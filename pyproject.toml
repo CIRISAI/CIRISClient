@@ -1,0 +1,16 @@
+[project]
+name = "ciris-client-readiness"
+version = "0.1.0"
+description = "Build-readiness gates for the CIRIS KMP client"
+requires-python = ">=3.10"
+# The gate framework lives in CIRISGrace; this repo owns only its own gates.
+# Until ciris-grace is published: pip install -e ../CIRISGrace
+dependencies = ["ciris-grace"]
+license = { text = "AGPL-3.0-or-later" }
+
+[project.scripts]
+client-readiness = "readiness.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

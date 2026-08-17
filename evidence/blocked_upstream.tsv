@@ -1,0 +1,17 @@
+# CIRIS evidence registry — the `state:blocked-upstream` adoption manifest.
+# Format mirrors CIRISServer/evidence/blocked_upstream.tsv (CIRISServer#361).
+#
+# Each row is an upstream obligation the client's build contract waits on,
+# expressed as a SCANNABLE PREDICATE: a needle whose appearance in the named
+# tree means the obligation landed.
+#
+# kind: absence | drift | untestable  (see the CIRISServer registry)
+#
+# Counts (files/lines) measured 2026-08-16 against CIRISConformance
+# origin/main @3ab8b75 and CIRISServer origin/main @515e656f (v0.5.176).
+issue	repo	scan_root	glob	needle	files	lines	kind	predicate
+86	CIRISServer	src	*.rs	openapi\.json	0	0	absence	The node does not serve its own OpenAPI spec. The client carries a committed copy and is graded against it, which means the contract is owned by the party under test. The three current "OpenAPI" mentions in src are prose comments. readiness spec-drift can only ask its question once a route serves the document.
+86	CIRISServer	client	*.gradle.kts	openApiGenerate|org\.openapi\.generator	0	0	absence	generated-api is ~730 committed files produced by openapi-generator (config in openapi-generator-config.yaml) and nothing re-runs the generator, so spec drift is silent. A generator task in the build graph is the fix; readiness generated-api-drift stays unimplemented until then.
+86	CIRISConformance	.github/workflows	*.yml	run-against-client	0	0	absence	The lane these gates are the pre-flight for (#86 §2). Until it exists, a client regression cannot block a CIRISServer or CIRISAgent release.
+86	CIRISConformance	tests	test_6*.py	-	0	0	absence	The client test band. Bands 0xx/1xx/2xx/3xx/5xx/9xx are in use; 6xx is free and unclaimed.
+86	CIRISVerify	-	-	ciris\.locale_manifest\.v2	-	-	untestable	CC 3.1.2.1 pins the locale-manifest leaf domain as ciris.locale_manifest.v2 with a field named locale; the shipped floor carries v1 and lang_code (documented in CIRISConformance test_578_locale_provenance). Until that closes, the client locale bundle cannot be checked against a signed Merkle root and the four-bundle byte-identity guard stands in for it. CIRISVerify is not in this repo reachable tree, so there is nothing local to scan. NO UPSTREAM ISSUE NUMBER IS KNOWN — one needs filing; this row is the obligation, not the tracker.
