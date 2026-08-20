@@ -66,9 +66,10 @@ kotlin {
 // src/main/resources/localization, wired to processResources. A `Sync` makes the
 // destination MATCH the source — so when the source holds no *.json (upstream it
 // holds three .txt and a CLAUDE.md; extracted, it resolves outside this repo
-// altogether) the task does not copy nothing, it DELETES the 30 committed locale
-// files in its destination. Localization is the product; it is never cut, and it
-// is certainly never cut by a task whose name says "sync".
+// altogether) the task does not copy nothing, it DELETES all 30 committed files
+// in its destination — the 29 locales and manifest.json. Localization is the
+// product; it is never cut, and it is certainly never cut by a task whose name
+// says "sync".
 //
 // The four in-tree bundles are kept identical by
 // client/tools/check_localization_sync.py, which runs in CI. See

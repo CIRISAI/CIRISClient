@@ -201,8 +201,12 @@ android {
 // src/main/assets/localization, wired to preBuild. A `Sync` makes the destination
 // MATCH the source — so with no *.json in the source (upstream: three .txt and a
 // CLAUDE.md; extracted: a path outside this repo) it does not copy nothing, it
-// DELETES its destination. That destination is the PRIMARY bundle: the one
-// carrying manifest.json, the one every parity check reads.
+// DELETES its destination — all 30 files, the 29 locales AND manifest.json.
+// That destination is the PRIMARY bundle, and manifest.json is the
+// supported-language list CLAUDE.md names as the source of truth. The
+// `exclude "manifest.json"` above filters the SOURCE; a Sync's delete pass
+// considers the whole destination, so the one file the task takes visible care
+// of is a file it removes.
 //
 // The task 150 lines below carries a comment explaining this exact Gradle hazard
 // for a different task ("Gradle treats that dir as the task's output and CLEANS

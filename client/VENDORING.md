@@ -184,9 +184,15 @@ bundle directory, wired to `preBuild` / `processResources`.
 At the vendored commit, upstream `localization/` contains **zero** `*.json`
 files (4 tracked files: one `CLAUDE.md`, three `.txt`). A `Sync` with an empty
 source does not copy nothing — it makes the destination match the source, so it
-**deletes the 30 committed locale files in its destination**. The Android one's
-destination is `src/main/assets/localization`: the primary bundle, the one
-`manifest.json` and every parity check read.
+**deletes all 30 committed files in its destination**: the 29 locales *and*
+`manifest.json`. The Android one's destination is `src/main/assets/localization`
+— the primary bundle, and `manifest.json` is the supported-language list that
+`CLAUDE.md` names as the source of truth and that every parity check reads.
+
+The `exclude "manifest.json"` on the task's *source* filter does not protect the
+destination; it only means the file would not be copied back in. A `Sync`'s
+delete pass considers everything in the destination, so the one file the task
+takes visible care of is a file it removes.
 
 Upstream this is latent (the path resolves to a real, if empty, directory).
 Extracted, `../../localization` resolves outside this repo entirely. Either
