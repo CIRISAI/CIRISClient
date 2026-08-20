@@ -33,8 +33,8 @@ One client. Two flavors. Three distributions.
 | distribution | what's in it | size |
 |---|---|---|
 | `ciris-client` | the resolver API and the version. No bundles. | ~25 KB |
-| `ciris-client-node` | the built client, `CIRISBuild.HAS_AGENT = false` | ~46 MiB when the jar lands |
-| `ciris-client-agent` | the built client, `CIRISBuild.HAS_AGENT = true` | ~46 MiB when the jar lands |
+| `ciris-client-node` | the built client, `CIRISBuild.HAS_AGENT = false` | 62.45 MiB |
+| `ciris-client-agent` | the built client, `CIRISBuild.HAS_AGENT = true` | 62.45 MiB |
 
 Consumers depend on `ciris-client[node]` or `ciris-client[agent]`, never on a
 payload distribution directly, and never on both flavors at once.
@@ -58,12 +58,16 @@ The one thing it will never do is hand back a path to a placeholder.
 
 ### Why a distribution per flavor
 
-The desktop uber-jar is ~46 MiB of `.class`. ProGuard would cut most of it and
-is blocked on ktor 3.x (CIRISServer#379), so treat that as fixed. PyPI's
-per-file limit is **104,857,600 bytes** — 100 MiB, not 100 MB, and the 4.8 MiB
-difference has been the whole remaining margin before now. Two flavors plus an
-Android AAR in one wheel runs at that limit with nothing left for the
-localization bundles.
+Measured, not estimated. The desktop uber-jar is **66.48 MiB** and compresses to
+a **65,488,254-byte** wheel — **62.5% of PyPI's 104,857,600-byte limit**, with
+37.55 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
+difference has been the whole remaining margin before now.) ProGuard would cut
+most of the jar and is blocked on ktor 3.x (CIRISServer#379), so treat the size
+as fixed.
+
+So one wheel carrying both flavors does not merely run close to the limit — at
+2 × 62.45 MiB it **does not fit**, before an Android AAR or anything else. The
+split is not a precaution; it is the only arrangement that ships.
 
 **Localization is the product and is never cut to save size.** 29 languages are
 29 audiences. If a wheel stops fitting, split a flavor or a target;
@@ -203,12 +207,13 @@ Three gates need care when you read them:
 
 ## What is not here yet
 
-- A green `gradle` job. It is wired and **advisory** (`continue-on-error`) until
-  it passes once on a runner. The wheels job tolerates its absence by staging a
-  placeholder that refuses, so the pipeline is honest rather than green.
 - Android AAR and iOS framework artifacts in the wheels. Only the desktop
   uber-jar is staged today; the manifest carries a `kind` per artifact so adding
   them is a staging line, not a schema change.
+- A client version on the desktop bundle. `desktopApp/build.gradle.kts` still
+  carries `packageVersion = "2.9.28"` by hand, which is why the jar is named
+  `CIRIS-linux-x64-2.9.28.jar` while `CLIENT_VERSION` is 0.5.181. It is the same
+  class of drift as #1 and #2 in the flavor table and has not been migrated.
 - `generated-api` regeneration and drift detection: the generator is not in the
   build graph, so spec drift is silent (`client/VENDORING.md` §7).
 - Anything reading the substrate's signed locale Merkle root. Until then the
@@ -217,6 +222,10 @@ Three gates need care when you read them:
 
 ## Status
 
-The source is extracted, both flavors are expressible, and the packaging is
-verified end to end against placeholder payloads. What has not been proven is
-the Gradle build on a runner — see above, and say so rather than assuming.
+Working, not scaffold. Run
+[32414315040](https://github.com/CIRISAI/CIRISClient/actions/runs/32414315040)
+is green end to end: both flavors compiled, both passed `:shared:desktopTest`,
+both produced a 66.48 MiB desktop uber-jar, and both were packaged into
+62.45 MiB wheels that install and resolve through `ciris_client.artifact_path`.
+
+Nothing is published. The gaps above are real and named.

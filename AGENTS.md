@@ -53,5 +53,5 @@
 
 ## CI
 - Every `apt-get` goes through `.github/actions/apt`: `azure.archive.ubuntu.com` dropped, `timeout 300`, `Acquire::Retries=3`. No exceptions — an unhardened `apt-get update` is a coin flip that costs a whole job when it loses.
-- `gradle` is `continue-on-error` **only until it passes once on a runner**. Turn it off then. A job allowed to fail forever is not a check, and it is how the placeholder payload becomes permanent.
+- `gradle` is REQUIRED. It shipped `continue-on-error` for one run to answer whether the vendored tree stands alone; it does, so the flag came off in the same PR. If you ever add an advisory job, write the condition for removing it next to the flag.
 - The wheels job stages a placeholder when Gradle produced nothing, and the placeholder RAISES on every artifact lookup. Never make it return a path instead; a wheel that installs and silently contains no client is the failure mode this whole arrangement exists to prevent.

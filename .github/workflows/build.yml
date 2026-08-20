@@ -6,17 +6,17 @@ name: build
 #   gradle   — :shared and the desktop uber-jar, per flavor. JDK 17 + Android SDK.
 #   wheels   — stages what gradle produced and builds the three distributions.
 #
-# HONEST STATUS. `checks` and `wheels` are real and are expected green. `gradle`
-# is ADVISORY (continue-on-error) until it has passed once on a runner: this tree
-# was vendored from a repo that built it inside a much larger build, and the
-# first green run here is the evidence that it stands alone. `wheels` therefore
-# tolerates a missing gradle artifact by staging a PLACEHOLDER payload — a wheel
-# that raises on every artifact lookup and says why, rather than one that looks
-# installable and ships an empty client.
+# All three are REQUIRED. `gradle` shipped advisory (continue-on-error) for
+# exactly one run — the question was whether a tree vendored out of a much larger
+# build stands alone, and run 32414315040 answered it: both flavors compiled,
+# both passed :shared:desktopTest, both produced a 66.48 MiB uber-jar, and both
+# were packaged and resolved through the consumption API. So the flag came off in
+# the same PR. A job allowed to fail forever is not a check.
 #
-# Flip `continue-on-error` off the day gradle is green. A job that is allowed to
-# fail forever is not a check, and leaving it that way is how the placeholder
-# becomes permanent.
+# `wheels` still tolerates a missing gradle artifact, by staging a PLACEHOLDER
+# payload that raises on every artifact lookup and says why. That path is no
+# longer the expected one; it is what keeps a broken build from quietly shipping
+# a wheel that installs and contains no client.
 
 on:
   pull_request:
@@ -61,7 +61,6 @@ jobs:
     name: gradle (${{ matrix.flavor }})
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    continue-on-error: true   # ADVISORY — see the header. Remove on first green.
     strategy:
       fail-fast: false
       matrix:

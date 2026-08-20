@@ -8,8 +8,9 @@ is 4.8 MiB and it has been the entire remaining margin before now.
 
 What fills a client wheel:
 
-  * the desktop uber-jar, ~46 MiB of ``.class``. ProGuard would cut most of it
-    and is blocked on ktor 3.x (CIRISServer#379), so treat this as fixed.
+  * the desktop uber-jar — 66.48 MiB, a 62.45 MiB wheel, 62.5% of the limit on
+    its own (measured, CIRISClient#1). ProGuard would cut most of it and is
+    blocked on ktor 3.x (CIRISServer#379), so treat this as fixed.
   * the localization bundles — 29 languages. **These are the product.** They are
     never cut to save size. If a wheel does not fit, split a flavor or a target;
     do not drop a language, because a language is an audience.

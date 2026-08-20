@@ -6,11 +6,11 @@ Each flavor ships as its own distribution (``ciris-client-node``,
 finds them, checks they belong with this version, and hands back paths.
 
 Why a separate distribution per flavor rather than one wheel with both: the
-desktop uber-jar alone is ~46 MiB of ``.class`` (ProGuard is blocked on ktor
-3.x — CIRISServer#379). Two flavors plus an Android AAR in one wheel runs at
-the PyPI limit of 104,857,600 bytes with no room for the localization bundles,
-which are the product and are never cut to save size. A consumer needs one
-flavor, so it downloads one.
+desktop uber-jar is 66.48 MiB and compresses to a 65,488,254-byte wheel — 62.5%
+of PyPI's 104,857,600-byte limit on its own (ProGuard is blocked on ktor 3.x,
+CIRISServer#379). Two of those in one wheel does not fit, before an Android AAR
+or anything else. The localization bundles inside are the product and are never
+cut to save size. A consumer needs one flavor, so it downloads one.
 
 Every failure here is loud and says what to do. A resolver that quietly returns
 a path to a placeholder is how a build ships an empty client.
