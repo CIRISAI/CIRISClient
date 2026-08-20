@@ -111,6 +111,16 @@ is how the digest in §1 stops meaning anything.
 | `androidApp/build.gradle` | `syncLocalizationAssets` removed | Destructive after extraction — see §5 |
 | `local.properties` | **deleted**, now git-ignored | Contained one developer's absolute `sdk.dir`; breaks every other machine |
 | `tools/check_localization_sync.py` | **added** (adapted) | Was `tools/dev/` in CIRISAgent, outside `client/` — see §6 |
+| `gradle.properties` | + `ciris.hasAgent=false` | The flavor default (§4) |
+
+**post-delta digest:** `39e0f8bf490e06532873134acabc924e570041ae88b6f488a093dbe985657e91`
+
+Every file under `client/` that is *not* in the table above hashes to that
+digest, and `packaging/check_vendoring.py` asserts it on every push. So an edit
+to a vendored file has two outcomes and no third: the digest still matches, or
+the edit is declared here. The quiet middle — a change made here, never pushed
+upstream, silently reverted by the next re-vendor — is what "kept aligned by
+hand" has meant in practice, and it is what this closes.
 
 ---
 

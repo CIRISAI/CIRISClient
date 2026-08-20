@@ -2,3 +2,17 @@ __pycache__/
 *.pyc
 .venv/
 reports/
+
+# Written by packaging/stage_artifacts.py from the repo-root VERSION.
+packaging/*/VERSION
+# Gradle output staged into the flavor payload packages.
+packaging/*/ciris_client_*/_artifacts/*
+!packaging/*/ciris_client_*/_artifacts/.gitkeep
+# Gradle
+client/.gradle/
+client/build/
+client/*/build/
+client/local.properties
+dist/
+build/
+*.egg-info/

@@ -60,17 +60,16 @@ kotlin {
     jvmToolchain(17)
 }
 
-// Sync localization JSON files from main repo to resources
-tasks.register<Sync>("syncLocalizationResources") {
-    description = "Sync localization JSON files from main repo to resources"
-    from("../../localization") {
-        include("*.json")
-        exclude("manifest.json")
-    }
-    into("src/main/resources/localization")
-}
-
-// Ensure localization resources are synced before processing resources
-tasks.named("processResources") {
-    dependsOn("syncLocalizationResources")
-}
+// LOCALIZATION: the committed bundle IS the source of truth here.
+//
+// This used to be a Gradle `Sync` from "../../localization" into
+// src/main/resources/localization, wired to processResources. A `Sync` makes the
+// destination MATCH the source — so when the source holds no *.json (upstream it
+// holds three .txt and a CLAUDE.md; extracted, it resolves outside this repo
+// altogether) the task does not copy nothing, it DELETES the 30 committed locale
+// files in its destination. Localization is the product; it is never cut, and it
+// is certainly never cut by a task whose name says "sync".
+//
+// The four in-tree bundles are kept identical by
+// client/tools/check_localization_sync.py, which runs in CI. See
+// client/VENDORING.md §5.

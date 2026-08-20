@@ -5,17 +5,24 @@
 > [`~/CIRISAgent/FSD/MISSION_DRIVEN_DEVELOPMENT.md`](../CIRISAgent/FSD/MISSION_DRIVEN_DEVELOPMENT.md)
 > and the overview at [ciris.ai/mdd](https://ciris.ai/mdd).
 
-**The client's build contract.** The KMP client currently lives vendored in two
-repositories at once. This repo holds the gates that say whether the requisites
-for building it are actually in place — before, and as a precondition of, any
-extraction of the source itself.
+**The client's build contract, and the client.** The KMP client lived vendored
+in two repositories at once. This repo holds the gates that say whether the
+requisites for building it are in place — and, since the gates reported, the
+source itself.
 
-**Status**: Gates only. **No client source here yet.** The tree under test is
-`CIRISServer/client` (mirrored in `CIRISAgent/client`), given by
-`--client-tree`. Extraction is deliberately deferred — see §5.
-**Identifier**: `ciris-client-readiness` (Python; the gate framework comes from
-[CIRISGrace](../CIRISGrace)).
-**Last updated**: 2026-08-16 (repo created).
+**Status**: Source extracted. `client/` is vendored from CIRISAgent@6083bdf
+with its provenance and every local delta in `client/VENDORING.md`; the default
+`--client-tree` is that tree. Both flavors are buildable from one source
+(§5.2). **The extraction is not finished until both consumers depend on the
+package and delete their copies** — until then this repo is a third tree, which
+is the cost, tracked as a row in `evidence/blocked_upstream.tsv`.
+**Identifiers**: `ciris-client` (the client, published as
+`ciris-client[node]` / `ciris-client[agent]`) and, in the same distribution,
+the readiness gates — still importable as `readiness`, still run as
+`python -m readiness`, with the gate framework from
+[CIRISGrace](../CIRISGrace) as an optional dependency so
+`pip install ciris-client` does not require it.
+**Last updated**: 2026-08-20 (client extracted; §5.1 and §5.2 answered).
 
 ---
 
@@ -37,15 +44,26 @@ copies. The API surface the client is judged against is a file the client
 itself owns. None of these are correctness bugs; all of them are places where
 a human is the transport, and where an error is silent rather than loud.
 
+Three of those four now have a producer, a consumer and a check rather than a
+person: `HAS_AGENT` and `CLIENT_VERSION` are build inputs derived from one
+source each, and the locale mirrors are guarded in this repo's CI rather than
+in one consumer's. The fourth — the API surface — is unchanged and still
+tracked. And the first of them, the two hand-aligned copies, is only half
+closed: the source is here, but both consumers still carry theirs. A third
+copy is worse than two, so that row in the manifest is the one that matters.
+
 **The constraint this repo exists to enforce:** every requisite for building
 the client must have a named producer, a named consumer, and a check. Where a
 check does not exist yet, it is declared `unimplemented` — never assumed.
 
 ## 2. The composition contract (WHO / WHAT / HOW)
 
-**WHO — protocols.** Reads a client tree, a node's served OpenAPI spec (when
-given `--node`), PyPI, and GitHub issue state. Writes a `ciris-readiness/v1`
-report. It changes nothing it reads.
+**WHO — protocols.** The gates read a client tree, a node's served OpenAPI spec
+(when given `--node`), PyPI, and GitHub issue state. They write a
+`ciris-readiness/v1` report and change nothing they read. The package reads the
+Gradle build's output and writes wheels; it never compiles Kotlin inside pip,
+because a consumer should not need a JDK and an Android SDK to install a
+client.
 
 **WHAT — schemas.** The requisite classes from
 [CIRISConformance#86](https://github.com/CIRISAI/CIRISConformance/issues/86) §4:
@@ -61,7 +79,7 @@ the report so a worklist is never mistaken for a verdict.
 
 | Gate | Class | How it advances M-1 |
 |---|---|---|
-| `version-alignment` | code | The banner a user sees must reflect the node they actually have |
+| `version-alignment` | code | The banner a user sees must reflect the node they actually have — read from `VERSION` in this tree, from the `ClientMode.kt` const in a consumer's copy, because a gate that works on one tree is not done |
 | `locale-parity` | data | Thirty languages are thirty audiences; a stale bundle ships raw keys to one of them |
 | `spec-drift` | data | The contract must come from the node, not from the client's copy of it |
 | `surface-binding` | data | Turns a silently unimplemented endpoint into a counted gap |
@@ -75,22 +93,53 @@ the report so a worklist is never mistaken for a verdict.
   envelope. This repo owns only its own questions.
 - **CIRISConformance** — owns what "conforming" means. When the `client` lane
   lands (#86 §2), these gates become its pre-flight, not its replacement.
-- **CIRISServer / CIRISAgent** — hold the client source today. Both are read;
-  neither is written.
+- **CIRISServer / CIRISAgent** — the two consumers. Each still holds its own
+  copy of the client source; both are read, neither is written. The extraction
+  is finished when they depend on `ciris-client[node]` / `ciris-client[agent]`
+  and delete those copies, and not before.
+- **CIRISVerify / CIRISServer releases** — supply the substrate binaries this
+  repo deliberately does not vendor. A device build re-hydrates them from those
+  releases (`client/VENDORING.md` §2); this repo owns the client, not the
+  substrate it drives.
 
 ## 5. Open questions
 
-1. **Extraction.** Whether the source moves here, and with which module
-   boundary (`shared` + `generated-api` only, versus the platform shells), is
-   deliberately unanswered. The gates should report what the two trees actually
-   support first; deciding before that is guessing.
-2. **Flavor.** Two Maven variants (`-node`, `-agent`) compiled from one source
-   with different `-PhasAgent` is the current intent — it preserves the
-   dead-code elimination that keeps agent surfaces out of the node build.
+1. **Extraction — ANSWERED 2026-08-20.** The source moved here. The module
+   boundary is **the whole Gradle build, minus the substrate**: `shared`,
+   `generated-api` and all three platform shells are vendored; the prebuilt
+   `ciris-server` wheels, `ciris-verify` FFI libraries, xcframeworks and iOS
+   Resources tree are not (`client/VENDORING.md` §2 — 2537 files, ~235 MB).
+
+   Shipping only `shared` + `generated-api` was the tidier boundary and is the
+   wrong one: the shells are where `HAS_AGENT` and the locale bundles land, so
+   cutting there would have left the two drifts that motivated this in the
+   consumers. What the gates reported, and what decided it, is that the shells
+   reach OUT — `desktopApp` and `androidApp` sync localization from a path
+   outside `client/`, and `iosApp`'s Xcode phase rsyncs `ciris_engine` and
+   `ciris_adapters` from the agent repo root. Those references are the real
+   boundary, and each one is now either removed (§5 of VENDORING.md) or recorded.
+
+2. **Flavor — ANSWERED 2026-08-20**, as intended: one source, `-PhasAgent`,
+   two variants. They ship as two Python distributions rather than two Maven
+   variants, because the consumers are Python and PyPI's per-file limit forces
+   the split anyway (README § *Why a distribution per flavor*). Dead-code
+   elimination is preserved: the flag is still a `const val`, now generated
+   rather than hand-edited.
+
 3. **Locale root.** When the client's bundle is checked against the substrate's
    signed locale Merkle root, `locale-parity`'s byte-identity half retires. The
    CC-vs-impl domain drift (`v2`/`locale` versus the shipped `v1`/`lang_code`)
    has to close first.
+
+4. **The sixth mirror.** Upstream guards six `en.json` mirrors; two are outside
+   this repo — the agent's server-side prompt bundle, and the copy inside the
+   un-vendored iOS substrate. Whether the agent's prompt bundle should share the
+   client's UI bundle at all, or is a separate corpus that merely looks alike,
+   is unanswered. Recorded as an obligation, not assumed either way.
+
+5. **Publication.** Nothing is on PyPI. The wheels are CI artifacts, and the
+   consumption contract is real code that has been installed and exercised, but
+   the name `ciris-client` is unclaimed.
 
 ## 6. References
 

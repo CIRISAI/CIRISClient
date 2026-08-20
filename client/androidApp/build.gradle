@@ -195,25 +195,23 @@ android {
     }
 }
 
-// Sync localization JSON files from main repo to assets
-// This ensures mobile has all translated strings available at runtime
-task syncLocalizationAssets(type: Sync) {
-    description = "Sync localization JSON files from main repo to assets"
-
-    from("../../localization") {
-        include "*.json"
-        // Exclude manifest.json (not needed at runtime)
-        exclude "manifest.json"
-    }
-    into "src/main/assets/localization"
-}
-
-// Make preBuild depend on localization sync
-tasks.whenTaskAdded { task ->
-    if (task.name == "preBuild") {
-        task.dependsOn syncLocalizationAssets
-    }
-}
+// LOCALIZATION: the committed bundle IS the source of truth here.
+//
+// This used to be a Gradle `Sync` from "../../localization" into
+// src/main/assets/localization, wired to preBuild. A `Sync` makes the destination
+// MATCH the source — so with no *.json in the source (upstream: three .txt and a
+// CLAUDE.md; extracted: a path outside this repo) it does not copy nothing, it
+// DELETES its destination. That destination is the PRIMARY bundle: the one
+// carrying manifest.json, the one every parity check reads.
+//
+// The task 150 lines below carries a comment explaining this exact Gradle hazard
+// for a different task ("Gradle treats that dir as the task's output and CLEANS
+// stale files it didn't produce"). The lesson was learned once and not applied to
+// its neighbours.
+//
+// The four in-tree bundles are kept identical by
+// client/tools/check_localization_sync.py, which runs in CI. See
+// client/VENDORING.md §5.
 
 // Generate obfuscated secrets file for Python
 // Reads from ~/.<key_name> files (not in git) and generates XOR-obfuscated Python

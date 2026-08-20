@@ -1,12 +1,26 @@
 [project]
-name = "ciris-client-readiness"
-version = "0.1.0"
-description = "Build-readiness gates for the CIRIS KMP client"
+name = "ciris-client"
+dynamic = ["version"]
+description = "The CIRIS Kotlin Multiplatform client — one build, consumed as a dependency"
+readme = "README.md"
 requires-python = ">=3.10"
-# The gate framework lives in CIRISGrace; this repo owns only its own gates.
-# Until ciris-grace is published: pip install -e ../CIRISGrace
-dependencies = ["ciris-grace"]
 license = { text = "AGPL-3.0-or-later" }
+
+# Deliberately empty. This distribution is the resolver and the version — the
+# built client bundles arrive through the flavor extras below, so a consumer
+# that only needs to ask "which client version pairs with this node?" does not
+# download ~46 MiB of JVM bytecode to find out.
+dependencies = []
+
+[project.optional-dependencies]
+# One flavor per extra, never both: they are the same client compiled with
+# CIRISBuild.HAS_AGENT false and true. See README § The consumption contract.
+node = ["ciris-client-node"]
+agent = ["ciris-client-agent"]
+# The build-readiness gates (this repo's original contents). Their framework
+# lives in CIRISGrace and is not published yet, which is why it is an extra and
+# not a dependency — `pip install ciris-client` must not fail on it.
+readiness = ["ciris-grace"]
 
 [project.scripts]
 client-readiness = "readiness.__main__:main"
@@ -14,3 +28,15 @@ client-readiness = "readiness.__main__:main"
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ciris_client", "readiness"]
+
+[tool.setuptools.dynamic]
+# The single source of the version, shared with the Kotlin build: the same file
+# :shared:generateBuildFlavor stamps into CLIENT_VERSION. `ciris-client==X` and
+# `ciris-server==X` are the pair.
+version = { file = "VERSION" }
+
+[tool.setuptools.package-data]
+ciris_client = ["py.typed"]

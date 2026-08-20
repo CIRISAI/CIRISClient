@@ -1,0 +1,193 @@
+#!/usr/bin/env python3
+"""Stage Gradle output into a flavor's payload package, then write its manifest.
+
+Kotlin is not compiled inside pip. The Gradle job builds the client, this script
+copies what it produced into ``packaging/<flavor>/ciris_client_<flavor>/_artifacts/``
+and records what it copied, and only then is the wheel built. Three steps, each
+of which can fail in its own right, instead of one that needs a JDK and an
+Android SDK on every consumer's machine.
+
+    # after ./gradlew -p client :desktopApp:packageUberJarForCurrentOS
+    python3 packaging/stage_artifacts.py --flavor node \
+        --artifact desktop-uber-jar=client/desktopApp/build/compose/jars/*.jar
+
+    # no Gradle run available — build a wheel that REFUSES rather than one that lies
+    python3 packaging/stage_artifacts.py --flavor node --placeholder "no gradle job"
+
+Stdlib only, on purpose: this runs between a Gradle job and a pip build, before
+anything is installed.
+"""
+
+from __future__ import annotations
+
+import argparse
+import datetime
+import glob
+import hashlib
+import json
+import os
+import shutil
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+FLAVORS = ("node", "agent")
+SCHEMA = "ciris-client-artifacts/v1"
+
+# PyPI's per-file limit. Stated as bytes because "100 MB" is 100 MiB and the
+# difference has been the whole margin before now.
+PYPI_LIMIT_BYTES = 104_857_600
+
+
+def project_dir(flavor: str) -> Path:
+    return REPO / "packaging" / flavor
+
+
+def payload_dir(flavor: str) -> Path:
+    return project_dir(flavor) / f"ciris_client_{flavor}" / "_artifacts"
+
+
+def read_version() -> str:
+    version = (REPO / "VERSION").read_text(encoding="utf-8").strip()
+    if not version:
+        sys.exit("VERSION is empty — refusing to stamp a bundle with no version")
+    return version
+
+
+def vendoring() -> dict[str, str]:
+    """Pull the vendored commit out of VENDORING.md so it rides in the manifest.
+
+    An artifact that cannot say which client source it was built from is an
+    artifact nobody can bisect. Parsed rather than duplicated, so there is one
+    place to update when the tree is re-vendored.
+    """
+    text = (REPO / "client" / "VENDORING.md").read_text(encoding="utf-8")
+    out: dict[str, str] = {}
+    for line in text.splitlines():
+        if line.startswith("| **Commit** |"):
+            out["commit"] = line.split("|")[2].strip().strip("`")
+        elif line.startswith("| **Source repo** |"):
+            cell = line.split("|")[2].strip()
+            out["repo"] = cell.split("`")[1] if "`" in cell else cell
+        if len(out) == 2:
+            break
+    if "commit" not in out:
+        # AGENTS.md, Gate Rules: a parser that finds nothing where the construct
+        # plainly exists must fail loudly rather than emit a manifest that is
+        # quietly missing its provenance.
+        sys.exit("could not read the vendored commit from client/VENDORING.md §1")
+    return out
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def resolve(pattern: str) -> Path:
+    matches = sorted(glob.glob(pattern, recursive=True))
+    files = [Path(m) for m in matches if Path(m).is_file()]
+    if not files:
+        sys.exit(f"no file matched {pattern!r} — did the Gradle task actually run?")
+    if len(files) > 1:
+        sys.exit(f"{pattern!r} matched {len(files)} files, expected 1: {files}")
+    return files[0]
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument("--flavor", required=True, choices=FLAVORS)
+    ap.add_argument(
+        "--artifact",
+        action="append",
+        default=[],
+        metavar="KIND=PATH",
+        help="artifact to stage, e.g. desktop-uber-jar=client/.../ciris.jar (globs ok)",
+    )
+    ap.add_argument(
+        "--placeholder",
+        metavar="REASON",
+        help="stage nothing; write a manifest that makes every lookup raise",
+    )
+    args = ap.parse_args()
+
+    if bool(args.artifact) == bool(args.placeholder):
+        return int(bool(sys.stderr.write(
+            "pass either --artifact (one or more) or --placeholder REASON, not both\n"
+        ))) or 2
+
+    dest = payload_dir(args.flavor)
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(parents=True)
+    (dest / ".gitkeep").touch()
+
+    version = read_version()
+    manifest = {
+        "schema": SCHEMA,
+        "flavor": args.flavor,
+        "has_agent": args.flavor == "agent",
+        "client_version": version,
+        "vendored_from": vendoring(),
+        "built": {
+            "at": datetime.datetime.now(datetime.timezone.utc).isoformat(
+                timespec="seconds"
+            ),
+            "github_run": os.environ.get("GITHUB_RUN_ID"),
+            "github_sha": os.environ.get("GITHUB_SHA"),
+        },
+        "artifacts": [],
+    }
+
+    if args.placeholder:
+        manifest["placeholder"] = True
+        manifest["placeholder_reason"] = args.placeholder
+        print(f"[placeholder] {args.flavor}: {args.placeholder}")
+    else:
+        total = 0
+        for spec in args.artifact:
+            if "=" not in spec:
+                sys.exit(f"--artifact wants KIND=PATH, got {spec!r}")
+            kind, _, pattern = spec.partition("=")
+            src = resolve(pattern)
+            target = dest / src.name
+            shutil.copy2(src, target)
+            size = target.stat().st_size
+            total += size
+            manifest["artifacts"].append(
+                {
+                    "kind": kind,
+                    "path": src.name,
+                    "bytes": size,
+                    "sha256": sha256(target),
+                }
+            )
+            print(f"[staged] {kind:<22} {src}  ({size / 1048576:.2f} MiB)")
+
+        if total > PYPI_LIMIT_BYTES:
+            sys.exit(
+                f"staged payload is {total:,} bytes, over PyPI's "
+                f"{PYPI_LIMIT_BYTES:,}-byte limit before compression. "
+                f"Localization is the product and is not what gets cut — "
+                f"split a flavor or a target instead."
+            )
+
+    (dest / "manifest.json").write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    print(f"[manifest] {dest / 'manifest.json'}")
+
+    # setuptools will not read a version file outside its project root, and a
+    # second committed copy of the version is the drift this repo exists to
+    # remove. So the version is projected here, from the one source, at the one
+    # moment the payload project is about to be built.
+    (project_dir(args.flavor) / "VERSION").write_text(version + "\n", encoding="utf-8")
+    print(f"[version]  {args.flavor} -> {version}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,37 @@
+# The agent flavor's built client bundles. Payload only — the API for finding them
+# is in `ciris-client`, which pulls this in via the `[agent]` extra.
+#
+# CIRISBuild.HAS_AGENT = true
+#
+# Built by CI, not by pip: producing the bundles needs JDK 17 and the Android
+# SDK, so the Gradle job runs first and `packaging/stage_artifacts.py` stages its
+# output into ciris_client_agent/_artifacts/ before the wheel is built. Building
+# this project with nothing staged yields a PLACEHOLDER wheel that raises on
+# every artifact lookup — see .github/workflows/build.yml.
+[project]
+name = "ciris-client-agent"
+dynamic = ["version"]
+description = "CIRIS KMP client bundles — agent build (node + brain)"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ciris_client_agent"]
+
+[tool.setuptools.dynamic]
+# Written by packaging/stage_artifacts.py from the repo-root VERSION, and NOT
+# committed: setuptools refuses to read a version file outside the project root
+# (`_assert_local`), and a second committed copy of the version is the drift this
+# repo exists to remove. Staging is not optional — build this project only after
+# `python3 packaging/stage_artifacts.py --flavor agent ...` has run.
+version = { file = ["VERSION"] }
+
+[tool.setuptools.package-data]
+# Everything staged. The bundles are .jar/.aar/.klib; naming them individually
+# would mean editing this file every time the build graph grows a target.
+ciris_client_agent = ["_artifacts/*", "_artifacts/**/*"]
