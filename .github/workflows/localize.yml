@@ -1,0 +1,124 @@
+# Continuous localization — the CI replacement for interactive Claude Code
+# fan-outs (FSD/ONE_CLIENT_N_NODES.md §7). New en.json keys on a PR get their
+# 28 translations as a bot commit on the same PR; the strict guard remains the
+# only gate that decides what merges.
+#
+# Cost design (client/tools/localize.py has the full account): diff-driven
+# (a no-missing run makes zero API calls), Haiku bulk lane + Sonnet repair
+# lane, shared cacheable prefix across the 28 language requests, and a
+# --mode batch lane at 50% off for large backfills (workflow_dispatch).
+#
+# Loop safety, twice over: the push uses GITHUB_TOKEN, whose events start no
+# workflows; and a second run finds nothing missing and exits before any API
+# call — idempotent by construction.
+#
+# Secrets: OPENROUTER_API_KEY (active lane), ANTHROPIC_API_KEY (preferred
+# when the account is funded — flip LOCALIZE_PROVIDER below; the direct SDK
+# path adds true prompt caching and the Batches API).
+
+name: localize
+
+on:
+  pull_request:
+    paths:
+      - "client/shared/src/desktopMain/resources/localization/en.json"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fast (now) or batch (50% cheaper, for backfills)"
+        default: "fast"
+        type: choice
+        options: [fast, batch]
+      max_keys:
+        description: "refuse runs larger than this many missing values"
+        default: "400"
+
+concurrency:
+  group: localize-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  localize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    # Fork PRs get no secrets; their missing keys surface in the strict guard
+    # instead, and a maintainer runs workflow_dispatch after merge-in.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Anything missing?
+        id: check
+        run: |
+          if python3 client/tools/localize.py --check; then
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Translate
+        if: steps.check.outputs.missing == 'true'
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LOCALIZE_PROVIDER: openrouter
+        run: |
+          pip install --quiet anthropic
+          python3 client/tools/localize.py \
+            --mode "${{ github.event.inputs.mode || 'fast' }}" \
+            --max-keys "${{ github.event.inputs.max_keys || '400' }}" \
+            | tee localize.log
+          {
+            echo "### Localization run"
+            echo '```'
+            cat localize.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Guard (strict) — the actual gate
+        if: steps.check.outputs.missing == 'true'
+        run: |
+          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --no-server-src --strict
+
+      - name: Re-record the vendoring state digest
+        if: steps.check.outputs.missing == 'true'
+        run: |
+          DIGEST=$(python3 packaging/check_vendoring.py --print)
+          python3 - "$DIGEST" <<'EOF'
+          import re, sys
+          p = "client/VENDORING.md"
+          s = open(p).read()
+          s = re.sub(r"(\*\*state digest:\*\* `)[0-9a-f]{64}(`)",
+                     rf"\g<1>{sys.argv[1]}\g<2>", s, count=1)
+          open(p, "w").write(s)
+          EOF
+          python3 packaging/check_vendoring.py
+
+      - name: Commit to the PR
+        if: steps.check.outputs.missing == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/*/src/main/assets/localization client/*/src/main/resources/localization \
+                  client/shared/src/desktopMain/resources/localization client/iosApp/iosApp/localization \
+                  client/VENDORING.md
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -m "i18n: machine translations for new keys (localize workflow)
+
+          Bulk lane + repair lane per client/tools/localize.py; validated by
+          check_localization_sync.py --strict in this same run. Review like any
+          other diff — presence is gated, quality is reviewed."
+            git push
+          fi
