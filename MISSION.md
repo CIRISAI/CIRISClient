@@ -4,6 +4,9 @@
 > document names *why*. Methodology:
 > [`~/CIRISAgent/FSD/MISSION_DRIVEN_DEVELOPMENT.md`](../CIRISAgent/FSD/MISSION_DRIVEN_DEVELOPMENT.md)
 > and the overview at [ciris.ai/mdd](https://ciris.ai/mdd).
+> This repo's FSD: [`FSD/ONE_CLIENT_N_NODES.md`](FSD/ONE_CLIENT_N_NODES.md);
+> the parent FSD remains
+> [CIRISConformance#86](https://github.com/CIRISAI/CIRISConformance/issues/86).
 
 **The client's build contract, and the client.** The KMP client lived vendored
 in two repositories at once. This repo holds the gates that say whether the
