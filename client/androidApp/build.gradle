@@ -373,6 +373,24 @@ task syncPythonSources(type: Exec) {
     workingDir(findProperty("cirisAgentRoot") ?: file("../.."))
     commandLine "python3", "-m", "tools.dev.stage_runtime", "${buildDir}/python-src", "--quiet"
 
+    // In CIRISClient the default ../.. is NOT a CIRISAgent checkout: the
+    // module and the ciris_engine tree it stages are the agent repo's, and
+    // this repo deliberately does not vendor them (client/VENDORING.md §2 —
+    // the runtime tree is the same class as the substrate binaries). Refuse
+    // with the remedy instead of dying as a ModuleNotFoundError three tasks
+    // deep in Chaquopy (Codex review, CIRISClient#1).
+    doFirst {
+        def root = file(findProperty("cirisAgentRoot") ?: "../..")
+        if (!new File(root, "tools/dev/stage_runtime.py").exists()) {
+            throw new GradleException(
+                "Android builds stage the Python runtime from a CIRISAgent " +
+                "checkout, and none was found at '${root}'. Pass " +
+                "-PcirisAgentRoot=/path/to/CIRISAgent (CI: actions/checkout " +
+                "CIRISAI/CIRISAgent first). This tree deliberately does not " +
+                "vendor the agent runtime — see client/VENDORING.md §2.")
+        }
+    }
+
     // Strip host-platform binaries from the staged tree. The canonical
     // stage_runtime tree carries macOS/Linux FFI binaries for desktop
     // (e.g. ciris_adapters/ciris_verify/ffi_bindings/libciris_verify_ffi.dylib,

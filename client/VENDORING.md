@@ -34,7 +34,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `666ef09d34db394f21b70088dad8395951a9b8d7ff7f01ec7ff2c164ef5d182a`
+**state digest:** `9870d4fb6d5c3576972fb1cab524563a5e1540fe242251f26137ed317c37498e`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -84,6 +84,11 @@ they were force-added.
   the whole set (`app_packages_native/`, `Frameworks/`, `Resources/`,
   `Resources.zip`, `substrate.lock.json`) on a macOS runner and uploads it as
   the `ios-substrate-refresh` artifact.
+- **Python runtime tree** (Android Chaquopy, iOS Resources) — staged from a
+  CIRISAgent checkout by its `tools.dev.stage_runtime`; point Gradle at one
+  with `-PcirisAgentRoot=/path/to/CIRISAgent`. The `syncPythonSources` task
+  refuses with this remedy when none is present, instead of a
+  `ModuleNotFoundError` three tasks deep in Chaquopy.
 - `client/iosApp/substrate.lock.json` records which `ciris-server` the excluded
   iOS binaries were built from. The agent tree vendored it; the server tree does
   not, and the merge followed the server: it arrives with rehydration (the
