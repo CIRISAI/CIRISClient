@@ -61,6 +61,8 @@ kotlin {
 }
 
 // LOCALIZATION: the committed bundle IS the source of truth here.
+// (Upstream removed the same task as NODE VENDOR DRIFT #9, CIRISServer#465 —
+// same destination-owning Sync hazard as androidApp's syncLocalizationAssets.)
 //
 // This used to be a Gradle `Sync` from "../../localization" into
 // src/main/resources/localization, wired to processResources. A `Sync` makes the

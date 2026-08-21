@@ -455,7 +455,10 @@ fun CIRISApp(
 
 
     // Handle system back button - navigate back to appropriate parent screen
-    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen !is Screen.Interact) {
+    // HOME_SCREEN, not Screen.Interact: on the node client the landing surface is
+    // Contacts, and a back press there must fall through to the platform (leave
+    // the app) rather than navigating to a screen that is not in the sidebar.
+    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen != HOME_SCREEN) {
         currentScreen = when (currentScreen) {
             // Login/Setup flow - don't go back, let user complete the flow
             is Screen.Login, is Screen.Setup -> currentScreen
@@ -467,9 +470,9 @@ fun CIRISApp(
             // for the manual entry, Interact for the post-login auto-present.
             is Screen.AddFederationId -> addFederationIdReturnScreen
 
-            // DataManagement and LLMSettings go back to Interact (main screen)
-            is Screen.DataManagement -> Screen.Interact
-            is Screen.LLMSettings -> Screen.Interact
+            // DataManagement and LLMSettings go back to the landing screen
+            is Screen.DataManagement -> HOME_SCREEN
+            is Screen.LLMSettings -> HOME_SCREEN
             is Screen.VizSettings -> Screen.Settings
 
             // Federation sub-screens (reached from Global Commons hub tiles) go
@@ -488,15 +491,18 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
-            // Contacts goes back to the picker source (Delegations) or Interact
+            // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
                 val src = contactsPickerSourceScreen
                 contactsPickerSourceScreen = null
-                src ?: Screen.Interact
+                src ?: HOME_SCREEN
             }
 
-            // All other screens go back to Interact (main screen)
-            else -> Screen.Interact
+            // A chat goes back to the contact list it was opened from
+            is Screen.UserChat -> Screen.Contacts
+
+            // All other screens go back to the landing screen
+            else -> HOME_SCREEN
         }
     }
 
@@ -516,6 +522,9 @@ fun CIRISApp(
     // Setup↔Startup↔Interact↔Login for minutes. Cleared once we land on
     // Login/Setup, or the rebind times out.
     var reconfiguring by remember { mutableStateOf(false) }
+    // NODE VENDOR DRIFT #25 (restored after the 2.9.28 re-vendor dropped it):
+    // setup just completed and the node restarted — drives the login banner.
+    var justCompletedSetup by remember { mutableStateOf(false) }
 
     // Login state
     var isLoginLoading by remember { mutableStateOf(false) }
@@ -734,6 +743,22 @@ fun CIRISApp(
     val nodeSwitcherViewModel: NodeSwitcherViewModel = viewModel {
         NodeSwitcherViewModel(apiClient)
     }
+    // NODE VENDOR DRIFT #28 (restored after the 2.9.28 re-vendor dropped it):
+    // keep the node-vs-agent gate in step across node switches (CIRISServer#390).
+    // The startup probe answered for the ORIGINAL node; a switch to a different
+    // KIND of node otherwise left the whole UI — agent wording, the 22 cognitive
+    // lights — branching on the stale verdict. The VM re-derives the mode against
+    // the new node's merged health and publishes it here.
+    val switchedMode by nodeSwitcherViewModel.switchedMode.collectAsState()
+    LaunchedEffect(switchedMode) {
+        switchedMode?.let { mode ->
+            if (clientMode != mode) {
+                platformLog(TAG, "[INFO][gate] clientMode re-derived on node switch → $mode")
+                clientMode = mode
+                startupViewModel.setClientMode(mode)
+            }
+        }
+    }
     // Catch-up: an existing logged-in owner whose local node has NO fed-ID
     // (legacy WA claim) must be auto-presented the guided Add Federation ID flow
     // after login — the startup owned-nodes projection ran UNAUTHENTICATED (or
@@ -780,6 +805,30 @@ fun CIRISApp(
     }
     val contactsViewModel: ContactsViewModel = viewModel {
         ContactsViewModel(apiClient)
+    }
+    // The node predates /v1/contacts (the embedded APK node lags one release).
+    // Contacts is the node-mode HOME, so landing there would put the user on a
+    // surface that cannot answer. Fall back to the PREVIOUS default (Nodes) once,
+    // and only from the automatic landing — if the user navigates to Contacts
+    // themselves they get the explanatory state and stay there, which is the
+    // honest answer to a question they asked on purpose.
+    val contactsUnsupported by contactsViewModel.routeUnsupported.collectAsState()
+    var contactsHomeFallbackApplied by remember { mutableStateOf(false) }
+    LaunchedEffect(contactsUnsupported, currentScreen) {
+        if (contactsUnsupported && !contactsHomeFallbackApplied &&
+            currentScreen is Screen.Contacts && contactsPickerSourceScreen == null
+        ) {
+            contactsHomeFallbackApplied = true
+            platformLog(TAG, "[INFO] node predates /v1/contacts — home falls back to Nodes")
+            currentScreen = Screen.ManageNodes
+        }
+    }
+
+    // User-to-user chat — a two-member community whose messages ARE CEG
+    // attestations (rendered through the same AttestationCard as every other
+    // CEG object).
+    val userChatViewModel: ai.ciris.mobile.shared.viewmodels.UserChatViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.UserChatViewModel(apiClient)
     }
     // Delegate moderation duty — the co-scrubbed conferral of slash/moderate/review
     // onto another self, with the sub-delegation depth stated up front.
@@ -888,7 +937,7 @@ fun CIRISApp(
             // Probe that second and let it upgrade the gate: AGENT iff either
             // surface reports a cognitive_state / a non-empty service map.
             try {
-                val nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
+                var nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
                 nodeVersion = nodeHealth.version
                 // Is the brain configured at all? A brain with no config runs 10 of
                 // its 22 services to serve the wizard and reports cognitive_state
@@ -900,39 +949,79 @@ fun CIRISApp(
                     val s = apiClient.getSetupStatus().data
                     s.setup_required && !s.has_env_file
                 }.getOrDefault(false)
-                var mode = ai.ciris.mobile.shared.models.clientModeFrom(
-                    nodeHealth.cognitiveState, nodeHealth.serviceCount, brainUnconfigured
+                // NODE VENDOR DRIFT #16 (restored after the 2.9.28 re-vendor
+                // dropped it): the folded-brain THREE-state probe (CIRISServer#390).
+                // "No brain", "brain answering" and "brain attached but not
+                // answering yet" are three different facts; the re-vendor collapsed
+                // the third into the first, which latches NODE against a brain we
+                // KNOW exists.
+                var probe = ai.ciris.mobile.shared.models.clientModeFrom(
+                    nodeHealth.cognitiveState, nodeHealth.serviceCount,
+                    nodeHealth.agentFolded, nodeHealth.agentReachable,
+                    brainUnconfigured,
                 )
-                if (mode.isNode) {
-                    // Bare node health — ask the brain whether it is running on top.
-                    // brainUnconfigured is passed here too: without it this probe
-                    // sees "SETUP" and promotes the half-started brain straight back
-                    // to AGENT, undoing the gate above.
-                    runCatching { apiClient.getSystemStatus() }
-                        .onSuccess { sys ->
-                            mode = ai.ciris.mobile.shared.models.clientModeFrom(
-                                sys.cognitive_state, sys.services_total, brainUnconfigured
+                // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
+                // brain on a daemon thread AFTER the node composes, so a probe at
+                // READY can legitimately see folded=true/reachable=false.
+                if (probe.undetermined) {
+                    val maxModePolls = ai.ciris.mobile.shared.ui.components.StartupBudget.seconds()
+                    var modePolls = 0
+                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s")
+                    while (probe.undetermined && modePolls < maxModePolls) {
+                        kotlinx.coroutines.delay(1000)
+                        modePolls++
+                        runCatching { apiClient.getNodeHealth(nodeBaseUrl) }.onSuccess { nh ->
+                            nodeHealth = nh
+                            nodeVersion = nh.version
+                            probe = ai.ciris.mobile.shared.models.clientModeFrom(
+                                nh.cognitiveState, nh.serviceCount,
+                                nh.agentFolded, nh.agentReachable,
+                                brainUnconfigured,
                             )
                         }
-                        .onFailure { e ->
-                            platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
-                        }
+                    }
                 }
-                clientMode = mode
-                // Node mode has no 22 cognitive service lights — drive the count
-                // from the gate rather than the hardcoded agent default.
-                startupViewModel.setClientMode(mode)
-                // Push the gate into the shared API client so EVERY poller that
-                // shares it stops calling AGENT-only endpoints (history / billing
-                // / llm config / WA / adapters / capacity / agent audit / verify)
-                // on a bare node — those 404/405 and just flood the log.
-                apiClient.setClientMode(mode)
-                platformLog(
-                    TAG,
-                    "[INFO][gate] clientMode=$mode (role=${nodeHealth.role}, " +
-                        "cognitive_state=${nodeHealth.cognitiveState}, services=${nodeHealth.serviceCount}, " +
-                        "version=${nodeHealth.version})",
-                )
+                if (probe.undetermined) {
+                    // Leave the gate UNSET rather than latch NODE against a brain we
+                    // KNOW exists — a node switch or the next launch can still
+                    // resolve it. Guessing here is what made a real agent render as
+                    // a bare node for the rest of the session.
+                    platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole budget — leaving clientMode unset")
+                } else {
+                    var mode = probe.mode
+                    if (mode.isNode) {
+                        // Bare node health — ask the brain whether it is running on top.
+                        // KEPT for pre-0.5.168 nodes and split deployments where the
+                        // brain has its own port. brainUnconfigured is passed here
+                        // too: without it this probe sees "SETUP" and promotes the
+                        // half-started brain straight back to AGENT.
+                        runCatching { apiClient.getSystemStatus() }
+                            .onSuccess { sys ->
+                                mode = ai.ciris.mobile.shared.models.clientModeFrom(
+                                    sys.cognitive_state, sys.services_total, brainUnconfigured
+                                )
+                            }
+                            .onFailure { e ->
+                                platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
+                            }
+                    }
+                    clientMode = mode
+                    // Node mode has no 22 cognitive service lights — drive the count
+                    // from the gate rather than the hardcoded agent default.
+                    startupViewModel.setClientMode(mode)
+                    // Push the gate into the shared API client so EVERY poller that
+                    // shares it stops calling AGENT-only endpoints (history / billing
+                    // / llm config / WA / adapters / capacity / agent audit / verify)
+                    // on a bare node — those 404/405 and just flood the log.
+                    apiClient.setClientMode(mode)
+                    platformLog(
+                        TAG,
+                        "[INFO][gate] clientMode=$mode (role=${nodeHealth.role}, " +
+                            "cognitive_state=${nodeHealth.cognitiveState}, services=${nodeHealth.serviceCount}, " +
+                            "folded=${nodeHealth.agentFolded}, reachable=${nodeHealth.agentReachable}, " +
+                            "version=${nodeHealth.version})",
+                    )
+                }
             } catch (e: Exception) {
                 // Probe failed — leave the gate unset (defaults to agent wording).
                 platformLog(TAG, "[WARN][gate] clientMode probe failed: ${e.message?.take(80)}")
@@ -976,6 +1065,12 @@ fun CIRISApp(
                             // catch-up (POST /v1/self/upgrade-owner) — never by
                             // re-running the wizard.
                             platformLog(TAG, "[INFO] Node back + $ownership after reconfigure → Login")
+                            // NODE VENDOR DRIFT #25: tell the login screen WHY it is
+                            // being shown — setup succeeded and the restart
+                            // invalidated the session BY DESIGN (CIRISServer#393).
+                            // Without this the screen is indistinguishable from a
+                            // failure.
+                            justCompletedSetup = true
                             isFirstRun = false
                             reconfiguring = false
                             startupViewModel.setKeepTimerAlive(false)
@@ -1910,6 +2005,7 @@ fun CIRISApp(
                     // Grey the sign-in button when this build has no OAuth creds wired
                     // (probed above from the node's /v1/auth/oauth/providers).
                     googleOAuthAvailable = googleOAuthAvailable,
+                    justCompletedSetup = justCompletedSetup,
                     // NOTE: no fedID sign-in option here by design — the fedID is the
                     // founder's identity, minted in the first-run wizard and accessed
                     // ONLY via the associated user-account session (log in below). It
@@ -3300,16 +3396,25 @@ fun CIRISApp(
             }
 
             Screen.Contacts -> {
-                // Contacts / Identities (Manage group): browse known federation
-                // peer store. Also reached from Delegations picker flow
-                // (contactsPickerSourceScreen != null = picker mode).
+                // Contacts: the owner's consented peers, and the node client's
+                // HOME surface. Also reached from the Delegations picker flow
+                // (contactsPickerSourceScreen != null = picker mode, which reads
+                // the WIDER peer store — a delegation target need not be a
+                // contact).
                 PlatformLogger.d(TAG, "[Screen.Contacts] Rendering contacts screen (picker=${contactsPickerSourceScreen != null})")
                 ContactsScreen(
                     viewModel = contactsViewModel,
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null
-                        currentScreen = src ?: Screen.Interact
+                        currentScreen = src ?: HOME_SCREEN
+                    },
+                    onOpenChat = { contact ->
+                        currentScreen = Screen.UserChat(
+                            contactKeyId = contact.keyId,
+                            communityId = contact.chatCommunityId,
+                            contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                        )
                     },
                     onPeerPicked = if (contactsPickerSourceScreen != null) { peer ->
                         pickedDelegationKeyId = peer.keyId
@@ -3317,6 +3422,21 @@ fun CIRISApp(
                         contactsPickerSourceScreen = null
                         currentScreen = src ?: Screen.Delegations
                     } else null,
+                )
+            }
+
+            is Screen.UserChat -> {
+                // One two-member chat. Every message renders through the same
+                // AttestationCard + hamburger as every other CEG object — the
+                // message IS an attestation and its card says so.
+                val route = currentScreen as Screen.UserChat
+                PlatformLogger.d(TAG, "[Screen.UserChat] community=${route.communityId.take(24)}…")
+                ChatScreen(
+                    viewModel = userChatViewModel,
+                    contactKeyId = route.contactKeyId,
+                    communityId = route.communityId,
+                    contactLabel = route.contactLabel,
+                    onBack = { currentScreen = Screen.Contacts },
                 )
             }
 
@@ -4826,20 +4946,23 @@ private fun CIRISTopBar(
 /**
  * The default post-auth landing screen.
  *
- * - **Node client (CIRISBuild.HAS_AGENT == false):** the agent chat
- *   (Screen.Interact) is not a surfaced nav card, so the app opens on the
- *   node-management surface (the Nodes card, NavSurface.Nodes). The Interact
- *   screen object remains defined and reachable; it is simply not the landing
- *   destination and not in the sidebar.
+ * - **Node client (CIRISBuild.HAS_AGENT == false):** the app opens on
+ *   CONTACTS. A node client's reason to exist is the people its owner can
+ *   reach, so the landing surface is the conversation list — and when that list
+ *   is empty, ContactsScreen lands with the "Add a Contact" card as the primary
+ *   action rather than an empty panel, because an empty contacts list has
+ *   exactly one useful next move. (This replaces the old ManageNodes landing:
+ *   node administration is a thing the owner does occasionally, not the thing
+ *   they opened the app for. It stays first-class in the Manage group.)
  * - **Agent build (HAS_AGENT == true):** the full agent client — the agent chat
  *   (AGENT_GROUP → NavSurface.Interact) is a first-class surfaced card, so the
- *   app opens on the reasoning-stream chat. Node management stays reachable from
- *   the Manage group.
+ *   app opens on the reasoning-stream chat. Contacts stays reachable from the
+ *   Manage group.
  *
  * Gated on the flag so the agent's adoption is a single HAS_AGENT flip.
  */
 private val HOME_SCREEN: Screen =
-    if (CIRISBuild.HAS_AGENT) Screen.Interact else Screen.ManageNodes
+    if (CIRISBuild.HAS_AGENT) Screen.Interact else Screen.Contacts
 
 /**
  * Navigation screens
@@ -4894,9 +5017,24 @@ private sealed class Screen {
     object AddFederationId : Screen()
     // Consent management (consent:replication peering + user-data consent).
     object ManageConsent : Screen()
-    // Contacts / Identities — browse the local node's known federation peer store;
-    // also used as a picker when delegating to an existing fed-ID.
+    // Contacts — the owner's consented peers (GET /v1/contacts) and the node
+    // client's HOME surface; also used as a picker (over the wider peer store)
+    // when delegating to an existing fed-ID.
     object Contacts : Screen()
+
+    /**
+     * One two-member chat. Parameterised because the room is identified by the
+     * DERIVED pair community id the contact card carries.
+     *
+     * The card's `chat_started` is deliberately NOT carried here: `POST /v1/chat`
+     * is idempotent and returns before any write for a room that exists, so the
+     * ViewModel always asks the node rather than acting on the client's guess.
+     */
+    data class UserChat(
+        val contactKeyId: String,
+        val communityId: String,
+        val contactLabel: String,
+    ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()
     // Identity Management (my self fed-ID + device roster / occurrences — add /
@@ -5014,6 +5152,9 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    // A chat keeps the Contacts card lit — it is a leaf of that surface, not a
+    // sidebar destination of its own.
+    is Screen.UserChat -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord

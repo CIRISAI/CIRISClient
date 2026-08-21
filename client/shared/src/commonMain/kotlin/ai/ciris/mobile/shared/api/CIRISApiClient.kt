@@ -47,6 +47,11 @@ import ai.ciris.mobile.shared.models.federation.SelfLoginResponse
 import ai.ciris.mobile.shared.models.federation.ClaimRemoteRequest
 import ai.ciris.mobile.shared.models.federation.ClaimRemoteResponse
 import ai.ciris.mobile.shared.models.federation.SignedKeyRecord
+import ai.ciris.mobile.shared.models.federation.AddContactResponse
+import ai.ciris.mobile.shared.models.federation.ContactListResponse
+import ai.ciris.mobile.shared.models.chat.ChatCommunity
+import ai.ciris.mobile.shared.models.chat.ChatTranscript
+import ai.ciris.mobile.shared.models.chat.SendChatMessageResult
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.viewmodels.AgentTemplateInfo
 import ai.ciris.mobile.shared.viewmodels.CheckDetail
@@ -707,6 +712,75 @@ class CIRISApiClient(
         }
     }
 
+    // ─── OAuth linking (CIRISServer#432 / #448) ──────────────────────────────
+    //
+    // POST /v1/self/oauth-link. The node has served this route all along and
+    // NOTHING called it — the generated `UsersApi.linkOauthAccount…` targets
+    // `/v1/users/{id}/oauth-links`, which comes from the AGENT's spec and which
+    // this node does not route. Two halves, each pointing at a counterpart that
+    // did not exist.
+    //
+    // It takes an EMAIL, not a provider subject id. That distinction is the
+    // whole reason the surface was unusable before: nobody can look up their own
+    // Google `sub`, so a form asking for one is a form nobody can complete. An
+    // address is the handle a person actually has. The node records it as a
+    // provisioning slot and binds the verified pair on the next sign-in.
+    /**
+     * Pre-provision an OAuth sign-in for [email] on this node.
+     *
+     * Omit [waId] to target the node's owner — the case a person linking their
+     * own account is in. Requires an owner session.
+     *
+     * Returns `true` when the node accepted the provisioning. The link itself
+     * completes on the NEXT sign-in with that provider, which is why the node
+     * answers `linked: false` here and says so in its `note`.
+     */
+    suspend fun preprovisionOAuthEmail(
+        email: String,
+        provider: String = "google",
+        waId: String? = null,
+    ): Boolean {
+        val method = "preprovisionOAuthEmail"
+        // Per-call client, matching every other hand-rolled route in this file
+        // (`getAgentMode`, `postLocalShutdown`): there is no class-level
+        // `httpClient` here, only `httpClientConfig`. My first version assumed
+        // one and CI's Kotlin compile was the first thing to say otherwise.
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 10000
+                connectTimeoutMillis = 5000
+            }
+        }
+        return try {
+            val body = buildJsonObject {
+                put("provider", provider)
+                put("email", email)
+                waId?.let { put("wa_id", it) }
+            }
+            val r = client.post("$baseUrl/v1/self/oauth-link") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body)
+            }
+            if (r.status.value in 200..299) {
+                logInfo(method, "pre-provisioned $provider sign-in for an address on ${waId ?: "the owner"}")
+                true
+            } else {
+                // Surface the node's typed reason rather than a status code: it
+                // distinguishes "already has an identity" from "not the owner",
+                // and those need different things from the person reading it.
+                logInfo(method, "node refused the link: ${r.status.value} ${r.bodyAsText()}")
+                false
+            }
+        } catch (e: Exception) {
+            logInfo(method, "link request failed: ${e.message}")
+            false
+        } finally {
+            client.close()
+        }
+    }
+
     // ─── Agent Mode (global) ─────────────────────────────────────────────────
     // GET/PUT /v1/system/agent-mode — drives federation transport posture.
     // Hand-rolled (not via SDK) because the route is newer than the SDK regen
@@ -1180,6 +1254,209 @@ class CIRISApiClient(
             decodeFederationEnvelope(response.bodyAsText(), LocalPeerState.serializer())
         } catch (e: Exception) {
             logException(method, e, "keyId=$keyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // Contacts + user-to-user chat (src/contacts_chat.rs)
+    //
+    // ALL five routes are owner-session gated (SYSTEM_ADMIN + FullAccess on an
+    // owner-BOUND node) and every refusal carries `{error, reason_id}`. The id
+    // is the difference between remedies that point in opposite directions —
+    // `contacts.unknown_fed_id` means "admit the key first", while
+    // `contacts.store_unavailable` means "go look at the node" — so these
+    // methods throw [NodeRefusal] with the id intact rather than a flattened
+    // sentence. Bodies are BARE JSON, not the federation `{data: …}` envelope.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Build the typed refusal for a non-2xx `{error, reason_id}` body.
+     *
+     * Tolerates a body that is not that shape (a proxy's HTML 502, an empty
+     * 401): [NodeRefusal.reasonId] is then null and the caller falls back to the
+     * status, which is still a better answer than a parse exception.
+     */
+    private fun nodeRefusal(method: String, status: HttpStatusCode, raw: String): NodeRefusal {
+        val obj = try { Json.parseToJsonElement(raw).jsonObject } catch (_: Exception) { null }
+        val reason = obj?.get("reason_id")?.jsonPrimitive?.contentOrNull
+        val detail = obj?.get("error")?.jsonPrimitive?.contentOrNull
+            ?: obj?.get("detail")?.jsonPrimitive?.contentOrNull
+        logError(method, "status=$status reason_id=${reason ?: "<none>"} body=${raw.take(200)}")
+        return NodeRefusal(reasonId = reason, detail = detail, statusCode = status.value)
+    }
+
+    /**
+     * The owner's contacts — every federation identity this node holds a
+     * `consent:replication:v1` grant to, with the derived pair-chat id.
+     *
+     * Hits ``GET /v1/contacts`` on the LOCAL NODE. The set is persist's
+     * revocation-FOLDED consent peer set, so a withdrawn grant is already gone
+     * and "un-contacting" needs no second call.
+     */
+    suspend fun listContacts(): ContactListResponse {
+        val method = "listContacts"
+        logInfo(method, "GET $LOCAL_NODE_URL/v1/contacts")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$LOCAL_NODE_URL/v1/contacts") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(ContactListResponse.serializer(), raw)
+            logInfo(method, "${decoded.contacts.size} contact(s) of ${decoded.total}")
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$LOCAL_NODE_URL")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Add [keyId] as a contact — emit (or return) the replication consent grant
+     * that lets the two nodes exchange this pair's rows.
+     *
+     * Hits ``POST /v1/contacts``. Idempotent: an existing grant comes back with
+     * [AddContactResponse.freshlyEmitted] `false` rather than being re-authored.
+     *
+     * The refusal worth surfacing on its own is `contacts.unknown_fed_id`: the
+     * key is not in this node's federation directory, and the remedy is to
+     * ADMIT it first (peering), not to retype it.
+     */
+    suspend fun addContact(keyId: String): AddContactResponse {
+        val method = "addContact"
+        logInfo(method, "POST $LOCAL_NODE_URL/v1/contacts key_id=${keyId.take(16)}…")
+        val client = federationHttpClient()
+        return try {
+            val body = buildJsonObject { put("key_id", keyId) }
+            val response = client.post("$LOCAL_NODE_URL/v1/contacts") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(AddContactResponse.serializer(), raw)
+            logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$LOCAL_NODE_URL")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Open (or re-open) the two-member chat community with [keyId].
+     *
+     * Hits ``POST /v1/chat``. The community id is DERIVED from the two key_ids
+     * sorted, so both ends dial the same room; [ChatCommunity.freshlyCreated] is
+     * `false` when the existing roster row was returned.
+     *
+     * Refuses `chat.not_a_contact` when no replication grant stands — a room
+     * whose messages cannot replicate to the other member is one nothing ever
+     * leaves, so [addContact] is the prerequisite, not a nicety.
+     */
+    suspend fun startChat(keyId: String): ChatCommunity {
+        val method = "startChat"
+        logInfo(method, "POST $LOCAL_NODE_URL/v1/chat key_id=${keyId.take(16)}…")
+        val client = federationHttpClient()
+        return try {
+            val body = buildJsonObject { put("key_id", keyId) }
+            val response = client.post("$LOCAL_NODE_URL/v1/chat") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(ChatCommunity.serializer(), raw)
+            logInfo(method, "community=${decoded.communityId.take(24)}… members=${decoded.memberKeyIds.size} fresh=${decoded.freshlyCreated}")
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$LOCAL_NODE_URL")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * The community transcript, OLDEST FIRST — every chat row authored by an
+     * ACTIVE member, with the structural composers already folded into each
+     * row's `status`.
+     *
+     * Hits ``GET /v1/chat/{communityId}/messages``. Anchored on the roster, not
+     * on the caller: the membership gate (`chat.not_a_member`) is the only thing
+     * between a non-member and the content, and owning the node is NOT
+     * membership in the cohort.
+     */
+    suspend fun listChatMessages(communityId: String): ChatTranscript {
+        val method = "listChatMessages"
+        logInfo(method, "GET $LOCAL_NODE_URL/v1/chat/$communityId/messages")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$LOCAL_NODE_URL/v1/chat/$communityId/messages") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(ChatTranscript.serializer(), raw)
+            logInfo(method, "${decoded.messages.size} message(s) of ${decoded.total}")
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$LOCAL_NODE_URL")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Say something in [communityId] — emit a `scores` attestation on
+     * `chat:message:v1`, authored by the OWNER's identity key (the human wrote
+     * it, not the box) and placed at the `community` tier.
+     *
+     * Hits ``POST /v1/chat/{communityId}/messages``.
+     *
+     * [SendChatMessageResult.message] `null` is a SUCCESS: the row landed and
+     * only the read-back projection did not resolve. Callers refresh the list;
+     * reporting a failed send there would be a lie about a committed write.
+     */
+    suspend fun sendChatMessage(
+        communityId: String,
+        body: String,
+        contentType: String? = null,
+    ): SendChatMessageResult {
+        val method = "sendChatMessage"
+        logInfo(method, "POST $LOCAL_NODE_URL/v1/chat/$communityId/messages bytes=${body.length}")
+        val client = federationHttpClient()
+        return try {
+            val payload = buildJsonObject {
+                put("body", body)
+                contentType?.let { put("content_type", it) }
+            }
+            val response = client.post("$LOCAL_NODE_URL/v1/chat/$communityId/messages") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(payload.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(SendChatMessageResult.serializer(), raw)
+            logInfo(
+                method,
+                "attestation=${decoded.attestationId.take(24)}… readback=${if (decoded.message != null) "ok" else "deferred"}",
+            )
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$LOCAL_NODE_URL")
             throw e
         } finally {
             client.close()
@@ -1954,17 +2231,37 @@ class CIRISApiClient(
         token: String? = accessToken,
         ownerPassword: String? = null,
         ownerUsername: String? = null,
+        // NODE VENDOR DRIFT #11 (restored after the 2.9.28 re-vendor dropped it):
+        // an OAuth owner has NO password, so without these two the claim succeeds
+        // and the owner can then authenticate to NOTHING (CIRISServer#384).
+        ownerOauthProvider: String? = null,
+        ownerOauthExternalId: String? = null,
     ): ClaimRemoteResponse {
         val method = "claimRemote"
-        logInfo(method, "POST $localNodeUrl/v1/setup/claim-remote node_code=${nodeCode.take(20)}… cohort=$cohortScope ownerPw=${ownerPassword != null}")
+        // Log WHETHER an owner session path is being installed, and which kind.
+        // #384 was invisible for exactly this reason: the claim reported success
+        // and nothing said the owner had no way back in.
+        val sessionPath = when {
+            ownerPassword != null -> "password"
+            ownerOauthProvider != null && ownerOauthExternalId != null -> "oauth:$ownerOauthProvider"
+            else -> "NONE (owner will have no session path)"
+        }
+        logInfo(method, "POST $localNodeUrl/v1/setup/claim-remote node_code=${nodeCode.take(20)}… cohort=$cohortScope owner_session=$sessionPath")
         val client = federationHttpClient()
         return try {
+            // Both halves or neither — a half pair is a ROOT cert the OAuth
+            // sign-in lookup cannot key on, which silently reproduces #384.
+            val oauthPair = ownerOauthProvider
+                ?.takeIf { it.isNotBlank() }
+                ?.let { pr -> ownerOauthExternalId?.takeIf { it.isNotBlank() }?.let { pr to it } }
             val request = ClaimRemoteRequest(
                 nodeCode = nodeCode,
                 claimPin = claimPin,
                 cohortScope = cohortScope,
                 ownerPassword = ownerPassword,
                 ownerUsername = ownerUsername,
+                ownerOauthProvider = oauthPair?.first,
+                ownerOauthExternalId = oauthPair?.second,
             )
             val bodyText = jsonConfig.encodeToString(ClaimRemoteRequest.serializer(), request)
             val response = client.post("$localNodeUrl/v1/setup/claim-remote") {
@@ -2529,6 +2826,55 @@ class CIRISApiClient(
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl, sourceDir=$sourceDir")
             throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * NODE VENDOR DRIFT #12 (restored after the 2.9.28 re-vendor dropped it):
+     * **does this folder hold a portable keyset?** (CIRISServer#404)
+     *
+     * Read-only: it discovers, it does not install. Ask it after a folder is
+     * picked and before the operator commits, so "I have no idea if this folder
+     * has the materials" stops being the state they are left in.
+     *
+     * A transport failure is NOT reported as "no keyset" — that would turn "we
+     * could not ask" into "we asked and there is nothing there", which are
+     * different facts with different remedies. It returns `null` for the first
+     * and a verdict for the second, and the caller must render them differently.
+     */
+    suspend fun inspectKeysetFolder(
+        dir: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.KeysetInspection? {
+        val method = "inspectKeysetFolder"
+        logInfo(method, "POST $nodeUrl/v1/self/identity/inspect dir=$dir")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.KeysetInspectRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.KeysetInspectRequest(dir = dir),
+            )
+            val response = client.post("$nodeUrl/v1/self/identity/inspect") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                logWarn(method, "inspect refused: ${response.status}: ${raw.take(200)}")
+                null
+            } else {
+                jsonConfig.decodeFromString(
+                    ai.ciris.mobile.shared.models.federation.KeysetInspection.serializer(),
+                    raw,
+                )
+            }
+        } catch (e: Exception) {
+            logWarn(method, "inspect unavailable: ${e.message}")
+            null
         } finally {
             client.close()
         }
@@ -5417,21 +5763,28 @@ class CIRISApiClient(
     }
 
     /**
-     * Probe the node's structured server health at `/v1/health` (unauthenticated —
+     * NODE VENDOR DRIFT #26 (restored after the 2.9.28 re-vendor dropped it):
+     * probe the node's MERGED health at `/v1/system/health` (unauthenticated —
      * liveness is public). Returns the [NodeHealth] facts that drive the universal
      * client's node-vs-agent gate ([ai.ciris.mobile.shared.models.ClientMode]) and
      * the version-mismatch banner: the node `version`, its `role`
-     * (`"fabric-node"` for a bare node), and the optional `cognitive_state` (present
-     * only when an agent enriches the endpoint).
+     * (`"fabric-node"` for a bare node), the optional `cognitive_state`, and the
+     * three-state `data.agent.{folded,reachable}` verdict.
      *
-     * `/v1/health` is a SUBSTRATE prefix — served natively by the NODE on :4243 and
-     * never proxied from the brain, and the Python brain on :8080 does not serve it
-     * at all. Callers must therefore pass the NODE base URL; the [baseUrl] default
-     * is kept only for clients already constructed against the node.
+     * `/v1/system/health` (not `/v1/health`) since server 0.5.168 (CIRISServer#390):
+     * that endpoint is the node's own health enriched with the folded brain's
+     * `cognitive_state`/`services` plus `agent.{folded,reachable}` — a strict
+     * superset of `/v1/health` (`version` still arrives for the mismatch banner),
+     * and the ONLY surface where a folded agent does not read as a bare node.
+     * The re-vendor pointed this back at `/v1/health`, which cannot answer the
+     * folded question at all, so every folded agent read as a bare node.
+     * Still served natively by the NODE on :4243; callers must pass the NODE base
+     * URL — the [baseUrl] default is kept only for clients already constructed
+     * against the node.
      */
     suspend fun getNodeHealth(nodeUrl: String = baseUrl): NodeHealth {
         val method = "getNodeHealth"
-        logDebug(method, "Probing node health at $nodeUrl/v1/health")
+        logDebug(method, "Probing node health at $nodeUrl/v1/system/health")
 
         val client = io.ktor.client.HttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
@@ -5442,7 +5795,7 @@ class CIRISApiClient(
         }
 
         return try {
-            val response = client.get("$nodeUrl/v1/health") {
+            val response = client.get("$nodeUrl/v1/system/health") {
                 authHeader()?.let { header("Authorization", it) }
             }
 
@@ -5450,21 +5803,7 @@ class CIRISApiClient(
                 throw RuntimeException("Node health failed: ${response.status}")
             }
 
-            val body = response.bodyAsText()
-            val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
-            val data = json.parseToJsonElement(body).jsonObject["data"]?.jsonObject
-
-            val cognitiveState = data?.get("cognitive_state")?.jsonPrimitive?.contentOrNull
-            var serviceCount = 0
-            data?.get("services")?.jsonObject?.forEach { (_, _) -> serviceCount++ }
-
-            NodeHealth(
-                status = data?.get("status")?.jsonPrimitive?.contentOrNull ?: "unknown",
-                role = data?.get("role")?.jsonPrimitive?.contentOrNull,
-                version = data?.get("version")?.jsonPrimitive?.contentOrNull,
-                cognitiveState = cognitiveState,
-                serviceCount = serviceCount
-            )
+            parseNodeHealth(response.bodyAsText())
         } finally {
             client.close()
         }
@@ -13240,18 +13579,60 @@ data class SystemHealthData(
 )
 
 /**
- * Structured server health from `/v1/health` — the facts the universal client's
- * node-vs-agent gate keys off (see [ai.ciris.mobile.shared.models.ClientMode]).
+ * NODE VENDOR DRIFT #26 (restored after the 2.9.28 re-vendor dropped it):
+ * the node's merged health from `/v1/system/health` — the facts the universal
+ * client's node-vs-agent gate keys off (see [ai.ciris.mobile.shared.models.ClientMode]).
  * A bare node reports `role="fabric-node"` with no [cognitiveState] and an empty
- * service map; an agent enriches the endpoint with [cognitiveState] + services.
+ * service map; a folded agent's [cognitiveState] + services are merged over the
+ * node's own health by the server (0.5.168, CIRISServer#390).
+ *
+ * [agentFolded]/[agentReachable] carry the server's THREE-state verdict
+ * (`data.agent.{folded,reachable}`): no brain, brain answering, and brain
+ * attached-but-not-answering are different facts. The defaults are `false` so a
+ * pre-0.5.168 envelope (no `agent` block) parses as "nothing known about a
+ * brain" — the shape the two-arg `clientModeFrom` already handled.
  */
 data class NodeHealth(
     val status: String,
     val role: String?,
     val version: String?,
     val cognitiveState: String?,
-    val serviceCount: Int
+    val serviceCount: Int,
+    val agentFolded: Boolean = false,
+    val agentReachable: Boolean = false
 )
+
+/**
+ * NODE VENDOR DRIFT #26 (restored after the 2.9.28 re-vendor dropped it):
+ * parse a `/v1/system/health` response body into [NodeHealth]. Pure — split out
+ * of [CIRISApiClient.getNodeHealth] so the wire contract is testable without
+ * Ktor (the DeadmitRefusalWireTest pattern): the Kotlin read is pinned against
+ * the envelopes the Rust side emits (`tests/folded_health.rs`).
+ *
+ * Tolerates a bare object (no `{"data":{…}}` envelope) for the same reason the
+ * server's merge does (`src/health.rs`): being strict over a shape difference
+ * would reintroduce the exact failure this surface exists to close — a real
+ * agent rendered as a bare node.
+ */
+fun parseNodeHealth(body: String): NodeHealth {
+    val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+    val root = json.parseToJsonElement(body).jsonObject
+    val data = root["data"]?.jsonObject ?: root
+
+    var serviceCount = 0
+    data["services"]?.jsonObject?.forEach { (_, _) -> serviceCount++ }
+    val agent = data["agent"]?.jsonObject
+
+    return NodeHealth(
+        status = data["status"]?.jsonPrimitive?.contentOrNull ?: "unknown",
+        role = data["role"]?.jsonPrimitive?.contentOrNull,
+        version = data["version"]?.jsonPrimitive?.contentOrNull,
+        cognitiveState = data["cognitive_state"]?.jsonPrimitive?.contentOrNull,
+        serviceCount = serviceCount,
+        agentFolded = agent?.get("folded")?.jsonPrimitive?.booleanOrNull ?: false,
+        agentReachable = agent?.get("reachable")?.jsonPrimitive?.booleanOrNull ?: false
+    )
+}
 
 data class UnifiedTelemetryData(
     val health: String,
