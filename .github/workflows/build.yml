@@ -62,6 +62,11 @@ jobs:
         # compiled Python — may be tracked. No clone, no network.
         run: python3 packaging/check_vendoring.py
 
+      - name: Compatibility matrix
+        # One row per release, append-only; exactly one row must match VERSION.
+        # A release without its matrix row does not merge (FSD §6).
+        run: python3 compat/validate.py
+
       - name: Flavor-extra pins
         # ciris-client[node]==X must resolve the X payload: both extras pin
         # exactly VERSION, or a stale resolver pairs with a fresh payload.

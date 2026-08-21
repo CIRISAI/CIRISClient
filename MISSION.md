@@ -89,6 +89,7 @@ the report so a worklist is never mistaken for a verdict.
 | `nav-gate-registry` | normative | A surface still gated on a closed issue is a capability withheld for no reason |
 | `substrate-binaries` | code | An artifact missing its substrate is an artifact that fails on a user's device, not in CI |
 | `toolchain` | code | Fails at the start of the day rather than twenty minutes into a build |
+| `compat-matrix` | normative | "Which client works with which node, and what does it do when they mismatch" must be a published, validated record — not support folklore (`compat/matrix.json`, FSD §6) |
 
 ## 4. Dependencies & gating
 

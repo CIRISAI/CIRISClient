@@ -404,3 +404,22 @@ def generated_api_drift(ctx: Context) -> Result:
         UNIMPLEMENTED,
         "generator is not wired into the build; drift is unchecked (Conformance#86 §4)",
     )
+
+
+@gate("compat-matrix", "Does the compatibility matrix carry this release's row?")
+def compat_matrix(ctx: Context) -> Result:
+    """The published client↔node record (FSD §6): one row per release,
+    append-only, exactly one row for the current VERSION. The same validation
+    CI runs (compat/validate.py) — one implementation, two callers.
+    """
+    from compat.validate import validate
+
+    problems = validate(Path(__file__).resolve().parents[1])
+    if problems:
+        return Result(
+            "compat-matrix",
+            FAIL,
+            f"{len(problems)} problem(s); first: {problems[0]}",
+            {"problems": problems},
+        )
+    return Result("compat-matrix", PASS, "matrix valid; current VERSION row present")

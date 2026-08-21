@@ -1,0 +1,24 @@
+{
+  "schema": "ciris-client-compat/v1",
+  "_doc": "One row per client release, append-only: a released row never mutates; a correction appends a superseding row naming what it corrects in notes. node_min is the oldest node this release degrades GRACEFULLY against — every absent capability renders an explained state, not an error. Validated by compat/validate.py (CI) and the compat-matrix readiness gate. FSD/ONE_CLIENT_N_NODES.md §6.",
+  "rows": [
+    {
+      "client_version": "0.5.185",
+      "flavors": ["node", "agent"],
+      "node_min": "0.5.168",
+      "node_min_reason": "the three-state /v1/system/health merge (folded brain, CIRISServer#390); older nodes lack data.agent.* and still parse, but chat/contacts absence pre-0.5.185 is explained by the contacts_node_too_old strings, and pre-0.5.168 brain detection degrades to the two-state probe",
+      "node_max_tested": "0.5.185",
+      "agent_min_tested": "2.9.28",
+      "capabilities": ["contacts", "chat", "commons.ballots"],
+      "capabilities_note": "surface ids shipped and node-version-dependent at this release; the full capability registry (FSD §4.1) supersedes this list when it lands",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "the node serves no OpenAPI spec yet — evidence/blocked_upstream.tsv; nulls retire when FSD §5 lands"
+      },
+      "locale_bundle": { "languages": 29, "keys": 3833 },
+      "notes": "seed row, written at the three-way merge (client/VENDORING.md §1)"
+    }
+  ]
+}
