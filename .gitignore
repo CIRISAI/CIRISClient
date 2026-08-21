@@ -13,6 +13,23 @@ client/.gradle/
 client/build/
 client/*/build/
 client/local.properties
+
+# Rehydrated substrate artifacts — other repositories' release binaries, staged
+# locally per client/VENDORING.md §2 so device builds can find them. They must
+# never be vendored here; `git add -A` must not stage them, and bypassing this
+# takes a deliberate `git add -f`. packaging/check_vendoring.py refuses them as
+# a second line of defense.
+client/androidApp/wheels/
+client/androidApp/src/main/jniLibs/
+client/androidApp/src/main/assets/bin/
+client/iosApp/Resources/
+client/iosApp/Resources.zip
+client/iosApp/Frameworks/
+client/iosApp/app_packages_native/
+
+# Runtime state the CIRISServer tree tracks by mistake — never here.
+client/**/.ciris_keys/
+client/iosApp/substrate.lock.json
 dist/
 build/
 *.egg-info/

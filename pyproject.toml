@@ -15,8 +15,14 @@ dependencies = []
 [project.optional-dependencies]
 # One flavor per extra, never both: they are the same client compiled with
 # CIRISBuild.HAS_AGENT false and true. See README § The consumption contract.
-node = ["ciris-client-node"]
-agent = ["ciris-client-agent"]
+#
+# Pinned to this distribution's own version: `ciris-client[node]==X` must
+# resolve the X payload, or pip pairs an old resolver with whatever payload
+# published last and the split surfaces only at runtime. The pin equals VERSION;
+# packaging/check_pins.py asserts that in CI, and a release bump touches both
+# in the same commit.
+node = ["ciris-client-node==0.5.185"]
+agent = ["ciris-client-agent==0.5.185"]
 # The build-readiness gates (this repo's original contents). Their framework
 # lives in CIRISGrace and is not published yet, which is why it is an extra and
 # not a dependency — `pip install ciris-client` must not fail on it.

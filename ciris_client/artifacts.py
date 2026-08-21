@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import importlib
 import json
+import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -128,9 +129,44 @@ def manifest(flavor: str | None = None) -> dict[str, Any]:
     return data
 
 
+def _refuse_placeholder(data: dict[str, Any], flavor: str) -> None:
+    if data.get("placeholder"):
+        raise ArtifactUnavailable(
+            f"the {flavor!r} payload is a PLACEHOLDER — it was built without a "
+            f"Gradle artifact staged into it, so there is no client here.\n"
+            f"    reason: {data.get('placeholder_reason', 'not recorded')}\n"
+            f"Build it with: ./gradlew -p client :desktopApp:packageUberJarForCurrentOS"
+            + (" -PhasAgent=true" if flavor == "agent" else "")
+        )
+
+
 def artifacts(flavor: str | None = None) -> list[dict[str, Any]]:
-    """Every artifact the installed payload carries, as manifest entries."""
-    return list(manifest(flavor).get("artifacts", []))
+    """Every artifact the installed payload carries, as manifest entries.
+
+    Raises :class:`ArtifactUnavailable` on a placeholder payload — callers are
+    told to query this rather than assume artifact kinds, so an empty list here
+    must mean "a real build carrying nothing", never "there was no build". Use
+    :func:`manifest` to introspect a placeholder diagnostically.
+    """
+    flavor = flavor or _sole_flavor()
+    data = manifest(flavor)
+    _refuse_placeholder(data, flavor)
+    return list(data.get("artifacts", []))
+
+
+def _current_platform() -> str:
+    """This interpreter's platform, in the manifest's `platform` vocabulary."""
+    import platform as _platform
+
+    machine = _platform.machine().lower()
+    arch = {"amd64": "x86_64", "aarch64": "arm64"}.get(machine, machine)
+    if sys.platform.startswith("linux"):
+        return f"linux-{arch}"
+    if sys.platform == "darwin":
+        return f"darwin-{arch}"
+    if sys.platform in ("win32", "cygwin"):
+        return f"windows-{arch}"
+    return f"{sys.platform}-{arch}"
 
 
 def artifact_path(kind: str, flavor: str | None = None) -> Path:
@@ -142,15 +178,7 @@ def artifact_path(kind: str, flavor: str | None = None) -> Path:
     """
     flavor = flavor or _sole_flavor()
     data = manifest(flavor)
-
-    if data.get("placeholder"):
-        raise ArtifactUnavailable(
-            f"the {flavor!r} payload is a PLACEHOLDER — it was built without a "
-            f"Gradle artifact staged into it, so there is no client here.\n"
-            f"    reason: {data.get('placeholder_reason', 'not recorded')}\n"
-            f"Build it with: ./gradlew -p client :desktopApp:packageUberJarForCurrentOS"
-            + (" -PhasAgent=true" if flavor == "agent" else "")
-        )
+    _refuse_placeholder(data, flavor)
 
     entries = {a["kind"]: a for a in data.get("artifacts", [])}
     if kind not in entries:
@@ -159,7 +187,22 @@ def artifact_path(kind: str, flavor: str | None = None) -> Path:
             f"{sorted(entries) or '[]'}"
         )
 
-    path = Path(data["_root"]) / entries[kind]["path"]
+    entry = entries[kind]
+
+    # A platform-stamped artifact on the wrong OS is not a client, it is a
+    # confusing crash later. Refuse here, with both names, rather than there.
+    built_for = entry.get("platform")
+    if built_for is not None and built_for != _current_platform():
+        raise ArtifactUnavailable(
+            f"the installed {kind!r} was built for {built_for!r} but this "
+            f"machine is {_current_platform()!r}. The payload wheel carries one "
+            f"OS's desktop runtime; install the payload built for this platform "
+            f"(or build locally: ./gradlew -p client "
+            f":desktopApp:packageUberJarForCurrentOS"
+            + (" -PhasAgent=true" if flavor == "agent" else "") + ")"
+        )
+
+    path = Path(data["_root"]) / entry["path"]
     if not path.is_file():
         raise ArtifactUnavailable(
             f"manifest lists {kind!r} at {path}, but the file is missing — the "

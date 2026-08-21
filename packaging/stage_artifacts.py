@@ -71,11 +71,16 @@ def vendoring() -> dict[str, str]:
             out["repo"] = cell.split("`")[1] if "`" in cell else cell
         if len(out) == 2:
             break
-    if "commit" not in out:
+    missing = {"commit", "repo"} - out.keys()
+    if missing:
         # AGENTS.md, Gate Rules: a parser that finds nothing where the construct
         # plainly exists must fail loudly rather than emit a manifest that is
-        # quietly missing its provenance.
-        sys.exit("could not read the vendored commit from client/VENDORING.md §1")
+        # quietly missing HALF its provenance — a commit with no repo does not
+        # identify which repository the bundled source came from.
+        sys.exit(
+            f"could not read {sorted(missing)} from client/VENDORING.md §1 — "
+            f"both the Source repo and Commit rows are required"
+        )
     return out
 
 
@@ -104,8 +109,11 @@ def main() -> int:
         "--artifact",
         action="append",
         default=[],
-        metavar="KIND=PATH",
-        help="artifact to stage, e.g. desktop-uber-jar=client/.../ciris.jar (globs ok)",
+        metavar="KIND[@PLATFORM]=PATH",
+        help="artifact to stage, e.g. desktop-uber-jar@linux-x86_64=client/.../"
+             "ciris.jar (globs ok). A platform-specific artifact staged without "
+             "its @PLATFORM ships silently broken to every other OS — the "
+             "desktop uber-jar embeds compose.desktop.currentOs.",
     )
     ap.add_argument(
         "--placeholder",
@@ -151,21 +159,24 @@ def main() -> int:
         for spec in args.artifact:
             if "=" not in spec:
                 sys.exit(f"--artifact wants KIND=PATH, got {spec!r}")
-            kind, _, pattern = spec.partition("=")
+            kind_spec, _, pattern = spec.partition("=")
+            kind, _, plat = kind_spec.partition("@")
             src = resolve(pattern)
             target = dest / src.name
             shutil.copy2(src, target)
             size = target.stat().st_size
             total += size
-            manifest["artifacts"].append(
-                {
-                    "kind": kind,
-                    "path": src.name,
-                    "bytes": size,
-                    "sha256": sha256(target),
-                }
-            )
-            print(f"[staged] {kind:<22} {src}  ({size / 1048576:.2f} MiB)")
+            entry = {
+                "kind": kind,
+                "path": src.name,
+                "bytes": size,
+                "sha256": sha256(target),
+            }
+            if plat:
+                entry["platform"] = plat
+            manifest["artifacts"].append(entry)
+            tag = f"{kind}@{plat}" if plat else kind
+            print(f"[staged] {tag:<22} {src}  ({size / 1048576:.2f} MiB)")
 
         if total > PYPI_LIMIT_BYTES:
             sys.exit(

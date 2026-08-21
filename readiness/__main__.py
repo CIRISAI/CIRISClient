@@ -16,7 +16,16 @@ import json
 import sys
 from pathlib import Path
 
-from grace.gate import Context, registry, render, report, run_gates
+try:
+    from grace.gate import Context, registry, render, report, run_gates
+except ImportError:  # base install: the gate framework is the `readiness` extra
+    sys.stderr.write(
+        "the readiness gates need the CIRISGrace gate framework, which a plain\n"
+        "`pip install ciris-client` deliberately does not pull in.\n"
+        "    pip install 'ciris-client[readiness]'   # once ciris-grace publishes\n"
+        "    pip install -e ../CIRISGrace            # from a sibling checkout today\n"
+    )
+    sys.exit(3)
 
 from . import client  # importing registers the gates
 
