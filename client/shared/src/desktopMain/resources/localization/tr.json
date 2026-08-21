@@ -829,7 +829,19 @@
   "memory_total_nodes": "Toplam Düğüm",
   "memory_try_graph": "Grafik Görünümünü Dene",
   "mesh": {
-    "announce_requirement": "Kendini duyurmayan bir düğüm, mesh üzerinde hizmet erişimi ve ajan hizmetleri alamaz. Anlaşmanın acil durdurma anahtarı yalnızca ulaşabildiği bir düğüme karşı anlamlıdır; bu yüzden erişilemeyen bir düğüme zaten baştan hizmet verilmez."
+    "announce_requirement": "Kendini duyurmayan bir düğüm, mesh üzerinde hizmet erişimi ve ajan hizmetleri alamaz. Anlaşmanın acil durdurma anahtarı yalnızca ulaşabildiği bir düğüme karşı anlamlıdır; bu yüzden erişilemeyen bir düğüme zaten baştan hizmet verilmez.",
+    "private_groups": {
+      "description": "Adresleri dizin durumundan türetilen ve hiçbir zaman duyurulmayan gruplar — üyelik seçtiğiniz kapsamda anonimdir ve düğüm operatörleri tarafından beklemedeyken kriptografik olarak opaktır (CC 5.4.6). Alt katman hazırlanmıştır; yüzey, kenar v18 benimsenmesiyle gelir.",
+      "title": "Özel Gruplar"
+    },
+    "video": {
+      "description": "Ağın kendisi üzerinde canlı sesli ve görüntülü iletişim — oturum katılımı, abone olma ve yayın yapma, her şey gibi aynı doğrulanmış omurga üzerinde ilerler, uçtan uca anahtarlanır ve akış ortasında çerçeve düşürmeden iyileşir. Kenar v18 serisinde kanıtlanmıştır; düğüm tarafı yüzey, onun benimsenmesiyle gelir.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "Tam oy düzlemi: M-of-N uzlaşma eşikleri tel üzerinde doğrulanır ve kuorum-zaman-üstü sıralaması alt katmanda yer alır. Commons'ın itiraz oyları zaten gönderilir — bu, birinci sınıf, doğrulanabilir bir ilkel olarak oylama.",
+      "title": "Oylama"
+    }
   },
   "mesh_config": {
     "consumption": {

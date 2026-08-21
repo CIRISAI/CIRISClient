@@ -829,7 +829,19 @@
   "memory_total_nodes": "Jimillar Kumburan",
   "memory_try_graph": "Yi amfani da kallon zane don ganin alaƙoƙi",
   "mesh": {
-    "announce_requirement": "Kumburin da bai sanar da kansa ba ba ya samun damar amfani da ayyuka a kan mesh kuma ba ya samun ayyukan wakili. Maɓallin kashewa na accord yana da ma'ana ne kawai a kan kumburin da zai iya kaiwa gare shi, don haka tun farko ba a taba bautar wa kumburin da ba a iya kaiwa gare shi ba."
+    "announce_requirement": "Kumburin da bai sanar da kansa ba ba ya samun damar amfani da ayyuka a kan mesh kuma ba ya samun ayyukan wakili. Maɓallin kashewa na accord yana da ma'ana ne kawai a kan kumburin da zai iya kaiwa gare shi, don haka tun farko ba a taba bautar wa kumburin da ba a iya kaiwa gare shi ba.",
+    "private_groups": {
+      "description": "Ƙungiyoyi waɗanda adireshinsu ake samo daga yanayin directory kuma ba a taɓa sanar da su ba — zama memba yana asirce a matakin da ka zaɓa, kuma an rufe shi ta hanyar sirri ga masu tafiyar da kumburi yayin ajiya (CC 5.4.6). Bangaren substrate a shirye yake; bayyanar fasalin zai zo tare da amincin edge v18.",
+      "title": "Ƙungiyoyin Sirri"
+    },
+    "video": {
+      "description": "Sauti da bidiyo kai-tsaye ta hanyar mesh kanta — shiga zaman aiki, biyan kuɗi, da bugawa duk suna tafiya a kan tsarin da aka tabbatar iri ɗaya kamar sauran abubuwa, tare da rufaffiyar sirri daga karshe zuwa karshe, tana warkarwa a tsakiyar kwararowa ba tare da zubar da firam ba. An tabbatar a jerin edge v18; bayyanar fasalin daga bangaren kumburi zai zo tare da amincinsa.",
+      "title": "Bidiyo"
+    },
+    "voting": {
+      "description": "Cikakken tsarin zaɓe: iyakokin yarjejeniya na M-daga-N da ake tabbatarwa a wire, da tsarin oda na quorum-sama-lokaci a cikin substrate. Zaɓen ƴan-adawa na Commons ya riga ya fara aiki — wannan zaɓe ne a matsayin asali na farko, mai tabbatarwa.",
+      "title": "Zaɓe"
+    }
   },
   "mesh_config": {
     "consumption": {

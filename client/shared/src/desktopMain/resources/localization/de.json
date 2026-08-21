@@ -829,7 +829,19 @@
   "memory_total_nodes": "Knoten gesamt",
   "memory_try_graph": "Graph ansehen",
   "mesh": {
-    "announce_requirement": "Ein Knoten, der sich nicht ankündigt, erhält im Mesh keinen Dienstzugang und keine Agentendienste. Der Not-Aus-Schalter des Accords ist nur gegenüber einem Knoten wirksam, den er erreichen kann — ein nicht erreichbarer Knoten wird deshalb von vornherein nicht bedient."
+    "announce_requirement": "Ein Knoten, der sich nicht ankündigt, erhält im Mesh keinen Dienstzugang und keine Agentendienste. Der Not-Aus-Schalter des Accords ist nur gegenüber einem Knoten wirksam, den er erreichen kann — ein nicht erreichbarer Knoten wird deshalb von vornherein nicht bedient.",
+    "private_groups": {
+      "description": "Gruppen, deren Adressen aus dem Verzeichniszustand abgeleitet werden und nie angekündigt werden — die Mitgliedschaft ist im von Ihnen gewählten Bereich anonym und für Knotenbetreiber im Ruhezustand kryptographisch undurchsichtig (CC 5.4.6). Die Substratseite ist aktiviert; die Oberflächenseite kommt mit der Edge-v18-Adoption.",
+      "title": "Private Gruppen"
+    },
+    "video": {
+      "description": "Live-Audio und -Video über das Mesh selbst — Sitzungsbeitritt, Abonnement und Veröffentlichung nutzen die gleiche überprüfte Rückgratstruktur wie alles andere, schlüsselverkapselt von Ende zu Ende, mit Heilung während des Durchsatzes ohne Bildverlust. In der Edge-v18-Reihe bewährt; die Knotenseite der Oberflächenseite kommt mit ihrer Adoption.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "Die vollständige Abstimmungsebene: M-of-N-Schwellwerte für Übereinstimmung, überprüft auf der Leitung, und Quorum-über-Zeit-Ordnung im Substrat. Die Abstimmungsballots der Commons werden bereits ausgeliefert — dies ist Abstimmung als primitives Element erster Klasse, überprüfbar.",
+      "title": "Abstimmung"
+    }
   },
   "mesh_config": {
     "consumption": {

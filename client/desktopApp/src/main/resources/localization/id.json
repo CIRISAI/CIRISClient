@@ -829,7 +829,19 @@
   "memory_total_nodes": "Total Node",
   "memory_try_graph": "Coba Tampilan Graf",
   "mesh": {
-    "announce_requirement": "Node yang tidak mengumumkan diri tidak mendapat akses layanan di mesh dan tidak mendapat layanan agen. Sakelar pemutus accord hanya bermakna terhadap node yang dapat dijangkaunya, jadi node yang tak terjangkau memang tidak pernah dilayani sejak awal."
+    "announce_requirement": "Node yang tidak mengumumkan diri tidak mendapat akses layanan di mesh dan tidak mendapat layanan agen. Sakelar pemutus accord hanya bermakna terhadap node yang dapat dijangkaunya, jadi node yang tak terjangkau memang tidak pernah dilayani sejak awal.",
+    "private_groups": {
+      "description": "Grup yang alamatnya berasal dari status direktori dan tidak pernah diumumkan — keanggotaan anonim pada cakupan yang Anda pilih, dan secara kripto opak untuk operator node saat istirahat (CC 5.4.6). Sisi substrat sudah siap; permukaan tiba dengan adopsi edge v18.",
+      "title": "Grup Pribadi"
+    },
+    "video": {
+      "description": "Audio dan video langsung melalui mesh itu sendiri — bergabung sesi, berlangganan, dan menerbitkan menggunakan tulang punggung terverifikasi yang sama seperti yang lain, dikunci ujung ke ujung, penyembuhan tengah aliran tanpa menghilangkan frame. Terbukti dalam lini edge v18; permukaan sisi node tiba dengan adopsinya.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "Bidang pemungutan suara lengkap: ambang kesepakatan M-dari-N diverifikasi di kawat, dan pengurutan kuorum-di-atas-waktu dalam substrat. Pemungutan suara keberatan Commons sudah dikirim — ini adalah pemungutan suara sebagai primitif terverifikasi kelas satu.",
+      "title": "Pemungutan Suara"
+    }
   },
   "mesh_config": {
     "consumption": {

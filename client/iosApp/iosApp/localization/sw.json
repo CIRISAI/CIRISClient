@@ -829,7 +829,19 @@
   "memory_total_nodes": "Jumla ya Nodi",
   "memory_try_graph": "Jaribu Mtazamo wa Grafu",
   "mesh": {
-    "announce_requirement": "Nodi isiyojitangaza haipati ufikiaji wa huduma katika mesh wala huduma za wakala. Swichi ya kuzima ya accord ina maana tu dhidi ya nodi inayoweza kuifikia, hivyo nodi isiyofikika haihudumiwi tangu mwanzo."
+    "announce_requirement": "Nodi isiyojitangaza haipati ufikiaji wa huduma katika mesh wala huduma za wakala. Swichi ya kuzima ya accord ina maana tu dhidi ya nodi inayoweza kuifikia, hivyo nodi isiyofikika haihudumiwi tangu mwanzo.",
+    "private_groups": {
+      "description": "Vikundi ambavyo anwani zake zinatokana na hali ya saraka na haziwezi kujifanya kwa umma — uanachama ni siri kwa kiwango unacho chagua, na kriptografia zisizobaini kwa waendeshaji wa nodi katika hifadhi (CC 5.4.6). Upande wa substrate umejazwa; uso unakuja na edge v18 adoption.",
+      "title": "Vikundi Vya Siri"
+    },
+    "video": {
+      "description": "Sauti na video moja kwa moja juu ya mesh yenyewe — kujiunga na kipindi, kusoma, na kupublish hutumiwa kwa ridge iliyothibitishwa sawa na kila kitu kingine, na ufunguo unaokwenda kiusoni, kukamatia katikati ya mtiririko bila kuacha fremu. Ilijaribu katika edge v18 line; uso wa nodi-side unakuja na adoption yake.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "Ndege kamili ya kura: M-of-N makubaliano yanayothibitishwa katika waya, na utaratibu wa quorum-juu-ya-muda katika substrate. Kura za upinga za Commons tayari zinajifanya — hii ni kura kama primitive ya daraja la kwanza, inayothibitishwa.",
+      "title": "Kura"
+    }
   },
   "mesh_config": {
     "consumption": {

@@ -829,7 +829,19 @@
   "memory_total_nodes": "Tổng Số Nút",
   "memory_try_graph": "Hãy thử Chế Độ Xem Đồ Thị",
   "mesh": {
-    "announce_requirement": "Một nút không thông báo hiện diện sẽ không có quyền truy cập dịch vụ trên mạng lưới và không có dịch vụ tác nhân nào. Công tắc ngắt của hiệp ước chỉ có ý nghĩa với một nút mà nó có thể tiếp cận, nên một nút không tiếp cận được thì ngay từ đầu đã không được phục vụ."
+    "announce_requirement": "Một nút không thông báo hiện diện sẽ không có quyền truy cập dịch vụ trên mạng lưới và không có dịch vụ tác nhân nào. Công tắc ngắt của hiệp ước chỉ có ý nghĩa với một nút mà nó có thể tiếp cận, nên một nút không tiếp cận được thì ngay từ đầu đã không được phục vụ.",
+    "private_groups": {
+      "description": "Các nhóm có địa chỉ được lấy từ trạng thái thư mục và không bao giờ được công bố — thành viên ẩn danh trong phạm vi bạn chọn, và mã hóa mặt mật với các toán tử nút khi lưu trữ (CC 5.4.6). Substrate đã được trang bị; bề mặt đến với việc áp dụng edge v18.",
+      "title": "Nhóm Riêng tư"
+    },
+    "video": {
+      "description": "Audio và video trực tiếp trên chính mesh — tham gia phiên, đăng ký và xuất bản đi trên cùng một cột sống được xác minh như mọi thứ khác, được mã hóa từ đầu đến cuối, tự sửa chữa trong quá trình phát mà không mất khung hình. Đã được chứng minh trong dòng edge v18; bề mặt phía nút đến với việc áp dụng của nó.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "Toàn bộ mặt phẳng phiếu bầu: ngưỡng thỏa thuận M-of-N được xác minh tại dây, và thứ tự quorum-above-time trong substrate. Các phiếu bầu phản đối của Commons đã được gửi — đây là bỏ phiếu như một nguyên thủy hạng nhất, có thể xác minh.",
+      "title": "Bỏ phiếu"
+    }
   },
   "mesh_config": {
     "consumption": {

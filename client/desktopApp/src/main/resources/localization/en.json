@@ -849,7 +849,19 @@
   "memory_total_nodes": "Total Nodes",
   "memory_try_graph": "Try Graph View",
   "mesh": {
-    "announce_requirement": "A node that does not announce gets no service access on the mesh and no agent services. The accord's kill switch is only meaningful against a node it can reach, so an unreachable node is never served in the first place."
+    "announce_requirement": "A node that does not announce gets no service access on the mesh and no agent services. The accord's kill switch is only meaningful against a node it can reach, so an unreachable node is never served in the first place.",
+    "private_groups": {
+      "description": "Groups whose addresses are derived from directory state and never announced — membership is anonymous at the scope you choose, and cryptographically opaque to node operators at rest (CC 5.4.6). The substrate side is armed; the surface arrives with the edge v18 adoption.",
+      "title": "Private Groups"
+    },
+    "video": {
+      "description": "Live audio and video over the mesh itself — session join, subscribe, and publish ride the same verified spine as everything else, keyed end to end, healing mid-stream without dropping a frame. Proven in the edge v18 line; the node-side surface arrives with its adoption.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "The full ballot plane: M-of-N accord thresholds verified at the wire, and quorum-above-time ordering in the substrate. The Commons' objection ballots already ship — this is voting as a first-class, verifiable primitive.",
+      "title": "Voting"
+    }
   },
   "mesh_config": {
     "consumption": {

@@ -829,7 +829,19 @@
   "memory_total_nodes": "Nœuds totaux",
   "memory_try_graph": "Essayez la vue graphique",
   "mesh": {
-    "announce_requirement": "Un nœud qui ne s'annonce pas n'obtient aucun accès aux services du maillage ni aux services d'agent. Le coupe-circuit de l'accord n'a de sens que contre un nœud qu'il peut atteindre ; un nœud injoignable n'est donc jamais servi au départ."
+    "announce_requirement": "Un nœud qui ne s'annonce pas n'obtient aucun accès aux services du maillage ni aux services d'agent. Le coupe-circuit de l'accord n'a de sens que contre un nœud qu'il peut atteindre ; un nœud injoignable n'est donc jamais servi au départ.",
+    "private_groups": {
+      "description": "Groupes dont les adresses sont dérivées de l'état du répertoire et jamais annoncées — l'appartenance est anonyme au niveau que vous choisissez, et cryptographiquement opaque aux opérateurs de nœuds au repos (CC 5.4.6). Le côté substrat est armé ; la surface arrive avec l'adoption de la version edge v18.",
+      "title": "Groupes privés"
+    },
+    "video": {
+      "description": "Audio et vidéo en direct sur le maillage lui-même — la jonction de session, l'abonnement et la publication empruntent la même épine dorsale vérifiée que tout le reste, chiffrées de bout en bout, cicatrisant en plein flux sans perdre une image. Éprouvé dans la ligne edge v18 ; la surface côté nœud arrive avec son adoption.",
+      "title": "Vidéo"
+    },
+    "voting": {
+      "description": "Le plan de scrutin complet : seuils d'accord M-sur-N vérifiés au fil, et classement quorum-au-delà-du-temps dans le substrat. Les bulletins d'objection de la Commons sont déjà expédiés — ceci est le vote en tant que primitif vérifiable de première classe.",
+      "title": "Scrutin"
+    }
   },
   "mesh_config": {
     "consumption": {

@@ -829,7 +829,19 @@
   "memory_total_nodes": "Total de Nós",
   "memory_try_graph": "Ver Visualização de Grafo",
   "mesh": {
-    "announce_requirement": "Um nó que não se anuncia não obtém acesso a serviços na malha nem a serviços de agente. O interruptor de emergência do acordo só tem significado contra um nó que ele consiga alcançar, portanto um nó inalcançável nunca chega sequer a ser servido."
+    "announce_requirement": "Um nó que não se anuncia não obtém acesso a serviços na malha nem a serviços de agente. O interruptor de emergência do acordo só tem significado contra um nó que ele consiga alcançar, portanto um nó inalcançável nunca chega sequer a ser servido.",
+    "private_groups": {
+      "description": "Grupos cujos endereços são derivados do estado do diretório e nunca anunciados — a associação é anônima no escopo que você escolher, e criptograficamente opaca aos operadores de nó em repouso (CC 5.4.6). O lado do substrato está armado; a superfície chega com a adoção da edge v18.",
+      "title": "Grupos Privados"
+    },
+    "video": {
+      "description": "Áudio e vídeo ao vivo sobre a malha em si — ingresso na sessão, inscrição e publicação usam a mesma espinha verificada como tudo o mais, criptografada de ponta a ponta, cicatrizando no meio do fluxo sem perder um quadro. Comprovado na linha edge v18; a superfície do lado do nó chega com sua adoção.",
+      "title": "Vídeo"
+    },
+    "voting": {
+      "description": "O plano de votação completo: limites de acordo M-de-N verificados no fio, e ordenação de quórum-acima-tempo no substrato. As cédulas de objeção da Commons já chegam — esta é a votação como primitiva verificável de primeira classe.",
+      "title": "Votação"
+    }
   },
   "mesh_config": {
     "consumption": {

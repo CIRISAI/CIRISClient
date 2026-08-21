@@ -829,7 +829,19 @@
   "memory_total_nodes": "Nodi Totali",
   "memory_try_graph": "Prova Vista Grafo",
   "mesh": {
-    "announce_requirement": "Un nodo che non si annuncia non ottiene accesso ai servizi sulla mesh né ai servizi degli agenti. Il kill switch dell'accordo ha senso solo contro un nodo che esso può raggiungere, quindi un nodo irraggiungibile non viene servito fin dal principio."
+    "announce_requirement": "Un nodo che non si annuncia non ottiene accesso ai servizi sulla mesh né ai servizi degli agenti. Il kill switch dell'accordo ha senso solo contro un nodo che esso può raggiungere, quindi un nodo irraggiungibile non viene servito fin dal principio.",
+    "private_groups": {
+      "description": "Gruppi i cui indirizzi sono derivati dallo stato della directory e mai annunciati — l'appartenenza è anonima nell'ambito che scegli, e crittograficamente opaca agli operatori dei nodi a riposo (CC 5.4.6). Il lato substrate è armato; la superficie arriva con l'adozione edge v18.",
+      "title": "Gruppi Privati"
+    },
+    "video": {
+      "description": "Audio e video dal vivo sulla mesh stessa — partecipazione sessione, sottoscrizione e pubblicazione utilizzano la stessa spina verificata di tutto il resto, con chiave end-to-end, riparazione mid-stream senza perdere fotogrammi. Provato nella linea edge v18; la superficie lato nodo arriva con la sua adozione.",
+      "title": "Video"
+    },
+    "voting": {
+      "description": "L'intero piano ballottare: soglie di accordo M-of-N verificate al filo, e ordinamento quorum-above-time nel substrate. I ballottari di obiezione dei Commons già spediscono — questo è il voto come primitiva verificabile di prima classe.",
+      "title": "Voto"
+    }
   },
   "mesh_config": {
     "consumption": {

@@ -829,7 +829,19 @@
   "memory_total_nodes": "Nodos totales",
   "memory_try_graph": "Probar vista de grafo",
   "mesh": {
-    "announce_requirement": "Un nodo que no se anuncia no obtiene acceso a servicios en la malla ni servicios de agente. El interruptor de emergencia del acuerdo solo tiene sentido frente a un nodo al que puede alcanzar, así que a un nodo inalcanzable no se le da servicio en primer lugar."
+    "announce_requirement": "Un nodo que no se anuncia no obtiene acceso a servicios en la malla ni servicios de agente. El interruptor de emergencia del acuerdo solo tiene sentido frente a un nodo al que puede alcanzar, así que a un nodo inalcanzable no se le da servicio en primer lugar.",
+    "private_groups": {
+      "description": "Grupos cuyas direcciones se derivan del estado del directorio y nunca se anuncian — la membresía es anónima en el alcance que elijas, y criptográficamente opaca para los operadores de nodos en reposo (CC 5.4.6). El lado del sustrato está armado; la superficie llega con la adopción de edge v18.",
+      "title": "Grupos Privados"
+    },
+    "video": {
+      "description": "Audio y vídeo en vivo a través de la propia malla — la unión de sesión, la suscripción y la publicación utilizan la misma columna vertebral verificada que todo lo demás, cifrada de extremo a extremo, recuperándose en mitad de la transmisión sin perder un fotograma. Probado en la línea edge v18; la superficie del lado del nodo llega con su adopción.",
+      "title": "Vídeo"
+    },
+    "voting": {
+      "description": "El plano de votación completo: umbrales de acuerdo M-de-N verificados en la línea, y ordenamiento de quórum-sobre-tiempo en el sustrato. Las papeletas de objeción de Commons ya se distribuyen — esto es votación como primitiva verificable de primera clase.",
+      "title": "Votación"
+    }
   },
   "mesh_config": {
     "consumption": {

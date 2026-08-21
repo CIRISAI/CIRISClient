@@ -4019,6 +4019,21 @@ fun CIRISApp(
                     onIssueClick = { url -> uriHandler.openUri(url) },
                 )
             }
+            Screen.Video -> {
+                ai.ciris.mobile.shared.ui.screens.mesh.VideoScreen(
+                    onIssueClick = { url -> uriHandler.openUri(url) },
+                )
+            }
+            Screen.Voting -> {
+                ai.ciris.mobile.shared.ui.screens.mesh.VotingScreen(
+                    onIssueClick = { url -> uriHandler.openUri(url) },
+                )
+            }
+            Screen.PrivateGroups -> {
+                ai.ciris.mobile.shared.ui.screens.mesh.PrivateGroupsScreen(
+                    onIssueClick = { url -> uriHandler.openUri(url) },
+                )
+            }
             Screen.Delegation -> {
                 ai.ciris.mobile.shared.ui.screens.federation.DelegationScreen(
                     onIssueClick = { url -> uriHandler.openUri(url) },
@@ -5058,6 +5073,9 @@ private sealed class Screen {
     // The other six are Coming Soon placeholders pinned to their substrate issue.
     object HealthReputation : Screen()
     object Participate : Screen()
+    object Video : Screen()
+    object Voting : Screen()
+    object PrivateGroups : Screen()
     object Delegation : Screen()
     object Constitutional : Screen()
     object AgentsList : Screen()
@@ -5167,6 +5185,9 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Billing -> ai.ciris.mobile.shared.ui.nav.NavSurface.Billing
     Screen.Wallet -> ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet
     Screen.Participate -> ai.ciris.mobile.shared.ui.nav.NavSurface.Participate
+    Screen.Video -> ai.ciris.mobile.shared.ui.nav.NavSurface.Video
+    Screen.Voting -> ai.ciris.mobile.shared.ui.nav.NavSurface.Voting
+    Screen.PrivateGroups -> ai.ciris.mobile.shared.ui.nav.NavSurface.PrivateGroups
     Screen.EnvironmentInfo -> ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph
     Screen.Delegation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation
     Screen.Constitutional -> ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional
@@ -5227,6 +5248,9 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Billing -> Screen.Billing
     ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet -> Screen.Wallet
     ai.ciris.mobile.shared.ui.nav.NavSurface.Participate -> Screen.Participate
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Video -> Screen.Video
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Voting -> Screen.Voting
+    ai.ciris.mobile.shared.ui.nav.NavSurface.PrivateGroups -> Screen.PrivateGroups
     ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph -> Screen.EnvironmentInfo
     ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation -> Screen.Delegation
     ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional -> Screen.Constitutional

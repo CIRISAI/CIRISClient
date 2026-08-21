@@ -332,6 +332,24 @@ sealed class NavSurface(
         labelKey = "commons.federation.constitutional.title",
     )
 
+    // ── The edge v18 trio — gated placeholders (CIRISServer#451). Each is a
+    // real registry consumer so the reservation cannot rot as a dead entry.
+    object Video : NavSurface(
+        id = "video", label = "Video", icon = CIRISIcons.play,
+        gate = SubstrateGate.EDGE_V18_VIDEO,
+        labelKey = "mesh.video.title",
+    )
+    object Voting : NavSurface(
+        id = "voting", label = "Voting", icon = CIRISIcons.check,
+        gate = SubstrateGate.EDGE_V18_VOTING,
+        labelKey = "mesh.voting.title",
+    )
+    object PrivateGroups : NavSurface(
+        id = "private-groups", label = "Private Groups", icon = CIRISIcons.lock,
+        gate = SubstrateGate.EDGE_V18_PRIVATE_GROUPS,
+        labelKey = "mesh.private_groups.title",
+    )
+
     /**
      * **Commons** — the reverse-quorum plane a community polices itself with
      * (CIRISServer#367, `src/commons_surface.rs`): raise an objection, see the
@@ -441,6 +459,26 @@ enum class SubstrateGate(
         prefixFamily = "client / relay / node peer taxonomy (post Step-4)",
         fsdSection = "substrate-substitution trajectory",
     ),
+
+    // ── The edge v18 adoption trio (CIRISServer#451) — reserved at the
+    // three-way merge so the three unrepresented mesh surfaces get the
+    // established SOON idiom instead of no representation at all
+    // (FSD/ONE_CLIENT_N_NODES.md §9 Phase 0).
+    EDGE_V18_VIDEO(
+        repo = "CIRISServer", issueNumber = 451,
+        prefixFamily = "A/V mesh session: join → subscribe → publish → heal → seal (MLS-keyed X-Wing hybrid)",
+        fsdSection = "edge v18 adoption — A/V spine",
+    ),
+    EDGE_V18_VOTING(
+        repo = "CIRISServer", issueNumber = 451,
+        prefixFamily = "AccordQuorumEvidence M-of-N at the wire + MergeBallot quorum-above-time (the full ballot plane; Commons objection-ballots already ship)",
+        fsdSection = "edge v18 adoption — voting substrate",
+    ),
+    EDGE_V18_PRIVATE_GROUPS(
+        repo = "CIRISServer", issueNumber = 451,
+        prefixFamily = "scope-native addressing: derived, never-announced group addresses (CC 5.4.6; armed server-side at 0.5.183)",
+        fsdSection = "edge v18 adoption — private groups + docs/SCOPE_PRIVACY.md",
+    ),
     ;
 
     val url: String get() = "https://github.com/CIRISAI/$repo/issues/$issueNumber"
@@ -547,6 +585,8 @@ val MANAGE_GROUP = NavGroup(
     surfaces = listOf(
         NavSurface.HealthReputation,
         NavSurface.Contacts,        // known federation identities (peer store browser)
+        NavSurface.Video,           // A/V mesh — gated on the edge v18 adoption (#451)
+        NavSurface.PrivateGroups,   // scope-native addressing — gated on #451
         NavSurface.IdentityManagement, // my self fed-ID + device roster (occurrences)
         NavSurface.Nodes,           // first-class node management (CRUD + switch)
         NavSurface.ManageConsent,   // consent:replication + user-data consent
@@ -586,6 +626,9 @@ val COMMONS_GROUP = NavGroup(
         add(NavSurface.LayerGlobalCommons)
         // The reverse-quorum plane those rosters are the quorum OF.
         add(NavSurface.Commons)
+        // The full ballot plane the commons' objection-ballots foreshadow —
+        // gated on the edge v18 adoption (#451).
+        add(NavSurface.Voting)
     },
         labelKey = "nav.group.commons_layers",)
 

@@ -829,7 +829,19 @@
   "memory_total_nodes": "Àpapọ̀ Àwọn Node",
   "memory_try_graph": "Gbìyànjú Wíwò Àwòrán",
   "mesh": {
-    "announce_requirement": "Nódù tí kò bá kéde kò ní rí ààyè iṣẹ́ lórí mesh náà, kò sì ní rí àwọn iṣẹ́ aṣojú. Ìtẹ̀ ìpakúpa ti accord kì í wúlò àyàfi lòdì sí nódù tí ó lè dé ọ̀dọ̀ rẹ̀, nítorí náà a kì í sìn nódù tí a kò lè dé ọ̀dọ̀ rẹ̀ láti ìbẹ̀rẹ̀."
+    "announce_requirement": "Nódù tí kò bá kéde kò ní rí ààyè iṣẹ́ lórí mesh náà, kò sì ní rí àwọn iṣẹ́ aṣojú. Ìtẹ̀ ìpakúpa ti accord kì í wúlò àyàfi lòdì sí nódù tí ó lè dé ọ̀dọ̀ rẹ̀, nítorí náà a kì í sìn nódù tí a kò lè dé ọ̀dọ̀ rẹ̀ láti ìbẹ̀rẹ̀.",
+    "private_groups": {
+      "description": "Àwọn ẹgbẹ́ ti a ṣẹ̀dá àwọn adirẹ́si wọn láti ìpìlẹ̀ ihò pẹ̀lú kò níye fi ìgúnná hàn — ìfésọmọ ńwọ ní àkọpọ̀ tí o yàn, ati ó ṣe ìhunràn àràkọ sí àwọn ọ̀pẹ̀ node ní ìpìnlẹ̀ (CC 5.4.6). Ẹ̀gbẹ́ substrate ti ṣe ìmọ̀; ìbẹ̀rẹ̀ pẹ̀lú edge v18 ti ọ̀fẹ́ wa.",
+      "title": "Àwọn Ẹgbẹ́ Aladá"
+    },
+    "video": {
+      "description": "Ọ̀rọ̀ aláipẹ̀ ati ìwéwé nì àpapọ̀ ara èwo àti ara ọn — ìdá ìparọ̀, pípa àbọ, ati lò pú gba ọ̀gà ìsọdiyàn níṣedí tí a lo fúnrì, ó ṣe ìfésọmọ láti òpópó àti síi, ó ṣe àlàyè nímidígbò bíìnú rẹ̀ láìbúkó ètò. A ṣe jẹ́ rírò nínú ẹ̀kọ́ edge v18; ìbẹ̀rẹ̀ ẹgbẹ́ node pẹ̀lú àwùjọ rẹ̀ ti dé.",
+      "title": "Ìwéwé"
+    },
+    "voting": {
+      "description": "Gbogbo ọ̀run ìbò: àfẹ́ M-nì-N tí a wíjúkìjú ní okun, ati ìdásìlẹ̀-sóko ìdásì òfin nínú àpapọ̀. Àwọn ìbò ìkìlọ̀ Commons ti ná ní ṣan — eyi ní ìbò àṣa àkọ́kọ́, èri ìdèní.",
+      "title": "Ìbò"
+    }
   },
   "mesh_config": {
     "consumption": {
