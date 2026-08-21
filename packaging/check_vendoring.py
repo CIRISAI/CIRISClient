@@ -1,103 +1,142 @@
 #!/usr/bin/env python3
-"""Has anything under ``client/`` drifted from upstream without saying so?
+"""Is the client tree the state VENDORING.md records, and is nothing in it
+that must never be vendored?
 
-    python3 packaging/check_vendoring.py
+    python3 packaging/check_vendoring.py            # check
+    python3 packaging/check_vendoring.py --print    # print the current digest
 
-``client/`` is vendored from CIRISAgent (``client/VENDORING.md`` §1). Everything
-in it is byte-identical to upstream **except** the files enumerated in §3, each
-of which is there for a stated reason.
+Since the 0.5.185 three-way merge (`client/VENDORING.md` §1) this tree is the
+tree of record: changes are authored here and git history is the changelog.
+What this guard asks changed with it, from "did anything drift from the vendor
+snapshot" to two questions that stay true after the consumers flip:
 
-This asserts that, without a network fetch: hash every vendored file that §3
-does not claim, and compare against the digest §3 records. An edit to a vendored
-file is then two outcomes and no third — either the digest still matches, or the
-edit is declared. What it makes impossible is the quiet middle: a change made
-here, never pushed upstream, that the next re-vendor silently reverts.
+1. **State digest.** The sha256-of-sha256s over every git-TRACKED file under
+   ``client/`` (except VENDORING.md, which records the digest) must equal the
+   digest §1 records. Any PR that touches ``client/`` re-records it in the same
+   commit (`--print`), which forces the VENDORING.md diff — and therefore the
+   provenance question — into review whenever the tree moves. Tracked files
+   only: a local Gradle build must not turn the guard red (Codex, PR #1).
 
-That middle is not hypothetical. It is what "the same ~200k lines exist in two
-repositories, kept aligned by hand" (MISSION §1) has meant in practice.
+2. **Exclusion classes.** No tracked file under ``client/`` may be one of the
+   things §2 exists to keep out: other repositories' release binaries
+   (substrate wheels, jniLibs, xcframeworks, the iOS Resources tree), key
+   material (``.ciris_keys/``, ``*secrets*key*``), compiled Python, or a
+   developer's ``local.properties``. The CIRISServer tree tracked two
+   ``secrets_master.key`` files at the time of the merge; the merge filtered
+   them, and this is what keeps that class of mistake from arriving with a
+   future pull.
 
-Stdlib only. No clone, no network, no build.
+Per-file hashes, not a set-of-names: a DECLARED file that changes without the
+record changing is exactly the silent middle the old single-digest check could
+not see (Codex, PR #1).
+
+Stdlib + git only. No clone, no network, no build.
 """
 
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 VENDORING = REPO / "client" / "VENDORING.md"
 
-_DIGEST_RE = re.compile(r"post-delta digest:\**\s*`([0-9a-f]{64})`")
-_ROW_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|")
+_DIGEST_RE = re.compile(r"state digest:\**\s*`([0-9a-f]{64})`")
+
+# Tracked paths under client/ that must never exist. Mirrors VENDORING.md §2.
+FORBIDDEN = (
+    "client/androidApp/wheels/*",
+    "client/androidApp/src/main/jniLibs/*",
+    "client/androidApp/src/main/assets/bin/*",
+    "client/iosApp/Resources/*",
+    "client/iosApp/Resources.zip",
+    "client/iosApp/Frameworks/*",
+    "client/iosApp/app_packages_native/*",
+    "client/*/.ciris_keys/*",
+    "client/.ciris_keys/*",
+    "*/__pycache__/*",
+    "*.pyc",
+    "*/local.properties",
+    "*secrets*key*",
+)
 
 
-def declared_deltas() -> set[str]:
-    """The file paths §3 claims, as repo-relative paths under client/."""
-    text = VENDORING.read_text(encoding="utf-8")
-    try:
-        section = text.split("## 3. Local deltas", 1)[1].split("\n## ", 1)[0]
-    except IndexError:
-        sys.exit("[FAIL] client/VENDORING.md has no '## 3. Local deltas' section")
-
-    paths = {f"client/{m.group(1)}" for line in section.splitlines() if (m := _ROW_RE.match(line))}
-    if not paths:
-        # AGENTS.md, Gate Rules: a parser that finds nothing where the construct
-        # plainly exists must fail loudly. An empty delta set would make every
-        # declared change look like undeclared drift, or — worse, if the table
-        # were the only thing that moved — make drift look declared.
-        sys.exit("[FAIL] parsed zero delta rows from VENDORING.md §3; the table is there")
-    return paths
+def tracked_files() -> list[str]:
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-z", "client"],
+        capture_output=True, check=True,
+    ).stdout
+    files = sorted(p for p in out.decode().split("\0") if p)
+    if not files:
+        sys.exit("[FAIL] git ls-files found nothing under client/ — that cannot be right")
+    return files
 
 
 def recorded_digest() -> str:
     m = _DIGEST_RE.search(VENDORING.read_text(encoding="utf-8"))
     if not m:
-        sys.exit("[FAIL] VENDORING.md §3 records no `post-delta digest:`")
+        sys.exit("[FAIL] client/VENDORING.md §1 records no `state digest:`")
     return m.group(1)
 
 
-def compute(exclude: set[str]) -> tuple[str, int]:
-    files = sorted(
-        p for p in (REPO / "client").rglob("*")
-        if p.is_file() and str(p.relative_to(REPO)) not in exclude
-    )
+def compute(files: list[str]) -> str:
     outer = hashlib.sha256()
-    for path in files:
-        inner = hashlib.sha256(path.read_bytes()).hexdigest()
-        outer.update(f"{inner}  {path.relative_to(REPO)}\n".encode())
-    return outer.hexdigest(), len(files)
+    for rel in files:
+        if rel == "client/VENDORING.md":
+            continue
+        inner = hashlib.sha256((REPO / rel).read_bytes()).hexdigest()
+        outer.update(f"{inner}  {rel}\n".encode())
+    return outer.hexdigest()
+
+
+def forbidden_hits(files: list[str]) -> list[str]:
+    return [
+        rel for rel in files
+        if any(fnmatch.fnmatch(rel, pat) for pat in FORBIDDEN)
+    ]
 
 
 def main() -> int:
-    deltas = declared_deltas() | {"client/VENDORING.md"}
-    digest, count = compute(deltas)
+    files = tracked_files()
+
+    hits = forbidden_hits(files)
+    if hits:
+        print("[FAIL] tracked files under client/ match a never-vendor class (§2):")
+        for h in hits:
+            print(f"    {h}")
+        print("  These are other repos' release binaries, key material, or local")
+        print("  state. Remove them (git rm --cached) — rehydration paths are")
+        print("  git-ignored on purpose.")
+        return 1
+
+    digest = compute(files)
     expected = recorded_digest()
 
     print("  vendoring check — client/ against its recorded state")
-    print(f"    declared deltas : {len(deltas)}")
-    print(f"    files hashed    : {count}")
-    print(f"    digest          : {digest}")
+    print(f"    tracked files : {len(files)}")
+    print(f"    digest        : {digest}")
 
     if digest == expected:
-        print("\n[OK] every vendored file is either untouched or declared in §3")
+        print("\n[OK] the tree matches VENDORING.md §1, and no never-vendor class is present")
         return 0
 
-    print(f"    expected        : {expected}")
+    print(f"    expected      : {expected}")
     print(
-        "\n[FAIL] a file under client/ changed without a row in VENDORING.md §3.\n"
-        "  Either revert it, or add it to the §3 table with the reason and update\n"
-        "  the recorded digest in the same commit:\n"
+        "\n[FAIL] client/ changed without VENDORING.md §1 re-recording it.\n"
+        "  Update the `state digest:` line in the same commit:\n"
         "      python3 packaging/check_vendoring.py --print\n"
-        "  A change worth keeping is usually a change worth pushing upstream — the\n"
-        "  delta table is deliberately small so that staying small is a decision."
+        "  That one line is what puts the tree's provenance into every review\n"
+        "  that moves the tree."
     )
     return 1
 
 
 if __name__ == "__main__":
     if "--print" in sys.argv:
-        print(compute(declared_deltas() | {"client/VENDORING.md"})[0])
+        print(compute(tracked_files()))
         sys.exit(0)
     sys.exit(main())

@@ -44,17 +44,28 @@ jobs:
           python-version: '3.12'
 
       - name: Localization guard (strict)
-        # Three checks, two severities: an en.json key referenced from commonMain
-        # but undefined renders RAW on every platform, and a bundle that diverges
-        # from its mirrors ships one platform a different product. --strict also
-        # blocks on untranslated keys, because 29 languages are 29 audiences and
-        # a fallback to English is a silent demotion of one of them.
-        run: python3 client/tools/check_localization_sync.py --strict
+        # The adopted CIRISServer guard: byte-identity across the four bundles,
+        # runtime resolveKey semantics, placeholder parity, reference coverage —
+        # and its own mutation self-test runs first, so the gate proves it can
+        # fail before it is trusted to pass. --no-server-src declares that the
+        # Rust emitters live in the consumers. --strict blocks on untranslated
+        # keys: 29 languages are 29 audiences and a fallback to English is a
+        # silent demotion of one of them.
+        run: |
+          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --no-server-src --strict
 
-      - name: Vendoring drift
-        # client/ is vendored. Every file in it is byte-identical to upstream or
-        # declared in VENDORING.md §3. This asserts that with no clone.
+      - name: Vendoring state
+        # client/ is the tree of record. The tracked tree must match the state
+        # digest VENDORING.md §1 records (re-recorded by any commit that touches
+        # client/), and no never-vendor class — substrate binaries, key material,
+        # compiled Python — may be tracked. No clone, no network.
         run: python3 packaging/check_vendoring.py
+
+      - name: Flavor-extra pins
+        # ciris-client[node]==X must resolve the X payload: both extras pin
+        # exactly VERSION, or a stale resolver pairs with a fresh payload.
+        run: python3 packaging/check_pins.py
 
   # ── The client itself, both flavors ─────────────────────────────────────────
   gradle:
