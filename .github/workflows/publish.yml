@@ -44,13 +44,30 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+
+      - name: apt (hardened)
+        uses: ./.github/actions/apt
+        with:
+          # The Compose desktop distribution tasks shell out to these.
+          packages: zip unzip
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "17" # shared/ pins JvmTarget.JVM_17 on every target
+
+      - uses: android-actions/setup-android@v3
+        # :shared applies com.android.library, so the Android SDK is needed to
+        # CONFIGURE the build even though only the desktop target is compiled.
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
       - run: python3 -m pip install --upgrade pip build
 
       # The release gates, run again here rather than trusted from the branch:
@@ -78,11 +95,16 @@ jobs:
       - name: Build the client
         # The agent build is what ships: every surface present, narrowed at
         # runtime by the probed node.
+        working-directory: client
         run: |
           set -euo pipefail
-          ./client/gradlew -p client :desktopApp:packageUberJarForCurrentOS \
-            -PhasAgent=true --no-daemon
+          ./gradlew --no-daemon -PhasAgent=true :desktopApp:packageUberJarForCurrentOS
+
+      - name: Stage it
+        run: |
+          set -euo pipefail
           jar=$(find client/desktopApp/build/compose/jars -name '*.jar' | head -1)
+          test -n "$jar" || { echo "::error::gradle produced no jar"; exit 1; }
           python3 packaging/stage_artifacts.py \
             --artifact "desktop-uber-jar@linux-x86_64=$jar"
 
@@ -151,5 +173,5 @@ jobs:
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          repository-url: ${{ (github.event.inputs.target == 'testpypi') && 'https://test.pypi.org/legacy/' || '' }}
+          repository-url: ${{ github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
           print-hash: true
