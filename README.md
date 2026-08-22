@@ -245,10 +245,16 @@ Three gates need care when you read them:
   build graph, so spec drift is silent (`client/VENDORING.md` §7).
 - Anything reading the substrate's signed locale Merkle root. Until then the
   four-bundle byte-identity check stands in for it.
-- ~~Publication.~~ **Done 2026-08-22**: `ciris-client 0.5.186` is on PyPI,
-  published by `.github/workflows/publish.yml` on the `v0.5.186` tag via
-  Trusted Publishing (no tokens). What remains is the consumers adopting it —
-  CIRISServer#471, CIRISAgent#1089.
+- ~~Publication.~~ **Done 2026-08-22**: on PyPI via Trusted Publishing (no
+  tokens) — `ciris-client 0.5.186` as four platform wheels (Linux x86-64,
+  macOS arm64, macOS x86-64, Windows x86-64) and `ciris-client-wasm 0.5.186`
+  (6.75 MiB). Every file carries a signed publish attestation. What remains is
+  the consumers adopting it — CIRISServer#471, CIRISAgent#1089.
+- One wart on that release: the very first upload was a `py3-none-any` wheel,
+  cut before the split, so it carries a Linux jar AND pre-split code. pip
+  prefers the platform wheels wherever one matches, so it is only reachable on
+  a platform with no specific wheel — but it is a stale fallback rather than an
+  honest one, and it should be deleted from the 0.5.186 release on PyPI.
 
 ## Status
 
