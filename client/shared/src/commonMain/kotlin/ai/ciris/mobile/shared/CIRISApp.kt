@@ -723,8 +723,13 @@ fun CIRISApp(
     // all: an approval gate the operator only discovers by navigating to its
     // screen is a silent denial-of-service on the agent. Stopped on logout so a
     // signed-out client isn't polling an endpoint it cannot authenticate to.
-    LaunchedEffect(currentAccessToken) {
-        if (currentAccessToken != null) {
+    // isHAAddonMode is part of the CONDITION and the KEY: in Home Assistant
+    // add-on mode authentication is supplied by ingress headers and
+    // currentAccessToken deliberately stays null, so keying on the token alone
+    // meant HA operators never got the badge or a single approval notification
+    // unless they happened to open the Wise Authority screen.
+    LaunchedEffect(currentAccessToken, isHAAddonMode) {
+        if (currentAccessToken != null || isHAAddonMode) {
             wiseAuthorityViewModel.startApprovalWatch()
         } else {
             wiseAuthorityViewModel.stopApprovalWatch()
@@ -762,16 +767,31 @@ fun CIRISApp(
     // Catch-up: an existing logged-in owner whose local node has NO fed-ID
     // (legacy WA claim) must be auto-presented the guided Add Federation ID flow
     // after login — the startup owned-nodes projection ran UNAUTHENTICATED (or
-    // pre-claim), so it couldn't know. We hook the FINAL landing screen
-    // (Interact) rather than the token assignment so we don't race the several
-    // login continuations that set currentScreen afterwards. Once authenticated
-    // and on Interact, refresh owned-nodes and reuse the SAME condition Manage
-    // Nodes uses to show the entry (ownerHasFedId == false: legacy owner, no
-    // fed-ID; null = unknown → fail-closed, don't prompt). One-shot via
-    // fedIdCatchupPrompted; naturally false once a fed-ID exists.
-    LaunchedEffect(currentScreen, currentAccessToken) {
-        if (currentScreen !is Screen.Interact) return@LaunchedEffect
-        if (currentAccessToken == null || fedIdCatchupPrompted) return@LaunchedEffect
+    // pre-claim), so it couldn't know. We hook the FINAL landing screen rather
+    // than the token assignment so we don't race the several login continuations
+    // that set currentScreen afterwards. Once authenticated and on that screen,
+    // refresh owned-nodes and reuse the SAME condition Manage Nodes uses to show
+    // the entry (ownerHasFedId == false: legacy owner, no fed-ID; null = unknown
+    // → fail-closed, don't prompt). One-shot via fedIdCatchupPrompted; naturally
+    // false once a fed-ID exists.
+    //
+    // KEYED ON [HOME_SCREEN], NOT ON Screen.Interact. This effect used to name
+    // Interact literally, which was the landing screen for BOTH builds when it
+    // was written. Moving node mode's home to Contacts silently made it
+    // unreachable: node users never visit Interact (it is not even in their
+    // sidebar), so a legacy owner with no fed-ID stopped being offered the Add
+    // Federation ID flow and landed instead on a Contacts surface they cannot
+    // use — the catch-up existing to prevent exactly that. The return
+    // destination follows for the same reason.
+    // isHAAddonMode counts as authenticated here, exactly as the approval
+    // watcher's effect treats it: ingress-header sessions keep
+    // currentAccessToken null by design, and gating on the token alone denied
+    // HA legacy owners the guided Add Federation ID flow this effect exists
+    // to provide.
+    LaunchedEffect(currentScreen, currentAccessToken, isHAAddonMode) {
+        if (currentScreen != HOME_SCREEN) return@LaunchedEffect
+        val authenticated = currentAccessToken != null || isHAAddonMode
+        if (!authenticated || fedIdCatchupPrompted) return@LaunchedEffect
         try {
             nodeSwitcherViewModel.reload()
         } catch (e: Exception) {
@@ -779,7 +799,7 @@ fun CIRISApp(
         }
         if (nodeSwitcherViewModel.ownerHasFedId.value == false) {
             fedIdCatchupPrompted = true
-            addFederationIdReturnScreen = Screen.Interact
+            addFederationIdReturnScreen = HOME_SCREEN
             PlatformLogger.i(TAG, "[fed-id-catchup] legacy owner has no fed-ID — auto-presenting Add Federation ID")
             currentScreen = Screen.AddFederationId
         }
@@ -805,6 +825,13 @@ fun CIRISApp(
     }
     val contactsViewModel: ContactsViewModel = viewModel {
         ContactsViewModel(apiClient)
+    }
+    // Same leak class as the approvals ViewModel (both are app-scoped and
+    // survive logout): the contact list is owner-gated content and must not
+    // survive into the next session. Declared here, not in the approval-watch
+    // effect above, because this ViewModel is constructed later in composition.
+    LaunchedEffect(currentAccessToken) {
+        if (currentAccessToken == null) contactsViewModel.clearSessionState()
     }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
@@ -2803,9 +2830,11 @@ fun CIRISApp(
                     }
                 }
 
+                val waAlertsBlocked by wiseAuthorityViewModel.notificationsBlocked.collectAsState()
                 WiseAuthorityScreen(
                     waStatus = waStatus,
                     deferrals = deferrals,
+                    notificationsBlocked = waAlertsBlocked,
                     isLoading = isWALoading,
                     isResolving = isResolving,
                     onResolveDeferral = { deferralId, resolution, guidance ->
@@ -4225,6 +4254,17 @@ fun CIRISApp(
                                 Screen.NetworkDiagnostics,
                                 Screen.NetworkContent -> Screen.LayerGlobalCommons
                                 is Screen.NetworkPeerDetail -> Screen.NetworkPeers
+                                // A chat → the contact list it was opened from.
+                                // This is a SECOND, independent mapping: the
+                                // PlatformBackHandler `when` above drives the
+                                // hardware/gesture back, this one drives the
+                                // compact-window overlay's affordance. ChatScreen
+                                // suppresses its OWN back button below 600dp and
+                                // relies on this — so an omission here renders the
+                                // drawer signet instead of a back arrow, and on
+                                // iOS and web (where PlatformBackHandler is a
+                                // no-op) leaves no way out of a chat at all.
+                                is Screen.UserChat -> Screen.Contacts
                                 // Nested sub-screens → their direct parent
                                 Screen.GraphMemory -> Screen.Memory
                                 Screen.SkillStudio -> Screen.Adapters
