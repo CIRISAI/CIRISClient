@@ -312,3 +312,51 @@ be reproduced from the Apache-2.0 original.
 **Owed before shipping q4f16:** its numerical equivalence is verified on ONE short greedy
 prompt. Identical output there does not establish equivalence across the distribution —
 run the 4-way eval on q4f16 specifically before it ships.
+
+---
+
+# DECISION: the pin is Qwen3-0.6B — 2026-08-22 (Eric)
+
+SmolLM2-360M-Instruct is **unpinned**. It reads floor at both granularities (12-way 0.060 —
+statistically indistinguishable from chance and below the majority class; 4-way 0.250 —
+exactly uniform chance), its collapse target moves with the prompt, and `rten-text` cannot
+load its tokenizer at all. It is smaller and cleaner and it does not work.
+
+## Pinned artifacts
+
+| target | repo → file | size | licence |
+|---|---|---:|---|
+| **native** (llama-cpp-2) | `unsloth/Qwen3-0.6B-GGUF` → `Qwen3-0.6B-Q4_K_M.gguf` | **396.7 MB** | **apache-2.0**, ungated |
+| **browser** (rten direct-ONNX) | `model_q4f16.onnx` — **must be self-produced**, see below | **569.8 MB** | — |
+| **tokenizer** | `Qwen/Qwen3-0.6B` → `tokenizer.json` | 11.4 MB | apache-2.0 |
+
+**Use unsloth's GGUF, not bartowski's.** The two disagreed in the scouting reports and both
+were right about different files: `bartowski/Qwen_Qwen3-0.6B-GGUF` is **484.2 MB and declares
+no licence**; `unsloth/Qwen3-0.6B-GGUF` is **396.7 MB and declares apache-2.0**. Smaller *and*
+licensed — strictly better on both axes, so there is no trade to weigh.
+
+**The browser ONNX must be reproduced by us.** `onnx-community/Qwen3-0.6B-ONNX` declares no
+licence on any file, including the `q4f16` we measured. The upstream `Qwen/Qwen3-0.6B` LICENSE
+is unmodified stock Apache-2.0 with no acceptable-use addendum, so the grant is real and the
+gap is purely the re-publisher's undeclared artifact. Export from the Apache-2.0 original.
+
+## Why this model
+- **The only sub-gig candidate with measured grip.** 4-way surface: 0.467 vs SmolLM2's 0.250
+  floor, McNemar p = 0.00119. Reaches 86% of a 14B control on the same task, unfine-tuned.
+- **`rten-text` loads its tokenizer**, and fails family-wide on SmolLM2 (360M *and* 135M).
+  The flip removes the tokenizer blocker rather than inheriting it.
+- Loads in rten with **zero conversion** — `Model::load_file`, 594 ms, contrib ops included.
+
+## Costs accepted, stated plainly
+- **2.09x the browser payload** of SmolLM2 (569.8 vs 272.7 MB). Root cause measured and
+  unavoidable: vocab 151,936 vs 49,152. `MatMulNBits` never touches the Gather-based
+  embedding lookup, and ORT's 524.6 MB embedding-quantised export **fails to load**
+  (`GatherBlockQuantized` unimplemented in rten). 569.8 MB is heavy for mobile Safari.
+- **We own the ONNX export** in perpetuity.
+- **q4f16 numerical equivalence rests on ONE short greedy prompt.** Run the 4-way eval on
+  q4f16 specifically before it ships.
+
+## Engine split, unchanged but for a new reason
+llama-cpp-2 native / rten wasm still holds — but performance no longer decides it. With
+prefix reuse the gap is **94 ms vs 111 ms (~15%)**, not 2x. Portability and tokenizer
+support decide it now.
