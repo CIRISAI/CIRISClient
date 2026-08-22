@@ -54,7 +54,13 @@ fun isWeb(): Boolean = getPlatform() == Platform.WEB
 fun getOAuthProviderName(): String = when (getPlatform()) {
     Platform.IOS -> "Apple"
     Platform.ANDROID -> "Google"
+    // Desktop signs in through the Google browser-handoff flow (there is no
+    // native SDK), so the provider the user sees is Google — not "Desktop".
+    // Real OAuth routing already uses "google" here (CIRISApp: `else "google"`).
     Platform.DESKTOP -> "Google"
+    // WEB is the same case, and upstream v2.9.33 named it "Web" — which is a
+    // platform, not an account anyone has. Kept as Google, for the reason the
+    // id below gives.
     Platform.WEB -> "Google"
 }
 
@@ -68,6 +74,12 @@ fun getOAuthProviderId(): String = when (getPlatform()) {
     // The wire id the node routes on (`/v1/auth/oauth/{provider}/login`).
     // "desktop" was never a provider the node serves — a request for it would
     // 404 "provider not configured".
+    //
+    // v2.9.33 fixed DESKTOP upstream and reintroduced the SAME defect one
+    // platform over, as `Platform.WEB -> "web"`. The node serves exactly
+    // google / apple / discord (CIRISServer src/auth/oauth.rs) — there is no
+    // "web" provider, so a web sign-in would 404 the way "desktop" did.
+    // Filed upstream; kept as google here.
     Platform.DESKTOP -> "google"
     Platform.WEB -> "google"
 }
