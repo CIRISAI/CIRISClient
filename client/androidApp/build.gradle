@@ -25,8 +25,8 @@ android {
         applicationId "ai.ciris.mobile"
         minSdk 24
         targetSdk 35
-        versionCode 165
-        versionName "2.9.28"
+        versionCode 167
+        versionName "2.9.30"
 
         ndk {
             // Include x86_64 for emulator testing (Chaquopy reads abiFilters at config time)
@@ -83,7 +83,7 @@ android {
                 // may sit one release behind Cargo.toml. A client feature that
                 // needs a NEWER node route must degrade honestly rather than
                 // assume the embedded node has it.
-                install "ciris-server==0.5.181"
+                install "ciris-server==0.5.185"
                 // ciris-lens-core is REQUIRED by the accord_metrics adapter
                 // (CIRISAgent#866 LensCore fold) — the fourth substrate leg.
                 // Its Android wheels are committed to wheels/ like the other
