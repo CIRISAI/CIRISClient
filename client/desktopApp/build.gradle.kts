@@ -18,12 +18,27 @@ import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 // for Dmg (macOS CFBundleVersion requires major >= 1), so the major is forced
 // to 1 and the rest tracks the release digit for digit — 0.5.185 -> 1.5.185.
 // Being derived is the point: there is nothing left to forget to bump.
-val releaseVersion: String =
-    Regex("""^version = "([^"]+)"""", RegexOption.MULTILINE)
-        .find(rootProject.file("../Cargo.toml").readText())
-        ?.groupValues
-        ?.get(1)
-        ?: error("could not read [package] version from Cargo.toml")
+// The release-version source differs by habitat: in CIRISClient (the tree of
+// record) it is the repo-root VERSION file — the same one source the flavor
+// generation and the wheel version already read; in CIRISServer it is
+// Cargo.toml. Try VERSION first so the derivation keeps working in both.
+val releaseVersion: String = run {
+    val versionFile = rootProject.file("../VERSION")
+    val cargoToml = rootProject.file("../Cargo.toml")
+    when {
+        versionFile.exists() -> versionFile.readText().trim()
+        cargoToml.exists() ->
+            Regex("""^version = "([^"]+)"""", RegexOption.MULTILINE)
+                .find(cargoToml.readText())
+                ?.groupValues
+                ?.get(1)
+                ?: error("could not read [package] version from Cargo.toml")
+        else -> error(
+            "no release-version source: neither ../VERSION (CIRISClient) " +
+            "nor ../Cargo.toml (CIRISServer) exists"
+        )
+    }
+}
 
 val nativePackageVersion: String =
     releaseVersion.split('.').let { parts ->
