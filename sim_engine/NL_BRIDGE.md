@@ -360,3 +360,44 @@ gap is purely the re-publisher's undeclared artifact. Export from the Apache-2.0
 llama-cpp-2 native / rten wasm still holds — but performance no longer decides it. With
 prefix reuse the gap is **94 ms vs 111 ms (~15%)**, not 2x. Portability and tokenizer
 support decide it now.
+
+---
+
+## The browser floor is 569.8 MB, and ONE op is why — 2026-08-22
+
+Tested every published Qwen3-0.6B ONNX variant by execution (`Model::load_file`, rten 0.25).
+The result is a clean dichotomy with a single cause:
+
+| variant | size | embedding table | rten |
+|---|---:|---|---|
+| `onnx/model_q4.onnx` | 919.1 MB | **unquantised** (fp32) | **LOADS** 831 ms |
+| `onnx/model_q4f16.onnx` | **569.8 MB** | **unquantised** (fp16) | **LOADS 594 ms** |
+| ORT `cpu_and_mobile/cpu-int4-kld-block-128` | 524.6 MB | quantised | **FAILS** |
+| `Qwen3-0.6B-DQ-ONNX` q4f16 (+ external data) | 355.5 MB | quantised | **FAILS** |
+
+Both failures are the same node and the same op:
+```
+/model/embed_tokens/GatherBlockQuantized:
+  com.microsoft/GatherBlockQuantized operator not supported or not enabled
+```
+
+**Every export small enough to want is small *because* it quantises the embedding table,
+and every one of those needs `GatherBlockQuantized`, which rten does not implement.** The
+two that load are exactly the two that leave the embedding unquantised. `model-scout`
+independently confirmed the mechanism by range-fetching the 919MB graph and finding
+`model.embed_tokens.weight` feeding a **plain `Gather` with no dequantise node**, and the
+arithmetic closes: 919.1 − 569.8 = 349.3 MB ≈ a 151936×1024 embedding (155.6M params) in
+fp32 plus ~13.9M fp32 MatMulNBits scales.
+
+### Consequences
+- **The browser payload is 569.8 MB today.** Not 524.6 and not 355.5 — those do not run.
+  This supersedes the "~525 MB, about 1.35x" reading, which assumed the ORT export loads.
+- **`GatherBlockQuantized` is a single, well-scoped unlock worth 214 MB (−38%).** Implementing
+  it in rten — one contrib op, upstream contribution — takes the browser artifact to
+  **355.5 MB**, below even SmolLM2's 387.9 MB q4. That is now the highest-leverage piece of
+  engine work available, and its payoff is measured rather than estimated.
+- The earlier note that q4f16 is "dead to rten" was **my error**, already corrected: q4f16
+  runs. What kills these two files is the embedding op, not the f16 scales.
+
+**Licence unchanged:** every `onnx-community` repo declares none, so we own the export
+whichever variant wins.
