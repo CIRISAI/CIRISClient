@@ -1,5 +1,0 @@
-# Lets `cargo test --target wasm32-wasip1` run the real test binary instead of only
-# building it. Requires node >= 20 (node:wasi, experimental but stable enough to run a
-# libtest binary). Nothing here affects native or wasm32-unknown-unknown builds.
-[target.wasm32-wasip1]
-runner = ["node", "--no-warnings", "../../tools/wasi-run.mjs"]
