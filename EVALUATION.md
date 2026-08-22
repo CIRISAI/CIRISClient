@@ -38,13 +38,11 @@ identical and only the better *explanation* survived.
 
 ## 2. The fifteen-minute evaluation
 
-Nothing is on PyPI yet, so the wheels come from CI. Take the newest green run
-of `build` on `feat/vendor-kmp-client`:
+It is on PyPI — this is a real `pip install`, not a CI artifact:
 
 ```bash
-gh run download --repo CIRISAI/CIRISClient -n wheels -D /tmp/cc
 python3 -m venv /tmp/eval
-/tmp/eval/bin/pip install --no-index /tmp/cc/ciris_client-*.whl
+/tmp/eval/bin/pip install ciris-client==0.5.186
 
 /tmp/eval/bin/python - <<'PY'
 import ciris_client as c
@@ -150,15 +148,14 @@ Small, but real, and worth stating before you agree rather than after:
 
 Do not decide without these:
 
-- **Nothing is published to PyPI yet.** `ciris-client` is an unclaimed name, so
-  until the first release lands, "depend on the wheel" means "depend on a CI
-  artifact", which is not good enough for a release of yours. The mechanism is
-  built and waiting: `.github/workflows/publish.yml` publishes all three
-  distributions on a `v*` tag via Trusted Publishing (OIDC, no tokens), gated on
-  the same checks plus one more — **a placeholder payload can never be
-  published**, because a wheel that installs and then refuses every lookup is
-  worse than no wheel. It needs the three pending publishers registered on PyPI
-  (workflow `publish.yml`, environment `pypi`) and a tag.
+- **This is the FIRST published release.** `ciris-client 0.5.186` went to PyPI
+  on 2026-08-22 — cut from the `v0.5.186` tag by
+  `.github/workflows/publish.yml` via Trusted Publishing (OIDC, no tokens),
+  gated on the same checks plus one more: a placeholder payload can never be
+  published, because a wheel that installs and then refuses every lookup is
+  worse than no wheel. Treat it as a first release accordingly: it has been
+  installed from the public index and exercised, and it has never been used by
+  a consumer in anger. That is what your feedback is for.
 - **Desktop uber-jar only.** No Android AAR, no iOS framework in the wheels yet.
   Your APK and installer pipelines still build from source — which is why
   adoption can be *staged* (§7) rather than all-or-nothing.

@@ -222,11 +222,10 @@ Three gates need care when you read them:
   build graph, so spec drift is silent (`client/VENDORING.md` §7).
 - Anything reading the substrate's signed locale Merkle root. Until then the
   four-bundle byte-identity check stands in for it.
-- Publication. Nothing is on PyPI yet; the wheels are CI artifacts.
-  `.github/workflows/publish.yml` is wired for it — Trusted Publishing on a
-  `v*` tag, no tokens, refusing outright to publish a placeholder payload —
-  and waits on three pending publishers being registered on PyPI
-  (workflow `publish.yml`, environment `pypi`).
+- ~~Publication.~~ **Done 2026-08-22**: `ciris-client 0.5.186` is on PyPI,
+  published by `.github/workflows/publish.yml` on the `v0.5.186` tag via
+  Trusted Publishing (no tokens). What remains is the consumers adopting it —
+  CIRISServer#471, CIRISAgent#1089.
 
 ## Status
 
@@ -242,4 +241,4 @@ desktop uber-jar named for the *derived* version (`CIRIS-linux-x64-1.5.186.jar`,
 from release 0.5.186), and both were packaged into 62.94 MiB wheels that install
 into a clean venv and resolve through `ciris_client.artifact_path`.
 
-Nothing is published to PyPI yet. The gaps above are real and named.
+The gaps above are real and named.

@@ -55,7 +55,14 @@
         "languages": 29,
         "keys": 3853
       },
-      "notes": "the superset merge: server v0.5.186 (1ea2c8b) + agent v2.9.32-stable (2504960) folded into the tree of record; two upstream placeholder defects repaired via the localize pipeline; androidApp ciris-server pin at 0.5.186 (wheels published)"
+      "notes": "the superset merge: server v0.5.186 (1ea2c8b) + agent v2.9.32-stable (2504960) folded into the tree of record; two upstream placeholder defects repaired via the localize pipeline; androidApp ciris-server pin at 0.5.186 (wheels published)",
+      "published": {
+        "index": "pypi",
+        "project": "ciris-client",
+        "url": "https://pypi.org/project/ciris-client/0.5.186/",
+        "wheel_bytes": 66042774,
+        "date": "2026-08-22"
+      }
     }
   ]
 }
