@@ -205,3 +205,20 @@ No Gemma 4 number (3.35GB, impractical here — these are the *shape* of the ove
 Gemma-specific; do not extrapolate linearly). No llguidance mask overhead. **No wasm
 runtime performance at all** — everything is native x86; browser will be worse
 (single-threaded, no mmap). One machine, no AVX-512.
+
+### Direct-ONNX load: VERIFIED BY EXECUTION, not inference — 2026-08-22
+The loader correction above was made from source reading. I then ran it, because a
+correction issued to another agent on unexecuted evidence is exactly the failure mode we
+police elsewhere. `rten 0.25` + `Model::load_file` on the **unmodified prebuilt**
+`HuggingFaceTB/SmolLM2-360M-Instruct/onnx/model_q4.onnx` (387,943,246 bytes, size-exact):
+
+```
+LOAD OK in 192.012719ms          <- no rten-convert, no self-export, contrib ops included
+inputs  = 67   input_ids · attention_mask · position_ids · past_key_values.{0..31}.{key,value}
+outputs = 65   logits [batch, seq, 49152] · present.{0..31}.{key,value}
+```
+
+Confirmed: the `com.microsoft` contrib ops load through the direct-ONNX path, the KV-cache
+plumbing is intact (5 KV heads, head_dim 64), and **load is 192ms — comparable to the
+self-exported int8 (187–194ms) and 2.6x faster than the fp32 (487–506ms)**, at a third of
+fp32's size. The 1.6GB intermediate and the permanent conversion step are not costs we owe.
