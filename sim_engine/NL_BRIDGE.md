@@ -86,3 +86,58 @@ research, and it should happen before we write code against either engine.
 Second risk worth pricing: `rten-generate` has ~1,211 recent downloads. It is the
 least-exercised code in this recommendation and it runs our decode loop. rten has the
 best CI discipline of the seven, but expect to read its source.
+
+---
+
+## Model decision VERIFIED against the artifacts — 2026-08-22
+
+`model-scout` recommended **SmolLM2-360M-Instruct**, overturning the earlier
+"two models forever" conclusion (which had anchored on Gemma 4 at 3.35GB). I checked its
+own flagged open items against the real files rather than accepting the inference. **The
+recommendation survives**, and three integration facts came out of the check that the
+brief did not have.
+
+### Confirmed by inspecting the actual ONNX graph
+Range-fetched the first 6MB of `HuggingFaceTB/SmolLM2-360M-Instruct/onnx/model_q4.onnx`:
+
+| op | count | domain |
+|---|---:|---|
+| `RotaryEmbedding` | 256 | com.microsoft |
+| `MatMulNBits` | 224 | com.microsoft |
+| `GroupQueryAttention` | 128 | com.microsoft |
+| `SimplifiedLayerNormalization` | 65 | com.microsoft |
+
+**Open item #3 CLOSES CONFIRMED** — the file really is on rten's documented `MatMulNBits`
+int4 path. But note what else is in there: this export is **built from ORT fused contrib
+ops**, not plain ONNX. rten's `llama.rs` example proves the *architecture*; it does not by
+itself prove *this export*. So I checked the op registry directly (rten 0.25.0 source):
+all four are implemented and registered, `RotaryEmbeddingMicrosoft` exists as a distinct
+contrib variant, and rten's own test fixtures are named `LlamaMSFT`. rten supports this
+export deliberately, not incidentally.
+
+### NEW — three facts for whoever wires this up
+
+1. **The contrib ops are behind a Cargo feature.**
+   `register_op!("com.microsoft", GroupQueryAttention, feature = "contrib")`.
+   It IS in `default`, so a plain dependency works — **but the wasm build must not set
+   `default-features = false`**, which is exactly the reflex for trimming browser binary
+   size. Doing so drops `contrib` and the model fails to load *at all*. If features are
+   trimmed, `contrib` and `onnx_format` must be re-added explicitly.
+2. **`wasm_api` is a non-default feature** — it must be enabled for the browser target.
+3. **Open item #2 CLOSES NEGATIVE: rten cannot run `q4f16`.**
+   `impl Operator for MatMulNBits` requires `TensorView<f32>` for both activations and
+   scales, and declares `OutputType::Fixed(DataType::Float)`. There is no f16 path.
+   The scout's conservative use of the `q4` files was **correct**, and the hoped-for
+   halving of every browser payload **is not available**. The real browser payload is
+   **387.94MB**, not ~200MB. This makes the SmolLM2-vs-Qwen3 gap *more* decisive, not
+   less: Qwen3-0.6B's browser cost stays at 919MB, which is not viable on mobile Safari.
+
+### Verdict
+**Pin SmolLM2-360M-Instruct.** One model, all three platforms, first-party GGUF *and*
+first-party ONNX, both apache-2.0 with no re-publisher in the licence chain — the exact
+place every other candidate breaks. Native `Q4_K_M` 270.6MB, browser `model_q4.onnx`
+387.94MB, tokenizer 2.10MB.
+
+Unchanged and still owed: **no model at any size has been evaluated on an 11-category
+typed-tuple taxonomy.** Published IFEval numbers cannot settle SmolLM2-vs-Qwen3 for our
+task; only our own eval set can, and we are fine-tuning regardless.
