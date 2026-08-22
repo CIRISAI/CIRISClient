@@ -1,6 +1,6 @@
 //! The integrator (FSD §2 `ForceSimulation`).
 //!
-//! Eleven nodes move in R^3 under three terms. Only the first is ontology-supplied:
+//! `N` nodes move in R^3 under three terms. Only the first is ontology-supplied:
 //!
 //! ```text
 //! F_i = Σ_{j≠i}  c_ij · (1 − ℓ_ij/r_ij) · (x_j − x_i)      spring   — MEASURED
@@ -8,11 +8,11 @@
 //!     − κ · x_i                                            centering — engine knob
 //! ```
 //!
-//! where `c_ij` is the measured coupling ([`data::COUPLING`], or its twin-symmetrised
-//! average [`tables::COUPLING_SYM`]) and `ℓ_ij` is the resistance distance
-//! ([`tables::METRIC`]). Stiffness and rest length are therefore both *readings*, not
-//! taste: the springs are as stiff as the confusion matrix says two kinds are coupled,
-//! and they relax to the length the Laplacian's resistance metric says they are apart.
+//! where `c_ij` is the coupling ([`Structure::coupling_for`], measured or
+//! twin-symmetrised) and `ℓ_ij` is the resistance distance ([`Structure::metric`]). Stiffness and rest
+//! length are therefore both *readings*, not taste: the springs are as stiff as the
+//! confusion matrix says two kinds are coupled, and they relax to the length the
+//! Laplacian's resistance metric says they are apart.
 //!
 //! Everything else in [`Params`] is an **engine gap**, named as such on each field. The
 //! ontology supplies a susceptibility, which is a *response*; it does not supply an
@@ -20,14 +20,23 @@
 //! E3, E5 and E9 of the FSD §4 table, and this module fills them with round numbers
 //! rather than pretending otherwise.
 //!
+//! ## The structure is an argument, not a constant (E10)
+//!
+//! Every function here takes a `&Structure<N>`. At `N = 11` the caller passes
+//! [`crate::K11`], whose tables are compile-time constants, and the generated code is
+//! what it always was. At any other `N` the caller passes a structure built by
+//! [`Structure::from_coupling`], which paid for its metric and spectrum once at
+//! construction. The integrator itself does not know or care which it was given, and
+//! it does no linear algebra either way.
+//!
 //! ## The harmonic regime carries the twin theorem; the full model does not
 //!
 //! [`Params::harmonic`] sets `rest_scale = 0`, which collapses the spring term to
 //! `F = −L x` exactly — `L` the coupling Laplacian, no division, no rest length. That
 //! is the regime in which `dark_state_decoupled` is a theorem, and
 //! [`tests::symmetrised_twin_mode_exerts_no_force_on_others`] checks that this file
-//! actually carries it: to the last bit, an antisymmetric twin displacement under
-//! `COUPLING_SYM` exerts zero force on the other nine nodes.
+//! actually carries it: to the last bit, an antisymmetric twin displacement under the
+//! symmetrised coupling exerts zero force on the other nodes.
 //!
 //! With `rest_scale = 1` the spring is nonlinear in the separation and the repulsion is
 //! nonlinear in everything, so the null holds only to O(d²) in the displacement. That
@@ -35,7 +44,7 @@
 //! should stake its proved null in the harmonic regime and its *measured* leakage in
 //! whichever regime it means to display.
 
-use crate::{data, tables, Mat, N};
+use crate::structure::Structure;
 
 /// Node mass, uniform.
 ///
@@ -57,30 +66,31 @@ pub const MASS: f64 = 1.0;
 /// branch because they need no direction — see the module note on the harmonic regime.
 pub const COINCIDENT_EPS: f64 = 1e-12;
 
-/// Positions and velocities of the eleven kinds, indexed by [`data::KINDS`] order.
+/// Positions and velocities of `N` kinds, indexed in the structure's own order (for the
+/// built-in object, [`crate::data::KINDS`] order).
 ///
-/// Fixed-size and `Copy`: 528 bytes, no allocator, no indirection. Snapshotting a state
-/// for a rollback or a probe is an assignment.
+/// Fixed-size and `Copy`: `48 N` bytes, no allocator, no indirection. Snapshotting a
+/// state for a rollback or a probe is an assignment.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct State {
+pub struct State<const N: usize> {
     /// Position of each kind in R^3, in resistance-metric units (so a separation of
-    /// `tables::METRIC[i][j]` is the relaxed length of that pair's spring).
+    /// `structure.metric[i][j]` is the relaxed length of that pair's spring).
     pub pos: [[f64; 3]; N],
     /// Velocity of each kind, in metric units per unit of [`Params::dt`] time — a unit
     /// which is itself an open gap (E3).
     pub vel: [[f64; 3]; N],
 }
 
-impl State {
+impl<const N: usize> State<N> {
     /// Every kind at the origin, at rest. The Laplacian's zero mode: net force is
     /// exactly zero in the harmonic regime, so this state is stationary forever.
-    pub const ZERO: State = State {
+    pub const ZERO: State<N> = State {
         pos: [[0.0; 3]; N],
         vel: [[0.0; 3]; N],
     };
 
     /// A state at the given positions, at rest.
-    pub fn at_rest(pos: [[f64; 3]; N]) -> State {
+    pub fn at_rest(pos: [[f64; 3]; N]) -> State<N> {
         State {
             pos,
             vel: [[0.0; 3]; N],
@@ -88,8 +98,8 @@ impl State {
     }
 }
 
-impl Default for State {
-    fn default() -> State {
+impl<const N: usize> Default for State<N> {
+    fn default() -> State<N> {
         State::ZERO
     }
 }
@@ -97,9 +107,12 @@ impl Default for State {
 /// The tunables the ontology does not supply.
 ///
 /// Every field here is an engine gap. They are grouped in one struct precisely so that
-/// the boundary is visible in the type: [`data::COUPLING`] and [`tables::METRIC`] enter
-/// the force law as constants and cannot be tuned, while everything a caller *can* turn
-/// is in here and is therefore not a result.
+/// the boundary is visible in the type: the coupling and the metric enter the force law
+/// from the [`Structure`] and cannot be tuned, while everything a caller *can* turn is
+/// in here and is therefore not a result.
+///
+/// `Params` carries no `N`: none of these quantities is per-node, and none of them
+/// depends on how many kinds there are.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Params {
     /// Integration step.
@@ -151,7 +164,7 @@ pub struct Params {
     pub centering: f64,
 
     /// Multiplier on the resistance-metric rest lengths. `1.0` uses
-    /// [`tables::METRIC`] as measured; `0.0` gives exact Laplacian dynamics.
+    /// [`Structure::metric`] as measured; `0.0` gives exact Laplacian dynamics.
     ///
     /// The metric itself is ontology-supplied; **this multiplier is not**, and is the
     /// one knob here whose extreme setting is meaningful rather than merely tuned. At
@@ -180,9 +193,9 @@ impl Params {
     /// The harmonic regime: `F = −L x` exactly, no repulsion, no centering, no damping.
     ///
     /// This is the regime the proved results live in — the coupling Laplacian's
-    /// eigenmodes ([`tables::LAPLACIAN_EIGENVALUES`]) are the exact normal modes, and
-    /// the twin dark state is exactly decoupled under [`tables::COUPLING_SYM`]. Use it
-    /// for anything that claims to be checking a theorem; use [`Params::default`] for
+    /// eigenmodes ([`Structure::eigenvalues`]) are the exact normal modes, and the twin
+    /// dark state is exactly decoupled under the symmetrised coupling. Use it for
+    /// anything that claims to be checking a theorem; use [`Params::default`] for
     /// anything that is meant to be looked at.
     pub fn harmonic() -> Params {
         Params {
@@ -196,28 +209,23 @@ impl Params {
     }
 }
 
-/// The coupling matrix in force: measured, or twin-symmetrised.
-///
-/// `false` gives [`data::COUPLING`] — what the panel actually read. `true` gives
-/// [`tables::COUPLING_SYM`], the Z2xZ2 group average, under which the twin dark mode is
-/// exactly decoupled. The difference between the two runs is the demonstrator (FSD §3):
-/// a proved null on one side, a measured leakage on the other.
-pub fn coupling(symmetrised: bool) -> &'static Mat {
-    if symmetrised {
-        &tables::COUPLING_SYM
-    } else {
-        &data::COUPLING
-    }
-}
-
 /// Force on every node at the current positions. Velocity-independent, hence exactly
 /// the negative gradient of [`potential_energy`].
+///
+/// `symmetrised` selects which of the structure's two couplings enters: `false` is what
+/// the panel actually read, `true` is the Z2xZ2 group average under which the twin dark
+/// mode is exactly decoupled.
 ///
 /// Pairs are summed in a fixed `i < j` order so the floating-point result is
 /// bit-identical across platforms and runs. Allocation-free: the return value is a
 /// fixed-size array by value.
-pub fn forces(state: &State, params: &Params, symmetrised: bool) -> [[f64; 3]; N] {
-    let c = coupling(symmetrised);
+pub fn forces<const N: usize>(
+    state: &State<N>,
+    st: &Structure<N>,
+    params: &Params,
+    symmetrised: bool,
+) -> [[f64; 3]; N] {
+    let c = st.coupling_for(symmetrised);
     let mut f = [[0.0f64; 3]; N];
     let soft2 = params.softening * params.softening;
 
@@ -234,7 +242,7 @@ pub fn forces(state: &State, params: &Params, symmetrised: bool) -> [[f64; 3]; N
             // metric. `scale · d` is the force on i; on j it is its negative.
             let k = c[i][j];
             if k != 0.0 {
-                let rest = params.rest_scale * tables::METRIC[i][j];
+                let rest = params.rest_scale * st.metric[i][j];
                 let scale = if rest == 0.0 {
                     // Harmonic regime: no normalisation, so no division and no
                     // coincidence guard. This branch is what makes `F = −L x` exact.
@@ -286,14 +294,19 @@ pub fn forces(state: &State, params: &Params, symmetrised: bool) -> [[f64; 3]; N
 /// oscillates within a bounded band rather than drifting — which is what
 /// [`tests::energy_does_not_grow_without_damping`] measures.
 ///
-/// Two force evaluations per step, 121 pairs each, no allocation, no branching on
-/// anything but the parameters. Deterministic by construction: fixed loop bounds, fixed
-/// summation order, no randomness, no map iteration.
-pub fn step(state: &mut State, params: &Params, symmetrised: bool) {
+/// Two force evaluations per step, `N(N−1)/2` pairs each, no allocation, no branching
+/// on anything but the parameters. Deterministic by construction: fixed loop bounds,
+/// fixed summation order, no randomness, no map iteration.
+pub fn step<const N: usize>(
+    state: &mut State<N>,
+    st: &Structure<N>,
+    params: &Params,
+    symmetrised: bool,
+) {
     let dt = params.dt;
     let half = 0.5 * dt / MASS;
 
-    let a0 = forces(state, params, symmetrised);
+    let a0 = forces(state, st, params, symmetrised);
     for i in 0..N {
         for k in 0..3 {
             state.vel[i][k] += half * a0[i][k];
@@ -301,7 +314,7 @@ pub fn step(state: &mut State, params: &Params, symmetrised: bool) {
         }
     }
 
-    let a1 = forces(state, params, symmetrised);
+    let a1 = forces(state, st, params, symmetrised);
     for i in 0..N {
         for k in 0..3 {
             state.vel[i][k] += half * a1[i][k];
@@ -319,14 +332,20 @@ pub fn step(state: &mut State, params: &Params, symmetrised: bool) {
 
 /// Run `n` steps. Provided so callers do not have to re-derive the loop; identical to
 /// calling [`step`] `n` times.
-pub fn run(state: &mut State, params: &Params, symmetrised: bool, n: usize) {
+pub fn run<const N: usize>(
+    state: &mut State<N>,
+    st: &Structure<N>,
+    params: &Params,
+    symmetrised: bool,
+    n: usize,
+) {
     for _ in 0..n {
-        step(state, params, symmetrised);
+        step(state, st, params, symmetrised);
     }
 }
 
 /// Kinetic energy, `½ Σ m |v_i|²`.
-pub fn kinetic_energy(state: &State) -> f64 {
+pub fn kinetic_energy<const N: usize>(state: &State<N>) -> f64 {
     let mut t = 0.0;
     for i in 0..N {
         let v = &state.vel[i];
@@ -344,8 +363,13 @@ pub fn kinetic_energy(state: &State) -> f64 {
 /// The softened repulsion uses the same `s` in the potential as in the force, so the
 /// pair is consistent and the softened system is genuinely conservative rather than
 /// approximately so.
-pub fn potential_energy(state: &State, params: &Params, symmetrised: bool) -> f64 {
-    let c = coupling(symmetrised);
+pub fn potential_energy<const N: usize>(
+    state: &State<N>,
+    st: &Structure<N>,
+    params: &Params,
+    symmetrised: bool,
+) -> f64 {
+    let c = st.coupling_for(symmetrised);
     let soft2 = params.softening * params.softening;
     let mut u = 0.0;
 
@@ -360,7 +384,7 @@ pub fn potential_energy(state: &State, params: &Params, symmetrised: bool) -> f6
 
             let k = c[i][j];
             if k != 0.0 {
-                let rest = params.rest_scale * tables::METRIC[i][j];
+                let rest = params.rest_scale * st.metric[i][j];
                 let stretch = if rest == 0.0 {
                     // Matches the no-division branch of `forces`: U = ½·k·r².
                     r2
@@ -395,27 +419,38 @@ pub fn potential_energy(state: &State, params: &Params, symmetrised: bool) -> f6
 /// FSD sketch named a two-argument signature; that signature cannot be made correct, so
 /// [`total_energy_with_defaults`] carries it for callers who really are on
 /// [`Params::default`].
-pub fn total_energy(state: &State, params: &Params, symmetrised: bool) -> f64 {
-    kinetic_energy(state) + potential_energy(state, params, symmetrised)
+pub fn total_energy<const N: usize>(
+    state: &State<N>,
+    st: &Structure<N>,
+    params: &Params,
+    symmetrised: bool,
+) -> f64 {
+    kinetic_energy(state) + potential_energy(state, st, params, symmetrised)
 }
 
 /// [`total_energy`] under [`Params::default`]. Wrong for any other parameters — prefer
-/// the three-argument form.
-pub fn total_energy_with_defaults(state: &State, symmetrised: bool) -> f64 {
-    total_energy(state, &Params::default(), symmetrised)
+/// the four-argument form.
+pub fn total_energy_with_defaults<const N: usize>(
+    state: &State<N>,
+    st: &Structure<N>,
+    symmetrised: bool,
+) -> f64 {
+    total_energy(state, st, &Params::default(), symmetrised)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::structure::{Structure, K11, NO_TWINS};
+    use crate::N;
 
-    /// Deterministic spread of the eleven nodes over a sphere of radius 1 by the
-    /// golden-angle spiral. No RNG anywhere in this crate, including its tests.
-    fn spiral_state() -> State {
-        let mut pos = [[0.0f64; 3]; N];
+    /// Deterministic spread of `N` nodes over a sphere of radius 1 by the golden-angle
+    /// spiral. No RNG anywhere in this crate, including its tests.
+    fn spiral_state<const M: usize>() -> State<M> {
+        let mut pos = [[0.0f64; 3]; M];
         let ga = 2.399963229728653; // π·(3 − √5)
-        for i in 0..N {
-            let z = 1.0 - 2.0 * (i as f64 + 0.5) / (N as f64);
+        for i in 0..M {
+            let z = 1.0 - 2.0 * (i as f64 + 0.5) / (M as f64);
             let r = libm::sqrt(1.0 - z * z);
             let th = ga * (i as f64);
             pos[i] = [r * libm::cos(th), r * libm::sin(th), z];
@@ -423,7 +458,7 @@ mod tests {
         State::at_rest(pos)
     }
 
-    fn max_abs(f: &[[f64; 3]; N]) -> f64 {
+    fn max_abs<const M: usize>(f: &[[f64; 3]; M]) -> f64 {
         let mut m = 0.0f64;
         for row in f.iter() {
             for &v in row.iter() {
@@ -438,7 +473,7 @@ mod tests {
 
     /// (a) A step from rest with zero forces leaves positions unchanged.
     ///
-    /// The zero-force state is the Laplacian's zero mode: all eleven nodes coincident.
+    /// The zero-force state is the Laplacian's zero mode: all nodes coincident.
     /// In the harmonic regime every spring reads `k·(x_j − x_i) = 0`, so the force is
     /// exactly zero — asserted, not assumed — and the step must be an identity.
     #[test]
@@ -447,23 +482,27 @@ mod tests {
         for &sym in [false, true].iter() {
             let mut s = State::at_rest([[0.3, -0.7, 1.1]; N]);
             let before = s;
-            assert_eq!(max_abs(&forces(&s, &p, sym)), 0.0, "force is not exactly zero");
-            step(&mut s, &p, sym);
+            assert_eq!(
+                max_abs(&forces(&s, &K11, &p, sym)),
+                0.0,
+                "force is not exactly zero"
+            );
+            step(&mut s, &K11, &p, sym);
             assert_eq!(s.pos, before.pos, "positions moved under zero force");
             assert_eq!(s.vel, before.vel, "velocities changed under zero force");
         }
 
         // Same at the origin, where the centering term is also zero, so the full
         // default force law is zero too.
-        let mut s = State::ZERO;
+        let mut s = State::<N>::ZERO;
         let d = Params::default();
         for &sym in [false, true].iter() {
             // Repulsion is finite at coincidence thanks to softening, but it is
             // antisymmetric about a coincident configuration and cancels exactly.
-            assert_eq!(max_abs(&forces(&s, &d, sym)), 0.0);
+            assert_eq!(max_abs(&forces(&s, &K11, &d, sym)), 0.0);
         }
-        step(&mut s, &d, false);
-        assert_eq!(s.pos, State::ZERO.pos);
+        step(&mut s, &K11, &d, false);
+        assert_eq!(s.pos, State::<N>::ZERO.pos);
     }
 
     /// (b) Energy does not grow over 1000 steps at `damping = 1.0`.
@@ -502,12 +541,12 @@ mod tests {
                     ..Params::default()
                 };
                 let steps = (5.0 / dt) as usize;
-                let mut s = spiral_state();
-                let e0 = total_energy(&s, &p, sym);
+                let mut s = spiral_state::<N>();
+                let e0 = total_energy(&s, &K11, &p, sym);
                 let (mut hi, mut lo) = (0.0f64, 0.0f64);
                 for _ in 0..steps {
-                    step(&mut s, &p, sym);
-                    let rel = (total_energy(&s, &p, sym) - e0) / libm::fabs(e0);
+                    step(&mut s, &K11, &p, sym);
+                    let rel = (total_energy(&s, &K11, &p, sym) - e0) / libm::fabs(e0);
                     if rel > hi {
                         hi = rel;
                     }
@@ -558,12 +597,12 @@ mod tests {
     #[test]
     fn damping_only_removes_energy() {
         let p = Params::default();
-        let mut s = spiral_state();
-        let mut prev = total_energy(&s, &p, false);
+        let mut s = spiral_state::<N>();
+        let mut prev = total_energy(&s, &K11, &p, false);
         let e0 = prev;
         for _ in 0..8 {
-            run(&mut s, &p, false, 500);
-            let e = total_energy(&s, &p, false);
+            run(&mut s, &K11, &p, false, 500);
+            let e = total_energy(&s, &K11, &p, false);
             assert!(e <= prev, "energy rose from {} to {} under damping", prev, e);
             prev = e;
         }
@@ -585,17 +624,17 @@ mod tests {
     /// Under the measured coupling they do not, which is the demonstrator (FSD §3).
     ///
     /// This is a check on the integrator, not the twin probe: it asserts only that the
-    /// force law preserves a symmetry the tables already have.
+    /// force law preserves a symmetry the structure already has.
     #[test]
     fn symmetrised_twin_mode_exerts_no_force_on_others() {
         let p = Params::harmonic();
-        for &(a, b) in data::TWINS.iter() {
+        for &(a, b) in K11.twins.iter() {
             let mut pos = [[0.0f64; 3]; N];
             pos[a] = [0.1, 0.0, 0.0];
             pos[b] = [-0.1, 0.0, 0.0];
             let s = State::at_rest(pos);
 
-            let f_sym = forces(&s, &p, true);
+            let f_sym = forces(&s, &K11, &p, true);
             for i in 0..N {
                 if i == a || i == b {
                     continue;
@@ -609,7 +648,7 @@ mod tests {
                 }
             }
 
-            let f_meas = forces(&s, &p, false);
+            let f_meas = forces(&s, &K11, &p, false);
             let mut leak = 0.0f64;
             for i in 0..N {
                 if i == a || i == b {
@@ -636,10 +675,10 @@ mod tests {
     #[test]
     fn harmonic_force_is_the_laplacian() {
         let p = Params::harmonic();
-        let s = spiral_state();
+        let s = spiral_state::<N>();
         for &sym in [false, true].iter() {
-            let c = coupling(sym);
-            let f = forces(&s, &p, sym);
+            let c = K11.coupling_for(sym);
+            let f = forces(&s, &K11, &p, sym);
             for i in 0..N {
                 for k in 0..3 {
                     let mut want = 0.0;
@@ -658,17 +697,18 @@ mod tests {
     #[test]
     fn force_is_minus_gradient_of_potential() {
         let p = Params::default();
-        let base = spiral_state();
+        let base = spiral_state::<N>();
         let h = 1e-6;
         for &sym in [false, true].iter() {
-            let f = forces(&base, &p, sym);
+            let f = forces(&base, &K11, &p, sym);
             for i in 0..N {
                 for k in 0..3 {
                     let mut up = base;
                     let mut dn = base;
                     up.pos[i][k] += h;
                     dn.pos[i][k] -= h;
-                    let g = (potential_energy(&up, &p, sym) - potential_energy(&dn, &p, sym))
+                    let g = (potential_energy(&up, &K11, &p, sym)
+                        - potential_energy(&dn, &K11, &p, sym))
                         / (2.0 * h);
                     assert!(
                         libm::fabs(f[i][k] + g) < 1e-5,
@@ -687,10 +727,10 @@ mod tests {
     #[test]
     fn step_is_deterministic() {
         let p = Params::default();
-        let mut a = spiral_state();
-        let mut b = spiral_state();
-        run(&mut a, &p, false, 250);
-        run(&mut b, &p, false, 250);
+        let mut a = spiral_state::<N>();
+        let mut b = spiral_state::<N>();
+        run(&mut a, &K11, &p, false, 250);
+        run(&mut b, &K11, &p, false, 250);
         assert_eq!(a, b);
     }
 
@@ -705,14 +745,14 @@ mod tests {
         };
         // Manner-Structure, the stiffest measured pair (c = 9.016).
         let (i, j) = (2usize, 9usize);
-        let rest = tables::METRIC[i][j];
+        let rest = K11.metric[i][j];
 
         // The other nine sit at the origin and contribute their own springs, so read
         // the i-j term as the CHANGE in the force on i as that one pair is stretched.
         let at = |sep: f64| {
             let mut pos = [[0.0f64; 3]; N];
             pos[j] = [sep, 0.0, 0.0];
-            forces(&State::at_rest(pos), &p, false)[i][0]
+            forces(&State::at_rest(pos), &K11, &p, false)[i][0]
         };
         let (short, at_rest_len, long) = (at(0.5 * rest), at(rest), at(1.5 * rest));
 
@@ -728,5 +768,108 @@ mod tests {
             long
         );
     }
-}
 
+    // ---- E10: the same dynamics at sizes the tables do not cover ----
+
+    /// The integrator runs at an `N` with no precomputed tables, and the properties it
+    /// is supposed to have are properties of the algorithm, not of eleven nodes: the
+    /// harmonic force is the Laplacian, the force is minus the gradient of the
+    /// potential, and the trajectory replays bit-identically.
+    #[test]
+    fn the_integrator_generalises_to_other_sizes() {
+        let c5 = [
+            [0.0, 1.5, 0.0, 0.25, 4.0],
+            [1.5, 0.0, 2.0, 0.0, 0.0],
+            [0.0, 2.0, 0.0, 7.0, 0.5],
+            [0.25, 0.0, 7.0, 0.0, 1.0],
+            [4.0, 0.0, 0.5, 1.0, 0.0],
+        ];
+        let st = Structure::<5>::from_coupling(&c5, NO_TWINS);
+
+        // Harmonic force is the Laplacian.
+        let s = spiral_state::<5>();
+        let ph = Params::harmonic();
+        let f = forces(&s, &st, &ph, false);
+        for i in 0..5 {
+            for k in 0..3 {
+                let mut want = 0.0;
+                for j in 0..5 {
+                    want += st.coupling[i][j] * (s.pos[j][k] - s.pos[i][k]);
+                }
+                assert!(libm::fabs(f[i][k] - want) < 1e-12, "node {i} axis {k}");
+            }
+        }
+
+        // Force is minus the gradient of the potential, full parameter set.
+        let pd = Params::default();
+        let fd = forces(&s, &st, &pd, false);
+        let h = 1e-6;
+        for i in 0..5 {
+            for k in 0..3 {
+                let mut up = s;
+                let mut dn = s;
+                up.pos[i][k] += h;
+                dn.pos[i][k] -= h;
+                let g = (potential_energy(&up, &st, &pd, false)
+                    - potential_energy(&dn, &st, &pd, false))
+                    / (2.0 * h);
+                assert!(libm::fabs(fd[i][k] + g) < 1e-5, "node {i} axis {k}");
+            }
+        }
+
+        // Deterministic replay.
+        let mut a = spiral_state::<5>();
+        let mut b = spiral_state::<5>();
+        run(&mut a, &st, &pd, false, 250);
+        run(&mut b, &st, &pd, false, 250);
+        assert_eq!(a, b);
+
+        // Energy does not grow without damping.
+        let pn = Params {
+            damping: 1.0,
+            ..Params::default()
+        };
+        let mut e = spiral_state::<5>();
+        let e0 = total_energy(&e, &st, &pn, false);
+        let mut hi = 0.0f64;
+        for _ in 0..1000 {
+            step(&mut e, &st, &pn, false);
+            let rel = (total_energy(&e, &st, &pn, false) - e0) / libm::fabs(e0);
+            if rel > hi {
+                hi = rel;
+            }
+        }
+        assert!(hi < 1.0e-3, "energy grew by {hi} at N = 5");
+    }
+
+    /// The twin theorem is a theorem about the group average, not about eleven nodes:
+    /// build a four-node structure with two twin pairs and the null is exact there too.
+    #[test]
+    fn the_proved_null_holds_at_other_sizes() {
+        let c = [
+            [0.0, 5.0, 2.0, 1.0],
+            [5.0, 0.0, 3.0, 4.0],
+            [2.0, 3.0, 0.0, 7.0],
+            [1.0, 4.0, 7.0, 0.0],
+        ];
+        // Deliberately NOT symmetric under these swaps — the group average must make
+        // it so, which is the whole point.
+        let st = Structure::<4>::from_coupling(&c, [(0, 1), (2, 3)]);
+        let p = Params::harmonic();
+        for &(a, b) in st.twins.iter() {
+            let mut pos = [[0.0f64; 3]; 4];
+            pos[a] = [0.1, 0.0, 0.0];
+            pos[b] = [-0.1, 0.0, 0.0];
+            let s = State::at_rest(pos);
+            let f = forces(&s, &st, &p, true);
+            for i in 0..4 {
+                if i == a || i == b {
+                    continue;
+                }
+                for k in 0..3 {
+                    assert_eq!(f[i][k], 0.0, "leak onto {i} from twins ({a}, {b})");
+                }
+            }
+        }
+    }
+}

@@ -314,3 +314,51 @@ edges"). Recording what the boundary removes *each step* closes it to <5%.
 
 **Remaining: E10 (variable N) only** — mechanical, and the precondition for any
 benchmark against an incumbent engine.
+
+---
+
+## §16 §11 IS RETRACTED AS A CLAIM **[today]** — the binding falsifier fired
+
+§11.5 said the scaling thesis had to be measured on real structures before being
+asserted, and named the failure mode. It was measured (`PORTABILITY.md` §3). **The
+failure mode is real, and §11 does not survive as written.**
+
+| scene | G vs N | N/G |
+|---|---|---|
+| **K11 — the engine's ONLY real scene** | G = 11 at every usable tolerance | **1.00x** |
+| unstructured (independent random couplings), N = 64…2048 | **G = N exactly**, every N, every tolerance | **1.00x** |
+| k archetypes replicated exactly | G = k, constant in N | up to 1024x |
+| k archetypes + jitter 0.2 | G = k above tolerance, G = N below | step function |
+
+### What is now established
+1. **The honest failure mode is confirmed at full strength.** On unstructured scenes no
+   two profiles EVER merge. Not "reduction degrades" — zero merges at every N and every
+   tolerance tested. The mechanism is forced: profile distance is a sup norm over N−2
+   independent coordinates, so the merge probability decays exponentially in N, and
+   raising the tolerance to compensate coarsens the scene out of existence.
+2. **K11 reads 1.00x.** The scaling thesis has **zero support from the object the engine
+   actually runs**. Not refuted — untested on its own subject, and by §11.5's terms it
+   may not be asserted.
+3. **The favourable case is tautological.** G = k because the generator was handed k
+   archetypes. Coarsening discovered nothing; it recovered an input.
+4. **It is a step function of (jitter/tolerance), not a curve** — so it cannot be
+   estimated from a small sample. A scene is on one side or the other.
+5. **The thesis was mis-stated as a property of the ALGORITHM.** It is a property of
+   SCENE GENERATION: N/G = 7037x at N = 10⁶ requires that only ~142 distinct complete
+   profiles exist among a million nodes. Nothing the coarsener does can create that.
+
+### §11, restated honestly
+> The engine has **no demonstrated asymptotic advantage**. It has a **conditional** one:
+> if a scene contains few distinct complete profiles at the working tolerance, reduction
+> is large and grows linearly in N; otherwise it is exactly 1.00x. Which regime a scene
+> is in must be **measured per scene** — it is a threshold, not a trend — and no scene
+> we currently run is in the favourable regime.
+
+The constant-factor claim (4x from Z2xZ2 block-diagonalisation) is unaffected and stands.
+
+### Why this is worth having found
+This is the FSD working. §11.5 was written specifically so that a scaling claim could
+not be made on borrowed evidence, and it stopped one. The engine is still worth
+building — the physics is principled, portable and bit-identical across three targets —
+but it must be sold on being **correct and principled**, not on being asymptotically
+faster, until a real scene in the favourable regime is exhibited.

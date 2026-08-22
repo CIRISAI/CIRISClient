@@ -22,22 +22,49 @@
 //!
 //! E2 inertia · E3 time scale · E5 action principle · E6 locality (K11 is complete,
 //! so nothing propagates) · E7 continuum limit · E8 dissipation coupling · E9 boundary.
-
+//!
+//! ## Sizes, and where the fast path went (E10)
+//!
+//! The crate was originally written against one structure: eleven kinds, one coupling,
+//! and every derived quantity emitted as a compile-time table. That is what made it
+//! fast, and — per FSD §10.1 — what made it unbenchmarkable against a general engine.
+//!
+//! It is now generic in `const N: usize`, with the eleven-kind case kept as a
+//! specialisation:
+//!
+//! * [`structure::K11`] is a `static` built by a `const fn` from the shipped
+//!   [`tables`]. Using the built-in object costs a reference; no linear algebra runs,
+//!   exactly as before.
+//! * [`Structure::from_coupling`] takes an arbitrary symmetric coupling at any `N` and
+//!   COMPUTES the metric, the spectrum, the susceptibility and the character
+//!   projectors with [`linalg`] — one `O(N^3)` eigensolve at construction, then the
+//!   same `O(N^2)` per step as before.
+//!
+//! The two are held together by `structure::tests::k11_matches_the_computed_structure`,
+//! which runs the general path on the built-in coupling and checks it reproduces every
+//! table. That cross-check is the only thing entitling the fast path to be called a
+//! specialisation rather than a second, unverified implementation.
+//!
 //! ## Why there is no allocator
 //!
-//! Eleven nodes, fixed forever. Every array in this crate is a compile-time-sized
-//! `[[f64; N]; N]`, every derived table ([`tables`]) is precomputed at code-generation
-//! time, and nothing is heap-allocated. The crate is therefore `no_std` WITHOUT
-//! `alloc` — it runs on bare metal, in a WASM sandbox with no allocator, or inside
-//! another engine's frame loop with zero setup cost. Total static data: ~6.9 KB.
-//! Per-step cost: O(N^2) = 121 multiply-adds for forces. There is no runtime linear
-//! algebra because there is nothing left to compute.
+//! Every array in this crate is a compile-time-sized `[[f64; N]; N]` and nothing is
+//! heap-allocated, so the crate is `no_std` WITHOUT `alloc` — it runs on bare metal, in
+//! a WASM sandbox with no allocator, or inside another engine's frame loop. Generality
+//! did not change that: [`linalg`] does its work in stack scratch arrays, and a
+//! [`Structure`] lives wherever the caller puts it. The trade is that a `Structure<N>`
+//! is `8 * (7 N^2 + 3 N)` bytes of *somewhere* — 7.2 KB at `N = 11`, 56 MB at
+//! `N = 1000` — and at large `N` the caller must place it deliberately rather than let
+//! it land on a stack frame ([`Structure::init_from_coupling`] exists for that).
+//!
+//! Per-step cost is `O(N^2)` multiply-adds for forces, unchanged.
 
 #![no_std]
 #![forbid(unsafe_code)]
 
 pub mod data;
 pub mod entropy;
+pub mod linalg;
+pub mod structure;
 pub mod tables;
 pub mod dynamics;
 pub mod gaps;
@@ -46,8 +73,14 @@ pub mod twin_probe;
 pub mod sectors;
 
 pub use data::{COUPLING, DEPTH, KINDS, N, TWINS};
+pub use structure::{Structure, K11};
 
-/// A square `N x N` matrix of `f64`, row-major. The only matrix type in this crate.
-pub type Mat = [[f64; N]; N];
-/// A vector of length `N`.
-pub type Vec11 = [f64; N];
+/// A square `N x N` matrix of `f64`, row-major, at an arbitrary size.
+pub type MatN<const N: usize> = [[f64; N]; N];
+/// A vector of length `N`, at an arbitrary size.
+pub type VecN<const N: usize> = [f64; N];
+
+/// A square matrix over the eleven built-in kinds.
+pub type Mat = MatN<N>;
+/// A vector over the eleven built-in kinds.
+pub type Vec11 = VecN<N>;

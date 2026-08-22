@@ -12,3 +12,15 @@ libm = "0.2"
 [features]
 default = []
 std = []
+
+# Benchmarks. The library is `no_std`; a bench target is a separate crate and may use
+# `std` freely, so no feature gymnastics are needed and the `std` feature stays unused
+# by them. `harness = false` because libtest's `#[bench]` is nightly-only and these are
+# plain `fn main()` reports meant to be read, not regression-gated.
+[[bench]]
+name = "profile_reduction"
+harness = false
+
+[[bench]]
+name = "step_cost"
+harness = false

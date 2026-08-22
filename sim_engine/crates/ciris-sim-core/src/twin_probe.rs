@@ -1,7 +1,7 @@
 //! The twin dark-state probe — the crate's one *proved* experiment.
 //!
 //! Displace the two members of a twin pair in opposite directions,
-//! `x = amplitude * (e_a - e_b)/sqrt(2)`, and ask what the other nine nodes feel.
+//! `x = amplitude * (e_a - e_b)/sqrt(2)`, and ask what the other nodes feel.
 //!
 //! Under a coupling that is symmetric in the pair the answer is **exactly zero**, and
 //! it is zero for a reason rather than by cancellation of a fitted parameter:
@@ -13,13 +13,15 @@
 //!   `-c_ab`, over any commutative ring, sorry-free.
 //!
 //! That makes criterion (a) below a prediction with no fitted content: the null is a
-//! theorem, and a nonzero reading on `tables::COUPLING_SYM` would mean the
-//! symmetrisation is wrong, not that the physics is interesting.
+//! theorem, and a nonzero reading on a structure's symmetrised coupling would mean the
+//! symmetrisation is wrong, not that the physics is interesting. None of this depends
+//! on `N` — the theorem is about a group average and two indices — so the probe reads
+//! the twins off the [`Structure`] and runs at any size.
 //!
 //! ## How far the measured object is from its own symmetry
 //!
-//! Under the MEASURED `data::COUPLING` the twins are only approximately twins, so the
-//! mode leaks. `Core/DefectCoupling.lean` gives the leak a closed form. Writing
+//! Under the MEASURED coupling the twins are only approximately twins, so the mode
+//! leaks. `Core/DefectCoupling.lean` gives the leak a closed form. Writing
 //! `w = e_a - e_b` (so `w . w = 2`) and `D = H - P H P` for the swap reflection `P`,
 //! `defect_split` proves
 //!
@@ -34,7 +36,7 @@
 //! off-twin part. [`g_db`] is that formula; [`ProbeResult::leakage`] is the same number
 //! obtained the physical way, by measuring the residual, and a test checks they agree.
 //!
-//! ## FINDING: criterion (b) is NOT met by the tables in this crate, and why
+//! ## FINDING: criterion (b) is NOT met by the built-in object's tables, and why
 //!
 //! The FSD asks for a twin-1 / twin-0 leakage ratio in `[3.0, 4.6]`, from
 //! CIRISOntology's measured `g_DB = 2.284` and `8.617` (ratio 3.77,
@@ -60,10 +62,12 @@
 //! **To close it properly**, `data::COUPLING` must ship the diagonal it currently
 //! zeroes (or `data.rs` must carry the two splits alongside). That is another agent's
 //! file. Until then [`CAMPAIGN_DIAGONAL_SPLIT`] carries the two numbers explicitly,
-//! marked as imported constants rather than as anything this crate can derive.
+//! marked as imported constants rather than as anything this crate can derive. It is
+//! `[f64; 2]` and not generic: it is a reading about the eleven-kind object, and there
+//! is no such reading for any other structure.
 
 use crate::sectors::dark_vector;
-use crate::{Mat, Vec11, N};
+use crate::structure::Structure;
 
 /// `1/(2 sqrt 2)`, the normalisation in `g_DB = ||D||_F / (2 sqrt 2)`.
 const INV_TWO_ROOT_TWO: f64 = 0.353_553_390_593_273_76;
@@ -71,17 +75,17 @@ const INV_TWO_ROOT_TWO: f64 = 0.353_553_390_593_273_76;
 /// The twin diagonal splits `|H_aa - H_bb|` measured by CIRISOntology's dark-state
 /// campaign, indexed like [`crate::TWINS`].
 ///
-/// **Imported, not derived.** `data::COUPLING` has its diagonal zeroed, so this crate
-/// cannot compute these; they come from the campaign record quoted in
-/// `Core/DefectCoupling.lean` ("3.710 vs 3.685, 0.7% apart"). They exist here only so
-/// the module doc's diagnosis is executable — see
+/// **Imported, not derived, and specific to the built-in object.** `data::COUPLING` has
+/// its diagonal zeroed, so this crate cannot compute these; they come from the campaign
+/// record quoted in `Core/DefectCoupling.lean` ("3.710 vs 3.685, 0.7% apart"). They
+/// exist here only so the module doc's diagnosis is executable — see
 /// `campaign_ratio_recovered_when_diagonal_split_is_restored`.
 pub const CAMPAIGN_DIAGONAL_SPLIT: [f64; 2] = [3.710, 3.685];
 
-/// What the other nine nodes feel when a twin pair is driven antisymmetrically.
+/// What the other nodes feel when a twin pair is driven antisymmetrically.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct ProbeResult {
-    /// `max |f_k|` over the nine nodes `k` outside the twin pair, where `f = M x`.
+    /// `max |f_k|` over the nodes `k` outside the twin pair, where `f = M x`.
     ///
     /// Proved zero for a twin-symmetric `M` (`DarkState.dark_state_decoupled`). The
     /// reading does not depend on whether forces are taken from the coupling matrix or
@@ -97,13 +101,17 @@ pub struct ProbeResult {
 /// `sum_{c not in {a,b}} (M_ca - M_cb)^2` — the off-twin half of `defect_split`.
 ///
 /// This is the part of the symmetry defect that a zero-diagonal matrix can still
-/// report, and the only part this crate's tables carry.
+/// report, and the only part the built-in object's tables carry.
 ///
 /// # Panics
 /// If `twin >= 2`.
-pub fn off_twin_defect_sq(m: &Mat, twin: usize) -> f64 {
-    assert!(twin < crate::TWINS.len(), "twin index out of range");
-    let (a, b) = crate::TWINS[twin];
+pub fn off_twin_defect_sq<const N: usize>(
+    st: &Structure<N>,
+    m: &[[f64; N]; N],
+    twin: usize,
+) -> f64 {
+    assert!(twin < st.twins.len(), "twin index out of range");
+    let (a, b) = st.twins[twin];
     let mut acc = 0.0f64;
     for c in 0..N {
         if c == a || c == b {
@@ -119,7 +127,8 @@ pub fn off_twin_defect_sq(m: &Mat, twin: usize) -> f64 {
 /// `trace_defect_sq` composed, with the diagonal split supplied separately.
 ///
 /// Split out from [`g_db`] because `data::COUPLING` cannot supply the split itself
-/// (its diagonal is zeroed); see the module doc.
+/// (its diagonal is zeroed); see the module doc. Carries no `N`: by the time the two
+/// halves of `tr(D^2)` have been summed, the size of the graph has been integrated out.
 pub fn g_db_of(off_defect_sq: f64, diagonal_split: f64) -> f64 {
     libm::sqrt(2.0 * diagonal_split * diagonal_split + 4.0 * off_defect_sq) * INV_TWO_ROOT_TWO
 }
@@ -127,38 +136,39 @@ pub fn g_db_of(off_defect_sq: f64, diagonal_split: f64) -> f64 {
 /// The dark-to-bright coupling of a twin pair, read off `m` alone.
 ///
 /// Uses `m`'s own diagonal for the split, so it is correct for any matrix that carries
-/// one. For this crate's zero-diagonal tables the split term vanishes and the result is
-/// the off-twin part only — which is precisely the gap documented in the module doc.
+/// one. For a zero-diagonal coupling the split term vanishes and the result is the
+/// off-twin part only — which is precisely the gap documented in the module doc.
 ///
 /// # Panics
 /// If `twin >= 2`.
-pub fn g_db(m: &Mat, twin: usize) -> f64 {
-    let (a, b) = crate::TWINS[twin];
-    g_db_of(off_twin_defect_sq(m, twin), m[a][a] - m[b][b])
+pub fn g_db<const N: usize>(st: &Structure<N>, m: &[[f64; N]; N], twin: usize) -> f64 {
+    let (a, b) = st.twins[twin];
+    g_db_of(off_twin_defect_sq(st, m, twin), m[a][a] - m[b][b])
 }
 
 /// Drive twin pair `twin` antisymmetrically at `amplitude` and report what leaks.
 ///
-/// `symmetrised` selects the matrix: `true` uses `tables::COUPLING_SYM`, for which the
-/// null is a theorem; `false` uses the measured `data::COUPLING`, for which the leak is
-/// a measurement.
+/// `symmetrised` selects the matrix: `true` uses the structure's group-averaged
+/// coupling, for which the null is a theorem; `false` uses the measured one, for which
+/// the leak is a measurement.
 ///
 /// Both outputs are homogeneous of degree one in `amplitude`, so a ratio between two
 /// twins is amplitude-free.
 ///
 /// # Panics
 /// If `twin >= 2`.
-pub fn probe(twin: usize, amplitude: f64, symmetrised: bool) -> ProbeResult {
-    let m: &Mat = if symmetrised {
-        &crate::tables::COUPLING_SYM
-    } else {
-        &crate::COUPLING
-    };
-    let (a, b) = crate::TWINS[twin];
-    let d = dark_vector(twin);
+pub fn probe<const N: usize>(
+    st: &Structure<N>,
+    twin: usize,
+    amplitude: f64,
+    symmetrised: bool,
+) -> ProbeResult {
+    let m = st.coupling_for(symmetrised);
+    let (a, b) = st.twins[twin];
+    let d = dark_vector(st, twin);
 
     // x = amplitude * d, and f = M x. Fixed loop order for bit-identical replay.
-    let mut f: Vec11 = [0.0f64; N];
+    let mut f = [0.0f64; N];
     for i in 0..N {
         let mut acc = 0.0f64;
         for j in 0..N {
@@ -200,8 +210,8 @@ pub fn probe(twin: usize, amplitude: f64, symmetrised: bool) -> ProbeResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::data::COUPLING;
-    use crate::tables::COUPLING_SYM;
+    use crate::structure::{Structure, K11};
+    use crate::N;
 
     /// **Acceptance criterion (a)** — the proved null.
     ///
@@ -211,7 +221,7 @@ mod tests {
     fn symmetrised_probe_is_silent_to_the_rest_of_the_graph() {
         for twin in 0..2 {
             for &amp in &[1.0f64, 7.5, -3.25, 1e6] {
-                let r = probe(twin, amp, true);
+                let r = probe(&K11, twin, amp, true);
                 assert!(
                     r.max_other_displacement < 1e-12,
                     "twin {twin} at amplitude {amp}: max other force {} — the symmetrised \
@@ -238,15 +248,15 @@ mod tests {
     #[test]
     fn symmetrised_probe_returns_the_predicted_eigenvalue() {
         for twin in 0..2 {
-            let (a, b) = crate::TWINS[twin];
-            let d = dark_vector(twin);
+            let (a, b) = K11.twins[twin];
+            let d = crate::sectors::dark_vector(&K11, twin);
             let mut f = [0.0f64; N];
             for i in 0..N {
                 for j in 0..N {
-                    f[i] += COUPLING_SYM[i][j] * d[j];
+                    f[i] += K11.coupling_sym[i][j] * d[j];
                 }
             }
-            let lambda = -COUPLING_SYM[a][b];
+            let lambda = -K11.coupling_sym[a][b];
             for i in 0..N {
                 assert!(
                     libm::fabs(f[i] - lambda * d[i]) < 1e-12,
@@ -263,8 +273,8 @@ mod tests {
     #[test]
     fn leakage_matches_the_closed_form() {
         for twin in 0..2 {
-            let measured = probe(twin, 1.0, false).leakage;
-            let closed = g_db(&COUPLING, twin);
+            let measured = probe(&K11, twin, 1.0, false).leakage;
+            let closed = g_db(&K11, &K11.coupling, twin);
             assert!(
                 libm::fabs(measured - closed) < 1e-12,
                 "twin {twin}: residual {measured} != g_DB {closed}"
@@ -275,8 +285,8 @@ mod tests {
     /// Both outputs scale linearly with amplitude, so twin ratios are amplitude-free.
     #[test]
     fn probe_is_linear_in_amplitude() {
-        let one = probe(1, 1.0, false);
-        let ten = probe(1, 10.0, false);
+        let one = probe(&K11, 1, 1.0, false);
+        let ten = probe(&K11, 1, 10.0, false);
         assert!(libm::fabs(ten.leakage - 10.0 * one.leakage) < 1e-9);
         assert!(
             libm::fabs(ten.max_other_displacement - 10.0 * one.max_other_displacement) < 1e-9
@@ -292,8 +302,8 @@ mod tests {
     /// `data::COUPLING` ships its diagonal, this test should be replaced by the band.
     #[test]
     fn measured_leakage_ratio_is_out_of_the_fsd_band_because_the_diagonal_is_zeroed() {
-        let t0 = probe(0, 1.0, false);
-        let t1 = probe(1, 1.0, false);
+        let t0 = probe(&K11, 0, 1.0, false);
+        let t1 = probe(&K11, 1, 1.0, false);
 
         // The individual readings, pinned.
         assert!(libm::fabs(t0.leakage - 1.332_692_568_223) < 1e-9, "{}", t0.leakage);
@@ -326,8 +336,14 @@ mod tests {
     /// and not a defect in the probe.
     #[test]
     fn campaign_ratio_recovered_when_diagonal_split_is_restored() {
-        let g0 = g_db_of(off_twin_defect_sq(&COUPLING, 0), CAMPAIGN_DIAGONAL_SPLIT[0]);
-        let g1 = g_db_of(off_twin_defect_sq(&COUPLING, 1), CAMPAIGN_DIAGONAL_SPLIT[1]);
+        let g0 = g_db_of(
+            off_twin_defect_sq(&K11, &K11.coupling, 0),
+            CAMPAIGN_DIAGONAL_SPLIT[0],
+        );
+        let g1 = g_db_of(
+            off_twin_defect_sq(&K11, &K11.coupling, 1),
+            CAMPAIGN_DIAGONAL_SPLIT[1],
+        );
         assert!(libm::fabs(g0 - 2.284) < 5e-4, "twin 0 g_DB {g0}, campaign 2.284");
         assert!(libm::fabs(g1 - 8.617) < 5e-4, "twin 1 g_DB {g1}, campaign 8.617");
 
@@ -346,8 +362,8 @@ mod tests {
     /// structurally cannot carry.
     #[test]
     fn the_two_twins_break_symmetry_in_different_directions() {
-        let off0 = off_twin_defect_sq(&COUPLING, 0);
-        let off1 = off_twin_defect_sq(&COUPLING, 1);
+        let off0 = off_twin_defect_sq(&K11, &K11.coupling, 0);
+        let off1 = off_twin_defect_sq(&K11, &K11.coupling, 1);
         assert!(libm::fabs(off0 - 3.552_138_962_793) < 1e-9, "{off0}");
         assert!(libm::fabs(off1 - 141.728_661_153_960) < 1e-9, "{off1}");
 
@@ -364,8 +380,43 @@ mod tests {
     #[test]
     fn symmetrised_coupling_has_zero_defect() {
         for twin in 0..2 {
-            assert!(off_twin_defect_sq(&COUPLING_SYM, twin) < 1e-24);
-            assert!(g_db(&COUPLING_SYM, twin) < 1e-12);
+            assert!(off_twin_defect_sq(&K11, &K11.coupling_sym, twin) < 1e-24);
+            assert!(g_db(&K11, &K11.coupling_sym, twin) < 1e-12);
+        }
+    }
+
+    /// E10: the probe is a statement about a group average and two indices, so it holds
+    /// at any `N`. On a four-node structure the symmetrised null is exact and the
+    /// measured leak matches the closed form, exactly as at eleven.
+    #[test]
+    fn the_probe_generalises_to_other_sizes() {
+        let c = [
+            [0.0, 5.0, 2.0, 1.0],
+            [5.0, 0.0, 3.0, 4.0],
+            [2.0, 3.0, 0.0, 7.0],
+            [1.0, 4.0, 7.0, 0.0],
+        ];
+        let st = Structure::<4>::from_coupling(&c, [(0, 1), (2, 3)]);
+        for twin in 0..2 {
+            // The proved null, on the group average.
+            let sym = probe(&st, twin, 3.0, true);
+            assert!(
+                sym.max_other_displacement < 1e-12,
+                "twin {twin}: null violated by {}",
+                sym.max_other_displacement
+            );
+            assert!(off_twin_defect_sq(&st, &st.coupling_sym, twin) < 1e-24);
+
+            // The measured leak, against the closed form.
+            let meas = probe(&st, twin, 1.0, false);
+            let closed = g_db(&st, &st.coupling, twin);
+            assert!(
+                libm::fabs(meas.leakage - closed) < 1e-12,
+                "twin {twin}: residual {} != g_DB {closed}",
+                meas.leakage
+            );
+            // This coupling is deliberately not twin-symmetric, so there IS a leak.
+            assert!(meas.leakage > 0.0, "twin {twin} showed no measured leak");
         }
     }
 }
