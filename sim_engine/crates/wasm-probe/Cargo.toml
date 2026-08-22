@@ -21,6 +21,14 @@ publish = false
 [lib]
 crate-type = ["rlib"]
 
+# The E10 verification surface: `Structure::from_coupling` and `jacobi_eigen` at N = 11,
+# 64 and 128. Separated so the deployment-size figure in PORTABILITY.md §1.3 measures the
+# engine as a consumer would link it, and the difference prices const-generic
+# monomorphisation instead of hiding it. `--no-default-features` gives the lean build.
+[features]
+default = ["verify"]
+verify = []
+
 [dependencies]
 ciris-sim-core = { path = "../ciris-sim-core" }
 libm = "0.2.16"

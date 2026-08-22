@@ -178,6 +178,12 @@ fn main() {
         for _ in 0..n {
             black_box(l.step_and_account(&mut s, &K11, &mut b, &p, false));
         }
+        // The ledger itself must be observed. Without this the optimiser proves
+        // `l.recorded` is never read, deletes the accumulation, and with it BOTH
+        // potential-energy evaluations — the measurement then reads as a bare step
+        // (355 ns instead of 660 ns) and silently reports the wrong thing.
+        black_box(l.recorded);
+        black_box(&b);
     });
 
     // --- a long run, to catch an allocation that only happens once.
