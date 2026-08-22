@@ -141,3 +141,67 @@ place every other candidate breaks. Native `Q4_K_M` 270.6MB, browser `model_q4.o
 Unchanged and still owed: **no model at any size has been evaluated on an 11-category
 typed-tuple taxonomy.** Published IFEval numbers cannot settle SmolLM2-vs-Qwen3 for our
 task; only our own eval set can, and we are fine-tuning regardless.
+
+---
+
+## Measured CPU latency, and a loader correction — 2026-08-22
+
+`inference-scout` measured the runtime hole on real hardware (i9-13900HX, AVX2/FMA, **no
+AVX-512** — a Xeon/EPYC or Zen4+ box would read better). Nothing below is estimated.
+
+### llama-cpp-2 native — settled, act on all three
+| finding | number |
+|---|---|
+| cold start (process → first token) | **0.5–0.9 s**, and **prefill-dominated**, not load-dominated (GGUF is mmap'd; model_load is only 64ms at 360M) |
+| per-call, 200-in / 30-out, 8 threads | SmolLM2-360M **602ms p50 / 690ms p95**; Qwen3-0.6B 742/842 |
+| decode throughput | 7.8 ms/tok (SmolLM2 Q4) · 13.3 ms/tok (Qwen3 Q4) |
+| **prefix reuse** | **1.56× (Qwen3) to 2.17× (SmolLM2) on p50 — and 2.35× on p95** |
+
+Three binding consequences:
+1. **Keep the inference process resident.** Cold start amortises to zero if it lives;
+   fork-per-call pays 0.5–0.9s every time. Highest-priority integration constraint.
+2. **Prefix reuse belongs in the first implementation, not a later optimisation.** ~10
+   lines against `clear_kv_cache_seq`. It beats everything else on the list, it cuts the
+   *tail* harder than the median, and the saving grows linearly with system-prompt length
+   while its cost stays flat — measured with only a 150-token prefix, ours will be longer.
+3. **Set threads to P-core count (8 here), not `num_cpus`.** Prefill and decode scale
+   *oppositely* — prefill improves to 32 threads, decode peaks at 8 and degrades as it
+   spills onto E-cores. `n_threads` and `n_threads_batch` should be set separately.
+
+### rten — the benchmark measured the WRONG ARTIFACT; numbers are provisional
+The scout hit a real failure — `rten-convert` rejected the prebuilt HF ONNX with **161
+unconvertible operators**, naming exactly the `com.microsoft` contrib ops — and worked
+around it with a self-exported fp32 (1638MB) and a dynamic-QUInt8 (553MB) build. **The
+diagnosis was right; the workaround was unnecessary.** rten 0.25.0 has **two loaders with
+different op coverage**:
+
+| loader | format | `com.microsoft` registrations |
+|---|---|---:|
+| `onnx_loader` / `onnx_registry.rs` | `.onnx` **direct** | **7** (incl. GQA, RotaryEmbedding, SimplifiedLayerNorm) |
+| `rten_loader` / `rten_registry.rs` | `.rten` (what `rten-convert` emits) | **0** |
+
+`Model::load_file` auto-detects file type and the docs state models load "from either
+`.onnx` or `.rten`". So the prebuilt **387.94MB `model_q4.onnx` loads directly**, contrib
+ops included, with no conversion step to own. Consequences:
+
+- The 1.6GB fp32 intermediate is not a cost we have to pay.
+- **"int8 made rten slower" does NOT transfer to q4.** Dynamic QUInt8 wraps every MatMul
+  in quantise/dequantise, which is why it lost at batch-1 GEMV. `MatMulNBits` is a *fused*
+  int4 kernel with an `accuracy_level` attribute — a different code path, not the same trade.
+- **rten's speed on the shipping artifact is therefore UNMEASURED.** The reported 2.1×
+  (fp32) and 4.5× (int8) gaps behind llama.cpp are provisional.
+- Re-measure at **our true output length**. The scout's sharpest observation: rten's
+  *prefill is faster* than llama.cpp's (250ms vs 364ms) and only *decode* loses (33.7 vs
+  7.8 ms/tok). A terse typed-tuple output is prefill-dominated, where rten may win outright.
+
+### Open blocker, independent of the above — ranks above every performance number
+`rten-text`'s `Tokenizer::from_file` fails with `BpeError(MissingVocabEntry("Ą"))` on both
+the original and a freshly-exported `tokenizer.json` — an rten-text BPE gap, not a corrupt
+file. Bypassed for timing with synthetic token IDs. **This is a genuine shipping blocker
+for rten with this model family** until the `tokenizers` crate is swapped in.
+
+### Not measured, stated plainly
+No Gemma 4 number (3.35GB, impractical here — these are the *shape* of the overhead, not
+Gemma-specific; do not extrapolate linearly). No llguidance mask overhead. **No wasm
+runtime performance at all** — everything is native x86; browser will be worse
+(single-threaded, no mmap). One machine, no AVX-512.
