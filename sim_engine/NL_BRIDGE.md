@@ -222,3 +222,50 @@ Confirmed: the `com.microsoft` contrib ops load through the direct-ONNX path, th
 plumbing is intact (5 KV heads, head_dim 64), and **load is 192ms — comparable to the
 self-exported int8 (187–194ms) and 2.6x faster than the fp32 (487–506ms)**, at a third of
 fp32's size. The 1.6GB intermediate and the permanent conversion step are not costs we owe.
+
+---
+
+## The pin flip's browser cost, MEASURED — 2026-08-22
+
+The 4-way surface eval convicted SmolLM2-360M (0.250 = uniform chance, below the 0.370
+majority class) and gave Qwen3-0.6B real grip (0.467, p=0.035; McNemar vs SmolLM2
+p=0.00119). So the pin flips on capability. The open question was the browser cost, which
+had been quoted at 919MB. I proposed a rescue and then tested it. **The rescue fails.**
+
+| candidate | file rten can load | size | `Model::load_file` |
+|---|---|---:|---|
+| SmolLM2-360M | `onnx/model_q4.onnx` | **387.9 MB** | **OK, 192 ms** |
+| Qwen3-0.6B | `onnx/model_q4.onnx` | **919.1 MB** | **OK, 831 ms** |
+| Qwen3-0.6B | `onnxruntime/cpu_and_mobile/cpu-int4-kld-block-128/model.onnx` | 524.6 MB | **FAILS** |
+
+```
+LOAD FAILED: in node "/model/embed_tokens/GatherBlockQuantized":
+  com.microsoft/GatherBlockQuantized operator not supported or not enabled
+```
+
+**The hypothesis was right and the conclusion is still negative.** I predicted the 919MB
+was inflated by an unquantised embedding table. It is — confirmed by the loaded graph:
+Qwen3-0.6B's vocab is **151,936** against SmolLM2's **49,152**, a 3.09x larger embedding
+table, and `MatMulNBits` quantises MatMul weights only, never the Gather-based embedding
+lookup. ORT's `cpu_and_mobile` export gets to 524.6MB precisely *by* quantising that table
+— which requires `GatherBlockQuantized`, an op rten does not implement. So the 1.75x saving
+is real and **unavailable to us**.
+
+### What this actually forces
+**"One model, every platform" and "a model that works" are now in tension**, and that is
+the decision, not a detail:
+
+- **Native is settled.** Qwen3-0.6B GGUF Q4_K_M is 484MB through llama-cpp-2 — fine
+  everywhere, and it is the only sub-gig candidate with measured signal.
+- **Browser is not.** 919MB is not viable on mobile Safari. SmolLM2 fits at 388MB but
+  reads *floor at both granularities*, so shipping it in the browser ships a model that
+  cannot do the task — worse than shipping nothing.
+
+Three honest routes, none free: accept desktop-browser-only at 919MB; implement
+`GatherBlockQuantized` in rten (an upstream contribution, and the only route that gets
+Qwen3 to 524.6MB); or find a model with a small vocabulary and real 4-way grip. **Vocabulary
+size — not parameter count — is the binding constraint on browser payload**, which is the
+generalisable lesson and should govern the next model search.
+
+Unchanged: `onnx-community` declares no licence on any of these files, so the export must
+be reproduced from the Apache-2.0 original regardless of which variant wins.
