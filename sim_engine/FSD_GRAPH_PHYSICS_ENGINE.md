@@ -101,8 +101,9 @@ people and is out of scope here.
 ## §9 Acceptance
 1. `ForceSimulation` accepts a coupling matrix and a metric; existing tests pass.
 2. `TwinProbe` test: symmetrised coupling ⇒ non-twin displacement < 1e-12; measured
-   coupling ⇒ ratio of Structure/Circumstances to Priorities/Process leakage in
-   [3.0, 4.6].
+   coupling ⇒ leakage ratio (Structure/Circumstances : Priorities/Process) = **6.3166**,
+   with the individual readings pinned at **1.332692568** and **8.418095424**.
+   **CORRECTED 2026-08-23 — the original band [3.0, 4.6] was wrong.** See §12.
 3. `ParitySectors` test: sector dimensions are exactly 9/1/1/0; inter-sector leakage
    < 1e-12 symmetrised.
 4. `MetricProvider` test: 0 triangle-inequality violations over all triples.
@@ -205,3 +206,32 @@ profile is distinct at the working tolerance — then G ~ N, the reduction is 1x
 engine is a factor-of-four symmetry trick with a nice metric. **That is the honest
 failure mode and it must be measured on real scenes before any scaling claim is made.**
 Check: report G/N versus N on captured scenes, at three tolerances, before benchmarking.
+
+
+## §12 A convention error the build caught **[today]**
+
+The FSD originally required a twin leakage ratio in [3.0, 4.6], from CIRISOntology's
+`FLAVOUR_DEFECT_RESULTS.md` (g_DB 2.284 and 8.617). The implementing agent measured
+**6.3166** instead, refused to tune the test, and diagnosed the cause: **the diagonal.**
+
+Two CIRISOntology campaigns use different diagonal conventions on the same matrix:
+
+| campaign | diagonal | g_DB (Pri/Prc, Str/Cir) | ratio |
+|---|---|---|---|
+| `DARK_STATE_K2` | **zeroed** (`fill_diagonal(c, 0.0)`) | 1.33269, 8.41810 | **6.3166** |
+| `FLAVOUR_DEFECT` (FDA-1) | **kept** | 2.2841, 8.6174 | 3.7728 |
+
+**Both are correct for their own purpose** — FDA-1 compares against CKM/PMNS, whose
+`sym(|V|²)` genuinely has a diagonal, so keeping it is required for like-with-like;
+K2 treats the matrix as a coupling graph, where self-coupling is meaningless.
+`DefectCoupling.defect_split` explains why the two disagree: the defect is
+`2·(diagonal split)² + 4·Σ(field direction)²`, so zeroing the diagonal deletes the
+first term outright.
+
+**The error was mine: I quoted FDA-1's number in a spec built on K2's convention.**
+A force simulation has no self-springs, so the engine's zeroed diagonal is right, and
+the engine independently **reproduced K2's published values to nine decimals** — which
+is a cross-validation of both, obtained for free.
+
+Rule adopted: **any figure crossing between campaigns must name its diagonal
+convention.** A bare `g_DB` is ambiguous by a factor of ~1.7.
