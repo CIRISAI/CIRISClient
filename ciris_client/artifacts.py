@@ -114,7 +114,38 @@ def _current_platform() -> str:
     return f"{sys.platform}-{arch}"
 
 
+def _wasm_bundle() -> Path:
+    """The browser bundle, from its own distribution.
+
+    It ships separately because it is the one artifact here that is host-
+    independent, and because its consumer (a node serving the web UI) runs no
+    JVM — pairing it with a 67 MiB desktop jar would make every web deployment
+    download one.
+    """
+    try:
+        import ciris_client_wasm
+    except ImportError as exc:
+        raise ArtifactUnavailable(
+            "the wasm browser bundle ships in its own distribution, which is "
+            "not installed.\n"
+            '    pip install "ciris-client[web]"     # or: pip install ciris-client-wasm'
+        ) from exc
+
+    from . import __version__
+
+    if ciris_client_wasm.__version__ != __version__:
+        raise ArtifactError(
+            f"version split: ciris-client is {__version__} but "
+            f"ciris-client-wasm is {ciris_client_wasm.__version__}. Install a "
+            f'matching pair — pip install "ciris-client[web]=={__version__}"'
+        )
+    return ciris_client_wasm.bundle_path()
+
+
 def artifact_path(kind: str) -> Path:
+    if kind == "wasm-browser":
+        return _wasm_bundle()
+
     """Absolute path to the built artifact of ``kind``.
 
     ``kind`` is whatever the Gradle build staged — ``desktop-uber-jar``,

@@ -11,6 +11,13 @@ license = { text = "AGPL-3.0-or-later" }
 dependencies = []
 
 [project.optional-dependencies]
+# The browser bundle, in its own distribution: it is host-independent and its
+# consumers run no JVM, so it is not carried by the per-OS desktop wheels.
+# Pinned to this distribution's own version — `ciris-client[web]==X` must
+# resolve the X bundle, or a stale resolver pairs with a fresh payload and the
+# split surfaces only at runtime. packaging/check_pins.py asserts it in CI.
+web = ["ciris-client-wasm==0.5.186"]
+
 # The build-readiness gates (this repo's original contents). Their framework
 # lives in CIRISGrace and is not published yet, which is why it is an extra and
 # not a dependency — `pip install ciris-client` must not fail on it.

@@ -10,14 +10,27 @@
 # No API tokens: `id-token: write` mints a short-lived OIDC credential per run,
 # which is why the job needs no secret and why a fork can never publish.
 #
-# ONE WHEEL PER OS, because the desktop uber-jar is ~67 MiB and PyPI's per-file
-# limit is 104,857,600 bytes: three OSes' jars cannot share one file, and they
-# do not need to. Each runner builds its own jar (compose.desktop.currentOs),
-# stages it stamped with the platform it was built FOR, and the wheel is
-# retagged so pip picks the right one automatically. The `py3-none-any` wheel
-# from the first 0.5.186 upload stays as the last-resort fallback: on a
-# platform with no specific wheel it installs and then REFUSES with the remedy,
-# rather than handing over a jar that cannot start.
+# ONE ARTIFACT PER WHEEL. PyPI's limit is per FILE, so the question is never
+# "does the release fit" but "should this consumer download this payload".
+#
+#   ciris-client        one wheel per OS, carrying that OS's desktop uber-jar
+#                       (~67 MiB raw, 63% of the limit). compose.desktop.currentOs
+#                       means the jar is per-platform, so the wheel is retagged
+#                       (manylinux/macosx/win) and pip picks the right one.
+#   ciris-client-wasm   the browser bundle, py3-none-any, 6.8 MiB. Host-
+#                       independent, and its consumers — CIRISHome on Home
+#                       Assistant, and the agent replacing its legacy web
+#                       interfaces — run no JVM. Bundling it with the desktop
+#                       jar would make every web deployment download 67 MiB of
+#                       JVM bytecode it never executes.
+#
+# The Android AAR and the iOS XCFramework are NOT wheels: their consumers are
+# Gradle and Xcode, not pip. They are attached to the GitHub release.
+#
+# The `py3-none-any` wheel from the first 0.5.186 upload stays as the
+# last-resort fallback: on a platform with no specific wheel it installs and
+# then REFUSES with the remedy, rather than handing over a jar that cannot
+# start.
 #
 # Additional platform wheels may be added to an EXISTING release, which is why
 # the OS suite can complete 0.5.186 with no version bump. That matters beyond
@@ -133,22 +146,22 @@ jobs:
           fi
           echo "publishing $version"
 
-      - name: Build the client for this OS
-        # The agent build is what ships: every surface present, narrowed at
-        # runtime by the probed node. compose.desktop.currentOs means the jar
-        # this produces carries THIS runner's desktop runtime — which is the
-        # entire reason for the matrix.
+      - name: Desktop uber-jar for this OS
+        # compose.desktop.currentOs means the jar this produces carries THIS
+        # runner's desktop runtime — the entire reason for the matrix. The agent
+        # build is what ships: every surface present, narrowed at runtime by the
+        # probed node.
         working-directory: client
         shell: bash
         run: ./gradlew --no-daemon -PhasAgent=true :desktopApp:packageUberJarForCurrentOS
 
-      - name: Stage it, stamped with the platform it was built for
+      - name: Stage the jar, stamped with the platform it was built for
         shell: bash
         run: |
           set -euo pipefail
           jar=$(find client/desktopApp/build/compose/jars -name '*.jar' | head -1)
-          test -n "$jar" || { echo "::error::gradle produced no jar"; exit 1; }
-          python3 packaging/stage_artifacts.py \
+          test -n "$jar" || { echo "::error::gradle produced no desktop jar"; exit 1; }
+          python3 packaging/stage_artifacts.py --dist client \
             --artifact "desktop-uber-jar@${{ matrix.platform }}=$jar"
 
       - name: A placeholder must never be published
@@ -201,9 +214,26 @@ jobs:
           m = c.manifest()
           assert not m.get("placeholder"), "placeholder reached the publish path"
           assert m["client_version"] == c.__version__, "version split"
-          p = c.artifact_path("desktop-uber-jar")
-          assert p.is_file(), p
-          print("resolves:", p.name, p.stat().st_size, "bytes")
+
+          # Every artifact this wheel claims must actually resolve. A manifest
+          # that lists what the build meant to produce is not evidence.
+          for a in c.artifacts():
+              p = c.artifact_path(a["kind"])
+              assert p.exists(), f"{a['kind']} listed but missing at {p}"
+              print(f"  {a['kind']:<18} {p.name}  {a['bytes']:,} bytes")
+
+          kinds = {a["kind"] for a in c.artifacts()}
+          assert kinds == {"desktop-uber-jar"}, f"expected the jar alone, got {kinds}"
+
+          # The web bundle is a separate distribution. Asking for it here must
+          # say so, not fail obscurely.
+          try:
+              c.artifact_path("wasm-browser")
+          except c.ArtifactUnavailable as e:
+              assert "own distribution" in str(e), e
+              print("  wasm-browser correctly points at ciris-client-wasm")
+          else:
+              raise SystemExit("wasm resolved from the desktop wheel")
           PY
 
       - uses: actions/upload-artifact@v4
@@ -212,9 +242,152 @@ jobs:
           path: dist/*.whl
           retention-days: 14
 
+  wasm:
+    name: wheel (wasm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+        # :shared applies com.android.library, so the SDK is needed to CONFIGURE
+        # even for the wasm target.
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+      - run: python3 -m pip install --upgrade pip build
+
+      - name: The web bundle
+        # PRODUCTION (28 MiB), not developmentExecutable (69 MiB). Every visitor
+        # downloads this; see shared/build.gradle.kts for why the old "never
+        # ship production wasm" warning no longer holds — it was retested.
+        working-directory: client
+        run: ./gradlew --no-daemon -PhasAgent=true :shared:wasmJsBrowserDistribution
+
+      - name: Stage it
+        run: |
+          set -euo pipefail
+          wasm=client/shared/build/dist/wasmJs/productionExecutable
+          test -d "$wasm" || { echo "::error::no wasm distribution at $wasm"; exit 1; }
+          # Source maps are a debugging aid, not a shipped artifact — and the
+          # largest thing in the bundle no visitor needs.
+          rm -f "$wasm"/*.map
+          python3 packaging/stage_artifacts.py --dist wasm --artifact "wasm-browser=$wasm"
+
+      - name: Build the wheel
+        run: python3 -m build --wheel --outdir dist packaging/wasm
+
+      - run: python3 packaging/check_wheel_size.py dist/*.whl
+
+      - name: Consumption contract — install and serve-check
+        run: |
+          set -euo pipefail
+          python3 -m venv consumer-venv
+          consumer-venv/bin/pip install --quiet --no-index dist/*.whl
+          mkdir -p verify && cd verify && ../consumer-venv/bin/python - <<'PY'
+          import ciris_client_wasm as w
+          p = w.bundle_path()   # raises unless every required part is present
+          print("serves:", p)
+          print("index :", w.index_html().is_file())
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-wasm
+          path: dist/*.whl
+          retention-days: 14
+
+  mobile:
+    name: ${{ matrix.name }}
+    # Android and iOS are NOT wheels: their consumers are Gradle and Xcode, not
+    # pip. They are attached to the GitHub release instead.
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: android-aar
+            runner: ubuntu-latest
+            task: ":shared:assembleRelease"
+          - name: ios-xcframework
+            # Kotlin/Native cannot cross-compile Apple targets.
+            runner: macos-14
+            task: ":shared:assembleSharedReleaseXCFramework"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Build
+        working-directory: client
+        run: ./gradlew --no-daemon -PhasAgent=true ${{ matrix.task }}
+
+      - name: Collect
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p mobile
+          version=$(cat VERSION)
+          if [ "${{ matrix.name }}" = "android-aar" ]; then
+            src=client/shared/build/outputs/aar/shared-release.aar
+            test -f "$src" || { echo "::error::no AAR at $src"; exit 1; }
+            cp "$src" "mobile/ciris-client-$version.aar"
+          else
+            xcf=$(find client/shared/build/XCFrameworks/release -maxdepth 1 -name '*.xcframework' | head -1)
+            test -n "$xcf" || { echo "::error::no XCFramework produced"; exit 1; }
+            # Zipped because an .xcframework is a directory, and a release asset
+            # is a file.
+            (cd "$(dirname "$xcf")" && zip -qr - "$(basename "$xcf")") \
+              > "mobile/ciris-client-$version.xcframework.zip"
+          fi
+          ls -la mobile
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mobile-${{ matrix.name }}
+          path: mobile/*
+          retention-days: 14
+
+  release-assets:
+    name: attach Android + iOS to the release
+    needs: mobile
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # to create/update the release these attach to
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: mobile-*
+          merge-multiple: true
+          path: mobile
+      - run: ls -la mobile
+      - name: Upload
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
+                 --title "$GITHUB_REF_NAME" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" mobile/* --repo "$GITHUB_REPOSITORY" --clobber
+
   publish:
     name: publish to ${{ github.event.inputs.target || 'pypi' }}
-    needs: build
+    needs: [build, wasm]
     # A dispatch with target `none` is a rehearsal: every wheel is built and
     # verified above, and nothing is uploaded.
     if: github.event_name == 'push' || github.event.inputs.target != 'none'

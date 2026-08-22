@@ -1,5 +1,6 @@
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
 
 plugins {
     kotlin("multiplatform")
@@ -177,6 +178,16 @@ kotlin {
     }
 
     // iOS
+    //
+    // The per-target frameworks are declared into an XCFramework so there is a
+    // single artifact to ship. Without the XCFramework DSL the build only
+    // produces `linkReleaseFrameworkIosArm64` and friends — three separate
+    // frameworks that no consumer can depend on as one, and no
+    // `assemble*XCFramework` task at all (client/CLAUDE.md documented one that
+    // has never existed). Device and simulator slices cannot live in a fat
+    // framework because both carry arm64; an XCFramework is the packaging that
+    // holds them together.
+    val xcf = XCFramework("shared")
     listOf(
         iosX64(),
         iosArm64(),
@@ -185,6 +196,7 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "shared"
             isStatic = true
+            xcf.add(this)
         }
     }
 
@@ -195,13 +207,26 @@ kotlin {
         }
     }
 
-    // Web (WASM) - NEW TARGET
-    // WARNING: Production builds (productionExecutable) fail at runtime due to KT-69154
-    // https://youtrack.jetbrains.com/issue/KT-69154
-    // Error: WebAssembly.instantiate(): Import #1 "js_code" "kotlin.wasm.internal.throwJsError":
-    //        function import requires a callable
-    // Workaround: Use developmentExecutable builds only (~11MB vs ~3MB, but functional)
-    // Track issue and do NOT ship production WASM builds until Kotlin team fixes this.
+    // Web (WASM).
+    //
+    // The warning that stood here said production builds fail at runtime on
+    // KT-69154 ("kotlin.wasm.internal.throwJsError: function import requires a
+    // callable") and that only developmentExecutable should ever ship. That was
+    // RETESTED on Kotlin 2.0.21 and is no longer true: the production bundle
+    // was served and loaded in a browser, instantiated, rendered the startup
+    // sequence, and ran real client code (CIRISApiClient probes, the
+    // localization loader, a typed NodeRefusal) with no LinkError. The reported
+    // symptom is commonly a STALE dist directory rather than a compiler defect,
+    // which is why a clean build clears it.
+    //
+    // It matters because the two differ by more than a flag: the development
+    // bundle is 69 MB and the production bundle is 28 MB. A web interface is
+    // downloaded by every visitor, so shipping the development build would put
+    // 41 MB of unminified payload on the wire for no reason.
+    //
+    // Ship `wasmJsBrowserDistribution` (production). If a LinkError ever
+    // reappears, clean `shared/build/dist/wasmJs` and rebuild BEFORE concluding
+    // the compiler broke.
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         moduleName = "ciris-shared"

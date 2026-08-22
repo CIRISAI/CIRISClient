@@ -1,0 +1,38 @@
+# The CIRIS client compiled to WebAssembly — the browser build, on its own.
+#
+# Separate from `ciris-client` on purpose. The desktop wheels carry a ~67 MiB
+# JVM uber-jar; a consumer that serves the web UI (CIRISHome on Home Assistant,
+# and the agent replacing its legacy web interfaces) runs no JVM at all and
+# should not download one. One artifact per wheel, so nobody pays for a payload
+# they never use.
+#
+# Built by CI, not by pip: producing the bundle needs a JDK and the Kotlin/Wasm
+# toolchain, so the Gradle job runs first and `packaging/stage_artifacts.py`
+# stages `wasmJsBrowserDistribution` (the PRODUCTION bundle) into
+# ciris_client_wasm/_artifacts/ before the wheel is built.
+#
+# `py3-none-any`, and correctly so: wasm is the one artifact here that is
+# genuinely host-independent — the same bytes serve a browser on any OS.
+[project]
+name = "ciris-client-wasm"
+dynamic = ["version"]
+description = "CIRIS client — the WebAssembly browser bundle"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-or-later" }
+dependencies = []
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["ciris_client_wasm"]
+
+[tool.setuptools.dynamic]
+# Written by packaging/stage_artifacts.py from the repo-root VERSION, and NOT
+# committed: setuptools refuses to read a version file outside the project root,
+# and a second committed copy of the version is the drift this repo removes.
+version = { file = ["VERSION"] }
+
+[tool.setuptools.package-data]
+ciris_client_wasm = ["_artifacts/*", "_artifacts/**/*"]

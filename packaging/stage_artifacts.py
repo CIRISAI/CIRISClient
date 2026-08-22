@@ -43,8 +43,17 @@ SCHEMA = "ciris-client-artifacts/v1"
 PYPI_LIMIT_BYTES = 104_857_600
 
 
-def payload_dir() -> Path:
-    return REPO / "ciris_client" / "_artifacts"
+#: Where each distribution's payload is staged. One artifact class per wheel:
+#: the desktop jars are per-OS and the wasm bundle is host-independent, so
+#: putting them in one file would make every consumer download the other's.
+PAYLOADS = {
+    "client": REPO / "ciris_client" / "_artifacts",
+    "wasm": REPO / "packaging" / "wasm" / "ciris_client_wasm" / "_artifacts",
+}
+
+
+def payload_dir(dist: str) -> Path:
+    return PAYLOADS[dist]
 
 
 def read_version() -> str:
@@ -93,17 +102,48 @@ def sha256(path: Path) -> str:
 
 
 def resolve(pattern: str) -> Path:
+    """The one file OR directory the pattern names.
+
+    A directory is a legitimate artifact: the wasm browser distribution is a
+    tree (the .wasm modules, the loader .js, index.html, composeResources), and
+    it is only useful whole.
+    """
     matches = sorted(glob.glob(pattern, recursive=True))
-    files = [Path(m) for m in matches if Path(m).is_file()]
-    if not files:
-        sys.exit(f"no file matched {pattern!r} — did the Gradle task actually run?")
-    if len(files) > 1:
-        sys.exit(f"{pattern!r} matched {len(files)} files, expected 1: {files}")
-    return files[0]
+    paths = [Path(m) for m in matches if Path(m).exists()]
+    if not paths:
+        sys.exit(f"nothing matched {pattern!r} — did the Gradle task actually run?")
+    if len(paths) > 1:
+        sys.exit(f"{pattern!r} matched {len(paths)}, expected 1: {paths}")
+    return paths[0]
+
+
+def tree_bytes(path: Path) -> int:
+    if path.is_file():
+        return path.stat().st_size
+    return sum(p.stat().st_size for p in path.rglob("*") if p.is_file())
+
+
+def tree_sha256(path: Path) -> str:
+    """One digest over a whole tree: every file\'s hash, keyed by its relative
+    path, in sorted order — so the digest is a fact about the CONTENT and not
+    about the order the filesystem happened to walk it."""
+    if path.is_file():
+        return sha256(path)
+    outer = hashlib.sha256()
+    for f in sorted(p for p in path.rglob("*") if p.is_file()):
+        outer.update(f"{sha256(f)}  {f.relative_to(path).as_posix()}\n".encode())
+    return outer.hexdigest()
 
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    ap.add_argument(
+        "--dist",
+        default="client",
+        choices=sorted(PAYLOADS),
+        help="which distribution to stage into: `client` (the per-OS desktop "
+             "wheels) or `wasm` (the browser bundle's own wheel)",
+    )
     ap.add_argument(
         "--flavor",
         default="agent",
@@ -134,7 +174,7 @@ def main() -> int:
             "pass either --artifact (one or more) or --placeholder REASON, not both\n"
         ))) or 2
 
-    dest = payload_dir()
+    dest = payload_dir(args.dist)
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
@@ -169,34 +209,62 @@ def main() -> int:
             kind_spec, _, pattern = spec.partition("=")
             kind, _, plat = kind_spec.partition("@")
             src = resolve(pattern)
-            target = dest / src.name
-            shutil.copy2(src, target)
-            size = target.stat().st_size
+            # A tree is staged under its KIND, not under whatever Gradle called
+            # its output directory: consumers serve this path, and
+            # "productionExecutable" is the build's business leaking into
+            # theirs. A file keeps its own name — that name is the artifact.
+            target = dest / (kind if src.is_dir() else src.name)
+            if src.is_dir():
+                shutil.copytree(src, target)
+            else:
+                shutil.copy2(src, target)
+            size = tree_bytes(target)
             total += size
             entry = {
                 "kind": kind,
-                "path": src.name,
+                "path": target.name,
                 "bytes": size,
-                "sha256": sha256(target),
+                "sha256": tree_sha256(target),
             }
+            if src.is_dir():
+                entry["tree"] = True
+                entry["files"] = sum(1 for p in target.rglob("*") if p.is_file())
             if plat:
                 entry["platform"] = plat
             manifest["artifacts"].append(entry)
             tag = f"{kind}@{plat}" if plat else kind
             print(f"[staged] {tag:<22} {src}  ({size / 1048576:.2f} MiB)")
 
-        if total > PYPI_LIMIT_BYTES:
-            sys.exit(
-                f"staged payload is {total:,} bytes, over PyPI's "
-                f"{PYPI_LIMIT_BYTES:,}-byte limit before compression. "
-                f"Localization is the product and is not what gets cut — "
-                f"split a flavor or a target instead."
-            )
+        # RAW total, reported — not enforced. PyPI's limit applies to the
+        # WHEEL, and the wheel is a zip: this check used to exit non-zero on
+        # `total > PYPI_LIMIT_BYTES`, which was sound while the payload was a
+        # single uber-jar (already compressed, so raw ≈ wheel). It stopped
+        # being sound when the wasm bundle arrived: 27 MiB of raw .wasm stores
+        # as roughly a third of that, and a payload measuring 109 MiB raw built
+        # an 84.9 MiB wheel — comfortably inside a limit this check called
+        # exceeded. Refusing to stage a payload that demonstrably fits is a
+        # false gate, and a false gate is worse than none.
+        #
+        # packaging/check_wheel_size.py measures the built wheel and is the
+        # authoritative gate. This prints the number so the trend is visible
+        # before it is a problem.
+        pct = total * 100 / PYPI_LIMIT_BYTES
+        print(
+            f"[payload]  {total:,} bytes raw ({total / 1048576:.2f} MiB) — "
+            f"{pct:.0f}% of PyPI's per-file limit BEFORE compression; "
+            f"check_wheel_size.py measures what actually ships"
+        )
 
     (dest / "manifest.json").write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     print(f"[manifest] {dest / 'manifest.json'}")
+
+    if args.dist != "client":
+        # setuptools will not read a version file outside its project root, so
+        # the one source is projected in at the moment that project is built.
+        (dest.parent.parent / "VERSION").write_text(version + "\n", encoding="utf-8")
+        print(f"[version]  {args.dist} -> {version}")
 
     return 0
 

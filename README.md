@@ -12,13 +12,31 @@ copies today; deleting them is what finishes this.
 ## Install
 
 ```bash
-pip install ciris-client     # one client; what it shows depends on the node
+pip install ciris-client            # the desktop client for your OS
+pip install ciris-client-wasm       # the browser bundle, on its own (6.8 MiB)
 ```
 
-pip picks the wheel for your OS — Linux x86-64, macOS arm64, macOS x86-64, or
-Windows x86-64 — because the desktop runtime inside is built per platform
-(`compose.desktop.currentOs`). On anything else the fallback wheel installs and
-then refuses with the remedy, rather than handing over a jar that cannot start.
+**One artifact per wheel.** PyPI's size limit is per file, so the question is
+never "does the release fit" but "should this consumer download this payload".
+
+| distribution | carries | size | who wants it |
+|---|---|---|---|
+| `ciris-client` | that OS's desktop uber-jar | 63.0% of the limit | anyone launching the desktop client |
+| `ciris-client-wasm` | the WebAssembly browser bundle | 6.8 MiB | CIRISHome, and any node serving the web UI |
+
+`ciris-client` ships one wheel per OS — Linux x86-64, macOS arm64, macOS
+x86-64, Windows x86-64 — because the desktop runtime inside is built per
+platform (`compose.desktop.currentOs`), and pip picks the right one. On a
+platform with no specific wheel the fallback installs and then refuses with the
+remedy, rather than handing over a jar that cannot start.
+
+The **Android AAR** and the **iOS XCFramework** are attached to the GitHub
+release rather than shipped as wheels: their consumers are Gradle and Xcode,
+not pip.
+
+`ciris_client.artifact_path("wasm-browser")` resolves the web bundle when
+`ciris-client-wasm` is installed (`pip install "ciris-client[web]"`), so one
+resolver API still covers everything.
 
 To run the readiness gates from a checkout — their framework lives in
 [CIRISGrace](../CIRISGrace) and is not published yet:
