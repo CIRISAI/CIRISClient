@@ -39,7 +39,7 @@
       "node_min": "0.5.168",
       "node_min_reason": "unchanged from 0.5.185: the three-state health merge is the floor; contacts/chat absence on older nodes renders the contacts_node_too_old strings",
       "node_max_tested": "0.5.186",
-      "agent_min_tested": "2.9.31",
+      "agent_min_tested": "2.9.32",
       "capabilities": [
         "contacts",
         "chat",
@@ -56,7 +56,7 @@
         "languages": 29,
         "keys": 3853
       },
-      "notes": "the superset merge: server v0.5.186 (1ea2c8b) + agent v2.9.30-stable (c26cb36) folded into the tree of record; two upstream placeholder defects repaired via the localize pipeline; agent pull updated to v2.9.31 (BYOK setup fixes, #1062) before release"
+      "notes": "the superset merge: server v0.5.186 (1ea2c8b) + agent v2.9.32-stable (2504960) folded into the tree of record; two upstream placeholder defects repaired via the localize pipeline; androidApp ciris-server pin at 0.5.186 (wheels published)"
     }
   ]
 }
