@@ -38,6 +38,22 @@ not pip.
 `ciris-client-wasm` is installed (`pip install "ciris-client[web]"`), so one
 resolver API still covers everything.
 
+### The locale bundle, for gates that read it
+
+```python
+ciris_client.locale_bundle()   # -> a directory of en.json + 28 locales + manifest.json
+```
+
+CIRISServer emits operator messages as `{id, text}`, where `id` is a
+localization key with no Kotlin call site, and its release gates assert those
+ids **resolve** against this bundle — the check that stops an operator reading
+a raw token. Those gates used to read a vendored `client/` tree; once the
+client is a dependency, the bundle lives inside the shipped jar. This extracts
+it once, caches it keyed by version and jar digest (`CIRIS_CLIENT_CACHE` to
+choose where, with a fallback if that is unwritable), and refuses to hand back
+a partial bundle — a gate must not read an incomplete extraction as an
+absence.
+
 To run the readiness gates from a checkout — their framework lives in
 [CIRISGrace](../CIRISGrace) and is not published yet:
 

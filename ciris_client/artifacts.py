@@ -99,6 +99,100 @@ def artifacts() -> list[dict[str, Any]]:
     return list(data.get("artifacts", []))
 
 
+#: Files the locale bundle is meaningless without.
+_LOCALE_REQUIRED = ("en.json", "manifest.json")
+
+
+def locale_bundle() -> Path:
+    """The client's locale bundle, extracted from the desktop jar.
+
+    Returns a directory holding ``en.json``, ``manifest.json`` and the 28 other
+    locales — the same bytes the running client resolves against.
+
+    **Why this exists.** CIRISServer emits operator messages as ``{id, text}``
+    pairs, where ``id`` is a localization key with no Kotlin call site, and its
+    release gates assert those ids actually RESOLVE against the client's bundle
+    — the check that stops an operator reading a raw token. Those gates used to
+    read `client/shared/.../localization` from a vendored tree. Once the tree is
+    a dependency instead, the bundle is inside the shipped jar, and three gates
+    each writing their own zip extraction is three chances to get it subtly
+    different (a different member prefix, a different notion of "missing").
+
+    The bundle is cached on disk, keyed by version and jar digest, so repeated
+    calls and repeated CI steps pay the extraction once. Set
+    ``CIRIS_CLIENT_CACHE`` to choose where; an unwritable cache falls back to a
+    temporary directory rather than failing, because reading strings should not
+    depend on the filesystem being hospitable.
+    """
+    import hashlib
+    import os
+    import tempfile
+    import zipfile
+
+    jar = artifact_path("desktop-uber-jar")
+
+    # Keyed by CONTENT, not just version: two builds of one version differ (the
+    # jar carries a timestamp), and a stale cache silently answering for a jar
+    # it did not come from is exactly the class of bug these gates exist to
+    # catch.
+    digest = hashlib.sha256(jar.read_bytes()).hexdigest()[:16]
+    from . import __version__
+
+    stem = f"ciris-client-locale-{__version__}-{digest}"
+
+    roots = []
+    if os.environ.get("CIRIS_CLIENT_CACHE"):
+        roots.append(Path(os.environ["CIRIS_CLIENT_CACHE"]))
+    if os.environ.get("XDG_CACHE_HOME"):
+        roots.append(Path(os.environ["XDG_CACHE_HOME"]) / "ciris-client")
+    roots.append(Path.home() / ".cache" / "ciris-client")
+    roots.append(Path(tempfile.gettempdir()) / "ciris-client")
+
+    for root in roots:
+        cached = root / stem
+        if (cached / "en.json").is_file():
+            return cached
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+            # Extract beside the target and rename, so a concurrent reader never
+            # sees a half-written bundle.
+            staging = Path(tempfile.mkdtemp(prefix=f"{stem}.", dir=root))
+            with zipfile.ZipFile(jar) as zf:
+                members = [
+                    n for n in zf.namelist()
+                    if n.startswith("localization/") and not n.endswith("/")
+                ]
+                if not members:
+                    raise ArtifactUnavailable(
+                        f"{jar.name} carries no localization/ entries — the jar "
+                        f"is not the one this function was written for."
+                    )
+                for name in members:
+                    target = staging / Path(name).name
+                    target.write_bytes(zf.read(name))
+            missing = [n for n in _LOCALE_REQUIRED if not (staging / n).is_file()]
+            if missing:
+                raise ArtifactUnavailable(
+                    f"the extracted locale bundle is missing {missing}; "
+                    f"refusing to hand back a partial bundle a gate would "
+                    f"then read as an absence"
+                )
+            try:
+                staging.rename(cached)
+            except OSError:
+                # Lost the race to another process; theirs is as good as ours.
+                if not (cached / "en.json").is_file():
+                    raise
+            return cached
+        except OSError:
+            continue  # this root is not writable — try the next
+
+    raise ArtifactUnavailable(
+        f"could not extract the locale bundle to any of {[str(r) for r in roots]}; "
+        f"set CIRIS_CLIENT_CACHE to a writable directory"
+    )
+
+
 def _current_platform() -> str:
     """This interpreter's platform, in the manifest's `platform` vocabulary."""
     import platform as _platform

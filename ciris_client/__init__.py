@@ -26,6 +26,7 @@ from .artifacts import (
     ArtifactUnavailable,
     artifact_path,
     artifacts,
+    locale_bundle,
     manifest,
 )
 
@@ -35,6 +36,7 @@ __all__ = [
     "__version__",
     "artifact_path",
     "artifacts",
+    "locale_bundle",
     "manifest",
 ]
 
