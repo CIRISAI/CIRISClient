@@ -187,6 +187,18 @@ actual fun Modifier.testable(tag: String, text: String?): Modifier = composed {
  */
 actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () -> Unit): Modifier = composed {
     if (TestAutomation.isEnabled()) {
+        // THE REGISTERED HANDLER MUST TRACK RECOMPOSITION. DisposableEffect is
+        // keyed on `tag`, so it runs once — and the registry kept the FIRST
+        // composition's `onClick`, whose closure had captured the screen state
+        // of that moment. Every automation /click then replayed that snapshot:
+        // in the setup wizard, Test Connection read an EMPTY api key while the
+        // field visibly held one, returned "Enter an API key" before any HTTP,
+        // and only a Back→Next (dispose + re-register) unwedged it. Real mouse
+        // clicks were immune because `.clickable { onClick() }` reads the
+        // current lambda — precisely the split that made this invisible to
+        // manual testing. rememberUpdatedState keeps single registration (the
+        // dispose-time cleanup the comment above documents still holds) while
+        // the registered thunk always calls the LATEST lambda.
         val currentOnClick by rememberUpdatedState(onClick)
         DisposableEffect(tag) {
             TestAutomation.registerClickHandler(tag) { currentOnClick() }
@@ -235,6 +247,7 @@ actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () ->
  */
 actual fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = composed {
     if (TestAutomation.isEnabled()) {
+        // Same stale-closure hazard as testableClickable — see the comment there.
         val currentOnClick by rememberUpdatedState(onClick)
         DisposableEffect(tag) {
             TestAutomation.registerClickHandler(tag) { currentOnClick() }
