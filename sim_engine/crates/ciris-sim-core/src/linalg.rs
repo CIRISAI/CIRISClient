@@ -112,9 +112,18 @@ pub struct Eigen<const N: usize> {
 /// construction (a Laplacian of a symmetric coupling).
 ///
 /// Determinism: the rotation order is row-cyclic and fixed — `p` ascending, `q > p`
-/// ascending — with no pivot search, so the sequence of rotations depends only on
-/// which entries are exactly zero and not on any comparison of magnitudes. The only
-/// data-dependent branch is `a[p][q] == 0.0`, which is exact.
+/// ascending. There is **no pivot search**, which is the property that matters: the
+/// classical Jacobi variant picks the largest off-diagonal entry each step, and a tie
+/// there resolves differently depending on how a platform rounds, which would make two
+/// targets take different rotations and diverge. Here the only branch that can skip a
+/// rotation is `a[p][q] == 0.0`, an exact test.
+///
+/// The routine does compare magnitudes elsewhere — the overflow guard on `theta`, the
+/// convergence test, the eigenvector sign convention — but none of those changes WHICH
+/// rotations are applied or in what order; they are deterministic functions of exact
+/// bit patterns that every IEEE-754 target computes identically. The claim is verified
+/// rather than argued: the whole suite, including its bit-exact assertions, passes on
+/// both x86-64 and `wasm32-wasip1`.
 ///
 /// Cost: `O(N^3)` per sweep, `2 N^2` doubles of stack, no allocation.
 pub fn jacobi_eigen<const N: usize>(m: &[[f64; N]; N]) -> Eigen<N> {
