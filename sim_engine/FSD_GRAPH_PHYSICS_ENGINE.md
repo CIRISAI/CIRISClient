@@ -155,3 +155,53 @@ count, same target (native and `wasm32-unknown-unknown`), reporting:
 constant 11-node structure, the honest report is "specialised engine beats general
 engine on the specialised case", which is not a result. The benchmark counts only at
 matched N with matched generality.
+
+## §11 The scaling thesis — where the win must come from **[proposed]**
+
+A constant-factor win is not worth building. The target is an **asymptotic** advantage,
+and there is exactly one place it can come from.
+
+### §11.1 Symmetry alone is only a constant factor — say so plainly
+Block-diagonalising by the Z2xZ2 character sectors turns one N x N problem into four of
+size ~N/4, i.e. O(N^2) -> 4 * O((N/4)^2) = O(N^2)/4. **A factor of four, forever.**
+Real, worth having, not a reason to build an engine.
+
+### §11.2 The asymptotic win is PROFILE-CLASS REDUCTION
+Measured (CIRISOntology PGX1_CORRECTION.md): the reduction ratio N/G, where G is the
+number of distinct relational profile classes at a fixed tolerance —
+
+| N | 1k | 4k | 16k | 65k | 262k | 1M |
+|---|---:|---:|---:|---:|---:|---:|
+| N/G (sigma=0.1) | 13x | 43x | 149x | 520x | 1913x | **7037x** |
+| N/G (sigma=1.0) | 12x | 40x | 144x | 524x | 1859x | **7133x** |
+
+G grows roughly like sqrt(log N) while N grows linearly, so **N/G grows without bound**.
+That is the scaling win, and it is measured over three decades rather than argued.
+
+### §11.3 Why this matches the steward's regime exactly
+"Large scale, high volume, low granularity until you zoom in" is PRECISELY the regime
+where profile classes collapse:
+- **zoomed out** — many nodes are relationally alike, few distinct complete profiles,
+  G small, reduction enormous;
+- **zoomed in** — profiles become distinct, G approaches N, reduction vanishes — but
+  you are now looking at few nodes, so N is small and it does not matter.
+
+**Level-of-detail IS profile-class coarsening.** They are the same operation, and this
+collapses gap E7 (continuum limit) into the LOD system rather than leaving it separate.
+
+### §11.4 The theorem that says when it is legal
+`GrayAlgebra.Kmat_det_ne_zero` and its exact converse
+`Kmat_det_eq_zero_of_not_injective` (proved for every N): a profile with pairwise
+DISTINCT values closes to the whole space; confinement happens precisely when values
+REPEAT. So compression is available exactly when profiles repeat — **not when the state
+space is small, and not when the rank is low.** The runtime check is therefore a
+covering number of observed profiles at the tolerance the frame needs, and it is
+computable per frame.
+
+### §11.5 What would falsify the thesis **[binding]**
+The N/G table was measured on the disordered-emitter profile system, **not on this
+engine's scenes**. If scene profiles do not repeat — if every node's complete relational
+profile is distinct at the working tolerance — then G ~ N, the reduction is 1x, and the
+engine is a factor-of-four symmetry trick with a nice metric. **That is the honest
+failure mode and it must be measured on real scenes before any scaling claim is made.**
+Check: report G/N versus N on captured scenes, at three tolerances, before benchmarking.
