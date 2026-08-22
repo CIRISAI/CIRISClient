@@ -1,0 +1,111 @@
+# FSD: The graph view as a physics engine — real forces, and the nine gaps that make it one
+
+**Status**: DRAFT — for discussion, not locked.
+**Date**: 2026-08-23.
+**Repo**: CIRISClient. MDD: this FSD names *what* we build; [`../MISSION.md`](../MISSION.md) names *why*.
+**Reads against**: CIRISClient `5d08b67` (`feat/vendor-kmp-client`); CIRISOntology `Core/{Symmetry,DarkState,DefectCoupling,GrayAlgebra,Surface,Generator}.lean` (42 modules, sorry-free, standard axioms).
+
+Every claim is tagged **[today]** or **[proposed]**. A **[proposed]** with no named
+producer, consumer, and check is not a plan; it is a wish, and it does not belong in
+§9's acceptance list.
+
+---
+
+## §0 The one-sentence problem
+
+`ForceSimulation.kt` runs a D3-style simulation in which every constant is chosen by
+feel, so the graph view is an illustration; the ontology has forces that are proved or
+measured but no engine to run them; this FSD joins the two, and treats the resulting
+engine as the instrument that finds what the ontology still lacks.
+
+## §1 Findings this FSD stands on **[today]**
+
+1. **The client's physics is arbitrary.** `ForceSimulation.kt` (300 lines): one
+   `linkStrength = 0.3f` for every edge, one `linkDistance = 120f`, one global
+   `damping`, `radius` per node TYPE. Nothing is derived. `CylinderLayout.kt` (real
+   perspective projection, depth-scaled alpha, rotation) stacks by 6-hour time buckets.
+   `GraphNodeDisplay` already carries `x,y,vx,vy`, `fixed`, and an `extra` map.
+2. **The ontology's structure is proved.** Eleven kinds as an exact image
+   (`generator_image`); automorphism group of order 4 of ~4×10⁷ relabelings
+   (`aut_with_stack_card`); a 4+7 surface/depth split with depth profile [3,2,0,2]
+   (`Surface.depth_counts`); Record not site-generated and one-way.
+3. **Exact dark modes exist and are decoupled** (`DarkState.twin_dark_state`,
+   `dark_state_decoupled`, over any commutative ring): under exact twin symmetry the
+   antisymmetric twin motion is an eigenmode annihilated by every other row.
+4. **Symmetry breaking has magnitude AND direction** (`DefectCoupling.defect_split`):
+   `tr(D²) = 2·(diagonal split)² + 4·Σ(field direction)²`. Measured `g_DB` = 2.284
+   (Priorities/Process) vs 8.617 (Structure/Circumstances) — a 3.8× difference.
+5. **E4 is closed [today].** The Z₂×Z₂ character sectors of K11 have dimensions
+   **9 / 1 / 1 / 0**; the two one-dimensional sectors ARE the twin dark modes and the
+   (−1,−1) sector is EMPTY. Inter-sector leakage is `1.1e-16` on the symmetrised
+   coupling (parities conserved) and `4.51` on the measured one (broken by the measured
+   defect, `‖V‖_F = 12.04`). **K11 has no momentum; its conserved charges are the two
+   twin parities.**
+6. **E1 is closed [today].** Resistance distance on the coupling Laplacian is a valid
+   metric: **0 triangle-inequality violations** over all 165 triples; range
+   0.096–0.911, median 0.368; closest pair Manner–Structure, farthest
+   Identity–Priorities.
+7. **Seven gaps remain open** (E2 inertia, E3 time scale, E5 action principle, E6
+   locality, E7 continuum limit, E8 dissipation coupling, E9 boundary) — see §4.
+
+## §2 What we build
+
+A `GraphPhysics` module in `shared/ui/screens/graph/` that replaces stipulated
+constants with supplied quantities, and exposes the ontology's proved effects as
+interactions a user can perform.
+
+| component | replaces | source |
+|---|---|---|
+| `CouplingMatrix` | scalar `linkStrength` | measured symmetrised coupling (sealed) |
+| `MetricProvider` | scalar `linkDistance` | resistance distance (§1.6) |
+| `ParitySectors` | nothing (new) | Z₂×Z₂ sectors 9/1/1/0 (§1.5) |
+| `ModeAnalysis` | global `alphaDecay` | Laplacian eigenmodes |
+| `MassModel` | `radius` per type | positional susceptibility (E2 — **open**) |
+| `TwinProbe` | nothing (new) | `twin_dark_state` + `dark_state_decoupled` |
+
+## §3 The demonstrator — `TwinProbe` **[proposed]**
+
+Producer: `GraphPhysics.TwinProbe`. Consumer: `NodeGraphView` gesture handler.
+Check: automated test asserting the null result below.
+
+Grab a twin pair; drag them apart antisymmetrically. Under the **symmetrised** coupling
+every other node's displacement is **exactly zero** — this is a theorem, not a tuning
+result. Toggle to the **measured** coupling and the motion leaks by `g_DB`, visibly
+**3.8× larger** for Structure/Circumstances than for Priorities/Process.
+
+This is the one screen that is worth building first: a gesture with a proved null and a
+measured departure from it.
+
+## §4 The nine gaps, as work items
+
+E1 metric **[closed today]** · E4 conserved charges **[closed today]**.
+
+| id | gap | what the engine does wrong without it | check |
+|---|---|---|---|
+| E2 | inertia — susceptibility is a response, not a mass | overdamped drift only; **the object cannot be rung** | oscillation observed after an impulse |
+| E3 | time scale — θ uncalibrated | animation speed has no correct setting | a rate matched to measured revision cadence |
+| E5 | action principle — no potential | every interaction hand-coded; nothing composes | forces reproduced as a gradient |
+| E6 | **locality — K11 is COMPLETE** | perturbations appear everywhere at once; nothing to watch travel | decide what propagation MEANS on a complete graph |
+| E7 | continuum limit — coarse-graining not covered by the mint theorems | cannot zoom; 11 nodes at every scale | a coarse-graining preserving proved structure |
+| E8 | dissipation coupling (minimal dilation) | probability leaks or freezes on Record edges | positivity preserved over a long run |
+| E9 | boundary — purifier implicit | departing objects have nowhere to go | purifier rendered as the boundary |
+
+**E6 is the sharp one and may not be a gap at all**: M7 (laws are of a connected field,
+not of kinds severally) is consistent with genuine non-locality. The screen decides.
+
+## §5 Non-goals
+Not a UX claim. Not a deployment. Not a Stance change in CIRISOntology. The physics is
+proved or measured; whether it makes a good interface is an empirical question about
+people and is out of scope here.
+
+## §9 Acceptance
+1. `ForceSimulation` accepts a coupling matrix and a metric; existing tests pass.
+2. `TwinProbe` test: symmetrised coupling ⇒ non-twin displacement < 1e-12; measured
+   coupling ⇒ ratio of Structure/Circumstances to Priorities/Process leakage in
+   [3.0, 4.6].
+3. `ParitySectors` test: sector dimensions are exactly 9/1/1/0; inter-sector leakage
+   < 1e-12 symmetrised.
+4. `MetricProvider` test: 0 triangle-inequality violations over all triples.
+5. Each of E2, E3, E5–E9 either closed with its §4 check passing, or listed in the
+   README as an open gap with the failing behaviour named. **An unlisted open gap is a
+   defect.**
