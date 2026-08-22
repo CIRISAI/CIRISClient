@@ -235,3 +235,30 @@ is a cross-validation of both, obtained for free.
 
 Rule adopted: **any figure crossing between campaigns must name its diagonal
 convention.** A bare `g_DB` is ambiguous by a factor of ~1.7.
+
+
+## §13 The harmonic-regime constraint — found by the build, not the spec **[today]**
+
+The implementing agent surfaced a limit the FSD did not state, and it binds the demo.
+
+`dark_state_decoupled` is a theorem about a LINEAR operator: the twin dark mode is
+annihilated by every other row of the coupling matrix. A force law with rest lengths,
+
+```text
+F_i = Σ_j c_ij · (1 − ℓ_ij / r_ij) · (x_j − x_i)
+```
+
+is **nonlinear in position** — `r_ij` sits in the denominator — so the exact
+cancellation does not survive it. Setting `rest_scale = 0` collapses the spring term to
+`F = −L·x` exactly, `L` the coupling Laplacian, and **that** is the regime in which the
+theorem holds. `Params::harmonic()` provides it, and `harmonic_force_is_the_laplacian`
+checks the collapse is real rather than assumed.
+
+**Consequence for §3, binding:** the `TwinProbe` demonstrator must run in the harmonic
+regime to show the proved null. In the full nonlinear layout the twins still leak
+differently — the measurement survives — but the exact zero does not, and a UI that
+showed "the rest of the graph does not move" under the default parameters would be
+claiming a theorem it is not entitled to.
+
+This is the right kind of finding: the spec asserted a theorem carried into code, and
+the code established the exact conditions under which it does.
