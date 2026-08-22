@@ -85,9 +85,9 @@ E1 metric **[closed today]** · E4 conserved charges **[closed today]**.
 | E2 | inertia | **CLOSED [today]** — `m_i = Σ_j c_ij` (weighted degree). Facts 17.82 and Premises 16.75 heaviest; Priorities 2.55 and Identity 2.81 lightest. Agrees with inverse M9 susceptibility on 46/55 pairs and on BOTH extremal triples. | `gaps::mass`, `step_massive` |
 | E3 | time scale | **CLOSED [today]** — `τ = 1/√λ₂ = 0.7582` (Fiedler), the slowest field-crossing relaxation. Stiffness ratio λ_max/λ₂ = **14.55** sets the integrator step. | `gaps::time_unit`, `suggested_dt` |
 | E5 | action principle | **CLOSED [today]** — the force law IS `−∇V`, verified numerically to < 1e-4 in both the harmonic and full parameter sets, symmetrised and measured. The dynamics is variational. | `gaps::gradient_residual` |
-| E6 | **locality — K11 is COMPLETE** | perturbations appear everywhere at once; nothing to watch travel | decide what propagation MEANS on a complete graph |
-| E7 | continuum limit — coarse-graining not covered by the mint theorems | cannot zoom; 11 nodes at every scale | a coarse-graining preserving proved structure |
-| E8 | dissipation coupling (minimal dilation) | probability leaks or freezes on Record edges | positivity preserved over a long run |
+| E6 | locality | **CLOSED [today]** — locality is **metric, not topological**. K11 is complete, so adjacency says nothing, but resistance distance orders the kinds and a disturbance reaches near ones first: arrival order follows the metric on >=75% of pairs. **It was not a gap; it was the wrong question.** | `field::arrival_step`, `neighbourhood` |
+| E7 | continuum limit | **CLOSED [today]** — profile-class coarsening, legal exactly when complete profiles repeat (`GrayAlgebra` + converse). Monotone in tolerance, N classes at 0 and 1 class at infinity. LOD and the continuum limit are the same operation. | `field::coarsen`, `reduction_ratio` |
+| E8 | dissipation coupling | **CLOSED [today]** — the **ledger**: nothing is destroyed at the boundary, it is *recorded*. Kinetic + potential + recorded is conserved to <5% over 3000 steps with absorption occurring. | `field::Ledger` |
 | E9 | boundary | **CLOSED [today]** — the **Record**: absorbing and one-way, because the ontology measures machine-zero backflow (Leg A `S4 = 0.0000`) and proves `record_not_site_generated`. What leaves the field is recorded and does not return. | `gaps::RecordBoundary` |
 
 **E6 is the sharp one and may not be a gap at all**: M7 (laws are of a connected field,
@@ -286,3 +286,31 @@ until it passes is the failure mode that test now exists to prevent.
 **Remaining open: E6 (locality), E7 (continuum limit), E8 (dissipation coupling), E10
 (variable N).** E6 and E7 are the ones with research content — E6 may be a property
 rather than a gap, and E7 is now understood to BE the level-of-detail system (§11.3).
+
+
+## §15 Three more gaps closed **[today]** — and one was the wrong question
+
+**E6 was not a gap.** The worry was that K11 is a complete graph, so every kind is
+adjacent to every other, so nothing can be watched travelling — fatal for a physics
+interface. The resolution is that **locality here is metric rather than topological**.
+Adjacency carries no information on a complete graph, but resistance distance does, and
+a disturbance injected at one kind reaches nearby kinds before distant ones: measured,
+arrival order follows the metric on at least three quarters of pairs. There IS something
+to watch travel; it just does not travel along edges. This is consistent with M7 — no
+strict locality, but a real effective one.
+
+**E7 collapsed into E10/LOD, as §11.3 predicted.** Coarse-graining merges kinds whose
+COMPLETE profiles agree within a tolerance, which `GrayAlgebra` and its converse say is
+legal exactly when profiles repeat. Monotone in tolerance: 11 classes at zero, 1 at
+infinity. The same code is the level-of-detail system and the continuum limit.
+
+**E8 cost two attempts and the failure was instructive.** The Record boundary absorbs,
+which naively destroys energy. The object's own answer is the ledger: what leaves the
+field is not lost but *recorded*. The first implementation recorded only on the step
+where a node was newly absorbed and **drifted 14.6%** — because the boundary goes on
+zeroing absorbed velocities every subsequent step, removing energy long after the event.
+That is verbatim the failure this gap predicted ("probability leaks or freezes on Record
+edges"). Recording what the boundary removes *each step* closes it to <5%.
+
+**Remaining: E10 (variable N) only** — mechanical, and the precondition for any
+benchmark against an incumbent engine.
