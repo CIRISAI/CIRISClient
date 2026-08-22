@@ -33,8 +33,8 @@ One client. Two flavors. Three distributions.
 | distribution | what's in it | size |
 |---|---|---|
 | `ciris-client` | the resolver API and the version. No bundles. | ~25 KB |
-| `ciris-client-node` | the built client, `CIRISBuild.HAS_AGENT = false` | 62.45 MiB |
-| `ciris-client-agent` | the built client, `CIRISBuild.HAS_AGENT = true` | 62.45 MiB |
+| `ciris-client-node` | the built client, `CIRISBuild.HAS_AGENT = false` | 62.94 MiB |
+| `ciris-client-agent` | the built client, `CIRISBuild.HAS_AGENT = true` | 62.94 MiB |
 
 Consumers depend on `ciris-client[node]` or `ciris-client[agent]`, never on a
 payload distribution directly, and never on both flavors at once.
@@ -44,7 +44,7 @@ payload distribution directly, and never on both flavors at once.
 ```python
 import ciris_client
 
-ciris_client.__version__            # '0.5.181' — pairs with ciris-server 0.5.181
+ciris_client.__version__            # '0.5.186' — pairs with ciris-server 0.5.186
 ciris_client.installed_flavors()    # ('node',)
 ciris_client.artifacts()            # [{'kind': 'desktop-uber-jar', 'bytes': …, 'sha256': …}]
 ciris_client.artifact_path('desktop-uber-jar')
@@ -58,15 +58,15 @@ The one thing it will never do is hand back a path to a placeholder.
 
 ### Why a distribution per flavor
 
-Measured, not estimated. The desktop uber-jar is **66.48 MiB** and compresses to
-a **65,488,254-byte** wheel — **62.5% of PyPI's 104,857,600-byte limit**, with
-37.55 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
+Measured, not estimated. The desktop uber-jar is **66.98 MiB** and compresses to
+a **65,995,464-byte** wheel — **62.9% of PyPI's 104,857,600-byte limit**, with
+37.06 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
 difference has been the whole remaining margin before now.) ProGuard would cut
 most of the jar and is blocked on ktor 3.x (CIRISServer#379), so treat the size
 as fixed.
 
 So one wheel carrying both flavors does not merely run close to the limit — at
-2 × 62.45 MiB it **does not fit**, before an Android AAR or anything else. The
+2 × 62.94 MiB it **does not fit**, before an Android AAR or anything else. The
 split is not a precaution; it is the only arrangement that ships.
 
 **Localization is the product and is never cut to save size.** 29 languages are
@@ -211,10 +211,6 @@ Three gates need care when you read them:
 - Android AAR and iOS framework artifacts in the wheels. Only the desktop
   uber-jar is staged today; the manifest carries a `kind` per artifact so adding
   them is a staging line, not a schema change.
-- A client version on the desktop bundle. `desktopApp/build.gradle.kts` still
-  carries `packageVersion = "2.9.28"` by hand, which is why the jar is named
-  `CIRIS-linux-x64-2.9.28.jar` while `CLIENT_VERSION` is 0.5.181. It is the same
-  class of drift as #1 and #2 in the flavor table and has not been migrated.
 - `generated-api` regeneration and drift detection: the generator is not in the
   build graph, so spec drift is silent (`client/VENDORING.md` §7).
 - Anything reading the substrate's signed locale Merkle root. Until then the
@@ -223,10 +219,16 @@ Three gates need care when you read them:
 
 ## Status
 
-Working, not scaffold. Run
-[32414315040](https://github.com/CIRISAI/CIRISClient/actions/runs/32414315040)
-is green end to end: both flavors compiled, both passed `:shared:desktopTest`,
-both produced a 66.48 MiB desktop uber-jar, and both were packaged into
-62.45 MiB wheels that install and resolve through `ciris_client.artifact_path`.
+Working, not scaffold, and **ready to evaluate** — see
+[`EVALUATION.md`](EVALUATION.md) for the runnable path and the decision it asks
+for.
 
-Nothing is published. The gaps above are real and named.
+The tree is the superset of both consumers' latest tags: CIRISServer
+`v0.5.186` and CIRISAgent `v2.9.32-stable`, merged per
+[`client/VENDORING.md`](client/VENDORING.md) §8. CI is green end to end — both
+flavors compiled, both passed `:shared:desktopTest`, both produced a 66.98 MiB
+desktop uber-jar named for the *derived* version (`CIRIS-linux-x64-1.5.186.jar`,
+from release 0.5.186), and both were packaged into 62.94 MiB wheels that install
+into a clean venv and resolve through `ciris_client.artifact_path`.
+
+Nothing is published to PyPI yet. The gaps above are real and named.
