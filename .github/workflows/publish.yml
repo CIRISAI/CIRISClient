@@ -10,15 +10,32 @@
 # No API tokens: `id-token: write` mints a short-lived OIDC credential per run,
 # which is why the job needs no secret and why a fork can never publish.
 #
+# ONE WHEEL PER OS, because the desktop uber-jar is ~67 MiB and PyPI's per-file
+# limit is 104,857,600 bytes: three OSes' jars cannot share one file, and they
+# do not need to. Each runner builds its own jar (compose.desktop.currentOs),
+# stages it stamped with the platform it was built FOR, and the wheel is
+# retagged so pip picks the right one automatically. The `py3-none-any` wheel
+# from the first 0.5.186 upload stays as the last-resort fallback: on a
+# platform with no specific wheel it installs and then REFUSES with the remedy,
+# rather than handing over a jar that cannot start.
+#
+# Additional platform wheels may be added to an EXISTING release, which is why
+# the OS suite can complete 0.5.186 with no version bump. That matters beyond
+# convenience: CLIENT_VERSION is generated from VERSION and drives the
+# node-vs-client mismatch banner, so publishing 0.5.187 with no matching
+# ciris-server release would show every user an "update recommended" banner
+# that is not true. `skip-existing` passes over a file already uploaded instead
+# of failing the run.
+#
 # WHAT MAY BE PUBLISHED. A placeholder payload must never reach PyPI — a wheel
 # that installs and then refuses every artifact lookup is worse than no wheel,
 # because `pip install ciris-client` would appear to succeed. The gate below
-# reads the staged manifest and REFUSES the whole run if it is a placeholder,
-# before anything is uploaded.
+# reads the staged manifest and REFUSES before anything is uploaded.
 #
-# Trigger: a tag `v*` (the release), or manual dispatch with TestPyPI as the
-# rehearsal target. Publication is the one step in this repo that cannot be
-# taken back, so it never rides on a branch push.
+# Trigger: a tag `v*`, or manual dispatch. Dispatch defaults to `none` — build
+# and verify every wheel, upload them as run artifacts, publish NOTHING —
+# because the one workflow whose failure mode is a half-done release should be
+# rehearsable without a TestPyPI project having to exist.
 
 name: publish
 
@@ -28,10 +45,10 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: "where to publish"
-        default: testpypi
+        description: "where to publish (none = build and verify only)"
+        default: none
         type: choice
-        options: [testpypi, pypi]
+        options: [none, testpypi, pypi]
 
 concurrency:
   group: publish-${{ github.ref }}
@@ -39,13 +56,34 @@ concurrency:
 
 jobs:
   build:
-    name: build the distribution
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+    name: wheel (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false # one OS failing must not hide the others' results
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            platform: linux-x86_64
+            wheel_tag: manylinux_2_17_x86_64
+          - name: macos-arm64
+            runner: macos-14
+            platform: darwin-arm64
+            wheel_tag: macosx_11_0_arm64
+          - name: macos-x86_64
+            runner: macos-13
+            platform: darwin-x86_64
+            wheel_tag: macosx_10_9_x86_64
+          - name: windows-x86_64
+            runner: windows-latest
+            platform: windows-x86_64
+            wheel_tag: win_amd64
     steps:
       - uses: actions/checkout@v4
 
       - name: apt (hardened)
+        if: runner.os == 'Linux'
         uses: ./.github/actions/apt
         with:
           # The Compose desktop distribution tasks shell out to these.
@@ -68,11 +106,13 @@ jobs:
         with:
           cache-read-only: true
 
-      - run: python3 -m pip install --upgrade pip build
+      - run: python3 -m pip install --upgrade pip build wheel
 
-      # The release gates, run again here rather than trusted from the branch:
-      # a tag can point at any commit.
+      # The release gates, re-run here rather than trusted from the branch: a
+      # tag can point at any commit. Linux only — they are OS-independent, and
+      # running them four times says nothing new.
       - name: Gates
+        if: matrix.name == 'linux-x86_64'
         run: |
           set -euo pipefail
           python3 packaging/check_vendoring.py
@@ -82,6 +122,7 @@ jobs:
 
       - name: The tag must name the version being published
         if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
         run: |
           set -euo pipefail
           tag="${GITHUB_REF_NAME#v}"
@@ -92,23 +133,26 @@ jobs:
           fi
           echo "publishing $version"
 
-      - name: Build the client
+      - name: Build the client for this OS
         # The agent build is what ships: every surface present, narrowed at
-        # runtime by the probed node.
+        # runtime by the probed node. compose.desktop.currentOs means the jar
+        # this produces carries THIS runner's desktop runtime — which is the
+        # entire reason for the matrix.
         working-directory: client
-        run: |
-          set -euo pipefail
-          ./gradlew --no-daemon -PhasAgent=true :desktopApp:packageUberJarForCurrentOS
+        shell: bash
+        run: ./gradlew --no-daemon -PhasAgent=true :desktopApp:packageUberJarForCurrentOS
 
-      - name: Stage it
+      - name: Stage it, stamped with the platform it was built for
+        shell: bash
         run: |
           set -euo pipefail
           jar=$(find client/desktopApp/build/compose/jars -name '*.jar' | head -1)
           test -n "$jar" || { echo "::error::gradle produced no jar"; exit 1; }
           python3 packaging/stage_artifacts.py \
-            --artifact "desktop-uber-jar@linux-x86_64=$jar"
+            --artifact "desktop-uber-jar@${{ matrix.platform }}=$jar"
 
       - name: A placeholder must never be published
+        shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -126,35 +170,54 @@ jobs:
           print("staged:", ", ".join(kinds))
           PY
 
-      - name: Build the wheel
+      - name: Build the wheel and tag it for this platform
+        shell: bash
         run: |
           set -euo pipefail
           python3 -m build --wheel --outdir dist .
+          # setuptools cannot know this is platform-specific — the payload is a
+          # jar, not a compiled extension — so the tag is applied after the
+          # fact. pip then prefers it over the `any` fallback on a machine it
+          # matches.
+          python3 -m wheel tags --platform-tag "${{ matrix.wheel_tag }}" --remove \
+            dist/ciris_client-*-py3-none-any.whl
+          ls -la dist
 
-      - run: python3 packaging/check_wheel_size.py dist/*.whl
+      - name: Wheel size against PyPI's limit
+        shell: bash
+        run: python3 packaging/check_wheel_size.py dist/*.whl
 
       - name: Consumption contract — install and resolve
+        shell: bash
         run: |
           set -euo pipefail
-          python3 -m venv /tmp/consumer
-          /tmp/consumer/bin/pip install --no-index dist/ciris_client-*.whl
-          /tmp/consumer/bin/python - <<'PY'
+          python3 -m venv consumer-venv
+          if [ -d consumer-venv/Scripts ]; then PY=$PWD/consumer-venv/Scripts/python; else PY=$PWD/consumer-venv/bin/python; fi
+          "$PY" -m pip install --quiet --no-index dist/*.whl
+          # Run from a directory that is NOT the checkout, so the INSTALLED
+          # package answers rather than the source tree sitting beside it.
+          mkdir -p verify && cd verify && "$PY" - <<'PY'
           import ciris_client as c
           m = c.manifest()
           assert not m.get("placeholder"), "placeholder reached the publish path"
           assert m["client_version"] == c.__version__, "version split"
-          print("resolves:", c.artifact_path("desktop-uber-jar"))
+          p = c.artifact_path("desktop-uber-jar")
+          assert p.is_file(), p
+          print("resolves:", p.name, p.stat().st_size, "bytes")
           PY
 
       - uses: actions/upload-artifact@v4
         with:
-          name: dist
+          name: dist-${{ matrix.name }}
           path: dist/*.whl
           retention-days: 14
 
   publish:
     name: publish to ${{ github.event.inputs.target || 'pypi' }}
     needs: build
+    # A dispatch with target `none` is a rehearsal: every wheel is built and
+    # verified above, and nothing is uploaded.
+    if: github.event_name == 'push' || github.event.inputs.target != 'none'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     # The environment PyPI's trusted publisher is scoped to. Add required
@@ -167,11 +230,18 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dist
+          pattern: dist-*
+          merge-multiple: true
           path: dist
+
+      - name: What is about to be uploaded
+        run: ls -la dist
 
       - name: Publish
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: ${{ github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
+          # Completing an OS suite on an existing release means some files may
+          # already be there. Skipping them is correct; failing the run is not.
+          skip-existing: true
           print-hash: true

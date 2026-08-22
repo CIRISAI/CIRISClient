@@ -15,6 +15,11 @@ copies today; deleting them is what finishes this.
 pip install ciris-client     # one client; what it shows depends on the node
 ```
 
+pip picks the wheel for your OS — Linux x86-64, macOS arm64, macOS x86-64, or
+Windows x86-64 — because the desktop runtime inside is built per platform
+(`compose.desktop.currentOs`). On anything else the fallback wheel installs and
+then refuses with the remedy, rather than handing over a jar that cannot start.
+
 To run the readiness gates from a checkout — their framework lives in
 [CIRISGrace](../CIRISGrace) and is not published yet:
 

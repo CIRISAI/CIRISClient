@@ -159,10 +159,12 @@ Do not decide without these:
 - **Desktop uber-jar only.** No Android AAR, no iOS framework in the wheels yet.
   Your APK and installer pipelines still build from source — which is why
   adoption can be *staged* (§7) rather than all-or-nothing.
-- **The payload is Linux-built.** `compose.desktop.currentOs` means the staged
-  jar carries one OS's desktop runtime; `artifact_path` now refuses on the wrong
-  platform with the remedy rather than handing you a broken jar, but per-OS
-  payload builds are not wired yet.
+- **Desktop is a full OS suite; mobile is not.** The release builds one wheel
+  per OS — Linux x86-64, macOS arm64, macOS x86-64, Windows x86-64 — each
+  carrying that platform's desktop runtime, and pip selects between them. What
+  is NOT in any wheel is the Android AAR and the iOS framework, so your APK,
+  AAB and iOS pipelines still build the client from source. That is the reason
+  staged adoption (§7) is the recommendation rather than a hedge.
 - **`generated-api` regeneration is still not in the build graph**, so spec
   drift stays silent — which is what
   [CIRISServer#470](https://github.com/CIRISAI/CIRISServer/issues/470) (serve and
