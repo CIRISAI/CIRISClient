@@ -130,6 +130,24 @@ class WiseAuthorityViewModel(
     private val _pendingApprovalCount = MutableStateFlow(0)
     val pendingApprovalCount: StateFlow<Int> = _pendingApprovalCount.asStateFlow()
 
+    /**
+     * Approval alerts are being SUPPRESSED because the OS denied notification
+     * permission.
+     *
+     * Re-exposed from the notifier, which is private here, so a surface can tell
+     * the operator. On Android 13+ `POST_NOTIFICATIONS` starts DENIED and nothing
+     * in this app ever requests it, so on a fresh install the session-wide watcher
+     * runs, finds work, and silently drops every alert. A denial nobody is told
+     * about is indistinguishable from an agent that never needed anything — which
+     * is the one thing this surface exists to disprove.
+     *
+     * This is the HONEST MINIMUM, not the cure: the cure is an Activity-backed
+     * runtime request behind an explicit opt-in, and the platform seam carries no
+     * Activity today (see ApprovalNotifier's KDoc for what that needs).
+     */
+    val notificationsBlocked: StateFlow<Boolean> =
+        notifier?.notificationsBlocked ?: MutableStateFlow(false).asStateFlow()
+
     /** Whether this server exposes budget *issuance*. See [BudgetCapability]. */
     private val _budgetCapability = MutableStateFlow(BudgetCapability.UNKNOWN)
     val budgetCapability: StateFlow<BudgetCapability> = _budgetCapability.asStateFlow()
@@ -226,12 +244,37 @@ class WiseAuthorityViewModel(
         }
     }
 
-    /** Stop the session-wide watch (logout / shutdown). */
+    /**
+     * Stop the session-wide watch (logout / shutdown) AND clear the
+     * session-owned approval state.
+     *
+     * The clear is not tidiness: this ViewModel is scoped to [CIRISApp], so it
+     * outlives the login session. Cancelling only the watcher left the previous
+     * user's badge count and proposal details standing for the NEXT user until
+     * their first successful fetch — or indefinitely when that fetch failed.
+     * What a signed-out client shows must not be another user's approvals.
+     *
+     * The notifier's persisted dedupe set is deliberately NOT cleared: it is
+     * device-scoped at-most-once by design (its own doc: restarting the app
+     * must not re-announce). A next user's OWN backlog still notifies — those
+     * ids were never remembered.
+     */
     fun stopApprovalWatch() {
         logInfo("stopApprovalWatch", "Stopping approval watch")
         watchJob?.cancel()
         watchJob = null
         watchStarted = false
+        _waStatus.value = null
+        _deferrals.value = emptyList()
+        _approvals.value = emptyList()
+        _pendingApprovalCount.value = 0
+        _budgetCapability.value = BudgetCapability.UNKNOWN
+        _selectedBudgetState.value = null
+        openApprovalId = null
+        _error.value = null
+        _successMessage.value = null
+        _isConnected.value = false
+        _isResolving.value = false
     }
 
     /**
@@ -320,9 +363,12 @@ class WiseAuthorityViewModel(
      * Fetch WA status, deferrals and proposal tickets, rebuild the unified
      * approval list, and hand it to the notifier.
      *
-     * Deferral fetch failures propagate (the screen shows a connection error);
-     * proposal fetch failures do not, because a deployment may legitimately
-     * have no tickets API and that must not blank the deferral list.
+     * Deferral fetch failures propagate (the screen shows a connection error).
+     * Proposal fetch failures ALSO propagate — except the specific
+     * feature-absent responses (404/405/501, see [ApprovalsApi.isTicketsApiAbsent]),
+     * because a deployment may legitimately have no tickets API and that must
+     * not blank the deferral list. A 401/500/transient failure is NOT proof of
+     * absence and no longer silently empties the approval card.
      */
     private suspend fun fetchDataInternal() {
         val method = "fetchDataInternal"
@@ -391,10 +437,22 @@ class WiseAuthorityViewModel(
                 val result = api.resolveDeferral(deferralId, resolution, guidance)
                 logInfo(method, "Deferral resolved: ${result.deferralId}, success=${result.success}")
 
-                _successMessage.value = "Deferral resolved successfully"
-                notifier?.forget(deferralId)
+                // HTTP success is transport; `result.success` is the DECISION.
+                // The response model carries the flag independently — e.g.
+                // another authority resolved this deferral concurrently — and
+                // announcing success on `success=false` forgot the notification
+                // key and closed the dialog as though THIS decision committed.
+                if (result.success) {
+                    _successMessage.value = "Deferral resolved successfully"
+                    notifier?.forget(deferralId)
+                } else {
+                    _error.value =
+                        "The deferral was not resolved — it may have been decided by another authority"
+                    logWarn(method, "Resolve refused by the server (success=false) for $deferralId")
+                }
 
-                // Refresh to update the list
+                // Refresh either way: on refusal the list shows the deferral's
+                // ACTUAL current state, which is the honest answer.
                 fetchDataInternal()
             } catch (e: Exception) {
                 logError(method, "Failed to resolve deferral: ${e::class.simpleName}: ${e.message}")
@@ -423,6 +481,11 @@ class WiseAuthorityViewModel(
         viewModelScope.launch {
             try {
                 val state = api.fetchTicketBudget(approvalId)
+                // UPSTREAM RELAY CANDIDATE (CIRISAgent#1086 pattern): this file
+                // was byte-identical to CIRISAgent 2.9.28 before this guard, so
+                // the race is upstream's too — 2.9.28:409 publishes on a ticketId
+                // echo alone, and 2.9.28:421 wipes the flow unconditionally.
+                //
                 // Publish only while this approval is still the open one.
                 //
                 // A response for a dialog the operator has already dismissed or
@@ -501,10 +564,22 @@ class WiseAuthorityViewModel(
         onResult: (BudgetGrantOutcome) -> Unit = {},
     ) {
         val method = "grantBudget"
+        // CLAIM THE SUBMISSION SYNCHRONOUSLY, before anything suspends. The
+        // in-flight flag was only assigned inside the coroutine, so a rapid
+        // double activation — or the independently-registered automation
+        // handler — reached api.grantBudget twice and could commit TWO signed
+        // money authorizations for one operator decision. The ViewModel is
+        // main-thread confined, so check-and-set here is race-free.
+        if (_isResolving.value) {
+            logWarn(method, "A submission is already in flight — ignoring duplicate activation for $approvalId")
+            return
+        }
+        _isResolving.value = true
         val approval = _approvals.value.firstOrNull { it.id == approvalId }
         val requested = approval?.requestedBudget
 
         if (requested == null) {
+            _isResolving.value = false
             logError(method, "No requested budget on approval $approvalId")
             val outcome = BudgetGrantOutcome(
                 ok = false,
@@ -529,6 +604,7 @@ class WiseAuthorityViewModel(
             overGrantConfirmed = overGrantConfirmed,
         )
         if (!validation.ok) {
+            _isResolving.value = false
             logWarn(method, "Local validation refused grant: ${validation.error} (${validation.message})")
             _error.value = validation.message ?: describe(validation.error)
             onResult(validation)
@@ -544,7 +620,7 @@ class WiseAuthorityViewModel(
         )
 
         viewModelScope.launch {
-            _isResolving.value = true
+            // Claimed synchronously above; this block only ever releases it.
             _error.value = null
 
             try {
@@ -566,6 +642,10 @@ class WiseAuthorityViewModel(
                         ?: ""
                     _successMessage.value = "Approved $amount $currency$overNote$signedNote"
 
+                    // UPSTREAM RELAY CANDIDATE (CIRISAgent#1086 pattern):
+                    // CIRISAgent 2.9.28:522 forgets the id unconditionally right
+                    // here, so a grant without promotion re-notifies there too.
+                    //
                     // Only a *successful* promotion retires the notification id.
                     // Issuing a budget without promoting deliberately leaves the
                     // ticket blocked, so the proposal is still in the pending set
@@ -573,11 +653,20 @@ class WiseAuthorityViewModel(
                     // there would re-notify the operator about the very approval
                     // they just acted on. Same rule as [updateProposalStatus].
                     if (promote) {
-                        val promoted = api.updateTicketStatus(
-                            approvalId,
-                            BudgetApprovalSeam.PROMOTED_STATUS,
-                            null,
-                        )
+                        // FOLLOW-UP I/O AFTER A RECORDED GRANT: a throw here must
+                        // not fall into the outer catch, which would report the
+                        // committed grant as failed and invite a retry of a money
+                        // authorization the server already holds.
+                        val promoted = try {
+                            api.updateTicketStatus(
+                                approvalId,
+                                BudgetApprovalSeam.PROMOTED_STATUS,
+                                null,
+                            )
+                        } catch (e: Exception) {
+                            logWarn(method, "Promotion call failed after grant: ${e.message}")
+                            false
+                        }
                         if (promoted) {
                             notifier?.forget(approvalId)
                         } else {
@@ -593,8 +682,18 @@ class WiseAuthorityViewModel(
                     logError(method, "Grant refused: ${outcome.error} ${outcome.message}")
                 }
 
-                fetchDataInternal()
+                // THE OUTCOME IS COMMITTED — report it BEFORE the refresh. A
+                // transient 401/500/network blip in the follow-up refresh used to
+                // fall into the outer catch and REPLACE a recorded success with
+                // BudgetGrantOutcome(false, …): dialog already closed, stale
+                // proposal still visible, operator told the approval failed and
+                // invited to re-authorize money the server already granted.
                 onResult(outcome)
+                try {
+                    fetchDataInternal()
+                } catch (e: Exception) {
+                    logWarn(method, "Post-grant refresh failed (grant outcome already reported): ${e.message}")
+                }
             } catch (e: Exception) {
                 logError(method, "Grant failed: ${e::class.simpleName}: ${e.message}")
                 val outcome = BudgetGrantOutcome(false, BudgetGrantError.UNKNOWN, e.message)
@@ -661,6 +760,10 @@ class WiseAuthorityViewModel(
     }
 
     /**
+     * UPSTREAM RELAY CANDIDATE (CIRISAgent#1086 pattern): CIRISAgent 2.9.28 has
+     * no such flag — 2.9.28:598 forgets the id on every status write, the defer
+     * that leaves the proposal pending included, so the bug is upstream's too.
+     *
      * @param retiresNotification whether this transition removes the approval
      *   from the pending set. Only then may the notifier forget the id:
      *   forgetting means "announce it again if it comes back", and for a status

@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.AttKind
 import ai.ciris.mobile.shared.ui.components.AttOp
 import ai.ciris.mobile.shared.ui.components.AttStatus
@@ -166,7 +167,15 @@ fun ChatScreen(
                     IconButton(
                         onClick = { viewModel.refresh() },
                         enabled = !loading,
-                        modifier = Modifier.testableClickable("btn_chat_refresh") { viewModel.refresh() },
+                        // Same rule as the send button: testableClickable appends
+                        // an UNCONDITIONAL clickable, so a disabled refresh still
+                        // fired — and a second loadMessages on the same epoch can
+                        // finish first, letting the OLDER response overwrite the
+                        // newer transcript. The handler re-checks what enabled
+                        // gates.
+                        modifier = Modifier.testableWithHandler("btn_chat_refresh") {
+                            if (!loading) viewModel.refresh()
+                        },
                     ) {
                         Icon(
                             CIRISIcons.refresh,
@@ -272,11 +281,23 @@ fun ChatScreen(
                             modifier = Modifier.weight(1f).testable("input_chat_body"),
                         )
                         Spacer(Modifier.width(8.dp))
+                        // ONE predicate for the human and the robot. The
+                        // Material `enabled` gates the real button, but
+                        // `testableClickable` appends an UNCONDITIONAL
+                        // clickable — a second tap mid-flight (or on an
+                        // oversized draft) fired send() through the automation
+                        // layer, and a message is an attestation: the duplicate
+                        // is irreversible. `testableWithHandler` registers for
+                        // automation without adding a clickable, and the
+                        // handler re-checks the SAME predicate the button uses.
+                        val canSend = !sending && draft.isNotBlank() &&
+                            draftBytes <= MAX_MESSAGE_BYTES
                         Button(
                             onClick = { viewModel.send() },
-                            enabled = !sending && draft.isNotBlank() &&
-                                draftBytes <= MAX_MESSAGE_BYTES,
-                            modifier = Modifier.testableClickable("btn_chat_send") { viewModel.send() },
+                            enabled = canSend,
+                            modifier = Modifier.testableWithHandler("btn_chat_send") {
+                                if (canSend) viewModel.send()
+                            },
                         ) {
                             Text(
                                 if (sending) localizedString("mobile.chat_sending")
@@ -329,7 +350,11 @@ private fun MessageRow(
         // when it is not the default. The BODY is not put here — it belongs in
         // the readable slot, not the mono metadata line.
         dimension = message.contentType.takeIf { it.isNotBlank() && it != "text/plain" },
+        // TWO AXES, both stated. The node signed it; the human wrote it. Reading
+        // the sender off `attesting_key_id` would label every message — yours and
+        // theirs — with the box that carried it.
         attesterKeyId = message.attestingKeyId.takeIf { it.isNotBlank() },
+        authorKeyId = message.author?.takeIf { it.isNotBlank() },
         timestamp = message.assertedAt.takeIf { it.isNotBlank() },
         supersededBy = message.statusAttestationId,
     )
@@ -346,10 +371,23 @@ private fun MessageRow(
                 viewer = ViewerAuthority(isHolder = message.mine),
                 onOp = onOp,
             ) {
+                // `mine` follows the AUTHOR (the server derives it from the same
+                // envelope field), so this stays correct now that the attester is
+                // the node. For the far side, name the person rather than "Them"
+                // when the row carries an author.
                 Text(
-                    if (message.mine) localizedString("mobile.chat_you")
-                    else localizedString("mobile.chat_them"),
+                    when {
+                        message.mine -> localizedString("mobile.chat_you")
+                        message.author?.isNotBlank() == true ->
+                            message.speakerKeyId.take(16) + "\u2026"
+                        else -> localizedString("mobile.chat_them")
+                    },
                     fontSize = 10.sp,
+                    fontFamily = if (!message.mine && message.author?.isNotBlank() == true) {
+                        FontFamily.Monospace
+                    } else {
+                        FontFamily.Default
+                    },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(Modifier.height(2.dp))
