@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
-"""Stage Gradle output into a flavor's payload package, then write its manifest.
+"""Stage Gradle output into the ciris_client package, then write its manifest.
 
 Kotlin is not compiled inside pip. The Gradle job builds the client, this script
-copies what it produced into ``packaging/<flavor>/ciris_client_<flavor>/_artifacts/``
-and records what it copied, and only then is the wheel built. Three steps, each
-of which can fail in its own right, instead of one that needs a JDK and an
-Android SDK on every consumer's machine.
+copies what it produced into ``ciris_client/_artifacts/`` and records what it
+copied, and only then is the wheel built. Three steps, each of which can fail in
+its own right, instead of one that needs a JDK and an Android SDK on every
+consumer's machine.
 
-    # after ./gradlew -p client :desktopApp:packageUberJarForCurrentOS
-    python3 packaging/stage_artifacts.py --flavor node \
-        --artifact desktop-uber-jar=client/desktopApp/build/compose/jars/*.jar
+    # after ./gradlew -p client :desktopApp:packageUberJarForCurrentOS -PhasAgent=true
+    python3 packaging/stage_artifacts.py \
+        --artifact desktop-uber-jar@linux-x86_64=client/desktopApp/build/compose/jars/*.jar
 
     # no Gradle run available — build a wheel that REFUSES rather than one that lies
-    python3 packaging/stage_artifacts.py --flavor node --placeholder "no gradle job"
+    python3 packaging/stage_artifacts.py --placeholder "no gradle job"
+
+``--flavor`` records WHICH build produced the staged jar (it lands in the
+manifest, and `has_agent` with it). It no longer selects a destination: one
+client ships, carrying the agent surfaces, gated at runtime on the probed node.
 
 Stdlib only, on purpose: this runs between a Gradle job and a pip build, before
 anything is installed.
@@ -39,12 +43,8 @@ SCHEMA = "ciris-client-artifacts/v1"
 PYPI_LIMIT_BYTES = 104_857_600
 
 
-def project_dir(flavor: str) -> Path:
-    return REPO / "packaging" / flavor
-
-
-def payload_dir(flavor: str) -> Path:
-    return project_dir(flavor) / f"ciris_client_{flavor}" / "_artifacts"
+def payload_dir() -> Path:
+    return REPO / "ciris_client" / "_artifacts"
 
 
 def read_version() -> str:
@@ -104,7 +104,14 @@ def resolve(pattern: str) -> Path:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--flavor", required=True, choices=FLAVORS)
+    ap.add_argument(
+        "--flavor",
+        default="agent",
+        choices=FLAVORS,
+        help="which build produced this jar — recorded in the manifest, not a "
+             "destination. Defaults to the shipped build (agent: every surface "
+             "present, gated at runtime).",
+    )
     ap.add_argument(
         "--artifact",
         action="append",
@@ -127,7 +134,7 @@ def main() -> int:
             "pass either --artifact (one or more) or --placeholder REASON, not both\n"
         ))) or 2
 
-    dest = payload_dir(args.flavor)
+    dest = payload_dir()
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True)
@@ -191,12 +198,6 @@ def main() -> int:
     )
     print(f"[manifest] {dest / 'manifest.json'}")
 
-    # setuptools will not read a version file outside its project root, and a
-    # second committed copy of the version is the drift this repo exists to
-    # remove. So the version is projected here, from the one source, at the one
-    # moment the payload project is about to be built.
-    (project_dir(args.flavor) / "VERSION").write_text(version + "\n", encoding="utf-8")
-    print(f"[version]  {args.flavor} -> {version}")
     return 0
 
 

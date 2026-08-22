@@ -84,8 +84,13 @@ def validate(repo_root: Path) -> list[str]:
                 if not _CAP.match(cap):
                     problems.append(f"{where}: capability id {cap!r} is not a dotted lowercase id")
         flavors = row["flavors"]
-        if not flavors or not set(flavors) <= {"node", "agent"}:
-            problems.append(f"{where}: flavors {flavors!r} must be a non-empty subset of node/agent")
+        # "universal" is the single build that carries every surface and narrows
+        # at runtime; node/agent remain valid for rows cut before that change.
+        if not flavors or not set(flavors) <= {"node", "agent", "universal"}:
+            problems.append(
+                f"{where}: flavors {flavors!r} must be a non-empty subset of "
+                f"node/agent/universal"
+            )
         langs = (row.get("locale_bundle") or {}).get("languages")
         if langs != 29:
             problems.append(f"{where}: locale_bundle.languages is {langs!r}; 29 is normative (FSD A4)")

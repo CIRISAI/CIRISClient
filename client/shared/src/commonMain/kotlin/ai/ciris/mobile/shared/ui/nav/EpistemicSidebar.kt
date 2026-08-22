@@ -27,6 +27,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISSignet
 import ai.ciris.mobile.shared.ui.components.CountPill
 import ai.ciris.mobile.shared.ui.theme.BrightnessPreference
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.CIRISBuild
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 
 /**
@@ -59,6 +60,10 @@ fun EpistemicSidebar(
     activeSurface: NavSurface?,
     onSurfaceSelected: (NavSurface) -> Unit,
     onIssueClick: (String) -> Unit = {},
+    // Whether the node on the other end can actually serve the agent surfaces.
+    // Defaults to the build ceiling so existing callers are unchanged; CIRISApp
+    // passes the runtime ClientMode verdict. See [visibleNavGroups].
+    showAgentSurfaces: Boolean = CIRISBuild.HAS_AGENT,
     appVersion: String = "",
     // Optional brightness state — when both are non-null, the sidebar renders
     // a 3-way segmented control (Light / System / Dark) at the bottom so the
@@ -87,7 +92,7 @@ fun EpistemicSidebar(
 
     // Active group is the group containing the active surface (transitively).
     val activeGroup = activeSurface?.let { surface ->
-        EPISTEMIC_NAV_GROUPS.firstOrNull { group ->
+        visibleNavGroups(showAgentSurfaces).firstOrNull { group ->
             group.surfaces.any { surface in it.descendantsAndSelf() }
         }
     }
@@ -95,7 +100,7 @@ fun EpistemicSidebar(
     // Per-group expansion state — initialize with the active group expanded.
     val groupExpanded = remember(activeGroup) {
         mutableStateMapOf<String, Boolean>().apply {
-            EPISTEMIC_NAV_GROUPS.forEach { put(it.id, it == activeGroup) }
+            visibleNavGroups(showAgentSurfaces).forEach { put(it.id, it == activeGroup) }
         }
     }
 
@@ -104,7 +109,7 @@ fun EpistemicSidebar(
     val surfaceExpanded = remember(activeSurface) {
         mutableStateMapOf<String, Boolean>().apply {
             if (activeSurface != null) {
-                EPISTEMIC_NAV_GROUPS.forEach { group ->
+                visibleNavGroups(showAgentSurfaces).forEach { group ->
                     group.surfaces.forEach { surface ->
                         if (activeSurface in surface.children.flatMap { it.descendantsAndSelf() }) {
                             put(surface.id, true)
@@ -181,7 +186,7 @@ fun EpistemicSidebar(
                 .verticalScroll(scroll)
                 .padding(vertical = 4.dp),
         ) {
-            EPISTEMIC_NAV_GROUPS.forEach { group ->
+            visibleNavGroups(showAgentSurfaces).forEach { group ->
                 val expanded = groupExpanded[group.id] ?: false
                 val isActiveGroup = group == activeGroup
                 // Roll the group's descendants' badges up to the header, so a

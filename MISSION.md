@@ -126,9 +126,12 @@ the report so a worklist is never mistaken for a verdict.
 2. **Flavor — ANSWERED 2026-08-20**, as intended: one source, `-PhasAgent`,
    two variants. They ship as two Python distributions rather than two Maven
    variants, because the consumers are Python and PyPI's per-file limit forces
-   the split anyway (README § *Why a distribution per flavor*). Dead-code
-   elimination is preserved: the flag is still a `const val`, now generated
-   rather than hand-edited.
+   the split anyway. **Superseded 2026-08-22:** the agent surfaces are gated at
+   RUNTIME on the probed `ClientMode` instead, so ONE distribution ships and a
+   node upgraded with a brain reveals them without reinstalling. `-PhasAgent`
+   survives as the build ceiling (still a `const val`, still generated, still
+   compiled both ways in CI) — it is simply no longer what a user's sidebar
+   depends on. See FSD §4.
 
 3. **Locale root.** When the client's bundle is checked against the substrate's
    signed locale Merkle root, `locale-parity`'s byte-identity half retires. The

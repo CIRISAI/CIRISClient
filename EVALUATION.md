@@ -2,7 +2,7 @@
 
 You are being asked one question:
 
-> **Should CIRISServer stop carrying `client/` and depend on `ciris-client[node]` instead?**
+> **Should CIRISServer stop carrying `client/` and depend on `ciris-client` instead?**
 
 This document is the runnable case for "yes" and the honest list of what you
 would be accepting. It is written to be *falsified*: every claim below is a
@@ -44,11 +44,11 @@ of `build` on `feat/vendor-kmp-client`:
 ```bash
 gh run download --repo CIRISAI/CIRISClient -n wheels -D /tmp/cc
 python3 -m venv /tmp/eval
-/tmp/eval/bin/pip install --no-index /tmp/cc/ciris_client-*.whl /tmp/cc/ciris_client_node-*.whl
+/tmp/eval/bin/pip install --no-index /tmp/cc/ciris_client-*.whl
 
 /tmp/eval/bin/python - <<'PY'
 import ciris_client as c
-print(c.__version__, c.installed_flavors())      # 0.5.186 ('node',)
+print(c.__version__)                             # 0.5.186
 print(c.manifest()['vendored_from'])             # repo + commit this was built from
 print(c.artifact_path('desktop-uber-jar'))       # a real path to a real jar
 PY
@@ -56,21 +56,19 @@ PY
 java -jar "$(/tmp/eval/bin/python -c 'import ciris_client;print(ciris_client.artifact_path("desktop-uber-jar"))')"
 ```
 
-That last line launches the node-flavor client your users would get. The four
-things worth checking while it is open: the sidebar has **no agent surfaces**
-(the `HAS_AGENT=false` dead-code elimination is intact), **Contacts is home**,
-the version banner reads **0.5.186**, and the three reserved mesh surfaces
-(Video, Voting, Private Groups) render the SOON placeholder with the tracking
-issue rather than not existing.
+That last line launches the client your users would get. **Point it at a bare
+node** and check the four things that matter: the sidebar shows **no agent
+surfaces** (no Interact, Tools, Memory or agent settings — they are present in
+the binary and withheld because your node cannot serve them), **Contacts is
+home**, the version banner reads **0.5.186**, and the three reserved mesh
+surfaces (Video, Voting, Private Groups) render the SOON placeholder with their
+tracking issue rather than not existing.
 
-**Then try to break it.** These are the failure modes we designed for; each
-should refuse loudly rather than hand you something broken:
-
-```bash
-/tmp/eval/bin/pip install /tmp/cc/ciris_client_agent-*.whl   # both flavors at once
-/tmp/eval/bin/python -c "import ciris_client; ciris_client.artifact_path('desktop-uber-jar')"
-# -> ArtifactError naming both flavors and telling you to pass flavor=
-```
+Then **point the same install at an agent** — the surfaces appear. That is the
+whole design: one artifact, narrowed at runtime by what the node can actually
+do, so a node upgraded with a brain needs no client reinstall. It is also the
+one behaviour most worth trying to break, because it is what replaced the
+compile-time flag your build used to flip.
 
 ## 3. Does it match what you shipped?
 

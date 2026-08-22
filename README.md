@@ -12,8 +12,7 @@ copies today; deleting them is what finishes this.
 ## Install
 
 ```bash
-pip install "ciris-client[node]"     # the AI-free node client
-pip install "ciris-client[agent]"    # the agent build (node + brain)
+pip install ciris-client     # one client; what it shows depends on the node
 ```
 
 To run the readiness gates from a checkout — their framework lives in
@@ -28,16 +27,23 @@ pip install -e ".[readiness]"
 
 ## The consumption contract
 
-One client. Two flavors. Three distributions.
+**One client. One distribution. One install.**
 
-| distribution | what's in it | size |
-|---|---|---|
-| `ciris-client` | the resolver API and the version. No bundles. | ~25 KB |
-| `ciris-client-node` | the built client, `CIRISBuild.HAS_AGENT = false` | 62.94 MiB |
-| `ciris-client-agent` | the built client, `CIRISBuild.HAS_AGENT = true` | 62.94 MiB |
+```bash
+pip install ciris-client        # 62.97 MiB, carries the built client
+```
 
-Consumers depend on `ciris-client[node]` or `ciris-client[agent]`, never on a
-payload distribution directly, and never on both flavors at once.
+There is no node flavor and no agent flavor to choose between, because the
+choice was never really the consumer's to make: **a node can be upgraded with a
+brain.** The published client carries every surface and decides at *runtime*,
+from the node it is attached to, which ones to offer. Install the agent beside
+a node and the same client reveals Interact, Tools, Memory and the agent
+settings on its next probe — nothing to reinstall, nothing to re-pin.
+
+`CIRISBuild.HAS_AGENT` survives as the build **ceiling** (a deliberately
+stripped build stays possible, and CI still compiles it), but it is no longer
+what a user's sidebar depends on. That is
+`ClientMode` — see [`FSD/ONE_CLIENT_N_NODES.md`](FSD/ONE_CLIENT_N_NODES.md) §4.
 
 ### Asking it things
 
@@ -45,32 +51,33 @@ payload distribution directly, and never on both flavors at once.
 import ciris_client
 
 ciris_client.__version__            # '0.5.186' — pairs with ciris-server 0.5.186
-ciris_client.installed_flavors()    # ('node',)
 ciris_client.artifacts()            # [{'kind': 'desktop-uber-jar', 'bytes': …, 'sha256': …}]
 ciris_client.artifact_path('desktop-uber-jar')
 ciris_client.manifest()['vendored_from']   # {'repo': …, 'commit': …}
 ```
 
-Every failure is loud and actionable. A flavor that is not installed, a payload
-that outran its manifest, a `ciris-client` and a payload at different versions,
-both flavors installed with no flavor named — each raises and says what to do.
-The one thing it will never do is hand back a path to a placeholder.
+Every failure is loud and actionable. A payload that outran its manifest, a
+version split between the package and the bundles it carries, an artifact built
+for another OS — each raises and says what to do. The one thing it will never do
+is hand back a path to a placeholder.
 
-### Why a distribution per flavor
+### The size arithmetic, and why one wheel now fits
 
-Measured, not estimated. The desktop uber-jar is **66.98 MiB** and compresses to
-a **65,995,464-byte** wheel — **62.9% of PyPI's 104,857,600-byte limit**, with
-37.06 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
+Measured, not estimated. The desktop uber-jar is **66.99 MiB** and the wheel
+carrying it is **66,031,198 bytes — 63.0% of PyPI's 104,857,600-byte limit**,
+with 37.03 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
 difference has been the whole remaining margin before now.) ProGuard would cut
 most of the jar and is blocked on ktor 3.x (CIRISServer#379), so treat the size
 as fixed.
 
-So one wheel carrying both flavors does not merely run close to the limit — at
-2 × 62.94 MiB it **does not fit**, before an Android AAR or anything else. The
-split is not a precaution; it is the only arrangement that ships.
+Two of those in one wheel — which is what shipping a node build *and* an agent
+build together would have meant — does **not** fit, and that arithmetic is why
+the client shipped as three distributions for a while. Gating the agent surfaces
+at runtime instead removed the second copy rather than the limit: one build, one
+wheel, comfortably inside.
 
 **Localization is the product and is never cut to save size.** 29 languages are
-29 audiences. If a wheel stops fitting, split a flavor or a target;
+29 audiences. If a wheel stops fitting, split a target;
 `packaging/check_wheel_size.py` fails the build before PyPI does, and prints the
 breakdown every time so the number is visible before it is a problem.
 
@@ -105,8 +112,8 @@ Full rationale, including why generating it does not re-open CIRISServer#272:
 
 For each of CIRISServer and CIRISAgent:
 
-1. Add `ciris-client[node]` (server) or `ciris-client[agent]` (agent) to
-   requirements, pinned to the matching `ciris-server` version.
+1. Add `ciris-client` to requirements, pinned to the matching `ciris-server`
+   version. Both consumers install the same thing.
 2. Replace reads of the vendored tree with `ciris_client.artifact_path(...)`.
 3. Delete `client/`, and with it the hand-editing of `HAS_AGENT` and
    `CLIENT_VERSION`, and the localization-mirror duplication.

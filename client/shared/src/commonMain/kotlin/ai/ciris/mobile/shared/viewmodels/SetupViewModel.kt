@@ -48,6 +48,22 @@ class SetupViewModel(
     private val _state = MutableStateFlow(SetupFormState())
     val state: StateFlow<SetupFormState> = _state.asStateFlow()
 
+    /**
+     * Does this node have a brain to configure? Decides whether the wizard's AI
+     * step exists at all.
+     *
+     * NOT [ClientMode]: at an agent's first run the brain is folded but
+     * unconfigured, which the mode gate correctly calls NODE — keying the step
+     * graph on it would hide the AI step in precisely the run that needs it.
+     * The caller supplies `data.agent.folded` instead. Defaults to the build
+     * ceiling so a caller that never sets it behaves exactly as before.
+     */
+    private var brainPresent: Boolean = CIRISBuild.HAS_AGENT
+
+    fun setBrainPresent(present: Boolean) {
+        brainPresent = present
+    }
+
     // OAuth poll job for adapter wizard
     private var adapterOAuthPollJob: Job? = null
 
@@ -563,7 +579,7 @@ class SetupViewModel(
             return false
         }
         _state.value = currentState.copy(
-            currentStep = nextSetupStep(currentState.currentStep, CIRISBuild.HAS_AGENT),
+            currentStep = nextSetupStep(currentState.currentStep, brainPresent),
         )
         return true
     }
@@ -574,7 +590,7 @@ class SetupViewModel(
     fun previousStep() {
         val currentState = _state.value
         _state.value = currentState.copy(
-            currentStep = previousSetupStep(currentState.currentStep, CIRISBuild.HAS_AGENT),
+            currentStep = previousSetupStep(currentState.currentStep, brainPresent),
         )
     }
 

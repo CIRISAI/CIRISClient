@@ -33,8 +33,7 @@
     {
       "client_version": "0.5.186",
       "flavors": [
-        "node",
-        "agent"
+        "universal"
       ],
       "node_min": "0.5.168",
       "node_min_reason": "unchanged from 0.5.185: the three-state health merge is the floor; contacts/chat absence on older nodes renders the contacts_node_too_old strings",
@@ -45,7 +44,7 @@
         "chat",
         "commons.ballots"
       ],
-      "capabilities_note": "chat/contacts now in a TAGGED server release (v0.5.186; landed 0.5.185); the 13 status.llm_* strings (incl. _observer variants) ship from agent v2.9.30",
+      "capabilities_note": "chat/contacts now in a TAGGED server release (v0.5.186; landed 0.5.185); the 13 status.llm_* strings (incl. _observer variants) ship from agent v2.9.30; ONE build ships (agent surfaces present, gated at runtime on the probed node) — the node/agent split retired",
       "spec_source": {
         "repo": "CIRISAI/CIRISServer",
         "release": null,

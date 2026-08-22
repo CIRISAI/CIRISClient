@@ -7,40 +7,34 @@ of Kotlin.
 
     import ciris_client
 
-    ciris_client.__version__                     # '0.5.181' — pairs with ciris-server 0.5.181
-    ciris_client.installed_flavors()             # ('node',)
+    ciris_client.__version__                     # '0.5.186' — pairs with ciris-server 0.5.186
+    ciris_client.artifacts()                     # what this build carries
     ciris_client.artifact_path('desktop-uber-jar')
 
-The bundles ship in a separate distribution per flavor, pulled in by an extra:
+    pip install ciris-client
 
-    pip install "ciris-client[node]"     # HAS_AGENT = false
-    pip install "ciris-client[agent]"    # HAS_AGENT = true
-
-Install exactly one. See README § The consumption contract.
+ONE client, not a flavor per consumer. The agent surfaces are carried by every
+build and gated at RUNTIME on the probed node, so a node that is later upgraded
+with a brain reveals them without reinstalling anything. See README § The
+consumption contract.
 """
 
 from __future__ import annotations
 
 from .artifacts import (
-    FLAVORS,
     ArtifactError,
     ArtifactUnavailable,
-    FlavorNotInstalled,
     artifact_path,
     artifacts,
-    installed_flavors,
     manifest,
 )
 
 __all__ = [
-    "FLAVORS",
     "ArtifactError",
     "ArtifactUnavailable",
-    "FlavorNotInstalled",
     "__version__",
     "artifact_path",
     "artifacts",
-    "installed_flavors",
     "manifest",
 ]
 

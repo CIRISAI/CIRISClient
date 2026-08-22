@@ -163,6 +163,9 @@ private object SetupColors {
 @Composable
 fun SetupScreen(
     viewModel: SetupViewModel,
+    // Whether this node has a brain to configure (`data.agent.folded`) — see
+    // SetupViewModel.brainPresent. Defaults to the build ceiling.
+    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
     apiClient: CIRISApiClient,
     onSetupComplete: () -> Unit,
     onBackToLogin: (() -> Unit)? = null,  // Optional callback to return to login screen
@@ -180,6 +183,11 @@ fun SetupScreen(
     val state by viewModel.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val semantic = SemanticColors.forTheme(ColorTheme.DEFAULT, isDark = false)
+
+    // The step GRAPH lives in the view model (nextStep/previousStep) while the
+    // step INDICATORS live here; both must agree on whether an AI step exists,
+    // or Next walks past a screen the indicator never drew.
+    LaunchedEffect(brainPresent) { viewModel.setBrainPresent(brainPresent) }
 
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
@@ -351,6 +359,7 @@ fun SetupScreen(
         Column(modifier = Modifier.fillMaxSize().imePadding()) {
             // Step indicators at top
             StepIndicators(
+                brainPresent = brainPresent,
                 currentStep = state.currentStep,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -364,7 +373,7 @@ fun SetupScreen(
                     .fillMaxWidth()
             ) {
                 when (state.currentStep) {
-                    SetupStep.YOU -> YouStep(viewModel, state)
+                    SetupStep.YOU -> YouStep(viewModel, state, brainPresent)
                     SetupStep.JOIN_FEDERATION -> JoinFederationStep(viewModel, state, apiClient)
                     SetupStep.AI -> AiStep(viewModel, state, apiClient)
                     SetupStep.COMPLETE ->
@@ -468,6 +477,7 @@ fun SetupScreen(
 
             // Navigation buttons - with navigation bar padding to avoid overlap
             NavigationButtons(
+                brainPresent = brainPresent,
                 currentStep = state.currentStep,
                 canProceed = state.canProceedFromCurrentStep(),
                 validationError = state.getStepValidationError(),
@@ -478,9 +488,9 @@ fun SetupScreen(
                     // AI on the agent build and JOIN_FEDERATION on the node
                     // client; on COMPLETE we ALSO self-claim ownership of the
                     // local node for the just-created user.
-                    val isFinalStep = isFinalSetupStep(state.currentStep, CIRISBuild.HAS_AGENT)
+                    val isFinalStep = isFinalSetupStep(state.currentStep, brainPresent)
 
-                    if (isFinalStep && !CIRISBuild.HAS_AGENT) {
+                    if (isFinalStep && !brainPresent) {
                         // NODE CLIENT final step: there is NO agent /v1/setup/complete
                         // on ciris-server. The fed-ID was already minted (fed-ID step,
                         // first-run); the automated LAST step is the ownership
@@ -590,11 +600,12 @@ fun SetupScreen(
 @Composable
 private fun StepIndicators(
     currentStep: SetupStep,
+    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
     modifier: Modifier = Modifier
 ) {
     // Three screens: You → Join the federation → AI. The node client has no
     // brain to configure, so it shows two.
-    val steps = if (CIRISBuild.HAS_AGENT) {
+    val steps = if (brainPresent) {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2", SetupStep.AI to "3")
     } else {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2")
@@ -677,6 +688,7 @@ private fun l10nOr(key: String, fallback: String): String {
 private fun YouStep(
     viewModel: SetupViewModel,
     state: SetupFormState,
+    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
     modifier: Modifier = Modifier
 ) {
     // ONE scroll for the whole screen — the sections below deliberately do not
@@ -695,7 +707,7 @@ private fun YouStep(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Text(
-            text = if (CIRISBuild.HAS_AGENT) {
+            text = if (brainPresent) {
                 localizedString("setup.welcome_desc")
             } else {
                 localizedString("mobile.setup_welcome_desc_node")
@@ -3018,6 +3030,7 @@ private fun CompleteStep(
 @Composable
 private fun NavigationButtons(
     currentStep: SetupStep,
+    brainPresent: Boolean,
     canProceed: Boolean,
     validationError: String?,
     isSubmitting: Boolean,
@@ -3086,7 +3099,7 @@ private fun NavigationButtons(
                         )
                     } else {
                         Text(
-                            if (isFinalSetupStep(currentStep, CIRISBuild.HAS_AGENT)) {
+                            if (isFinalSetupStep(currentStep, brainPresent)) {
                                 localizedString("setup.finish")
                             } else {
                                 localizedString("setup.next")

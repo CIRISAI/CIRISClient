@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `0254c2c186764e05fe1ba26136fdc7b2db9b46a2620cae0b104970347030aef6`
+**state digest:** `634916b0d3d7640a8e94e1a66b250278a89a4da2975438001c7272064e8432f8`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -137,7 +137,7 @@ input.
 
 | # | Drift | Was | Is now | Selected by |
 |---|---|---|---|---|
-| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | generated into `CIRISBuild.kt` per flavor; still a `const val`, so dead-code elimination is unchanged | `-PhasAgent=true\|false` (default `false`) |
+| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | generated per flavor and still a `const val` (so a stripped build stays possible), but it is now the build **ceiling** only: which agent surfaces a user actually sees is decided at runtime by the probed `ClientMode`, because a node can gain a brain without reinstalling the client. The shipped wheel is built `-PhasAgent=true`. | `-PhasAgent=true\|false` (default `false`; CI compiles both, ships the superset) |
 | 2 | `CLIENT_VERSION` | `const val` in `models/ClientMode.kt`, hand-edited, kept in step by a script in one repo and by nothing in the other | generated from the repo-root `VERSION` file, the same file the Python package version comes from | `VERSION` (override: `-PclientVersion=`) |
 | 3 | localization bundles | 29 languages in 6 mirrored copies, kept identical by a checker that lived outside `client/` | 4 in-tree mirrors, checker vendored to `client/tools/` and run in CI | — (see §5, §6) |
 | 4 | `generated-api/` | 1107 committed files, generator not in the build graph | unchanged, provenance documented | — (see §7) |

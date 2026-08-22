@@ -3,11 +3,10 @@ __pycache__/
 .venv/
 reports/
 
-# Written by packaging/stage_artifacts.py from the repo-root VERSION.
-packaging/*/VERSION
-# Gradle output staged into the flavor payload packages.
-packaging/*/ciris_client_*/_artifacts/*
-!packaging/*/ciris_client_*/_artifacts/.gitkeep
+# Gradle output staged into the client package by stage_artifacts.py. Built,
+# never committed — a jar in git is the defect this repo exists to remove.
+ciris_client/_artifacts/*
+!ciris_client/_artifacts/.gitkeep
 # Gradle
 client/.gradle/
 client/build/

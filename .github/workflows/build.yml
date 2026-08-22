@@ -67,10 +67,6 @@ jobs:
         # A release without its matrix row does not merge (FSD §6).
         run: python3 compat/validate.py
 
-      - name: Flavor-extra pins
-        # ciris-client[node]==X must resolve the X payload: both extras pin
-        # exactly VERSION, or a stale resolver pairs with a fresh payload.
-        run: python3 packaging/check_pins.py
 
   # ── The client itself, both flavors ─────────────────────────────────────────
   gradle:
@@ -172,28 +168,28 @@ jobs:
           pattern: gradle-*
           path: gradle-out
 
-      - name: Stage each flavor
+      - name: Stage the shipped build
+        # The AGENT build is what ships: it carries every surface, and which of
+        # them a user sees is decided at runtime by the probed node. The node
+        # flavor is still COMPILED above, as proof the ceiling flag still works
+        # and a stripped build stays possible — it is simply not packaged.
         run: |
           set -euo pipefail
-          for flavor in node agent; do
-            jar=$(find "gradle-out/gradle-$flavor" -name '*.jar' 2>/dev/null | head -1 || true)
-            if [ -n "$jar" ]; then
-              python3 packaging/stage_artifacts.py --flavor "$flavor" \
-                --artifact "desktop-uber-jar=$jar"
-            else
-              # Named precisely. "no gradle artifact" tells the next person to
-              # look at the gradle job; a generic "unavailable" does not.
-              python3 packaging/stage_artifacts.py --flavor "$flavor" \
-                --placeholder "gradle-$flavor produced no jar in run ${{ github.run_id }}"
-            fi
-          done
+          jar=$(find gradle-out/gradle-agent -name '*.jar' 2>/dev/null | head -1 || true)
+          if [ -n "$jar" ]; then
+            python3 packaging/stage_artifacts.py \
+              --artifact "desktop-uber-jar@linux-x86_64=$jar"
+          else
+            # Named precisely. "no gradle artifact" tells the next person to
+            # look at the gradle job; a generic "unavailable" does not.
+            python3 packaging/stage_artifacts.py \
+              --placeholder "gradle-agent produced no jar in run ${{ github.run_id }}"
+          fi
 
-      - name: Build the three distributions
+      - name: Build the distribution
         run: |
           set -euo pipefail
           python3 -m build --wheel --outdir dist .
-          python3 -m build --wheel --outdir dist packaging/node
-          python3 -m build --wheel --outdir dist packaging/agent
           ls -la dist
 
       - name: Wheel size against PyPI's limit
@@ -205,13 +201,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m venv /tmp/consumer
-          /tmp/consumer/bin/pip install --no-index \
-            dist/ciris_client-*.whl dist/ciris_client_node-*.whl
+          /tmp/consumer/bin/pip install --no-index dist/ciris_client-*.whl
           /tmp/consumer/bin/python - <<'PY'
           import ciris_client as c
-          print("version:", c.__version__, "flavors:", c.installed_flavors())
-          m = c.manifest("node")
-          assert m["flavor"] == "node" and m["has_agent"] is False
+          m = c.manifest()
+          print("version:", c.__version__, "built as:", m["flavor"])
           assert m["client_version"] == c.__version__, "version split"
           if m.get("placeholder"):
               # The wheel must REFUSE, not return a path to nothing.
@@ -229,21 +223,12 @@ jobs:
         if: always()
         run: |
           {
-            echo "### Wheels"
+            echo "### Wheel"
             echo
+            p=$(python3 -c "import json;d=json.load(open('ciris_client/_artifacts/manifest.json'));print('PLACEHOLDER — '+d['placeholder_reason'] if d.get('placeholder') else ', '.join(a['kind'] for a in d['artifacts']))")
             echo '| wheel | bytes | payload |'
             echo '|---|---:|---|'
             for w in dist/*.whl; do
-              case "$w" in
-                *client_node*) f=node ;;
-                *client_agent*) f=agent ;;
-                *) f="" ;;
-              esac
-              if [ -n "$f" ]; then
-                p=$(python3 -c "import json;d=json.load(open('packaging/$f/ciris_client_$f/_artifacts/manifest.json'));print('PLACEHOLDER — '+d['placeholder_reason'] if d.get('placeholder') else ', '.join(a['kind'] for a in d['artifacts']))")
-              else
-                p='resolver only (no bundles by design)'
-              fi
               echo "| \`$(basename "$w")\` | $(stat -c%s "$w") | $p |"
             done
           } >> "$GITHUB_STEP_SUMMARY"

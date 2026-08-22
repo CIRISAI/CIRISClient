@@ -674,6 +674,42 @@ val EPISTEMIC_NAV_GROUPS: List<NavGroup> = buildList {
 }
 
 /**
+ * The groups a sidebar should actually RENDER, for a given attachment.
+ *
+ * [EPISTEMIC_NAV_GROUPS] above is the build's CEILING — everything this binary
+ * could ever show. This is the ceiling narrowed by what the node on the other
+ * end actually is, and the two are deliberately different lists:
+ *
+ *  - **Ceiling (build-time, [CIRISBuild.HAS_AGENT]).** One published client
+ *    carries the agent surfaces, so the ceiling is normally the full set. It
+ *    stays a `const val` so a deliberately stripped build can still drop the
+ *    agent code entirely.
+ *  - **Exposure (runtime, [ai.ciris.mobile.shared.models.ClientMode]).** A bare
+ *    node cannot serve Interact, Tools, Memory or the agent settings; rendering
+ *    them against one is offering a door onto a wall. When the node is later
+ *    upgraded with a brain, the SAME binary reveals them on the next probe —
+ *    which is the point, and is not expressible in a compile-time flag.
+ *
+ * Routes are NOT narrowed: [allSurfaces] and `surfaceToScreen` still resolve
+ * every surface, so a deep link or a restored screen keeps working while the
+ * sidebar declines to advertise it.
+ */
+fun visibleNavGroups(showAgentSurfaces: Boolean): List<NavGroup> =
+    if (showAgentSurfaces) {
+        EPISTEMIC_NAV_GROUPS
+    } else {
+        EPISTEMIC_NAV_GROUPS.mapNotNull { group ->
+            when (group.id) {
+                AGENT_GROUP.id, CLIENT_GROUP.id -> null
+                COMMONS_GROUP.id -> group.copy(
+                    surfaces = group.surfaces.filterNot { it == NavSurface.LayerAgent },
+                )
+                else -> group
+            }
+        }
+    }
+
+/**
  * Walk the entire surface tree (depth-first) — used by routers needing the
  * full leaf catalog without re-traversing the group structure each time.
  */
