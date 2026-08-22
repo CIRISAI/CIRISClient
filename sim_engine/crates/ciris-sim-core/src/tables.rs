@@ -110,3 +110,28 @@ pub const SECTOR_PROJECTORS: [[[f64; N]; N]; 4] = [
 
 /// Dimensions of the four character sectors: 9, 1, 1, 0.
 pub const SECTOR_DIMS: [usize; 4] = [9, 1, 1, 0];
+
+/// **E2 — inertia.** Mass per node, taken as the weighted degree `m_i = sum_j c_ij`.
+/// A kind bound to everything resists motion; a weakly coupled kind is light. This is
+/// the standard mass matrix that turns `F = -L x` into the normalised-Laplacian
+/// eigenproblem `L v = lambda M v`. **Build-mode analogical choice, not yet formalised**
+/// — it agrees in ordering with the M9 susceptibility (corr(m, 1/chi) = 0.9042),
+/// which is the ontology quantity it stands in for.
+pub const MASS: [f64; N] = [2.54527553486, 14.2574565301, 13.2500667789, 2.81091150149, 9.44065834747, 17.8212576148, 10.513759684, 3.16514346563, 7.66146661845, 11.7844487917, 16.7495551326];
+
+/// **M9 susceptibility** — response of node `i` to unit force, the Laplacian
+/// pseudo-inverse diagonal. Supplied for diagnostics and as the alternative mass
+/// convention `m_i = 1/chi_i`.
+pub const SUSCEPTIBILITY: [f64; N] = [0.387431396016, 0.0906209449492, 0.142372326841, 0.341204438066, 0.14107694697, 0.0872258977222, 0.138071488058, 0.305686777045, 0.129506937246, 0.148508658143, 0.0647478162576];
+
+/// **E3 — the time unit.** `tau = 1/sqrt(lambda_2)`, the reciprocal root of the Fiedler
+/// value (algebraic connectivity): the period of the SLOWEST non-trivial relaxation,
+/// i.e. how long a disturbance takes to cross the whole field. Everything else in the
+/// object is faster than this. **Build-mode analogical choice, not yet formalised.**
+pub const TIME_UNIT: f64 = 0.758184714421;
+
+/// Fiedler value (algebraic connectivity) — the slowest non-trivial mode.
+pub const FIEDLER: f64 = 1.73960221133;
+
+/// Largest Laplacian eigenvalue — the fastest mode; the integrator step must resolve it.
+pub const LAMBDA_MAX: f64 = 25.310913616;

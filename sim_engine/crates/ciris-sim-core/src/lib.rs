@@ -40,6 +40,7 @@ pub mod data;
 pub mod entropy;
 pub mod tables;
 pub mod dynamics;
+pub mod gaps;
 pub mod twin_probe;
 pub mod sectors;
 
