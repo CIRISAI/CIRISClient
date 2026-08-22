@@ -216,6 +216,10 @@ Three gates need care when you read them:
 - Anything reading the substrate's signed locale Merkle root. Until then the
   four-bundle byte-identity check stands in for it.
 - Publication. Nothing is on PyPI yet; the wheels are CI artifacts.
+  `.github/workflows/publish.yml` is wired for it — Trusted Publishing on a
+  `v*` tag, no tokens, refusing outright to publish a placeholder payload —
+  and waits on three pending publishers being registered on PyPI
+  (workflow `publish.yml`, environment `pypi`).
 
 ## Status
 

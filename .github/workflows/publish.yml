@@ -1,0 +1,165 @@
+# Publish the three distributions to PyPI via Trusted Publishing (OIDC).
+#
+# PyPI-side configuration — three pending publishers, one per project, all
+# naming THIS file and THIS environment:
+#
+#   owner: CIRISAI   repo: CIRISClient
+#   workflow: publish.yml            environment: pypi
+#   projects: ciris-client · ciris-client-node · ciris-client-agent
+#
+# No API tokens: `id-token: write` mints a short-lived OIDC credential per run,
+# which is why the job needs no secret and why a fork can never publish.
+#
+# WHAT MAY BE PUBLISHED. A placeholder payload must never reach PyPI — a wheel
+# that installs and then refuses every artifact lookup is worse than no wheel,
+# because `pip install ciris-client[node]` would appear to succeed. The gate
+# below reads each payload's own manifest and REFUSES the whole run if either
+# flavor is a placeholder, before anything is uploaded.
+#
+# Trigger: a tag `v*` (the release), or manual dispatch with TestPyPI as the
+# rehearsal target. Publication is the one step in this repo that cannot be
+# taken back, so it never rides on a branch push.
+
+name: publish
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "where to publish"
+        default: testpypi
+        type: choice
+        options: [testpypi, pypi]
+
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false # never interrupt an upload
+
+jobs:
+  build:
+    name: build the three distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - run: python3 -m pip install --upgrade pip build
+
+      # The release gates, run again here rather than trusted from the branch:
+      # a tag can point at any commit.
+      - name: Gates
+        run: |
+          set -euo pipefail
+          python3 packaging/check_vendoring.py
+          python3 packaging/check_pins.py
+          python3 compat/validate.py
+          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --no-server-src --strict
+
+      - name: The tag must name the version being published
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          version=$(cat VERSION)
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match VERSION ($version)"
+            exit 1
+          fi
+          echo "publishing $version"
+
+      - name: Build both flavors
+        run: |
+          set -euo pipefail
+          for flavor in node agent; do
+            hasAgent=$([ "$flavor" = agent ] && echo true || echo false)
+            ./client/gradlew -p client :desktopApp:packageUberJarForCurrentOS \
+              -PhasAgent=$hasAgent --no-daemon
+            jar=$(find client/desktopApp/build/compose/jars -name '*.jar' | head -1)
+            python3 packaging/stage_artifacts.py --flavor "$flavor" \
+              --artifact "desktop-uber-jar@linux-x86_64=$jar"
+            rm -f client/desktopApp/build/compose/jars/*.jar
+          done
+
+      - name: A placeholder must never be published
+        run: |
+          set -euo pipefail
+          for flavor in node agent; do
+            python3 - "$flavor" <<'PY'
+          import json, sys
+          flavor = sys.argv[1]
+          m = json.load(open(f"packaging/{flavor}/ciris_client_{flavor}/_artifacts/manifest.json"))
+          if m.get("placeholder"):
+              raise SystemExit(
+                  f"::error::the {flavor} payload is a PLACEHOLDER "
+                  f"({m.get('placeholder_reason')}) — refusing to publish a wheel "
+                  f"that installs and then refuses every lookup"
+              )
+          kinds = [a["kind"] for a in m["artifacts"]]
+          if not kinds:
+              raise SystemExit(f"::error::the {flavor} payload carries no artifacts")
+          print(f"{flavor}: {', '.join(kinds)}")
+          PY
+          done
+
+      - name: Build wheels
+        run: |
+          set -euo pipefail
+          python3 -m build --wheel --outdir dist .
+          python3 -m build --wheel --outdir dist packaging/node
+          python3 -m build --wheel --outdir dist packaging/agent
+
+      - run: python3 packaging/check_wheel_size.py dist/*.whl
+
+      - name: Consumption contract — install and resolve
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/consumer
+          /tmp/consumer/bin/pip install --no-index \
+            dist/ciris_client-*.whl dist/ciris_client_node-*.whl
+          /tmp/consumer/bin/python - <<'PY'
+          import ciris_client as c
+          assert c.installed_flavors() == ("node",), c.installed_flavors()
+          m = c.manifest("node")
+          assert not m.get("placeholder"), "placeholder reached the publish path"
+          assert m["client_version"] == c.__version__, "version split"
+          print("resolves:", c.artifact_path("desktop-uber-jar"))
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/*.whl
+          retention-days: 14
+
+  publish:
+    name: publish to ${{ github.event.inputs.target || 'pypi' }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The environment PyPI's trusted publisher is scoped to. Add required
+    # reviewers on it to make publication a human decision.
+    environment:
+      name: ${{ github.event.inputs.target || 'pypi' }}
+      url: https://pypi.org/project/ciris-client/
+    permissions:
+      id-token: write # OIDC — this is the credential; there is no token secret
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: ${{ (github.event.inputs.target == 'testpypi') && 'https://test.pypi.org/legacy/' || '' }}
+          print-hash: true

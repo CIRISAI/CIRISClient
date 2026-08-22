@@ -152,10 +152,15 @@ Small, but real, and worth stating before you agree rather than after:
 
 Do not decide without these:
 
-- **Nothing is published to PyPI.** `ciris-client` is an unclaimed name. Step
-  one of adoption is publication, and until then "depend on the wheel" means
-  "depend on a CI artifact", which is not good enough for a release. This is the
-  single largest gap.
+- **Nothing is published to PyPI yet.** `ciris-client` is an unclaimed name, so
+  until the first release lands, "depend on the wheel" means "depend on a CI
+  artifact", which is not good enough for a release of yours. The mechanism is
+  built and waiting: `.github/workflows/publish.yml` publishes all three
+  distributions on a `v*` tag via Trusted Publishing (OIDC, no tokens), gated on
+  the same checks plus one more — **a placeholder payload can never be
+  published**, because a wheel that installs and then refuses every lookup is
+  worse than no wheel. It needs the three pending publishers registered on PyPI
+  (workflow `publish.yml`, environment `pypi`) and a tag.
 - **Desktop uber-jar only.** No Android AAR, no iOS framework in the wheels yet.
   Your APK and installer pipelines still build from source — which is why
   adoption can be *staged* (§7) rather than all-or-nothing.
