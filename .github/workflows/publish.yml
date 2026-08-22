@@ -314,18 +314,29 @@ jobs:
     # Android and iOS are NOT wheels: their consumers are Gradle and Xcode, not
     # pip. They are attached to the GitHub release instead.
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 90
+    timeout-minutes: ${{ matrix.timeout }}
     strategy:
-      fail-fast: false
+      fail-fast: false # iOS taking hours must not cancel the Android artifact
       matrix:
         include:
           - name: android-aar
             runner: ubuntu-latest
             task: ":shared:assembleRelease"
+            timeout: 45
+            cache_read_only: true
           - name: ios-xcframework
-            # Kotlin/Native cannot cross-compile Apple targets.
+            # Kotlin/Native cannot cross-compile Apple targets, and release
+            # linking is the expensive part: MEASURED at >85 minutes for
+            # linkReleaseFrameworkIosArm64 alone — the first of three targets —
+            # which is how a 90-minute budget produced a cancelled job rather
+            # than a failed one. Compose + full LLVM optimization + isStatic is
+            # the combination; the timeout below is sized for all three targets
+            # on a COLD cache, and cache_read_only is false precisely so the
+            # first run pays that once and later runs do not.
             runner: macos-14
             task: ":shared:assembleSharedReleaseXCFramework"
+            timeout: 350
+            cache_read_only: false
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -335,7 +346,7 @@ jobs:
       - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
-          cache-read-only: true
+          cache-read-only: ${{ matrix.cache_read_only }}
 
       - name: Build
         working-directory: client
@@ -370,26 +381,48 @@ jobs:
   release-assets:
     name: attach Android + iOS to the release
     needs: mobile
-    if: startsWith(github.ref, 'refs/tags/v')
+    # `always()`: the legs are independent artifacts, and iOS can take hours or
+    # time out. Withholding the Android AAR because iOS was slow would be the
+    # matrix's convenience beating the consumer's.
+    if: |
+      always() &&
+      (github.event_name == 'push' || github.event.inputs.target != 'none')
     runs-on: ubuntu-latest
     permissions:
       contents: write # to create/update the release these attach to
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           pattern: mobile-*
           merge-multiple: true
           path: mobile
-      - run: ls -la mobile
+      - name: What built
+        run: ls -la mobile || echo "no mobile artifacts this run"
       - name: Upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" \
-                 --title "$GITHUB_REF_NAME" --generate-notes
-          gh release upload "$GITHUB_REF_NAME" mobile/* --repo "$GITHUB_REPOSITORY" --clobber
+          # On a tag push the tag is the release. On a dispatch (completing an
+          # existing release's asset set) it comes from VERSION, which the tag
+          # had to match to publish in the first place.
+          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
+            tag="$GITHUB_REF_NAME"
+          else
+            tag="v$(cat VERSION)"
+          fi
+          shopt -s nullglob
+          assets=(mobile/*)
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "::warning::no mobile artifacts to attach — check the mobile jobs"
+            exit 0
+          fi
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+                 --title "$tag" --generate-notes
+          gh release upload "$tag" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "attached: ${assets[*]}"
 
   publish:
     name: publish to ${{ github.event.inputs.target || 'pypi' }}
