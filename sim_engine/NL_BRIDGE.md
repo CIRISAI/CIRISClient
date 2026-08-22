@@ -269,3 +269,46 @@ generalisable lesson and should govern the next model search.
 
 Unchanged: `onnx-community` declares no licence on any of these files, so the export must
 be reproduced from the Apache-2.0 original regardless of which variant wins.
+
+---
+
+## CORRECTION: q4f16 DOES run in rten — my earlier note was wrong — 2026-08-22
+
+Above I recorded "Open item #2 CLOSES NEGATIVE: rten cannot run `q4f16`", reasoning from
+`impl Operator for MatMulNBits` declaring
+`OutputType::Fixed(ValueType::Tensor(DataType::Float))`. **That reading was wrong.** That
+declaration governs the operator's *output* dtype, not what the model file may *store*.
+`inference-scout` tested it rather than accepting my source argument, and q4f16 loads,
+runs, and produced byte-identical generated text against q4 on a matched prompt.
+
+I have re-tested the consequence for both candidates. Every figure below is
+`Model::load_file` on the unmodified published file:
+
+| model | variant | size | load |
+|---|---|---:|---|
+| SmolLM2-360M | `model_q4.onnx` | 387.9 MB | OK 192 ms |
+| **SmolLM2-360M** | **`model_q4f16.onnx`** | **272.7 MB** | OK (scout) |
+| Qwen3-0.6B | `model_q4.onnx` | 919.1 MB | OK 831 ms |
+| **Qwen3-0.6B** | **`model_q4f16.onnx`** | **569.8 MB** | **OK 594 ms** |
+| Qwen3-0.6B | ORT `cpu-int4` (quantised embeddings) | 524.6 MB | **FAILS** — `GatherBlockQuantized` |
+
+**The browser floor is 30–38% lower than recorded.** The `GatherBlockQuantized` failure
+and the vocabulary analysis both still stand — 151,936 vs 49,152 is still why Qwen3 is
+larger — but the flip's browser cost is **569.8 MB vs 272.7 MB (2.09x)**, not 919 vs 388.
+
+### This materially strengthens the pin flip, on three independent counts
+1. **569.8 MB is a shippable browser payload** where 919 MB was not.
+2. **`rten-text` works on Qwen3 and FAILS on the SmolLM2 family** (`MissingVocabEntry("Ą")`
+   at *load*, both 360M and 135M — family-wide, not one bad file). The tokenizer blocker
+   is a SmolLM2 problem, not a Qwen3 one, so the flip removes it rather than inheriting it.
+3. Qwen3-0.6B is the only sub-gig candidate with measured 4-way grip (0.467 vs SmolLM2's
+   0.250 floor).
+
+**Recommendation: flip the pin to Qwen3-0.6B on both targets** — native GGUF Q4_K_M 484 MB
+via llama-cpp-2, browser `model_q4f16.onnx` 569.8 MB via rten direct-ONNX. The licence
+obligation is unchanged and real: `onnx-community` declares no licence, so that export must
+be reproduced from the Apache-2.0 original.
+
+**Owed before shipping q4f16:** its numerical equivalence is verified on ONE short greedy
+prompt. Identical output there does not establish equivalence across the distribution —
+run the 4-way eval on q4f16 specifically before it ships.
