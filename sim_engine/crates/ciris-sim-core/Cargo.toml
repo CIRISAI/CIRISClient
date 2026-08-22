@@ -1,0 +1,14 @@
+[package]
+name = "ciris-sim-core"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/CIRISAI/CIRISClient"
+description = "Deterministic no_std physics core for the CIRIS relational object: measured couplings, resistance metric, parity sectors, Laplacian modes, and the proved twin dark-state probe. Replaces the ad-hoc force simulations in CIRISGame and CEWPOS."
+
+[dependencies]
+libm = "0.2"
+
+[features]
+default = []
+std = []
