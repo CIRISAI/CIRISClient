@@ -11,15 +11,21 @@ contract* and [`../FSD/ONE_CLIENT_N_NODES.md`](../FSD/ONE_CLIENT_N_NODES.md)
 
 ## 1. Provenance
 
-The tree is the result of a true three-way merge (FSD §3), not a copy of any
-one upstream state:
+The tree is a merge lineage, not a copy of any one upstream state. The
+original extraction was a true three-way merge (FSD §3): base
+[`CIRISAI/CIRISAgent`](https://github.com/CIRISAI/CIRISAgent) `client/` @
+`6083bdf` (2.9.28) vendored byte-identically in commit `dc17f56`, ours the
+eight PR #1 extraction deltas (§4), theirs CIRISServer @ `a2433ba` (0.5.185).
+Upstream states have since been pulled per §8; this ledger records **each
+upstream's last merged state** — the branch point the next pull starts from:
 
-| | |
-|---|---|
-| **Base** | [`CIRISAI/CIRISAgent`](https://github.com/CIRISAI/CIRISAgent) `client/` @ `6083bdff497d774540fd749c647567ec8984e66b` (2.9.28, main, 2026-08-20) — as vendored byte-identically in commit `dc17f56`, digest `f7fc7eba43ef57a5a16d87af3799a95f4692f975d85ec8cc17a91c9790b55dbe` |
-| **Ours** | the eight extraction deltas of PR #1 (flavor generation, `VERSION`-derived `CLIENT_VERSION`, destructive-`Sync` removal, vendored localization checker — §4) |
-| **Theirs** | `CIRISAI/CIRISServer` `client/` @ `a2433ba46c5d6f1f6e48cb3ddfd287e1f7c3f082` (0.5.185) with §2's exclusions applied, extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`, `local.properties` |
-| **Merged on** | 2026-08-20 |
+| Upstream | Last merged state | Input commit | Pulled |
+|---|---|---|---|
+| `CIRISAI/CIRISServer` | `v0.5.186` (`1ea2c8b80a8022634d4f57309b0aa7ae8bde5ba9`) | `merge/server-v0.5.186` | 2026-08-21 |
+| `CIRISAI/CIRISAgent` | `v2.9.30-stable` (`c26cb366a61849e98ceffa973bbdf2c47e2fb0fc`) | `merge/agent-v2.9.30` | 2026-08-21 |
+
+The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
+`local.properties`, `substrate.lock.json`) applies to every pull.
 
 For the artifact manifest (`packaging/stage_artifacts.py`), the newest content
 source is the pair a bisect wants:
@@ -27,14 +33,14 @@ source is the pair a bisect wants:
 | | |
 |---|---|
 | **Source repo** | [`CIRISAI/CIRISServer`](https://github.com/CIRISAI/CIRISServer) |
-| **Commit** | `a2433ba46c5d6f1f6e48cb3ddfd287e1f7c3f082` |
+| **Commit** | `1ea2c8b80a8022634d4f57309b0aa7ae8bde5ba9` |
 
 ### The state digest
 
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `a78fe4fae57c38b73c0865607b81a00fbecda8589cf4f5a884158b844fdb0ec6`
+**state digest:** `e55aae12078260c65f4e3d6f8aecae2dc43f25379816774639da0f9cb423800c`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
