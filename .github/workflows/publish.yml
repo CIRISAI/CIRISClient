@@ -85,7 +85,13 @@ jobs:
             platform: darwin-arm64
             wheel_tag: macosx_11_0_arm64
           - name: macos-x86_64
-            runner: macos-13
+            # macos-13 was RETIRED in December 2025; a job asking for it queues
+            # forever rather than failing, which is how this was found — three
+            # legs green and one pending with no runner. macos-15-intel is the
+            # Intel replacement. Horizon worth knowing: GitHub drops x86_64
+            # macOS altogether when the macOS 15 image retires (Fall 2027), at
+            # which point this leg becomes a cross-build or goes away.
+            runner: macos-15-intel
             platform: darwin-x86_64
             wheel_tag: macosx_10_9_x86_64
           - name: windows-x86_64
