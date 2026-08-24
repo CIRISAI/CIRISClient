@@ -122,7 +122,7 @@ matrix** ([`compat/matrix.json`](compat/matrix.json)) that answers "which client
 works with which node, and what does it do when they mismatch" as a validated
 artifact rather than folklore; and a **localization pipeline** that translates
 new keys into 29 languages in CI for cents
-([`client/tools/localize.py`](client/tools/localize.py) — the six mesh strings
+([`localization/localize.py`](localization/localize.py) — the six mesh strings
 cost $0.14, the two upstream repairs cost $0.035).
 
 ## 5. What you would owe

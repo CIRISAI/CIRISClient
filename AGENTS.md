@@ -3,12 +3,21 @@
 ## Project Structure & Module Organization
 - `client/` — the **vendored** KMP client. Not authored here. Read `client/VENDORING.md` before touching anything in it; §3 governs.
 - `ciris_client/` — the Python API consumers use to find the built bundles. No Kotlin is compiled by pip, ever.
+- `localization/` — the OTHER thing this repo owns. `glossaries/` is 29 files of canonical terminology (3,045 pairs) plus each language's standing prose rules; `localize.py` is the translate → evaluate → repair pipeline that reads them; `glossary.py` parses them. The bundles themselves live under `client/` because that is where the app loads them from.
 - `packaging/` — the flavor payload projects (`node`, `agent`) and the three checks: `stage_artifacts.py`, `check_vendoring.py`, `check_wheel_size.py`. Stdlib only; they run before anything is installed.
 - `readiness/client.py` — the client build gates. One function per gate, registered with `@gate(id, question)`.
 - `readiness/__main__.py` — the CLI, including `--client-tree`.
 - `evidence/` — the evidence registry (see `evidence/README.md`).
 - The gate framework is **not** here. It lives in [CIRISGrace](../CIRISGrace) and is imported as `grace.gate`. Do not fork it; extend it there.
 - Gates default to this repo's `client/` and still accept `--client-tree` for a consumer's copy.
+
+## Working in `localization/`
+- The pipeline has THREE LANES and ONE DIRECTION: `translate → evaluate → repair`. `--lane` chooses where a run enters; it always flows through the rest. There is no path that writes an unreviewed string into a shipped bundle, and that is not an accident — Haiku fan-outs produced word-salad in 5 of 28 locales that structural validation could not see.
+- **Glossary-first.** Terminology is decided before translation, not after. Every request carries the glossary terms that occur in its batch, that language's prose rules, and real shipped translations as anchors. A model asked to render "node" fresh will pick something; the corpus already decided.
+- **A refusal is expressible and never final.** The translate lane asks for `refusals` rather than letting a model disguise "I cannot" as a bad string, then escalates that key — one key, not the batch — up a ladder whose last rung is a different model family. If every rung refuses, the run FAILS. English under a non-English locale is not a fallback, it is a silent demotion of that audience.
+- **The judge is a different family from the drafter.** A judge sharing the drafter's weights shares its blind spots and prefers its own output.
+- Say what this pipeline does not guarantee, every time: native fluency, dialect coverage, cultural adaptation of metaphor, legal review. Everything it writes is `draft` / `needs_native_review` until a speaker signs off.
+- Anchors are EXEMPLARS. `MAX_ANCHOR_CHARS` exists because `prompts.language_guidance` is a real key whose Yoruba value is 31,297 characters, and lexical retrieval loved it: it contains most words, so it out-scored every genuinely similar UI string and cost ~8k tokens a request to teach nothing about button labels.
 
 ## Working in `client/`
 - Every file under `client/` is byte-identical to CIRISAgent@6083bdf **or** has a row in `client/VENDORING.md` §3 saying why. `packaging/check_vendoring.py` asserts exactly that, and CI runs it.

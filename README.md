@@ -145,6 +145,49 @@ and the version-mismatch banner cannot disagree with the package that shipped
 it. Full rationale, including why generating it does not re-open
 CIRISServer#272: [`client/VENDORING.md`](client/VENDORING.md) §4.
 
+### Localization: three lanes, one direction
+
+This repo owns the localization corpus as well as the client — 29 languages,
+3,853 keys, four byte-identical runtime bundles, and the glossaries that decide
+what the words are.
+
+```
+translate ──► evaluate ──► repair
+              ▲             ▲
+              └─ enter here └─ enter here
+```
+
+`translate` brings English into 28 locales. `evaluate` grades what is already
+there. `repair` corrects what the evaluation rejected. A run enters at one lane
+and flows through the rest, so nothing reaches a shipped bundle unreviewed.
+
+```bash
+python3 localization/localize.py --lane translate --keys 'mesh_config.*' --dry-run
+python3 localization/localize.py --lane evaluate  --keys 'commons_surface.*' --lang yo
+```
+
+In CI they are `i18n-translate`, `i18n-evaluate` and `i18n-repair`
+(`workflow_dispatch`, any key pattern), plus `localize`, which runs the same
+pipeline by itself whenever a PR changes `en.json`. All four call one reusable
+workflow, and all four are decided by the same strict guard.
+
+Three things are worth knowing before reading the code:
+
+- **Evaluation is MQM**, not a score out of ten — span-level errors with a
+  category and a severity, reference-free, in the shape
+  [GEMBA-MQM](https://arxiv.org/pdf/2310.13988) established for LLM judging. The
+  judge is a *different model family* from the drafter, because a judge that
+  shares the drafter's weights shares its blind spots.
+- **Refusals escalate; they never ship.** A model that cannot render a string is
+  asked to say so rather than invent one, and that key — not the batch — goes up
+  a ladder ending in a different model family. If the ladder is exhausted the
+  build fails. Low-resource languages are the whole point: CIRIS ranks languages
+  by *inverse* model support, so Yoruba, Hausa and Amharic come before Spanish,
+  and they are exactly where a fallback to English would be invisible.
+- **What it does not claim.** Terminology, structure, placeholders and meaning
+  are guaranteed. Native fluency is not. Everything the pipeline writes is
+  `draft` / `needs_native_review` until a speaker signs off.
+
 ### Migrating off a vendored copy
 
 For each of CIRISServer and CIRISAgent:
