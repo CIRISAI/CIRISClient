@@ -156,6 +156,7 @@ jobs:
           set -euo pipefail
           python3 packaging/check_vendoring.py
           python3 compat/validate.py
+          python3 packaging/check_pins.py
           python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
           python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
@@ -407,9 +408,15 @@ jobs:
     # `always()`: the legs are independent artifacts, and iOS can take hours or
     # time out. Withholding the Android AAR because iOS was slow would be the
     # matrix's convenience beating the consumer's.
-    if: |
-      always() &&
-      (github.event_name == 'push' || github.event.inputs.target != 'none')
+    # A TAG PUSH ONLY. This used to accept any dispatch whose target was not
+    # `none`, which meant a TestPyPI rehearsal from any ref ran this job — and
+    # `gh release create` invents a tag from the default branch when none
+    # exists, so a rehearsal could mint an OFFICIAL v$(cat VERSION) release
+    # pointing at code that is not what was being tested. `always()` is kept
+    # for the reason it was added: iOS can take hours or time out, and
+    # withholding the Android AAR because iOS was slow is the matrix's
+    # convenience beating the consumer's.
+    if: always() && github.event_name == 'push' && github.ref_type == 'tag' 
     runs-on: ubuntu-latest
     permissions:
       contents: write # to create/update the release these attach to
@@ -430,19 +437,22 @@ jobs:
           # On a tag push the tag is the release. On a dispatch (completing an
           # existing release's asset set) it comes from VERSION, which the tag
           # had to match to publish in the first place.
-          if [ "${GITHUB_REF_TYPE:-}" = "tag" ]; then
-            tag="$GITHUB_REF_NAME"
-          else
-            tag="v$(cat VERSION)"
-          fi
+          # The job only runs on a tag push now, so the tag IS the ref. Kept as
+          # a check rather than an assumption: this is the step that can create
+          # a release, and it must never invent the thing it is attaching to.
+          [ "${GITHUB_REF_TYPE:-}" = "tag" ] || {
+            echo "::error::release-assets ran without a tag ref"; exit 1; }
+          tag="$GITHUB_REF_NAME"
           shopt -s nullglob
           assets=(mobile/*)
           if [ ${#assets[@]} -eq 0 ]; then
             echo "::warning::no mobile artifacts to attach — check the mobile jobs"
             exit 0
           fi
+          # --verify-tag: create a release for a tag that EXISTS, never one
+          # `gh` would helpfully mint from the default branch.
           gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
-            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+            || gh release create "$tag" --repo "$GITHUB_REPOSITORY" --verify-tag \
                  --title "$tag" --generate-notes
           gh release upload "$tag" "${assets[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           echo "attached: ${assets[*]}"

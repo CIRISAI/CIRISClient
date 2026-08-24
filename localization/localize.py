@@ -161,13 +161,38 @@ LADDER: Tuple[str, ...] = tuple(
     m.strip() for m in os.environ["LOCALIZE_LADDER"].split(",") if m.strip()
 ) if os.environ.get("LOCALIZE_LADDER") else _LADDERS[PROVIDER]
 
-# The judge. Different family from LADDER[0] by default — see the module
-# docstring. Overridable, but overriding it to the drafter's family gives up the
-# independence that is the second pass's entire value.
-REVIEW_MODEL = os.environ.get(
-    "LOCALIZE_REVIEW_MODEL",
-    "openai/gpt-5.1" if PROVIDER == "openrouter" else "claude-opus-5",
-)
+# The judge. Different family from the drafter — see the module docstring.
+#
+# The Anthropic SDK path CANNOT satisfy that: it reaches only Anthropic models,
+# so its drafter and its judge are the same family and the second pass stops
+# being independent. That is not a smaller version of the design, it is the
+# design's one load-bearing property removed, so the provider says so out loud
+# rather than quietly reviewing itself. Set LOCALIZE_REVIEW_MODEL to accept it
+# deliberately (a same-family judge still catches plenty; it just cannot be
+# claimed as independent), or use OpenRouter, which reaches every rung.
+_DEFAULT_REVIEWER = {"openrouter": "openai/gpt-5.1"}
+
+
+def _review_model() -> str:
+    forced = os.environ.get("LOCALIZE_REVIEW_MODEL")
+    if forced:
+        return forced
+    model = _DEFAULT_REVIEWER.get(PROVIDER)
+    if model:
+        return model
+    raise SystemExit(
+        f"[refuse] LOCALIZE_PROVIDER={PROVIDER} reaches only one model family, so "
+        f"the drafter and the reviewer would be relatives and the review lane "
+        f"would be checking its own homework. Use OPENROUTER_API_KEY (the ladder "
+        f"and an independent judge), or set LOCALIZE_REVIEW_MODEL explicitly to "
+        f"accept a same-family review — which is worth having, but must not be "
+        f"described as independent."
+    )
+
+
+#: Resolved once at the start of a run rather than at import, so `--check` and
+#: `--glossary-report` still work on a provider that cannot supply a judge.
+REVIEW_MODEL = ""
 
 # $/MTok (input, output) for the cost REPORT only; billing is whatever the API
 # bills. From OpenRouter's model list. Update when a rung moves.
@@ -510,6 +535,16 @@ def _openrouter_call(model: str, system: str, messages: List[dict]) -> Reply:
 def call_model(model: str, system: str, messages: List[dict], *, batch: bool = False) -> Reply:
     if PROVIDER == "openrouter":
         return _openrouter_call(model + (":batch" if batch else ""), system, messages)
+    if batch:
+        # The Anthropic path here is the synchronous Messages API. Dropping
+        # `batch` on the floor was worse than not supporting it: the request was
+        # billed at full price while Spend.report labelled every line
+        # "batch -50%", so the run REPORTED a saving it did not take.
+        raise SystemExit(
+            "[refuse] --mode batch is not implemented on the Anthropic SDK path. "
+            "Use OPENROUTER_API_KEY (its :batch slugs halve the same request), or "
+            "run --mode fast and pay what the report says you paid."
+        )
     return _anthropic_call(model, system, messages)
 
 
@@ -695,14 +730,18 @@ def evaluate_lane(lang: str, values: Dict[str, str], en_flat: dict, spend: Spend
     out: Dict[str, List[dict]] = {}
     for k in keys:
         errs = raw.get(k)
-        if errs is None:
-            # A key the reviewer skipped is NOT a key that passed. Saying so is
-            # the difference between a gate and a formality.
+        # A key the reviewer skipped is NOT a key that passed, and neither is a
+        # key it answered with something that is not a list of findings. Both
+        # are "no valid review happened"; coercing the second to [] reads as
+        # "reviewed and clean", which is the difference between a gate and a
+        # formality.
+        if not isinstance(errs, list):
+            what = "returned no verdict" if errs is None else f"returned a {type(errs).__name__}"
             out[k] = [{"category": "accuracy", "severity": "critical", "span": "",
-                       "note": "the reviewer returned no verdict for this key",
+                       "note": f"no valid review for this key: the reviewer {what}",
                        "suggestion": ""}]
             continue
-        out[k] = [e for e in errs if isinstance(e, dict)] if isinstance(errs, list) else []
+        out[k] = [e for e in errs if isinstance(e, dict)]
     return out
 
 
@@ -824,6 +863,9 @@ def insert(lang: str, values: Dict[str, str], en: dict, *, overwrite: bool) -> N
 
 def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: int,
         mode: str, dry_run: bool, report_path: Optional[Path]) -> int:
+    global REVIEW_MODEL  # noqa: PLW0603 - resolved once per run; see _review_model
+    REVIEW_MODEL = _review_model()
+
     en_flat, selection = select(patterns, langs, only_missing=(lane == "translate" and not patterns))
     if not selection:
         print("nothing selected — every requested key is already present in every "
@@ -852,12 +894,17 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
             print(f"    {lang}: {len(keys)} key(s), {g} glossary term(s) in scope")
         return 0
 
+    # Before the first call, for every language in the selection: a glossary
+    # discovered missing on language 19 of 28 means 18 were drafted without one.
+    gloss.require(sorted(selection))
+
     en = load(CANONICAL / "en.json")
     spend = Spend()
     union = sorted({k for ks in selection.values() for k in ks})
     src = source_block(union, en_flat)
 
     unresolved: Dict[str, Dict[str, str]] = {}
+    rejected: Dict[str, Dict[str, str]] = {}
     report: Dict[str, dict] = {}
     rc = 0
 
@@ -892,6 +939,24 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
         fixes = repair_lane(lang, values, findings, en_flat, spend)
         values.update(fixes)
 
+        # A key the review REJECTED and repair could not fix is still the
+        # rejected text. Without this it is written to all four mirrors and the
+        # run exits 0, because only repaired-then-re-rejected keys set rc — so
+        # the worse outcome (repair failed outright: every rung errored,
+        # refused, or returned junk) was the silent one. The structural guard
+        # cannot catch it; that is the whole reason the review lane exists.
+        unfixed = sorted(k for k, e in findings.items() if needs_repair(e) and k not in fixes)
+        if unfixed:
+            print(f"[repair] {lang}: {len(unfixed)} REJECTED key(s) not repaired — "
+                  f"{', '.join(unfixed[:5])}{' …' if len(unfixed) > 5 else ''}")
+            rc = 1
+            rejected[lang] = {
+                k: "; ".join(
+                    f"{e.get('severity')}/{e.get('category')}: {e.get('note', '')}"
+                    for e in findings[k] if needs_repair([e])
+                ) for k in unfixed
+            }
+
         # Re-review only what changed: a repair is a new string and an unreviewed
         # new string is exactly what this pipeline refuses to write.
         if fixes:
@@ -913,6 +978,7 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
             "mean_score": round(sum(scores.values()) / len(scores), 1) if scores else 100.0,
             "findings": {k: e for k, e in findings.items() if e},
             "unresolved": unresolved.get(lang, {}),
+            "rejected_unrepaired": rejected.get(lang, {}),
         }
 
         if values:
@@ -934,6 +1000,14 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
             for k, why in sorted(keys.items()):
                 print(f"  {lang}  {k}: {why}")
         rc = 1
+
+    if rejected:
+        print("\n[FAIL-CLOSED] the reviewer rejected these and repair did not fix "
+              "them. They are written as-is and the run fails: the strict guard "
+              "checks structure, and structure is not what is wrong with them.")
+        for lang, keys in sorted(rejected.items()):
+            for k, why in sorted(keys.items()):
+                print(f"  {lang}  {k}: {why}")
 
     print("\nEvery value written is status=draft / review_status=needs_native_review. "
           "This pipeline guarantees terminology, structure and meaning; it does not "

@@ -99,8 +99,44 @@ def artifacts() -> list[dict[str, Any]]:
     return list(data.get("artifacts", []))
 
 
-#: Files the locale bundle is meaningless without.
+#: Files the locale bundle is meaningless without. Everything else it must
+#: carry is DECLARED by manifest.json rather than listed here — see
+#: :func:`_verify_bundle`.
 _LOCALE_REQUIRED = ("en.json", "manifest.json")
+
+
+def _verify_bundle(directory: "Path") -> list[str]:
+    """Names the bundle promises and does not have. Empty = complete.
+
+    Checking `en.json` and `manifest.json` was not enough. If Gradle packaging
+    ever drops a single non-English locale — `yo.json`, say — those two files
+    are still there, so the bundle looked complete while one audience silently
+    lost its language. The source-tree localization guard cannot see that: it
+    grades the repository, and this function answers for the JAR.
+    manifest.json is the supported-language list, so it is also the thing to
+    hold the bundle to.
+    """
+    import json as _json
+
+    missing = [n for n in _LOCALE_REQUIRED if not (directory / n).is_file()]
+    if missing:
+        return missing
+    try:
+        declared = _json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    except ValueError as e:
+        return [f"manifest.json does not parse ({e})"]
+    langs = declared.get("languages")
+    if isinstance(langs, dict):
+        codes = sorted(langs)
+    elif isinstance(langs, list):
+        codes = sorted(x.get("code", x) if isinstance(x, dict) else x for x in langs)
+    else:
+        # A manifest that declares no languages certifies nothing, and an empty
+        # denominator must not read as a pass.
+        return ["manifest.json declares no languages"]
+    if not codes:
+        return ["manifest.json declares no languages"]
+    return [f"{c}.json" for c in codes if not (directory / f"{c}.json").is_file()]
 
 
 def locale_bundle() -> Path:
@@ -126,6 +162,7 @@ def locale_bundle() -> Path:
     """
     import hashlib
     import os
+    import shutil
     import tempfile
     import zipfile
 
@@ -151,7 +188,13 @@ def locale_bundle() -> Path:
     for root in roots:
         cached = root / stem
         if (cached / "en.json").is_file():
-            return cached
+            # Verify the CACHE too. A bundle that was partial when it was
+            # written stays partial forever otherwise, and the fast path is
+            # where it would be read from every time after.
+            stale = _verify_bundle(cached)
+            if not stale:
+                return cached
+            shutil.rmtree(cached, ignore_errors=True)
         try:
             root.mkdir(parents=True, exist_ok=True)
             # Extract beside the target and rename, so a concurrent reader never
@@ -170,12 +213,15 @@ def locale_bundle() -> Path:
                 for name in members:
                     target = staging / Path(name).name
                     target.write_bytes(zf.read(name))
-            missing = [n for n in _LOCALE_REQUIRED if not (staging / n).is_file()]
+            missing = _verify_bundle(staging)
             if missing:
+                shown = missing if len(missing) <= 6 else missing[:6] + ["…"]
                 raise ArtifactUnavailable(
-                    f"the extracted locale bundle is missing {missing}; "
-                    f"refusing to hand back a partial bundle a gate would "
-                    f"then read as an absence"
+                    f"the extracted locale bundle is missing {len(missing)} file(s) "
+                    f"its own manifest.json declares: {shown}. Refusing to hand back "
+                    f"a partial bundle a gate would then read as an absence — an id "
+                    f"that resolves in 28 languages and not the 29th is exactly the "
+                    f"defect these gates exist to catch."
                 )
             try:
                 staging.rename(cached)

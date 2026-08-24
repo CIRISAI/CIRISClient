@@ -6,6 +6,12 @@ reports/
 # Gradle output staged into the client package by stage_artifacts.py. Built,
 # never committed — a jar in git is the defect this repo exists to remove.
 ciris_client/_artifacts/*
+# The wasm distribution stages the same way and was not covered: an
+# ordinary `git add -A` after `stage_artifacts.py --dist wasm` committed a
+# generated payload AND a second source of the version.
+packaging/wasm/ciris_client_wasm/_artifacts/*
+!packaging/wasm/ciris_client_wasm/_artifacts/.gitkeep
+packaging/wasm/VERSION
 !ciris_client/_artifacts/.gitkeep
 # Gradle
 client/.gradle/

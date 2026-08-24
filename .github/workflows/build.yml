@@ -85,6 +85,14 @@ jobs:
         # A release without its matrix row does not merge (FSD §6).
         run: python3 compat/validate.py
 
+      - name: Companion version pin
+        # check_pins.py says CI enforces it; until now nothing did. A routine
+        # VERSION bump could publish ciris-client==X while the `web` extra still
+        # required an older ciris-client-wasm, so `pip install ciris-client[web]`
+        # resolved a version split that only showed up at runtime. It caught
+        # exactly that on the 0.5.188 bump.
+        run: python3 packaging/check_pins.py
+
 
   # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:

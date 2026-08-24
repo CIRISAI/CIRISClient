@@ -7,7 +7,8 @@ Also importable: ``validate(repo_root) -> list[str]`` returns problems (empty =
 valid), so the ``compat-matrix`` readiness gate asks the same question CI does
 without a second implementation.
 
-Checks: schema id; row shape (required fields, version syntax); exactly one row
+Checks: schema id; row shape (required fields, version syntax on all three
+version fields); exactly one row
 for the current VERSION; no duplicate client_version; version ordering sane
 (node_min <= node_max_tested); locale count is 29 (A4 of the FSD: the number is
 normative); capabilities non-empty and kebab/dotted ids. Append-only-ness is a
@@ -71,7 +72,10 @@ def validate(repo_root: Path) -> list[str]:
         if cv in seen:
             problems.append(f"{where}: duplicate client_version {cv} (first at rows[{seen[cv]}])")
         seen[cv] = i
-        for field in ("node_min", "node_max_tested"):
+        # agent_min_tested is REQUIRED and was never syntax-checked, so
+        # "2.9" or "definitely-not-a-version" reached consumers as a
+        # compatibility claim this validator had promised to check.
+        for field in ("node_min", "node_max_tested", "agent_min_tested"):
             if not _VER.match(row[field]):
                 problems.append(f"{where}: {field} {row[field]!r} is not MAJOR.MINOR.PATCH")
         if _VER.match(row["node_min"]) and _VER.match(row["node_max_tested"]):

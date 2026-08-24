@@ -116,6 +116,35 @@ def relevant(code: str, texts: List[str], *, limit: int = 60) -> Dict[str, str]:
     return {e: all_terms[e] for _, e in hits[:limit]}
 
 
+class GlossaryMissing(RuntimeError):
+    """No usable glossary for a language the pipeline was asked to translate.
+
+    Not a warning. Every request is documented as carrying the canonical
+    terminology, and a language whose glossary is missing, misnamed, or parses
+    to nothing would be drafted WITHOUT it while the structural guard — which
+    has no opinion about word choice — reported green. That is the shape
+    AGENTS.md forbids: a parser that finds nothing where the construct plainly
+    exists must fail loudly, not pass.
+    """
+
+
+def require(codes: List[str]) -> None:
+    """Refuse before the first model call if any language has no glossary.
+
+    Checked up front, for all of them, rather than per request: discovering it
+    on language 19 of 28 means the first 18 were already drafted and paid for.
+    """
+    empty = sorted(c for c in codes if not terms(c))
+    if empty:
+        raise GlossaryMissing(
+            "no canonical terminology for: " + ", ".join(empty) + ". Expected "
+            + ", ".join(f"{GLOSSARY_DIR.name}/{c}_glossary.md" for c in empty)
+            + " to exist and to contain at least one English|target table row. "
+            "Every request is supposed to carry the glossary; drafting without "
+            "one produces terminology drift that no structural check can see."
+        )
+
+
 def block(code: str, texts: List[str]) -> str:
     """The glossary payload for one request, or "" when nothing applies."""
     hits = relevant(code, texts)
