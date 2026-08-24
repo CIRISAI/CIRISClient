@@ -7,7 +7,7 @@ of Kotlin.
 
     import ciris_client
 
-    ciris_client.__version__                     # '0.5.186' — pairs with ciris-server 0.5.186
+    ciris_client.__version__                     # '0.5.188' — pairs with ciris-server 0.5.188
     ciris_client.artifacts()                     # what this build carries
     ciris_client.artifact_path('desktop-uber-jar')
 

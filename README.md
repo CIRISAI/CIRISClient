@@ -79,17 +79,19 @@ from the node it is attached to, which ones to offer. Install the agent beside
 a node and the same client reveals Interact, Tools, Memory and the agent
 settings on its next probe — nothing to reinstall, nothing to re-pin.
 
-`CIRISBuild.HAS_AGENT` survives as the build **ceiling** (a deliberately
-stripped build stays possible, and CI still compiles it), but it is no longer
-what a user's sidebar depends on. That is
-`ClientMode` — see [`FSD/ONE_CLIENT_N_NODES.md`](FSD/ONE_CLIENT_N_NODES.md) §4.
+`CIRISBuild.HAS_AGENT` is **deleted** (CIRISServer#479). It survived one
+release as a build ceiling and that was one release too many: a constant
+nothing reads invites the next compile-time branch, which is the thing that
+had to stop being possible. What a user's sidebar depends on is `ClientMode`,
+probed from the node — see
+[`FSD/ONE_CLIENT_N_NODES.md`](FSD/ONE_CLIENT_N_NODES.md) §4.
 
 ### Asking it things
 
 ```python
 import ciris_client
 
-ciris_client.__version__            # '0.5.186' — pairs with ciris-server 0.5.186
+ciris_client.__version__            # '0.5.188' — pairs with ciris-server 0.5.188
 ciris_client.artifacts()            # [{'kind': 'desktop-uber-jar', 'bytes': …, 'sha256': …}]
 ciris_client.artifact_path('desktop-uber-jar')
 ciris_client.manifest()['vendored_from']   # {'repo': …, 'commit': …}
@@ -120,32 +122,28 @@ wheel, comfortably inside.
 `packaging/check_wheel_size.py` fails the build before PyPI does, and prints the
 breakdown every time so the number is visible before it is a problem.
 
-### Flavors: how `HAS_AGENT` is selected
+### One build, and where its version comes from
 
-`CIRISBuild.HAS_AGENT` decides whether the AI/assistant surfaces exist at all.
-It was a `const val` hand-edited to `false` in CIRISServer's copy and `true` in
-CIRISAgent's — the same file with two values in two repos, which is a fork with
-no name and no way to build the other side.
-
-It is now a Gradle property, the spelling [MISSION.md](MISSION.md) §5.2 already
-named:
+There is one Gradle build and one artifact:
 
 ```bash
-./gradlew -p client :desktopApp:packageUberJarForCurrentOS                   # node
-./gradlew -p client :desktopApp:packageUberJarForCurrentOS -PhasAgent=true   # agent
+./gradlew -p client :desktopApp:packageUberJarForCurrentOS
 ```
 
-`:shared:generateBuildFlavor` writes `CIRISBuild.kt` and `ClientVersion.kt` into
-a generated source dir. They are still `const val`s in `commonMain`, so dead-code
-elimination is exactly as it was: an agent-only surface behind
-`if (CIRISBuild.HAS_AGENT)` is still removed from the node build at compile
-time. What changed is where the constant comes from, not what it is.
+`-PhasAgent` existed for two days and is gone with the constant it selected.
+It was a real improvement on a hand-edited `const val` — it gave the fork a
+name and made both sides buildable — but it kept the premise that the answer
+is a property of the artifact, and that premise is the bug CIRISServer#479
+reported: a node that gains a brain keeps the node UX until someone
+reinstalls. `stage_artifacts.py` still takes `--flavor`, but only to record
+which build produced the staged jar.
 
+`:shared:generateBuildFlavor` now writes exactly one file, `ClientVersion.kt`.
 `CLIENT_VERSION` comes from the repo-root `VERSION` file — the same file the
-wheel version comes from. So `ciris-client==X` pairs with `ciris-server==X`, and
-the version-mismatch banner cannot disagree with the package that shipped it.
-Full rationale, including why generating it does not re-open CIRISServer#272:
-[`client/VENDORING.md`](client/VENDORING.md) §4.
+wheel version comes from. So `ciris-client==X` pairs with `ciris-server==X`,
+and the version-mismatch banner cannot disagree with the package that shipped
+it. Full rationale, including why generating it does not re-open
+CIRISServer#272: [`client/VENDORING.md`](client/VENDORING.md) §4.
 
 ### Migrating off a vendored copy
 
@@ -154,8 +152,9 @@ For each of CIRISServer and CIRISAgent:
 1. Add `ciris-client` to requirements, pinned to the matching `ciris-server`
    version. Both consumers install the same thing.
 2. Replace reads of the vendored tree with `ciris_client.artifact_path(...)`.
-3. Delete `client/`, and with it the hand-editing of `HAS_AGENT` and
-   `CLIENT_VERSION`, and the localization-mirror duplication.
+3. Delete `client/`, and with it the hand-edited `CLIENT_VERSION`, the
+   localization-mirror duplication, and the numbered `NODE VENDOR DRIFT`
+   markers that exist only because a re-vendor can silently revert local work.
 4. Keep the substrate where it belongs: `androidApp/wheels/`, jniLibs, the iOS
    Resources tree and the xcframeworks are `ciris-server` and `ciris-verify`
    release artifacts and are **not** in this repo
@@ -279,11 +278,11 @@ Working, not scaffold, and **ready to evaluate** — see
 for.
 
 The tree is the superset of both consumers' latest tags: CIRISServer
-`v0.5.186` and CIRISAgent `v2.9.32-stable`, merged per
-[`client/VENDORING.md`](client/VENDORING.md) §8. CI is green end to end — both
-flavors compiled, both passed `:shared:desktopTest`, both produced a 66.98 MiB
-desktop uber-jar named for the *derived* version (`CIRIS-linux-x64-1.5.186.jar`,
-from release 0.5.186), and both were packaged into 62.94 MiB wheels that install
-into a clean venv and resolve through `ciris_client.artifact_path`.
+`v0.5.188` and CIRISAgent `v2.9.36-stable`, merged per
+[`client/VENDORING.md`](client/VENDORING.md) §8. One build compiles and passes
+`:shared:desktopTest` (432 tests), produces the desktop uber-jar named for the
+*derived* version (`CIRIS-linux-x64-1.5.188.jar`, from release 0.5.188), and is
+packaged into a wheel that installs into a clean venv and resolves through
+`ciris_client.artifact_path`.
 
 The gaps above are real and named.

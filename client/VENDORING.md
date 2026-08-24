@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `82a6584ca88de87469c6961311c302af8027a28e1b62da97de1bfa1387b5ed82`
+**state digest:** `04c694e9df46a6747b15a8bb2634ae0d880c16a584d7b482f7086f57f1d5e1b6`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -227,20 +227,43 @@ CIRISAgent and in CIRISServer's copy.
 
 ## 6. `check_localization_sync.py`
 
-Vendored from CIRISAgent `tools/dev/check_localization_sync.py` @ the same
-commit, to `client/tools/check_localization_sync.py`.
+`client/tools/check_localization_sync.py`, adopted from the **CIRISServer**
+copy at the 0.5.185 three-way merge and pulled forward with every §8 merge
+since. It superseded the key-parity checker originally vendored from
+CIRISAgent `tools/dev/`: byte-identity across the four bundles, runtime
+`resolveKey` semantics, placeholder parity, and a mutation self-test that
+breaks each check on purpose and requires every one to fire.
 
 `REPO_ROOT = Path(__file__).resolve().parents[2]` resolves to the repo root
 from either location, so the mirror paths keep their `client/` prefix and the
-file needed **one** change: `UI_MIRRORS` drops the two out-of-tree entries
-(§5). Its three checks, two severities and every message are unchanged.
+file runs unmodified from a consumer's checkout.
+
+**One adaptation, and it is a DECLARATION rather than a deletion.** The
+`server-id-*` checks scan the Rust server sources that emit localized
+messages. Those live in the consumers, not here, so a run in this repo
+examines zero ids — and this checker's own rule is that a zero denominator is
+an error, not a pass. `--no-server-src` declares the absence: those checks
+report `SKIP` with the reason. Run without the flag from a CIRISServer or
+CIRISAgent checkout and they run exactly as upstream.
+
+The same flag governs `_prove_the_debt_list_is_kept_honest`, for the same
+reason one level up. Without server sources every `KNOWN_UNLOCALIZED` entry
+reads as "no longer emitted", so the proof would fail for the absence rather
+than for a defect — and once that noise was suppressed its GONE half would
+pass *vacuously*, which is worse than failing. It skips, declared, and the
+consumers' CI is where it has a denominator.
 
 ```bash
-python3 client/tools/check_localization_sync.py            # errors block
-python3 client/tools/check_localization_sync.py --strict   # warnings block too
+python3 client/tools/check_localization_sync.py --self-test --no-server-src
+python3 client/tools/check_localization_sync.py --no-server-src            # errors block
+python3 client/tools/check_localization_sync.py --no-server-src --strict   # warnings block too
 ```
 
-Run from the repo root. CI runs the `--strict` form.
+Run from the repo root. CI runs the self-test first, then the `--strict`
+form — a gate whose red path has never run is a gate with an untested half.
+
+The two mirrors that were never under `client/` (§5) remain cross-repo
+obligations in [`../evidence/blocked_upstream.tsv`](../evidence/blocked_upstream.tsv).
 
 ---
 

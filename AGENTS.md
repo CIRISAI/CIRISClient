@@ -48,7 +48,7 @@
 ## Security & Configuration Tips
 - No credentials here; `gh` supplies GitHub auth.
 - **The extraction happened** (`MISSION.md` §5.1, 2026-08-20). This section used to read: *"Do not vendor client source into this repo ahead of an extraction decision — a partial copy would create a third tree to keep in sync, which is the problem this repo exists to measure."* That warning was right and has not expired; it has become a deadline. Until CIRISServer and CIRISAgent depend on the package and delete their copies, there ARE three trees, and this repo is one of them. The obligation is a row in `evidence/blocked_upstream.tsv` with a scannable predicate. Do not let it become the status quo.
-- Do not add a second source for anything that already has one. The version lives in `VERSION` and is projected into the wheel and into `CLIENT_VERSION`; the flavor lives in `-PhasAgent`; the locale bundles are kept identical by a check, not by hand. Adding a committed copy of any of them re-opens the drift this repo was built to close.
+- Do not add a second source for anything that already has one. The version lives in `VERSION` and is projected into the wheel and into `CLIENT_VERSION`; whether the agent surfaces are live is answered by the probed `ClientMode` and nowhere else (there is no build flavor — CIRISServer#479); the locale bundles are kept identical by a check, not by hand. Adding a committed copy of any of them re-opens the drift this repo was built to close.
 - Locale bundles and specs read here may contain unreleased strings; treat `--json` output as internal.
 
 ## CI

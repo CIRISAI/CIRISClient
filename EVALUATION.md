@@ -113,7 +113,7 @@ This is the actual return on the change:
 | Re-vendoring the agent's client tree by hand | Pulls are merges here, and you consume a wheel |
 | Maintaining 22+ numbered `NODE VENDOR DRIFT` markers | There is one tree; a difference is a commit, not a marker to re-apply |
 | `scripts/sync-client-version.sh` + its pre-commit hook + its CI `--check` | `CLIENT_VERSION` is generated from one `VERSION` file |
-| Hand-flipping `CIRISBuild.HAS_AGENT` | `-PhasAgent`, selected per flavor at build time |
+| Hand-flipping `CIRISBuild.HAS_AGENT` | It is deleted (CIRISServer#479) — the probed `ClientMode` decides, at runtime |
 | Guarding four byte-identical locale bundles in your CI | Guarded here, on every PR, with the mutation self-test |
 | "Re-vendor drift recovery: 19 restorations" commits | The condition that produced them is gone |
 

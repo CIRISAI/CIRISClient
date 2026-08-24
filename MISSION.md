@@ -48,9 +48,10 @@ itself owns. None of these are correctness bugs; all of them are places where
 a human is the transport, and where an error is silent rather than loud.
 
 Three of those four now have a producer, a consumer and a check rather than a
-person: `HAS_AGENT` and `CLIENT_VERSION` are build inputs derived from one
-source each, and the locale mirrors are guarded in this repo's CI rather than
-in one consumer's. The fourth — the API surface — is unchanged and still
+person: `CLIENT_VERSION` is a build input derived from one source, `HAS_AGENT`
+turned out not to be a build question at all and was deleted in favour of the
+probed `ClientMode` (CIRISServer#479), and the locale mirrors are guarded in
+this repo's CI rather than in one consumer's. The fourth — the API surface — is unchanged and still
 tracked. And the first of them, the two hand-aligned copies, is only half
 closed: the source is here, but both consumers still carry theirs. A third
 copy is worse than two, so that row in the manifest is the one that matters.
@@ -123,15 +124,15 @@ the report so a worklist is never mistaken for a verdict.
    `ciris_adapters` from the agent repo root. Those references are the real
    boundary, and each one is now either removed (§5 of VENDORING.md) or recorded.
 
-2. **Flavor — ANSWERED 2026-08-20**, as intended: one source, `-PhasAgent`,
-   two variants. They ship as two Python distributions rather than two Maven
-   variants, because the consumers are Python and PyPI's per-file limit forces
-   the split anyway. **Superseded 2026-08-22:** the agent surfaces are gated at
-   RUNTIME on the probed `ClientMode` instead, so ONE distribution ships and a
-   node upgraded with a brain reveals them without reinstalling. `-PhasAgent`
-   survives as the build ceiling (still a `const val`, still generated, still
-   compiled both ways in CI) — it is simply no longer what a user's sidebar
-   depends on. See FSD §4.
+2. **Flavor — ANSWERED 2026-08-20, then RETIRED 2026-08-24.** The first
+   answer was one source and two variants selected by `-PhasAgent`, shipped as
+   two Python distributions because PyPI's per-file limit forces the split.
+   The better answer, which CIRISServer#479 forced, is that there is no flavor:
+   an agent IS a node that has had a brain added, so the agent surfaces are
+   gated at RUNTIME on the probed `ClientMode`. ONE distribution ships, a node
+   upgraded with a brain reveals them without reinstalling, and the constant
+   `-PhasAgent` selected is deleted rather than deprecated — a build constant
+   nothing reads is how the next compile-time branch gets written. See FSD §4.
 
 3. **Locale root.** When the client's bundle is checked against the substrate's
    signed locale Merkle root, `locale-parity`'s byte-identity half retires. The
