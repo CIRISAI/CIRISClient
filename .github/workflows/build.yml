@@ -43,17 +43,35 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: The server release this client pairs with
+        id: pair
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        # The localization bundles live here; the Rust that EMITS ids into them
+        # lives in CIRISServer. Five of the twelve checks compare the two, so
+        # the guard is handed a checkout instead of being allowed to declare
+        # the absence — a check with a denominator of zero is not a pass.
+        #
+        # Pinned to the VERSION this client pairs with, so the emitters graded
+        # are the ones from that server release rather than whatever main holds.
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: v${{ steps.pair.outputs.version }}
+          path: .emitters
+
       - name: Localization guard (strict)
         # The adopted CIRISServer guard: byte-identity across the four bundles,
         # runtime resolveKey semantics, placeholder parity, reference coverage —
         # and its own mutation self-test runs first, so the gate proves it can
-        # fail before it is trusted to pass. --no-server-src declares that the
-        # Rust emitters live in the consumers. --strict blocks on untranslated
+        # fail before it is trusted to pass. --server-src points it at the Rust
+        # emitters, which live in CIRISServer. --strict blocks on untranslated
         # keys: 29 languages are 29 audiences and a fallback to English is a
         # silent demotion of one of them.
         run: |
-          python3 client/tools/check_localization_sync.py --self-test --no-server-src
-          python3 client/tools/check_localization_sync.py --no-server-src --strict
+          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
+          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
       - name: Vendoring state
         # client/ is the tree of record. The tracked tree must match the state

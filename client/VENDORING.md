@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `04c694e9df46a6747b15a8bb2634ae0d880c16a584d7b482f7086f57f1d5e1b6`
+**state digest:** `aa6f9e9a98ab07ef2073c18908f31c68bc959e4f8d00b0b2653c434c088144e0`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -238,25 +238,38 @@ breaks each check on purpose and requires every one to fire.
 from either location, so the mirror paths keep their `client/` prefix and the
 file runs unmodified from a consumer's checkout.
 
-**One adaptation, and it is a DECLARATION rather than a deletion.** The
-`server-id-*` checks scan the Rust server sources that emit localized
-messages. Those live in the consumers, not here, so a run in this repo
-examines zero ids — and this checker's own rule is that a zero denominator is
-an error, not a pass. `--no-server-src` declares the absence: those checks
-report `SKIP` with the reason. Run without the flag from a CIRISServer or
-CIRISAgent checkout and they run exactly as upstream.
+**One adaptation, and it is a POINTER rather than a skip.** Five of the twelve
+checks compare what the server EMITS against what `en.json` defines, by
+scanning the Rust sources that carry the emission sites. Those sources live in
+CIRISServer; the bundles live here. `--server-src <checkout>` says where they
+are, and it is **repeatable and has no opt-out**: a run that cannot find them
+FAILS and prints the remedy.
 
-The same flag governs `_prove_the_debt_list_is_kept_honest`, for the same
-reason one level up. Without server sources every `KNOWN_UNLOCALIZED` entry
-reads as "no longer emitted", so the proof would fail for the absence rather
-than for a defect — and once that noise was suppressed its GONE half would
-pass *vacuously*, which is worse than failing. It skips, declared, and the
-consumers' CI is where it has a denominator.
+That is deliberate, and it replaced a `--no-server-src` flag that declared the
+absence and reported `SKIP`. The declaration was honest about the file layout
+and wrong about everything else — the sources are public and one checkout
+away, this repo owns the localizations, and a guard reporting green over a
+denominator of zero is the exact shape this file's own rules forbid. Pointed
+at a real checkout the five checks grade **303 emitted ids** rather than none.
+
+The pointer is scoped to ONE tree (`EMITTER_FOR_ROOT`), which is not a detail:
+the self-test's synthetic fixtures must never see it. One mutation *deletes* a
+fixture's `src/` to prove a nowhere-to-scan run is caught, and a global pointer
+would quietly rescue it by scanning CIRISServer instead — a green line proving
+nothing.
+
+`_prove_the_debt_list_is_kept_honest` needs the emitters for the same reason
+one level up: without them every `KNOWN_UNLOCALIZED` entry reads as "no longer
+emitted", so its real-tree half would fail for the absence rather than for a
+defect *and* its GONE half would pass vacuously. It says so and fails, rather
+than skipping.
 
 ```bash
-python3 client/tools/check_localization_sync.py --self-test --no-server-src
-python3 client/tools/check_localization_sync.py --no-server-src            # errors block
-python3 client/tools/check_localization_sync.py --no-server-src --strict   # warnings block too
+# CI pins the checkout to v$(cat VERSION) — the emitters graded are the ones
+# from the server release this client PAIRS with, not whatever main holds.
+python3 client/tools/check_localization_sync.py --self-test --server-src ~/CIRISServer
+python3 client/tools/check_localization_sync.py --server-src ~/CIRISServer            # errors block
+python3 client/tools/check_localization_sync.py --server-src ~/CIRISServer --strict   # warnings block too
 ```
 
 Run from the repo root. CI runs the self-test first, then the `--strict`

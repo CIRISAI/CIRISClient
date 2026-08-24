@@ -84,11 +84,31 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: The server release this client pairs with
+        id: pair
+        if: steps.check.outputs.missing == 'true'
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        if: steps.check.outputs.missing == 'true'
+        # The localization bundles live here; the Rust that EMITS ids into them
+        # lives in CIRISServer. Five of the twelve checks compare the two, so
+        # the guard is handed a checkout instead of being allowed to declare
+        # the absence — a check with a denominator of zero is not a pass.
+        #
+        # Pinned to the VERSION this client pairs with, so the emitters graded
+        # are the ones from that server release rather than whatever main holds.
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: v${{ steps.pair.outputs.version }}
+          path: .emitters
+
       - name: Guard (strict) — the actual gate
         if: steps.check.outputs.missing == 'true'
         run: |
-          python3 client/tools/check_localization_sync.py --self-test --no-server-src
-          python3 client/tools/check_localization_sync.py --no-server-src --strict
+          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
+          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
       - name: Re-record the vendoring state digest
         if: steps.check.outputs.missing == 'true'

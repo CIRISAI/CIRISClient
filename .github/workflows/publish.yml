@@ -130,14 +130,34 @@ jobs:
       # The release gates, re-run here rather than trusted from the branch: a
       # tag can point at any commit. Linux only — they are OS-independent, and
       # running them four times says nothing new.
+      - name: The server release this client pairs with
+        id: pair
+        if: matrix.name == 'linux-x86_64'
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        if: matrix.name == 'linux-x86_64'
+        # The localization bundles live here; the Rust that EMITS ids into them
+        # lives in CIRISServer. Five of the twelve checks compare the two, so
+        # the guard is handed a checkout instead of being allowed to declare
+        # the absence — a check with a denominator of zero is not a pass.
+        #
+        # Pinned to the VERSION this client pairs with, so the emitters graded
+        # are the ones from that server release rather than whatever main holds.
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: v${{ steps.pair.outputs.version }}
+          path: .emitters
+
       - name: Gates
         if: matrix.name == 'linux-x86_64'
         run: |
           set -euo pipefail
           python3 packaging/check_vendoring.py
           python3 compat/validate.py
-          python3 client/tools/check_localization_sync.py --self-test --no-server-src
-          python3 client/tools/check_localization_sync.py --no-server-src --strict
+          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
+          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
       - name: The tag must name the version being published
         if: startsWith(github.ref, 'refs/tags/v')

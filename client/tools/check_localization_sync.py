@@ -128,6 +128,28 @@ COMMON_MAIN = "client/shared/src/commonMain"
 # only Kotlin has never looked at the surface #366 was actually about.
 SERVER_SRC = "src"
 
+# Set by ``--server-src``. Each entry is a checkout that CONTAINS the Rust
+# sources emitting localized message ids — CIRISServer, and CIRISAgent when it
+# grows its own.
+#
+# WHY THIS IS A POINTER AND NOT A SKIP. CIRISClient owns the localization
+# BUNDLES; the code that emits ids into them lives in the consumers. That is a
+# fact about where files sit, not permission to stop checking: the sources are
+# public and one checkout away, and a guard that declares them "somebody else's
+# CI" is a guard reporting green over a denominator of zero. So the absence is
+# not declarable any more — say WHERE the emitters are, or fail and be told to.
+EMITTER_ROOTS: Tuple[Path, ...] = ()
+
+# The ONE tree ``EMITTER_ROOTS`` describes — set beside it, never separately.
+#
+# Without this the pointer is global, and the self-test's SYNTHETIC fixtures
+# start reporting the real server's 303 ids instead of their own single planted
+# one. The mutation that DELETES a fixture's ``src/`` to prove a zero
+# denominator is caught would then quietly scan CIRISServer and pass. Fixtures
+# must be hermetic; a fixture tree is never the tree the CLI was pointed at, so
+# comparing roots is what makes them so.
+EMITTER_FOR_ROOT: Optional[Path] = None
+
 # localizedString("key" …) / getString("key" …) — capture the literal first arg.
 # ``[^"$\\]`` rejects interpolated keys ("mobile.foo_${x}") which can't be
 # checked statically; those are skipped, not failed.
@@ -668,24 +690,65 @@ def check_reference_coverage(root: Path, en: dict) -> Result:
     return msgs, len(refs)
 
 
+def _emitter_src_dirs(root: Path) -> List[Tuple[Path, Path]]:
+    """Every Rust tree to scan, as (src_dir, path_label_base).
+
+    ``--server-src`` wins for the tree the CLI was pointed at, and ONLY that
+    tree ([EMITTER_FOR_ROOT]). Each argument may be a checkout root (its
+    ``src/`` is used) or a source directory itself, so both
+    ``--server-src ~/CIRISServer`` and ``--server-src ~/CIRISServer/src`` mean
+    the same thing. Everything else — a fixture tree, and a CIRISServer
+    checkout running this file in place — falls back to ``<root>/src``, which
+    is what keeps the tool byte-identical in its home repo.
+    """
+    if EMITTER_FOR_ROOT is None or root.resolve() != EMITTER_FOR_ROOT:
+        src = root / SERVER_SRC
+        return [(src, root)] if src.is_dir() else []
+
+    found: List[Tuple[Path, Path]] = []
+    for raw in EMITTER_ROOTS:
+        base = Path(raw).expanduser().resolve()
+        src = base / SERVER_SRC if (base / SERVER_SRC).is_dir() else base
+        if src.is_dir():
+            found.append((src, base))
+    if found:
+        return found
+    src = root / SERVER_SRC
+    return [(src, root)] if src.is_dir() else []
+
+
+def _emitter_files(root: Path) -> List[Tuple[Path, Path]]:
+    """(file, label) for every ``*.rs`` under every emitter tree.
+
+    The label disambiguates when more than one checkout is scanned — an id
+    reported against ``src/health.rs`` is not actionable if two repos both have
+    one.
+    """
+    dirs = _emitter_src_dirs(root)
+    multi = len(dirs) > 1 or bool(EMITTER_ROOTS)
+    out: List[Tuple[Path, Path]] = []
+    for src, base in dirs:
+        for rs in sorted(src.rglob("*.rs")):
+            rel = rs.relative_to(base)
+            out.append((rs, Path(base.name) / rel if multi else rel))
+    return out
+
+
 def server_message_ids(root: Path) -> Dict[str, Path]:
     """Map each server-emitted message id -> first Rust emission site."""
     ids: Dict[str, Path] = {}
-    src = root / SERVER_SRC
-    if not src.exists():
-        return ids
-    for rs in sorted(src.rglob("*.rs")):
+    for rs, label in _emitter_files(root):
         text = _without_test_modules(rs.read_text(encoding="utf-8"))
         for m in _SERVER_MSG.finditer(text):
             if " " not in m.group(2):
                 continue  # not an English sentence — not an (id, text) pair
-            ids.setdefault(m.group(1), rs.relative_to(root))
+            ids.setdefault(m.group(1), label)
         # Same id position, computed text. See `_SERVER_MSG_ID_FORMATTED`.
         for m in _SERVER_MSG_ID_FORMATTED.finditer(text):
-            ids.setdefault(m.group(1), rs.relative_to(root))
+            ids.setdefault(m.group(1), label)
         # Same id position, ANY following expression. See `_emitter_call_ids`.
         for mid in _emitter_call_ids(text):
-            ids.setdefault(mid, rs.relative_to(root))
+            ids.setdefault(mid, label)
     return ids
 
 
@@ -722,10 +785,7 @@ def _server_message_texts_all(root: Path) -> Dict[str, List[str]]:
     translation of a sentence it does not say (codex review, PR #483).
     """
     out: Dict[str, List[str]] = {}
-    src = root / SERVER_SRC
-    if not src.exists():
-        return out
-    for rs in sorted(src.rglob("*.rs")):
+    for rs, _label in _emitter_files(root):
         text = _without_test_modules(rs.read_text(encoding="utf-8"))
         for m in _SERVER_MSG.finditer(text):
             txt = _rust_unescape(m.group(2))
@@ -1079,23 +1139,19 @@ def run_checks_synthetic(root: Path) -> Report:
     return run_checks(root, debt_list_applies=False)
 
 
-def run_checks(
-    root: Path, *, no_server_src: bool = False, debt_list_applies: bool = True
-) -> Report:
-    """Two independent narrowings, for two different absences.
+def run_checks(root: Path, *, debt_list_applies: bool = True) -> Report:
+    """`debt_list_applies=False` for SYNTHETIC trees.
 
-    `no_server_src=True` for a tree with NO server sources to scan — this
-    repository, where the emitters live in the consumers and their CI runs the
-    server-id checks. Declared absence, reported as SKIP: never a silent pass,
-    and never the false DEAD error a zero denominator would otherwise raise.
-
-    `debt_list_applies=False` for SYNTHETIC trees. `KNOWN_UNLOCALIZED` is a
-    statement about a real repository's sources. The self-test builds a fixture
-    tree containing one emission site, where every entry on the list is
-    trivially "no longer emitted" — so the freshness check would fire on every
-    mutation and drown out what each one is testing. The list is proven
-    separately, against real semantics, by
+    `KNOWN_UNLOCALIZED` is a statement about a real repository's sources. The
+    self-test builds a fixture tree containing one emission site, where every
+    entry on the list is trivially "no longer emitted" — so the freshness check
+    would fire on every mutation and drown out what each one is testing. The
+    list is proven separately, against real semantics, by
     `_prove_the_debt_list_is_kept_honest`.
+
+    Where the emitters are is NOT one of these narrowings. It is a pointer
+    (`--server-src`, see [EMITTER_ROOTS]) with no default and no way to opt
+    out: a run that cannot find them fails and says so.
     """
     rep = Report()
     canonical = root / CANONICAL_BUNDLE
@@ -1126,10 +1182,17 @@ def run_checks(
     msgs, n = check_key_resolvability(root)
     rep.record("key-resolvability", msgs, n, severity="error", unit="address(es)")
 
-    if no_server_src:
-        # Declared absence (this repo carries no Rust server source; the
-        # emitters live in the consumers, whose CI runs these checks). A
-        # declared skip, never a silent pass — and never a false DEAD error.
+    if not _emitter_src_dirs(root):
+        # NOT a skip. Five checks exist to compare what the server EMITS against
+        # what en.json defines, and with nowhere to look they have a denominator
+        # of zero — which this file's own rule says is an error, not a pass.
+        # The sources are public; the run just has to be told where they are.
+        rep.errors.append(
+            "no Rust emitter sources found — pass --server-src <checkout> (e.g. a "
+            "CIRISServer clone at the version this client pairs with). Five checks "
+            "could not run, and a bundle guard that cannot see the emitters is "
+            "reporting on half the problem"
+        )
         for name in (
             "server-id-reachable",
             "server-id-coverage",
@@ -1138,7 +1201,7 @@ def run_checks(
             "unlocalized-debt-current",
         ):
             rep.lines.append(
-                f"  SKIP  {name:<19}: declared --no-server-src; runs in the consumer's CI"
+                f"  FAIL  {name:<24}: no emitter source — pass --server-src <checkout>"
             )
     else:
         server_ids = server_message_ids(root)
@@ -1166,7 +1229,7 @@ def run_checks(
 
 def _print_report(root: Path, rep: Report, strict: bool) -> int:
     canonical = root / CANONICAL_BUNDLE
-    print("Localization guard (CIRISServer vendored client)")
+    print("Localization guard — CIRIS client bundles")
     try:
         en_keys = len(flat_values(load_json(canonical / "en.json")))
         langs = len(manifest_languages(canonical))
@@ -1398,7 +1461,16 @@ def _mutations() -> List[Tuple[str, str, Any, str]]:
         _flatten_nav_home(root)
 
     def no_server_sources(root: Path) -> None:
-        """Zero denominator on the server side: the scan finds no emission sites."""
+        """Nowhere to look on the server side.
+
+        This used to assert the generic zero-denominator error. It now asserts
+        the SPECIFIC one, because the two are different diagnoses: "I scanned
+        and found nothing" is a defect in the emitters, while "I had nowhere to
+        scan" is a defect in how the run was invoked, and only the second has a
+        remedy the reader can act on. The mutation matters as much as ever —
+        this is the tree the `--server-src` pointer must NOT rescue, which is
+        why the pointer is scoped to one root ([EMITTER_FOR_ROOT]).
+        """
         shutil.rmtree(root / SERVER_SRC)
 
     def conflicting_server_id_text(root: Path) -> None:
@@ -1451,7 +1523,7 @@ def _mutations() -> List[Tuple[str, str, Any, str]]:
         ("server emits an id en.json never defines", "warning", server_id_uncovered, "no en.json entry"),
         ("server id defined but flat (unreachable)", "error", server_id_defined_but_flat, "DEFINED in en.json"),
         ("one id emitted with TWO different texts", "error", conflicting_server_id_text, "CONFLICTING English text"),
-        ("no server emission sites (zero denominator)", "error", no_server_sources, "looked at nothing"),
+        ("nowhere to scan for emissions", "error", no_server_sources, "pass --server-src"),
     ]
 def _truncate_nav_home(root: Path) -> None:
     r"""The 2026-08-05 defect, reproduced: en.json carries a PREFIX of the text the
@@ -1495,7 +1567,7 @@ def _resync(root: Path) -> None:
             shutil.copy2(f, target / f.name)
 
 
-def _prove_the_debt_list_is_kept_honest(root: Path, *, no_server_src: bool = False) -> int:
+def _prove_the_debt_list_is_kept_honest(root: Path) -> int:
     """Both halves of `unlocalized-debt-current`, against the REAL tree.
 
     Proven here rather than as a fixture mutation because the list is a
@@ -1503,12 +1575,11 @@ def _prove_the_debt_list_is_kept_honest(root: Path, *, no_server_src: bool = Fal
     them, so every entry reads as stale and the check would fire on every other
     mutation instead of on its own.
 
-    That same sentence is why a declared `--no-server-src` SKIPS it. Without
-    server sources `server_message_ids` returns nothing, so every entry reads
-    as GONE: the real-tree half would fail for the absence rather than for a
-    defect, and the GONE half would pass VACUOUSLY — a green line proving
-    nothing, which is the worse of the two. The emitters live in the
-    consumers; their CI is where this proof has a denominator.
+    It therefore needs the emitters, and says so rather than skipping: without
+    them every entry reads as GONE, so the real-tree half would fail for the
+    absence rather than for a defect AND the GONE half would pass VACUOUSLY —
+    a green line proving nothing, which is the worse of the two. Point
+    `--server-src` at a checkout.
 
       * COVERED — an entry that has since gained an en.json entry must fail, or
         the debt is never actually paid down;
@@ -1516,12 +1587,13 @@ def _prove_the_debt_list_is_kept_honest(root: Path, *, no_server_src: bool = Fal
         exemption is invisible until it quietly covers for a future
         re-introduction of the same id.
     """
-    if no_server_src:
+    if not _emitter_src_dirs(root):
         print(
-            "  SKIP  the debt list's honesty proof: declared --no-server-src; it is a "
-            "statement about a tree that HAS server sources, and runs in the consumer's CI"
+            "  FAIL  the debt list's honesty proof needs the emitters: pass "
+            "--server-src <checkout>. Without them every entry reads as GONE, and "
+            "the GONE half of this proof would pass without proving anything"
         )
-        return 0
+        return 1
 
     global KNOWN_UNLOCALIZED  # noqa: PLW0603 - restored in the finally below
     failures = 0
@@ -1692,7 +1764,7 @@ def _prove_keyset_comparison_is_blind(root: Path) -> int:
     return 0
 
 
-def self_test(*, no_server_src: bool = False) -> int:
+def self_test() -> int:
     print("Localization guard SELF-TEST — every check is broken on purpose and must fire")
     print()
     failures = 0
@@ -1741,7 +1813,7 @@ def self_test(*, no_server_src: bool = False) -> int:
 
         failures += _prove_keyset_comparison_is_blind(Path(td) / "blind")
         failures += _prove_test_fixtures_are_not_server_emissions(Path(td) / "cfgtest")
-        failures += _prove_the_debt_list_is_kept_honest(Path("."), no_server_src=no_server_src)
+        failures += _prove_the_debt_list_is_kept_honest(Path("."))
 
     print()
     if failures:
@@ -1754,11 +1826,16 @@ def self_test(*, no_server_src: bool = False) -> int:
 def main() -> int:
     ap = argparse.ArgumentParser(description="CIRIS client localization bundle guard")
     ap.add_argument(
-        "--no-server-src",
-        action="store_true",
-        help="declare that this tree carries no Rust server source: the "
-             "server-id-* checks report SKIP (declared) instead of a "
-             "zero-denominator error; they run in the consumer's CI instead",
+        "--server-src",
+        action="append",
+        default=[],
+        metavar="PATH",
+        help="checkout containing the Rust sources that emit localized message "
+             "ids (a repo root, or its src/ directly). Repeatable. Required "
+             "whenever <root>/src is not one — the bundles live here, the "
+             "emitters live in the consumers, and the five server-id-* checks "
+             "compare the two. There is no way to declare the absence: without "
+             "this the run FAILS and tells you to pass it",
     )
     ap.add_argument(
         "--strict",
@@ -1777,14 +1854,23 @@ def main() -> int:
     )
     args = ap.parse_args()
 
+    global EMITTER_ROOTS, EMITTER_FOR_ROOT  # noqa: PLW0603 - CLI-set
+    EMITTER_ROOTS = tuple(Path(p) for p in args.server_src)
+
     if args.self_test:
-        return self_test(no_server_src=args.no_server_src)
+        # `_prove_the_debt_list_is_kept_honest` grades the real tree at CWD;
+        # every other part of the self-test grades a fixture, and must not see
+        # the pointer.
+        EMITTER_FOR_ROOT = Path(".").resolve()
+        return self_test()
+
+    EMITTER_FOR_ROOT = Path(args.root).resolve()
 
     root = Path(args.root).resolve()
     if not (root / CANONICAL_BUNDLE).exists():
         print(f"ERROR: canonical bundle not found at {root / CANONICAL_BUNDLE}")
         return 1
-    return _print_report(root, run_checks(root, no_server_src=args.no_server_src), args.strict)
+    return _print_report(root, run_checks(root), args.strict)
 
 
 if __name__ == "__main__":
