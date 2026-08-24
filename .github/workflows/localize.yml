@@ -1,0 +1,52 @@
+# Continuous localization — the automated lane.
+#
+# New or changed English keys on a PR get their 28 translations, reviewed and
+# repaired, as a bot commit on the same PR. This is the CI replacement for the
+# interactive Claude Code fan-outs (FSD/ONE_CLIENT_N_NODES.md §7); the strict
+# guard remains the only thing that decides what merges.
+#
+# The other three workflows (i18n-translate / i18n-evaluate / i18n-repair) are
+# the manual door into the same pipeline for arbitrary keys. This one is the
+# door that opens by itself, and it is diff-driven: a run with nothing missing
+# makes zero API calls, which is also its loop guard. The push uses
+# GITHUB_TOKEN, whose events start no workflows — loop safety, twice over.
+
+name: localize
+
+on:
+  pull_request:
+    paths:
+      - "client/shared/src/desktopMain/resources/localization/en.json"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "fast (now) or batch (50% cheaper, for backfills)"
+        default: "fast"
+        type: choice
+        options: [fast, batch]
+      max_keys:
+        description: "refuse runs larger than this many missing values"
+        default: "400"
+
+concurrency:
+  group: i18n-write-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  localize:
+    # Fork PRs get no secrets; their missing keys surface in the strict guard
+    # instead, and a maintainer runs a lane workflow after merge-in.
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/i18n-lane.yml
+    secrets: inherit
+    with:
+      lane: translate
+      keys: ""            # diff-driven: whatever is missing, and nothing else
+      langs: ""
+      max_keys: ${{ inputs.max_keys || '400' }}
+      mode: ${{ inputs.mode || 'fast' }}
+      commit: true
+      ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.ref || github.ref }}

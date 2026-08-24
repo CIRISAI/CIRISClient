@@ -1,0 +1,257 @@
+name: build
+
+# One client, built once, in two flavors, packaged as wheels.
+#
+#   checks   — localization parity + vendoring drift. Seconds, no toolchain.
+#   gradle   — :shared and the desktop uber-jar, per flavor. JDK 17 + Android SDK.
+#   wheels   — stages what gradle produced and builds the three distributions.
+#
+# All three are REQUIRED. `gradle` shipped advisory (continue-on-error) for
+# exactly one run — the question was whether a tree vendored out of a much larger
+# build stands alone, and run 32414315040 answered it: both flavors compiled,
+# both passed :shared:desktopTest, both produced a 66.48 MiB uber-jar, and both
+# were packaged and resolved through the consumption API. So the flag came off in
+# the same PR. A job allowed to fail forever is not a check.
+#
+# `wheels` still tolerates a missing gradle artifact, by staging a PLACEHOLDER
+# payload that raises on every artifact lookup and says why. That path is no
+# longer the expected one; it is what keeps a broken build from quietly shipping
+# a wheel that installs and contains no client.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Seconds, no toolchain, and they fail for reasons you can act on ─────────
+  checks:
+    name: localization + vendoring
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: The server release this client pairs with
+        id: pair
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        # The localization bundles live here; the Rust that EMITS ids into them
+        # lives in CIRISServer. Five of the twelve checks compare the two, so
+        # the guard is handed a checkout instead of being allowed to declare
+        # the absence — a check with a denominator of zero is not a pass.
+        #
+        # Pinned to the VERSION this client pairs with, so the emitters graded
+        # are the ones from that server release rather than whatever main holds.
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: v${{ steps.pair.outputs.version }}
+          path: .emitters
+
+      - name: Localization guard (strict)
+        # The adopted CIRISServer guard: byte-identity across the four bundles,
+        # runtime resolveKey semantics, placeholder parity, reference coverage —
+        # and its own mutation self-test runs first, so the gate proves it can
+        # fail before it is trusted to pass. --server-src points it at the Rust
+        # emitters, which live in CIRISServer. --strict blocks on untranslated
+        # keys: 29 languages are 29 audiences and a fallback to English is a
+        # silent demotion of one of them.
+        run: |
+          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
+          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
+
+      - name: Vendoring state
+        # client/ is the tree of record. The tracked tree must match the state
+        # digest VENDORING.md §1 records (re-recorded by any commit that touches
+        # client/), and no never-vendor class — substrate binaries, key material,
+        # compiled Python — may be tracked. No clone, no network.
+        run: python3 packaging/check_vendoring.py
+
+      - name: Compatibility matrix
+        # One row per release, append-only; exactly one row must match VERSION.
+        # A release without its matrix row does not merge (FSD §6).
+        run: python3 compat/validate.py
+
+
+  # ── The client itself. ONE build ────────────────────────────────────────────
+  gradle:
+    name: gradle
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: apt (hardened)
+        uses: ./.github/actions/apt
+        with:
+          # The Compose desktop distribution tasks shell out to these; installing
+          # them through the hardened path is the point, not the package list.
+          packages: zip unzip
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'   # shared/ pins JvmTarget.JVM_17 on every target
+
+      - uses: android-actions/setup-android@v3
+        # :shared applies com.android.library, so the Android SDK is needed to
+        # CONFIGURE the build even when only the desktop target is compiled.
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+          gradle-home-cache-cleanup: true
+
+      - name: Show the version this build actually stamped
+        working-directory: client
+        # Print it rather than trust it. This used to assert the generated
+        # HAS_AGENT matched the flavor CI asked for, because a flavor that
+        # silently defaulted was a wrong artifact with a right-looking name.
+        # CIRISServer#479 deleted the flavor, and the same hazard moved to the
+        # only value the task still generates: a version that silently defaulted
+        # would put a wrong number in the VERSION-MISMATCH banner every user
+        # sees. So the assertion moved with it.
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :shared:generateBuildFlavor
+          gen=shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientVersion.kt
+          echo "── generated ClientVersion.kt ──"
+          cat "$gen"
+          want=$(cat ../VERSION)
+          grep -q "CLIENT_VERSION: String = \"$want\"" "$gen" \
+            || { echo "::error::generated CLIENT_VERSION is not $want"; exit 1; }
+          # And nothing else may appear there. A resurrected compile-time flag
+          # would be invisible otherwise, which is how the last one survived.
+          test "$(find shared/build/generated/flavor -name '*.kt' | wc -l)" = 1 \
+            || { echo "::error::generateBuildFlavor wrote more than ClientVersion.kt"; \
+                 find shared/build/generated/flavor -name '*.kt'; exit 1; }
+
+      - name: Compile :shared (desktop target)
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:compileKotlinDesktop
+
+      - name: Test :shared (desktop target)
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:desktopTest
+
+      - name: Desktop uber-jar
+        working-directory: client
+        run: |
+          ./gradlew --no-daemon :desktopApp:packageUberJarForCurrentOS
+          find desktopApp/build -name '*.jar' -size +1M -printf '%s %p\n' | sort -rn
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gradle-client
+          path: client/desktopApp/build/compose/jars/*.jar
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ── Package. Runs whatever gradle managed, and says so ──────────────────────
+  wheels:
+    name: wheels
+    needs: [gradle]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python3 -m pip install --upgrade pip build
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: gradle-*
+          path: gradle-out
+
+      - name: Stage the shipped build
+        # One build, carrying every surface; which of them a user sees is
+        # decided at runtime by the probed node (CIRISServer#479).
+        run: |
+          set -euo pipefail
+          jar=$(find gradle-out/gradle-client -name '*.jar' 2>/dev/null | head -1 || true)
+          if [ -n "$jar" ]; then
+            python3 packaging/stage_artifacts.py \
+              --artifact "desktop-uber-jar@linux-x86_64=$jar"
+          else
+            # Named precisely. "no gradle artifact" tells the next person to
+            # look at the gradle job; a generic "unavailable" does not.
+            python3 packaging/stage_artifacts.py \
+              --placeholder "the gradle job produced no jar in run ${{ github.run_id }}"
+          fi
+
+      - name: Build the distribution
+        run: |
+          set -euo pipefail
+          python3 -m build --wheel --outdir dist .
+          ls -la dist
+
+      - name: Wheel size against PyPI's limit
+        # 104,857,600 bytes. "100 MB" is 100 MiB and the 4.8 MiB difference has
+        # been the entire remaining margin before now.
+        run: python3 packaging/check_wheel_size.py dist/*.whl
+
+      - name: Consumption contract — install and resolve
+        run: |
+          set -euo pipefail
+          python3 -m venv /tmp/consumer
+          /tmp/consumer/bin/pip install --no-index dist/ciris_client-*.whl
+          # Run from a directory that is NOT the checkout. `python -` puts the
+          # CWD first on sys.path, so run here and `ciris_client/` in the repo
+          # root shadows the wheel — this step then grades the source tree and
+          # reports green whatever the wheel contains, which is the one failure
+          # it exists to catch. publish.yml already did this; this one did not.
+          mkdir -p /tmp/verify && cd /tmp/verify && /tmp/consumer/bin/python - <<'PY'
+          import ciris_client as c
+          # And prove it, rather than trusting the cd: a comment cannot fail.
+          assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
+          m = c.manifest()
+          print("version:", c.__version__, "built as:", m["flavor"])
+          assert m["client_version"] == c.__version__, "version split"
+          if m.get("placeholder"):
+              # The wheel must REFUSE, not return a path to nothing.
+              try:
+                  c.artifact_path("desktop-uber-jar")
+              except c.ArtifactUnavailable as e:
+                  print("placeholder refuses as designed:", str(e).splitlines()[0])
+              else:
+                  raise SystemExit("placeholder payload did not refuse")
+          else:
+              print("desktop-uber-jar ->", c.artifact_path("desktop-uber-jar"))
+          PY
+
+      - name: Say plainly what shipped
+        if: always()
+        run: |
+          {
+            echo "### Wheel"
+            echo
+            p=$(python3 -c "import json;d=json.load(open('ciris_client/_artifacts/manifest.json'));print('PLACEHOLDER — '+d['placeholder_reason'] if d.get('placeholder') else ', '.join(a['kind'] for a in d['artifacts']))")
+            echo '| wheel | bytes | payload |'
+            echo '|---|---:|---|'
+            for w in dist/*.whl; do
+              echo "| \`$(basename "$w")\` | $(stat -c%s "$w") | $p |"
+            done
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels
+          path: dist/*.whl
+          retention-days: 14

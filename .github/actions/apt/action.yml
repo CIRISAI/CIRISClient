@@ -1,0 +1,38 @@
+name: apt (hardened)
+description: >
+  Install apt packages with the mirror and bounds this org learned the hard way.
+  Every apt path in this repo goes through here — an unhardened apt-get update
+  is a coin flip that costs a whole job when it loses.
+
+inputs:
+  packages:
+    description: space-separated package list
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        set -euo pipefail
+
+        # 1. DROP azure.archive.ubuntu.com. GitHub's Ubuntu images point at the
+        #    Azure mirror, which has stalled or 500'd often enough to be the
+        #    single most common cause of a red job that has nothing to do with
+        #    the change under test.
+        sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
+          /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
+
+        # 2. BOUND IT. `timeout 300` so a hung mirror fails in five minutes
+        #    instead of holding the runner to the job timeout, and Retries=3 so a
+        #    single flaky response is retried rather than fatal. Both, not either:
+        #    retries without a timeout just makes the hang three times longer.
+        sudo timeout 300 apt-get \
+          -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=30 \
+          -o Acquire::https::Timeout=30 \
+          update
+
+        sudo timeout 300 apt-get install -y --no-install-recommends \
+          -o Acquire::Retries=3 \
+          ${{ inputs.packages }}

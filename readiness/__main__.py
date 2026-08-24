@@ -16,9 +16,18 @@ import json
 import sys
 from pathlib import Path
 
-from grace.gate import Context, registry, render, report, run_gates
+try:
+    from grace.gate import Context, registry, render, report, run_gates
+except ImportError:  # base install: the gate framework is the `readiness` extra
+    sys.stderr.write(
+        "the readiness gates need the CIRISGrace gate framework, which a plain\n"
+        "`pip install ciris-client` deliberately does not pull in.\n"
+        "    pip install 'ciris-client[readiness]'   # once ciris-grace publishes\n"
+        "    pip install -e ../CIRISGrace            # from a sibling checkout today\n"
+    )
+    sys.exit(3)
 
-from . import client  # noqa: F401  — importing registers the gates
+from . import client  # importing registers the gates
 
 REPO = "CIRISClient"
 
@@ -34,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--client-tree",
         type=Path,
         default=None,
-        help="client source tree (default: <root>/CIRISServer/client)",
+        help="client source tree (default: this repo's client/)",
     )
     p.add_argument("--node", default=None, help="base URL of a running node")
     p.add_argument("--offline", action="store_true", help="skip gates needing network")
@@ -56,7 +65,7 @@ def main(argv: list[str] | None = None) -> int:
     ctx.client_tree = args.client_tree  # type: ignore[attr-defined]
     results = run_gates(ctx, args.ids if args.command == "run" else None)
 
-    tree = args.client_tree or (args.root / "CIRISServer" / "client")
+    tree = args.client_tree or client.client_tree(ctx)
     print(f"\n  {REPO} — build readiness  ({tree})\n")
     print(render(results))
     print()

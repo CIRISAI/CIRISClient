@@ -2,10 +2,15 @@
 
 These answer: *are the requisites in place to build a client I can trust?*
 
-The client source has not been extracted yet — it is still vendored in
-CIRISServer/client and mirrored in CIRISAgent/client. So these gates read a
-client tree given by `--client-tree` (default: `<root>/CIRISServer/client`).
-When the extraction happens the default changes and the gates do not.
+The client source is HERE, under `client/` — extracted from CIRISAgent and
+vendored with its provenance in `client/VENDORING.md`. The default `--client-tree`
+is that tree. The gates themselves did not change: the same questions, asked of
+the tree this repo now owns. CIRISServer/client and CIRISAgent/client still
+exist and still diverge until they switch to consuming the wheel, so keep
+grading them too:
+
+    python -m readiness --client-tree ~/CIRISServer/client
+    python -m readiness --client-tree ~/CIRISAgent/client
 
 Requisite classes, per CIRISConformance#86 §4:
   code       wheels, substrate binaries, generated-api
@@ -64,9 +69,20 @@ BUNDLES = (
 )
 
 
+#: This repo's own vendored tree — the default subject since the extraction.
+IN_REPO_CLIENT = Path(__file__).resolve().parents[1] / "client"
+
+
 def client_tree(ctx: Context) -> Path:
     override = getattr(ctx, "client_tree", None)
-    return Path(override) if override else ctx.repo("CIRISServer") / "client"
+    if override:
+        return Path(override)
+    if IN_REPO_CLIENT.is_dir():
+        return IN_REPO_CLIENT
+    # Installed from a wheel rather than a checkout: there is no source tree to
+    # read. Fall back to where the source used to live rather than pretending
+    # an empty path is a client.
+    return ctx.repo("CIRISServer") / "client"
 
 
 @gate("toolchain", "Are the build tools present for the platforms we target?")
@@ -108,19 +124,38 @@ def version_alignment(ctx: Context) -> Result:
     bundled in the same artifact.
     """
     tree = client_tree(ctx)
-    cv_file = tree / "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
     cargo = tree.parent / "Cargo.toml"
-    if not cv_file.exists():
-        return Result("version-alignment", ERROR, f"not found: {cv_file}")
-    m = CLIENT_VERSION_RE.search(cv_file.read_text(errors="replace"))
-    if not m:
-        return Result("version-alignment", ERROR, "CLIENT_VERSION constant not found")
-    client_v = m.group(1)
+
+    # TWO LAYOUTS, one question. In this repo CLIENT_VERSION is generated at
+    # build time from the repo-root VERSION file (client/VENDORING.md §4), so
+    # the committed constant is gone on purpose. In CIRISServer/client and
+    # CIRISAgent/client — which this gate must still grade, they diverge and a
+    # result from one is not a result about the client — it is still a
+    # hand-edited const in ClientMode.kt.
+    version_file = tree.parent / "VERSION"
+    cv_file = tree / "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
+
+    if version_file.is_file() and version_file.read_text().strip():
+        client_v, source = version_file.read_text().strip(), "VERSION"
+    elif cv_file.exists():
+        m = CLIENT_VERSION_RE.search(cv_file.read_text(errors="replace"))
+        if not m:
+            # Neither source. Loud, per the Gate Rules: a version this gate
+            # cannot read is not a version that matches.
+            return Result(
+                "version-alignment",
+                ERROR,
+                f"no VERSION file beside the tree and no CLIENT_VERSION const in {cv_file.name}",
+            )
+        client_v, source = m.group(1), "ClientMode.kt"
+    else:
+        return Result("version-alignment", ERROR, f"not found: {version_file} or {cv_file}")
     if not cargo.exists():
         return Result(
             "version-alignment",
             UNIMPLEMENTED,
-            f"CLIENT_VERSION={client_v}; no Cargo.toml beside the tree to compare",
+            f"CLIENT_VERSION={client_v} (from {source}); no Cargo.toml beside the tree",
+            {"client": client_v, "source": source},
         )
     cm = CARGO_VERSION_RE.search(cargo.read_text(errors="replace"))
     node_v = cm.group(1) if cm else None
@@ -129,9 +164,11 @@ def version_alignment(ctx: Context) -> Result:
             "version-alignment",
             FAIL,
             f"CLIENT_VERSION={client_v} but node is {node_v}",
-            {"client": client_v, "node": node_v},
+            {"client": client_v, "node": node_v, "source": source},
         )
-    return Result("version-alignment", PASS, f"both {client_v}", {"client": client_v})
+    return Result(
+        "version-alignment", PASS, f"both {client_v}", {"client": client_v, "source": source}
+    )
 
 
 @gate("locale-parity", "Do the runtime locale bundles agree, and how complete are they?")
@@ -328,7 +365,23 @@ def substrate_binaries(ctx: Context) -> Result:
     wheels = sorted((tree / "androidApp" / "wheels").glob("*.whl"))
     jni = sorted((tree / "androidApp" / "src" / "main" / "jniLibs").rglob("*.so"))
     if not wheels and not jni:
-        return Result("substrate-binaries", FAIL, "no wheels or jniLibs found in the client tree")
+        # In THIS repo that is by design and is written down: the substrate is
+        # other repositories' release artifacts, deliberately not vendored
+        # (client/VENDORING.md §2). Still a FAIL — a tree without them cannot
+        # produce a device build, and a gate that passes on a documented absence
+        # is a gate that has learned to say yes.
+        note = (
+            " — deliberate here: see client/VENDORING.md §2 for the excluded set "
+            "and how to re-hydrate it"
+            if tree == IN_REPO_CLIENT
+            else ""
+        )
+        return Result(
+            "substrate-binaries",
+            FAIL,
+            f"no wheels or jniLibs in the client tree{note}",
+            {"by_design": tree == IN_REPO_CLIENT},
+        )
     return Result(
         "substrate-binaries",
         PASS,
@@ -351,3 +404,22 @@ def generated_api_drift(ctx: Context) -> Result:
         UNIMPLEMENTED,
         "generator is not wired into the build; drift is unchecked (Conformance#86 §4)",
     )
+
+
+@gate("compat-matrix", "Does the compatibility matrix carry this release's row?")
+def compat_matrix(ctx: Context) -> Result:
+    """The published client↔node record (FSD §6): one row per release,
+    append-only, exactly one row for the current VERSION. The same validation
+    CI runs (compat/validate.py) — one implementation, two callers.
+    """
+    from compat.validate import validate
+
+    problems = validate(Path(__file__).resolve().parents[1])
+    if problems:
+        return Result(
+            "compat-matrix",
+            FAIL,
+            f"{len(problems)} problem(s); first: {problems[0]}",
+            {"problems": problems},
+        )
+    return Result("compat-matrix", PASS, "matrix valid; current VERSION row present")

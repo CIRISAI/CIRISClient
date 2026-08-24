@@ -1,0 +1,96 @@
+{
+  "schema": "ciris-client-compat/v1",
+  "_doc": "One row per client release, append-only: a released row never mutates; a correction appends a superseding row naming what it corrects in notes. node_min is the oldest node this release degrades GRACEFULLY against — every absent capability renders an explained state, not an error. Validated by compat/validate.py (CI) and the compat-matrix readiness gate. FSD/ONE_CLIENT_N_NODES.md §6.",
+  "rows": [
+    {
+      "client_version": "0.5.185",
+      "flavors": [
+        "node",
+        "agent"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "the three-state /v1/system/health merge (folded brain, CIRISServer#390); older nodes lack data.agent.* and still parse, but chat/contacts absence pre-0.5.185 is explained by the contacts_node_too_old strings, and pre-0.5.168 brain detection degrades to the two-state probe",
+      "node_max_tested": "0.5.185",
+      "agent_min_tested": "2.9.28",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots"
+      ],
+      "capabilities_note": "surface ids shipped and node-version-dependent at this release; the full capability registry (FSD §4.1) supersedes this list when it lands",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "the node serves no OpenAPI spec yet — evidence/blocked_upstream.tsv; nulls retire when FSD §5 lands"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3853
+      },
+      "notes": "seed row, written at the three-way merge (client/VENDORING.md §1)"
+    },
+    {
+      "client_version": "0.5.186",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.185: the three-state health merge is the floor; contacts/chat absence on older nodes renders the contacts_node_too_old strings",
+      "node_max_tested": "0.5.186",
+      "agent_min_tested": "2.9.33",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots"
+      ],
+      "capabilities_note": "chat/contacts now in a TAGGED server release (v0.5.186; landed 0.5.185); the 13 status.llm_* strings (incl. _observer variants) ship from agent v2.9.30; ONE build ships (agent surfaces present, gated at runtime on the probed node) — the node/agent split retired",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3853
+      },
+      "notes": "the superset merge: server v0.5.186 (1ea2c8b) + agent v2.9.32-stable (2504960) folded into the tree of record; two upstream placeholder defects repaired via the localize pipeline; androidApp ciris-server pin at 0.5.186 (wheels published)",
+      "published": {
+        "index": "pypi",
+        "project": "ciris-client",
+        "url": "https://pypi.org/project/ciris-client/0.5.186/",
+        "wheel_bytes": 66042774,
+        "date": "2026-08-22"
+      }
+    },
+    {
+      "client_version": "0.5.188",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.186: the three-state health merge (data.agent.{folded,reachable}, CIRISServer#390) is still the floor. This release ADDS a reader for data.role (CIRISAgent#1111) and does not raise the floor with it — role is optional on the wire and its absence falls through to the existing inference, so a 0.5.168 node behaves exactly as before",
+      "node_max_tested": "0.5.188",
+      "agent_min_tested": "2.9.36",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots"
+      ],
+      "capabilities_note": "no new capability id; two behaviour changes worth naming. (1) SEVERITY: the node's warning vocabulary is info|warning|error|critical and the banner handled three of four, so critical fell through to the blue informational branch — the >=90% memory warning that precedes a SIGKILL rendered LESS urgent than the 80% advisory. Fixed (CIRISClient#2); against a node older than 0.5.188 nothing changes, because nothing emitted critical before it. (2) MODE: the agent surfaces are chosen at runtime from the probed ClientMode, now including the runtime's own data.role declaration. CIRISBuild.HAS_AGENT is DELETED (CIRISServer#479) — one build ships and narrows itself",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3853
+      },
+      "notes": "the superset merge: server v0.5.188 (1b4f377) + agent v2.9.36-stable (c211a9f) folded into the tree of record. androidApp ciris-server pin at 0.5.188 (published). The localization guard stops declaring the emitters absent and is pointed at a pinned CIRISServer checkout instead, so its five server-id checks grade 303 emitted ids rather than none; the KNOWN_UNLOCALIZED debt list is exactly current at 19 entries. localize.py becomes a translate->evaluate->repair pipeline with the 29 CIRIS glossaries as input",
+      "published": null
+    }
+  ]
+}

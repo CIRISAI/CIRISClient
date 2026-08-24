@@ -1,0 +1,183 @@
+# The localization pipeline, once. The three lane workflows call this.
+#
+# DRY on purpose: translate, evaluate and repair differ in where a run ENTERS
+# the pipeline and in what it does with the result — not in how the repo is
+# checked out, how the emitters are pinned, which gate decides, or how the
+# digest is re-recorded. Three copies of that would drift, and the copy that
+# drifted would be the one nobody ran this week.
+#
+# Secrets: OPENROUTER_API_KEY drives the model ladder (every rung, including a
+# family the Anthropic SDK cannot reach). ANTHROPIC_API_KEY is honoured when
+# present — it adds true prompt caching and the Batches API, at the cost of the
+# non-Anthropic rung. LOCALIZE_PROVIDER picks when both are set.
+
+name: i18n lane
+
+on:
+  workflow_call:
+    inputs:
+      lane:
+        description: "translate | evaluate | repair"
+        required: true
+        type: string
+      keys:
+        description: "fnmatch patterns over flat dotted keys, space-separated. Empty = whatever is missing"
+        required: false
+        default: ""
+        type: string
+      langs:
+        description: "language codes, space-separated. Empty = all 28"
+        required: false
+        default: ""
+        type: string
+      max_keys:
+        description: "refuse runs larger than this many key-values"
+        required: false
+        default: "400"
+        type: string
+      mode:
+        description: "fast | batch (batch is 50% cheaper, for backfills)"
+        required: false
+        default: "fast"
+        type: string
+      commit:
+        description: "push the result to the branch (false = report only)"
+        required: false
+        default: true
+        type: boolean
+      ref:
+        description: "ref to check out and push to"
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  lane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: The server release this client pairs with
+        id: pair
+        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        # The guard below compares what the server EMITS against what en.json
+        # defines. The emitters live in CIRISServer, pinned to the release this
+        # client pairs with — see check_localization_sync.py --server-src.
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: v${{ steps.pair.outputs.version }}
+          path: .emitters
+
+      - name: Plan (no API call)
+        id: plan
+        env:
+          LOCALIZE_PROVIDER: ${{ vars.LOCALIZE_PROVIDER || 'openrouter' }}
+        run: |
+          set -euo pipefail
+          args=""
+          for p in ${{ inputs.keys }}; do args="$args --keys $p"; done
+          for l in ${{ inputs.langs }}; do args="$args --lang $l"; done
+          echo "args=$args" >> "$GITHUB_OUTPUT"
+          python3 localization/localize.py --lane "${{ inputs.lane }}" $args \
+            --max-keys "${{ inputs.max_keys }}" --dry-run | tee plan.log
+          {
+            echo "### Plan — ${{ inputs.lane }} lane"
+            echo '```'
+            cat plan.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the lane
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          LOCALIZE_PROVIDER: ${{ vars.LOCALIZE_PROVIDER || 'openrouter' }}
+          LOCALIZE_LADDER: ${{ vars.LOCALIZE_LADDER }}
+          LOCALIZE_REVIEW_MODEL: ${{ vars.LOCALIZE_REVIEW_MODEL }}
+        run: |
+          set -euo pipefail
+          pip install --quiet anthropic
+          python3 localization/localize.py \
+            --lane "${{ inputs.lane }}" ${{ steps.plan.outputs.args }} \
+            --max-keys "${{ inputs.max_keys }}" \
+            --mode "${{ inputs.mode }}" \
+            --report i18n-report.json | tee lane.log
+          {
+            echo "### ${{ inputs.lane }} lane"
+            echo '```'
+            cat lane.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: MQM findings
+        if: always() && hashFiles('i18n-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: i18n-report-${{ inputs.lane }}
+          path: i18n-report.json
+
+      - name: Guard (strict) — the actual gate
+        # The pipeline proposes; this decides. Its own mutation self-test runs
+        # first, so the gate proves it can fail before it is trusted to pass.
+        run: |
+          set -euo pipefail
+          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
+          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
+
+      - name: Re-record the vendoring state digest
+        if: inputs.commit
+        run: |
+          set -euo pipefail
+          DIGEST=$(python3 packaging/check_vendoring.py --print)
+          python3 - "$DIGEST" <<'PY'
+          import re, sys
+          p = "client/VENDORING.md"
+          s = open(p).read()
+          s = re.sub(r"(\*\*state digest:\*\* `)[0-9a-f]{64}(`)",
+                     rf"\g<1>{sys.argv[1]}\g<2>", s, count=1)
+          open(p, "w").write(s)
+          PY
+          python3 packaging/check_vendoring.py
+
+      - name: Commit
+        if: inputs.commit
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add client/*/src/main/assets/localization \
+                  client/*/src/main/resources/localization \
+                  client/shared/src/desktopMain/resources/localization \
+                  client/iosApp/iosApp/localization \
+                  client/VENDORING.md
+          if git diff --cached --quiet; then
+            echo "nothing to commit"
+          else
+            git commit -F - <<'MSG'
+          i18n: ${{ inputs.lane }} lane (translate -> evaluate -> repair)
+
+          Machine translation, independently reviewed against MQM, and repaired
+          where the review found a critical, major or terminology error. Every
+          value here is status=draft / review_status=needs_native_review: this
+          pipeline guarantees terminology, structure and meaning, and does not
+          guarantee native fluency.
+
+          Validated by check_localization_sync.py --strict in this same run.
+          The MQM findings are attached to the run as i18n-report.json.
+          Review like any other diff.
+          MSG
+            git push
+          fi

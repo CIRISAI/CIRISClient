@@ -1,0 +1,52 @@
+# Translate arbitrary keys into the 28 target locales.
+#
+# English in, 28 locales out, with the CIRIS glossary and the shipped corpus as context. A key that any model refuses escalates to a stronger one — per key, not per batch — and a refusal is never allowed to become an English string under a non-English locale.
+#
+# The pipeline runs the same way whichever lane a run enters: it flows
+# translate -> ... -> repair, and the strict guard decides what merges. The work
+# itself is in .github/workflows/i18n-lane.yml, once.
+
+name: i18n translate
+
+on:
+  workflow_dispatch:
+    inputs:
+      keys:
+        description: "Key patterns (fnmatch over flat dotted keys), space-separated. Empty = whatever is missing."
+        required: false
+        default: ""
+      langs:
+        description: "Language codes, space-separated. Empty = all 28."
+        required: false
+        default: ""
+      max_keys:
+        description: "Refuse runs larger than this many key-values."
+        required: false
+        default: "400"
+      mode:
+        description: "fast, or batch for 50% off when nobody is waiting."
+        required: false
+        default: "fast"
+        type: choice
+        options: [fast, batch]
+
+concurrency:
+  # One writer at a time. Parallel agents racing on one bundle is the failure
+  # CIRISAgent's retrospectives name explicitly; a queue is the fix.
+  group: i18n-write-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  translate:
+    uses: ./.github/workflows/i18n-lane.yml
+    secrets: inherit
+    with:
+      lane: translate
+      keys: ${{ inputs.keys }}
+      langs: ${{ inputs.langs }}
+      max_keys: ${{ inputs.max_keys }}
+      mode: ${{ inputs.mode }}
+      commit: true

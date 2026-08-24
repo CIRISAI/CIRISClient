@@ -1,0 +1,52 @@
+# Correct or improve translations the reviewer rejects.
+#
+# Enters at evaluate, fixes what is flagged and nothing that is not, then re-reviews only what it changed — a repair is a new string, and an unreviewed new string is the thing this pipeline refuses to write.
+#
+# The pipeline runs the same way whichever lane a run enters: it flows
+# repair -> ... -> repair, and the strict guard decides what merges. The work
+# itself is in .github/workflows/i18n-lane.yml, once.
+
+name: i18n repair
+
+on:
+  workflow_dispatch:
+    inputs:
+      keys:
+        description: "Key patterns (fnmatch over flat dotted keys), space-separated. Empty = whatever is missing."
+        required: false
+        default: ""
+      langs:
+        description: "Language codes, space-separated. Empty = all 28."
+        required: false
+        default: ""
+      max_keys:
+        description: "Refuse runs larger than this many key-values."
+        required: false
+        default: "400"
+      mode:
+        description: "fast, or batch for 50% off when nobody is waiting."
+        required: false
+        default: "fast"
+        type: choice
+        options: [fast, batch]
+
+concurrency:
+  # One writer at a time. Parallel agents racing on one bundle is the failure
+  # CIRISAgent's retrospectives name explicitly; a queue is the fix.
+  group: i18n-write-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    uses: ./.github/workflows/i18n-lane.yml
+    secrets: inherit
+    with:
+      lane: repair
+      keys: ${{ inputs.keys }}
+      langs: ${{ inputs.langs }}
+      max_keys: ${{ inputs.max_keys }}
+      mode: ${{ inputs.mode }}
+      commit: true
