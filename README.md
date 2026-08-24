@@ -5,8 +5,9 @@ mesh — and the gates that say whether it is fit to build.
 
 The client source is now **here**, under [`client/`](client/), vendored from
 CIRISAgent with its provenance recorded in
-[`client/VENDORING.md`](client/VENDORING.md). It is built once, in two flavors,
-and consumed as a dependency. CIRISServer and CIRISAgent still carry their own
+[`client/VENDORING.md`](client/VENDORING.md). It is built once — one artifact
+that narrows itself against the node it is attached to — and consumed as a
+dependency. CIRISServer and CIRISAgent still carry their own
 copies today; deleting them is what finishes this.
 
 ## Install

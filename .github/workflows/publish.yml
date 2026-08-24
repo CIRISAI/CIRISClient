@@ -179,7 +179,7 @@ jobs:
         # probed node.
         working-directory: client
         shell: bash
-        run: ./gradlew --no-daemon -PhasAgent=true :desktopApp:packageUberJarForCurrentOS
+        run: ./gradlew --no-daemon :desktopApp:packageUberJarForCurrentOS
 
       - name: Stage the jar, stamped with the platform it was built for
         shell: bash
@@ -237,6 +237,9 @@ jobs:
           # package answers rather than the source tree sitting beside it.
           mkdir -p verify && cd verify && "$PY" - <<'PY'
           import ciris_client as c
+          # Prove the cd worked rather than trusting it: `python -` puts CWD
+          # first on sys.path, and a comment cannot fail.
+          assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
           m = c.manifest()
           assert not m.get("placeholder"), "placeholder reached the publish path"
           assert m["client_version"] == c.__version__, "version split"
@@ -294,7 +297,7 @@ jobs:
         # downloads this; see shared/build.gradle.kts for why the old "never
         # ship production wasm" warning no longer holds — it was retested.
         working-directory: client
-        run: ./gradlew --no-daemon -PhasAgent=true :shared:wasmJsBrowserDistribution
+        run: ./gradlew --no-daemon :shared:wasmJsBrowserDistribution
 
       - name: Stage it
         run: |
@@ -370,7 +373,7 @@ jobs:
 
       - name: Build
         working-directory: client
-        run: ./gradlew --no-daemon -PhasAgent=true ${{ matrix.task }}
+        run: ./gradlew --no-daemon ${{ matrix.task }}
 
       - name: Collect
         shell: bash

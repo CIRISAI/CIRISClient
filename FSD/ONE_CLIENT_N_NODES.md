@@ -52,9 +52,11 @@ feature, here is the API" a structured intake instead of a conversation.
 
 ## §2 Axioms
 
-- **A1 — Agent is a strict superset of node.** One source tree, one registry;
-  the flavor (`-PhasAgent`) is a ceiling, and dead-code elimination is an
-  optimization of the runtime rule, never a separate system.
+- **A1 — Agent is a strict superset of node.** One source tree, one registry,
+  and — since CIRISServer#479 — one ARTIFACT. The build-time ceiling
+  (`-PhasAgent`, and the `CIRISBuild.HAS_AGENT` constant before it) is gone:
+  it made agent-ness a property of the binary, which A2 says it is not. There
+  is no compile-time flavor left to be an optimization of the runtime rule.
 - **A2 — A node can be upgraded to include a brain.** Agent-ness is a runtime,
   per-attachment, *mutable* property. Discovery must be refreshable; the
   interesting staleness is the node getting *better* and the UI not noticing.
@@ -279,11 +281,13 @@ acknowledged it. **(6)** The release carries the signed `ciris-capability/v1`
   unrepresented features get the established SOON surface; upstream issues
   filed (server spec-serving, agent spec-publishing, locale-manifest domain
   drift) and their numbers recorded in the evidence registry.
-  *Accept when*: the merged tree builds both flavors; the gate board runs;
+  *Accept when*: the merged tree builds (one artifact — the two-flavor form of
+  this criterion was retired with the flavor, CIRISServer#479); the gate board runs;
   every Codex finding on PR #1 is fixed or carries an evidence row saying why
   not.
-- **Phase 1 — consumers flip**: Server and Agent depend on
-  `ciris-client[node|agent]`, delete their trees; drift markers, sync
+- **Phase 1 — consumers flip**: Server and Agent depend on `ciris-client`
+  (one distribution — the `[node|agent]` extras were never cut, because the
+  flavor they would have selected no longer exists), delete their trees; drift markers, sync
   scripts, and the byte-identity guard retire on #86 §7's conditions.
   *Accept when*: `ciris-client` appears in both repos' requirements (the
   evidence predicate PR #1 already names).

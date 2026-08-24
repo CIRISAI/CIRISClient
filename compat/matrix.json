@@ -63,6 +63,34 @@
         "wheel_bytes": 66042774,
         "date": "2026-08-22"
       }
+    },
+    {
+      "client_version": "0.5.188",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.186: the three-state health merge (data.agent.{folded,reachable}, CIRISServer#390) is still the floor. This release ADDS a reader for data.role (CIRISAgent#1111) and does not raise the floor with it — role is optional on the wire and its absence falls through to the existing inference, so a 0.5.168 node behaves exactly as before",
+      "node_max_tested": "0.5.188",
+      "agent_min_tested": "2.9.36",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots"
+      ],
+      "capabilities_note": "no new capability id; two behaviour changes worth naming. (1) SEVERITY: the node's warning vocabulary is info|warning|error|critical and the banner handled three of four, so critical fell through to the blue informational branch — the >=90% memory warning that precedes a SIGKILL rendered LESS urgent than the 80% advisory. Fixed (CIRISClient#2); against a node older than 0.5.188 nothing changes, because nothing emitted critical before it. (2) MODE: the agent surfaces are chosen at runtime from the probed ClientMode, now including the runtime's own data.role declaration. CIRISBuild.HAS_AGENT is DELETED (CIRISServer#479) — one build ships and narrows itself",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3853
+      },
+      "notes": "the superset merge: server v0.5.188 (1b4f377) + agent v2.9.36-stable (c211a9f) folded into the tree of record. androidApp ciris-server pin at 0.5.188 (published). The localization guard stops declaring the emitters absent and is pointed at a pinned CIRISServer checkout instead, so its five server-id checks grade 303 emitted ids rather than none; the KNOWN_UNLOCALIZED debt list is exactly current at 19 entries. localize.py becomes a translate->evaluate->repair pipeline with the 29 CIRIS glossaries as input",
+      "published": null
     }
   ]
 }

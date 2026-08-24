@@ -7,7 +7,7 @@ copied, and only then is the wheel built. Three steps, each of which can fail in
 its own right, instead of one that needs a JDK and an Android SDK on every
 consumer's machine.
 
-    # after ./gradlew -p client :desktopApp:packageUberJarForCurrentOS -PhasAgent=true
+    # after ./gradlew -p client :desktopApp:packageUberJarForCurrentOS
     python3 packaging/stage_artifacts.py \
         --artifact desktop-uber-jar@linux-x86_64=client/desktopApp/build/compose/jars/*.jar
 
@@ -35,7 +35,11 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-FLAVORS = ("node", "agent")
+# "universal" is the ONE build that ships since CIRISServer#479 deleted the
+# flavor: every surface present, narrowed at runtime by the probed node.
+# node/agent stay accepted so a manifest cut before that change still
+# describes itself in its own words.
+FLAVORS = ("universal", "node", "agent")
 SCHEMA = "ciris-client-artifacts/v1"
 
 # PyPI's per-file limit. Stated as bytes because "100 MB" is 100 MiB and the
@@ -146,11 +150,11 @@ def main() -> int:
     )
     ap.add_argument(
         "--flavor",
-        default="agent",
+        default="universal",
         choices=FLAVORS,
         help="which build produced this jar — recorded in the manifest, not a "
-             "destination. Defaults to the shipped build (agent: every surface "
-             "present, gated at runtime).",
+             "destination. Defaults to `universal`, the only build there is: "
+             "every surface present, narrowed at runtime by the probed node.",
     )
     ap.add_argument(
         "--artifact",
@@ -184,7 +188,9 @@ def main() -> int:
     manifest = {
         "schema": SCHEMA,
         "flavor": args.flavor,
-        "has_agent": args.flavor == "agent",
+        # A universal build CARRIES the agent surfaces; whether a user sees
+        # them is the probed node's answer, not this manifest's.
+        "has_agent": args.flavor != "node",
         "client_version": version,
         "vendored_from": vendoring(),
         "built": {

@@ -86,19 +86,11 @@ jobs:
         run: python3 compat/validate.py
 
 
-  # ── The client itself, both flavors ─────────────────────────────────────────
+  # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:
-    name: gradle (${{ matrix.flavor }})
+    name: gradle
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - flavor: node
-            hasAgent: 'false'
-          - flavor: agent
-            hasAgent: 'true'
     steps:
       - uses: actions/checkout@v4
 
@@ -120,48 +112,50 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          # Per flavor. The generated CIRISBuild.kt differs between them, so a
-          # shared cache key would have each flavor invalidating the other's
-          # entries on every alternating run — the shape of CIRISServer#272.
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
           gradle-home-cache-cleanup: true
 
-      - name: Show the flavor this build actually selected
+      - name: Show the version this build actually stamped
         working-directory: client
-        # Print it rather than trust it. HAS_AGENT decides which surfaces exist
-        # at all, and a flavor that silently defaulted is a wrong artifact with a
-        # right-looking name.
+        # Print it rather than trust it. This used to assert the generated
+        # HAS_AGENT matched the flavor CI asked for, because a flavor that
+        # silently defaulted was a wrong artifact with a right-looking name.
+        # CIRISServer#479 deleted the flavor, and the same hazard moved to the
+        # only value the task still generates: a version that silently defaulted
+        # would put a wrong number in the VERSION-MISMATCH banner every user
+        # sees. So the assertion moved with it.
         run: |
-          ./gradlew --no-daemon -PhasAgent=${{ matrix.hasAgent }} \
-            :shared:generateBuildFlavor
-          echo "── generated CIRISBuild.kt ──"
-          cat shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/CIRISBuild.kt
+          set -euo pipefail
+          ./gradlew --no-daemon :shared:generateBuildFlavor
+          gen=shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientVersion.kt
           echo "── generated ClientVersion.kt ──"
-          cat shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientVersion.kt
-          grep -q 'HAS_AGENT: Boolean = ${{ matrix.hasAgent }}' \
-            shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/CIRISBuild.kt \
-            || { echo "::error::generated HAS_AGENT is not ${{ matrix.hasAgent }}"; exit 1; }
+          cat "$gen"
+          want=$(cat ../VERSION)
+          grep -q "CLIENT_VERSION: String = \"$want\"" "$gen" \
+            || { echo "::error::generated CLIENT_VERSION is not $want"; exit 1; }
+          # And nothing else may appear there. A resurrected compile-time flag
+          # would be invisible otherwise, which is how the last one survived.
+          test "$(find shared/build/generated/flavor -name '*.kt' | wc -l)" = 1 \
+            || { echo "::error::generateBuildFlavor wrote more than ClientVersion.kt"; \
+                 find shared/build/generated/flavor -name '*.kt'; exit 1; }
 
       - name: Compile :shared (desktop target)
         working-directory: client
-        run: ./gradlew --no-daemon -PhasAgent=${{ matrix.hasAgent }} :shared:compileKotlinDesktop
+        run: ./gradlew --no-daemon :shared:compileKotlinDesktop
 
       - name: Test :shared (desktop target)
         working-directory: client
-        # SetupStepFlowTest already runs both HAS_AGENT values as data, so the
-        # flavor's own branch coverage does not depend on which flavor CI built.
-        run: ./gradlew --no-daemon -PhasAgent=${{ matrix.hasAgent }} :shared:desktopTest
+        run: ./gradlew --no-daemon :shared:desktopTest
 
       - name: Desktop uber-jar
         working-directory: client
         run: |
-          ./gradlew --no-daemon -PhasAgent=${{ matrix.hasAgent }} \
-            :desktopApp:packageUberJarForCurrentOS
+          ./gradlew --no-daemon :desktopApp:packageUberJarForCurrentOS
           find desktopApp/build -name '*.jar' -size +1M -printf '%s %p\n' | sort -rn
 
       - uses: actions/upload-artifact@v4
         with:
-          name: gradle-${{ matrix.flavor }}
+          name: gradle-client
           path: client/desktopApp/build/compose/jars/*.jar
           if-no-files-found: warn
           retention-days: 7
@@ -187,13 +181,11 @@ jobs:
           path: gradle-out
 
       - name: Stage the shipped build
-        # The AGENT build is what ships: it carries every surface, and which of
-        # them a user sees is decided at runtime by the probed node. The node
-        # flavor is still COMPILED above, as proof the ceiling flag still works
-        # and a stripped build stays possible — it is simply not packaged.
+        # One build, carrying every surface; which of them a user sees is
+        # decided at runtime by the probed node (CIRISServer#479).
         run: |
           set -euo pipefail
-          jar=$(find gradle-out/gradle-agent -name '*.jar' 2>/dev/null | head -1 || true)
+          jar=$(find gradle-out/gradle-client -name '*.jar' 2>/dev/null | head -1 || true)
           if [ -n "$jar" ]; then
             python3 packaging/stage_artifacts.py \
               --artifact "desktop-uber-jar@linux-x86_64=$jar"
@@ -201,7 +193,7 @@ jobs:
             # Named precisely. "no gradle artifact" tells the next person to
             # look at the gradle job; a generic "unavailable" does not.
             python3 packaging/stage_artifacts.py \
-              --placeholder "gradle-agent produced no jar in run ${{ github.run_id }}"
+              --placeholder "the gradle job produced no jar in run ${{ github.run_id }}"
           fi
 
       - name: Build the distribution
@@ -220,8 +212,15 @@ jobs:
           set -euo pipefail
           python3 -m venv /tmp/consumer
           /tmp/consumer/bin/pip install --no-index dist/ciris_client-*.whl
-          /tmp/consumer/bin/python - <<'PY'
+          # Run from a directory that is NOT the checkout. `python -` puts the
+          # CWD first on sys.path, so run here and `ciris_client/` in the repo
+          # root shadows the wheel — this step then grades the source tree and
+          # reports green whatever the wheel contains, which is the one failure
+          # it exists to catch. publish.yml already did this; this one did not.
+          mkdir -p /tmp/verify && cd /tmp/verify && /tmp/consumer/bin/python - <<'PY'
           import ciris_client as c
+          # And prove it, rather than trusting the cd: a comment cannot fail.
+          assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
           m = c.manifest()
           print("version:", c.__version__, "built as:", m["flavor"])
           assert m["client_version"] == c.__version__, "version split"
