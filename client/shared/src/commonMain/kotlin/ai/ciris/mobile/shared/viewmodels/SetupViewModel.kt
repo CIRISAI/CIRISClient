@@ -42,27 +42,19 @@ private const val TAG = "SetupViewModel"
  * - Survives configuration changes and app backgrounding (extends ViewModel)
  */
 class SetupViewModel(
-    private val apiClient: CIRISApiClientProtocol
+    private val apiClient: CIRISApiClientProtocol,
+    /**
+     * Does the attached node carry a brain? (CIRISServer#479 — the probed
+     * `ClientMode`, not `CIRISBuild.HAS_AGENT`.) Decides whether the setup flow
+     * includes the AI/assistant steps. Defaults to `false`: a wizard that has
+     * not yet learned the answer must not ask a brainless node's owner to
+     * configure an LLM.
+     */
+    private val hasAgent: Boolean = false,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SetupFormState())
     val state: StateFlow<SetupFormState> = _state.asStateFlow()
-
-    /**
-     * Does this node have a brain to configure? Decides whether the wizard's AI
-     * step exists at all.
-     *
-     * NOT [ClientMode]: at an agent's first run the brain is folded but
-     * unconfigured, which the mode gate correctly calls NODE — keying the step
-     * graph on it would hide the AI step in precisely the run that needs it.
-     * The caller supplies `data.agent.folded` instead. Defaults to the build
-     * ceiling so a caller that never sets it behaves exactly as before.
-     */
-    private var brainPresent: Boolean = CIRISBuild.HAS_AGENT
-
-    fun setBrainPresent(present: Boolean) {
-        brainPresent = present
-    }
 
     // OAuth poll job for adapter wizard
     private var adapterOAuthPollJob: Job? = null
@@ -579,7 +571,7 @@ class SetupViewModel(
             return false
         }
         _state.value = currentState.copy(
-            currentStep = nextSetupStep(currentState.currentStep, brainPresent),
+            currentStep = nextSetupStep(currentState.currentStep, hasAgent),
         )
         return true
     }
@@ -590,7 +582,7 @@ class SetupViewModel(
     fun previousStep() {
         val currentState = _state.value
         _state.value = currentState.copy(
-            currentStep = previousSetupStep(currentState.currentStep, brainPresent),
+            currentStep = previousSetupStep(currentState.currentStep, hasAgent),
         )
     }
 

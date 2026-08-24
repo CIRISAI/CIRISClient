@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.186` (`1ea2c8b80a8022634d4f57309b0aa7ae8bde5ba9`) | `merge/server-v0.5.186` | 2026-08-21 |
+| `CIRISAI/CIRISServer` | `v0.5.187` (`3c9fbcd2c7db1d24208ca7d2ce10311ac98cf5e0`) | `merge/server-v0.5.187` | 2026-08-24 |
 | `CIRISAI/CIRISAgent` | `v2.9.33-stable` (`2bd11fcbdb71f110ef1cc5e40b3d1cca06ce055c`) | `merge/agent-v2.9.33` | 2026-08-22 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -33,14 +33,14 @@ source is the pair a bisect wants:
 | | |
 |---|---|
 | **Source repo** | [`CIRISAI/CIRISServer`](https://github.com/CIRISAI/CIRISServer) |
-| **Commit** | `1ea2c8b80a8022634d4f57309b0aa7ae8bde5ba9` |
+| **Commit** | `3c9fbcd2c7db1d24208ca7d2ce10311ac98cf5e0` |
 
 ### The state digest
 
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `1d56abf0847ed63369ac012cc90e34b9c38d1dd25a4a8dca8d20a1a69d0c40e9`
+**state digest:** `77643733cb33581a79c3e0271b5aa685f4d6b311591bcd897456ef00b776123a`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -128,34 +128,49 @@ checker in §6. What replaced the table's job:
 
 ---
 
-## 4. The drift-to-flavor migration
+## 4. The drift, and what each piece became
 
 Three things differed between the CIRISServer copy and the CIRISAgent copy of
 this tree. None of them were disagreements about the code; all three were the
-same source configured two ways with no way to say so. Each is now a build
-input.
+same source configured two ways with no way to say so. Two are now build
+inputs derived from one file each; the third turned out not to be a build
+question at all.
 
 | # | Drift | Was | Is now | Selected by |
 |---|---|---|---|---|
-| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | generated per flavor and still a `const val` (so a stripped build stays possible), but it is now the build **ceiling** only: which agent surfaces a user actually sees is decided at runtime by the probed `ClientMode`, because a node can gain a brain without reinstalling the client. The shipped wheel is built `-PhasAgent=true`. | `-PhasAgent=true\|false` (default `false`; CI compiles both, ships the superset) |
+| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | **deleted** (CIRISServer#479). It briefly became a generated build flavor; that was still the wrong question. An agent IS a node that has had a brain added, so "are the agent surfaces live?" is about the ATTACHED NODE and is answered at runtime by the probed `ClientMode`. One artifact ships and narrows itself. `CIRISBuild.kt` is a committed tombstone carrying the reasoning. | the probe: `data.agent.{folded,reachable}` from the merged `/v1/system/health` (CIRISServer#390) |
 | 2 | `CLIENT_VERSION` | `const val` in `models/ClientMode.kt`, hand-edited, kept in step by a script in one repo and by nothing in the other | generated from the repo-root `VERSION` file, the same file the Python package version comes from | `VERSION` (override: `-PclientVersion=`) |
 | 3 | localization bundles | 29 languages in 6 mirrored copies, kept identical by a checker that lived outside `client/` | 4 in-tree mirrors, checker vendored to `client/tools/` and run in CI | — (see §5, §6) |
 | 4 | `generated-api/` | 1107 committed files, generator not in the build graph | unchanged, provenance documented | — (see §7) |
 
-`-PhasAgent` is the spelling `MISSION.md` §5.2 already names. It is read in
-`shared/build.gradle.kts` and defaults from `gradle.properties`
-(`ciris.hasAgent=false`), because the node client is the base product and the
-agent build is the superset.
+**There is no build flavor.** `-PhasAgent` existed for two days and is gone
+with the constant it selected, along with `ciris.hasAgent` in
+`gradle.properties` and the node/agent split in the packaging payload. It was
+a real improvement on a hand-edited `const val` — it at least gave the fork a
+name and made both sides buildable — but it kept the premise that the answer
+is a property of the ARTIFACT, and that premise is what CIRISServer#479
+reported: a node that gains a brain keeps the node UX until someone reinstalls
+a different build. It also cost two ~63 MiB desktop bundles to say one thing,
+which does not fit in one wheel. `stage_artifacts.py` still takes `--flavor`,
+but only to RECORD which build produced the staged jar; it no longer selects a
+destination.
 
-**Why generate rather than patch.** `CLIENT_VERSION`'s own KDoc upstream warns
-that mutating it at build time "recompiled the whole Compose client and
-defeated the desktop-JAR gradle cache every leg (CIRISServer#272)". Generation
-does not reintroduce that: the generated file's content is a pure function of
-(flavor, version), so it is byte-stable across builds of the same flavor and
-the cache holds. It is invalidated exactly when the version changes — which is
-when a rebuild is correct. What #272 actually cost was a value that differed
-*per CI leg*; a value that differs *per flavor* is what separate flavor build
-directories are for.
+The flag is deleted rather than deprecated. A build constant nothing reads is
+the CIRISServer#365 shape (nine `mesh_config` keys, zero consumers), and
+leaving it would invite the next compile-time branch — which is the thing that
+has to stop being possible. Every default is node-first: a surface that has
+not yet learned the answer shows the node behaviour, because offering agent
+affordances on a brainless node is a door onto a wall, while the reverse
+merely arrives a moment late. `NavGatingTest` pins that direction.
+
+**Why generate `CLIENT_VERSION` rather than patch it.** Its own KDoc upstream
+warns that mutating it at build time "recompiled the whole Compose client and
+defeated the desktop-JAR gradle cache every leg (CIRISServer#272)".
+Generation does not reintroduce that: the generated file's content is a pure
+function of the version, so it is byte-stable across builds of the same
+version and the cache holds. It is invalidated exactly when the version
+changes — which is when a rebuild is correct. What #272 actually cost was a
+value that differed *per CI leg*.
 
 ---
 

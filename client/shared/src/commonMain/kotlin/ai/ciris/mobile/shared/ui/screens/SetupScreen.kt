@@ -1,6 +1,5 @@
 package ai.ciris.mobile.shared.ui.screens
 
-import ai.ciris.mobile.shared.CIRISBuild
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.CheckState
 import ai.ciris.mobile.shared.api.checkLlmConfig
@@ -163,11 +162,15 @@ private object SetupColors {
 @Composable
 fun SetupScreen(
     viewModel: SetupViewModel,
-    // Whether this node has a brain to configure (`data.agent.folded`) — see
-    // SetupViewModel.brainPresent. Defaults to the build ceiling.
-    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
     apiClient: CIRISApiClient,
     onSetupComplete: () -> Unit,
+    /**
+     * Does the attached node carry a brain? (CIRISServer#479 — the probed
+     * `ClientMode`.) Decides whether the wizard offers the AI/assistant steps.
+     * Defaults to `false` for the same reason the landing screen does: asking a
+     * brainless node's owner to configure an LLM is the worse wrong guess.
+     */
+    hasAgent: Boolean = false,
     onBackToLogin: (() -> Unit)? = null,  // Optional callback to return to login screen
     // The one-time ownership CLAIM PIN / NodeCode captured from the LOCAL node's
     // boot banner (PythonRuntime.localClaimPin / .localNodeCode). Used on setup
@@ -183,11 +186,6 @@ fun SetupScreen(
     val state by viewModel.state.collectAsState()
     val coroutineScope = rememberCoroutineScope()
     val semantic = SemanticColors.forTheme(ColorTheme.DEFAULT, isDark = false)
-
-    // The step GRAPH lives in the view model (nextStep/previousStep) while the
-    // step INDICATORS live here; both must agree on whether an AI step exists,
-    // or Next walks past a screen the indicator never drew.
-    LaunchedEffect(brainPresent) { viewModel.setBrainPresent(brainPresent) }
 
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
@@ -359,7 +357,7 @@ fun SetupScreen(
         Column(modifier = Modifier.fillMaxSize().imePadding()) {
             // Step indicators at top
             StepIndicators(
-                brainPresent = brainPresent,
+                hasAgent = hasAgent,
                 currentStep = state.currentStep,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -373,7 +371,7 @@ fun SetupScreen(
                     .fillMaxWidth()
             ) {
                 when (state.currentStep) {
-                    SetupStep.YOU -> YouStep(viewModel, state, brainPresent)
+                    SetupStep.YOU -> YouStep(viewModel, state, hasAgent)
                     SetupStep.JOIN_FEDERATION -> JoinFederationStep(viewModel, state, apiClient)
                     SetupStep.AI -> AiStep(viewModel, state, apiClient)
                     SetupStep.COMPLETE ->
@@ -477,7 +475,7 @@ fun SetupScreen(
 
             // Navigation buttons - with navigation bar padding to avoid overlap
             NavigationButtons(
-                brainPresent = brainPresent,
+                hasAgent = hasAgent,
                 currentStep = state.currentStep,
                 canProceed = state.canProceedFromCurrentStep(),
                 validationError = state.getStepValidationError(),
@@ -488,9 +486,9 @@ fun SetupScreen(
                     // AI on the agent build and JOIN_FEDERATION on the node
                     // client; on COMPLETE we ALSO self-claim ownership of the
                     // local node for the just-created user.
-                    val isFinalStep = isFinalSetupStep(state.currentStep, brainPresent)
+                    val isFinalStep = isFinalSetupStep(state.currentStep, hasAgent)
 
-                    if (isFinalStep && !brainPresent) {
+                    if (isFinalStep && !hasAgent) {
                         // NODE CLIENT final step: there is NO agent /v1/setup/complete
                         // on ciris-server. The fed-ID was already minted (fed-ID step,
                         // first-run); the automated LAST step is the ownership
@@ -600,12 +598,13 @@ fun SetupScreen(
 @Composable
 private fun StepIndicators(
     currentStep: SetupStep,
-    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
+    /** The probed mode (CIRISServer#479) — three dots with a brain, two without. */
+    hasAgent: Boolean,
     modifier: Modifier = Modifier
 ) {
     // Three screens: You → Join the federation → AI. The node client has no
     // brain to configure, so it shows two.
-    val steps = if (brainPresent) {
+    val steps = if (hasAgent) {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2", SetupStep.AI to "3")
     } else {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2")
@@ -688,7 +687,8 @@ private fun l10nOr(key: String, fallback: String): String {
 private fun YouStep(
     viewModel: SetupViewModel,
     state: SetupFormState,
-    brainPresent: Boolean = CIRISBuild.HAS_AGENT,
+    /** The probed mode (CIRISServer#479) — the welcome copy differs. */
+    hasAgent: Boolean,
     modifier: Modifier = Modifier
 ) {
     // ONE scroll for the whole screen — the sections below deliberately do not
@@ -707,7 +707,7 @@ private fun YouStep(
             modifier = Modifier.padding(bottom = 8.dp)
         )
         Text(
-            text = if (brainPresent) {
+            text = if (hasAgent) {
                 localizedString("setup.welcome_desc")
             } else {
                 localizedString("mobile.setup_welcome_desc_node")
@@ -1635,19 +1635,13 @@ private fun AiStep(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Test Connection action.
-            //
-            // Bound to BOTH the real tap (onClick) and the UI-automation click
-            // path (testableClickable on the button below). This button used to
-            // carry `testable(...)` — position only, NOT reachable via the test
-            // server's /click — so automation could never trigger it and the
-            // live BYOK model dropdown (#1062) never populated under test.
-            // Extracting the action lets both the human and the harness run it.
-            val runTestConnection: () -> Unit = {
-                if (!isTesting) {
-                    isTesting = true
-                    testResult = null
-                    coroutineScope.launch(Dispatchers.Default) {
+            // Test Connection button
+            OutlinedButton(
+                onClick = {
+                    if (!isTesting) {
+                        isTesting = true
+                        testResult = null
+                        coroutineScope.launch(Dispatchers.Default) {
                             try {
                                 // Provider is now stored as key directly (e.g., "openai", "local")
                                 val providerId = state.llmProvider
@@ -1705,13 +1699,8 @@ private fun AiStep(
                             }
                         }
                     }
-                }
-
-            OutlinedButton(
-                onClick = runTestConnection,
-                // testableClickable (not testable): the /click endpoint must be
-                // able to fire this so UI automation can list BYOK models.
-                modifier = Modifier.fillMaxWidth().testableClickable("btn_test_connection") { runTestConnection() },
+                },
+                modifier = Modifier.fillMaxWidth().testable("btn_test_connection"),
                 enabled = !isTesting && (isLocalProvider || isMobileLocalProvider || state.llmApiKey.isNotEmpty()),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = SetupColors.Primary
@@ -1739,25 +1728,14 @@ private fun AiStep(
             // then fails every request. Break them out.
             configCheck?.let { c ->
                 Spacer(modifier = Modifier.height(12.dp))
-                // The verdict TEXT is exposed to the test server (testable carries
-                // `text` into /tree). Without this, CI could see THAT a check row
-                // rendered but never WHAT it said — which is how the stale-closure
-                // regression hid: the row said "Enter an API key" while the field
-                // held one, and no automation could read the words.
                 if (c.key != CheckState.UNKNOWN) {
-                    Box(Modifier.testable("txt_llm_check_key", text = c.keyMessage)) {
-                        LlmCheckRow(state = c.key, message = c.keyMessage)
-                    }
+                    LlmCheckRow(state = c.key, message = c.keyMessage)
                 }
                 if (c.models != CheckState.UNKNOWN) {
-                    Box(Modifier.testable("txt_llm_check_models", text = c.modelsMessage)) {
-                        LlmCheckRow(state = c.models, message = c.modelsMessage)
-                    }
+                    LlmCheckRow(state = c.models, message = c.modelsMessage)
                 }
                 if (c.selectedModel != CheckState.UNKNOWN) {
-                    Box(Modifier.testable("txt_llm_check_selected_model", text = c.selectedModelMessage)) {
-                        LlmCheckRow(state = c.selectedModel, message = c.selectedModelMessage)
-                    }
+                    LlmCheckRow(state = c.selectedModel, message = c.selectedModelMessage)
                 }
             }
 
@@ -1767,7 +1745,6 @@ private fun AiStep(
                     shape = RoundedCornerShape(8.dp),
                     color = if (result.valid) SetupColors.SuccessLight else SetupColors.ErrorLight,
                     modifier = Modifier.fillMaxWidth()
-                        .testable("txt_llm_test_result", text = listOfNotNull(result.message, result.error).joinToString(" — "))
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -3030,7 +3007,8 @@ private fun CompleteStep(
 @Composable
 private fun NavigationButtons(
     currentStep: SetupStep,
-    brainPresent: Boolean,
+    /** The probed mode (CIRISServer#479) — decides which step is FINAL. */
+    hasAgent: Boolean,
     canProceed: Boolean,
     validationError: String?,
     isSubmitting: Boolean,
@@ -3099,7 +3077,7 @@ private fun NavigationButtons(
                         )
                     } else {
                         Text(
-                            if (isFinalSetupStep(currentStep, brainPresent)) {
+                            if (isFinalSetupStep(currentStep, hasAgent)) {
                                 localizedString("setup.finish")
                             } else {
                                 localizedString("setup.next")

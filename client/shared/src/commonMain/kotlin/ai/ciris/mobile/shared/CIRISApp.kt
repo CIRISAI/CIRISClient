@@ -429,22 +429,11 @@ fun CIRISApp(
     var clientMode by remember { mutableStateOf<ai.ciris.mobile.shared.models.ClientMode?>(null) }
     var nodeVersion by remember { mutableStateOf<String?>(null) }
     val isAgentMode = clientMode?.isAgent ?: true  // default to agent wording until probed
-
-    // The agent surfaces this ATTACHMENT can actually use. One published client
-    // carries them all (the build ceiling, CIRISBuild.HAS_AGENT); whether the
-    // node on the other end can serve them is a runtime fact that can change
-    // under us when a node gains a brain. Unlike [isAgentMode] — which picks
-    // WORDING and may safely guess "agent" — this decides whether a door is
-    // offered at all, so an unresolved probe means "no": revealing Interact
-    // after the probe lands is recoverable, stranding someone on it is not.
-    // Does a brain EXIST on this node, configured or not? Deliberately NOT
-    // [ClientMode]: at an agent's first run the brain is folded but
-    // unconfigured, which clientModeFrom correctly reports as NODE — so keying
-    // the setup wizard on the mode would hide the AI step exactly when it is
-    // needed. `data.agent.folded` answers the narrower question the wizard asks.
-    var brainPresent by remember { mutableStateOf(false) }
-    val agentSurfacesUsable = CIRISBuild.HAS_AGENT && clientMode?.isAgent == true
-    val homeDestination = homeScreen(agentSurfacesUsable)
+    // The landing surface, from the PROBE (CIRISServer#479). Deliberately NOT
+    // `isAgentMode`: that one defaults to agent so copy reads naturally before
+    // the probe lands, while the LANDING must default to the node surface —
+    // opening on a chat with no brain behind it is the worse wrong guess.
+    val homeTarget = homeScreen(hasAgent = clientMode?.isAgent ?: false)
 
     // Navigation state
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Startup) }
@@ -471,10 +460,10 @@ fun CIRISApp(
 
 
     // Handle system back button - navigate back to appropriate parent screen
-    // homeDestination, not Screen.Interact: on the node client the landing surface is
+    // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is
     // Contacts, and a back press there must fall through to the platform (leave
     // the app) rather than navigating to a screen that is not in the sidebar.
-    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen != homeDestination) {
+    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen != homeTarget) {
         currentScreen = when (currentScreen) {
             // Login/Setup flow - don't go back, let user complete the flow
             is Screen.Login, is Screen.Setup -> currentScreen
@@ -487,8 +476,8 @@ fun CIRISApp(
             is Screen.AddFederationId -> addFederationIdReturnScreen
 
             // DataManagement and LLMSettings go back to the landing screen
-            is Screen.DataManagement -> homeDestination
-            is Screen.LLMSettings -> homeDestination
+            is Screen.DataManagement -> homeTarget
+            is Screen.LLMSettings -> homeTarget
             is Screen.VizSettings -> Screen.Settings
 
             // Federation sub-screens (reached from Global Commons hub tiles) go
@@ -511,14 +500,14 @@ fun CIRISApp(
             is Screen.Contacts -> {
                 val src = contactsPickerSourceScreen
                 contactsPickerSourceScreen = null
-                src ?: homeDestination
+                src ?: homeTarget
             }
 
             // A chat goes back to the contact list it was opened from
             is Screen.UserChat -> Screen.Contacts
 
             // All other screens go back to the landing screen
-            else -> homeDestination
+            else -> homeTarget
         }
     }
 
@@ -696,7 +685,12 @@ fun CIRISApp(
     }
     // SetupViewModel needs to survive configuration changes and app backgrounding
     // Pass apiClient to ensure proper base URL (especially in HA addon mode)
-    val setupViewModel: SetupViewModel = viewModel { SetupViewModel(apiClient) }
+    // KEYED on the probe (CIRISServer#479): `viewModel {}` caches its instance,
+    // so a VM built before the mode landed would keep the pre-probe answer for
+    // the app's whole life — the exact staleness this conversion exists to end.
+    val setupHasAgent = clientMode?.isAgent ?: false
+    val setupViewModel: SetupViewModel =
+        viewModel(key = "setup-$setupHasAgent") { SetupViewModel(apiClient, setupHasAgent) }
     // Set HA addon mode if running in Home Assistant addon context
     if (isHAAddonMode) {
         setupViewModel.setHAAddonMode(true)
@@ -791,7 +785,7 @@ fun CIRISApp(
     // → fail-closed, don't prompt). One-shot via fedIdCatchupPrompted; naturally
     // false once a fed-ID exists.
     //
-    // KEYED ON [homeDestination], NOT ON Screen.Interact. This effect used to name
+    // KEYED ON THE PROBED LANDING, NOT ON Screen.Interact. This effect used to name
     // Interact literally, which was the landing screen for BOTH builds when it
     // was written. Moving node mode's home to Contacts silently made it
     // unreachable: node users never visit Interact (it is not even in their
@@ -805,7 +799,7 @@ fun CIRISApp(
     // HA legacy owners the guided Add Federation ID flow this effect exists
     // to provide.
     LaunchedEffect(currentScreen, currentAccessToken, isHAAddonMode) {
-        if (currentScreen != homeDestination) return@LaunchedEffect
+        if (currentScreen != homeTarget) return@LaunchedEffect
         val authenticated = currentAccessToken != null || isHAAddonMode
         if (!authenticated || fedIdCatchupPrompted) return@LaunchedEffect
         try {
@@ -815,7 +809,7 @@ fun CIRISApp(
         }
         if (nodeSwitcherViewModel.ownerHasFedId.value == false) {
             fedIdCatchupPrompted = true
-            addFederationIdReturnScreen = homeDestination
+            addFederationIdReturnScreen = homeTarget
             PlatformLogger.i(TAG, "[fed-id-catchup] legacy owner has no fed-ID — auto-presenting Add Federation ID")
             currentScreen = Screen.AddFederationId
         }
@@ -1003,10 +997,6 @@ fun CIRISApp(
                     nodeHealth.agentFolded, nodeHealth.agentReachable,
                     brainUnconfigured,
                 )
-                // A brain that is folded but unconfigured is still a brain.
-                brainPresent = nodeHealth.agentFolded ||
-                    nodeHealth.cognitiveState != null ||
-                    nodeHealth.serviceCount > 0
                 // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
                 // brain on a daemon thread AFTER the node composes, so a probe at
                 // READY can legitimately see folded=true/reachable=false.
@@ -1196,7 +1186,7 @@ fun CIRISApp(
                 platformLog(TAG, "[INFO] Not first run in HA Addon mode - using ingress auth directly")
                 startupViewModel.setStatus(LocalizationHelper.getString("mobile.status_ready"))
                 interactViewModel.startPolling()
-                currentScreen = homeDestination
+                currentScreen = homeTarget
             } else {
                 // Not first run, normal mode - try to load stored token and check if valid/refresh if needed
                 platformLog(TAG, "[INFO] Not first run, attempting to load and validate stored token")
@@ -1406,7 +1396,7 @@ fun CIRISApp(
                                     }
                                 }
 
-                                currentScreen = homeDestination
+                                currentScreen = homeTarget
                             } else {
                                 // Token invalid and couldn't refresh - need interactive login
                                 PlatformLogger.i(TAG, " Token invalid/expired and silent refresh failed - redirecting to login")
@@ -1702,7 +1692,7 @@ fun CIRISApp(
                                                     isLoginLoading = false
                                                     loginStatusMessage = null
                                                     platformLog(TAG, "[INFO] Navigating to home (node) screen")
-                                                    currentScreen = homeDestination
+                                                    currentScreen = homeTarget
                                                 } catch (e: Exception) {
                                                     platformLog(TAG, "[ERROR] Token exchange failed: ${e::class.simpleName}: ${e.message}")
                                                     isLoginLoading = false
@@ -1804,54 +1794,35 @@ fun CIRISApp(
                             // password manager and 2FA, short enough that an
                             // abandoned attempt does not spin forever.
                             var token: ai.ciris.mobile.shared.models.OAuthHandoff? = null
-                            var failure: ai.ciris.mobile.shared.models.OAuthHandoffPoll.Failed? = null
                             var attempts = 0
-                            while (token == null && failure == null && attempts < 90) {
+                            while (token == null && attempts < 90) {
                                 kotlinx.coroutines.delay(2000)
                                 attempts++
                                 // After ~20s our own tab has had its chance;
                                 // accept a sign-in that completed in a stray
                                 // tab rather than spin while the node holds a
                                 // perfectly good session.
-                                when (val poll = apiClient.pollOAuthHandoff(
+                                token = apiClient.collectOAuthHandoff(
                                     nonce,
                                     nodeBaseUrl,
                                     allowUnbound = attempts > 10,
-                                )) {
-                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Ready -> token = poll.handoff
-                                    // The node reported a TERMINAL failure — stop
-                                    // spinning and surface its reason (#1098). Without
-                                    // this, a failed sign-in spun the full ~3 minutes.
-                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Failed -> failure = poll
-                                    // Heartbeat every ~20s: "still waiting" must be
-                                    // visible, or a stalled flow looks like a crashed one.
-                                    ai.ciris.mobile.shared.models.OAuthHandoffPoll.Pending ->
-                                        if (attempts % 10 == 0) {
-                                            platformLog(TAG, "[INFO][onGoogleSignIn] still waiting for the browser (${attempts * 2}s)")
-                                        }
+                                )
+                                // Heartbeat every ~20s: "still waiting" must be
+                                // visible, or a stalled flow looks like a crashed one.
+                                if (token == null && attempts % 10 == 0) {
+                                    platformLog(TAG, "[INFO][onGoogleSignIn] still waiting for the browser (${attempts * 2}s)")
                                 }
                             }
                             isLoginLoading = false
                             loginStatusMessage = null
                             val collected = token
                             if (collected == null) {
-                                // Show the reason the browser tab showed, so a user
-                                // who saw the node's error on the web page sees the
-                                // same thing here — not a 3-minute spinner (#1098).
-                                loginErrorMessage = when (failure?.reasonId) {
-                                    "auth.oauth.store_unavailable" ->
-                                        "That account is linked to more than one certificate on this node, so it can't sign you in with it. Sign in with your local username and password, or retire the duplicate."
-                                    "auth.oauth.flow_expired", "auth.oauth.state_invalid" ->
-                                        "That sign-in expired before it completed. Please try again."
-                                    null ->
-                                        LocalizationHelper.getString("auth.browser_signin.timed_out")
-                                    else ->
-                                        "Google sign-in couldn't complete (${failure?.reasonId}). Try again, or sign in with your local username and password."
-                                }
-                                // Return to the Login chooser so the message is
-                                // actionable rather than stranded behind a spinner.
-                                currentScreen = Screen.Login
-                                platformLog(TAG, "[WARN][onGoogleSignIn] sign-in did not complete after ${attempts * 2}s (reason=${failure?.reasonId ?: "timeout"}).")
+                                // Say WHICH failure this is. "Sign-in failed" would
+                                // cover both "you closed the tab" and "the node is
+                                // broken", and only one of those is the user's to fix.
+                                loginErrorMessage =
+                                    LocalizationHelper.getString("auth.browser_signin.timed_out")
+                                platformLog(TAG, "[WARN][onGoogleSignIn] no hand-off after ${attempts * 2}s. If you signed in successfully, the browser tab was probably an OLD one opened without ?app_nonce= — close stray CIRIS sign-in tabs and use the button again.")
                             } else {
                                 platformLog(TAG, "[INFO][onGoogleSignIn] desktop browser sign-in collected a session")
                                 currentAccessToken = collected.accessToken
@@ -1880,7 +1851,7 @@ fun CIRISApp(
                                     currentScreen = Screen.Setup
                                 } else {
                                     interactViewModel.startPolling()
-                                    currentScreen = homeDestination
+                                    currentScreen = homeTarget
                                 }
                             }
                         }
@@ -1988,7 +1959,7 @@ fun CIRISApp(
 
                                 isLoginLoading = false
                                 loginStatusMessage = null
-                                currentScreen = homeDestination
+                                currentScreen = homeTarget
                             } catch (e: Exception) {
                                 platformLog(TAG, "[ERROR] Local login failed: ${e::class.simpleName}: ${e.message}")
                                 isLoginLoading = false
@@ -2096,7 +2067,7 @@ fun CIRISApp(
             Screen.Setup -> {
                 platformLog(TAG, "[DEBUG][Screen.Setup] Rendering setup screen")
                 SetupScreen(
-                    brainPresent = brainPresent,
+                    hasAgent = setupHasAgent,
                     viewModel = setupViewModel,
                     apiClient = apiClient,
                     // Provide the one-time ownership CLAIM PIN / NodeCode captured
@@ -3476,7 +3447,7 @@ fun CIRISApp(
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null
-                        currentScreen = src ?: homeDestination
+                        currentScreen = src ?: homeTarget
                     },
                     onOpenChat = { contact ->
                         currentScreen = Screen.UserChat(
@@ -4220,11 +4191,8 @@ fun CIRISApp(
 
                 val sidebarComposable: @Composable () -> Unit = {
                     ai.ciris.mobile.shared.ui.nav.EpistemicSidebar(
+                        hasAgent = clientMode?.isAgent ?: false,
                         activeSurface = activeSurface,
-                        // The runtime narrowing: don't advertise agent surfaces
-                        // a bare node cannot serve. Reveals itself on the probe
-                        // after a node gains a brain — no reinstall.
-                        showAgentSurfaces = agentSurfacesUsable,
                         onSurfaceSelected = { surf ->
                             currentScreen = surfaceToScreen(surf)
                             // Auto-close the drawer on mobile after a
@@ -5045,29 +5013,31 @@ private fun CIRISTopBar(
 /**
  * The default post-auth landing screen.
  *
- * - **Attached to a bare node:** the app opens on CONTACTS. A node client's
- *   reason to exist is the people its owner can reach, so the landing surface
- *   is the conversation list — and when that list is empty, ContactsScreen
- *   lands with the "Add a Contact" card as the primary action rather than an
- *   empty panel, because an empty contacts list has exactly one useful next
- *   move. (This replaces the old ManageNodes landing: node administration is a
- *   thing the owner does occasionally, not the thing they opened the app for.
- *   It stays first-class in the Manage group.)
- * - **Attached to an agent:** the agent chat (AGENT_GROUP → NavSurface.Interact)
- *   is a first-class surfaced card, so the app opens on the reasoning-stream
- *   chat. Contacts stays reachable from the Manage group.
+ * - **Node (the attached node carries NO brain):** the app opens on
+ *   CONTACTS. A node client's reason to exist is the people its owner can
+ *   reach, so the landing surface is the conversation list — and when that list
+ *   is empty, ContactsScreen lands with the "Add a Contact" card as the primary
+ *   action rather than an empty panel, because an empty contacts list has
+ *   exactly one useful next move. (This replaces the old ManageNodes landing:
+ *   node administration is a thing the owner does occasionally, not the thing
+ *   they opened the app for. It stays first-class in the Manage group.)
+ * - **Agent (the attached node carries a brain):** the full client — the chat
+ *   (AGENT_GROUP → NavSurface.Interact) is a first-class surfaced card, so the
+ *   app opens on the reasoning-stream chat. Contacts stays reachable from the
+ *   Manage group.
  *
- * RUNTIME, not build-time. This used to be a `val` gated on
- * [CIRISBuild.HAS_AGENT], which could not express the thing that actually
- * happens: one published client, attached to a node that may GAIN a brain
- * later. It is now a function of the probed [ClientMode] — install the agent
- * beside the node and the next probe lands the same binary on Interact, with
- * no reinstall. `isAgent = false` while the probe is unresolved: offering
- * Contacts and then revealing Interact is recoverable; the reverse strands the
- * user on a screen the node cannot serve.
+ * **A FUNCTION OF THE PROBED MODE, not of the build** (CIRISServer#479). It
+ * was `CIRISBuild.HAS_AGENT`, decided at compile time, which forced two
+ * artifacts and meant a node that GAINED a brain kept the node landing until
+ * someone reinstalled it. `hasAgent` is the probed `ClientMode`, so the same
+ * installed client follows the node it is attached to.
+ *
+ * Defaults to the NODE landing while the probe is undetermined: opening on a
+ * chat that cannot answer (no brain) is a worse first impression than opening
+ * on contacts and revealing the chat a moment later.
  */
-private fun homeScreen(isAgent: Boolean): Screen =
-    if (isAgent) Screen.Interact else Screen.Contacts
+private fun homeScreen(hasAgent: Boolean): Screen =
+    if (hasAgent) Screen.Interact else Screen.Contacts
 
 /**
  * Navigation screens
