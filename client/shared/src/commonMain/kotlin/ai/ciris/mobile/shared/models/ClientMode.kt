@@ -53,6 +53,19 @@ enum class ClientMode {
  */
 data class ModeProbe(val mode: ClientMode, val undetermined: Boolean)
 
+/** The runtime's own answer to "what am I" — `data.role` in `/v1/system/health`. */
+const val ROLE_AGENT = "agent"
+
+/**
+ * A node with no brain folded on top of it.
+ *
+ * NOT the complement of [ROLE_AGENT], and nothing branches on it. A node's
+ * merged health keeps the NODE's own `role` even while a folded brain answers
+ * over it (`foldedReachableEnvelope` in ClientModeTest pins exactly that), so
+ * `fabric-node` means "ask the other signals", never "there is no brain".
+ */
+const val ROLE_FABRIC_NODE = "fabric-node"
+
 /**
  * Derive the [ClientMode] from a probed `/v1/system/health` snapshot. AGENT iff
  * the server reports a `cognitive_state` (the agent enrichment) OR a non-empty
@@ -74,11 +87,15 @@ data class ModeProbe(val mode: ClientMode, val undetermined: Boolean)
  * @param brainUnconfigured the brain says it still needs setup and holds no config,
  *   so its 10 first-run services are the wizard's, not an agent's. Only the brain
  *   knows this; the health envelope alone cannot distinguish it from a real agent.
+ * @param role `data.role` — the runtime's own declaration (CIRISAgent#1111).
+ *   [ROLE_AGENT] settles the question outright; anything else, including null
+ *   from a runtime too old to send it, falls through to the inference below.
  */
 fun clientModeFrom(
     cognitiveState: String?,
     serviceCount: Int,
     brainUnconfigured: Boolean = false,
+    role: String? = null,
 ): ClientMode =
     when {
         // A HALF-STARTED BRAIN IS NOT AN AGENT (CIRISAgent#1075).
@@ -107,6 +124,16 @@ fun clientModeFrom(
         // can say whether it is configured, so the caller asks it and passes the
         // answer in.
         brainUnconfigured -> ClientMode.NODE
+        // WHAT THE RUNTIME SAYS IT IS BEATS WHAT WE CAN INFER ABOUT IT.
+        // A bare node answers role="fabric-node"; the agent answers role="agent"
+        // (CIRISAgent#1111). Everything below this line is inference over
+        // symptoms — a cognitive_state that leaked, a service map that happened
+        // to be non-empty — and inference is what read a half-started brain as
+        // an agent (#1075) and a brain-carrying home as a bare node. The
+        // declaration is checked AFTER brainUnconfigured on purpose: a brain
+        // that still needs its wizard is honestly role="agent" and still must
+        // not get the agent surface.
+        role == ROLE_AGENT -> ClientMode.AGENT
         cognitiveState != null || serviceCount > 0 -> ClientMode.AGENT
         else -> ClientMode.NODE
     }
@@ -152,6 +179,8 @@ fun clientModeFrom(
  * @param brainUnconfigured as above (CIRISAgent#1075) — the brain's own answer
  *        that it holds no config. Defaults false: a caller that cannot ask must
  *        not downgrade a live agent.
+ * @param role `data.role` — as above (CIRISAgent#1111). Passed through to the
+ *        inference, and additionally settles [ModeProbe.undetermined].
  */
 fun clientModeFrom(
     cognitiveState: String?,
@@ -159,17 +188,25 @@ fun clientModeFrom(
     agentFolded: Boolean,
     agentReachable: Boolean,
     brainUnconfigured: Boolean = false,
+    role: String? = null,
 ): ModeProbe {
     // A folded brain that ANSWERED is an agent even if its health omitted the
     // usual fields — unless it answered "I am not configured yet".
     val answeringFold = agentFolded && agentReachable && !brainUnconfigured
+    // A runtime that DECLARED itself an agent (CIRISAgent#1111) has already
+    // answered the only question `undetermined` exists to defer, so there is
+    // nothing a bounded retry could learn. This does NOT weaken the fold retry:
+    // a node's merged health keeps role="fabric-node" while a brain answers
+    // over it, so the folded-but-unreachable path is unaffected on the common
+    // wire — this arm only fires when talking to an agent runtime directly.
+    val declaredAgent = role == ROLE_AGENT && !brainUnconfigured
     return ModeProbe(
         mode = if (answeringFold) {
             ClientMode.AGENT
         } else {
-            clientModeFrom(cognitiveState, serviceCount, brainUnconfigured)
+            clientModeFrom(cognitiveState, serviceCount, brainUnconfigured, role)
         },
-        undetermined = agentFolded && !agentReachable && !brainUnconfigured,
+        undetermined = agentFolded && !agentReachable && !brainUnconfigured && !declaredAgent,
     )
 }
 

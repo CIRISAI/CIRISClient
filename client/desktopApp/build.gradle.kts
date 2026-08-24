@@ -83,7 +83,10 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "CIRIS"
             packageVersion = nativePackageVersion
-            description = "CIRIS Node Desktop Application"
+            // Neither "Node" nor "Agent": since CIRISServer#479 ONE artifact
+            // ships and narrows itself against the probed node, so naming it
+            // for either half describes a build that no longer exists.
+            description = "CIRIS Desktop Application"
             vendor = "CIRIS L3C"
 
             macOS {

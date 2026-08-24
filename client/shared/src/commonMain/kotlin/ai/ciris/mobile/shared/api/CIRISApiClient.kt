@@ -5770,6 +5770,7 @@ class CIRISApiClient(
             val data = parsed["data"]?.jsonObject
 
             val status = data?.get("status")?.jsonPrimitive?.contentOrNull ?: "unknown"
+            val role = data?.get("role")?.jsonPrimitive?.contentOrNull
             val cognitiveState = data?.get("cognitive_state")?.jsonPrimitive?.contentOrNull
 
             // Parse services for counts
@@ -5787,6 +5788,7 @@ class CIRISApiClient(
 
             SystemStatus(
                 status = status,
+                role = role,
                 cognitive_state = cognitiveState,
                 services_online = healthyCount,
                 services_total = totalCount,

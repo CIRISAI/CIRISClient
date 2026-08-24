@@ -996,6 +996,7 @@ fun CIRISApp(
                     nodeHealth.cognitiveState, nodeHealth.serviceCount,
                     nodeHealth.agentFolded, nodeHealth.agentReachable,
                     brainUnconfigured,
+                    role = nodeHealth.role,
                 )
                 // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
                 // brain on a daemon thread AFTER the node composes, so a probe at
@@ -1014,6 +1015,7 @@ fun CIRISApp(
                                 nh.cognitiveState, nh.serviceCount,
                                 nh.agentFolded, nh.agentReachable,
                                 brainUnconfigured,
+                                role = nh.role,
                             )
                         }
                     }
@@ -1035,7 +1037,8 @@ fun CIRISApp(
                         runCatching { apiClient.getSystemStatus() }
                             .onSuccess { sys ->
                                 mode = ai.ciris.mobile.shared.models.clientModeFrom(
-                                    sys.cognitive_state, sys.services_total, brainUnconfigured
+                                    sys.cognitive_state, sys.services_total, brainUnconfigured,
+                                    role = sys.role,
                                 )
                             }
                             .onFailure { e ->

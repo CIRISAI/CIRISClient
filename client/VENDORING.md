@@ -22,7 +22,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
 | `CIRISAI/CIRISServer` | `v0.5.188` (`1b4f3772c9fb5ecde42d4821daaaf0cb919ca614`) | `merge/server-v0.5.188` | 2026-08-24 |
-| `CIRISAI/CIRISAgent` | `v2.9.33-stable` (`2bd11fcbdb71f110ef1cc5e40b3d1cca06ce055c`) | `merge/agent-v2.9.33` | 2026-08-22 |
+| `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
 `local.properties`, `substrate.lock.json`) applies to every pull.
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `7a74b708f3a5f0aba680b4484c3819e1ea28456ed7546486d953ef5695703601`
+**state digest:** `82a6584ca88de87469c6961311c302af8027a28e1b62da97de1bfa1387b5ed82`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

@@ -337,4 +337,114 @@ class ClientModeTest {
     fun version_mismatch_fires_on_a_real_difference() {
         assertTrue(isVersionMismatch("0.5.175", "0.5.176"))
     }
+
+    // ── The runtime declares what it is (CIRISAgent#1111) ──────────────────
+    //
+    // Every case above infers agent-ness from symptoms. A bare node in a home
+    // that carries a brain reports role="fabric-node" with no cognitive_state
+    // and no services, and the client correctly renders the node surface — but
+    // an AGENT must never be reduced to that surface just because its health
+    // envelope happened to omit the fields the inference reads.
+
+    @Test
+    fun a_runtime_that_declares_agent_is_an_AGENT() {
+        assertEquals(
+            ClientMode.AGENT,
+            clientModeFrom(cognitiveState = null, serviceCount = 0, role = ROLE_AGENT),
+            "the declaration beats the inference — an agent that answered role=agent is an " +
+                "agent even if this particular envelope carried no cognitive_state or services",
+        )
+    }
+
+    @Test
+    fun a_fabric_node_stays_a_NODE() {
+        assertEquals(
+            ClientMode.NODE,
+            clientModeFrom(cognitiveState = null, serviceCount = 0, role = ROLE_FABRIC_NODE),
+            "a bare node declares fabric-node and must keep the node surface",
+        )
+    }
+
+    @Test
+    fun the_declaration_does_not_beat_the_unconfigured_brain_gate() {
+        // An agent that still needs its wizard honestly answers role="agent".
+        // #1075 must still win: its 10 first-run services are the wizard's.
+        assertEquals(
+            ClientMode.NODE,
+            clientModeFrom("SETUP", serviceCount = 10, brainUnconfigured = true, role = ROLE_AGENT),
+            "role is checked AFTER brainUnconfigured — a half-started brain is not an agent " +
+                "surface no matter what it calls itself",
+        )
+    }
+
+    @Test
+    fun absent_role_falls_back_to_the_existing_inference() {
+        assertEquals(
+            ClientMode.AGENT,
+            clientModeFrom("WORK", serviceCount = 22, role = null),
+            "an older node/agent that sends no role must behave exactly as before",
+        )
+        assertEquals(
+            ClientMode.NODE,
+            clientModeFrom(null, serviceCount = 0, role = null),
+            "and a roleless bare node still reads as NODE",
+        )
+    }
+
+    // ── Where the two restorations meet: the declaration and the fold ──────
+    //
+    // #1111 (role) and #390 (folded/reachable) were written against different
+    // trees and arrive here in the same merge. These pin the composition,
+    // because the dangerous reading is that role somehow answers the fold's
+    // question — it does not, and the wire is why.
+
+    @Test
+    fun a_folded_envelopes_fabric_node_role_does_NOT_suppress_the_retry() {
+        // THE CASE THAT MATTERS. A node's merged health keeps the NODE's own
+        // role while a brain folds over it, so role="fabric-node" arrives on
+        // exactly the envelope #390 must retry. Reading it as "no brain" is
+        // the latch that hid a live agent for a whole session.
+        val probe = clientModeFrom(
+            cognitiveState = null, serviceCount = 0,
+            agentFolded = true, agentReachable = false,
+            role = ROLE_FABRIC_NODE,
+        )
+        assertTrue(
+            probe.undetermined,
+            "fabric-node is the NODE's own answer and says nothing about the brain folded " +
+                "over it — this envelope is still a retry, not a verdict",
+        )
+    }
+
+    @Test
+    fun a_declared_agent_has_nothing_left_to_retry() {
+        // The mirror: role="agent" only comes from an agent runtime answering
+        // for itself. That settles the one question `undetermined` defers, so
+        // a bounded re-probe could learn nothing.
+        val probe = clientModeFrom(
+            cognitiveState = null, serviceCount = 0,
+            agentFolded = true, agentReachable = false,
+            role = ROLE_AGENT,
+        )
+        assertEquals(ClientMode.AGENT, probe.mode)
+        assertFalse(
+            probe.undetermined,
+            "the runtime already said what it is — retrying cannot improve on a declaration",
+        )
+    }
+
+    @Test
+    fun an_unconfigured_brain_that_declares_agent_is_NODE_and_final() {
+        // All three axes at once: declared agent, folded and answering, and the
+        // brain itself says it still needs its wizard. #1075 wins, and because
+        // the brain SPOKE, NODE is a verdict rather than a state to retry.
+        val probe = clientModeFrom(
+            cognitiveState = "SETUP", serviceCount = 10,
+            agentFolded = true, agentReachable = true,
+            brainUnconfigured = true,
+            role = ROLE_AGENT,
+        )
+        assertEquals(ClientMode.NODE, probe.mode)
+        assertFalse(probe.undetermined, "the brain answered — there is nothing left to retry")
+    }
 }
