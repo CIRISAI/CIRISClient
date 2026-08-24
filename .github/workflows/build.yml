@@ -52,7 +52,7 @@ jobs:
         # keys: 29 languages are 29 audiences and a fallback to English is a
         # silent demotion of one of them.
         run: |
-          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --self-test --no-server-src
           python3 client/tools/check_localization_sync.py --no-server-src --strict
 
       - name: Vendoring state

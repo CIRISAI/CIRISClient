@@ -136,7 +136,7 @@ jobs:
           set -euo pipefail
           python3 packaging/check_vendoring.py
           python3 compat/validate.py
-          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --self-test --no-server-src
           python3 client/tools/check_localization_sync.py --no-server-src --strict
 
       - name: The tag must name the version being published

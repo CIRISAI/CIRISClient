@@ -87,7 +87,7 @@ jobs:
       - name: Guard (strict) — the actual gate
         if: steps.check.outputs.missing == 'true'
         run: |
-          python3 client/tools/check_localization_sync.py --self-test
+          python3 client/tools/check_localization_sync.py --self-test --no-server-src
           python3 client/tools/check_localization_sync.py --no-server-src --strict
 
       - name: Re-record the vendoring state digest
