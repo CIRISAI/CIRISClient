@@ -1,51 +1,54 @@
 # VENDORING — `client/`
 
-This tree is **vendored**, not authored here. It is the CIRIS Kotlin
-Multiplatform client, copied from the repository that has been its source of
-truth to date.
-
-Until this repo's first release, CIRISServer and CIRISAgent still carry their
-own copies. The point of the extraction is that they stop: see
-[`../README.md`](../README.md) § *The consumption contract*.
+This tree is the **tree of record** for the CIRIS Kotlin Multiplatform client.
+It began as a vendored copy; since the three-way merge recorded below it is
+authored here, and the copies in CIRISServer and CIRISAgent are the ones with
+a retirement date: see [`../README.md`](../README.md) § *The consumption
+contract* and [`../FSD/ONE_CLIENT_N_NODES.md`](../FSD/ONE_CLIENT_N_NODES.md)
+§3.
 
 ---
 
 ## 1. Provenance
 
+The tree is a merge lineage, not a copy of any one upstream state. The
+original extraction was a true three-way merge (FSD §3): base
+[`CIRISAI/CIRISAgent`](https://github.com/CIRISAI/CIRISAgent) `client/` @
+`6083bdf` (2.9.28) vendored byte-identically in commit `dc17f56`, ours the
+eight PR #1 extraction deltas (§4), theirs CIRISServer @ `a2433ba` (0.5.185).
+Upstream states have since been pulled per §8; this ledger records **each
+upstream's last merged state** — the branch point the next pull starts from:
+
+| Upstream | Last merged state | Input commit | Pulled |
+|---|---|---|---|
+| `CIRISAI/CIRISServer` | `v0.5.187` (`3c9fbcd2c7db1d24208ca7d2ce10311ac98cf5e0`) | `merge/server-v0.5.187` | 2026-08-24 |
+| `CIRISAI/CIRISAgent` | `v2.9.33-stable` (`2bd11fcbdb71f110ef1cc5e40b3d1cca06ce055c`) | `merge/agent-v2.9.33` | 2026-08-22 |
+
+The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
+`local.properties`, `substrate.lock.json`) applies to every pull.
+
+For the artifact manifest (`packaging/stage_artifacts.py`), the newest content
+source is the pair a bisect wants:
+
 | | |
 |---|---|
-| **Source repo** | [`CIRISAI/CIRISAgent`](https://github.com/CIRISAI/CIRISAgent) |
-| **Source path** | `client/` |
-| **Commit** | `6083bdff497d774540fd749c647567ec8984e66b` |
-| **Commit subject** | `2.9.28 — say which model, which provider, and every language equal` |
-| **Commit date** | 2026-08-20 |
-| **Branch** | `main` |
-| **Vendored on** | 2026-08-20 |
-| **Files vendored** | 1761 |
-| **`CLIENT_VERSION` at vendor time** | `0.5.181` |
+| **Source repo** | [`CIRISAI/CIRISServer`](https://github.com/CIRISAI/CIRISServer) |
+| **Commit** | `3c9fbcd2c7db1d24208ca7d2ce10311ac98cf5e0` |
 
-### The vendoring digest
+### The state digest
 
-Every vendored file is **byte-identical** to its upstream original. That is a
-checkable claim, not a promise:
+The tree's current recorded state — sha256-of-sha256s over every git-tracked
+file under `client/` except this one:
 
-```
-find client -type f -not -name VENDORING.md -print0 \
-  | sort -z | xargs -0 sha256sum | sha256sum
-→ f7fc7eba43ef57a5a16d87af3799a95f4692f975d85ec8cc17a91c9790b55dbe
-```
+**state digest:** `77643733cb33581a79c3e0271b5aa685f4d6b311591bcd897456ef00b776123a`
 
-(This file is the one thing under `client/` that is not vendored, so it excludes
-itself.)
-
-Run from the repo root, so the hashed paths carry the `client/` prefix the
-upstream tree uses too — the same command over an upstream checkout, with §2's
-exclusions applied, produces the same digest. It is recorded here so that "did anything drift?" is
-one command, and so the answer survives the memory of whoever asks.
-
-**The digest is for the vendoring commit only.** Local deltas (§3) change it by
-design — that is why they are enumerated. Re-verify against §2's excluded-path
-list, not against a later HEAD.
+`packaging/check_vendoring.py` asserts it on every push, and refuses any
+tracked file matching a §2 never-vendor class. **Any commit that touches
+`client/` re-records this line in the same commit**
+(`python3 packaging/check_vendoring.py --print`) — one mechanical line, and it
+is what forces this file's diff, and therefore the provenance question, into
+every review that moves the tree. Git history is the changelog; this digest is
+the seal.
 
 ---
 
@@ -87,61 +90,87 @@ they were force-added.
   the whole set (`app_packages_native/`, `Frameworks/`, `Resources/`,
   `Resources.zip`, `substrate.lock.json`) on a macOS runner and uploads it as
   the `ios-substrate-refresh` artifact.
-- `client/iosApp/substrate.lock.json` **is** vendored — it is the pin, and it is
-  small. It records which `ciris-server` the excluded binaries were built from.
+- **Python runtime tree** (Android Chaquopy, iOS Resources) — staged from a
+  CIRISAgent checkout by its `tools.dev.stage_runtime`; point Gradle at one
+  with `-PcirisAgentRoot=/path/to/CIRISAgent`. The `syncPythonSources` task
+  refuses with this remedy when none is present, instead of a
+  `ModuleNotFoundError` three tasks deep in Chaquopy.
+- `client/iosApp/substrate.lock.json` records which `ciris-server` the excluded
+  iOS binaries were built from. The agent tree vendored it; the server tree does
+  not, and the merge followed the server: it arrives with rehydration (the
+  workflow above writes it) and is git-ignored here alongside what it pins.
 
 Nothing here can be rebuilt from this repo alone, which is the honest statement
 of the boundary: **this repo owns the client, not the substrate it drives.**
 
 ---
 
-## 3. Local deltas
+## 3. Local deltas — RETIRED at the merge
 
-Changes made *after* the vendoring commit, each one a drift-to-configuration
-migration or a fix for something that only breaks once the tree is extracted.
-This table is the complete list. Adding to the tree without adding a row here
-is how the digest in §1 stops meaning anything.
+The delta table that stood here enumerated the eight changes PR #1 made on top
+of the byte-identical vendor commit. It existed because the tree was a copy and
+every departure from the copy needed a declaration. Since the three-way merge
+(§1) the tree is authored here: git history is the declaration, the §1 state
+digest is the seal, and a change worth coordinating with the consumers is a
+change worth a cherry-pick or an upstream issue, not a table row.
 
-| File | Delta | Why |
-|---|---|---|
-| `shared/build.gradle.kts` | + `generateBuildFlavor` task, generated srcDir | Makes `HAS_AGENT` / `CLIENT_VERSION` build inputs (§4) |
-| `shared/src/commonMain/.../CIRISBuild.kt` | **deleted** | Regenerated per flavor into `build/generated/flavor/` |
-| `shared/src/commonMain/.../models/ClientMode.kt` | `const val CLIENT_VERSION` removed | Regenerated from the `VERSION` file |
-| `desktopApp/build.gradle.kts` | `syncLocalizationResources` removed | Destructive after extraction — see §5 |
-| `androidApp/build.gradle` | `syncLocalizationAssets` removed | Destructive after extraction — see §5 |
-| `local.properties` | **deleted**, now git-ignored | Contained one developer's absolute `sdk.dir`; breaks every other machine |
-| `tools/check_localization_sync.py` | **added** (adapted) | Was `tools/dev/` in CIRISAgent, outside `client/` — see §6 |
+The eight deltas themselves are folded into the merge and documented where they
+live: the flavor generation in §4, the `Sync` removal in §5, the localization
+checker in §6. What replaced the table's job:
+
+- **Undeclared drift** — the §1 state digest, re-recorded by every commit that
+  touches `client/` (per-file hashes, so no file can move silently).
+- **Never-vendor classes** — `packaging/check_vendoring.py` refuses substrate
+  binaries, key material, compiled Python, and `local.properties` outright (§2).
+- **Upstream coordination** — pulls are merges (§8), so a change made here can
+  no longer be silently reverted by a re-vendor. That quiet middle was the
+  reason the table had to exist.
 
 ---
 
-## 4. The drift-to-flavor migration
+## 4. The drift, and what each piece became
 
 Three things differed between the CIRISServer copy and the CIRISAgent copy of
 this tree. None of them were disagreements about the code; all three were the
-same source configured two ways with no way to say so. Each is now a build
-input.
+same source configured two ways with no way to say so. Two are now build
+inputs derived from one file each; the third turned out not to be a build
+question at all.
 
 | # | Drift | Was | Is now | Selected by |
 |---|---|---|---|---|
-| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | generated into `CIRISBuild.kt` per flavor; still a `const val`, so dead-code elimination is unchanged | `-PhasAgent=true\|false` (default `false`) |
+| 1 | `CIRISBuild.HAS_AGENT` | `const val` hand-edited per repo — `false` in CIRISServer, `true` in CIRISAgent | **deleted** (CIRISServer#479). It briefly became a generated build flavor; that was still the wrong question. An agent IS a node that has had a brain added, so "are the agent surfaces live?" is about the ATTACHED NODE and is answered at runtime by the probed `ClientMode`. One artifact ships and narrows itself. `CIRISBuild.kt` is a committed tombstone carrying the reasoning. | the probe: `data.agent.{folded,reachable}` from the merged `/v1/system/health` (CIRISServer#390) |
 | 2 | `CLIENT_VERSION` | `const val` in `models/ClientMode.kt`, hand-edited, kept in step by a script in one repo and by nothing in the other | generated from the repo-root `VERSION` file, the same file the Python package version comes from | `VERSION` (override: `-PclientVersion=`) |
 | 3 | localization bundles | 29 languages in 6 mirrored copies, kept identical by a checker that lived outside `client/` | 4 in-tree mirrors, checker vendored to `client/tools/` and run in CI | — (see §5, §6) |
 | 4 | `generated-api/` | 1107 committed files, generator not in the build graph | unchanged, provenance documented | — (see §7) |
 
-`-PhasAgent` is the spelling `MISSION.md` §5.2 already names. It is read in
-`shared/build.gradle.kts` and defaults from `gradle.properties`
-(`ciris.hasAgent=false`), because the node client is the base product and the
-agent build is the superset.
+**There is no build flavor.** `-PhasAgent` existed for two days and is gone
+with the constant it selected, along with `ciris.hasAgent` in
+`gradle.properties` and the node/agent split in the packaging payload. It was
+a real improvement on a hand-edited `const val` — it at least gave the fork a
+name and made both sides buildable — but it kept the premise that the answer
+is a property of the ARTIFACT, and that premise is what CIRISServer#479
+reported: a node that gains a brain keeps the node UX until someone reinstalls
+a different build. It also cost two ~63 MiB desktop bundles to say one thing,
+which does not fit in one wheel. `stage_artifacts.py` still takes `--flavor`,
+but only to RECORD which build produced the staged jar; it no longer selects a
+destination.
 
-**Why generate rather than patch.** `CLIENT_VERSION`'s own KDoc upstream warns
-that mutating it at build time "recompiled the whole Compose client and
-defeated the desktop-JAR gradle cache every leg (CIRISServer#272)". Generation
-does not reintroduce that: the generated file's content is a pure function of
-(flavor, version), so it is byte-stable across builds of the same flavor and
-the cache holds. It is invalidated exactly when the version changes — which is
-when a rebuild is correct. What #272 actually cost was a value that differed
-*per CI leg*; a value that differs *per flavor* is what separate flavor build
-directories are for.
+The flag is deleted rather than deprecated. A build constant nothing reads is
+the CIRISServer#365 shape (nine `mesh_config` keys, zero consumers), and
+leaving it would invite the next compile-time branch — which is the thing that
+has to stop being possible. Every default is node-first: a surface that has
+not yet learned the answer shows the node behaviour, because offering agent
+affordances on a brainless node is a door onto a wall, while the reverse
+merely arrives a moment late. `NavGatingTest` pins that direction.
+
+**Why generate `CLIENT_VERSION` rather than patch it.** Its own KDoc upstream
+warns that mutating it at build time "recompiled the whole Compose client and
+defeated the desktop-JAR gradle cache every leg (CIRISServer#272)".
+Generation does not reintroduce that: the generated file's content is a pure
+function of the version, so it is byte-stable across builds of the same
+version and the cache holds. It is invalidated exactly when the version
+changes — which is when a rebuild is correct. What #272 actually cost was a
+value that differed *per CI leg*.
 
 ---
 
@@ -174,9 +203,15 @@ bundle directory, wired to `preBuild` / `processResources`.
 At the vendored commit, upstream `localization/` contains **zero** `*.json`
 files (4 tracked files: one `CLAUDE.md`, three `.txt`). A `Sync` with an empty
 source does not copy nothing — it makes the destination match the source, so it
-**deletes the 30 committed locale files in its destination**. The Android one's
-destination is `src/main/assets/localization`: the primary bundle, the one
-`manifest.json` and every parity check read.
+**deletes all 30 committed files in its destination**: the 29 locales *and*
+`manifest.json`. The Android one's destination is `src/main/assets/localization`
+— the primary bundle, and `manifest.json` is the supported-language list that
+`CLAUDE.md` names as the source of truth and that every parity check reads.
+
+The `exclude "manifest.json"` on the task's *source* filter does not protect the
+destination; it only means the file would not be copied back in. A `Sync`'s
+delete pass considers everything in the destination, so the one file the task
+takes visible care of is a file it removes.
 
 Upstream this is latent (the path resolves to a real, if empty, directory).
 Extracted, `../../localization` resolves outside this repo entirely. Either
@@ -239,37 +274,33 @@ which is where a generator task would have to live.
 
 ---
 
-## 8. Re-vendoring
+## 8. Pulling from upstream — merges, not wipes
 
-Until CIRISServer and CIRISAgent switch to consuming the wheel, upstream will
-keep moving. To pull a newer upstream state:
+Until CIRISServer and CIRISAgent consume the wheel, their trees keep moving.
+The wipe-and-reapply procedure that stood here is retired: it is exactly how a
+re-vendor silently reverts local work. A pull is now a three-way merge, the
+same shape as §1:
 
 ```bash
-git clone --depth=1 https://github.com/CIRISAI/CIRISAgent /tmp/agentsrc
-cd /tmp/agentsrc && git rev-parse HEAD          # → the new SHA for §1
-
-cd <CIRISClient>
-git checkout -b chore/re-vendor-<short-sha>
-rm -rf client
-git -C /tmp/agentsrc archive --format=tar HEAD client | tar x
-
-# §2 — the exclusion set
+# in a CIRISClient checkout, on a branch
+git checkout -b merge/<upstream>-<short-sha> <the commit recorded in §1 as that upstream's last merged state>
+rm -rf client && git -C <upstream-checkout> archive <sha> client | tar x
+# apply §2's exclusion set (see packaging/check_vendoring.py FORBIDDEN)
 rm -rf client/iosApp/Resources client/iosApp/Frameworks \
        client/iosApp/app_packages_native client/iosApp/Resources.zip \
        client/androidApp/wheels client/androidApp/src/main/jniLibs \
        client/androidApp/src/main/assets/bin
-
-git add -A -f client
-find client -type f -not -name VENDORING.md -print0 \
-  | sort -z | xargs -0 sha256sum | sha256sum      # → the new §1 digest
+find client \( -name .ciris_keys -o -name __pycache__ \) -type d -prune -exec rm -rf {} +
+find client -name '*.pyc' -delete; rm -f client/local.properties
+git checkout <current-branch> -- client/VENDORING.md   # not upstream's to write
+git add -A client && git commit
+git checkout <working-branch> && git merge merge/<upstream>-<short-sha>
+# resolve, re-record the §1 state digest, update §1's merge inputs — same commit
 ```
 
-Then **re-apply §3 by hand and update this file in the same commit.** The
-deltas are few and small precisely so that this step stays possible; if the
-table ever grows past what a person will re-apply, that is the signal to push
-the change upstream instead of carrying it.
+Conflicts are the point: they are the places where this tree and upstream both
+moved, surfaced for a decision instead of settled by whichever copy ran last.
 
-Direction of travel: this is temporary. Once consumers depend on the published
-wheel, `client/` here becomes the source of truth and the copies in
-CIRISServer and CIRISAgent are deleted — at which point §1 records a
-provenance, not a sync obligation, and this section is what gets deleted first.
+Direction of travel: once the consumers depend on the published wheel, their
+copies are deleted, pulls stop, and §1 records a history rather than a sync
+obligation.
