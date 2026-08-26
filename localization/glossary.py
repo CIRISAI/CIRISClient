@@ -152,7 +152,16 @@ def block(code: str, texts: List[str]) -> str:
     if hits:
         out.append(
             "CANONICAL TERMINOLOGY (from the CIRIS glossary for this language — "
-            "these are decided, not suggestions; use them exactly):"
+            "these are decided, not suggestions; use them exactly).\n"
+            "CASE IS NOT NORMATIVE HERE: the glossary tables write terms in the "
+            "case that reads well IN A TABLE, so apply the target language's own "
+            "sentence casing rather than copying the capitalisation shown. A "
+            "reviewer once rejected a correct Yoruba rendering for not being in "
+            "the ALL CAPS its glossary row happened to use.\n"
+            "IF A SHIPPED ANCHOR BELOW USES A DIFFERENT RENDERING OF ONE OF THESE "
+            "TERMS, SAY SO rather than silently picking one: the corpus and the "
+            "glossary can disagree, and which of them is right is not yours to "
+            "decide inside a single string."
         )
         out += [f"  {e}  ->  {t}" for e, t in hits.items()]
     for title, text in guidance(code):
