@@ -831,7 +831,10 @@ fun CIRISApp(
         ai.ciris.mobile.shared.viewmodels.AdminLadderViewModel(apiClient)
     }
     val identityManagementViewModel: ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel = viewModel {
-        ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient)
+        // nodeBaseUrl, not the api base: the federation warnings this screen
+        // surfaces are the NODE's (CIRISServer#490), and a folded agent's brain
+        // answers on a different port.
+        ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
     val contactsViewModel: ContactsViewModel = viewModel {
         ContactsViewModel(apiClient)

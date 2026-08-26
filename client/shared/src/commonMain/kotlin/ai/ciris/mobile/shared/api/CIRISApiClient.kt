@@ -9164,30 +9164,7 @@ class CIRISApiClient(
             val status = data["status"]?.jsonPrimitive?.content ?: "unknown"
             val cognitiveState = data["cognitive_state"]?.jsonPrimitive?.content ?: "UNKNOWN"
 
-            // Parse warnings array
-            val warnings = data["warnings"]?.jsonArray?.mapNotNull { warningElement ->
-                try {
-                    val warningObj = warningElement.jsonObject
-                    val actionUrl = warningObj["action_url"]?.jsonPrimitive?.contentOrNull
-                    SystemWarning(
-                        code = warningObj["code"]?.jsonPrimitive?.content ?: "",
-                        message = warningObj["message"]?.jsonPrimitive?.content ?: "",
-                        severity = warningObj["severity"]?.jsonPrimitive?.content ?: "warning",
-                        actionUrl = actionUrl,
-                        // Two structured spellings, because the node has two
-                        // reasonable ways to say it and neither is prose. A
-                        // dedicated field if the envelope grows one; otherwise the
-                        // key_id already carried in the repair route it points at.
-                        // What is NOT read is `message` — see [SystemWarning.subjectKeyId].
-                        subjectKeyId = warningObj["subject_key_id"]?.jsonPrimitive?.contentOrNull
-                            ?: warningObj["key_id"]?.jsonPrimitive?.contentOrNull
-                            ?: keyIdFromActionUrl(actionUrl),
-                    )
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to parse warning: ${e.message}")
-                    null
-                }
-            } ?: emptyList()
+            val warnings = parseWarnings(data)
 
             // Parse degraded_mode flag
             val degradedMode = data["degraded_mode"]?.jsonPrimitive?.boolean ?: false
@@ -13634,6 +13611,38 @@ data class SystemWarning(
 )
 
 /**
+ * The `warnings` array of a `/v1/system/health` envelope.
+ *
+ * Shared by the brain's [CIRISApiClient.getSystemHealth] and the node's
+ * [parseNodeHealth] because they are the same wire shape from two different
+ * processes — and because the surfaces that consume warnings have to be able to
+ * ask the RIGHT one. `federation.*` codes are emitted by the node walking its
+ * own `federation_keys`; a folded agent's brain answers on a different port and
+ * knows nothing about them.
+ */
+internal fun parseWarnings(data: kotlinx.serialization.json.JsonObject): List<SystemWarning> =
+    data["warnings"]?.jsonArray?.mapNotNull { element ->
+        runCatching {
+            val w = element.jsonObject
+            val actionUrl = w["action_url"]?.jsonPrimitive?.contentOrNull
+            SystemWarning(
+                code = w["code"]?.jsonPrimitive?.content ?: "",
+                message = w["message"]?.jsonPrimitive?.content ?: "",
+                severity = w["severity"]?.jsonPrimitive?.content ?: "warning",
+                actionUrl = actionUrl,
+                // Two structured spellings, because the node has two reasonable
+                // ways to say it and neither is prose. `subject_key_id` is the
+                // contract (CIRISServer#490); `key_id` and the repair route's own
+                // parameter are kept because they cost nothing and are also
+                // structure. What is NOT read is `message`.
+                subjectKeyId = w["subject_key_id"]?.jsonPrimitive?.contentOrNull
+                    ?: w["key_id"]?.jsonPrimitive?.contentOrNull
+                    ?: keyIdFromActionUrl(actionUrl),
+            )
+        }.getOrNull()
+    } ?: emptyList()
+
+/**
  * `key_id` from a repair route's query string, or null.
  *
  * `action_url` is documented as *"where to go to act on it, when there is such a
@@ -13680,7 +13689,18 @@ data class NodeHealth(
     val cognitiveState: String?,
     val serviceCount: Int,
     val agentFolded: Boolean = false,
-    val agentReachable: Boolean = false
+    val agentReachable: Boolean = false,
+    /**
+     * The node's own `warnings`, which are NOT the brain's.
+     *
+     * `federation.*` codes are raised by the node walking its `federation_keys`
+     * (CIRISServer#490). In a folded-agent deployment the brain answers
+     * `/v1/system/health` on a different port and knows nothing about them, so a
+     * surface that asked [CIRISApiClient.getSystemHealth] for a federation
+     * warning would find none and render nothing — silently, and only in the
+     * deployment that matters most (Codex, PR #4).
+     */
+    val warnings: List<SystemWarning> = emptyList(),
 )
 
 /**
@@ -13711,7 +13731,8 @@ fun parseNodeHealth(body: String): NodeHealth {
         cognitiveState = data["cognitive_state"]?.jsonPrimitive?.contentOrNull,
         serviceCount = serviceCount,
         agentFolded = agent?.get("folded")?.jsonPrimitive?.booleanOrNull ?: false,
-        agentReachable = agent?.get("reachable")?.jsonPrimitive?.booleanOrNull ?: false
+        agentReachable = agent?.get("reachable")?.jsonPrimitive?.booleanOrNull ?: false,
+        warnings = parseWarnings(data),
     )
 }
 

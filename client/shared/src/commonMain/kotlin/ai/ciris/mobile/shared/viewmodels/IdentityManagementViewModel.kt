@@ -32,6 +32,17 @@ import kotlinx.coroutines.launch
  */
 class IdentityManagementViewModel(
     private val apiClient: CIRISApiClient,
+    /**
+     * The NODE, not the brain.
+     *
+     * `federation.*` warnings are raised by the node walking its own
+     * `federation_keys` (CIRISServer#490). In the folded-agent deployment the
+     * brain answers `/v1/system/health` on 8080 and the node on 4243, so asking
+     * the client's default base URL finds no federation warning and the repair
+     * card stays hidden — silently, and precisely in the deployment where the
+     * damaged portable ID lives (Codex, PR #4).
+     */
+    private val nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL,
 ) : ViewModel() {
 
     companion object {
@@ -148,7 +159,7 @@ class IdentityManagementViewModel(
             add(keyId)
             _occurrences.value.forEach { add(it.occurrenceKeyId) }
         }
-        runCatching { apiClient.getSystemHealth() }
+        runCatching { apiClient.getNodeHealth(nodeBaseUrl) }
             .onSuccess { health ->
                 val found = subjectBlindKeyFor(health.warnings, owned)
                 _subjectBlind.value = found
@@ -175,7 +186,17 @@ class IdentityManagementViewModel(
                         }
                 }
             }
-            .onFailure { PlatformLogger.w(TAG, "[subjectBlind] health probe: ${it.message}") }
+            .onFailure {
+                // CLEAR IT. A probe that failed is not evidence the identity is
+                // still broken, and this view model has no periodic retry — so a
+                // stale value would keep a red "your identity is unusable" card
+                // on screen for the rest of its life, including after the repair
+                // succeeded (Codex, PR #4). Absence of evidence renders nothing
+                // here, exactly as it does for an unattributed warning and an
+                // empty roster.
+                _subjectBlind.value = null
+                PlatformLogger.w(TAG, "[subjectBlind] node health probe: ${it.message}")
+            }
     }
 
     /** Reload the roster for the resolved self fed-ID. */

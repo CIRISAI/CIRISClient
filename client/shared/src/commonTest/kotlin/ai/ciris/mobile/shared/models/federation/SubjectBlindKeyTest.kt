@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.models.federation
 
 import ai.ciris.mobile.shared.api.SystemWarning
 import ai.ciris.mobile.shared.api.keyIdFromActionUrl
+import ai.ciris.mobile.shared.api.parseNodeHealth
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
@@ -148,6 +149,55 @@ class SubjectBlindKeyTest {
     @Test
     fun a_healthy_node_shows_no_card() {
         assertNull(subjectBlindKeyFor(emptyList(), roster))
+    }
+
+    // ── end to end, from the NODE's envelope ──────────────────────────────────
+    //
+    // The warning is raised by the node walking its own federation_keys. In a
+    // folded-agent deployment the brain answers /v1/system/health on another
+    // port and knows nothing about it, so a surface that asked the brain would
+    // find nothing and render nothing — silently, and only in the deployment
+    // where the damaged portable ID actually lives.
+
+    @Test
+    fun the_nodes_health_envelope_carries_the_warning_through_to_the_card() {
+        val envelope = """
+        {
+          "data": {
+            "status": "ok",
+            "role": "fabric-node",
+            "version": "0.5.189",
+            "services": {},
+            "agent": { "folded": true, "reachable": true },
+            "warnings": [
+              {
+                "code": "federation.key_subject_blind",
+                "message": "key $mine has a subject-blind registration envelope",
+                "severity": "warning",
+                "action_url": "/v1/federation/adopt-scrubbed",
+                "subject_key_id": "$mine"
+              }
+            ]
+          }
+        }
+        """
+        val health = parseNodeHealth(envelope)
+        assertEquals(1, health.warnings.size)
+        assertEquals("warning", health.warnings[0].severity)
+        val found = subjectBlindKeyFor(health.warnings, roster)
+        assertEquals(mine, found?.keyId)
+        assertEquals(
+            "http://127.0.0.1:4243/v1/federation/adopt-scrubbed",
+            repairUrl("http://127.0.0.1:4243", found?.actionUrl),
+        )
+    }
+
+    @Test
+    fun a_node_envelope_with_no_warnings_array_parses_to_none() {
+        // Every node older than CIRISServer#490 — and every healthy one.
+        val health = parseNodeHealth("""{ "data": { "status": "ok", "services": {} } }""")
+        assertEquals(emptyList(), health.warnings)
+        assertNull(subjectBlindKeyFor(health.warnings, roster))
     }
 
     // ── the repair route must be openable, or no button is drawn ──────────────
