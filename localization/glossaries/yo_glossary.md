@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Yoruba. 
 
 | English | Yoruba | Definition |
 |---------|--------|------------|
-| ACCORD | ÀDÉHÙN | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] ÀDÉHÙN | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | ALÁṢẸ ỌLỌ́GBỌ́N | Human oversight entity |
 | Conscience | ẸRÍ-ỌKÀN | Ethical filter mechanism |
 | Principal Hierarchy | ÌTÒ-ÌṢÀKÓSO PÀTÀKÌ | Chain of command for guidance |

@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Italian.
 
 | English | Italian | Definition |
 |---------|---------|------------|
-| ACCORD | ACCORD | The covenant governing agent behavior (keep in English) |
+| ACCORD | [DEPRECATED] ACCORD | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior (keep in English) |
 | Wise Authority | Wise Authority | Human oversight entity (keep in English) |
 | Conscience | Coscienza | Ethical filter mechanism |
 | Principal Hierarchy | Gerarchia dei Principi | Chain of command for guidance |

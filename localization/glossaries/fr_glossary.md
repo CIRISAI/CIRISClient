@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in French. 
 
 | English | French | Definition |
 |---------|--------|------------|
-| ACCORD | ACCORD | The covenant governing agent behavior (kept in English) |
+| ACCORD | [DEPRECATED] ACCORD | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior (kept in English) |
 | Wise Authority | Wise Authority | Human oversight entity (kept in English as technical term) |
 | Conscience | Conscience | Ethical filter mechanism |
 | Principal Hierarchy | Hiérarchie Principale | Chain of command for guidance |

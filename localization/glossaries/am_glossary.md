@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Amharic.
 
 | English | Amharic | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | ስምምነት | Simimnet | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] ስምምነት | Simimnet | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | የጥበብ ባለስልጣን | Ye-Ṭibeb Balesiliṭan | Human oversight entity |
 | Conscience | ህሊና | Hilina | Ethical filter mechanism |
 | Principal Hierarchy | የመርሆ ደረጃ ሰንሰለት | Ye-Meriho Dereja Senselet | Chain of command for guidance |

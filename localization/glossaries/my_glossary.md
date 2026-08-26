@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Burmese.
 
 | English | Burmese | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | သဘောတူညီချက် | Tha-baw-tu-nyi-chè | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] သဘောတူညီချက် | Tha-baw-tu-nyi-chè | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | ပညာရှိအာဏာပိုင် | Pyin-nya-shi-a-na-paing | Human oversight entity |
 | Conscience | အသိစိတ် | A-thi-seit | Ethical filter mechanism |
 | Principal Hierarchy | အဓိကအဆင့်အတန်း | A-hti-ka-a-shin-a-tan | Chain of command for guidance |

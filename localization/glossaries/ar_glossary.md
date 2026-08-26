@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Arabic. 
 
 | English | Arabic | Transliteration | Definition |
 |---------|--------|-----------------|------------|
-| ACCORD | عہد نامہ | Ahd Namah | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] عہد نامہ | Ahd Namah | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | السلطة الحكيمة | As-Sultah al-Hakimah | Human oversight entity |
 | Conscience | الضمير | Ad-Damir | Ethical filter mechanism |
 | Principal Hierarchy | التسلسل الهرمي للمبادئ | At-Tasalsul al-Harami lil-Mabadi' | Chain of command for guidance |

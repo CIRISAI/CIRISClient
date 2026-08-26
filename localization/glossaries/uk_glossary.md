@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Ukrainia
 
 | English | Ukrainian | Transliteration | Definition |
 |---------|-----------|-----------------|------------|
-| ACCORD | УГОДА | Uhoda | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] УГОДА | Uhoda | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Мудрий Авторитет | Mudryi Avtorytet | Human oversight entity |
 | Conscience | Совість | Sovist | Ethical filter mechanism |
 | Principal Hierarchy | Головна Ієрархія | Holovna Iierarkhiia | Chain of command for guidance |

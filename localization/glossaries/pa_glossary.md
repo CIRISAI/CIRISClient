@@ -27,7 +27,7 @@ This glossary provides both scripts where practical, with Gurmukhi as the defaul
 
 | English | Gurmukhi | Shahmukhi | Definition |
 |---------|----------|-----------|------------|
-| ACCORD | ਇਕਰਾਰਨਾਮਾ | اقرارنامہ | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] ਇਕਰਾਰਨਾਮਾ | اقرارنامہ | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | ਸਿਆਣੀ ਅਥਾਰਟੀ | سیانی اتھارٹی | Human oversight entity |
 | Conscience | ਜ਼ਮੀਰ | ضمیر | Ethical filter mechanism |
 | Principal Hierarchy | ਮੁੱਖ ਲੜੀ | مکھ لڑی | Chain of command for guidance |

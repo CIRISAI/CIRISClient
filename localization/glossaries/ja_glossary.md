@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Japanese
 
 | English | Japanese | Romaji | Definition |
 |---------|----------|--------|------------|
-| ACCORD | 協定 | Kyōtei | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] 協定 | Kyōtei | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | 賢明な権威 | Kenmei na Ken'i | Human oversight entity |
 | Conscience | 良心 | Ryōshin | Ethical filter mechanism |
 | Principal Hierarchy | 原則的階層 | Gensokuteki Kaisō | Chain of command for guidance |

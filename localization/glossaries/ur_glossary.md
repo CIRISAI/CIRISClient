@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Urdu. Al
 
 | English | Urdu | Transliteration | Definition |
 |---------|------|-----------------|------------|
-| ACCORD | عہد نامہ | Ahd Nama | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] عہد نامہ | Ahd Nama | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | دانش مند اتھارٹی | Danish Mand Authority | Human oversight entity |
 | Conscience | ضمیر | Zameer | Ethical filter mechanism |
 | Principal Hierarchy | اصولی درجہ بندی | Usooli Darja Bandi | Chain of command for guidance |

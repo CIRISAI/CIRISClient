@@ -23,7 +23,7 @@ This glossary defines the canonical translations for key CIRIS terms in Telugu. 
 
 | English | Telugu | Transliteration | Definition |
 |---------|--------|-----------------|------------|
-| ACCORD | ఒప్పందం | Oppandam | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] ఒప్పందం | Oppandam | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | జ్ఞాన అధికారం | Jñāna Adhikāram | Human oversight entity |
 | Conscience | మనస్సాక్షి | Manassākṣi | Ethical filter mechanism |
 | Principal Hierarchy | ముఖ్య క్రమం | Mukhya Kramam | Chain of command for guidance |

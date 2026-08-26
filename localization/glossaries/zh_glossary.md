@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Simplifi
 
 | English | Chinese | Pinyin | Definition |
 |---------|---------|--------|------------|
-| ACCORD | 协议 | xiéyì | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] 协议 | xiéyì | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | 智慧权威 | zhìhuì quánwēi | Human oversight entity |
 | Conscience | 良知 | liángzhī | Ethical filter mechanism |
 | Principal Hierarchy | 原则层次 | yuánzé céngcì | Chain of command for guidance |

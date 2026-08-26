@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Bengali.
 
 | English | Bengali | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | চুক্তি | Chukti | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] চুক্তি | Chukti | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | জ্ঞানী কর্তৃপক্ষ | Gyani kortripokko | Human oversight entity |
 | Conscience | বিবেক | Bibek | Ethical filter mechanism |
 | Principal Hierarchy | প্রধান শ্রেণিবিন্যাস | Prodhan shrenibinyas | Chain of command for guidance |
