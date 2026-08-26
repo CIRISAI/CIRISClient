@@ -9168,11 +9168,20 @@ class CIRISApiClient(
             val warnings = data["warnings"]?.jsonArray?.mapNotNull { warningElement ->
                 try {
                     val warningObj = warningElement.jsonObject
+                    val actionUrl = warningObj["action_url"]?.jsonPrimitive?.contentOrNull
                     SystemWarning(
                         code = warningObj["code"]?.jsonPrimitive?.content ?: "",
                         message = warningObj["message"]?.jsonPrimitive?.content ?: "",
                         severity = warningObj["severity"]?.jsonPrimitive?.content ?: "warning",
-                        actionUrl = warningObj["action_url"]?.jsonPrimitive?.contentOrNull
+                        actionUrl = actionUrl,
+                        // Two structured spellings, because the node has two
+                        // reasonable ways to say it and neither is prose. A
+                        // dedicated field if the envelope grows one; otherwise the
+                        // key_id already carried in the repair route it points at.
+                        // What is NOT read is `message` — see [SystemWarning.subjectKeyId].
+                        subjectKeyId = warningObj["subject_key_id"]?.jsonPrimitive?.contentOrNull
+                            ?: warningObj["key_id"]?.jsonPrimitive?.contentOrNull
+                            ?: keyIdFromActionUrl(actionUrl),
                     )
                 } catch (e: Exception) {
                     logWarn(method, "Failed to parse warning: ${e.message}")
@@ -13608,8 +13617,40 @@ data class SystemWarning(
     val code: String,
     val message: String,
     val severity: String = "warning",
-    val actionUrl: String? = null
+    val actionUrl: String? = null,
+    /**
+     * The record this warning is ABOUT, when the node names one — a
+     * `federation_keys.key_id` for the federation.* codes.
+     *
+     * Structured on purpose. [message] arrives already composed and, per
+     * `degradation::Warning`, is *never localized*, so it is the one part of a
+     * warning a consumer must not parse: extracting a key_id from an English
+     * sentence would break the first time the sentence improved, and would make
+     * the 29-language bundle a lie for anything keyed off it. A surface that
+     * needs to know WHOSE record is broken — the identity card
+     * (CIRISServer#490) — reads this or renders nothing.
+     */
+    val subjectKeyId: String? = null,
 )
+
+/**
+ * `key_id` from a repair route's query string, or null.
+ *
+ * `action_url` is documented as *"where to go to act on it, when there is such a
+ * place"*, and for a per-record repair that place necessarily names the record.
+ * Reading it from there is reading a URL parameter — a structure — not a
+ * sentence. Anything it cannot parse yields null, and a null subject renders
+ * nothing (see `subjectBlindKeyFor`).
+ */
+internal fun keyIdFromActionUrl(actionUrl: String?): String? {
+    val query = actionUrl?.substringAfter('?', "")?.takeIf { it.isNotEmpty() } ?: return null
+    return query.split('&')
+        .asSequence()
+        .map { it.substringBefore('=') to it.substringAfter('=', "") }
+        .firstOrNull { (name, _) -> name == "key_id" || name == "subject_key_id" }
+        ?.second
+        ?.takeIf { it.isNotBlank() }
+}
 
 data class SystemHealthData(
     val status: String,

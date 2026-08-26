@@ -91,6 +91,35 @@
       },
       "notes": "the superset merge: server v0.5.188 (1b4f377) + agent v2.9.36-stable (c211a9f) folded into the tree of record. androidApp ciris-server pin at 0.5.188 (published). The localization guard stops declaring the emitters absent and is pointed at a pinned CIRISServer checkout instead, so its five server-id checks grade 303 emitted ids rather than none; the KNOWN_UNLOCALIZED debt list is exactly current at 19 entries. localize.py becomes a translate->evaluate->repair pipeline with the 29 CIRIS glossaries as input",
       "published": null
+    },
+    {
+      "client_version": "0.5.189",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.188. The identity card's repair surface is additive and renders only when the node emits federation.key_subject_blind with a named subject (CIRISServer#490); a node that emits nothing shows nothing, which is the same screen 0.5.188 shipped",
+      "node_max_tested": "0.5.188",
+      "agent_min_tested": "2.9.36",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair"
+      ],
+      "capabilities_note": "identity.repair is the CLIENT half of CIRISServer#490: a subject-blind federation key row (pre-CIRISPersist#659 envelope, naming only key_id) is refused at every peer it replicates to, and until now nothing told its owner. The card keys on Warning.code, never on Warning.message — which arrives already composed and never localized — and is scoped to the operator's own roster, so a stranger's malformed row cannot appear on it. It renders nothing when the node names no subject: fail-closed, because 'your identity is unusable' about an unattributed row is worse than no card. LINEAGE SCOPING ('fedIDs descended from the portable ID') is NOT implemented — MintedIdentity carries no lineage field and the live damaged row has no delegates_to to walk (open question on CIRISServer#490). The roster relation is used instead, and the key_id string is never parsed for it",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3860
+      },
+      "notes": "the identity-card release CIRISServer 0.5.189 pins for adoption (CIRISServer#471). Seven new mobile.identity_repair_* ids, translated into the other 28 locales by the localize pipeline. The androidApp ciris-server pin stays at 0.5.188 until 0.5.189 publishes — that pin may only name a version that already exists on PyPI",
+      "published": null
     }
   ]
 }

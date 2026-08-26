@@ -75,6 +75,13 @@ import androidx.compose.ui.unit.sp
 fun IdentityManagementScreen(
     viewModel: IdentityManagementViewModel,
     onBack: () -> Unit,
+    /**
+     * Open the node's repair route for a subject-blind identity
+     * (CIRISServer#490). Defaulted to a no-op so every existing call site
+     * compiles: the button that uses it only renders when the node supplied a
+     * route, and a host that has not wired one has nothing to open.
+     */
+    onOpenRepair: (String) -> Unit = {},
 ) {
     val identityKeyId by viewModel.identityKeyId.collectAsState()
     val occurrences by viewModel.occurrences.collectAsState()
@@ -83,6 +90,7 @@ fun IdentityManagementScreen(
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
     val notice by viewModel.notice.collectAsState()
+    val subjectBlind by viewModel.subjectBlind.collectAsState()
 
     var deviceCode by remember { mutableStateOf("") }
     var pendingRevoke by remember { mutableStateOf<String?>(null) }
@@ -412,6 +420,91 @@ fun IdentityManagementScreen(
                             },
                         ) {
                             Text(localizedString("mobile.common_dismiss"))
+                        }
+                    }
+                }
+            }
+
+            // ── A damaged identity, and the fact that it is repairable ────────
+            //
+            // Here rather than on a node-degradation banner (CIRISServer#490):
+            // this is not the node failing to serve, it is a fact about THIS
+            // PERSON'S portable identity — the one they import from USB in the
+            // wizard and use to mint the occurrences the card below creates. It
+            // sits directly above that card because that is what it affects.
+            //
+            // Rendered from `code`, never from `Warning.message`: the node's
+            // sentence arrives already composed and never localized, so echoing
+            // it would ship one English string to 29 audiences on a screen whose
+            // whole subject is the operator's own identity.
+            subjectBlind?.let { blind ->
+                Spacer(Modifier.height(16.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    modifier = Modifier.fillMaxWidth().testable("identity_repair_card"),
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                        Text(
+                            localizedString("mobile.identity_repair_title"),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            localizedString("mobile.identity_repair_key_label"),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
+                        Text(
+                            blind.keyId,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.testable("identity_repair_key_id"),
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        // Four sentences, in the order the operator needs them:
+                        // what is wrong, that it is recoverable, what recovery
+                        // takes, and that nothing is being deleted.
+                        //
+                        // Spelled out rather than looped over a list of key
+                        // names: the localization guard's reference scan reads
+                        // string-literal call sites only, so a key reached
+                        // through a variable is a key it cannot see — and an id
+                        // nothing appears to reference is an id that gets
+                        // deleted as dead.
+                        //
+                        // The scan is literal enough to have flagged a call
+                        // written INSIDE this comment while it was being
+                        // explained, which is the behaviour working.
+                        listOf(
+                            localizedString("mobile.identity_repair_body"),
+                            localizedString("mobile.identity_repair_recoverable"),
+                            localizedString("mobile.identity_repair_needs"),
+                            localizedString("mobile.identity_repair_keeps"),
+                        ).forEach { sentence ->
+                            Text(
+                                sentence,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                            Spacer(Modifier.height(6.dp))
+                        }
+                        // Only when the node named somewhere to go. An action
+                        // button that leads nowhere is worse than none on a card
+                        // whose entire message is "this is fixable".
+                        blind.actionUrl?.let { url ->
+                            TextButton(
+                                onClick = { onOpenRepair(url) },
+                                modifier = Modifier.testableClickable("btn_identity_repair_action") {
+                                    onOpenRepair(url)
+                                },
+                            ) {
+                                Text(localizedString("mobile.identity_repair_action"))
+                            }
                         }
                     }
                 }

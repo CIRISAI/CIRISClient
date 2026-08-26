@@ -5,6 +5,8 @@ import ai.ciris.mobile.shared.models.federation.AddOccurrenceBody
 import ai.ciris.mobile.shared.models.federation.AddOccurrenceRequest
 import ai.ciris.mobile.shared.models.federation.MintedIdentity
 import ai.ciris.mobile.shared.models.federation.SelfOccurrence
+import ai.ciris.mobile.shared.models.federation.SubjectBlindKey
+import ai.ciris.mobile.shared.models.federation.subjectBlindKeyFor
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,6 +56,16 @@ class IdentityManagementViewModel(
      */
     private val _enrolledIdentity = MutableStateFlow<MintedIdentity?>(null)
     val enrolledIdentity: StateFlow<MintedIdentity?> = _enrolledIdentity.asStateFlow()
+
+    /**
+     * A subject-blind key row on THIS operator's roster (CIRISServer#490), when
+     * the node reports one. Null is the normal state and the only state that
+     * renders nothing — including when the node reports the code without naming
+     * a subject, because a card that says "your identity is unusable" about an
+     * unidentified row is worse than no card. See [subjectBlindKeyFor].
+     */
+    private val _subjectBlind = MutableStateFlow<SubjectBlindKey?>(null)
+    val subjectBlind: StateFlow<SubjectBlindKey?> = _subjectBlind.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -118,6 +130,52 @@ class IdentityManagementViewModel(
                 PlatformLogger.w(TAG, "[refreshRoster] ${e.message}")
                 _error.value = "Couldn't load the device roster: ${e.message}"
             }
+        refreshSubjectBlind(keyId)
+    }
+
+    /**
+     * Ask the node whether any identity on this roster is subject-blind.
+     *
+     * AFTER the roster, and never in place of it: the scope is the roster, so a
+     * failed roster load means an EMPTY scope, and an empty scope must resolve
+     * to "no card" rather than to "cannot tell, show it anyway". Its own failure
+     * is logged and not surfaced — the identity screen still works when the
+     * node's health endpoint does not answer, and an error banner about a probe
+     * the user did not ask for is noise on the screen they came here for.
+     */
+    private suspend fun refreshSubjectBlind(keyId: String) {
+        val owned = buildSet {
+            add(keyId)
+            _occurrences.value.forEach { add(it.occurrenceKeyId) }
+        }
+        runCatching { apiClient.getSystemHealth() }
+            .onSuccess { health ->
+                val found = subjectBlindKeyFor(health.warnings, owned)
+                _subjectBlind.value = found
+                if (found != null) {
+                    PlatformLogger.w(
+                        TAG,
+                        "[subjectBlind] ${found.keyId} is refused everywhere it replicates " +
+                            "(CIRISServer#490); repair route=${found.actionUrl ?: "none given"}",
+                    )
+                } else {
+                    // Say WHY the card is hidden when the node raised the code
+                    // and this could not attribute it: silence here would look
+                    // identical to a healthy roster, and the difference is a
+                    // missing field in the node's warning, not a healthy key.
+                    health.warnings
+                        .filter { it.code == ai.ciris.mobile.shared.models.federation.WARNING_KEY_SUBJECT_BLIND }
+                        .forEach {
+                            PlatformLogger.w(
+                                TAG,
+                                "[subjectBlind] the node raised ${it.code} but named no subject " +
+                                    "(no subject_key_id / key_id / key_id= in action_url), so it " +
+                                    "cannot be attributed to this roster and no card is shown",
+                            )
+                        }
+                }
+            }
+            .onFailure { PlatformLogger.w(TAG, "[subjectBlind] health probe: ${it.message}") }
     }
 
     /** Reload the roster for the resolved self fed-ID. */
