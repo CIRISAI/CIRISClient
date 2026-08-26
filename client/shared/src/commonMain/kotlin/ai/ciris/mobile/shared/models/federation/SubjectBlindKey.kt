@@ -12,6 +12,22 @@ import ai.ciris.mobile.shared.api.SystemWarning
  * refuses it — *"an envelope that does not name its subject stands for ANY
  * record it is pasted onto"* — at every peer it replicates to, forever.
  *
+ * ## Severity is `warning`, and the card is red anyway
+ *
+ * It arrives as `warning`, not `error`, and that is deliberate on the node's
+ * side: `is_degrading()` maps `error|critical` to `degraded_mode = true`, and
+ * this condition is PERMANENT until somebody repairs it. Raised as an error it
+ * would pin every node holding a stale row as degraded forever, over something
+ * that reduces no node service at all — the degradation module's own doctrine
+ * names that failure exactly: *"collapsing them would make the flag useless the
+ * first time an advisory fired."*
+ *
+ * So severity answers "is this node degrading?" and the answer is no. It does
+ * NOT answer "how loudly should this be shown to the person whose identity is
+ * broken", and nothing here reads it. Prominence is keyed on the code, which is
+ * why the card renders in the error container from a warning-severity signal.
+ * A card that waited for a severity bump would be waiting for a bug.
+ *
  * KEY ON THIS CONSTANT, NEVER ON [SystemWarning.message]. The substrate's own
  * rule for refusal tokens is *"consumers key on the token constant, never on
  * message prose"*, and `degradation::Warning.message` is documented as arriving

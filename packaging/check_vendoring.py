@@ -4,6 +4,8 @@ that must never be vendored?
 
     python3 packaging/check_vendoring.py            # check
     python3 packaging/check_vendoring.py --print    # print the current digest
+    python3 packaging/check_vendoring.py --merged-ref CIRISServer   # that upstream's
+                                                    # last merged commit, per §1
 
 Since the 0.5.185 three-way merge (`client/VENDORING.md` §1) this tree is the
 tree of record: changes are authored here and git history is the changelog.
@@ -46,6 +48,36 @@ REPO = Path(__file__).resolve().parents[1]
 VENDORING = REPO / "client" / "VENDORING.md"
 
 _DIGEST_RE = re.compile(r"state digest:\**\s*`([0-9a-f]{64})`")
+
+# The §1 provenance table: | `CIRISAI/X` | `vN` (`sha`) | `branch` | date |
+_MERGED_ROW_RE = re.compile(
+    r"^\|\s*`CIRISAI/(?P<repo>\w+)`\s*\|\s*`(?P<tag>[^`]+)`\s*\(`(?P<sha>[0-9a-f]{7,40})`\)",
+    re.MULTILINE,
+)
+
+
+def merged_ref(repo: str) -> tuple[str, str]:
+    """(tag, commit) that §1 records as `repo`'s last merged state.
+
+    WHY A WORKFLOW WANTS THIS. The localization guard has to be pointed at the
+    Rust sources that emit localized ids (`--server-src`), and CI first pinned
+    that checkout to `v$(cat VERSION)`. That works only while the client's
+    version trails the server's releases — and the client LEADS by design: 0.5.189
+    exists here so CIRISServer 0.5.189 can pin a client that has the feature. The
+    tag did not exist yet, so every workflow failed at checkout.
+
+    This is the right pin and was all along: the commit the tree was actually
+    merged against is the emitter set the bundle was reconciled with, it is
+    recorded here already, and it cannot fail to exist because merging it is
+    what put the row in the table.
+    """
+    for m in _MERGED_ROW_RE.finditer(VENDORING.read_text(encoding="utf-8")):
+        if m.group("repo") == repo:
+            return m.group("tag"), m.group("sha")
+    sys.exit(
+        f"[FAIL] client/VENDORING.md §1 records no merged state for CIRISAI/{repo}; "
+        f"the provenance table is where that lives and a pull always updates it"
+    )
 
 # Tracked paths under client/ that must never exist. Mirrors VENDORING.md §2.
 FORBIDDEN = (
@@ -136,6 +168,12 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # Each query prints ONE line and exits. `$(… --merged-ref X)` is how a
+    # workflow reads these, so anything else on stdout becomes part of the value.
+    if "--merged-ref" in sys.argv:
+        _, sha = merged_ref(sys.argv[sys.argv.index("--merged-ref") + 1])
+        print(sha)
+        sys.exit(0)
     if "--print" in sys.argv:
         print(compute(tracked_files()))
         sys.exit(0)

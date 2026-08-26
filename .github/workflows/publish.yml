@@ -130,10 +130,18 @@ jobs:
       # The release gates, re-run here rather than trusted from the branch: a
       # tag can point at any commit. Linux only — they are OS-independent, and
       # running them four times says nothing new.
-      - name: The server release this client pairs with
+      - name: The CIRISServer commit this tree was merged against
         id: pair
         if: matrix.name == 'linux-x86_64'
-        run: echo "version=$(cat VERSION)" >> "$GITHUB_OUTPUT"
+        # NOT `v$(cat VERSION)`. That pin assumed the client's version trails the
+        # server's releases, and the client LEADS by design: 0.5.189 exists here
+        # so CIRISServer 0.5.189 can pin a client that has the feature. The tag
+        # did not exist, and every workflow failed at checkout.
+        #
+        # VENDORING.md §1 already records the commit the tree was actually merged
+        # against, which is the emitter set the bundle was reconciled with — and
+        # it cannot fail to exist, because merging it is what wrote the row.
+        run: echo "ref=$(python3 packaging/check_vendoring.py --merged-ref CIRISServer)" >> "$GITHUB_OUTPUT"
 
       - name: Emitter sources (the ids the bundles must define)
         if: matrix.name == 'linux-x86_64'
@@ -142,12 +150,13 @@ jobs:
         # the guard is handed a checkout instead of being allowed to declare
         # the absence — a check with a denominator of zero is not a pass.
         #
-        # Pinned to the VERSION this client pairs with, so the emitters graded
-        # are the ones from that server release rather than whatever main holds.
+        # Pinned to the merged state in VENDORING.md §1, so the emitters graded
+        # are the ones this tree was reconciled against rather than whatever main
+        # holds — and the pin moves only when a §8 pull moves it.
         uses: actions/checkout@v4
         with:
           repository: CIRISAI/CIRISServer
-          ref: v${{ steps.pair.outputs.version }}
+          ref: ${{ steps.pair.outputs.ref }}
           path: .emitters
 
       - name: Gates

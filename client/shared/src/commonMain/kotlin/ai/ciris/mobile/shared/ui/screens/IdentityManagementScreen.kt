@@ -437,6 +437,14 @@ fun IdentityManagementScreen(
             // sentence arrives already composed and never localized, so echoing
             // it would ship one English string to 29 audiences on a screen whose
             // whole subject is the operator's own identity.
+            //
+            // ERROR CONTAINER FROM A WARNING-SEVERITY SIGNAL, on purpose. The
+            // node sends `warning` because `error` would set degraded_mode, and
+            // this condition is permanent until repaired — it would pin the node
+            // as degraded forever over something that degrades no service.
+            // Severity answers "is this node degrading?"; it does not answer
+            // "how loudly does the person whose identity is broken need to hear
+            // it". That second question is answered here, off the code.
             subjectBlind?.let { blind ->
                 Spacer(Modifier.height(16.dp))
                 Surface(

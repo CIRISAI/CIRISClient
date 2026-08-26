@@ -30,10 +30,15 @@ class SubjectBlindKeyTest {
         subject: String? = mine,
         actionUrl: String? = "/v1/federation/adopt-scrubbed",
         message: String = "key $mine has a subject-blind registration envelope",
+        // `warning`, not `error`, and that is the node's contract rather than a
+        // fixture convenience: `error` sets degraded_mode, and this condition is
+        // permanent until repaired, so it would pin the node degraded forever
+        // over something that degrades no service (CIRISServer#490).
+        severity: String = "warning",
     ) = SystemWarning(
         code = code,
         message = message,
-        severity = "error",
+        severity = severity,
         actionUrl = actionUrl,
         subjectKeyId = subject,
     )
@@ -97,6 +102,30 @@ class SubjectBlindKeyTest {
         // business, however similar its prose.
         assertNull(subjectBlindKeyFor(listOf(warn(code = "federation.key_self_signed")), roster))
         assertNull(subjectBlindKeyFor(listOf(warn(code = "")), roster))
+    }
+
+    // ── severity is not what selects this card ────────────────────────────────
+
+    @Test
+    fun the_card_is_selected_by_code_at_every_severity() {
+        // The node sends `warning` and this must still surface — the card is red
+        // because of what the code MEANS, not because of how the node scored its
+        // effect on service. A card waiting for `error` would be waiting for a
+        // bug: raising it as error sets degraded_mode, and this condition never
+        // clears on its own.
+        listOf("warning", "error", "critical", "info", "").forEach { sev ->
+            assertEquals(
+                mine,
+                subjectBlindKeyFor(listOf(warn(severity = sev)), roster)?.keyId,
+                "severity=$sev must not change whether the operator is told",
+            )
+        }
+    }
+
+    @Test
+    fun a_high_severity_warning_of_another_code_still_belongs_elsewhere() {
+        // The mirror: severity cannot promote an unrelated code onto this card.
+        assertNull(subjectBlindKeyFor(listOf(warn(code = "memory.pressure", severity = "critical")), roster))
     }
 
     @Test
