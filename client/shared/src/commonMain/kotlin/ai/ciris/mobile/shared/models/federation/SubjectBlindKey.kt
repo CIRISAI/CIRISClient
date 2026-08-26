@@ -97,3 +97,30 @@ fun subjectBlindKeyFor(
         .firstOrNull { (_, subject) -> subject in ownedKeyIds }
         ?.let { (w, subject) -> SubjectBlindKey(keyId = subject, actionUrl = w.actionUrl) }
 }
+
+
+/**
+ * Where the repair button actually goes: [SubjectBlindKey.actionUrl] resolved
+ * against the node.
+ *
+ * `action_url` is documented as *"where to go to act on it"* and the node
+ * naturally states it as its own route — `/v1/federation/adopt-scrubbed`. A
+ * relative path handed to a URI handler opens nothing, so it is joined to the
+ * node the client is attached to. An absolute URL is passed through untouched:
+ * a node that points somewhere else (a crypto-ops box, where the holder keys
+ * live) is naming a place this client has no business rewriting.
+ *
+ * Returns null for anything that cannot be made openable, and the caller renders
+ * no button rather than a dead one.
+ */
+fun repairUrl(nodeBaseUrl: String, actionUrl: String?): String? {
+    val route = actionUrl?.trim().orEmpty()
+    if (route.isEmpty()) return null
+    if (route.startsWith("http://") || route.startsWith("https://")) return route
+    // Anything that is neither absolute nor a rooted path is not a route this
+    // can resolve — refuse rather than guess at a base it was not given.
+    if (!route.startsWith("/")) return null
+    val base = nodeBaseUrl.trim().trimEnd('/')
+    if (base.isEmpty()) return null
+    return base + route
+}

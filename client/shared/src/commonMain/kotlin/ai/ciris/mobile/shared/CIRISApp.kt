@@ -3508,6 +3508,12 @@ fun CIRISApp(
                 IdentityManagementScreen(
                     viewModel = identityManagementViewModel,
                     onBack = { currentScreen = Screen.Interact },
+                    // The repair route for a subject-blind fedID (CIRISServer#490).
+                    // The card only offers it when the node named one AND it
+                    // resolves against this node, so what arrives here is always
+                    // an openable URL.
+                    onOpenRepair = { url -> uriHandler.openUri(url) },
+                    nodeBaseUrl = nodeBaseUrl,
                 )
             }
 

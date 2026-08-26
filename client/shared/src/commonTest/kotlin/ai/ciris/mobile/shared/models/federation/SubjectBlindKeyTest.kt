@@ -150,6 +150,42 @@ class SubjectBlindKeyTest {
         assertNull(subjectBlindKeyFor(emptyList(), roster))
     }
 
+    // ── the repair route must be openable, or no button is drawn ──────────────
+
+    @Test
+    fun a_node_relative_route_is_joined_to_the_node() {
+        // What the node actually sends: its own route. Handed to a URI handler
+        // unjoined it opens nothing, which is the dead button this card cannot
+        // afford — its whole message is "this is fixable".
+        assertEquals(
+            "http://localhost:8080/v1/federation/adopt-scrubbed",
+            repairUrl("http://localhost:8080", "/v1/federation/adopt-scrubbed"),
+        )
+        assertEquals(
+            "http://localhost:8080/v1/x",
+            repairUrl("http://localhost:8080/", "/v1/x"),
+            "a trailing slash on the base must not double up",
+        )
+    }
+
+    @Test
+    fun an_absolute_route_is_left_alone() {
+        // A node pointing at a crypto-ops box, where the holder keys live, is
+        // naming a place this client has no business rewriting.
+        val elsewhere = "https://ops.example/repair?key_id=$mine"
+        assertEquals(elsewhere, repairUrl("http://localhost:8080", elsewhere))
+    }
+
+    @Test
+    fun anything_unopenable_yields_no_button() {
+        assertNull(repairUrl("http://localhost:8080", null))
+        assertNull(repairUrl("http://localhost:8080", "   "))
+        // Neither absolute nor rooted: not a route this can resolve, and
+        // guessing a base it was not given is how a button leads nowhere.
+        assertNull(repairUrl("http://localhost:8080", "v1/federation/adopt-scrubbed"))
+        assertNull(repairUrl("", "/v1/x"))
+    }
+
     // ── the action_url fallback: a URL parameter is a structure, not a sentence ──
 
     @Test

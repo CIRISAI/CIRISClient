@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.ui.screens
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.models.federation.repairUrl
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel
@@ -77,11 +78,19 @@ fun IdentityManagementScreen(
     onBack: () -> Unit,
     /**
      * Open the node's repair route for a subject-blind identity
-     * (CIRISServer#490). Defaulted to a no-op so every existing call site
-     * compiles: the button that uses it only renders when the node supplied a
-     * route, and a host that has not wired one has nothing to open.
+     * (CIRISServer#490).
+     *
+     * NO DEFAULT, deliberately. It had one — a no-op, so existing call sites
+     * would keep compiling — and the single production call site duly omitted
+     * it, which shipped an enabled "How to repair this" button that did nothing
+     * (Codex, PR #4). That is the exact failure the card exists to prevent: its
+     * whole message is *"this is fixable"*, and a dead control is that message
+     * being false. Required, so forgetting it is a compile error rather than a
+     * button.
      */
-    onOpenRepair: (String) -> Unit = {},
+    onOpenRepair: (String) -> Unit,
+    /** The node this client is attached to, for resolving a relative repair route. */
+    nodeBaseUrl: String = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL,
 ) {
     val identityKeyId by viewModel.identityKeyId.collectAsState()
     val occurrences by viewModel.occurrences.collectAsState()
@@ -501,10 +510,12 @@ fun IdentityManagementScreen(
                             )
                             Spacer(Modifier.height(6.dp))
                         }
-                        // Only when the node named somewhere to go. An action
-                        // button that leads nowhere is worse than none on a card
-                        // whose entire message is "this is fixable".
-                        blind.actionUrl?.let { url ->
+                        // Only when there is somewhere to go AND it resolves to
+                        // an openable URL. A button that leads nowhere is worse
+                        // than none on a card whose entire message is "this is
+                        // fixable" — and "nowhere" includes a route the node
+                        // stated relatively that nothing joined to a base.
+                        repairUrl(nodeBaseUrl, blind.actionUrl)?.let { url ->
                             TextButton(
                                 onClick = { onOpenRepair(url) },
                                 modifier = Modifier.testableClickable("btn_identity_repair_action") {
