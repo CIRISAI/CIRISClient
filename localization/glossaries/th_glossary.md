@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Thai. Al
 
 | English | Thai | Transliteration | Definition |
 |---------|------|-----------------|------------|
-| ACCORD | ข้อตกลง | Khôr-dtòk-long | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] ข้อตกลง | Khôr-dtòk-long | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | ผู้มีอำนาจที่ชาญฉลาด | Phûu-mee-am-nâat-thêe-chaan-chà-làat | Human oversight entity |
 | Conscience | มโนธรรม | Má-noh-tham | Ethical filter mechanism |
 | Principal Hierarchy | ลำดับชั้นหลัก | Lam-dàp-chán-làk | Chain of command for guidance |

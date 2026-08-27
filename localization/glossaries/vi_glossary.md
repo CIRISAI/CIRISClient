@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Vietname
 
 | English | Vietnamese | Definition |
 |---------|------------|------------|
-| ACCORD | HIỆP ƯỚC | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] HIỆP ƯỚC | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Cơ Quan Sáng Suốt | Human oversight entity |
 | Conscience | Lương Tâm | Ethical filter mechanism |
 | Principal Hierarchy | Hệ Thống Phân Cấp | Chain of command for guidance |

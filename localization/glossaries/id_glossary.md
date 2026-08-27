@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Indonesi
 
 | English | Indonesian | Definition |
 |---------|------------|------------|
-| ACCORD | PERJANJIAN | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] PERJANJIAN | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Otoritas Bijak | Human oversight entity |
 | Conscience | Nurani | Ethical filter mechanism |
 | Principal Hierarchy | Hierarki Prinsip | Chain of command for guidance |

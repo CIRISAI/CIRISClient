@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Russian.
 
 | English | Russian | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | Соглашение | Soglasheniye | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] Соглашение | Soglasheniye | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Мудрый Авторитет | Mudryy Avtoritet | Human oversight entity |
 | Conscience | Совесть | Sovest' | Ethical filter mechanism |
 | Principal Hierarchy | Иерархия Принципов | Iyerarkhiya Printsipov | Chain of command for guidance |

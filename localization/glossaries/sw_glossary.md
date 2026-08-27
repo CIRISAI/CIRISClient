@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Swahili.
 
 | English | Swahili | Definition |
 |---------|---------|------------|
-| ACCORD | Mkataba | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] Mkataba | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Mshauri wa Kibinadamu | Human oversight entity |
 | Conscience | Dhamiri | Ethical filter mechanism |
 | Principal Hierarchy | Uratibu wa Viongozi | Chain of command for guidance |

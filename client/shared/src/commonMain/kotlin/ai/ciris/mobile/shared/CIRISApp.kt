@@ -831,7 +831,10 @@ fun CIRISApp(
         ai.ciris.mobile.shared.viewmodels.AdminLadderViewModel(apiClient)
     }
     val identityManagementViewModel: ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel = viewModel {
-        ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient)
+        // nodeBaseUrl, not the api base: the federation warnings this screen
+        // surfaces are the NODE's (CIRISServer#490), and a folded agent's brain
+        // answers on a different port.
+        ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
     val contactsViewModel: ContactsViewModel = viewModel {
         ContactsViewModel(apiClient)
@@ -3508,6 +3511,12 @@ fun CIRISApp(
                 IdentityManagementScreen(
                     viewModel = identityManagementViewModel,
                     onBack = { currentScreen = Screen.Interact },
+                    // The repair route for a subject-blind fedID (CIRISServer#490).
+                    // The card only offers it when the node named one AND it
+                    // resolves against this node, so what arrives here is always
+                    // an openable URL.
+                    onOpenRepair = { url -> uriHandler.openUri(url) },
+                    nodeBaseUrl = nodeBaseUrl,
                 )
             }
 

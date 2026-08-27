@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `b5e4b5daea09aba5e30daf57a61064cb69ea294779b0fcbfae63edde06a329c8`
+**state digest:** `6ab7c3e1b92be5ca512817b346271b4a4076eb2d51247cf502ead1a7fdcacec9`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -265,8 +265,10 @@ defect *and* its GONE half would pass vacuously. It says so and fails, rather
 than skipping.
 
 ```bash
-# CI pins the checkout to v$(cat VERSION) — the emitters graded are the ones
-# from the server release this client PAIRS with, not whatever main holds.
+# CI pins the checkout to the commit §1 records as CIRISServer's last merged
+# state (`check_vendoring.py --merged-ref CIRISServer`) — the emitter set this
+# tree was actually reconciled against. NOT v$(cat VERSION): the client LEADS
+# (0.5.189 ships so CIRISServer 0.5.189 can pin it), so that tag need not exist.
 python3 client/tools/check_localization_sync.py --self-test --server-src ~/CIRISServer
 python3 client/tools/check_localization_sync.py --server-src ~/CIRISServer            # errors block
 python3 client/tools/check_localization_sync.py --server-src ~/CIRISServer --strict   # warnings block too

@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Marathi.
 
 | English | Marathi | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | करार | Karār | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] करार | Karār | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | शहाणे प्राधिकरण | Śahāṇe Prādhikaraṇ | Human oversight entity |
 | Conscience | विवेक | Vivek | Ethical filter mechanism |
 | Principal Hierarchy | मुख्य श्रेणीक्रम | Mukhya Śreṇīkram | Chain of command for guidance |

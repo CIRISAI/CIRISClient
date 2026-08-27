@@ -23,7 +23,7 @@ This glossary defines the canonical translations for key CIRIS terms in Persian 
 
 | English | Persian | Transliteration | Definition |
 |---------|---------|-----------------|------------|
-| ACCORD | پیمان | Peyman | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] پیمان | Peyman | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | مرجع خردمند | Marja' Kheradmand | Human oversight entity |
 | Conscience | وجدان | Vejdan | Ethical filter mechanism |
 | Principal Hierarchy | سلسله‌مراتب اصلی | Selselemarateb Asli | Chain of command for guidance |

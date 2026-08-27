@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Spanish.
 
 | English | Spanish | Definition |
 |---------|---------|------------|
-| ACCORD | ACCORD | The covenant governing agent behavior (kept in English) |
+| ACCORD | [DEPRECATED] ACCORD | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior (kept in English) |
 | Wise Authority | Autoridad Sabia | Human oversight entity |
 | Conscience | Conciencia | Ethical filter mechanism |
 | Principal Hierarchy | Jerarquía de Principios | Chain of command for guidance |

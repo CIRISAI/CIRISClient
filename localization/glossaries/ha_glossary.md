@@ -23,7 +23,7 @@ This glossary defines the canonical translations for key CIRIS terms in Hausa. A
 
 | English | Hausa | Definition |
 |---------|-------|------------|
-| ACCORD | YARJEJENIYA | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] YARJEJENIYA | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Hukumar Hikima | Human oversight entity |
 | Conscience | Lamiri | Ethical filter mechanism |
 | Principal Hierarchy | Tsarin Shugabanci | Chain of command for guidance |

@@ -23,7 +23,7 @@ This glossary defines the canonical translations for key CIRIS terms in Tamil. A
 
 | English | Tamil | Transliteration | Definition |
 |---------|-------|-----------------|------------|
-| ACCORD | உடன்படிக்கை | Uṭaṉpaṭikkai | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] உடன்படிக்கை | Uṭaṉpaṭikkai | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | அறிவார்ந்த அதிகாரம் | Aṟivārnta Atikāram | Human oversight entity |
 | Conscience | மனசாட்சி | Maṉacāṭci | Ethical filter mechanism |
 | Principal Hierarchy | முதன்மை படிநிலை | Mutaṉmai Paṭinilai | Chain of command for guidance |

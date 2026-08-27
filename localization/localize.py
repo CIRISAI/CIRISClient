@@ -238,6 +238,43 @@ def mqm_score(errors: Sequence[dict]) -> int:
 # Prompts
 # ─────────────────────────────────────────────────────────────────────────────
 
+#: The one source for the lessons three production runs taught. Parsed from the
+#: guide rather than restated here — a rule that lives in two places drifts, and
+#: the copy that drifts is the one the models are reading.
+TRANSLATION_GUIDE = Path(__file__).resolve().parent / "TRANSLATION_GUIDE.md"
+_GUIDE_SECTION = "## 3. The failure modes that actually occur"
+
+
+def _guide_rules() -> str:
+    """The guide's §3 bullets, as prompt text.
+
+    Fails loudly rather than returning "". A prompt that quietly lost its rules
+    still produces confident output, and nothing downstream can tell the
+    difference — which is the same shape as a gate that cannot fail.
+    """
+    try:
+        text = TRANSLATION_GUIDE.read_text(encoding="utf-8")
+    except OSError as e:
+        raise SystemExit(f"[refuse] cannot read {TRANSLATION_GUIDE}: {e}. Its §3 is "
+                         f"what every agent is told about the failure modes seen in "
+                         f"production; running without it silently drops them.")
+    start = text.find(_GUIDE_SECTION)
+    if start < 0:
+        raise SystemExit(f"[refuse] {TRANSLATION_GUIDE.name} has no section "
+                         f"{_GUIDE_SECTION!r} — the prompts are built from it.")
+    end = text.find("\n## ", start + len(_GUIDE_SECTION))
+    body = text[start:end if end > 0 else len(text)]
+    rules = re.findall(r"^- (\*\*.+?)(?=\n- |\n\n|\Z)", body, re.M | re.S)
+    if not rules:
+        raise SystemExit(f"[refuse] {_GUIDE_SECTION!r} parsed to zero rules. The "
+                         f"section is the prompts' only source; an empty parse is a "
+                         f"silently weaker pipeline, not an empty section.")
+    clean = [" ".join(r.split()) for r in rules]
+    return "\n".join(f"- {r}" for r in clean)
+
+
+GUIDE_RULES = _guide_rules()
+
 _PLACEHOLDER_RULE = """- Preserve every placeholder EXACTLY as it appears in the English source:
   {named}, ${expr}, %s, %1$s. Never translate, rename, drop, add or reorder one.
 - Product terms stay untranslated: CIRIS, ciris-server, key_id, USB, and version
@@ -265,7 +302,11 @@ Rules, all of them hard:
   a bad translation, and a refusal is ROUTED TO A STRONGER MODEL rather than
   shipped. Never return English text as a translation, never transliterate the
   English, and never invent a plausible-looking string you do not stand behind —
-  those are worse than a refusal, because nothing downstream can see them."""
+  those are worse than a refusal, because nothing downstream can see them.
+
+WHAT WENT WRONG BEFORE. Every one of these was a real finding on a real run of
+this pipeline, in some language, and each cost a release:
+""" + GUIDE_RULES
 
 SYSTEM_REVIEW = f"""You are an independent translation quality reviewer for \
 CIRIS, a decentralized mesh client shipped in 29 languages. You did not write \
@@ -296,7 +337,11 @@ Judge hard and specifically:
 - A term that disagrees with the CANONICAL TERMINOLOGY block is TERMINOLOGY,
   even if the alternative is a fine word in isolation.
 - Do NOT invent errors to look thorough. An empty list is the correct and
-  expected answer for a good translation."""
+  expected answer for a good translation.
+
+LOOK FOR THESE SPECIFICALLY. Each is a defect this pipeline has actually shipped
+past a structural gate, in some language, on some run:
+""" + GUIDE_RULES
 
 SYSTEM_REPAIR = f"""You are correcting CIRIS UI translations that a reviewer \
 rejected. You will receive the English source, the current translation, and the \
@@ -310,7 +355,10 @@ Rules:
 - If you judge a finding to be WRONG, return the current translation unchanged
   rather than damaging it to satisfy a bad review, and say so in "refusals".
 {_PLACEHOLDER_RULE}
-- The CANONICAL TERMINOLOGY block wins every terminology dispute."""
+- The CANONICAL TERMINOLOGY block wins every terminology dispute.
+
+THE DEFECTS YOU ARE MOST LIKELY CORRECTING. Each has been a real finding here:
+""" + GUIDE_RULES
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -711,20 +759,32 @@ def evaluate_lane(lang: str, values: Dict[str, str], en_flat: dict, spend: Spend
              "text": "REVIEW THESE (source -> translation):\n" + pairs},
         ],
     }]
-    try:
-        reply = call_model(REVIEW_MODEL, SYSTEM_REVIEW, messages)
-    except Exception as e:  # noqa: BLE001
-        log(f"[evaluate] {lang}: reviewer unreachable ({e}) — treating as UNREVIEWED")
-        return {k: [{"category": "accuracy", "severity": "critical",
-                     "span": "", "note": f"review did not run: {e}",
-                     "suggestion": ""}] for k in keys}
-    spend.add(REVIEW_MODEL, reply)
-    try:
-        raw = parse_json_reply(reply.text)
-    except ValueError as e:
-        log(f"[evaluate] {lang}: unparseable review ({e}) — treating as UNREVIEWED")
+    # TWO attempts before failing closed. A reply that arrives truncated or
+    # malformed is a transport failure, not a verdict — and failing closed on one
+    # blocks the whole language, since every key in the batch is then marked
+    # unreviewed. `ja` lost all seven keys to a single reply that broke at
+    # character 1218. Fail-closed is right; fail-closed on the first hiccup is
+    # just brittle.
+    raw = None
+    last = ""
+    for attempt in (1, 2):
+        try:
+            reply = call_model(REVIEW_MODEL, SYSTEM_REVIEW, messages)
+        except Exception as e:  # noqa: BLE001
+            last = f"reviewer unreachable: {e}"
+            log(f"[evaluate] {lang}: {last} (attempt {attempt}/2)")
+            continue
+        spend.add(REVIEW_MODEL, reply)
+        try:
+            raw = parse_json_reply(reply.text)
+            break
+        except ValueError as e:
+            last = f"review reply unparseable: {e}"
+            log(f"[evaluate] {lang}: {last} (attempt {attempt}/2)")
+    if raw is None:
+        log(f"[evaluate] {lang}: no usable review after 2 attempts — treating as UNREVIEWED")
         return {k: [{"category": "accuracy", "severity": "critical", "span": "",
-                     "note": f"review reply unparseable: {e}", "suggestion": ""}]
+                     "note": f"{last} (2 attempts)", "suggestion": ""}]
                 for k in keys}
 
     out: Dict[str, List[dict]] = {}
@@ -749,53 +809,88 @@ def evaluate_lane(lang: str, values: Dict[str, str], en_flat: dict, spend: Spend
 # Lane 3 — repair
 # ─────────────────────────────────────────────────────────────────────────────
 
-def repair_lane(lang: str, values: Dict[str, str], findings: Dict[str, List[dict]],
-                en_flat: dict, spend: Spend, *, log=print) -> Dict[str, str]:
-    """Corrected values for the keys the review rejected. Others are untouched."""
-    todo = sorted(k for k, errs in findings.items() if needs_repair(errs))
-    if not todo:
-        return {}
+def _repair_once(lang: str, model: str, todo: Sequence[str], values: Dict[str, str],
+                 findings: Dict[str, List[dict]], en_flat: dict, spend: Spend,
+                 *, log=print) -> Dict[str, str]:
+    """One repair attempt, at one rung. Structurally-clean corrections only."""
     payload = json.dumps(
         {k: {"source": str(en_flat.get(k, "")), "current": values.get(k, ""),
-             "findings": findings[k]} for k in todo},
+             "findings": findings.get(k, [])} for k in todo},
         indent=1, ensure_ascii=False, sort_keys=True)
+    messages = [{
+        "role": "user",
+        "content": [
+            {"type": "text",
+             "text": f"TARGET LANGUAGE: {lang} ({language_name(lang)})\n\n"
+                     + context_block(lang, list(todo), en_flat)},
+            {"type": "text", "text": "CORRECT THESE:\n" + payload},
+        ],
+    }]
+    try:
+        reply = call_model(model, SYSTEM_REPAIR, messages)
+    except Exception as e:  # noqa: BLE001 — a dead rung must not kill the run
+        log(f"[repair] {lang}: {model} failed: {e}")
+        return {}
+    spend.add(model, reply)
+    try:
+        got = (parse_json_reply(reply.text).get("translations") or {})
+    except ValueError as e:
+        log(f"[repair] {lang}: {model} unparseable reply ({e})")
+        return {}
+    got = {k: v for k, v in got.items() if k in todo and isinstance(v, str)}
+    bad = structural_problems(list(got), en_flat, got)
+    return {k: v for k, v in got.items() if k not in bad}
 
-    fixed: Dict[str, str] = {}
-    outstanding = todo
-    for rung, model in enumerate(LADDER[1:] or LADDER):  # repair starts one rung up
-        if not outstanding:
+
+def repair_until_clean(lang: str, values: Dict[str, str], findings: Dict[str, List[dict]],
+                       en_flat: dict, spend: Spend, *, log=print
+                       ) -> Tuple[Dict[str, str], Dict[str, List[dict]]]:
+    """Repair, RE-REVIEW, and escalate on the review's verdict — not just on a
+    malformed reply.
+
+    The first version walked the ladder only when a rung returned junk, so a
+    rung that produced structurally-valid but semantically-rejected text ended
+    the loop: `outstanding` emptied, the ladder stopped, and the re-review's
+    rejection became a build failure with no second attempt. That made the
+    expensive rungs unreachable for exactly the case they exist for — the hard
+    languages. Run 3 left `am`, `ha`, `my` and `yo` rejected while
+    `openai/gpt-5-pro` was never asked, and those are Tier 0 languages, ranked
+    first precisely because models are worst at them.
+
+    Escalation is still SPARING: only rejected keys go up, one language at a
+    time, and a rung that satisfies the reviewer ends the walk.
+
+    Returns (accepted corrections, findings that survived every rung).
+    """
+    accepted: Dict[str, str] = {}
+    current = dict(values)
+    live = dict(findings)
+    rungs = list(LADDER[1:]) or list(LADDER)  # repair starts one rung above the drafter
+    for rung, model in enumerate(rungs):
+        todo = sorted(k for k, errs in live.items() if needs_repair(errs))
+        if not todo:
             break
-        messages = [{
-            "role": "user",
-            "content": [
-                {"type": "text",
-                 "text": f"TARGET LANGUAGE: {lang} ({language_name(lang)})\n\n"
-                         + context_block(lang, outstanding, en_flat)},
-                {"type": "text", "text": "CORRECT THESE:\n" + payload},
-            ],
-        }]
-        try:
-            reply = call_model(model, SYSTEM_REPAIR, messages)
-        except Exception as e:  # noqa: BLE001
-            log(f"[repair] {lang}: rung {rung} ({model}) failed: {e}")
+        fixes = _repair_once(lang, model, todo, current, live, en_flat, spend, log=log)
+        if not fixes:
+            log(f"[repair] {lang}: {model} produced nothing usable for {len(todo)} key(s)")
             continue
-        spend.add(model, reply)
-        try:
-            got = (parse_json_reply(reply.text).get("translations") or {})
-        except ValueError as e:
-            log(f"[repair] {lang}: unparseable reply ({e})")
-            continue
-        got = {k: v for k, v in got.items() if k in outstanding and isinstance(v, str)}
-        bad = structural_problems(list(got), en_flat, got)
-        fixed.update({k: v for k, v in got.items() if k not in bad})
-        outstanding = [k for k in outstanding if k not in fixed]
-        log(f"[repair] {lang}: {len(fixed)}/{len(todo)} corrected at rung {rung} ({model})")
-    return fixed
+        # A repair is a NEW string, and an unreviewed new string is the one thing
+        # this pipeline refuses to write. Re-review before believing it.
+        verdict = evaluate_lane(lang, fixes, en_flat, spend, log=log)
+        good = {k: v for k, v in fixes.items() if not needs_repair(verdict.get(k, []))}
+        accepted.update(good)
+        current.update(good)
+        for k in good:
+            live[k] = verdict.get(k, [])
+        still = sorted(k for k in fixes if k not in good)
+        for k in still:
+            live[k] = verdict.get(k, live.get(k, []))
+            current[k] = fixes[k]  # carry the better-but-not-clean text upward
+        log(f"[repair] {lang}: {len(good)}/{len(todo)} accepted at {model}"
+            + (f"; {len(still)} still rejected" if still else ""))
+    remaining = {k: e for k, e in live.items() if needs_repair(e)}
+    return accepted, remaining
 
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Writing
-# ─────────────────────────────────────────────────────────────────────────────
 
 def insert(lang: str, values: Dict[str, str], en: dict, *, overwrite: bool) -> None:
     """Write into all four mirrors at en.json's key positions.
@@ -936,39 +1031,33 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
         # `repair_lane` has nothing to correct and makes no call. That is the
         # difference between "the lane ran and was satisfied" and "the lane was
         # skipped", and only the first is a statement about the strings.
-        fixes = repair_lane(lang, values, findings, en_flat, spend)
+        # Repair walks the ladder on the REVIEWER's verdict, re-reviewing after
+        # each rung, so a rung that returns well-formed but rejected text is
+        # escalated rather than accepted. What survives every rung is what no
+        # model this pipeline can reach was able to render acceptably.
+        fixes, unresolved = repair_until_clean(lang, values, findings, en_flat, spend)
         values.update(fixes)
+        for k in fixes:
+            findings[k] = []
+            scores[k] = 100
+        for k, errs in unresolved.items():
+            findings[k] = errs
+            scores[k] = mqm_score(errs)
 
-        # A key the review REJECTED and repair could not fix is still the
-        # rejected text. Without this it is written to all four mirrors and the
-        # run exits 0, because only repaired-then-re-rejected keys set rc — so
-        # the worse outcome (repair failed outright: every rung errored,
-        # refused, or returned junk) was the silent one. The structural guard
-        # cannot catch it; that is the whole reason the review lane exists.
-        unfixed = sorted(k for k, e in findings.items() if needs_repair(e) and k not in fixes)
-        if unfixed:
-            print(f"[repair] {lang}: {len(unfixed)} REJECTED key(s) not repaired — "
-                  f"{', '.join(unfixed[:5])}{' …' if len(unfixed) > 5 else ''}")
+        if unresolved:
+            # Rejected text is still rejected text. Writing it and exiting 0
+            # would put a semantic defect through a structural gate that cannot
+            # see it — which is the entire reason the review lane exists.
+            print(f"[repair] {lang}: {len(unresolved)} key(s) rejected by every rung "
+                  f"— {', '.join(sorted(unresolved)[:5])}"
+                  f"{' …' if len(unresolved) > 5 else ''}")
             rc = 1
             rejected[lang] = {
                 k: "; ".join(
                     f"{e.get('severity')}/{e.get('category')}: {e.get('note', '')}"
-                    for e in findings[k] if needs_repair([e])
-                ) for k in unfixed
+                    for e in errs if needs_repair([e])
+                ) for k, errs in unresolved.items()
             }
-
-        # Re-review only what changed: a repair is a new string and an unreviewed
-        # new string is exactly what this pipeline refuses to write.
-        if fixes:
-            recheck = evaluate_lane(lang, fixes, en_flat, spend)
-            for k, errs in recheck.items():
-                findings[k] = errs
-                scores[k] = mqm_score(errs)
-            still = sorted(k for k, e in recheck.items() if needs_repair(e))
-            if still:
-                print(f"[evaluate] {lang}: {len(still)} repaired key(s) STILL "
-                      f"rejected — {', '.join(still[:5])}")
-                rc = 1
 
         report[lang] = {
             "keys": len(findings),

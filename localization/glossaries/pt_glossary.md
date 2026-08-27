@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in Portugue
 
 | English | Português | Definition |
 |---------|-----------|------------|
-| ACCORD | Acordo / Pacto | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED] Acordo / Pacto | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | Autoridade Sábia | Human oversight entity |
 | Conscience | Consciência | Ethical filter mechanism |
 | Principal Hierarchy | Hierarquia de Princípios | Chain of command for guidance |

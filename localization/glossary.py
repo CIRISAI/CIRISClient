@@ -40,6 +40,10 @@ PROSE_SECTIONS: Tuple[str, ...] = (
 )
 
 _H2 = re.compile(r"^##(?!#)\s+(.*)$")
+
+#: A term whose target cell opens with this is RETIRING. Its recorded rendering
+#: stays visible as history and stops being authoritative — see [deprecated].
+DEPRECATED_MARK = "[DEPRECATED]"
 _WORD = re.compile(r"[A-Za-z][A-Za-z0-9_'-]*")
 
 
@@ -80,14 +84,51 @@ def _parse(code: str) -> Tuple[Tuple[Tuple[str, str], ...], Tuple[Tuple[str, str
     return tuple(terms.items()), kept
 
 
+def _is_deprecated(rendering: str) -> bool:
+    return rendering.strip().startswith(DEPRECATED_MARK)
+
+
+def deprecated(code: str) -> Dict[str, str]:
+    """English -> the retiring rendering, for terms marked [DEPRECATED].
+
+    Kept separate from [terms] rather than deleted, because a deprecated entry
+    still has work to do: it is what stops a model coining a NEW rendering for a
+    term the product is retiring. What it must not do is out-argue the corpus.
+    """
+    return {e: t for e, t in _parse(code)[0] if _is_deprecated(t)}
+
+
 def terms(code: str) -> Dict[str, str]:
-    """English -> target, for every canonical term this language pins."""
-    return dict(_parse(code)[0])
+    """English -> target, for every LIVE canonical term this language pins.
+
+    Deprecated entries are excluded on purpose. ACCORD is the worked example:
+    one glossary row covered both a document (a proper name) and a role
+    (`accord holder`, a common noun), so it produced a different answer per
+    language forever — four strategies across 28 — and the reviewers cited the
+    shipped corpus against it, correctly. A retiring term must not out-argue the
+    strings users are already reading (CIRISClient#5).
+    """
+    return {e: t for e, t in _parse(code)[0] if not _is_deprecated(t)}
 
 
 def guidance(code: str) -> List[Tuple[str, str]]:
     """(section title, prose) for the language-specific rules worth sending."""
     return list(_parse(code)[1])
+
+
+def _mentions(english: str, texts: List[str]) -> bool:
+    """Does `english` occur in `texts`? Whole-word for single words.
+
+    Shared by [relevant] and the retiring-terms block so a term cannot be
+    considered relevant by one and invisible to the other.
+    """
+    probe = english.strip().lower()
+    if not probe:
+        return False
+    hay = " \n ".join(texts).lower()
+    if _WORD.fullmatch(english.strip()):
+        return re.search(rf"\b{re.escape(probe)}\b", hay) is not None
+    return probe in hay
 
 
 def relevant(code: str, texts: List[str], *, limit: int = 60) -> Dict[str, str]:
@@ -101,17 +142,10 @@ def relevant(code: str, texts: List[str], *, limit: int = 60) -> Dict[str, str]:
     all_terms = terms(code)
     if not all_terms:
         return {}
-    hay = " \n ".join(texts).lower()
     hits: List[Tuple[int, str]] = []
     for english in all_terms:
-        probe = english.lower()
-        if not probe:
-            continue
-        if _WORD.fullmatch(english):
-            if re.search(rf"\b{re.escape(probe)}\b", hay):
-                hits.append((len(probe), english))
-        elif probe in hay:
-            hits.append((len(probe), english))
+        if _mentions(english, texts):
+            hits.append((len(english), english))
     hits.sort(key=lambda p: (-p[0], p[1]))
     return {e: all_terms[e] for _, e in hits[:limit]}
 
@@ -152,9 +186,34 @@ def block(code: str, texts: List[str]) -> str:
     if hits:
         out.append(
             "CANONICAL TERMINOLOGY (from the CIRIS glossary for this language — "
-            "these are decided, not suggestions; use them exactly):"
+            "these are decided, not suggestions; use them exactly).\n"
+            "CASE IS NOT NORMATIVE HERE: the glossary tables write terms in the "
+            "case that reads well IN A TABLE, so apply the target language's own "
+            "sentence casing rather than copying the capitalisation shown. A "
+            "reviewer once rejected a correct Yoruba rendering for not being in "
+            "the ALL CAPS its glossary row happened to use.\n"
+            "IF A SHIPPED ANCHOR BELOW USES A DIFFERENT RENDERING OF ONE OF THESE "
+            "TERMS, SAY SO rather than silently picking one: the corpus and the "
+            "glossary can disagree, and which of them is right is not yours to "
+            "decide inside a single string."
         )
         out += [f"  {e}  ->  {t}" for e, t in hits.items()]
+    retiring = {e: t for e, t in deprecated(code).items()
+                if _mentions(e, texts)}
+    if retiring:
+        out.append(
+            "\nRETIRING TERMINOLOGY — these appear in the source and the glossary "
+            "NO LONGER PINS THEM:\n"
+            + "\n".join(
+                f"  {e}  (was: {t.replace(DEPRECATED_MARK, '').strip()})"
+                for e, t in retiring.items()
+            )
+            + "\nRender them the way the ANCHOR TRANSLATIONS below already do, and "
+            "do not coin a new rendering. The product is retiring these terms, so "
+            "a fresh translation would entrench something on its way out — and "
+            "the shipped strings are what users are reading today."
+        )
+
     for title, text in guidance(code):
         out.append(f"\n{title.upper()} (this language's standing rules):\n{text}")
     return "\n".join(out)

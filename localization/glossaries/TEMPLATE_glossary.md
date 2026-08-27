@@ -21,7 +21,7 @@ This glossary defines the canonical translations for key CIRIS terms in {LANGUAG
 
 | English | {LANGUAGE_NAME} | Transliteration | Definition |
 |---------|-----------------|-----------------|------------|
-| ACCORD | | | The covenant governing agent behavior |
+| ACCORD | [DEPRECATED]  |  | DEPRECATED — superseded by the CIRIS Constitution. Do NOT coin a rendering for it. The ROLE (`accord holder`, `accord_custody`, `/v1/accord/*`) is live and follows the shipped strings, not this row. Was: The covenant governing agent behavior |
 | Wise Authority | | | Human oversight entity |
 | Conscience | | | Ethical filter mechanism |
 | Principal Hierarchy | | | Chain of command for guidance |
