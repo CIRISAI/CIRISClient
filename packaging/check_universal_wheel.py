@@ -41,24 +41,33 @@ import urllib.request
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-INDEX = "https://pypi.org/pypi/ciris-client/json"
+#: The SIMPLE index — what pip actually resolves against, and what reflects an
+#: upload first. The metadata API (/pypi/<name>/json) is a cache in front of it:
+#: on 0.5.190 the wheel was live and resolvable by pip while that endpoint still
+#: showed four files, so this check failed a release it had just verified. A
+#: gate that reports red on a green release is how gates get switched off.
+SIMPLE = "https://pypi.org/simple/ciris-client/"
+SIMPLE_ACCEPT = "application/vnd.pypi.simple.v1+json"
 UNIVERSAL_TAG = "py3-none-any"
 TIMEOUT = 20
 
 
 def published_files(version: str) -> list[str]:
+    req = urllib.request.Request(SIMPLE, headers={"Accept": SIMPLE_ACCEPT})
     try:
-        with urllib.request.urlopen(INDEX, timeout=TIMEOUT) as resp:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
             data = json.loads(resp.read())
     except (urllib.error.URLError, TimeoutError, ValueError) as e:
         sys.exit(
-            f"[FAIL] could not reach {INDEX}: {e}\n"
+            f"[FAIL] could not reach {SIMPLE}: {e}\n"
             f"  This check FAILS CLOSED. An index that did not answer has not "
             f"told you the wheel is there, and treating silence as a pass is how "
             f"the wheel went missing for three releases. Re-run, or pass "
             f"--offline to skip this deliberately."
         )
-    return [f["filename"] for f in data.get("releases", {}).get(version, [])]
+    prefix = f"ciris_client-{version}-"
+    return [f["filename"] for f in data.get("files", [])
+            if f.get("filename", "").startswith(prefix)]
 
 
 def main() -> int:
@@ -71,12 +80,15 @@ def main() -> int:
 
     files = published_files(version)
     if not files:
+        # Distinguished from "published, but no any-wheel" on purpose: the
+        # caller retries one of these and not the other. Nothing at all means
+        # either the upload has not happened or the index has not caught up;
+        # files-but-no-any-wheel is the defect, and it will never fix itself.
         print(
-            f"[FAIL] ciris-client {version} publishes no files at all.\n"
-            f"  If the release has not been cut yet, this check belongs AFTER the "
-            f"upload, not before it."
+            f"[PENDING] ciris-client {version} has no files on the simple index yet.\n"
+            f"  Either the upload has not landed or the index has not caught up."
         )
-        return 1
+        return 2
 
     universal = [f for f in files if UNIVERSAL_TAG in f]
     print(f"  ciris-client {version}: {len(files)} file(s) on PyPI")

@@ -691,11 +691,25 @@ jobs:
         # host and matched manylinux (CIRISServer#493).
         if: github.event_name == 'push' || github.event.inputs.target == 'pypi'
         run: |
-          set -euo pipefail
-          # PyPI's index is read-through-cache; give the upload a moment to
-          # appear rather than failing a release on propagation.
-          for i in 1 2 3 4 5; do
-            if python3 packaging/check_universal_wheel.py; then exit 0; fi
-            echo "not visible yet — retry $i/5"; sleep 20
+          set -uo pipefail
+          # PATIENT ABOUT PROPAGATION, IMMEDIATE ABOUT AN ABSENCE.
+          #
+          # The first version of this gave 5 x 20s and failed the 0.5.190
+          # publish — while the wheel was live and pip could resolve it. A gate
+          # that reports red on a green release is how gates get switched off,
+          # so the two cases are now separate exit codes:
+          #
+          #   2  nothing on the index for this version yet — retry, it is
+          #      propagation or an upload still settling
+          #   1  files ARE published and none is py3-none-any — the defect, and
+          #      waiting cannot fix it. Fail now.
+          for i in $(seq 1 20); do
+            python3 packaging/check_universal_wheel.py
+            case $? in
+              0) exit 0 ;;
+              1) echo "::error::the version is published WITHOUT a universal wheel — waiting will not help"; exit 1 ;;
+              *) echo "not on the index yet — retry $i/20"; sleep 30 ;;
+            esac
           done
-          python3 packaging/check_universal_wheel.py
+          echo "::error::ciris-client $(cat VERSION) never appeared on the simple index after 10 minutes"
+          exit 1
