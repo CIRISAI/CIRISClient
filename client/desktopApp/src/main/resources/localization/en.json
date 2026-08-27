@@ -2994,7 +2994,7 @@
     "wallet_transfer_success": "Transfer successful! TX: {tx}",
     "wallet_trust_degraded": "Hardware Trust Degraded",
     "wallet_warning": "Warning",
-    "claim_node_no_signer": "Claiming binds your identity, and that signature comes from your own node — which is not running. Start your node, then claim."
+    "claim_node_no_signer": "Your own node signs the claim, and it is not running. Start your node, then claim."
   },
   "moderation": {
     "ladder": {
