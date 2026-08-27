@@ -42,6 +42,10 @@ REPO = Path(__file__).resolve().parents[1]
 FLAVORS = ("universal", "node", "agent")
 SCHEMA = "ciris-client-artifacts/v1"
 
+#: What the universal wheel carries instead of a jar. The same bundle the jar
+#: embeds, staged directly so `locale_bundle()` needs no jar to answer.
+LOCALE_SOURCE = "client/shared/src/desktopMain/resources/localization"
+
 # PyPI's per-file limit. Stated as bytes because "100 MB" is 100 MiB and the
 # difference has been the whole margin before now.
 PYPI_LIMIT_BYTES = 104_857_600
@@ -169,13 +173,26 @@ def main() -> int:
     ap.add_argument(
         "--placeholder",
         metavar="REASON",
-        help="stage nothing; write a manifest that makes every lookup raise",
+        help="stage nothing; write a manifest that makes every lookup raise. This "
+             "reports a BUILD FAILURE — see --universal for the wheel that "
+             "deliberately carries no jar",
+    )
+    ap.add_argument(
+        "--universal",
+        action="store_true",
+        help="stage the LOCALE BUNDLE and no OS payload: the py3-none-any wheel. "
+             "Not a placeholder — a placeholder says the build broke, this says "
+             "there is no desktop jar BY DESIGN and names the platform wheels that "
+             "have one. It is what a non-desktop consumer resolves: pip matches on "
+             "the WHEEL TAG, and four OS-tagged wheels match nothing on Android",
     )
     args = ap.parse_args()
 
-    if bool(args.artifact) == bool(args.placeholder):
+    modes = [bool(args.artifact), bool(args.placeholder), bool(args.universal)]
+    if sum(modes) != 1:
         return int(bool(sys.stderr.write(
-            "pass either --artifact (one or more) or --placeholder REASON, not both\n"
+            "pass exactly one of --artifact (one or more), --placeholder REASON, "
+            "or --universal\n"
         ))) or 2
 
     dest = payload_dir(args.dist)
@@ -203,7 +220,39 @@ def main() -> int:
         "artifacts": [],
     }
 
-    if args.placeholder:
+    if args.universal:
+        # THE WHEEL EVERY NON-DESKTOP CONSUMER RESOLVES.
+        #
+        # `python -m build` emits py3-none-any; the OS wheels are that wheel
+        # RETAGGED (`wheel tags --platform-tag … --remove`). Dropping the any
+        # wheel at the split therefore did not narrow the offer, it removed the
+        # only tag Android, iOS or any other platform could match — and the
+        # symptom is a resolver error naming the last version that still had
+        # one, not a missing feature. Nothing caught it because a desktop host
+        # matches manylinux and installs happily (CIRISServer#493).
+        #
+        # It carries the LOCALE BUNDLE rather than nothing. A wheel that only
+        # installs is not worth publishing; the bundle is what makes
+        # server-emitted ids resolve, which is the thing a jar-free consumer
+        # actually needs, and it is the same bytes the jar would have carried.
+        src = REPO / LOCALE_SOURCE
+        if not src.is_dir():
+            sys.exit(f"[FAIL] no locale bundle at {src} — nothing to stage")
+        target = dest / "localization"
+        shutil.copytree(src, target)
+        size = tree_bytes(target)
+        manifest["universal"] = True
+        manifest["locales"] = target.name
+        manifest["artifacts"].append({
+            "kind": "locale-bundle",
+            "path": target.name,
+            "bytes": size,
+            "sha256": tree_sha256(target),
+            "tree": True,
+            "files": sum(1 for q in target.rglob("*") if q.is_file()),
+        })
+        print(f"[universal] locale-bundle  {src}  ({size / 1048576:.2f} MiB), no OS payload")
+    elif args.placeholder:
         manifest["placeholder"] = True
         manifest["placeholder_reason"] = args.placeholder
         print(f"[placeholder] {args.flavor}: {args.placeholder}")

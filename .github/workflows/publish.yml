@@ -223,6 +223,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          # CLEAN FIRST. setuptools caches the staged payload in build/lib, and
+          # a rebuild after a DIFFERENT staging re-adds whatever was there
+          # before: a universal build produced a 66 MiB wheel carrying
+          # CIRIS-linux-x64-1.5.188.jar — two versions stale, from a payload the
+          # staging had already deleted. The size check passes, because the jar
+          # is a plausible size for a wheel that is supposed to have one.
+          rm -rf build dist
           python3 -m build --wheel --outdir dist .
           # setuptools cannot know this is platform-specific — the payload is a
           # jar, not a compiled extension — so the tag is applied after the
@@ -278,6 +285,92 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.name }}
+          path: dist/*.whl
+          retention-days: 14
+
+  # ── The wheel every NON-DESKTOP consumer resolves ───────────────────────────
+  universal:
+    name: wheel (universal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install --upgrade pip build
+
+      - name: Stage the locale bundle, and no OS payload
+        # pip resolves on the WHEEL TAG. The four OS-tagged wheels match nothing
+        # on Android, iOS, or any platform outside that set, so a release
+        # without py3-none-any is UNRESOLVABLE there — and the resolver names
+        # the last version that had one, which reads like a yank rather than a
+        # missing tag (CIRISServer#493).
+        #
+        # It carries the locale bundle rather than nothing: a wheel that only
+        # installs is not worth publishing, and the bundle is what makes
+        # server-emitted ids resolve — the thing a jar-free consumer needs.
+        # Android and iOS take the AAR and XCFramework from the GitHub release;
+        # this wheel is for the Python side.
+        run: python3 packaging/stage_artifacts.py --universal
+
+      - name: Build it, and DO NOT retag
+        run: |
+          set -euo pipefail
+          rm -rf build dist
+          python3 -m build --wheel --outdir dist .
+          ls -la dist
+          case "$(ls dist)" in
+            *py3-none-any.whl) ;;
+            *) echo "::error::the universal job produced something that is not py3-none-any"; exit 1 ;;
+          esac
+
+      - name: It must NOT carry a jar
+        # The size is the tell, and it is checked rather than eyeballed: ~63 MiB
+        # means a desktop runtime rode along in setuptools' build cache, and
+        # nothing downstream would notice — the wheel installs, and the size
+        # check passes because that IS a plausible size for a client wheel.
+        run: |
+          set -euo pipefail
+          python3 packaging/check_wheel_size.py dist/*.whl
+          if python3 -c "
+          import sys, zipfile
+          z = zipfile.ZipFile(sys.argv[1])
+          jars = [i.filename for i in z.infolist() if i.filename.endswith('.jar')]
+          sys.exit(0 if jars else 1)
+          " dist/*.whl; then
+            echo "::error::the universal wheel carries a jar — clean build/ before packaging"
+            exit 1
+          fi
+
+      - name: Consumption contract — locales without a jar
+        run: |
+          set -euo pipefail
+          python3 -m venv consumer-venv
+          consumer-venv/bin/pip install --quiet --no-index dist/*.whl
+          mkdir -p verify && cd verify && ../consumer-venv/bin/python - <<'PY'
+          import ciris_client as c
+          assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
+          m = c.manifest()
+          assert m.get("universal"), "the universal wheel does not declare itself universal"
+          assert not m.get("placeholder"), "universal is not a placeholder"
+          b = c.locale_bundle()
+          n = len([p for p in b.glob("*.json") if p.name != "manifest.json"])
+          assert n == 29, f"expected 29 locales without a jar, got {n}"
+          print(f"  locale_bundle(): {n} locales, no jar, no extraction")
+          # And the refusal must say WHICH wheel this is, not just what it lacks.
+          try:
+              c.artifact_path("desktop-uber-jar")
+          except c.ArtifactUnavailable as e:
+              assert "by design, not by failure" in str(e), str(e)
+              print("  artifact_path refuses as a supported state, not a bug")
+          else:
+              raise SystemExit("the universal wheel handed back a desktop jar")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-universal
           path: dist/*.whl
           retention-days: 14
 
@@ -468,7 +561,7 @@ jobs:
 
   publish:
     name: publish to ${{ github.event.inputs.target || 'pypi' }}
-    needs: [build, wasm]
+    needs: [build, wasm, universal]
     # A dispatch with target `none` is a rehearsal: every wheel is built and
     # verified above, and nothing is uploaded.
     if: github.event_name == 'push' || github.event.inputs.target != 'none'
@@ -492,6 +585,7 @@ jobs:
         run: ls -la dist
 
       - name: Publish
+        id: upload
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: ${{ github.event.inputs.target == 'testpypi' && 'https://test.pypi.org/legacy/' || 'https://upload.pypi.org/legacy/' }}
@@ -499,3 +593,20 @@ jobs:
           # already be there. Skipping them is correct; failing the run is not.
           skip-existing: true
           print-hash: true
+
+      - name: The index must offer a wheel a non-desktop consumer can resolve
+        # AFTER the upload, because that is when there is something to assert.
+        # Fails closed on an unreachable index: "I could not ask" is not "it is
+        # fine", and that equivalence is exactly what let py3-none-any go
+        # missing for three releases while every check installed on a desktop
+        # host and matched manylinux (CIRISServer#493).
+        if: github.event_name == 'push' || github.event.inputs.target == 'pypi'
+        run: |
+          set -euo pipefail
+          # PyPI's index is read-through-cache; give the upload a moment to
+          # appear rather than failing a release on propagation.
+          for i in 1 2 3 4 5; do
+            if python3 packaging/check_universal_wheel.py; then exit 0; fi
+            echo "not visible yet — retry $i/5"; sleep 20
+          done
+          python3 packaging/check_universal_wheel.py

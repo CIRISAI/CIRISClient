@@ -76,6 +76,34 @@ def manifest() -> dict[str, Any]:
     return data
 
 
+def _refuse_universal(data: dict[str, Any], kind: str) -> None:
+    """A universal wheel has no OS payload, and that is a SUPPORTED state.
+
+    Distinct from a placeholder on purpose. A placeholder means the build
+    produced nothing and the wheel should not have shipped — a bug, reported as
+    one. This means the wheel is the ``py3-none-any`` one, which exists because
+    pip resolves on the WHEEL TAG: four OS-tagged wheels match nothing on
+    Android or iOS, and dropping the any-tagged wheel made the package
+    unresolvable there entirely (CIRISServer#493).
+
+    So the answer is a fact, not a failure: there is no desktop jar here, the
+    platform wheels have one, and the locale bundle — the part a non-desktop
+    consumer actually needs — is present and works.
+    """
+    if data.get("universal"):
+        raise ArtifactUnavailable(
+            f"this is the UNIVERSAL (py3-none-any) ciris-client wheel: it carries the "
+            f"locale bundle and no OS payload, so {kind!r} is not here — by design, "
+            f"not by failure.\n"
+            f"    locale_bundle() works from this wheel; artifact_path() does not.\n"
+            f"    For a desktop jar, install on a platform with an OS wheel "
+            f"(manylinux_2_17_x86_64, macosx_11_0_arm64, macosx_10_9_x86_64, "
+            f"win_amd64) — pip picks it automatically there.\n"
+            f"    Android and iOS consume the AAR and XCFramework from the GitHub "
+            f"release, not from this wheel."
+        )
+
+
 def _refuse_placeholder(data: dict[str, Any]) -> None:
     if data.get("placeholder"):
         raise ArtifactUnavailable(
@@ -165,6 +193,24 @@ def locale_bundle() -> Path:
     import shutil
     import tempfile
     import zipfile
+
+    # The universal wheel STAGES the bundle rather than embedding it in a jar it
+    # does not have. Served directly: no extraction, no cache, no jar — and the
+    # same verification, because a bundle missing a locale is the same defect
+    # whichever wheel it came from.
+    data = manifest()
+    _refuse_placeholder(data)
+    staged = data.get("locales")
+    if staged:
+        here = _ARTIFACTS_DIR / staged
+        missing = _verify_bundle(here)
+        if missing:
+            shown = missing if len(missing) <= 6 else missing[:6] + ["…"]
+            raise ArtifactUnavailable(
+                f"the staged locale bundle is missing {len(missing)} file(s) its own "
+                f"manifest.json declares: {shown}"
+            )
+        return here
 
     jar = artifact_path("desktop-uber-jar")
 
@@ -297,6 +343,11 @@ def artifact_path(kind: str) -> Path:
 
     entries = {a["kind"]: a for a in data.get("artifacts", [])}
     if kind not in entries:
+        # Say WHICH wheel this is before saying what it lacks. "carries no
+        # 'desktop-uber-jar'" reads as a broken build; on the universal wheel it
+        # is the design, and the difference decides whether the reader goes
+        # looking for a bug or installs the right wheel.
+        _refuse_universal(data, kind)
         raise ArtifactUnavailable(
             f"this ciris-client carries no {kind!r} artifact; it has "
             f"{sorted(entries) or '[]'}"

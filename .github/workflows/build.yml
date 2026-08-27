@@ -94,6 +94,22 @@ jobs:
         # A release without its matrix row does not merge (FSD §6).
         run: python3 compat/validate.py
 
+      - name: A published version must offer a universal wheel
+        # Only for versions already on the index — a PR's VERSION is normally
+        # unpublished, and asserting it would fail every PR. What this catches is
+        # a release that shipped OS wheels only, which is unresolvable on Android
+        # and iOS (CIRISServer#493).
+        run: |
+          set -euo pipefail
+          prev=$(python3 - <<'EOF'
+          import json, urllib.request
+          d = json.loads(urllib.request.urlopen("https://pypi.org/pypi/ciris-client/json", timeout=20).read())
+          vs = sorted(d["releases"], key=lambda v: [int(x) for x in v.split(".") if x.isdigit()])
+          print(vs[-1] if vs else "")
+          EOF
+          )
+          [ -n "$prev" ] && python3 packaging/check_universal_wheel.py "$prev"
+
       - name: Companion version pin
         # check_pins.py says CI enforces it; until now nothing did. A routine
         # VERSION bump could publish ciris-client==X while the `web` extra still
