@@ -1719,7 +1719,7 @@
     "identity_portable_dir_placeholder": "/media/you/USB or /Volumes/USB",
     "identity_portable_title": "Create portable software identity occurrence → directory",
     "identity_repair_action": "How to repair this identity",
-    "identity_repair_body": "This fed-ID was minted before its signed registration had to name what it stands for, so every peer it reaches refuses it. It will keep being offered and keep being refused.",
+    "identity_repair_body": "This fed-ID was minted before its signed registration had to name what it stands for, so it is refused by every peer that receives it. It will keep being offered and it will keep being refused.",
     "identity_repair_keeps": "Nothing is deleted. Attestations hang off this identity, so it is replaced in place and every one of them stays valid.",
     "identity_repair_key_label": "Affected fed-ID",
     "identity_repair_needs": "The repair needs an accord holder to sign this identity again with the same key material: this identity has two signing keys, and both must be unchanged. Creating a replacement identity is refused as a key swap, and registering this identity again does nothing.",

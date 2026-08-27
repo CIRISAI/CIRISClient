@@ -108,8 +108,10 @@ so a lesson learned here reaches the models that would otherwise repeat it.
 
 - **Direction reversal.** Check who is doing what to whom in the target's own
   word order. "Every peer it reaches refuses it" became "it refuses every peer
-  that reaches it" in Yoruba — two participants, one verb, and the sentence
-  survives the swap looking fine.
+  that reaches it" in Yoruba, then again in Arabic and Japanese — two
+  participants, one verb, and the sentence survives the swap looking fine. If
+  you are WRITING the English: a reduced relative clause hides the subject, so
+  say "it is refused by every peer that receives it" and name the agent.
 - **Dangling referent.** A quantifier or pronoun must still attach to its head
   noun after translation. "Both of its signing keys" needs *both* to attach to
   *keys*; languages that mark number or repeat the head will strand it if you go

@@ -759,20 +759,32 @@ def evaluate_lane(lang: str, values: Dict[str, str], en_flat: dict, spend: Spend
              "text": "REVIEW THESE (source -> translation):\n" + pairs},
         ],
     }]
-    try:
-        reply = call_model(REVIEW_MODEL, SYSTEM_REVIEW, messages)
-    except Exception as e:  # noqa: BLE001
-        log(f"[evaluate] {lang}: reviewer unreachable ({e}) — treating as UNREVIEWED")
-        return {k: [{"category": "accuracy", "severity": "critical",
-                     "span": "", "note": f"review did not run: {e}",
-                     "suggestion": ""}] for k in keys}
-    spend.add(REVIEW_MODEL, reply)
-    try:
-        raw = parse_json_reply(reply.text)
-    except ValueError as e:
-        log(f"[evaluate] {lang}: unparseable review ({e}) — treating as UNREVIEWED")
+    # TWO attempts before failing closed. A reply that arrives truncated or
+    # malformed is a transport failure, not a verdict — and failing closed on one
+    # blocks the whole language, since every key in the batch is then marked
+    # unreviewed. `ja` lost all seven keys to a single reply that broke at
+    # character 1218. Fail-closed is right; fail-closed on the first hiccup is
+    # just brittle.
+    raw = None
+    last = ""
+    for attempt in (1, 2):
+        try:
+            reply = call_model(REVIEW_MODEL, SYSTEM_REVIEW, messages)
+        except Exception as e:  # noqa: BLE001
+            last = f"reviewer unreachable: {e}"
+            log(f"[evaluate] {lang}: {last} (attempt {attempt}/2)")
+            continue
+        spend.add(REVIEW_MODEL, reply)
+        try:
+            raw = parse_json_reply(reply.text)
+            break
+        except ValueError as e:
+            last = f"review reply unparseable: {e}"
+            log(f"[evaluate] {lang}: {last} (attempt {attempt}/2)")
+    if raw is None:
+        log(f"[evaluate] {lang}: no usable review after 2 attempts — treating as UNREVIEWED")
         return {k: [{"category": "accuracy", "severity": "critical", "span": "",
-                     "note": f"review reply unparseable: {e}", "suggestion": ""}]
+                     "note": f"{last} (2 attempts)", "suggestion": ""}]
                 for k in keys}
 
     out: Dict[str, List[dict]] = {}
