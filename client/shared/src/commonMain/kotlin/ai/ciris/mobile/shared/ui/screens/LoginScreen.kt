@@ -117,7 +117,12 @@ fun LoginScreen(
     // is allowed is `mayEnterWithFederationIdentity`, decided by CIRISApp
     // against the live owner session — see its KDoc for why the identity's
     // presence on the device is not itself an answer.
+    // The OWNER's fed-ID (owned-nodes `owner`), never the node's own signer.
     federationIdentityKeyId: String? = null,
+    // The probe REACHED the node and got an answer. False also covers "could not
+    // ask" — a cold launch can compose before the node is up, and a question that
+    // was never answered must not render as "you have no identity" and invite the
+    // owner to create a second one.
     federationProbed: Boolean = false,
     onFederationSignIn: () -> Unit = {},
     onCreateFederationIdentity: () -> Unit = {},

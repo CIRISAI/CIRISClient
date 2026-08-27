@@ -557,20 +557,45 @@ fun CIRISApp(
     var federationIdentityKeyId by remember { mutableStateOf<String?>(null) }
     var federationProbed by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
+        // THE OWNER'S FED-ID, NOT THE NODE'S SIGNER (Codex, PR #6).
+        //
+        // getSelfKeyRecord() returns the NODE key — `ciris-client` on a claimed
+        // node — which is the node's own signer and NOT the bound owner. Reading
+        // it here made the login screen offer "Sign in as ciris-client", and
+        // worse, treated an ordinary node signer as proof that the OWNER already
+        // has a federation identity, so the create path could never appear for
+        // an owner who genuinely has none. IdentityManagementViewModel.load()
+        // documents this exact trap and asks owned-nodes first; this now does
+        // the same thing, in the same order, for the same reason.
+        //
+        // Three outcomes, not two. A probe that could not REACH the node has
+        // learned nothing, and "nothing" must not render as "no identity" — the
+        // startup flow retries node readiness, and a cold launch can compose
+        // before the node answers. Only a probe that got an answer sets
+        // federationProbed, so an unreachable node renders no section at all
+        // rather than inviting the owner to create an identity they already have.
+        var reached = false
         val keyId = try {
-            apiClient.getSelfKeyRecord(
+            val owner = runCatching { apiClient.getOwnedNodes().owner }
+                .onSuccess { reached = true }
+                .getOrNull()
+                ?.takeIf { it.isNotBlank() }
+            owner ?: apiClient.getSelfKeyRecord(
                 ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
-            ).keyId
+            ).keyId.also { reached = true }
         } catch (e: Exception) {
-            platformLog(TAG, "[INFO][federation] local-node self-key-record probe failed: ${e.message?.take(80)}")
+            platformLog(TAG, "[INFO][federation] probe failed: ${e.message?.take(80)}")
             null
         }
         federationIdentityKeyId = keyId
-        federationProbed = true
+        federationProbed = reached
         platformLog(
             TAG,
-            "[INFO][federation] startup probe: " +
-                if (keyId != null) "existing identity key_id=$keyId" else "no federation identity yet",
+            "[INFO][federation] startup probe: " + when {
+                !reached -> "node unreachable — no federation section rendered"
+                keyId != null -> "owner identity key_id=$keyId"
+                else -> "reached the node; owner has no federation identity yet"
+            },
         )
     }
 
@@ -1114,6 +1139,14 @@ fun CIRISApp(
                             // Without this the screen is indistinguishable from a
                             // failure.
                             justCompletedSetup = true
+                            // AND THE TOKEN IS DEAD (Codex, PR #6). The restart
+                            // invalidated the session — that is what the banner
+                            // above exists to explain — but the in-memory token
+                            // stayed non-null, so anything asking "is a session
+                            // open?" got yes. mayEnterWithFederationIdentity did
+                            // exactly that and sent the user to a node that then
+                            // rejected them. Clear it where it dies.
+                            currentAccessToken = null
                             isFirstRun = false
                             reconfiguring = false
                             startupViewModel.setKeepTimerAlive(false)
@@ -2081,7 +2114,15 @@ fun CIRISApp(
                                     "federation identity key_id=$federationIdentityKeyId",
                             )
                             loginErrorMessage = null
-                            currentScreen = Screen.Interact
+                            // homeTarget and the shared post-auth start, not a
+                            // bare jump to Interact (Codex, PR #6). Every other
+                            // login-success path starts interact polling and
+                            // lands on the PROBED home — a bare node's landing
+                            // is Contacts, and sending it to the agent-only chat
+                            // surface is the doors-onto-a-wall mistake one screen
+                            // over from where NavGatingTest pins it.
+                            interactViewModel.startPolling()
+                            currentScreen = homeTarget
                         } else {
                             // Not an error the user caused — a redirect. They are
                             // one account sign-in (immediately below) from the
@@ -2098,12 +2139,29 @@ fun CIRISApp(
                         }
                     },
                     onCreateFederationIdentity = {
-                        // No identity yet. The wizard's FEDERATION_IDENTITY_SETUP
-                        // step drives the LOCAL NODE, which is where the keys live
-                        // — the app mints nothing and holds nothing.
-                        platformLog(TAG, "[INFO][onCreateFederationIdentity] no identity — entering setup")
+                        // A CONFIGURED NODE IS NOT A FRESH ONE (Codex, PR #6).
+                        //
+                        // Screen.Setup is the FIRST-RUN wizard, and its completion
+                        // path self-claims the node and reconfigures the runtime.
+                        // Sending a returning owner of an already-configured node
+                        // through it — because they happen to lack a fed-ID — runs
+                        // a one-time claim against a node that is already claimed.
+                        // Screen.AddFederationId is the catch-up flow that exists
+                        // for exactly this state, and the same routing already
+                        // happens automatically at fed-id-catchup.
+                        //
+                        // It is session-authenticated, which is the right gate:
+                        // minting an identity for an owner requires proving you
+                        // are that owner, the same rule as entering as one.
                         loginErrorMessage = null
-                        currentScreen = Screen.Setup
+                        if (isFirstRun ?: true) {
+                            platformLog(TAG, "[INFO][onCreateFederationIdentity] fresh node — first-run wizard")
+                            currentScreen = Screen.Setup
+                        } else {
+                            platformLog(TAG, "[INFO][onCreateFederationIdentity] configured node — fed-ID catch-up")
+                            addFederationIdReturnScreen = homeTarget
+                            currentScreen = Screen.AddFederationId
+                        }
                     },
                 )
 
