@@ -5,6 +5,11 @@ For the strings the pipeline cannot render acceptably. It is not a fallback for
 rung of the ladder**, which so far has meant one thing: a low-resource language
 where no reachable model produced text a reviewer would accept.
 
+**§3 is also live configuration.** `localize.py` parses those bullets into the
+translate, review and repair system prompts, and refuses to start if it cannot —
+so a lesson learned by hand here is a lesson the models get on the next run,
+rather than one that stays in a document nobody re-reads.
+
 That is not a rare edge. CIRIS ranks languages by **inverse model support**
 (Meta-Goal M-1: need, not market size), so the languages at the top of the
 priority list are exactly the ones models are worst at. Amharic, Hausa, Burmese
@@ -92,35 +97,44 @@ notes are specific and usually correct — treat them as the brief.
 
 ## 3. The failure modes that actually occur
 
-Drawn from three production runs, in order of how often they bit:
+<!-- PIPELINE-RULES: localize.py parses the bullets in this section verbatim into
+     the translate, review and repair system prompts. One source, two consumers —
+     edit here and the agents change with it. Keep the shape:
+     `- **Name.** one or two sentences.` -->
 
-**Direction reversal.** `"every peer it reaches refuses it"` became *"it refuses
-every peer that reaches it"* in Yoruba. Two participants, one verb — check who
-is doing what to whom, in the target's own word order.
+Drawn from three production runs, in order of how often they bit. **These are
+also the rules the pipeline injects into every agent** — see the comment above,
+so a lesson learned here reaches the models that would otherwise repeat it.
 
-**Dangling referent.** `"both of its signing keys"` needs *both* to attach to
-*keys*. Languages that mark number or repeat the head noun will strand it if you
-translate word-for-word.
-
-**Half-loan compounds.** Amharic's reviewer rejected `"registration envelope"`
-rendered as one translated word plus one loan: *"unnatural half-loan,
-half-translation … word-salad"*. Either take the whole term as a loan or express
-the whole concept natively. Here the metaphor was dropped entirely — ` የተፈረመበት
-የምዝገባ መዝገብ`, "the registration record it was signed over" — because the crypto
-sense of *envelope* has no Amharic idiom and the postal word would mislead.
-
-**Register drift.** The glossaries' *Cultural Considerations* are binding:
-Amharic formal `እርስዎ` (never `አንተ/አንቺ`); Bengali `আপনি`; Yoruba respectful forms.
-
-**Orthography.** Yoruba tone marks and sub-dots carry meaning — `okun` is beach,
-rope or strength depending on marks, so unmarked text is ambiguous, not merely
-informal. Every vowel gets its mark. Amharic uses Ethiopian punctuation: `።`
-full stop, `፣` comma. Hausa needs its hooked letters `ɓ ɗ ƙ`.
-
-**"Minted".** A term of art. `am` read it as *choosing*, `my` as *creating*.
-Prefer the language's word for **issued** where one exists.
-
----
+- **Direction reversal.** Check who is doing what to whom in the target's own
+  word order. "Every peer it reaches refuses it" became "it refuses every peer
+  that reaches it" in Yoruba — two participants, one verb, and the sentence
+  survives the swap looking fine.
+- **Dangling referent.** A quantifier or pronoun must still attach to its head
+  noun after translation. "Both of its signing keys" needs *both* to attach to
+  *keys*; languages that mark number or repeat the head will strand it if you go
+  word-for-word.
+- **Half-loan compounds.** Do not build a term from one translated word plus one
+  loanword. Amharic's reviewer called exactly that word-salad for "registration
+  envelope". Take the whole term as a loan, or express the whole concept
+  natively — and if the source's metaphor has no idiom in the target, drop the
+  metaphor and say what it means.
+- **Terms of art read as ordinary words.** "Minted" is issuance, not choosing
+  (`am`) and not merely creating (`my`). Prefer the language's word for ISSUED.
+  The same trap waits on "scrub", "fold", "attest" and "anchor".
+- **Register drift.** The formality the glossary's standing rules specify is
+  binding, not advisory: Amharic formal `እርስዎ` and never `አንተ/አንቺ`, Bengali
+  `আপনি`, Yoruba respectful forms.
+- **Orthography is meaning.** Yoruba tone marks and sub-dots disambiguate words
+  (`okun` is beach, rope or strength by marks alone), so unmarked text is
+  ambiguous rather than merely informal. Amharic takes `።` and `፣`; Hausa keeps
+  `ɓ ɗ ƙ`.
+- **Bare demonstratives.** "This", standing alone, forces gendered languages to
+  invent agreement with a noun that is not there — Italian did. Name the noun.
+- **The corpus outranks your instinct.** A rendering that disagrees with the
+  shipped anchors is wrong even when it is defensible, because the anchors are
+  what users are already reading. Say so if you think the corpus is wrong;
+  do not quietly diverge from it.
 
 ## 4. Writing them in
 

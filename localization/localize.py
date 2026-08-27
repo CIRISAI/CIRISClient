@@ -238,6 +238,43 @@ def mqm_score(errors: Sequence[dict]) -> int:
 # Prompts
 # ─────────────────────────────────────────────────────────────────────────────
 
+#: The one source for the lessons three production runs taught. Parsed from the
+#: guide rather than restated here — a rule that lives in two places drifts, and
+#: the copy that drifts is the one the models are reading.
+TRANSLATION_GUIDE = Path(__file__).resolve().parent / "TRANSLATION_GUIDE.md"
+_GUIDE_SECTION = "## 3. The failure modes that actually occur"
+
+
+def _guide_rules() -> str:
+    """The guide's §3 bullets, as prompt text.
+
+    Fails loudly rather than returning "". A prompt that quietly lost its rules
+    still produces confident output, and nothing downstream can tell the
+    difference — which is the same shape as a gate that cannot fail.
+    """
+    try:
+        text = TRANSLATION_GUIDE.read_text(encoding="utf-8")
+    except OSError as e:
+        raise SystemExit(f"[refuse] cannot read {TRANSLATION_GUIDE}: {e}. Its §3 is "
+                         f"what every agent is told about the failure modes seen in "
+                         f"production; running without it silently drops them.")
+    start = text.find(_GUIDE_SECTION)
+    if start < 0:
+        raise SystemExit(f"[refuse] {TRANSLATION_GUIDE.name} has no section "
+                         f"{_GUIDE_SECTION!r} — the prompts are built from it.")
+    end = text.find("\n## ", start + len(_GUIDE_SECTION))
+    body = text[start:end if end > 0 else len(text)]
+    rules = re.findall(r"^- (\*\*.+?)(?=\n- |\n\n|\Z)", body, re.M | re.S)
+    if not rules:
+        raise SystemExit(f"[refuse] {_GUIDE_SECTION!r} parsed to zero rules. The "
+                         f"section is the prompts' only source; an empty parse is a "
+                         f"silently weaker pipeline, not an empty section.")
+    clean = [" ".join(r.split()) for r in rules]
+    return "\n".join(f"- {r}" for r in clean)
+
+
+GUIDE_RULES = _guide_rules()
+
 _PLACEHOLDER_RULE = """- Preserve every placeholder EXACTLY as it appears in the English source:
   {named}, ${expr}, %s, %1$s. Never translate, rename, drop, add or reorder one.
 - Product terms stay untranslated: CIRIS, ciris-server, key_id, USB, and version
@@ -265,7 +302,11 @@ Rules, all of them hard:
   a bad translation, and a refusal is ROUTED TO A STRONGER MODEL rather than
   shipped. Never return English text as a translation, never transliterate the
   English, and never invent a plausible-looking string you do not stand behind —
-  those are worse than a refusal, because nothing downstream can see them."""
+  those are worse than a refusal, because nothing downstream can see them.
+
+WHAT WENT WRONG BEFORE. Every one of these was a real finding on a real run of
+this pipeline, in some language, and each cost a release:
+""" + GUIDE_RULES
 
 SYSTEM_REVIEW = f"""You are an independent translation quality reviewer for \
 CIRIS, a decentralized mesh client shipped in 29 languages. You did not write \
@@ -296,7 +337,11 @@ Judge hard and specifically:
 - A term that disagrees with the CANONICAL TERMINOLOGY block is TERMINOLOGY,
   even if the alternative is a fine word in isolation.
 - Do NOT invent errors to look thorough. An empty list is the correct and
-  expected answer for a good translation."""
+  expected answer for a good translation.
+
+LOOK FOR THESE SPECIFICALLY. Each is a defect this pipeline has actually shipped
+past a structural gate, in some language, on some run:
+""" + GUIDE_RULES
 
 SYSTEM_REPAIR = f"""You are correcting CIRIS UI translations that a reviewer \
 rejected. You will receive the English source, the current translation, and the \
@@ -310,7 +355,10 @@ Rules:
 - If you judge a finding to be WRONG, return the current translation unchanged
   rather than damaging it to satisfy a bad review, and say so in "refusals".
 {_PLACEHOLDER_RULE}
-- The CANONICAL TERMINOLOGY block wins every terminology dispute."""
+- The CANONICAL TERMINOLOGY block wins every terminology dispute.
+
+THE DEFECTS YOU ARE MOST LIKELY CORRECTING. Each has been a real finding here:
+""" + GUIDE_RULES
 
 
 # ─────────────────────────────────────────────────────────────────────────────
