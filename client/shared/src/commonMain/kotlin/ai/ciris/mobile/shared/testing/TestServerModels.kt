@@ -28,6 +28,29 @@ data class TreeResponse(val screen: String, val elements: List<ElementInfo>, val
 @Serializable
 data class ScreenResponse(val screen: String)
 
+/**
+ * The app's own account of the gates a walk-test needs to assert.
+ *
+ * `/screen` and `/tree` can only tell a harness what is DRAWN, and the two
+ * things a client of a federation node must get right are not drawings: which
+ * node it is talking to, and whether that node is carrying a brain. Inferring
+ * the mode from which widgets happen to be on screen makes the assertion a
+ * restatement of the layout -- it goes green for a client that renders agent
+ * affordances against a bare node, which is the bug.
+ *
+ * [clientMode] is `ClientMode.name`, or `"unset"` while the probe is still
+ * undetermined -- which is a REAL state, not a missing value: a folded brain
+ * that is not answering must leave the gate unset and be retried, never latched
+ * (CIRISServer#390). A harness has to be able to see the difference.
+ */
+@Serializable
+data class StateResponse(
+    val screen: String,
+    val testMode: Boolean,
+    val clientMode: String,
+    val nodeUrl: String
+)
+
 @Serializable
 data class ClickRequest(val testTag: String)
 

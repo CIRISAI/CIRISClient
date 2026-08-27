@@ -458,6 +458,19 @@ fun CIRISApp(
         TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
     }
 
+    // Publish the node-vs-agent gate to test automation.
+    //
+    // A walk-test cannot assert this from the element tree without asserting
+    // the layout instead of the gate -- it would pass a client that draws agent
+    // affordances against a bare node. `null` is published as "unset" rather
+    // than defaulted to NODE, because undetermined (a folded brain that is not
+    // answering) is a distinct state the client must retry out of, and a
+    // harness that cannot see it cannot catch a client that latches.
+    LaunchedEffect(clientMode, nodeBaseUrl) {
+        ai.ciris.mobile.shared.testing.TestAutomationState.clientMode = clientMode?.name ?: "unset"
+        ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl = nodeBaseUrl
+    }
+
 
     // Handle system back button - navigate back to appropriate parent screen
     // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is

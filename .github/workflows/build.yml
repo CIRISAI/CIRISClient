@@ -193,6 +193,109 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # ── Drive the actual app against actual nodes ───────────────────────────────
+  #
+  # Everything above this line can pass for a client that never starts. The jobs
+  # compile it, unit test :shared, build a jar and a wheel, and check facts about
+  # PyPI -- and every defect this repo has shipped to the server team lived past
+  # all of that, because it only exists once the app is RUNNING and talking to a
+  # node. This job starts it, four times, against the four node configurations a
+  # universal client has to be complete against.
+  #
+  # See testing/README.md for the matrix and for the one corner it cannot cover.
+  e2e-desktop:
+    name: e2e (desktop)
+    needs: [gradle]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: apt (hardened)
+        uses: ./.github/actions/apt
+        with:
+          # Compose Desktop needs a display. There is no X server on a runner.
+          # xvfb-run needs xauth; without it it fails with a bare "xauth: not found".
+          packages: xvfb xauth
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: gradle-client
+          path: jars
+
+      - name: The node this client will be a client of
+        id: node
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          want="v$(cat VERSION)"
+          asset_for() { echo "ciris-server-$1-x86_64-unknown-linux-gnu.tar.gz"; }
+          mkdir -p node
+          # The pinned version first. Client and server versions are gated to
+          # move together, so that is the pairing this tree claims to work with.
+          if gh release download "$want" -R CIRISAI/CIRISServer \
+               -p "$(asset_for "$want")" -D node 2>/dev/null; then
+            used="$want"
+          else
+            # NOT a silent fallback. The client can legitimately cut a version
+            # before the server tags the matching one, and testing against no
+            # node at all would be worse -- but which node ran is a fact the
+            # report has to carry, not a detail the log buries.
+            used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
+            echo "::notice::CIRISServer $want is not released yet; the walk ran against $used"
+            gh release download "$used" -R CIRISAI/CIRISServer -p "$(asset_for "$used")" -D node
+          fi
+          tar xzf node/ciris-server-*.tar.gz -C node
+          chmod +x node/ciris-server
+          echo "version=$used" >> "$GITHUB_OUTPUT"
+          echo "Client $(cat VERSION) walking against node $used"
+
+      - name: Walk the matrix
+        run: |
+          set -euo pipefail
+          jar=$(find jars -name '*.jar' -size +1M | head -1)
+          test -n "$jar" || { echo "::error::no uber-jar in the gradle artifact"; exit 1; }
+          python3 -m testing.run_e2e \
+            --corner all \
+            --jar "$jar" \
+            --node-bin node/ciris-server \
+            --report e2e-report.json \
+            --workdir e2e-work
+
+      - name: What the walk saw
+        if: always()
+        run: |
+          test -f e2e-report.json || { echo "no report was written"; exit 0; }
+          python3 - <<'EOF'
+          import json
+          r = json.load(open("e2e-report.json"))
+          for c in r["corners"]:
+              print(f"{c['corner']:24s} {c['status']:8s} {c['seconds']}s  screen={c['screen']!r}")
+              for case in c["cases"]:
+                  if case["status"] == "failed":
+                      print(f"    FAILED {case['name']}: {case['detail']}")
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          # Screenshots, node logs and app logs for every corner. A failed walk
+          # is only useful if you can see what the app was showing.
+          name: e2e-evidence
+          path: |
+            e2e-report.json
+            e2e-work/*/app.log
+            e2e-work/*/node.log
+            e2e-work/*/failure.png
+          if-no-files-found: warn
+          retention-days: 14
+
   # ── Package. Runs whatever gradle managed, and says so ──────────────────────
   wheels:
     name: wheels

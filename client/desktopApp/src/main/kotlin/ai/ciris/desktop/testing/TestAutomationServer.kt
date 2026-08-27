@@ -224,6 +224,16 @@ class TestAutomationServer(
                     ))
                 }
 
+                // The app's own account of its gates -- see StateResponse.
+                get("/state") {
+                    call.respond(ai.ciris.mobile.shared.testing.StateResponse(
+                        screen = currentScreen,
+                        testMode = true,
+                        clientMode = ai.ciris.mobile.shared.testing.TestAutomationState.clientMode,
+                        nodeUrl = ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl
+                    ))
+                }
+
                 // Get current screen
                 get("/screen") {
                     call.respond(ScreenResponse(screen = currentScreen))
