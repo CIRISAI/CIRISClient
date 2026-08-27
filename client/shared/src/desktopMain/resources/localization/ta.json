@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "செல்லாது username or password. தயவுசெய்து try again.",
     "login_federation_create": "புதிய ஃபெடரேஷன் ID-ஐ உருவாக்கு",
     "login_federation_existing": "உங்கள் ஃபெடரேஷன் அடையாளம் இந்த சாதனத்தில் தயாராக உள்ளது.",
+    "login_federation_needs_account": "இந்த ஃபெடரேஷன் அடையாளத்தைப் பயன்படுத்த, கீழே உங்கள் கணக்குடன் உள்நுழையவும்.",
     "login_federation_none": "தொடங்க உங்கள் நீண்டகால ஃபெடரேஷன் அடையாளத்தை உருவாக்கவும்.",
     "login_federation_or": "அல்லது கீழே மற்றொரு உள்நுழைவு விருப்பத்தைப் பயன்படுத்தவும்",
     "login_federation_signin_as": "{key_id} ஆக உள்நுழையவும்",

@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Jina la mtumiaji au nenosiri si sahihi. Tafadhali jaribu tena.",
     "login_federation_create": "Unda kitambulisho kipya cha shirikisho",
     "login_federation_existing": "Utambulisho wako wa shirikisho uko tayari kwenye kifaa hiki.",
+    "login_federation_needs_account": "Ingia kwa akaunti yako hapa chini ili kutumia utambulisho huu wa shirikisho.",
     "login_federation_none": "Unda utambulisho wako wa shirikisho wa muda mrefu ili kuanza.",
     "login_federation_or": "au tumia chaguo lingine la kuingia hapa chini",
     "login_federation_signin_as": "Ingia kama {key_id}",

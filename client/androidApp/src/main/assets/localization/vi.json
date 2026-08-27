@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Tên đăng nhập hoặc mật khẩu không hợp lệ. Vui lòng thử lại.",
     "login_federation_create": "Tạo ID liên bang mới",
     "login_federation_existing": "Danh tính liên bang của bạn đã sẵn sàng trên thiết bị này.",
+    "login_federation_needs_account": "Đăng nhập bằng tài khoản của bạn bên dưới để sử dụng danh tính liên bang này.",
     "login_federation_none": "Tạo danh tính liên bang lâu dài của bạn để bắt đầu.",
     "login_federation_or": "hoặc dùng một tùy chọn đăng nhập khác bên dưới",
     "login_federation_signin_as": "Đăng nhập với tư cách {key_id}",

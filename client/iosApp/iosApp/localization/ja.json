@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "ユーザー名またはパスワードが無効です。もう一度お試しください。",
     "login_federation_create": "新しいフェデレーションIDを作成",
     "login_federation_existing": "このデバイスでフェデレーションIDの準備ができています。",
+    "login_federation_needs_account": "このフェデレーションIDを使用するには、以下からアカウントでサインインしてください。",
     "login_federation_none": "開始するには、長期的なフェデレーションIDを作成してください。",
     "login_federation_or": "または以下の別のサインイン方法を使用",
     "login_federation_signin_as": "{key_id} としてサインイン",

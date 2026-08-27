@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "غلط صارف نام یا پاس ورڈ۔ براہ کرم دوبارہ کوشش کریں۔",
     "login_federation_create": "نئی فیڈریشن آئی ڈی بنائیں",
     "login_federation_existing": "آپ کی فیڈریشن شناخت اس آلے پر تیار ہے۔",
+    "login_federation_needs_account": "اس فیڈریشن شناخت کو استعمال کرنے کے لیے نیچے اپنے اکاؤنٹ سے سائن ان کریں۔",
     "login_federation_none": "شروع کرنے کے لیے اپنی دیرپا فیڈریشن شناخت بنائیں۔",
     "login_federation_or": "یا نیچے کوئی اور سائن اِن اختیار استعمال کریں",
     "login_federation_signin_as": "{key_id} کے طور پر سائن ان کریں",

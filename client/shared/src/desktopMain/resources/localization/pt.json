@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Nome de usuário ou senha inválidos. Tente novamente.",
     "login_federation_create": "Criar um novo ID de federação",
     "login_federation_existing": "Sua identidade de federação está pronta neste dispositivo.",
+    "login_federation_needs_account": "Entre com sua conta abaixo para usar essa identidade de federação.",
     "login_federation_none": "Crie sua identidade de federação de longa duração para começar.",
     "login_federation_or": "ou use outra opção de login abaixo",
     "login_federation_signin_as": "Entrar como {key_id}",

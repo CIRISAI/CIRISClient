@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "အသုံးပြုသူအမည် သို့မဟုတ် စကားဝှက် မမှန်ကန်ပါ။ ထပ်မံကြိုးစားပါ။",
     "login_federation_create": "federation ID အသစ်တစ်ခု ဖန်တီးပါ",
     "login_federation_existing": "သင်၏ federation အထောက်အထားသည် ဤစက်တွင် အသင့်ဖြစ်နေသည်။",
+    "login_federation_needs_account": "ဤ federation အထောက်အထားကို အသုံးပြုရန် အောက်တွင် သင်၏ အကောင့်ဖြင့် ဝင်ရောက်ပါ။",
     "login_federation_none": "စတင်ရန် သင်၏ ရေရှည်တည်တံ့သော federation အထောက်အထားကို ဖန်တီးပါ။",
     "login_federation_or": "သို့မဟုတ် အောက်ရှိ အခြားဝင်ရောက်မှုနည်းလမ်းကို သုံးပါ",
     "login_federation_signin_as": "{key_id} အဖြစ် ဝင်ရောက်ပါ",
