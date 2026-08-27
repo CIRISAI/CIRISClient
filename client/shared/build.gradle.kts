@@ -140,7 +140,24 @@ kotlin {
     // holds them together.
     val xcf = XCFramework("shared")
     listOf(
-        iosX64(),
+        // iosX64 — the INTEL simulator — is deliberately absent.
+        //
+        // The XCFramework is three sequential release links and nothing else:
+        // iosArm64 81m, iosSimulatorArm64 80m, iosX64 83m, measured on the
+        // 0.5.189 publish. Release linking is whole-program LLVM optimisation
+        // over all of Compose Multiplatform, Kotlin/Native does not use
+        // compiler caches for optimised binaries, and Gradle parallelism does
+        // not apply because all three tasks live in this one project. So the
+        // only lever on a four-hour build is how many of those links exist.
+        //
+        // What iosX64 buys is running the SIMULATOR on an Intel Mac. The device
+        // target and the Apple Silicon simulator are untouched, CI runs on
+        // macos-14 (ARM), and no shipped artifact loses a platform: an iPhone
+        // build uses iosArm64 either way.
+        //
+        // PUTTING IT BACK is one line and 83 minutes per release. Do that the
+        // moment someone actually needs an Intel simulator — this is a cost
+        // decision, not a claim that Intel Macs do not exist.
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -291,7 +308,6 @@ kotlin {
             }
         }
 
-        val iosX64Main by getting { dependsOn(iosMain) }
         val iosArm64Main by getting { dependsOn(iosMain) }
         val iosSimulatorArm64Main by getting { dependsOn(iosMain) }
 

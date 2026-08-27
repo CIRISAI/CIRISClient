@@ -45,7 +45,8 @@ kotlin {
         browser()
     }
 
-    iosX64()
+    // iosX64 (Intel simulator) omitted to match :shared — see its
+    // build.gradle.kts for the cost that bought.
     iosArm64()
     iosSimulatorArm64()
 
@@ -69,12 +70,10 @@ kotlin {
                 implementation("io.ktor:ktor-client-js:3.0.3")
             }
         }
-        val iosX64Main by getting
         val iosArm64Main by getting
         val iosSimulatorArm64Main by getting
         val iosMain by creating {
             dependsOn(commonMain)
-            iosX64Main.dependsOn(this)
             iosArm64Main.dependsOn(this)
             iosSimulatorArm64Main.dependsOn(this)
         }

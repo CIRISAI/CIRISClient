@@ -467,9 +467,12 @@ jobs:
             # first run pays that once and later runs do not.
             runner: macos-14
             task: ":shared:assembleSharedReleaseXCFramework"
-            timeout: 350
+            # Two links, not three (iosX64 dropped — see shared/build.gradle.kts):
+            # ~161 min measured, so 240 leaves real headroom on a cold runner
+            # without the old 350 that let a wedged build burn six hours.
+            timeout: 240
             # 25 minutes, not 10. linkReleaseFrameworkIosArm64 is measured at
-            # >85 minutes and is genuinely quiet inside LLVM optimisation, so a
+            # 81 minutes and is genuinely quiet inside LLVM optimisation, so a
             # tighter idle window would kill a healthy build — which is the
             # failure mode a hang detector must not have. The wall clock stays
             # at 350; what changes is that a WEDGED build now fails in 25
@@ -487,12 +490,74 @@ jobs:
         with:
           cache-read-only: ${{ matrix.cache_read_only }}
 
+      - name: Kotlin/Native toolchain cache
+        # setup-gradle caches ~/.gradle and NOT ~/.konan, which is where
+        # Kotlin/Native keeps LLVM and the sysroots. So every run re-downloaded
+        # them and printed "one-time action performed only on the first run of
+        # the compiler" — every run being a first run. `cache_read_only: false`
+        # was set on this job to stop exactly that and could never have worked,
+        # because it governs a different cache.
+        #
+        # This is minutes, not hours. The hours are the release links, and the
+        # step below is what stops paying those.
+        if: matrix.name == 'ios-xcframework'
+        uses: actions/cache@v4
+        with:
+          path: ~/.konan
+          key: konan-${{ runner.os }}-${{ hashFiles('client/gradle/libs.versions.toml', 'client/build.gradle.kts', 'client/shared/build.gradle.kts') }}
+          restore-keys: konan-${{ runner.os }}-
+
+      - name: XCFramework cache
+        # THE ACTUAL FIX. Four hours is three sequential release links —
+        # iosArm64 81m, iosSimulatorArm64 80m, iosX64 83m — and everything else
+        # in the job is seven minutes. Release linking is whole-program LLVM
+        # optimisation over all of Compose Multiplatform; it is expensive
+        # because of what it does, and Kotlin/Native does not use compiler
+        # caches for optimised release binaries, so no toolchain cache shortens
+        # it.
+        #
+        # What DOES shorten it is not doing it. The framework is a pure function
+        # of the Kotlin that goes into it, and most releases do not touch that:
+        # a locale pass, a packaging fix, a version bump all rebuild an
+        # artifact that is byte-for-byte the previous one. Keyed on the sources
+        # the framework is actually built from, a release that did not change
+        # them restores in seconds.
+        #
+        # Deliberately NOT keyed on the vendoring digest: that covers all of
+        # client/, so a locale JSON — which the framework does not embed
+        # (composeResources is NO-SOURCE) — would invalidate hours of work for
+        # nothing.
+        #
+        # VERSION *is* in the key and stays there. generateBuildFlavor compiles
+        # CLIENT_VERSION into commonMain, so a new version genuinely is a
+        # different framework, and a cache that ignored that would ship the
+        # previous version's string into the VERSION-MISMATCH banner — the
+        # exact defect CLIENT_VERSION generation exists to prevent. So this
+        # cache pays off on RE-RUNS of a version (three re-tags of 0.5.190
+        # today, four hours each) and not on new ones; what makes new ones
+        # cheaper is having two release links instead of three.
+        id: xcf-cache
+        if: matrix.name == 'ios-xcframework'
+        uses: actions/cache@v4
+        with:
+          path: client/shared/build/XCFrameworks/release
+          key: xcf-${{ runner.os }}-${{ hashFiles('client/shared/src/commonMain/**', 'client/shared/src/iosMain/**', 'client/shared/src/iosArm64Main/**', 'client/shared/src/iosSimulatorArm64Main/**', 'client/generated-api/src/**', 'client/shared/build.gradle.kts', 'client/generated-api/build.gradle.kts', 'client/build.gradle.kts', 'client/gradle.properties', 'VERSION') }}
+
       - name: Build
+        # Skipped entirely on an XCFramework cache hit — the four hours are the
+        # link, so the only way not to pay them is not to run it.
+        if: matrix.name != 'ios-xcframework' || steps.xcf-cache.outputs.cache-hit != 'true'
         working-directory: client
         run: |
           ../packaging/run_with_watchdog.sh \
             "${{ matrix.idle_seconds }}" 300 "${{ matrix.name }}" \
             -- ./gradlew --no-daemon ${{ matrix.task }}
+
+      - name: Restored, not rebuilt
+        if: matrix.name == 'ios-xcframework' && steps.xcf-cache.outputs.cache-hit == 'true'
+        run: |
+          echo "XCFramework restored from cache — the Kotlin that feeds it is unchanged."
+          find client/shared/build/XCFrameworks/release -maxdepth 1 -name '*.xcframework' -exec du -sh {} +
 
       - name: Collect
         shell: bash
