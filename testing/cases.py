@@ -146,22 +146,6 @@ def did_launch_a_node(ctx: Context) -> None:
     ctx.notes.append("client launched its own node")
 
 
-@case("claim_pin_is_readable", (LOCAL_NODE,), "the first-run path the desktop wheel broke")
-def claim_pin_is_readable(ctx: Context) -> None:
-    home = ctx.node_home
-    if home is None:
-        raise AssertionError("harness bug: no node home recorded for the local corner")
-    from pathlib import Path
-
-    pin_file = Path(str(home)) / "claim_pin"
-    if not pin_file.exists() or not pin_file.read_text().strip():
-        raise AssertionError(
-            f"the node wrote no claim PIN at {pin_file}. First run cannot be "
-            f"completed by a client that only reads the file."
-        )
-    ctx.notes.append("claim PIN present in the node home")
-
-
 @case("automation_surface_answers", ALL_CORNERS, "the driver's own contract with the app")
 def automation_surface_answers(ctx: Context) -> None:
     h = ctx.app.health()

@@ -265,6 +265,7 @@ jobs:
             --corner all \
             --jar "$jar" \
             --node-bin node/ciris-server \
+            --node-version "${{ steps.node.outputs.version }}" \
             --report e2e-report.json \
             --workdir e2e-work
 

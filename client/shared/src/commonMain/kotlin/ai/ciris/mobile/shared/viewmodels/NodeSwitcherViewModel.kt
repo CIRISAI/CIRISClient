@@ -763,7 +763,13 @@ class NodeSwitcherViewModel(
             )
             return
         }
-        _bootstrap.value = _bootstrap.value.copy(claimInProgress = true, claimError = null, claimedRole = null)
+        _bootstrap.value = _bootstrap.value.copy(
+            claimInProgress = true,
+            claimError = null,
+            claimFailure = null,
+            claimErrorDetail = null,
+            claimedRole = null,
+        )
         viewModelScope.launch {
             try {
                 // Drive the LOCAL node to claim the target. The local node does ALL
@@ -788,22 +794,54 @@ class NodeSwitcherViewModel(
                 // PIN. The local node (or, via it, the target) returns 4xx with a
                 // body that mentions the pin (e.g. "invalid_claim_pin" / "claim
                 // pin"); claimRemote re-throws it.
-                val msg = e.message.orEmpty()
-                val isPinRejection = msg.contains("claim_pin", ignoreCase = true) ||
-                    msg.contains("claim pin", ignoreCase = true) ||
-                    msg.contains("invalid pin", ignoreCase = true)
+                // FOUR OUTCOMES, NOT TWO. See [ClaimFailure]: a wrong PIN, an
+                // already-owned node, an unreachable target and a malformed
+                // NodeCode need different next actions, and the previous
+                // two-way split (PIN prose, else the raw message) made the
+                // three non-PIN cases indistinguishable to an operator
+                // claiming a fleet. Classified on the server's stable codes.
+                val failure = ai.ciris.mobile.shared.models.classifyClaimFailure(e.message)
                 _bootstrap.value = _bootstrap.value.copy(
                     claimInProgress = false,
-                    claimError = if (isPinRejection) {
-                        "The node rejected the PIN — check the one-time PIN on the node's console and try again."
-                    } else {
-                        "Claim failed: ${e.message}"
+                    claimFailure = failure,
+                    // The verbatim message is KEPT alongside the classification,
+                    // never replaced by it: UNKNOWN exists precisely so an
+                    // unrecognised refusal reaches the operator intact rather
+                    // than being flattened into a guess.
+                    claimErrorDetail = e.message,
+                    claimError = when (failure) {
+                        ai.ciris.mobile.shared.models.ClaimFailure.PIN_REJECTED ->
+                            "The node rejected the PIN — check the one-time PIN on the node's console and try again."
+                        ai.ciris.mobile.shared.models.ClaimFailure.ALREADY_CLAIMED ->
+                            "This node already has an owner — there is nothing to claim. It prints a one-time PIN only while unclaimed."
+                        ai.ciris.mobile.shared.models.ClaimFailure.UNREACHABLE ->
+                            "Could not reach that node to claim it — check the address in its NodeCode and that the node is running."
+                        ai.ciris.mobile.shared.models.ClaimFailure.BAD_NODE_CODE ->
+                            "That NodeCode could not be read — re-scan or re-paste the full CIRIS-V1- code."
+                        ai.ciris.mobile.shared.models.ClaimFailure.UNKNOWN ->
+                            "Claim failed: ${e.message}"
                     },
                 )
             }
         }
     }
 
+    /**
+     * Is the local node -- the thing that SIGNS a claim -- reachable?
+     *
+     * Desktop, Android and iOS all ship a local node, so this is normally true;
+     * it is false when that node is not running yet, and on the web build,
+     * which has no local runtime at all and therefore cannot claim anything.
+     */
+    fun checkLocalSigner() {
+        viewModelScope.launch {
+            val ready = runCatching {
+                apiClient.isLocalNodeUp(ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL)
+            }.getOrDefault(false)
+            PlatformLogger.i(TAG, "[claimAdmin] local signer ready=$ready")
+            _bootstrap.value = _bootstrap.value.copy(localSignerReady = ready)
+        }
+    }
 }
 
 /** Phase of the NodeCode bootstrap, for driving the connect/pin/claim UI. */
@@ -826,6 +864,29 @@ data class NodeBootstrapState(
     /** Non-null on a successful claim (e.g. "SYSTEM_ADMIN"). */
     val claimedRole: String? = null,
     val claimError: String? = null,
+    /**
+     * WHY the claim failed, as a fact the UI can branch on -- see [ClaimFailure].
+     * `null` when no claim has failed.
+     */
+    val claimFailure: ai.ciris.mobile.shared.models.ClaimFailure? = null,
+    /**
+     * The node's own message, kept verbatim beside the classification. The
+     * classification is for deciding what to OFFER; this is what actually
+     * happened, and an unrecognised refusal must still reach the operator.
+     */
+    val claimErrorDetail: String? = null,
+    /**
+     * Can this device sign a claim at all?
+     *
+     * The owner-binding is built and hybrid-signed by the operator's OWN node --
+     * the app performs no crypto by design -- so claiming requires the local
+     * node to be up. `null` while unchecked, `false` when it is not reachable.
+     *
+     * Checked BEFORE the operator is asked for a NodeCode and a one-time PIN.
+     * Collecting both secrets and only then failing at the POST wastes a
+     * console trip, and the one-time PIN may be consumed or re-read for nothing.
+     */
+    val localSignerReady: Boolean? = null,
 ) {
     val isPinned: Boolean get() = pinnedProfile != null
     val isAdminClaimed: Boolean get() = claimedRole != null

@@ -61,12 +61,19 @@ LOCAL_NODE_URL = f"http://127.0.0.1:{NODE_API_PORT}"
 # read by `clientModeFrom`; nothing is decorative.
 BRAIN_MERGE = {
     "cognitive_state": "WORK",
-    "role": "agent",
     "services": {
         f"service_{i:02d}": {"healthy": True, "status": "ok"} for i in range(22)
     },
     "agent": {"folded": True, "reachable": True},
 }
+# NOTE THE ABSENCE OF `role` (Codex, PR #10). A node's merged health keeps
+# `role: "fabric-node"` while a folded brain answers over it -- ClientMode.kt
+# says so explicitly, and `clientModeFrom` treats `role == "agent"` as
+# CONCLUSIVE, checked before it looks at anything else. Setting it here made
+# the agent corner green on that one field alone: the client could stop reading
+# cognitive_state, the service map and agent.reachable entirely -- the whole
+# folded-node derivation this corner exists for -- and nothing would go red.
+# Leaving the real node's role intact forces the verdict through `answeringFold`.
 
 # Folded but not answering: the UNDETERMINED verdict. No cognitive_state, no
 # services -- the two positive signals are absent, so a client that latches
@@ -92,7 +99,18 @@ CONFIGURED_SETUP = {
 }
 
 # Per-corner rewrites, keyed by the route they apply to.
-NODE_REWRITES: dict[str, dict] = {}
+
+# A bare node that is SET UP (Codex, PR #10).
+#
+# The setup rewrite is what makes this corner test anything. A fresh node
+# reports `setup_required: true`, and `brainUnconfigured` is the FIRST arm of
+# `clientModeFrom` -- an unconditional NODE that never reaches the role check,
+# the cognitive_state check or the service-count check. So a bare node on a
+# fresh home is classified correctly for a reason that bypasses classification,
+# and a client that promoted every configured node to AGENT stayed green here.
+# The health envelope is left exactly as the real node reports it: this is a
+# genuinely bare node that has simply completed its wizard.
+NODE_REWRITES = {"/v1/setup/status": CONFIGURED_SETUP}
 AGENT_REWRITES = {
     "/v1/system/health": BRAIN_MERGE,
     "/v1/setup/status": CONFIGURED_SETUP,
@@ -185,10 +203,30 @@ class RealNode:
         try:
             wait_until_up(self.url)
         except RuntimeError:
+            # KILL IT BEFORE RAISING (Codex, PR #10). A node that starts but
+            # never goes healthy is still holding the fixed port. Raising from
+            # here means `start()` never returns, so the caller never assigns
+            # self.node and its `finally` has nothing to clean up -- the orphan
+            # then fails every following corner, and outlives the run on a
+            # developer's machine.
+            tail = self.tail()
+            self.stop_process_only()
             raise RuntimeError(
-                f"node did not come up; last log lines:\n{self.tail()}"
+                f"node did not come up; last log lines:\n{tail}"
             ) from None
         return self
+
+    def stop_process_only(self) -> None:
+        """Terminate without waiting on the port -- for a node that never rose."""
+        if not self.proc:
+            return
+        self.proc.terminate()
+        try:
+            self.proc.wait(timeout=15)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait(timeout=10)
+        self.proc = None
 
     def tail(self, n: int = 30) -> str:
         if not self.log or not self.log.exists():

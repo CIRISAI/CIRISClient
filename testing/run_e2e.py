@@ -81,6 +81,10 @@ class CornerResult:
     status: str  # passed | failed | error
     cases: list[CaseResult] = field(default_factory=list)
     screen: str = ""
+    #: The app's own /state at the end of the corner -- clientMode and node URL.
+    #: Evidence, and the thing a later compatibility question
+    #: will actually be asked about.
+    app_state: dict = field(default_factory=dict)
     elements: list[str] = field(default_factory=list)
     node_log_tail: str = ""
     app_log_tail: str = ""
@@ -121,6 +125,11 @@ def _pids_on_port(port: int) -> list[int]:
         except (OSError, PermissionError):
             continue
     return pids
+
+
+def _client_version() -> str:
+    v = Path(__file__).resolve().parent.parent / "VERSION"
+    return v.read_text().strip() if v.is_file() else "<unknown>"
 
 
 def _port_busy(port: int) -> bool:
@@ -249,14 +258,21 @@ class Corner:
         env["HOME"] = str(self.workdir / "fakehome")
         Path(env["CIRIS_HOME"]).mkdir(parents=True, exist_ok=True)
         Path(env["HOME"]).mkdir(parents=True, exist_ok=True)
+        # The node binary is on PATH in EVERY corner (Codex, PR #10).
+        #
+        # It reads like it belongs only to the local corner, and putting it
+        # there made `did_not_launch_a_node` vacuous: on a CI runner there is no
+        # `ciris-server` on PATH at all, so a client that DOES launch a local
+        # node whenever it can find one -- the actual regression, and the common
+        # developer setup where a node is installed -- had no way to exhibit it.
+        # The corners now differ by CIRIS_API_URL alone, which is the real
+        # difference, and the negative is a negative.
+        env["PATH"] = f"{Path(self.node_bin).parent}{os.pathsep}{env.get('PATH','')}"
         if self.api_url:
             # Both spellings: CIRIS_NODE_URL is upstream's, CIRIS_API_URL is ours.
             env["CIRIS_API_URL"] = self.api_url
             env["CIRIS_NODE_URL"] = self.api_url
-        if self.name == LOCAL_NODE:
-            # The app finds the node by PATH lookup; give it exactly the binary
-            # this run downloaded, not whatever the developer has installed.
-            env["PATH"] = f"{Path(self.node_bin).parent}{os.pathsep}{env.get('PATH','')}"
+        else:
             env.pop("CIRIS_API_URL", None)
             env.pop("CIRIS_NODE_URL", None)
         return env
@@ -397,6 +413,7 @@ class Corner:
                 res.cases.append(CaseResult(c.name, "skipped", detail=f"not applicable to {self.name}"))
 
             res.screen = app.screen()
+            res.app_state = app.state()
             res.elements = sorted(app.tags())
             if res.status == "failed":
                 shot = self.workdir / "failure.png"
@@ -422,6 +439,9 @@ def main() -> int:
     ap.add_argument("--node-bin", default=None, help="released ciris-server binary")
     ap.add_argument("--test-port", type=int, default=TEST_PORT_DEFAULT)
     ap.add_argument("--report", default=None, help="write a JSON report here")
+    ap.add_argument("--node-version", default=None,
+                    help="the CIRISServer tag this node came from; recorded in "
+                         "the report so the evidence identifies its pairing")
     ap.add_argument("--workdir", default=None)
     ap.add_argument("--reclaim", action="store_true",
                     help="kill a leftover TEST-MODE app holding the test port "
@@ -443,7 +463,9 @@ def main() -> int:
     print(f"jar      : {jar}")
     print(f"node     : {node_bin}")
     print(f"workdir  : {root}")
-    print(f"corners  : {', '.join(corners)}\n")
+    print(f"corners  : {', '.join(corners)}")
+    print(f"pairing  : client {_client_version()} against node "
+          f"{args.node_version or '<unrecorded>'}\n")
 
     if _port_busy(args.test_port) and args.reclaim:
         # Only ever a TEST-MODE CIRIS app: that is a disposable artefact of a
@@ -500,8 +522,16 @@ def main() -> int:
         print(f"  -> {r.status.upper()} in {r.seconds}s\n")
 
     if args.report:
-        Path(args.report).write_text(json.dumps(
-            {"corners": [asdict(r) for r in results]}, indent=2))
+        # WHICH PAIRING PRODUCED THIS (Codex, PR #10). The client can cut a
+        # version before the server tags the matching one, so CI falls back to
+        # the latest release -- and evidence that cannot say which node it ran
+        # against cannot be used to settle a compatibility question later.
+        Path(args.report).write_text(json.dumps({
+            "client_version": _client_version(),
+            "node_version": args.node_version or "<unrecorded>",
+            "node_binary": node_bin,
+            "corners": [asdict(r) for r in results],
+        }, indent=2))
         print(f"report: {args.report}")
 
     bad = [r for r in results if r.status != "passed"]

@@ -2993,7 +2993,8 @@
     "wallet_transfer_note": "Transfer to another Base address for fiat cashout",
     "wallet_transfer_success": "Transfer successful! TX: {tx}",
     "wallet_trust_degraded": "Hardware Trust Degraded",
-    "wallet_warning": "Warning"
+    "wallet_warning": "Warning",
+    "claim_node_no_signer": "Claiming binds your identity, and that signature comes from your own node — which is not running. Start your node, then claim."
   },
   "moderation": {
     "ladder": {

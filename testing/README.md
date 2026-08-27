@@ -51,6 +51,20 @@ reports itself unconfigured (CIRISAgent#1075), and `undetermined` requires
 `/v1/setup/status` still said `setup_required: true`. An agent presents both, or
 it is not an agent.
 
+### What the "remote" corners do NOT test
+
+The facade runs on `127.0.0.1`, so the node sees a **loopback** peer and its
+loopback-only routes answer normally. `GET /v1/setup/status` and
+`/v1/setup/owned-nodes` are localhost-only and return 403 to a genuinely off-host
+client (measured against the released binary; see
+`docs/FSD-remote-first-run-claim.md` §3.1).
+
+So these corners exercise the client's remote *configuration* path -- it is
+pointed at another URL, it must not launch a node, it derives its mode from that
+URL -- but not remote *reachability*. A real off-host client meets 403s this
+harness never produces. Until a corner makes the node observe a non-loopback
+source address, no result here is evidence about off-host behaviour.
+
 ### The corner this cannot cover
 
 **local × agent.** The released node binds 4242/4243 with no port override —
