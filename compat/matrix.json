@@ -150,6 +150,38 @@
       },
       "notes": "the release CIRISServer 0.5.190 is blocked on. Adds the federation-ID-first login surface, session-gated from the first commit it exists in, so CIRISAgent can adopt ciris-client without losing it. One new id, mobile.login_federation_needs_account, in all 29 languages. The androidApp ciris-server pin stays at 0.5.188 until 0.5.190 publishes",
       "published": null
+    },
+    {
+      "client_version": "0.5.191",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.190. Everything here is client-side: a diagnostics bundle read from the device, a local wipe that touches no endpoint, and two automation fixes. The wipe exists BECAUSE the authenticated reset (POST /v1/system/data/reset-account) is AuthAdminDep-gated and so unreachable from the login screen, which is where it is needed",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.39",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe"
+      ],
+      "capabilities_note": "inherited from CIRISAgent so that repo can delete client/ (CIRISClient#7, CIRISServer#495/#496): the published artifact was missing work that existed only there, and deleting client/ would have dropped it silently — CIRISAgent#1091's drift pointing the other way. diagnostics.export is a bundle plus log buffer on the three screens that can strand a user, Download and Copy both offered because they fail differently; gated to desktop and mobile, because on web the buffer is deliberately empty and on managed deployments the person at the UI is not necessarily entitled to the node's environment. device.local_wipe makes 'Reset device' match its own dialog: it NEVER deletes the home directory, only the entries the node generates, with tracked source skipped in a checkout and .git a veto — the fourth shape of that function, after three revisions each of which found a new way to destroy the wrong thing. Also: testableWithHandler now registers elements on iOS as well as Android (the same modifier had been making controls clickable but invisible to /tree), and the desktop logger feeds DebugLogBuffer, which it never did — so the bundle's log section was empty on desktop for the whole process lifetime",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3861
+      },
+      "notes": "the matched cut with CIRISServer 0.5.191, which is pinned to ciris-client==0.5.191 and gated to move with it. Ported from CIRISAgent fix/sonar-reliability-security at 193e78d9 — the SIXTH review round, taken deliberately at final shape rather than mid-branch, because an earlier revision of the wipe recursively deleted a source checkout. Five-wheel matrix required and now gated on shape as well as presence: py3-none-any under 20 MiB (jar-free) and each platform wheel over 40 MiB (carrying one)",
+      "published": null
     }
   ]
 }
