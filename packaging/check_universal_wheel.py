@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Does the published ciris-client offer a wheel a NON-DESKTOP consumer can resolve?
+"""Does the published ciris-client offer the RIGHT five-wheel matrix?
 
     python3 packaging/check_universal_wheel.py            # check VERSION
     python3 packaging/check_universal_wheel.py 0.5.189    # check any version
@@ -29,6 +29,20 @@ fine" — that equivalence is what let this ship. Use `--offline` to skip
 deliberately; the skip is then a decision someone made, not a network flake
 deciding for them.
 
+**Presence is not enough, and that distinction is not theoretical.** Building the
+0.5.190 universal wheel produced a 66 MiB one on the first attempt: setuptools
+had cached the desktop jar in `build/lib` from a previous staging and put it back
+into a payload the staging had deleted. It installed. `check_wheel_size.py`
+passed — 66 MiB is a plausible size for a client wheel. A presence-only check
+passes it too, and Android then resolves a wheel carrying ~70 MB of desktop Java
+it cannot run. So the sizes are checked in both directions: the universal wheel
+must be small enough to be jar-free, and each platform wheel large enough to be
+carrying the jar it exists for (CIRISClient#8).
+
+Mutation-tested against versions that really shipped, not fixtures:
+0.5.186 fails on a 62.98 MiB universal wheel, 0.5.189 fails on its absence,
+0.5.190 passes, and a version nobody cut returns 2 — pending, not broken.
+
 Stdlib only. One HTTPS GET.
 """
 
@@ -51,6 +65,24 @@ SIMPLE_ACCEPT = "application/vnd.pypi.simple.v1+json"
 UNIVERSAL_TAG = "py3-none-any"
 TIMEOUT = 20
 
+#: The universal wheel is pure Python and a locale bundle. 0.5.190's is 3.14 MiB.
+#: A jar-carrying one is ~63 MiB — which is what 0.5.186 actually published, and
+#: what a presence-only check happily passes.
+#:
+#: THIS EXISTS BECAUSE IT NEARLY HAPPENED. Building the 0.5.190 universal wheel
+#: produced a 66 MiB one on the first attempt: setuptools had cached the desktop
+#: jar in build/lib from a previous staging, and put it back into a payload the
+#: staging had deleted. It installed, and check_wheel_size passed, because 66 MiB
+#: is a perfectly plausible size for a client wheel. It was caught by looking, not
+#: by a gate — and a fix that reintroduces 70 MB of unusable desktop Java into a
+#: ~206 MiB APK is a regression wearing the shape of a fix (CIRISClient#8).
+UNIVERSAL_MAX_BYTES = 20 * 1024 * 1024
+
+#: And the inverse. A platform wheel exists to carry the jar; one that does not is
+#: a desktop install with no client in it, which is the failure the placeholder
+#: machinery was built to refuse. 0.5.190's are 61-68 MiB.
+PLATFORM_MIN_BYTES = 40 * 1024 * 1024
+
 
 def published_files(version: str) -> list[str]:
     req = urllib.request.Request(SIMPLE, headers={"Accept": SIMPLE_ACCEPT})
@@ -66,7 +98,7 @@ def published_files(version: str) -> list[str]:
             f"--offline to skip this deliberately."
         )
     prefix = f"ciris_client-{version}-"
-    return [f["filename"] for f in data.get("files", [])
+    return [(f["filename"], f.get("size") or 0) for f in data.get("files", [])
             if f.get("filename", "").startswith(prefix)]
 
 
@@ -90,11 +122,12 @@ def main() -> int:
         )
         return 2
 
-    universal = [f for f in files if UNIVERSAL_TAG in f]
+    universal = [(n, s) for n, s in files if UNIVERSAL_TAG in n]
+    platform = [(n, s) for n, s in files if UNIVERSAL_TAG not in n]
     print(f"  ciris-client {version}: {len(files)} file(s) on PyPI")
-    for f in sorted(files):
-        mark = "  <- universal" if UNIVERSAL_TAG in f else ""
-        print(f"    {f}{mark}")
+    for n, s in sorted(files):
+        mark = "  <- universal" if UNIVERSAL_TAG in n else ""
+        print(f"    {s / 1048576:7.2f} MiB  {n}{mark}")
 
     if not universal:
         print(
@@ -106,7 +139,35 @@ def main() -> int:
         )
         return 1
 
-    print(f"\n[OK] {version} offers {UNIVERSAL_TAG} — a non-desktop consumer can resolve it")
+    # PRESENCE IS NOT ENOUGH. The wheel has to be the RIGHT wheel: a universal
+    # one that carries the jar resolves on Android and then ships ~70 MB of
+    # desktop Java that cannot run there.
+    problems = []
+    for n, s in universal:
+        if s > UNIVERSAL_MAX_BYTES:
+            problems.append(
+                f"{n} is {s / 1048576:.2f} MiB — over the {UNIVERSAL_MAX_BYTES / 1048576:.0f} MiB "
+                f"ceiling, so it is carrying a desktop jar. That is 0.5.186's shape "
+                f"(62.98 MiB), not 0.5.190's (3.14 MiB): it resolves on Android and "
+                f"ships unusable Java into the APK. Clean build/ before packaging — "
+                f"setuptools caches the payload and puts back what staging deleted."
+            )
+    for n, s in platform:
+        if s < PLATFORM_MIN_BYTES:
+            problems.append(
+                f"{n} is {s / 1048576:.2f} MiB — under the {PLATFORM_MIN_BYTES / 1048576:.0f} MiB "
+                f"floor, so it is NOT carrying the desktop jar it exists to carry. "
+                f"A desktop install would resolve this and find no client."
+            )
+    if problems:
+        print("\n[FAIL] the matrix is present but wrong:")
+        for p in problems:
+            print(f"  - {p}")
+        return 1
+
+    print(f"\n[OK] {version}: {UNIVERSAL_TAG} at "
+          f"{universal[0][1] / 1048576:.2f} MiB (jar-free) and {len(platform)} "
+          f"platform wheel(s) carrying one — resolvable AND correct everywhere")
     return 0
 
 
