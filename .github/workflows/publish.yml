@@ -63,9 +63,12 @@ on:
         type: choice
         options: [none, testpypi, pypi]
 
-concurrency:
-  group: publish-${{ github.ref }}
-  cancel-in-progress: false # never interrupt an upload
+# NO WORKFLOW-LEVEL CONCURRENCY. "Never interrupt an upload" is a rule about the
+# UPLOAD, and putting it on the whole run made it a rule about the slowest job
+# instead: ios-xcframework legitimately takes ~4 hours, so a second publish on
+# the same ref queued behind it — and the release that FIXED Android's
+# resolution (CIRISServer#493) sat waiting on an iOS artifact Android does not
+# get from PyPI. The groups are now on the jobs that actually need them.
 
 jobs:
   build:
@@ -449,6 +452,9 @@ jobs:
             runner: ubuntu-latest
             task: ":shared:assembleRelease"
             timeout: 45
+            # Ten minutes of total silence from a Gradle build is a hang, not a
+            # slow step: even the long Kotlin/Native links emit task lines.
+            idle_seconds: 600
             cache_read_only: true
           - name: ios-xcframework
             # Kotlin/Native cannot cross-compile Apple targets, and release
@@ -462,6 +468,13 @@ jobs:
             runner: macos-14
             task: ":shared:assembleSharedReleaseXCFramework"
             timeout: 350
+            # 25 minutes, not 10. linkReleaseFrameworkIosArm64 is measured at
+            # >85 minutes and is genuinely quiet inside LLVM optimisation, so a
+            # tighter idle window would kill a healthy build — which is the
+            # failure mode a hang detector must not have. The wall clock stays
+            # at 350; what changes is that a WEDGED build now fails in 25
+            # minutes with thread stacks instead of at 350 with "cancelled".
+            idle_seconds: 1500
             cache_read_only: false
     steps:
       - uses: actions/checkout@v4
@@ -476,7 +489,10 @@ jobs:
 
       - name: Build
         working-directory: client
-        run: ./gradlew --no-daemon ${{ matrix.task }}
+        run: |
+          ../packaging/run_with_watchdog.sh \
+            "${{ matrix.idle_seconds }}" 300 "${{ matrix.name }}" \
+            -- ./gradlew --no-daemon ${{ matrix.task }}
 
       - name: Collect
         shell: bash
@@ -506,6 +522,10 @@ jobs:
 
   release-assets:
     name: attach Android + iOS to the release
+    concurrency:
+      # It creates or updates one release; two at once would race on its assets.
+      group: release-assets-${{ github.ref }}
+      cancel-in-progress: false
     needs: mobile
     # `always()`: the legs are independent artifacts, and iOS can take hours or
     # time out. Withholding the Android AAR because iOS was slow would be the
@@ -561,6 +581,10 @@ jobs:
 
   publish:
     name: publish to ${{ github.event.inputs.target || 'pypi' }}
+    concurrency:
+      # Two uploads of the same version at once is the thing to prevent.
+      group: publish-upload-${{ github.event.inputs.target || 'pypi' }}
+      cancel-in-progress: false
     needs: [build, wasm, universal]
     # A dispatch with target `none` is a rehearsal: every wheel is built and
     # verified above, and nothing is uploaded.
