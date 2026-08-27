@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "اسم المستخدم أو كلمة المرور غير صحيحة. يرجى المحاولة مرة أخرى.",
     "login_federation_create": "إنشاء معرّف اتحاد جديد",
     "login_federation_existing": "هوية الاتحاد الخاصة بك جاهزة على هذا الجهاز.",
+    "login_federation_needs_account": "سجّل الدخول بحسابك أدناه لاستخدام هوية الاتحاد هذه.",
     "login_federation_none": "أنشئ هوية الاتحاد طويلة الأمد الخاصة بك للبدء.",
     "login_federation_or": "أو استخدم خيار تسجيل دخول آخر أدناه",
     "login_federation_signin_as": "تسجيل الدخول بصفة {key_id}",

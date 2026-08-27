@@ -26,6 +26,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -103,6 +106,21 @@ fun LoginScreen(
     // (CIRISServer#393). Defaulted so a caller that does not track it still
     // compiles and simply renders no banner.
     justCompletedSetup: Boolean = false,
+    // Federation-ID-first startup (CIRISAgent#887). The owner's federation
+    // identity lives in the LOCAL node's keyring, not the app. CIRISApp probes
+    // the node's self-key-record once and passes the result here: present ->
+    // "Sign in as <key_id>", absent -> "Create a new federation ID", which runs
+    // the FEDERATION_IDENTITY_SETUP wizard. The classic OAuth/local options
+    // remain below, unchanged.
+    //
+    // This screen offers an ENTRY POINT, never a credential. Whether the entry
+    // is allowed is `mayEnterWithFederationIdentity`, decided by CIRISApp
+    // against the live owner session — see its KDoc for why the identity's
+    // presence on the device is not itself an answer.
+    federationIdentityKeyId: String? = null,
+    federationProbed: Boolean = false,
+    onFederationSignIn: () -> Unit = {},
+    onCreateFederationIdentity: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var marketingOptIn by remember { mutableStateOf(false) }
@@ -242,6 +260,20 @@ fun LoginScreen(
                 // session (log in below → that session unlocks the fedID). A
                 // credential-less "sign in as <fedID>" door was a security hole.
                 // First-run users are auto-routed to the setup wizard upstream.
+
+                // Above the classic OAuth/local options, so the founder's
+                // long-lived identity is the primary way in. Only once the probe
+                // has landed, and never while a login is in flight, so it does
+                // not compete with the progress indicator.
+                if (!isLoading && federationProbed) {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    FederationIdentitySection(
+                        keyId = federationIdentityKeyId,
+                        onSignIn = onFederationSignIn,
+                        onCreate = onCreateFederationIdentity,
+                    )
+                    Spacer(modifier = Modifier.height(20.dp))
+                }
 
                 if (isLoading) {
                     // Progress indicator
@@ -950,4 +982,90 @@ internal fun buildOwnerHintLine(ownerHint: ai.ciris.mobile.shared.models.OwnerHi
         else -> return ""
     }
     return localizedString("mobile.login_owner_hint", "owner", ownerString)
+}
+
+/**
+ * The federation-identity entry point: sign in as the existing long-lived
+ * identity, or create one. Sits ABOVE the classic OAuth / local options, which
+ * remain available.
+ *
+ * What this offers is an ENTRY POINT, not a credential. The button asks CIRISApp
+ * to proceed; CIRISApp decides whether there is a session to proceed with
+ * ([ai.ciris.mobile.shared.models.federation.mayEnterWithFederationIdentity]).
+ * Keeping the decision out of the screen is the point — a surface that could
+ * admit someone by rendering a button is the shape being avoided.
+ */
+@Composable
+private fun FederationIdentitySection(
+    keyId: String?,
+    onSignIn: () -> Unit,
+    onCreate: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.width(280.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        if (keyId != null) {
+            val shortId = if (keyId.length > 16) "${keyId.take(10)}\u2026${keyId.takeLast(4)}" else keyId
+            Text(
+                text = localizedString("mobile.login_federation_existing"),
+                color = LoginColors.White.copy(alpha = 0.8f),
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = onSignIn,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LoginColors.Accent,
+                    contentColor = LoginColors.White,
+                ),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testableClickable("btn_federation_signin") { onSignIn() },
+            ) {
+                Text(
+                    text = localizedString("mobile.login_federation_signin_as", "key_id", shortId),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        } else {
+            Text(
+                text = localizedString("mobile.login_federation_none"),
+                color = LoginColors.White.copy(alpha = 0.8f),
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = onCreate,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = LoginColors.Accent,
+                    contentColor = LoginColors.White,
+                ),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp)
+                    .testableClickable("btn_federation_create") { onCreate() },
+            ) {
+                Text(
+                    text = localizedString("mobile.login_federation_create"),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        Text(
+            text = localizedString("mobile.login_federation_or"),
+            color = LoginColors.White.copy(alpha = 0.5f),
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }

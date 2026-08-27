@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Geçersiz kullanıcı adı veya şifre. Lütfen tekrar deneyin.",
     "login_federation_create": "Yeni bir federasyon kimliği oluştur",
     "login_federation_existing": "Federasyon kimliğiniz bu cihazda hazır.",
+    "login_federation_needs_account": "Bu federasyon kimliğini kullanmak için aşağıdan hesabınızla oturum açın.",
     "login_federation_none": "Başlamak için uzun ömürlü federasyon kimliğinizi oluşturun.",
     "login_federation_or": "veya aşağıdan başka bir oturum açma seçeneği kullanın",
     "login_federation_signin_as": "{key_id} olarak oturum aç",

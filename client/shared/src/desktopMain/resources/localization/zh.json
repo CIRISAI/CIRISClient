@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "用户名或密码无效。请重试。",
     "login_federation_create": "创建新的联邦 ID",
     "login_federation_existing": "您的联邦身份已在此设备上就绪。",
+    "login_federation_needs_account": "请使用您的账户登录，以使用此联邦身份。",
     "login_federation_none": "创建您的长期联邦身份以开始使用。",
     "login_federation_or": "或使用下方其他登录方式",
     "login_federation_signin_as": "以 {key_id} 身份登录",

@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Orúkọ-olùmúlò tàbí ọ̀rọ̀ àṣírí aláìtọ́. Ẹ jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan síi.",
     "login_federation_create": "Dá ID federation tuntun",
     "login_federation_existing": "Ìdánimọ̀ federation rẹ ti ṣetán lórí ẹ̀rọ yìí.",
+    "login_federation_needs_account": "Wọlé pẹ̀lú àkàǹtì rẹ ní ìsàlẹ̀ láti lo ìdánimọ̀ federation yìí.",
     "login_federation_none": "Dá ìdánimọ̀ federation rẹ tí ó pẹ́ láti bẹ̀rẹ̀.",
     "login_federation_or": "tàbí lo àṣàyàn ìwọlé mìíràn lábẹ́",
     "login_federation_signin_as": "Wọlé gẹ́gẹ́ bí {key_id}",

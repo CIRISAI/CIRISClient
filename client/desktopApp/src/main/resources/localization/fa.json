@@ -1851,6 +1851,7 @@
     "login_error_invalid_credentials": "نام کاربری یا رمز عبور نادرست است. لطفاً دوباره تلاش کنید.",
     "login_federation_create": "ساخت شناسه فدراسیون جدید",
     "login_federation_existing": "هویت فدراسیون شما روی این دستگاه آماده است.",
+    "login_federation_needs_account": "برای استفاده از این هویت فدراسیون، با حساب خود در پایین وارد شوید.",
     "login_federation_none": "برای شروع، هویت فدراسیون بلندمدت خود را بسازید.",
     "login_federation_or": "یا از گزینه ورود دیگری در پایین استفاده کنید",
     "login_federation_signin_as": "ورود به‌عنوان {key_id}",

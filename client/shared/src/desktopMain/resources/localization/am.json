@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "ልክ ያልሆነ የተጠቃሚ ስም ወይም የይለፍ ቃል። እባክዎ እንደገና ይሞክሩ።",
     "login_federation_create": "አዲስ የፌዴሬሽን መታወቂያ ፍጠር",
     "login_federation_existing": "የፌዴሬሽን ማንነትህ በዚህ መሣሪያ ላይ ዝግጁ ነው።",
+    "login_federation_needs_account": "ይህን የፌዴሬሽን ማንነት ለመጠቀም ከታች በመለያዎ ይግቡ።",
     "login_federation_none": "ለመጀመር ረጅም-ዕድሜ የፌዴሬሽን ማንነትህን ፍጠር።",
     "login_federation_or": "ወይም ከታች ሌላ የመግቢያ አማራጭ ተጠቀም",
     "login_federation_signin_as": "እንደ {key_id} ግባ",

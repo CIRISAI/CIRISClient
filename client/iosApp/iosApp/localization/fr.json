@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Nom d'utilisateur ou mot de passe incorrect. Veuillez réessayer.",
     "login_federation_create": "Créer un nouvel ID de fédération",
     "login_federation_existing": "Votre identité de fédération est prête sur cet appareil.",
+    "login_federation_needs_account": "Connectez-vous avec votre compte ci-dessous pour utiliser cette identité de fédération.",
     "login_federation_none": "Créez votre identité de fédération de longue durée pour commencer.",
     "login_federation_or": "ou utilisez une autre option de connexion ci-dessous",
     "login_federation_signin_as": "Se connecter en tant que {key_id}",

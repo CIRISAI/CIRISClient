@@ -120,6 +120,36 @@
       },
       "notes": "the identity-card release CIRISServer 0.5.189 pins for adoption (CIRISServer#471). Seven new mobile.identity_repair_* ids, translated into the other 28 locales by the localize pipeline. The androidApp ciris-server pin stays at 0.5.188 until 0.5.189 publishes — that pin may only name a version that already exists on PyPI",
       "published": null
+    },
+    {
+      "client_version": "0.5.190",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.189. The federation-identity entry point is a CLIENT surface over a probe this client already made (the node's self-key-record); it asks the node for nothing new",
+      "node_max_tested": "0.5.188",
+      "agent_min_tested": "2.9.39",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry"
+      ],
+      "capabilities_note": "identity.federation_entry is the federation-ID-first login surface (CIRISAgent#887), and it arrives SHUT. This tree deliberately had no fedID sign-in option — the original vendor commit carried a note saying so by design, because a long-lived identity on the device is not proof of who is holding it, and entering on its presence alone is a second credential-less door beside the account login. That reasoning stands; the conclusion changes. Leaving the door out rather than shutting it meant the consumers, who HAVE this surface, would lose it on adoption — so the door is here and `mayEnterWithFederationIdentity` keeps it shut unless a real owner session is open. No per-fedID PIN: a second secret on the same door rebuilds the parallel-credential path this closes. The node agrees independently — resolve_user_signer will not sign with the fedID without the live owner session either",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3861
+      },
+      "notes": "the release CIRISServer 0.5.190 is blocked on. Adds the federation-ID-first login surface, session-gated from the first commit it exists in, so CIRISAgent can adopt ciris-client without losing it. One new id, mobile.login_federation_needs_account, in all 29 languages. The androidApp ciris-server pin stays at 0.5.188 until 0.5.190 publishes",
+      "published": null
     }
   ]
 }

@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "अमान्य उपयोगकर्ता नाम या पासवर्ड। कृपया पुनः प्रयास करें।",
     "login_federation_create": "नई फेडरेशन ID बनाएं",
     "login_federation_existing": "आपकी फेडरेशन पहचान इस डिवाइस पर तैयार है।",
+    "login_federation_needs_account": "इस फेडरेशन पहचान का उपयोग करने के लिए नीचे अपने खाते से साइन इन करें।",
     "login_federation_none": "शुरू करने के लिए अपनी दीर्घकालिक फेडरेशन पहचान बनाएं।",
     "login_federation_or": "या नीचे कोई अन्य साइन-इन विकल्प चुनें",
     "login_federation_signin_as": "{key_id} के रूप में साइन इन करें",

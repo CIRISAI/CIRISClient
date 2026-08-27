@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "잘못된 사용자 이름 또는 비밀번호입니다. 다시 시도해 주세요.",
     "login_federation_create": "새 페더레이션 ID 만들기",
     "login_federation_existing": "이 기기에 페더레이션 신원이 준비되어 있습니다.",
+    "login_federation_needs_account": "이 페더레이션 신원을 사용하려면 아래에서 계정으로 로그인하세요.",
     "login_federation_none": "시작하려면 장기 사용 페더레이션 신원을 만드세요.",
     "login_federation_or": "또는 아래의 다른 로그인 옵션 사용",
     "login_federation_signin_as": "{key_id}(으)로 로그인",

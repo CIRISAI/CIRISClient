@@ -1845,6 +1845,7 @@
     "login_error_invalid_credentials": "Nama pengguna atau kata sandi salah. Silakan coba lagi.",
     "login_federation_create": "Buat ID federasi baru",
     "login_federation_existing": "Identitas federasi Anda siap di perangkat ini.",
+    "login_federation_needs_account": "Masuk dengan akun Anda di bawah untuk menggunakan identitas federasi ini.",
     "login_federation_none": "Buat identitas federasi jangka panjang Anda untuk memulai.",
     "login_federation_or": "atau gunakan opsi masuk lain di bawah",
     "login_federation_signin_as": "Masuk sebagai {key_id}",

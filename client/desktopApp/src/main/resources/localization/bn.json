@@ -1846,6 +1846,7 @@
     "login_error_invalid_credentials": "ব্যবহারকারীর নাম বা পাসওয়ার্ড ভুল। আবার চেষ্টা করুন।",
     "login_federation_create": "নতুন ফেডারেশন আইডি তৈরি করুন",
     "login_federation_existing": "আপনার ফেডারেশন পরিচয় এই ডিভাইসে প্রস্তুত।",
+    "login_federation_needs_account": "এই ফেডারেশন পরিচয় ব্যবহার করতে নিচে আপনার অ্যাকাউন্ট দিয়ে সাইন ইন করুন।",
     "login_federation_none": "শুরু করতে আপনার দীর্ঘস্থায়ী ফেডারেশন পরিচয় তৈরি করুন।",
     "login_federation_or": "অথবা নিচের অন্য কোনো সাইন-ইন বিকল্প ব্যবহার করুন",
     "login_federation_signin_as": "{key_id} হিসেবে সাইন ইন করুন",
