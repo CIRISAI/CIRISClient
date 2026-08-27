@@ -2049,11 +2049,62 @@ fun CIRISApp(
                     // (probed above from the node's /v1/auth/oauth/providers).
                     googleOAuthAvailable = googleOAuthAvailable,
                     justCompletedSetup = justCompletedSetup,
-                    // NOTE: no fedID sign-in option here by design — the fedID is the
-                    // founder's identity, minted in the first-run wizard and accessed
-                    // ONLY via the associated user-account session (log in below). It
-                    // is never a credential-less login. First-run users are auto-routed
-                    // to the setup wizard upstream (isFirstRun handling).
+                    // FEDERATION-ID-FIRST ENTRY (CIRISAgent#887).
+                    //
+                    // This spot carried, since the original vendor commit, a note
+                    // saying there was NO fedID sign-in option here BY DESIGN —
+                    // the fedID is reached only through the account session, and
+                    // is never a credential-less login. That reasoning was right
+                    // and is unchanged. What was wrong was the conclusion drawn
+                    // from it: the door was left out rather than shut.
+                    //
+                    // Leaving it out had a cost that only shows up at adoption.
+                    // The consumers HAVE this surface; a client that does not
+                    // would delete the feature from them when they take the
+                    // package, which is the opposite of what adoption is for.
+                    // And the startup probe above already computed
+                    // federationIdentityKeyId and federationProbed and handed
+                    // them to nothing — the probe was here, the surface was not.
+                    //
+                    // So the door exists and is SHUT unless a real owner session
+                    // is open. `mayEnterWithFederationIdentity` is that rule,
+                    // extracted so it can be tested rather than read.
+                    federationIdentityKeyId = federationIdentityKeyId,
+                    federationProbed = federationProbed,
+                    onFederationSignIn = {
+                        if (ai.ciris.mobile.shared.models.federation
+                                .mayEnterWithFederationIdentity(currentAccessToken)
+                        ) {
+                            platformLog(
+                                TAG,
+                                "[INFO][onFederationSignIn] live owner session — entering with " +
+                                    "federation identity key_id=$federationIdentityKeyId",
+                            )
+                            loginErrorMessage = null
+                            currentScreen = Screen.Interact
+                        } else {
+                            // Not an error the user caused — a redirect. They are
+                            // one account sign-in (immediately below) from the
+                            // thing they just asked for, and the node would refuse
+                            // to sign with the fedID without that session anyway.
+                            platformLog(
+                                TAG,
+                                "[WARN][onFederationSignIn] no live owner session — refusing " +
+                                    "credential-less fedID entry; prompting account sign-in " +
+                                    "(key_id=$federationIdentityKeyId)",
+                            )
+                            loginErrorMessage =
+                                LocalizationHelper.getString("mobile.login_federation_needs_account")
+                        }
+                    },
+                    onCreateFederationIdentity = {
+                        // No identity yet. The wizard's FEDERATION_IDENTITY_SETUP
+                        // step drives the LOCAL NODE, which is where the keys live
+                        // — the app mints nothing and holds nothing.
+                        platformLog(TAG, "[INFO][onCreateFederationIdentity] no identity — entering setup")
+                        loginErrorMessage = null
+                        currentScreen = Screen.Setup
+                    },
                 )
 
                     // Non-blocking node-vs-client VERSION-MISMATCH banner. The node
