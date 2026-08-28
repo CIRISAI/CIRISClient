@@ -2081,28 +2081,6 @@ fun CIRISApp(
                         // ANR before any feedback appears, which reads as the reset hanging
                         // rather than working.
                         coroutineScope.launch {
-                            // OWNERSHIP FIRST, BEFORE ANYTHING IS STOPPED OR DELETED
-                            // (Codex, PR #18).
-                            //
-                            // `wipeLocalData` refuses when the client is driving a
-                            // REMOTE node, and that refusal was correct and badly
-                            // placed: the shutdown below already ran, so a remote
-                            // profile meant this killed an unrelated local node,
-                            // logged the operator out, and then declined to wipe —
-                            // the worst of both, and it reported failure for having
-                            // done the right thing.
-                            //
-                            // Ask before touching anything.
-                            if (!ai.ciris.mobile.shared.platform.ownsLocalNode(apiClient.baseUrl)) {
-                                platformLog(TAG, "[WARN][onResetSetup] refusing: ${apiClient.baseUrl} is not a node this device owns")
-                                // The surface the reset dialog already reports on.
-                                loginErrorMessage =
-                                    "This client is connected to a node on another machine. " +
-                                        "Reset erases local node data, and there is none here " +
-                                        "for that node — reset it from the machine it runs on."
-                                return@launch
-                            }
-
                             // STOP THE NODE BEFORE DELETING ITS LIVE FILES (Codex, PR #9).
                             // This used to run after the wipe. On Windows an open SQLite or
                             // log handle makes deletion fail outright; on Unix it succeeds
@@ -2125,20 +2103,6 @@ fun CIRISApp(
                             val wiped = withContext(Dispatchers.Default) {
                                 ai.ciris.mobile.shared.platform.wipeLocalData(
                                     declaredHome,
-                                    // `apiClient.baseUrl`, NOT `nodeBaseUrl`.
-                                    //
-                                    // I wrote this line claiming to pass the
-                                    // current URL and passed the stale one
-                                    // (Codex, PR #18). `nodeBaseUrl` is an
-                                    // immutable CIRISApp PARAMETER, fixed for
-                                    // the composition; `switchTo` mutates
-                                    // `apiClient.baseUrl` via updateBaseUrl and
-                                    // never touches the parameter. So after a
-                                    // switch to a remote profile this still
-                                    // read loopback — the guard accepted it,
-                                    // and the whole fix did nothing for the
-                                    // exact case it was written for.
-                                    activeNodeUrl = apiClient.baseUrl,
                                 )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")

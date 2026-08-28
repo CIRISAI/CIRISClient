@@ -85,7 +85,7 @@ class DebugBundleRedactionTest {
     fun a_quoted_secret_containing_spaces_is_removed_whole() {
         // The value group used to stop at the first space, so a four-word
         // passphrase lost one word and kept three (Codex, PR #18).
-        val out = DebugBundle.redactSecrets("""password="correct horse battery staple"""" + "\"")
+        val out = DebugBundle.redactSecrets("password=\"correct horse battery staple\"")
         assertFalse(out.contains("horse"), "the rest of the passphrase survived: $out")
         assertFalse(out.contains("staple"), "the rest of the passphrase survived: $out")
         assertTrue(out.contains("<redacted>"), out)
@@ -93,7 +93,7 @@ class DebugBundleRedactionTest {
 
     @Test
     fun a_quoted_state_is_still_not_a_credential() {
-        val out = DebugBundle.redactSecrets("""token="expired"""" + "\"")
+        val out = DebugBundle.redactSecrets("token=\"expired\"")
         assertTrue(out.contains("expired"), "a state was redacted to nothing: $out")
     }
 
@@ -177,5 +177,34 @@ class DebugBundleRedactionTest {
         // (Codex, PR #18). Constructing and using them is the assertion.
         assertTrue(DebugBundle.redactSecrets("API_KEY=sk-abcdef").contains("<redacted>"))
         assertTrue(DebugBundle.redactSecrets("Bearer AbCdEf0123456789").contains("<redacted>"))
+    }
+
+    @Test
+    fun a_state_word_is_only_a_state_when_it_is_the_whole_value() {
+        // `\b` matched INSIDE these, so the lookahead suppressed the match and
+        // exported the credential whole — a leak the relaxed quantifier created
+        // (Codex, PR #18).
+        for (line in listOf(
+            "password=valid-secret-123",
+            "password=no-way-this-leaks",
+            "token=expired-value",
+            "llm_api_key=set-me-to-something",
+        )) {
+            val out = DebugBundle.redactSecrets(line)
+            assertTrue(out.contains("<redacted>"), "not redacted: $out")
+        }
+        // and the genuine states still survive
+        for (line in listOf("password=valid", "token=expired", "llm_api_key=set")) {
+            assertFalse(DebugBundle.redactSecrets(line).contains("<redacted>"), line)
+        }
+    }
+
+    @Test
+    fun a_short_bearer_token_is_still_a_bearer_token() {
+        for (line in listOf("Authorization: Bearer abc123", "Bearer service:abc123")) {
+            val out = DebugBundle.redactSecrets(line)
+            assertTrue(out.contains("<redacted>"), "not redacted: $out")
+            assertFalse(out.contains("abc123"), "token survived: $out")
+        }
     }
 }

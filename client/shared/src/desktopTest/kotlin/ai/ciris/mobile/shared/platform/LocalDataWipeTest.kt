@@ -93,46 +93,7 @@ class LocalDataWipeTest {
         assertTrue(home.listFiles()?.isEmpty() == true)
     }
 
-    @Test
-    fun `owns the backend only when it is loopback`() {
-        // Unset or blank: the client boots the node itself.
-        assertTrue(ownsLocalBackend(null))
-        assertTrue(ownsLocalBackend(""))
 
-        assertTrue(ownsLocalBackend("http://localhost:8080"))
-        assertTrue(ownsLocalBackend("http://127.0.0.1:8080"))
-        assertTrue(ownsLocalBackend("http://127.5.5.5:8080"))
-        assertTrue(ownsLocalBackend("http://[::1]:8080"))
-        assertTrue(ownsLocalBackend("http://0.0.0.0:8080"))
 
-        // A node on another host keeps its state on its own disk.
-        assertFalse(ownsLocalBackend("https://agents.ciris.ai"))
-        assertFalse(ownsLocalBackend("http://192.168.1.50:8080"))
-        assertFalse(ownsLocalBackend("http://node.local:8080"))
-        assertFalse(ownsLocalBackend("garbage"))
 
-        // Hostnames that only LOOK like loopback under a prefix test.
-        assertFalse(ownsLocalBackend("http://127.0.0.1.evil.com/"))
-        assertFalse(ownsLocalBackend("http://localhost.evil.com/"))
-    }
-
-    @Test
-    fun expanded_ipv6_loopback_is_still_loopback() {
-        // `::1` and `0:0:0:0:0:0:0:1` are one address; URI.host returns the
-        // spelling that was typed. A false negative here is the worst case in
-        // the flow: reset has already stopped the runtime, so the operator is
-        // logged out with nothing erased (Codex, PR #18).
-        assertTrue(ownsLocalBackend("http://[0:0:0:0:0:0:0:1]:8080"))
-        assertTrue(ownsLocalBackend("http://[::1]:8080"))
-        assertTrue(ownsLocalBackend("http://127.0.0.1:4243"))
-        assertTrue(ownsLocalBackend("http://localhost:4243"))
-    }
-
-    @Test
-    fun a_remote_host_is_still_remote_and_is_never_resolved() {
-        assertFalse(ownsLocalBackend("http://192.168.50.8:4243"))
-        assertFalse(ownsLocalBackend("http://node.example.com:4243"))
-        // A name that merely BEGINS with a loopback literal is an ordinary host.
-        assertFalse(ownsLocalBackend("http://127.0.0.1.evil.com:4243"))
-    }
 }

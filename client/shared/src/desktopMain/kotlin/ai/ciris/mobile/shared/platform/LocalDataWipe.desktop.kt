@@ -93,103 +93,13 @@ private fun isSourceCheckout(home: File): Boolean =
  * make this delete something it does not recognise. What survives is an empty
  * directory and any file we never wrote, which is exactly what should survive.
  */
-/**
- * `127.x.y.z` as an ADDRESS, not as a prefix. `127.0.0.1.evil.com` is a
- * perfectly ordinary hostname that a prefix test reads as loopback.
- */
-private val LOOPBACK_IPV4 = Regex("""^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$""")
-
-/** Hex, colons and dots only — an address literal, never a name to resolve. */
-private val LOOPS_LIKE_AN_IP = Regex("""^[0-9a-f:.]+$""")
-
-/**
- * True when the backend this client is driving is one we could own locally.
- *
- * INHERITED from CIRISAgent 2.9.41 (CIRISClient#11). `CIRIS_API_URL` is a
- * supported way to point the client at a node on another host, and
- * `PythonRuntime.desktop` honours it and never starts a local backend — but the
- * wipe never consulted it. Reset then reported success having reset nothing the
- * user was looking at, while deleting the database, identity and keys of
- * whatever local node happened to share the disk.
- *
- * This is the FOURTH misresolution in this function and the first above the
- * filesystem layer: the previous three picked the wrong directory, this one
- * picked the wrong machine.
- *
- * Loopback is the test because it is the condition the node would have to
- * satisfy for our home resolution to describe it at all. A remote node keeps
- * its state on its own disk under its own `CIRIS_HOME`.
- */
-internal fun ownsLocalBackend(apiUrl: String?): Boolean {
-    val url = apiUrl?.takeIf { it.isNotBlank() } ?: return true
-    val host = runCatching { java.net.URI(url).host }.getOrNull()
-        ?: return false // unparseable: assume not ours
-    val h = host.trim().removePrefix("[").removeSuffix("]").lowercase()
-    if (h == "localhost") return true
-
-    // ASK THE STACK, DO NOT SPELL OUT THE ADDRESSES.
-    //
-    // `::1` and `0:0:0:0:0:0:0:1` are the same address, and `URI.host` returns
-    // whichever spelling was typed — so a desktop configured with the expanded
-    // form was classified REMOTE and refused (Codex, PR #18). The consequence is
-    // the worst ordering in this flow: reset has already shut the local runtime
-    // down before this predicate runs, so a false negative leaves the operator
-    // logged out, the node stopped, and nothing erased.
-    //
-    // Only for things that already look like an address, so this never resolves
-    // a hostname — a DNS lookup here would be both slow and a way to make a
-    // remote name answer "loopback".
-    if (LOOPS_LIKE_AN_IP.matches(h)) {
-        val verdict = runCatching {
-            val addr = java.net.InetAddress.getByName(h)
-            addr.isLoopbackAddress || addr.isAnyLocalAddress
-        }.getOrNull()
-        if (verdict != null) return verdict
-    }
-    return LOOPBACK_IPV4.matches(h)
-}
-
-/**
- * The URL the client is ACTUALLY using, in the order that decides it.
- *
- * The inherited guard read `CIRIS_API_URL` alone, and missed two live paths
- * (Codex, PR #18):
- *
- *   - `NodeSwitcherViewModel.switchTo` calls `apiClient.updateBaseUrl(...)` and
- *     never touches the environment, so after a switch to a saved remote
- *     profile the env still says loopback and the guard still says "ours".
- *   - `Main.kt` prefers `CIRIS_NODE_URL` over `CIRIS_API_URL`; a desktop
- *     configured with the former was checked against a variable nobody set.
- *
- * In both cases Reset would then treat a REMOTE node's declared home as a local
- * path: deleting unrelated local state if that path happens to exist here, and
- * otherwise reporting a successful reset while the node the user is looking at
- * is untouched. That is the same "wrong machine" error the guard was added for,
- * reached by a different road.
- */
-private fun activeNodeUrlOrEnv(explicit: String?): String? =
-    explicit?.takeIf { it.isNotBlank() }
-        ?: System.getenv("CIRIS_NODE_URL")?.takeIf { it.isNotBlank() }
-        ?: System.getenv("CIRIS_API_URL")
-
-actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boolean {
+actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
     // Managed deployments are not ours to wipe: `/app` belongs to CIRIS-Manager,
     // and the person at this UI is not necessarily entitled to destroy it.
     if (isManagedDeployment()) {
         println("[LocalDataWipe] refusing: CIRIS-Manager-managed deployment (/app)")
         return false
     }
-
-    // A client pointed at a REMOTE node owns nothing here. Composed with the
-    // declared-home resolution below rather than replacing it: asking the node
-    // where it lives is right when the node is ours, and this decides whether
-    // it is. A remote node answers with a path on ITS disk, and acting on that
-    // locally is the same mistake one level further along.
-    if (!ownsLocalBackend(activeNodeUrlOrEnv(activeNodeUrl))) {
-        println("[LocalDataWipe] refusing: CIRIS_API_URL points at a node we do not own")
-        return false
-    }
-
     val home = resolveNodeHome(declaredNodeHome) ?: return false
     if (!home.exists()) return true
 
@@ -291,5 +201,3 @@ private fun clearSecurePreferences(): Boolean = runCatching {
 }
 
 
-actual fun ownsLocalNode(activeNodeUrl: String?): Boolean =
-    ownsLocalBackend(activeNodeUrlOrEnv(activeNodeUrl))

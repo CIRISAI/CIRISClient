@@ -12,7 +12,7 @@ private const val TAG = "LocalDataWipe"
  * CIRIS_HOME is resolved through EnvFileUpdater's existing accessor rather than
  * rebuilt here — two spellings of that path is how a wipe half-succeeds.
  */
-actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boolean {
+actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
     // Symmetry with desktop. Always false on a phone today, but the predicate is
     // the feature's one boundary and reading it here keeps that true if the
     // platform set ever changes.
@@ -83,5 +83,3 @@ fun initLocalDataWipe(context: Context) {
 }
 
 
-/** Android runs its node in-process; there is no other machine to confuse it with. */
-actual fun ownsLocalNode(activeNodeUrl: String?): Boolean = true

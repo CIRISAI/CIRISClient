@@ -123,8 +123,13 @@ object DebugBundle {
         // JWTs — the shape is unmistakable and never appears in prose.
         Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
         // Authorization headers, including the `service:TOKEN` form.
+        //
+        // No length floor. `Bearer abc123` is a credential exactly as much as a
+        // 40-character one, and the explicit marker is the whole shape check —
+        // I removed the analogous minimum from the assignment arms last round
+        // and left this one behind (Codex, PR #18).
         Regex(
-            """\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]{12,}""",
+            """\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]+""",
             RegexOption.IGNORE_CASE,
         ) to "$1<redacted>",
         // DOUBLE-quoted value. The value class excludes ONLY this delimiter.
@@ -154,7 +159,14 @@ object DebugBundle {
         // UNQUOTED name = value. Whitespace really is the delimiter here.
         Regex(
             """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +
-                """(?!(?:$NOT_A_STATE)\b)([^\s"',;)}\]]+)""",
+                // THE STATE MUST BE THE ENTIRE VALUE. `\b` alone matches the
+                // boundary INSIDE `valid-secret-123`, `no-way-this-leaks` and
+                // `expired-value`, so the lookahead suppressed the match and
+                // exported the credential whole — a leak my own relaxed
+                // quantifier created, since these values were previously too
+                // short-circuited to reach it (Codex, PR #18). The quoted arms
+                // already required the closing delimiter; this one must too.
+                """(?!(?:$NOT_A_STATE)(?:["'\s,;)}\]]|${'$'}))([^\s"',;)}\]]+)""",
             RegexOption.IGNORE_CASE,
         ) to "$1$2<redacted>",
     )

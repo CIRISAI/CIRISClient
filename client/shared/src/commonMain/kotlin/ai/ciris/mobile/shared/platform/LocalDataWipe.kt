@@ -39,30 +39,4 @@ package ai.ciris.mobile.shared.platform
  *   authoritative for the claim PIN, for the same reason (Codex, PR #9).
  *   Null when there is nobody to ask; the resolver then falls back to the guess.
  */
-/**
- * @param activeNodeUrl the URL the client is ACTUALLY talking to right now, not
- *   an environment variable. `NodeSwitcherViewModel.switchTo` repoints the API
- *   client at a saved profile without touching the environment, and desktop
- *   prefers `CIRIS_NODE_URL` over `CIRIS_API_URL` — so a guard that re-reads one
- *   env var is guarding against a configuration the client may have left behind
- *   (Codex, PR #18). Null means "caller did not say", and the desktop actual
- *   falls back to the environment.
- */
-expect fun wipeLocalData(
-    declaredNodeHome: String? = null,
-    activeNodeUrl: String? = null,
-): Boolean
-
-
-/**
- * Can this device wipe the node it is currently talking to?
- *
- * ASKED BEFORE ANYTHING IS DESTROYED. `wipeLocalData` already refuses when the
- * client is driving a remote node, but the reset flow stops the local runtime
- * FIRST — so a remote profile meant the app killed an unrelated local node,
- * logged the operator out, and then declined to wipe anything (Codex, PR #18).
- * The refusal was right and its position was not.
- *
- * @param activeNodeUrl the URL the client is actually using right now.
- */
-expect fun ownsLocalNode(activeNodeUrl: String?): Boolean
+expect fun wipeLocalData(declaredNodeHome: String? = null): Boolean
