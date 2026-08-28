@@ -67,3 +67,7 @@ actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boo
 
     return ok
 }
+
+
+/** iOS runs its node in-process; there is no other machine to confuse it with. */
+actual fun ownsLocalNode(activeNodeUrl: String?): Boolean = true

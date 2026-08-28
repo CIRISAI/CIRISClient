@@ -81,3 +81,7 @@ private var wipeContext: Context? = null
 fun initLocalDataWipe(context: Context) {
     wipeContext = context.applicationContext
 }
+
+
+/** Android runs its node in-process; there is no other machine to confuse it with. */
+actual fun ownsLocalNode(activeNodeUrl: String?): Boolean = true

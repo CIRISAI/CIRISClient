@@ -289,3 +289,7 @@ private fun clearSecurePreferences(): Boolean = runCatching {
     println("[LocalDataWipe] could not clear secure preferences: ${e.message}")
     false
 }
+
+
+actual fun ownsLocalNode(activeNodeUrl: String?): Boolean =
+    ownsLocalBackend(activeNodeUrlOrEnv(activeNodeUrl))

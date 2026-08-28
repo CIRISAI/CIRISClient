@@ -6,3 +6,7 @@ package ai.ciris.mobile.shared.platform
  * the UI can say so instead of claiming a wipe that did not happen.
  */
 actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boolean = false
+
+
+/** Web has no local runtime at all, so there is never local node state to erase. */
+actual fun ownsLocalNode(activeNodeUrl: String?): Boolean = false

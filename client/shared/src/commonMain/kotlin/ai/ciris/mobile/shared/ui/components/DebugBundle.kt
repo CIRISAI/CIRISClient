@@ -116,13 +116,17 @@ object DebugBundle {
      */
     private const val NOT_A_STATE =
         """expired|missing|present|invalid|unknown|revoked|pending|""" +
-            """refreshed|required|rejected|absent"""
+            """refreshed|required|rejected|absent|ok|set|unset|none|null|""" +
+            """true|false|yes|no|enabled|disabled|empty|blank|valid"""
 
     private val SECRET_PATTERNS: List<Pair<Regex, String>> = listOf(
         // JWTs — the shape is unmistakable and never appears in prose.
         Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
         // Authorization headers, including the `service:TOKEN` form.
-        Regex("""(?i)\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]{12,}""") to "$1<redacted>",
+        Regex(
+            """\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]{12,}""",
+            RegexOption.IGNORE_CASE,
+        ) to "$1<redacted>",
         // DOUBLE-quoted value. The value class excludes ONLY this delimiter.
         //
         // A single quoted arm written as `[^"']` fails the moment a
@@ -139,16 +143,19 @@ object DebugBundle {
         // closing delimiter and stops there, leaving the rest of the passphrase
         // in the bundle — the same leak again, through the escape this time.
         Regex(
-            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["])((?:[^"\\]|\\.){6,})["]"""
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["])((?:[^"\\]|\\.)+)["]""",
+            RegexOption.IGNORE_CASE,
         ) to "\$1\$2\"<redacted>\"",
         // SINGLE-quoted value, same rule, mirrored.
         Regex(
-            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])((?:[^'\\]|\\.){6,})[']"""
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])((?:[^'\\]|\\.)+)[']""",
+            RegexOption.IGNORE_CASE,
         ) to "\$1\$2'<redacted>'",
         // UNQUOTED name = value. Whitespace really is the delimiter here.
         Regex(
-            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +
-                """(?!(?:$NOT_A_STATE)\b)([^\s"',;)}\]]{6,})"""
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +
+                """(?!(?:$NOT_A_STATE)\b)([^\s"',;)}\]]+)""",
+            RegexOption.IGNORE_CASE,
         ) to "$1$2<redacted>",
     )
 

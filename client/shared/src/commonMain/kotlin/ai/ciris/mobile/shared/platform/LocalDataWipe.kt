@@ -52,3 +52,17 @@ expect fun wipeLocalData(
     declaredNodeHome: String? = null,
     activeNodeUrl: String? = null,
 ): Boolean
+
+
+/**
+ * Can this device wipe the node it is currently talking to?
+ *
+ * ASKED BEFORE ANYTHING IS DESTROYED. `wipeLocalData` already refuses when the
+ * client is driving a remote node, but the reset flow stops the local runtime
+ * FIRST — so a remote profile meant the app killed an unrelated local node,
+ * logged the operator out, and then declined to wipe anything (Codex, PR #18).
+ * The refusal was right and its position was not.
+ *
+ * @param activeNodeUrl the URL the client is actually using right now.
+ */
+expect fun ownsLocalNode(activeNodeUrl: String?): Boolean

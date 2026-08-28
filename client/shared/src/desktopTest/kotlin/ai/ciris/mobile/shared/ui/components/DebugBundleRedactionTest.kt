@@ -148,4 +148,34 @@ class DebugBundleRedactionTest {
         assertFalse(out.contains("battery"), "the credential survived: $out")
         assertFalse(out.contains("staple"), "the credential survived: $out")
     }
+
+    @Test
+    fun a_short_credential_is_still_a_credential() {
+        // The value quantifier was {6,}, so anything shorter was exported whole
+        // (Codex, PR #18). The NAME is the shape check; length was never it.
+        for (line in listOf("client_secret=\"abc\"", "password=12345", "token=x1")) {
+            val out = DebugBundle.redactSecrets(line)
+            assertTrue(out.contains("<redacted>"), "not redacted: $out")
+        }
+    }
+
+    @Test
+    fun a_short_status_is_still_a_status() {
+        // Relaxing the quantifier made the state list load-bearing for words
+        // that are now long enough to match.
+        for (line in listOf("token: ok", "llm_api_key=unset", "password: none", "secret=null")) {
+            val out = DebugBundle.redactSecrets(line)
+            assertFalse(out.contains("<redacted>"), "a status was redacted: $out")
+        }
+    }
+
+    @Test
+    fun the_patterns_construct_without_inline_flags() {
+        // `(?i)` is invalid in ECMAScript, so on wasmJs building these threw at
+        // object init — and `environment()` touches the object, so "Open a
+        // GitHub issue" on a failure panel crashed before it could open
+        // (Codex, PR #18). Constructing and using them is the assertion.
+        assertTrue(DebugBundle.redactSecrets("API_KEY=sk-abcdef").contains("<redacted>"))
+        assertTrue(DebugBundle.redactSecrets("Bearer AbCdEf0123456789").contains("<redacted>"))
+    }
 }
