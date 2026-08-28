@@ -99,6 +99,9 @@ private fun isSourceCheckout(home: File): Boolean =
  */
 private val LOOPBACK_IPV4 = Regex("""^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$""")
 
+/** Hex, colons and dots only — an address literal, never a name to resolve. */
+private val LOOPS_LIKE_AN_IP = Regex("""^[0-9a-f:.]+$""")
+
 /**
  * True when the backend this client is driving is one we could own locally.
  *
@@ -122,7 +125,28 @@ internal fun ownsLocalBackend(apiUrl: String?): Boolean {
     val host = runCatching { java.net.URI(url).host }.getOrNull()
         ?: return false // unparseable: assume not ours
     val h = host.trim().removePrefix("[").removeSuffix("]").lowercase()
-    return h == "localhost" || h == "::1" || h == "0.0.0.0" || LOOPBACK_IPV4.matches(h)
+    if (h == "localhost") return true
+
+    // ASK THE STACK, DO NOT SPELL OUT THE ADDRESSES.
+    //
+    // `::1` and `0:0:0:0:0:0:0:1` are the same address, and `URI.host` returns
+    // whichever spelling was typed — so a desktop configured with the expanded
+    // form was classified REMOTE and refused (Codex, PR #18). The consequence is
+    // the worst ordering in this flow: reset has already shut the local runtime
+    // down before this predicate runs, so a false negative leaves the operator
+    // logged out, the node stopped, and nothing erased.
+    //
+    // Only for things that already look like an address, so this never resolves
+    // a hostname — a DNS lookup here would be both slow and a way to make a
+    // remote name answer "loopback".
+    if (LOOPS_LIKE_AN_IP.matches(h)) {
+        val verdict = runCatching {
+            val addr = java.net.InetAddress.getByName(h)
+            addr.isLoopbackAddress || addr.isAnyLocalAddress
+        }.getOrNull()
+        if (verdict != null) return verdict
+    }
+    return LOOPBACK_IPV4.matches(h)
 }
 
 /**

@@ -89,6 +89,22 @@ object DebugBundle {
      * (a JWT, a bearer header, an explicit assignment to a secret-ish name)
      * rather than anything that merely looks high-entropy.
      */
+    /**
+     * A credential name, optionally CARRYING A PREFIX.
+     *
+     * `\b(api[_-]?key)` cannot fire inside `llm_api_key`: `_` is a word
+     * character, so there is no boundary before `api`. The names this codebase
+     * actually uses are the compound ones — `llm_api_key` (7 sites),
+     * `system_admin_password`, `backup_llm_api_key`, `owner_password` — so the
+     * pattern was blind to exactly the spellings a leak here would wear
+     * (Codex, PR #18).
+     *
+     * `[a-z0-9_]*` before the name, and the delimiter still required
+     * IMMEDIATELY after it — which is what keeps `llm_api_key_set=true` out:
+     * no split of that string ends in a credential name followed by `=`.
+     */
+    private const val NAME_PREFIX = """[a-z0-9_]*"""
+
     /** Names people give to secrets. One definition, so the arms cannot drift. */
     private const val SECRET_NAMES =
         """api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|""" +
@@ -117,16 +133,21 @@ object DebugBundle {
         // opposite quote can appear inside the value, which it may.
         //
         // `["]` rather than a bare quote: a raw string cannot end with one.
+        //
+        // The value consumes ESCAPED characters as part of itself. `[^"]` reads
+        // the `\"` in `{"password":"correct \"horse\" battery staple"}` as the
+        // closing delimiter and stops there, leaving the rest of the passphrase
+        // in the bundle — the same leak again, through the escape this time.
         Regex(
-            """(?i)\b($SECRET_NAMES)(\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["])([^"]{6,})["]"""
+            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["])((?:[^"\\]|\\.){6,})["]"""
         ) to "\$1\$2\"<redacted>\"",
         // SINGLE-quoted value, same rule, mirrored.
         Regex(
-            """(?i)\b($SECRET_NAMES)(\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])([^']{6,})[']"""
+            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])((?:[^'\\]|\\.){6,})[']"""
         ) to "\$1\$2'<redacted>'",
         // UNQUOTED name = value. Whitespace really is the delimiter here.
         Regex(
-            """(?i)\b($SECRET_NAMES)(\s*["']?\s*[:=]\s*["']?)""" +
+            """(?i)\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +
                 """(?!(?:$NOT_A_STATE)\b)([^\s"',;)}\]]{6,})"""
         ) to "$1$2<redacted>",
     )

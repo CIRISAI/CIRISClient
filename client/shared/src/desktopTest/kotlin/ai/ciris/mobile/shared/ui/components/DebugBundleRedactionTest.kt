@@ -113,4 +113,39 @@ class DebugBundleRedactionTest {
         assertFalse(out.contains("sesame"), "the credential survived: $out")
         assertTrue(out.contains("<redacted>"), out)
     }
+
+    @Test
+    fun compound_credential_names_are_the_ones_this_codebase_uses() {
+        // llm_api_key appears 7 times in the models; \b cannot fire after an
+        // underscore, so the pattern was blind to exactly these spellings
+        // (Codex, PR #18).
+        for (line in listOf(
+            "llm_api_key=sk-abcdef123456",
+            "owner_password=hunter2hunter2",
+            "system_admin_password=hunter2hunter2",
+            "backup_llm_api_key=sk-abcdef123456",
+        )) {
+            val out = DebugBundle.redactSecrets(line)
+            assertTrue(out.contains("<redacted>"), "not redacted: $out")
+            assertFalse(out.contains("sk-abcdef123456"), "credential survived: $out")
+            assertFalse(out.contains("hunter2hunter2"), "credential survived: $out")
+        }
+    }
+
+    @Test
+    fun a_status_flag_is_not_a_credential() {
+        // `llm_api_key_set=true` is a boolean about configuration. Redacting it
+        // costs the reader the fact the line carried.
+        val out = DebugBundle.redactSecrets("llm_api_key_set=true")
+        assertTrue(out.contains("true"), "a status flag was redacted: $out")
+    }
+
+    @Test
+    fun an_escaped_delimiter_does_not_end_the_value() {
+        val out = DebugBundle.redactSecrets(
+            "{\"password\":\"correct \\\"horse\\\" battery staple\"}"
+        )
+        assertFalse(out.contains("battery"), "the credential survived: $out")
+        assertFalse(out.contains("staple"), "the credential survived: $out")
+    }
 }
