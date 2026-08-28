@@ -273,7 +273,7 @@ not a result about the client.
 | `spec-drift` | data | Does the committed OpenAPI spec match what the node serves? (needs `--node`) |
 | `surface-binding` | data | Does every documented endpoint reach a client surface? |
 | `nav-gate-registry` | normative | Is every `SubstrateGate` pointing at an open issue? |
-| `compat-matrix` | normative | Does the compatibility matrix carry this release's row? |
+| `compat-matrix` | normative | Does the compatibility matrix carry this release's row, and does the client's `MIN_NODE_VERSION` agree with it? |
 
 ### Reading the board
 

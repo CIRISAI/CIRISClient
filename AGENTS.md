@@ -22,8 +22,8 @@
 - Anchors are EXEMPLARS. `MAX_ANCHOR_CHARS` exists because `prompts.language_guidance` is a real key whose Yoruba value is 31,297 characters, and lexical retrieval loved it: it contains most words, so it out-scored every genuinely similar UI string and cost ~8k tokens a request to teach nothing about button labels.
 
 ## Working in `client/`
-- Every file under `client/` is byte-identical to CIRISAgent@6083bdf **or** has a row in `client/VENDORING.md` §3 saying why. `packaging/check_vendoring.py` asserts exactly that, and CI runs it.
-- Changing a vendored file means: make the change, add the row, and re-record the digest (`python3 packaging/check_vendoring.py --print`) in the same commit.
+- The tree is AUTHORED here, not copied. `client/VENDORING.md` §3 — the byte-identity-or-delta-row rule — was RETIRED at the three-way merge: git history is the declaration and the §1 state digest is the seal. `packaging/check_vendoring.py` asserts the digest and the never-vendor classes (§2); it has never asserted byte-identity to a vendor commit, and this file said it did (Codex, PR #19).
+- Changing a file under `client/` means: make the change and re-record the digest (`python3 packaging/check_vendoring.py --print`) in the same commit. There is no row to add.
 - Prefer pushing the change upstream to carrying it. The delta table is deliberately small so that keeping it small stays a decision someone makes, not a thing that erodes.
 - Do not vendor the substrate. `androidApp/wheels/`, jniLibs, `iosApp/Resources*`, `iosApp/Frameworks/` and `iosApp/app_packages_native/` are other repos' release artifacts (§2). They are excluded on purpose and `.gitignore` does not protect you from `git add -f`.
 

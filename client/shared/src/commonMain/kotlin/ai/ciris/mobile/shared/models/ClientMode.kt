@@ -221,21 +221,24 @@ fun clientModeFrom(
 /**
  * The oldest node this client can drive.
  *
- * A FLOOR, not a pin. CIRISServer 0.5.192 moves its own dependency to
- * `ciris-client>=0.5.190,<0.6` (CIRISServer#497) so the client can ship for the
- * agent team without a paired server cut; this is the same relaxation from the
- * other side.
+ * **This is `node_min` from `compat/matrix.json`, and it must stay equal to it.**
+ * `CompatibilityFloorMatchesMatrixTest` fails if they diverge.
  *
- * THIS NUMBER IS NOT YET EARNED THE WAY THE SERVER EARNED ITS FLOOR. The server
- * mutation-tested theirs at both ends — lower it to 0.5.186 and the id gate
- * fails, lower it to 0.5.188 and the wheel gate fails — so the bound is measured
- * rather than asserted. Ours is the pairing both sides are standardising on and
- * nothing here proves this client cannot drive an older node. Until a gate
- * installs the floor and exercises the API surface this client actually calls,
- * treat it as the server team put it: an untested bound is a guess with a
- * version number on it.
+ * I first wrote 0.5.190 here, which was the SERVER's floor for the opposite
+ * question. CIRISServer#497 declares `ciris-client>=0.5.190,<0.6` — which
+ * CLIENT versions the server supports. This constant answers which NODE
+ * versions the client supports, and the repo already had that answer, recorded
+ * with a reason in the compatibility matrix and unchanged at 0.5.168 since
+ * 0.5.185. Taking the server's number for it would have nagged on every node
+ * between 0.5.168 and 0.5.190 — nodes the matrix says are supported — which is
+ * the permanent nag the whole change was made to remove, moved to a different
+ * boundary.
+ *
+ * So the floor is not "unearned" as I described it: it is stated and justified
+ * in the matrix, one row per release, append-only. What was missing was
+ * anything keeping the two copies equal. That is the test.
  */
-const val MIN_NODE_VERSION: String = "0.5.190"
+const val MIN_NODE_VERSION: String = "0.5.168"
 
 /**
  * Compare two `major.minor.patch` versions NUMERICALLY. Negative, zero, positive.

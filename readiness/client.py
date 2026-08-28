@@ -406,15 +406,30 @@ def generated_api_drift(ctx: Context) -> Result:
     )
 
 
-@gate("compat-matrix", "Does the compatibility matrix carry this release's row?")
+@gate(
+    "compat-matrix",
+    "Does the compatibility matrix carry this release's row, and does the "
+    "client's MIN_NODE_VERSION agree with it?",
+)
 def compat_matrix(ctx: Context) -> Result:
     """The published client↔node record (FSD §6): one row per release,
     append-only, exactly one row for the current VERSION. The same validation
     CI runs (compat/validate.py) — one implementation, two callers.
+
+    ALSO the Kotlin floor. `MIN_NODE_VERSION` states the oldest supported node
+    in code, and `node_min` states it in the matrix; they are one fact written
+    twice, and nothing structural kept them equal until this gate. The question
+    above says so, because a gate whose stated contract omits a condition it
+    enforces is a board that under-reports what it checked.
+
+    Graded against THE TREE UNDER GRADE, not always this repo's: `--client-tree`
+    points readiness at CIRISServer's or CIRISAgent's vendored copy, and reading
+    our own `client/` there would report green for a consumer whose constant had
+    drifted (Codex, PR #19).
     """
     from compat.validate import validate
 
-    problems = validate(Path(__file__).resolve().parents[1])
+    problems = validate(Path(__file__).resolve().parents[1], client_tree(ctx))
     if problems:
         return Result(
             "compat-matrix",
