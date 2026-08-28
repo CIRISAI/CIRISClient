@@ -89,36 +89,45 @@ object DebugBundle {
      * (a JWT, a bearer header, an explicit assignment to a secret-ish name)
      * rather than anything that merely looks high-entropy.
      */
+    /** Names people give to secrets. One definition, so the arms cannot drift. */
+    private const val SECRET_NAMES =
+        """api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|""" +
+            """auth[_-]?token|token|secret|password|passwd|client[_-]?secret"""
+
+    /**
+     * `token: expired` is a STATE, not a credential. Redacting it costs the
+     * reader the one fact the line carried.
+     */
+    private const val NOT_A_STATE =
+        """expired|missing|present|invalid|unknown|revoked|pending|""" +
+            """refreshed|required|rejected|absent"""
+
     private val SECRET_PATTERNS: List<Pair<Regex, String>> = listOf(
         // JWTs — the shape is unmistakable and never appears in prose.
         Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
         // Authorization headers, including the `service:TOKEN` form.
         Regex("""(?i)\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]{12,}""") to "$1<redacted>",
-        // QUOTED value — matched through the CLOSING QUOTE, and this arm must
-        // come first. A single pattern that stops at whitespace leaks most of
-        // the secret it claims to remove: `password="correct horse battery
-        // staple"` redacted to `password="<redacted> horse battery staple"`,
-        // three words of a four-word passphrase still in the bundle (Codex,
-        // PR #18). Quoted secrets legitimately contain spaces, so the quote is
-        // the delimiter, not whitespace.
+        // DOUBLE-quoted value. The value class excludes ONLY this delimiter.
+        //
+        // A single quoted arm written as `[^"']` fails the moment a
+        // double-quoted secret contains an apostrophe — `password="correct
+        // horse's battery staple"` did not match at all, and fell through to
+        // the unquoted arm, which redacted the prefix and left the rest in the
+        // bundle (Codex, PR #18). One delimiter per arm is the only way the
+        // opposite quote can appear inside the value, which it may.
+        //
+        // `["]` rather than a bare quote: a raw string cannot end with one.
         Regex(
-            """(?i)\b(api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|"""
-                + """auth[_-]?token|token|secret|password|passwd|client[_-]?secret)"""
-                + """(\s*[:=]\s*)(["'])"""
-                + """(?!(?:expired|missing|present|invalid|unknown|revoked|pending|"""
-                + """refreshed|required|rejected|absent)["'])"""
-                + """([^"']{6,})(\3)"""
-        ) to "$1$2$3<redacted>$3",
-        // UNQUOTED name = value, where the name is one people give to secrets.
+            """(?i)\b($SECRET_NAMES)(\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["])([^"]{6,})["]"""
+        ) to "\$1\$2\"<redacted>\"",
+        // SINGLE-quoted value, same rule, mirrored.
         Regex(
-            """(?i)\b(api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|"""
-                + """auth[_-]?token|token|secret|password|passwd|client[_-]?secret)"""
-                + """(\s*["']?\s*[:=]\s*["']?)"""
-                // `token: expired` is a STATE, not a credential. Redacting it
-                // costs the reader the one fact the line carried.
-                + """(?!(?:expired|missing|present|invalid|unknown|revoked|pending|"""
-                + """refreshed|required|rejected|absent)\b)"""
-                + """([^\s"',;)}\]]{6,})"""
+            """(?i)\b($SECRET_NAMES)(\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])([^']{6,})[']"""
+        ) to "\$1\$2'<redacted>'",
+        // UNQUOTED name = value. Whitespace really is the delimiter here.
+        Regex(
+            """(?i)\b($SECRET_NAMES)(\s*["']?\s*[:=]\s*["']?)""" +
+                """(?!(?:$NOT_A_STATE)\b)([^\s"',;)}\]]{6,})"""
         ) to "$1$2<redacted>",
     )
 

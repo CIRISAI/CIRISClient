@@ -96,4 +96,21 @@ class DebugBundleRedactionTest {
         val out = DebugBundle.redactSecrets("""token="expired"""" + "\"")
         assertTrue(out.contains("expired"), "a state was redacted to nothing: $out")
     }
+
+    @Test
+    fun a_double_quoted_secret_may_contain_an_apostrophe() {
+        // A single arm excluding BOTH quote types never matched this, so it
+        // fell through to the unquoted arm and leaked the rest (Codex, PR #18).
+        val out = DebugBundle.redactSecrets("password=\"correct horse's battery staple\"")
+        assertFalse(out.contains("battery"), "the credential survived: $out")
+        assertFalse(out.contains("staple"), "the credential survived: $out")
+        assertTrue(out.contains("<redacted>"), out)
+    }
+
+    @Test
+    fun a_single_quoted_secret_may_contain_a_double_quote() {
+        val out = DebugBundle.redactSecrets("password='he said \"open sesame\" twice'")
+        assertFalse(out.contains("sesame"), "the credential survived: $out")
+        assertTrue(out.contains("<redacted>"), out)
+    }
 }

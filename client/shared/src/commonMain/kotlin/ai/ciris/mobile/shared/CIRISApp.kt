@@ -2103,11 +2103,20 @@ fun CIRISApp(
                             val wiped = withContext(Dispatchers.Default) {
                                 ai.ciris.mobile.shared.platform.wipeLocalData(
                                     declaredHome,
-                                    // The URL this client is talking to RIGHT NOW.
-                                    // A node switch repoints the API client
-                                    // without touching the environment, so the
-                                    // environment is not the answer (Codex, PR #18).
-                                    activeNodeUrl = nodeBaseUrl,
+                                    // `apiClient.baseUrl`, NOT `nodeBaseUrl`.
+                                    //
+                                    // I wrote this line claiming to pass the
+                                    // current URL and passed the stale one
+                                    // (Codex, PR #18). `nodeBaseUrl` is an
+                                    // immutable CIRISApp PARAMETER, fixed for
+                                    // the composition; `switchTo` mutates
+                                    // `apiClient.baseUrl` via updateBaseUrl and
+                                    // never touches the parameter. So after a
+                                    // switch to a remote profile this still
+                                    // read loopback — the guard accepted it,
+                                    // and the whole fix did nothing for the
+                                    // exact case it was written for.
+                                    activeNodeUrl = apiClient.baseUrl,
                                 )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
