@@ -87,6 +87,8 @@ fun ManageNodesScreen(
     onBack: () -> Unit,
     /** Navigate to the claim-ownership flow (ClaimNodeScreen). */
     onClaimNode: () -> Unit,
+    /** Routes to [VerifyAgentScreen] — look a build up in the registry. */
+    onVerifyAgent: () -> Unit = {},
     /** Navigate to the guided "Add Federation ID" catch-up flow (AddFederationIdScreen).
      *  Only surfaced when the logged-in owner has NO fed-ID. */
     onAddFederationId: () -> Unit = {},
@@ -165,6 +167,7 @@ fun ManageNodesScreen(
                 NodesListView(
                     viewModel = viewModel,
                     onClaimNode = onClaimNode,
+                    onVerifyAgent = onVerifyAgent,
                     onAddFederationId = onAddFederationId,
                     modifier = Modifier.weight(1f),
                 )
@@ -205,6 +208,7 @@ private fun RowScope.ViewTab(
 private fun NodesListView(
     viewModel: NodeSwitcherViewModel,
     onClaimNode: () -> Unit,
+    onVerifyAgent: () -> Unit = {},
     onAddFederationId: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -460,6 +464,17 @@ private fun NodesListView(
             Spacer(Modifier.height(8.dp))
 
             // ── Claim ownership affordance ───────────────────────────────────
+            // Verify a build against the registry. Sits beside claim because
+            // both are registry-shaped questions about a node's identity, and
+            // this is where an operator already comes to ask them.
+            Button(
+                onClick = onVerifyAgent,
+                modifier = Modifier.fillMaxWidth().testableClickable("btn_manage_nodes_verify") { onVerifyAgent() },
+            ) {
+                Text(localizedString("mobile.verify_title"))
+            }
+            Spacer(Modifier.height(8.dp))
+
             Button(
                 onClick = onClaimNode,
                 modifier = Modifier.fillMaxWidth().testableClickable("btn_manage_nodes_claim") { onClaimNode() },

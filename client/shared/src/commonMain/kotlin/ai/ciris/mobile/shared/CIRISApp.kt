@@ -458,6 +458,28 @@ fun CIRISApp(
         TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
     }
 
+    // WHAT THIS NODE DECLARES IT CAN DO.
+    //
+    // Probed alongside the mode gate and re-probed on a node switch, because a
+    // different node confers different capabilities and a cached answer from
+    // the previous one would license the wrong UI.
+    //
+    // Starts UNREACHABLE, not UNDECLARED: before the first probe we have not
+    // asked, and rendering "this node predates capability declarations" before
+    // asking is the false version diagnosis that state exists to prevent
+    // (Codex, PR #20).
+    var nodeCapabilities by remember {
+        mutableStateOf(ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE)
+    }
+    LaunchedEffect(nodeBaseUrl) {
+        nodeCapabilities = apiClient.getNodeCapabilities(nodeBaseUrl)
+        platformLog(
+            TAG,
+            "[INFO][caps] $nodeBaseUrl declares ${nodeCapabilities.declared?.size ?: "nothing"}" +
+                if (nodeCapabilities.unreachable) " (unreachable)" else "",
+        )
+    }
+
 
     // Handle system back button - navigate back to appropriate parent screen
     // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is
@@ -3586,6 +3608,19 @@ fun CIRISApp(
                 )
             }
 
+            Screen.VerifyAgent -> {
+                // CIRISPortal's /verify, shipped AHEAD of its API. On every node
+                // released today `nodeCapabilities` is UNDECLARED or UNREACHABLE
+                // and the notice explains which — the lookup form only appears
+                // once a node declares registry:lookup (CIRISServer#499).
+                PlatformLogger.d(TAG, "[Screen.VerifyAgent] caps=${nodeCapabilities.state(ai.ciris.mobile.shared.models.capability.Capability.REGISTRY_LOOKUP)}")
+                VerifyAgentScreen(
+                    capabilities = nodeCapabilities,
+                    onLookup = { hash -> apiClient.lookupAgentHash(hash, nodeBaseUrl) },
+                    onBack = { currentScreen = Screen.Interact },
+                )
+            }
+
             Screen.ClaimNode -> {
                 // Last UI piece of the founder flow: enter a node's NodeCode +
                 // claim PIN → connect/identity-pin → claim SYSTEM_ADMIN. Drives
@@ -3612,6 +3647,7 @@ fun CIRISApp(
                     viewModel = nodeSwitcherViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     onClaimNode = { currentScreen = Screen.ClaimNode },
+                    onVerifyAgent = { currentScreen = Screen.VerifyAgent },
                     // Catch-up: legacy owner (no fed-ID) → guided Add Federation ID.
                     // Manual entry returns to Manage Nodes (vs. the login auto-
                     // present, which returns to Interact).
@@ -4528,6 +4564,7 @@ fun CIRISApp(
                                 Screen.VizSettings -> Screen.Settings
                                 Screen.ServerConnection -> Screen.Interact
                                 Screen.ClaimNode -> Screen.Interact
+                                Screen.VerifyAgent -> Screen.Interact
                                 // Sub-screens of the home (Interact)
                                 Screen.Adapters,
                                 Screen.Audit,
@@ -5312,6 +5349,7 @@ private sealed class Screen {
     // Claim-Ownership: founder enters a node's NodeCode + claim PIN to become
     // its SYSTEM_ADMIN (connect → identity-pin → claim). Flow-only (no sidebar).
     object ClaimNode : Screen()
+    object VerifyAgent : Screen()
 
     // Node management (CRUD over saved NodeProfiles) — first-class Manage-group
     // surface, promoted from the in-page node-switcher dropdown.
@@ -5492,7 +5530,7 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
     // Flow-only / no sidebar
     Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection, Screen.ClaimNode,
-    Screen.AddFederationId, Screen.Help -> null
+    Screen.AddFederationId, Screen.Help, Screen.VerifyAgent -> null
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {

@@ -9229,7 +9229,19 @@ class CIRISApiClient(
             return ""
         }
         val raw = str("status", "agent_status")
-        if (raw.isBlank() && str("agent_hash", "agentHash").isBlank()) {
+        val returnedHash = str("agent_hash", "agentHash")
+        // THE REGISTRY MUST SAY WHICH HASH IT VERIFIED. The guard was `raw AND
+        // hash both blank`, so a record carrying a status but no hash passed —
+        // and the fallback then displayed the hash the OPERATOR TYPED as though
+        // the registry had returned it (Codex, PR #20). On a revocation check
+        // that is the worst possible lie: it shows their input confirmed.
+        if (returnedHash.isBlank()) {
+            logInfo(method, "registry returned a record without a hash — not rendering it as an answer")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node returned a record without the hash it verified"
+            )
+        }
+        if (raw.isBlank()) {
             // A 200 we cannot read is not a verdict. Same rule as the status enum.
             return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
                 "the node returned a record this client could not read"
@@ -9237,8 +9249,9 @@ class CIRISApiClient(
         }
         return ai.ciris.mobile.shared.models.capability.LookupResult.Found(
             ai.ciris.mobile.shared.models.capability.AgentRecord(
-                // The RETURNED hash, never the queried one — see above.
-                agentHash = str("agent_hash", "agentHash").ifBlank { agentHash },
+                // The RETURNED hash. No fallback to the queried value exists
+                // any more — its absence is handled above as Unavailable.
+                agentHash = returnedHash,
                 agentType = str("agent_type", "agentType"),
                 version = str("version"),
                 status = ai.ciris.mobile.shared.models.capability.AgentStatus.fromWire(raw),
@@ -9260,7 +9273,17 @@ class CIRISApiClient(
             }
         }
         val body = try {
-            client.get("$nodeUrl/v1/federation/conformance").bodyAsText()
+            val resp = client.get("$nodeUrl/v1/federation/conformance")
+            // A 404 or 500 STILL HAS A BODY, and that body has no capabilities
+            // array — so reading it fell through to UNDECLARED and told the
+            // operator their node predates the declaration. The thrown path was
+            // fixed and this one was not (Codex, PR #20): same false version
+            // diagnosis, reached by a status code instead of an exception.
+            if (!resp.status.isSuccess()) {
+                logInfo("getNodeCapabilities", "conformance -> HTTP ${resp.status.value} at $nodeUrl")
+                return ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
+            }
+            resp.bodyAsText()
         } finally {
             client.close()
         }

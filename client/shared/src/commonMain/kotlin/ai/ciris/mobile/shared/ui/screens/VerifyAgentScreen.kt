@@ -17,7 +17,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import ai.ciris.mobile.shared.platform.testableClickable
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -155,6 +167,97 @@ fun VerifyAgentResult(
                     )
                 }
             }
+        }
+    }
+}
+
+
+/**
+ * The whole surface: a hash field, a check button, and whichever of the four
+ * outcomes applies.
+ *
+ * The lookup is INJECTED rather than reached for, so this composable has no
+ * opinion about which node answers — `CIRISApp` supplies the attached node's
+ * URL, which is the bug that made `LOCAL_NODE_URL` a bad default here and in
+ * the reset home resolution.
+ *
+ * The form only renders when the capability is PRESENT. That is not cosmetic:
+ * offering a field that cannot be submitted teaches the operator the feature is
+ * broken, when in fact this node simply does not serve it.
+ */
+@Composable
+fun VerifyAgentScreen(
+    capabilities: NodeCapabilities,
+    onLookup: suspend (String) -> LookupResult,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val usable = capabilities.has(Capability.REGISTRY_LOOKUP)
+    var hash by remember { mutableStateOf("") }
+    var result by remember { mutableStateOf<LookupResult?>(null) }
+    var inFlight by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(
+            text = localizedString("mobile.verify_title"),
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            modifier = Modifier.testable("txt_verify_title"),
+        )
+
+        // Says which of UNDECLARED / ABSENT / UNREACHABLE applies, and returns
+        // nothing at all when the capability is PRESENT.
+        VerifyAgentCapabilityNotice(capabilities)
+
+        if (usable) {
+            OutlinedTextField(
+                value = hash,
+                onValueChange = { hash = it; result = null },
+                label = { Text(localizedString("mobile.verify_hash_label")) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions.Default,
+                modifier = Modifier.fillMaxWidth().testable("input_verify_hash"),
+            )
+            Button(
+                onClick = {
+                    if (!inFlight && hash.isNotBlank()) {
+                        inFlight = true
+                        scope.launch {
+                            result = onLookup(hash.trim())
+                            inFlight = false
+                        }
+                    }
+                },
+                enabled = !inFlight && hash.isNotBlank(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testableClickable("btn_verify_submit") {
+                        if (!inFlight && hash.isNotBlank()) {
+                            inFlight = true
+                            scope.launch {
+                                result = onLookup(hash.trim())
+                                inFlight = false
+                            }
+                        }
+                    },
+            ) {
+                Text(localizedString("mobile.verify_button"))
+            }
+            result?.let { VerifyAgentResult(it) }
+        }
+
+        Button(
+            onClick = onBack,
+            modifier = Modifier.testableClickable("btn_verify_back") { onBack() },
+        ) {
+            Text(localizedString("mobile.claim_node_back"))
         }
     }
 }
