@@ -248,4 +248,16 @@ class DebugBundleRedactionTest {
         assertFalse(out.contains("battery"), "the credential survived: $out")
         assertFalse(out.contains("staple"), "the credential survived: $out")
     }
+
+    @Test
+    fun an_unterminated_secret_may_contain_the_other_quote_or_an_escape() {
+        for (line in listOf(
+            "password=\"correct horse's battery staple",
+            "password=\"correct \\\"horse\\\" battery staple",
+        )) {
+            val out = DebugBundle.redactSecrets(line)
+            assertFalse(out.contains("battery"), "the credential survived: $out")
+            assertFalse(out.contains("staple"), "the credential survived: $out")
+        }
+    }
 }

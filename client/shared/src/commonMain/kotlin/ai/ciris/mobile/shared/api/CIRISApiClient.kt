@@ -9148,7 +9148,7 @@ class CIRISApiClient(
      * not cost the answer. Null when the node does not declare one — the caller
      * then falls back to the guess, which is where it was before.
      */
-    suspend fun getNodeHomePath(): String? = runCatching {
+    suspend fun getNodeHomePath(nodeUrl: String = LOCAL_NODE_URL): String? = runCatching {
         // A short-lived client, as the other raw scrapes in this file do: the
         // generated setup API binds a model that does not carry claim_pin_file.
         val client = io.ktor.client.HttpClient {
@@ -9163,7 +9163,7 @@ class CIRISApiClient(
         // to compile for that target -- while desktop compiled clean. Every other
         // raw scrape in this file closes its client this way.
         val body = try {
-            client.get("$baseUrl/v1/setup/status").bodyAsText()
+            client.get("$nodeUrl/v1/setup/status").bodyAsText()
         } finally {
             client.close()
         }

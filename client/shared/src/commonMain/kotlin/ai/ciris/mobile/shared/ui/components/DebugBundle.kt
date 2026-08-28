@@ -181,14 +181,23 @@ object DebugBundle {
             RegexOption.IGNORE_CASE,
         ) to "\$1\$2'<redacted>'",
         // An OPENING quote with no closing one — a truncated or line-clipped
-        // log entry. Both quoted arms fail, and the unquoted arm below consumes
-        // the quote and stops at the first space, leaving most of the credential
-        // in the bundle (Codex, PR #18). An unmatched quote means the value runs
-        // to end of line, so redact that far.
+        // log entry. Both terminated arms fail, and the unquoted arm below
+        // consumes the quote and stops at the first space, leaving most of the
+        // credential in the bundle (Codex, PR #18).
+        //
+        // ONE ARM PER DELIMITER, CONSUMING ESCAPES, exactly like the terminated
+        // pair — I wrote the first version of this with the `[^"']` value class
+        // the terminated arms had already been fixed away from, so a truncated
+        // secret containing an apostrophe or an escaped quote fell through to
+        // the same first-space truncation. Same bug, one arm later.
         Regex(
-            """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*[:=]\s*)(["'])(?!(?:$NOT_A_STATE)["']?${'$'})([^"'\n]+)${'$'}""",
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*[:=]\s*)["](?!(?:$NOT_A_STATE)["]?${'$'})((?:[^"\\\n]|\\.)+)${'$'}""",
             setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
-        ) to "$1$2$3<redacted>",
+        ) to "\$1\$2\"<redacted>",
+        Regex(
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*[:=]\s*)['](?!(?:$NOT_A_STATE)[']?${'$'})((?:[^'\\\n]|\\.)+)${'$'}""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
+        ) to "\$1\$2'<redacted>",
         // UNQUOTED name = value. Whitespace really is the delimiter here.
         Regex(
             """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +
