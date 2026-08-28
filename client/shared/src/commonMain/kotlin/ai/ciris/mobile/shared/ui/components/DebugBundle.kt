@@ -121,7 +121,12 @@ object DebugBundle {
 
     private val SECRET_PATTERNS: List<Pair<Regex, String>> = listOf(
         // JWTs — the shape is unmistakable and never appears in prose.
-        Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
+        // `eyJ` is the shape check — that is a base64url `{"` and nothing else
+        // starts that way by accident. Segment LENGTH is not: a JWT with a small
+        // claims set has a short middle segment and was exported whole
+        // (Codex, PR #18). Same mistake as the `{6,}` and `{12,}` floors, in the
+        // one arm I had not yet reached.
+        Regex("""eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
         // Authorization headers, including the `service:TOKEN` form.
         //
         // No length floor. `Bearer abc123` is a credential exactly as much as a

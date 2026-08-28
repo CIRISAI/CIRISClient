@@ -207,4 +207,12 @@ class DebugBundleRedactionTest {
             assertFalse(out.contains("abc123"), "token survived: $out")
         }
     }
+
+    @Test
+    fun a_jwt_with_a_small_claims_set_is_still_a_jwt() {
+        // Segment length was never the shape check; `eyJ` is (Codex, PR #18).
+        val out = DebugBundle.redactSecrets("auth=eyJhbGc.eyJhIjoxfQ.sig")
+        assertTrue(out.contains("<redacted"), "not redacted: $out")
+        assertFalse(out.contains("eyJhIjoxfQ"), "claims survived: $out")
+    }
 }
