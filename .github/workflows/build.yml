@@ -99,13 +99,34 @@ jobs:
         # unpublished, and asserting it would fail every PR. What this catches is
         # a release that shipped OS wheels only, which is unresolvable on Android
         # and iOS (CIRISServer#493).
+        #
+        # THE VERSION IS READ FROM THE SURFACE IT WILL BE ASSERTED AGAINST.
+        #
+        # This used to take the newest version from `/pypi/ciris-client/json`
+        # and then assert it against the SIMPLE INDEX — two independently cached
+        # surfaces, so a freshly published version could be visible in one and
+        # not the other. That is not a rare race: it failed on 0.5.191 minutes
+        # after publishing, with `[PENDING] ciris-client 0.5.191 has no files on
+        # the simple index yet` — for a release whose five wheels were live.
+        # Retrying would only wait out a gap that need not exist. Reading the
+        # version from the simple index makes it impossible by construction: a
+        # version this sees is a version that view can answer for.
         run: |
           set -euo pipefail
           prev=$(python3 - <<'EOF'
           import json, urllib.request
-          d = json.loads(urllib.request.urlopen("https://pypi.org/pypi/ciris-client/json", timeout=20).read())
-          vs = sorted(d["releases"], key=lambda v: [int(x) for x in v.split(".") if x.isdigit()])
-          print(vs[-1] if vs else "")
+          req = urllib.request.Request(
+              "https://pypi.org/simple/ciris-client/",
+              headers={"Accept": "application/vnd.pypi.simple.v1+json"},
+          )
+          d = json.loads(urllib.request.urlopen(req, timeout=20).read())
+          vs = set()
+          for f in d.get("files", []):
+              parts = f["filename"].split("-")
+              if len(parts) > 1 and parts[0] == "ciris_client":
+                  vs.add(parts[1])
+          ok = sorted(vs, key=lambda v: [int(x) for x in v.split(".") if x.isdigit()])
+          print(ok[-1] if ok else "")
           EOF
           )
           [ -n "$prev" ] && python3 packaging/check_universal_wheel.py "$prev"
