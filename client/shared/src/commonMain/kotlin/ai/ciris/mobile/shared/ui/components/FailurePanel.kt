@@ -327,7 +327,15 @@ private fun reportUrl(
         appendLine("<details><summary>Error detail</summary>")
         appendLine()
         appendLine("```")
-        appendLine(detail.take(4000))
+        // REDACTED, like the bundle. This body goes to a PUBLIC GitHub issue,
+        // which is a worse destination than the bundle the redactor was written
+        // for — that one is a file the user chooses to send, this one is a URL
+        // that opens a form to the world. `DebugBundle.render()` scrubbed its
+        // own output while this path passed the raw server detail straight
+        // through (Codex, PR #18): the same text, the same risk, one export
+        // scrubbed and one not, because the scrubbing was attached to a
+        // FUNCTION rather than to leaving the device.
+        appendLine(DebugBundle.redactSecrets(detail).take(4000))
         appendLine("```")
         appendLine()
         appendLine("</details>")

@@ -120,6 +120,25 @@ object DebugBundle {
             """true|false|yes|no|enabled|disabled|empty|blank|valid"""
 
     private val SECRET_PATTERNS: List<Pair<Regex, String>> = listOf(
+        // THE CLAIM PIN. The one credential this client demonstrably handles.
+        //
+        // `StartupViewModel` logs the node's stdout lines through PlatformLogger
+        // (first 50, then every tenth), PlatformLogger feeds DebugLogBuffer, and
+        // the node's ownership banner — `CLAIM PIN: 7F3K-Q9MZ` — is emitted in
+        // its first few lines on a fresh unclaimed node. So the live one-time
+        // secret that grants ownership of the node sits in a bundle built to be
+        // mailed to strangers, and no assignment pattern matches it because it
+        // is a LABELLED BANNER, not a `name=value` (Codex, PR #18).
+        //
+        // Label AND shape, so an ordinary `XXXX-XXXX` in prose is untouched.
+        // The token is 8 Crockford base32 characters (no I/L/O/U) as XXXX-XXXX,
+        // the same alphabet `PythonRuntime.desktop.CLAIM_PIN_REGEX` parses. The
+        // NodeCode on the neighbouring line is deliberately NOT redacted: it is
+        // a public bootstrap handle and the reader needs it.
+        Regex(
+            """(claim\s*pin\s*[:=]\s*)[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}""",
+            RegexOption.IGNORE_CASE,
+        ) to "$1<redacted:pin>",
         // JWTs — the shape is unmistakable and never appears in prose.
         // `eyJ` is the shape check — that is a base64url `{"` and nothing else
         // starts that way by accident. Segment LENGTH is not: a JWT with a small
@@ -161,6 +180,15 @@ object DebugBundle {
             """\b($NAME_PREFIX(?:$SECRET_NAMES))(["']?\s*[:=]\s*)['](?!(?:$NOT_A_STATE)['])((?:[^'\\]|\\.)+)[']""",
             RegexOption.IGNORE_CASE,
         ) to "\$1\$2'<redacted>'",
+        // An OPENING quote with no closing one — a truncated or line-clipped
+        // log entry. Both quoted arms fail, and the unquoted arm below consumes
+        // the quote and stops at the first space, leaving most of the credential
+        // in the bundle (Codex, PR #18). An unmatched quote means the value runs
+        // to end of line, so redact that far.
+        Regex(
+            """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*[:=]\s*)(["'])(?!(?:$NOT_A_STATE)["']?${'$'})([^"'\n]+)${'$'}""",
+            setOf(RegexOption.IGNORE_CASE, RegexOption.MULTILINE),
+        ) to "$1$2$3<redacted>",
         // UNQUOTED name = value. Whitespace really is the delimiter here.
         Regex(
             """\b($NAME_PREFIX(?:$SECRET_NAMES))(\s*["']?\s*[:=]\s*["']?)""" +

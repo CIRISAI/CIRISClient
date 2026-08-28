@@ -215,4 +215,37 @@ class DebugBundleRedactionTest {
         assertTrue(out.contains("<redacted"), "not redacted: $out")
         assertFalse(out.contains("eyJhIjoxfQ"), "claims survived: $out")
     }
+
+    @Test
+    fun the_claim_pin_banner_is_redacted() {
+        // The node's ownership banner reaches DebugLogBuffer through
+        // StartupViewModel's per-line PlatformLogger call, so the live one-time
+        // secret sits in a bundle built to be mailed out (Codex, PR #18).
+        val line = "\u2551    CLAIM PIN: 7F3K-Q9MZ   (one-time; console-only)"
+        val out = DebugBundle.redactSecrets(line)
+        assertFalse(out.contains("7F3K-Q9MZ"), "the claim PIN survived: $out")
+        assertTrue(out.contains("<redacted:pin>"), out)
+    }
+
+    @Test
+    fun the_public_nodecode_is_left_alone() {
+        // It sits on the neighbouring banner line and is a PUBLIC bootstrap
+        // handle. Redacting it costs the reader the thing they need.
+        val line = "\u2551    NodeCode : CIRIS-V1-AAAA-BBBB-CCCC"
+        assertTrue(DebugBundle.redactSecrets(line).contains("CIRIS-V1-AAAA-BBBB-CCCC"))
+    }
+
+    @Test
+    fun an_ordinary_dashed_token_is_not_mistaken_for_a_pin() {
+        // Label AND shape: without the label this would eat arbitrary text.
+        val line = "order ABCD-1234 shipped"
+        assertTrue(DebugBundle.redactSecrets(line).contains("ABCD-1234"))
+    }
+
+    @Test
+    fun an_unterminated_quoted_credential_is_redacted_to_end_of_line() {
+        val out = DebugBundle.redactSecrets("password=\"correct horse battery staple")
+        assertFalse(out.contains("battery"), "the credential survived: $out")
+        assertFalse(out.contains("staple"), "the credential survived: $out")
+    }
 }
