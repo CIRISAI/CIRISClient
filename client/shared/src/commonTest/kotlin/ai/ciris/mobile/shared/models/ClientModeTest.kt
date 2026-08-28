@@ -336,17 +336,24 @@ class ClientModeTest {
         // is genuinely too old and SHOULD flag, so the prefix is now shown to be
         // ignored at versions where the answer is not about age.
         assertFalse(isVersionMismatch("v0.5.191", "0.5.191"))
-        assertTrue(isVersionMismatch("v0.5.176", "0.5.191"))
+        assertTrue(isVersionMismatch("v0.5.167", "0.5.191"))
     }
 
     @Test
     fun version_mismatch_fires_on_a_node_below_the_floor() {
         // RENAMED, because the reason changed. This used to be "fires on a real
         // difference" — under equality, 0.5.175 vs 0.5.176 flagged because they
-        // differed. It still flags, but now because 0.5.175 is below
-        // MIN_NODE_VERSION, and a mere difference no longer flags anything:
-        // that is the decoupling CIRISServer#497 asked for.
-        assertTrue(isVersionMismatch("0.5.175", "0.5.176"))
+        // differed. Now only being BELOW the floor flags, and a mere difference
+        // flags nothing: the decoupling CIRISServer#497 asked for.
+        //
+        // The example moved too, and it had to (Codex, PR #19). While the floor
+        // was wrongly 0.5.190 this asserted 0.5.175 flags; the floor's real
+        // value is 0.5.168, which makes 0.5.175 a SUPPORTED node. Correcting the
+        // constant without correcting the case would have left a test asserting
+        // the client nags at a node the matrix says is fine — the exact defect
+        // being fixed, preserved in the test that was supposed to prove it gone.
+        assertTrue(isVersionMismatch("0.5.167", "0.5.191"), "below the 0.5.168 floor")
+        assertFalse(isVersionMismatch("0.5.175", "0.5.191"), "above the floor, merely older")
         assertFalse(isVersionMismatch("0.5.192", "0.5.193"))
     }
 
