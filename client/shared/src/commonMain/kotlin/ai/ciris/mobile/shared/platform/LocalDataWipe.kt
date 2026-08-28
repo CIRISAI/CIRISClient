@@ -39,4 +39,16 @@ package ai.ciris.mobile.shared.platform
  *   authoritative for the claim PIN, for the same reason (Codex, PR #9).
  *   Null when there is nobody to ask; the resolver then falls back to the guess.
  */
-expect fun wipeLocalData(declaredNodeHome: String? = null): Boolean
+/**
+ * @param activeNodeUrl the URL the client is ACTUALLY talking to right now, not
+ *   an environment variable. `NodeSwitcherViewModel.switchTo` repoints the API
+ *   client at a saved profile without touching the environment, and desktop
+ *   prefers `CIRIS_NODE_URL` over `CIRIS_API_URL` — so a guard that re-reads one
+ *   env var is guarding against a configuration the client may have left behind
+ *   (Codex, PR #18). Null means "caller did not say", and the desktop actual
+ *   falls back to the environment.
+ */
+expect fun wipeLocalData(
+    declaredNodeHome: String? = null,
+    activeNodeUrl: String? = null,
+): Boolean

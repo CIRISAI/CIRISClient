@@ -125,9 +125,30 @@ internal fun ownsLocalBackend(apiUrl: String?): Boolean {
     return h == "localhost" || h == "::1" || h == "0.0.0.0" || LOOPBACK_IPV4.matches(h)
 }
 
-private fun ownsLocalBackend(): Boolean = ownsLocalBackend(System.getenv("CIRIS_API_URL"))
+/**
+ * The URL the client is ACTUALLY using, in the order that decides it.
+ *
+ * The inherited guard read `CIRIS_API_URL` alone, and missed two live paths
+ * (Codex, PR #18):
+ *
+ *   - `NodeSwitcherViewModel.switchTo` calls `apiClient.updateBaseUrl(...)` and
+ *     never touches the environment, so after a switch to a saved remote
+ *     profile the env still says loopback and the guard still says "ours".
+ *   - `Main.kt` prefers `CIRIS_NODE_URL` over `CIRIS_API_URL`; a desktop
+ *     configured with the former was checked against a variable nobody set.
+ *
+ * In both cases Reset would then treat a REMOTE node's declared home as a local
+ * path: deleting unrelated local state if that path happens to exist here, and
+ * otherwise reporting a successful reset while the node the user is looking at
+ * is untouched. That is the same "wrong machine" error the guard was added for,
+ * reached by a different road.
+ */
+private fun activeNodeUrlOrEnv(explicit: String?): String? =
+    explicit?.takeIf { it.isNotBlank() }
+        ?: System.getenv("CIRIS_NODE_URL")?.takeIf { it.isNotBlank() }
+        ?: System.getenv("CIRIS_API_URL")
 
-actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
+actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boolean {
     // Managed deployments are not ours to wipe: `/app` belongs to CIRIS-Manager,
     // and the person at this UI is not necessarily entitled to destroy it.
     if (isManagedDeployment()) {
@@ -140,7 +161,7 @@ actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
     // where it lives is right when the node is ours, and this decides whether
     // it is. A remote node answers with a path on ITS disk, and acting on that
     // locally is the same mistake one level further along.
-    if (!ownsLocalBackend()) {
+    if (!ownsLocalBackend(activeNodeUrlOrEnv(activeNodeUrl))) {
         println("[LocalDataWipe] refusing: CIRIS_API_URL points at a node we do not own")
         return false
     }

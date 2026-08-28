@@ -62,12 +62,31 @@ actual fun saveDebugBundle(fileName: String, content: String): String? {
             }
 
             // Publish only now that the file is complete.
-            ctx.contentResolver.update(
-                uri,
-                ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
-                null,
-                null,
-            )
+            //
+            // AND TREAT A FAILED PUBLISH LIKE A FAILED WRITE (Codex, PR #18).
+            // The bytes landing is not the same event as the row becoming
+            // visible. If this update throws, the outer runCatching returns
+            // null WITHOUT reaching the delete above, leaving the complete
+            // bundle stored as an orphaned pending item — invisible to every
+            // file manager, and never cleaned up. If it returns zero rows it
+            // did not throw and did not publish, and the old code reported
+            // "Downloads/$fileName" for a file the user cannot find.
+            //
+            // Both are the same failure as an empty row, which this function
+            // already knew to clean up: something is in MediaStore that the
+            // user cannot reach and did not ask to keep.
+            val published = runCatching {
+                ctx.contentResolver.update(
+                    uri,
+                    ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                    null,
+                    null,
+                )
+            }.getOrDefault(0)
+            if (published <= 0) {
+                runCatching { ctx.contentResolver.delete(uri, null, null) }
+                return@runCatching null
+            }
             // A name the user can search for, not a URI they cannot act on.
             "Downloads/$fileName"
         } else {

@@ -80,4 +80,20 @@ class DebugBundleRedactionTest {
         assertFalse(out.contains("rt_abcdef0123456789"), "extra map bypassed redaction")
         assertTrue(out.contains("CIRIS debug bundle"))
     }
+
+    @Test
+    fun a_quoted_secret_containing_spaces_is_removed_whole() {
+        // The value group used to stop at the first space, so a four-word
+        // passphrase lost one word and kept three (Codex, PR #18).
+        val out = DebugBundle.redactSecrets("""password="correct horse battery staple"""" + "\"")
+        assertFalse(out.contains("horse"), "the rest of the passphrase survived: $out")
+        assertFalse(out.contains("staple"), "the rest of the passphrase survived: $out")
+        assertTrue(out.contains("<redacted>"), out)
+    }
+
+    @Test
+    fun a_quoted_state_is_still_not_a_credential() {
+        val out = DebugBundle.redactSecrets("""token="expired"""" + "\"")
+        assertTrue(out.contains("expired"), "a state was redacted to nothing: $out")
+    }
 }

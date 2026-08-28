@@ -94,7 +94,22 @@ object DebugBundle {
         Regex("""eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}(\.[A-Za-z0-9_-]+)?""") to "<redacted:jwt>",
         // Authorization headers, including the `service:TOKEN` form.
         Regex("""(?i)\b(bearer\s+)(service:)?[A-Za-z0-9._~+/=-]{12,}""") to "$1<redacted>",
-        // name = value, where the name is one people give to secrets.
+        // QUOTED value — matched through the CLOSING QUOTE, and this arm must
+        // come first. A single pattern that stops at whitespace leaks most of
+        // the secret it claims to remove: `password="correct horse battery
+        // staple"` redacted to `password="<redacted> horse battery staple"`,
+        // three words of a four-word passphrase still in the bundle (Codex,
+        // PR #18). Quoted secrets legitimately contain spaces, so the quote is
+        // the delimiter, not whitespace.
+        Regex(
+            """(?i)\b(api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|"""
+                + """auth[_-]?token|token|secret|password|passwd|client[_-]?secret)"""
+                + """(\s*[:=]\s*)(["'])"""
+                + """(?!(?:expired|missing|present|invalid|unknown|revoked|pending|"""
+                + """refreshed|required|rejected|absent)["'])"""
+                + """([^"']{6,})(\3)"""
+        ) to "$1$2$3<redacted>$3",
+        // UNQUOTED name = value, where the name is one people give to secrets.
         Regex(
             """(?i)\b(api[_-]?key|access[_-]?token|refresh[_-]?token|id[_-]?token|"""
                 + """auth[_-]?token|token|secret|password|passwd|client[_-]?secret)"""

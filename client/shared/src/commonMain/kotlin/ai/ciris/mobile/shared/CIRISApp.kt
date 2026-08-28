@@ -2101,7 +2101,14 @@ fun CIRISApp(
                             }
 
                             val wiped = withContext(Dispatchers.Default) {
-                                ai.ciris.mobile.shared.platform.wipeLocalData(declaredHome)
+                                ai.ciris.mobile.shared.platform.wipeLocalData(
+                                    declaredHome,
+                                    // The URL this client is talking to RIGHT NOW.
+                                    // A node switch repoints the API client
+                                    // without touching the environment, so the
+                                    // environment is not the answer (Codex, PR #18).
+                                    activeNodeUrl = nodeBaseUrl,
+                                )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
 

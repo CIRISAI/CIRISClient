@@ -5,4 +5,4 @@ package ai.ciris.mobile.shared.platform
  * data is not this browser's to delete. Reports false rather than pretending, so
  * the UI can say so instead of claiming a wipe that did not happen.
  */
-actual fun wipeLocalData(declaredNodeHome: String?): Boolean = false
+actual fun wipeLocalData(declaredNodeHome: String?, activeNodeUrl: String?): Boolean = false
