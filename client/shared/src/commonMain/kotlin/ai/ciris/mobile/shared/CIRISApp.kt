@@ -3616,6 +3616,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.VerifyAgent] caps=${nodeCapabilities.state(ai.ciris.mobile.shared.models.capability.Capability.REGISTRY_LOOKUP)}")
                 VerifyAgentScreen(
                     capabilities = nodeCapabilities,
+                    nodeUrl = nodeBaseUrl,
                     onLookup = { hash -> apiClient.lookupAgentHash(hash, nodeBaseUrl) },
                     onBack = { currentScreen = Screen.Interact },
                 )

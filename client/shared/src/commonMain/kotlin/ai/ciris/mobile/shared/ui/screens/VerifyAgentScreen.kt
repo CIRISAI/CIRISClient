@@ -188,14 +188,22 @@ fun VerifyAgentResult(
 @Composable
 fun VerifyAgentScreen(
     capabilities: NodeCapabilities,
+    /** Which node answers. Also the identity the result belongs to — see below. */
+    nodeUrl: String,
     onLookup: suspend (String) -> LookupResult,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val usable = capabilities.has(Capability.REGISTRY_LOOKUP)
-    var hash by remember { mutableStateOf("") }
-    var result by remember { mutableStateOf<LookupResult?>(null) }
-    var inFlight by remember { mutableStateOf(false) }
+    // KEYED ON THE NODE. Without this the state survives a node switch, so an
+    // operator who verifies a hash against node A, switches to node B, and looks
+    // at the screen sees A's verdict presented as B's answer — a revocation
+    // result attributed to a registry that never gave it. Self-review, after
+    // eight review findings on this file all of the same shape: a path that
+    // shows an answer it does not have.
+    var hash by remember(nodeUrl) { mutableStateOf("") }
+    var result by remember(nodeUrl) { mutableStateOf<LookupResult?>(null) }
+    var inFlight by remember(nodeUrl) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     Column(
