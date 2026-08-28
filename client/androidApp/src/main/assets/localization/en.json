@@ -1928,7 +1928,7 @@
     "login_owner_hint": "Last signed in: {owner}",
     "login_password_label": "Password",
     "login_privacy": "View Privacy Policy",
-    "login_reset_device": "Reset local device",
+    "login_reset_device": "Reset this device",
     "login_reset_device_cancel": "Cancel",
     "login_reset_device_confirm_body": "This erases the node data stored on THIS device and returns to the setup wizard. A node you are connected to on another machine is not affected. This cannot be undone.",
     "login_reset_device_confirm_title": "Reset this device?",
