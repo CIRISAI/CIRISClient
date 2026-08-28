@@ -182,6 +182,38 @@
       },
       "notes": "the matched cut with CIRISServer 0.5.191, which is pinned to ciris-client==0.5.191 and gated to move with it. Ported from CIRISAgent fix/sonar-reliability-security at 193e78d9 — the SIXTH review round, taken deliberately at final shape rather than mid-branch, because an earlier revision of the wipe recursively deleted a source checkout. Five-wheel matrix required and now gated on shape as well as presence: py3-none-any under 20 MiB (jar-free) and each platform wheel over 40 MiB (carrying one)",
       "published": null
+    },
+    {
+      "client_version": "0.5.192",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged from 0.5.191, and now GATED rather than asserted: compat/validate.py compares this field to the client's MIN_NODE_VERSION and fails the release if they disagree. The constant shipped at 0.5.190 in the first cut of that work — the SERVER's client-floor from CIRISServer#497, which answers the opposite question — and would have nagged on every node between 0.5.168 and 0.5.190 that this row calls supported",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe"
+      ],
+      "capabilities_note": "no new capability: this cut restores the SUPERSET after CIRISAgent 2.9.41 kept working on the client code for two hours past the 0.5.191 tag (CIRISClient#11). Seven fixes inherited — credential redaction on the debug bundle, Android IS_PENDING cleanup so a failed write leaves no empty file in Downloads, the log buffer's compare-and-set, the viewport the bundle registers, tests for the wipe — plus one neither tree had fixed: getAppVersion() reported a hand-maintained 2.3.2 while builds shipped 0.5.x, and now reports the generated CLIENT_VERSION. Reset is renamed 'Reset this device' and its remote-node guard DELIBERATELY NOT inherited: the button states its scope and asks the LOCAL node for its home, so scope is fixed by what is queried rather than policed afterwards",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3861
+      },
+      "notes": "FIRST CUT UNDER THE RANGE. CIRISServer 0.5.192 moves to ciris-client>=0.5.190,<0.6 (CIRISServer#497), so this ships without a paired server release — the point of the decoupling. isVersionMismatch compares against a floor instead of equality, which under a range would have nagged on every legitimately-mixed pair. node_max_tested stays 0.5.190: the 0.5.191 node was fetched and the four-corner walk was NOT run against it, because port 4243 was held by a live agent this session had no business stopping. An untested bound is a guess with a version number on it, so the tested one is recorded. 24 review findings across seven rounds are in the git history; two were the claim PIN reaching the debug bundle through StartupViewModel's per-line logging, and FailurePanel's GitHub-issue body never passing through redaction at all",
+      "published": null
     }
   ]
 }
