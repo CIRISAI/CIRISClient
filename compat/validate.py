@@ -122,6 +122,25 @@ MIN_NODE_RE = re.compile(
 CLIENT_MODE_REL = "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
 
 
+def _client_version_of(client_tree: Path, fallback: str) -> str:
+    """
+    The version of the tree being graded.
+
+    `--client-tree` points readiness at a consumer's vendored copy, which can be
+    at a different release than this repo. Selecting the row by OUR VERSION
+    would compare that tree's constant against a row describing a release it is
+    not (Codex, PR #19). The generated `ClientVersion.kt` is the tree's own
+    answer; absent it — a tree that has not run `generateBuildFlavor` — fall
+    back to ours rather than inventing one.
+    """
+    gen = client_tree / "shared/build/generated/flavor/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientVersion.kt"
+    if gen.is_file():
+        m = re.search(r'CLIENT_VERSION:\s*String\s*=\s*"([^"]+)"', gen.read_text(encoding="utf-8"))
+        if m:
+            return m.group(1)
+    return fallback
+
+
 def check_kotlin_floor(client_tree: Path, rows: list, version: str) -> list[str]:
     """
     `MIN_NODE_VERSION` in Kotlin must equal this release's `node_min`.
@@ -150,7 +169,11 @@ def check_kotlin_floor(client_tree: Path, rows: list, version: str) -> list[str]
     kt = client_tree / CLIENT_MODE_REL
     if not kt.is_file():
         return [f"{kt} is missing — the floor constant cannot be checked"]
-    m = MIN_NODE_RE.search(kt.read_text(encoding="utf-8"))
+    # Block comments too. The line-anchored exclusion catches `//` and a `*`
+    # continuation line, but an old declaration parked inside `/* ... */` need
+    # not start its line with anything (Codex, PR #19). Strip them, then match.
+    source = re.sub(r"/\*.*?\*/", "", kt.read_text(encoding="utf-8"), flags=re.S)
+    m = MIN_NODE_RE.search(source)
     if not m:
         # A parser that finds nothing where the construct plainly exists must
         # fail loudly (AGENTS.md, Gate Rules).
@@ -158,9 +181,10 @@ def check_kotlin_floor(client_tree: Path, rows: list, version: str) -> list[str]
     # The caller's loop already reports a non-object row or a missing
     # node_min. Reaching past that to index it turns an actionable failure list
     # into a traceback, for both CI and the imported readiness gate.
+    graded = _client_version_of(client_tree, version)
     row = next(
         (r for r in rows
-         if isinstance(r, dict) and r.get("client_version") == version),
+         if isinstance(r, dict) and r.get("client_version") == graded),
         None,
     )
     declared = row.get("node_min") if row else None
