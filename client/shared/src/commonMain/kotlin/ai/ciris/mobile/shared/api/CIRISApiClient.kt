@@ -9132,6 +9132,46 @@ class CIRISApiClient(
 
     // ===== Extended System API =====
 
+    /**
+     * The node's OWN home directory, from `/v1/setup/status`'s `claim_pin_file`.
+     *
+     * Its parent is the home. Asked rather than inferred because the client is
+     * not always the process that started the node: over `CIRIS_API_URL`, or
+     * behind a launcher with its own `CIRIS_HOME`, reconstructing the backend's
+     * `get_ciris_home()` from THIS process's environment names an unrelated
+     * installation. `PythonRuntime.desktop` already treats the declared path as
+     * authoritative for the claim PIN; a destructive reset has strictly more
+     * reason to (CIRISClient#9).
+     *
+     * A narrow scrape rather than a model bind, matching that precedent: this
+     * runs against a node that may be mid-boot, and a strict decode failure must
+     * not cost the answer. Null when the node does not declare one — the caller
+     * then falls back to the guess, which is where it was before.
+     */
+    suspend fun getNodeHomePath(): String? = runCatching {
+        // A short-lived client, as the other raw scrapes in this file do: the
+        // generated setup API binds a model that does not carry claim_pin_file.
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 5_000
+                connectTimeoutMillis = 3_000
+            }
+        }
+        // try/finally, NOT `client.use { }`: on wasmJs the `use` that resolves here
+        // is not an inline suspend context, so the call inside it is "Suspension
+        // functions can only be called within coroutine body" and :shared fails
+        // to compile for that target -- while desktop compiled clean. Every other
+        // raw scrape in this file closes its client this way.
+        val body = try {
+            client.get("$baseUrl/v1/setup/status").bodyAsText()
+        } finally {
+            client.close()
+        }
+        Regex("\"claim_pin_file\"\\s*:\\s*\"([^\"]+)\"")
+            .find(body)?.groupValues?.get(1)
+            ?.let { it.substringBeforeLast('/', "").ifBlank { null } }
+    }.getOrNull()
+
     suspend fun getSystemHealth(): SystemHealthData {
         val method = "getSystemHealth"
         // Per-poll fetch (every 30s) — debug; the INFO line below fires only when

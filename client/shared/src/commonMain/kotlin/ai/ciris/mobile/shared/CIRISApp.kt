@@ -702,9 +702,22 @@ fun CIRISApp(
         }
     }
 
+    // Monitor .token_refresh_needed signal from Python billing provider
+    // Polls every 10 seconds (matches old Android TokenRefreshManager)
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(10_000)
+            if (envFileUpdater.checkTokenRefreshSignal()) {
+                PlatformLogger.i(TAG, "Token refresh signal detected from Python - triggering silent refresh")
+                tokenManager.on401Error()
+            }
+        }
+    }
+
     // ViewModels
     // Cast to PythonRuntimeProtocol since actual implementations implement it
     val pythonRuntimeProtocol: PythonRuntimeProtocol = pythonRuntime as PythonRuntimeProtocol
+
     val startupViewModel: StartupViewModel = viewModel {
         StartupViewModel(pythonRuntimeProtocol, apiClient)
     }
@@ -2068,37 +2081,71 @@ fun CIRISApp(
                         // ANR before any feedback appears, which reads as the reset hanging
                         // rather than working.
                         coroutineScope.launch {
+                            // STOP THE NODE BEFORE DELETING ITS LIVE FILES (Codex, PR #9).
+                            // This used to run after the wipe. On Windows an open SQLite or
+                            // log handle makes deletion fail outright; on Unix it succeeds
+                            // and the still-running node RECREATES paths after the loop has
+                            // declared success — so the reset either failed or restarted
+                            // into residual state, and both looked like it had worked.
+                            //
+                            // Ask it where it lives while it is still up, too: the answer is
+                            // authoritative and it is about to stop being available.
+                            val declaredHome = if (ai.ciris.mobile.shared.platform.isDesktop()) {
+                                val h = runCatching { apiClient.getNodeHomePath() }.getOrNull()
+                                platformLog(TAG, "[INFO][onResetSetup] node declared home: ${h ?: "<none>"}")
+                                runCatching { pythonRuntime.shutdown() }
+                                    .onFailure { platformLog(TAG, "[WARN][onResetSetup] backend shutdown: ${it.message}") }
+                                h
+                            } else {
+                                null
+                            }
+
                             val wiped = withContext(Dispatchers.Default) {
-                                ai.ciris.mobile.shared.platform.wipeLocalData()
+                                ai.ciris.mobile.shared.platform.wipeLocalData(declaredHome)
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
 
                             if (!wiped) {
-                                // Say so rather than restarting into an unchanged node and
-                                // letting the user rediscover it as a login failure — the
-                                // exact loop this fix removes.
+                                // STAY ON LOGIN. This used to set the message and then
+                                // navigate to Startup, so the promised failure was never
+                                // read — and without a logout the retained credentials
+                                // could restore the session, making a failed destructive
+                                // action look like nothing happened at all. The user is
+                                // told, on the screen that tells them, and the session is
+                                // dropped so a half-wiped node cannot be signed back into.
                                 loginErrorMessage =
                                     "Reset did not complete: local data could not be erased. " +
                                         "Reinstalling the app clears it."
-                                currentAccessToken = null
-                                startupViewModel.retry()
-                                checkingFirstRun = false
-                                currentScreen = Screen.Startup
+                                settingsViewModel.logout {
+                                    currentAccessToken = null
+                                    platformLog(TAG, "[WARN][onResetSetup] wipe failed — logged out, staying on Login")
+                                }
+                                currentScreen = Screen.Login
                             } else {
                                 settingsViewModel.logout {
                                     currentAccessToken = null
-                                    // STOP THE BACKEND FIRST on desktop. restartApp() is
-                                    // exitProcess(0) there, and the Python node is a CHILD
-                                    // PROCESS — exiting the UI does not take it with us. It
-                                    // would keep serving from open handles to files we just
-                                    // deleted, and the next launch would reconnect to a
-                                    // still-healthy configured node instead of first-run.
-                                    // On mobile the runtime is in-process, so the restart IS
-                                    // the teardown.
-                                    if (ai.ciris.mobile.shared.platform.isDesktop()) {
-                                        runCatching { pythonRuntime.shutdown() }
+                                    // The desktop backend was already stopped above, before
+                                    // its files were deleted — restartApp() is exitProcess(0)
+                                    // here and the Python node is a CHILD PROCESS that
+                                    // exiting the UI does not take with it.
+                                    //
+                                    // NOT ON iOS. restartApp() there checks for
+                                    // `Documents/ciris/.server_ready` and treats its absence
+                                    // as a dead runtime, falling back to exit(0) — and the
+                                    // wipe has just deleted the directory that file lives in.
+                                    // So Reset ALWAYS killed the app instead of returning to
+                                    // the wizard the dialog promises (Codex, PR #9). The app
+                                    // is still running and the home is gone, so the next
+                                    // startup is a genuine first run: just go there.
+                                    if (ai.ciris.mobile.shared.platform.isIOS()) {
+                                        platformLog(TAG, "[INFO][onResetSetup] iOS — returning to setup rather than exiting")
+                                        startupViewModel.retry()
+                                        checkingFirstRun = false
+                                        isFirstRun = true
+                                        currentScreen = Screen.Startup
+                                    } else {
+                                        ai.ciris.mobile.shared.platform.AppRestarter.restartApp()
                                     }
-                                    ai.ciris.mobile.shared.platform.AppRestarter.restartApp()
                                 }
                             }
                         }

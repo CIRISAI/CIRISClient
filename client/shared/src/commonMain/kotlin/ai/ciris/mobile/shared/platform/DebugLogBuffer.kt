@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.platform
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -38,8 +39,6 @@ data class DebugLogEntry(
  */
 object DebugLogBuffer {
     private const val MAX_ENTRIES = 200
-    private var idCounter = 0L
-
     private val _entries = MutableStateFlow<List<DebugLogEntry>>(emptyList())
     val entries: StateFlow<List<DebugLogEntry>> = _entries.asStateFlow()
 
@@ -54,19 +53,39 @@ object DebugLogBuffer {
     /**
      * Add a log entry to the buffer
      */
+    /**
+     * Append one entry.
+     *
+     * ATOMIC BECAUSE THE WRITERS ARE CONCURRENT (Codex, PR #9). Desktop logging
+     * arrives from several polling and I/O coroutines at once, and the original
+     * `idCounter++` plus read-modify-write of `_entries.value` could hand two
+     * entries the same id and let one thread's list overwrite another's — losing
+     * exactly the failure logs this buffer exists to preserve, and losing them
+     * hardest under load, which is when a stuck install is being diagnosed.
+     *
+     * The id is derived from the list INSIDE the same `update`, rather than from
+     * a separate counter. `update` retries its lambda on contention, so a
+     * counter incremented alongside it would advance once per attempt and mint
+     * duplicates under exactly the load this is meant to survive. Derived from
+     * the list, the id is whatever the winning attempt computes — and there is
+     * no second piece of state to disagree with it. No new dependency, which is
+     * the other reason: atomicfu is not on this module.
+     */
     fun add(level: String, tag: String, message: String) {
-        val entry = DebugLogEntry(
-            id = idCounter++,
-            timestamp = currentTimeMillis(),
-            level = level,
-            tag = tag,
-            message = message
-        )
-
-        _entries.value = (_entries.value + entry).takeLast(MAX_ENTRIES)
+        val stamp = currentTimeMillis()
+        _entries.update { current ->
+            val entry = DebugLogEntry(
+                id = (current.lastOrNull()?.id ?: 0L) + 1L,
+                timestamp = stamp,
+                level = level,
+                tag = tag,
+                message = message
+            )
+            (current + entry).takeLast(MAX_ENTRIES)
+        }
 
         if (level == "ERROR" || level == "WARN") {
-            _errorCount.value = _errorCount.value + 1
+            _errorCount.update { it + 1 }
             if (level == "ERROR") {
                 _latestError.value = "[$tag] $message"
             }

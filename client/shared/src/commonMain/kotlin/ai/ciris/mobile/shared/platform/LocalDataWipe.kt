@@ -28,4 +28,15 @@ package ai.ciris.mobile.shared.platform
  * restart the process regardless — a half-wiped home that keeps running is worse
  * than either outcome.
  */
-expect fun wipeLocalData(): Boolean
+/**
+ * @param declaredNodeHome the home the RUNNING node reports, when the caller
+ *   could ask it. The desktop resolver otherwise reconstructs the backend's
+ *   `get_ciris_home()` from this process's environment — which is a guess, and
+ *   wrong exactly when it matters: a client connected over `CIRIS_API_URL`, or a
+ *   launcher that started the node with a different home, would have the app
+ *   erase an unrelated local installation and leave the live node untouched.
+ *   `PythonRuntime.desktop` already treats the node's declared path as
+ *   authoritative for the claim PIN, for the same reason (Codex, PR #9).
+ *   Null when there is nobody to ask; the resolver then falls back to the guess.
+ */
+expect fun wipeLocalData(declaredNodeHome: String? = null): Boolean

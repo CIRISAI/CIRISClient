@@ -15,6 +15,8 @@ import ai.ciris.mobile.shared.PurchaseResultCallback
 import ai.ciris.mobile.shared.PurchaseResultType
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.config.CIRISConfig
+import ai.ciris.mobile.shared.platform.initDebugBundleExport
+import ai.ciris.mobile.shared.platform.initLocalDataWipe
 import ai.ciris.mobile.shared.platform.AppRestarter
 import ai.ciris.mobile.shared.platform.PythonRuntime
 import ai.ciris.mobile.shared.localization.LocalizationResourceLoader
@@ -91,6 +93,16 @@ class MainActivity : ComponentActivity() {
 
         // Initialize AppRestarter for app restart functionality (used by Settings reset)
         AppRestarter.init(this, MainActivity::class.java)
+        // Both need an application Context — the export to reach storage and the
+        // clipboard, the wipe to reach SharedPreferences and the files dir.
+        //
+        // WITHOUT THESE THE FEATURES ARE INERT, not broken-looking: the export's
+        // Download returns null and Copy returns false, and the wipe reports
+        // failure and skips the logout/restart path, leaving a partially wiped
+        // node running with credentials still present. Silent both times, which
+        // is why the port that dropped them looked green (Codex, PR #9).
+        initDebugBundleExport(this)
+        initLocalDataWipe(this)
 
         // Initialize URL opener for browser links
         initUrlOpener(this)

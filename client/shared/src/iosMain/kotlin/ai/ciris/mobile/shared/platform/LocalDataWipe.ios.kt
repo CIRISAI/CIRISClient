@@ -30,7 +30,7 @@ import platform.Security.kSecClassGenericPassword
  * open-ended, so any list would drift the moment a provider is added.
  */
 @OptIn(ExperimentalForeignApi::class)
-actual fun wipeLocalData(): Boolean {
+actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
     var ok = true
 
     // 1. The node's state directory.
