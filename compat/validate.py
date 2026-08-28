@@ -39,7 +39,7 @@ def _vertuple(v: str) -> tuple[int, ...]:
     return tuple(int(x) for x in v.split("."))
 
 
-def validate(repo_root: Path) -> list[str]:
+def validate(repo_root: Path, client_tree: Path | None = None) -> list[str]:
     problems: list[str] = []
     path = repo_root / "compat" / "matrix.json"
     if not path.is_file():
@@ -106,17 +106,23 @@ def validate(repo_root: Path) -> list[str]:
             f"exactly one row must match VERSION ({version}); found {len(matches)} — "
             f"a release without its matrix row does not merge (FSD §6)"
         )
-    problems.extend(check_kotlin_floor(repo_root, rows, version))
+    problems.extend(check_kotlin_floor(client_tree or (repo_root / 'client'), rows, version))
     return problems
 
 
+# ANCHORED TO A LIVE DECLARATION. A commented-out old value sitting above a
+# changed live one made this capture the comment and pass while the compiled
+# constant disagreed with the matrix — a drift gate reporting green on the drift
+# it exists to catch (Codex, PR #19, reproduced there).
 MIN_NODE_RE = re.compile(
-    r'const val MIN_NODE_VERSION:\s*String\s*=\s*"([^"]+)"'
+    r'^(?!\s*(?://|\*|/\*))\s*(?:internal\s+|public\s+)?const val MIN_NODE_VERSION'
+    r':\s*String\s*=\s*"([^"]+)"',
+    re.M,
 )
-CLIENT_MODE = "client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
+CLIENT_MODE_REL = "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
 
 
-def check_kotlin_floor(repo_root: Path, rows: list, version: str) -> list[str]:
+def check_kotlin_floor(client_tree: Path, rows: list, version: str) -> list[str]:
     """
     `MIN_NODE_VERSION` in Kotlin must equal this release's `node_min`.
 
@@ -141,23 +147,31 @@ def check_kotlin_floor(repo_root: Path, rows: list, version: str) -> list[str]:
     the check would pass while drifting — a gate silently failing to fail.
     """
     problems: list[str] = []
-    kt = repo_root / CLIENT_MODE
+    kt = client_tree / CLIENT_MODE_REL
     if not kt.is_file():
-        return [f"{CLIENT_MODE} is missing — the floor constant cannot be checked"]
+        return [f"{kt} is missing — the floor constant cannot be checked"]
     m = MIN_NODE_RE.search(kt.read_text(encoding="utf-8"))
     if not m:
         # A parser that finds nothing where the construct plainly exists must
         # fail loudly (AGENTS.md, Gate Rules).
-        return [f"parsed no MIN_NODE_VERSION from {CLIENT_MODE}"]
-    row = next((r for r in rows if r.get("client_version") == version), None)
-    if row is None:
-        return []  # the "exactly one row for VERSION" check already reports this
-    if m.group(1) != row["node_min"]:
+        return [f"parsed no MIN_NODE_VERSION from {kt}"]
+    # The caller's loop already reports a non-object row or a missing
+    # node_min. Reaching past that to index it turns an actionable failure list
+    # into a traceback, for both CI and the imported readiness gate.
+    row = next(
+        (r for r in rows
+         if isinstance(r, dict) and r.get("client_version") == version),
+        None,
+    )
+    declared = row.get("node_min") if row else None
+    if not isinstance(declared, str):
+        return []
+    if m.group(1) != declared:
         problems.append(
             f"MIN_NODE_VERSION is {m.group(1)!r} but the {version} row's "
-            f"node_min is {row['node_min']!r} — same fact, two copies. The "
+            f"node_min is {declared!r} — same fact, two copies. The "
             f"matrix is where it is reasoned about; change it there and follow "
-            f"in {CLIENT_MODE}."
+            f"in {kt}."
         )
     return problems
 
