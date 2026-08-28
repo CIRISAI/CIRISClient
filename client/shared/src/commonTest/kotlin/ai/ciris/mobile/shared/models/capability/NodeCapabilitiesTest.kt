@@ -57,4 +57,37 @@ class NodeCapabilitiesTest {
         assertFalse(CapabilityState.ABSENT.isUsable)
         assertFalse(CapabilityState.UNDECLARED.isUsable)
     }
+
+    @Test
+    fun could_not_ask_is_not_the_node_being_old() {
+        // The probe first mapped transport failure onto UNDECLARED, so the UI
+        // told an operator with a dropped connection that their CURRENT node
+        // predates capability declarations and should be upgraded — a false
+        // version diagnosis from a timeout (Codex, PR #20).
+        val unreachable = NodeCapabilities.UNREACHABLE
+        assertEquals(CapabilityState.UNREACHABLE, unreachable.state(Capability.REGISTRY_LOOKUP))
+        assertFalse(unreachable.has(Capability.REGISTRY_LOOKUP))
+
+        // and it is a DIFFERENT state from a document that was read and had no list
+        assertEquals(CapabilityState.UNDECLARED, NodeCapabilities.UNDECLARED.state(Capability.REGISTRY_LOOKUP))
+        assertTrue(
+            unreachable.state(Capability.REGISTRY_LOOKUP) != NodeCapabilities.UNDECLARED.state(Capability.REGISTRY_LOOKUP),
+            "unreachable and undeclared must not collapse",
+        )
+    }
+
+    @Test
+    fun unreachable_wins_over_a_stale_declaration() {
+        // If we could not read the document, whatever we hold is not current.
+        val stale = NodeCapabilities(setOf(Capability.REGISTRY_LOOKUP), unreachable = true)
+        assertEquals(CapabilityState.UNREACHABLE, stale.state(Capability.REGISTRY_LOOKUP))
+        assertFalse(stale.has(Capability.REGISTRY_LOOKUP), "a probe that failed cannot license the UI")
+    }
+
+    @Test
+    fun no_state_except_present_is_usable() {
+        for (s in CapabilityState.entries) {
+            assertEquals(s == CapabilityState.PRESENT, s.isUsable, "$s")
+        }
+    }
 }

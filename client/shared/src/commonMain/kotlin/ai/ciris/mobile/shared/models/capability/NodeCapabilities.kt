@@ -33,12 +33,30 @@ enum class CapabilityState {
     ABSENT,
 
     /**
-     * The node declared nothing at all — it predates the declaration, or the
-     * probe failed. Distinct from [ABSENT] on purpose: every node released
-     * today is here, and reading that as "the feature does not exist" would
-     * hide surfaces that a newer node will serve.
+     * The node's declaration was READ, and carried no capability list — it
+     * predates CIRISServer#499. Every node released today is here.
+     *
+     * Distinct from [ABSENT]: reading it as "the feature does not exist" would
+     * hide surfaces a newer node will serve.
      */
-    UNDECLARED;
+    UNDECLARED,
+
+    /**
+     * WE COULD NOT ASK. The node was unreachable, slow, or answered something
+     * unreadable.
+     *
+     * A separate state because the first version of this probe mapped transport
+     * failure onto [UNDECLARED], and the UI then told the operator their node
+     * predates capability declarations and should be upgraded — a FALSE VERSION
+     * DIAGNOSIS from a dropped connection (Codex, PR #20). That is the
+     * could-not-ask-versus-answered conflation this whole model exists to
+     * prevent, committed inside the model's own probe.
+     *
+     * `LookupResult.Unavailable` keeps the same distinction one layer down, and
+     * `ModeProbe.undetermined` keeps it for the node-vs-agent gate. Three
+     * places, one rule: silence is not an answer.
+     */
+    UNREACHABLE;
 
     /** Only a positive declaration earns the full UI. */
     val isUsable: Boolean get() = this == PRESENT
@@ -65,9 +83,14 @@ object Capability {
  *
  * @param declared null when the node said nothing — see [CapabilityState.UNDECLARED].
  */
-data class NodeCapabilities(val declared: Set<String>?) {
+data class NodeCapabilities(
+    val declared: Set<String>?,
+    /** True when the declaration could not be READ at all — see [CapabilityState.UNREACHABLE]. */
+    val unreachable: Boolean = false,
+) {
 
     fun state(id: String): CapabilityState = when {
+        unreachable -> CapabilityState.UNREACHABLE
         declared == null -> CapabilityState.UNDECLARED
         id in declared -> CapabilityState.PRESENT
         else -> CapabilityState.ABSENT
@@ -76,7 +99,10 @@ data class NodeCapabilities(val declared: Set<String>?) {
     fun has(id: String): Boolean = state(id).isUsable
 
     companion object {
-        /** A node that has told us nothing. Every node released today. */
+        /** Read the document; it carried no capability list. Every node today. */
         val UNDECLARED = NodeCapabilities(null)
+
+        /** Could not read the document. NOT the same as the node being old. */
+        val UNREACHABLE = NodeCapabilities(null, unreachable = true)
     }
 }

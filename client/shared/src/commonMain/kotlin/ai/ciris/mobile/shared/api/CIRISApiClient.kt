@@ -9181,7 +9181,7 @@ class CIRISApiClient(
      */
     suspend fun lookupAgentHash(
         agentHash: String,
-        nodeUrl: String = LOCAL_NODE_URL,
+        nodeUrl: String,
     ): ai.ciris.mobile.shared.models.capability.LookupResult {
         val method = "lookupAgentHash"
         val client = io.ktor.client.HttpClient {
@@ -9201,6 +9201,8 @@ class CIRISApiClient(
                 )
             }
             resp.bodyAsText()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             logInfo(method, "registry lookup unreachable: ${e.message?.take(80)}")
             return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
@@ -9213,10 +9215,21 @@ class CIRISApiClient(
         if (Regex("\"found\"\\s*:\\s*false").containsMatchIn(body)) {
             return ai.ciris.mobile.shared.models.capability.LookupResult.NotFound
         }
-        fun str(field: String): String =
-            Regex("\"$field\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: ""
-        val raw = str("status")
-        if (raw.isBlank() && str("agentHash").isBlank()) {
+        // SNAKE CASE FIRST. The checked-in OpenAPI schemas are snake_case
+        // throughout and this request itself sends `agent_hash`; the Portal's
+        // TypeScript interface is camelCase because Next.js maps it. Reading
+        // only camelCase silently dropped the type, timestamp and attestation
+        // flag — and substituted the QUERIED hash for the returned one, which
+        // would have displayed the hash the operator typed as though the
+        // registry had confirmed it (Codex, PR #20).
+        fun str(vararg names: String): String {
+            for (n in names) {
+                Regex("\"$n\"\\s*:\\s*\"([^\"]*)\"").find(body)?.let { return it.groupValues[1] }
+            }
+            return ""
+        }
+        val raw = str("status", "agent_status")
+        if (raw.isBlank() && str("agent_hash", "agentHash").isBlank()) {
             // A 200 we cannot read is not a verdict. Same rule as the status enum.
             return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
                 "the node returned a record this client could not read"
@@ -9224,20 +9237,22 @@ class CIRISApiClient(
         }
         return ai.ciris.mobile.shared.models.capability.LookupResult.Found(
             ai.ciris.mobile.shared.models.capability.AgentRecord(
-                agentHash = str("agentHash").ifBlank { agentHash },
-                agentType = str("agentType"),
+                // The RETURNED hash, never the queried one — see above.
+                agentHash = str("agent_hash", "agentHash").ifBlank { agentHash },
+                agentType = str("agent_type", "agentType"),
                 version = str("version"),
                 status = ai.ciris.mobile.shared.models.capability.AgentStatus.fromWire(raw),
                 rawStatus = raw,
-                registeredAt = str("registeredAt"),
-                hasAttestation = Regex("\"hasAttestation\"\\s*:\\s*true").containsMatchIn(body),
+                registeredAt = str("registered_at", "registeredAt"),
+                hasAttestation = Regex("\"(has_attestation|hasAttestation)\"\\s*:\\s*true")
+                    .containsMatchIn(body),
             )
         )
     }
 
     suspend fun getNodeCapabilities(
-        nodeUrl: String = LOCAL_NODE_URL,
-    ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = runCatching {
+        nodeUrl: String,
+    ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = try {
         val client = io.ktor.client.HttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 5_000
@@ -9252,12 +9267,25 @@ class CIRISApiClient(
         // `"capabilities": [ "a", "b" ]` — absent array means undeclared, empty
         // array means declared-and-holds-nothing. The two are different answers.
         val block = Regex("\"capabilities\"\\s*:\\s*\\[([^\\]]*)\\]").find(body)
-            ?: return@runCatching ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
-        val ids = Regex("\"([^\"]+)\"").findAll(block.groupValues[1])
-            .map { it.groupValues[1] }
-            .toSet()
-        ai.ciris.mobile.shared.models.capability.NodeCapabilities(ids)
-    }.getOrElse { ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED }
+        if (block == null) {
+            // The document WAS read and carries no list: an older node.
+            ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
+        } else {
+            val ids = Regex("\"([^\"]+)\"").findAll(block.groupValues[1])
+                .map { it.groupValues[1] }
+                .toSet()
+            ai.ciris.mobile.shared.models.capability.NodeCapabilities(ids)
+        }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // Structured concurrency: a cancelled probe must die, not publish state.
+        throw e
+    } catch (e: Exception) {
+        // COULD NOT ASK — not "the node is old". Mapping this to UNDECLARED made
+        // the UI tell an operator with a dropped connection that their current
+        // node predates capability declarations (Codex, PR #20).
+        logInfo("getNodeCapabilities", "conformance unreadable at $nodeUrl: ${e.message?.take(80)}")
+        ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
+    }
 
     suspend fun getNodeHomePath(nodeUrl: String = LOCAL_NODE_URL): String? = runCatching {
         // A short-lived client, as the other raw scrapes in this file do: the

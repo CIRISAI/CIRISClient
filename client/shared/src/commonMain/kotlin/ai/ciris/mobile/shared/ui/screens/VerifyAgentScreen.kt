@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.capability.AgentStatus
 import ai.ciris.mobile.shared.models.capability.Capability
 import ai.ciris.mobile.shared.models.capability.CapabilityState
@@ -59,10 +60,13 @@ fun VerifyAgentCapabilityNotice(
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                text = when (state) {
-                    CapabilityState.UNDECLARED -> "This node hasn't said whether it can verify builds"
-                    else -> "This node doesn't verify builds"
-                },
+                text = localizedString(
+                    when (state) {
+                        CapabilityState.UNDECLARED -> "mobile.verify_undeclared_title"
+                        CapabilityState.UNREACHABLE -> "mobile.verify_unreachable_title"
+                        else -> "mobile.verify_absent_title"
+                    }
+                ),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -70,14 +74,17 @@ fun VerifyAgentCapabilityNotice(
             Spacer(Modifier.height(4.dp))
             Text(
                 // The two remedies are different, so the two sentences are.
-                text = when (state) {
-                    CapabilityState.UNDECLARED ->
-                        "It's running a version from before nodes declared what they can do. " +
-                            "A newer node will answer this, and the check will appear here when it does."
-                    else ->
-                        "Build verification is part of the registry, and this node doesn't carry it. " +
-                            "A node that does can answer the same question."
-                },
+                text = localizedString(
+                    when (state) {
+                        CapabilityState.UNDECLARED -> "mobile.verify_undeclared_body"
+                        // COULD NOT ASK. Distinct copy, because the remedy is
+                        // neither "upgrade" nor "use another node" — it is "try
+                        // again", and telling someone their node is old because
+                        // a request timed out is a false diagnosis.
+                        CapabilityState.UNREACHABLE -> "mobile.verify_unreachable_body"
+                        else -> "mobile.verify_absent_body"
+                    }
+                ),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -108,12 +115,15 @@ fun VerifyAgentResult(
                     val r = result.record
                     Text(
                         text = when (r.status) {
-                            AgentStatus.REGISTERED -> "Registered"
-                            AgentStatus.DEPRECATED -> "Deprecated"
-                            AgentStatus.REVOKED -> "Revoked"
+                            AgentStatus.REGISTERED -> localizedString("mobile.verify_status_registered")
+                            AgentStatus.DEPRECATED -> localizedString("mobile.verify_status_deprecated")
+                            AgentStatus.REVOKED -> localizedString("mobile.verify_status_revoked")
                             // The registry said something this build does not
-                            // know. Show it verbatim rather than deciding.
-                            AgentStatus.UNKNOWN -> r.rawStatus.ifBlank { "Status not recognised" }
+                            // know. Show it verbatim rather than deciding — the
+                            // raw string is not translated because it is the
+                            // registry's own token, not our prose.
+                            AgentStatus.UNKNOWN ->
+                                r.rawStatus.ifBlank { localizedString("mobile.verify_status_unreadable") }
                         },
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
@@ -123,7 +133,7 @@ fun VerifyAgentResult(
                     if (r.registeredAt.isNotBlank()) Text("registered ${r.registeredAt}", fontSize = 12.sp)
                     if (r.status == AgentStatus.REVOKED) {
                         Text(
-                            "This build has been revoked. Do not run it.",
+                            localizedString("mobile.verify_revoked_warning"),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onErrorContainer,
@@ -132,19 +142,15 @@ fun VerifyAgentResult(
                 }
                 // ANSWERED, and the answer is no record. Actionable.
                 LookupResult.NotFound -> {
-                    Text("No record of this build", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                    Text(
-                        "The registry answered and holds nothing for this hash.",
-                        fontSize = 13.sp,
-                    )
+                    Text(localizedString("mobile.verify_not_found_title"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(localizedString("mobile.verify_not_found_body"), fontSize = 13.sp)
                 }
                 // NOT ANSWERED. Never rendered as "no record": that would tell
                 // someone an unverified build was checked and cleared.
                 is LookupResult.Unavailable -> {
-                    Text("Couldn't check", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(localizedString("mobile.verify_unavailable_title"), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                     Text(
-                        "This is not the same as 'not registered' — the registry did not answer. " +
-                            result.reason,
+                        localizedString("mobile.verify_unavailable_body") + " " + result.reason,
                         fontSize = 13.sp,
                     )
                 }
