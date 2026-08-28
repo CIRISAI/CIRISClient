@@ -9166,6 +9166,75 @@ class CIRISApiClient(
      * Never throws. A node that is down, slow, or serving an older conformance
      * document is undeclared, which is the honest reading of all three.
      */
+    /**
+     * Look an agent build up in the registry — `GET {nodeUrl}/v1/registry/lookup?agent_hash=`.
+     *
+     * CIRISPortal's `/verify`, served by a canonical node once CIRISRegistry
+     * folds in. GATED BY THE CALLER on [Capability.REGISTRY_LOOKUP]: no node
+     * released today serves this, and calling it anyway would turn a missing
+     * capability into a connection error the operator has to interpret.
+     *
+     * The three outcomes are kept apart deliberately. `found: false` is the
+     * registry ANSWERING that it holds no record — actionable. A transport
+     * failure is not an answer, and rendering it as "not registered" tells
+     * someone an unverified build was checked and cleared.
+     */
+    suspend fun lookupAgentHash(
+        agentHash: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.capability.LookupResult {
+        val method = "lookupAgentHash"
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 10_000
+                connectTimeoutMillis = 5_000
+            }
+        }
+        val body = try {
+            val resp = client.get("$nodeUrl/v1/registry/lookup") {
+                url.parameters.append("agent_hash", agentHash)
+            }
+            if (!resp.status.isSuccess()) {
+                logInfo(method, "registry lookup -> HTTP ${resp.status.value}")
+                return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                    "the node answered HTTP ${resp.status.value}"
+                )
+            }
+            resp.bodyAsText()
+        } catch (e: Exception) {
+            logInfo(method, "registry lookup unreachable: ${e.message?.take(80)}")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                e.message?.take(120) ?: "the registry could not be reached"
+            )
+        } finally {
+            client.close()
+        }
+
+        if (Regex("\"found\"\\s*:\\s*false").containsMatchIn(body)) {
+            return ai.ciris.mobile.shared.models.capability.LookupResult.NotFound
+        }
+        fun str(field: String): String =
+            Regex("\"$field\"\\s*:\\s*\"([^\"]*)\"").find(body)?.groupValues?.get(1) ?: ""
+        val raw = str("status")
+        if (raw.isBlank() && str("agentHash").isBlank()) {
+            // A 200 we cannot read is not a verdict. Same rule as the status enum.
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node returned a record this client could not read"
+            )
+        }
+        return ai.ciris.mobile.shared.models.capability.LookupResult.Found(
+            ai.ciris.mobile.shared.models.capability.AgentRecord(
+                agentHash = str("agentHash").ifBlank { agentHash },
+                agentType = str("agentType"),
+                version = str("version"),
+                status = ai.ciris.mobile.shared.models.capability.AgentStatus.fromWire(raw),
+                rawStatus = raw,
+                registeredAt = str("registeredAt"),
+                hasAttestation = Regex("\"hasAttestation\"\\s*:\\s*true").containsMatchIn(body),
+            )
+        )
+    }
+
     suspend fun getNodeCapabilities(
         nodeUrl: String = LOCAL_NODE_URL,
     ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = runCatching {
