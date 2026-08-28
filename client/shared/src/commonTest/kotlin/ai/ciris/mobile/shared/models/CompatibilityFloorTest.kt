@@ -48,8 +48,11 @@ class CompatibilityFloorTest {
     @Test
     fun a_node_below_the_floor_still_says_so() {
         // The signal the nag exists for. "Never complain" would have deleted it.
-        assertTrue(isVersionMismatch("0.5.188", clientVersion = "0.5.191"))
-        assertTrue(isVersionMismatch("0.5.186", clientVersion = "0.5.191"))
+        assertTrue(isVersionMismatch("0.5.167", clientVersion = "0.5.191"))
+        assertTrue(isVersionMismatch("0.5.100", clientVersion = "0.5.191"))
+        // 0.5.188 and 0.5.186 are ABOVE the 0.5.168 floor — supported, silent.
+        assertFalse(isVersionMismatch("0.5.188", clientVersion = "0.5.191"))
+        assertFalse(isVersionMismatch("0.5.186", clientVersion = "0.5.191"))
         // And the lexical trap must not rescue a too-old node: "0.5.9" reads as
         // greater than "0.5.190" to a string compare.
         assertTrue(isVersionMismatch("0.5.9", clientVersion = "0.5.191"))
@@ -70,7 +73,7 @@ class CompatibilityFloorTest {
         // Absent means "did not say", not "is happy". Every node today is here,
         // so this is the live path, and the floor this side holds still applies.
         assertFalse(isVersionMismatch("0.5.191", clientVersion = "0.5.191", nodeMinClientVersion = null))
-        assertTrue(isVersionMismatch("0.5.186", clientVersion = "0.5.191", nodeMinClientVersion = null))
+        assertTrue(isVersionMismatch("0.5.167", clientVersion = "0.5.191", nodeMinClientVersion = null))
     }
 
     // ---- unchanged behaviour -----------------------------------------
