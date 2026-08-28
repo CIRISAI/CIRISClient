@@ -12,7 +12,7 @@ private const val TAG = "LocalDataWipe"
  * CIRIS_HOME is resolved through EnvFileUpdater's existing accessor rather than
  * rebuilt here — two spellings of that path is how a wipe half-succeeds.
  */
-actual fun wipeLocalData(): Boolean {
+actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
     // Symmetry with desktop. Always false on a phone today, but the predicate is
     // the feature's one boundary and reading it here keeps that true if the
     // platform set ever changes.
@@ -52,8 +52,19 @@ actual fun wipeLocalData(): Boolean {
             val prefsDir = File(ctx.applicationInfo.dataDir, "shared_prefs")
             prefsDir.listFiles()?.forEach { f ->
                 val name = f.name.removeSuffix(".xml")
-                ctx.getSharedPreferences(name, Context.MODE_PRIVATE).edit().clear().commit()
-                Log.i(TAG, "cleared prefs: $name")
+                // commit() RETURNS whether it persisted, and only a thrown
+                // exception was being noticed (Codex, PR #9). A storage failure
+                // therefore let the wipe report success, restart, and keep the
+                // previous owner's credentials — the promise broken in the one
+                // direction nobody would check.
+                val persisted = ctx.getSharedPreferences(name, Context.MODE_PRIVATE)
+                    .edit().clear().commit()
+                if (persisted) {
+                    Log.i(TAG, "cleared prefs: $name")
+                } else {
+                    Log.e(TAG, "prefs NOT persisted: $name")
+                    ok = false
+                }
             }
         }.onFailure {
             Log.e(TAG, "prefs clear failed: ${it.message}")

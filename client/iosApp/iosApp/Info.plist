@@ -24,6 +24,16 @@
 	<string>2.9.36</string>
 	<key>CFBundleVersion</key>
 	<string>337</string>
+	<!-- The diagnostics bundle writes into the app's Documents directory, and a
+	     file there is invisible to Files.app unless BOTH of these are set. Without
+	     them the export returns a private sandbox path and the UI reports "Saved
+	     to" a location the stranded user cannot reach — the same shape as the
+	     Android scoped-storage defect, on the platform that has no toolchain here
+	     to catch it (Codex, PR #9). -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
