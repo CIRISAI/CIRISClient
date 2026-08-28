@@ -9148,6 +9148,48 @@ class CIRISApiClient(
      * not cost the answer. Null when the node does not declare one — the caller
      * then falls back to the guess, which is where it was before.
      */
+    /**
+     * WHAT THIS NODE DECLARES IT CAN DO — `GET {nodeUrl}/v1/federation/conformance`.
+     *
+     * Returns [NodeCapabilities.UNDECLARED] for every node that does not carry a
+     * `capabilities` array, which today is all of them: the declaration is
+     * CIRISServer#499 and the registry fold is what will populate it. Undeclared
+     * is NOT absent — see [CapabilityState] — so the UI says the node has not
+     * told us rather than hiding a surface a newer node will serve.
+     *
+     * A NARROW SCRAPE, deliberately, like the other raw reads in this file. The
+     * generated SDK binds a conformance model that predates this field, and a
+     * strict decode failing on an unknown shape would turn "the node declared
+     * something we do not parse" into "the node declared nothing" — the exact
+     * collapse this three-state model exists to prevent.
+     *
+     * Never throws. A node that is down, slow, or serving an older conformance
+     * document is undeclared, which is the honest reading of all three.
+     */
+    suspend fun getNodeCapabilities(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = runCatching {
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 5_000
+                connectTimeoutMillis = 3_000
+            }
+        }
+        val body = try {
+            client.get("$nodeUrl/v1/federation/conformance").bodyAsText()
+        } finally {
+            client.close()
+        }
+        // `"capabilities": [ "a", "b" ]` — absent array means undeclared, empty
+        // array means declared-and-holds-nothing. The two are different answers.
+        val block = Regex("\"capabilities\"\\s*:\\s*\\[([^\\]]*)\\]").find(body)
+            ?: return@runCatching ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
+        val ids = Regex("\"([^\"]+)\"").findAll(block.groupValues[1])
+            .map { it.groupValues[1] }
+            .toSet()
+        ai.ciris.mobile.shared.models.capability.NodeCapabilities(ids)
+    }.getOrElse { ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED }
+
     suspend fun getNodeHomePath(nodeUrl: String = LOCAL_NODE_URL): String? = runCatching {
         // A short-lived client, as the other raw scrapes in this file do: the
         // generated setup API binds a model that does not carry claim_pin_file.
