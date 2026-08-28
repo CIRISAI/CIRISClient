@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "نجح التحويل! TX: {tx}",
     "wallet_trust_degraded": "تدهورت ثقة الأجهزة",
     "wallet_warning": "تحذير",
+    "claim_node_no_signer": "يجب تشغيل عقدتك قبل أن تتمكن من المطالبة بعقدة أخرى. شغّل عقدتك، ثم حاول مرة أخرى.",
     "attestation_actions_desc": "إجراءات هذا السجل",
     "chat_badge_message": "رسالة",
     "chat_details": "النوع {type} · النطاق {scope} · الحالة {status}",

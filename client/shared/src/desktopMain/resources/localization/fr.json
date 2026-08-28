@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfert réussi ! TX: {tx}",
     "wallet_trust_degraded": "Confiance Matérielle Dégradée",
     "wallet_warning": "Avertissement",
+    "claim_node_no_signer": "Votre nœud doit être démarré avant de pouvoir revendiquer un autre nœud. Démarrez votre nœud, puis réessayez.",
     "attestation_actions_desc": "Actions pour cet enregistrement",
     "chat_badge_message": "MESSAGE",
     "chat_details": "type {type} · portée {scope} · statut {status}",

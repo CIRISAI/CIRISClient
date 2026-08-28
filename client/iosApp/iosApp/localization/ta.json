@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "பரிமாற்றம் வெற்றிகரம்! TX: {tx}",
     "wallet_trust_degraded": "Hardware நம்பகத்தன்மை Degraded",
     "wallet_warning": "எச்சரிக்கை",
+    "claim_node_no_signer": "உங்கள் நோடு மற்றொரு நோடைக் கோரும் முன் தொடங்கப்பட்டிருக்க வேண்டும். உங்கள் நோடைத் தொடங்கி, மீண்டும் முயற்சிக்கவும்.",
     "attestation_actions_desc": "இந்தப் பதிவுக்கான செயல்கள்",
     "chat_badge_message": "செய்தி",
     "chat_details": "வகை {type} · எல்லை {scope} · நிலை {status}",

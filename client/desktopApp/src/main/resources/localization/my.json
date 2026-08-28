@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfer အောင်မြင်ful! TX: {tx}",
     "wallet_trust_degraded": "Hardware ယုံကြည်မှု အားနည်းသွားပြီ",
     "wallet_warning": "သတိပေး",
+    "claim_node_no_signer": "အခြား Node ကို ပိုင်ဆိုင်မှုပြောရန် သင်၏ node ကို အရင်စတင်ထားရမည်။ သင်၏ node ကို စတင်ပြီး ထပ်မံကြိုးစားပါ။",
     "attestation_actions_desc": "ဤမှတ်တမ်းအတွက် လုပ်ဆောင်ချက်များ",
     "chat_badge_message": "မက်ဆေ့ချ်",
     "chat_details": "အမျိုးအစား {type} · scope {scope} · အခြေအနေ {status}",

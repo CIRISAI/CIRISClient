@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Uhamisho umefanikiwa! TX: {tx}",
     "wallet_trust_degraded": "Kuaminika kwa Maunzi Kumedhoofika",
     "wallet_warning": "Onyo",
+    "claim_node_no_signer": "Nodi yako inahitaji kuanzishwa kabla ya kudai nodi nyingine. Anzisha nodi yako, kisha ujaribu tena.",
     "attestation_actions_desc": "Vitendo vya rekodi hii",
     "chat_badge_message": "UJUMBE",
     "chat_details": "aina {type} · wigo {scope} · hali {status}",

@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "ਟ੍ਰਾਂਸਫਰ ਸਫਲ! TX: {tx}",
     "wallet_trust_degraded": "ਹਾਰਡਵੇਅਰ ਭਰੋਸਾ ਘਟਿਆ",
     "wallet_warning": "ਚੇਤਾਵਨੀ",
+    "claim_node_no_signer": "ਕਿਸੇ ਹੋਰ ਨੋਡ ਦਾ ਦਾਅਵਾ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਤੁਹਾਡਾ ਨੋਡ ਸ਼ੁਰੂ ਹੋਣਾ ਲਾਜ਼ਮੀ ਹੈ। ਆਪਣਾ ਨੋਡ ਸ਼ੁਰੂ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
     "attestation_actions_desc": "ਇਸ ਰਿਕਾਰਡ ਲਈ ਕਾਰਵਾਈਆਂ",
     "chat_badge_message": "ਸੁਨੇਹਾ",
     "chat_details": "ਕਿਸਮ {type} · ਦਾਇਰਾ {scope} · ਸਥਿਤੀ {status}",

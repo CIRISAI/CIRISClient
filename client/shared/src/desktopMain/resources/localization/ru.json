@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Перевод успешен! TX: {tx}",
     "wallet_trust_degraded": "Доверие к оборудованию ухудшено",
     "wallet_warning": "Предупреждение",
+    "claim_node_no_signer": "Ваш узел должен быть запущен, прежде чем он сможет заявить права на другой узел. Запустите узел и повторите попытку.",
     "attestation_actions_desc": "Действия для этой записи",
     "chat_badge_message": "СООБЩЕНИЕ",
     "chat_details": "тип {type} · область {scope} · статус {status}",

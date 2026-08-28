@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Gbígbé ṣe àṣeyọrí! TX: {tx}",
     "wallet_trust_degraded": "Ìgbẹ́kẹ̀lé Ohun Ẹ̀rọ Ti Dín Kù",
     "wallet_warning": "Ìkìlọ̀",
+    "claim_node_no_signer": "Gbọ́dọ̀ bẹ̀rẹ̀ node rẹ kí ó tó lè gba node mìíràn. Bẹ̀rẹ̀ node rẹ, lẹ́yìn náà gbìyànjú lẹ́ẹ̀kan sí i.",
     "attestation_actions_desc": "Àwọn ìgbésẹ̀ fún àkọsílẹ̀ yìí",
     "chat_badge_message": "ÌFIRÁNṢẸ́",
     "chat_details": "irú {type} · ààlà {scope} · ipò {status}",

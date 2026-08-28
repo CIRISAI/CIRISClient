@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfer başarılı! TX: {tx}",
     "wallet_trust_degraded": "Donanım Güveni Düşmüş",
     "wallet_warning": "Uyarı",
+    "claim_node_no_signer": "Başka bir düğümü sahiplenmeden önce kendi düğümünüz başlatılmış olmalıdır. Düğümünüzü başlatın ve tekrar deneyin.",
     "attestation_actions_desc": "Bu kayıt için eylemler",
     "chat_badge_message": "MESAJ",
     "chat_details": "tür {type} · kapsam {scope} · durum {status}",

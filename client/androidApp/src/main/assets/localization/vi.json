@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Chuyển khoản thành công! TX: {tx}",
     "wallet_trust_degraded": "Tin tưởng Suy giảm",
     "wallet_warning": "Cảnh báo",
+    "claim_node_no_signer": "Nút của bạn phải được khởi động trước khi có thể nhận quyền một nút khác. Hãy khởi động nút của bạn, rồi thử lại.",
     "attestation_actions_desc": "Các thao tác cho bản ghi này",
     "chat_badge_message": "TIN NHẮN",
     "chat_details": "loại {type} · phạm vi {scope} · trạng thái {status}",

@@ -2930,6 +2930,7 @@
     "wallet_transfer_success": "انتقال با موفقیت انجام شد! TX: {tx}",
     "wallet_trust_degraded": "افت اعتماد سخت‌افزاری",
     "wallet_warning": "هشدار",
+    "claim_node_no_signer": "گرهٔ شما باید پیش از ادعای گره‌ای دیگر راه‌اندازی شده باشد. گرهٔ خود را راه‌اندازی کنید و دوباره تلاش کنید.",
     "attestation_actions_desc": "اقدامات برای این رکورد",
     "chat_badge_message": "پیام",
     "chat_details": "نوع {type} · محدوده {scope} · وضعیت {status}",

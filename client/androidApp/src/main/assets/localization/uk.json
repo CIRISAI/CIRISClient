@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Переказ успішний! TX: {tx}",
     "wallet_trust_degraded": "Апаратну довіру знижено",
     "wallet_warning": "Попередження",
+    "claim_node_no_signer": "Ваш вузол потрібно запустити, перш ніж він зможе заявити право на інший вузол. Запустіть свій вузол і спробуйте ще раз.",
     "attestation_actions_desc": "Дії для цього запису",
     "chat_badge_message": "ПОВІДОМЛЕННЯ",
     "chat_details": "тип {type} · область {scope} · статус {status}",

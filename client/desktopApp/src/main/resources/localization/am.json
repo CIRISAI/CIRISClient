@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "ማስተላለፍ ተሳክቷል! TX: {tx}",
     "wallet_trust_degraded": "ስልክ ሥቅ ተዳክሞ ነበር",
     "wallet_warning": "ማስጠንቀቂያ",
+    "claim_node_no_signer": "የእርስዎ ኖድ ሌላ ኖድ ከመያዙ በፊት መጀመር አለበት። ኖድዎን ይጀምሩ፣ ከዚያ እንደገና ይሞክሩ።",
     "attestation_actions_desc": "ለዚህ መዝገብ ያሉ እርምጃዎች",
     "chat_badge_message": "መልዕክት",
     "chat_details": "ዓይነት {type} · ወሰን {scope} · ሁኔታ {status}",

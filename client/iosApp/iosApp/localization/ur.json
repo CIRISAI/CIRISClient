@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "ٹرانسفر کامیاب! TX: {tx}",
     "wallet_trust_degraded": "ہارڈ ویئر اعتماد کمزور پڑ گیا",
     "wallet_warning": "انتباہ",
+    "claim_node_no_signer": "کسی اور نوڈ کا دعویٰ کرنے سے پہلے آپ کا نوڈ شروع ہونا ضروری ہے۔ اپنا نوڈ شروع کریں، پھر دوبارہ کوشش کریں۔",
     "attestation_actions_desc": "اس ریکارڈ کے لیے اقدامات",
     "chat_badge_message": "پیغام",
     "chat_details": "قسم {type} · دائرہ {scope} · حیثیت {status}",

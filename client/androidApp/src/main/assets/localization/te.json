@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "బదిలీ విజయవంతమైంది! TX: {tx}",
     "wallet_trust_degraded": "హార్డ్‌వేర్ నమ్మకం తగ్గింది",
     "wallet_warning": "హెచ్చరిక",
+    "claim_node_no_signer": "మీ నోడ్ మరో నోడ్‌ను క్లెయిమ్ చేయడానికి ముందు ప్రారంభమై ఉండాలి. మీ నోడ్‌ను ప్రారంభించి, మళ్ళీ ప్రయత్నించండి.",
     "attestation_actions_desc": "ఈ రికార్డుకు చర్యలు",
     "chat_badge_message": "సందేశం",
     "chat_details": "రకం {type} · పరిధి {scope} · స్థితి {status}",

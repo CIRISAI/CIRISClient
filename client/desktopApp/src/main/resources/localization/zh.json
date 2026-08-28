@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "转账成功！TX: {tx}",
     "wallet_trust_degraded": "硬件信任降级",
     "wallet_warning": "警告",
+    "claim_node_no_signer": "您的节点必须先启动才能认领另一个节点。请启动您的节点，然后重试。",
     "attestation_actions_desc": "此记录的操作",
     "chat_badge_message": "消息",
     "chat_details": "类型 {type} · 范围 {scope} · 状态 {status}",

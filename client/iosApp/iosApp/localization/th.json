@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfer สำเร็จful! TX: {tx}",
     "wallet_trust_degraded": "ความน่าเชื่อถือของฮาร์ดแวร์ลดลง",
     "wallet_warning": "คำเตือน",
+    "claim_node_no_signer": "โหนดของคุณต้องเริ่มทำงานก่อนจึงจะสามารถอ้างสิทธิ์โหนดอื่นได้ กรุณาเริ่มโหนดของคุณ แล้วลองอีกครั้ง",
     "attestation_actions_desc": "การดำเนินการสำหรับระเบียนนี้",
     "chat_badge_message": "ข้อความ",
     "chat_details": "ประเภท {type} · ขอบเขต {scope} · สถานะ {status}",

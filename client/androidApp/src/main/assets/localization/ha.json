@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Aika ya yi nasara! TX: {tx}",
     "wallet_trust_degraded": "Tabbas Kayan Aiki Ya Rage",
     "wallet_warning": "Gargaɗi",
+    "claim_node_no_signer": "Dole ne a fara kumburinka kafin ya iya karɓar wani kumburi. Fara kumburinka, sannan ka sake gwadawa.",
     "attestation_actions_desc": "Ayyuka don wannan rikodin",
     "chat_badge_message": "SAƘO",
     "chat_details": "nau'i {type} · iyaka {scope} · matsayi {status}",

@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "¡Transferencia exitosa! TX: {tx}",
     "wallet_trust_degraded": "Confianza de Hardware Degradada",
     "wallet_warning": "Advertencia",
+    "claim_node_no_signer": "Tu nodo debe estar iniciado antes de poder reclamar otro nodo. Inicia tu nodo e inténtalo de nuevo.",
     "attestation_actions_desc": "Acciones para este registro",
     "chat_badge_message": "MENSAJE",
     "chat_details": "tipo {type} · ámbito {scope} · estado {status}",

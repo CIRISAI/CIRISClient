@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Überweisung erfolgreich! TX: {tx}",
     "wallet_trust_degraded": "Hardware-Vertrauen herabgestuft",
     "wallet_warning": "Warnung",
+    "claim_node_no_signer": "Ihr Node muss gestartet sein, bevor er einen anderen Knoten übernehmen kann. Starten Sie Ihren Node und versuchen Sie es erneut.",
     "attestation_actions_desc": "Aktionen für diesen Datensatz",
     "chat_badge_message": "NACHRICHT",
     "chat_details": "Typ {type} · Bereich {scope} · Status {status}",

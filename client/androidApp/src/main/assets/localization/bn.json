@@ -2925,6 +2925,7 @@
     "wallet_transfer_success": "ট্রান্সফার সফল! TX: {tx}",
     "wallet_trust_degraded": "হার্ডওয়্যার বিশ্বাস হ্রাস পেয়েছে",
     "wallet_warning": "সতর্কতা",
+    "claim_node_no_signer": "আরেকটি নোড দাবি করার আগে আপনার নোড চালু থাকতে হবে। আপনার নোড চালু করুন, তারপর আবার চেষ্টা করুন।",
     "attestation_actions_desc": "এই রেকর্ডের জন্য পদক্ষেপ",
     "chat_badge_message": "বার্তা",
     "chat_details": "ধরন {type} · পরিসর {scope} · অবস্থা {status}",

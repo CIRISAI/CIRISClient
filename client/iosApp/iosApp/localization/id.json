@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfer berhasil! TX: {tx}",
     "wallet_trust_degraded": "Kepercayaan Perangkat Keras Menurun",
     "wallet_warning": "Peringatan",
+    "claim_node_no_signer": "Node Anda harus dijalankan terlebih dahulu sebelum dapat mengklaim node lain. Jalankan node Anda, lalu coba lagi.",
     "attestation_actions_desc": "Tindakan untuk catatan ini",
     "chat_badge_message": "PESAN",
     "chat_details": "jenis {type} · lingkup {scope} · status {status}",

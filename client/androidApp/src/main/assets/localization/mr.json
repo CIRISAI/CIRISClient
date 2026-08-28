@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "Transfer यशful! TX: {tx}",
     "wallet_trust_degraded": "हार्डवेअर विश्वास खालावला",
     "wallet_warning": "इशारा",
+    "claim_node_no_signer": "आणखी एका नोडचा दावा करण्यापूर्वी तुमचा नोड सुरू असणे आवश्यक आहे. तुमचा नोड सुरू करा आणि नंतर पुन्हा प्रयत्न करा.",
     "attestation_actions_desc": "या नोंदीसाठी क्रिया",
     "chat_badge_message": "संदेश",
     "chat_details": "प्रकार {type} · व्याप्ती {scope} · स्थिती {status}",

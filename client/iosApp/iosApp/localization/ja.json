@@ -2924,6 +2924,7 @@
     "wallet_transfer_success": "送金成功！TX: {tx}",
     "wallet_trust_degraded": "ハードウェア信頼が低下しました",
     "wallet_warning": "警告",
+    "claim_node_no_signer": "他のノードの所有権を取得するには、まずお客様のノードを起動する必要があります。ノードを起動してから、もう一度お試しください。",
     "attestation_actions_desc": "このレコードに対する操作",
     "chat_badge_message": "メッセージ",
     "chat_details": "種別 {type} · スコープ {scope} · 状態 {status}",
