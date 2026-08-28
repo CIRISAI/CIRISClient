@@ -106,6 +106,59 @@ def validate(repo_root: Path) -> list[str]:
             f"exactly one row must match VERSION ({version}); found {len(matches)} — "
             f"a release without its matrix row does not merge (FSD §6)"
         )
+    problems.extend(check_kotlin_floor(repo_root, rows, version))
+    return problems
+
+
+MIN_NODE_RE = re.compile(
+    r'const val MIN_NODE_VERSION:\s*String\s*=\s*"([^"]+)"'
+)
+CLIENT_MODE = "client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/ClientMode.kt"
+
+
+def check_kotlin_floor(repo_root: Path, rows: list, version: str) -> list[str]:
+    """
+    `MIN_NODE_VERSION` in Kotlin must equal this release's `node_min`.
+
+    THE SAME FACT IS WRITTEN TWICE. The matrix is where the floor is reasoned
+    about, one row per release, append-only; the Kotlin constant is where the
+    version banner can read it. The first version of that constant was a
+    DIFFERENT NUMBER — the server's client-floor from CIRISServer#497, which
+    answers the opposite question — and the client would have nagged on nodes
+    this file calls supported.
+
+    CHECKED HERE, NOT IN THE CLIENT'S TEST SUITE. `client/` builds standalone
+    with `-PclientVersion` and this tree is vendored into two other repos, none
+    of which are required to have `compat/` above them: a Kotlin test that walks
+    up looking for this file fails the whole `:shared:desktopTest` task there,
+    for a reason that has nothing to do with the client (Codex, PR #19). The
+    matrix is the thing being compared against, so the comparison belongs beside
+    the matrix, where the file is guaranteed to exist.
+
+    Parses the row as JSON rather than scanning text after a match: a row that
+    ever placed `node_min` before `client_version` would send a text scan into
+    the NEXT release's floor, and if that value happened to match the constant
+    the check would pass while drifting — a gate silently failing to fail.
+    """
+    problems: list[str] = []
+    kt = repo_root / CLIENT_MODE
+    if not kt.is_file():
+        return [f"{CLIENT_MODE} is missing — the floor constant cannot be checked"]
+    m = MIN_NODE_RE.search(kt.read_text(encoding="utf-8"))
+    if not m:
+        # A parser that finds nothing where the construct plainly exists must
+        # fail loudly (AGENTS.md, Gate Rules).
+        return [f"parsed no MIN_NODE_VERSION from {CLIENT_MODE}"]
+    row = next((r for r in rows if r.get("client_version") == version), None)
+    if row is None:
+        return []  # the "exactly one row for VERSION" check already reports this
+    if m.group(1) != row["node_min"]:
+        problems.append(
+            f"MIN_NODE_VERSION is {m.group(1)!r} but the {version} row's "
+            f"node_min is {row['node_min']!r} — same fact, two copies. The "
+            f"matrix is where it is reasoned about; change it there and follow "
+            f"in {CLIENT_MODE}."
+        )
     return problems
 
 
