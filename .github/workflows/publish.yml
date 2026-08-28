@@ -664,6 +664,12 @@ jobs:
     permissions:
       id-token: write # OIDC — this is the credential; there is no token secret
     steps:
+      # THE REPO. Without it `packaging/check_universal_wheel.py` and `VERSION`
+      # are not on disk, and the gate below cannot run at all — see its comment.
+      # This job only ever downloaded artifacts, because uploading them is all it
+      # used to do.
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           pattern: dist-*
@@ -684,6 +690,20 @@ jobs:
           print-hash: true
 
       - name: The index must offer a wheel a non-desktop consumer can resolve
+        # THIS GATE HAD NEVER RUN. Not once, in any publish.
+        #
+        # The job it lives in downloads artifacts and uploads them; it never
+        # checked out the repo, so `packaging/check_universal_wheel.py` was not
+        # on disk. Python exited 2 with "can't open file", the step shell runs
+        # with `-e`, and the step aborted before the retry loop below was ever
+        # reached — which is why the failure looked like a timeout and was not
+        # one. The 0.5.191 publish failed here twice and I read the first one as
+        # CDN propagation, which it never was.
+        #
+        # A gate that cannot fail is the hazard this repo keeps naming. This was
+        # a step further along: a gate that could not RUN, reporting red for a
+        # reason unrelated to the thing it guards, on a release that was correct.
+        #
         # AFTER the upload, because that is when there is something to assert.
         # Fails closed on an unreachable index: "I could not ask" is not "it is
         # fine", and that equivalence is exactly what let py3-none-any go
