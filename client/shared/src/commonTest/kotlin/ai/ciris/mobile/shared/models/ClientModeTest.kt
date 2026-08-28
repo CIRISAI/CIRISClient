@@ -330,12 +330,24 @@ class ClientModeTest {
 
     @Test
     fun version_mismatch_ignores_the_v_prefix() {
-        assertFalse(isVersionMismatch("v0.5.176", "0.5.176"))
+        // Intent unchanged; the EXAMPLE had to move. It used to pair 0.5.176
+        // with 0.5.176 and assert no flag, which held only because the check was
+        // equality. Under a compatibility floor (CIRISClient#16) a 0.5.176 node
+        // is genuinely too old and SHOULD flag, so the prefix is now shown to be
+        // ignored at versions where the answer is not about age.
+        assertFalse(isVersionMismatch("v0.5.191", "0.5.191"))
+        assertTrue(isVersionMismatch("v0.5.176", "0.5.191"))
     }
 
     @Test
-    fun version_mismatch_fires_on_a_real_difference() {
+    fun version_mismatch_fires_on_a_node_below_the_floor() {
+        // RENAMED, because the reason changed. This used to be "fires on a real
+        // difference" — under equality, 0.5.175 vs 0.5.176 flagged because they
+        // differed. It still flags, but now because 0.5.175 is below
+        // MIN_NODE_VERSION, and a mere difference no longer flags anything:
+        // that is the decoupling CIRISServer#497 asked for.
         assertTrue(isVersionMismatch("0.5.175", "0.5.176"))
+        assertFalse(isVersionMismatch("0.5.192", "0.5.193"))
     }
 
     // ── The runtime declares what it is (CIRISAgent#1111) ──────────────────
