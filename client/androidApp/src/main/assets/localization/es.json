@@ -1860,7 +1860,7 @@
     "login_privacy": "Ver Política de Privacidad",
     "login_reset_device": "Restablecer dispositivo",
     "login_reset_device_cancel": "Cancelar",
-    "login_reset_device_confirm_body": "Esto borrará todos los datos locales y volverás al asistente de configuración. Esta acción no se puede deshacer.",
+    "login_reset_device_confirm_body": "Esto borrará los datos del nodo almacenados en ESTE dispositivo y volverá al asistente de configuración. Un nodo al que estés conectado en otra máquina no se verá afectado. Esta acción no se puede deshacer.",
     "login_reset_device_confirm_title": "¿Restablecer dispositivo?",
     "login_setup_complete_relogin": "La configuración ha finalizado. Tu nodo se reinició, así que vuelve a iniciar sesión con las mismas credenciales que usaste para completar la configuración.",
     "login_signin_apple": "Iniciar sesión con Apple",

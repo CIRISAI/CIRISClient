@@ -1860,7 +1860,7 @@
     "login_privacy": "プライバシーポリシーを表示",
     "login_reset_device": "デバイスをリセット",
     "login_reset_device_cancel": "キャンセル",
-    "login_reset_device_confirm_body": "すべてのローカルデータが消去され、セットアップウィザードに戻ります。この操作は元に戻せません。",
+    "login_reset_device_confirm_body": "このデバイスに保存されているノードデータが消去され、セットアップウィザードに戻ります。別のマシン上で接続しているノードには影響しません。この操作は元に戻せません。",
     "login_reset_device_confirm_title": "デバイスをリセットしますか？",
     "login_setup_complete_relogin": "セットアップが完了しました。ノードが再起動したため、セットアップで使用したものと同じ認証情報で再度ログインしてください。",
     "login_signin_apple": "Appleでサインイン",

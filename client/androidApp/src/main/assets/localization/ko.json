@@ -1860,7 +1860,7 @@
     "login_privacy": "개인정보 보호정책 보기",
     "login_reset_device": "기기 재설정",
     "login_reset_device_cancel": "취소",
-    "login_reset_device_confirm_body": "모든 로컬 데이터가 삭제되고 설정 마법사로 돌아갑니다. 이 작업은 취소할 수 없습니다.",
+    "login_reset_device_confirm_body": "이 작업은 이 기기에 저장된 노드 데이터를 삭제하고 설정 마법사로 돌아갑니다. 다른 기기에서 연결해 사용 중인 노드는 영향을 받지 않습니다. 이 작업은 취소할 수 없습니다.",
     "login_reset_device_confirm_title": "기기를 재설정하시겠습니까?",
     "login_setup_complete_relogin": "설정이 완료되었습니다. 노드가 재시작되었으므로 설정에 사용한 것과 동일한 자격 증명으로 다시 로그인해 주세요.",
     "login_signin_apple": "Apple로 로그인",

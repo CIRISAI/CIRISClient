@@ -1860,7 +1860,7 @@
     "login_privacy": "查看隐私政策",
     "login_reset_device": "重置设备",
     "login_reset_device_cancel": "取消",
-    "login_reset_device_confirm_body": "此操作将清除所有本地数据并返回设置向导。此操作无法撤销。",
+    "login_reset_device_confirm_body": "此操作将清除存储在本设备上的节点数据并返回设置向导。您在其他设备上已连接的节点不会受到影响。此操作无法撤销。",
     "login_reset_device_confirm_title": "重置设备？",
     "login_setup_complete_relogin": "设置已完成。您的节点已重新启动，请使用完成设置时使用的相同凭据重新登录。",
     "login_signin_apple": "使用 Apple 登录",

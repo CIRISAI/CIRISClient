@@ -1860,7 +1860,7 @@
     "login_privacy": "Xem chính sách bảo mật",
     "login_reset_device": "Đặt lại thiết bị",
     "login_reset_device_cancel": "Hủy",
-    "login_reset_device_confirm_body": "Thao tác này sẽ xóa tất cả dữ liệu cục bộ và quay lại trình hướng dẫn cài đặt. Hành động này không thể hoàn tác.",
+    "login_reset_device_confirm_body": "Thao tác này sẽ xóa dữ liệu nút được lưu trữ trên CHÍNH thiết bị này và quay lại trình hướng dẫn cài đặt. Nút mà bạn đang kết nối trên một máy khác sẽ không bị ảnh hưởng. Không thể hoàn tác.",
     "login_reset_device_confirm_title": "Đặt lại thiết bị?",
     "login_setup_complete_relogin": "Thiết lập đã hoàn tất. Nút của bạn đã khởi động lại, vui lòng đăng nhập lại bằng đúng thông tin đăng nhập mà bạn đã dùng để hoàn tất thiết lập.",
     "login_signin_apple": "Đăng nhập bằng Apple",
