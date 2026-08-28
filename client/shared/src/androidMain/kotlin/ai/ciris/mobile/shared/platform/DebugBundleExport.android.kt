@@ -35,17 +35,58 @@ actual fun saveDebugBundle(fileName: String, content: String): String? {
     val ctx = appContext ?: return null
     return runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // IS_PENDING keeps the row invisible to other apps until the bytes
+            // are actually there. The row has to be inserted before the stream
+            // can be opened, so between those two calls a failure -- a full
+            // disk, a revoked provider -- would otherwise publish an empty file
+            // into Downloads. An empty debug bundle is worse than none: someone
+            // sends it believing they sent their logs.
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
                 put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
                 put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
             val uri = ctx.contentResolver.insert(
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 values,
             ) ?: return@runCatching null
-            ctx.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
-                ?: return@runCatching null
+
+            val wrote = runCatching {
+                ctx.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                    ?: throw java.io.IOException("openOutputStream returned null for $uri")
+            }
+            if (wrote.isFailure) {
+                runCatching { ctx.contentResolver.delete(uri, null, null) }
+                return@runCatching null
+            }
+
+            // Publish only now that the file is complete.
+            //
+            // AND TREAT A FAILED PUBLISH LIKE A FAILED WRITE (Codex, PR #18).
+            // The bytes landing is not the same event as the row becoming
+            // visible. If this update throws, the outer runCatching returns
+            // null WITHOUT reaching the delete above, leaving the complete
+            // bundle stored as an orphaned pending item — invisible to every
+            // file manager, and never cleaned up. If it returns zero rows it
+            // did not throw and did not publish, and the old code reported
+            // "Downloads/$fileName" for a file the user cannot find.
+            //
+            // Both are the same failure as an empty row, which this function
+            // already knew to clean up: something is in MediaStore that the
+            // user cannot reach and did not ask to keep.
+            val published = runCatching {
+                ctx.contentResolver.update(
+                    uri,
+                    ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
+                    null,
+                    null,
+                )
+            }.getOrDefault(0)
+            if (published <= 0) {
+                runCatching { ctx.contentResolver.delete(uri, null, null) }
+                return@runCatching null
+            }
             // A name the user can search for, not a URI they cannot act on.
             "Downloads/$fileName"
         } else {

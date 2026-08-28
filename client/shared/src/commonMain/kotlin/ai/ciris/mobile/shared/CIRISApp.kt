@@ -2091,7 +2091,24 @@ fun CIRISApp(
                             // Ask it where it lives while it is still up, too: the answer is
                             // authoritative and it is about to stop being available.
                             val declaredHome = if (ai.ciris.mobile.shared.platform.isDesktop()) {
-                                val h = runCatching { apiClient.getNodeHomePath() }.getOrNull()
+                                // THE LOCAL NODE'S HOME, EXPLICITLY. The button
+                                // says "Reset this device"; asking the ACTIVE
+                                // node where it lives asks a remote machine when
+                                // the client is pointed at one, and hands that
+                                // path to a LOCAL filesystem wipe — deleting from
+                                // an unrelated local directory if it happens to
+                                // exist here, and otherwise reporting success
+                                // having cleared nothing (Codex, PR #18).
+                                //
+                                // A device-local operation asks the device-local
+                                // node. That is also why no ownership guard is
+                                // needed: the scope is fixed by what we query,
+                                // not policed after the fact.
+                                val h = runCatching {
+                                    apiClient.getNodeHomePath(
+                                        ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
+                                    )
+                                }.getOrNull()
                                 platformLog(TAG, "[INFO][onResetSetup] node declared home: ${h ?: "<none>"}")
                                 runCatching { pythonRuntime.shutdown() }
                                     .onFailure { platformLog(TAG, "[WARN][onResetSetup] backend shutdown: ${it.message}") }
@@ -2101,7 +2118,9 @@ fun CIRISApp(
                             }
 
                             val wiped = withContext(Dispatchers.Default) {
-                                ai.ciris.mobile.shared.platform.wipeLocalData(declaredHome)
+                                ai.ciris.mobile.shared.platform.wipeLocalData(
+                                    declaredHome,
+                                )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
 

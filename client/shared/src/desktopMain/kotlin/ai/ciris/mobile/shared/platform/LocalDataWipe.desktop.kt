@@ -100,11 +100,35 @@ actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
         println("[LocalDataWipe] refusing: CIRIS-Manager-managed deployment (/app)")
         return false
     }
-
     val home = resolveNodeHome(declaredNodeHome) ?: return false
     if (!home.exists()) return true
 
-    val checkout = isSourceCheckout(home)
+    var ok = wipeGeneratedState(home, isSourceCheckout(home))
+
+    // THE FILESYSTEM IS NOT ALL THE LOCAL DATA (Codex, PR #9).
+    //
+    // SecureStorage.desktop keeps provider API keys in java.util.prefs under
+    // `apikey_*`, and `getApiKey()` falls back to them once .env is gone.
+    // logout() clears tokens and user fields and leaves those, so a wipe that
+    // stopped at the filesystem handed the next owner of the machine the
+    // previous owner's provider key — under a dialog that says "erase all local
+    // data". Removing files is the visible half of the promise; this is the half
+    // that decides whether the promise was true.
+    if (!clearSecurePreferences()) ok = false
+    return ok
+}
+
+/**
+ * Remove the generated entries from [home]. Never removes [home] itself.
+ *
+ * SEPARATED FROM RESOLUTION so it can be tested against a real directory
+ * (inherited from CIRISAgent 2.9.41, CIRISClient#11). Every shipped bug in this
+ * file was "deleted more than it should have", and that is only observable by
+ * pointing it at a populated tree and asserting what SURVIVES — a thesis file,
+ * a `src/`, a `.git`. Asserting the intended targets are gone would have passed
+ * for all four of them.
+ */
+internal fun wipeGeneratedState(home: File, checkout: Boolean): Boolean {
     var ok = true
     var removed = 0
 
@@ -147,17 +171,6 @@ actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
         }
     }
 
-    // THE FILESYSTEM IS NOT ALL THE LOCAL DATA (Codex, PR #9).
-    //
-    // SecureStorage.desktop keeps provider API keys in java.util.prefs under
-    // `apikey_*`, and `getApiKey()` falls back to them once .env is gone.
-    // logout() clears tokens and user fields and leaves those, so a wipe that
-    // stopped at the filesystem handed the next owner of the machine the
-    // previous owner's provider key — under a dialog that says "erase all local
-    // data". Removing files is the visible half of the promise; this is the half
-    // that decides whether the promise was true.
-    if (!clearSecurePreferences()) ok = false
-
     println("[LocalDataWipe] ${home.absolutePath}: removed $removed generated entries, ok=$ok")
     return ok
 }
@@ -186,3 +199,5 @@ private fun clearSecurePreferences(): Boolean = runCatching {
     println("[LocalDataWipe] could not clear secure preferences: ${e.message}")
     false
 }
+
+

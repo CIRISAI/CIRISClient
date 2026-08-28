@@ -6,3 +6,5 @@ package ai.ciris.mobile.shared.platform
  * the UI can say so instead of claiming a wipe that did not happen.
  */
 actual fun wipeLocalData(declaredNodeHome: String?): Boolean = false
+
+

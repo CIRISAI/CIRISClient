@@ -54,7 +54,20 @@ actual fun startTestAutomationServer() {
 }
 
 /**
- * Fallback version if JAR manifest is unavailable.
- * Keep in sync with mobile/androidApp/build.gradle versionName.
+ * Fallback version if the JAR manifest is unavailable.
+ *
+ * THE FALLBACK IS THE ONLY VALUE DESKTOP EVER REPORTS, which is why the old
+ * hand-maintained constant drifted to `2.3.2` while builds shipped 2.9.x and
+ * then 0.5.x. The Compose uber-jar writes only `Main-Class` into its manifest,
+ * so `implementationVersion` is always null and the "fallback" above is the
+ * whole answer. A diagnostics bundle from a 0.5.191 build named 2.3.2 as its
+ * version — in the one artifact whose entire job is to say what was running.
+ *
+ * "Keep in sync with androidApp/build.gradle versionName" was the instruction,
+ * and nothing enforced it in either repo (CIRISClient#11 asked us to put a
+ * check on it if we kept the constant). We do not keep it: CLIENT_VERSION is
+ * GENERATED from the repo-root VERSION file by :shared:generateBuildFlavor —
+ * the same value the wheel publishes — so there is no second number that can
+ * drift, and no check needed for one that cannot exist.
  */
-private const val DESKTOP_VERSION_FALLBACK = "2.3.2"
+private val DESKTOP_VERSION_FALLBACK: String = ai.ciris.mobile.shared.models.CLIENT_VERSION

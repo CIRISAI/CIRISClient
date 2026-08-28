@@ -1860,7 +1860,7 @@
     "login_privacy": "Voir la Politique de Confidentialité",
     "login_reset_device": "Réinitialiser l'appareil",
     "login_reset_device_cancel": "Annuler",
-    "login_reset_device_confirm_body": "Cela effacera toutes les données locales et vous ramènera à l'assistant de configuration. Cette action est irréversible.",
+    "login_reset_device_confirm_body": "Cela efface les données du nœud stockées sur CET appareil et revient à l'assistant de configuration. Un nœud auquel vous êtes connecté sur une autre machine n'est pas affecté. Cela ne peut pas être annulé.",
     "login_reset_device_confirm_title": "Réinitialiser l'appareil ?",
     "login_setup_complete_relogin": "La configuration est terminée. Votre nœud a redémarré : veuillez vous reconnecter avec les mêmes identifiants que ceux utilisés pour terminer la configuration.",
     "login_signin_apple": "Se connecter avec Apple",

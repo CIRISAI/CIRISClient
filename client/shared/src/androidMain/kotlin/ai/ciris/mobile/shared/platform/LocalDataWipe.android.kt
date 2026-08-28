@@ -81,3 +81,5 @@ private var wipeContext: Context? = null
 fun initLocalDataWipe(context: Context) {
     wipeContext = context.applicationContext
 }
+
+
