@@ -42,6 +42,23 @@ enum class CapabilityState {
     UNDECLARED,
 
     /**
+     * THE NODE ANSWERED "I DO NOT KNOW". It emitted `capabilities: null` —
+     * CIRISServer#499's shape for "could not read its own key record".
+     *
+     * The server draws this distinction deliberately and says why: "'no
+     * capabilities' and 'could not determine' must not collapse into one
+     * answer, or a client renders a transient directory error as a node with no
+     * authority" (`src/conformance.rs`). My first parser matched only the array
+     * form, so an explicit `null` read identically to a missing key and the UI
+     * told a CURRENT node's operator that their node predates the declaration.
+     *
+     * Distinct from [UNREACHABLE], which is OUR side failing to ask, and from
+     * [UNDECLARED], which is an older node that never had the field. Three
+     * different remedies: retry or look at the node, check the network, upgrade.
+     */
+    UNDETERMINED,
+
+    /**
      * WE COULD NOT ASK. The node was unreachable, slow, or answered something
      * unreadable.
      *
@@ -87,10 +104,13 @@ data class NodeCapabilities(
     val declared: Set<String>?,
     /** True when the declaration could not be READ at all — see [CapabilityState.UNREACHABLE]. */
     val unreachable: Boolean = false,
+    /** True when the node emitted `capabilities: null` — see [CapabilityState.UNDETERMINED]. */
+    val undetermined: Boolean = false,
 ) {
 
     fun state(id: String): CapabilityState = when {
         unreachable -> CapabilityState.UNREACHABLE
+        undetermined -> CapabilityState.UNDETERMINED
         declared == null -> CapabilityState.UNDECLARED
         id in declared -> CapabilityState.PRESENT
         else -> CapabilityState.ABSENT
@@ -104,5 +124,8 @@ data class NodeCapabilities(
 
         /** Could not read the document. NOT the same as the node being old. */
         val UNREACHABLE = NodeCapabilities(null, unreachable = true)
+
+        /** The node said `null`: it could not determine its own. Its answer, not ours. */
+        val UNDETERMINED = NodeCapabilities(null, undetermined = true)
     }
 }

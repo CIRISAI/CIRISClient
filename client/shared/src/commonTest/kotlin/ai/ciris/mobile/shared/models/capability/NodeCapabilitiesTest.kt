@@ -90,4 +90,22 @@ class NodeCapabilitiesTest {
             assertEquals(s == CapabilityState.PRESENT, s.isUsable, "$s")
         }
     }
+
+    @Test
+    fun the_node_saying_it_does_not_know_is_its_own_answer() {
+        // CIRISServer#499 emits `capabilities: null` when the node cannot read
+        // its own key record, and says explicitly that this must not collapse
+        // with `[]`. Three different remedies, so three different states.
+        val undetermined = NodeCapabilities.UNDETERMINED
+        assertEquals(CapabilityState.UNDETERMINED, undetermined.state(Capability.REGISTRY_LOOKUP))
+        assertFalse(undetermined.has(Capability.REGISTRY_LOOKUP))
+
+        val all = listOf(
+            NodeCapabilities.UNDETERMINED.state(Capability.REGISTRY_LOOKUP),
+            NodeCapabilities.UNREACHABLE.state(Capability.REGISTRY_LOOKUP),
+            NodeCapabilities.UNDECLARED.state(Capability.REGISTRY_LOOKUP),
+            NodeCapabilities(emptySet()).state(Capability.REGISTRY_LOOKUP),
+        )
+        assertEquals(all.size, all.toSet().size, "all four not-usable answers must stay distinct")
+    }
 }

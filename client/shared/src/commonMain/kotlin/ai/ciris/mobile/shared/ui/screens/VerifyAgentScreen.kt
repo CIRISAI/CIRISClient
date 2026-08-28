@@ -76,6 +76,7 @@ fun VerifyAgentCapabilityNotice(
                     when (state) {
                         CapabilityState.UNDECLARED -> "mobile.verify_undeclared_title"
                         CapabilityState.UNREACHABLE -> "mobile.verify_unreachable_title"
+                        CapabilityState.UNDETERMINED -> "mobile.verify_undetermined_title"
                         else -> "mobile.verify_absent_title"
                     }
                 ),
@@ -94,6 +95,9 @@ fun VerifyAgentCapabilityNotice(
                         // again", and telling someone their node is old because
                         // a request timed out is a false diagnosis.
                         CapabilityState.UNREACHABLE -> "mobile.verify_unreachable_body"
+                        // The NODE said it does not know — its answer, not our
+                        // failure to ask. Remedy is retry, not upgrade.
+                        CapabilityState.UNDETERMINED -> "mobile.verify_undetermined_body"
                         else -> "mobile.verify_absent_body"
                     }
                 ),

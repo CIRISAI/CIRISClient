@@ -9289,10 +9289,28 @@ class CIRISApiClient(
         }
         // `"capabilities": [ "a", "b" ]` — absent array means undeclared, empty
         // array means declared-and-holds-nothing. The two are different answers.
+        // THREE SHAPES, THREE ANSWERS (CIRISServer#499, src/conformance.rs):
+        //   key absent            an older node that never had the field
+        //   "capabilities": null  the node could not read its own key record
+        //   "capabilities": [...] the conferred set, possibly empty
+        //
+        // The server draws the middle distinction on purpose — "'no capabilities'
+        // and 'could not determine' must not collapse into one answer" — and my
+        // first parser matched only the array, so an explicit null read as a
+        // missing key and told a current node's operator to upgrade.
+        val hasKey = Regex("\"capabilities\"\\s*:").containsMatchIn(body)
+        val isNull = Regex("\"capabilities\"\\s*:\\s*null").containsMatchIn(body)
         val block = Regex("\"capabilities\"\\s*:\\s*\\[([^\\]]*)\\]").find(body)
-        if (block == null) {
-            // The document WAS read and carries no list: an older node.
-            ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
+        if (isNull) {
+            ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDETERMINED
+        } else if (block == null) {
+            if (hasKey) {
+                // Present but neither null nor an array: we cannot read it, and
+                // guessing which of the other three it means would be inventing.
+                ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
+            } else {
+                ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
+            }
         } else {
             val ids = Regex("\"([^\"]+)\"").findAll(block.groupValues[1])
                 .map { it.groupValues[1] }

@@ -2997,8 +2997,8 @@
     "verify_title": "Verify a build",
     "verify_hash_label": "Build hash",
     "verify_button": "Check",
-    "verify_undeclared_title": "This node hasn't said whether it can verify builds",
-    "verify_undeclared_body": "It is running a version from before nodes declared what they can do. A newer node will answer this.",
+    "verify_undeclared_title": "This node cannot say whether it verifies builds",
+    "verify_undeclared_body": "This node is older than the capability declaration, so it cannot say. A newer node can verify builds.",
     "verify_absent_title": "This node does not verify builds",
     "verify_absent_body": "Build verification is part of the registry, and this node does not carry it. A node that does can answer the same question.",
     "verify_unreachable_title": "Could not reach this node",
@@ -3011,7 +3011,9 @@
     "verify_not_found_title": "No record of this build",
     "verify_not_found_body": "The registry answered and holds nothing for this hash.",
     "verify_unavailable_title": "Could not check",
-    "verify_unavailable_body": "This is not the same as 'not registered' — the registry did not answer."
+    "verify_unavailable_body": "This is not the same as 'not registered' — the registry did not answer.",
+    "verify_undetermined_title": "This node could not determine what it can do",
+    "verify_undetermined_body": "The node answered, but could not read its own key record. This is usually temporary — try again shortly."
   },
   "moderation": {
     "ladder": {
