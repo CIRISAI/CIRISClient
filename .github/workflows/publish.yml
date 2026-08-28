@@ -703,13 +703,25 @@ jobs:
           #      propagation or an upload still settling
           #   1  files ARE published and none is py3-none-any — the defect, and
           #      waiting cannot fix it. Fail now.
-          for i in $(seq 1 20); do
+          # 30 MINUTES, NOT 10. The 0.5.191 publish uploaded all five wheels
+          # successfully and then failed HERE, on a version that was live: two
+          # queries of the simple index seconds apart returned 0 files and then
+          # 5, because the index is CDN-fronted and edges do not agree. Ten
+          # minutes was not enough patience for a fact that arrives unevenly,
+          # and a gate that reports red on a green release is how gates get
+          # switched off — which the comment above already said, about the
+          # previous time this was too impatient.
+          for i in $(seq 1 40); do
             python3 packaging/check_universal_wheel.py
             case $? in
               0) exit 0 ;;
               1) echo "::error::the version is published WITHOUT a universal wheel — waiting will not help"; exit 1 ;;
-              *) echo "not on the index yet — retry $i/20"; sleep 30 ;;
+              *) echo "not on the index yet — retry $i/40"; sleep 45 ;;
             esac
           done
-          echo "::error::ciris-client $(cat VERSION) never appeared on the simple index after 10 minutes"
+          # The upload step above SUCCEEDED to get here, so say so: the likely
+          # state is published-and-still-propagating, and the reader needs the
+          # one command that settles it rather than a verdict this step could
+          # not reach.
+          echo "::error::ciris-client $(cat VERSION) did not appear on the simple index within 30 minutes, though the upload step succeeded. Check directly before assuming the release is bad: curl -s -H 'Accept: application/vnd.pypi.simple.v1+json' https://pypi.org/simple/ciris-client/ | python3 -c \"import json,sys; print([f['filename'] for f in json.load(sys.stdin)['files'] if '$(cat VERSION)' in f['filename']])\""
           exit 1
