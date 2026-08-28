@@ -219,14 +219,101 @@ fun clientModeFrom(
 // unaffected: same package, same name, same `const val`.
 
 /**
- * Whether [nodeVersion] differs materially from [CLIENT_VERSION] — i.e. a
- * non-blocking "update recommended" banner should be shown. Compares the
- * leading `major.minor.patch` (ignoring any pre-release/build suffix) and only
- * flags an actual mismatch (never flags when the node version is unknown/blank).
+ * The oldest node this client can drive.
+ *
+ * A FLOOR, not a pin. CIRISServer 0.5.192 moves its own dependency to
+ * `ciris-client>=0.5.190,<0.6` (CIRISServer#497) so the client can ship for the
+ * agent team without a paired server cut; this is the same relaxation from the
+ * other side.
+ *
+ * THIS NUMBER IS NOT YET EARNED THE WAY THE SERVER EARNED ITS FLOOR. The server
+ * mutation-tested theirs at both ends — lower it to 0.5.186 and the id gate
+ * fails, lower it to 0.5.188 and the wheel gate fails — so the bound is measured
+ * rather than asserted. Ours is the pairing both sides are standardising on and
+ * nothing here proves this client cannot drive an older node. Until a gate
+ * installs the floor and exercises the API surface this client actually calls,
+ * treat it as the server team put it: an untested bound is a guess with a
+ * version number on it.
  */
-fun isVersionMismatch(nodeVersion: String?, clientVersion: String = CLIENT_VERSION): Boolean {
+const val MIN_NODE_VERSION: String = "0.5.190"
+
+/**
+ * Compare two `major.minor.patch` versions NUMERICALLY. Negative, zero, positive.
+ *
+ * NOT string comparison, and the difference is live at the versions this repo
+ * actually ships. Lexically `"0.5.9" > "0.5.190"`, because '9' > '1' — so a
+ * floor check written the obvious way decides a 0.5.9 node satisfies a 0.5.190
+ * floor and a 0.5.191 client is below a 0.5.9 one. Three-digit patch numbers
+ * make this the common case here, not an edge.
+ *
+ * The old equality check was immune to this because it never ORDERED anything.
+ * Introducing a floor introduces ordering, and ordering is the whole trap.
+ *
+ * Missing components read as 0, so `0.5` and `0.5.0` compare equal. A component
+ * that is not a number sinks to 0 rather than throwing: this drives a banner,
+ * and a malformed version should not be able to crash the surface that reports
+ * it.
+ */
+fun compareVersions(a: String, b: String): Int {
+    fun parts(v: String): List<Int> =
+        v.trim().removePrefix("v").takeWhile { it.isDigit() || it == '.' }
+            .split('.').map { it.toIntOrNull() ?: 0 }
+    val pa = parts(a)
+    val pb = parts(b)
+    for (i in 0 until maxOf(pa.size, pb.size)) {
+        val d = (pa.getOrNull(i) ?: 0) - (pb.getOrNull(i) ?: 0)
+        if (d != 0) return if (d < 0) -1 else 1
+    }
+    return 0
+}
+
+/**
+ * Whether the node and this client are INCOMPATIBLE — i.e. a non-blocking
+ * "update recommended" banner should be shown.
+ *
+ * WAS EQUALITY, WHICH ONLY WORKED BECAUSE THE VERSIONS WERE LOCKED. While the
+ * server pinned `ciris-client==<server version>` the two were always equal, the
+ * comparison was always true, and the branch was never exercised. Widening to a
+ * range turns that held-still assumption into a defect: a 0.5.192 node with a
+ * 0.5.193 client is THE POINT of decoupling, and equality would greet its
+ * operator with a permanent nag. Trading a release dance for a permanent nag is
+ * the worse trade (CIRISClient#16).
+ *
+ * TWO DIRECTIONS, WHICH EQUALITY CONFLATED INTO ONE:
+ *
+ *   - is the NODE too old for this client?   [MIN_NODE_VERSION], held here,
+ *     because a node that predates the whole idea of declaring a floor cannot
+ *     tell us anything about itself.
+ *   - is the CLIENT too old for this node?   [nodeMinClientVersion], declared
+ *     BY THE NODE, because only the node knows which clients it supports. A
+ *     client-held answer to this cannot ever learn that a newer node needs a
+ *     newer client — it would call itself compatible and be wrong.
+ *
+ * Nothing declares [nodeMinClientVersion] today, so it is optional and absent
+ * means "the node did not say", not "the node is happy". The floor this side
+ * holds still applies, which keeps the real signal the nag exists for: a
+ * genuinely incompatible pair still says so. Replacing equality with "never
+ * complain" would have deleted that signal, and someone shipped a mismatched
+ * pair once already.
+ *
+ * Never flags on an unknown or blank node version — that is "I could not ask",
+ * which is not "you are broken".
+ */
+fun isVersionMismatch(
+    nodeVersion: String?,
+    clientVersion: String = CLIENT_VERSION,
+    nodeMinClientVersion: String? = null,
+    minNodeVersion: String = MIN_NODE_VERSION,
+): Boolean {
     val node = nodeVersion?.trim()?.removePrefix("v")?.takeWhile { it.isDigit() || it == '.' }
     if (node.isNullOrBlank()) return false
     val client = clientVersion.trim().removePrefix("v").takeWhile { it.isDigit() || it == '.' }
-    return node != client
+
+    // The node's own claim about what it needs, when it makes one.
+    val declared = nodeMinClientVersion?.trim()?.removePrefix("v")
+        ?.takeWhile { it.isDigit() || it == '.' }
+    if (!declared.isNullOrBlank() && compareVersions(client, declared) < 0) return true
+
+    // And what this client needs of the node.
+    return compareVersions(node, minNodeVersion) < 0
 }
