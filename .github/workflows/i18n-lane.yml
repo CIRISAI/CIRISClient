@@ -138,6 +138,10 @@ jobs:
           path: i18n-report.json
 
       - name: Guard (strict) — the actual gate
+        # always(), so a lane that exited 1 still gets its bundles checked and
+        # the operator sees BOTH facts: which keys were rejected, and what the
+        # structural gate says about what did land.
+        if: always()
         # The pipeline proposes; this decides. Its own mutation self-test runs
         # first, so the gate proves it can fail before it is trusted to pass.
         run: |
@@ -146,7 +150,7 @@ jobs:
           python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
       - name: Re-record the vendoring state digest
-        if: inputs.commit
+        if: always() && inputs.commit
         run: |
           set -euo pipefail
           DIGEST=$(python3 packaging/check_vendoring.py --print)
@@ -161,7 +165,12 @@ jobs:
           python3 packaging/check_vendoring.py
 
       - name: Commit
-        if: inputs.commit
+        # ALWAYS, even when the lane exited 1. The lane writes only ACCEPTED
+        # values now, so committing on failure banks the good work and leaves
+        # the rejected keys missing — which the strict guard then blocks on,
+        # exactly as it would have anyway. Skipping this on failure is what
+        # discarded 587 good translations per run, seven runs running.
+        if: always() && inputs.commit
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
