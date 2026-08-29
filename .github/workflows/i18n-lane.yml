@@ -165,6 +165,8 @@ jobs:
           python3 packaging/check_vendoring.py
 
       - name: Commit
+        env:
+          BRANCH: ${{ github.ref_name }}
         # ALWAYS, even when the lane exited 1. The lane writes only ACCEPTED
         # values now, so committing on failure banks the good work and leaves
         # the rejected keys missing — which the strict guard then blocks on,
@@ -196,5 +198,21 @@ jobs:
           The MQM findings are attached to the run as i18n-report.json.
           Review like any other diff.
           MSG
-            git push
+            # REBASE BEFORE PUSHING. The lane takes minutes and a human can
+            # land a commit on the same branch while it runs — which is exactly
+            # what happened: the runner committed the last translation, the push
+            # was rejected "fetch first", and the step failed AFTER doing all the
+            # work. Retry a few times because the race can recur.
+            for attempt in 1 2 3; do
+              if git push; then
+                exit 0
+              fi
+              echo "push rejected (attempt $attempt) — rebasing onto the branch and retrying"
+              git pull --rebase --autostash origin "$BRANCH" || true
+              # The bundles are regenerated deterministically from en.json, so a
+              # rebase conflict here means someone edited the same keys; let it
+              # fail loudly rather than resolving it blind.
+            done
+            echo "::error::could not push the translations after 3 attempts — the branch moved under the lane each time"
+            exit 1
           fi
