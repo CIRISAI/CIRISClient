@@ -214,6 +214,39 @@
       },
       "notes": "FIRST CUT UNDER THE RANGE. CIRISServer 0.5.192 moves to ciris-client>=0.5.190,<0.6 (CIRISServer#497), so this ships without a paired server release — the point of the decoupling. isVersionMismatch compares against a floor instead of equality, which under a range would have nagged on every legitimately-mixed pair. node_max_tested stays 0.5.190: the 0.5.191 node was fetched and the four-corner walk was NOT run against it, because port 4243 was held by a live agent this session had no business stopping. An untested bound is a guess with a version number on it, so the tested one is recorded. 24 review findings across seven rounds are in the git history; two were the claim PIN reaching the debug bundle through StartupViewModel's per-line logging, and FailurePanel's GitHub-issue body never passing through redaction at all",
       "published": null
+    },
+    {
+      "client_version": "0.5.193",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged, and gated: compat/validate.py fails the release if this and the client's MIN_NODE_VERSION disagree. Nothing in this cut raises the floor — the capability gate renders a node that declares NOTHING as UNDECLARED, which is every node at or above this floor today",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "registry.verify is the FIRST surface shipped ahead of its API. No released node serves /v1/registry/lookup, so on every install today it renders the unavailable path and says WHICH unavailable — that is the feature, not a placeholder. CapabilityWire is the wire contract for the whole ecosystem: CIRISServer#499 declares conferred scopes in src/conformance.rs, CIRISAgent is adding an agent-tier field on /v1/system/health, and this is the one reader, written to be quoted rather than reimplemented. Four wire shapes, four answers — absent means an older peer, null means it could not read its own record, [] means it holds nothing, a list means membership — because those are four remedies and collapsing any pair produces a confident wrong answer instead of a missing one",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3861
+      },
+      "notes": "The pattern cut: UI ahead of the API, gated on a declaration rather than probed for. CIRISServer shipped the declaration independently and drew the same null-versus-empty line in its own field docs, which is the useful signal — the distinction is a property of the problem, not a preference. Sixteen review findings landed on this branch and every one was the same shape: presenting an answer that was not there. A verdict from another node, a record for another hash, a transport failure read as an old node, the operator's own input echoed back as confirmation. The gate was sound from the first commit; the plumbing around attribution was where all the work was",
+      "published": null
     }
   ]
 }
