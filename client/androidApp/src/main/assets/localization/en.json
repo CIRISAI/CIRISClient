@@ -3000,7 +3000,7 @@
     "verify_undeclared_title": "This node cannot say whether it verifies builds",
     "verify_undeclared_body": "This node is older than the capability declaration, so it cannot say. A newer node can verify builds.",
     "verify_absent_title": "This node does not verify builds",
-    "verify_absent_body": "Build verification is part of the registry, and this node does not carry it. A node that does can answer the same question.",
+    "verify_absent_body": "This node does not carry the registry, so it cannot check builds. Another node can.",
     "verify_unreachable_title": "Could not reach this node",
     "verify_unreachable_body": "The node did not answer, so we do not know whether it can verify builds. This is not a problem with the build you are checking.",
     "verify_status_registered": "Registered",
