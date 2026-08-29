@@ -427,6 +427,11 @@ fun CIRISApp(
     // lights, "agent" wording, the WORK-state wait). null = not probed yet.
     // nodeVersion drives the non-blocking version-mismatch banner.
     var clientMode by remember { mutableStateOf<ai.ciris.mobile.shared.models.ClientMode?>(null) }
+    /**
+     * Is a brain folded here and answering — regardless of whether it is
+     * configured yet. `null` until the first probe answers; see [setupHasAgent].
+     */
+    var brainPresent by remember { mutableStateOf<Boolean?>(null) }
     var nodeVersion by remember { mutableStateOf<String?>(null) }
     val isAgentMode = clientMode?.isAgent ?: true  // default to agent wording until probed
     // The landing surface, from the PROBE (CIRISServer#479). Deliberately NOT
@@ -725,7 +730,26 @@ fun CIRISApp(
     // KEYED on the probe (CIRISServer#479): `viewModel {}` caches its instance,
     // so a VM built before the mode landed would keep the pre-probe answer for
     // the app's whole life — the exact staleness this conversion exists to end.
-    val setupHasAgent = clientMode?.isAgent ?: false
+    // THE WIZARD'S QUESTION IS NOT THE POLLER GATE'S QUESTION.
+    //
+    // This was `clientMode?.isAgent ?: false`, and both halves were wrong for
+    // setup (CIRISClient#21):
+    //
+    //   isAgent   demotes a folded brain that reports itself unconfigured — and
+    //             on a first run it IS unconfigured, which is what the wizard
+    //             exists to fix. So the gate said NODE, the wizard dropped the
+    //             AI step, the brain stayed unconfigured, and the user reached
+    //             chat to silence. The arm's own comment names the circularity:
+    //             it was added because such a brain 503s `addLlmProvider`, "so
+    //             the user could not configure an escape".
+    //   ?: false  collapses "not probed yet" into "no brain", so the wizard
+    //             composed its step list on a value that meant unknown. Same
+    //             distinct-zeroes rule as CapabilityWire's null-versus-empty:
+    //             could-not-determine must not become a definite answer.
+    //
+    // `brainPresent` is folded && reachable — is there a brain here to
+    // configure — and null still means nobody has asked.
+    val setupHasAgent = brainPresent == true
     val setupViewModel: SetupViewModel =
         viewModel(key = "setup-$setupHasAgent") { SetupViewModel(apiClient, setupHasAgent) }
     // Set HA addon mode if running in Home Assistant addon context
@@ -1147,6 +1171,9 @@ fun CIRISApp(
                             }
                     }
                     clientMode = mode
+                    // The wizard's question, from the same probe. See setupHasAgent.
+                    brainPresent = probe.brainPresent
+                    platformLog(TAG, "[INFO][gate] brainPresent=${probe.brainPresent} (folded/reachable, independent of readiness)")
                     // Node mode has no 22 cognitive service lights — drive the count
                     // from the gate rather than the hardcoded agent default.
                     startupViewModel.setClientMode(mode)
@@ -2349,7 +2376,28 @@ fun CIRISApp(
             }
 
             Screen.Setup -> {
-                platformLog(TAG, "[DEBUG][Screen.Setup] Rendering setup screen")
+                // DO NOT COMPOSE THE WIZARD ON AN UNANSWERED PROBE.
+                //
+                // `SetupViewModel` is keyed on `setupHasAgent` and
+                // `isFinalSetupStep` reads it, so the step list is FIXED at
+                // composition. Composing while the probe is outstanding fixes
+                // that shape on a default, and the shape is what decides whether
+                // the AI step exists at all — the log in CIRISClient#21 shows
+                // the wizard declaring JOIN_FEDERATION final 80 lines before the
+                // gate resolved.
+                //
+                // It is a race, so it hits slow machines and not fast ones,
+                // which is the worst way for it to reach a user: a finished
+                // install with no LLM and a chat screen that answers nothing.
+                //
+                // Waiting is safe — the probe is bounded by the startup budget
+                // and StartupScreen is what the user is already looking at.
+                if (brainPresent == null) {
+                    platformLog(TAG, "[INFO][Screen.Setup] holding — brainPresent not yet probed")
+                    StartupScreen(viewModel = startupViewModel)
+                    return@Box
+                }
+                platformLog(TAG, "[DEBUG][Screen.Setup] Rendering setup screen (hasAgent=$setupHasAgent)")
                 SetupScreen(
                     hasAgent = setupHasAgent,
                     viewModel = setupViewModel,
