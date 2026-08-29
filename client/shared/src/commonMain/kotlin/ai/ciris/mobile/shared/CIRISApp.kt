@@ -832,11 +832,24 @@ fun CIRISApp(
     // (Codex, PR #20). The previous revision used a parameter that never
     // changes; this one used a default that was never chosen. Neither is "the
     // node in use", which is what the first profile id lets us tell apart.
+    // A LATCH, NOT A COMPARISON. Inferring "did a switch happen" from
+    // `activeProfileId != firstProfileId` makes switching away and BACK to the
+    // first profile indistinguishable from never having switched — so the probe
+    // restored the startup URL while `apiClient` pointed at the profile the
+    // operator had just chosen (Codex, PR #20). Choosing the local profile
+    // deliberately is a real choice and must be honoured as one.
+    //
+    // Once a switch has occurred the operator owns the selection, permanently.
     val firstProfileId = remember { mutableStateOf<String?>(null) }
+    var hasSwitchedNode by remember { mutableStateOf(false) }
     LaunchedEffect(activeProfileId) {
-        if (firstProfileId.value == null) firstProfileId.value = activeProfileId
+        if (firstProfileId.value == null) {
+            firstProfileId.value = activeProfileId
+        } else if (activeProfileId != firstProfileId.value) {
+            hasSwitchedNode = true
+        }
     }
-    val switched = activeProfileId != null && activeProfileId != firstProfileId.value
+    val switched = hasSwitchedNode
     val effectiveNodeUrl = if (switched) {
         nodeSwitcherViewModel.activeProfile?.baseUrl?.takeIf { it.isNotBlank() } ?: nodeBaseUrl
     } else {
