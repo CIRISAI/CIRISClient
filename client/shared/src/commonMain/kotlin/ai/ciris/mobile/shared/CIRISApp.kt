@@ -458,29 +458,6 @@ fun CIRISApp(
         TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
     }
 
-    // WHAT THIS NODE DECLARES IT CAN DO.
-    //
-    // Probed alongside the mode gate and re-probed on a node switch, because a
-    // different node confers different capabilities and a cached answer from
-    // the previous one would license the wrong UI.
-    //
-    // Starts UNREACHABLE, not UNDECLARED: before the first probe we have not
-    // asked, and rendering "this node predates capability declarations" before
-    // asking is the false version diagnosis that state exists to prevent
-    // (Codex, PR #20).
-    var nodeCapabilities by remember {
-        mutableStateOf(ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE)
-    }
-    LaunchedEffect(nodeBaseUrl) {
-        nodeCapabilities = apiClient.getNodeCapabilities(nodeBaseUrl)
-        platformLog(
-            TAG,
-            "[INFO][caps] $nodeBaseUrl declares ${nodeCapabilities.declared?.size ?: "nothing"}" +
-                if (nodeCapabilities.unreachable) " (unreachable)" else "",
-        )
-    }
-
-
     // Handle system back button - navigate back to appropriate parent screen
     // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is
     // Contacts, and a back press there must fall through to the platform (leave
@@ -834,6 +811,39 @@ fun CIRISApp(
             }
         }
     }
+    // WHAT THE ACTIVE NODE DECLARES IT CAN DO.
+    //
+    // Keyed on the ACTIVE PROFILE, not the `nodeBaseUrl` parameter.
+    // `NodeSwitcherViewModel.switchTo` repoints `apiClient.baseUrl` and
+    // `activeProfileId`; the CIRISApp parameter is fixed for the composition and
+    // never moves. Keying on it meant the probe did not re-run on a switch and
+    // the verify screen's per-node state never reset — so one registry's
+    // registered/revoked verdict could be presented as the selected node's
+    // answer (Codex, PR #20). The VM's own docs say it: reacting to
+    // `activeProfile` is the screen's responsibility.
+    //
+    // This is the second time I have reached for the immutable parameter where
+    // the mutable value was needed; the reset home resolution was the first.
+    val activeProfileId by nodeSwitcherViewModel.activeProfileId.collectAsState()
+    val effectiveNodeUrl = nodeSwitcherViewModel.activeProfile
+        ?.baseUrl?.takeIf { it.isNotBlank() } ?: nodeBaseUrl
+
+    // A one-shot probe strands the UI: UNREACHABLE and UNDETERMINED are both
+    // transient, the copy tells the operator to try again, and nothing could.
+    var capabilityProbeAttempt by remember { mutableStateOf(0) }
+    var nodeCapabilities by remember(effectiveNodeUrl) {
+        mutableStateOf(ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE)
+    }
+    LaunchedEffect(effectiveNodeUrl, activeProfileId, capabilityProbeAttempt) {
+        nodeCapabilities = apiClient.getNodeCapabilities(effectiveNodeUrl)
+        platformLog(
+            TAG,
+            "[INFO][caps] $effectiveNodeUrl declares ${nodeCapabilities.declared?.size ?: "nothing"}" +
+                if (nodeCapabilities.unreachable) " (unreachable)" else "" +
+                if (nodeCapabilities.undetermined) " (undetermined)" else "",
+        )
+    }
+
     // Catch-up: an existing logged-in owner whose local node has NO fed-ID
     // (legacy WA claim) must be auto-presented the guided Add Federation ID flow
     // after login — the startup owned-nodes projection ran UNAUTHENTICATED (or
@@ -3616,9 +3626,14 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.VerifyAgent] caps=${nodeCapabilities.state(ai.ciris.mobile.shared.models.capability.Capability.REGISTRY_LOOKUP)}")
                 VerifyAgentScreen(
                     capabilities = nodeCapabilities,
-                    nodeUrl = nodeBaseUrl,
-                    onLookup = { hash -> apiClient.lookupAgentHash(hash, nodeBaseUrl) },
-                    onBack = { currentScreen = Screen.Interact },
+                    nodeUrl = effectiveNodeUrl,
+                    onLookup = { hash -> apiClient.lookupAgentHash(hash, effectiveNodeUrl) },
+                    onRetryProbe = { capabilityProbeAttempt++ },
+                    // homeTarget, not Interact: on a bare node the landing
+                    // surface is Contacts and Interact is not in the sidebar, so
+                    // returning there drops a node user onto a screen their node
+                    // cannot serve (Codex, PR #20).
+                    onBack = { currentScreen = Screen.ManageNodes },
                 )
             }
 
@@ -4565,7 +4580,7 @@ fun CIRISApp(
                                 Screen.VizSettings -> Screen.Settings
                                 Screen.ServerConnection -> Screen.Interact
                                 Screen.ClaimNode -> Screen.Interact
-                                Screen.VerifyAgent -> Screen.Interact
+                                Screen.VerifyAgent -> Screen.ManageNodes
                                 // Sub-screens of the home (Interact)
                                 Screen.Adapters,
                                 Screen.Audit,

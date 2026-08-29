@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 fun VerifyAgentCapabilityNotice(
     capabilities: NodeCapabilities,
     modifier: Modifier = Modifier,
+    onRetry: (() -> Unit)? = null,
 ) {
     val state = capabilities.state(Capability.REGISTRY_LOOKUP)
     if (state == CapabilityState.PRESENT) return
@@ -104,6 +105,20 @@ fun VerifyAgentCapabilityNotice(
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Only the transient states get a retry. Offering one for ABSENT or
+            // UNDECLARED would invite the operator to keep pressing a button
+            // that cannot change the answer.
+            if (onRetry != null &&
+                (state == CapabilityState.UNREACHABLE || state == CapabilityState.UNDETERMINED)
+            ) {
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onRetry,
+                    modifier = Modifier.testableClickable("btn_verify_retry_probe") { onRetry() },
+                ) {
+                    Text(localizedString("mobile.verify_retry"))
+                }
+            }
         }
     }
 }
@@ -195,6 +210,8 @@ fun VerifyAgentScreen(
     /** Which node answers. Also the identity the result belongs to — see below. */
     nodeUrl: String,
     onLookup: suspend (String) -> LookupResult,
+    /** Re-probe the node's declaration — only offered for the transient states. */
+    onRetryProbe: (() -> Unit)? = null,
     onBack: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -226,7 +243,7 @@ fun VerifyAgentScreen(
 
         // Says which of UNDECLARED / ABSENT / UNREACHABLE applies, and returns
         // nothing at all when the capability is PRESENT.
-        VerifyAgentCapabilityNotice(capabilities)
+        VerifyAgentCapabilityNotice(capabilities, onRetry = onRetryProbe)
 
         if (usable) {
             OutlinedTextField(

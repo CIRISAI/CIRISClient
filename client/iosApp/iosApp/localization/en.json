@@ -3013,7 +3013,8 @@
     "verify_unavailable_title": "Could not check",
     "verify_unavailable_body": "This is not the same as 'not registered' — the registry did not answer.",
     "verify_undetermined_title": "This node could not determine what it can do",
-    "verify_undetermined_body": "The node answered, but could not read its own key record. This is usually temporary — try again shortly."
+    "verify_undetermined_body": "The node answered, but could not read its own key record. This is usually temporary — try again shortly.",
+    "verify_retry": "Check again"
   },
   "moderation": {
     "ladder": {

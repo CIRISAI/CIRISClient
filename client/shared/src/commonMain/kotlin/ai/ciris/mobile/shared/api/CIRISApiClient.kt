@@ -9235,6 +9235,19 @@ class CIRISApiClient(
         // and the fallback then displayed the hash the OPERATOR TYPED as though
         // the registry had returned it (Codex, PR #20). On a revocation check
         // that is the worst possible lie: it shows their input confirmed.
+        // AND IT MUST BE THE HASH WE ASKED ABOUT. Rejecting only a blank one
+        // still accepted a record for a DIFFERENT build and showed its verdict
+        // beside the operator's query — and hashes are long and visually similar,
+        // so displaying the returned value is not enough to catch it
+        // (Codex, PR #20).
+        if (returnedHash.isNotBlank() &&
+            !returnedHash.equals(agentHash.trim(), ignoreCase = true)
+        ) {
+            logInfo(method, "registry answered for a different hash than asked")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node answered about a different build than the one asked about"
+            )
+        }
         if (returnedHash.isBlank()) {
             logInfo(method, "registry returned a record without a hash — not rendering it as an answer")
             return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
