@@ -280,6 +280,40 @@
       },
       "notes": "THE GATE WAS ANSWERING A QUESTION THE WIZARD WAS NOT ASKING. clientMode decides whether AGENT-only surfaces and pollers run, and it demotes a folded-but-unconfigured brain to NODE (CIRISAgent#1075) because such a brain 503s every agent poller — the arm's own comment lists `addLlmProvider 503 <- so the user could not configure an escape`. The wizard then used that verdict to skip the step that calls addLlmProvider, so: unconfigured -> NODE -> no AI step -> still unconfigured. The fix that stopped the 503s had become the reason configuration never happened. ModeProbe.brainPresent = folded && reachable, independent of readiness, because readiness must not gate the step that produces it; the poller gate is unchanged. The provisional half is fixed too — setupHasAgent was `clientMode?.isAgent ?: false`, collapsing 'not probed yet' into 'no brain' while SetupViewModel is keyed on it, so Screen.Setup now waits for the probe rather than fixing its step list on a default. Third place this repo has needed distinct zeroes, after ModeProbe.undetermined and CapabilityWire's null-versus-empty",
       "published": null
+    },
+    {
+      "client_version": "0.5.195",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. This release only REMOVES a client-side control; it asks the node for nothing it was not already asking for, so nothing here moves the floor",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "identity.federation_entry is RETAINED and narrowed, not dropped: creating a federation identity is still offered here. What went away is the sign-in half, which was never an entry — it could only refuse",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3882,
+        "keys_note": "3882 is measured, not carried forward. The 0.5.194 row recorded 3861 while the bundle actually held 3885, so that figure was already 24 short of the tree it described; propagating it minus three would have preserved the error. Three keys are removed here: login_federation_existing, login_federation_signin_as, login_federation_needs_account"
+      },
+      "notes": "A CONTROL THAT COULD NEVER DO ANYTHING (CIRISClient#23). The login screen offered \"Sign in as <key_id>\" whenever the node reported a key_id — which on a fresh install is just the bootstrap keystore alias, so the button appeared for users who had no federation identity at all. It could not work even when it appeared: getOwnerHint resolves to null pre-setup one line above the render, and the click handler refused every press without a live owner session. The call site carried a comment stating there was deliberately NO fedID sign-in option here because a credential-less door was a security hole, and the button rendered twelve lines below it. The guard was correct and the door should not have been reopened behind it; both are now gone, along with mayEnterWithFederationIdentity, which existed only to keep it shut. Removed rather than relabelled: a control whose every outcome is a refusal has no name that makes it honest",
+      "published": null
     }
   ]
 }
