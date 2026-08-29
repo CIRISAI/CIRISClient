@@ -247,6 +247,39 @@
       },
       "notes": "The pattern cut: UI ahead of the API, gated on a declaration rather than probed for. CIRISServer shipped the declaration independently and drew the same null-versus-empty line in its own field docs, which is the useful signal — the distinction is a property of the problem, not a preference. Sixteen review findings landed on this branch and every one was the same shape: presenting an answer that was not there. A verdict from another node, a record for another hash, a transport failure read as an old node, the operator's own input echoed back as confirmation. The gate was sound from the first commit; the plumbing around attribution was where all the work was",
       "published": null
+    },
+    {
+      "client_version": "0.5.194",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged, and gated against the client's MIN_NODE_VERSION by compat/validate.py. Nothing here raises the floor: the wizard fix reads folded/reachable, which the node has reported since 0.5.168",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change — a first-run correctness fix. On a folded agent the setup wizard dropped the AI step, so setup finished with NO LLM CONFIGURED on the one build that cannot work without one: the user reached chat and got silence. Timing-dependent, so it hit slow machines and not fast ones (CIRISClient#21)",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3861
+      },
+      "notes": "THE GATE WAS ANSWERING A QUESTION THE WIZARD WAS NOT ASKING. clientMode decides whether AGENT-only surfaces and pollers run, and it demotes a folded-but-unconfigured brain to NODE (CIRISAgent#1075) because such a brain 503s every agent poller — the arm's own comment lists `addLlmProvider 503 <- so the user could not configure an escape`. The wizard then used that verdict to skip the step that calls addLlmProvider, so: unconfigured -> NODE -> no AI step -> still unconfigured. The fix that stopped the 503s had become the reason configuration never happened. ModeProbe.brainPresent = folded && reachable, independent of readiness, because readiness must not gate the step that produces it; the poller gate is unchanged. The provisional half is fixed too — setupHasAgent was `clientMode?.isAgent ?: false`, collapsing 'not probed yet' into 'no brain' while SetupViewModel is keyed on it, so Screen.Setup now waits for the probe rather than fixing its step list on a default. Third place this repo has needed distinct zeroes, after ModeProbe.undetermined and CapabilityWire's null-versus-empty",
+      "published": null
     }
   ]
 }
