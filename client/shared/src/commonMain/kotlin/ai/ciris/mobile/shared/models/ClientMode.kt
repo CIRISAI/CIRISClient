@@ -51,7 +51,30 @@ enum class ClientMode {
  * cannot. [undetermined] is a RETRY signal, not a verdict: the caller must
  * re-probe (bounded) and must NOT latch [mode] as final while it is set.
  */
-data class ModeProbe(val mode: ClientMode, val undetermined: Boolean)
+data class ModeProbe(
+    val mode: ClientMode,
+    val undetermined: Boolean,
+    /**
+     * IS THERE A BRAIN HERE AT ALL — regardless of whether it is configured yet.
+     *
+     * [mode] answers a NARROWER question than it looks like it answers: "should
+     * the agent surfaces and the AGENT-only pollers run". It deliberately
+     * demotes a folded brain that reports itself unconfigured (CIRISAgent#1075)
+     * because such a brain 503s every agent poller — including, per the comment
+     * on that arm, `addLlmProvider`, "so the user could not configure an escape".
+     *
+     * The SETUP WIZARD asks a different question: is there a brain that needs
+     * configuring? For that, being unconfigured is the REASON TO OFFER THE STEP,
+     * not to hide it — and using [mode] made it circular. On a folded agent's
+     * first run the brain is unconfigured by definition, so the gate said NODE,
+     * so the wizard dropped the AI step, so the brain stayed unconfigured and
+     * the user reached chat to silence (CIRISClient#21).
+     *
+     * `folded && reachable` — a brain that exists and is answering. Nothing
+     * about its readiness, which is the wizard's job to fix.
+     */
+    val brainPresent: Boolean = false,
+)
 
 /** The runtime's own answer to "what am I" — `data.role` in `/v1/system/health`. */
 const val ROLE_AGENT = "agent"
@@ -207,6 +230,8 @@ fun clientModeFrom(
             clientModeFrom(cognitiveState, serviceCount, brainUnconfigured, role)
         },
         undetermined = agentFolded && !agentReachable && !brainUnconfigured && !declaredAgent,
+        // Independent of readiness on purpose — see the field doc.
+        brainPresent = agentFolded && agentReachable,
     )
 }
 
