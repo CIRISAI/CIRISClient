@@ -9300,36 +9300,14 @@ class CIRISApiClient(
         } finally {
             client.close()
         }
-        // `"capabilities": [ "a", "b" ]` — absent array means undeclared, empty
-        // array means declared-and-holds-nothing. The two are different answers.
-        // THREE SHAPES, THREE ANSWERS (CIRISServer#499, src/conformance.rs):
-        //   key absent            an older node that never had the field
-        //   "capabilities": null  the node could not read its own key record
-        //   "capabilities": [...] the conferred set, possibly empty
-        //
-        // The server draws the middle distinction on purpose — "'no capabilities'
-        // and 'could not determine' must not collapse into one answer" — and my
-        // first parser matched only the array, so an explicit null read as a
-        // missing key and told a current node's operator to upgrade.
-        val hasKey = Regex("\"capabilities\"\\s*:").containsMatchIn(body)
-        val isNull = Regex("\"capabilities\"\\s*:\\s*null").containsMatchIn(body)
-        val block = Regex("\"capabilities\"\\s*:\\s*\\[([^\\]]*)\\]").find(body)
-        if (isNull) {
-            ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDETERMINED
-        } else if (block == null) {
-            if (hasKey) {
-                // Present but neither null nor an array: we cannot read it, and
-                // guessing which of the other three it means would be inventing.
-                ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
-            } else {
-                ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNDECLARED
-            }
-        } else {
-            val ids = Regex("\"([^\"]+)\"").findAll(block.groupValues[1])
-                .map { it.groupValues[1] }
-                .toSet()
-            ai.ciris.mobile.shared.models.capability.NodeCapabilities(ids)
-        }
+        // ONE READER FOR THE WHOLE CONTRACT — see CapabilityWire, which
+        // enumerates every wire shape and is the reference CIRISServer and
+        // CIRISAgent read. A second parser here would be a second opinion about
+        // what silence means, which is the thing that keeps going wrong.
+        ai.ciris.mobile.shared.models.capability.CapabilityWire.parse(
+            body,
+            ai.ciris.mobile.shared.models.capability.CapabilityWire.FIELD_CONFERRED,
+        )
     } catch (e: kotlinx.coroutines.CancellationException) {
         // Structured concurrency: a cancelled probe must die, not publish state.
         throw e
