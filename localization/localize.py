@@ -1035,28 +1035,28 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
         # each rung, so a rung that returns well-formed but rejected text is
         # escalated rather than accepted. What survives every rung is what no
         # model this pipeline can reach was able to render acceptably.
-        fixes, unresolved = repair_until_clean(lang, values, findings, en_flat, spend)
+        fixes, unrepaired = repair_until_clean(lang, values, findings, en_flat, spend)
         values.update(fixes)
         for k in fixes:
             findings[k] = []
             scores[k] = 100
-        for k, errs in unresolved.items():
+        for k, errs in unrepaired.items():
             findings[k] = errs
             scores[k] = mqm_score(errs)
 
-        if unresolved:
+        if unrepaired:
             # Rejected text is still rejected text. Writing it and exiting 0
             # would put a semantic defect through a structural gate that cannot
             # see it — which is the entire reason the review lane exists.
-            print(f"[repair] {lang}: {len(unresolved)} key(s) rejected by every rung "
-                  f"— {', '.join(sorted(unresolved)[:5])}"
-                  f"{' …' if len(unresolved) > 5 else ''}")
+            print(f"[repair] {lang}: {len(unrepaired)} key(s) rejected by every rung "
+                  f"— {', '.join(sorted(unrepaired)[:5])}"
+                  f"{' …' if len(unrepaired) > 5 else ''}")
             rc = 1
             rejected[lang] = {
                 k: "; ".join(
                     f"{e.get('severity')}/{e.get('category')}: {e.get('note', '')}"
                     for e in errs if needs_repair([e])
-                ) for k, errs in unresolved.items()
+                ) for k, errs in unrepaired.items()
             }
 
         report[lang] = {
@@ -1086,7 +1086,7 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
         # 1, the key stays missing, and the strict guard still blocks the merge
         # until it is filled. The only thing that changes is that the accepted
         # values survive, so the next run has one key to do instead of 588.
-        withheld = set(rejected.get(lang, {})) | set(unresolved)
+        withheld = set(rejected.get(lang, {})) | set(unrepaired)
         writable = {k: v for k, v in values.items() if k not in withheld}
         if writable:
             insert(lang, writable, en, overwrite=(lane != "translate"))
