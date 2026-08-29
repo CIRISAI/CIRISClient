@@ -458,7 +458,6 @@ fun CIRISApp(
         TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
     }
 
-
     // Handle system back button - navigate back to appropriate parent screen
     // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is
     // Contacts, and a back press there must fall through to the platform (leave
@@ -812,6 +811,67 @@ fun CIRISApp(
             }
         }
     }
+    // WHAT THE ACTIVE NODE DECLARES IT CAN DO.
+    //
+    // Keyed on the ACTIVE PROFILE, not the `nodeBaseUrl` parameter.
+    // `NodeSwitcherViewModel.switchTo` repoints `apiClient.baseUrl` and
+    // `activeProfileId`; the CIRISApp parameter is fixed for the composition and
+    // never moves. Keying on it meant the probe did not re-run on a switch and
+    // the verify screen's per-node state never reset — so one registry's
+    // registered/revoked verdict could be presented as the selected node's
+    // answer (Codex, PR #20). The VM's own docs say it: reacting to
+    // `activeProfile` is the screen's responsibility.
+    //
+    // This is the second time I have reached for the immutable parameter where
+    // the mutable value was needed; the reset home resolution was the first.
+    val activeProfileId by nodeSwitcherViewModel.activeProfileId.collectAsState()
+    // ONLY AFTER AN EXPLICIT SWITCH. `reload()` synthesizes an initial profile
+    // hard-coded to 127.0.0.1:4243, so preferring `activeProfile` outright
+    // replaced the CONFIGURED node — the browser origin on wasm, CIRIS_NODE_URL
+    // on desktop — with localhost when nobody had switched anything
+    // (Codex, PR #20). The previous revision used a parameter that never
+    // changes; this one used a default that was never chosen. Neither is "the
+    // node in use", which is what the first profile id lets us tell apart.
+    // A LATCH, NOT A COMPARISON. Inferring "did a switch happen" from
+    // `activeProfileId != firstProfileId` makes switching away and BACK to the
+    // first profile indistinguishable from never having switched — so the probe
+    // restored the startup URL while `apiClient` pointed at the profile the
+    // operator had just chosen (Codex, PR #20). Choosing the local profile
+    // deliberately is a real choice and must be honoured as one.
+    //
+    // Once a switch has occurred the operator owns the selection, permanently.
+    val firstProfileId = remember { mutableStateOf<String?>(null) }
+    var hasSwitchedNode by remember { mutableStateOf(false) }
+    LaunchedEffect(activeProfileId) {
+        if (firstProfileId.value == null) {
+            firstProfileId.value = activeProfileId
+        } else if (activeProfileId != firstProfileId.value) {
+            hasSwitchedNode = true
+        }
+    }
+    val switched = hasSwitchedNode
+    val effectiveNodeUrl = if (switched) {
+        nodeSwitcherViewModel.activeProfile?.baseUrl?.takeIf { it.isNotBlank() } ?: nodeBaseUrl
+    } else {
+        nodeBaseUrl
+    }
+
+    // A one-shot probe strands the UI: UNREACHABLE and UNDETERMINED are both
+    // transient, the copy tells the operator to try again, and nothing could.
+    var capabilityProbeAttempt by remember { mutableStateOf(0) }
+    var nodeCapabilities by remember(effectiveNodeUrl) {
+        mutableStateOf(ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE)
+    }
+    LaunchedEffect(effectiveNodeUrl, activeProfileId, capabilityProbeAttempt) {
+        nodeCapabilities = apiClient.getNodeCapabilities(effectiveNodeUrl)
+        platformLog(
+            TAG,
+            "[INFO][caps] $effectiveNodeUrl declares ${nodeCapabilities.declared?.size ?: "nothing"}" +
+                if (nodeCapabilities.unreachable) " (unreachable)" else "" +
+                if (nodeCapabilities.undetermined) " (undetermined)" else "",
+        )
+    }
+
     // Catch-up: an existing logged-in owner whose local node has NO fed-ID
     // (legacy WA claim) must be auto-presented the guided Add Federation ID flow
     // after login — the startup owned-nodes projection ran UNAUTHENTICATED (or
@@ -3586,6 +3646,25 @@ fun CIRISApp(
                 )
             }
 
+            Screen.VerifyAgent -> {
+                // CIRISPortal's /verify, shipped AHEAD of its API. On every node
+                // released today `nodeCapabilities` is UNDECLARED or UNREACHABLE
+                // and the notice explains which — the lookup form only appears
+                // once a node declares registry:lookup (CIRISServer#499).
+                PlatformLogger.d(TAG, "[Screen.VerifyAgent] caps=${nodeCapabilities.state(ai.ciris.mobile.shared.models.capability.Capability.REGISTRY_LOOKUP)}")
+                VerifyAgentScreen(
+                    capabilities = nodeCapabilities,
+                    nodeUrl = effectiveNodeUrl,
+                    onLookup = { hash -> apiClient.lookupAgentHash(hash, effectiveNodeUrl) },
+                    onRetryProbe = { capabilityProbeAttempt++ },
+                    // homeTarget, not Interact: on a bare node the landing
+                    // surface is Contacts and Interact is not in the sidebar, so
+                    // returning there drops a node user onto a screen their node
+                    // cannot serve (Codex, PR #20).
+                    onBack = { currentScreen = Screen.ManageNodes },
+                )
+            }
+
             Screen.ClaimNode -> {
                 // Last UI piece of the founder flow: enter a node's NodeCode +
                 // claim PIN → connect/identity-pin → claim SYSTEM_ADMIN. Drives
@@ -3612,6 +3691,7 @@ fun CIRISApp(
                     viewModel = nodeSwitcherViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     onClaimNode = { currentScreen = Screen.ClaimNode },
+                    onVerifyAgent = { currentScreen = Screen.VerifyAgent },
                     // Catch-up: legacy owner (no fed-ID) → guided Add Federation ID.
                     // Manual entry returns to Manage Nodes (vs. the login auto-
                     // present, which returns to Interact).
@@ -4528,6 +4608,7 @@ fun CIRISApp(
                                 Screen.VizSettings -> Screen.Settings
                                 Screen.ServerConnection -> Screen.Interact
                                 Screen.ClaimNode -> Screen.Interact
+                                Screen.VerifyAgent -> Screen.ManageNodes
                                 // Sub-screens of the home (Interact)
                                 Screen.Adapters,
                                 Screen.Audit,
@@ -5312,6 +5393,7 @@ private sealed class Screen {
     // Claim-Ownership: founder enters a node's NodeCode + claim PIN to become
     // its SYSTEM_ADMIN (connect → identity-pin → claim). Flow-only (no sidebar).
     object ClaimNode : Screen()
+    object VerifyAgent : Screen()
 
     // Node management (CRUD over saved NodeProfiles) — first-class Manage-group
     // surface, promoted from the in-page node-switcher dropdown.
@@ -5492,7 +5574,7 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
     // Flow-only / no sidebar
     Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection, Screen.ClaimNode,
-    Screen.AddFederationId, Screen.Help -> null
+    Screen.AddFederationId, Screen.Help, Screen.VerifyAgent -> null
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {

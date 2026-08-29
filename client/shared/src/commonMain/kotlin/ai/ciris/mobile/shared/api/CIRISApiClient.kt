@@ -9148,6 +9148,177 @@ class CIRISApiClient(
      * not cost the answer. Null when the node does not declare one — the caller
      * then falls back to the guess, which is where it was before.
      */
+    /**
+     * WHAT THIS NODE DECLARES IT CAN DO — `GET {nodeUrl}/v1/federation/conformance`.
+     *
+     * Returns [NodeCapabilities.UNDECLARED] for every node that does not carry a
+     * `capabilities` array, which today is all of them: the declaration is
+     * CIRISServer#499 and the registry fold is what will populate it. Undeclared
+     * is NOT absent — see [CapabilityState] — so the UI says the node has not
+     * told us rather than hiding a surface a newer node will serve.
+     *
+     * A NARROW SCRAPE, deliberately, like the other raw reads in this file. The
+     * generated SDK binds a conformance model that predates this field, and a
+     * strict decode failing on an unknown shape would turn "the node declared
+     * something we do not parse" into "the node declared nothing" — the exact
+     * collapse this three-state model exists to prevent.
+     *
+     * Never throws. A node that is down, slow, or serving an older conformance
+     * document is undeclared, which is the honest reading of all three.
+     */
+    /**
+     * Look an agent build up in the registry — `GET {nodeUrl}/v1/registry/lookup?agent_hash=`.
+     *
+     * CIRISPortal's `/verify`, served by a canonical node once CIRISRegistry
+     * folds in. GATED BY THE CALLER on [Capability.REGISTRY_LOOKUP]: no node
+     * released today serves this, and calling it anyway would turn a missing
+     * capability into a connection error the operator has to interpret.
+     *
+     * The three outcomes are kept apart deliberately. `found: false` is the
+     * registry ANSWERING that it holds no record — actionable. A transport
+     * failure is not an answer, and rendering it as "not registered" tells
+     * someone an unverified build was checked and cleared.
+     */
+    suspend fun lookupAgentHash(
+        agentHash: String,
+        nodeUrl: String,
+    ): ai.ciris.mobile.shared.models.capability.LookupResult {
+        val method = "lookupAgentHash"
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 10_000
+                connectTimeoutMillis = 5_000
+            }
+        }
+        val body = try {
+            val resp = client.get("$nodeUrl/v1/registry/lookup") {
+                url.parameters.append("agent_hash", agentHash)
+            }
+            if (!resp.status.isSuccess()) {
+                logInfo(method, "registry lookup -> HTTP ${resp.status.value}")
+                return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                    "the node answered HTTP ${resp.status.value}"
+                )
+            }
+            resp.bodyAsText()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logInfo(method, "registry lookup unreachable: ${e.message?.take(80)}")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                e.message?.take(120) ?: "the registry could not be reached"
+            )
+        } finally {
+            client.close()
+        }
+
+        if (Regex("\"found\"\\s*:\\s*false").containsMatchIn(body)) {
+            return ai.ciris.mobile.shared.models.capability.LookupResult.NotFound
+        }
+        // SNAKE CASE FIRST. The checked-in OpenAPI schemas are snake_case
+        // throughout and this request itself sends `agent_hash`; the Portal's
+        // TypeScript interface is camelCase because Next.js maps it. Reading
+        // only camelCase silently dropped the type, timestamp and attestation
+        // flag — and substituted the QUERIED hash for the returned one, which
+        // would have displayed the hash the operator typed as though the
+        // registry had confirmed it (Codex, PR #20).
+        fun str(vararg names: String): String {
+            for (n in names) {
+                Regex("\"$n\"\\s*:\\s*\"([^\"]*)\"").find(body)?.let { return it.groupValues[1] }
+            }
+            return ""
+        }
+        val raw = str("status", "agent_status")
+        val returnedHash = str("agent_hash", "agentHash")
+        // THE REGISTRY MUST SAY WHICH HASH IT VERIFIED. The guard was `raw AND
+        // hash both blank`, so a record carrying a status but no hash passed —
+        // and the fallback then displayed the hash the OPERATOR TYPED as though
+        // the registry had returned it (Codex, PR #20). On a revocation check
+        // that is the worst possible lie: it shows their input confirmed.
+        // AND IT MUST BE THE HASH WE ASKED ABOUT. Rejecting only a blank one
+        // still accepted a record for a DIFFERENT build and showed its verdict
+        // beside the operator's query — and hashes are long and visually similar,
+        // so displaying the returned value is not enough to catch it
+        // (Codex, PR #20).
+        if (returnedHash.isNotBlank() &&
+            !returnedHash.equals(agentHash.trim(), ignoreCase = true)
+        ) {
+            logInfo(method, "registry answered for a different hash than asked")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node answered about a different build than the one asked about"
+            )
+        }
+        if (returnedHash.isBlank()) {
+            logInfo(method, "registry returned a record without a hash — not rendering it as an answer")
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node returned a record without the hash it verified"
+            )
+        }
+        if (raw.isBlank()) {
+            // A 200 we cannot read is not a verdict. Same rule as the status enum.
+            return ai.ciris.mobile.shared.models.capability.LookupResult.Unavailable(
+                "the node returned a record this client could not read"
+            )
+        }
+        return ai.ciris.mobile.shared.models.capability.LookupResult.Found(
+            ai.ciris.mobile.shared.models.capability.AgentRecord(
+                // The RETURNED hash. No fallback to the queried value exists
+                // any more — its absence is handled above as Unavailable.
+                agentHash = returnedHash,
+                agentType = str("agent_type", "agentType"),
+                version = str("version"),
+                status = ai.ciris.mobile.shared.models.capability.AgentStatus.fromWire(raw),
+                rawStatus = raw,
+                registeredAt = str("registered_at", "registeredAt"),
+                hasAttestation = Regex("\"(has_attestation|hasAttestation)\"\\s*:\\s*true")
+                    .containsMatchIn(body),
+            )
+        )
+    }
+
+    suspend fun getNodeCapabilities(
+        nodeUrl: String,
+    ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = try {
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 5_000
+                connectTimeoutMillis = 3_000
+            }
+        }
+        val body = try {
+            val resp = client.get("$nodeUrl/v1/federation/conformance")
+            // A 404 or 500 STILL HAS A BODY, and that body has no capabilities
+            // array — so reading it fell through to UNDECLARED and told the
+            // operator their node predates the declaration. The thrown path was
+            // fixed and this one was not (Codex, PR #20): same false version
+            // diagnosis, reached by a status code instead of an exception.
+            if (!resp.status.isSuccess()) {
+                logInfo("getNodeCapabilities", "conformance -> HTTP ${resp.status.value} at $nodeUrl")
+                return ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
+            }
+            resp.bodyAsText()
+        } finally {
+            client.close()
+        }
+        // ONE READER FOR THE WHOLE CONTRACT — see CapabilityWire, which
+        // enumerates every wire shape and is the reference CIRISServer and
+        // CIRISAgent read. A second parser here would be a second opinion about
+        // what silence means, which is the thing that keeps going wrong.
+        ai.ciris.mobile.shared.models.capability.CapabilityWire.parse(
+            body,
+            ai.ciris.mobile.shared.models.capability.CapabilityWire.FIELD_CONFERRED,
+        )
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // Structured concurrency: a cancelled probe must die, not publish state.
+        throw e
+    } catch (e: Exception) {
+        // COULD NOT ASK — not "the node is old". Mapping this to UNDECLARED made
+        // the UI tell an operator with a dropped connection that their current
+        // node predates capability declarations (Codex, PR #20).
+        logInfo("getNodeCapabilities", "conformance unreadable at $nodeUrl: ${e.message?.take(80)}")
+        ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE
+    }
+
     suspend fun getNodeHomePath(nodeUrl: String = LOCAL_NODE_URL): String? = runCatching {
         // A short-lived client, as the other raw scrapes in this file do: the
         // generated setup API binds a model that does not carry claim_pin_file.

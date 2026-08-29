@@ -1035,28 +1035,28 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
         # each rung, so a rung that returns well-formed but rejected text is
         # escalated rather than accepted. What survives every rung is what no
         # model this pipeline can reach was able to render acceptably.
-        fixes, unresolved = repair_until_clean(lang, values, findings, en_flat, spend)
+        fixes, unrepaired = repair_until_clean(lang, values, findings, en_flat, spend)
         values.update(fixes)
         for k in fixes:
             findings[k] = []
             scores[k] = 100
-        for k, errs in unresolved.items():
+        for k, errs in unrepaired.items():
             findings[k] = errs
             scores[k] = mqm_score(errs)
 
-        if unresolved:
+        if unrepaired:
             # Rejected text is still rejected text. Writing it and exiting 0
             # would put a semantic defect through a structural gate that cannot
             # see it — which is the entire reason the review lane exists.
-            print(f"[repair] {lang}: {len(unresolved)} key(s) rejected by every rung "
-                  f"— {', '.join(sorted(unresolved)[:5])}"
-                  f"{' …' if len(unresolved) > 5 else ''}")
+            print(f"[repair] {lang}: {len(unrepaired)} key(s) rejected by every rung "
+                  f"— {', '.join(sorted(unrepaired)[:5])}"
+                  f"{' …' if len(unrepaired) > 5 else ''}")
             rc = 1
             rejected[lang] = {
                 k: "; ".join(
                     f"{e.get('severity')}/{e.get('category')}: {e.get('note', '')}"
                     for e in errs if needs_repair([e])
-                ) for k, errs in unresolved.items()
+                ) for k, errs in unrepaired.items()
             }
 
         report[lang] = {
@@ -1070,9 +1070,30 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
             "rejected_unrepaired": rejected.get(lang, {}),
         }
 
-        if values:
-            insert(lang, values, en, overwrite=(lane != "translate"))
-            print(f"[write] {lang}: {len(values)} value(s), 4 mirrors")
+        # BANK THE ACCEPTED WORK, WITHHOLD THE REJECTED.
+        #
+        # This used to write everything — accepted and rejected alike — and then
+        # exit 1, which failed the job before the Commit step and threw the
+        # WHOLE RUN away. On a 21-key job across 28 languages that is 588 pairs
+        # discarded because one of them came back clumsy, and it happened seven
+        # times in a row on one branch: every run failed on a different single
+        # pair, so every run binned 587 good translations and cost a full lane to
+        # do it.
+        #
+        # The guarantee is unchanged and is what makes this safe: a rejected
+        # value is NOT written, so nothing semantically bad reaches a bundle and
+        # English never appears under a non-English locale. The run still exits
+        # 1, the key stays missing, and the strict guard still blocks the merge
+        # until it is filled. The only thing that changes is that the accepted
+        # values survive, so the next run has one key to do instead of 588.
+        withheld = set(rejected.get(lang, {})) | set(unrepaired)
+        writable = {k: v for k, v in values.items() if k not in withheld}
+        if writable:
+            insert(lang, writable, en, overwrite=(lane != "translate"))
+            print(f"[write] {lang}: {len(writable)} value(s), 4 mirrors"
+                  + (f" ({len(withheld)} withheld — rejected)" if withheld else ""))
+        elif withheld:
+            print(f"[write] {lang}: nothing written — all {len(withheld)} rejected")
 
     print("\nspend (estimate — billing is what the API bills):")
     print(spend.report(batch=(mode == "batch")))
