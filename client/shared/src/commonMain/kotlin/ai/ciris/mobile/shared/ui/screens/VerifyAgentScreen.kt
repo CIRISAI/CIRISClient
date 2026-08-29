@@ -105,12 +105,14 @@ fun VerifyAgentCapabilityNotice(
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // Only the transient states get a retry. Offering one for ABSENT or
-            // UNDECLARED would invite the operator to keep pressing a button
-            // that cannot change the answer.
-            if (onRetry != null &&
-                (state == CapabilityState.UNREACHABLE || state == CapabilityState.UNDETERMINED)
-            ) {
+            // EVERY non-PRESENT state gets a retry. I first withheld it from
+            // ABSENT and UNDECLARED, reasoning that pressing again cannot change
+            // a settled answer — but an operator can upgrade the node or install
+            // registry support AT THE SAME URL, and the probe result survives
+            // leaving and reopening the screen. So those answers are not
+            // permanent either, and withholding the control left the form
+            // unavailable for the rest of the session (Codex, PR #20).
+            if (onRetry != null) {
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = onRetry,
@@ -227,6 +229,24 @@ fun VerifyAgentScreen(
     var inFlight by remember(nodeUrl) { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
+    // THE RESULT MUST BELONG TO THE HASH THAT WAS SUBMITTED. The field stays
+    // editable while a lookup runs, so submitting A and then typing B left A's
+    // coroutine to write its answer underneath a field showing B — and the
+    // API's returned-hash check cannot catch it, because the response correctly
+    // matches A (Codex, PR #20). The submitted value is captured and the
+    // completion is discarded if the field has moved on.
+    val submit: (String) -> Unit = { candidate ->
+        val submitted = candidate.trim()
+        if (!inFlight && submitted.isNotBlank()) {
+            inFlight = true
+            scope.launch {
+                val r = onLookup(submitted)
+                if (hash.trim() == submitted) result = r
+                inFlight = false
+            }
+        }
+    }
+
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -255,27 +275,11 @@ fun VerifyAgentScreen(
                 modifier = Modifier.fillMaxWidth().testable("input_verify_hash"),
             )
             Button(
-                onClick = {
-                    if (!inFlight && hash.isNotBlank()) {
-                        inFlight = true
-                        scope.launch {
-                            result = onLookup(hash.trim())
-                            inFlight = false
-                        }
-                    }
-                },
+                onClick = { submit(hash) },
                 enabled = !inFlight && hash.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable("btn_verify_submit") {
-                        if (!inFlight && hash.isNotBlank()) {
-                            inFlight = true
-                            scope.launch {
-                                result = onLookup(hash.trim())
-                                inFlight = false
-                            }
-                        }
-                    },
+                    .testableClickable("btn_verify_submit") { submit(hash) },
             ) {
                 Text(localizedString("mobile.verify_button"))
             }

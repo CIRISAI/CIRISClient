@@ -825,8 +825,23 @@ fun CIRISApp(
     // This is the second time I have reached for the immutable parameter where
     // the mutable value was needed; the reset home resolution was the first.
     val activeProfileId by nodeSwitcherViewModel.activeProfileId.collectAsState()
-    val effectiveNodeUrl = nodeSwitcherViewModel.activeProfile
-        ?.baseUrl?.takeIf { it.isNotBlank() } ?: nodeBaseUrl
+    // ONLY AFTER AN EXPLICIT SWITCH. `reload()` synthesizes an initial profile
+    // hard-coded to 127.0.0.1:4243, so preferring `activeProfile` outright
+    // replaced the CONFIGURED node — the browser origin on wasm, CIRIS_NODE_URL
+    // on desktop — with localhost when nobody had switched anything
+    // (Codex, PR #20). The previous revision used a parameter that never
+    // changes; this one used a default that was never chosen. Neither is "the
+    // node in use", which is what the first profile id lets us tell apart.
+    val firstProfileId = remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(activeProfileId) {
+        if (firstProfileId.value == null) firstProfileId.value = activeProfileId
+    }
+    val switched = activeProfileId != null && activeProfileId != firstProfileId.value
+    val effectiveNodeUrl = if (switched) {
+        nodeSwitcherViewModel.activeProfile?.baseUrl?.takeIf { it.isNotBlank() } ?: nodeBaseUrl
+    } else {
+        nodeBaseUrl
+    }
 
     // A one-shot probe strands the UI: UNREACHABLE and UNDETERMINED are both
     // transient, the copy tells the operator to try again, and nothing could.
