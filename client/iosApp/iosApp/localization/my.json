@@ -2944,6 +2944,7 @@
     "verify_status_registered": "မှတ်ပုံတင်ထားသည်",
     "verify_status_deprecated": "ထပ်မံ အသုံးပြုရန် အကြံမပြုတော့ပါ",
     "verify_status_revoked": "ရုပ်သိမ်းထားသည်",
+    "verify_status_unreadable": "အခြေအနေကို အသိအမှတ်မပြုနိုင်ပါ",
     "attestation_actions_desc": "ဤမှတ်တမ်းအတွက် လုပ်ဆောင်ချက်များ",
     "chat_badge_message": "မက်ဆေ့ချ်",
     "chat_details": "အမျိုးအစား {type} · scope {scope} · အခြေအနေ {status}",
