@@ -731,9 +731,24 @@ jobs:
           # and a gate that reports red on a green release is how gates get
           # switched off — which the comment above already said, about the
           # previous time this was too impatient.
+          # `case $?` CANNOT SEE A FAILURE UNDER `bash -e`.
+          #
+          # GitHub runs this as `bash -e {0}`; -e arrives on the command line
+          # and the `set -uo pipefail` above does not clear it (that omission
+          # of -e was the intent, and it was silently overridden). So a
+          # non-zero python3 aborted the whole step before `case` could read
+          # $?, and all 40 retries below were dead code from the day they were
+          # written. That is what failed the 0.5.194 publish: exit 2 on
+          # iteration one, 0.1s after an upload that had succeeded, on a
+          # release that was live and complete minutes later.
+          #
+          # `|| rc=$?` puts the call in a tested context, where -e does not
+          # fire. Keep it that way: do not "simplify" this back to a bare call
+          # followed by `case $?`.
           for i in $(seq 1 40); do
-            python3 packaging/check_universal_wheel.py
-            case $? in
+            rc=0
+            python3 packaging/check_universal_wheel.py || rc=$?
+            case $rc in
               0) exit 0 ;;
               1) echo "::error::the version is published WITHOUT a universal wheel — waiting will not help"; exit 1 ;;
               *) echo "not on the index yet — retry $i/40"; sleep 45 ;;
