@@ -364,14 +364,50 @@ class CIRISApiClient(
     companion object {
         private const val TAG = "CIRISApiClient"
 
+        /** The address a local node uses when nobody has said otherwise. */
+        const val DEFAULT_LOCAL_NODE_URL = "http://127.0.0.1:4243"
+
         /**
          * Base URL of THIS device's **local node** — the ciris-server the app
          * runs in-process (ServerManager.serverUrl). All federation crypto
          * (JCS canonicalization + hybrid signing) happens INSIDE that node's
          * substrate; the app only drives it over plain localhost HTTP. The app
          * holds NO federation keys and signs NO federation artifacts in Kotlin.
+         *
+         * RESOLVED, NOT CONSTANT (CIRISClient#26).
+         *
+         * That reasoning is right and unchanged. What was wrong was making it a
+         * compile-time constant: WHICH node runs in-process is exactly the thing
+         * a constant cannot know, and the app is already told — `Main.kt`
+         * resolves `CIRIS_NODE_URL ?: CIRIS_API_URL ?: <default>` at startup,
+         * and Android's node answers on :8080, not :4243.
+         *
+         * The consequence was not cosmetic. A desktop client attached to a node
+         * on :4343 sent all twelve of its ordinary calls there and then minted
+         * the owner's federation identity on :4243 — a different node the
+         * operator had never attached to. Keys were created on the wrong
+         * substrate while every other call was correct.
+         *
+         * Set once by the platform entry point via [setLocalNodeUrl]. Every one
+         * of the ~30 call sites that names this reads the resolved value, so the
+         * fix did not depend on finding all of them.
          */
-        const val LOCAL_NODE_URL = "http://127.0.0.1:4243"
+        @Volatile
+        var LOCAL_NODE_URL: String = DEFAULT_LOCAL_NODE_URL
+            private set
+
+        /**
+         * Declare which local node this app actually drives. Call once, early,
+         * from the platform entry point — before any federation call site runs.
+         */
+        fun setLocalNodeUrl(url: String) {
+            val trimmed = url.trim().trimEnd('/')
+            require(trimmed.isNotEmpty()) { "local node url must not be blank" }
+            if (trimmed != LOCAL_NODE_URL) {
+                PlatformLogger.i(TAG, "[setLocalNodeUrl] local node is $trimmed (was $LOCAL_NODE_URL)")
+            }
+            LOCAL_NODE_URL = trimmed
+        }
 
         // Mask token for logging (show first 8 and last 4 chars)
         private fun maskToken(token: String?): String {

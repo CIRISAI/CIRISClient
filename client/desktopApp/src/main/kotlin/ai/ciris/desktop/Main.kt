@@ -102,7 +102,15 @@ fun main() {
     // loopback node is ever restarted; pointed at someone else's node this
     // observes and reports.
     val nodeUrl = System.getenv("CIRIS_NODE_URL")
-        ?: System.getenv("CIRIS_API_URL") ?: "http://127.0.0.1:4243"
+        ?: System.getenv("CIRIS_API_URL") ?: ai.ciris.mobile.shared.api.CIRISApiClient.DEFAULT_LOCAL_NODE_URL
+
+    // WHICH local node this is (CIRISClient#26). Every federation call site —
+    // mintUserIdentity, upgradeOwnerToFedId, announceOwnership, getSelfKeyRecord
+    // — used to name a hardcoded :4243 while the rest of the app honoured this
+    // value, so a client attached to :4343 minted the owner's identity on a node
+    // the operator had never attached to. Declared once, here, before anything
+    // that could mint a key.
+    ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(nodeUrl)
     val backendSupervisor = ai.ciris.mobile.shared.backend.BackendSupervisor(
         probe = { ai.ciris.mobile.shared.backend.DesktopBackendController.probe(nodeUrl) },
         controller = ai.ciris.mobile.shared.backend.DesktopBackendController(pythonRuntime),

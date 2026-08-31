@@ -1,3 +1,6 @@
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
+import java.util.zip.ZipOutputStream
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.plugin.mpp.apple.XCFramework
@@ -356,5 +359,131 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// THE PUBLISHED AAR MUST CARRY :generated-api's CLASSES.
+//
+// An Android AAR never contains its project dependencies' classes. Gradle
+// expects a consumer to resolve them from a repository using the POM or module
+// metadata that sits beside the artifact.
+//
+// This AAR has neither. It is published as a bare file on a GitHub release and
+// dropped into `apps/android/libs/`, so there is no repository to resolve
+// anything from — which made `implementation(project(":generated-api"))`
+// structurally unable to reach a consumer. The result shipped: 0.5.195's AAR
+// holds 5,820 `ai/ciris/mobile` classes and zero `ai/ciris/api`, and every APK
+// built against it died in onCreate with
+//
+//     NoClassDefFoundError: Lai/ciris/api/apis/AgentApi;
+//     at CIRISApiClient.<init>(CIRISApiClient.kt:446)
+//
+// on the app's startup path (CIRISClient#25).
+//
+// So the AAR is fat: the two class sets are merged into one classes.jar. That
+// matches how it is actually consumed — a file, not a coordinate.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Build the fat AAR and refuse to emit one that would crash on launch.
+ *
+ * Done with explicit zip surgery rather than Gradle file-collection wiring: the
+ * lazy `from {}` forms resolve at configuration time and cannot see an AAR that
+ * does not exist yet. This is longer and it is deterministic.
+ */
+val fatReleaseAar by tasks.registering {
+    dependsOn("bundleReleaseAar", ":generated-api:bundleReleaseAar")
+
+    val sharedAar = layout.buildDirectory.file("outputs/aar/shared-release.aar")
+    val genAar = project(":generated-api").layout.buildDirectory
+        .file("outputs/aar/generated-api-release.aar")
+    val outAar = layout.buildDirectory.file("fataar/shared-release-fat.aar")
+
+    inputs.file(sharedAar)
+    inputs.file(genAar)
+    outputs.file(outAar)
+
+    doLast {
+        val src = sharedAar.get().asFile
+        val gen = genAar.get().asFile
+        val dst = outAar.get().asFile
+        dst.parentFile.mkdirs()
+
+        fun classesOf(aar: File): Map<String, ByteArray> {
+            val out = LinkedHashMap<String, ByteArray>()
+            ZipFile(aar).use { z ->
+                val entry = z.getEntry("classes.jar")
+                    ?: error("no classes.jar inside ${aar.name}")
+                val jarBytes = z.getInputStream(entry).readBytes()
+                val tmp = File.createTempFile("classes", ".jar")
+                tmp.writeBytes(jarBytes)
+                ZipFile(tmp).use { j ->
+                    for (e in j.entries()) {
+                        if (e.isDirectory) continue
+                        if (e.name.startsWith("META-INF/") &&
+                            (e.name.endsWith(".SF") || e.name.endsWith(".DSA") || e.name.endsWith(".RSA"))
+                        ) continue
+                        out[e.name] = j.getInputStream(e).readBytes()
+                    }
+                }
+                tmp.delete()
+            }
+            return out
+        }
+
+        // :shared first, then :generated-api. On the (unexpected) case of a
+        // name collision, :shared wins and we say so rather than silently
+        // preferring whichever was iterated last.
+        val merged = LinkedHashMap<String, ByteArray>()
+        merged.putAll(classesOf(src))
+        var collisions = 0
+        for ((name, bytes) in classesOf(gen)) {
+            if (merged.putIfAbsent(name, bytes) != null) collisions++
+        }
+        if (collisions > 0) {
+            logger.lifecycle("[fat-aar] $collisions duplicate entry(ies); :shared kept")
+        }
+
+        val mobile = merged.keys.count { it.startsWith("ai/ciris/mobile/") && it.endsWith(".class") }
+        val api = merged.keys.count { it.startsWith("ai/ciris/api/") && it.endsWith(".class") }
+        logger.lifecycle("[fat-aar] ai/ciris/mobile: $mobile   ai/ciris/api: $api")
+
+        // The gate. 0.5.195 published a 16 MB AAR from a BUILD SUCCESSFUL with
+        // zero ai/ciris/api classes in it, so "the build worked" establishes
+        // nothing here. Assert the class the crash actually named.
+        if (mobile == 0) error("fat AAR lost :shared entirely")
+        if (api == 0) error(
+            "fat AAR carries no ai/ciris/api classes — every APK built against it " +
+            "dies in onCreate (CIRISClient#25)"
+        )
+        if (!merged.containsKey("ai/ciris/api/apis/AgentApi.class")) error(
+            "ai/ciris/api/apis/AgentApi is absent — the exact class NoClassDefFoundError named"
+        )
+
+        // classes.jar, then the rest of :shared's AAR around it.
+        val mergedJar = File(dst.parentFile, "classes.jar")
+        ZipOutputStream(mergedJar.outputStream().buffered()).use { out ->
+            for ((name, bytes) in merged) {
+                out.putNextEntry(ZipEntry(name))
+                out.write(bytes)
+                out.closeEntry()
+            }
+        }
+        ZipOutputStream(dst.outputStream().buffered()).use { out ->
+            ZipFile(src).use { z ->
+                for (e in z.entries()) {
+                    if (e.isDirectory || e.name == "classes.jar") continue
+                    out.putNextEntry(ZipEntry(e.name))
+                    out.write(z.getInputStream(e).readBytes())
+                    out.closeEntry()
+                }
+            }
+            out.putNextEntry(ZipEntry("classes.jar"))
+            out.write(mergedJar.readBytes())
+            out.closeEntry()
+        }
+        mergedJar.delete()
+        logger.lifecycle("[fat-aar] wrote ${dst.name} (${dst.length()} bytes)")
     }
 }

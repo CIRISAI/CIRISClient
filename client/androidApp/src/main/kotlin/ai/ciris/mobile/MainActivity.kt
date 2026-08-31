@@ -250,6 +250,11 @@ class MainActivity : ComponentActivity() {
         Log.i(TAG, "Initializing Google Play Billing...")
 
         // Create API client for purchase verification
+        // WHICH local node this is (CIRISClient#26). On Android the in-process
+        // ciris-server answers on :8080, not the :4243 the constant used to
+        // hardcode — so every federation call site named a port nothing here
+        // listens on. Declared before the client exists.
+        CIRISApiClient.setLocalNodeUrl("http://localhost:8080")
         apiClient = CIRISApiClient("http://localhost:8080")
 
         billingManager = BillingManager(

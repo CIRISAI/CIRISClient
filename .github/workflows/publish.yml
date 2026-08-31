@@ -450,7 +450,7 @@ jobs:
         include:
           - name: android-aar
             runner: ubuntu-latest
-            task: ":shared:assembleRelease"
+            task: ":shared:fatReleaseAar"
             timeout: 45
             # Ten minutes of total silence from a Gradle build is a hang, not a
             # slow step: even the long Kotlin/Native links emit task lines.
@@ -566,9 +566,24 @@ jobs:
           mkdir -p mobile
           version=$(cat VERSION)
           if [ "${{ matrix.name }}" = "android-aar" ]; then
-            src=client/shared/build/outputs/aar/shared-release.aar
-            test -f "$src" || { echo "::error::no AAR at $src"; exit 1; }
+            # THE FAT AAR, NOT THE RAW ONE (CIRISClient#25).
+            #
+            # An Android AAR never carries its project dependencies' classes;
+            # Gradle expects a consumer to resolve them from a repository via
+            # the POM beside it. This artifact has no POM and no repository —
+            # it is a bare file dropped into apps/android/libs/ — so shipping
+            # shared-release.aar shipped :shared without :generated-api, and
+            # every APK built against 0.5.195 died in onCreate with
+            # NoClassDefFoundError on ai/ciris/api/apis/AgentApi.
+            src=client/shared/build/fataar/shared-release-fat.aar
+            test -f "$src" || { echo "::error::no fat AAR at $src"; exit 1; }
             cp "$src" "mobile/ciris-client-$version.aar"
+
+            # Assert the fix on the artifact about to be UPLOADED, not on a
+            # build directory. The broken release was a BUILD SUCCESSFUL and a
+            # 16 MB file, so neither establishes anything; only opening it and
+            # finding the class the crash named does.
+            python3 packaging/check_aar.py "mobile/ciris-client-$version.aar"
           else
             xcf=$(find client/shared/build/XCFrameworks/release -maxdepth 1 -name '*.xcframework' | head -1)
             test -n "$xcf" || { echo "::error::no XCFramework produced"; exit 1; }

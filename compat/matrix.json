@@ -314,6 +314,39 @@
       },
       "notes": "A CONTROL THAT COULD NEVER DO ANYTHING (CIRISClient#23). The login screen offered \"Sign in as <key_id>\" whenever the node reported a key_id — which on a fresh install is just the bootstrap keystore alias, so the button appeared for users who had no federation identity at all. It could not work even when it appeared: getOwnerHint resolves to null pre-setup one line above the render, and the click handler refused every press without a live owner session. The call site carried a comment stating there was deliberately NO fedID sign-in option here because a credential-less door was a security hole, and the button rendered twelve lines below it. The guard was correct and the door should not have been reopened behind it; both are now gone, along with mayEnterWithFederationIdentity, which existed only to keep it shut. Removed rather than relabelled: a control whose every outcome is a refusal has no name that makes it honest",
       "published": null
+    },
+    {
+      "client_version": "0.5.196",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Both fixes are client-side — one packaging, one about which local node the client addresses — and neither asks the node for anything new",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change. The Android AAR now CARRIES the capabilities it always claimed: 0.5.195's artifact shipped :shared without :generated-api, so every capability in this list was unreachable from an APK — the client crashed before any of them could be used",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3882
+      },
+      "notes": "TWO ARTIFACTS THAT LOOKED RIGHT AND WERE NOT. #25: an Android AAR never contains its project dependencies' classes — Gradle expects a consumer to resolve them from a repository via the POM beside it. This one is published as a bare file and dropped into apps/android/libs/, so there is no POM and no repository, and implementation(project(\":generated-api\")) could never reach a consumer. 0.5.195 shipped 5,820 ai/ciris/mobile classes and zero ai/ciris/api; every APK built against it died in onCreate with NoClassDefFoundError on AgentApi, from CIRISApiClient's constructor on the startup path. The AAR is now fat, and packaging/check_aar.py opens the artifact about to be uploaded and looks for the class the crash named — the broken release was a BUILD SUCCESSFUL producing a 16 MB file, so neither exit code nor size distinguished it. #26: LOCAL_NODE_URL was a const val naming :4243 at ~30 federation call sites while the app honoured CIRIS_NODE_URL everywhere else, so a desktop client attached to :4343 sent all twelve ordinary calls there and then minted the owner's federation identity on a node the operator had never attached to. The constant's own doc was right about WHY it exists and wrong that it could be constant: which node runs in-process is precisely what a compile-time value cannot know, and Main.kt already resolves it. Now set once by each platform entry point, which fixes all thirty sites without depending on having found them",
+      "published": null
     }
   ]
 }
