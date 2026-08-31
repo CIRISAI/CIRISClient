@@ -1,0 +1,175 @@
+@file:OptIn(kotlinx.cinterop.ExperimentalForeignApi::class)
+
+package ai.ciris.mobile.shared.backend
+
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSHomeDirectory
+import platform.Foundation.NSLog
+import platform.Foundation.NSString
+import platform.Foundation.NSUTF8StringEncoding
+import platform.Foundation.writeToFile
+
+/**
+ * iOS's half of the resume/restart contract.
+ *
+ * iOS already had all of this — resume detection, health probing, restart,
+ * attempt counting — implemented in Swift in `ContentView.checkAndRestartServerIfNeeded`
+ * and `PythonBridge.ensureServerRunning`. Being in Swift is exactly why it went
+ * wrong and stayed wrong: KMP tests could not reach it, the three other
+ * platforms could not inherit it, and the one constant that mattered was
+ * invisible to review.
+ *
+ * That constant: `for i in 1...2`. A Python interpreter suspended for hours got
+ * two one-second polls to prove it was alive before iOS wrote `.restart_signal`
+ * and paid a full cold boot. Threads have to thaw, pages have to fault back in,
+ * and the listening socket has to start accepting again; two seconds does not
+ * cover it, so iOS restarted on every single resume.
+ *
+ * Swift keeps what only Swift can do — booting Python, owning `scenePhase`,
+ * seeing the runtime `Thread` — and pushes those facts here through
+ * [IosBackendBridge]. Everything about WHEN to act now lives in
+ * [BackendSupervisor], in common code, under test.
+ */
+class IosBackendController : LocalBackendController {
+
+    override val canRevive: Boolean = true
+
+    /**
+     * The evidence `PythonBridge.ensureServerRunning` already computed and threw
+     * away. It logged:
+     *
+     *     NSLog("  - isExecuting: \(thread.isExecuting)")
+     *     NSLog("  - isFinished:  \(thread.isFinished)")
+     *
+     * and then proceeded identically whichever way they read. An executing
+     * thread means the runtime is THAWING and must be waited for; a finished
+     * thread means it is dead and waiting is pure delay. Taking that branch is
+     * what lets the thaw budget be generous instead of two seconds.
+     */
+    override suspend fun hostLiveness(): HostLiveness = IosBackendBridge.hostLiveness()
+
+    /**
+     * Ask the node's Python watchdog to restart the runtime, the same mechanism
+     * [ai.ciris.mobile.shared.platform.AppRestarter] uses. iOS cannot spawn a
+     * process, so signalling the in-process runtime is the only revive
+     * available — which is also why patience matters more here than anywhere
+     * else: the fallback is expensive.
+     */
+    override suspend fun revive(): Result<Unit> = runCatching {
+        val cirisDir = "${NSHomeDirectory()}/Documents/ciris"
+        NSFileManager.defaultManager.createDirectoryAtPath(
+            cirisDir, withIntermediateDirectories = true, attributes = null, error = null,
+        )
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        val content = "restart" as NSString
+        val ok = content.writeToFile(
+            "$cirisDir/.restart_signal",
+            atomically = true,
+            encoding = NSUTF8StringEncoding,
+            error = null,
+        )
+        if (!ok) error("could not write .restart_signal")
+        NSLog("[IosBackendController] .restart_signal written")
+    }
+}
+
+/**
+ * The Swift → Kotlin seam.
+ *
+ * State is PUSHED from Swift rather than pulled through a closure: a Kotlin
+ * lambda held across the ObjC interop boundary is awkward to hand back from
+ * Swift, while a plain setter is unambiguous from both sides and survives the
+ * framework regeneration.
+ *
+ * Swift calls [setRuntimeThreadState] whenever it learns something about the
+ * runtime thread — at minimum on every resume, which is when it matters — and
+ * [reportResumed] / [reportBackgrounded] on `scenePhase` transitions.
+ */
+object IosBackendBridge {
+
+    private var executing = false
+    private var finished = false
+    private var everReported = false
+
+    /** Set by the app at startup so Swift's lifecycle events can reach it. */
+    var supervisor: BackendSupervisor? = null
+
+    /**
+     * Swift reports `runtimeThread.isExecuting` / `.isFinished`.
+     *
+     * Both false with no thread at all is [HostLiveness.UNKNOWN], not DEAD:
+     * "we have not looked yet" must not read as "it died", which is the same
+     * distinction the rest of this package exists to keep.
+     */
+    fun setRuntimeThreadState(isExecuting: Boolean, isFinished: Boolean) {
+        executing = isExecuting
+        finished = isFinished
+        everReported = true
+    }
+
+    fun hostLiveness(): HostLiveness = when {
+        !everReported -> HostLiveness.UNKNOWN
+        finished -> HostLiveness.DEAD
+        executing -> HostLiveness.ALIVE
+        else -> HostLiveness.UNKNOWN
+    }
+
+    /** `scenePhase == .active` */
+    fun reportResumed() {
+        NSLog("[IosBackendBridge] resumed")
+        supervisor?.onResumed()
+    }
+
+    /** `scenePhase == .background` */
+    fun reportBackgrounded() {
+        NSLog("[IosBackendBridge] backgrounded")
+        supervisor?.onBackgrounded()
+    }
+}
+
+/**
+ * A health probe that reports WHY it failed.
+ *
+ * `PythonRuntime.ios.checkHealth` resolves every `error != null` to
+ * `Result.success(false)` — backend refused, request timed out and phone in
+ * airplane mode all arrive as the same `false`. That flattening is what left
+ * the supervisor nothing to reason about, so it is not reused here.
+ *
+ * NSURLError codes are given as literals rather than the imported symbols
+ * because the numeric values are stable ABI and read unambiguously next to the
+ * outcome they map to.
+ */
+suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutcome =
+    kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+        val nsUrl = platform.Foundation.NSURL.URLWithString("$serverUrl/v1/system/health")
+        if (nsUrl == null) {
+            cont.resume(ProbeOutcome.TRANSPORT) {}
+            return@suspendCancellableCoroutine
+        }
+        val request = platform.Foundation.NSMutableURLRequest.requestWithURL(nsUrl)
+        request.setHTTPMethod("GET")
+        request.setTimeoutInterval(timeoutSeconds)
+
+        val task = platform.Foundation.NSURLSession.sharedSession
+            .dataTaskWithRequest(request) { _, response, error ->
+                val outcome = when {
+                    error != null -> when (error.code.toInt()) {
+                        -1001 -> ProbeOutcome.TIMEOUT      // timed out — may be thawing
+                        -1004 -> ProbeOutcome.REFUSED      // cannot connect — nothing listening
+                        -1005 -> ProbeOutcome.TIMEOUT      // connection lost — may be thawing
+                        -1003 -> ProbeOutcome.TRANSPORT    // cannot find host
+                        -1009 -> ProbeOutcome.TRANSPORT    // not connected to internet
+                        // Unclassified resolves toward PATIENCE: a slow recovery
+                        // costs less than a cold boot the user watches.
+                        else -> ProbeOutcome.TIMEOUT
+                    }
+                    else -> {
+                        val code = (response as? platform.Foundation.NSHTTPURLResponse)
+                            ?.statusCode?.toInt() ?: -1
+                        if (code in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.REFUSED
+                    }
+                }
+                cont.resume(outcome) {}
+            }
+        task.resume()
+    }

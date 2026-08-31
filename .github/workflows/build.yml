@@ -214,6 +214,62 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+  # ── iOS Kotlin. The only host that can compile it ───────────────────────────
+  ios-kotlin:
+    name: ios-kotlin
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      # ON LINUX THIS TASK IS SILENTLY SKIPPED.
+      #
+      # `./gradlew :shared:compileKotlinIosArm64` on a Linux host prints
+      # "Task :shared:compileKotlinIosArm64 SKIPPED" and then BUILD SUCCESSFUL.
+      # Every iosMain source file is therefore UNCOMPILED by every ubuntu job in
+      # this workflow, and a green build.yml has never once meant the iOS code
+      # compiles.
+      #
+      # That is not hypothetical. 0.5.191 was tagged, released, and shipped with
+      # no XCFramework at all because one iosMain file was missing an @OptIn —
+      # a one-line error that no CI job was in a position to see until the
+      # release job tried to link it, at which point the tag already existed.
+      #
+      # So this job runs on macOS, and it asserts the task actually EXECUTED
+      # rather than trusting the exit code, because a skip and a success are the
+      # same green tick.
+      - name: Compile iosMain (and prove it was not skipped)
+        working-directory: client
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :shared:compileKotlinIosArm64 \
+                    :shared:compileKotlinIosSimulatorArm64 | tee /tmp/ios.log
+          for t in compileKotlinIosArm64 compileKotlinIosSimulatorArm64; do
+            if grep -qE "Task :shared:$t (SKIPPED|NO-SOURCE)" /tmp/ios.log; then
+              echo "::error::$t was skipped — this host cannot compile iosMain, so this job proved nothing"
+              exit 1
+            fi
+          done
+          test -d shared/build/classes/kotlin/iosArm64/main \
+            || { echo "::error::no iosArm64 klib output"; exit 1; }
+          echo "iosMain compiled on $(uname -s)"
+
+      - name: Test iosMain (simulator target)
+        working-directory: client
+        # The resume/restart contract is common code and is covered by
+        # desktopTest, but running the iOS test target too catches an actual
+        # that compiles and then cannot link.
+        run: ./gradlew --no-daemon :shared:iosSimulatorArm64Test
+
   # ── Package. Runs whatever gradle managed, and says so ──────────────────────
   wheels:
     name: wheels
