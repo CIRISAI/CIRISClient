@@ -2,12 +2,10 @@
 
 package ai.ciris.mobile.shared.backend
 
-import platform.Foundation.NSFileManager
-import platform.Foundation.NSHomeDirectory
-import platform.Foundation.NSLog
-import platform.Foundation.NSString
-import platform.Foundation.NSUTF8StringEncoding
-import platform.Foundation.writeToFile
+import kotlinx.cinterop.*
+import kotlinx.coroutines.suspendCancellableCoroutine
+import platform.Foundation.*
+import kotlin.coroutines.resume
 
 /**
  * iOS's half of the resume/restart contract.
@@ -112,7 +110,7 @@ object IosBackendBridge {
             controller = IosBackendController(),
             ownership = { ownershipOf(nodeUrl) },
             now = {
-                (platform.Foundation.NSDate().timeIntervalSince1970 * 1000.0).toLong()
+                (NSDate().timeIntervalSince1970 * 1000.0).toLong()
             },
             log = { NSLog("[backend] $it") },
         )
@@ -208,17 +206,17 @@ object IosBackendBridge {
  * outcome they map to.
  */
 suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutcome =
-    kotlinx.coroutines.suspendCancellableCoroutine { cont ->
-        val nsUrl = platform.Foundation.NSURL.URLWithString("$serverUrl/v1/system/health")
+    suspendCancellableCoroutine { cont ->
+        val nsUrl = NSURL.URLWithString("$serverUrl/v1/system/health")
         if (nsUrl == null) {
-            cont.resume(ProbeOutcome.TRANSPORT) {}
+            cont.resume(ProbeOutcome.TRANSPORT)
             return@suspendCancellableCoroutine
         }
-        val request = platform.Foundation.NSMutableURLRequest.requestWithURL(nsUrl)
+        val request = NSMutableURLRequest.requestWithURL(nsUrl)
         request.setHTTPMethod("GET")
         request.setTimeoutInterval(timeoutSeconds)
 
-        val task = platform.Foundation.NSURLSession.sharedSession
+        val task = NSURLSession.sharedSession
             .dataTaskWithRequest(request) { _, response, error ->
                 val outcome = when {
                     error != null -> when (error.code.toInt()) {
@@ -232,7 +230,7 @@ suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutc
                         else -> ProbeOutcome.TIMEOUT
                     }
                     else -> {
-                        val code = (response as? platform.Foundation.NSHTTPURLResponse)
+                        val code = (response as? NSHTTPURLResponse)
                             ?.statusCode?.toInt() ?: -1
                         // Any HTTP response proves something is listening, so a
                         // non-2xx is a node that is up and not ready — a slow
@@ -241,7 +239,7 @@ suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutc
                         if (code in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.TIMEOUT
                     }
                 }
-                cont.resume(outcome) {}
+                cont.resume(outcome)
             }
         task.resume()
     }
