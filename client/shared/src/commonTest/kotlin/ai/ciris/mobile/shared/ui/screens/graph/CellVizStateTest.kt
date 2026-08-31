@@ -18,7 +18,7 @@ class CellVizStateTest {
     // =========================================================================
 
     @Test
-    fun `DEFAULT is neutral — all factors 1 0, preFetch true`() {
+    fun `DEFAULT is neutral — all factors 1 0 and preFetch true`() {
         val s = CellVizState.DEFAULT
         assertEquals(1f, s.c)
         assertEquals(1f, s.iInt)

@@ -66,7 +66,7 @@ class SelectionTest {
     }
 
     @Test
-    fun `tap 5 px from a port still hits the port (hit radius forgiving)`() {
+    fun `tap 5 px from a port still hits the port - hit radius forgiving`() {
         val port = SelectionPort("a", "api", CellBus.COMM, 300f, 500f)
         val hit = hitTestSelection(
             tapX = 305f, tapY = 500f,
@@ -267,7 +267,7 @@ class SelectionTest {
     }
 
     @Test
-    fun `tap in empty cytoplasm (no mote) returns null`() {
+    fun `tap in empty cytoplasm with no mote returns null`() {
         // Between nucleus (r=100) and membrane (r=300), no mote there.
         val hit = hitTestSelection(
             tapX = layout.centerX + 200f, tapY = layout.centerY,

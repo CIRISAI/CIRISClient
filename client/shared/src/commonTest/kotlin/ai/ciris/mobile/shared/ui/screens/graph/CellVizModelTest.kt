@@ -625,7 +625,7 @@ class CellVizModelTest {
     }
 
     @Test
-    fun `action_result routes on verb, not event_type alone`() {
+    fun `action_result routes on verb - not event_type alone`() {
         assertEquals(
             CellBus.MEMORY,
             busFromEventType("action_result", action = "memorize"),
