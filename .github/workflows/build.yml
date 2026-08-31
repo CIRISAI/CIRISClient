@@ -263,6 +263,30 @@ jobs:
             || { echo "::error::no iosArm64 klib output"; exit 1; }
           echo "iosMain compiled on $(uname -s)"
 
+      # A PARTIAL GUARD, AND SAYING SO.
+      #
+      # This parses the Swift; it does NOT type-check it against the shared
+      # framework, because iosApp/Frameworks/ (Python.xcframework,
+      # CIRISVerify.xcframework) is gitignored and nothing in this repo fetches
+      # it, so `xcodebuild` cannot run here. A call into a Kotlin symbol that
+      # does not exist would still reach a tag unseen.
+      #
+      # It is worth having anyway: it catches malformed Swift, which is the
+      # failure mode of every scripted edit to these files. The real gap —
+      # no compiler of any kind for the iOS app in CI — is tracked separately;
+      # do not read a green tick here as "the iOS app builds".
+      - name: Parse the Swift sources (syntax only)
+        working-directory: client/iosApp/iosApp
+        run: |
+          set -euo pipefail
+          for f in *.swift; do
+            echo "── $f"
+            xcrun swiftc -parse -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
+                  -target arm64-apple-ios17.0-simulator "$f" 2>&1 | tee /tmp/parse.log
+            grep -q "error:" /tmp/parse.log && { echo "::error::$f failed to parse"; exit 1; } || true
+          done
+          echo "all Swift sources parse"
+
       - name: Test iosMain (simulator target)
         working-directory: client
         # The resume/restart contract is common code and is covered by

@@ -1,4 +1,5 @@
 import Foundation
+import shared
 import Compression
 
 /// Swift bridge for Python initialization and runtime management.
@@ -365,6 +366,30 @@ import Compression
         }
         let readyPath = "\(documentsPath)/ciris/.server_ready"
         return fm.fileExists(atPath: readyPath)
+    }
+
+    /// Report the runtime thread's state to the shared supervisor.
+    ///
+    /// `ensureServerRunning` below has always COMPUTED this — it logs
+    /// `isExecuting` and `isFinished` on every resume — and then branched on
+    /// neither, taking the same restart path whichever way they read. That is
+    /// the whole iOS defect: an executing thread is THAWING and must be waited
+    /// for, a finished thread is dead and waiting is pure delay, and treating
+    /// them alike forces a patience budget short enough to be wrong.
+    ///
+    /// No thread at all reports UNKNOWN rather than dead: "we have not looked"
+    /// is not "it died".
+    @objc public static func reportRuntimeThreadState() {
+        if let thread = runtimeThread {
+            IosBackendBridge.shared.setRuntimeThreadState(
+                isExecuting: thread.isExecuting,
+                isFinished: thread.isFinished
+            )
+            NSLog("[PythonBridge] reported thread state: executing=\(thread.isExecuting) finished=\(thread.isFinished)")
+        } else {
+            // No thread yet — say nothing rather than assert death.
+            NSLog("[PythonBridge] no runtime thread to report")
+        }
     }
 
     /// Wait for the runtime to resume or restart after iOS suspended it

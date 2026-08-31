@@ -91,8 +91,58 @@ object IosBackendBridge {
     private var finished = false
     private var everReported = false
 
-    /** Set by the app at startup so Swift's lifecycle events can reach it. */
-    var supervisor: BackendSupervisor? = null
+    /**
+     * The node this app is currently talking to. Defaults to the embedded one;
+     * CIRISApp calls [setNodeUrl] when the user connects elsewhere, at which
+     * point [ownershipOf] stops calling it ours and the supervisor will observe
+     * without ever restarting it.
+     */
+    private var nodeUrl: String = "http://127.0.0.1:8080"
+
+    fun setNodeUrl(url: String) { nodeUrl = url }
+
+    /**
+     * Owned here rather than injected, so Swift has exactly one symbol to
+     * touch and no startup ordering to get right. Policy still lives in
+     * [BackendSupervisor] — this object only supplies the platform facts.
+     */
+    val supervisor: BackendSupervisor by lazy {
+        BackendSupervisor(
+            probe = { iosProbe(nodeUrl) },
+            controller = IosBackendController(),
+            ownership = { ownershipOf(nodeUrl) },
+            now = {
+                (platform.Foundation.NSDate().timeIntervalSince1970 * 1000.0).toLong()
+            },
+            log = { NSLog("[backend] $it") },
+        )
+    }
+
+    /**
+     * For the Swift reconnect overlay. Deliberately a plain getter rather than
+     * a StateFlow: exposing a flow across the ObjC boundary buys nothing here,
+     * and the overlay is polled by SwiftUI anyway.
+     */
+    val isRecovering: Boolean
+        get() = supervisor.state.value.let {
+            it is BackendState.Thawing || it is BackendState.Reviving
+        }
+
+    val hasGivenUp: Boolean
+        get() = supervisor.state.value is BackendState.GaveUp
+
+    /** Attempts so far, for the overlay's "tried N times". */
+    val attemptCount: Int
+        get() = supervisor.state.value.let {
+            when (it) {
+                is BackendState.Reviving -> it.attempt
+                is BackendState.GaveUp -> it.attempts
+                else -> 0
+            }
+        }
+
+    /** Clear the crash-loop guard when the user taps retry. */
+    fun retryNow() { supervisor.retryNow() }
 
     /**
      * Swift reports `runtimeThread.isExecuting` / `.isFinished`.
@@ -114,16 +164,34 @@ object IosBackendBridge {
         else -> HostLiveness.UNKNOWN
     }
 
+    private var job: kotlinx.coroutines.Job? = null
+
+    /**
+     * Start the probe loop. Idempotent, and called from [reportResumed] so
+     * Swift cannot forget it — a supervisor that is never ticked reports
+     * Thawing forever, which would look like a hang rather than an error.
+     */
+    fun start() {
+        if (job != null) return
+        job = supervisor.run(
+            kotlinx.coroutines.CoroutineScope(
+                kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
+            )
+        )
+        NSLog("[IosBackendBridge] supervisor started")
+    }
+
     /** `scenePhase == .active` */
     fun reportResumed() {
         NSLog("[IosBackendBridge] resumed")
-        supervisor?.onResumed()
+        start()
+        supervisor.onResumed()
     }
 
     /** `scenePhase == .background` */
     fun reportBackgrounded() {
         NSLog("[IosBackendBridge] backgrounded")
-        supervisor?.onBackgrounded()
+        supervisor.onBackgrounded()
     }
 }
 

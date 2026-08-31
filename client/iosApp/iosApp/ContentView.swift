@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import shared
 
 struct ContentView: View {
@@ -30,9 +31,9 @@ struct ContentView: View {
                     RestartRequiredOverlay(
                         retryCount: reconnectAttempts,
                         onRetry: {
-                            Task {
-                                await checkAndRestartServerIfNeeded()
-                            }
+                            // Clears the crash-loop guard and reopens a thaw
+                            // window; the supervisor takes it from there.
+                            IosBackendBridge.shared.retryNow()
                         },
                         onExit: {
                             // Use KMP AppRestarter to terminate app
@@ -57,106 +58,54 @@ struct ContentView: View {
                 })
             }
         }
+        // The overlay reads the supervisor rather than Swift-local flags, so
+        // what the user sees and what the recovery logic believes cannot drift
+        // apart — the failure mode the login screen already had, telling people
+        // to check a connection when the app had stopped its own backend.
+        .onReceive(Timer.publish(every: 1, on: .main, in: .common).autoconnect()) { _ in
+            isReconnecting = IosBackendBridge.shared.isRecovering
+            reconnectFailed = IosBackendBridge.shared.hasGivenUp
+            reconnectAttempts = Int(IosBackendBridge.shared.attemptCount)
+        }
         .onChange(of: scenePhase) { newPhase in
             if newPhase == .background && pythonReady {
                 // Keep the server alive for up to 3 minutes so OAuth/purchase callbacks can arrive
                 NSLog("[ContentView] App entering background — requesting background time for server (timeout: \(Int(backgroundTimeoutSeconds))s)")
                 beginBackgroundKeepAlive()
+                IosBackendBridge.shared.reportBackgrounded()
             }
             if newPhase == .active && pythonReady {
                 // App came to foreground - cancel timeout and end background task
                 cancelBackgroundTimeout()
                 endBackgroundKeepAlive()
-                NSLog("[ContentView] App became active, checking server health...")
-                Task {
-                    await checkAndRestartServerIfNeeded()
-                }
+
+                // THE POLICY MOVED TO KOTLIN.
+                //
+                // What used to run here decided, in Swift, whether the backend
+                // was dead — and decided it after two seconds. A Python
+                // interpreter suspended for hours cannot thaw its threads, fault
+                // its pages back in and start accepting on its socket in two
+                // seconds, so the answer was almost always "dead" and the app
+                // paid a full cold boot on EVERY resume.
+                //
+                // Swift now reports two facts and stops there: the runtime
+                // thread's state, which is the evidence that separates thawing
+                // from dead, and the transition itself. How long to wait, when
+                // to signal a restart, how many times, and when to stop trying
+                // all live in BackendSupervisor — in common code, shared with
+                // Android and desktop, and under test against a virtual clock.
+                PythonBridge.reportRuntimeThreadState()
+                IosBackendBridge.shared.reportResumed()
+                NSLog("[ContentView] App became active — supervisor notified")
             }
         }
     }
 
-    /// Check if server is alive after app resume and restart if needed
-    private func checkAndRestartServerIfNeeded() async {
-        // Give iOS a moment to resume all threads before we start checking
-        try? await Task.sleep(nanoseconds: 500_000_000)  // 0.5 seconds
-
-        // Quick initial check
-        let serverAlive = await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let alive = PythonBridge.checkHealth()
-                continuation.resume(returning: alive)
-            }
-        }
-
-        if serverAlive {
-            NSLog("[ContentView] Server is healthy after resume")
-            await MainActor.run {
-                isReconnecting = false
-                reconnectFailed = false
-                reconnectAttempts = 0  // Reset on success
-            }
-            return
-        }
-
-        NSLog("[ContentView] Server not responding after resume, waiting for recovery...")
-
-        await MainActor.run {
-            isReconnecting = true
-            reconnectFailed = false
-        }
-
-        // Wait for the server to resume with a hard 20s timeout
-        // ensureServerRunning polls for ~12s, but add safety margin
-        let success: Bool
-        do {
-            success = try await withThrowingTaskGroup(of: Bool.self) { group in
-                group.addTask {
-                    await withCheckedContinuation { continuation in
-                        DispatchQueue.global(qos: .userInitiated).async {
-                            let result = PythonBridge.ensureServerRunning()
-                            continuation.resume(returning: result)
-                        }
-                    }
-                }
-                group.addTask {
-                    try await Task.sleep(nanoseconds: 20_000_000_000) // 20s hard timeout
-                    return false
-                }
-                // Return whichever finishes first
-                let result = try await group.next() ?? false
-                group.cancelAll()
-                return result
-            }
-        } catch {
-            success = false
-        }
-
-        await MainActor.run {
-            isReconnecting = false
-            if success {
-                NSLog("[ContentView] Server recovered successfully - refreshing UI")
-                reconnectFailed = false
-                reconnectAttempts = 0  // Reset on success
-
-                // Force Compose UI to refresh by recreating the view
-                // This clears any stale error state in the Kotlin side
-                pythonReady = false
-            } else {
-                reconnectAttempts += 1
-                NSLog("[ContentView] Server did not recover (attempt \(reconnectAttempts))")
-                reconnectFailed = true
-            }
-        }
-
-        // If recovery succeeded, re-enable the UI after a brief moment
-        if success {
-            try? await Task.sleep(nanoseconds: 100_000_000)  // 0.1 seconds
-            await MainActor.run {
-                pythonReady = true
-                NSLog("[ContentView] UI refreshed")
-            }
-        }
-    }
+    // `checkAndRestartServerIfNeeded` used to live here. It gave a suspended
+    // interpreter 0.5s plus two one-second polls to prove it was alive, then
+    // wrote `.restart_signal` — which is why iOS cold-booted on every resume.
+    // Its job is now BackendSupervisor's, in common code and under test; Swift
+    // reports the transition and the thread state and decides nothing.
 
     /// Request background execution time to keep the Python server alive (e.g., for OAuth/purchase callbacks).
     /// We set a 3-minute timeout to allow external flows to complete, after which we allow iOS to suspend.
