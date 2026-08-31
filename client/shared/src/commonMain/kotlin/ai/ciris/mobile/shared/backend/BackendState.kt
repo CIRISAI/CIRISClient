@@ -175,6 +175,11 @@ data class RevivePolicy(
      * Being generous here costs nothing: the node is already being started, and
      * the only thing a shorter window buys is a second restart on top of a boot
      * that was going to succeed.
+     *
+     * BOTH BUDGETS ARE ARGUED FROM BOOT FIGURES, NOT MEASURED. The resume
+     * distribution — which is what [thawBudgetMs] actually depends on — is
+     * being measured on arm32 in CIRISAgent#1125. Adjust them from that data,
+     * not from a hunch, and keep the two separate whatever the numbers say.
      */
     val bootBudgetMs: Long = 90_000,
     val maxAttempts: Int = 5,
