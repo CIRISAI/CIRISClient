@@ -234,7 +234,11 @@ suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutc
                     else -> {
                         val code = (response as? platform.Foundation.NSHTTPURLResponse)
                             ?.statusCode?.toInt() ?: -1
-                        if (code in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.REFUSED
+                        // Any HTTP response proves something is listening, so a
+                        // non-2xx is a node that is up and not ready — a slow
+                        // boot, not a death. See the JVM probes for why calling
+                        // this REFUSED would boot-loop a healthy start.
+                        if (code in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.TIMEOUT
                     }
                 }
                 cont.resume(outcome) {}

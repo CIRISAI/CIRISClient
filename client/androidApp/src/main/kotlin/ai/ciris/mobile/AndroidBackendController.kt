@@ -96,7 +96,16 @@ class AndroidBackendController(context: Context) : LocalBackendController {
                         readTimeout = timeoutMs
                         requestMethod = "GET"
                     }
-                    if (conn.responseCode in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.REFUSED
+                    // ANY HTTP RESPONSE PROVES SOMETHING IS LISTENING.
+                    //
+                    // A non-2xx is therefore NOT death evidence — it is a node
+                    // that is up and not ready, which is what a slow boot looks
+                    // like (503 while services come up). Classifying it REFUSED
+                    // would make the supervisor restart a node that was starting
+                    // normally, and on a platform that cannot report host
+                    // liveness that is a boot loop. TIMEOUT is the honest
+                    // reading: keep waiting, and act only if it never settles.
+                    if (conn.responseCode in 200..299) ProbeOutcome.ANSWERED else ProbeOutcome.TIMEOUT
                 } catch (e: ConnectException) {
                     ProbeOutcome.REFUSED
                 } catch (e: SocketTimeoutException) {
