@@ -392,7 +392,11 @@ class CIRISApiClient(
          * of the ~30 call sites that names this reads the resolved value, so the
          * fix did not depend on finding all of them.
          */
-        @Volatile
+        // kotlin.concurrent.Volatile, not kotlin.jvm.Volatile: this is
+        // commonMain and the JVM one does not exist on Kotlin/Native. The
+        // desktop build compiled it happily; ios-kotlin caught it, which is
+        // the job doing exactly what it was added for.
+        @kotlin.concurrent.Volatile
         var LOCAL_NODE_URL: String = DEFAULT_LOCAL_NODE_URL
             private set
 
