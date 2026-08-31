@@ -134,13 +134,49 @@ enum class Ownership { OURS, REMOTE }
 /**
  * Timings for the resume/restart contract.
  *
- * [thawBudgetMs] is generous ON PURPOSE, and is only safe because genuine death
- * is caught by evidence ([HostLiveness.DEAD], [ProbeOutcome.REFUSED]) in well
- * under a second and never waits out the clock. iOS shipped 2_000 here with no
- * evidence check at all, which is why it restarted on every resume.
+ * Two waits, deliberately, because they answer different questions: is this
+ * backend still WAKING ([thawBudgetMs]), versus is the one I just started still
+ * BOOTING ([bootBudgetMs]). Kubernetes separates liveness from startup probes
+ * for exactly this reason, and collapsing them is what produces a restart loop
+ * against an app that was starting normally.
+ *
+ * Both are only safe because genuine death is caught by evidence
+ * ([HostLiveness.DEAD], [ProbeOutcome.REFUSED]) in well under a second and never
+ * waits out either clock. iOS shipped a 2s wait with no evidence check at all,
+ * which is why it restarted on every resume.
  */
 data class RevivePolicy(
-    val thawBudgetMs: Long = 30_000,
+    /**
+     * How long to wait for a RESUMING backend before concluding it is dead.
+     *
+     * Sized to a resume, which is fast — the process is already built, its
+     * pages are mostly resident, and it has only to thaw and re-accept. Field
+     * numbers for comparison: a COLD BOOT is ~14s on a modern phone and up to
+     * ~45s on arm32, and a resume is much quicker than either.
+     *
+     * This was 30s, which was wrong in both directions at once: far slower than
+     * a resume ever needs, and — because the same value was also used after a
+     * revive — shorter than an arm32 cold boot, so the supervisor would have
+     * restarted a node it had just started, mid-boot. That is the CrashLoopBackOff
+     * that Kubernetes' startup probe exists to prevent, and the fix is the same
+     * one: separate the startup wait from the liveness wait ([bootBudgetMs]).
+     */
+    val thawBudgetMs: Long = 5_000,
+
+    /**
+     * How long to wait after a revive before concluding it failed.
+     *
+     * A revived node COLD BOOTS — 22 services, ~14s on a phone and up to ~45s
+     * on arm32 — so this is the startup probe, not the liveness probe, and it
+     * has to cover the slowest device we support with headroom. The usual
+     * guidance is to set the startup window well above worst acceptable
+     * startup rather than near it; 90s is 2x the arm32 figure.
+     *
+     * Being generous here costs nothing: the node is already being started, and
+     * the only thing a shorter window buys is a second restart on top of a boot
+     * that was going to succeed.
+     */
+    val bootBudgetMs: Long = 90_000,
     val maxAttempts: Int = 5,
     val backoffMs: List<Long> = listOf(1_000, 2_000, 4_000, 8_000, 16_000),
     val backoffCapMs: Long = 30_000,

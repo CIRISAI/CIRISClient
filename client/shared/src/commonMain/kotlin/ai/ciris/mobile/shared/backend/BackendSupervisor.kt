@@ -41,6 +41,9 @@ class BackendSupervisor(
 
     private val _state = MutableStateFlow<BackendState>(BackendState.Thawing(0, policy.thawBudgetMs))
 
+    /** Which wait is running: a resume thaw, or a boot after we started it. */
+    private var activeBudgetMs: Long = policy.thawBudgetMs
+
     /**
      * The single source of truth for every liveness surface in the UI. Status
      * text, banners and controls all derive from this one flow, so they cannot
@@ -91,10 +94,11 @@ class BackendSupervisor(
         foregrounded = false
     }
 
-    private fun openThawWindow(why: String) {
+    private fun openThawWindow(why: String, budgetMs: Long = policy.thawBudgetMs) {
         thawStartedAt = now()
-        _state.value = BackendState.Thawing(0, policy.thawBudgetMs)
-        log("thaw window opened ($why), budget=${policy.thawBudgetMs}ms")
+        activeBudgetMs = budgetMs
+        _state.value = BackendState.Thawing(0, budgetMs)
+        log("wait opened ($why), budget=${budgetMs}ms")
     }
 
     // ------------------------------------------------------------------
@@ -169,11 +173,11 @@ class BackendSupervisor(
             // No evidence of death: wait, unless the budget has run out.
             val started = thawStartedAt ?: now().also { thawStartedAt = it }
             val elapsed = t - started
-            if (elapsed < policy.thawBudgetMs) {
-                _state.value = BackendState.Thawing(elapsed, policy.thawBudgetMs)
+            if (elapsed < activeBudgetMs) {
+                _state.value = BackendState.Thawing(elapsed, activeBudgetMs)
                 return
             }
-            return goDown(t, DeathEvidence.BudgetExpired(policy.thawBudgetMs))
+            return goDown(t, DeathEvidence.BudgetExpired(activeBudgetMs))
         }
 
         return goDown(t, evidence)
@@ -220,7 +224,12 @@ class BackendSupervisor(
             // Deliberately NOT Live: the revive was requested, not confirmed.
             // The next probe decides, which is the same discipline that keeps
             // "we asked" separate from "it answered" everywhere else here.
-            openThawWindow("revive requested")
+            //
+            // And it waits on the BOOT budget, not the thaw budget: what we
+            // just started has to come up cold — 22 services, up to ~45s on
+            // arm32 — and judging that by a resume-sized window would restart
+            // a node that was booting normally.
+            openThawWindow("revive requested", policy.bootBudgetMs)
         }
     }
 

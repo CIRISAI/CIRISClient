@@ -66,8 +66,10 @@ class BackendSupervisorTest {
 
         sup.onResumed()
 
-        // Well past the 2s deadline that shipped in PythonBridge.swift.
-        repeat(20) { clock.advance(1_000); sup.tick() }
+        // Twice the 2s deadline that shipped in PythonBridge.swift, and still
+        // inside the resume budget. A resume is much faster than the ~14s cold
+        // boot on a modern phone, so 4s of silence from a LIVE host is normal.
+        repeat(4) { clock.advance(1_000); sup.tick() }
 
         assertIs<BackendState.Thawing>(sup.state.value, "a live host that has not answered is THAWING")
         assertEquals(0, fake.reviveCalls, "iOS cold-booted here on every resume; it must not")
@@ -298,6 +300,61 @@ class BackendSupervisorTest {
 
         assertEquals(1, fake.reviveCalls)
         assertIs<BackendState.Thawing>(sup.state.value, "asked, not confirmed — the next probe decides")
+    }
+
+    @Test
+    fun a_wedged_but_running_host_is_eventually_acted_on() {
+        // Patience is not infinite. A host that stays ALIVE and never answers
+        // is wedged, and the budget is the backstop that stops us waiting
+        // forever on it.
+        val fake = Fake(host = HostLiveness.ALIVE)
+        val clock = Clock()
+        val sup = supervisor(fake, clock, { ProbeOutcome.TIMEOUT })
+
+        kotlinx.coroutines.test.runTest {
+            sup.onResumed()
+            repeat(3) { clock.advance(5_000); sup.tick() }
+            assertTrue(fake.reviveCalls > 0, "the thaw budget must expire, not stall")
+        }
+    }
+
+    /**
+     * THE ARM32 BOOT LOOP.
+     *
+     * A revived node COLD BOOTS — 22 services, ~14s on a modern phone and up to
+     * ~45s on arm32. Judging that by the resume-sized budget would declare the
+     * boot dead and restart it, then restart that, which is precisely the
+     * CrashLoopBackOff a Kubernetes startup probe exists to prevent. The single
+     * 30s budget this replaced would have done exactly that on arm32.
+     */
+    @Test
+    fun a_slow_cold_boot_after_a_revive_is_not_restarted_again() = runTest {
+        val fake = Fake(host = HostLiveness.ALIVE)
+        val clock = Clock()
+        var healthy = false
+        val sup = supervisor(
+            fake, clock,
+            { if (healthy) ProbeOutcome.ANSWERED else ProbeOutcome.TIMEOUT },
+            policy = RevivePolicy(thawBudgetMs = 5_000, bootBudgetMs = 90_000),
+        )
+
+        // Dead host -> one revive.
+        fake.host = HostLiveness.DEAD
+        sup.onResumed()
+        sup.tick()
+        assertEquals(1, fake.reviveCalls)
+
+        // Now it is booting: host alive, not answering yet. 45 seconds of that
+        // is a normal arm32 cold boot and must NOT be a second revive.
+        fake.host = HostLiveness.ALIVE
+        repeat(45) { clock.advance(1_000); sup.tick() }
+        assertEquals(1, fake.reviveCalls, "an arm32 cold boot must not be restarted mid-boot")
+        assertIs<BackendState.Thawing>(sup.state.value)
+
+        healthy = true
+        sup.tick()
+        assertEquals(BackendState.Live, sup.state.value, "it came up on its own")
+        assertEquals(1, fake.reviveCalls)
     }
 
     // ------------------------------------------------------------------
