@@ -92,6 +92,32 @@ fun main() {
         pythonRuntime.shutdown()
     })
 
+    // WATCH THE NODE. Desktop spawns a real child process and so can answer
+    // "is it alive?" exactly, via Process.isAlive — and never asked. Nothing
+    // monitored it: if the node died, the first anyone knew was a failing
+    // request, and the only recovery was a button a user had to find. Laptop
+    // sleep is the phones' failure under a different name.
+    //
+    // Same supervisor, same policy, same tests as Android and iOS. Only a
+    // loopback node is ever restarted; pointed at someone else's node this
+    // observes and reports.
+    val nodeUrl = System.getenv("CIRIS_NODE_URL")
+        ?: System.getenv("CIRIS_API_URL") ?: "http://127.0.0.1:4243"
+    val backendSupervisor = ai.ciris.mobile.shared.backend.BackendSupervisor(
+        probe = { ai.ciris.mobile.shared.backend.DesktopBackendController.probe(nodeUrl) },
+        controller = ai.ciris.mobile.shared.backend.DesktopBackendController(pythonRuntime),
+        ownership = { ai.ciris.mobile.shared.backend.ownershipOf(nodeUrl) },
+        now = { System.currentTimeMillis() },
+        log = { println("[backend] $it") },
+    )
+    val supervisorScope = kotlinx.coroutines.CoroutineScope(
+        kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
+    )
+    // A desktop window is foreground for its whole life as far as this is
+    // concerned; there is no background-stop policy to fight here.
+    backendSupervisor.onResumed()
+    backendSupervisor.run(supervisorScope)
+
     application {
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp)
 

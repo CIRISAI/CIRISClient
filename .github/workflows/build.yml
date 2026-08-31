@@ -292,7 +292,15 @@ jobs:
         # The resume/restart contract is common code and is covered by
         # desktopTest, but running the iOS test target too catches an actual
         # that compiles and then cannot link.
-        run: ./gradlew --no-daemon :shared:iosSimulatorArm64Test
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon :shared:iosSimulatorArm64Test | tee /tmp/iostest.log
+          # Same trap as the compile step: on a host that cannot run this, the
+          # task is SKIPPED and the job goes green having tested nothing.
+          if grep -qE "Task :shared:iosSimulatorArm64Test (SKIPPED|NO-SOURCE)" /tmp/iostest.log; then
+            echo "::error::iosSimulatorArm64Test was skipped — no tests actually ran"
+            exit 1
+          fi
 
   # ── Package. Runs whatever gradle managed, and says so ──────────────────────
   wheels:
