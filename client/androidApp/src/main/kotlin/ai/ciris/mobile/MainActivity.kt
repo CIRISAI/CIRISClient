@@ -14,6 +14,10 @@ import ai.ciris.mobile.shared.PurchaseLauncher
 import ai.ciris.mobile.shared.PurchaseResultCallback
 import ai.ciris.mobile.shared.PurchaseResultType
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.backend.BackendSupervisor
+import ai.ciris.mobile.shared.backend.Ownership
+import ai.ciris.mobile.shared.backend.ownershipOf
+import androidx.lifecycle.lifecycleScope
 import ai.ciris.mobile.shared.config.CIRISConfig
 import ai.ciris.mobile.shared.platform.initDebugBundleExport
 import ai.ciris.mobile.shared.platform.initLocalDataWipe
@@ -613,12 +617,64 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /**
+     * THE RESUME EVENT ANDROID NEVER HAD.
+     *
+     * The backend can be stopped while we are away — the service's own 3-minute
+     * battery timer does it on purpose — and until now nothing asked about it on
+     * the way back in. `onResume` processed billing and returned; the only
+     * `startForegroundService` call lived inside `setContent` and so re-ran only
+     * when the Activity happened to be recreated.
+     *
+     * Policy lives in the shared supervisor; this just reports the transition.
+     */
+    private val backendSupervisor: BackendSupervisor by lazy {
+        val controller = AndroidBackendController(this)
+        // ONE url for both questions. Probing localhost while judging the
+        // ownership of a remote baseUrl would let the supervisor answer about
+        // two different nodes in a single decision — reporting NotOurs on the
+        // strength of a loopback probe, or worse.
+        val nodeUrl = { apiClient?.baseUrl }
+        BackendSupervisor(
+            probe = {
+                nodeUrl()?.let { AndroidBackendController.probe(it) }
+                    ?: ai.ciris.mobile.shared.backend.ProbeOutcome.TRANSPORT
+            },
+            controller = controller,
+            // Only a LOCAL node is ours to revive. Pointed at someone else's
+            // research agent, the supervisor reports and never restarts.
+            // A null apiClient means we cannot yet tell WHICH node this is, and
+            // that is not the same as "it is ours". Unknown resolves to REMOTE
+            // so the supervisor observes without ever restarting a node it has
+            // not positively identified as loopback.
+            ownership = { nodeUrl()?.let { ownershipOf(it) } ?: Ownership.REMOTE },
+            now = { android.os.SystemClock.elapsedRealtime() },
+            log = { Log.i(TAG, "[backend] $it") },
+        )
+    }
+
+    /** Drives [backendSupervisor]; started once, cancelled with the Activity. */
+    private var backendJob: kotlinx.coroutines.Job? = null
+
+    override fun onStart() {
+        super.onStart()
+        if (backendJob == null) {
+            backendJob = backendSupervisor.run(lifecycleScope)
+        }
+    }
+
     override fun onResume() {
         super.onResume()
         // Process any pending purchases when activity resumes
         if (::billingManager.isInitialized) {
             billingManager.processPendingPurchases()
         }
+        backendSupervisor.onResumed()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        backendSupervisor.onBackgrounded()
     }
 
     override fun onDestroy() {
