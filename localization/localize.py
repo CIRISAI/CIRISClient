@@ -152,8 +152,9 @@ PROVIDER = _provider()
 _LADDERS = {
     "openrouter": (
         "anthropic/claude-sonnet-5",   # draft — strongest on tone and register
-        "anthropic/claude-opus-5",     # escalation — the hard keys
-        "openai/gpt-5-pro",            # last word — a different family entirely
+        "google/gemini-3.7-flash",     # first repair — a different family, and the
+                                       # measured best on low-resource languages
+        "anthropic/claude-opus-5",     # last word — the hard keys
     ),
     "anthropic": ("claude-sonnet-5", "claude-opus-5"),
 }
@@ -202,6 +203,10 @@ PRICE = {
     "anthropic/claude-haiku-4.5": (1.00, 5.00),
     "openai/gpt-5.1": (1.25, 10.00),
     "openai/gpt-5-pro": (15.00, 120.00),
+    "google/gemini-3.7-flash": (0.75, 3.75),
+    "google/gemini-3.1-pro-preview": (2.00, 12.00),
+    "openai/gpt-5.4": (2.50, 15.00),
+    "x-ai/grok-4.6": (2.00, 6.00),
     "claude-sonnet-5": (2.00, 10.00),
     "claude-opus-5": (5.00, 25.00),
 }
