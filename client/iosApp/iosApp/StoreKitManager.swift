@@ -133,16 +133,36 @@ class StoreKitManager: NSObject, ObservableObject {
 
             for await result in Transaction.updates {
                 do {
-                    let transaction = try await self?.checkVerified(result)
+                    // BIND SELF ONCE, STRONGLY, PER ITERATION.
+                    //
+                    // `[weak self]` on a detached Task makes `self` a mutable
+                    // optional owned by this closure. The `MainActor.run` body
+                    // below then read that same VAR from another concurrency
+                    // domain — "reference to captured var 'self' in
+                    // concurrently-executing code", which is a warning under
+                    // Swift 5 and an ERROR under Swift 6, and a real race
+                    // either way: the binding can change between the two reads,
+                    // so the transaction could be recorded against a different
+                    // object than the one that verified it, or against none.
+                    //
+                    // `guard let self` produces an immutable binding for the
+                    // iteration, so there is no var to capture. Behaviour is
+                    // unchanged when self is gone: previously `self?.` returned
+                    // nil and the `if let` skipped the body; now the iteration
+                    // is skipped, which does the same nothing.
+                    guard let self else { continue }
 
-                    if let transaction = transaction {
-                        NSLog("[StoreKitManager] Transaction update: \(transaction.id) - \(transaction.productID)")
+                    let transaction = try await self.checkVerified(result)
 
-                        // Note: We don't auto-verify here because we need the Apple ID token
-                        // The app should handle pending transactions on next launch
-                        await MainActor.run {
-                            self?.purchasedProductIDs.insert(transaction.productID)
-                        }
+                    NSLog("[StoreKitManager] Transaction update: \(transaction.id) - \(transaction.productID)")
+
+                    // Note: We don't auto-verify here because we need the Apple ID token
+                    // The app should handle pending transactions on next launch
+                    await MainActor.run {
+                        // Set.insert returns (inserted:memberAfterInsert:), which
+                        // made this closure non-Void and MainActor.run's result
+                        // "unused". Discarding it explicitly is the intent.
+                        _ = self.purchasedProductIDs.insert(transaction.productID)
                     }
                 } catch {
                     NSLog("[StoreKitManager] Transaction verification failed: \(error)")
