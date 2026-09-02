@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.api
 
+import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.viewmodels.ModelInfo
 
 /**
@@ -119,6 +120,21 @@ data class LlmConfigCheck(
  *     itself proof the key authenticates; a thrown error is the real key/reach
  *     failure, reported as such.
  */
+private const val PROBE_TAG = "LlmConfigCheck"
+
+/**
+ * THE PROBE MUST EXPLAIN ITSELF (CIRISClient#28, ask 3).
+ *
+ * Five Test Connection attempts on macOS produced ZERO probe-side lines in the
+ * client log — no provider, no endpoint, no outcome, no error. 72 lines
+ * mentioning llm/model in that file and none of them from here. Diagnosing it
+ * meant correlating a screenshot, a QA harness log and a runtime log across
+ * three machines, for a question this function could have answered in one line.
+ *
+ * Every return path below says what it decided and why.
+ */
+private fun probeLog(message: String) = PlatformLogger.i(PROBE_TAG, "[checkLlmConfig] $message")
+
 suspend fun CIRISApiClient.checkLlmConfig(
     provider: String,
     apiKey: String,
@@ -134,11 +150,15 @@ suspend fun CIRISApiClient.checkLlmConfig(
     // the Test Connection button on exactly the providers that have no key.
     val keylessProviders = setOf("local", "local_ondevice", "mobile_local", "local_inference")
     val needsKey = provider !in keylessProviders
+    probeLog(
+        "begin provider=$provider baseUrl=${baseUrl ?: "(default)"} " +
+            "model=${selectedModel ?: "(none)"} keyPresent=${apiKey.isNotBlank()}"
+    )
     if (needsKey && apiKey.isBlank()) {
         return LlmConfigCheck(
             key = CheckState.UNKNOWN,
             keyMessage = "Enter an API key to check this provider.",
-        )
+        ).also { probeLog("no key for a provider that needs one — UNKNOWN, nothing probed") }
     }
 
     val hasModel = !selectedModel.isNullOrBlank()
@@ -153,7 +173,7 @@ suspend fun CIRISApiClient.checkLlmConfig(
             return LlmConfigCheck(
                 key = CheckState.FAILED,
                 keyMessage = e.message ?: "Could not reach the provider.",
-            )
+            ).also { probeLog("validate threw: ${e::class.simpleName}: ${e.message}") }
         }
         if (!validation.valid) {
             // Stop here on purpose. Listing models with a rejected credential
@@ -161,7 +181,7 @@ suspend fun CIRISApiClient.checkLlmConfig(
             return LlmConfigCheck(
                 key = CheckState.FAILED,
                 keyMessage = validation.error ?: validation.message,
-            )
+            ).also { probeLog("credential rejected: ${validation.error ?: validation.message}") }
         }
         validationMessage = validation.message
     }
@@ -216,5 +236,13 @@ suspend fun CIRISApiClient.checkLlmConfig(
             null
         },
         availableModels = listed.models,
-    )
+    ).also {
+        // The success path logs too. A probe that only speaks when it fails
+        // cannot tell you it ran — and "ran and passed" versus "never ran" was
+        // exactly the distinction missing when five clicks produced silence.
+        probeLog(
+            "done key=${it.key} models=${it.models} selectedModel=${it.selectedModel} " +
+                "listed=${listed.models.size} model(s)"
+        )
+    }
 }

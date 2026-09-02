@@ -1754,6 +1754,37 @@ private fun AiStep(
                 }
             }
 
+            // A VERDICT SURFACE THAT IS ALWAYS PRESENT AND ALWAYS CARRIES TEXT.
+            //
+            // The QA gate reads `txt_llm_*` and got `verdicts: {}` — no element
+            // carried any text: not an error, not a "checking…", nothing. It
+            // could not tell a failed probe from a probe that never ran, and
+            // neither could the screenshot beside it (CIRISClient#28, ask 4).
+            //
+            // The block below renders only when testResult is non-null, so
+            // before a run and DURING one there was nothing to read at all. An
+            // empty element and an absent one are the same to automation, so
+            // this one is unconditional and its text names the state.
+            Text(
+                text = when {
+                    isTesting -> "testing"
+                    testResult == null -> "not run"
+                    testResult?.valid == true -> "ok"
+                    else -> "failed"
+                },
+                fontSize = 1.sp,
+                color = Color.Transparent,
+                modifier = Modifier.testable(
+                    "txt_llm_state",
+                    when {
+                        isTesting -> "testing"
+                        testResult == null -> "not run"
+                        testResult?.valid == true -> "ok"
+                        else -> "failed"
+                    },
+                ),
+            )
+
             testResult?.let { result ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Surface(
@@ -1774,6 +1805,7 @@ private fun AiStep(
                         )
                         Column {
                             Text(
+                                modifier = Modifier.testable("txt_llm_verdict", result.message),
                                 text = result.message,
                                 color = if (result.valid) SetupColors.SuccessDark else SetupColors.ErrorDark,
                                 fontSize = 14.sp,
