@@ -94,6 +94,15 @@ actual object TestAutomation {
         }
     }
 
+    private val inputSinks = mutableSetOf<String>()
+
+    /** A field declares itself text-drivable when it starts listening. */
+    actual fun registerInputSink(testTag: String) { inputSinks.add(testTag) }
+
+    actual fun unregisterInputSink(testTag: String) { inputSinks.remove(testTag) }
+
+    actual fun hasInputSink(testTag: String): Boolean = inputSinks.contains(testTag)
+
     /**
      * Whether a click handler is currently registered for [testTag].
      * Mirrors `TestAutomationState.hasClickHandler` for desktop's local
@@ -102,7 +111,7 @@ actual object TestAutomation {
      * whose layout positions never reached the main-window
      * `onGloballyPositioned` callback.
      */
-    fun hasClickHandler(testTag: String): Boolean = clickHandlers.containsKey(testTag)
+    actual fun hasClickHandler(testTag: String): Boolean = clickHandlers.containsKey(testTag)
 
     actual fun requestTextInput(testTag: String, text: String, clearFirst: Boolean) {
         _textInputRequests.value = TextInputRequest(testTag, text, clearFirst)

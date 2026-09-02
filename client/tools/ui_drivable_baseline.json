@@ -1,0 +1,295 @@
+{
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/AdapterWizardDialog.kt": [
+    "input_manual_url"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/AttestationSheets.kt": [
+    "input_coscrub_paste"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/PendingApprovalsCard.kt": [
+    "input_budget_amount",
+    "input_budget_expiry",
+    "input_budget_reason"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillImportDialog.kt": [
+    "btn_show_source_url",
+    "btn_skill_import_confirm",
+    "btn_skill_import_done",
+    "btn_skill_preview",
+    "input_skill_md",
+    "input_skill_source_url"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillStudioCards.kt": [
+    "btn_add_env_var",
+    "btn_add_tool",
+    "chip_tags_container",
+    "input_instructions_md",
+    "input_skill_description",
+    "input_skill_name",
+    "input_skill_version"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillStudioDialogs.kt": [
+    "btn_add_parameter",
+    "btn_add_tag",
+    "btn_cancel_delete",
+    "btn_cancel_env",
+    "btn_cancel_param",
+    "btn_cancel_tag",
+    "btn_cancel_tool",
+    "btn_confirm_delete",
+    "btn_save_env",
+    "btn_save_param",
+    "btn_save_tool",
+    "input_env_default",
+    "input_env_description",
+    "input_env_name",
+    "input_param_default",
+    "input_param_description",
+    "input_param_name",
+    "input_param_type",
+    "input_tag",
+    "input_tool_cost",
+    "input_tool_description",
+    "input_tool_name",
+    "input_tool_when_to_use"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AccordCeremonyScreen.kt": [
+    "input_ceremony_cosign_pin",
+    "input_ceremony_cosign_usb",
+    "input_ceremony_holder_name",
+    "input_ceremony_key_id",
+    "input_ceremony_pin",
+    "input_ceremony_usb_path"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AccordScreen.kt": [
+    "input_accord_announce",
+    "input_accord_drill_id",
+    "input_canonical_destination",
+    "input_canonical_transport_kind",
+    "input_remint_ip",
+    "input_scrub_module_remint_cosign",
+    "input_scrub_module_remint_propose"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AdaptersScreen.kt": [
+    "btn_add_menu_cancel"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AddFederationIdScreen.kt": [
+    "input_fed_label"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ChatScreen.kt": [
+    "input_chat_body"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ChildSafetyScreen.kt": [
+    "btn_child_safety_back",
+    "btn_watchlist_disable",
+    "btn_watchlist_enable",
+    "btn_watchlist_refresh",
+    "input_watchlist_group",
+    "input_watchlist_id"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ClaimNodeScreen.kt": [
+    "btn_claim_node_back",
+    "field_claim_node_code",
+    "field_claim_node_displayname",
+    "field_claim_node_pin"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ConfigScreen.kt": [
+    "input_config_edit_value",
+    "input_config_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ContactsScreen.kt": [
+    "input_contacts_add_key",
+    "input_contacts_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/DelegationsScreen.kt": [
+    "input_delegation_code",
+    "input_delegation_key_id",
+    "input_delegation_label"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/DutyConferralScreen.kt": [
+    "input_duty_subject"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/HealthReputationScreen.kt": [
+    "btn_capacity_full_spec"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/IdentityManagementScreen.kt": [
+    "btn_identity_associate_yubikey",
+    "btn_identity_scan_qr",
+    "input_identity_associate_dir",
+    "input_identity_device_code",
+    "input_identity_portable_dir"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/InteractScreen.kt": [
+    "input_message"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LLMSettingsScreen.kt": [
+    "btn_add_provider_submit",
+    "btn_cancel_disable_ciris",
+    "btn_confirm_disable_ciris",
+    "btn_fetch_models",
+    "input_add_provider_api_key",
+    "input_add_provider_model",
+    "input_add_provider_type",
+    "input_api_key",
+    "input_base_url",
+    "input_llm_model",
+    "input_llm_provider",
+    "switch_ciris_services"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LoginScreen.kt": [
+    "btn_login_back",
+    "btn_privacy_policy",
+    "btn_server_status",
+    "input_password",
+    "input_username"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LogsScreen.kt": [
+    "input_logs_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ManageConsentScreen.kt": [
+    "btn_consent_revoke_peering",
+    "btn_consent_setup_peering",
+    "btn_manage_consent_back",
+    "btn_open_user_consent",
+    "toggle_send_traces"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ManageNodesScreen.kt": [
+    "btn_add_node_by_code",
+    "btn_add_node_by_url",
+    "btn_add_node_code_connect",
+    "btn_add_node_url_save",
+    "btn_manage_nodes_back",
+    "btn_nodes_restore_usb",
+    "btn_nodes_save_usb",
+    "field_add_node_code",
+    "field_add_node_code_url",
+    "field_add_node_name",
+    "field_add_node_url",
+    "field_edit_node_name"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/MemoryScreen.kt": [
+    "input_memory_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/MeshConfigSection.kt": [
+    "input_mesh_config_delegation",
+    "input_mesh_config_grounds",
+    "input_mesh_config_ratifies",
+    "input_mesh_config_root",
+    "input_mesh_config_ttl",
+    "input_mesh_config_value"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ModerationProposalSheet.kt": [
+    "input_moderation_reason"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ModerationScreen.kt": [
+    "btn_file_moderation",
+    "btn_ladder_cancel",
+    "btn_ladder_commit",
+    "btn_ladder_preview",
+    "btn_ladder_review",
+    "btn_load_named_moderator",
+    "btn_moderation_back",
+    "btn_open_delegation",
+    "input_allegation_type",
+    "input_ladder_attestation_type",
+    "input_ladder_attesting_key",
+    "input_ladder_attesting_keys",
+    "input_ladder_community_id",
+    "input_ladder_delegation_id",
+    "input_ladder_descend_ack",
+    "input_ladder_dimension_prefix",
+    "input_ladder_quorum_ids",
+    "input_ladder_reason",
+    "input_ladder_revoked_after",
+    "input_ladder_selection_after",
+    "input_moderation_community",
+    "input_moderation_note",
+    "input_moderation_targets"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ProvisionAccordHolderScreen.kt": [
+    "input_provision_holder_key_id",
+    "input_provision_holder_pin",
+    "input_provision_holder_usb_path"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SelfReaderOpsSection.kt": [
+    "chip_reader_standing",
+    "input_reader_delegation_id",
+    "input_reader_reason",
+    "input_reader_subject",
+    "input_self_compelled_by",
+    "input_self_delegation_id",
+    "input_self_reason"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ServerConnectionScreen.kt": [
+    "btn_connect_recent",
+    "btn_remove_recent",
+    "btn_server_back",
+    "input_server_url"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SettingsScreen.kt": [
+    "switch_force_classic_viz",
+    "switch_live_background"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SetupScreen.kt": [
+    "input_api_key",
+    "input_device_name",
+    "input_federation_associate_keyid",
+    "input_fedid_label",
+    "input_llm_base_url",
+    "input_llm_model_text",
+    "input_password",
+    "input_password_confirm",
+    "input_username"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SkillStudioScreen.kt": [
+    "btn_cancel_import",
+    "btn_confirm_import",
+    "btn_import_done",
+    "btn_import_now",
+    "tab_security",
+    "tab_skill_md"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/TransportScreen.kt": [
+    "toggle_radio_enabled"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/UsersScreen.kt": [
+    "input_users_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/VerifyAgentScreen.kt": [
+    "input_verify_hash"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WalletPage.kt": [
+    "btn_copy_address",
+    "btn_send_transfer",
+    "input_recipient_address",
+    "input_transfer_amount",
+    "input_transfer_memo"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WiseAuthorityScreen.kt": [
+    "input_wisdom_guidance"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/commons/CommonsScreen.kt": [
+    "input_commons_action",
+    "input_commons_ballot_grounds",
+    "input_commons_cohort_key",
+    "input_commons_cosigner_classical",
+    "input_commons_cosigner_key",
+    "input_commons_cosigner_pqc",
+    "input_commons_dismiss_grounds",
+    "input_commons_objection_grounds"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkContentScreen.kt": [
+    "input_peer_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkDiagnosticsScreen.kt": [
+    "input_diagnostics_search"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkPeerDetailScreen.kt": [
+    "input_appearance_bg",
+    "input_appearance_fg",
+    "input_appearance_icon"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkPeersScreen.kt": [
+    "input_add_peer_code",
+    "switch_show_infra"
+  ]
+}

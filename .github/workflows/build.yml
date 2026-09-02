@@ -139,6 +139,20 @@ jobs:
         # exactly that on the 0.5.188 bump.
         run: python3 packaging/check_pins.py
 
+      - name: Every interactive control must be drivable in test mode
+        # Downstream builds fully automated UI QA against this client, which only
+        # works if what automation can SEE it can also DRIVE. A testTag proves
+        # visibility and nothing more: a `btn_*` on plain `testable()` makes
+        # /click fall back to a Robot click at fixed coordinates, which is luck
+        # about DPI and platform scaling — it worked on Linux and Windows and
+        # missed on macOS five times running, invisibly (CIRISClient#28).
+        #
+        # Baselined at the current 203 rather than failing on all of them: a
+        # check that breaks the build on day one gets switched off in a week and
+        # then protects nothing. This fails on NEW offenders; the baseline is
+        # debt with a number that can visibly fall.
+        run: python3 client/tools/check_ui_drivable.py
+
 
   # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:

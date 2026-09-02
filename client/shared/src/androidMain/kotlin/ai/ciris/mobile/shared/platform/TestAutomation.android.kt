@@ -57,6 +57,18 @@ actual object TestAutomation {
         return TestAutomationState.triggerClick(testTag)
     }
 
+    /** Whether automation can DRIVE this tag, as opposed to merely see it. */
+    actual fun hasClickHandler(testTag: String): Boolean = false
+
+    private val inputSinks = mutableSetOf<String>()
+
+    /** A field declares itself text-drivable when it starts listening. */
+    actual fun registerInputSink(testTag: String) { inputSinks.add(testTag) }
+
+    actual fun unregisterInputSink(testTag: String) { inputSinks.remove(testTag) }
+
+    actual fun hasInputSink(testTag: String): Boolean = inputSinks.contains(testTag)
+
     actual fun requestTextInput(testTag: String, text: String, clearFirst: Boolean) {
         TestAutomationState.requestTextInput(testTag, text, clearFirst)
     }

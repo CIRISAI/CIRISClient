@@ -26,6 +26,7 @@ import ai.ciris.mobile.shared.platform.getPlatform
 import ai.ciris.mobile.shared.platform.probeLocalInferenceCapability
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.platform.TestAutomation
 
 import ai.ciris.mobile.shared.models.ConfigCompleteData
@@ -1636,8 +1637,18 @@ private fun AiStep(
             Spacer(modifier = Modifier.height(16.dp))
 
             // Test Connection button
-            OutlinedButton(
-                onClick = {
+            // ONE ACTION, TWO DOORS (CIRISClient#28).
+            //
+            // `.testable()` only sets a testTag; it registers no handler, so the
+            // test server had nothing to invoke and fell back to a blind mouse
+            // click at fixed coordinates. That is luck about DPI and window
+            // size: it worked on Linux and Windows and missed on macOS five
+            // times running, and a miss produced no verdict, no log line, and a
+            // screenshot identical to a working screen.
+            //
+            // Hoisted so the programmatic path and the human path run the same
+            // code, rather than two things that have to be kept in agreement.
+            val runConnectionTest: () -> Unit = {
                     if (!isTesting) {
                         isTesting = true
                         testResult = null
@@ -1699,8 +1710,12 @@ private fun AiStep(
                             }
                         }
                     }
-                },
-                modifier = Modifier.fillMaxWidth().testable("btn_test_connection"),
+            }
+
+            OutlinedButton(
+                onClick = runConnectionTest,
+                modifier = Modifier.fillMaxWidth()
+                    .testableWithHandler("btn_test_connection") { runConnectionTest() },
                 enabled = !isTesting && (isLocalProvider || isMobileLocalProvider || state.llmApiKey.isNotEmpty()),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = SetupColors.Primary

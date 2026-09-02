@@ -216,11 +216,49 @@ class TestAutomationServer(
 
                 // Get UI element tree
                 get("/tree") {
-                    val tree = elements.values.toList().sortedBy { it.testTag }
+                    val tree = elements.values.toList().sortedBy { it.testTag }.map {
+                        it.copy(
+                            canClick = TestAutomation.hasClickHandler(it.testTag),
+                            canInput = TestAutomation.hasInputSink(it.testTag),
+                        )
+                    }
                     call.respond(TreeResponse(
                         screen = currentScreen,
                         elements = tree,
                         count = tree.size
+                    ))
+                }
+
+                /**
+                 * THE INVARIANT: every interactive control on screen is drivable.
+                 *
+                 * Returns the tagged elements automation can see but not drive.
+                 * `btn_*` needs a click handler; `input_*`/`field_*` needs a
+                 * listening text sink. Display tags (`txt_*`, `text_*`,
+                 * `screen_*`, `card_*`) are exempt — being readable IS their job.
+                 *
+                 * A QA gate asserts this is empty on each screen it visits. That
+                 * turns "tagged but not drivable" from something discovered by a
+                 * flaky click into something a build can fail on.
+                 */
+                get("/undrivable") {
+                    val offenders = elements.values
+                        .filter { e ->
+                            val t = e.testTag
+                            when {
+                                t.startsWith("btn_") || t.startsWith("chip_") || t.startsWith("menu_") ->
+                                    !TestAutomation.hasClickHandler(t)
+                                t.startsWith("input_") || t.startsWith("field_") ->
+                                    !TestAutomation.hasInputSink(t)
+                                else -> false
+                            }
+                        }
+                        .map { it.testTag }
+                        .sorted()
+                    call.respond(UndrivableResponse(
+                        screen = currentScreen,
+                        undrivable = offenders,
+                        count = offenders.size,
                     ))
                 }
 
@@ -259,13 +297,24 @@ class TestAutomationServer(
                         return@post
                     }
 
-                    // Element is positioned but has no programmatic handler (e.g. a plain
-                    // `testable()` or a dropdown that handles clicks via AWT). Fall back
-                    // to Robot mouse click at the element's center.
+                    // NO HANDLER: STILL CLICKED, BUT NO LONGER SILENTLY.
+                    //
+                    // Falling back to a Robot click at the element's centre is luck
+                    // about DPI, window size and platform scaling. It worked on
+                    // Linux and Windows and missed on macOS five times running, and
+                    // the miss was invisible — no verdict, no client log line, and a
+                    // screenshot identical to a working screen (CIRISClient#28).
+                    //
+                    // The fallback stays, because removing it would break flows that
+                    // work today. What changes is that the response SAYS it was used,
+                    // so a harness can treat a coordinate click as the defect it is
+                    // rather than as a pass. GET /undrivable lists these ahead of time.
                     println("[TestAutomation] No programmatic handler for ${request.testTag}, falling back to mouse click at (${element.centerX}, ${element.centerY})")
                     performMouseClick(element.centerX, element.centerY)
 
                     call.respond(ActionResponse(
+                        error = "no programmatic handler for ${request.testTag}; " +
+                            "used a coordinate click, which is not reliable across DPI or platform",
                         success = true,
                         element = element.testTag,
                         action = "mouse-click",
@@ -286,7 +335,28 @@ class TestAutomationServer(
                         return@post
                     }
 
-                    // Request text input via flow (UI will pick it up)
+                    // A TAGGED FIELD IS NOT NECESSARILY A LISTENING ONE.
+                    //
+                    // Text entry is collected per screen by hand, so a field can
+                    // carry an `input_*` tag with nothing subscribed. This used to
+                    // fire the request, sleep 100ms and answer `success: true`
+                    // regardless — reporting text that was never typed, which a
+                    // harness cannot distinguish from text that was. 124 of the
+                    // 127 `input_*` tags had no sink when this was written.
+                    if (!TestAutomation.hasInputSink(request.testTag)) {
+                        call.respond(
+                            HttpStatusCode.UnprocessableEntity,
+                            ActionResponse(
+                                success = false,
+                                element = element.testTag,
+                                action = "input",
+                                error = "no text sink is listening for ${request.testTag}; " +
+                                    "the field is tagged but not drivable (see GET /undrivable)"
+                            )
+                        )
+                        return@post
+                    }
+
                     TestAutomation.requestTextInput(request.testTag, request.text, request.clearFirst)
 
                     // Give UI time to process the request
@@ -711,6 +781,20 @@ class TestAutomationServer(
 @Serializable
 data class ElementInfo(
     val testTag: String,
+    /**
+     * Whether automation can DRIVE this element, not merely see it.
+     *
+     * A tag proves visibility. It does not prove drivability: `testable()`
+     * registers no handler, so `/click` fell back to a blind mouse click at
+     * fixed coordinates — luck about DPI and window size, which worked on two
+     * platforms and missed on the third five times running (CIRISClient#28).
+     *
+     * Reported per element so a QA gate can assert the invariant instead of
+     * discovering a gap through a flaky click.
+     */
+    val canClick: Boolean = false,
+    /** Whether a field is listening for `/input`, rather than merely tagged. */
+    val canInput: Boolean = false,
     val x: Int,
     val y: Int,
     val width: Int,
@@ -730,6 +814,13 @@ data class HealthResponse(
 data class TreeResponse(
     val screen: String,
     val elements: List<ElementInfo>,
+    val count: Int
+)
+
+@Serializable
+data class UndrivableResponse(
+    val screen: String,
+    val undrivable: List<String>,
     val count: Int
 )
 

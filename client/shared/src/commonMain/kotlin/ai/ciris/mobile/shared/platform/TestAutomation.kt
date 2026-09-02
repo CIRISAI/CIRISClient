@@ -65,6 +65,40 @@ expect object TestAutomation {
     fun triggerClick(testTag: String): Boolean
 
     /**
+     * Does [testTag] have a registered click handler — i.e. can automation
+     * actually DRIVE it, rather than guess at its pixels?
+     *
+     * THE INVARIANT THIS EXISTS TO MAKE CHECKABLE.
+     *
+     * A tag alone proves an element is VISIBLE, not that it is drivable.
+     * `testable()` sets a tag and registers nothing, so `/click` fell back to a
+     * blind mouse click at fixed coordinates — which is luck about DPI and
+     * window size. It worked on Linux and Windows and missed on macOS five
+     * times running, and a miss produced no verdict, no log line, and a
+     * screenshot identical to a working screen (CIRISClient#28).
+     *
+     * That was one of 61 `btn_*` tags with no handler. Point-fixing them does
+     * not hold, because nothing made the next one detectable. This makes
+     * "tagged but not drivable" a fact the harness can assert on.
+     */
+    fun hasClickHandler(testTag: String): Boolean
+
+    /**
+     * Tags that have declared themselves text-drivable by collecting
+     * [textInputRequests].
+     *
+     * Text entry is consumed per screen by hand, so a field can carry an
+     * `input_*` tag with nothing listening — and `/input` answered
+     * `success: true` after a fixed delay regardless, reporting text that was
+     * never typed. A field registers here when it is listening.
+     */
+    fun registerInputSink(testTag: String)
+
+    fun unregisterInputSink(testTag: String)
+
+    fun hasInputSink(testTag: String): Boolean
+
+    /**
      * Flow of pending text input requests.
      * Text fields should observe this and handle requests for their tag.
      */
