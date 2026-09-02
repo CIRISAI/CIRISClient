@@ -45,3 +45,6 @@ build/
 
 # per-run MQM reports and hard-case files from localization/drive.sh
 localization/hard-cases/
+
+# Subagent worktrees — transient, and each is its own git repo
+.claude/worktrees/
