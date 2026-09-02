@@ -24,9 +24,55 @@ object TestAutomationHandler {
 
     fun handleTree(): TreeResponse {
         val screen = TestAutomationState.currentScreen
-        val elements = TestAutomationState.getAllElements().values.toList()
+        val elements = TestAutomationState.getAllElements().values.toList().map { withDrivability(it) }
         return TreeResponse(screen = screen, elements = elements, count = elements.size)
     }
+
+    /** Stamp an element with what automation can actually do to it. */
+    private fun withDrivability(e: ElementInfo): ElementInfo = e.copy(
+        canClick = ai.ciris.mobile.shared.platform.TestAutomation.hasClickHandler(e.testTag),
+        canInput = ai.ciris.mobile.shared.platform.TestAutomation.hasInputSink(e.testTag),
+    )
+
+    /**
+     * THE INVARIANT, AS A PRE-FLIGHT: everything interactive on screen is drivable.
+     *
+     * `btn_*`/`chip_*`/`menu_*` need a click handler; `input_*`/`quick_input_*`/
+     * `field_*` need a listening text sink. Display tags — `txt_`, `text_`,
+     * `screen_`, `card_`, `dialog_` — are exempt, because being readable IS
+     * their job.
+     *
+     * Shared, so the answer is identical on all five platforms. A harness that
+     * can only ask this on desktop cannot depend on it (CIRISClient#30).
+     */
+    fun handleUndrivable(): UndrivableResponse {
+        val ta = ai.ciris.mobile.shared.platform.TestAutomation
+        val offenders = TestAutomationState.getAllElements().values
+            .map { it.testTag }
+            .filter { t ->
+                when {
+                    t.startsWith("btn_") || t.startsWith("chip_") || t.startsWith("menu_") ->
+                        !ta.hasClickHandler(t)
+                    t.startsWith("input_") || t.startsWith("quick_input_") || t.startsWith("field_") ->
+                        !ta.hasInputSink(t)
+                    else -> false
+                }
+            }
+            .sorted()
+        return UndrivableResponse(
+            screen = TestAutomationState.currentScreen,
+            undrivable = offenders,
+            count = offenders.size,
+        )
+    }
+
+    /** The app's own account of its gates — see [StateResponse]. */
+    fun handleState(): StateResponse = StateResponse(
+        screen = TestAutomationState.currentScreen,
+        testMode = true,
+        clientMode = TestAutomationState.clientMode,
+        nodeUrl = TestAutomationState.nodeUrl,
+    )
 
     fun handleScreen(): ScreenResponse {
         return ScreenResponse(screen = TestAutomationState.currentScreen)
@@ -69,6 +115,24 @@ object TestAutomationHandler {
         val element = TestAutomationState.getElement(request.testTag)
             ?: return ActionResponse(success = false, error = "Element not found: ${request.testTag}")
 
+        // A TAGGED FIELD IS NOT NECESSARILY A LISTENING ONE.
+        //
+        // Text entry is collected per screen, so a field can carry an input_*
+        // tag with nothing subscribed. This used to fire the request and answer
+        // success:true regardless — telling a harness it had typed something it
+        // had not. Desktop stopped doing that in 0.5.197; mobile kept doing it,
+        // which is why Android and iOS could report a green setup step that had
+        // entered nothing (CIRISClient#28).
+        if (!ai.ciris.mobile.shared.platform.TestAutomation.hasInputSink(request.testTag)) {
+            return ActionResponse(
+                success = false,
+                element = request.testTag,
+                action = "input",
+                error = "no text sink is listening for ${request.testTag}; the field is " +
+                    "tagged but not drivable (see GET /undrivable)"
+            )
+        }
+
         // Use platform TestAutomation (not TestAutomationState) - dialogs observe the platform flow
         ai.ciris.mobile.shared.platform.TestAutomation.requestTextInput(request.testTag, request.text, request.clearFirst)
 
@@ -106,7 +170,9 @@ object TestAutomationHandler {
     }
 
     fun handleGetElement(testTag: String): ElementInfo? {
-        return TestAutomationState.getElement(testTag)
+        // Stamped exactly as /tree does: one element must never disagree with
+        // the list it appears in.
+        return TestAutomationState.getElement(testTag)?.let { withDrivability(it) }
     }
 
     fun handleScroll(request: ScrollRequest): ActionResponse {

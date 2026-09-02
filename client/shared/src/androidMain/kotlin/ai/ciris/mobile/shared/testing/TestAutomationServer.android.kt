@@ -23,6 +23,12 @@ private const val TAG = "TestAutomation.android"
  */
 class AndroidTestAutomationServer(private val port: Int = 9091) {
 
+    /** True once a real connection to the port has succeeded, not merely once start() returned. */
+    @Volatile
+    var ready: Boolean = false
+        private set
+
+
     private var server: EmbeddedServer<*, *>? = null
 
     private val json = Json {
@@ -62,6 +68,14 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
                     call.respond(TestAutomationHandler.handleTree())
                 }
 
+                // Tagged-but-not-drivable on this screen — the harness pre-flight.
+                get("/undrivable") {
+                    call.respond(TestAutomationHandler.handleUndrivable())
+                }
+                // The app's own account of its gates.
+                get("/state") {
+                    call.respond(TestAutomationHandler.handleState())
+                }
                 // Get current screen
                 get("/screen") {
                     call.respond(TestAutomationHandler.handleScreen())
@@ -140,7 +154,39 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
         }
 
         server?.start(wait = false)
-        Log.i(TAG, "Server started on http://localhost:$port")
+
+        // DO NOT CLAIM "STARTED" BECAUSE start() RETURNED.
+        //
+        // start(wait = false) binds asynchronously, so this log used to fire
+        // before the socket was necessarily accepting. The harness saw
+        // "Server started on http://localhost:9091" and a connection refused —
+        // or worse, one /health answered and the very next request died with
+        // RemoteProtocolError. A log that reports readiness it has not checked
+        // is how a bind race reads as an app fault (CIRISClient#28).
+        //
+        // So we verify by connecting, and we say which happened.
+        Thread {
+            val deadline = System.currentTimeMillis() + READY_TIMEOUT_MS
+            var attempt = 0
+            while (System.currentTimeMillis() < deadline) {
+                attempt++
+                try {
+                    java.net.Socket().use { sock ->
+                        sock.connect(java.net.InetSocketAddress("127.0.0.1", port), 500)
+                    }
+                    ready = true
+                    Log.i(TAG, "Server accepting on http://localhost:$port (after $attempt attempt(s))")
+                    return@Thread
+                } catch (e: java.io.IOException) {
+                    Thread.sleep(READY_POLL_MS)
+                }
+            }
+            Log.e(
+                TAG,
+                "Server did NOT accept on port $port within ${READY_TIMEOUT_MS}ms — " +
+                    "the app is running but automation cannot reach it",
+            )
+        }.apply { isDaemon = true; name = "ciris-test-server-ready" }.start()
     }
 
     fun stop() {
@@ -150,6 +196,10 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
     }
 
     companion object {
+        /** How long to keep checking that the port actually accepts. */
+        private const val READY_TIMEOUT_MS = 30_000L
+        private const val READY_POLL_MS = 250L
+
         private var instance: AndroidTestAutomationServer? = null
 
         // Can be set programmatically before app starts (e.g., from test runner)

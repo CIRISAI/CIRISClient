@@ -413,6 +413,39 @@
       },
       "notes": "REGRESSION FIX FOR 0.5.197 (CIRISClient#30). That cut made /input refuse with 422 when no text sink is registered — the right rule, since before it answered success:true after a fixed delay whether or not anything received the text — and then registered NO sinks. Six screens dispatch textInputRequests through a when(request.testTag) and all were working; the gate asserted a registration none performed, and every text input on every desktop went undrivable in one cut. Setup could not pass the YOU step; downstream adoption (CIRISAgent#1132) blocked. Same shape as the 0.5.196 supervisor nobody read: invariant right, wiring absent. rememberInputSinks() now sits on the line after each collector naming the tags its dispatch handles, and check_ui_drivable.py fails the build if a dispatched tag is undeclared — mutation-verified by removing one. /undrivable is stable and intended as a harness pre-flight.",
       "published": null
+    },
+    {
+      "client_version": "0.5.199",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Test-surface work only; nothing here touches the node",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change. What changes is that Android and iOS now serve the same automation surface desktop does, so a harness can depend on it being there",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3892
+      },
+      "notes": "THE MOBILE HALF OF CIRISClient#28. Android's TestAutomationServer logged 'Server started' immediately after Ktor's start(wait=false), which binds asynchronously — so the log reported readiness it had not checked, and a bind race read as an app fault: one /health answered and the next died with RemoteProtocolError, another night nothing within 90s. Readiness is now verified by actually connecting, and a failure to accept within 30s is logged as such. iOS ran a BLOCKING posix accept() on Dispatchers.Default and handed each accepted connection back to that same small pool, so the loop could starve the handlers it spawned — 'Server started' in the log and nothing answering for 120s. accept() now owns a dedicated Worker. AND THE SURFACE IS UNIFORM. handleInput answered success:true on mobile whether or not a field was listening — the 0.5.197 desktop bug, still live on the two platforms where automation is hardest — so a green setup step could have typed nothing. It now refuses with the same message. /tree carries canClick/canInput everywhere, and /undrivable and /state, previously desktop-only, are served by the shared handler on all five platforms; the pre-flight this repo tells harnesses to run now exists where they need it",
+      "published": null
     }
   ]
 }

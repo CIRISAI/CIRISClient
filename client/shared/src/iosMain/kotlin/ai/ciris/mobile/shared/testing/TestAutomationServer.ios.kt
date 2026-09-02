@@ -8,6 +8,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import platform.Foundation.NSLog
 import platform.posix.*
+import kotlin.native.concurrent.Worker
 
 // Network byte order conversion (big-endian)
 private fun htons(value: UShort): UShort {
@@ -28,6 +29,7 @@ private fun htonl(value: UInt): UInt {
 class IOSTestAutomationServer(private val port: Int = 9091) {
 
     private var serverSocket: Int = -1
+    private var acceptWorker: Worker? = null
     private var running = false
     private var scope: CoroutineScope? = null
 
@@ -42,13 +44,26 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         running = true
         scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
-        scope?.launch {
+        // THE ACCEPT LOOP GETS ITS OWN THREAD, NOT A SHARED DISPATCHER.
+        //
+        // `accept()` is a BLOCKING posix call. Running it on Dispatchers.Default
+        // parked one of that pool's few workers indefinitely, and every
+        // connection it accepted was handed back to the SAME pool to be served —
+        // so the loop could starve the handlers it was spawning. The log said
+        // "Server started on http://localhost:9091" and nothing ever answered,
+        // which is what the nightly saw: a clean startup through to the wizard,
+        // and /health silent for 120s (CIRISClient#28).
+        //
+        // A dedicated worker cannot starve anything: it blocks in accept(), and
+        // the handlers keep the pool to themselves.
+        acceptWorker = Worker.start(name = "ciris-ios-test-accept")
+        acceptWorker?.executeAfter(0L, {
             try {
-                startServer()
-            } catch (e: Exception) {
+                runBlocking { startServer() }
+            } catch (e: Throwable) {
                 NSLog("[TestAutomation.ios] Server error: ${e.message}")
             }
-        }
+        })
     }
 
     fun stop() {
@@ -59,6 +74,10 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         }
         scope?.cancel()
         scope = null
+        // The worker is blocked in accept(); closing the socket above is what
+        // releases it, so request termination without waiting on it.
+        acceptWorker?.requestTermination(processScheduledJobs = false)
+        acceptWorker = null
         NSLog("[TestAutomation.ios] Server stopped")
     }
 
@@ -174,6 +193,12 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                     200 to json.encodeToString(TestAutomationHandler.handleTree())
                 method == "GET" && path == "/screen" ->
                     200 to json.encodeToString(TestAutomationHandler.handleScreen())
+                // Tagged-but-not-drivable on this screen — the harness pre-flight.
+                method == "GET" && path == "/undrivable" ->
+                    200 to json.encodeToString(TestAutomationHandler.handleUndrivable())
+                // The app's own account of its gates.
+                method == "GET" && path == "/state" ->
+                    200 to json.encodeToString(TestAutomationHandler.handleState())
                 method == "POST" && path == "/click" -> {
                     val req = json.decodeFromString<ClickRequest>(body)
                     val resp = TestAutomationHandler.handleClick(req)

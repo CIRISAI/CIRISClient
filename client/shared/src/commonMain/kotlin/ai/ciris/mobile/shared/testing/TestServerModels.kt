@@ -16,7 +16,18 @@ data class ElementInfo(
     val height: Int,
     val text: String? = null,
     val centerX: Int,
-    val centerY: Int
+    val centerY: Int,
+    /**
+     * Whether automation can DRIVE this element, not merely see it.
+     *
+     * A tag proves visibility and nothing more. Desktop has carried these since
+     * 0.5.197; mobile did not, so a harness could read /tree on Android or iOS
+     * and have no way to tell a driveable control from a decorative one
+     * (CIRISClient#28).
+     */
+    val canClick: Boolean = false,
+    /** Whether a field is listening for /input, rather than merely tagged. */
+    val canInput: Boolean = false
 )
 
 @Serializable
@@ -49,6 +60,21 @@ data class StateResponse(
     val testMode: Boolean,
     val clientMode: String,
     val nodeUrl: String
+)
+
+/**
+ * Tagged elements on the current screen that automation can SEE but not DRIVE.
+ *
+ * The pre-flight a harness runs before driving a screen, so it fails with a
+ * list rather than discovering gaps one flaky control at a time. Desktop has
+ * served this since 0.5.197; adding it here puts it on all five platforms,
+ * which is what makes it safe to depend on (CIRISClient#28, #30).
+ */
+@Serializable
+data class UndrivableResponse(
+    val screen: String,
+    val undrivable: List<String>,
+    val count: Int
 )
 
 @Serializable
