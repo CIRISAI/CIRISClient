@@ -383,7 +383,7 @@ jobs:
           # mismatch this comment exists to explain.
           swiftver=$(python3 - <<'PYVER'
           import re, sys, pathlib
-          text = pathlib.Path("iosApp/project.yml").read_text()
+          text = pathlib.Path("project.yml").read_text()  # cwd is client/iosApp
           hits = re.findall(r'^\s*SWIFT_VERSION:\s*"?([0-9]+)', text, re.M)
           if len(hits) != 1:
               sys.exit(f"::error::project.yml has {len(hits)} SWIFT_VERSION settings, expected 1: {hits}")
