@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Nút tại địa chỉ này không phản hồi",
     "backend_retry": "Thử lại",
     "backend_choose_node": "Chọn một nút khác",
+    "claim_node_no_signer": "Nút của bạn phải được khởi động trước khi có thể nhận quyền một nút khác. Hãy khởi động nút của bạn, rồi thử lại.",
     "attestation_actions_desc": "Các thao tác cho bản ghi này",
     "chat_badge_message": "TIN NHẮN",
     "chat_details": "loại {type} · phạm vi {scope} · trạng thái {status}",

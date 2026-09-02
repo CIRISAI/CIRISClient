@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Le nœud à cette adresse ne répond pas",
     "backend_retry": "Réessayer",
     "backend_choose_node": "Choisir un autre nœud",
+    "claim_node_no_signer": "Votre nœud doit être démarré avant de pouvoir revendiquer un autre nœud. Démarrez votre nœud, puis réessayez.",
     "attestation_actions_desc": "Actions pour cet enregistrement",
     "chat_badge_message": "MESSAGE",
     "chat_details": "type {type} · portée {scope} · statut {status}",

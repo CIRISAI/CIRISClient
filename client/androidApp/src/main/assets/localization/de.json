@@ -2873,6 +2873,7 @@
     "backend_remote_silent": "Der Knoten unter dieser Adresse antwortet nicht",
     "backend_retry": "Erneut versuchen",
     "backend_choose_node": "Anderen Knoten wählen",
+    "claim_node_no_signer": "Ihr Knoten muss gestartet sein, bevor er einen anderen Knoten übernehmen kann. Starten Sie Ihren Knoten und versuchen Sie es erneut.",
     "verify_unreachable_title": "Knoten nicht erreichbar",
     "verify_unreachable_body": "Der Knoten hat nicht geantwortet, daher wissen wir nicht, ob er Builds verifizieren kann. Das liegt nicht an dem Build, den Sie prüfen.",
     "verify_status_registered": "Registriert",

@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Kumburin da ke wannan adireshin ba ya amsawa",
     "backend_retry": "Sake gwadawa",
     "backend_choose_node": "Zaɓi wani kumburi daban",
+    "claim_node_no_signer": "Dole a fara kumburinku kafin ya iya karɓi wani kumburi. Ku fara kumburinku, sannan ku sake gwadawa.",
     "attestation_actions_desc": "Ayyuka don wannan rikodin",
     "chat_badge_message": "SAƘO",
     "chat_details": "nau'i {type} · iyaka {scope} · matsayi {status}",

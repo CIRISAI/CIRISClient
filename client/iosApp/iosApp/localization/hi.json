@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "इस पते पर मौजूद नोड जवाब नहीं दे रहा",
     "backend_retry": "फिर से प्रयास करें",
     "backend_choose_node": "एक अलग नोड चुनें",
+    "claim_node_no_signer": "किसी अन्य नोड का दावा करने से पहले आपका नोड शुरू होना चाहिए। अपना नोड शुरू करें, फिर फिर से प्रयास करें।",
     "attestation_actions_desc": "इस रिकॉर्ड के लिए कार्रवाइयाँ",
     "chat_badge_message": "संदेश",
     "chat_details": "प्रकार {type} · दायरा {scope} · स्थिति {status}",

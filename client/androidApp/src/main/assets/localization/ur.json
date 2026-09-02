@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "اس پتے پر موجود نوڈ جواب نہیں دے رہا",
     "backend_retry": "دوبارہ کوشش کریں",
     "backend_choose_node": "ایک مختلف نوڈ منتخب کریں",
+    "claim_node_no_signer": "آپ کے نوڈ کو کسی اور نوڈ کا دعویٰ کرنے سے پہلے شروع ہونا ضروری ہے۔ اپنا نوڈ شروع کریں، پھر دوبارہ کوشش کریں۔",
     "attestation_actions_desc": "اس ریکارڈ کے لیے اقدامات",
     "chat_badge_message": "پیغام",
     "chat_details": "قسم {type} · دائرہ {scope} · حیثیت {status}",

@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Node di alamat ini tidak merespons",
     "backend_retry": "Coba lagi",
     "backend_choose_node": "Pilih node lain",
+    "claim_node_no_signer": "Node Anda harus dijalankan terlebih dahulu sebelum dapat mengklaim node lain. Jalankan node Anda, lalu coba lagi.",
     "attestation_actions_desc": "Tindakan untuk catatan ini",
     "chat_badge_message": "PESAN",
     "chat_details": "jenis {type} · lingkup {scope} · status {status}",

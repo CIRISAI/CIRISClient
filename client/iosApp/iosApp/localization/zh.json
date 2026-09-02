@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "该地址上的节点没有响应",
     "backend_retry": "重试",
     "backend_choose_node": "选择其他节点",
+    "claim_node_no_signer": "您的节点必须先启动，才能认领其他节点。请启动您的节点后重试。",
     "attestation_actions_desc": "此记录的操作",
     "chat_badge_message": "消息",
     "chat_details": "类型 {type} · 范围 {scope} · 状态 {status}",

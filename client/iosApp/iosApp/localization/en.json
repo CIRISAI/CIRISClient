@@ -3020,7 +3020,8 @@
     "backend_unreachable": "No network. Please check your connection.",
     "backend_remote_silent": "The node at this address isn't responding",
     "backend_retry": "Try again",
-    "backend_choose_node": "Choose a different node"
+    "backend_choose_node": "Choose a different node",
+    "claim_node_no_signer": "Your node must be started before it can claim another node. Start your node, then try again."
   },
   "moderation": {
     "ladder": {

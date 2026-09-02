@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "العقدة عند هذا العنوان لا تستجيب",
     "backend_retry": "حاول مرة أخرى",
     "backend_choose_node": "اختر عقدة أخرى",
+    "claim_node_no_signer": "يجب تشغيل عقدتك قبل أن تتمكن من المطالبة بعقدة أخرى. شغّل عقدتك، ثم أعد المحاولة.",
     "attestation_actions_desc": "إجراءات هذا السجل",
     "chat_badge_message": "رسالة",
     "chat_details": "النوع {type} · النطاق {scope} · الحالة {status}",

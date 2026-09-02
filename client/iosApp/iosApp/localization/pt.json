@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "O nó neste endereço não está respondendo",
     "backend_retry": "Tentar novamente",
     "backend_choose_node": "Escolher outro nó",
+    "claim_node_no_signer": "Seu nó precisa estar iniciado antes de poder reivindicar outro nó. Inicie seu nó e tente novamente.",
     "attestation_actions_desc": "Ações para este registo",
     "chat_badge_message": "MENSAGEM",
     "chat_details": "tipo {type} · âmbito {scope} · estado {status}",

@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "ਇਸ ਪਤੇ 'ਤੇ ਨੋਡ ਜਵਾਬ ਨਹੀਂ ਦੇ ਰਿਹਾ",
     "backend_retry": "ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ",
     "backend_choose_node": "ਕੋਈ ਹੋਰ ਨੋਡ ਚੁਣੋ",
+    "claim_node_no_signer": "ਕਿਸੇ ਹੋਰ ਨੋਡ ਦਾ ਦਾਅਵਾ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਤੁਹਾਡਾ ਨੋਡ ਸ਼ੁਰੂ ਹੋਣਾ ਲਾਜ਼ਮੀ ਹੈ। ਆਪਣਾ ਨੋਡ ਸ਼ੁਰੂ ਕਰੋ, ਫਿਰ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
     "attestation_actions_desc": "ਇਸ ਰਿਕਾਰਡ ਲਈ ਕਾਰਵਾਈਆਂ",
     "chat_badge_message": "ਸੁਨੇਹਾ",
     "chat_details": "ਕਿਸਮ {type} · ਦਾਇਰਾ {scope} · ਸਥਿਤੀ {status}",

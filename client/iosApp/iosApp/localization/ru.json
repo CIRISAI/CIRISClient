@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Узел по этому адресу не отвечает",
     "backend_retry": "Попробовать снова",
     "backend_choose_node": "Выбрать другой узел",
+    "claim_node_no_signer": "Ваш узел должен быть запущен, прежде чем он сможет заявить права на другой узел. Запустите свой узел и попробуйте снова.",
     "attestation_actions_desc": "Действия для этой записи",
     "chat_badge_message": "СООБЩЕНИЕ",
     "chat_details": "тип {type} · область {scope} · статус {status}",

@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Bu adresteki düğüm yanıt vermiyor",
     "backend_retry": "Tekrar deneyin",
     "backend_choose_node": "Farklı bir düğüm seçin",
+    "claim_node_no_signer": "Başka bir düğümü sahiplenmeden önce düğümünüzün başlatılmış olması gerekir. Düğümünüzü başlatın, ardından tekrar deneyin.",
     "attestation_actions_desc": "Bu kayıt için eylemler",
     "chat_badge_message": "MESAJ",
     "chat_details": "tür {type} · kapsam {scope} · durum {status}",

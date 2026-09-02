@@ -2957,6 +2957,7 @@
     "backend_remote_silent": "گره در این نشانی پاسخ نمی‌دهد",
     "backend_retry": "دوباره تلاش کنید",
     "backend_choose_node": "گره دیگری را انتخاب کنید",
+    "claim_node_no_signer": "گره شما باید پیش از ادعای گرهٔ دیگر راه‌اندازی شده باشد. گره خود را راه‌اندازی کنید، سپس دوباره تلاش کنید.",
     "attestation_actions_desc": "اقدامات برای این رکورد",
     "chat_badge_message": "پیام",
     "chat_details": "نوع {type} · محدوده {scope} · وضعیت {status}",

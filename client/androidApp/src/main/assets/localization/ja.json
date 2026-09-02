@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "このアドレスのノードが応答していません",
     "backend_retry": "再試行",
     "backend_choose_node": "別のノードを選択",
+    "claim_node_no_signer": "他のノードの所有権を取得するには、まずご自身のノードを起動する必要があります。ノードを起動してから、もう一度お試しください。",
     "attestation_actions_desc": "このレコードに対する操作",
     "chat_badge_message": "メッセージ",
     "chat_details": "種別 {type} · スコープ {scope} · 状態 {status}",

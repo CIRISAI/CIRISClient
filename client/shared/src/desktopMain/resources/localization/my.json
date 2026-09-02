@@ -2876,6 +2876,7 @@
     "backend_remote_silent": "ဤလိပ်စာရှိ node သည် တုံ့ပြန်မှု မရှိပါ",
     "backend_retry": "ထပ်ကြိုးစားပါ",
     "backend_choose_node": "အခြား node တစ်ခု ရွေးချယ်ပါ",
+    "claim_node_no_signer": "အခြား Node ကို ပိုင်ဆိုင်မှုပြောရန် သင်၏ Node ကို စတင်ထားရပါမည်။ သင်၏ Node ကို စတင်ပြီး ထပ်မံကြိုးစားပါ။",
     "wa_approve": "အတည်ပြုပါ",
     "wa_avg_resolution": "ပျမ်းမျှ ဖြေရှင်းချိန်: {time} မိနစ်",
     "wa_bus_subscribers": "Bus Subscribers",

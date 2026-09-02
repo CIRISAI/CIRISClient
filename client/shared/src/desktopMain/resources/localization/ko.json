@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "이 주소의 노드가 응답하지 않습니다",
     "backend_retry": "다시 시도",
     "backend_choose_node": "다른 노드 선택",
+    "claim_node_no_signer": "노드가 시작되어야 다른 노드의 소유권을 주장할 수 있습니다. 노드를 시작한 후 다시 시도하세요.",
     "attestation_actions_desc": "이 레코드에 대한 작업",
     "chat_badge_message": "메시지",
     "chat_details": "유형 {type} · 범위 {scope} · 상태 {status}",

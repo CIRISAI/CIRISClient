@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Nodi katika anwani hii haijibu",
     "backend_retry": "Jaribu tena",
     "backend_choose_node": "Chagua nodi nyingine",
+    "claim_node_no_signer": "Nodi yako lazima ianzishwe kabla ya kudai nodi nyingine. Anzisha nodi yako, kisha ujaribu tena.",
     "attestation_actions_desc": "Vitendo vya rekodi hii",
     "chat_badge_message": "UJUMBE",
     "chat_details": "aina {type} · wigo {scope} · hali {status}",

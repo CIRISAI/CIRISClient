@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "โหนดที่ที่อยู่นี้ไม่ตอบสนอง",
     "backend_retry": "ลองอีกครั้ง",
     "backend_choose_node": "เลือกโหนดอื่น",
+    "claim_node_no_signer": "โหนดของคุณต้องเริ่มทำงานก่อนจึงจะอ้างสิทธิ์โหนดอื่นได้ กรุณาเริ่มโหนดของคุณ แล้วลองอีกครั้ง",
     "attestation_actions_desc": "การดำเนินการสำหรับระเบียนนี้",
     "chat_badge_message": "ข้อความ",
     "chat_details": "ประเภท {type} · ขอบเขต {scope} · สถานะ {status}",

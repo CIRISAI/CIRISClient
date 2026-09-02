@@ -19,6 +19,18 @@ object TestAutomationState {
     var currentScreen: String = "unknown"
     var isEnabled: Boolean = false
 
+    /**
+     * The node-vs-agent gate, as the app has actually derived it.
+     *
+     * `"unset"` is meaningful: it is the state a folded-but-unreachable brain
+     * must leave the client in, pending retry. Written by `CIRISApp` wherever
+     * `clientMode` is assigned; read by the test server's `/state`.
+     */
+    var clientMode: String = "unset"
+
+    /** The node URL the app settled on -- local default, or a remote override. */
+    var nodeUrl: String = ""
+
     // Window position offset (desktop only, for converting to screen coords)
     var windowX: Int = 0
     var windowY: Int = 0

@@ -27,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -83,6 +85,14 @@ fun ClaimNodeScreen(
     // Default to "self" but make the founder pick before claiming.
     var cohortScope by remember { mutableStateOf("self") }
 
+    // ASK THE PRECONDITION FIRST. The claim is signed by this device's OWN node
+    // (the app does no crypto), so without it running there is nothing to type a
+    // NodeCode and a one-time PIN into. Checking on entry means the operator
+    // learns that before making a trip to the target node's console, rather than
+    // after -- see docs/FSD-remote-first-run-claim.md A2.
+    androidx.compose.runtime.LaunchedEffect(Unit) { viewModel.checkLocalSigner() }
+    val signerMissing = bootstrap.localSignerReady == false
+
     // While the connect-or-claim pipeline is running we disable the button.
     val inFlight = bootstrap.inProgress || bootstrap.claimInProgress
     val pinned = bootstrap.pinnedProfile
@@ -127,6 +137,23 @@ fun ClaimNodeScreen(
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            if (signerMissing) {
+                Spacer(Modifier.height(16.dp))
+                Card(
+                    modifier = Modifier.fillMaxWidth().testable("card_claim_no_signer"),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        text = localizedString("mobile.claim_node_no_signer"),
+                        modifier = Modifier.padding(14.dp),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
 
             Spacer(Modifier.height(20.dp))
 
@@ -195,7 +222,8 @@ fun ClaimNodeScreen(
                     // resulting PINNED profile below and chain the claim then.
                     viewModel.connectByNodeCode(codeInput.trim())
                 },
-                enabled = !inFlight && codeInput.isNotBlank() && pinInput.isNotBlank() && !claimed,
+                enabled = !inFlight && !signerMissing &&
+                    codeInput.isNotBlank() && pinInput.isNotBlank() && !claimed,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)

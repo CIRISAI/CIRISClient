@@ -2952,6 +2952,7 @@
     "backend_remote_silent": "এই ঠিকানার নোডটি সাড়া দিচ্ছে না",
     "backend_retry": "আবার চেষ্টা করুন",
     "backend_choose_node": "একটি ভিন্ন নোড নির্বাচন করুন",
+    "claim_node_no_signer": "আরেকটি নোড দাবি করার আগে আপনার নোড চালু থাকতে হবে। আপনার নোড চালু করুন, তারপর আবার চেষ্টা করুন।",
     "attestation_actions_desc": "এই রেকর্ডের জন্য পদক্ষেপ",
     "chat_badge_message": "বার্তা",
     "chat_details": "ধরন {type} · পরিসর {scope} · অবস্থা {status}",

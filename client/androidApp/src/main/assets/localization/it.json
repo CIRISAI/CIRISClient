@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "Il nodo a questo indirizzo non risponde",
     "backend_retry": "Riprova",
     "backend_choose_node": "Scegli un altro nodo",
+    "claim_node_no_signer": "Il tuo nodo deve essere avviato prima di poter rivendicare un altro nodo. Avvia il tuo nodo, poi riprova.",
     "attestation_actions_desc": "Azioni per questo record",
     "chat_badge_message": "MESSAGGIO",
     "chat_details": "tipo {type} · ambito {scope} · stato {status}",

@@ -2951,6 +2951,7 @@
     "backend_remote_silent": "ఈ చిరునామాలో ఉన్న నోడ్ స్పందించడం లేదు",
     "backend_retry": "మళ్లీ ప్రయత్నించండి",
     "backend_choose_node": "వేరే నోడ్‌ను ఎంచుకోండి",
+    "claim_node_no_signer": "మరో నోడ్‌ను క్లెయిమ్ చేయడానికి ముందు మీ నోడ్ ప్రారంభమై ఉండాలి. మీ నోడ్‌ను ప్రారంభించి, ఆపై మళ్లీ ప్రయత్నించండి.",
     "attestation_actions_desc": "ఈ రికార్డుకు చర్యలు",
     "chat_badge_message": "సందేశం",
     "chat_details": "రకం {type} · పరిధి {scope} · స్థితి {status}",
