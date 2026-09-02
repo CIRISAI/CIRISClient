@@ -87,9 +87,23 @@ they were force-added.
   into `client/androidApp/wheels/`. The ABI list is in
   `client/androidApp/build.gradle`.
 - **iOS** — CIRISAgent's `.github/workflows/refresh-ios-substrate.yml` produces
-  the whole set (`app_packages_native/`, `Frameworks/`, `Resources/`,
+  the set it can (`app_packages_native/`, `Frameworks/`, `Resources/`,
   `Resources.zip`, `substrate.lock.json`) on a macOS runner and uploads it as
-  the `ios-substrate-refresh` artifact.
+  the `ios-substrate-refresh` artifact. **It does not produce
+  `Python.xcframework`**, and that gap is the reason `xcodebuild` cannot run in
+  this repo's CI (CIRISClient#24). The three inputs, precisely:
+
+  | Input | Published anywhere? | What it would take here |
+  |---|---|---|
+  | `Python.xcframework` | No — no CIRISAI repo publishes it, and CIRISAgent git-ignores its own `apps/ios/Frameworks/` | It is the output of a `briefcase build iOS` of CIRISAgent's `ios/CirisiOS`; `iosApp/scripts/prepare_python_bundle.sh` reads it from a hardcoded path on one machine. Upstream is `beeware/Python-Apple-support` (`3.10-b14` ships `Python-3.10-iOS-support.b14.tar.gz`), which IS fetchable — but the simulator `lib-dynload` layout `embed_native_frameworks.sh` reads is the briefcase build's, so adopting it is a port, not a download. |
+  | `CIRISVerify.xcframework` | Partly — `ciris-verify-vX.Y.Z-ios.tar.gz` carries a **library-style, static** `CirisVerify.xcframework` (`libciris_verify_ffi.a`) | The project needs the **framework-style, dynamic** one (`iosApp/CLAUDE.md`, key constraint 1: `ctypes.CDLL` cannot `dlsym` a static archive), which CIRISAgent's `tools/update_ciris_verify.py --local` builds. The tarball does carry the `.dylib` and the release carries `ciris_verify.h`, so it is reconstructible — by re-implementing another repo's packaging in this one, which is what §2 exists to refuse. |
+  | `Resources.zip` | No | 27 MB, zipped from CIRISAgent's `ciris_engine/` + `ciris_adapters/`, which are not in this repo in any form. The Xcode target lists it as a **source**, so the project does not build without it. This is the one with no path through it. |
+
+  What CI does instead, since none of that is needed to catch a Swift call into
+  a Kotlin symbol that does not exist: `build.yml`'s `ios-kotlin` job links
+  `:shared:linkDebugFrameworkIosSimulatorArm64` and runs `swiftc -typecheck`
+  over every Swift source against it, with a canary proving the type-checker is
+  actually resolving Kotlin members before the check is trusted.
 - **Python runtime tree** (Android Chaquopy, iOS Resources) — staged from a
   CIRISAgent checkout by its `tools.dev.stage_runtime`; point Gradle at one
   with `-PcirisAgentRoot=/path/to/CIRISAgent`. The `syncPythonSources` task
