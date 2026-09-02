@@ -157,9 +157,24 @@ class ServerConnectionViewModel(
                 }
             }
         } catch (e: Exception) {
+            // DO NOT NAME A CAUSE THIS CANNOT KNOW.
+            //
+            // This used to set "Cannot connect to server" for every failure —
+            // a dead local backend, airplane mode, DNS, a request cancelled
+            // mid-resume. On a phone whose backend runs INSIDE the app that
+            // produced "Please check your connection." for someone whose
+            // network was fine; they restarted the phone, then asked why their
+            // Google login was broken, because an unreachable backend surfaces
+            // on the login screen.
+            //
+            // The honest verdict here is "not reachable", full stop. WHICH
+            // failure it is, and what the user can do about it, is
+            // BackendSupervisor's answer — see [noticeFor], where every state
+            // is required by the compiler to carry a true message and a working
+            // action. This reports reachability and stops there.
             logError("checkConnectionStatus", "Health check failed: ${e.message}")
             _connectionStatus.value = ConnectionStatus.DISCONNECTED
-            _errorMessage.value = "Cannot connect to server"
+            _errorMessage.value = null
         }
     }
 

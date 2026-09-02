@@ -3011,7 +3011,14 @@
     "verify_unavailable_body": "This is not the same as 'not registered' — the registry did not answer.",
     "verify_undetermined_title": "This node could not determine what it can do",
     "verify_undetermined_body": "The node answered, but could not read its own key record. This is usually temporary — try again shortly.",
-    "verify_retry": "Check again"
+    "verify_retry": "Check again",
+    "backend_live": "Agent running",
+    "backend_waking": "Waking the agent…",
+    "backend_down": "The agent stopped",
+    "backend_restarting": "Restarting the agent…",
+    "backend_gave_up": "The agent could not be restarted",
+    "backend_unreachable": "No network. Please check your connection.",
+    "backend_remote_silent": "The node at this address isn't responding"
   },
   "moderation": {
     "ladder": {

@@ -47,6 +47,23 @@ class PythonRuntimeService : Service(), DefaultLifecycleObserver {
 
         var isRunning = false
             private set
+
+        /**
+         * Why the runtime last failed to start, or null if it has not.
+         *
+         * THE APP ALWAYS KNEW. This exception was caught, written to a
+         * NOTIFICATION, and dropped — while the login screen said "Cannot
+         * connect to server. Please check your connection." to a user whose
+         * network was fine and whose backend lives inside the app. They
+         * restarted their phone and then asked why their Google login was
+         * broken, because an unreachable backend surfaces on the login screen.
+         *
+         * Recorded here so [AndroidBackendController.revive] can hand it to the
+         * supervisor, which puts it in front of the person who needs it.
+         */
+        @Volatile
+        var lastStartupError: String? = null
+            private set
     }
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
@@ -91,9 +108,15 @@ class PythonRuntimeService : Service(), DefaultLifecycleObserver {
             try {
                 initializePython()
                 startServer()
+                lastStartupError = null
                 updateNotification("CIRIS running")
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to start Python runtime", e)
+                // Keep the reason where something can reach it, not only in a
+                // notification the user cannot correlate with a login screen.
+                lastStartupError = e.message?.takeIf { it.isNotBlank() }
+                    ?: e::class.simpleName
+                    ?: "the runtime failed to start"
                 updateNotification("Error: ${e.message}")
             }
         }

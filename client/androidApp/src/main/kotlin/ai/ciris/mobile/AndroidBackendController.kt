@@ -59,7 +59,15 @@ class AndroidBackendController(context: Context) : LocalBackendController {
      * this call.
      */
     override suspend fun revive(): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        // A PREVIOUS FAILURE IS THE MOST USEFUL THING WE KNOW.
+        //
+        // If the runtime already tried and failed — a missing native module, a
+        // bad interpreter state — starting the service again will fail the same
+        // way. Surfacing that reason lets the supervisor's GaveUp carry
+        // something a person can act on or forward, instead of the app
+        // repeating a restart it has no reason to expect will work.
+        val previousFailure = PythonRuntimeService.lastStartupError
+        val started = runCatching {
             Log.i(TAG, "revive() — starting PythonRuntimeService")
             val intent = Intent(appContext, PythonRuntimeService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -68,6 +76,22 @@ class AndroidBackendController(context: Context) : LocalBackendController {
                 appContext.startService(intent)
             }
             Unit
+        }
+
+        // ALWAYS ATTEMPT THE START, THEN CARRY THE REASON.
+        //
+        // Short-circuiting on a previous failure would make one transient error
+        // permanent and turn the user's Retry into a button that does nothing —
+        // which is the shape of the bug being fixed, not a fix for it. So the
+        // start is always requested; a stale reason only decides what we REPORT.
+        //
+        // Reporting failure while a previous reason stands is what puts the real
+        // string into GaveUp. A start that works clears it, the next probe
+        // answers, and the supervisor goes Live before the cap is reached.
+        when {
+            started.isFailure -> started
+            previousFailure != null -> Result.failure(IllegalStateException(previousFailure))
+            else -> started
         }
     }
 
