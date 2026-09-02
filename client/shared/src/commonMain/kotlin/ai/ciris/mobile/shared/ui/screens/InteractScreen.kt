@@ -69,6 +69,7 @@ import ai.ciris.mobile.shared.platform.FilePickerDialog
 import ai.ciris.mobile.shared.platform.PickedFile
 import ai.ciris.mobile.shared.platform.platformImePadding
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
@@ -216,6 +217,10 @@ fun InteractScreen(
 
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_message")
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->
             if (request.testTag == "input_message") {

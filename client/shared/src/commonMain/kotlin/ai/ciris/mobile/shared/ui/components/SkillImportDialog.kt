@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.models.ImportedSkillData
 import ai.ciris.mobile.shared.models.SkillImportResult
 import ai.ciris.mobile.shared.models.SkillPreviewData
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.SkillImportViewModel.ImportPhase
@@ -73,6 +74,10 @@ fun SkillImportDialog(
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
 
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_skill_md", "input_skill_source_url")
     // Handle incoming text input requests
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->

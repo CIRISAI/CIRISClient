@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.getOAuthProviderName
 import ai.ciris.mobile.shared.platform.isDesktop
 import ai.ciris.mobile.shared.platform.isIOS
@@ -674,6 +675,10 @@ private fun LocalLoginForm(
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
 
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_username", "input_password")
     // Handle incoming text input requests
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->

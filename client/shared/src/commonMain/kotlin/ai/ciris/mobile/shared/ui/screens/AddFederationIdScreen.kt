@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.AnnounceDecisionCard
@@ -108,6 +109,10 @@ fun AddFederationIdScreen(
     // SetupScreen/LoginScreen/InteractScreen use — without this, /input on
     // input_fed_label "succeeds" but the Compose state never updates).
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_fed_label")
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->
             if (request.testTag == "input_fed_label") {

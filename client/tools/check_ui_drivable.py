@@ -52,7 +52,7 @@ BASELINE = pathlib.Path(__file__).parent / "ui_drivable_baseline.json"
 
 #: Prefixes naming controls a person ACTS on. Everything else — txt_, text_,
 #: screen_, card_, dialog_ — is display, and being readable is its whole job.
-INTERACTIVE = ("btn_", "chip_", "menu_", "input_", "field_", "toggle_", "switch_", "tab_")
+INTERACTIVE = ("btn_", "chip_", "menu_", "input_", "quick_input_", "field_", "toggle_", "switch_", "tab_")
 
 #: `.testable("tag")` — the tag-only modifier. The other two register handlers.
 TAG_ONLY = re.compile(r'\.testable\(\s*"([a-zA-Z0-9_]+)"')
@@ -68,6 +68,33 @@ def offenders() -> dict[str, list[str]]:
         ]
         if hits:
             found[str(f.relative_to(ROOT))] = sorted(set(hits))
+    return found
+
+
+#: A text-input dispatch: `"input_x" ->` in a when, or `== "input_x"` in an if.
+DISPATCHED = re.compile(r'(?:"((?:quick_)?(?:input|field)_[a-zA-Z0-9_]+)"\s*(?:,|->)|==\s*"((?:quick_)?(?:input|field)_[a-zA-Z0-9_]+)")')
+DECLARED = re.compile(r'rememberInputSinks\(([^)]*)\)', re.S)
+
+
+def undeclared_sinks() -> dict[str, list[str]]:
+    """Tags a file DISPATCHES from textInputRequests but never declares as sinks.
+
+    CIRISClient#30: /input refuses with 422 unless a sink is registered, and six
+    screens dispatched tags without registering one — every desktop text input
+    went undrivable in a single cut and setup could not pass the YOU step. The
+    registration now sits beside the dispatch (rememberInputSinks); this makes
+    forgetting it a build failure rather than a downstream nightly.
+    """
+    found: dict[str, list[str]] = {}
+    for f in sorted(SRC.rglob("*.kt")):
+        text = f.read_text(encoding="utf-8")
+        if "textInputRequests" not in text or "TestAutomationState" in f.name:
+            continue
+        dispatched = {a or b for a, b in DISPATCHED.findall(text)}
+        declared = {t.strip().strip('"') for m in DECLARED.findall(text) for t in m.split(",") if t.strip()}
+        missing = sorted(dispatched - declared)
+        if missing:
+            found[str(f.relative_to(ROOT))] = missing
     return found
 
 
@@ -99,6 +126,18 @@ def main() -> int:
         print(f"baseline re-recorded: {total} offender(s) in {len(now)} file(s)")
         return 0
 
+    sinks = undeclared_sinks()
+    if sinks:
+        print("::error::text input dispatched without a declared sink — /input will refuse it "
+              "with 422 (CIRISClient#30)")
+        for path, tags in sinks.items():
+            print(f"\n  {path}")
+            for t in tags:
+                print(f"      {t}")
+        print("\n  Add rememberInputSinks(...) beside the textInputRequests collector, naming "
+              "every tag the dispatch handles.")
+        return 1
+
     base = load_baseline()
     base_total = sum(len(v) for v in base.values())
 
@@ -121,7 +160,7 @@ def main() -> int:
         print("\n  Use .testableClickable(tag) { ... } for a control you own the click of,")
         print("  or .testableWithHandler(tag) { ... } when the component already handles")
         print("  its own clicks (Button, DropdownMenuItem). For a text field, subscribe to")
-        print("  TestAutomation.textInputRequests and call registerInputSink(tag).")
+        print("  TestAutomation.textInputRequests and declare rememberInputSinks(tag, ...).")
         return 1
 
     if total < base_total:

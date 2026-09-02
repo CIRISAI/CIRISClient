@@ -248,7 +248,7 @@ class TestAutomationServer(
                             when {
                                 t.startsWith("btn_") || t.startsWith("chip_") || t.startsWith("menu_") ->
                                     !TestAutomation.hasClickHandler(t)
-                                t.startsWith("input_") || t.startsWith("field_") ->
+                                t.startsWith("input_") || t.startsWith("quick_input_") || t.startsWith("field_") ->
                                     !TestAutomation.hasInputSink(t)
                                 else -> false
                             }

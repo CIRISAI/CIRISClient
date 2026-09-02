@@ -29,6 +29,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.platform.TestAutomation
 
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.models.ConfigCompleteData
 import ai.ciris.mobile.shared.models.ConfigSessionData
 import ai.ciris.mobile.shared.models.ConfigStepResultData
@@ -191,6 +192,10 @@ fun SetupScreen(
     // Observe text input requests for test automation
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
 
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_api_key", "input_device_name", "input_fedid_label", "input_llm_base_url", "input_llm_model_text", "input_password", "input_password_confirm", "input_public_api_email", "input_username", "quick_input_api_key", "quick_input_llm_base_url", "quick_input_llm_model_text")
     // Handle incoming text input requests
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->

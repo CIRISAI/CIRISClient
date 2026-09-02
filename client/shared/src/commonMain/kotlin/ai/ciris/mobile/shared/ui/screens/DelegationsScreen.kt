@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
@@ -131,6 +132,10 @@ fun DelegationsScreen(
     // /input silently no-ops and createDelegation bails on an empty label). Mirrors
     // LoginScreen/SetupScreen.
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
+    // The tags the dispatch below handles. Registration lives HERE, on the
+    // line after the collector, so it cannot be forgotten separately —
+    // check_ui_drivable.py fails the build if a dispatched tag is missing.
+    rememberInputSinks("input_delegation_code", "input_delegation_key_id", "input_delegation_label")
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->
             when (request.testTag) {
