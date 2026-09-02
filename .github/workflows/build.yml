@@ -368,6 +368,30 @@ jobs:
           fi
           echo "macro plugin search:${plugins:- <none found>}"
 
+          # MATCH THE APP'S LANGUAGE MODE, READ FROM project.yml.
+          #
+          # Bare swiftc type-checks under the toolchain default, which is
+          # stricter than SWIFT_VERSION 5.9 about concurrent capture. On its
+          # first real run this step rejected StoreKitManager.swift:144 —
+          # "reference to captured var 'self' in concurrently-executing code" —
+          # in a file the shipping app compiles without complaint.
+          #
+          # A gate that reports errors the real build does not have is a gate
+          # that gets switched off, and then it protects nothing. So the mode
+          # comes from the project, and is asserted present rather than
+          # defaulted: a missing SWIFT_VERSION would silently restore the
+          # mismatch this comment exists to explain.
+          swiftver=$(python3 - <<'PYVER'
+          import re, sys, pathlib
+          text = pathlib.Path("iosApp/project.yml").read_text()
+          hits = re.findall(r'^\s*SWIFT_VERSION:\s*"?([0-9]+)', text, re.M)
+          if len(hits) != 1:
+              sys.exit(f"::error::project.yml has {len(hits)} SWIFT_VERSION settings, expected 1: {hits}")
+          print(hits[0])
+          PYVER
+          )
+          echo "swift language mode from project.yml: $swiftver"
+
           # ── The gate must be able to fail ──────────────────────────────────
           cat > /tmp/canary.swift <<'SWIFT'
           import shared
@@ -378,6 +402,7 @@ jobs:
           }
           SWIFT
           if xcrun swiftc -typecheck -module-name canary \
+               -swift-version "$swiftver" \
                -sdk "$sdk" -target "$target" -F "$fw" $plugins \
                /tmp/canary.swift >/tmp/canary.log 2>&1; then
             echo "::error::the canary type-checked — the Swift is NOT resolved against shared.framework, so the check below proves nothing"
@@ -407,9 +432,11 @@ jobs:
             exit 1
           }
 
+
           echo "── type-checking $n Swift sources as one module:"
           printf '   %s\n' $srcs
           xcrun swiftc -typecheck -module-name iosApp \
+                -swift-version "$swiftver" \
                 -sdk "$sdk" -target "$target" -F "$fw" $plugins \
                 -import-objc-header iosApp/iosApp-Bridging-Header.h \
                 $srcs
