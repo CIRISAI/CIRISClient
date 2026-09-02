@@ -327,6 +327,23 @@ fun LoginScreen(
                     // meant the user saw nothing happen. Card body falls back
                     // to login_wrong_account_body_generic when there's no
                     // hint to display.
+                    // THE BACKEND SPEAKS FOR ITSELF, ABOVE THE LOGIN ERRORS.
+                    //
+                    // This spot showed "Cannot connect to server. Please check
+                    // your connection." for every failure, including a local
+                    // backend the app had stopped itself. A user read it as a
+                    // login problem — which is the natural reading, because an
+                    // unreachable backend surfaces HERE — restarted their phone
+                    // and asked why their Google account no longer worked.
+                    //
+                    // The banner renders BackendSupervisor's state, where every
+                    // case is required by the compiler to carry a true message
+                    // and a working action. It shows nothing when the backend is
+                    // healthy, and nothing at all when no supervisor is
+                    // installed: an un-instrumented build must not invent a
+                    // status (CIRISClient#28-adjacent, and the Esu thread).
+                    ai.ciris.mobile.shared.ui.components.BackendBannerCentered()
+
                     if (observerBlocked) {
                         ObserverBlockedRecoveryCard(
                             ownerHint = ownerHint,

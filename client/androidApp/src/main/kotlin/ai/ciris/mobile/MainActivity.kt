@@ -665,6 +665,10 @@ class MainActivity : ComponentActivity() {
         super.onStart()
         if (backendJob == null) {
             backendJob = backendSupervisor.run(lifecycleScope)
+            // Let the UI read it. Building the supervisor and not installing it
+            // is what made 0.5.196 look identical to a user with a dead
+            // backend: it decided correctly and no screen was listening.
+            ai.ciris.mobile.shared.backend.BackendStatus.install(backendSupervisor, lifecycleScope)
         }
     }
 

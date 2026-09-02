@@ -171,11 +171,11 @@ object IosBackendBridge {
      */
     fun start() {
         if (job != null) return
-        job = supervisor.run(
-            kotlinx.coroutines.CoroutineScope(
-                kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
-            )
+        val scope = kotlinx.coroutines.CoroutineScope(
+            kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
         )
+        job = supervisor.run(scope)
+        BackendStatus.install(supervisor, scope)
         NSLog("[IosBackendBridge] supervisor started")
     }
 

@@ -3018,7 +3018,9 @@
     "backend_restarting": "Restarting the agent…",
     "backend_gave_up": "The agent could not be restarted",
     "backend_unreachable": "No network. Please check your connection.",
-    "backend_remote_silent": "The node at this address isn't responding"
+    "backend_remote_silent": "The node at this address isn't responding",
+    "backend_retry": "Try again",
+    "backend_choose_node": "Choose a different node"
   },
   "moderation": {
     "ladder": {

@@ -125,6 +125,7 @@ fun main() {
     // concerned; there is no background-stop policy to fight here.
     backendSupervisor.onResumed()
     backendSupervisor.run(supervisorScope)
+    ai.ciris.mobile.shared.backend.BackendStatus.install(backendSupervisor, supervisorScope)
 
     application {
     val windowState = rememberWindowState(width = 1200.dp, height = 800.dp)
