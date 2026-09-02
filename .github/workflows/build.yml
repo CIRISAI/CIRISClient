@@ -228,11 +228,14 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
-  # ── iOS Kotlin. The only host that can compile it ───────────────────────────
+  # ── iOS. The only host that can compile the Kotlin or check the Swift ───────
   ios-kotlin:
     name: ios-kotlin
     runs-on: macos-14
-    timeout-minutes: 45
+    # 70, not 45: the job now also LINKS a debug simulator framework so the
+    # Swift can be type-checked against it. Debug linking is minutes, not the
+    # ~161 measured for the release XCFramework, but it is not free either.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
 
@@ -277,29 +280,175 @@ jobs:
             || { echo "::error::no iosArm64 klib output"; exit 1; }
           echo "iosMain compiled on $(uname -s)"
 
-      # A PARTIAL GUARD, AND SAYING SO.
+      # A DEBUG SIMULATOR FRAMEWORK, NOT THE RELEASE XCFRAMEWORK.
       #
-      # This parses the Swift; it does NOT type-check it against the shared
-      # framework, because iosApp/Frameworks/ (Python.xcframework,
-      # CIRISVerify.xcframework) is gitignored and nothing in this repo fetches
-      # it, so `xcodebuild` cannot run here. A call into a Kotlin symbol that
-      # does not exist would still reach a tag unseen.
-      #
-      # It is worth having anyway: it catches malformed Swift, which is the
-      # failure mode of every scripted edit to these files. The real gap —
-      # no compiler of any kind for the iOS app in CI — is tracked separately;
-      # do not read a green tick here as "the iOS app builds".
-      - name: Parse the Swift sources (syntax only)
-        working-directory: client/iosApp/iosApp
+      # `assembleSharedReleaseXCFramework` is what publish.yml ships and it is
+      # MEASURED at ~161 minutes; nothing that slow can gate a push. The debug
+      # simulator framework carries the same Kotlin surface — every symbol the
+      # Swift is able to call — and links off the klibs the step above just
+      # built. It is not a stand-in either: it is the exact directory the Xcode
+      # project points Debug simulator builds at
+      # (iosApp/project.yml, FRAMEWORK_SEARCH_PATHS[sdk=iphonesimulator*]).
+      - name: Link shared.framework for the simulator (and prove it was not skipped)
+        working-directory: client
         run: |
           set -euo pipefail
-          for f in *.swift; do
-            echo "── $f"
-            xcrun swiftc -parse -sdk "$(xcrun --sdk iphonesimulator --show-sdk-path)" \
-                  -target arm64-apple-ios17.0-simulator "$f" 2>&1 | tee /tmp/parse.log
-            grep -q "error:" /tmp/parse.log && { echo "::error::$f failed to parse"; exit 1; } || true
-          done
-          echo "all Swift sources parse"
+          ./gradlew --no-daemon :shared:linkDebugFrameworkIosSimulatorArm64 | tee /tmp/ioslink.log
+          if grep -qE "Task :shared:linkDebugFrameworkIosSimulatorArm64 (SKIPPED|NO-SOURCE)" /tmp/ioslink.log; then
+            echo "::error::linkDebugFrameworkIosSimulatorArm64 was skipped — there is no framework to check the Swift against"
+            exit 1
+          fi
+          fw=shared/build/bin/iosSimulatorArm64/debugFramework/shared.framework
+          test -f "$fw/Modules/module.modulemap" \
+            || { echo "::error::$fw carries no module.modulemap — 'import shared' could not resolve"; exit 1; }
+          echo "linked $fw"
+
+      # THE SWIFT IS TYPE-CHECKED AGAINST THE KOTLIN NOW, NOT MERELY PARSED.
+      #
+      # `swiftc -parse` stood here and checked syntax alone. The failure this
+      # job exists to catch — a Swift call into a Kotlin symbol that does not
+      # exist — is invisible to `-parse`, so it still reached a tag unseen
+      # (CIRISClient#24). `-typecheck` with -F at the framework linked above
+      # resolves every `IosBackendBridge.shared.…` / `AppRestarter.shared.…` /
+      # `MainViewControllerWithAuthAndStore(…)` call against the real Kotlin
+      # surface, and every source goes in as ONE module so cross-file
+      # references resolve the way Xcode resolves them.
+      #
+      # AND IT PROVES IT CAN FAIL BEFORE IT IS TRUSTED TO PASS. A canary that
+      # calls a Kotlin member which has never existed must be REJECTED. If it
+      # type-checks, then -F is wrong or the framework is empty, and everything
+      # after it would go green having resolved nothing — the same green tick a
+      # SKIPPED task gives, which is the trap this whole job was built around.
+      #
+      # WHAT IT STILL DOES NOT COVER, so the tick is not misread:
+      #   * no `xcodebuild` — see the block below for exactly what that takes;
+      #   * PythonInit.m is not compiled; it needs <Python/Python.h>;
+      #   * `#if targetEnvironment(simulator)` has device arms, and this is the
+      #     simulator slice. Kotlin symbols there are unchecked.
+      - name: Type-check the Swift against the Kotlin framework
+        working-directory: client/iosApp
+        run: |
+          set -euo pipefail
+
+          fw="$PWD/../shared/build/bin/iosSimulatorArm64/debugFramework"
+          sdk="$(xcrun --sdk iphonesimulator --show-sdk-path)"
+
+          # THE DEPLOYMENT TARGET IS READ FROM THE SURFACE IT IS CHECKED AGAINST.
+          # A hardcoded `ios17.0` stood in the old step while the app ships 15.0,
+          # so the check was two majors looser than the build it stands in for
+          # and had no way to notice.
+          ios=$(python3 - <<'PY'
+          import re, sys
+          hits = re.findall(r'^\s+iOS:\s*"?([0-9][0-9.]*)"?\s*$', open("project.yml").read(), re.M)
+          # Exactly one, or the answer is a guess: a second `iOS:` key would make
+          # this silently pick whichever came first.
+          if len(hits) != 1:
+              sys.exit(f"::error::project.yml has {len(hits)} `iOS:` deployment targets, expected 1: {hits}")
+          print(hits[0])
+          PY
+          )
+          target="arm64-apple-ios${ios}-simulator"
+          echo "deployment target ${ios} (read from project.yml) -> ${target}"
+
+          # SwiftUI's `#Preview` is a MACRO, and ContentView.swift ends in one.
+          # xcodebuild passes the plugin search paths that let the compiler find
+          # its implementation; bare `swiftc` does not, so without these the
+          # step would fail on a line Xcode compiles happily — a false red is as
+          # useless as a false green.
+          plugins=""
+          server="$(xcrun --find swift-plugin-server 2>/dev/null || true)"
+          if [ -n "$server" ]; then
+            toolchain_plugins="$(dirname "$(dirname "$server")")/lib/swift/host/plugins"
+            if [ -d "$toolchain_plugins" ]; then
+              plugins="$plugins -plugin-path $toolchain_plugins"
+            fi
+            if [ -d "$sdk/usr/lib/swift/host/plugins" ]; then
+              plugins="$plugins -external-plugin-path $sdk/usr/lib/swift/host/plugins#$server"
+            fi
+          fi
+          echo "macro plugin search:${plugins:- <none found>}"
+
+          # ── The gate must be able to fail ──────────────────────────────────
+          cat > /tmp/canary.swift <<'SWIFT'
+          import shared
+
+          // A member that has never existed on the Kotlin object the app calls.
+          func ciris_ci_canary() {
+              _ = IosBackendBridge.shared.ciris_ci_canary_absent_member()
+          }
+          SWIFT
+          if xcrun swiftc -typecheck -module-name canary \
+               -sdk "$sdk" -target "$target" -F "$fw" $plugins \
+               /tmp/canary.swift >/tmp/canary.log 2>&1; then
+            echo "::error::the canary type-checked — the Swift is NOT resolved against shared.framework, so the check below proves nothing"
+            exit 1
+          fi
+          if grep -q "no such module 'shared'" /tmp/canary.log; then
+            echo "::error::shared.framework did not load from $fw"
+            cat /tmp/canary.log
+            exit 1
+          fi
+          grep -q "ciris_ci_canary_absent_member" /tmp/canary.log || {
+            echo "::error::the canary failed for an unexpected reason — read this before trusting anything below"
+            cat /tmp/canary.log
+            exit 1
+          }
+          echo "canary: shared.framework loads, and an absent Kotlin member is an error"
+
+          # ── The check ──────────────────────────────────────────────────────
+          srcs=$(find iosApp -name '*.swift' | sort)
+          n=$(printf '%s' "$srcs" | grep -c '\.swift$' || true)
+          [ "$n" -gt 0 ] \
+            || { echo "::error::no Swift sources found — this step would pass having checked nothing"; exit 1; }
+          # An empty glob is not the only way to check nothing: a source set that
+          # never touches `shared` would type-check happily and mean as little.
+          grep -lE '^import shared$' $srcs >/dev/null || {
+            echo "::error::not one Swift source imports shared — nothing here reaches the Kotlin surface"
+            exit 1
+          }
+
+          echo "── type-checking $n Swift sources as one module:"
+          printf '   %s\n' $srcs
+          xcrun swiftc -typecheck -module-name iosApp \
+                -sdk "$sdk" -target "$target" -F "$fw" $plugins \
+                -import-objc-header iosApp/iosApp-Bridging-Header.h \
+                $srcs
+          echo "the Swift type-checks against the Kotlin it calls"
+
+      # WHAT AN ACTUAL `xcodebuild -sdk iphonesimulator` WOULD TAKE, written
+      # down so the next person does not re-derive it. All three are needed;
+      # the third has no path through it today.
+      #
+      #   1. Python.xcframework — published by NO CIRISAI repo. The only
+      #      producer is a `briefcase build iOS` of CIRISAgent's ios/CirisiOS,
+      #      and iosApp/scripts/prepare_python_bundle.sh reads it from a
+      #      hardcoded path on one machine (/Users/macmini/CIRISAgent/…/
+      #      build/ciris_ios/ios/xcode/Support/Python.xcframework). Upstream it
+      #      is beeware/Python-Apple-support — release 3.10-b14 ships
+      #      Python-3.10-iOS-support.b14.tar.gz and IS fetchable — but the
+      #      lib-dynload layout embed_native_frameworks.sh reads out of the
+      #      simulator slice is the briefcase build's, so adopting it is a port,
+      #      not a download.
+      #   2. CIRISVerify.xcframework — CIRISVerify DOES publish an iOS asset
+      #      (ciris-verify-v14.1.0-ios.tar.gz), but the xcframework inside it is
+      #      library-style and STATIC (CirisVerify.xcframework/ios-arm64-
+      #      simulator/libciris_verify_ffi.a). This project requires the
+      #      framework-style DYNAMIC one — iosApp/CLAUDE.md, key constraint 1:
+      #      ctypes.CDLL cannot dlsym a static archive — which CIRISAgent's
+      #      tools/update_ciris_verify.py --local builds. The tarball does carry
+      #      the .dylib and the release carries ciris_verify.h, so it is
+      #      reconstructible; doing it here means re-implementing another repo's
+      #      packaging in this one, which is the defect VENDORING.md §2 refuses.
+      #   3. Resources.zip — 27 MB, gitignored, and the Xcode target lists it as
+      #      a SOURCE (project.yml, 14 references in project.pbxproj), so the
+      #      project does not build without it. It is zipped from CIRISAgent's
+      #      ciris_engine/ and ciris_adapters/ trees, which are not in this repo
+      #      in any form.
+      #
+      # (3) is the wall: this repo owns the client, not the substrate it drives.
+      # Until that changes, the type-check above is the whole of the Swift's
+      # compiler coverage here — and it is the part that catches a Kotlin/Swift
+      # break, which is what CIRISClient#24 was actually about.
 
       - name: Test iosMain (simulator target)
         working-directory: client
