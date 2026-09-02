@@ -186,6 +186,16 @@ Response:
 ### Interact Screen (Chat)
 - `input_message` - Chat message input field
 - `btn_send` - Send message button
+- `interact_transcript` - The message list itself
+- `msg_<role>_<n>` - One transcript row, with the message text in `text`.
+  `<role>` is `user`, `agent`, `system`, `error` or `action`; `<n>` counts that
+  role's own rows from the oldest, so the first reply is always `msg_agent_0`
+  however many `action`/`system` rows the agent interleaved. Ordinals never
+  change once assigned. Only rows currently on screen are in `/tree`
+  (`LazyColumn` composes what is visible), but the list is pinned to the newest
+  messages, so the latest reply is always there. Added for CIRISClient#27; the
+  transcript was previously untagged and therefore absent from `/tree`
+  entirely.
 
 ## Example: Full Login Flow
 

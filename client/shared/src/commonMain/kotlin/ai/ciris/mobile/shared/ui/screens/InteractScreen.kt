@@ -1736,6 +1736,12 @@ private fun EmptyStateView(
 /**
  * Chat message list
  * Replaces RecyclerView from fragment_interact.xml:133-140
+ *
+ * Test tags:
+ *  - ``interact_transcript``  — the LazyColumn
+ *  - ``msg_<role>_<n>``       — one message row, carrying its text; role is one
+ *    of user/agent/system/error/action and n counts that role's rows from the
+ *    oldest. See [transcriptTestTags] (CIRISClient#27).
  */
 @Composable
 private fun ChatMessageList(
@@ -1761,11 +1767,22 @@ private fun ChatMessageList(
             else -> maxWidth * 0.55f
         }.coerceIn(200.dp, 600.dp)  // Min 200dp, max 600dp
 
+        // Tags are minted CHRONOLOGICALLY and only then reversed for display,
+        // because `msg_agent_0` has to mean the first reply and go on meaning it
+        // — see transcriptTestTags for why "newest first" would be a race rather
+        // than a naming preference (CIRISClient#27).
+        val taggedRows = remember(messages) {
+            messages.zip(transcriptTestTags(messages)).asReversed()
+        }
+
         LazyColumn(
             state = listState,
+            // The transcript itself, so automation can tell an empty
+            // conversation from a screen that never rendered one.
             modifier = Modifier
                 .fillMaxSize()
-                .padding(8.dp),
+                .padding(8.dp)
+                .testable("interact_transcript"),
             reverseLayout = true,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -1777,13 +1794,25 @@ private fun ChatMessageList(
             // Nothing anywhere said so; the count below simply disagreed.
             // Deduplicating ONCE here and counting the same list is what keeps the
             // two honest with each other.
-            items(messages.reversed(), key = { it.id }) { message ->
+            items(taggedRows, key = { it.first.id }) { (message, tag) ->
+                // The TEXT is the point, not the tag. A tag proves a row exists;
+                // a gate asserting "the agent replied" has to read what it says,
+                // and `/tree` carries exactly the string handed to `testable`.
+                // Passed on the row's own modifier so the whole bubble — author
+                // line, body, timestamp — is one addressable element.
+                //
+                // LazyColumn composes only what is visible, so an old message
+                // scrolled out of view leaves the tree. That is fine here and
+                // only here: reverseLayout plus the auto-scroll below pins the
+                // NEWEST rows on screen, which is what an assertion about a
+                // reply is looking at.
+                val row = Modifier.testable(tag, message.text)
                 when (message.type) {
-                    MessageType.USER -> UserChatBubble(message, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
-                    MessageType.AGENT -> AgentChatBubble(message, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
-                    MessageType.SYSTEM -> SystemMessage(message, bubbleMaxWidth = bubbleMaxWidth)
-                    MessageType.ERROR -> ErrorMessage(message, bubbleMaxWidth = bubbleMaxWidth)
-                    MessageType.ACTION -> ActionBubble(message, bubbleMaxWidth = bubbleMaxWidth)
+                    MessageType.USER -> UserChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
+                    MessageType.AGENT -> AgentChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
+                    MessageType.SYSTEM -> SystemMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
+                    MessageType.ERROR -> ErrorMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
+                    MessageType.ACTION -> ActionBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
                 }
             }
         }
