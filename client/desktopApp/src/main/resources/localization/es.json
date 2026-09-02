@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "Este nodo no pudo determinar qué puede hacer",
     "verify_undetermined_body": "El nodo respondió, pero no pudo leer su propio registro de claves. Esto suele ser temporal — inténtalo de nuevo en breve.",
     "verify_retry": "Comprobar de nuevo",
-    "backend_live": "Agente en ejecución",
+    "backend_live": "El agente está listo",
     "backend_waking": "Despertando al agente…",
     "backend_down": "El agente se detuvo",
     "backend_restarting": "Reiniciando el agente…",

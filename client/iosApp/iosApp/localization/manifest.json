@@ -56,7 +56,7 @@
       "name": "Amharic",
       "native_name": "አማርኛ",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ar": {
@@ -67,7 +67,7 @@
       "name": "Arabic",
       "native_name": "العربية",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "bn": {
@@ -77,7 +77,7 @@
       "name": "Bengali",
       "native_name": "বাংলা",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "de": {
@@ -87,7 +87,7 @@
       "name": "German",
       "native_name": "Deutsch",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "en": {
@@ -106,7 +106,7 @@
       "name": "Spanish",
       "native_name": "Español",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "fa": {
@@ -118,7 +118,7 @@
       "name": "Persian",
       "native_name": "فارسی",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "fr": {
@@ -128,7 +128,7 @@
       "name": "French",
       "native_name": "Français",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ha": {
@@ -139,7 +139,7 @@
       "name": "Hausa",
       "native_name": "هَوُسَ",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "hi": {
@@ -149,7 +149,7 @@
       "name": "Hindi",
       "native_name": "हिन्दी",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "id": {
@@ -160,7 +160,7 @@
       "name": "Indonesian",
       "native_name": "Bahasa Indonesia",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "it": {
@@ -170,7 +170,7 @@
       "name": "Italian",
       "native_name": "Italiano",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ja": {
@@ -180,7 +180,7 @@
       "name": "Japanese",
       "native_name": "日本語",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ko": {
@@ -190,7 +190,7 @@
       "name": "Korean",
       "native_name": "한국어",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "mr": {
@@ -202,7 +202,7 @@
       "name": "Marathi",
       "native_name": "मराठी",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "my": {
@@ -214,7 +214,7 @@
       "name": "Burmese",
       "native_name": "မြန်မာ",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "pa": {
@@ -226,7 +226,7 @@
       "name": "Punjabi",
       "native_name": "ਪੰਜਾਬੀ",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "pt": {
@@ -236,7 +236,7 @@
       "name": "Portuguese",
       "native_name": "Português",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ru": {
@@ -246,7 +246,7 @@
       "name": "Russian",
       "native_name": "Русский",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "sw": {
@@ -256,7 +256,7 @@
       "name": "Swahili",
       "native_name": "Kiswahili",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ta": {
@@ -266,7 +266,7 @@
       "name": "Tamil",
       "native_name": "தமிழ்",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "te": {
@@ -277,7 +277,7 @@
       "name": "Telugu",
       "native_name": "తెలుగు",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "th": {
@@ -289,7 +289,7 @@
       "name": "Thai",
       "native_name": "ไทย",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "tr": {
@@ -299,7 +299,7 @@
       "name": "Turkish",
       "native_name": "Türkçe",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "uk": {
@@ -310,7 +310,7 @@
       "name": "Ukrainian",
       "native_name": "Українська",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "ur": {
@@ -321,7 +321,7 @@
       "name": "Urdu",
       "native_name": "اردو",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "vi": {
@@ -332,7 +332,7 @@
       "name": "Vietnamese",
       "native_name": "Tiếng Việt",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "yo": {
@@ -344,7 +344,7 @@
       "name": "Yoruba",
       "native_name": "Yorùbá",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     },
     "zh": {
@@ -354,7 +354,7 @@
       "name": "Chinese (Simplified)",
       "native_name": "中文",
       "origin": "auto-generated",
-      "review_status": "needs_native_review",
+      "review_status": "machine_reviewed",
       "status": "draft"
     }
   },
@@ -499,5 +499,6 @@
     "status": "Status labels"
   },
   "updated_at": "2026-04-20T05:00:00Z",
-  "version": "2.1.0"
+  "version": "2.1.0",
+  "review_status_note": "machine_reviewed: translated and MQM-reviewed by models, the judge from a different family than the writer. There is no native-reviewer pipeline behind this project, so the previous 'needs_native_review' named a queue nobody was working. status stays draft and no output may be described as native quality."
 }

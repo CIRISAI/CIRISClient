@@ -187,7 +187,8 @@ Three things are worth knowing before reading the code:
   and they are exactly where a fallback to English would be invisible.
 - **What it does not claim.** Terminology, structure, placeholders and meaning
   are guaranteed. Native fluency is not. Everything the pipeline writes is
-  `draft` / `needs_native_review` until a speaker signs off.
+  `draft` / `machine_reviewed` — machine-translated, MQM-reviewed by a judge of a
+  different model family than the writer. There is no native-reviewer pipeline.
 
 ### Migrating off a vendored copy
 

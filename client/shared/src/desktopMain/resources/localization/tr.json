@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "Bu düğüm ne yapabileceğini belirleyemedi",
     "verify_undetermined_body": "Düğüm yanıt verdi, ancak kendi anahtar kaydını okuyamadı. Bu genellikle geçicidir — kısa süre sonra tekrar deneyin.",
     "verify_retry": "Yeniden kontrol et",
-    "backend_live": "Ajan çalışıyor",
+    "backend_live": "Ajan hazır",
     "backend_waking": "Ajan uyandırılıyor…",
     "backend_down": "Ajan durdu",
     "backend_restarting": "Ajan yeniden başlatılıyor…",

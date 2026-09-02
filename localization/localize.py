@@ -86,8 +86,15 @@ holds it. GUARANTEED: terminology consistency, structural completeness,
 functional correctness, meaning preservation, placeholder integrity. NOT
 guaranteed: native fluency, dialect coverage, cultural adaptation of metaphor,
 legal review. Everything this pipeline writes is `status: draft` /
-`review_status: needs_native_review` until a speaker signs off, and no output
-of it may be marketed as native quality.
+`review_status: machine_reviewed`, and no output of it may be marketed as
+native quality.
+
+The label was `needs_native_review`, which named an action nobody was going to
+take: there is no native-reviewer pipeline and no queue behind that string. A
+pending that can never clear is a worse claim than a stated limit, and it also
+hides the real one — these are machine translations, MQM-reviewed by a model of
+a different family from the one that wrote them, and that is the whole of it.
+Say so plainly rather than implying a human is coming.
 
 ── Cost design, in the order that actually saves money ────────────────────────
 
@@ -1151,10 +1158,15 @@ def run(lane: str, patterns: Sequence[str], langs: Sequence[str], *, max_keys: i
             for k, why in sorted(keys.items()):
                 print(f"  {lang}  {k}: {why}")
 
-    print("\nEvery value written is status=draft / review_status=needs_native_review. "
+    print("\nEvery value written is status=draft / review_status=machine_reviewed. "
           "This pipeline guarantees terminology, structure and meaning; it does not "
           "guarantee native fluency, and nothing it writes may be described as "
-          "native quality until a speaker signs off.")
+          "native quality.\n"
+          "There is no native-reviewer pipeline behind this. The label used to say "
+          "needs_native_review, which read as a queue someone was working; there is "
+          "no queue and no one is working it, and a permanent pending is a worse "
+          "claim than an honest limit. What IS true stays true: draft, not native "
+          "quality, never marketed as such.")
     return rc
 
 

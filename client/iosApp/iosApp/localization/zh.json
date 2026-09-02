@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "本节点无法确定自己能做什么",
     "verify_undetermined_body": "该节点作出了应答，但无法读取自己的密钥记录。这通常是暂时性的——请稍后重试。",
     "verify_retry": "重新检查",
-    "backend_live": "智能体正在运行",
+    "backend_live": "智能体已就绪",
     "backend_waking": "正在唤醒智能体……",
     "backend_down": "智能体已停止",
     "backend_restarting": "正在重启智能体……",

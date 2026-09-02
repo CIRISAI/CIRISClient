@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "Este nó não conseguiu determinar o que pode fazer",
     "verify_undetermined_body": "O nó respondeu, mas não conseguiu ler o próprio registro de chave. Isto costuma ser temporário — tente novamente em breve.",
     "verify_retry": "Verificar novamente",
-    "backend_live": "Agente executando",
+    "backend_live": "O agente está pronto",
     "backend_waking": "Acordando o agente…",
     "backend_down": "O agente parou",
     "backend_restarting": "Reiniciando o agente…",

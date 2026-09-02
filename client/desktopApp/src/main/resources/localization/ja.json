@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "このノードは自身にできることを判別できませんでした",
     "verify_undetermined_body": "ノードは応答しましたが、自身の鍵の記録を読み取れませんでした。これは通常一時的なものです — しばらくしてから再試行してください。",
     "verify_retry": "再確認",
-    "backend_live": "エージェント実行中",
+    "backend_live": "エージェントの準備ができました",
     "backend_waking": "エージェントを起動しています…",
     "backend_down": "エージェントが停止しました",
     "backend_restarting": "エージェントを再起動しています…",

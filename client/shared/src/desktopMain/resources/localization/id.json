@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "Node ini tidak dapat menentukan apa yang bisa dilakukannya",
     "verify_undetermined_body": "Node merespons, tetapi tidak dapat membaca catatan kuncinya sendiri. Biasanya ini bersifat sementara — coba lagi sebentar lagi.",
     "verify_retry": "Periksa lagi",
-    "backend_live": "Agen berjalan",
+    "backend_live": "Agen siap",
     "backend_waking": "Membangunkan agen…",
     "backend_down": "Agen berhenti",
     "backend_restarting": "Memulai ulang agen…",

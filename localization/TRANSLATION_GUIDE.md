@@ -181,11 +181,19 @@ correctness, meaning preservation, placeholder integrity.
 **NOT guaranteed** — native fluency, dialect coverage, cultural adaptation of
 metaphor, legal review.
 
-Everything stays `status: draft` / `review_status: needs_native_review` until a
-speaker signs off. **Hand-translating does not upgrade that status.** It buys
-correct terminology, a resolvable referent and the right script conventions —
-which is what the reviewer rejected the machine output for — and it does not buy
-a native ear. Say so.
+Everything stays `status: draft` / `review_status: machine_reviewed`.
+That label is the honest one: these are machine translations, reviewed by an
+MQM judge from a different model family than the writer, and nothing more.
+It used to read `needs_native_review`, which named a queue that does not
+exist — there is no native-reviewer pipeline behind this project. A pending
+that can never clear is a worse claim than a stated limit, and it hid the
+real one. What does not change: draft, not native quality, and no output of
+this pipeline may be marketed as native quality.
+
+**Hand-translating does not upgrade that status either.** An agent doing the
+work by hand is still not a native speaker, and relabelling it would be the
+same false claim in a different place. The status describes who checked it,
+not how much care went in.
 
 ---
 

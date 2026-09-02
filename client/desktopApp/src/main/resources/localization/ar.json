@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "تعذّر على هذه العقدة تحديد ما تستطيع فعله",
     "verify_undetermined_body": "أجابت العقدة، لكنها لم تستطع قراءة سجل مفتاحها الخاص. هذا عادةً مؤقت — حاول مجدداً بعد قليل.",
     "verify_retry": "تحقّق مجدداً",
-    "backend_live": "الوكيل يعمل",
+    "backend_live": "الوكيل جاهز",
     "backend_waking": "جارٍ إيقاظ الوكيل…",
     "backend_down": "توقّف الوكيل",
     "backend_restarting": "جارٍ إعادة تشغيل الوكيل…",

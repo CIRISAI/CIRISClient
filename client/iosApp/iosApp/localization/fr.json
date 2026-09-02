@@ -2942,7 +2942,7 @@
     "verify_undetermined_title": "Ce nœud n'a pas pu déterminer ce qu'il peut faire",
     "verify_undetermined_body": "Le nœud a répondu, mais n'a pas pu lire son propre enregistrement de clé. C'est généralement temporaire — réessayez dans un instant.",
     "verify_retry": "Vérifier à nouveau",
-    "backend_live": "Agent en cours d'exécution",
+    "backend_live": "L'agent est prêt",
     "backend_waking": "Réveil de l'agent…",
     "backend_down": "L'agent s'est arrêté",
     "backend_restarting": "Redémarrage de l'agent…",

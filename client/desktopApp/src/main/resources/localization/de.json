@@ -2864,7 +2864,7 @@
     "verify_undetermined_title": "Dieser Knoten konnte nicht feststellen, was er kann",
     "verify_undetermined_body": "Der Knoten hat geantwortet, konnte aber seinen eigenen Schlüsseldatensatz nicht lesen. Das ist meist vorübergehend — versuchen Sie es in Kürze erneut.",
     "verify_retry": "Erneut prüfen",
-    "backend_live": "Agent läuft",
+    "backend_live": "Der Agent ist bereit",
     "backend_waking": "Agent wird geweckt…",
     "backend_down": "Der Agent wurde gestoppt",
     "backend_restarting": "Agent wird neu gestartet…",
