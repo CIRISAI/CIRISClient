@@ -42,3 +42,6 @@ build/
 # A local emitter checkout for check_localization_sync.py --server-src.
 # Scratch: the emitters are CIRISServer's, pinned per run, never content here.
 .emitters/
+
+# per-run MQM reports and hard-case files from localization/drive.sh
+localization/hard-cases/
