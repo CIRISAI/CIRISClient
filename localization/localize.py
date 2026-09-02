@@ -346,8 +346,14 @@ Judge hard and specifically:
 - Agreement with the CANONICAL TERMINOLOGY block is NOT a finding. Report
   terminology only where the translation DISAGREES with it. A note that says
   the term was used correctly must not appear as an error.
-- Casing alone is never a finding: the glossary tables are written in table
-  case, and the target language's own sentence and label casing applies.
+- Echoing the glossary's TABLE CASE is not a finding. The tables are written
+  in title case as a formatting convention; a term used mid-sentence takes the
+  target language's own casing. Do not report a term merely for differing in
+  case from its glossary row.
+  BUT the target language's own casing rules are normative and DO produce
+  findings where a glossary states them — German capitalizes all nouns
+  (de_glossary.md "Capitalization"), and a lowercase noun there is an
+  orthographic error, not a style preference.
 
 LOOK FOR THESE SPECIFICALLY. Each is a defect this pipeline has actually shipped
 past a structural gate, in some language, on some run:
