@@ -552,6 +552,10 @@ def _anthropic_call(model: str, system: str, messages: List[dict]) -> Reply:
                  msg.usage.cache_read_input_tokens or 0)
 
 
+#: Per-model output caps for the OpenRouter path (see the body below).
+MAX_OUTPUT_TOKENS = {"openai/gpt-5-pro": 32000}
+
+
 def _openrouter_call(model: str, system: str, messages: List[dict]) -> Reply:
     """Same request over OpenRouter. Content blocks are flattened — the
     cache_control lever does not survive this path, which is priced in: it buys
@@ -562,7 +566,13 @@ def _openrouter_call(model: str, system: str, messages: List[dict]) -> Reply:
     flat = "\n\n".join(part["text"] for m in messages for part in m["content"])
     body = json.dumps({
         "model": model,
-        "max_tokens": 16000,
+        # Reasoning models count their thinking against max_tokens. At 16000 a
+        # 35-key repair payload came back with content null (Opus) or with
+        # reasoning-only text (gpt-5-pro), so every rung "produced nothing
+        # usable" and the whole batch was held at full cost. OpenRouter also
+        # pre-authorizes max_tokens x output price before the call, so the
+        # most expensive rung is capped lower or it 402s on a low balance.
+        "max_tokens": MAX_OUTPUT_TOKENS.get(model, 64000),
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": flat}],
     }).encode()
@@ -597,6 +607,12 @@ def call_model(model: str, system: str, messages: List[dict], *, batch: bool = F
 
 
 def parse_json_reply(text: str) -> dict:
+    # A provider can return a message with no text at all (content null: a
+    # rung that spent its whole token budget on reasoning). Callers already
+    # treat ValueError as "unparseable reply" and escalate; an AttributeError
+    # here killed a whole run instead.
+    if text is None:
+        raise ValueError("empty reply (no text content)")
     text = text.strip()
     if text.startswith("```"):
         text = text.strip("`")
