@@ -347,6 +347,39 @@
       },
       "notes": "TWO ARTIFACTS THAT LOOKED RIGHT AND WERE NOT. #25: an Android AAR never contains its project dependencies' classes — Gradle expects a consumer to resolve them from a repository via the POM beside it. This one is published as a bare file and dropped into apps/android/libs/, so there is no POM and no repository, and implementation(project(\":generated-api\")) could never reach a consumer. 0.5.195 shipped 5,820 ai/ciris/mobile classes and zero ai/ciris/api; every APK built against it died in onCreate with NoClassDefFoundError on AgentApi, from CIRISApiClient's constructor on the startup path. The AAR is now fat, and packaging/check_aar.py opens the artifact about to be uploaded and looks for the class the crash named — the broken release was a BUILD SUCCESSFUL producing a 16 MB file, so neither exit code nor size distinguished it. #26: LOCAL_NODE_URL was a const val naming :4243 at ~30 federation call sites while the app honoured CIRIS_NODE_URL everywhere else, so a desktop client attached to :4343 sent all twelve ordinary calls there and then minted the owner's federation identity on a node the operator had never attached to. The constant's own doc was right about WHY it exists and wrong that it could be constant: which node runs in-process is precisely what a compile-time value cannot know, and Main.kt already resolves it. Now set once by each platform entry point, which fixes all thirty sites without depending on having found them",
       "published": null
+    },
+    {
+      "client_version": "0.5.197",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing here asks the node for anything new: the backend supervisor uses /v1/system/health, which the node has answered since 0.5.168, and everything else is client-side UI, packaging or test surface",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change. What changed is whether a user can SEE that a capability is unavailable and act on it: a dead local backend now reports itself honestly instead of blaming the user's network",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3892
+      },
+      "notes": "THE MACHINERY WAS BUILT IN 0.5.196 AND NOTHING READ IT. BackendSupervisor shipped wired to lifecycle on three platforms with 18 tests, and no screen consumed its state, so a user with a dead backend still read \"Cannot connect to server. Please check your connection.\" from an app whose backend runs inside itself — then restarted their phone and asked why Google sign-in had broken, because an unreachable backend surfaces on the login screen. noticeFor() is now an exhaustive `when` over BackendState with no else, so a new state cannot be added without deciding what the user is told and what they can do; verified by adding one and watching the build fail. Three properties are pinned by test: no state is silent, no broken state is a dead end, and \"check your connection\" appears only on Unreachable, where we could not ASK. The service's startup exception — previously written to a notification and dropped — now reaches GaveUp and the screen. DRIVABILITY IS AN INVARIANT: 61 btn_* tags had no handler and 124 input_* had no sink while /input answered success:true regardless, so /tree now carries canClick/canInput, /undrivable lists what is tagged-but-not-drivable per screen, and a baselined static check fails on new offenders. THE APP IS NOW STARTED BY CI, four times, against the four node configurations a universal client must serve (#10) — every defect this repo shipped previously lived past a green build because nothing ran the app. iOS Swift is type-checked against the real Kotlin framework for the first time (#24), which found a genuine captured-var race in the StoreKit transaction listener on first contact; fixed rather than accommodated by loosening the gate. Chat transcript tagged so automation can assert agent replies (#27). checkLlmConfig logs every path including success (#28).",
+      "published": null
     }
   ]
 }

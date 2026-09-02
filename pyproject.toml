@@ -16,7 +16,7 @@ dependencies = []
 # Pinned to this distribution's own version — `ciris-client[web]==X` must
 # resolve the X bundle, or a stale resolver pairs with a fresh payload and the
 # split surfaces only at runtime. packaging/check_pins.py asserts it in CI.
-web = ["ciris-client-wasm==0.5.196"]
+web = ["ciris-client-wasm==0.5.197"]
 
 # The build-readiness gates (this repo's original contents). Their framework
 # lives in CIRISGrace and is not published yet, which is why it is an extra and
