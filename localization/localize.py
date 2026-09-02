@@ -152,8 +152,9 @@ PROVIDER = _provider()
 _LADDERS = {
     "openrouter": (
         "anthropic/claude-sonnet-5",   # draft — strongest on tone and register
-        "anthropic/claude-opus-5",     # escalation — the hard keys
-        "openai/gpt-5-pro",            # last word — a different family entirely
+        "google/gemini-3.7-flash",     # first repair — a different family, and the
+                                       # measured best on low-resource languages
+        "anthropic/claude-opus-5",     # last word — the hard keys
     ),
     "anthropic": ("claude-sonnet-5", "claude-opus-5"),
 }
@@ -202,6 +203,10 @@ PRICE = {
     "anthropic/claude-haiku-4.5": (1.00, 5.00),
     "openai/gpt-5.1": (1.25, 10.00),
     "openai/gpt-5-pro": (15.00, 120.00),
+    "google/gemini-3.7-flash": (0.75, 3.75),
+    "google/gemini-3.1-pro-preview": (2.00, 12.00),
+    "openai/gpt-5.4": (2.50, 15.00),
+    "x-ai/grok-4.6": (2.00, 6.00),
     "claude-sonnet-5": (2.00, 10.00),
     "claude-opus-5": (5.00, 25.00),
 }
@@ -338,6 +343,17 @@ Judge hard and specifically:
   even if the alternative is a fine word in isolation.
 - Do NOT invent errors to look thorough. An empty list is the correct and
   expected answer for a good translation.
+- Agreement with the CANONICAL TERMINOLOGY block is NOT a finding. Report
+  terminology only where the translation DISAGREES with it. A note that says
+  the term was used correctly must not appear as an error.
+- Echoing the glossary's TABLE CASE is not a finding. The tables are written
+  in title case as a formatting convention; a term used mid-sentence takes the
+  target language's own casing. Do not report a term merely for differing in
+  case from its glossary row.
+  BUT the target language's own casing rules are normative and DO produce
+  findings where a glossary states them — German capitalizes all nouns
+  (de_glossary.md "Capitalization"), and a lowercase noun there is an
+  orthographic error, not a style preference.
 
 LOOK FOR THESE SPECIFICALLY. Each is a defect this pipeline has actually shipped
 past a structural gate, in some language, on some run:
@@ -552,6 +568,10 @@ def _anthropic_call(model: str, system: str, messages: List[dict]) -> Reply:
                  msg.usage.cache_read_input_tokens or 0)
 
 
+#: Per-model output caps for the OpenRouter path (see the body below).
+MAX_OUTPUT_TOKENS = {"openai/gpt-5-pro": 32000}
+
+
 def _openrouter_call(model: str, system: str, messages: List[dict]) -> Reply:
     """Same request over OpenRouter. Content blocks are flattened — the
     cache_control lever does not survive this path, which is priced in: it buys
@@ -562,7 +582,13 @@ def _openrouter_call(model: str, system: str, messages: List[dict]) -> Reply:
     flat = "\n\n".join(part["text"] for m in messages for part in m["content"])
     body = json.dumps({
         "model": model,
-        "max_tokens": 16000,
+        # Reasoning models count their thinking against max_tokens. At 16000 a
+        # 35-key repair payload came back with content null (Opus) or with
+        # reasoning-only text (gpt-5-pro), so every rung "produced nothing
+        # usable" and the whole batch was held at full cost. OpenRouter also
+        # pre-authorizes max_tokens x output price before the call, so the
+        # most expensive rung is capped lower or it 402s on a low balance.
+        "max_tokens": MAX_OUTPUT_TOKENS.get(model, 64000),
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": flat}],
     }).encode()
@@ -597,6 +623,12 @@ def call_model(model: str, system: str, messages: List[dict], *, batch: bool = F
 
 
 def parse_json_reply(text: str) -> dict:
+    # A provider can return a message with no text at all (content null: a
+    # rung that spent its whole token budget on reasoning). Callers already
+    # treat ValueError as "unparseable reply" and escalate; an AttributeError
+    # here killed a whole run instead.
+    if text is None:
+        raise ValueError("empty reply (no text content)")
     text = text.strip()
     if text.startswith("```"):
         text = text.strip("`")

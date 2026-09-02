@@ -56,7 +56,18 @@ def _parse(code: str) -> Tuple[Tuple[Tuple[str, str], ...], Tuple[Tuple[str, str
     terms: Dict[str, str] = {}
     prose: Dict[str, List[str]] = {}
     section = None
-    for line in path.read_text(encoding="utf-8").splitlines():
+    lines = path.read_text(encoding="utf-8").splitlines()
+    # The first row of EVERY table is its header, whatever it says. Only rows
+    # whose first cell was literally "English" used to be skipped, so the
+    # Version History table's "| Version | Date | Changes |" became the
+    # canonical term "Version -> Date" in 24 languages and the judge enforced
+    # it ("must be followed even if it appears odd").
+    header_rows = {
+        i for i, line in enumerate(lines[:-1])
+        if line.startswith("|") and lines[i + 1].startswith("|")
+        and all(set(c.strip()) <= set("-: ") for c in lines[i + 1].strip().strip("|").split("|"))
+    }
+    for i, line in enumerate(lines):
         head = _H2.match(line)
         if head:
             section = head.group(1).strip()
@@ -68,7 +79,7 @@ def _parse(code: str) -> Tuple[Tuple[Tuple[str, str], ...], Tuple[Tuple[str, str
                 continue
             if set(cells[0]) <= set("-: ") or set(cells[1]) <= set("-: "):
                 continue  # the table's rule row
-            if cells[0].lower() == "english":
+            if cells[0].lower() == "english" or i in header_rows:
                 continue  # its header
             # setdefault, not assignment: the first table to define a term wins,
             # and the tables are ordered most-canonical-first (Core Action Verbs,
