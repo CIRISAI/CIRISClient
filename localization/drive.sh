@@ -48,8 +48,9 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   echo "=== attempt $attempt/$ATTEMPTS ($LANE lane, $LOCALIZE_BUNDLE bundle) ==="
   last_report="$OUT/run-$STAMP-a$attempt.json"
   python3 localization/localize.py --lane "$LANE" "${keyargs[@]}" \
-    --max-keys "$MAX_KEYS" --report "$last_report" 2>&1 | tail -20
+    --max-keys "$MAX_KEYS" --report "$last_report" > "$last_report.log" 2>&1
   rc=$?
+  tail -20 "$last_report.log"
   if [ "$rc" = "0" ]; then
     echo "DONE after $attempt attempt(s): lane clean"
     exit 0
