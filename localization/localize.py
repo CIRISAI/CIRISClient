@@ -343,6 +343,11 @@ Judge hard and specifically:
   even if the alternative is a fine word in isolation.
 - Do NOT invent errors to look thorough. An empty list is the correct and
   expected answer for a good translation.
+- Agreement with the CANONICAL TERMINOLOGY block is NOT a finding. Report
+  terminology only where the translation DISAGREES with it. A note that says
+  the term was used correctly must not appear as an error.
+- Casing alone is never a finding: the glossary tables are written in table
+  case, and the target language's own sentence and label casing applies.
 
 LOOK FOR THESE SPECIFICALLY. Each is a defect this pipeline has actually shipped
 past a structural gate, in some language, on some run:
