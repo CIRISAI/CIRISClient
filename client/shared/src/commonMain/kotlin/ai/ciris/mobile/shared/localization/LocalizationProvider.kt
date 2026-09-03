@@ -41,15 +41,25 @@ fun localizedString(key: String, params: Map<String, String> = emptyMap()): Stri
     val currentLanguage = currentLanguageState.value
     val isLoading = isLoadingState.value
 
-    // During initial loading, return the key as fallback
-    // This will recompose when loading completes
-    if (isLoading) {
-        return key
-    }
-
-    // Use produceState to create a derived state that depends on language
-    // This ensures Compose properly tracks the dependency and recomposes
-    val result = remember(currentLanguage, key, params) {
+    // A RAW KEY IS NEVER A TRUE THING TO SHOW A USER (CIRISClient#34).
+    //
+    // This returned `key` outright while isLoading, bypassing the whole
+    // fallback cascade in getString — current language, then English, then the
+    // key as a last resort. English is loaded during init and `_isLoading`
+    // starts true, so the fallback is frequently ALREADY POPULATED at the
+    // moment this was refusing to consult it.
+    //
+    // The cost was visible: the first iOS screenshot the five-platform gate
+    // ever captured shows "mobile.login_setup_complete_relogin" to the user, on
+    // the login screen right after setup — the window where the node restarts
+    // and localization is reloading, and where iOS is slowest because its
+    // loader hops to Dispatchers.Main.
+    //
+    // Now the cascade runs in every state. If genuinely nothing is loaded,
+    // getString still returns the key, so this is never worse — only better
+    // whenever English happens to be there, which is most of the time.
+    // `isLoading` is still READ above, so completing a load recomposes this.
+    val result = remember(currentLanguage, isLoading, key, params) {
         localization.getString(key, params)
     }
 

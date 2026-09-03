@@ -2,6 +2,10 @@ package ai.ciris.mobile.shared.platform
 
 import ai.ciris.mobile.shared.testing.TestAutomationState
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.composed
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -111,8 +115,32 @@ actual fun Modifier.testable(tag: String, text: String?): Modifier {
  */
 actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () -> Unit): Modifier {
     return if (TestAutomation.isEnabled()) {
-        TestAutomation.registerClickHandler(tag, onClick)
-        this.testTag(tag)
+        composed {
+        // REGISTER ONCE, TRACK RECOMPOSITION, UNREGISTER ON DISPOSE (CIRISClient#32).
+        //
+        // This called registerClickHandler directly in the composable body, so
+        // it re-registered on EVERY recomposition and never unregistered at
+        // all: a handler outlived the screen that owned it, and a /click after
+        // navigation could run a closure belonging to a composable no longer on
+        // screen. Android had the sibling defect — DisposableEffect keyed on
+        // `tag` only, freezing the first composition's lambda, which ran Test
+        // Connection with an empty api key.
+        //
+        // Neither is what desktop does. Three implementations of one idea is
+        // how they diverged; #33 is the fix for that. This makes iOS behave
+        // like desktop in the meantime: single registration, latest lambda,
+        // cleaned up when the composable leaves.
+            val currentOnClick by rememberUpdatedState(onClick)
+            DisposableEffect(tag) {
+                TestAutomation.registerClickHandler(tag) { currentOnClick() }
+                onDispose {
+                    TestAutomation.unregisterClickHandler(tag)
+                    TestAutomation.unregisterElement(tag)
+                }
+            }
+            this
+        }
+            .testTag(tag)
             .clickable { onClick() }
             .onGloballyPositioned { coords ->
                 val bounds = coords.boundsInWindow()
@@ -133,7 +161,6 @@ actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () ->
  */
 actual fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier {
     if (TestAutomation.isEnabled()) {
-        TestAutomation.registerClickHandler(tag, onClick)
         // ALSO register the element, matching the Android and desktop actuals.
         //
         // /tree is populated from the element registry, not from testTag, so
@@ -146,7 +173,31 @@ actual fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modif
         // The identical defect existed on Android and was fixed there; this is
         // its twin, and it went unnoticed because iOS has no build on the host
         // that found the Android one.
-        return this.testTag(tag).onGloballyPositioned { coords ->
+        return composed {
+        // REGISTER ONCE, TRACK RECOMPOSITION, UNREGISTER ON DISPOSE (CIRISClient#32).
+        //
+        // This called registerClickHandler directly in the composable body, so
+        // it re-registered on EVERY recomposition and never unregistered at
+        // all: a handler outlived the screen that owned it, and a /click after
+        // navigation could run a closure belonging to a composable no longer on
+        // screen. Android had the sibling defect — DisposableEffect keyed on
+        // `tag` only, freezing the first composition's lambda, which ran Test
+        // Connection with an empty api key.
+        //
+        // Neither is what desktop does. Three implementations of one idea is
+        // how they diverged; #33 is the fix for that. This makes iOS behave
+        // like desktop in the meantime: single registration, latest lambda,
+        // cleaned up when the composable leaves.
+            val currentOnClick by rememberUpdatedState(onClick)
+            DisposableEffect(tag) {
+                TestAutomation.registerClickHandler(tag) { currentOnClick() }
+                onDispose {
+                    TestAutomation.unregisterClickHandler(tag)
+                    TestAutomation.unregisterElement(tag)
+                }
+            }
+            this
+        }.testTag(tag).onGloballyPositioned { coords ->
             val bounds = coords.boundsInWindow()
             TestAutomation.registerElement(
                 tag,

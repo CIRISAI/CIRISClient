@@ -3,6 +3,8 @@ package ai.ciris.mobile.shared.platform
 import ai.ciris.mobile.shared.testing.AndroidTestAutomationServer
 import ai.ciris.mobile.shared.testing.TestAutomationState
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
@@ -123,8 +125,25 @@ actual fun Modifier.testable(tag: String, text: String?): Modifier = composed {
  */
 actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () -> Unit): Modifier = composed {
     if (TestAutomation.isEnabled()) {
+        // THE REGISTERED HANDLER MUST TRACK RECOMPOSITION (CIRISClient#32).
+        //
+        // DisposableEffect is keyed on `tag`, so it runs once and the registry
+        // kept the FIRST composition's `onClick` — a closure holding the screen
+        // state of that moment. Every automation /click replayed that snapshot:
+        // on the Android wizard, Test Connection ran with an EMPTY api key
+        // while the field visibly held one, and answered success:true for it.
+        //
+        // Real mouse clicks were immune, because `.clickable { onClick() }`
+        // reads the current lambda. That split is exactly why this survived
+        // manual testing and only a programmatic click could expose it.
+        //
+        // Desktop fixed this and neither mobile platform inherited it — which
+        // is #33's argument for one implementation instead of three.
+        // rememberUpdatedState keeps single registration while the registered
+        // thunk always calls the LATEST lambda.
+        val currentOnClick by rememberUpdatedState(onClick)
         DisposableEffect(tag) {
-            TestAutomation.registerClickHandler(tag, onClick)
+            TestAutomation.registerClickHandler(tag) { currentOnClick() }
             onDispose {
                 TestAutomation.unregisterClickHandler(tag)
                 TestAutomation.unregisterElement(tag)
@@ -155,8 +174,25 @@ actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () ->
  */
 actual fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = composed {
     if (TestAutomation.isEnabled()) {
+        // THE REGISTERED HANDLER MUST TRACK RECOMPOSITION (CIRISClient#32).
+        //
+        // DisposableEffect is keyed on `tag`, so it runs once and the registry
+        // kept the FIRST composition's `onClick` — a closure holding the screen
+        // state of that moment. Every automation /click replayed that snapshot:
+        // on the Android wizard, Test Connection ran with an EMPTY api key
+        // while the field visibly held one, and answered success:true for it.
+        //
+        // Real mouse clicks were immune, because `.clickable { onClick() }`
+        // reads the current lambda. That split is exactly why this survived
+        // manual testing and only a programmatic click could expose it.
+        //
+        // Desktop fixed this and neither mobile platform inherited it — which
+        // is #33's argument for one implementation instead of three.
+        // rememberUpdatedState keeps single registration while the registered
+        // thunk always calls the LATEST lambda.
+        val currentOnClick by rememberUpdatedState(onClick)
         DisposableEffect(tag) {
-            TestAutomation.registerClickHandler(tag, onClick)
+            TestAutomation.registerClickHandler(tag) { currentOnClick() }
             onDispose {
                 TestAutomation.unregisterClickHandler(tag)
                 TestAutomation.unregisterElement(tag)

@@ -137,18 +137,61 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         }
     }
 
-    private suspend fun handleConnection(clientSocket: Int) {
-        // Read request
-        val buffer = ByteArray(8192)
-        val bytesRead = memScoped {
-            buffer.usePinned { pinned ->
-                recv(clientSocket, pinned.addressOf(0), buffer.size.toULong(), 0).toInt()
+    /**
+     * Byte offset of the CRLFCRLF terminating the headers, or -1.
+     *
+     * Searched over BYTES, not over a decoded string: a character index and a
+     * byte offset diverge the moment anything non-ASCII appears, and the body
+     * offset derived from it would slice mid-character. Headers are ASCII in
+     * practice, which is exactly the kind of "in practice" that stops being
+     * true quietly.
+     */
+    private fun indexOfHeaderEnd(buf: ByteArray, len: Int): Int {
+        var i = 0
+        while (i + 3 < len) {
+            if (buf[i] == 13.toByte() && buf[i + 1] == 10.toByte() &&
+                buf[i + 2] == 13.toByte() && buf[i + 3] == 10.toByte()
+            ) return i
+            i++
+        }
+        return -1
+    }
+
+    /** One recv() into [into] at [offset]; bytes read, or <= 0 at EOF/error. */
+    private fun readChunk(clientSocket: Int, into: ByteArray, offset: Int): Int =
+        if (offset >= into.size) 0 else memScoped {
+            into.usePinned { pinned ->
+                recv(clientSocket, pinned.addressOf(offset), (into.size - offset).toULong(), 0).toInt()
             }
         }
-        if (bytesRead <= 0) return
 
-        val request = buffer.decodeToString(0, bytesRead)
-        val lines = request.split("\r\n")
+    private suspend fun handleConnection(clientSocket: Int) {
+        // A REQUEST IS NOT ONE recv() (CIRISClient#35).
+        //
+        // This read once into an 8 KB buffer and parsed whatever had arrived.
+        // TCP does not promise that headers and body land together, and httpx
+        // (which the QA gate uses) writes them as separate segments — so every
+        // GET worked and every POST decoded an EMPTY body, then returned the
+        // kotlinx exception text as the response. CIRISAgent had to route iOS
+        // through a one-segment transport to get the wizard running at all.
+        //
+        // So: read until the header terminator, then keep reading until
+        // Content-Length bytes of body have arrived.
+        val buffer = ByteArray(65536)
+        var filled = 0
+        var headerEnd = -1
+
+        while (filled < buffer.size) {
+            val n = readChunk(clientSocket, buffer, filled)
+            if (n <= 0) break
+            filled += n
+            headerEnd = indexOfHeaderEnd(buffer, filled)
+            if (headerEnd >= 0) break
+        }
+        if (filled <= 0 || headerEnd < 0) return
+
+        val headerText = buffer.decodeToString(0, headerEnd)
+        val lines = headerText.split("\r\n")
         if (lines.isEmpty()) return
 
         // Parse request line
@@ -157,9 +200,25 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         val method = parts[0]
         val path = parts[1].split("?")[0]
 
-        // Parse body (after empty line)
-        val bodyStart = request.indexOf("\r\n\r\n")
-        val body = if (bodyStart >= 0) request.substring(bodyStart + 4) else ""
+        // Content-Length decides how much body is still owed. Absent or
+        // unparseable means no body — a GET, or a client that sent none.
+        val contentLength = lines.drop(1)
+            .firstOrNull { it.startsWith("Content-Length:", ignoreCase = true) }
+            ?.substringAfter(':')?.trim()?.toIntOrNull()
+            ?: 0
+
+        val bodyStart = headerEnd + 4
+        while (filled - bodyStart < contentLength && filled < buffer.size) {
+            val n = readChunk(clientSocket, buffer, filled)
+            if (n <= 0) break   // peer closed early; decode what we have and let route() report it
+            filled += n
+        }
+
+        val body = if (filled > bodyStart) {
+            buffer.decodeToString(bodyStart, minOf(filled, bodyStart + contentLength).coerceAtLeast(bodyStart))
+        } else {
+            ""
+        }
 
         // Route
         val (statusCode, responseBody) = route(method, path, body)
@@ -226,7 +285,17 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                 else -> 404 to """{"error":"Not found: $method $path"}"""
             }
         } catch (e: Exception) {
-            500 to """{"error":"${e.message?.replace("\"", "'")}"}"""
+            // BUILD THE ERROR WITH THE SERIALIZER, NOT WITH STRING PASTE.
+            //
+            // kotlinx decode failures carry newlines ("...at path: $\nJSON input:
+            // ..."), and a hand-quoted "{\"error\":\"$msg\"}" put them raw
+            // inside a JSON string — so a client parsing the reply got a parse
+            // error about our parse error, and reported it as the server
+            // returning non-JSON (CIRISClient#35). Encoding escapes whatever the
+            // message contains.
+            500 to json.encodeToString(
+                mapOf("error" to (e.message ?: e::class.simpleName ?: "unknown error"))
+            )
         }
     }
 
