@@ -27,7 +27,15 @@ data class ElementInfo(
      */
     val canClick: Boolean = false,
     /** Whether a field is listening for /input, rather than merely tagged. */
-    val canInput: Boolean = false
+    val canInput: Boolean = false,
+    /**
+     * What a text field currently holds, or null for anything that is not one.
+     *
+     * `/element` carried `text: null` for input fields, so no consumer could
+     * confirm that an `/input` had actually landed — the only witness was the
+     * app's own validation UI in a screenshot (CIRISClient#31).
+     */
+    val inputValue: String? = null
 )
 
 @Serializable

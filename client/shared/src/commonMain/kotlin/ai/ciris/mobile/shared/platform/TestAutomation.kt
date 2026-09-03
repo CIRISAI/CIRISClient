@@ -99,6 +99,26 @@ expect object TestAutomation {
     fun hasInputSink(testTag: String): Boolean
 
     /**
+     * Record what the field currently HOLDS, so `/input` can be verified from
+     * outside (CIRISClient#31).
+     *
+     * `/input` answers on POST, not on apply: it drops a request into a
+     * conflating StateFlow and returns success:true before any field has
+     * collected it. Three inputs in quick succession can leave the first two
+     * applied to nothing while every call reports success — which is what the
+     * CIRISAgent gate hit, typing username/password/confirm and then reading
+     * "Password is required" from the product's own validation.
+     *
+     * No consumer could detect that, because `/element` carried `text: null`
+     * for input fields: the only witness was a screenshot. A field that reports
+     * its value makes "acknowledged but not applied" a single poll instead.
+     */
+    fun setInputValue(testTag: String, value: String)
+
+    /** What the field holds now, or null if it has never reported. */
+    fun inputValue(testTag: String): String?
+
+    /**
      * Flow of pending text input requests.
      * Text fields should observe this and handle requests for their tag.
      */

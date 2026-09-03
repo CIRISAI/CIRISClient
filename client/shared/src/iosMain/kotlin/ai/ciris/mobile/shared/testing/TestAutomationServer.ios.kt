@@ -306,6 +306,19 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
             val testMode = platform.posix.getenv("CIRIS_TEST_MODE")?.toKString()?.lowercase()
             if (testMode in listOf("true", "1", "yes")) {
                 val port = platform.posix.getenv("CIRIS_TEST_PORT")?.toKString()?.toIntOrNull() ?: 9091
+                                // ONE SERVER, ONCE (CIRISClient#31).
+                //
+                // Without this a second call built a second server whose bind
+                // FAILED on the already-taken port, and then overwrote
+                // `instance` with the broken one — so a later stop() stopped
+                // the wrong object and left the working server running. The
+                // reporter found it on iOS; Android had the identical hole, and
+                // it matters the moment a host wants to start earlier than
+                // CIRISApp's LaunchedEffect.
+                if (instance != null) {
+                    NSLog("[TestAutomation.ios] Server already started; ignoring")
+                    return
+                }
                 NSLog("[TestAutomation.ios] Test mode enabled, starting server on port $port")
                 instance = IOSTestAutomationServer(port).also { it.start() }
             }

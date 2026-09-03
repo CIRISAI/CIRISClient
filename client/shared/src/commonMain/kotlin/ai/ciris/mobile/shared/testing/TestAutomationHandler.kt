@@ -10,6 +10,25 @@ import kotlinx.serialization.json.Json
  */
 object TestAutomationHandler {
 
+    /** How long a single /input may wait for a field to apply it. */
+    private const val APPLY_TIMEOUT_MS = 3_000L
+    private const val APPLY_POLL_MS = 20L
+
+    /**
+     * Wait until no text-input request is outstanding, i.e. every screen that
+     * was going to collect one has, and cleared it. False on timeout.
+     */
+    private suspend fun awaitFlowIdle(
+        ta: ai.ciris.mobile.shared.platform.TestAutomation,
+    ): Boolean {
+        var waited = 0L
+        while (ta.textInputRequests.value != null && waited < APPLY_TIMEOUT_MS) {
+            kotlinx.coroutines.delay(APPLY_POLL_MS)
+            waited += APPLY_POLL_MS
+        }
+        return ta.textInputRequests.value == null
+    }
+
     private val json = Json {
         prettyPrint = true
         isLenient = true
@@ -29,10 +48,17 @@ object TestAutomationHandler {
     }
 
     /** Stamp an element with what automation can actually do to it. */
-    private fun withDrivability(e: ElementInfo): ElementInfo = e.copy(
-        canClick = ai.ciris.mobile.shared.platform.TestAutomation.hasClickHandler(e.testTag),
-        canInput = ai.ciris.mobile.shared.platform.TestAutomation.hasInputSink(e.testTag),
-    )
+    private fun withDrivability(e: ElementInfo): ElementInfo {
+        val ta = ai.ciris.mobile.shared.platform.TestAutomation
+        return e.copy(
+            canClick = ta.hasClickHandler(e.testTag),
+            canInput = ta.hasInputSink(e.testTag),
+            // The field's CURRENT value, so /input can be verified from outside
+            // (#31). `text` already carries a label for display elements, so a
+            // separate field keeps the two meanings apart.
+            inputValue = ta.inputValue(e.testTag),
+        )
+    }
 
     /**
      * THE INVARIANT, AS A PRE-FLIGHT: everything interactive on screen is drivable.
@@ -111,7 +137,7 @@ object TestAutomationHandler {
         )
     }
 
-    fun handleInput(request: InputRequest): ActionResponse {
+    suspend fun handleInput(request: InputRequest): ActionResponse {
         val element = TestAutomationState.getElement(request.testTag)
             ?: return ActionResponse(success = false, error = "Element not found: ${request.testTag}")
 
@@ -133,8 +159,50 @@ object TestAutomationHandler {
             )
         }
 
-        // Use platform TestAutomation (not TestAutomationState) - dialogs observe the platform flow
-        ai.ciris.mobile.shared.platform.TestAutomation.requestTextInput(request.testTag, request.text, request.clearFirst)
+        val ta = ai.ciris.mobile.shared.platform.TestAutomation
+
+        // ACKNOWLEDGE ON APPLY, NOT ON POST (CIRISClient#31).
+        //
+        // requestTextInput drops the request into a CONFLATING StateFlow and
+        // this used to return success:true immediately. Two consequences, both
+        // observed by the CIRISAgent gate:
+        //
+        //   1. A second request replaces a first the field has not collected
+        //      yet. Typing username, password and confirm back-to-back left the
+        //      password applied to nothing while all three calls reported
+        //      success — the product then said "Password is required".
+        //   2. Even alone, success meant "posted", never "changed".
+        //
+        // Every screen's dispatch calls clearTextInputRequest() after applying,
+        // so the flow returning to null IS the apply signal. Waiting for it
+        // serialises the requests (fixing 1) and makes the acknowledgement mean
+        // what a caller assumes it means (fixing 2) — without touching any of
+        // the six screens that collect.
+        //
+        // A timeout is reported as a failure, because "I could not confirm this
+        // landed" is not success. That is the whole lesson of #30 and of the
+        // handleInput sink check.
+        if (!awaitFlowIdle(ta)) {
+            return ActionResponse(
+                success = false, element = request.testTag, action = "input",
+                error = "a previous /input was still unapplied after ${APPLY_TIMEOUT_MS}ms; " +
+                    "posting now would silently replace it",
+            )
+        }
+
+        ta.requestTextInput(request.testTag, request.text, request.clearFirst)
+
+        if (!awaitFlowIdle(ta)) {
+            return ActionResponse(
+                success = false, element = request.testTag, action = "input",
+                error = "the field did not apply the text within ${APPLY_TIMEOUT_MS}ms; " +
+                    "it is registered as a sink but its dispatch did not run",
+            )
+        }
+
+        // Record what the field now holds, so /element and /tree can be read
+        // back. Without this a consumer had no witness but a screenshot.
+        ta.setInputValue(request.testTag, request.text)
 
         return ActionResponse(
             success = true,

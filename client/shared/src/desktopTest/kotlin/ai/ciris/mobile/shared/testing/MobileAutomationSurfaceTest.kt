@@ -1,6 +1,10 @@
 package ai.ciris.mobile.shared.testing
 
 import ai.ciris.mobile.shared.platform.TestAutomation
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -33,6 +37,17 @@ class MobileAutomationSurfaceTest {
     private fun register(tag: String) =
         TestAutomationState.registerElement(tag, 10, 20, 100, 40, null)
 
+    /**
+     * Stand in for a screen's collector: apply the request and clear it, which
+     * is what all six real dispatches do. /input now waits for that clear as
+     * its apply signal, so a test without one is testing the timeout.
+     */
+    private fun CoroutineScope.collectLikeAScreen() = launch {
+        TestAutomation.textInputRequests.collect { req ->
+            if (req != null) TestAutomation.clearTextInputRequest()
+        }
+    }
+
     @BeforeTest
     fun setup() {
         TestAutomationState.clearElements()
@@ -49,7 +64,7 @@ class MobileAutomationSurfaceTest {
     // ── /input must not claim to have typed into nothing ──────────────────
 
     @Test
-    fun input_into_a_field_with_no_sink_is_refused() {
+    fun input_into_a_field_with_no_sink_is_refused() = runTest {
         register(field)
         val r = TestAutomationHandler.handleInput(InputRequest(field, "admin", clearFirst = true))
         assertFalse(r.success, "this answered success:true on mobile while typing nothing")
@@ -60,16 +75,52 @@ class MobileAutomationSurfaceTest {
     }
 
     @Test
-    fun input_succeeds_once_a_sink_is_listening() {
+    fun input_succeeds_once_a_sink_is_listening_and_a_screen_applies_it() = runTest {
         register(field)
         TestAutomation.registerInputSink(field)
+        val collector = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).collectLikeAScreen()
+
         val r = TestAutomationHandler.handleInput(InputRequest(field, "admin", clearFirst = true))
-        assertTrue(r.success, "a listening field must accept text: ${r.error}")
+        assertTrue(r.success, "a listening field whose screen applied must succeed: ${r.error}")
         assertEquals("admin", r.text)
+        collector.cancel()
     }
 
     @Test
-    fun a_missing_element_is_still_reported_as_missing() {
+    fun input_that_is_never_applied_reports_failure_not_success() = runTest {
+        // THE #31 DEFECT, INVERTED INTO A TEST.
+        //
+        // A registered sink whose dispatch never runs — the exact shape when a
+        // conflating StateFlow drops a request. This used to answer
+        // success:true; the gate typed a password, got success, and the product
+        // said "Password is required".
+        register(field)
+        TestAutomation.registerInputSink(field)   // registered, but nobody collects
+
+        val r = TestAutomationHandler.handleInput(InputRequest(field, "hunter2", clearFirst = true))
+        assertFalse(r.success, "unapplied input must not report success")
+        assertTrue((r.error ?: "").contains("did not apply"), r.error ?: "")
+        TestAutomation.clearTextInputRequest()
+    }
+
+    @Test
+    fun an_applied_input_is_readable_back_from_element_and_tree() = runTest {
+        // Without this a consumer had no witness but a screenshot.
+        register(field)
+        TestAutomation.registerInputSink(field)
+        val collector = CoroutineScope(UnconfinedTestDispatcher(testScheduler)).collectLikeAScreen()
+
+        TestAutomationHandler.handleInput(InputRequest(field, "qaadmin", clearFirst = true))
+        assertEquals("qaadmin", TestAutomationHandler.handleGetElement(field)?.inputValue)
+        assertEquals(
+            "qaadmin",
+            TestAutomationHandler.handleTree().elements.single { it.testTag == field }.inputValue,
+        )
+        collector.cancel()
+    }
+
+    @Test
+    fun a_missing_element_is_still_reported_as_missing() = runTest {
         // Not-found and not-drivable are different failures and must stay so.
         val r = TestAutomationHandler.handleInput(InputRequest("input_absent", "x"))
         assertFalse(r.success)

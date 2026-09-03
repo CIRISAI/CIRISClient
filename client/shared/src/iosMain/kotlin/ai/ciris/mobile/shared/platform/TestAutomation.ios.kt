@@ -70,9 +70,19 @@ actual object TestAutomation {
     /** A field declares itself text-drivable when it starts listening. */
     actual fun registerInputSink(testTag: String) { inputSinks.add(testTag) }
 
-    actual fun unregisterInputSink(testTag: String) { inputSinks.remove(testTag) }
+    actual fun unregisterInputSink(testTag: String) {
+        inputSinks.remove(testTag)
+        inputValues.remove(testTag)
+    }
 
     actual fun hasInputSink(testTag: String): Boolean = inputSinks.contains(testTag)
+
+    /** tag -> what the field currently holds. See the expect for why. */
+    private val inputValues = mutableMapOf<String, String>()
+
+    actual fun setInputValue(testTag: String, value: String) { inputValues[testTag] = value }
+
+    actual fun inputValue(testTag: String): String? = inputValues[testTag]
 
     actual fun requestTextInput(testTag: String, text: String, clearFirst: Boolean) {
         TestAutomationState.requestTextInput(testTag, text, clearFirst)
