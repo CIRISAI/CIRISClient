@@ -50,13 +50,29 @@ object TestAutomationHandler {
     /** Stamp an element with what automation can actually do to it. */
     private fun withDrivability(e: ElementInfo): ElementInfo {
         val ta = ai.ciris.mobile.shared.platform.TestAutomation
+        val held = ta.inputValue(e.testTag)
         return e.copy(
             canClick = ta.hasClickHandler(e.testTag),
             canInput = ta.hasInputSink(e.testTag),
             // The field's CURRENT value, so /input can be verified from outside
             // (#31). `text` already carries a label for display elements, so a
             // separate field keeps the two meanings apart.
-            inputValue = ta.inputValue(e.testTag),
+            inputValue = held,
+            // AND MIRRORED INTO `text`, WHICH IS WHERE CONSUMERS ALREADY LOOK.
+            //
+            // Exposing the value under a new name only would have closed this on
+            // paper. The driver that reported the defect polls `text` and, when
+            // it reads null, gives up on the FIRST read by design -- "a client
+            // that omits text for input elements will omit it however long we
+            // poll". So a consumer would have seen `unverifiable: element
+            // exposes no text` against this release exactly as against the last
+            // one, and learned nothing.
+            //
+            // `?:` and not an overwrite: a display element's label is its own
+            // meaning and outranks this. Only a field with a registered sink and
+            // a CONFIRMED apply has a non-null value here, so nothing else can
+            // be touched.
+            text = e.text ?: held,
         )
     }
 

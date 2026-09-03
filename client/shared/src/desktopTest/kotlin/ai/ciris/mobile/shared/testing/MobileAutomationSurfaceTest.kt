@@ -120,6 +120,32 @@ class MobileAutomationSurfaceTest {
     }
 
     @Test
+    fun the_applied_value_is_readable_under_text_too_where_drivers_look() {
+        // EXPOSING IT UNDER A NEW NAME ONLY WOULD HAVE CLOSED THIS ON PAPER.
+        //
+        // The driver that reported #31 polls `text`, and on reading null it
+        // concludes on the FIRST read by design. A consumer would have seen
+        // "unverifiable: element exposes no text" against this release exactly
+        // as against the last one.
+        register(field)
+        TestAutomation.registerInputSink(field)
+        TestAutomation.setInputValue(field, "qaadmin")
+        assertEquals("qaadmin", TestAutomationHandler.handleGetElement(field)?.text)
+    }
+
+    @Test
+    fun a_display_label_outranks_a_mirrored_value() {
+        // `text` is a label for display elements and that meaning comes first;
+        // an overwrite would have made the fix a regression elsewhere.
+        TestAutomationState.registerElement("txt_banner", 0, 0, 10, 10, "Password is required")
+        assertEquals(
+            "Password is required",
+            TestAutomationHandler.handleGetElement("txt_banner")?.text,
+        )
+        TestAutomationState.clearElements()
+    }
+
+    @Test
     fun a_missing_element_is_still_reported_as_missing() = runTest {
         // Not-found and not-drivable are different failures and must stay so.
         val r = TestAutomationHandler.handleInput(InputRequest("input_absent", "x"))
