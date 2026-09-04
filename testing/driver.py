@@ -35,6 +35,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+#: Substrings naming a field whose value is masked, and so cannot be read back.
+#: Verifying one would fail on every correct run, which is worse than not
+#: verifying: a check that cries wolf gets switched off, and then the fields it
+#: WAS protecting go unchecked too.
+_SECRET_MARKERS = ("password", "secret", "token", "api_key", "apikey")
+
+
+def _looks_secret(test_tag: str) -> bool:
+    t = test_tag.lower()
+    return any(m in t for m in _SECRET_MARKERS)
+
+
 class DriverError(RuntimeError):
     """A call to the automation server failed, or the app never answered."""
 
@@ -50,6 +62,37 @@ class Element:
     height: int
     text: str | None = None
 
+    #: What automation can DO to this element, not merely see it. Served on
+    #: every platform from 0.5.199; absent on older clients, where None means
+    #: "this client cannot say" and must never be read as False.
+    can_click: bool | None = None
+    can_input: bool | None = None
+
+    #: A text field's current value, from 0.5.200. `text` carries the same value
+    #: for input elements (the client mirrors it there, because that is where
+    #: drivers look) and a LABEL for display elements.
+    input_value: str | None = None
+
+    @property
+    def is_ghost(self) -> bool:
+        """Registered, but nothing can drive it — the CIRISClient#30 shape.
+
+        An element that outlives the composable that registered it stays in
+        `/tree` looking exactly like a live control. It was the whole of #30:
+        the gate waited for `input_username`, matched the SETUP WIZARD's field
+        still in the registry, and concluded a login form was up that had never
+        composed.
+
+        `canClick`/`canInput` are computed live from the handler and sink
+        registries, so a stale entry reports both False while a live control
+        reports one of them True. That makes a ghost detectable in one poll,
+        where otherwise it takes a screenshot and a person.
+
+        None (an older client that does not serve these) is NOT a ghost — it is
+        an unknown, and calling it one would fail every pre-0.5.199 run.
+        """
+        return self.can_click is False and self.can_input is False
+
     @classmethod
     def from_json(cls, d: dict[str, Any]) -> "Element":
         return cls(
@@ -59,6 +102,9 @@ class Element:
             width=int(d.get("width", 0)),
             height=int(d.get("height", 0)),
             text=d.get("text"),
+            can_click=d.get("canClick"),
+            can_input=d.get("canInput"),
+            input_value=d.get("inputValue"),
         )
 
 
@@ -159,8 +205,51 @@ class TestAutomationServer:
     def click(self, test_tag: str) -> None:
         self._call("POST", "/click", {"testTag": test_tag})
 
-    def input(self, test_tag: str, text: str, clear_first: bool = True) -> None:
+    def input(self, test_tag: str, text: str, clear_first: bool = True,
+              verify: bool = True) -> None:
+        """Type into a field, and confirm the field actually holds it.
+
+        `success: true` used to mean the request was POSTED, not that anything
+        changed (CIRISClient#31). From 0.5.200 the client acknowledges on apply,
+        so this is belt and braces rather than the only defence -- but it is the
+        half that keeps working against an OLDER client, and it is the half that
+        catches a field applying something different from what was sent.
+
+        A field that exposes no value is reported UNVERIFIABLE, not failed: on a
+        client before 0.5.200 nothing exposed one, and failing there would make
+        this driver unusable against exactly the versions worth reproducing
+        against. A field that exposes a DIFFERENT value is the defect this
+        exists to catch, and that raises.
+        """
         self._call("POST", "/input", {"testTag": test_tag, "text": text, "clearFirst": clear_first})
+        if verify and not _looks_secret(test_tag):
+            self._verify_input_landed(test_tag, text)
+
+    def _verify_input_landed(self, test_tag: str, expected: str, budget: float = 3.0) -> None:
+        deadline = time.monotonic() + budget
+        seen: str | None = None
+        exposed = False
+        while time.monotonic() < deadline:
+            el = self.element(test_tag)
+            if el is not None:
+                value = el.input_value if el.input_value is not None else el.text
+                if value is None:
+                    # STRUCTURAL, NOT SLOW. A client that omits the value omits
+                    # it however long we poll, so burning the budget per field
+                    # buys nothing and costs real time on the slowest platform.
+                    return
+                exposed = True
+                seen = value
+                if seen == expected:
+                    return
+            time.sleep(0.1)
+        if not exposed:
+            return
+        raise DriverError(
+            f"/input on {test_tag!r} was acknowledged, but {budget:.0f}s later the field "
+            f"holds {seen!r} rather than {expected!r} — the client reported success for "
+            f"input it did not apply"
+        )
 
     def navigate(self, screen: str) -> None:
         self._call("POST", "/navigate", {"screen": screen})

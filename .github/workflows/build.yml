@@ -94,6 +94,23 @@ jobs:
         # A release without its matrix row does not merge (FSD §6).
         run: python3 compat/validate.py
 
+      - name: The driver's rules
+        # The gate rules vendored from CIRISAgent (CIRISClient#31), as tests of
+        # OUR driver rather than of theirs — see testing/gate/VENDORED.md for
+        # why the rules came across and the helper did not.
+        #
+        # Wired here because nothing in this repo ran pytest at all, so these
+        # would have sat in the tree looking like coverage while never
+        # executing once. A rule that cannot fail is not a rule.
+        #
+        # They stand up a real http.server on a real socket: two of the four
+        # defects this driver has met were in the transport itself — a POST body
+        # arriving in a second TCP segment, and a response that was not valid
+        # JSON — and a mocked transport passes both.
+        run: |
+          python3 -m pip install --quiet pytest
+          python3 -m pytest testing/test_driver_rules.py -q
+
       - name: A published version must offer a universal wheel
         # Only for versions already on the index — a PR's VERSION is normally
         # unpublished, and asserting it would fail every PR. What this catches is
