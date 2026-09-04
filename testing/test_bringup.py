@@ -181,3 +181,23 @@ def test_cannot_run_is_raised_not_returned():
     # A platform that cannot run must SKIP LOUDLY: a silent skip and a pass are
     # the same colour on a dashboard.
     assert issubclass(CannotRun, RuntimeError)
+
+
+def test_a_missing_tool_is_a_step_failure_not_an_escaping_exception():
+    # subprocess raises BEFORE there is a returncode, so check=False did not
+    # protect teardown from it: on a machine with no adb, tearing down after a
+    # failure crashed and buried the real error under its traceback.
+    plan = Plan(platform="test", steps=[Step("no-such-tool", ["definitely-not-a-real-binary"],
+                                             optional=True)])
+    assert [rc for _, rc in run(plan, check=False)] == [127]
+
+
+def test_a_missing_tool_on_a_required_step_still_names_the_step():
+    plan = Plan(platform="test", steps=[Step("needs-adb", ["definitely-not-a-real-binary"])])
+    with pytest.raises(CannotRun, match="needs-adb"):
+        run(plan)
+
+
+def test_teardown_survives_a_machine_with_no_adb():
+    # The end-to-end version of the above: this is what crashed.
+    run(android_teardown(PKG), check=False)

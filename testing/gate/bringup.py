@@ -227,13 +227,28 @@ def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[St
     """
     results: list[tuple[Step, int]] = []
     for step in plan.steps:
-        proc = subprocess.run(step.cmd, capture_output=True, text=True, timeout=timeout)
-        results.append((step, proc.returncode))
-        if proc.returncode != 0 and not step.optional and check:
+        try:
+            proc = subprocess.run(step.cmd, capture_output=True, text=True, timeout=timeout)
+            code, stderr = proc.returncode, proc.stderr or ""
+        except (FileNotFoundError, NotADirectoryError) as e:
+            # A MISSING TOOL IS A STEP FAILURE, NOT AN EXCEPTION THAT ESCAPES.
+            #
+            # subprocess raises before there is a returncode, so `check=False`
+            # did not protect teardown from it: on a machine with no adb, tearing
+            # down after a failure crashed with FileNotFoundError and buried the
+            # real error underneath its traceback. That is precisely the
+            # "a teardown that fails hides the failure that caused it" rule that
+            # every teardown step being optional exists to honour, defeated one
+            # layer below where it was written.
+            code, stderr = 127, f"{step.cmd[0]}: not found ({e})"
+        except subprocess.TimeoutExpired as e:
+            code, stderr = 124, f"timed out after {timeout}s ({e})"
+        results.append((step, code))
+        if code != 0 and not step.optional and check:
             raise CannotRun(
                 f"{plan.platform} bring-up failed at {step.name!r}\n"
                 f"  command: {' '.join(step.cmd)}\n"
-                f"  exit:    {proc.returncode}\n"
-                f"  stderr:  {(proc.stderr or '').strip()[:2000]}"
+                f"  exit:    {code}\n"
+                f"  stderr:  {stderr.strip()[:2000]}"
             )
     return results

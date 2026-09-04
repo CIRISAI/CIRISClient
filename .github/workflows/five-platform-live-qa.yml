@@ -1,0 +1,322 @@
+# The gate that drives the real UI on every platform we ship (CIRISClient#31).
+#
+# WHY THIS EXISTS. build.yml checks PARTS: the wheel builds, the types check,
+# the tests pass, and e2e-desktop drives Linux. None of that asks the question a
+# consumer asks — "if I install this candidate on a phone, can automation drive
+# it?" — on the two platforms where automation is hardest and where every defect
+# of the last month actually lived: #30, #32, #34 and #35 were all iOS or
+# Android, all found downstream, and each one cost a release.
+#
+# The loop this replaces:
+#
+#     we publish -> they adopt -> their gate finds it -> we fix -> we publish
+#
+# THREE RUNNER IMAGES, FIVE TARGETS. Linux hosts its own desktop plus the
+# Android emulator; macOS hosts its own desktop plus the iOS simulator; Windows
+# hosts itself. That is the pairing CIRISAgent arrived at, and it is the reason
+# the bill is three runners rather than five.
+#
+# ONE FLOW, FIVE TIMES. There is one Compose app exposing one TestAutomation
+# server on 9091 everywhere, so nothing below contains platform-specific TEST
+# logic — only platform-specific BRING-UP, which is genuinely different because
+# an emulator is not a window. The bring-up lives in testing/gate/bringup.py as
+# inspectable plans, unit-tested in build.yml, so the sequence is not first
+# checked here at 2am against a timeout.
+#
+# THE NODE IS REAL. Every leg downloads a released ciris-server and the client
+# talks to it: on Android through `adb reverse`, so the emulator's
+# localhost:8080 IS the runner's node. That keeps the client in the REMOTE shape
+# FSD/ONE_CLIENT_N_NODES.md describes and is why no Android node binary is
+# needed — CIRISServer publishes none.
+#
+# WHAT MAKES IT A GATE RATHER THAN A REPORT, and each is guarded by
+# tests/test_five_platform_workflow.py because a gate that can be quietly
+# defeated is worse than none:
+#   * fail-fast is OFF — killing the matrix on first red destroys the five-way
+#     comparison that makes a platform-specific defect obvious
+#   * artifacts upload with always() — a failure you cannot diagnose from the
+#     artifact costs a re-run to learn what the first run already knew
+#   * the gallery job runs on failure — the red run is the one worth looking at
+#   * every leg has a timeout — a hung emulator must not burn six hours
+#   * a platform that cannot run FAILS; it never skips quietly
+
+name: Five-Platform Live QA
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Subset to run (space-separated: linux windows android ios), or 'all'"
+        required: false
+        default: "all"
+        type: string
+  # Nightly, not per-push: it boots an emulator and a simulator, which is too
+  # slow and too costly to gate every commit. A nightly failure lands before the
+  # next tag, which is the moment that matters.
+  schedule:
+    - cron: "0 6 * * *"
+
+concurrency:
+  group: five-platform-live-qa-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CIRIS_AGENT_ROOT: ${{ github.workspace }}/.agent
+
+jobs:
+  linux-android:
+    name: linux desktop + android emulator
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'linux') || contains(inputs.platforms, 'android') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Android build stages a Python runtime from a CIRISAgent checkout;
+      # this tree deliberately does not vendor it (client/VENDORING.md §2).
+      - uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISAgent
+          path: .agent
+
+      - uses: ./.github/actions/apt
+        with:
+          packages: xvfb xauth
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: The node this client will be a client of
+        id: node
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          want="v$(cat VERSION)"
+          mkdir -p node
+          asset="ciris-server-$want-x86_64-unknown-linux-gnu.tar.gz"
+          if gh release download "$want" -R CIRISAI/CIRISServer -p "$asset" -D node 2>/dev/null; then
+            used="$want"
+          else
+            used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
+            echo "::notice::CIRISServer $want is not released; running against $used"
+            gh release download "$used" -R CIRISAI/CIRISServer \
+              -p "ciris-server-$used-x86_64-unknown-linux-gnu.tar.gz" -D node
+          fi
+          tar xzf node/ciris-server-*.tar.gz -C node
+          chmod +x node/ciris-server
+          echo "version=$used" >> "$GITHUB_OUTPUT"
+
+      - name: Build the candidate
+        run: |
+          set -euo pipefail
+          cd client
+          ./gradlew :desktopApp:packageUberJarForCurrentOS :androidApp:assembleDebug \
+            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" --console=plain
+
+      # THE CANDIDATE, NOT WHATEVER IS ON DISK. This asserts the artifact
+      # carries this tree's version -- "freshest on disk" and "built from this
+      # tree" are different questions, and answering the first while meaning the
+      # second reports a platform green for code that is not the candidate.
+      - name: Resolve the artifacts
+        id: art
+        run: |
+          set -euo pipefail
+          echo "jar=$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" >> "$GITHUB_OUTPUT"
+          echo "apk=$(python3 -m testing.gate.candidate_artifacts --kind android_apk | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Start the node
+        run: |
+          ./node/ciris-server > node.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+
+      - name: Linux desktop
+        run: |
+          python3 -m testing.gate.run_platform --platform desktop --xvfb \
+            --jar "${{ steps.art.outputs.jar }}" \
+            --node-version "${{ steps.node.outputs.version }}" \
+            --shots shots --report reports/linux.json
+
+      - name: Android emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          profile: pixel_2
+          disable-animations: true
+          script: |
+            python3 -m testing.gate.run_platform --platform android \
+              --apk "${{ steps.art.outputs.apk }}" \
+              --node-version "${{ steps.node.outputs.version }}" \
+              --shots shots --report reports/android.json
+
+      # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
+      # to learn what this run already knew.
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-linux-android
+          path: |
+            shots/
+            reports/
+            node.log
+
+  macos-ios:
+    name: macos desktop + ios simulator
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos') || contains(inputs.platforms, 'ios') }}
+    runs-on: macos-14
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: The node this client will be a client of
+        id: node
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
+          mkdir -p node
+          gh release download "$used" -R CIRISAI/CIRISServer \
+            -p "ciris-server-$used-aarch64-apple-darwin.tar.gz" -D node
+          tar xzf node/ciris-server-*.tar.gz -C node
+          chmod +x node/ciris-server
+          echo "version=$used" >> "$GITHUB_OUTPUT"
+
+      - name: Build the candidate
+        run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
+
+      - name: Start the node
+        run: |
+          ./node/ciris-server > node.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+
+      - name: macOS desktop
+        run: |
+          python3 -m testing.gate.run_platform --platform desktop \
+            --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
+            --node-version "${{ steps.node.outputs.version }}" \
+            --shots shots --report reports/macos.json
+
+      # iOS is the leg most likely to be red for reasons of its own, and it runs
+      # LAST so a macOS desktop result exists either way.
+      - name: iOS simulator
+        run: |
+          set -euo pipefail
+          cd client && ./gradlew :shared:assembleDebugXCFramework --console=plain && cd ..
+          xcodebuild -project client/iosApp/iosApp.xcodeproj -scheme iosApp \
+            -sdk iphonesimulator -configuration Debug \
+            -derivedDataPath dd build CODE_SIGNING_ALLOWED=NO
+          app=$(find dd -name 'iosApp.app' -maxdepth 6 | head -1)
+          test -n "$app" || { echo "::error::no iosApp.app was produced"; exit 1; }
+          python3 -m testing.gate.run_platform --platform ios --app "$app" \
+            --node-version "${{ steps.node.outputs.version }}" \
+            --shots shots --report reports/ios.json
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-macos-ios
+          path: |
+            shots/
+            reports/
+            node.log
+
+  windows:
+    name: windows desktop
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'windows') }}
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: The node this client will be a client of
+        id: node
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
+          mkdir -p node
+          gh release download "$used" -R CIRISAI/CIRISServer \
+            -p "ciris-server-$used-x86_64-pc-windows-msvc.tar.gz" -D node
+          tar xzf node/ciris-server-*.tar.gz -C node
+          echo "version=$used" >> "$GITHUB_OUTPUT"
+
+      - name: Build the candidate
+        shell: bash
+        run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
+
+      - name: Start the node
+        shell: bash
+        run: |
+          ./node/ciris-server.exe > node.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
+            sleep 2
+          done
+          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+
+      - name: Windows desktop
+        shell: bash
+        run: |
+          python3 -m testing.gate.run_platform --platform desktop \
+            --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
+            --node-version "${{ steps.node.outputs.version }}" \
+            --shots shots --report reports/windows.json
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-windows
+          path: |
+            shots/
+            reports/
+            node.log
+
+  gallery:
+    name: screenshot gallery
+    # ALWAYS, and needs all three: the RED run is the one worth looking at, and
+    # a gallery that only builds on success is a gallery you can never use to
+    # diagnose anything.
+    if: always()
+    needs: [linux-android, macos-ios, windows]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: live-qa-*
+          merge-multiple: true
+          path: collected
+      - name: Build the gallery
+        run: |
+          python3 testing/gate/build_qa_gallery.py --shots collected --out gallery.html || \
+            echo "::warning::gallery build failed; the raw artifacts are still attached"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-gallery
+          path: gallery.html
