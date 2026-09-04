@@ -482,6 +482,64 @@ val fatReleaseAar by tasks.registering {
             out.putNextEntry(ZipEntry("classes.jar"))
             out.write(mergedJar.readBytes())
             out.closeEntry()
+
+            // WHAT THIS AAR NEEDS, WHERE A CONSUMER CAN ACTUALLY READ IT
+            // (CIRISClient#31, item 4).
+            //
+            // The AAR carries no POM and no .module, so nothing at build time
+            // can learn it needs Compose >= 1.7. A downstream shell hand-pinned
+            // androidx.compose.ui:ui:1.6.1, which compiled clean and then died
+            // on the first recomposition with
+            //
+            //     NoSuchMethodError: Composer.startReplaceGroup
+            //
+            // on the device, at CIRISApp.kt:355 — the only place that skew can
+            // surface today.
+            //
+            // PUBLISHING A POM WOULD NOT HAVE FIXED IT. This AAR is consumed as
+            // a FILE from `apps/android/libs/` through Gradle's flatDir, and
+            // flatDir does not read metadata at all — that is precisely why the
+            // transitive dependency vanished in the first place (#25). So the
+            // requirement travels INSIDE the artifact, where a consumer can read
+            // it from the file they already have, and
+            // `packaging/check_aar_compat.py` turns it into a build failure
+            // instead of a crash.
+            //
+            // Derived from the plugin version this module actually builds with,
+            // never hand-written: a hardcoded floor drifts silently the moment
+            // the plugin moves, which is the same class of defect as the skew it
+            // documents.
+            // `clientVersion` is this file's existing top-level val (line ~62),
+            // which already resolves -PclientVersion or the VERSION file and
+            // REFUSES rather than defaulting. Re-reading VERSION here would have
+            // been a second source for one fact. `project.version` is
+            // "unspecified" for this module and would have written that word
+            // into the artifact.
+            // DERIVED, NOT HAND-WRITTEN. A hardcoded floor drifts silently the
+            // moment the plugin moves — the same class of defect as the skew it
+            // documents — so it is read from where the version is declared, and
+            // REFUSES rather than guessing if that line ever changes shape.
+            val rootBuild = rootProject.file("build.gradle.kts").readText()
+            val composeMp = Regex("""id\("org\.jetbrains\.compose"\)\.version\("([^"]+)"\)""")
+                .find(rootBuild)?.groupValues?.get(1)
+                ?: error(
+                    "cannot read the org.jetbrains.compose version from build.gradle.kts — " +
+                    "the AAR's stated Compose floor would be a guess, and a wrong floor is " +
+                    "worse than none (CIRISClient#31)"
+                )
+            val requirements = """
+                {
+                  "client_version": "${clientVersion}",
+                  "compose_multiplatform": "$composeMp",
+                  "jetpack_compose_runtime_min": "1.7.0",
+                  "why": "built with the org.jetbrains.compose $composeMp accessors; the bytecode calls Composer.startReplaceGroup, introduced in Jetpack Compose 1.7.0",
+                  "remedy": "apply the org.jetbrains.compose plugin and go through its accessors rather than hand-pinning androidx.compose.* — that makes your version follow the plugin exactly as this AAR's does",
+                  "verify": "python3 packaging/check_aar_compat.py <this.aar> --compose <your androidx.compose.ui version>"
+                }
+            """.trimIndent() + "\n"
+            out.putNextEntry(ZipEntry("META-INF/ciris-client-requirements.json"))
+            out.write(requirements.toByteArray())
+            out.closeEntry()
         }
         mergedJar.delete()
         logger.lifecycle("[fat-aar] wrote ${dst.name} (${dst.length()} bytes)")
