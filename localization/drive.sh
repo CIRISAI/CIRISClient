@@ -49,7 +49,18 @@ for attempt in $(seq 1 "$ATTEMPTS"); do
   last_report="$OUT/run-$STAMP-a$attempt.json"
   python3 localization/localize.py --lane "$LANE" "${keyargs[@]}" \
     --max-keys "$MAX_KEYS" --report "$last_report" 2>&1 | tail -20
-  rc=$?
+  # ${PIPESTATUS[0]}, NOT $?. In a pipeline `$?` is the LAST command's status,
+  # so this read `tail`'s -- and tail exits 0 whatever it was fed. Every refusal,
+  # every crash and every 402 therefore reported "lane clean", and the retry loop
+  # underneath has never once fired.
+  #
+  # It was found the only way a silent false green ever is: by noticing the work
+  # had not happened. `--keys 'chat.*'` refused with "616 > --max-keys 500",
+  # translated nothing, and this said DONE.
+  #
+  # Same shape as the PyPI publish gate whose retries were dead code under
+  # `bash -e` (packaging, 0.5.19x): a status that was never the one being tested.
+  rc=${PIPESTATUS[0]}
   if [ "$rc" = "0" ]; then
     echo "DONE after $attempt attempt(s): lane clean"
     exit 0
