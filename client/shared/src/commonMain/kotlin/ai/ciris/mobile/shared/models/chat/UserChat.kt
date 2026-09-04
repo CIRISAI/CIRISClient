@@ -69,6 +69,75 @@ data class CegChatMessage(
      * NOT the attester. Drives alignment and viewer authority.
      */
     val mine: Boolean = false,
+
+    // ── CIRISClient#37: two axes, not one role ────────────────────────────
+
+    /**
+     * What this entry IS: `message` | `system` | `error`.
+     *
+     * A system note belongs IN the transcript, in order — not a toast, not a
+     * dialog. "The room's key exchange has not finished" is part of the story of
+     * the conversation, and lifting it out of sequence loses when it happened.
+     */
+    val kind: String = KIND_MESSAGE,
+
+    /**
+     * What the author IS: `person` | `agent` | `node` | `other` | `unknown`.
+     *
+     * A fact about the entry, identical for every viewer. Crucially separate
+     * from [relation], which is not.
+     */
+    @SerialName("author_kind")
+    val authorKind: String = AUTHOR_KIND_UNKNOWN,
+
+    /**
+     * Roster metadata: `founder` | `member` | operator-defined. DISPLAY ONLY.
+     *
+     * **Never derive moderation from this.** Moderation is a delegable duty, not
+     * a role (CC §4.5.x): a founder appoints a moderator with a scoped
+     * `delegates_to`, so a plain `member` can hold real authority while a
+     * `founder` holds none. Reading a mod badge off this field renders the first
+     * as an ordinary participant and the second as a moderator, both wrongly.
+     * [authorDuties] is the signal.
+     *
+     * The vocabulary is OPEN, so an unrecognised value is an ordinary member,
+     * never an error.
+     */
+    @SerialName("author_role")
+    val authorRole: String? = null,
+
+    /**
+     * What the author actually HOLDS in this community: `moderate`, `takedown`,
+     * `review`. Backed by persist's `admission::is_named_moderator` — a live
+     * scope-bearing delegation chain, fail-closed.
+     *
+     * Open-ended: ignore entries you do not recognise rather than failing, since
+     * new duty scopes may be added.
+     *
+     * Empty on someone the roster calls a founder is a LEGITIMATE state, not a
+     * bug — it means no live steward-bound chain currently reaches them.
+     */
+    @SerialName("author_duties")
+    val authorDuties: List<String> = emptyList(),
+
+    /**
+     * The viewer's relationship to the author: `self` | `own_agent` | `other` |
+     * `none`.
+     *
+     * VIEWER-DEPENDENT, and the only field here that is. The rows themselves
+     * replicate byte-identically to every member, so this is the server's
+     * convenience for THIS reader — which is exactly why it cannot be fused
+     * with [authorKind] into one flat enum.
+     */
+    val relation: String? = null,
+
+    /** Localization key for a `system`/`error` entry; absent on a `message`. */
+    @SerialName("message_id")
+    val messageId: String? = null,
+
+    /** Why the row could not be opened, when [body] is absent. */
+    @SerialName("unopened_reason")
+    val unopenedReason: String? = null,
 ) {
     val isLive: Boolean get() = status == STATUS_LIVE
 
@@ -86,7 +155,50 @@ data class CegChatMessage(
     val authorDiffersFromAttester: Boolean
         get() = author?.takeIf { it.isNotBlank() }?.let { it != attestingKeyId } ?: false
 
+    /** A system note or an error — rendered in the transcript, never as a bubble. */
+    val isSystemEntry: Boolean get() = kind == KIND_SYSTEM || kind == KIND_ERROR
+
+    /**
+     * Show a moderator indicator?
+     *
+     * Duties, never role. See [authorDuties]. Empty is an ordinary member —
+     * including for a roster founder, which is a legitimate state.
+     */
+    val moderates: Boolean get() = authorDuties.isNotEmpty()
+
+    /**
+     * The author is an agent this viewer owns.
+     *
+     * NOT the same as [mine], and the difference is the point: an own-agent row
+     * shares an OWNER with the viewer but is not the viewer SPEAKING. Rendering
+     * it as the user's own message attributes a machine's words to a human.
+     */
+    val isOwnAgent: Boolean
+        get() = authorKind == AUTHOR_KIND_AGENT && relation == RELATION_OWN_AGENT
+
+    /**
+     * Directory resolution has not answered yet. Render NEUTRALLY and re-resolve
+     * later; falling back to `person` states something the row does not say, and
+     * is the same absence-as-negative mistake as #21 and #34.
+     */
+    val authorIsUnresolved: Boolean get() = authorKind == AUTHOR_KIND_UNKNOWN
+
     companion object {
+        const val KIND_MESSAGE = "message"
+        const val KIND_SYSTEM = "system"
+        const val KIND_ERROR = "error"
+        const val AUTHOR_KIND_PERSON = "person"
+        const val AUTHOR_KIND_AGENT = "agent"
+        const val AUTHOR_KIND_NODE = "node"
+        const val AUTHOR_KIND_OTHER = "other"
+        const val AUTHOR_KIND_UNKNOWN = "unknown"
+        const val RELATION_SELF = "self"
+        const val RELATION_OWN_AGENT = "own_agent"
+        const val RELATION_OTHER = "other"
+        const val RELATION_NONE = "none"
+        const val DUTY_MODERATE = "moderate"
+        const val DUTY_TAKEDOWN = "takedown"
+        const val DUTY_REVIEW = "review"
         const val STATUS_LIVE = "live"
         const val STATUS_SUPERSEDED = "superseded"
         const val STATUS_WITHDRAWN = "withdrawn"
@@ -131,7 +243,32 @@ data class ChatTranscript(
     @SerialName("cohort_scope")
     val cohortScope: String = CegChatMessage.COHORT_SCOPE_COMMUNITY,
     val messages: List<CegChatMessage> = emptyList(),
+    /**
+     * How many people SAID something. System notes are excluded, so an unstarted
+     * conversation is `total: 0` with one entry in [messages].
+     *
+     * Drive unread badges off this, never off `messages.size` — a room that has
+     * only ever emitted "waiting for them to join" would otherwise show as
+     * having unread traffic (CIRISClient#37).
+     */
     val total: Int = 0,
+    /**
+     * The room is usable end to end.
+     *
+     * Distinct from "no error": a room can be waiting on a peer with nothing
+     * wrong.
+     */
+    val ready: Boolean = false,
+    /**
+     * This state resolves WITHOUT the user doing anything.
+     *
+     * When true there must be NO retry button. Both waiting states clear when
+     * the peer's row replicates; a human pressing retry changes nothing, and
+     * offering the control says otherwise — it converts patience into a
+     * suspicion that something is broken.
+     */
+    @SerialName("converges_on_its_own")
+    val convergesOnItsOwn: Boolean = false,
 )
 
 /** ``POST /v1/chat/{community_id}/messages`` body. */

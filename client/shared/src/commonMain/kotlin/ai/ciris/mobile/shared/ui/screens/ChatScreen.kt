@@ -2,6 +2,9 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
+import ai.ciris.mobile.shared.models.chat.Presentation
+import ai.ciris.mobile.shared.models.chat.chatEntryText
+import ai.ciris.mobile.shared.models.chat.presentationOf
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
@@ -50,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -248,6 +252,16 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         items(messages, key = { it.attestationId }) { msg ->
+                            // TWO AXES, ONE BRANCH (CIRISClient#37). The decision
+                            // lives in presentationOf so it can be enumerated and
+                            // tested without composing anything; this is only its
+                            // rendering. A system note is placed IN the transcript,
+                            // in order — it is part of the conversation's story,
+                            // and a toast would lose when it happened.
+                            if (msg.isSystemEntry) {
+                                SystemNoteRow(msg)
+                                return@items
+                            }
                             MessageRow(
                                 message = msg,
                                 detailsOpen = detailsFor == msg.attestationId,
@@ -334,6 +348,40 @@ fun ChatScreen(
 // One message = one attestation card
 // ═════════════════════════════════════════════════════════════════════════════
 
+/**
+ * A `system` or `error` entry: centred, in sequence, never a toast (#37).
+ *
+ * The text comes from `chatEntryText`, which looks up `message_id` and falls
+ * back to the server's English in `body` — never to a blank line and never to
+ * the raw key. A transcript that silently drops an event is worse than one
+ * carrying an untranslated sentence, and a raw dotted key on screen is
+ * CIRISClient#34.
+ */
+@Composable
+private fun SystemNoteRow(message: CegChatMessage) {
+    // localizedString is @Composable, so the lookup happens HERE and the pure
+    // helper receives the result. Keeping chatEntryText free of Compose is what
+    // lets its fallback rules — id, then body, never a blank line and never the
+    // raw key — be unit-tested without composing anything.
+    val localized = message.messageId?.let { localizedString(it) }
+    val text = chatEntryText(message) { localized }
+    val isError = message.kind == CegChatMessage.KIND_ERROR
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .testable("chat_note_${message.attestationId}", text),
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Text(
+            text,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            color = if (isError) MaterialTheme.colorScheme.error
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth(0.86f).padding(vertical = 6.dp),
+        )
+    }
+}
+
 @Composable
 private fun MessageRow(
     message: CegChatMessage,
@@ -359,7 +407,14 @@ private fun MessageRow(
         supersededBy = message.statusAttestationId,
     )
     Row(
-        modifier = Modifier.fillMaxWidth().testable("chat_msg_${message.attestationId}"),
+        // THE TEXT, NOT JUST THE TAG (CIRISClient#27, one surface later).
+        // /tree reports a tagged element's `text`, and a bubble with a tag and
+        // no text tells automation that a message EXISTS while withholding what
+        // it says — so "did the reply arrive, and is it the right one?" is still
+        // unanswerable. InteractScreen already passes message.text for exactly
+        // this reason; the user-to-user transcript did not.
+        modifier = Modifier.fillMaxWidth()
+            .testable("chat_msg_${message.attestationId}", message.body),
         horizontalArrangement = if (message.mine) Arrangement.End else Arrangement.Start,
     ) {
         Box(modifier = Modifier.fillMaxWidth(0.94f)) {
@@ -376,11 +431,38 @@ private fun MessageRow(
                 // the node. For the far side, name the person rather than "Them"
                 // when the row carries an author.
                 Text(
-                    when {
-                        message.mine -> localizedString("mobile.chat_you")
-                        message.author?.isNotBlank() == true ->
-                            message.speakerKeyId.take(16) + "\u2026"
-                        else -> localizedString("mobile.chat_them")
+                    buildString {
+                        // AN AGENT IS NOT ITS OWNER (#37). An own-agent row
+                        // shares an owner with the viewer and can carry
+                        // mine=true for that reason; labelling it "You" would
+                        // attribute a machine's words to a human.
+                        append(
+                            when (presentationOf(message)) {
+                                Presentation.OwnMessage -> localizedString("mobile.chat_you")
+                                Presentation.OwnAgentMessage ->
+                                    localizedString("mobile.chat_your_agent")
+                                Presentation.OtherAgentMessage ->
+                                    localizedString("mobile.chat_an_agent")
+                                // Directory resolution is still in flight. Neutral,
+                                // and NOT a fallback to a person's name.
+                                Presentation.UnresolvedAuthorMessage ->
+                                    localizedString("mobile.chat_resolving_author")
+                                else ->
+                                    if (message.author?.isNotBlank() == true) {
+                                        message.speakerKeyId.take(16) + "\u2026"
+                                    } else {
+                                        localizedString("mobile.chat_them")
+                                    }
+                            }
+                        )
+                        // MODERATION IS A DUTY, NOT A ROLE (CIRISServer 6d6239b).
+                        // A plain `member` holding a scoped delegation moderates;
+                        // a roster `founder` with no live chain does not. Reading
+                        // this off author_role gets both backwards.
+                        if (message.moderates) {
+                            append(" ")
+                            append(localizedString("mobile.chat_moderator_badge"))
+                        }
                     },
                     fontSize = 10.sp,
                     fontFamily = if (!message.mine && message.author?.isNotBlank() == true) {

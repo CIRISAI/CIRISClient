@@ -512,6 +512,39 @@
       },
       "notes": "TWO iOS-ONLY DEFECTS THE FIVE-PLATFORM GATE FOUND AGAINST 0.5.200, NEITHER WITH THE REPORTED CAUSE. #30: iOS's plain `testable()` registered an element on layout and never unregistered it, so /tree described a screen that was not on screen. The gate waited for `input_username`, matched the SETUP WIZARD's field still in the registry, concluded the login form was up, and then got “no text sink is listening” for a form that had never composed; `btn_login_submit` was correctly absent in the same breath, because `testableClickable` does dispose. A stale entry is worse than a missing one — a harness cannot tell a ghost from a live control. Android and desktop carried the disposal from the start and iOS had it in both clickable variants, added when #32 was fixed: one rule, four copies, a fix landing in two of the three that need it, which is #33's argument arriving as a defect. check_ui_drivable.py now fails the build on a variant that registers and never unregisters — paired rather than absolute, since wasmJs registers nothing and demanding disposal there would be a false positive that teaches people to ignore the check. #34: reported as a missing key; the key is in all four of our bundles and has been since 0.5.185. What is missing is any bundle of OURS in anything we publish. Both mobile loaders read the HOST app's resources (NSBundle.mainBundle; context.assets), the .aar has four entries and no assets/, and the .xcframework.zip has zero .json — so every consumer vendors 29 bundles themselves and nothing we shipped said so. They took the node's ciris_engine/data/localized/en.json: a different bundle for a different surface, 3,739 keys to our 3,892, and the 185-key gap contains exactly mobile.login_setup_complete_relogin. The loader was working perfectly against a bundle that was short. Same shape as the missing AAR POM: a component whose requirements are invisible, so a mismatch can only surface as a defect on a device. This release publishes ciris-client-<version>-localization.zip as a release asset (3.1 MB, 29 languages, 3,892 keys) so an authoritative copy exists and can be pinned, and adds packaging/localization_bundle.py --verify to name a consumer's missing keys in one command instead of one screenshot at a time. STILL OPEN and unchanged here: the .aar ships no POM or .module metadata (#31 item 4), and embedding the strings in the artifacts themselves — straightforward on Android, needing a resource bundle plus a loader change on iOS, which is not being guessed at untested.",
       "published": null
+    },
+    {
+      "client_version": "0.5.202",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Chat-plane rendering and 15 new localized ids; the client reads fields an older node simply omits, and every one of them defaults to the pre-#37 shape",
+      "node_max_tested": "0.5.190",
+      "agent_min_tested": "2.9.41",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change; chat entry rendering is a client-side reading of fields CIRISServer 0.5.197 already serves",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3907
+      },
+      "notes": "CHAT ENTRIES ON TWO AXES, AND THE IDS TO SAY THEM IN 29 LANGUAGES (#36, #37). The server stopped returning a message list and started returning entries on kind (what the entry IS) and author_kind (what the AUTHOR is), with relation as the viewer-dependent convenience. The flat self|other_human|my_agent|other_agent|system|error enum was considered upstream and rejected because a channel breaks it: the same row is my_agent to one member and other_agent to another, and these rows replicate BYTE-IDENTICALLY to every member, so a viewer-dependent value cannot be a property of the row. presentationOf() is an exhaustive `when` over a sealed Presentation, so a new kind fails compilation rather than falling into whatever branch is last. Two orderings are load-bearing and both are mutation-checked: KIND IS ASKED BEFORE AUTHOR, because a system entry has no author by definition and asking author-kind first renders “End-to-end encrypted.” as a stranger’s message; and AGENT IS CHECKED BEFORE `mine`, because an own-agent row carries mine=true (same owner) and labelling it “You” attributes a machine’s words to a human. MODERATION IS A DUTY, NOT A ROLE: author_duties, never author_role — a plain member holding a scoped delegation moderates, and a roster founder with no live steward-bound chain does not, which is a legitimate state rather than a bug. The vocabulary is open, so unknown roles are ordinary members and unknown duties still indicate authority. `unknown` author_kind renders neutrally and re-resolves; falling back to person would be the same absence-as-negative mistake as #21 and #34. THE ENGLISH IS NOT OURS TO IMPROVE. Two source strings drew MQM accuracy rejections in more than one language and were reworded; check_localization_sync’s server-id-text refused them — the client renders the LOOKUP, so a reworded bundle string produces a translated sentence saying something the wire never said. Reverted to byte-exact src/contacts_chat.rs and the 28 translations regenerated against it; the ambiguity is real and is now a server-side question. Also fixed: drive.sh read tail’s exit code in a pipeline, so every lane refusal and crash reported “DONE: lane clean” and the retry loop had never once fired. Found only by noticing the work had not happened. Still open and reported: the pipeline has no source-hash tracking, so editing English silently leaves translations of the old text, and 8 contacts.* ids at CIRISServer HEAD have no bundle entry (absent from the pinned emitter ref, so not a regression here).",
+      "published": null
     }
   ]
 }
