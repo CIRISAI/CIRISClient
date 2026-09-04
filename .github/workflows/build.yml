@@ -109,7 +109,8 @@ jobs:
         # JSON — and a mocked transport passes both.
         run: |
           python3 -m pip install --quiet pytest
-          python3 -m pytest testing/test_driver_rules.py testing/test_gate_vendoring.py -q
+          python3 -m pytest testing/test_driver_rules.py testing/test_gate_vendoring.py \
+            testing/test_bringup.py -q
 
       - name: A published version must offer a universal wheel
         # Only for versions already on the index — a PR's VERSION is normally

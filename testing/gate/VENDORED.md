@@ -150,8 +150,36 @@ broken:
 5. **pre-send baseline** — TODO. A stale row must not satisfy the reply assertion.
 6. **an error row is not a reply** — TODO.
 7. **screenshots at every stage, including on success** — TODO.
-8. **a platform that cannot run must SKIP LOUDLY** — TODO, and it belongs with
-   the workflow rather than the driver.
+8. **a platform that cannot run must SKIP LOUDLY** — DONE at the bring-up layer
+   (`bringup.CannotRun`, raised and never swallowed, naming the step and its
+   stderr). A silent skip and a pass are the same colour on a dashboard.
+
+## Bring-up (`bringup.py`) — ours, and testable without hardware
+
+Every step needs an emulator, a simulator or a display, so a conventional
+implementation cannot be tested until CI has hardware — which means the adb
+sequence is first found wrong on a runner, from a timeout, with no message.
+That is the position their gate was in for four runs.
+
+So each platform builds an inspectable **plan** — a list of named steps — and
+running it is separate. The plan is pure data, so ORDER and CONTENT are unit
+tested anywhere, and order is where bring-up bugs live. Three invariants, each
+mutation-checked:
+
+1. **Test mode is armed before the app starts.** Android's switch is a sentinel
+   file read once at startup, so touching it after `am start` yields an app with
+   no automation server and a `/health` that never answers — indistinguishable
+   from a crash.
+2. **The node is reachable before the app starts**, via `adb reverse` so the
+   emulator's `localhost:8080` is the runner's node. That keeps the client in
+   the REMOTE shape of `FSD/ONE_CLIENT_N_NODES.md` and needs no Android node
+   binary — just as well, since CIRISServer publishes none.
+3. **Installed before forwarded.** adb accepts on the HOST socket before it
+   tries the device, so a forward to an absent package succeeds and then fails
+   as a socket error that looks exactly like a dead app.
+
+Teardown steps are all optional, because teardown runs after failures too and a
+teardown that fails hides the failure that caused it.
 
 ## Re-syncing
 
