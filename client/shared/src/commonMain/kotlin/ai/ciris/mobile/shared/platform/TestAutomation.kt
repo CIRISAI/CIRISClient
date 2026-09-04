@@ -1,7 +1,15 @@
 package ai.ciris.mobile.shared.platform
 
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.testTag
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -152,28 +160,110 @@ expect object TestAutomation {
 }
 
 /**
- * Modifier that makes an element trackable for test automation.
- * Combines testTag with position tracking.
+ * ONE IMPLEMENTATION, NOT THREE (CIRISClient#33).
  *
- * On desktop with test mode enabled, this reports element position.
- * On other platforms, this just applies testTag.
+ * These were `expect` with four `actual`s, and every one of them was pure
+ * Compose over `TestAutomationState` — which is already common. Nothing in them
+ * was ever platform-specific, and the cost of pretending otherwise was three
+ * defects in one month, each a copy missing a fix another copy already had:
+ *
+ *   #32  `testableClickable` kept the FIRST composition's onClick on Android
+ *        and iOS, because their DisposableEffect was keyed on the tag alone.
+ *        Desktop had fixed it with `rememberUpdatedState`. A programmatic click
+ *        replayed a closure captured before the user typed, so Test Connection
+ *        ran with an empty api key while the field visibly held one — and real
+ *        mouse clicks were immune, which is why it survived manual testing.
+ *
+ *   #30  iOS's plain `testable()` registered on layout and never unregistered,
+ *        so `/tree` described a screen that was not on screen. The fix for #32
+ *        went into the two clickable variants here and not this one: one rule,
+ *        four copies, a fix landing in two of the three that needed it.
+ *
+ * A gate finds these one platform and one release at a time. A single
+ * implementation means the next fix is the last one.
+ *
+ * WHY THIS IS SAFE ON EVERY TARGET
+ *
+ * The only platform-specific thing is `TestAutomation.isEnabled()`, which stays
+ * an `expect`. wasmJs returns `false` unconditionally — it serves no automation
+ * server — so the common body no-ops there exactly as its hand-written actual
+ * did, rather than registering elements nothing can read.
+ *
+ * ONE DELIBERATE BEHAVIOUR CHANGE: desktop measured with
+ * `positionInWindow() + size`, Android and iOS with `boundsInWindow()`. They
+ * agree for a fully visible element and differ for a clipped one, where
+ * `boundsInWindow` reports the rect actually ON SCREEN. That is the more
+ * correct answer for a click target — an unclipped rect can put a coordinate
+ * outside the window for a partially scrolled row — and it is what two of the
+ * three already did. Desktop's `/mouse-click` is the only consumer of these
+ * coordinates, and `e2e-desktop` exercises it on every push.
  */
-expect fun Modifier.testable(tag: String, text: String? = null): Modifier
+private fun Modifier.trackPosition(tag: String, text: String?): Modifier =
+    this.onGloballyPositioned { coords ->
+        val bounds = coords.boundsInWindow()
+        TestAutomation.registerElement(
+            tag,
+            bounds.left.toInt(), bounds.top.toInt(),
+            bounds.width.toInt(), bounds.height.toInt(),
+            text,
+        )
+    }
 
 /**
- * Modifier that makes an element both trackable AND clickable for test automation.
- * The onClick handler can be triggered programmatically by the test server.
+ * Track an element's position for automation. Tag only when test mode is off.
  *
- * On desktop with test mode enabled, this registers the click handler.
- * On other platforms, this just applies testTag and clickable.
+ * Registered on composition and UNREGISTERED ON DISPOSE. Without the disposal an
+ * entry outlives the composable that owned it and `/tree` reports a control that
+ * is not on screen — worse than a missing entry, because nothing can tell a
+ * ghost from a live control (#30).
  */
-expect fun Modifier.testableClickable(tag: String, text: String? = null, onClick: () -> Unit): Modifier
+fun Modifier.testable(tag: String, text: String? = null): Modifier = composed {
+    if (!TestAutomation.isEnabled()) return@composed this.testTag(tag)
+    DisposableEffect(tag) {
+        onDispose { TestAutomation.unregisterElement(tag) }
+    }
+    this.testTag(tag).trackPosition(tag, text)
+}
 
 /**
- * Modifier that tracks an element AND registers a click handler WITHOUT adding clickable.
- * Use this for components that already handle clicks internally (like DropdownMenuItem).
+ * Track an element AND register a programmatic click handler, plus `clickable`.
  *
- * The onClick handler can be triggered programmatically by the test server,
- * but normal user clicks are handled by the component's built-in onClick.
+ * `rememberUpdatedState` is the whole of #32: the DisposableEffect is keyed on
+ * the tag so it runs once, and without the indirection the handler it registered
+ * would keep calling the FIRST composition's lambda forever.
  */
-expect fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier
+fun Modifier.testableClickable(
+    tag: String,
+    text: String? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
+    if (!TestAutomation.isEnabled()) return@composed this.testTag(tag).clickable { onClick() }
+    val currentOnClick by rememberUpdatedState(onClick)
+    DisposableEffect(tag) {
+        TestAutomation.registerClickHandler(tag) { currentOnClick() }
+        onDispose {
+            TestAutomation.unregisterClickHandler(tag)
+            TestAutomation.unregisterElement(tag)
+        }
+    }
+    this.testTag(tag).clickable { onClick() }.trackPosition(tag, text)
+}
+
+/**
+ * Track an element and register a handler WITHOUT adding `clickable`.
+ *
+ * For components that already handle their own clicks (Button, DropdownMenuItem)
+ * — adding another `clickable` would give them two.
+ */
+fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = composed {
+    if (!TestAutomation.isEnabled()) return@composed this.testTag(tag)
+    val currentOnClick by rememberUpdatedState(onClick)
+    DisposableEffect(tag) {
+        TestAutomation.registerClickHandler(tag) { currentOnClick() }
+        onDispose {
+            TestAutomation.unregisterClickHandler(tag)
+            TestAutomation.unregisterElement(tag)
+        }
+    }
+    this.testTag(tag).trackPosition(tag, null)
+}

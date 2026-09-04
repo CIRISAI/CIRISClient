@@ -86,19 +86,3 @@ actual object TestAutomation {
         _fileInjectionRequests.value = null
     }
 }
-
-/**
- * WASM implementation - just applies testTag, no position tracking.
- */
-actual fun Modifier.testable(tag: String, text: String?): Modifier = this.testTag(tag)
-
-/**
- * WASM implementation - applies testTag and clickable.
- */
-actual fun Modifier.testableClickable(tag: String, text: String?, onClick: () -> Unit): Modifier =
-    this.testTag(tag).clickable(onClick = onClick)
-
-/**
- * WASM implementation - just applies testTag, no handler registration.
- */
-actual fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = this.testTag(tag)

@@ -98,48 +98,75 @@ def undeclared_sinks() -> dict[str, list[str]]:
     return found
 
 
-#: `actual fun Modifier.testable...(` in a platform source set.
-ACTUAL_TESTABLE = re.compile(r"actual fun Modifier\.(testable\w*)\(")
+#: A `Modifier.testable...(` definition, wherever it lives.
+TESTABLE_DEF = re.compile(r"(?:actual )?fun Modifier\.(testable\w*)\(")
+
+#: The single implementation, since CIRISClient#33.
+COMMON_TESTABLE = ROOT / "shared" / "src" / "commonMain" / "kotlin" / "ai" / "ciris" / \
+    "mobile" / "shared" / "platform" / "TestAutomation.kt"
 
 PLATFORM_SRC = ROOT / "shared" / "src"
 
 
+def _variants(text: str) -> dict[str, str]:
+    """{name: body} for each Modifier.testable* definition in `text`."""
+    hits = list(TESTABLE_DEF.finditer(text))
+    out: dict[str, str] = {}
+    for i, m in enumerate(hits):
+        end = hits[i + 1].start() if i + 1 < len(hits) else len(text)
+        out[m.group(1)] = text[m.start():end]
+    return out
+
+
 def undisposed_testables() -> dict[str, list[str]]:
-    """Platform variants that REGISTER an element but never UNREGISTER it.
+    """A variant that REGISTERS an element and never UNREGISTERS it.
 
-    CIRISClient#30, second time. iOS's plain `testable()` registered on layout
-    and never disposed, so an element stayed in `/tree` after the composable
-    that owned it left the screen -- and a tree that describes a screen which is
-    not on screen is worse than a missing entry, because a harness cannot tell a
-    ghost from a live control. The five-platform gate waited for
-    `input_username`, matched the SETUP WIZARD's field, concluded the login form
-    was up, and then got "no text sink is listening" for a form that had never
-    composed.
+    CIRISClient#30. iOS's plain `testable()` registered on layout and never
+    disposed, so an element stayed in `/tree` after its composable left the
+    screen -- and a tree describing a screen that is not on screen is worse than
+    a missing entry, because a harness cannot tell a ghost from a live control.
 
-    The rule was already right in three places. Android and desktop had disposal
-    from the start; iOS had it in `testableClickable` and `testableWithHandler`
-    -- added when #32 was fixed -- and not in `testable`. One rule, four copies,
-    a fix landing in two of the three that need it. That is the argument
-    CIRISClient#33 is making, and until the copies are consolidated this check
-    is what keeps them honest.
+    SINCE #33 THERE IS ONE IMPLEMENTATION, AND THAT CHANGED WHAT THIS MUST ASK.
+    This used to glob the four platform actuals. Consolidating them into
+    commonMain would have left it with NOTHING to scan -- passing silently,
+    having checked nothing, exactly as the rule it guards was being moved. So it
+    now reads the common file, and `no_platform_testable_actuals` below keeps the
+    copies from coming back.
 
-    PAIRED, NOT ABSOLUTE. The invariant is "whoever registers must unregister",
-    not "everyone must unregister". wasmJs applies `testTag` and nothing else --
-    it registers no elements and serves no automation server -- so demanding
-    disposal there would be a false positive that teaches people to ignore this.
+    PAIRED, NOT ABSOLUTE: the invariant is "whoever registers must unregister".
+    """
+    if not COMMON_TESTABLE.exists():
+        return {"MISSING": [f"{COMMON_TESTABLE} does not exist"]}
+    text = COMMON_TESTABLE.read_text(encoding="utf-8")
+    variants = _variants(text)
+    if not variants:
+        # A DENOMINATOR OF ZERO IS NOT A PASS.
+        return {str(COMMON_TESTABLE.relative_to(ROOT)): ["no Modifier.testable* found at all"]}
+    bad = [
+        name for name, body in variants.items()
+        # trackPosition() is the shared helper that registers; a variant calling
+        # it is registering just as surely as one calling registerElement.
+        if ("registerElement" in body or "trackPosition" in body)
+        and "unregisterElement" not in body
+    ]
+    return {str(COMMON_TESTABLE.relative_to(ROOT)): sorted(bad)} if bad else {}
+
+
+def platform_testable_actuals() -> dict[str, list[str]]:
+    """Per-platform copies of a rule that is now common (CIRISClient#33).
+
+    Three defects in one month were each a copy missing a fix another copy
+    already had. The copies are gone; this is what stops them coming back, and
+    it is cheaper than finding the next one through a downstream gate one
+    platform and one release at a time.
     """
     found: dict[str, list[str]] = {}
     for f in sorted(PLATFORM_SRC.glob("*Main/kotlin/**/TestAutomation.*.kt")):
-        text = f.read_text(encoding="utf-8")
-        hits = [m for m in ACTUAL_TESTABLE.finditer(text)]
-        bad: list[str] = []
-        for i, m in enumerate(hits):
-            end = hits[i + 1].start() if i + 1 < len(hits) else len(text)
-            body = text[m.start():end]
-            if "registerElement" in body and "unregisterElement" not in body:
-                bad.append(m.group(1))
-        if bad:
-            found[str(f.relative_to(ROOT))] = sorted(bad)
+        if f.resolve() == COMMON_TESTABLE.resolve():
+            continue
+        names = sorted(n for n in _variants(f.read_text(encoding="utf-8")))
+        if names:
+            found[str(f.relative_to(ROOT))] = names
     return found
 
 
@@ -170,6 +197,17 @@ def main() -> int:
         BASELINE.write_text(json.dumps(now, indent=2, sort_keys=True) + "\n")
         print(f"baseline re-recorded: {total} offender(s) in {len(now)} file(s)")
         return 0
+
+    copies = platform_testable_actuals()
+    if copies:
+        print("::error::a per-platform Modifier.testable* has come back — this rule lives in "
+              "commonMain since CIRISClient#33, and three defects in one month were each a copy "
+              "missing a fix another copy already had")
+        for path, names in copies.items():
+            print(f"\n  {path}")
+            for n in names:
+                print(f"      {n}")
+        return 1
 
     stale = undisposed_testables()
     if stale:
