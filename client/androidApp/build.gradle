@@ -24,7 +24,26 @@ android {
     defaultConfig {
         applicationId "ai.ciris.mobile"
         minSdk 24
-        targetSdk 35
+        // ANDROID 16 (API 36) IS A PLAY REQUIREMENT, NOT A PREFERENCE
+        // (CIRISClient#38). Since 2026-08-30 Play refuses app UPDATES whose
+        // target is more than a year behind the latest release, and it refuses
+        // them at upload — so a perfectly green build was simply not shippable.
+        //
+        // compileSdk was already 36 and no `android.suppressUnsupportedCompileSdk`
+        // is set, so the toolchain needed nothing: targetSdk opts into RUNTIME
+        // behaviour changes only. All three that 36 turns on were checked here
+        // rather than assumed, and this app was already clear of each:
+        //
+        //   edge-to-edge enforcement — MainActivity already calls
+        //     enableEdgeToEdge(), so the insets behaviour is what we ship today
+        //     and 36 changes nothing about it
+        //   predictive back — back goes through
+        //     androidx.activity.compose.BackHandler, which registers on the
+        //     OnBackPressedDispatcher that AndroidX bridges to
+        //     OnBackInvokedCallback
+        //   orientation/resizability ignored above 600dp — the manifest locks
+        //     neither, so there is nothing to be ignored
+        targetSdk 36
         versionCode 173
         versionName "2.9.36"
 
