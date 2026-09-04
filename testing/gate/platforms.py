@@ -46,6 +46,7 @@ doing. On Linux CI there is no display at all, so the app must be wrapped in
 from __future__ import annotations
 
 import asyncio
+import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -72,6 +73,47 @@ class PlatformPorts:
     test_server: int
     #: Host port that reaches the agent's HTTP API (8080 on-device).
     api: int
+
+
+def _resolve_adb() -> str:
+    """ADAPTED from upstream, which read this out of CIRISAgent's `__main__`.
+
+    NOT `shutil.which("adb")` first. On a GitHub runner adb lives at
+    `$ANDROID_SDK_ROOT/platform-tools/adb` and is NOT on PATH, so `which` finds
+    nothing and every capture silently produces no screenshot -- which is what
+    happened on their first green Android run: the flow passed and the gallery
+    had no tile for it. A capture that fails quietly is how a gate stops being
+    evidence.
+    """
+    for var in ("ANDROID_SDK_ROOT", "ANDROID_HOME"):
+        root = os.environ.get(var)
+        if root:
+            candidate = Path(root) / "platform-tools" / "adb"
+            if candidate.exists():
+                return str(candidate)
+    return shutil.which("adb") or "adb"
+
+
+#: WHY EVERY `bring_up` BELOW RAISES (CIRISClient#31).
+#:
+#: Upstream, each delegated to `web_ui/__main__.py` -- CIRISAgent's bring-up,
+#: which builds and installs THEIR app shells around this client. That module is
+#: deliberately not vendored: our apps are `client/androidApp`, `client/iosApp`
+#: and `client/desktopApp`, the real things rather than shells, so their bring-up
+#: is the one part of this file that could not come across.
+#:
+#: CAPTURE is what transplants, and it is the substance -- per-platform
+#: screenshots with the right tool for each, which is genuinely fiddly and
+#: genuinely worth reusing. Bring-up is `adb`/`simctl` against paths only this
+#: repo knows.
+#:
+#: These RAISE rather than returning 0, because a bring-up that silently does
+#: nothing produces a run against an app that was never started and reports the
+#: platform green -- the exact failure this gate exists to prevent.
+_BRING_UP_IS_OURS = (
+    "bring-up belongs to this repo, not the vendored gate: CIRISAgent's version "
+    "built their app shells. See testing/gate/VENDORED.md."
+)
 
 
 class Platform(Protocol):
@@ -138,9 +180,7 @@ class DesktopPlatform:
         return self._ports
 
     async def bring_up(self, args) -> int:
-        from . import __main__ as web_ui_main
-
-        return await web_ui_main.run_desktop_up(args)
+        raise NotImplementedError(_BRING_UP_IS_OURS)
 
     def capture(self, kind: str, dest: Path) -> Optional[Path]:
         """Ask the app for its own screenshot.
@@ -152,15 +192,19 @@ class DesktopPlatform:
         if kind != CaptureKind.SCREENSHOT:
             return None
         try:
-            import httpx
+            # ADAPTED: upstream used httpx. Everything that drives this client
+            # here is stdlib-only on purpose -- CI installs nothing to run it,
+            # and a capture helper is a poor reason to make a screenshot depend
+            # on a package being present.
+            import urllib.request
 
-            with httpx.Client(timeout=30.0) as client:
-                r = client.get(f"{self._server_url}/screenshot")
-                if r.status_code != 200 or not r.content:
-                    return None
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(r.content)
-                return dest
+            with urllib.request.urlopen(f"{self._server_url}/screenshot", timeout=30.0) as r:
+                content = r.read()
+            if not content:
+                return None
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            dest.write_bytes(content)
+            return dest
         except Exception:
             # A capture failure must never fail a passing run — the screenshot is
             # review material, not an assertion.
@@ -189,21 +233,13 @@ class AndroidPlatform:
         is exactly what happened on the first green run: the flow passed on
         Android and the gallery had no tile for it.
         """
-        from . import __main__ as web_ui_main
-
-        try:
-            adb = str(web_ui_main._android_sdk_paths()["adb"])
-        except Exception:  # noqa: BLE001
-            adb = shutil.which("adb") or "adb"
-        cmd = [adb]
+        cmd = [_resolve_adb()]
         if self._serial:
             cmd += ["-s", self._serial]
         return cmd + list(args)
 
     async def bring_up(self, args) -> int:
-        from . import __main__ as web_ui_main
-
-        return await web_ui_main.run_android_up(args)
+        raise NotImplementedError(_BRING_UP_IS_OURS)
 
     def capture(self, kind: str, dest: Path) -> Optional[Path]:
         if kind != CaptureKind.SCREENSHOT:
@@ -281,11 +317,7 @@ class IOSPlatform:
         no second UDID namespace — so they are separate functions rather than one
         with a mode flag.
         """
-        from . import __main__ as web_ui_main
-
-        if self._simulator:
-            return await web_ui_main.run_ios_simulator_up(args)
-        return await web_ui_main.run_ios_up(args)
+        raise NotImplementedError(_BRING_UP_IS_OURS)
 
     def capture(self, kind: str, dest: Path) -> Optional[Path]:
         if kind != CaptureKind.SCREENSHOT:

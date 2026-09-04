@@ -28,12 +28,53 @@ prevent. So the split is deliberate and recorded rather than left to inference.
 | here | upstream | how |
 |---|---|---|
 | `platform_procs.py` | `tools/qa_runner/platform_procs.py` | verbatim — port ownership, Windows `netstat` / POSIX `lsof` |
-| `platforms.py` | `tools/qa_runner/modules/web_ui/platforms.py` | verbatim — per-platform screenshot capture |
 | `build_qa_gallery.py` | `tools/dev/build_qa_gallery.py` | verbatim — the screenshot gallery |
+| `platforms.py` | `tools/qa_runner/modules/web_ui/platforms.py` | **adapted** — capture transplants, bring-up could not. See below |
 | `candidate_artifacts.py` | `tools/fetch_client_artifacts.py` | **the seam**, adapted — see below |
 
-All three verbatim files are stdlib-only and import nothing from CIRISAgent,
-which is why they transplant without edits.
+`platform_procs.py` and `build_qa_gallery.py` are stdlib-only and reference
+nothing of CIRISAgent's, which is why they transplant untouched.
+
+### `platforms.py` — and a mistake this file previously recorded as a fact
+
+An earlier version of this document said all three vendored modules were
+"stdlib-only and import nothing from CIRISAgent". That was **false for
+`platforms.py`**, and the way it was checked is what made it look true: every
+dependency on their code is a DEFERRED import inside a method.
+
+```python
+async def bring_up(self, args) -> int:
+    from . import __main__ as web_ui_main          # CIRISAgent's bring-up
+    return await web_ui_main.run_android_up(args)
+
+def _adb(self, *args):
+    adb = str(web_ui_main._android_sdk_paths()["adb"])    # and again
+```
+
+`import testing.gate.platforms` touches neither, so the module imported cleanly
+while four of its five entry points raised `ImportError` on first call — and
+they would have raised at the moment a run tried to boot an emulator.
+
+What actually transplants is **capture**, which is the substance: per-platform
+screenshots with the right tool for each, which is fiddly and worth reusing.
+**Bring-up does not**, because theirs builds and installs their `apps/` shells
+around this client, and ours are the real apps. So:
+
+- every `bring_up` now RAISES `NotImplementedError`. Not returns 0 — a bring-up
+  that silently does nothing produces a run against an app that was never
+  started and reports the platform green, which is the one outcome this gate
+  exists to prevent.
+- `_resolve_adb()` replaces their `__main__._android_sdk_paths()`, reading
+  `ANDROID_SDK_ROOT`/`ANDROID_HOME` directly. Their comment explains why this
+  cannot be `shutil.which("adb")`: on a runner adb is not on PATH, and the quiet
+  miss cost them a whole Android tile on their first green run.
+- `httpx` became `urllib.request`. Everything else driving this client here is
+  stdlib-only so CI installs nothing, and a screenshot helper is a poor reason
+  to break that.
+
+`testing/test_gate_vendoring.py` now asserts this property by AST rather than by
+import, so the same mistake cannot be made silently again. It is
+mutation-checked against the original code.
 
 ### Not taken, with the reason
 
