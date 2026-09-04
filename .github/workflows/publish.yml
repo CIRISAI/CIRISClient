@@ -631,6 +631,26 @@ jobs:
           path: mobile
       - name: What built
         run: ls -la mobile || echo "no mobile artifacts this run"
+
+      # THE STRINGS TRAVEL WITH THE CLIENT THAT RENDERS THEM (CIRISClient#34).
+      #
+      # Both mobile loaders read the HOST app's resources -- NSBundle.mainBundle
+      # on iOS, context.assets on Android -- and neither artifact above carries a
+      # single string. So a consumer embedding this client has to vendor 29
+      # bundles, and until now nothing we published told them that, said which
+      # copy was authoritative, or let them notice theirs had drifted. One did
+      # vendor the node's bundle, which is 185 keys short, and a user was shown
+      # `mobile.login_setup_complete_relogin` on the iOS login screen.
+      #
+      # Built here rather than in the mobile matrix because it depends on no
+      # toolchain and must attach even when a mobile leg times out -- the same
+      # reason `needs: mobile` is paired with `always()` above.
+      - name: The localization bundle
+        run: |
+          set -euo pipefail
+          mkdir -p mobile
+          python3 packaging/localization_bundle.py \
+            --build "mobile/ciris-client-$(cat VERSION)-localization.zip"
       - name: Upload
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -647,8 +667,20 @@ jobs:
           tag="$GITHUB_REF_NAME"
           shopt -s nullglob
           assets=(mobile/*)
-          if [ ${#assets[@]} -eq 0 ]; then
+          # THE MOBILE WARNING MUST STILL BE ABLE TO FIRE.
+          #
+          # It used to be enough to ask whether `mobile/` was empty, because the
+          # only things in it came from the mobile matrix. The localization
+          # bundle is built unconditionally in this job, so `mobile/*` is now
+          # never empty and that question has stopped being the one worth asking
+          # — a silently absent AAR and XCFramework would have read as a normal
+          # release. Ask about the mobile artifacts by name instead.
+          mobile_assets=(mobile/*.aar mobile/*.xcframework.zip)
+          if [ ${#mobile_assets[@]} -eq 0 ]; then
             echo "::warning::no mobile artifacts to attach — check the mobile jobs"
+          fi
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "::warning::nothing at all to attach"
             exit 0
           fi
           # --verify-tag: create a release for a tag that EXISTS, never one

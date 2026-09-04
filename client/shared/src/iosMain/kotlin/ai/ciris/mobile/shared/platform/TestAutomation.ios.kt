@@ -103,9 +103,33 @@ actual object TestAutomation {
 
 /**
  * iOS implementation — tracks position when test mode enabled, otherwise just testTag.
+ *
+ * WHY `composed { DisposableEffect }` AND NOT A BARE MODIFIER (CIRISClient#30).
+ *
+ * This registered on layout and never unregistered, so an element stayed in the
+ * tree forever after the composable that owned it left the screen — and `/tree`
+ * then described a screen that was not on screen.
+ *
+ * That is worse than a missing entry, because a harness cannot tell a ghost
+ * from a live control. The five-platform gate hit exactly this on iOS after a
+ * setup that had just passed 6/6: it waited for `input_username`, found the
+ * WIZARD's field still registered, concluded the login form was up, and then
+ * got "no text sink is listening" — because the form it thought it was looking
+ * at had never composed. `btn_login_submit` was correctly absent in the same
+ * breath, which is what makes the pair diagnostic: the two `testableClickable`
+ * variants below already dispose, so they vanished honestly while this one did
+ * not.
+ *
+ * Android and desktop have carried this since they were written. iOS was the
+ * third copy, and when the stale-closure fix (#32) went into the clickable
+ * variants here, THIS one was not touched — three copies of one rule, a fix
+ * landing in two. That is the argument #33 is making, in the form of a defect.
  */
-actual fun Modifier.testable(tag: String, text: String?): Modifier {
-    return if (TestAutomation.isEnabled()) {
+actual fun Modifier.testable(tag: String, text: String?): Modifier = composed {
+    if (TestAutomation.isEnabled()) {
+        DisposableEffect(tag) {
+            onDispose { TestAutomation.unregisterElement(tag) }
+        }
         this.testTag(tag).onGloballyPositioned { coords ->
             val bounds = coords.boundsInWindow()
             TestAutomation.registerElement(

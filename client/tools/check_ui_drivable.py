@@ -98,6 +98,51 @@ def undeclared_sinks() -> dict[str, list[str]]:
     return found
 
 
+#: `actual fun Modifier.testable...(` in a platform source set.
+ACTUAL_TESTABLE = re.compile(r"actual fun Modifier\.(testable\w*)\(")
+
+PLATFORM_SRC = ROOT / "shared" / "src"
+
+
+def undisposed_testables() -> dict[str, list[str]]:
+    """Platform variants that REGISTER an element but never UNREGISTER it.
+
+    CIRISClient#30, second time. iOS's plain `testable()` registered on layout
+    and never disposed, so an element stayed in `/tree` after the composable
+    that owned it left the screen -- and a tree that describes a screen which is
+    not on screen is worse than a missing entry, because a harness cannot tell a
+    ghost from a live control. The five-platform gate waited for
+    `input_username`, matched the SETUP WIZARD's field, concluded the login form
+    was up, and then got "no text sink is listening" for a form that had never
+    composed.
+
+    The rule was already right in three places. Android and desktop had disposal
+    from the start; iOS had it in `testableClickable` and `testableWithHandler`
+    -- added when #32 was fixed -- and not in `testable`. One rule, four copies,
+    a fix landing in two of the three that need it. That is the argument
+    CIRISClient#33 is making, and until the copies are consolidated this check
+    is what keeps them honest.
+
+    PAIRED, NOT ABSOLUTE. The invariant is "whoever registers must unregister",
+    not "everyone must unregister". wasmJs applies `testTag` and nothing else --
+    it registers no elements and serves no automation server -- so demanding
+    disposal there would be a false positive that teaches people to ignore this.
+    """
+    found: dict[str, list[str]] = {}
+    for f in sorted(PLATFORM_SRC.glob("*Main/kotlin/**/TestAutomation.*.kt")):
+        text = f.read_text(encoding="utf-8")
+        hits = [m for m in ACTUAL_TESTABLE.finditer(text)]
+        bad: list[str] = []
+        for i, m in enumerate(hits):
+            end = hits[i + 1].start() if i + 1 < len(hits) else len(text)
+            body = text[m.start():end]
+            if "registerElement" in body and "unregisterElement" not in body:
+                bad.append(m.group(1))
+        if bad:
+            found[str(f.relative_to(ROOT))] = sorted(bad)
+    return found
+
+
 def load_baseline() -> dict[str, list[str]]:
     if not BASELINE.exists():
         return {}
@@ -125,6 +170,19 @@ def main() -> int:
         BASELINE.write_text(json.dumps(now, indent=2, sort_keys=True) + "\n")
         print(f"baseline re-recorded: {total} offender(s) in {len(now)} file(s)")
         return 0
+
+    stale = undisposed_testables()
+    if stale:
+        print("::error::a testable variant registers an element and never unregisters it — "
+              "the entry outlives the composable and /tree reports a control that is not on "
+              "screen (CIRISClient#30)")
+        for path, names in stale.items():
+            print(f"\n  {path}")
+            for n in names:
+                print(f"      {n}")
+        print("\n  Wrap the modifier in `composed { }` and add:")
+        print("      DisposableEffect(tag) { onDispose { TestAutomation.unregisterElement(tag) } }")
+        return 1
 
     sinks = undeclared_sinks()
     if sinks:
