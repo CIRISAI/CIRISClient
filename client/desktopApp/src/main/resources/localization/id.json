@@ -3895,6 +3895,11 @@
     "adapters_info": "Adapter menghubungkan CIRIS ke layanan seperti Home Assistant, kalender, dan lainnya. Anda dapat menambahkannya dari Pengaturan setelah penyiapan.",
     "adapters_later": "Konfigurasi setelah penyiapan",
     "adapters_title": "Adapter",
+    "ai_preference_question": "CIRIS dapat berjalan dengan atau tanpa asisten AI. Mana yang Anda inginkan?",
+    "ai_preference_with": "Dengan asisten AI",
+    "ai_preference_with_desc": "Anda akan memilih penyedia di layar berikutnya. Model CIRIS gratis disertakan saat Anda masuk dengan Google atau Apple.",
+    "ai_preference_without": "Tanpa asisten AI",
+    "ai_preference_without_desc": "Node berjalan secara mandiri — federasi, persetujuan, dan data Anda sendiri semuanya berfungsi. Anda dapat menambahkan penyedia nanti dari Pengaturan.",
     "back": "Kembali",
     "byok_mode_desc": "Konfigurasikan penyedia LLM Anda untuk melanjutkan",
     "byok_mode_title": "Bawa Kunci Anda Sendiri",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Mereka belum menerima. Ini menunggu keputusan orang lain, sehingga mencoba lagi tidak akan mengubah apa pun.",
+    "awaiting_key_body": "kunci yang disebutkan oleh kode ini sedang diambil dari mesh; coba lagi setelah kunci itu tiba dan kontak akan diverifikasi terhadap komitmen kode tersebut",
+    "code_commitment_mismatch": "Kode ini tidak cocok dengan kunci yang diterima untuk orang tersebut. Jangan percayai kode ini.",
+    "code_without_pqc_commitment": "Kode ini terlalu lama untuk ditambahkan secara langsung. Minta kode baru dari mereka, atau tambahkan mereka melalui peering.",
     "consent_emit_failed": "Node tidak dapat menerbitkan pemberian persetujuan yang menjadikan ini sebuah kontak. Tidak ada yang diubah.",
+    "consent_not_granted": "Node ini belum memberikan persetujuan kepada mereka. Berbeda dengan menunggu persetujuan mereka, bagian ini adalah tanggung jawab Anda untuk diperbaiki.",
+    "delegation_denied": "Delegasi sesi ini tidak memberikan izin untuk tindakan tersebut.",
+    "key_pull_unavailable": "Perangkat ini tidak berada di mesh, sehingga tidak dapat mengambil kunci mereka. Tambahkan mereka dari perangkat yang berada di mesh.",
     "malformed_body": "key_id harus berupa id kunci federasi yang tidak kosong",
+    "malformed_code": "Ini tampak seperti kode CIRIS, tetapi tidak dapat diuraikan. Salinan yang terpotong atau rusak tidak akan memperbaiki dirinya sendiri, jadi minta kode itu lagi daripada mencoba kode ini lagi.",
+    "prior_rung_incomplete": "Langkah ini tidak dapat selesai karena langkah sebelumnya belum selesai. Periksa di sana, bukan di sini.",
     "self_contact": "menolak menambahkan identitas node ini sendiri sebagai kontak",
     "store_unavailable": "Node tidak dapat membaca catatan kontaknya. Tidak ada yang diubah — coba lagi setelah node kembali sehat.",
-    "unknown_fed_id": "ID federasi itu tidak ada di direktori node ini. Terima kuncinya terlebih dahulu (peering) — penanda yang sudah diumumkan tetapi belum diterima tidak membawa provenans dan tidak dapat diberi persetujuan."
+    "unknown_fed_id": "ID federasi itu tidak ada di direktori node ini. Terima kuncinya terlebih dahulu (peering) — penanda yang sudah diumumkan tetapi belum diterima tidak membawa provenans dan tidak dapat diberi persetujuan.",
+    "unreachable": "Mereka dikenal, tetapi tidak ada yang merespons. Perangkat mereka mungkin sedang offline; pesan akan sampai kepada mereka setelah mereka kembali.",
+    "unresolvable": "Pengenal itu tidak dapat diresolusi menjadi kontak."
   }
 }

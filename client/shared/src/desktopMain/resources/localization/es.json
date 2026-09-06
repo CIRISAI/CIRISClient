@@ -3895,6 +3895,11 @@
     "adapters_info": "Los adaptadores conectan CIRIS a servicios como Home Assistant, calendarios y más. Puede agregarlos desde Configuración después de la instalación.",
     "adapters_later": "Configurar después de la instalación",
     "adapters_title": "Adaptadores",
+    "ai_preference_question": "CIRIS puede funcionar con o sin un asistente de IA. ¿Cuál prefieres?",
+    "ai_preference_with": "Con un asistente de IA",
+    "ai_preference_with_desc": "Elegirás un proveedor en la siguiente pantalla. Los modelos gratuitos de CIRIS están incluidos cuando inicias sesión con Google o Apple.",
+    "ai_preference_without": "Sin un asistente de IA",
+    "ai_preference_without_desc": "El nodo funciona por sí solo — la federación, el consentimiento y tus propios datos funcionan igual. Puedes agregar un proveedor más tarde desde Configuración.",
     "back": "Atrás",
     "byok_mode_desc": "Configura tu proveedor de LLM para continuar",
     "byok_mode_title": "Trae Tu Propia Clave",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Aún no han aceptado. Esto depende de una persona, así que intentarlo de nuevo no cambiará nada.",
+    "awaiting_key_body": "la clave que nombra este código se está obteniendo de la malla; inténtalo de nuevo cuando haya llegado y el contacto se verificará contra el compromiso del código",
+    "code_commitment_mismatch": "Este código no coincide con la clave recibida para esa persona. No confíes en él.",
+    "code_without_pqc_commitment": "Este código es demasiado antiguo para añadirlo directamente. Pídeles uno nuevo, o añádelos mediante emparejamiento.",
     "consent_emit_failed": "El nodo no pudo emitir la concesión de consentimiento que convierte esto en un contacto. No se cambió nada.",
+    "consent_not_granted": "Este nodo aún no les ha otorgado su consentimiento. A diferencia de esperar su consentimiento, esta mitad depende de ti.",
+    "delegation_denied": "La delegación de esta sesión no otorga esa acción.",
+    "key_pull_unavailable": "Este dispositivo no está en la malla, así que no puede obtener su clave. Añádelos desde un dispositivo que sí lo esté.",
     "malformed_body": "key_id debe ser un id de clave de federación no vacío",
+    "malformed_code": "Eso parece un código de CIRIS, pero no se puede decodificar. Un texto pegado truncado o corrupto no se repara solo, así que pide el código de nuevo en lugar de volver a intentar este.",
+    "prior_rung_incomplete": "Este paso no puede finalizar porque uno anterior no lo ha hecho. Revisa ahí en lugar de aquí.",
     "self_contact": "se rechaza añadir la identidad propia de este nodo como contacto",
     "store_unavailable": "El nodo no pudo leer sus registros de contactos. No se cambió nada — inténtalo de nuevo cuando el nodo vuelva a estar en buen estado.",
-    "unknown_fed_id": "Ese ID de federación no está en el directorio de este nodo. Admite primero la clave (peering) — un marcador anunciado pero no admitido no lleva procedencia y no puede recibir consentimiento."
+    "unknown_fed_id": "Ese ID de federación no está en el directorio de este nodo. Admite primero la clave (peering) — un marcador anunciado pero no admitido no lleva procedencia y no puede recibir consentimiento.",
+    "unreachable": "Se les conoce, pero nada respondió. Sus dispositivos pueden estar fuera de línea; los mensajes les llegarán cuando vuelvan.",
+    "unresolvable": "Ese identificador no corresponde a ningún contacto."
   }
 }

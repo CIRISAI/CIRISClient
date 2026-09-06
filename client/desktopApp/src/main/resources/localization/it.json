@@ -3895,6 +3895,11 @@
     "adapters_info": "Gli adattatori collegano CIRIS a servizi come Home Assistant, calendari e altro. Puoi aggiungerli dalle Impostazioni dopo la configurazione.",
     "adapters_later": "Configura dopo la configurazione",
     "adapters_title": "Adattatori",
+    "ai_preference_question": "CIRIS può funzionare con o senza un assistente IA. Quale preferisci?",
+    "ai_preference_with": "Con un assistente IA",
+    "ai_preference_with_desc": "Nella schermata successiva sceglierai un provider. I modelli CIRIS gratuiti sono inclusi quando accedi con Google o Apple.",
+    "ai_preference_without": "Senza un assistente IA",
+    "ai_preference_without_desc": "Il nodo funziona autonomamente — federazione, consenso e i tuoi dati funzionano comunque. Puoi aggiungere un provider in seguito dalle Impostazioni.",
     "back": "Indietro",
     "byok_mode_desc": "Configura il tuo provider LLM per continuare",
     "byok_mode_title": "Porta Le Tue Chiavi",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Non ha ancora accettato. Questo dipende da una persona, quindi riprovare non cambierà nulla.",
+    "awaiting_key_body": "la chiave indicata da questo codice è in corso di recupero dalla mesh; riprova una volta arrivata e il contatto verrà verificato rispetto all'impegno del codice",
+    "code_commitment_mismatch": "Questo codice non corrisponde alla chiave ricevuta per quella persona. Non fidartene.",
+    "code_without_pqc_commitment": "Questo codice è troppo vecchio per essere aggiunto direttamente. Chiedigli un nuovo codice, oppure aggiungilo tramite il peering.",
     "consent_emit_failed": "Il nodo non è riuscito a emettere la concessione di consenso che rende questo un contatto. Nulla è stato modificato.",
+    "consent_not_granted": "Questo nodo non ha ancora concesso il consenso nei suoi confronti. A differenza dell'attesa del suo consenso, questa metà dipende da te.",
+    "delegation_denied": "La delega di questa sessione non concede quell'azione.",
+    "key_pull_unavailable": "Questo dispositivo non è connesso alla mesh, quindi non può recuperare la sua chiave. Aggiungilo da un dispositivo che lo sia.",
     "malformed_body": "key_id deve essere un id di chiave di federazione non vuoto",
+    "malformed_code": "Sembra un codice CIRIS, ma non viene decodificato correttamente. Un incollaggio troncato o danneggiato non si ripara da solo, quindi richiedi di nuovo il codice invece di riprovare con questo.",
+    "prior_rung_incomplete": "Questo passaggio non può essere completato perché un passaggio precedente non lo è. Guarda lì, non qui.",
     "self_contact": "rifiuto di aggiungere l'identità di questo stesso nodo come contatto",
     "store_unavailable": "Il nodo non è riuscito a leggere i propri record dei contatti. Nulla è stato modificato — riprova quando il nodo sarà di nuovo funzionante.",
-    "unknown_fed_id": "Questo ID di federazione non è nella directory di questo nodo. Ammetti prima la chiave (peering) — un segnalibro annunciato ma non ammesso non ha provenienza e non può ricevere consenso."
+    "unknown_fed_id": "Questo ID di federazione non è nella directory di questo nodo. Ammetti prima la chiave (peering) — un segnalibro annunciato ma non ammesso non ha provenienza e non può ricevere consenso.",
+    "unreachable": "Il contatto è noto, ma non è arrivata alcuna risposta. I suoi dispositivi potrebbero essere offline; i messaggi lo raggiungeranno quando tornerà online.",
+    "unresolvable": "Quell'identificatore non corrisponde a nessun contatto."
   }
 }

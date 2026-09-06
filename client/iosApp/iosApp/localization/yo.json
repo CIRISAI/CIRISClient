@@ -3895,6 +3895,11 @@
     "adapters_info": "Àwọn adápútà ń so CIRIS mọ́ àwọn iṣẹ́ bíi Home Assistant, kálẹ́ndà, àti àwọn míì. O lè fi wọ́n kùn láti Àwọn Ètò lẹ́yìn ètò.",
     "adapters_later": "Ṣètò lẹ́yìn ètò",
     "adapters_title": "Àwọn Adápútà",
+    "ai_preference_question": "CIRIS lè ṣiṣẹ́ pẹ̀lú tàbí láìsí olùrànlọ́wọ́ AI. Èwo ni ìwọ yóò fẹ́?",
+    "ai_preference_with": "Pẹ̀lú olùrànlọ́wọ́ AI",
+    "ai_preference_with_desc": "Ìwọ yóò yan olùpèsè kan ní ojú-ìwé tí ó tẹ̀lé. Àwọn àwòṣe CIRIS ọ̀fẹ́ wà pẹ̀lú nígbà tí o bá wọlé pẹ̀lú Google tàbí Apple.",
+    "ai_preference_without": "Láìsí olùrànlọ́wọ́ AI",
+    "ai_preference_without_desc": "Nóòdù náà ń ṣiṣẹ́ fúnra rẹ̀ — Ìṣọ̀kan-Àjùmọ̀ṣe (federation), ìfohùnsọ̀kan àti dátà tìrẹ gbogbo ń ṣiṣẹ́. O lè fi olùpèsè kún nígbà mìíràn láti Ìṣètò.",
     "back": "Padà Sẹ́yìn",
     "byok_mode_desc": "Ṣètò olùpèsè LLM rẹ láti tẹ̀síwájú",
     "byok_mode_title": "Ẹ Mú Tìrẹ Ló",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Wọn kò tíì gbà. Èyí ń dúró de ẹnìkan, nítorí náà àtúngbìyànjú kò ní yí ohunkóhun padà.",
+    "awaiting_key_body": "kọ́kọ́rọ́ tí kóòdù yìí dárúkọ ń jẹ́ mímú wá láti ọ̀dọ̀ mesh náà; gbìyànjú lẹ́ẹ̀kansi nígbà tí ó bá ti dé, a óò sì fi olùbásọ̀rọ̀ náà wéra pẹ̀lú ìlérí kóòdù náà",
+    "code_commitment_mismatch": "Kóòdù yìí kò bá kọ́kọ́rọ́ tí a gbà fún ẹni náà mu. Má ṣe gbẹ́kẹ̀lé e.",
+    "code_without_pqc_commitment": "Kóòdù yìí ti dàgbà jù láti fi kún taara. Bèèrè lọ́wọ́ wọn fún òmíràn tuntun, tàbí fi wọ́n kún nípasẹ̀ ìsopọ̀ ẹlẹgbẹ́-sí-ẹlẹgbẹ́.",
     "consent_emit_failed": "Nóòdù náà kò lè gbé ìyọ̀ǹda àṣẹ tí ó sọ eléyìí di olùbásọ̀rọ̀ jáde. Kò sí ohun tí ó yí padà.",
+    "consent_not_granted": "Nóòdù yìí kò tíì fi ìyọ̀ǹda fún wọn. Yàtọ̀ sí dídúró de ìyọ̀ǹda tiwọn, apá yìí jẹ́ tirẹ láti tún un ṣe.",
+    "delegation_denied": "Ìfilélẹ̀-àṣẹ sáà yìí kò fún ìṣe yẹn ní àṣẹ.",
+    "key_pull_unavailable": "Ẹ̀rọ yìí kò sí lórí mesh, nítorí náà kò lè gbà kọ́kọ́rọ́ wọn wá. Fi wọ́n kún láti orí ẹ̀rọ tí ó wà lórí rẹ̀.",
     "malformed_body": "key_id gbọ́dọ̀ jẹ́ ID kọ́kọ́rọ́ ìṣọ̀kan tí kò ṣófo",
+    "malformed_code": "Ó dà bí kóòdù CIRIS, ṣùgbọ́n kò yanjú. Ọ̀rọ̀ tí a dà kọjá tí ó kúrú jù tàbí tí ó bàjẹ́ kì í tún ara rẹ̀ ṣe fúnra rẹ̀, nítorí náà bèèrè fún kóòdù náà lẹ́ẹ̀kansi dípò gbígbìyànjú èyí lẹ́ẹ̀kansi.",
+    "prior_rung_incomplete": "Ìgbésẹ̀ yìí kò lè parí nítorí pé ìgbésẹ̀ tí ó ṣáájú kò tíì parí. Wo ibẹ̀ dípò ibí.",
     "self_contact": "a kọ̀ láti fi ìdánimọ̀ ti nóòdù yìí fúnra rẹ̀ kún gẹ́gẹ́ bí olùbásọ̀rọ̀",
     "store_unavailable": "Nóòdù náà kò lè ka àwọn àkọsílẹ̀ olùbásọ̀rọ̀ rẹ̀. Kò sí ohun tí ó yí padà — gbìyànjú lẹ́ẹ̀kansi nígbà tí nóòdù bá ti wà ní ìlera.",
-    "unknown_fed_id": "ID ìṣọ̀kan yẹn kò sí nínú àkójọ nóòdù yìí. Kọ́kọ́ gba kọ́kọ́rọ́ náà wọlé (peering) — àmì-ìrántí tí a kéde ṣùgbọ́n tí a kò tíì gbà wọlé kò ní orísun kankan, a kò sì lè yọ̀ǹda fún un."
+    "unknown_fed_id": "ID ìṣọ̀kan yẹn kò sí nínú àkójọ nóòdù yìí. Kọ́kọ́ gba kọ́kọ́rọ́ náà wọlé (peering) — àmì-ìrántí tí a kéde ṣùgbọ́n tí a kò tíì gbà wọlé kò ní orísun kankan, a kò sì lè yọ̀ǹda fún un.",
+    "unreachable": "A mọ̀ wọn, ṣùgbọ́n kò sí ìdáhùn kankan. Àwọn ẹ̀rọ wọn lè jẹ́ tí kò sórí ayélujára; àwọn ìránṣẹ́ yóò dé ọ̀dọ̀ wọn nígbà tí wọ́n bá padà.",
+    "unresolvable": "Àmì-ìdánimọ̀ yẹn kò yanjú sí olùbásọ̀rọ̀ kankan."
   }
 }

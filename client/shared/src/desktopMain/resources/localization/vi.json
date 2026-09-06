@@ -3895,6 +3895,11 @@
     "adapters_info": "Adapter kết nối CIRIS với các dịch vụ như Home Assistant, lịch và nhiều hơn nữa. Bạn có thể thêm chúng từ Cài đặt sau khi thiết lập.",
     "adapters_later": "Cấu hình sau khi thiết lập",
     "adapters_title": "Adapter",
+    "ai_preference_question": "CIRIS có thể chạy có hoặc không có trợ lý AI. Bạn muốn chọn phương án nào?",
+    "ai_preference_with": "Có trợ lý AI",
+    "ai_preference_with_desc": "Bạn sẽ chọn nhà cung cấp ở màn hình tiếp theo. Các mô hình CIRIS miễn phí được bao gồm khi bạn đăng nhập bằng Google hoặc Apple.",
+    "ai_preference_without": "Không có trợ lý AI",
+    "ai_preference_without_desc": "Nút hoạt động độc lập — liên bang, sự đồng ý và dữ liệu của riêng bạn đều hoạt động bình thường. Bạn có thể thêm nhà cung cấp sau từ Cài đặt.",
     "back": "Quay Lại",
     "byok_mode_desc": "Cấu hình nhà cung cấp LLM của bạn để tiếp tục",
     "byok_mode_title": "Mang Khóa Của Riêng Bạn",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Họ chưa chấp thuận. Điều này đang chờ một người, nên thử lại sẽ không thay đổi được gì.",
+    "awaiting_key_body": "khóa mà mã này nêu tên đang được tải về từ lưới; hãy thử lại khi khóa đến, và liên hệ sẽ được xác minh theo cam kết của mã",
+    "code_commitment_mismatch": "Mã này không khớp với khóa đã nhận được cho người đó. Không được tin tưởng mã này.",
+    "code_without_pqc_commitment": "Mã này quá cũ để thêm trực tiếp. Hãy xin họ một mã mới, hoặc thêm họ qua kết nối ngang hàng.",
     "consent_emit_failed": "Nút không thể phát hành sự chấp thuận biến đây thành một liên hệ. Không có gì bị thay đổi.",
+    "consent_not_granted": "Nút này chưa chấp thuận họ. Không giống như việc phải chờ họ chấp thuận, phần này là việc bạn có thể khắc phục.",
+    "delegation_denied": "Ủy quyền của phiên này không cấp quyền cho hành động đó.",
+    "key_pull_unavailable": "Thiết bị này không nằm trên lưới, nên không thể tải khóa của họ. Hãy thêm họ từ một thiết bị có kết nối lưới.",
     "malformed_body": "key_id phải là một id khóa liên kết không rỗng",
+    "malformed_code": "Đây có vẻ là một mã CIRIS, nhưng không thể giải mã. Một đoạn dán bị cắt ngắn hoặc hỏng sẽ không tự sửa được, vì vậy hãy xin mã mới thay vì thử lại mã này.",
+    "prior_rung_incomplete": "Bước này không thể hoàn tất vì một bước trước đó chưa hoàn tất. Hãy xem ở đó thay vì ở đây.",
     "self_contact": "từ chối thêm danh tính của chính nút này làm liên hệ",
     "store_unavailable": "Nút không thể đọc các bản ghi liên hệ của nó. Không có gì bị thay đổi — hãy thử lại khi nút hoạt động bình thường.",
-    "unknown_fed_id": "ID liên kết đó không có trong danh bạ của nút này. Hãy kết nạp khóa trước (peering) — một dấu trang đã được công bố nhưng chưa được kết nạp không mang nguồn gốc và không thể được chấp thuận."
+    "unknown_fed_id": "ID liên kết đó không có trong danh bạ của nút này. Hãy kết nạp khóa trước (peering) — một dấu trang đã được công bố nhưng chưa được kết nạp không mang nguồn gốc và không thể được chấp thuận.",
+    "unreachable": "Họ đã được biết đến, nhưng không có phản hồi nào. Thiết bị của họ có thể đang ngoại tuyến; tin nhắn sẽ đến được họ khi họ trở lại.",
+    "unresolvable": "Định danh đó không phân giải được thành một liên hệ."
   }
 }

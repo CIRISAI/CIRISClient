@@ -40,3 +40,29 @@ enum class SetupMode {
      */
     LOCAL_ON_DEVICE
 }
+
+/**
+ * WHICH LLM MODE AN OAUTH SIGN-IN LANDS IN.
+ *
+ * Signing in with Google or Apple entitles the person to CIRIS's hosted models
+ * at no cost, and the OAuth ID TOKEN IS THE CREDENTIAL — there is no key to
+ * paste. So an eligible sign-in defaults to [SetupMode.CIRIS_PROXY] and the AI
+ * screen offers the free service, with one tap to [SetupMode.BYOK] for anyone
+ * who would rather bring their own provider, and one tap back.
+ *
+ * WHY THE FIRST BRANCH IS NOT `!= null`. "Unchosen" has TWO representations
+ * here — `null`, and the non-null [SetupMode.LOCAL_ON_DEVICE] default — so a
+ * bare null-guard reads the second as "already chosen" and an eligible OAuth
+ * NEVER reaches the proxy. That was the "forced BYOK despite a Google login"
+ * bug. Only BYOK and CIRIS_PROXY count as a choice the person actually made,
+ * and such a choice is preserved.
+ *
+ * Extracted from the assignment it used to be inline in, so the rule can be
+ * RUN rather than only read: a mode that silently falls to BYOK looks identical
+ * on screen to one that was chosen, and the difference is a bill.
+ */
+fun initialSetupMode(current: SetupMode?, isCirisEligible: Boolean): SetupMode = when {
+    current == SetupMode.BYOK || current == SetupMode.CIRIS_PROXY -> current
+    isCirisEligible -> SetupMode.CIRIS_PROXY
+    else -> SetupMode.BYOK
+}

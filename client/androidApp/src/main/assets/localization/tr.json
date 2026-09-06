@@ -3895,6 +3895,11 @@
     "adapters_info": "Adaptörler, CIRIS'i Home Assistant, takvimler ve daha fazlası gibi hizmetlere bağlar. Kurulumdan sonra Ayarlar'dan bunları ekleyebilirsiniz.",
     "adapters_later": "Kurulumdan sonra yapılandır",
     "adapters_title": "Adaptörler",
+    "ai_preference_question": "CIRIS, yapay zeka asistanı ile veya asistan olmadan çalışabilir. Hangisini tercih edersiniz?",
+    "ai_preference_with": "Yapay zeka asistanı ile",
+    "ai_preference_with_desc": "Sağlayıcıyı bir sonraki ekranda seçeceksiniz. Google veya Apple ile oturum açtığınızda ücretsiz CIRIS modelleri dahil edilir.",
+    "ai_preference_without": "Yapay zeka asistanı olmadan",
+    "ai_preference_without_desc": "Düğüm kendi başına çalışır — federasyon, onay ve kendi verileriniz sorunsuz işler. Daha sonra Ayarlar'dan bir sağlayıcı ekleyebilirsiniz.",
     "back": "Geri",
     "byok_mode_desc": "Devam etmek için LLM sağlayıcınızı yapılandırın",
     "byok_mode_title": "Kendi Anahtarınızı Getirin",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Henüz kabul etmediler. Bu bir kişiyi beklediğinden, yeniden denemek hiçbir şeyi değiştirmeyecektir.",
+    "awaiting_key_body": "bu kodun adlandırdığı anahtar mesh ağından getiriliyor; anahtar geldiğinde yeniden deneyin, kişi kodun taahhüdüne göre doğrulanacaktır",
+    "code_commitment_mismatch": "Bu kod, o kişi için alınan anahtarla eşleşmiyor. Ona güvenmeyin.",
+    "code_without_pqc_commitment": "Bu kod doğrudan eklemek için çok eski. Onlardan yeni bir kod isteyin veya eşleştirme yoluyla ekleyin.",
     "consent_emit_failed": "Düğüm, bunu bir kişi kaydı yapan onay iznini yayımlayamadı. Hiçbir şey değiştirilmedi.",
+    "consent_not_granted": "Bu düğüm onlara henüz onay vermedi. Onların onayını beklemenin aksine, bu kısmı düzeltmek sizin elinizde.",
+    "delegation_denied": "Bu oturumun yetki devri bu eylemi kapsamıyor.",
+    "key_pull_unavailable": "Bu cihaz mesh ağında değil, bu nedenle onların anahtarını getiremiyor. Onları mesh ağında olan bir cihazdan ekleyin.",
     "malformed_body": "key_id boş olmayan bir federasyon anahtar kimliği olmalıdır",
+    "malformed_code": "Bu bir CIRIS kodu gibi görünüyor, ancak kod çözülmüyor. Kesilmiş veya bozulmuş bir yapıştırma kendiliğinden düzelmez, bu yüzden bu kodu tekrar denemek yerine kodu yeniden isteyin.",
+    "prior_rung_incomplete": "Bu adım tamamlanamıyor çünkü ondan önceki bir adım tamamlanmadı. Buraya değil, oraya bakın.",
     "self_contact": "bu düğümün kendi kimliğinin kişi olarak eklenmesi reddediliyor",
     "store_unavailable": "Düğüm kişi kayıtlarını okuyamadı. Hiçbir şey değiştirilmedi — düğüm sağlıklı olduğunda tekrar deneyin.",
-    "unknown_fed_id": "Bu federasyon kimliği bu düğümün dizininde yok. Önce anahtarı kabul edin (eşleme) — duyurulmuş ama kabul edilmemiş bir yer imi hiçbir köken bilgisi taşımaz ve ona onay verilemez."
+    "unknown_fed_id": "Bu federasyon kimliği bu düğümün dizininde yok. Önce anahtarı kabul edin (eşleme) — duyurulmuş ama kabul edilmemiş bir yer imi hiçbir köken bilgisi taşımaz ve ona onay verilemez.",
+    "unreachable": "Onlar tanınıyor, ancak hiçbir yanıt alınamadı. Cihazları çevrimdışı olabilir; geri döndüklerinde mesajlar onlara ulaşacaktır.",
+    "unresolvable": "Bu tanımlayıcı bir kişiye çözümlenmiyor."
   }
 }

@@ -3895,6 +3895,11 @@
     "adapters_info": "Os adaptadores conectam o CIRIS a serviços como Home Assistant, calendários e muito mais. Você pode adicioná-los nas Configurações após a instalação.",
     "adapters_later": "Configurar após a instalação",
     "adapters_title": "Adaptadores",
+    "ai_preference_question": "O CIRIS pode funcionar com ou sem um assistente de IA. Qual você prefere?",
+    "ai_preference_with": "Com assistente de IA",
+    "ai_preference_with_desc": "Você escolherá um provedor na próxima tela. Modelos gratuitos do CIRIS estão incluídos quando você entra com Google ou Apple.",
+    "ai_preference_without": "Sem assistente de IA",
+    "ai_preference_without_desc": "O nó funciona por conta própria — federação, consentimento e seus próprios dados funcionam normalmente. Você pode adicionar um provedor depois nas Configurações.",
     "back": "Voltar",
     "byok_mode_desc": "Configure seu provedor de LLM para continuar",
     "byok_mode_title": "Traga Sua Própria Chave",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Ainda não aceitaram. Isto está à espera de uma pessoa, por isso tentar novamente não vai mudar nada.",
+    "awaiting_key_body": "a chave que este código identifica está a ser obtida a partir da mesh; tente novamente depois de ela chegar, e o contacto será verificado em relação ao compromisso do código",
+    "code_commitment_mismatch": "Este código não corresponde à chave recebida para essa pessoa. Não confie nele.",
+    "code_without_pqc_commitment": "Este código é demasiado antigo para ser adicionado directamente. Peça um código novo, ou adicione essa pessoa através de peering.",
     "consent_emit_failed": "O nó não conseguiu emitir a concessão de consentimento que torna isto um contacto. Nada foi alterado.",
+    "consent_not_granted": "Este nó ainda não concedeu consentimento a essa pessoa. Ao contrário de esperar pelo consentimento dela, esta parte depende de você para ser corrigida.",
+    "delegation_denied": "A delegação desta sessão não concede essa ação.",
+    "key_pull_unavailable": "Este dispositivo não está na mesh, por isso não pode obter a chave dessa pessoa. Adicione-a a partir de um dispositivo que esteja.",
     "malformed_body": "key_id deve ser um id de chave de federação não vazio",
+    "malformed_code": "Isto parece um código CIRIS, mas não é possível decodificá-lo. Uma colagem truncada ou corrompida não se repara sozinha, por isso peça o código novamente em vez de tentar este outra vez.",
+    "prior_rung_incomplete": "Esta etapa não pode ser concluída porque uma etapa anterior ainda não foi concluída. Veja aí em vez de aqui.",
     "self_contact": "a recusar adicionar a identidade do próprio nó como contacto",
     "store_unavailable": "O nó não conseguiu ler os seus registos de contactos. Nada foi alterado — tente novamente quando o nó estiver saudável.",
-    "unknown_fed_id": "Esse ID de federação não está no diretório deste nó. Admita primeiro a chave (peering) — um marcador anunciado mas não admitido não tem proveniência e não pode receber consentimento."
+    "unknown_fed_id": "Esse ID de federação não está no diretório deste nó. Admita primeiro a chave (peering) — um marcador anunciado mas não admitido não tem proveniência e não pode receber consentimento.",
+    "unreachable": "Essa pessoa é conhecida, mas nada respondeu. Os dispositivos dela podem estar offline; as mensagens chegarão até ela quando ela voltar.",
+    "unresolvable": "Esse identificador não corresponde a nenhum contacto."
   }
 }

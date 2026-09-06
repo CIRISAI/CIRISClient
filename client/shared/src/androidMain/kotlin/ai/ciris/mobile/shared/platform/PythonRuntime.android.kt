@@ -295,8 +295,14 @@ actual class PythonRuntime : PythonRuntimeProtocol {
     private var pythonInitialized = false
     private var serverStarted = false
 
-    // Server URL - must use localhost (not 127.0.0.1) for Same-Origin Policy
-    actual override val serverUrl: String = "http://localhost:8080"
+    // Server URL - must use localhost (not 127.0.0.1) for Same-Origin Policy.
+    //
+    // The PORT is no longer fixed: after a run-without-AI setup the brain shuts
+    // down and only the node serves, on 4243 (CIRISAgent#1149). ActiveBackend
+    // holds which one this install uses, resolved from the home's .env, and
+    // defaults to the agent so an unread .env still reaches :8080 — where every
+    // install predating the flag serves.
+    actual override val serverUrl: String get() = ActiveBackend.endpoint.baseUrl("localhost")
 
     /**
      * Mark Python as initialized (called from MainActivity after Chaquopy starts)
@@ -338,7 +344,7 @@ actual class PythonRuntime : PythonRuntimeProtocol {
 
     actual override suspend fun checkHealth(): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
-            val url = URL("http://localhost:8080/v1/system/health")
+            val url = URL(ActiveBackend.endpoint.healthUrl("localhost"))
             val connection = url.openConnection() as HttpURLConnection
 
             connection.apply {

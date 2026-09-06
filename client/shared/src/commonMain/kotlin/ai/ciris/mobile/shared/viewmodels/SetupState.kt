@@ -92,24 +92,48 @@ enum class SetupStep {
  * @param hasAgent [CIRISBuild.HAS_AGENT] — the node client has no brain, so it
  *        has no AI screen to show.
  */
-fun nextSetupStep(current: SetupStep, hasAgent: Boolean): SetupStep = when (current) {
+/**
+ * IS THERE AN LLM SCREEN AT ALL?
+ *
+ * TWO reasons there might not be, and they are different reasons:
+ *
+ *   [hasAgent] false — a node client has no brain to configure. Structural: the
+ *   screen could never have applied.
+ *
+ *   [runWithoutAi] true — the person was asked, on screen 1, whether they want
+ *   an AI assistant, and said no. A CHOICE, not an absence.
+ *
+ * Both mean the same thing to the step machine, which is why this is one
+ * predicate rather than two branches in each of the three functions below. It is
+ * also the only place the two reasons are joined, so a future third reason has
+ * one place to go.
+ *
+ * ASKING FIRST IS WHY THIS EXISTS. The choice used to live ON the LLM screen, so
+ * the only way to say "no AI" was to visit the screen that configures one. Moving
+ * the question to screen 1 means the screen can be skipped entirely — but only if
+ * every function that walks the steps agrees, or Next lands on a screen that is
+ * not rendered and the wizard strands the user with no Complete button.
+ */
+fun hasAiStep(hasAgent: Boolean, runWithoutAi: Boolean): Boolean = hasAgent && !runWithoutAi
+
+fun nextSetupStep(current: SetupStep, hasAiStep: Boolean): SetupStep = when (current) {
     SetupStep.YOU -> SetupStep.JOIN_FEDERATION
-    SetupStep.JOIN_FEDERATION -> if (hasAgent) SetupStep.AI else SetupStep.COMPLETE
+    SetupStep.JOIN_FEDERATION -> if (hasAiStep) SetupStep.AI else SetupStep.COMPLETE
     SetupStep.AI -> SetupStep.COMPLETE
     SetupStep.COMPLETE -> SetupStep.COMPLETE
 }
 
 /** The exact mirror of [nextSetupStep]. */
-fun previousSetupStep(current: SetupStep, hasAgent: Boolean): SetupStep = when (current) {
+fun previousSetupStep(current: SetupStep, hasAiStep: Boolean): SetupStep = when (current) {
     SetupStep.YOU -> SetupStep.YOU
     SetupStep.JOIN_FEDERATION -> SetupStep.YOU
     SetupStep.AI -> SetupStep.JOIN_FEDERATION
-    SetupStep.COMPLETE -> if (hasAgent) SetupStep.AI else SetupStep.JOIN_FEDERATION
+    SetupStep.COMPLETE -> if (hasAiStep) SetupStep.AI else SetupStep.JOIN_FEDERATION
 }
 
 /** Is [step] the last one the user acts on before the wizard completes? */
-fun isFinalSetupStep(step: SetupStep, hasAgent: Boolean): Boolean =
-    step == (if (hasAgent) SetupStep.AI else SetupStep.JOIN_FEDERATION)
+fun isFinalSetupStep(step: SetupStep, hasAiStep: Boolean): Boolean =
+    step == (if (hasAiStep) SetupStep.AI else SetupStep.JOIN_FEDERATION)
 
 /**
  * Device auth state for the "Connect to Node" flow.
@@ -372,6 +396,25 @@ data class FederationIdentitySetupState(
          * case-insensitively against the trimmed label.
          */
         val REJECTED_GENERIC_LABELS = setOf("ciris-client", "ciris-client-user")
+
+        /**
+         * What the fed-ID is called when nothing better can be derived.
+         *
+         * Deliberately NOT one of [REJECTED_GENERIC_LABELS]: those are what the
+         * TOOLING generates by default, so they appear without anyone choosing
+         * them. This one is a visible, editable starting value on a field the
+         * person is looking at.
+         *
+         * AND IT DOES NOT COLLIDE. The node appends a UUID when it mints, so
+         * two people who both leave this untouched get distinct identities that
+         * merely share a human-readable stem. That is the difference from
+         * [REJECTED_GENERIC_LABELS], which name the identity outright.
+         *
+         * The alternative was an empty label, which fails isLabelValid() and
+         * blocks Next with no legible cause on an OAuth identity that returned
+         * no email — a dead end on the first screen.
+         */
+        const val DEFAULT_FED_LABEL = "cirisuser"
     }
 }
 

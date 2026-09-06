@@ -125,12 +125,7 @@ class SetupViewModel(
             // would ALWAYS win and a ciris-eligible OAuth would never get
             // CIRIS_PROXY — the "forced BYOK despite Google login" bug. Treat the
             // LOCAL_ON_DEVICE default as "unchosen" so OAuth eligibility applies.
-            setupMode = when {
-                _state.value.setupMode == SetupMode.BYOK ||
-                    _state.value.setupMode == SetupMode.CIRIS_PROXY -> _state.value.setupMode
-                isCirisEligible -> SetupMode.CIRIS_PROXY
-                else -> SetupMode.BYOK
-            },
+            setupMode = initialSetupMode(_state.value.setupMode, isCirisEligible),
             // OAuth no longer forks the flow. QUICK_SETUP existed to let an
             // authenticated user skip a welcome screen that collected nothing;
             // with WELCOME merged into screen 1 there is nothing to skip, and
@@ -367,7 +362,14 @@ class SetupViewModel(
      *  email local-part when it looks like an email, else the trimmed seed. */
     private fun deriveFedLabel(seed: String?): String {
         val s = (seed ?: "").trim()
-        return (if ("@" in s) s.substringBefore("@") else s).trim()
+        val derived = (if ("@" in s) s.substringBefore("@") else s).trim()
+        // A NAME, NOT A BLANK. An OAuth identity that returns neither an email
+        // nor a usable subject left this empty, and an empty label fails
+        // isLabelValid() — so the person was blocked on screen 1 by a field they
+        // never filled in and could not see a reason for. A default they can
+        // read and overwrite is better than an empty box that silently blocks
+        // Next.
+        return derived.ifBlank { FederationIdentitySetupState.DEFAULT_FED_LABEL }
     }
 
     /**
@@ -571,7 +573,10 @@ class SetupViewModel(
             return false
         }
         _state.value = currentState.copy(
-            currentStep = nextSetupStep(currentState.currentStep, hasAgent),
+            currentStep = nextSetupStep(
+                currentState.currentStep,
+                hasAiStep(hasAgent, currentState.runWithoutAi),
+            ),
         )
         return true
     }
@@ -582,7 +587,10 @@ class SetupViewModel(
     fun previousStep() {
         val currentState = _state.value
         _state.value = currentState.copy(
-            currentStep = previousSetupStep(currentState.currentStep, hasAgent),
+            currentStep = previousSetupStep(
+                currentState.currentStep,
+                hasAiStep(hasAgent, currentState.runWithoutAi),
+            ),
         )
     }
 

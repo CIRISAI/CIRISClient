@@ -3895,6 +3895,11 @@
     "adapters_info": "Masu daidaitawa suna haɗa CIRIS zuwa ayyuka kamar Home Assistant, kalenda, da ƙari. Zaka iya ƙara waɗannan daga Saitunan bayan saitawa.",
     "adapters_later": "Saita bayan saitawa",
     "adapters_title": "Masu daidaitawa",
+    "ai_preference_question": "CIRIS na iya aiki tare da ko ba tare da mataimakin AI ba. Wanne kuke so?",
+    "ai_preference_with": "Tare da mataimakin AI",
+    "ai_preference_with_desc": "Za ku zaɓi mai samarwa a shafi na gaba. Ana haɗa da samfuran CIRIS kyauta lokacin da kuka shiga da Google ko Apple.",
+    "ai_preference_without": "Ba tare da mataimakin AI ba",
+    "ai_preference_without_desc": "Kumburin yana aiki da kansa — tarayya, yarda, da bayananku duk suna aiki. Za ku iya ƙara mai samarwa daga baya daga Saituna.",
     "back": "Komawa",
     "byok_mode_desc": "Saita mai ba da huduma LLM ku don ci gaba",
     "byok_mode_title": "Kawo Na Gida",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Har yanzu ba su karɓa ba. Wannan yana jiran mutum ne, don haka sake gwadawa ba zai canza komai ba.",
+    "awaiting_key_body": "ana samo maɓallin da wannan lambar ta ambata daga mesh; sake gwadawa da zarar ya isa, sannan za a tabbatar da lambar sadarwa bisa alƙawarin da wannan lambar ta ƙunsa",
+    "code_commitment_mismatch": "Wannan lambar ba ta dace da maɓallin da aka samu na wannan mutumin ba. Kada ku amince da ita.",
+    "code_without_pqc_commitment": "Wannan lamba ta tsufa don ƙarawa kai tsaye. Ku tambaye su sabuwar lamba, ko ku ƙara su ta hanyar peering.",
     "consent_emit_failed": "Node ɗin ya kasa fitar da izinin yarda da ke mai da wannan lamba. Ba a canza komai ba.",
+    "consent_not_granted": "Wannan kumburi bai amince da su tukuna ba. Sabanin jiran amincewarsu, wannan rabin naku ne ku gyara.",
+    "delegation_denied": "Wakilcin wannan zaman bai bada izinin wannan aiki ba.",
+    "key_pull_unavailable": "Wannan na'ura ba ta cikin hanyar sadarwar mesh ba, don haka ba za ta iya samo maɓallinsu ba. Ku ƙara su daga na'urar da take a kan mesh.",
     "malformed_body": "key_id dole ne ya zama id na mabuɗin tarayya wanda ba fanko ba",
+    "malformed_code": "Wannan yana kama da lambar CIRIS, amma ba ta warwarewa ba. Lambar da aka liƙa da aka yanke ko ta lalace ba za ta gyaru da kanta ba, don haka ku sake tambayar lambar, maimakon sake gwada wannan.",
+    "prior_rung_incomplete": "Wannan mataki ba zai ƙare ba domin wani mataki na baya bai ƙare ba. Ku duba can maimakon nan.",
     "self_contact": "an ƙi ƙara shaidar wannan node kanta a matsayin lamba",
     "store_unavailable": "Node ɗin ya kasa karanta bayanan lambobinsa. Ba a canza komai ba — sake gwadawa da zarar node ɗin ya warke.",
-    "unknown_fed_id": "Wannan ID na tarayya ba ya cikin jerin adireshin wannan node. Fara shigar da mabuɗin (peering) — alamar da aka sanar amma ba a shigar ba ba ta da tushen asali kuma ba za a iya ba ta yarda ba."
+    "unknown_fed_id": "Wannan ID na tarayya ba ya cikin jerin adireshin wannan node. Fara shigar da mabuɗin (peering) — alamar da aka sanar amma ba a shigar ba ba ta da tushen asali kuma ba za a iya ba ta yarda ba.",
+    "unreachable": "An san su, amma babu wanda ya amsa. Na'urorinsu na iya kasancewa ba a kan layi ba; saƙonni za su kai musu lokacin da suka dawo.",
+    "unresolvable": "Wannan mai ganewa ba ya komawa ga wani abokin hulɗa ba."
   }
 }

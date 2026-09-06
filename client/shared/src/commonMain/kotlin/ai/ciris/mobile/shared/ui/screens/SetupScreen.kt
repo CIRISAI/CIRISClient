@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.CheckState
 import ai.ciris.mobile.shared.api.checkLlmConfig
 import ai.ciris.mobile.shared.ui.components.LlmCheckRow
+import ai.ciris.mobile.shared.ui.components.VerticalScrollbar
 import ai.ciris.mobile.shared.localization.localizedString
 import androidx.compose.foundation.layout.imePadding
 import ai.ciris.mobile.shared.models.ConsentDisclosure
@@ -44,6 +45,7 @@ import ai.ciris.mobile.shared.viewmodels.FederationIdentitySetupState
 import ai.ciris.mobile.shared.viewmodels.LlmValidationResult
 import ai.ciris.mobile.shared.viewmodels.ModelInfo
 import ai.ciris.mobile.shared.viewmodels.SetupStep
+import ai.ciris.mobile.shared.viewmodels.hasAiStep
 import ai.ciris.mobile.shared.viewmodels.isFinalSetupStep
 import ai.ciris.mobile.shared.viewmodels.SetupFormState
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
@@ -363,7 +365,7 @@ fun SetupScreen(
         Column(modifier = Modifier.fillMaxSize().imePadding()) {
             // Step indicators at top
             StepIndicators(
-                hasAgent = hasAgent,
+                hasAiStep = hasAiStep(hasAgent, state.runWithoutAi),
                 currentStep = state.currentStep,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -481,7 +483,7 @@ fun SetupScreen(
 
             // Navigation buttons - with navigation bar padding to avoid overlap
             NavigationButtons(
-                hasAgent = hasAgent,
+                hasAiStep = hasAiStep(hasAgent, state.runWithoutAi),
                 currentStep = state.currentStep,
                 canProceed = state.canProceedFromCurrentStep(),
                 validationError = state.getStepValidationError(),
@@ -492,7 +494,7 @@ fun SetupScreen(
                     // AI on the agent build and JOIN_FEDERATION on the node
                     // client; on COMPLETE we ALSO self-claim ownership of the
                     // local node for the just-created user.
-                    val isFinalStep = isFinalSetupStep(state.currentStep, hasAgent)
+                    val isFinalStep = isFinalSetupStep(state.currentStep, hasAiStep(hasAgent, state.runWithoutAi))
 
                     if (isFinalStep && !hasAgent) {
                         // NODE CLIENT final step: there is NO agent /v1/setup/complete
@@ -604,13 +606,19 @@ fun SetupScreen(
 @Composable
 private fun StepIndicators(
     currentStep: SetupStep,
-    /** The probed mode (CIRISServer#479) — three dots with a brain, two without. */
-    hasAgent: Boolean,
+    /**
+     * Whether an LLM screen will be visited: the probed mode (CIRISServer#479)
+     * AND the person's answer on screen 1. Three dots when there is one, two
+     * when there is not — a third dot for a screen the wizard will skip is a
+     * progress bar that lies about how much is left.
+     */
+    hasAiStep: Boolean,
     modifier: Modifier = Modifier
 ) {
-    // Three screens: You → Join the federation → AI. The node client has no
-    // brain to configure, so it shows two.
-    val steps = if (hasAgent) {
+    // You → Join the federation → AI. A node client has no brain to configure,
+    // and someone who chose to run without an AI assistant has nothing to
+    // configure either; both show two.
+    val steps = if (hasAiStep) {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2", SetupStep.AI to "3")
     } else {
         listOf(SetupStep.YOU to "1", SetupStep.JOIN_FEDERATION to "2")
@@ -699,11 +707,19 @@ private fun YouStep(
 ) {
     // ONE scroll for the whole screen — the sections below deliberately do not
     // scroll themselves (nesting two vertical scrolls is a Compose crash).
+    // A VISIBLE SCROLLBAR, FOR THE PLATFORM THAT HAS NO OTHER HINT.
+    // Every step already scrolled; on desktop nothing SAID so, because a
+    // pointer gets no momentum indicator the way a finger does — so a page
+    // taller than the window looked like a page that was simply cut off.
+    // VerticalScrollbar is an expect/actual that draws on desktop and is a
+    // no-op on mobile, where the platform already indicates it.
+    val scrollState = rememberScrollState()
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
     ) {
         Text(
             text = localizedString("setup.welcome_title"),
@@ -724,16 +740,36 @@ private fun YouStep(
             modifier = Modifier.padding(bottom = 20.dp)
         )
 
-        // Order matters: AGE first (required, and it gates minor-stewardship),
-        // then the local account (username/password — only rendered for non-OAuth
-        // setups), then the federation identity whose label AUTO-POPULATES from the
-        // username/OAuth id entered just above (still overridable). Asking age →
-        // who-you-sign-in-as → what-to-name-the-identity reads top to bottom.
+        // EVERYTHING ON THIS SCREEN IS REQUIRED, AND IT READS IN THE ORDER A
+        // PERSON WOULD ASK IT.
+        //
+        //   1. Do you want an AI assistant?  — decides whether there is a third
+        //      screen at all, so it is asked before anything is configured.
+        //      Agent builds only: a node client has no brain to switch on, and
+        //      offering the choice there would be offering something that cannot
+        //      happen.
+        //   2. How old are you?              — gates minor-stewardship and seeds
+        //      the fed-ID, so nothing below it can be judged until it is answered.
+        //   3. Who do you sign in as?        — username/password, non-OAuth only.
+        //   4. What is the identity called?  — auto-populates from 3, overridable.
+        //
+        // Optional fields live at the BOTTOM of their own section rather than
+        // between two required ones, so a person filling only what is required
+        // never has to skip past something to reach the next thing that blocks.
+        if (hasAgent) {
+            AiPreferenceSection(viewModel = viewModel, state = state)
+            Spacer(modifier = Modifier.height(24.dp))
+        }
         AgeRangeSection(viewModel = viewModel, state = state)
         Spacer(modifier = Modifier.height(24.dp))
         AccountSection(viewModel = viewModel, state = state)
         Spacer(modifier = Modifier.height(24.dp))
         FederationIdentitySection(viewModel = viewModel, state = state)
+    }
+    VerticalScrollbar(
+        scrollState = scrollState,
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+    )
     }
 }
 
@@ -774,11 +810,19 @@ private fun JoinFederationStep(
         }
     }
 
+    // A VISIBLE SCROLLBAR, FOR THE PLATFORM THAT HAS NO OTHER HINT.
+    // Every step already scrolled; on desktop nothing SAID so, because a
+    // pointer gets no momentum indicator the way a finger does — so a page
+    // taller than the window looked like a page that was simply cut off.
+    // VerticalScrollbar is an expect/actual that draws on desktop and is a
+    // no-op on mobile, where the platform already indicates it.
+    val scrollState = rememberScrollState()
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
     ) {
         val d = disclosure
         if (d == null) {
@@ -916,6 +960,11 @@ private fun JoinFederationStep(
                 }
             }
         }
+    }
+    VerticalScrollbar(
+        scrollState = scrollState,
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+    )
     }
 }
 
@@ -1067,11 +1116,19 @@ private fun AiStep(
         }
     }
 
+    // A VISIBLE SCROLLBAR, FOR THE PLATFORM THAT HAS NO OTHER HINT.
+    // Every step already scrolled; on desktop nothing SAID so, because a
+    // pointer gets no momentum indicator the way a finger does — so a page
+    // taller than the window looked like a page that was simply cut off.
+    // VerticalScrollbar is an expect/actual that draws on desktop and is a
+    // no-op on mobile, where the platform already indicates it.
+    val scrollState = rememberScrollState()
+    Box(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .padding(24.dp)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
     ) {
         Text(
             text = localizedString("setup.llm_title"),
@@ -1088,53 +1145,18 @@ private fun AiStep(
             modifier = Modifier.padding(bottom = 24.dp)
         )
 
-        // ── Run without AI ───────────────────────────────────────────────────
-        // An option, never a default. Selected, it writes
-        // CIRIS_SERVICES_DISABLED=true; picking any provider clears it.
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = if (state.runWithoutAi) SetupColors.InfoLight else SetupColors.GrayLight,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp)
-                .testableClickable("toggle_run_without_ai") {
-                    viewModel.setRunWithoutAi(!state.runWithoutAi)
-                }
-        ) {
-            Row(
-                modifier = Modifier.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = l10nOr("setup.llm_run_without_ai_title", "Run without AI"),
-                        color = SetupColors.TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                    )
-                    Text(
-                        text = l10nOr(
-                            "setup.llm_run_without_ai_desc",
-                            "The node runs on its own — federation, consent and your own data all " +
-                                "work. You can add an AI provider later from Settings.",
-                        ),
-                        color = SetupColors.TextSecondary,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-                Switch(
-                    checked = state.runWithoutAi,
-                    onCheckedChange = { viewModel.setRunWithoutAi(it) },
-                )
-            }
-        }
-
-        if (state.runWithoutAi) {
-            // The rest of the screen configures a provider that will not be used.
-            return@Column
-        }
+        // NO "run without AI" TOGGLE HERE ANY MORE.
+        //
+        // The question moved to screen 1, where it is asked before anything is
+        // configured: "CIRIS can run with or without an AI assistant, which
+        // would you like?" Reaching THIS screen now means the person said yes,
+        // so offering to undo it here would be asking twice and answering once.
+        //
+        // It also removes a real defect. While the toggle lived here, flipping
+        // it made `hasAiStep` false while the user was standing ON the AI step,
+        // so `isFinalSetupStep` stopped calling it final and the button read
+        // "Next" on the last screen. Moving the question makes that state
+        // unreachable rather than handled.
 
         // CIRIS Proxy card (for Google users in CIRIS_PROXY mode)
         if (state.isGoogleAuth && state.setupMode == SetupMode.CIRIS_PROXY) {
@@ -1829,6 +1851,11 @@ private fun AiStep(
             }
         }
     }
+    VerticalScrollbar(
+        scrollState = scrollState,
+        modifier = Modifier.align(Alignment.CenterEnd).fillMaxHeight(),
+    )
+    }
 }
 
 
@@ -2342,6 +2369,97 @@ private fun FederationIdentitySection(
  * (`POST /v1/safety/age-assurance`). The app does NO crypto. Declining/erroring
  * never traps the user — the protective default is `minor`.
  */
+/**
+ * "CIRIS can run with or without an AI assistant, which would you like?"
+ *
+ * ASKED FIRST, AND ASKED ONCE. This used to be a switch on the LLM screen,
+ * which meant the only way to say "no AI" was to visit the screen that
+ * configures one — and the wizard then walked you through choosing a provider
+ * you had just said you did not want. Now the answer decides whether that
+ * screen exists at all ([hasAiStep]).
+ *
+ * AGENT BUILDS ONLY. The caller gates on `hasAgent`: a node client has no brain
+ * to switch on, so the question has no true answer there.
+ *
+ * NEITHER OPTION IS PRESELECTED AS A RECOMMENDATION. Running without an
+ * assistant is a first-class way to use CIRIS — federation, consent and your own
+ * data all work — and the copy says so rather than framing it as a downgrade.
+ */
+@Composable
+private fun AiPreferenceSection(
+    viewModel: SetupViewModel,
+    state: SetupFormState,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            text = l10nOr(
+                "setup.ai_preference_question",
+                "CIRIS can run with or without an AI assistant. Which would you like?",
+            ),
+            color = SetupColors.TextPrimary,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        val options = listOf(
+            false to (
+                l10nOr("setup.ai_preference_with", "With an AI assistant") to
+                    l10nOr(
+                        "setup.ai_preference_with_desc",
+                        "You will choose a provider on the next screen. Free CIRIS models are " +
+                            "included when you sign in with Google or Apple.",
+                    )
+                ),
+            true to (
+                l10nOr("setup.ai_preference_without", "Without an AI assistant") to
+                    l10nOr(
+                        "setup.ai_preference_without_desc",
+                        "The node runs on its own — federation, consent and your own data all " +
+                            "work. You can add a provider later from Settings.",
+                    )
+                ),
+        )
+        options.forEach { (without, copy) ->
+            val selected = state.runWithoutAi == without
+            val tag = if (without) "opt_run_without_ai" else "opt_run_with_ai"
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = if (selected) SetupColors.InfoLight else SetupColors.GrayLight,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+                    .testableClickable(tag) { viewModel.setRunWithoutAi(without) },
+            ) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(
+                        selected = selected,
+                        onClick = { viewModel.setRunWithoutAi(without) },
+                    )
+                    Column(modifier = Modifier.weight(1f).padding(start = 4.dp)) {
+                        Text(
+                            text = copy.first,
+                            color = SetupColors.TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = copy.second,
+                            color = SetupColors.TextSecondary,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun AgeRangeSection(
     viewModel: SetupViewModel,
@@ -2351,18 +2469,25 @@ private fun AgeRangeSection(
     val age = state.ageRange
 
     Column(modifier = modifier.fillMaxWidth()) {
+        // COMPACT ON PURPOSE. This section is one of four required things on
+        // screen 1, and it used a 20sp heading, a full paragraph, and two
+        // full-width stacked cards — roughly a third of the viewport to ask a
+        // two-option question. Heading matched to the other sections (16sp), and
+        // the two bands sit SIDE BY SIDE: the labels are short, and a row costs
+        // one line where a column costs two cards.
         Text(
             text = localizedString("mobile.age_range_title"),
             color = SetupColors.TextPrimary,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(bottom = 8.dp)
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
         Text(
             text = localizedString("mobile.age_range_explainer"),
             color = SetupColors.TextSecondary,
-            fontSize = 14.sp,
-            modifier = Modifier.padding(bottom = 20.dp)
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(bottom = 10.dp)
         )
 
         // The two protective bands. The server models exactly two: minor / adult
@@ -2371,7 +2496,7 @@ private fun AgeRangeSection(
             AgeBand.MINOR to ("minor" to localizedString("mobile.age_range_minor")),
             AgeBand.ADULT to ("adult" to localizedString("mobile.age_range_adult")),
         )
-        Column(modifier = Modifier.padding(bottom = 16.dp)) {
+        Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
             options.forEach { (band, meta) ->
                 val (token, label) = meta
                 val selected = age.selectedBandToken == token
@@ -2379,26 +2504,25 @@ private fun AgeRangeSection(
                     shape = RoundedCornerShape(12.dp),
                     color = if (selected) SetupColors.Primary.copy(alpha = 0.18f) else SetupColors.InfoLight,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp)
+                        .weight(1f)
+                        .padding(end = if (token == "minor") 8.dp else 0.dp)
                         .testableClickable("age_band_$token") {
                             if (!age.inProgress) viewModel.setAgeRange(band)
                         }
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
                     ) {
                         RadioButton(
                             selected = selected,
                             onClick = { if (!age.inProgress) viewModel.setAgeRange(band) },
                             enabled = !age.inProgress,
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = label,
                             color = SetupColors.InfoDark,
-                            fontSize = 16.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Medium,
                         )
                     }
@@ -3059,8 +3183,13 @@ private fun CompleteStep(
 @Composable
 private fun NavigationButtons(
     currentStep: SetupStep,
-    /** The probed mode (CIRISServer#479) — decides which step is FINAL. */
-    hasAgent: Boolean,
+    /**
+     * Whether an LLM screen exists at all — the probed mode (CIRISServer#479)
+     * AND the person's own answer to "with or without an AI assistant?" on
+     * screen 1. Decides which step is FINAL, so passing `hasAgent` alone would
+     * put Next on a screen that is never rendered and leave no Complete button.
+     */
+    hasAiStep: Boolean,
     canProceed: Boolean,
     validationError: String?,
     isSubmitting: Boolean,
@@ -3129,7 +3258,7 @@ private fun NavigationButtons(
                         )
                     } else {
                         Text(
-                            if (isFinalSetupStep(currentStep, hasAgent)) {
+                            if (isFinalSetupStep(currentStep, hasAiStep)) {
                                 localizedString("setup.finish")
                             } else {
                                 localizedString("setup.next")

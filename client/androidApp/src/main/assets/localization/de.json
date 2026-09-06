@@ -3895,6 +3895,11 @@
     "adapters_info": "Adapter verbinden CIRIS mit Diensten wie Home Assistant, Kalendern und mehr. Sie können diese nach der Einrichtung in den Einstellungen hinzufügen.",
     "adapters_later": "Nach Einrichtung konfigurieren",
     "adapters_title": "Adapter",
+    "ai_preference_question": "CIRIS kann mit oder ohne KI-Assistenten laufen. Was möchten Sie?",
+    "ai_preference_with": "Mit KI-Assistent",
+    "ai_preference_with_desc": "Auf dem nächsten Bildschirm wählen Sie einen Anbieter aus. Kostenlose CIRIS-Modelle sind enthalten, wenn Sie sich mit Google oder Apple anmelden.",
+    "ai_preference_without": "Ohne KI-Assistenten",
+    "ai_preference_without_desc": "Der Knoten läuft eigenständig — Föderation, Einwilligung und Ihre eigenen Daten funktionieren. Sie können später in den Einstellungen einen Anbieter hinzufügen.",
     "back": "Zurück",
     "byok_mode_desc": "Konfigurieren Sie Ihren LLM-Anbieter, um fortzufahren",
     "byok_mode_title": "Bringen Sie Ihren eigenen Schlüssel mit",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Diese Person hat noch nicht zugestimmt. Dies wartet auf einen Menschen, ein erneuter Versuch wird daher nichts ändern.",
+    "awaiting_key_body": "der Schlüssel, den dieser Code benennt, wird gerade aus dem Mesh abgerufen; versuchen Sie es erneut, sobald er eingetroffen ist, und der Kontakt wird gegen das Commitment des Codes verifiziert",
+    "code_commitment_mismatch": "Dieser Code stimmt nicht mit dem für diese Person empfangenen Schlüssel überein. Vertrauen Sie ihm nicht.",
+    "code_without_pqc_commitment": "Dieser Code ist zu alt, um ihn direkt hinzuzufügen. Bitten Sie die Person um einen neuen Code, oder fügen Sie sie über Peering hinzu.",
     "consent_emit_failed": "Der Knoten konnte die Einwilligung, die diesen Kontakt begründet, nicht ausstellen. Es wurde nichts geändert.",
+    "consent_not_granted": "Dieser Knoten hat dieser Person noch nicht zugestimmt. Anders als beim Warten auf ihre Zustimmung liegt es an Ihnen, diesen Teil zu beheben.",
+    "delegation_denied": "Die Delegation dieser Sitzung gewährt diese Handlung nicht.",
+    "key_pull_unavailable": "Dieses Gerät ist nicht mit dem Mesh verbunden und kann daher den Schlüssel dieser Person nicht abrufen. Fügen Sie die Person über ein Gerät hinzu, das verbunden ist.",
     "malformed_body": "key_id muss eine nicht leere Föderations-Schlüssel-ID sein",
+    "malformed_code": "Das sieht wie ein CIRIS-Code aus, lässt sich aber nicht decodieren. Ein abgeschnittener oder beschädigter Einfügevorgang repariert sich nicht von selbst — bitten Sie erneut um den Code, anstatt es mit diesem hier noch einmal zu versuchen.",
+    "prior_rung_incomplete": "Dieser Schritt kann nicht abgeschlossen werden, weil ein vorheriger Schritt noch nicht abgeschlossen ist. Schauen Sie dort nach, nicht hier.",
     "self_contact": "das Hinzufügen der eigenen Identität dieses Knotens als Kontakt wird verweigert",
     "store_unavailable": "Der Knoten konnte seine Kontaktdatensätze nicht lesen. Es wurde nichts geändert — versuchen Sie es erneut, sobald der Knoten wieder funktionsfähig ist.",
-    "unknown_fed_id": "Diese Föderations-ID ist nicht im Verzeichnis dieses Knotens. Lassen Sie den Schlüssel zuerst zu (Peering) — ein angekündigtes, aber nicht zugelassenes Lesezeichen trägt keine Provenienz und kann keine Einwilligung erhalten."
+    "unknown_fed_id": "Diese Föderations-ID ist nicht im Verzeichnis dieses Knotens. Lassen Sie den Schlüssel zuerst zu (Peering) — ein angekündigtes, aber nicht zugelassenes Lesezeichen trägt keine Provenienz und kann keine Einwilligung erhalten.",
+    "unreachable": "Diese Person ist bekannt, aber es kam keine Antwort. Ihre Geräte sind möglicherweise offline; Nachrichten erreichen sie, sobald sie wieder online sind.",
+    "unresolvable": "Diese Kennung lässt sich keinem Kontakt zuordnen."
   }
 }

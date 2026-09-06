@@ -3895,6 +3895,11 @@
     "adapters_info": "Les adaptateurs connectent CIRIS à des services comme Home Assistant, calendriers et plus. Vous pouvez les ajouter depuis les Paramètres après la configuration.",
     "adapters_later": "Configurer après la configuration",
     "adapters_title": "Adaptateurs",
+    "ai_preference_question": "CIRIS peut fonctionner avec ou sans assistant IA. Que préférez-vous ?",
+    "ai_preference_with": "Avec un assistant IA",
+    "ai_preference_with_desc": "Vous choisirez un fournisseur à l'écran suivant. Des modèles CIRIS gratuits sont inclus lorsque vous vous connectez avec Google ou Apple.",
+    "ai_preference_without": "Sans assistant IA",
+    "ai_preference_without_desc": "Le nœud fonctionne de manière autonome — la fédération, le consentement et vos propres données fonctionnent tous. Vous pouvez ajouter un fournisseur plus tard depuis les Paramètres.",
     "back": "Retour",
     "byok_mode_desc": "Configurez votre fournisseur LLM pour continuer",
     "byok_mode_title": "Apportez Votre Propre Clé",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Ils n'ont pas encore accepté. Cela dépend d'une personne, donc réessayer ne changera rien.",
+    "awaiting_key_body": "la clé que ce code nomme est en cours de récupération depuis le réseau maillé ; réessayez une fois qu'elle sera arrivée, et le contact sera vérifié par rapport à l'engagement du code",
+    "code_commitment_mismatch": "Ce code ne correspond pas à la clé reçue pour cette personne. Ne lui faites pas confiance.",
+    "code_without_pqc_commitment": "Ce code est trop ancien pour être ajouté directement. Demandez-leur-en un nouveau, ou ajoutez-les via l'appairage.",
     "consent_emit_failed": "Le nœud n’a pas pu émettre l’octroi de consentement qui fait de cette identité un contact. Rien n’a été modifié.",
+    "consent_not_granted": "Ce nœud ne leur a pas encore accordé son consentement. Contrairement à l'attente de leur consentement, cette moitié dépend de vous.",
+    "delegation_denied": "La délégation de cette session n'accorde pas cette action.",
+    "key_pull_unavailable": "Cet appareil n'est pas sur le réseau maillé, il ne peut donc pas récupérer leur clé. Ajoutez-les depuis un appareil qui l'est.",
     "malformed_body": "key_id doit être un identifiant de clé de fédération non vide",
+    "malformed_code": "Cela ressemble à un code CIRIS, mais il ne se décode pas. Un collage tronqué ou corrompu ne se répare pas de lui-même ; demandez donc à nouveau le code plutôt que de réessayer celui-ci.",
+    "prior_rung_incomplete": "Cette étape ne peut pas se terminer car une étape antérieure ne l'a pas fait. Regardez là plutôt qu'ici.",
     "self_contact": "refus d’ajouter l’identité propre de ce nœud comme contact",
     "store_unavailable": "Le nœud n’a pas pu lire ses enregistrements de contacts. Rien n’a été modifié — réessayez une fois le nœud rétabli.",
-    "unknown_fed_id": "Cet identifiant de fédération n’est pas dans l’annuaire de ce nœud. Admettez d’abord la clé (appairage) — un signet annoncé mais non admis ne porte aucune provenance et ne peut pas faire l’objet d’un consentement."
+    "unknown_fed_id": "Cet identifiant de fédération n’est pas dans l’annuaire de ce nœud. Admettez d’abord la clé (appairage) — un signet annoncé mais non admis ne porte aucune provenance et ne peut pas faire l’objet d’un consentement.",
+    "unreachable": "Ils sont connus, mais rien n'a répondu. Leurs appareils sont peut-être hors ligne ; les messages les atteindront à leur retour.",
+    "unresolvable": "Cet identifiant ne correspond à aucun contact."
   }
 }

@@ -30,7 +30,10 @@ actual class PythonRuntime : PythonRuntimeProtocol {
     private var _outputLineCallback: ((String) -> Unit)? = null
     private var _lastReportedServiceCount = 0
 
-    actual override val serverUrl: String = "http://127.0.0.1:8080"
+    // The PORT is no longer fixed: after a run-without-AI setup the brain shuts
+    // down and only the node serves, on 4243 (CIRISAgent#1149). Defaults to the
+    // agent, so an unread .env still reaches :8080.
+    actual override val serverUrl: String get() = ActiveBackend.endpoint.baseUrl("127.0.0.1")
 
     // First-run ownership CLAIM PIN, captured from the node's DURABLE
     // <home>/claim_pin file (0600). On iOS, Swift boots Python before Compose, so
@@ -158,7 +161,7 @@ actual class PythonRuntime : PythonRuntimeProtocol {
      */
     actual override suspend fun checkHealth(): Result<Boolean> {
         return suspendCancellableCoroutine { continuation ->
-            val nsUrl = NSURL.URLWithString("$serverUrl/v1/system/health")
+            val nsUrl = NSURL.URLWithString(ActiveBackend.endpoint.healthUrl("127.0.0.1"))
             if (nsUrl == null) {
                 continuation.resume(Result.failure(Exception("Invalid URL")))
                 return@suspendCancellableCoroutine

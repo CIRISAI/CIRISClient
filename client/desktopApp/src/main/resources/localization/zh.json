@@ -3895,6 +3895,11 @@
     "adapters_info": "适配器将 CIRIS 连接到 Home Assistant、日历等服务。您可以在设置后从设置中添加这些。",
     "adapters_later": "设置后配置",
     "adapters_title": "适配器",
+    "ai_preference_question": "CIRIS 可以在有或没有 AI 助手的情况下运行。您想选择哪种？",
+    "ai_preference_with": "使用 AI 助手",
+    "ai_preference_with_desc": "您将在下一步选择提供商。使用 Google 或 Apple 登录时，将包含免费的 CIRIS 模型。",
+    "ai_preference_without": "不使用 AI 助手",
+    "ai_preference_without_desc": "节点将独立运行 — 联邦、同意和您自己的数据均可正常使用。您可以稍后在设置中添加提供商。",
     "back": "返回",
     "byok_mode_desc": "配置您的LLM提供商以继续",
     "byok_mode_title": "自带密钥模式",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "对方尚未接受。这一步取决于对方，因此重试不会改变任何结果。",
+    "awaiting_key_body": "该代码所指定的密钥正在从网格中获取；待其到达后重试，届时将依据代码的承诺值验证该联系人",
+    "code_commitment_mismatch": "此代码与为该联系人接收到的密钥不匹配。请勿信任它。",
+    "code_without_pqc_commitment": "此代码过旧，无法直接添加。请向对方索取新代码，或通过对等连接添加对方。",
     "consent_emit_failed": "节点无法签发使其成为联系人的同意授权。未做任何更改。",
+    "consent_not_granted": "本节点尚未同意对方。与等待对方同意不同，这一半是您可以自行解决的。",
+    "delegation_denied": "此会话的委派未授予该操作权限。",
+    "key_pull_unavailable": "此设备不在网格上，因此无法获取对方的密钥。请从已连接网格的设备添加对方。",
     "malformed_body": "key_id 必须是非空的联邦密钥 ID",
+    "malformed_code": "这看起来像是一个 CIRIS 代码，但无法解码。被截断或损坏的粘贴内容不会自行修复，因此请重新索取代码，而不要再次尝试此代码。",
+    "prior_rung_incomplete": "此步骤无法完成，因为更早的一个步骤尚未完成。请检查那一步，而不是这一步。",
     "self_contact": "拒绝将此节点自身的身份添加为联系人",
     "store_unavailable": "节点无法读取其联系人记录。未做任何更改——请在节点恢复正常后重试。",
-    "unknown_fed_id": "该联邦 ID 不在此节点的目录中。请先准入该密钥（对等接入）——仅公告而未准入的书签不携带任何来源信息，无法对其授予同意。"
+    "unknown_fed_id": "该联邦 ID 不在此节点的目录中。请先准入该密钥（对等接入）——仅公告而未准入的书签不携带任何来源信息，无法对其授予同意。",
+    "unreachable": "对方是已知的，但没有收到任何回应。对方的设备可能处于离线状态；待对方设备恢复后，消息将会送达。",
+    "unresolvable": "该标识符无法解析为联系人。"
   }
 }

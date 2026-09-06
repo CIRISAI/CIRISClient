@@ -3895,6 +3895,11 @@
     "adapters_info": "Viunganishi vinaiunganisha CIRIS kwa huduma kama Home Assistant, kalenda, na zaidi. Unaweza kuziongeza kutoka Mipangilio baada ya usanidi.",
     "adapters_later": "Sanidi baada ya usanidi",
     "adapters_title": "Viunganishi",
+    "ai_preference_question": "CIRIS inaweza kufanya kazi na au bila msaidizi wa AI. Ungependa ipi?",
+    "ai_preference_with": "Na msaidizi wa AI",
+    "ai_preference_with_desc": "Utachagua mtoa huduma katika skrini inayofuata. Miundo ya bila malipo ya CIRIS inajumuishwa unapoingia kwa kutumia Google au Apple.",
+    "ai_preference_without": "Bila msaidizi wa AI",
+    "ai_preference_without_desc": "Nodi inafanya kazi peke yake — shirikisho, ridhaa na data yako yote hufanya kazi. Unaweza kuongeza mtoa huduma baadaye kutoka Mipangilio.",
     "back": "Rudi",
     "byok_mode_desc": "Sanidi mtoa huduma wa LLM wako ili kuendelea",
     "byok_mode_title": "Umiliki Wako Mwenyewe",
@@ -4276,10 +4281,21 @@
     }
   },
   "contacts": {
+    "awaiting_consent": "Hawajakubali bado. Hii inasubiri mtu, hivyo kujaribu tena hakutabadilisha chochote.",
+    "awaiting_key_body": "ufunguo unaotajwa na msimbo huu unachukuliwa kutoka kwenye mtandao; jaribu tena mara tu utakapowasili, na anwani itathibitishwa dhidi ya ahadi ya msimbo huo",
+    "code_commitment_mismatch": "Msimbo huu haufanani na ufunguo uliopokelewa kwa mtu huyo. Usiuamini.",
+    "code_without_pqc_commitment": "Msimbo huu ni wa zamani sana kuweza kuongezwa moja kwa moja. Waombe msimbo mpya, au waongeze kupitia peering.",
     "consent_emit_failed": "Nodi haikuweza kutoa idhini inayomfanya huyu kuwa anwani. Hakuna kilichobadilishwa.",
+    "consent_not_granted": "Nodi hii haijawapa idhini bado. Tofauti na kusubiri idhini yao, sehemu hii ni yako kuirekebisha.",
+    "delegation_denied": "Ukabidhi wa kikao hiki haupi ruhusa ya kitendo hicho.",
+    "key_pull_unavailable": "Kifaa hiki hakiko kwenye mtandao, hivyo hakiwezi kuchukua ufunguo wao. Waongeze kutoka kifaa kilicho kwenye mtandao.",
     "malformed_body": "key_id lazima iwe kitambulisho cha ufunguo wa shirikisho kisicho tupu",
+    "malformed_code": "Hiyo inafanana na msimbo wa CIRIS, lakini haiwezi kusimbuliwa. Bandiko lililokatika au lililoharibika halijirekebishi lenyewe, hivyo omba msimbo tena badala ya kujaribu huu tena.",
+    "prior_rung_incomplete": "Hatua hii haiwezi kumalizika kwa sababu hatua ya awali haijamalizika. Angalia huko badala ya hapa.",
     "self_contact": "inakataa kuongeza utambulisho wa nodi hii yenyewe kama anwani",
     "store_unavailable": "Nodi haikuweza kusoma rekodi zake za anwani. Hakuna kilichobadilishwa — jaribu tena nodi itakapokuwa katika hali nzuri.",
-    "unknown_fed_id": "Kitambulisho hicho cha shirikisho hakimo katika orodha ya nodi hii. Kubali ufunguo kwanza (peering) — alamisho lililotangazwa bila kukubaliwa halina asili na haliwezi kupewa idhini."
+    "unknown_fed_id": "Kitambulisho hicho cha shirikisho hakimo katika orodha ya nodi hii. Kubali ufunguo kwanza (peering) — alamisho lililotangazwa bila kukubaliwa halina asili na haliwezi kupewa idhini.",
+    "unreachable": "Wanajulikana, lakini hakuna kilichojibu. Vifaa vyao vinaweza kuwa nje ya mtandao; jumbe zitawafikia watakaporejea.",
+    "unresolvable": "Kitambulisho hicho hakipatikani kama anwani."
   }
 }

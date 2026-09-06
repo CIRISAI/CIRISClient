@@ -18,18 +18,22 @@ import kotlin.test.assertTrue
  */
 class SetupStepFlowTest {
 
-    private val builds = listOf(true, false) // CIRISBuild.HAS_AGENT: agent, node client
+    //: Whether an LLM screen exists. TWO different reasons it might not, and the
+    //: step machine must behave identically for both: a node client has no brain
+    //: (structural), and an agent build whose user chose to run without an AI
+    //: assistant on screen 1 (a choice). See `hasAiStep`.
+    private val builds = listOf(true, false)
 
     @Test
     fun everyStepIsReachable() {
         // Walk the graph from the entry step in every build configuration and
         // collect what is actually visitable.
         val reached = mutableSetOf(SetupStep.YOU)
-        for (hasAgent in builds) {
+        for (hasAiStep in builds) {
             var step = SetupStep.YOU
             var guard = 0
             while (step != SetupStep.COMPLETE && guard++ < SetupStep.entries.size + 1) {
-                step = nextSetupStep(step, hasAgent)
+                step = nextSetupStep(step, hasAiStep)
                 reached += step
             }
         }
@@ -41,49 +45,99 @@ class SetupStepFlowTest {
         )
     }
 
+    // ── the AI question moved to screen 1 ────────────────────────────────
+
+    @Test
+    fun choosingToRunWithoutAiSkipsTheLlmScreenOnAnAgentBuild() {
+        // The whole point of moving the question to screen 1: the LLM screen is
+        // not merely defaulted past, it is never shown.
+        assertFalse(hasAiStep(hasAgent = true, runWithoutAi = true))
+        assertEquals(
+            SetupStep.COMPLETE,
+            nextSetupStep(SetupStep.JOIN_FEDERATION, hasAiStep(true, runWithoutAi = true)),
+        )
+    }
+
+    @Test
+    fun consentBecomesTheFinalStepWhenThereIsNoAiScreen() {
+        // If this disagreed with nextSetupStep, Next would advance to a screen
+        // that is never rendered and the user would be stranded with no
+        // Complete button — the failure mode that makes the two functions one
+        // predicate rather than two.
+        assertTrue(isFinalSetupStep(SetupStep.JOIN_FEDERATION, hasAiStep(true, runWithoutAi = true)))
+        assertFalse(isFinalSetupStep(SetupStep.AI, hasAiStep(true, runWithoutAi = true)))
+    }
+
+    @Test
+    fun backFromCompleteSkipsTheLlmScreenToo() {
+        // The mirror has to skip what the forward walk skipped, or Back lands on
+        // a screen the user never saw.
+        assertEquals(
+            SetupStep.JOIN_FEDERATION,
+            previousSetupStep(SetupStep.COMPLETE, hasAiStep(true, runWithoutAi = true)),
+        )
+    }
+
+    @Test
+    fun aNodeClientIsUnaffectedByTheAiAnswer() {
+        // It has no brain either way, so the answer cannot change its flow —
+        // and the question is not asked there at all.
+        assertFalse(hasAiStep(hasAgent = false, runWithoutAi = false))
+        assertFalse(hasAiStep(hasAgent = false, runWithoutAi = true))
+    }
+
+    @Test
+    fun wantingAnAiOnAnAgentBuildStillVisitsTheLlmScreen() {
+        assertTrue(hasAiStep(hasAgent = true, runWithoutAi = false))
+        assertEquals(
+            SetupStep.AI,
+            nextSetupStep(SetupStep.JOIN_FEDERATION, hasAiStep(true, runWithoutAi = false)),
+        )
+    }
+
     @Test
     fun theAgentBuildVisitsAllThreeScreens() {
-        assertEquals(SetupStep.JOIN_FEDERATION, nextSetupStep(SetupStep.YOU, hasAgent = true))
-        assertEquals(SetupStep.AI, nextSetupStep(SetupStep.JOIN_FEDERATION, hasAgent = true))
-        assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.AI, hasAgent = true))
+        assertEquals(SetupStep.JOIN_FEDERATION, nextSetupStep(SetupStep.YOU, hasAiStep = true))
+        assertEquals(SetupStep.AI, nextSetupStep(SetupStep.JOIN_FEDERATION, hasAiStep = true))
+        assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.AI, hasAiStep = true))
     }
 
     @Test
     fun theNodeClientSkipsTheAiScreen() {
         // The node client has no brain to configure — but it must still pass
         // through the federation consent screen.
-        assertEquals(SetupStep.JOIN_FEDERATION, nextSetupStep(SetupStep.YOU, hasAgent = false))
-        assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.JOIN_FEDERATION, hasAgent = false))
+        assertEquals(SetupStep.JOIN_FEDERATION, nextSetupStep(SetupStep.YOU, hasAiStep = false))
+        assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.JOIN_FEDERATION, hasAiStep = false))
     }
 
     @Test
     fun consentIsOnThePathInEveryBuild() {
         // The 0.3 regression in one assertion: the consent screen must not be
         // skippable by any build configuration.
-        for (hasAgent in builds) {
+        for (hasAiStep in builds) {
             var step = SetupStep.YOU
             val path = mutableListOf(step)
             while (step != SetupStep.COMPLETE) {
-                step = nextSetupStep(step, hasAgent)
+                step = nextSetupStep(step, hasAiStep)
                 path += step
             }
             assertTrue(
                 SetupStep.JOIN_FEDERATION in path,
-                "hasAgent=$hasAgent never reaches the consent screen: $path",
+                "hasAiStep=$hasAiStep never reaches the consent screen: $path",
             )
         }
     }
 
     @Test
     fun backMirrorsForwardExactly() {
-        for (hasAgent in builds) {
+        for (hasAiStep in builds) {
             var step = SetupStep.YOU
             while (step != SetupStep.COMPLETE) {
-                val forward = nextSetupStep(step, hasAgent)
+                val forward = nextSetupStep(step, hasAiStep)
                 assertEquals(
                     step,
-                    previousSetupStep(forward, hasAgent),
-                    "back from $forward must return to $step (hasAgent=$hasAgent)",
+                    previousSetupStep(forward, hasAiStep),
+                    "back from $forward must return to $step (hasAiStep=$hasAiStep)",
                 )
                 step = forward
             }
@@ -92,24 +146,24 @@ class SetupStepFlowTest {
 
     @Test
     fun theFirstStepHasNoBack() {
-        for (hasAgent in builds) {
-            assertEquals(SetupStep.YOU, previousSetupStep(SetupStep.YOU, hasAgent))
+        for (hasAiStep in builds) {
+            assertEquals(SetupStep.YOU, previousSetupStep(SetupStep.YOU, hasAiStep))
         }
     }
 
     @Test
     fun completeIsTerminal() {
-        for (hasAgent in builds) {
-            assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.COMPLETE, hasAgent))
+        for (hasAiStep in builds) {
+            assertEquals(SetupStep.COMPLETE, nextSetupStep(SetupStep.COMPLETE, hasAiStep))
         }
     }
 
     @Test
     fun theFinalStepIsTheOneBeforeComplete() {
-        for (hasAgent in builds) {
-            val finals = SetupStep.entries.filter { isFinalSetupStep(it, hasAgent) }
-            assertEquals(1, finals.size, "exactly one step may be final (hasAgent=$hasAgent)")
-            assertEquals(SetupStep.COMPLETE, nextSetupStep(finals.single(), hasAgent))
+        for (hasAiStep in builds) {
+            val finals = SetupStep.entries.filter { isFinalSetupStep(it, hasAiStep) }
+            assertEquals(1, finals.size, "exactly one step may be final (hasAiStep=$hasAiStep)")
+            assertEquals(SetupStep.COMPLETE, nextSetupStep(finals.single(), hasAiStep))
         }
     }
 
@@ -122,8 +176,8 @@ class SetupStepFlowTest {
         for (step in SetupStep.entries) {
             if (step == SetupStep.JOIN_FEDERATION) continue // the one real difference
             assertEquals(
-                nextSetupStep(step, hasAgent = true),
-                nextSetupStep(step, hasAgent = false),
+                nextSetupStep(step, hasAiStep = true),
+                nextSetupStep(step, hasAiStep = false),
                 "$step must transition identically in both builds",
             )
         }
