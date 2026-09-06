@@ -3,7 +3,12 @@ package ai.ciris.mobile.shared.testing
 import ai.ciris.mobile.shared.platform.TestAutomation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.test.runTest
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
@@ -174,6 +179,56 @@ class MobileAutomationSurfaceTest {
         val alone = TestAutomationHandler.handleGetElement(field)
         assertEquals(fromTree.canInput, alone?.canInput)
         assertEquals(fromTree.canClick, alone?.canClick)
+    }
+
+    // ── a click must reach the UI thread ──────────────────────────────────
+
+    @Test
+    fun a_click_handler_runs_on_the_main_dispatcher() = runTest {
+        // CIRISClient#30. A registered handler is a composable's lambda and most
+        // of them assign to a `remember { mutableStateOf(...) }`. iOS serves
+        // requests from a Kotlin/Native Worker, and a snapshot write from there
+        // did not schedule recomposition: the click reported success and the UI
+        // never changed, so the login form never composed — which is why its
+        // sinks and its submit button were both missing from that run.
+        //
+        // Main is a dispatcher on its OWN THREAD here, deliberately. With a test
+        // dispatcher the handler would run on the test thread either way and the
+        // assertion would pass without the fix, which is no assertion at all.
+        val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "ciris-main-probe") }
+        Dispatchers.setMain(exec.asCoroutineDispatcher())
+        try {
+            register(btn)
+            var ranOn: String? = null
+            // Straight onto the registry `triggerClick` reads. `TestAutomation`'s
+            // wrapper is gated on test mode, which a unit test does not set —
+            // and gating is not what this test is about.
+            TestAutomationState.registerClickHandler(btn) { ranOn = Thread.currentThread().name }
+            val r = TestAutomationHandler.handleClick(ClickRequest(btn))
+            assertTrue(r.success, r.error ?: "")
+            assertEquals(
+                "ciris-main-probe", ranOn,
+                "the handler ran off the main dispatcher — on iOS that is a snapshot " +
+                    "write that never recomposes, and the click reports success anyway",
+            )
+        } finally {
+            Dispatchers.resetMain()
+            exec.shutdownNow()
+        }
+    }
+
+    @Test
+    fun a_click_with_no_handler_is_still_reported_as_not_found() = runTest {
+        val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "ciris-main-probe") }
+        Dispatchers.setMain(exec.asCoroutineDispatcher())
+        try {
+            val r = TestAutomationHandler.handleClick(ClickRequest("btn_absent"))
+            assertFalse(r.success)
+            assertTrue((r.error ?: "").contains("Element not found"), r.error ?: "")
+        } finally {
+            Dispatchers.resetMain()
+            exec.shutdownNow()
+        }
     }
 
     // ── /undrivable, the pre-flight ───────────────────────────────────────

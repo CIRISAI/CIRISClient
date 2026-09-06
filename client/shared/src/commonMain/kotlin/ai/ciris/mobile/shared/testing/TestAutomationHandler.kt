@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.testing
 
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.serialization.json.Json
 
@@ -120,7 +122,7 @@ object TestAutomationHandler {
         return ScreenResponse(screen = TestAutomationState.currentScreen)
     }
 
-    fun handleClick(request: ClickRequest): ActionResponse {
+    suspend fun handleClick(request: ClickRequest): ActionResponse {
         val element = TestAutomationState.getElement(request.testTag)
 
         // Try the programmatic click handler FIRST, before requiring an
@@ -130,7 +132,39 @@ object TestAutomationHandler {
         // never reach the main-window `onGloballyPositioned` callback. Gating
         // on a position entry would 404 the click for handlers that are live
         // and dispatchable.
-        val clicked = TestAutomationState.triggerClick(request.testTag)
+        // ON THE MAIN THREAD, BECAUSE A HANDLER WRITES COMPOSE STATE
+        // (CIRISClient#30).
+        //
+        // A registered handler is a composable's lambda, and most of them assign
+        // to a `remember { mutableStateOf(...) }`. iOS serves this request from a
+        // Kotlin/Native `Worker` — a separate native thread — and a snapshot
+        // write from there did not schedule recomposition. The click SUCCEEDED
+        // and the UI never changed:
+        //
+        //   [OK]   reveal_local_login
+        //   [FAIL] enter_username: no text sink is listening for input_username
+        //   [FAIL] click_login_button: Element not found: btn_login_submit
+        //
+        // `LocalLoginForm` had never composed, so of course it registered no
+        // sinks and no submit button. The screenshot from that run shows the
+        // login chooser with "Local Login" still an unexpanded button.
+        //
+        // WHY THIS WAS iOS-ONLY, WHICH IS WHAT MADE IT HARD TO SEE. The setup
+        // wizard passes 6/6 on the same run and its buttons work — because
+        // SetupScreen's step state is `viewModel.state.collectAsState()`, a
+        // StateFlow whose collector resumes on the main thread. Text input works
+        // for the same reason: it goes through a StateFlow. The ONLY broken path
+        // was a handler writing a composable's own snapshot state directly, and
+        // the login form's toggle is exactly that. Android and desktop serve
+        // from background threads too and recompose anyway, so the platform
+        // difference is Kotlin/Native, not the architecture.
+        //
+        // A previous fix for this issue (the iOS `testable()` disposal, 0.5.201)
+        // addressed a real defect and not this one; the symptom was unchanged,
+        // which is what said the diagnosis was wrong.
+        val clicked = withContext(Dispatchers.Main) {
+            TestAutomationState.triggerClick(request.testTag)
+        }
         if (clicked) {
             return ActionResponse(
                 success = true,
