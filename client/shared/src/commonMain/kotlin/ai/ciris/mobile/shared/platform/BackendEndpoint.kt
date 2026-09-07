@@ -142,3 +142,63 @@ object ActiveBackend {
         endpoint = AGENT_ENDPOINT
     }
 }
+
+/**
+ * THE LOOPBACK NAME THIS PLATFORM MUST USE.
+ *
+ * Android has to say `localhost`: the WebView's Same-Origin Policy treats it
+ * and `127.0.0.1` as different origins, and the literal breaks it. Everywhere
+ * else `127.0.0.1` is the honest answer. Both call sites used to hardcode
+ * their own, which was fine while only `PythonRuntime` needed one and became a
+ * trap the moment a second reader appeared.
+ */
+expect val LOOPBACK_HOST: String
+
+/**
+ * Point the client at the backend the home's `.env` says is running.
+ *
+ * THE SWITCH WAS BUILT AND NEVER PLUGGED IN (CIRISClient#43). `ActiveBackend`
+ * and `runWithoutAiFromEnv` shipped in 0.5.203 with tests that call
+ * `resolveFrom` directly — and NOTHING IN PRODUCTION CALLED IT, on any
+ * platform. So `ActiveBackend.endpoint` stayed at its `AGENT_ENDPOINT` default
+ * forever: a run-without-AI install polled `:8080` after the agent had already
+ * handed off to the node on `:4243`, and the user watched "Restarting your
+ * node…" for as long as they were willing to.
+ *
+ * Call this at startup AND when setup completes. The second is not optional:
+ * the hand-off replaces the AGENT process, not the client, so a client that
+ * only resolves at startup has already decided before the answer exists.
+ *
+ * THE NODE URL IS ONLY FORCED IN THE RUN-WITHOUT-AI DIRECTION. Anything else
+ * would stamp on `CIRIS_NODE_URL` and on operators attached to someone else's
+ * node — the exact defect CIRISClient#26 was about. The invariant this
+ * enforces is the narrow one: once run-without-AI is recorded, no path may
+ * leave the client talking to the agent port.
+ *
+ * @return the endpoint now in effect.
+ */
+suspend fun syncBackendFromEnv(updater: EnvFileUpdater): BackendEndpoint =
+    syncBackendFrom(object : EnvReader {
+        override suspend fun readRawEnv(): String? = updater.readRawEnv()
+    })
+
+/**
+ * What [syncBackendFromEnv] needs from a home: its `.env`, or null.
+ *
+ * A one-method seam so the wiring is testable without a device. `EnvFileUpdater`
+ * is an expect class with a platform constructor, so a test cannot build one —
+ * which is a large part of why this path went unwired and unnoticed.
+ */
+interface EnvReader {
+    suspend fun readRawEnv(): String?
+}
+
+/** See [syncBackendFromEnv]. */
+suspend fun syncBackendFrom(reader: EnvReader): BackendEndpoint {
+    ActiveBackend.resolveFrom(runCatching { reader.readRawEnv() }.getOrNull())
+    val endpoint = ActiveBackend.endpoint
+    if (endpoint == NODE_ONLY_ENDPOINT) {
+        ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(endpoint.baseUrl(LOOPBACK_HOST))
+    }
+    return endpoint
+}

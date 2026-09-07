@@ -80,27 +80,42 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         }
     }
 
-    actual override val serverUrl: String get() = _serverUrl
+    // THE RECORDED ANSWER OUTRANKS THE ENV VAR (CIRISClient#43).
+    //
+    // `_serverUrl` comes from CIRIS_API_URL, which the launcher sets to the
+    // AGENT's :8080 — correct while the agent runs, and wrong the instant a
+    // run-without-AI setup replaces it with the node on :4243. This process is
+    // not restarted by that hand-off, so a value read once at construction is
+    // a value read before the answer existed. Only the run-without-AI
+    // direction is forced; otherwise CIRIS_API_URL still wins, because
+    // pointing an operator away from the node they attached to is
+    // CIRISClient#26.
+    actual override val serverUrl: String
+        get() = if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+            ActiveBackend.endpoint.baseUrl(LOOPBACK_HOST)
+        } else {
+            _serverUrl
+        }
 
     actual override suspend fun initialize(pythonHome: String): Result<Unit> = runCatching {
         _initialized = true
     }
 
     actual override suspend fun startServer(): Result<String> = runCatching {
-        println("[PythonRuntime.desktop] startServer() called, checking for server at $_serverUrl")
+        println("[PythonRuntime.desktop] startServer() called, checking for server at $serverUrl")
 
         // Check if server is already running and in a usable state
         val existingServerState = checkExistingServer()
 
         when (existingServerState) {
             ExistingServerState.HEALTHY -> {
-                println("[PythonRuntime.desktop] Server already running and healthy at $_serverUrl")
+                println("[PythonRuntime.desktop] Server already running and healthy at $serverUrl")
             }
             ExistingServerState.STUCK_SHUTDOWN -> {
                 println("[PythonRuntime.desktop] Detected stuck server in shutdown state - attempting to kill...")
                 if (!killStuckServer()) {
                     throw RuntimeException(
-                        "A CIRIS server is stuck in shutdown state on $_serverUrl but could not be killed.\n\n" +
+                        "A CIRIS server is stuck in shutdown state on $serverUrl but could not be killed.\n\n" +
                         "Please manually kill the process:\n" +
                         "  Linux/Mac: lsof -i :${getPort()} | grep LISTEN | awk '{print \$2}' | xargs kill\n" +
                         "  Windows: netstat -ano | findstr :${getPort()} then taskkill /PID <pid> /F\n\n" +
@@ -131,11 +146,11 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 // capture of the same secret — NOT a weakening (setup/root still
                 // verifies the PIN). Only fills if the stdout capture missed it.
                 readClaimPinFromFileIfMissing()
-                return@runCatching _serverUrl
+                return@runCatching serverUrl
             }
             delay(1000)
         }
-        throw RuntimeException("Cannot connect to CIRIS server at $_serverUrl. Please ensure the server is running.")
+        throw RuntimeException("Cannot connect to CIRIS server at $serverUrl. Please ensure the server is running.")
     }
 
     /**
@@ -208,7 +223,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * caller falls back to the environment guess.
      */
     private suspend fun declaredClaimPinFile(): String? = runCatching {
-        val body = httpClient.get("$_serverUrl/v1/setup/status").bodyAsText()
+        val body = httpClient.get("$serverUrl/v1/setup/status").bodyAsText()
         // Deliberately a narrow scrape rather than a full model bind: this runs on
         // the first-run path against a server that may be mid-boot, and a strict
         // decode failure here must not cost us the PIN.
@@ -267,7 +282,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
             // SHUTDOWN concept here, so any 2xx == HEALTHY. Upstream probes
             // /v1/system/health and demands a WORK/SETUP cognitive_state, which
             // a node NEVER reports — every boot read as NOT_RUNNING.
-            val response = httpClient.get("$_serverUrl/v1/identity")
+            val response = httpClient.get("$serverUrl/v1/identity")
             if (response.status.value in 200..299) {
                 ExistingServerState.HEALTHY
             } else {
@@ -282,7 +297,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * Get port from server URL.
      */
     private fun getPort(): String {
-        return Regex(":(\\d+)").find(_serverUrl)?.groupValues?.get(1) ?: "4243"
+        return Regex(":(\\d+)").find(serverUrl)?.groupValues?.get(1) ?: "4243"
     }
 
     /**
@@ -331,7 +346,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 
             // Verify server is no longer responding
             return try {
-                httpClient.get("$_serverUrl/v1/system/health")
+                httpClient.get("$serverUrl/v1/system/health")
                 // Still responding - kill failed
                 println("[PythonRuntime.desktop] Server still responding after kill attempt")
                 false
@@ -401,7 +416,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         if (held.isNotEmpty()) {
             throw RuntimeException(
                 "Cannot start the CIRIS backend: port(s) $held are still held by another process " +
-                "and nothing is answering on $_serverUrl. A previous backend is most likely still " +
+                "and nothing is answering on $serverUrl. A previous backend is most likely still " +
                 "shutting down or stuck (CIRISAgent#1152).\n\n" +
                 "  Linux/Mac: lsof -i :${held.first()} | grep LISTEN | awk '{print \$2}' | xargs kill -9\n" +
                 "  Windows: netstat -ano | findstr :${held.first()} then taskkill /PID <pid> /F\n\n" +
@@ -575,7 +590,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         if (checkHealth().getOrNull() == true) {
             onStatus?.invoke("Connected to server")
             _serverStarted = true
-            return Result.success(_serverUrl)
+            return Result.success(serverUrl)
         }
 
         onStatus?.invoke("Starting server...")
@@ -593,7 +608,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         // ciris-server readiness: GET /v1/identity returning 200 means the node's
         // read API is up and serving. There is no agent-style cognitive_state to
         // inspect; a 2xx is the node-up signal the startup gate waits on.
-        val response = httpClient.get("$_serverUrl/v1/identity")
+        val response = httpClient.get("$serverUrl/v1/identity")
         val isReady = response.status.value in 200..299
         if (!isReady) {
             println("[PythonRuntime.desktop] Not ready yet - GET /v1/identity -> ${response.status.value}")

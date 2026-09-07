@@ -16,6 +16,7 @@ import ai.ciris.mobile.shared.platform.PythonRuntime
 import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
+import ai.ciris.mobile.shared.platform.syncBackendFromEnv
 import ai.ciris.mobile.shared.platform.createPythonRuntime
 import ai.ciris.mobile.shared.platform.createSecureStorage
 import ai.ciris.mobile.shared.platform.getOAuthProviderName
@@ -354,6 +355,18 @@ fun CIRISApp(
 
     val coroutineScope = rememberCoroutineScope()
     val apiClient = remember { CIRISApiClient(apiBaseUrl, accessToken) }
+
+    // WHICH BACKEND IS SERVING, read from the home's `.env` (CIRISClient#43).
+    //
+    // Before anything polls a port. On an install that recorded run-without-AI
+    // the agent is gone and only the node on :4243 answers; every platform used
+    // to assume :8080 because nothing ever called `resolveFrom`. Absent means
+    // the agent, deliberately — that is where every install predating the flag
+    // serves.
+    LaunchedEffect(Unit) {
+        val endpoint = syncBackendFromEnv(envFileUpdater)
+        PlatformLogger.i(TAG, "[BACKEND] serving on :${endpoint.port}${endpoint.healthPath}")
+    }
 
     // Start test automation server on non-desktop platforms (desktop starts it in Main.kt)
     LaunchedEffect(Unit) {
@@ -2400,6 +2413,17 @@ fun CIRISApp(
                     nodeCodeProvider = { pythonRuntimeProtocol.localNodeCode.value },
                     onSetupComplete = {
                         platformLog(TAG, "[INFO] onSetupComplete called - exchanging tokens...")
+                        // THE HAND-OFF MOMENT (CIRISClient#43). A run-without-AI
+                        // setup replaces the AGENT process with the node: :8080
+                        // goes away and :4243 starts serving. The CLIENT is not
+                        // restarted, so unless it re-reads the answer here it
+                        // keeps polling the port it chose before the answer
+                        // existed — 109 API inits at :8080 and "Restarting your
+                        // node…" forever.
+                        coroutineScope.launch {
+                            val endpoint = syncBackendFromEnv(envFileUpdater)
+                            platformLog(TAG, "[INFO][BACKEND] after setup the backend is :${endpoint.port}")
+                        }
                         // After setup completes, exchange OAuth ID token for CIRIS access token
                         // Run on IO dispatcher to avoid blocking main thread during network/file operations
                         coroutineScope.launch {

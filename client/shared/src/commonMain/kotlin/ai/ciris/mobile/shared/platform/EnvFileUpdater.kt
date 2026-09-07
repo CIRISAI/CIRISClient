@@ -75,6 +75,18 @@ expect class EnvFileUpdater {
     suspend fun readLlmConfig(): EnvLlmConfig?
 
     /**
+     * The home `.env` verbatim, or null when there is not one yet.
+     *
+     * [readLlmConfig] parses the keys it cares about; this hands back the file
+     * so a reader can answer a question it does not know about — specifically
+     * `CIRIS_RUN_WITHOUT_AI`, which decides WHICH BACKEND the client talks to
+     * (see `ActiveBackend`). Null is a first run, a wiped home, or a platform
+     * with no home at all, and every one of those means "the agent", which is
+     * where installs predating the flag serve.
+     */
+    suspend fun readRawEnv(): String?
+
+    /**
      * Delete the .env file to trigger first-run setup on next app start.
      * Used by "Re-run Setup Wizard" feature.
      *
