@@ -43,6 +43,7 @@ fi
 python3 packaging/check_vendoring.py
 python3 compat/validate.py
 python3 packaging/check_pins.py
+python3 client/tools/check_row_layout.py
 python3 client/tools/check_localization_sync.py --self-test --server-src "$EMITTERS"
 python3 client/tools/check_localization_sync.py --server-src "$EMITTERS" --strict
 echo "[OK] every release gate passed (emitters: CIRISServer@$ref)"

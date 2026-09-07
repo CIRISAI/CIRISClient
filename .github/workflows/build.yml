@@ -171,6 +171,14 @@ jobs:
         # debt with a number that can visibly fall.
         run: python3 client/tools/check_ui_drivable.py
 
+      - name: No Row measures a weighted child at zero width
+        # A HARD ZERO, unlike the drivability baseline above, because the tree
+        # is clean today and each occurrence is a control nobody can see.
+        # CIRISClient#42: both age bands in the setup wizard rendered at zero
+        # width from 0.5.203, invisible to a person, while automation appeared
+        # to click them via the coordinate fallback.
+        run: python3 client/tools/check_row_layout.py
+
 
   # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:

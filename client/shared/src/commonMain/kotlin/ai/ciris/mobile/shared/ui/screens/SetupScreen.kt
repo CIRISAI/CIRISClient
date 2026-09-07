@@ -2498,6 +2498,16 @@ private fun AgeRangeSection(
             AgeBand.MINOR to ("minor" to localizedString("mobile.age_range_minor")),
             AgeBand.ADULT to ("adult" to localizedString("mobile.age_range_adult")),
         )
+        // THE TWO BANDS SHARE ONE ROW, AND NOTHING ELSE MAY JOIN THEM.
+        //
+        // "Prefer not to say" used to sit inside this Row carrying
+        // `fillMaxWidth()`. Row measures its UNWEIGHTED children first against
+        // the full width, so that one child took all of it and the weighted
+        // bands were measured with what was left: ZERO. Both age options
+        // rendered at zero width -- invisible to a person, and reported by
+        // /tree as composed-but-off-screen once 0.5.206 started telling the
+        // truth about visibility (CIRISClient#42). The decline option is a
+        // full-width row of its own, BELOW this one.
         Row(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
             options.forEach { (band, meta) ->
                 val (token, label) = meta
@@ -2530,53 +2540,53 @@ private fun AgeRangeSection(
                     }
                 }
             }
+        }
 
-            // PREFER NOT TO SAY — a real, selectable answer.
-            //
-            // The subject has the right not to state an age, and the question is
-            // required, so declining has to be something they can actually choose.
-            // It is NOT a band: nothing is recorded, because writing
-            // `age_self_declared:minor:v1` for someone who never said it would put
-            // a statement they did not make into their own assurance record.
-            //
-            // The consequence is stated on the option itself rather than discovered
-            // afterwards: declining is treated as under-18, stewardship included.
-            // A protection the subject only finds out about after choosing is not
-            // an informed choice.
-            val declineSelected = age.declined
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = if (declineSelected) SetupColors.Primary.copy(alpha = 0.18f) else SetupColors.InfoLight,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp)
-                    .testableClickable("age_band_declined") {
-                        if (!age.inProgress) viewModel.declineAgeRange()
-                    }
+        // PREFER NOT TO SAY — a real, selectable answer.
+        //
+        // The subject has the right not to state an age, and the question is
+        // required, so declining has to be something they can actually choose.
+        // It is NOT a band: nothing is recorded, because writing
+        // `age_self_declared:minor:v1` for someone who never said it would put
+        // a statement they did not make into their own assurance record.
+        //
+        // The consequence is stated on the option itself rather than discovered
+        // afterwards: declining is treated as under-18, stewardship included.
+        // A protection the subject only finds out about after choosing is not
+        // an informed choice.
+        val declineSelected = age.declined
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = if (declineSelected) SetupColors.Primary.copy(alpha = 0.18f) else SetupColors.InfoLight,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .testableClickable("age_band_declined") {
+                    if (!age.inProgress) viewModel.declineAgeRange()
+                }
+        ) {
+            Row(
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.Top,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 14.dp)
-                ) {
-                    RadioButton(
-                        selected = declineSelected,
-                        onClick = { if (!age.inProgress) viewModel.declineAgeRange() },
-                        enabled = !age.inProgress,
+                RadioButton(
+                    selected = declineSelected,
+                    onClick = { if (!age.inProgress) viewModel.declineAgeRange() },
+                    enabled = !age.inProgress,
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = localizedString("mobile.age_range_decline"),
+                        color = SetupColors.InfoDark,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            text = localizedString("mobile.age_range_decline"),
-                            color = SetupColors.InfoDark,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
-                        Text(
-                            text = localizedString("mobile.age_range_decline_note"),
-                            color = SetupColors.TextSecondary,
-                            fontSize = 13.sp,
-                        )
-                    }
+                    Text(
+                        text = localizedString("mobile.age_range_decline_note"),
+                        color = SetupColors.TextSecondary,
+                        fontSize = 13.sp,
+                    )
                 }
             }
         }
