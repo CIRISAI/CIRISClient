@@ -677,6 +677,39 @@
       },
       "notes": "SUPERSEDES 0.5.204 AND 0.5.205, WHICH BUILT EVERY WHEEL AND PUBLISHED NONE. Both tags failed the release gate on the vendoring digest: client/ changed across three commits without client/VENDORING.md section 1 being re-recorded, main's CI had said so since the first of them, and the tag was cut without reading it. Their GitHub releases carry only the AAR, XCFramework and localization bundle; no wheel reached PyPI, so pip resolves neither version. This row carries everything those two did: #41 (the setup request body is the client's own model -- run_without_ai and fourteen sibling fields now reach the agent), #33 (off-screen elements are listed, not driven, and every refusal names what is drivable), #40 (a desktop restart waits for the ports, not the pid; SIGKILL after a bounded SIGTERM grace, never a second SIGTERM). The gates now live in packaging/gates.sh, runnable before a tag exists and the same list publish.yml runs. Pairs with every agent and node 0.5.203 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.207",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A test-automation surface fix; the client reads nothing new from the node or the agent",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "/scroll ACTUALLY SCROLLS, AND SAYS SO ONLY WHEN IT DID (#33). handleScroll posted to a StateFlow and returned success:true; nothing in the tree collected that flow on ANY platform -- its only references were its own declaration, setter and clearer. Invisible while /click and /input still drove off-screen elements through a coordinate fallback; 0.5.206 correctly made them refuse, the agent's gate moved recovery into its primitives (scroll once, ask again), and the recovery could not work: iOS inert but reporting success, Android 404 (the shared handler existed, the third hand-written route table lacked the line), desktop turning a Robot wheel at an off-screen element's clipped zero-size centre and still answering success. Adds the missing consumer as ONE implementation -- rememberTestableScrollState() / Modifier.testableVerticalScroll(), 45 files migrated, a no-op outside test mode, most-recent scrollable owns the dispatch. handleScroll now refuses when nothing on screen can scroll (naming the screen and what is drivable) and otherwise waits for the consumer to apply before answering, like /input (#31); a timeout is a failure. HARNESS-VISIBLE CHANGE: a refused /scroll is 404 with a reason, not 200 -- retry only on 200. Desktop's wheel remains a fallback for a POSITIONED element, reported as action 'mouse-wheel' so a caller knows which path ran. Pairs with every agent and node 0.5.206 does.",
+      "published": null
     }
   ]
 }
