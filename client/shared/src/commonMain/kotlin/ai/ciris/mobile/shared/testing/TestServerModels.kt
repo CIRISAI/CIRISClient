@@ -35,8 +35,28 @@ data class ElementInfo(
      * confirm that an `/input` had actually landed — the only witness was the
      * app's own validation UI in a screenshot (CIRISClient#31).
      */
-    val inputValue: String? = null
+    val inputValue: String? = null,
+    /**
+     * Whether any of this element is ON SCREEN.
+     *
+     * A composable can be composed and positioned while entirely outside the
+     * window: `ModalNavigationDrawer` composes its drawer content always and
+     * translates it off screen when closed, so on a phone the whole nav rail
+     * (`menu_logout`, `btn_governance_menu`, ...) is registered, has a click
+     * handler, and cannot be seen or tapped. `/tree` listed it as present and
+     * a harness waited 20s for it (CIRISClient#33). `boundsInWindow()` clips
+     * to the window, so a fully off-screen element registers with zero size;
+     * that is what this reads.
+     */
+    val visible: Boolean = true
 )
+
+/**
+ * ON SCREEN means the window-clipped bounds have area. See [ElementInfo.visible].
+ * One function, used by every registry, so "present" and "usable" cannot
+ * drift apart per platform.
+ */
+fun isOnScreen(width: Int, height: Int): Boolean = width > 0 && height > 0
 
 @Serializable
 data class HealthResponse(val status: String, val testMode: Boolean)

@@ -122,8 +122,30 @@ object TestAutomationHandler {
         return ScreenResponse(screen = TestAutomationState.currentScreen)
     }
 
+    /** Suffix for a refusal: what IS usable on this screen. */
+    private fun onScreenHint(): String {
+        val usable = TestAutomationState.onScreenDrivable()
+        val shown = usable.take(40).joinToString(", ")
+        val more = if (usable.size > 40) ", … (${usable.size - 40} more)" else ""
+        return "on screen and drivable now: [$shown$more]"
+    }
+
     suspend fun handleClick(request: ClickRequest): ActionResponse {
         val element = TestAutomationState.getElement(request.testTag)
+
+        // COMPOSED IS NOT SHOWN. A closed drawer's items are positioned off
+        // screen with live handlers; firing one would drive a control the
+        // person cannot see, and the harness would record a pass for a path
+        // no user can take (CIRISClient#33).
+        if (element != null && !element.visible) {
+            return ActionResponse(
+                success = false,
+                element = request.testTag,
+                action = "click",
+                error = "${request.testTag} is composed but off screen (inside a closed drawer or sheet?); " +
+                    onScreenHint()
+            )
+        }
 
         // Try the programmatic click handler FIRST, before requiring an
         // element-position entry. `testableClickable` registers the handler the
@@ -175,7 +197,10 @@ object TestAutomationHandler {
         }
 
         if (element == null) {
-            return ActionResponse(success = false, error = "Element not found: ${request.testTag}")
+            return ActionResponse(
+                success = false,
+                error = "Element not found: ${request.testTag}; " + onScreenHint()
+            )
         }
         // Element is positioned but has no programmatic handler (e.g. a plain
         // `testable()` text). Caller can fall back to a coordinate-based click.
@@ -189,7 +214,19 @@ object TestAutomationHandler {
 
     suspend fun handleInput(request: InputRequest): ActionResponse {
         val element = TestAutomationState.getElement(request.testTag)
-            ?: return ActionResponse(success = false, error = "Element not found: ${request.testTag}")
+            ?: return ActionResponse(
+                success = false,
+                error = "Element not found: ${request.testTag}; " + onScreenHint()
+            )
+        if (!element.visible) {
+            return ActionResponse(
+                success = false,
+                element = request.testTag,
+                action = "input",
+                error = "${request.testTag} is composed but off screen (inside a closed drawer or sheet?); " +
+                    onScreenHint()
+            )
+        }
 
         // A TAGGED FIELD IS NOT NECESSARILY A LISTENING ONE.
         //
@@ -274,17 +311,26 @@ object TestAutomationHandler {
             // confirm-button's modifier composes inside the dialog content —
             // it does NOT have to wait for a position entry that may never
             // arrive through the popup's separate layout tree.
-            if (TestAutomationState.getElement(request.testTag) != null
-                || TestAutomationState.hasClickHandler(request.testTag)) {
+            //
+            // But a POSITIONED element must be on screen. An off-screen entry
+            // (a closed drawer's item) is a positive "composed" signal and a
+            // negative "usable" one, and a wait is asking about usable
+            // (CIRISClient#33). Handler-only entries have no position to judge
+            // and keep the popup allowance above.
+            val el = TestAutomationState.getElement(request.testTag)
+            val usable = if (el != null) el.visible else TestAutomationState.hasClickHandler(request.testTag)
+            if (usable) {
                 return ActionResponse(success = true, element = request.testTag, action = "wait")
             }
             delay(100)
         }
 
-        return ActionResponse(
-            success = false,
-            error = "Element not found within ${timeoutMs}ms: ${request.testTag}"
-        )
+        val why = if (TestAutomationState.isOffScreen(request.testTag)) {
+            "${request.testTag} is composed but off screen (inside a closed drawer or sheet?)"
+        } else {
+            "Element not found within ${timeoutMs}ms: ${request.testTag}"
+        }
+        return ActionResponse(success = false, error = "$why; " + onScreenHint())
     }
 
     fun handleGetElement(testTag: String): ElementInfo? {

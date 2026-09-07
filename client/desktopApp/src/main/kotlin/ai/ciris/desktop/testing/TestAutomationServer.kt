@@ -163,8 +163,18 @@ class TestAutomationServer(
             height = height,
             text = text,
             centerX = screenX + width / 2,
-            centerY = screenY + height / 2
+            centerY = screenY + height / 2,
+            visible = ai.ciris.mobile.shared.testing.isOnScreen(width, height),
         )
+    }
+
+    /** What a harness could act on right now: on screen, with a handler. */
+    private fun onScreenHint(): String {
+        val usable = elements.values
+            .filter { it.visible && TestAutomation.hasClickHandler(it.testTag) }
+            .map { it.testTag }.sorted()
+        return "on screen and drivable now: [${usable.take(40).joinToString(", ")}" +
+            (if (usable.size > 40) ", … (${usable.size - 40} more)]" else "]")
     }
 
     /**
@@ -282,6 +292,20 @@ class TestAutomationServer(
                     val request = call.receive<ClickRequest>()
                     val element = elements[request.testTag]
 
+                    // COMPOSED IS NOT SHOWN (CIRISClient#33): a closed drawer's item
+                    // has a live handler and no on-screen pixels. Refuse rather than
+                    // drive a control the person cannot see.
+                    if (element != null && !element.visible) {
+                        call.respond(ActionResponse(
+                            success = false,
+                            element = request.testTag,
+                            action = "click",
+                            error = "${request.testTag} is composed but off screen (inside a closed drawer or sheet?); " +
+                                onScreenHint()
+                        ))
+                        return@post
+                    }
+
                     // Try the programmatic click handler FIRST. `testableClickable`
                     // registers handlers the moment its modifier composes, so dialog /
                     // sheet buttons that live inside a Compose Popup (AlertDialog,
@@ -302,7 +326,7 @@ class TestAutomationServer(
                     if (element == null) {
                         call.respond(
                             HttpStatusCode.NotFound,
-                            ActionResponse(success = false, error = "Element not found: ${request.testTag}")
+                            ActionResponse(success = false, error = "Element not found: ${request.testTag}; " + onScreenHint())
                         )
                         return@post
                     }
@@ -419,8 +443,11 @@ class TestAutomationServer(
                         // the main window, so accepting the handler signal lets
                         // `wait_for_element("btn_mode_confirm")` resolve as soon as the
                         // confirm-button is composed and ready to click.
-                        if (elements.containsKey(request.testTag)
-                            || TestAutomation.hasClickHandler(request.testTag)) {
+                        // A POSITIONED element must also be on screen (CIRISClient#33);
+                        // handler-only entries keep the popup allowance.
+                        val el = elements[request.testTag]
+                        val usable = if (el != null) el.visible else TestAutomation.hasClickHandler(request.testTag)
+                        if (usable) {
                             call.respond(ActionResponse(
                                 success = true,
                                 element = request.testTag,
@@ -435,7 +462,10 @@ class TestAutomationServer(
                         HttpStatusCode.NotFound,
                         ActionResponse(
                             success = false,
-                            error = "Element not found within ${timeoutMs}ms: ${request.testTag}"
+                            error = (if (elements[request.testTag]?.visible == false)
+                                "${request.testTag} is composed but off screen (inside a closed drawer or sheet?)"
+                            else "Element not found within ${timeoutMs}ms: ${request.testTag}") +
+                                "; " + onScreenHint()
                         )
                     )
                 }
@@ -598,7 +628,8 @@ class TestAutomationServer(
                                 height = e.height,
                                 text = e.text,
                                 centerX = e.centerX,
-                                centerY = e.centerY
+                                centerY = e.centerY,
+                                visible = e.visible,
                             )
                         },
                         elementCount = filteredElements.size
@@ -811,7 +842,9 @@ data class ElementInfo(
     val height: Int,
     val text: String? = null,
     val centerX: Int,
-    val centerY: Int
+    val centerY: Int,
+    /** On screen, or composed-but-clipped-away. See the shared ElementInfo (CIRISClient#33). */
+    val visible: Boolean = true
 )
 
 @Serializable

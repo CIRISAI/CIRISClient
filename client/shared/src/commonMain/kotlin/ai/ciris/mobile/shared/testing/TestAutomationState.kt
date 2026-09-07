@@ -44,9 +44,21 @@ object TestAutomationState {
             width = width, height = height,
             text = text,
             centerX = screenX + width / 2,
-            centerY = screenY + height / 2
+            centerY = screenY + height / 2,
+            visible = isOnScreen(width, height),
         )
     }
+
+    /**
+     * What a harness could act on RIGHT NOW: on screen, with a click handler.
+     * This is the list a failed `/wait` or `/click` prints, so a wrong tag is a
+     * line of output rather than a log dig (CIRISClient#33, #39).
+     */
+    fun onScreenDrivable(): List<String> =
+        elements.values.filter { it.visible && clickHandlers.containsKey(it.testTag) }.map { it.testTag }.sorted()
+
+    /** Composed and positioned, but entirely outside the window. */
+    fun isOffScreen(testTag: String): Boolean = elements[testTag]?.visible == false
 
     fun unregisterElement(testTag: String) {
         elements.remove(testTag)
