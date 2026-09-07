@@ -43,6 +43,20 @@ data class CellVizState(
      * (J = k_eff · (1 − ρ) · λ · σ).
      */
     val localScore: Float? = null,
+    /**
+     * WHETHER THESE NUMBERS CAME FROM THE FEDERATION, or from the local
+     * fallback.
+     *
+     * `isPreFetch` says "we have finished trying". It does NOT say we
+     * succeeded: `refreshCapacity()` clears it in its CATCH branch too, after
+     * computing a purely local score from service health. Reading `!isPreFetch`
+     * as "federation detectors are running" therefore reported the coherence
+     * ratchet, manifold conformity and distributive access detectors as live
+     * whenever `/v1/my-data/capacity` had just FAILED (CIRISClient#45 review).
+     *
+     * Defaults false: nothing is federation-backed until a fetch says so.
+     */
+    val federationDataPresent: Boolean = false,
 ) {
     /**
      * Clamp every factor into `[0, 1]`. Lens returns values in that range, but

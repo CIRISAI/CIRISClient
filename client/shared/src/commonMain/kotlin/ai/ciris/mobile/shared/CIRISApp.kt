@@ -514,6 +514,11 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
+            // Sub-screens of layer hubs
+            is Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+            is Screen.Delegation -> Screen.LayerFamily
+            is Screen.Constitutional -> Screen.LayerGlobalCommons
+
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
                 val src = contactsPickerSourceScreen
@@ -4144,7 +4149,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.EnvironmentInfo] User triggered refresh")
                         environmentInfoViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = Screen.LayerLocalCommunity },
                     onCategorySelected = { category ->
                         PlatformLogger.d("CIRISApp", "[Screen.EnvironmentInfo] Category selected: $category")
                         environmentInfoViewModel.setCategory(category)
@@ -4402,12 +4407,33 @@ fun CIRISApp(
                 )
             }
             Screen.Delegation -> {
+                val delegationsList by delegationsViewModel.delegations.collectAsState()
+                val isDelegationsLoading by delegationsViewModel.loading.collectAsState()
                 ai.ciris.mobile.shared.ui.screens.federation.DelegationScreen(
+                    delegations = delegationsList,
+                    isLoading = isDelegationsLoading,
+                    onRefresh = { delegationsViewModel.refresh() },
+                    onNavigateBack = { currentScreen = Screen.LayerFamily },
+                    onManageDeviceGrants = { currentScreen = Screen.Delegations },
                     onIssueClick = { url -> uriHandler.openUri(url) },
                 )
             }
             Screen.Constitutional -> {
+                val accordFamily by accordViewModel.family.collectAsState()
+                val accordHolders by accordViewModel.holders.collectAsState()
+                val accordThreshold by accordViewModel.holderThreshold.collectAsState()
+                val accordHaltStatus by accordViewModel.haltStatus.collectAsState()
+                val isAccordLoading by accordViewModel.loading.collectAsState()
                 ai.ciris.mobile.shared.ui.screens.federation.ConstitutionalScreen(
+                    family = accordFamily,
+                    holders = accordHolders,
+                    holderThreshold = accordThreshold,
+                    haltStatus = accordHaltStatus,
+                    isLoading = isAccordLoading,
+                    onRefresh = { accordViewModel.refresh() },
+                    onNavigateBack = { currentScreen = Screen.LayerGlobalCommons },
+                    onOpenAccordCeremony = { currentScreen = Screen.AccordCeremony },
+                    onOpenProvisionHolder = { currentScreen = Screen.ProvisionAccordHolder },
                     onIssueClick = { url -> uriHandler.openUri(url) },
                 )
             }
@@ -4491,18 +4517,24 @@ fun CIRISApp(
             // ── 2.9.4 — CEG 0.6 layer hubs (Identities · Trust · Policies) ──
             Screen.LayerAgent -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT,
+                hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             Screen.LayerFamily -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY,
+                hasAgent = clientMode?.isAgent ?: false,
+                onOpenDelegations = { currentScreen = Screen.Delegation },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY,
+                hasAgent = clientMode?.isAgent ?: false,
+                onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
+                hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
@@ -4619,6 +4651,10 @@ fun CIRISApp(
                                 // iOS and web (where PlatformBackHandler is a
                                 // no-op) leaves no way out of a chat at all.
                                 is Screen.UserChat -> Screen.Contacts
+                                // Layer hub sub-screens
+                                Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+                                Screen.Delegation -> Screen.LayerFamily
+                                Screen.Constitutional -> Screen.LayerGlobalCommons
                                 // Nested sub-screens → their direct parent
                                 Screen.GraphMemory -> Screen.Memory
                                 Screen.SkillStudio -> Screen.Adapters
@@ -4633,7 +4669,6 @@ fun CIRISApp(
                                 Screen.Config,
                                 Screen.Consent,
                                 Screen.DataManagement,
-                                Screen.EnvironmentInfo,
                                 Screen.Help,
                                 Screen.LLMSettings,
                                 Screen.Logs,

@@ -611,6 +611,7 @@ class InteractViewModel(
                 category = data.category,
                 isPreFetch = false,
                 localScore = local,
+                federationDataPresent = true,
             ).sanitized()
             logInfo(method, "Capacity OK: ${data.agentName} ${data.category} " +
                     "composite=${data.compositeScore} local=${data.localScore} cached=${data.cached}")
@@ -635,6 +636,10 @@ class InteractViewModel(
                 category = localCat,
                 compositeScore = localScore,  // Use local as composite when lens unavailable
                 localScore = localScore,
+                // EXPLICITLY FALSE, not merely left alone: `copy` would carry a
+                // previous success forward, so a fetch that starts working and
+                // then fails would keep claiming federation backing.
+                federationDataPresent = false,
             )
             logInfo(method, "Fell back to local: score=$localScore category=$localCat")
         }
