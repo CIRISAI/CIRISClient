@@ -213,6 +213,34 @@ fun ConstitutionalScreen(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                                 )
                             }
+                        } else if (haltStatus == null) {
+                            // NOT KNOWING IS NOT THE SAME AS BEING SAFE.
+                            //
+                            // `haltStatus` is null on first render and after any
+                            // failed getAccordHaltStatus(). This branch used to
+                            // fall in with "disarmed", so a SAFETY control
+                            // reported a confirmed-safe state at the one moment
+                            // it had no idea — and `isLoading` was threaded in
+                            // and never read. Three states, not two.
+                            Surface(
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text(
+                                    text = if (isLoading) {
+                                        "Reading kill-switch status…"
+                                    } else {
+                                        "Kill-switch status UNKNOWN — the node did not answer. This is not a report that it is disarmed."
+                                    },
+                                    color = CIRISColors.TextDim,
+                                    fontSize = 12.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        .testable("txt_killswitch_unknown"),
+                                )
+                            }
                         } else {
                             Surface(
                                 color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
@@ -224,12 +252,25 @@ fun ConstitutionalScreen(
                                     color = CIRISColors.SignetTeal,
                                     fontSize = 12.sp,
                                     fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        .testable("txt_killswitch_disarmed"),
                                 )
                             }
                         }
                         Text(
-                            text = "A 2-of-3 human kill-switch family: 3 humans each holding a primary SEAT + a cold SPARE (6 keys total). FIPS YubiKey + ML-DSA hardware custody.",
+                            // The live threshold when the node has told us one,
+                            // the design's shape when it has not. A fixed
+                            // "2-of-3" printed over a family with a different
+                            // threshold is a statement about the constitution
+                            // that the constitution does not make.
+                            text = if (holders.isNotEmpty()) {
+                                "A $holderThreshold-of-${holders.size} human kill-switch family: each holder carries a primary SEAT " +
+                                    "and a cold SPARE. FIPS YubiKey + ML-DSA hardware custody."
+                            } else {
+                                "A human kill-switch family: each holder carries a primary SEAT and a cold SPARE. " +
+                                    "FIPS YubiKey + ML-DSA hardware custody."
+                            },
                             color = CIRISColors.TextSecondary,
                             fontSize = 13.sp,
                         )

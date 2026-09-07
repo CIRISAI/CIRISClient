@@ -193,17 +193,30 @@ fun DelegationScreen(
                             color = CIRISColors.TextSecondary,
                             fontSize = 13.sp,
                         )
+                        // UNAVAILABLE, NOT EMPTY.
+                        //
+                        // This composable receives only DelegationsViewModel's
+                        // OUTBOUND device grants (GET /v1/auth/device/grants)
+                        // and makes no inbound query at all. It first reported
+                        // those outbound grants as inbound authority; the fix
+                        // for that replaced the count with a flat "no active
+                        // inbound delegations", which is the same unsupported
+                        // claim with the sign flipped. The screen cannot see
+                        // this, so it says so.
                         Surface(
                             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = "No active inbound delegations recorded",
-                                color = CIRISColors.TextPrimary,
+                                text = "Inbound delegations are not readable from this client yet — " +
+                                    "this is not a report that there are none.",
+                                color = CIRISColors.TextDim,
                                 fontSize = 12.sp,
                                 fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .testable("txt_delegation_inbound_unavailable"),
                             )
                         }
                     }

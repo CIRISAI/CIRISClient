@@ -236,6 +236,23 @@ private fun CompositeScoreHero(state: CellVizState) {
                     trackColor = Color.White.copy(alpha = 0.08f),
                 )
             }
+            // FRAGILITY — only when measurably elevated, and restored here.
+            //
+            // The redesigned hero ended at the progress bar and nothing in this
+            // file read `fragilityIndex` any more, while the API and
+            // InteractViewModel still populate it. That silently removed the
+            // only precise elevated-fragility warning on this surface — an
+            // unbounded risk signal, dropped by a layout change.
+            if (!state.isPreFetch && state.fragilityIndex > 1.2f) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = "Fragility index: ${fmt2(state.fragilityIndex)}",
+                    color = CIRISColors.StatusWarn,
+                    fontSize = 11.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier.testable("txt_fragility_elevated"),
+                )
+            }
         }
     }
 }
@@ -367,6 +384,27 @@ private fun FederationAttestationsSection(state: CellVizState) {
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
+            } else if (!state.federationDataPresent) {
+                // THE FETCH FINISHED; IT DID NOT SUCCEED. refreshCapacity()
+                // clears isPreFetch in its catch branch too, after computing a
+                // local score from service health — so keying LIVE on
+                // `!isPreFetch` announced federation detectors precisely when
+                // the federation call had failed.
+                Surface(
+                    color = CIRISColors.BusTool.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(4.dp),
+                ) {
+                    Text(
+                        text = "LOCAL ONLY",
+                        color = CIRISColors.BusTool,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.0.sp,
+                        modifier = Modifier
+                            .testable("federation_capacity_local_only")
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             } else {
                 Surface(
                     color = CIRISColors.SignetTeal.copy(alpha = 0.18f),
@@ -386,10 +424,14 @@ private fun FederationAttestationsSection(state: CellVizState) {
             }
         }
         Text(
-            text = if (state.isPreFetch) {
-                "Node capacity detectors warming up. Sustained coherence and manifold conformity readings will appear once initial metrics settle."
-            } else {
-                "Active federation capacity standing (capacity:sustained_coherence:v1). Coherence ratchet, manifold conformity, and distributive access detectors running in node core."
+            text = when {
+                state.isPreFetch ->
+                    "Node capacity detectors warming up. Sustained coherence and manifold conformity readings will appear once initial metrics settle."
+                !state.federationDataPresent ->
+                    "Federation capacity standing is UNAVAILABLE — /v1/my-data/capacity did not answer, so the score above is a local " +
+                        "service-health estimate. Manifold conformity and distributive access detectors are not reporting."
+                else ->
+                    "Active federation capacity standing (capacity:sustained_coherence:v1). Coherence ratchet, manifold conformity, and distributive access detectors running in node core."
             },
             color = CIRISColors.TextDim,
             fontSize = 11.sp,
