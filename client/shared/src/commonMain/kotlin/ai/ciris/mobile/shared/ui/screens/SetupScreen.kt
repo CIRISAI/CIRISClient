@@ -1103,10 +1103,11 @@ private fun AiStep(
     // Platform default, applied ONCE and only while the provider is still the
     // untouched `OpenAI` — never overwrite a choice the user has made.
     //
-    // The CIRIS proxy is deliberately NOT offered on desktop: it is gated on
-    // `isGoogleAuth`, which desktop first-run never sets, and the OAuth ID token
-    // IS the credential. Showing the card there would offer a login that cannot
-    // authenticate.
+    // The CIRIS proxy is offered wherever the person signed in with Google or
+    // Apple, desktop included: the OAuth ID token IS the credential, so an
+    // OAuth sign-in lands on the free CIRIS models (`initialSetupMode`) and can
+    // switch to BYOK. `!state.isGoogleAuth` below only keeps this on-device
+    // default from overriding that landing.
     LaunchedEffect(localInference.isReady) {
         val untouched = state.llmProvider.equals("OpenAI", ignoreCase = true) &&
             state.llmApiKey.isEmpty() && !state.runWithoutAi
