@@ -1,0 +1,418 @@
+# A BUILD YOU CAN HOLD, WITHOUT WAITING FOR APPLE.
+#
+# `publish.yml` is the release. It is also four hours long, because
+# `ios-xcframework` is two sequential Kotlin/Native release links (~161 min
+# measured) and Kotlin/Native keeps no compiler cache for optimised binaries.
+# That is the right cost for a release and the wrong cost for "does this
+# feature work on a device".
+#
+# So this workflow builds everything that does NOT need a Mac, attaches it to a
+# GitHub prerelease, and uploads NOTHING to PyPI. Linux and Windows desktop
+# wheels, the universal wheel, the web bundle, the Android AAR and the
+# localization bundle — the whole consumable set for a five-platform gate run
+# minus the two Apple targets, in roughly the time the Android AAR takes.
+#
+# WHAT IT DELIBERATELY DOES NOT DO
+#
+#   - No macOS wheels and no XCFramework. Those are the point of the omission.
+#     A preview cannot answer an iOS or macOS question; use `publish.yml`.
+#   - No PyPI, no TestPyPI. There is no upload job here at all, and the version
+#     it stamps could not be uploaded even if one were added — see below.
+#   - No VERSION bump, no tag on `main`, no compat-matrix row. A preview is not
+#     a release and must not look like one in the tree.
+#
+# WHY THE VERSION IS STAMPED
+#
+# The wheels carry `<VERSION>+preview.g<sha>` — a PEP 440 LOCAL version. Two
+# properties, both load-bearing:
+#
+#   1. PyPI REFUSES local versions. So a preview wheel cannot reach the index
+#      by any accident, misfire or future edit of this file. That is a
+#      structural guarantee rather than a policy someone has to remember.
+#   2. It is unmistakable in a log. `CLIENT_VERSION` is generated from the same
+#      VERSION file, so the running desktop app reports the preview and its
+#      sha — which is exactly what you want when a gate run says something
+#      surprising and the question is "what was actually installed".
+#
+# Stamping happens AFTER the gates, because `compat/validate.py` and
+# `check_pins.py` legitimately require the tree's real VERSION to match the
+# matrix row and the `[web]` pin.
+name: preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      label:
+        description: "name for this preview (default: the short sha)"
+        required: false
+        default: ""
+      android:
+        description: "build the Android AAR (~30 min; untick for a desktop-only cycle)"
+        type: boolean
+        default: true
+
+# One preview at a time per ref. They share a release, and two runs would race
+# on its assets — the same reason `release-assets` in publish.yml is serialised.
+concurrency:
+  group: preview-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Desktop wheels, Mac excluded ────────────────────────────────────────────
+  build:
+    name: wheel (${{ matrix.name }})
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            runner: ubuntu-latest
+            platform: linux-x86_64
+            wheel_tag: manylinux_2_17_x86_64
+          - name: windows-x86_64
+            runner: windows-latest
+            platform: windows-x86_64
+            wheel_tag: win_amd64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: python3 -m pip install --upgrade pip build wheel
+
+      # THE GATES STILL RUN, and they are the cheap ones. 0.5.204 and 0.5.205
+      # built every wheel and published nothing because the vendoring digest
+      # had not been re-recorded; a preview that skipped the gates would let a
+      # branch reach a device carrying that same mistake, and the release cut
+      # afterwards would be the first to notice.
+      - name: The CIRISServer commit this tree was merged against
+        id: pair
+        if: matrix.name == 'linux-x86_64'
+        run: echo "ref=$(python3 packaging/check_vendoring.py --merged-ref CIRISServer)" >> "$GITHUB_OUTPUT"
+
+      - name: Emitter sources (the ids the bundles must define)
+        if: matrix.name == 'linux-x86_64'
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISServer
+          ref: ${{ steps.pair.outputs.ref }}
+          path: .emitters
+
+      - name: Gates
+        if: matrix.name == 'linux-x86_64'
+        run: bash packaging/gates.sh .emitters
+
+      # AFTER the gates. See the header for why this version and not a bump.
+      - name: Stamp this as a preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          base=$(cat VERSION)
+          echo "${base}+preview.g${GITHUB_SHA:0:7}" > VERSION
+          echo "building $(cat VERSION)"
+
+      - name: Desktop uber-jar for this OS
+        working-directory: client
+        shell: bash
+        run: ./gradlew --no-daemon :desktopApp:packageUberJarForCurrentOS
+
+      - name: Stage the jar, stamped with the platform it was built for
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar=$(find client/desktopApp/build/compose/jars -name '*.jar' | head -1)
+          test -n "$jar" || { echo "::error::gradle produced no desktop jar"; exit 1; }
+          python3 packaging/stage_artifacts.py --dist client \
+            --artifact "desktop-uber-jar@${{ matrix.platform }}=$jar"
+
+      # A PLACEHOLDER IS AS WRONG IN A PREVIEW AS IN A RELEASE. It installs and
+      # then refuses every artifact lookup, so a gate run against one fails in
+      # a way that looks like the feature and is not.
+      - name: A placeholder must never be shipped
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          m = json.load(open("ciris_client/_artifacts/manifest.json"))
+          if m.get("placeholder"):
+              raise SystemExit(f"::error::PLACEHOLDER build ({m.get('placeholder_reason')})")
+          kinds = [a["kind"] for a in m["artifacts"]]
+          if not kinds:
+              raise SystemExit("::error::the staged build carries no artifacts")
+          print("staged:", ", ".join(kinds))
+          PY
+
+      - name: Build the wheel and tag it for this platform
+        shell: bash
+        run: |
+          set -euo pipefail
+          # CLEAN FIRST — setuptools caches the staged payload in build/lib and
+          # a rebuild after a different staging re-adds what was there before.
+          rm -rf build dist
+          python3 -m build --wheel --outdir dist .
+          python3 -m wheel tags --platform-tag "${{ matrix.wheel_tag }}" --remove \
+            dist/ciris_client-*-py3-none-any.whl
+          ls -la dist
+
+      - name: Consumption contract — install and resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m venv consumer-venv
+          if [ -d consumer-venv/Scripts ]; then PY=$PWD/consumer-venv/Scripts/python; else PY=$PWD/consumer-venv/bin/python; fi
+          "$PY" -m pip install --quiet --no-index dist/*.whl
+          mkdir -p verify && cd verify && "$PY" - <<'PY'
+          import ciris_client as c
+          assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
+          m = c.manifest()
+          assert not m.get("placeholder"), "placeholder reached the preview path"
+          assert m["client_version"] == c.__version__, "version split"
+          assert "+preview." in c.__version__, f"a preview must say so: {c.__version__}"
+          for a in c.artifacts():
+              p = c.artifact_path(a["kind"])
+              assert p.exists(), f"{a['kind']} listed but missing at {p}"
+              print(f"  {a['kind']:<18} {p.name}  {a['bytes']:,} bytes")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-${{ matrix.name }}
+          path: dist/*.whl
+          retention-days: 7
+
+  # ── The wheel every non-desktop consumer resolves ───────────────────────────
+  #
+  # Kept even though no Mac is built: pip resolves on the wheel tag, and without
+  # py3-none-any a preview is UNRESOLVABLE on Android, iOS and anything outside
+  # the two OS tags above (CIRISServer#493). A preview that a consumer cannot
+  # install is not a preview.
+  universal:
+    name: wheel (universal)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python3 -m pip install --upgrade pip build
+
+      - name: Stamp this as a preview
+        run: |
+          set -euo pipefail
+          echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
+
+      - name: Stage the locale bundle, and no OS payload
+        run: python3 packaging/stage_artifacts.py --universal
+
+      - name: Build it, and DO NOT retag
+        run: |
+          set -euo pipefail
+          rm -rf build dist
+          python3 -m build --wheel --outdir dist .
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-universal
+          path: dist/*.whl
+          retention-days: 7
+
+  # ── The web bundle ──────────────────────────────────────────────────────────
+  wasm:
+    name: wheel (wasm)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - run: python3 -m pip install --upgrade pip build
+
+      - name: Stamp this as a preview
+        run: |
+          set -euo pipefail
+          echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
+
+      - name: The web bundle
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:wasmJsBrowserDistribution
+
+      - name: Stage it
+        run: |
+          set -euo pipefail
+          wasm=client/shared/build/dist/wasmJs/productionExecutable
+          test -d "$wasm" || { echo "::error::no wasm distribution at $wasm"; exit 1; }
+          # Source maps are a debugging aid, not a shipped artifact — and the
+          # largest thing in the bundle no visitor needs.
+          rm -f "$wasm"/*.map
+          python3 packaging/stage_artifacts.py --dist wasm --artifact "wasm-browser=$wasm"
+
+      - name: Build the wheel
+        run: python3 -m build --wheel --outdir dist packaging/wasm
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-wasm
+          path: dist/*.whl
+          retention-days: 7
+
+  # ── Android ─────────────────────────────────────────────────────────────────
+  #
+  # Optional, because it is the longest job here by a wide margin and a
+  # desktop-only cycle should not pay for it. iOS has no equivalent switch: it
+  # is simply not built by this workflow.
+  android:
+    name: android-aar
+    if: inputs.android
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Stamp this as a preview
+        run: |
+          set -euo pipefail
+          echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
+
+      - name: The fat AAR
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:fatReleaseAar
+
+      - name: Stage it
+        run: |
+          set -euo pipefail
+          version=$(cat VERSION)
+          mkdir -p mobile
+          # THE FAT AAR, not shared-release.aar: the plain one ships :shared
+          # without :generated-api, and every APK built against it dies on a
+          # NoClassDefFoundError for the generated API (CIRISClient#25).
+          src=client/shared/build/fataar/shared-release-fat.aar
+          test -f "$src" || { echo "::error::no fat AAR at $src"; exit 1; }
+          cp "$src" "mobile/ciris-client-$version.aar"
+          python3 packaging/check_aar.py "mobile/ciris-client-$version.aar"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preview-android
+          path: mobile/*
+          retention-days: 7
+
+  # ── One prerelease holding everything that built ────────────────────────────
+  preview-release:
+    name: attach to the preview release
+    # `always()`: the legs are independent artifacts. Withholding the Linux
+    # wheel because the Android AAR failed would be this matrix's convenience
+    # beating the consumer's — the same reasoning as publish.yml's
+    # release-assets, for the same reason.
+    if: always()
+    needs: [build, universal, wasm, android]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: preview-*
+          merge-multiple: true
+          path: assets
+
+      # The strings travel with the client that renders them (CIRISClient#34).
+      # Built here rather than in a build job so it attaches even when one
+      # fails, and named for the stamped version so a preview bundle is never
+      # mistaken for a release's.
+      - name: The localization bundle
+        run: |
+          set -euo pipefail
+          mkdir -p assets
+          version="$(cat VERSION)+preview.g${GITHUB_SHA:0:7}"
+          python3 packaging/localization_bundle.py \
+            --build "assets/ciris-client-$version-localization.zip"
+
+      - name: What built
+        run: ls -la assets
+
+      - name: Publish the prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=(assets/*)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::error::nothing built — refusing to publish an empty preview"
+            exit 1
+          fi
+
+          label="${{ inputs.label }}"
+          [ -n "$label" ] || label="${GITHUB_SHA:0:7}"
+          # Tag names are not free-form: keep it to what git and gh accept.
+          label=$(printf '%s' "$label" | tr -c 'A-Za-z0-9._-' '-')
+          tag="preview-$label"
+          version="$(cat VERSION)+preview.g${GITHUB_SHA:0:7}"
+
+          # --target: the release points at the commit that was BUILT. Without
+          # it `gh` invents a tag from the default branch, which is how a
+          # rehearsal can end up describing code nobody tested.
+          # --prerelease: it must never be the "latest" a consumer resolves.
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$tag" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease --title "$tag ($version)"
+          else
+            gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" --prerelease --title "$tag ($version)" \
+              --notes "$(cat <<EOF
+          **Preview build — not a release.** Built from \`$GITHUB_SHA\` by the \`preview\` workflow.
+
+          | | |
+          |---|---|
+          | version | \`$version\` |
+          | has | Linux + Windows desktop wheels, the universal wheel, the web bundle, the localization bundle$( [ "${{ inputs.android }}" = "true" ] && echo ", the Android AAR" ) |
+          | does NOT have | **macOS wheels, the iOS XCFramework** — this workflow builds no Apple targets |
+          | on PyPI | **no.** The version carries a PEP 440 local segment, which PyPI refuses by design |
+
+          Install a wheel directly from this page, e.g.
+
+          \`\`\`
+          pip install https://github.com/$GITHUB_REPOSITORY/releases/download/$tag/<wheel>
+          \`\`\`
+
+          For anything involving macOS or iOS, cut a real release with \`publish.yml\`.
+          EOF
+          )"
+          fi
+          gh release upload "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
+          echo "preview published: $tag"
+          echo "  $(printf '%s\n' "${files[@]}" | wc -l) asset(s)"
+          gh release view "$tag" --repo "$GITHUB_REPOSITORY" --json url -q .url
