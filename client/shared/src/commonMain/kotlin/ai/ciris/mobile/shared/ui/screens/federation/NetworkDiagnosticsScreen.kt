@@ -55,6 +55,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * Network → Diagnostics sub-screen. Unified diagnostic feed across all
@@ -187,7 +188,7 @@ fun NetworkDiagnosticsScreen(
 
 @Composable
 private fun CountersStrip(counters: Map<FederationChannel, Int>) {
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,7 +224,7 @@ private fun ChannelFilterChipRow(
     selected: Set<FederationChannel>,
     onToggle: (FederationChannel) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -395,7 +396,7 @@ private fun ChannelBadge(channel: FederationChannel) {
 @Composable
 private fun ExpandedPayloadView(payload: JsonObject) {
     val pretty = remember(payload) { prettyPrintJson(payload) }
-    val scroll = rememberScrollState()
+    val scroll = rememberTestableScrollState()
     Box(
         modifier = Modifier
             .fillMaxWidth()

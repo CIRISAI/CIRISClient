@@ -48,6 +48,7 @@ import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Wise Authority screen — the human-in-the-loop approval surface.
@@ -599,7 +600,7 @@ private fun ResolveDeferralDialog(
         text = {
             Column(
                 modifier = Modifier
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {

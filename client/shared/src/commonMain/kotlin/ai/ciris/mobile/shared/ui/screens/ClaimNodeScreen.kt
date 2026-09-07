@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Claim-Ownership screen — the last UI piece of the founder flow.
@@ -123,7 +124,7 @@ fun ClaimNodeScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
         ) {
             Text(
                 text = localizedString("mobile.claim_node_heading"),

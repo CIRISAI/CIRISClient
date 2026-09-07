@@ -34,6 +34,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.CohortScope
 import ai.ciris.mobile.shared.ui.nav.SubstrateGate
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * Generic layer hub for the 5 UX-facing cohort scopes. Renders three
@@ -66,7 +67,7 @@ fun LayerHubScreen(
     onIssueClick: (String) -> Unit = {},
 ) {
     val gate = scopeGate(scope)
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Box(
         modifier = Modifier
             .fillMaxSize()

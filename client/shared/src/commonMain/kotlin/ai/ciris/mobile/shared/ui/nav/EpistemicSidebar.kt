@@ -28,6 +28,7 @@ import ai.ciris.mobile.shared.ui.components.CountPill
 import ai.ciris.mobile.shared.ui.theme.BrightnessPreference
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * The Epistemic Commons Framework sidebar — load-bearing nav chrome for 2.9.4.
@@ -91,7 +92,7 @@ fun EpistemicSidebar(
     badges: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
-    val scroll = rememberScrollState()
+    val scroll = rememberTestableScrollState()
 
     // The nav is now a FUNCTION of the probed mode (CIRISServer#479), resolved
     // once per composition rather than baked at compile time.

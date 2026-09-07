@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Delegations** — authorize an agent or another person to act on your behalf.
@@ -191,7 +192,7 @@ fun DelegationsScreen(
                 .fillMaxSize()
                 .padding(pad)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
             Text(

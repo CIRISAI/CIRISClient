@@ -26,6 +26,7 @@ import ai.ciris.mobile.shared.ui.components.surfaceText
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.viewmodels.CommonsViewModel
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **The Commons** — persist's reverse-quorum plane, rendered
@@ -110,7 +111,7 @@ fun CommonsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

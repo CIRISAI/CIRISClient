@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Network — CIRISEdge operator view (Manage group, 2.9.6).
@@ -62,7 +63,7 @@ fun NetworkOpsScreen(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState())
+            .testableVerticalScroll()
             .testable("screen_network_ops"),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {

@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Transport — node transports + serial LoRa (RNode) radio configuration.
@@ -50,7 +51,7 @@ fun TransportScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .testable("screen_transport"),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

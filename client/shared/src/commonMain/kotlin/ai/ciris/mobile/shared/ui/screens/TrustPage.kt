@@ -48,6 +48,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Trust Page - Full-page view of CIRISVerify attestation status
@@ -196,7 +197,7 @@ fun TrustPage(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

@@ -274,7 +274,8 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                 }
                 method == "POST" && path == "/scroll" -> {
                     val req = json.decodeFromString<ScrollRequest>(body)
-                    200 to json.encodeToString(TestAutomationHandler.handleScroll(req))
+                    val resp = TestAutomationHandler.handleScroll(req)
+                    (if (resp.success) 200 else 404) to json.encodeToString(resp)
                 }
                 method == "GET" && path.startsWith("/element/") -> {
                     val tag = path.removePrefix("/element/")

@@ -62,6 +62,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * Settings screen
@@ -238,7 +240,7 @@ fun SettingsScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
@@ -670,7 +672,7 @@ private fun TrustSecurityCard(
     val uriHandler = LocalUriHandler.current
     val clipboardManager = LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
 
     // Fetch verify status on mount
     LaunchedEffect(Unit) {

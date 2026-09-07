@@ -97,6 +97,23 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
                     call.respond(TestAutomationHandler.handleInput(request))
                 }
 
+                // Scroll the screen (recovery after an off-screen refusal)
+                //
+                // ANDROID HAD NO SUCH ROUTE while desktop and iOS did, though
+                // the handler is shared — so a harness recovering from an
+                // off-screen /click or /input could scroll on two platforms
+                // and got a 404 on the third (CIRISClient#33). That is the
+                // duplication tax: the route tables are three hand-written
+                // copies of one contract.
+                post("/scroll") {
+                    val request = call.receive<ScrollRequest>()
+                    val resp = TestAutomationHandler.handleScroll(request)
+                    call.respond(
+                        if (resp.success) HttpStatusCode.OK else HttpStatusCode.NotFound,
+                        resp
+                    )
+                }
+
                 // Wait for element to appear
                 post("/wait") {
                     val request = call.receive<WaitRequest>()

@@ -107,6 +107,7 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.material.icons.filled.Settings
 import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 private const val TAG = "SetupScreen"
 
@@ -713,7 +714,7 @@ private fun YouStep(
     // taller than the window looked like a page that was simply cut off.
     // VerticalScrollbar is an expect/actual that draws on desktop and is a
     // no-op on mobile, where the platform already indicates it.
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
@@ -816,7 +817,7 @@ private fun JoinFederationStep(
     // taller than the window looked like a page that was simply cut off.
     // VerticalScrollbar is an expect/actual that draws on desktop and is a
     // no-op on mobile, where the platform already indicates it.
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = Modifier
@@ -1123,7 +1124,7 @@ private fun AiStep(
     // taller than the window looked like a page that was simply cut off.
     // VerticalScrollbar is an expect/actual that draws on desktop and is a
     // no-op on mobile, where the platform already indicates it.
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
     Box(modifier = modifier.fillMaxSize()) {
     Column(
         modifier = Modifier

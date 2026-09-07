@@ -57,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Manage Nodes (CRUD) — the management surface for every saved fabric node.
@@ -239,7 +240,7 @@ private fun NodesListView(
         modifier = modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+            .testableVerticalScroll(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(

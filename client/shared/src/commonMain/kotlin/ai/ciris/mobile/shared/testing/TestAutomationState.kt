@@ -134,8 +134,40 @@ object TestAutomationState {
     }
 
     // Scroll requests
+    //
+    // A REQUEST NEEDS SOMETHING THAT CAN SCROLL. This flow existed, and
+    // `handleScroll` set it and answered success:true, and NOTHING IN THE TREE
+    // COLLECTED IT -- on any platform. So `/scroll` moved nothing while
+    // reporting that it had, which only became load-bearing when 0.5.206 made
+    // /click and /input refuse off-screen elements and a harness started
+    // scrolling to recover (CIRISClient#33). Same class as #28 and #31: an
+    // endpoint answering for something it did not do.
+    //
+    // `rememberTestableScrollState` registers the screen's scroll state here
+    // and dispatches; the ACTIVE registrant is the most recent one, so a
+    // scrollable dialog over a scrollable screen does not double-apply.
     private val _scrollRequests = MutableStateFlow<ScrollRequest?>(null)
     val scrollRequests: StateFlow<ScrollRequest?> = _scrollRequests
+
+    private val scrollables = mutableListOf<Long>()
+    private var nextScrollToken = 1L
+
+    /** Claim a token for a scrollable that is now composed. */
+    fun registerScrollable(): Long {
+        val token = nextScrollToken++
+        scrollables.add(token)
+        return token
+    }
+
+    fun unregisterScrollable(token: Long) {
+        scrollables.remove(token)
+    }
+
+    /** The most recently composed scrollable owns the dispatch. */
+    fun isActiveScrollable(token: Long): Boolean = scrollables.lastOrNull() == token
+
+    /** Whether anything on screen can act on a scroll request at all. */
+    fun hasScrollable(): Boolean = scrollables.isNotEmpty()
 
     fun requestScroll(testTag: String, direction: String, amount: Int) {
         _scrollRequests.value = ScrollRequest(testTag, direction, amount)

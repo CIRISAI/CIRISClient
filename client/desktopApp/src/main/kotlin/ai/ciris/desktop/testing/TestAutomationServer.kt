@@ -518,22 +518,41 @@ class TestAutomationServer(
                     val direction = json.jsonObject["direction"]?.jsonPrimitive?.content ?: "down"
                     val amount = json.jsonObject["amount"]?.jsonPrimitive?.int ?: 300
 
-                    val element = elements[testTag]
-                    if (element != null) {
-                        // Move mouse to element center then scroll
-                        robot.mouseMove(element.centerX, element.centerY)
-                        Thread.sleep(50)
-                        val wheelAmount = if (direction == "up") -(amount / 30) else (amount / 30)
-                        robot.mouseWheel(wheelAmount)
+                    // THE SHARED HANDLER FIRST, and it answers for whether the
+                    // screen MOVED (CIRISClient#33). This used to post to a
+                    // flow nothing collected and reply success:true always,
+                    // with a Robot wheel at the element's centre as the only
+                    // thing that could really scroll -- and for an OFF-SCREEN
+                    // element, which is exactly when a harness scrolls now,
+                    // that centre is a clipped zero-size rect, so the wheel
+                    // turned somewhere meaningless and the reply still said
+                    // success.
+                    val resp = ai.ciris.mobile.shared.testing.TestAutomationHandler.handleScroll(
+                        ai.ciris.mobile.shared.testing.ScrollRequest(testTag, direction, amount)
+                    )
+                    if (resp.success) {
+                        call.respond(resp)
+                        return@post
                     }
 
-                    // Also dispatch via shared handler for cross-platform state
-                    ai.ciris.mobile.shared.testing.TestAutomationState.requestScroll(testTag, direction, amount)
-
+                    // Nothing Compose-side could take it. Fall back to the
+                    // wheel over a POSITIONED element -- native scroll areas
+                    // and anything not wrapped in testableVerticalScroll --
+                    // and say which path ran, so a caller is never told a
+                    // no-op succeeded.
+                    val element = elements[testTag]
+                    if (element == null || !element.visible) {
+                        call.respond(HttpStatusCode.NotFound, resp)
+                        return@post
+                    }
+                    robot.mouseMove(element.centerX, element.centerY)
+                    Thread.sleep(50)
+                    val wheelAmount = if (direction == "up") -(amount / 30) else (amount / 30)
+                    robot.mouseWheel(wheelAmount)
                     call.respond(ai.ciris.mobile.shared.testing.ActionResponse(
                         success = true,
                         element = testTag,
-                        action = "scroll",
+                        action = "mouse-wheel",
                         text = "$direction:$amount"
                     ))
                 }

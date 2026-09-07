@@ -61,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Network → Content sub-screen.
@@ -292,7 +293,7 @@ private fun FetchStep(vm: NetworkContentViewModel, loading: Boolean) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .testableVerticalScroll()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

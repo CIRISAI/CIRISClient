@@ -44,6 +44,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Add Federation ID (catch-up flow)** — the guided path for an EXISTING logged-in
@@ -160,7 +161,7 @@ fun AddFederationIdScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Text(

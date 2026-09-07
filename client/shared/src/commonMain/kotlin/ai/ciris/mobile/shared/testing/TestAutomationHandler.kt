@@ -31,6 +31,15 @@ object TestAutomationHandler {
         return ta.textInputRequests.value == null
     }
 
+    private suspend fun awaitScrollIdle(): Boolean {
+        var waited = 0L
+        while (TestAutomationState.scrollRequests.value != null && waited < APPLY_TIMEOUT_MS) {
+            kotlinx.coroutines.delay(APPLY_POLL_MS)
+            waited += APPLY_POLL_MS
+        }
+        return TestAutomationState.scrollRequests.value == null
+    }
+
     private val json = Json {
         prettyPrint = true
         isLenient = true
@@ -339,8 +348,42 @@ object TestAutomationHandler {
         return TestAutomationState.getElement(testTag)?.let { withDrivability(it) }
     }
 
-    fun handleScroll(request: ScrollRequest): ActionResponse {
+    /**
+     * Scroll the screen, and answer for whether it MOVED.
+     *
+     * This used to post to a flow nothing collected and return success:true --
+     * on every platform (CIRISClient#33). A harness recovering from an
+     * off-screen refusal by scrolling was told the scroll worked and then hit
+     * the identical refusal, which reads as a flaky app rather than a missing
+     * feature. Acknowledged on apply, exactly like /input (#31): the consumer
+     * clears the flow after scrolling, so the flow returning to null IS the
+     * signal, and a timeout is a failure because "I could not confirm this
+     * landed" is not success.
+     */
+    suspend fun handleScroll(request: ScrollRequest): ActionResponse {
+        if (!TestAutomationState.hasScrollable()) {
+            return ActionResponse(
+                success = false,
+                element = request.testTag,
+                action = "scroll",
+                error = "nothing on screen '${TestAutomationState.currentScreen}' can scroll " +
+                    "(no testableVerticalScroll registered), so the request would move nothing; " +
+                    onScreenHint()
+            )
+        }
+        if (!awaitScrollIdle()) {
+            return ActionResponse(
+                success = false, element = request.testTag, action = "scroll",
+                error = "a previous /scroll was still unapplied after ${APPLY_TIMEOUT_MS}ms",
+            )
+        }
         TestAutomationState.requestScroll(request.testTag, request.direction, request.amount)
+        if (!awaitScrollIdle()) {
+            return ActionResponse(
+                success = false, element = request.testTag, action = "scroll",
+                error = "the screen did not apply the scroll within ${APPLY_TIMEOUT_MS}ms",
+            )
+        }
         return ActionResponse(
             success = true,
             element = request.testTag,

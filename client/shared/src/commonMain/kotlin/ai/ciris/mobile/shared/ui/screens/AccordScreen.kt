@@ -80,6 +80,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * **Trust Root** — the HUMANITY_ACCORD constitutional surface (CIRISServer #41),
@@ -156,7 +158,7 @@ fun AccordScreen(
     var sheet by remember { mutableStateOf<AccordSheet?>(null) }
     var newMenu by remember { mutableStateOf(false) }
     var saveDir by remember { mutableStateOf<String?>(null) }
-    val scrollState = rememberScrollState()
+    val scrollState = rememberTestableScrollState()
 
     // Screen entry: refresh the canonical roster + the gossiped pending co-scrubs so a
     // partial that arrived over the accord peer-plane shows up without a manual refresh.
@@ -1060,7 +1062,7 @@ private fun RemintTrustRootSheet(
             Column(
                 modifier = Modifier
                     .heightIn(max = 460.dp)
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .testable("sheet_remint_trust_root"),
             ) {
                 Text(

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * "Get the logs off this device" — the same block on every screen that can strand
@@ -194,7 +195,7 @@ fun DebugLogsBlock(
                         modifier = Modifier
                             .heightIn(max = 220.dp)
                             .testable("txt_debug_bundle")
-                            .verticalScroll(rememberScrollState())
+                            .testableVerticalScroll()
                             .padding(8.dp),
                     )
                 }

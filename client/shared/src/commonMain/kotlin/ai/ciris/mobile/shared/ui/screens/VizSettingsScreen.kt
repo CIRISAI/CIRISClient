@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Visualization Settings screen — step 11 of FSD/CELL_VIZ_REDESIGN.md.
@@ -111,7 +112,7 @@ fun VizSettingsScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {

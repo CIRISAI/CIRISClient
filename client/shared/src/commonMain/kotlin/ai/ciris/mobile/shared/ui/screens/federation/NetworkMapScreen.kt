@@ -52,6 +52,7 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.min
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Network → Map sub-screen (T-E-UI Batch D).
@@ -114,7 +115,7 @@ fun NetworkMapScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .padding(16.dp)
                 .testable("screen_federation_map"),
             verticalArrangement = Arrangement.spacedBy(16.dp),

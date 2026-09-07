@@ -42,6 +42,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Network → Identity sub-screen (T-E-UI Batch A).
@@ -125,7 +126,7 @@ fun NetworkIdentityScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .padding(16.dp)
                     .testable("screen_federation_identity"),
                 verticalArrangement = Arrangement.spacedBy(16.dp),

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Delegate moderation duty** — confer `slash` / `moderate` / `review` on another
@@ -123,7 +124,7 @@ fun DutyConferralScreen(
                 .fillMaxSize()
                 .padding(pad)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
             Text(

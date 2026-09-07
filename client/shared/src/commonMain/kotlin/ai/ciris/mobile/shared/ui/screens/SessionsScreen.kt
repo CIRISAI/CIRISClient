@@ -25,6 +25,7 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Sessions screen for cognitive session management
@@ -96,7 +97,7 @@ fun SessionsScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

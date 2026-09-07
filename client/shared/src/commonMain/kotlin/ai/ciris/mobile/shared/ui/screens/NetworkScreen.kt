@@ -31,6 +31,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Network — federation transport substrate operator hub (2.9.4).
@@ -132,7 +133,7 @@ fun NetworkScreen(
         modifier = Modifier
             .fillMaxSize()
             .testable("screen_network_hub")
-            .verticalScroll(rememberScrollState())
+            .testableVerticalScroll()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {

@@ -27,6 +27,7 @@ import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.nav.SubstrateGate
 import ai.ciris.mobile.shared.ui.screens.graph.CellVizState
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 
 /**
  * "Health & Reputation" — the agent's CIRIS Capacity Score, surfaced as a
@@ -56,7 +57,7 @@ fun HealthReputationScreen(
     state: CellVizState,
     onIssueClick: (String) -> Unit = {},
 ) {
-    val scroll = rememberScrollState()
+    val scroll = rememberTestableScrollState()
     val uriHandler = LocalUriHandler.current
 
     Box(

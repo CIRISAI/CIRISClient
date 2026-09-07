@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.graphics.vector.ImageVector
 import ai.ciris.mobile.shared.ui.nav.SubstrateGate
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 // CIRISIcons is in the same package; no explicit import needed.
 
 /**
@@ -45,7 +46,7 @@ fun ComingSoonPlaceholder(
     onIssueClick: (String) -> Unit = {},
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val scroll = rememberScrollState()
+    val scroll = rememberTestableScrollState()
 
     Box(
         modifier = Modifier

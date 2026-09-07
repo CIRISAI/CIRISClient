@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * Data Management screen for DSAR self-service.
@@ -325,7 +326,7 @@ fun DataManagementScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {

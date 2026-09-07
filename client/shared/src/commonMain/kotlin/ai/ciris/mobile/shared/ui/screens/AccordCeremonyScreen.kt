@@ -42,6 +42,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Genesis ceremony** — the guided HUMANITY_ACCORD genesis wizard (CIRISServer
@@ -92,7 +93,7 @@ fun AccordCeremonyScreen(
                 .fillMaxSize()
                 .padding(pad)
                 .padding(horizontal = 16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
 

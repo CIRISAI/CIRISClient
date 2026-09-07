@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * ═══════════════════════════════════════════════════════════════════════════
@@ -344,7 +345,7 @@ fun ProposalApprovalDialog(
         },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()).fillMaxWidth(),
+                modifier = Modifier.testableVerticalScroll().fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // ─── What the agent asked for ───────────────────────────────

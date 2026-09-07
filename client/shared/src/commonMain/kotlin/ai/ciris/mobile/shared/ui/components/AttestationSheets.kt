@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonElement
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * The shared sign / confirm sub-flows for the Trust Root — defined ONCE, opened by
@@ -186,7 +187,7 @@ fun HardwareScrubSheet(
             Column(
                 modifier = Modifier
                     .heightIn(max = 460.dp)
-                    .verticalScroll(rememberScrollState())
+                    .testableVerticalScroll()
                     .testable("scrub_sheet_$tagPrefix"),
             ) {
                 Text(

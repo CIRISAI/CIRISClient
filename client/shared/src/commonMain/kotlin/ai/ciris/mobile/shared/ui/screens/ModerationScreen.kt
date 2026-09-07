@@ -59,6 +59,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Moderation card** — moderation as a delegable DUTY, not a role (CC §4.5.x).
@@ -129,7 +130,7 @@ fun ModerationScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
@@ -795,7 +796,7 @@ private fun LadderConfirmSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp)
                 .heightIn(max = 620.dp)
-                .verticalScroll(rememberScrollState())
+                .testableVerticalScroll()
                 .testable("sheet_ladder_confirm"),
         ) {
             Text(

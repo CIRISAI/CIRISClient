@@ -30,6 +30,7 @@ import ai.ciris.mobile.shared.ui.components.refusalText
 import ai.ciris.mobile.shared.ui.components.surfaceText
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.viewmodels.MeshConfigViewModel
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **The Mesh Configuration plane, rendered** (CIRISServer#346 / #365,
@@ -834,7 +835,7 @@ private fun MeshConfigWriteDialog(
         title = { Text(localizedString("surfaces.mesh_config.write_title")) },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier.testableVerticalScroll(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Box {

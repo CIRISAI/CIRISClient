@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 // ============================================================================
 // Skill Workshop Dialog - HyperCard-style card editor
@@ -149,7 +150,7 @@ fun SkillImportDialog(
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(16.dp)
-                        .verticalScroll(rememberScrollState()),
+                        .testableVerticalScroll(),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     // Error display

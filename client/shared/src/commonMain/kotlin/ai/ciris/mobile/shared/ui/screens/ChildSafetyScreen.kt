@@ -42,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **Child-safety / watchlist card** (CC 4.5.7).
@@ -94,7 +95,7 @@ fun ChildSafetyScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()),
+                .testableVerticalScroll(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ── The load-bearing honesty banner (always visible, never buried) ──

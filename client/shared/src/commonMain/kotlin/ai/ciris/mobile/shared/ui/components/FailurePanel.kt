@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 
 /**
  * **What kind of failure this is** — because the two need different words and
@@ -181,7 +182,7 @@ fun FailurePanel(
                     color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier
                         .padding(8.dp)
-                        .verticalScroll(rememberScrollState())
+                        .testableVerticalScroll()
                         .testable("failure_panel_detail"),
                 )
             }
