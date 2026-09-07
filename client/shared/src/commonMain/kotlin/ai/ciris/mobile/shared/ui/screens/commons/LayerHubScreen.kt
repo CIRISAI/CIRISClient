@@ -37,6 +37,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.CohortScope
 import ai.ciris.mobile.shared.ui.nav.SubstrateGate
@@ -201,7 +202,7 @@ private fun LocalCommunityEnvironmentCard(onOpenEnvironment: () -> Unit) {
                 onClick = onOpenEnvironment,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable("btn_open_environment") { onOpenEnvironment() },
+                    .testableWithHandler("btn_open_environment") { onOpenEnvironment() },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),
@@ -261,7 +262,7 @@ private fun FamilyDelegationsCard(onOpenDelegations: () -> Unit) {
                 onClick = onOpenDelegations,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable("btn_open_delegations") { onOpenDelegations() },
+                    .testableWithHandler("btn_open_delegations") { onOpenDelegations() },
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                 ),

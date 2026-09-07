@@ -24,7 +24,7 @@ import ai.ciris.mobile.shared.models.federation.AccordHaltStatusResponse
 import ai.ciris.mobile.shared.models.federation.AccordHolderDto
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 import ai.ciris.mobile.shared.platform.testable
-import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.nav.NavSurface
@@ -68,7 +68,7 @@ fun ConstitutionalScreen(
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
                             onClick = onNavigateBack,
-                            modifier = Modifier.testableClickable("btn_constitutional_back") { onNavigateBack() },
+                            modifier = Modifier.testableWithHandler("btn_constitutional_back") { onNavigateBack() },
                         ) {
                             Icon(
                                 imageVector = CIRISIcons.arrowBack,
@@ -82,7 +82,7 @@ fun ConstitutionalScreen(
                 actions = {
                     IconButton(
                         onClick = onRefresh,
-                        modifier = Modifier.testableClickable("btn_constitutional_refresh") { onRefresh() },
+                        modifier = Modifier.testableWithHandler("btn_constitutional_refresh") { onRefresh() },
                     ) {
                         Icon(
                             imageVector = CIRISIcons.refresh,
@@ -241,7 +241,7 @@ fun ConstitutionalScreen(
                                 onClick = onOpenAccordCeremony,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .testableClickable("btn_open_accord_ceremony") { onOpenAccordCeremony() },
+                                    .testableWithHandler("btn_open_accord_ceremony") { onOpenAccordCeremony() },
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
                                 ),
@@ -255,7 +255,7 @@ fun ConstitutionalScreen(
                                 onClick = onOpenProvisionHolder,
                                 modifier = Modifier
                                     .weight(1f)
-                                    .testableClickable("btn_open_provision_holder") { onOpenProvisionHolder() },
+                                    .testableWithHandler("btn_open_provision_holder") { onOpenProvisionHolder() },
                             ) {
                                 Text(
                                     text = localizedString("nav.surface.provision_accord_holder"),

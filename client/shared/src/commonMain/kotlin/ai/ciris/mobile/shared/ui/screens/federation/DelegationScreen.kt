@@ -22,7 +22,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.DelegationDto
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 import ai.ciris.mobile.shared.platform.testable
-import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.nav.NavSurface
@@ -61,7 +61,7 @@ fun DelegationScreen(
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
                             onClick = onNavigateBack,
-                            modifier = Modifier.testableClickable("btn_delegation_back") { onNavigateBack() },
+                            modifier = Modifier.testableWithHandler("btn_delegation_back") { onNavigateBack() },
                         ) {
                             Icon(
                                 imageVector = CIRISIcons.arrowBack,
@@ -75,7 +75,7 @@ fun DelegationScreen(
                 actions = {
                     IconButton(
                         onClick = onRefresh,
-                        modifier = Modifier.testableClickable("btn_delegation_refresh") { onRefresh() },
+                        modifier = Modifier.testableWithHandler("btn_delegation_refresh") { onRefresh() },
                     ) {
                         Icon(
                             imageVector = CIRISIcons.refresh,
@@ -199,11 +199,7 @@ fun DelegationScreen(
                             modifier = Modifier.fillMaxWidth(),
                         ) {
                             Text(
-                                text = if (delegations.isNotEmpty()) {
-                                    "${delegations.size} active inbound authority grant(s)"
-                                } else {
-                                    "No active inbound delegations recorded"
-                                },
+                                text = "No active inbound delegations recorded",
                                 color = CIRISColors.TextPrimary,
                                 fontSize = 12.sp,
                                 fontFamily = FontFamily.Monospace,
@@ -257,7 +253,7 @@ fun DelegationScreen(
                             onClick = onManageDeviceGrants,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testableClickable("btn_delegation_manage_grants") { onManageDeviceGrants() },
+                                .testableWithHandler("btn_delegation_manage_grants") { onManageDeviceGrants() },
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MaterialTheme.colorScheme.primary,
                             ),
