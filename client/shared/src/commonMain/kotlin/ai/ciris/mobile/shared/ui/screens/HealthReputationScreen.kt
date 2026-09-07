@@ -5,10 +5,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -98,9 +100,9 @@ fun HealthReputationScreen(
             // The σ-maturity explainer (lifted from the old popup)
             CapacityMaturityNote(state)
 
-            // Federation-attestations sub-section gated on CIRISLensCore#25
+            // Federation-attestations sub-section (LensCore merged in-tree)
             Spacer(Modifier.height(8.dp))
-            FederationAttestationsGate(onIssueClick)
+            FederationAttestationsSection(state = state)
 
             // Spec link
             Row(
@@ -140,90 +142,98 @@ private fun HealthHeader(state: CellVizState) {
 
 @Composable
 private fun CategoryPill(category: String) {
-    val (bg, fg, label) = when (category) {
-        "high_capacity", "healthy" -> Triple(CIRISColors.StatusOk.copy(alpha = 0.15f), CIRISColors.StatusOk, category.uppercase().replace("_", " "))
-        "moderate" -> Triple(CIRISColors.StatusWarn.copy(alpha = 0.15f), CIRISColors.StatusWarn, "MODERATE")
-        "high_fragility" -> Triple(CIRISColors.StatusErr.copy(alpha = 0.15f), CIRISColors.StatusErr, "HIGH FRAGILITY")
-        "pending" -> Triple(CIRISColors.TextDim.copy(alpha = 0.15f), CIRISColors.TextDim, "WARMING UP")
+    val (bg, fg, label) = when (category.lowercase()) {
+        "high_capacity" -> Triple(CIRISColors.SignetTeal.copy(alpha = 0.15f), CIRISColors.SignetTeal, "HIGH CAPACITY")
+        "healthy" -> Triple(CIRISColors.SignetTeal.copy(alpha = 0.15f), CIRISColors.SignetTeal, "HEALTHY")
+        "moderate" -> Triple(CIRISColors.BusTool.copy(alpha = 0.15f), CIRISColors.BusTool, "MODERATE")
+        "high_fragility" -> Triple(CIRISColors.StatusWarn.copy(alpha = 0.15f), CIRISColors.StatusWarn, "HIGH FRAGILITY")
+        "pending" -> Triple(CIRISColors.BusTool.copy(alpha = 0.15f), CIRISColors.BusTool, "WARMING UP")
         else -> Triple(CIRISColors.TextDim.copy(alpha = 0.15f), CIRISColors.TextDim, category.uppercase())
     }
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(50))
             .background(bg)
-            .border(1.dp, fg.copy(alpha = 0.40f), RoundedCornerShape(50))
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-            .testTag("capacity_category_pill"),
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(text = label, color = fg, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.0.sp)
+        Text(
+            text = label,
+            color = fg,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.8.sp,
+        )
     }
 }
 
 @Composable
 private fun CompositeScoreHero(state: CellVizState) {
-    val local = state.localScore
-    val fleet = state.compositeScore
-    Box(
+    val hasLocal = state.localScore != null
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CIRISColors.BackgroundDarker)
-            .border(1.dp, CIRISColors.SignetTeal.copy(alpha = 0.30f), RoundedCornerShape(12.dp))
-            .padding(20.dp)
-            .testTag("capacity_composite_hero"),
+            .testable("card_capacity_composite"),
+        color = CIRISColors.BackgroundDarker,
+        shape = RoundedCornerShape(14.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                text = "Composite (𝒞_CIRIS = C · I_int · R · I_inc · S)",
-                color = CIRISColors.TextTertiary,
-                fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
-            )
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = if (state.isPreFetch) "…" else fmt(fleet),
-                    color = CIRISColors.AccentCyan,
-                    fontSize = 44.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.testTag("capacity_composite_value"),
-                )
-                Spacer(Modifier.width(12.dp))
-                local?.let {
-                    Column {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "COMPOSITE SCORE",
+                        color = CIRISColors.TextDim,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = if (state.isPreFetch) "—" else fmt(state.compositeScore),
+                        color = CIRISColors.TextPrimary,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Bold,
+                        fontFamily = FontFamily.Monospace,
+                    )
+                    if (!state.isPreFetch && hasLocal) {
+                        Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "local",
-                            color = CIRISColors.TextDim,
-                            fontSize = 9.sp,
-                            letterSpacing = 1.0.sp,
-                        )
-                        Text(
-                            text = fmt(it),
-                            color = CIRISColors.SignetTeal,
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.testTag("capacity_local_value"),
+                            text = "Local: ${fmt(state.localScore!!)} · Fleet: ${fmt(state.compositeScore)}",
+                            color = CIRISColors.TextSecondary,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
                         )
                     }
                 }
+                Surface(
+                    color = CIRISColors.SignetTeal.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(6.dp),
+                ) {
+                    Text(
+                        text = if (hasLocal) "LOCAL + FLEET" else "FLEET ONLY",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.8.sp,
+                        color = CIRISColors.SignetTeal,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
             }
-            Text(
-                text = if (local != null) {
-                    "Local reflects this device's CCA approximation (service health, LLM health, sustainability). Fleet is the template-aggregate across every install of the same agent template — your context."
-                } else {
-                    "Fleet score across every install of the same agent template. Local score climbs as the device accumulates operational evidence."
-                },
-                color = CIRISColors.TextSecondary,
-                fontSize = 12.sp,
-                lineHeight = 18.sp,
-            )
-            // Fragility — only show when measurably elevated
-            if (!state.isPreFetch && state.fragilityIndex > 1.2f) {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Fragility index: ${fmt2(state.fragilityIndex)}",
-                    color = CIRISColors.StatusWarn,
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
+            if (!state.isPreFetch) {
+                LinearProgressIndicator(
+                    progress = { state.compositeScore.coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = CIRISColors.AccentCyan,
+                    trackColor = Color.White.copy(alpha = 0.08f),
                 )
             }
         }
@@ -231,98 +241,98 @@ private fun CompositeScoreHero(state: CellVizState) {
 }
 
 @Composable
-private fun FactorRow(short: String, name: String, value: Float, description: String) {
-    val clamped = value.coerceIn(0f, 1f)
-    Row(
+private fun FactorRow(
+    symbol: String,
+    title: String,
+    score: Float,
+    description: String,
+) {
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(CIRISColors.BackgroundDarker.copy(alpha = 0.7f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 14.dp, vertical = 12.dp)
-            .testTag("capacity_factor_$short"),
-        verticalAlignment = Alignment.CenterVertically,
+            .testable("factor_row_${symbol.lowercase()}"),
+        color = CIRISColors.BackgroundDarker,
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
     ) {
-        // Code label
-        Box(
-            modifier = Modifier
-                .width(58.dp)
-                .clip(RoundedCornerShape(6.dp))
-                .background(CIRISColors.SignetTeal.copy(alpha = 0.15f))
-                .padding(vertical = 6.dp),
-            contentAlignment = Alignment.Center,
+        Row(
+            modifier = Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text(
-                text = short,
-                color = CIRISColors.SignetTeal,
-                fontSize = 12.sp,
-                fontFamily = FontFamily.Monospace,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-        Spacer(Modifier.width(14.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(name, color = CIRISColors.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-            Text(description, color = CIRISColors.TextDim, fontSize = 11.sp, lineHeight = 16.sp)
-            Spacer(Modifier.height(6.dp))
-            LinearProgressIndicator(
-                progress = clamped,
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(50)),
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.06f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = symbol,
+                    color = CIRISColors.TextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    fontFamily = FontFamily.Monospace,
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    color = CIRISColors.TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = description,
+                    color = CIRISColors.TextSecondary,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                )
+            }
+            Text(
+                text = fmt(score),
                 color = CIRISColors.AccentCyan,
-                trackColor = Color.White.copy(alpha = 0.06f),
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                fontFamily = FontFamily.Monospace,
             )
         }
-        Spacer(Modifier.width(12.dp))
-        Text(
-            text = fmt(clamped),
-            color = CIRISColors.TextPrimary,
-            fontSize = 13.sp,
-            fontFamily = FontFamily.Monospace,
-            fontWeight = FontWeight.Medium,
-        )
     }
 }
 
 @Composable
 private fun CapacityMaturityNote(state: CellVizState) {
-    Column(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .background(CIRISColors.SignetTeal.copy(alpha = 0.06f))
-            .border(1.dp, CIRISColors.SignetTeal.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-            .padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+            .testable("card_capacity_maturity"),
+        color = CIRISColors.BackgroundDarker.copy(alpha = 0.6f),
+        shape = RoundedCornerShape(10.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.04f)),
     ) {
-        Text(
-            text = "Why a fresh install isn't 1.00",
-            color = CIRISColors.SignetTeal,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-        )
-        Text(
-            text = "The sustained-coherence factor (S) needs operational evidence: roughly 30 successful interactions over a 30-day rolling window for a fully computed local score. Until then it floors at 0.30 — by design, so a brand-new agent doesn't claim coherence it hasn't earned. Keep using the agent and the number climbs honestly.",
-            color = CIRISColors.TextSecondary,
-            fontSize = 12.sp,
-            lineHeight = 18.sp,
-        )
-        state.localScore?.let { local ->
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             Text(
-                text = "Right now your local score is ${fmt(local)}.",
-                color = CIRISColors.TextTertiary,
+                text = "ℹ",
+                color = CIRISColors.AccentCyan,
+                fontSize = 14.sp,
+            )
+            Text(
+                text = "σ-maturity tracks behavioral stability over time. As the agent completes interactions, sustained coherence confidence climbs.",
+                color = CIRISColors.TextDim,
                 fontSize = 11.sp,
-                fontFamily = FontFamily.Monospace,
+                lineHeight = 15.sp,
             )
         }
     }
 }
 
 @Composable
-private fun FederationAttestationsGate(onIssueClick: (String) -> Unit) {
-    val gate = SubstrateGate.LENSCORE_CAPACITY
+private fun FederationAttestationsSection(state: CellVizState) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -330,7 +340,7 @@ private fun FederationAttestationsGate(onIssueClick: (String) -> Unit) {
             .background(CIRISColors.BackgroundDarker.copy(alpha = 0.5f))
             .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
             .padding(14.dp)
-            .testTag("federation_capacity_gate"),
+            .testable("card_federation_capacity_attestations"),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -341,25 +351,46 @@ private fun FederationAttestationsGate(onIssueClick: (String) -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(50))
-                    .background(CIRISColors.BusTool.copy(alpha = 0.15f))
-                    .border(1.dp, CIRISColors.BusTool.copy(alpha = 0.40f), RoundedCornerShape(50))
-                    .clickable { onIssueClick(gate.url) }
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            ) {
-                Text(
-                    text = "COMING SOON",
-                    color = CIRISColors.BusTool,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = 1.0.sp,
-                )
+            if (state.isPreFetch) {
+                Surface(
+                    color = CIRISColors.BusTool.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(4.dp),
+                ) {
+                    Text(
+                        text = "WARMING UP",
+                        color = CIRISColors.BusTool,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.0.sp,
+                        modifier = Modifier
+                            .testable("federation_capacity_warming_up")
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
+            } else {
+                Surface(
+                    color = CIRISColors.SignetTeal.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(4.dp),
+                ) {
+                    Text(
+                        text = "LIVE",
+                        color = CIRISColors.SignetTeal,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.0.sp,
+                        modifier = Modifier
+                            .testable("federation_capacity_live")
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    )
+                }
             }
         }
         Text(
-            text = "Per-cohort manifold conformity, correlated-action axes, and distributive-access readings ship when ${gate.shortRef} closes. Today's card shows local + fleet only.",
+            text = if (state.isPreFetch) {
+                "Node capacity detectors warming up. Sustained coherence and manifold conformity readings will appear once initial metrics settle."
+            } else {
+                "Active federation capacity standing (capacity:sustained_coherence:v1). Coherence ratchet, manifold conformity, and distributive access detectors running in node core."
+            },
             color = CIRISColors.TextDim,
             fontSize = 11.sp,
             lineHeight = 16.sp,
@@ -394,17 +425,18 @@ private fun fmt2(v: Float): String {
  * Once the CIRISApp.kt rewire wires every callsite through the state-hoisted
  * shape, delete this overload.
  */
+/**
+ * Deprecated overload — kept as the no-arg path for callers wired up before
+ * the state-hoisted version landed. Renders the live card with default state.
+ */
 @Deprecated(
     message = "Use the overload that takes CellVizState — the score now ships as a real card.",
     replaceWith = ReplaceWith("HealthReputationScreen(state, onIssueClick)"),
 )
 @Composable
 fun HealthReputationScreen(onIssueClick: (String) -> Unit = {}) {
-    ComingSoonPlaceholder(
-        title = NavSurface.HealthReputation.label,
-        icon = NavSurface.HealthReputation.icon,
-        description = "Per-agent reputation surface. The state-hoisted overload of this composable ships now; this no-arg fallback renders the substrate-gate placeholder.",
-        gate = SubstrateGate.LENSCORE_CAPACITY,
+    HealthReputationScreen(
+        state = CellVizState(),
         onIssueClick = onIssueClick,
     )
 }

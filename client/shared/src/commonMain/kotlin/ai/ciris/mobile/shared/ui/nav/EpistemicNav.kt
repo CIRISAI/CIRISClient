@@ -301,7 +301,6 @@ sealed class NavSurface(
     /** Self — the agent itself. Implicit in the user's mental model. */
     object LayerAgent : NavSurface(
         id = "layer-agent", label = "Agent (Self)", icon = CIRISIcons.person,
-        gate = SubstrateGate.EDGE_PEERRESOLVER,
         labelKey = "commons.layer.agent.title",
     )
 
@@ -315,19 +314,16 @@ sealed class NavSurface(
     )
     object EnvironmentGraph : NavSurface(
         // Ungated 2.9.6 — routes to the live EnvironmentInfo screen
-        // (/v1/memory?scope=environment). The cohort-overlay extension remains
-        // future work; the base environment view ships now.
+        // (/v1/memory?scope=environment). Reachable under Local Community.
         id = "environment-graph", label = "Environment Graph", icon = CIRISIcons.snapshot,
         labelKey = "commons.federation.environment_graph.title",
     )
     object Delegation : NavSurface(
         id = "delegation", label = "Delegation", icon = CIRISIcons.send,
-        gate = SubstrateGate.PERSIST_DELEGATES_TO,
         labelKey = "commons.federation.delegation.title",
     )
     object Constitutional : NavSurface(
         id = "constitutional", label = "Constitutional", icon = CIRISIcons.instructions,
-        gate = SubstrateGate.REGISTRY_ACCORD_HOLDER,
         labelKey = "commons.federation.constitutional.title",
     )
 
@@ -367,7 +363,6 @@ sealed class NavSurface(
     /** Other CIRIS occurrences sharing the operator's identity. */
     object LayerFamily : NavSurface(
         id = "layer-family", label = "Family", icon = CIRISIcons.home,
-        gate = SubstrateGate.EDGE_PEERRESOLVER,
         children = listOf(Delegation),
         labelKey = "commons.layer.family.title",
     )
@@ -375,14 +370,13 @@ sealed class NavSurface(
     /** One home channel / Discord guild / household — locally-trusted peers. */
     object LayerLocalCommunity : NavSurface(
         id = "layer-local-community", label = "Local Community", icon = CIRISIcons.location,
-        gate = SubstrateGate.EDGE_PEERRESOLVER,
+        children = listOf(EnvironmentGraph),
         labelKey = "commons.layer.local_community.title",
     )
 
     /** Cross-community affinity groups the agent has joined (CEG affiliations). */
     object LayerGlobalCommunities : NavSurface(
         id = "layer-global-communities", label = "Global Communities", icon = CIRISIcons.shield,
-        gate = SubstrateGate.EDGE_PEERRESOLVER,
         children = listOf(Participate),
         labelKey = "commons.layer.global_communities.title",
     )
@@ -390,8 +384,7 @@ sealed class NavSurface(
     /** The federation as the universal layer (folds species + planet + federation). */
     object LayerGlobalCommons : NavSurface(
         id = "layer-global-commons", label = "Global Commons", icon = CIRISIcons.globe,
-        gate = SubstrateGate.EDGE_PEERRESOLVER,
-        children = listOf(EnvironmentGraph, Constitutional),
+        children = listOf(Constitutional),
         labelKey = "commons.layer.global_commons.title",
     )
 
@@ -418,40 +411,10 @@ enum class SubstrateGate(
     val prefixFamily: String,
     val fsdSection: String,
 ) {
-    VERIFY_ATTESTATION_LADDER(
-        repo = "CIRISVerify", issueNumber = 36,
-        prefixFamily = "attestation:l1..l5 + provenance:* + hardware_custody:*",
-        fsdSection = "FSD-002 §3.2",
-    ),
-    PERSIST_DELEGATES_TO(
-        repo = "CIRISPersist", issueNumber = 104,
-        prefixFamily = "federation_directory:* + delegates_to (structural)",
-        fsdSection = "FSD-002 §3.3 + §2.2.1",
-    ),
-    EDGE_PEERRESOLVER(
-        repo = "CIRISEdge", issueNumber = 22,
-        prefixFamily = "peer_reachability:* + ContentFetch + VerifiedEnvelope feed",
-        fsdSection = "FSD-002 §3.4 + §3.6.7",
-    ),
     NODECORE_NEEDS(
         repo = "CIRISNodeCore", issueNumber = 12,
         prefixFamily = "need:{domain}:{kind} (new primitive, in flight)",
         fsdSection = "FSD-002 §3.6 (extension)",
-    ),
-    LENSCORE_CAPACITY(
-        repo = "CIRISLensCore", issueNumber = 25,
-        prefixFamily = "capacity:core_identity..sustained_coherence:composite",
-        fsdSection = "FSD-002 §3.5.4",
-    ),
-    LENSCORE_COHORT(
-        repo = "CIRISLensCore", issueNumber = 25,
-        prefixFamily = "manifold_conformity:{cohort} + detection:correlated_action:{axis} + detection:distributive:access:*",
-        fsdSection = "FSD-002 §3.5.2 + §3.5.3 + §3.5.5",
-    ),
-    REGISTRY_ACCORD_HOLDER(
-        repo = "CIRISRegistry", issueNumber = 23,
-        prefixFamily = "accord:* (reserved to identity_type=accord_holder)",
-        fsdSection = "FSD-002 §3.9 + §4.1",
     ),
     POST_SUBSTRATE_SUBSTITUTION(
         repo = "CIRISAgent", issueNumber = 800,
