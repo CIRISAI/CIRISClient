@@ -177,10 +177,16 @@ expect val LOOPBACK_HOST: String
  *
  * @return the endpoint now in effect.
  */
-suspend fun syncBackendFromEnv(updater: EnvFileUpdater): BackendEndpoint =
-    syncBackendFrom(object : EnvReader {
-        override suspend fun readRawEnv(): String? = updater.readRawEnv()
-    })
+suspend fun syncBackendFromEnv(
+    updater: EnvFileUpdater,
+    apiClient: ai.ciris.mobile.shared.api.CIRISApiClient,
+): BackendEndpoint =
+    syncBackendFrom(
+        object : EnvReader {
+            override suspend fun readRawEnv(): String? = updater.readRawEnv()
+        },
+        apiClient,
+    )
 
 /**
  * What [syncBackendFromEnv] needs from a home: its `.env`, or null.
@@ -193,12 +199,29 @@ interface EnvReader {
     suspend fun readRawEnv(): String?
 }
 
-/** See [syncBackendFromEnv]. */
-suspend fun syncBackendFrom(reader: EnvReader): BackendEndpoint {
+/**
+ * See [syncBackendFromEnv].
+ *
+ * [apiClient] is NOT optional, and that is the point. The first cut of this
+ * moved `LOCAL_NODE_URL` — which federation call sites read — and left the
+ * client every ORDINARY call goes through pinned at whatever it was
+ * constructed with, because `CIRISApp` builds it once inside a `remember`.
+ * So the node URL moved to :4243 and login still went to :8080. Taking the
+ * client as a required argument means the two cannot move apart again;
+ * a caller that has one cannot forget to hand it over.
+ */
+suspend fun syncBackendFrom(
+    reader: EnvReader,
+    apiClient: ai.ciris.mobile.shared.api.CIRISApiClient,
+): BackendEndpoint {
     ActiveBackend.resolveFrom(runCatching { reader.readRawEnv() }.getOrNull())
     val endpoint = ActiveBackend.endpoint
     if (endpoint == NODE_ONLY_ENDPOINT) {
-        ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(endpoint.baseUrl(LOOPBACK_HOST))
+        val url = endpoint.baseUrl(LOOPBACK_HOST)
+        ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(url)
+        // updateBaseUrl recreates every SDK instance, so this reaches the
+        // ~13 generated APIs as well as the direct HTTP calls.
+        if (apiClient.baseUrl != url) apiClient.updateBaseUrl(url)
     }
     return endpoint
 }

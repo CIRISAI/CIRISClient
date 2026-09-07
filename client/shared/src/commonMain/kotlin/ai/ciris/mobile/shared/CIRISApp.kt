@@ -364,7 +364,7 @@ fun CIRISApp(
     // the agent, deliberately — that is where every install predating the flag
     // serves.
     LaunchedEffect(Unit) {
-        val endpoint = syncBackendFromEnv(envFileUpdater)
+        val endpoint = syncBackendFromEnv(envFileUpdater, apiClient)
         PlatformLogger.i(TAG, "[BACKEND] serving on :${endpoint.port}${endpoint.healthPath}")
     }
 
@@ -2421,7 +2421,7 @@ fun CIRISApp(
                         // existed — 109 API inits at :8080 and "Restarting your
                         // node…" forever.
                         coroutineScope.launch {
-                            val endpoint = syncBackendFromEnv(envFileUpdater)
+                            val endpoint = syncBackendFromEnv(envFileUpdater, apiClient)
                             platformLog(TAG, "[INFO][BACKEND] after setup the backend is :${endpoint.port}")
                         }
                         // After setup completes, exchange OAuth ID token for CIRIS access token
