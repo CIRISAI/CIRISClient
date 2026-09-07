@@ -68,7 +68,6 @@ import ai.ciris.api.models.DocumentPayload
 import ai.ciris.api.models.ImagePayload
 import ai.ciris.api.models.InteractRequest as SdkInteractRequest
 import ai.ciris.api.models.LoginRequest as SdkLoginRequest
-import ai.ciris.api.models.SetupCompleteRequest as SdkSetupCompleteRequest
 import ai.ciris.api.models.ShutdownRequest as SdkShutdownRequest
 import ai.ciris.api.models.NativeTokenRequest as SdkNativeTokenRequest
 import ai.ciris.api.models.StateTransitionRequest as SdkStateTransitionRequest
@@ -7211,48 +7210,21 @@ class CIRISApiClient(
         logInfo(method, "Completing setup: provider=${request.llm_provider}, template=${request.template_id}, username=${request.admin_username}")
 
         return try {
-            val sdkRequest = SdkSetupCompleteRequest(
-                llmProvider = request.llm_provider,
-                llmApiKey = request.llm_api_key,
-                llmBaseUrl = request.llm_base_url,
-                llmModel = request.llm_model,
-                backupLlmApiKey = request.backup_llm_api_key,
-                backupLlmBaseUrl = request.backup_llm_base_url,
-                backupLlmModel = request.backup_llm_model,
-                templateId = request.template_id,
-                enabledAdapters = request.enabled_adapters,
-                adapterConfig = request.adapter_config.mapValues { JsonPrimitive(it.value) },
-                agentPort = request.agent_port,
-                systemAdminPassword = request.system_admin_password,
-                adminUsername = request.admin_username,
-                adminPassword = request.admin_password,
-                oauthProvider = request.oauth_provider,
-                oauthExternalId = request.oauth_external_id,
-                oauthEmail = request.oauth_email,
-                nodeUrl = request.node_url,
-                signingKeyId = request.signing_key_id,
-                signingKeyProvisioned = request.signing_key_provisioned,
-                provisionedSigningKeyB64 = request.provisioned_signing_key_b64
-            )
-            logDebug(method, "Created SdkSetupCompleteRequest with signingKeyId=${request.signing_key_id}")
+            // OUR MODEL IS THE WIRE. See SetupCompleteWire.kt for why it is not
+            // re-typed into the generated SDK model any more (CIRISClient#41).
+            val body = request.toWireJson()
+            logDebug(method, "Request carries run_without_ai=${request.run_without_ai} trace_analyze=${request.trace_analyze}")
 
             // Use manual HTTP request to handle error responses properly
             // The generated SDK tries to parse error responses as success, which fails
             val httpClient = HttpClient {
                 install(ContentNegotiation) {
+                    // Response parsing only; the request body is pre-encoded by
+                    // toWireJson() with the config that owns the default-collision
+                    // fix (SetupCompleteWire.kt).
                     json(Json {
                         ignoreUnknownKeys = true
                         isLenient = true
-                        // DEFAULT-COLLISION FIX: the generated SdkSetupCompleteRequest
-                        // declares adminUsername default "admin". With kotlinx's
-                        // default encodeDefaults=false, a user who picks EXACTLY
-                        // "admin" serializes as an ABSENT field → the server's
-                        // pydantic default ("owner") wins → the account is created
-                        // as "owner" and the user's admin/password login bounces
-                        // forever. Encode set values always; keep omitting nulls so
-                        // server-side defaults still apply to genuinely-unset fields.
-                        encodeDefaults = true
-                        explicitNulls = false
                     })
                 }
                 install(HttpTimeout) {
@@ -7267,7 +7239,7 @@ class CIRISApiClient(
             try {
                 val httpResponse = httpClient.post("$baseUrl/v1/setup/complete") {
                     contentType(io.ktor.http.ContentType.Application.Json)
-                    setBody(sdkRequest)
+                    setBody(body)
                 }
 
                 val statusCode = httpResponse.status.value

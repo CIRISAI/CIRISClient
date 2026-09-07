@@ -24,8 +24,11 @@ import kotlin.test.assertTrue
  *
  * Everything between the click and the payload is client-side, so this walks
  * exactly that path: choose, advance, build the request. There is no UI here on
- * purpose — if these pass, the model is sound and the loss is in delivery
- * (the click, or the screen); if they fail, it is here.
+ * purpose — if these pass, the model is sound and the loss is in delivery.
+ *
+ * AND IT WAS (CIRISClient#41). These passed on the release that lost the
+ * choice: `CIRISApiClient.completeSetup` re-typed the model into a generated
+ * SDK class with no `run_without_ai`. `CompleteSetupWireTest` reads the bytes.
  */
 class RunWithoutAiDeliveryTest {
 
