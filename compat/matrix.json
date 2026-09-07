@@ -743,6 +743,39 @@
       },
       "notes": "BOTH AGE BANDS RENDERED AT ZERO WIDTH FROM 0.5.203 (#42). 'Prefer not to say' sat inside the same Row as the two bands carrying fillMaxWidth(); Row measures unweighted children first against the full width and gives the weighted ones what remains, so that child took all of it and both bands measured to zero. USER-FACING, not a harness artifact: the bands were invisible to a person, so the only selectable answer on a required question was 'prefer not to say', which is treated as under-18 WITH STEWARDSHIP -- every setup since 0.5.203 took the protective path whether or not the owner wanted it. It hid because the controls were still composed and still registered click handlers, so the pre-0.5.206 coordinate fallback clicked a zero-size rect and automation looked green; 0.5.206's honest visibility reporting is what surfaced it, the agent's gate reading four drivable controls on the YOU step with NEITHER band among them. Adds client/tools/check_row_layout.py, a hard-zero lint in build.yml and the release gates that walks each Row's children seeing THROUGH control flow (the bands were inside a forEach, which is why no direct-child reading of the source put them beside the offender) and stopping at nested layout containers; mutation-verified in both directions. 0.5.207 published its wheels to PyPI but its ios-xcframework job was CANCELLED to cut this release, so the v0.5.207 GitHub release carries no XCFramework -- take iOS artifacts from v0.5.208. Pairs with every agent and node 0.5.206 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.209",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client now TALKS to the node it was already meant to; it reads nothing new from it",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE RUN-WITHOUT-AI SWITCH WAS NEVER PLUGGED IN (#43). After the hand-off the client kept polling :8080 -- 109 CIRISApiClient inits at the agent port, none at :4243, and 'Restarting your node...' forever while the node was serving the whole time. Not an overwrite: :4243 was never chosen. ActiveBackend, runWithoutAiFromEnv and BackendEndpoint shipped in 0.5.203 with fifteen passing tests and ActiveBackend.resolveFrom HAD NO PRODUCTION CALLER ON ANY PLATFORM -- its only references were that test and a doc comment saying 'a platform that has not wired resolveFrom yet', which described every platform. Desktop never consulted it and took its port from CIRIS_API_URL (the launcher sets the agent's :8080); iOS and Android read it and so carried the SAME BUG LATENT, undriven. Now resolved at BOTH moments it must hold: at startup before anything polls, and when setup COMPLETES, because the hand-off replaces the agent process and not the client. EnvFileUpdater.readRawEnv() (expect + four actuals) is the read, syncBackendFromEnv the seam, and desktop's PythonRuntime.serverUrl follows the same answer so the health poll moves too. The node URL is forced ONLY in the run-without-AI direction: the other way would stamp on CIRIS_NODE_URL and on an operator attached to someone else's node (#26). LOOPBACK_HOST replaces two hardcoded call sites -- Android must say localhost for the WebView's Same-Origin Policy. MOBILE IS FIXED BY THE SAME CHANGE, having been broken the same way without anyone driving it. Pairs with agent 2.11.0, which shuts the brain down and serves only :4243, and with every agent and node 0.5.208 does.",
+      "published": null
     }
   ]
 }
