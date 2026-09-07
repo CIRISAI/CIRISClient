@@ -391,6 +391,24 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         println("[PythonRuntime.desktop] Found ciris-server at: $cirisServer")
         println("[PythonRuntime.desktop] Node home: $home (node listens on :${getNodeListenPort()}, API on :${getPort()})")
 
+        // Nothing answered on the API (we are here because checkExistingServer
+        // said NOT_RUNNING), but a backend that was just killed — by us on a
+        // factory reset, or by whoever launched it — can still hold its ports
+        // for a couple of seconds. Starting into that gap is CIRISClient#40.
+        // Wait for the ports, and if they never clear say WHICH, in our words,
+        // rather than letting Edge init fail in its.
+        val held = PortRelease.awaitFree(backendPorts(), timeoutMs = 15_000)
+        if (held.isNotEmpty()) {
+            throw RuntimeException(
+                "Cannot start the CIRIS backend: port(s) $held are still held by another process " +
+                "and nothing is answering on $_serverUrl. A previous backend is most likely still " +
+                "shutting down or stuck (CIRISAgent#1152).\n\n" +
+                "  Linux/Mac: lsof -i :${held.first()} | grep LISTEN | awk '{print \$2}' | xargs kill -9\n" +
+                "  Windows: netstat -ano | findstr :${held.first()} then taskkill /PID <pid> /F\n\n" +
+                "Then restart the application."
+            )
+        }
+
         _serverProcess = ProcessBuilder(
             cirisServer,
             "--home", home,
@@ -604,15 +622,53 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         // Kill the server process if we launched it
         _serverProcess?.let { proc ->
             println("[PythonRuntime.desktop] Shutting down server process (PID: ${proc.pid()})...")
+            // ONE SIGTERM, a bounded grace, then SIGKILL, then WAIT FOR THE PORTS
+            // (CIRISClient#40).
+            //
+            // `waitFor(timeout)` RETURNS FALSE on timeout; it does not throw. The
+            // previous code only escalated inside a catch, so a backend that
+            // ignored SIGTERM was left running with `_serverProcess = null` —
+            // and the agent does ignore it (CIRISAgent#1152: the signal is
+            // logged and never acted on). The grace stays, so a build where
+            // #1152 is fixed gets its graceful release; it is not relied on.
+            //
+            // Never a second SIGTERM: the agent's handler turns it into
+            // KeyboardInterrupt, which bypasses the graceful release entirely.
             proc.destroy()
-            try {
+            val exited = try {
                 proc.waitFor(5, java.util.concurrent.TimeUnit.SECONDS)
             } catch (_: Exception) {
+                false
+            }
+            if (!exited) {
+                println("[PythonRuntime.desktop] Backend did not exit on SIGTERM within 5s — SIGKILL")
                 proc.destroyForcibly()
+                try { proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) {}
             }
             _serverProcess = null
+            // The pid being gone is not the ports being free: SIGKILL releases
+            // them about 2s later, and a backend started in that gap dies on
+            // "Edge transport ports are held by another process".
+            val held = PortRelease.awaitFree(backendPorts(), timeoutMs = 15_000)
+            if (held.isEmpty()) {
+                println("[PythonRuntime.desktop] Backend ports released: ${backendPorts()}")
+            } else {
+                println("[PythonRuntime.desktop] WARNING: ports still held 15s after SIGKILL: $held")
+            }
         }
     }
+
+    /**
+     * Every port a local backend can hold: the API this runtime talks to, the
+     * node's base/Edge port beneath it, and the agent's pair — a run-without-AI
+     * install hands off from one to the other, so a restart must see both clear.
+     */
+    private fun backendPorts(): List<Int> =
+        listOf(
+            getPort().toIntOrNull() ?: 4243,
+            getNodeListenPort().toIntOrNull() ?: PortRelease.EDGE_PORT,
+            8080, 4243, PortRelease.EDGE_PORT,
+        ).distinct()
 
     actual override fun isInitialized(): Boolean = _initialized
 
