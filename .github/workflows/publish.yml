@@ -164,13 +164,10 @@ jobs:
 
       - name: Gates
         if: matrix.name == 'linux-x86_64'
-        run: |
-          set -euo pipefail
-          python3 packaging/check_vendoring.py
-          python3 compat/validate.py
-          python3 packaging/check_pins.py
-          python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
-          python3 client/tools/check_localization_sync.py --server-src .emitters --strict
+        # ONE LIST, in packaging/gates.sh, runnable at a keyboard before the tag
+        # exists. 0.5.204 and 0.5.205 built every wheel and published nothing
+        # because this step was the first place the list ran.
+        run: bash packaging/gates.sh .emitters
 
       - name: The tag must name the version being published
         if: startsWith(github.ref, 'refs/tags/v')
