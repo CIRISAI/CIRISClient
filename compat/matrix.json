@@ -611,6 +611,39 @@
       },
       "notes": "THE SETUP REQUEST BODY IS THE CLIENT'S OWN MODEL (#41). completeSetup() re-typed CompleteSetupRequest into the generated SDK's SetupCompleteRequest, built from an openapi.json that says 1.0.0 and knows seventeen properties; ours carries thirty-six. Every field the SDK lacked was silently omitted and the agent's default won: run_without_ai (the owner chose no AI, the agent configured a brain with no LLM), trace_analyze, share_location_in_traces, preferred_language, the five location_* fields, timezone, identity_template, stewardship_tier, approved_adapters, org_id. The body is now the model encoded directly; CompleteSetupWireTest counts every declared property on the wire. Pairs with every agent that accepts those fields (2.9.14+); older agents ignore unknown keys. COMPOSED IS NOT SHOWN (#33): ModalNavigationDrawer composes its content always and translates it off screen when closed, so on phones the nav rail was listed by /tree with live handlers and no pixels. ElementInfo.visible reads the window-clipped bounds; /wait resolves only on usable, /click and /input refuse off-screen elements, and every refusal names what IS drivable on screen. Harnesses that read /tree gain a field; nothing they read is removed.",
       "published": null
+    },
+    {
+      "client_version": "0.5.205",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A desktop process-lifecycle fix; the client reads nothing new from the node or the agent",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "A RESTART WAITS FOR THE PORTS, NOT THE PID (#40). After a factory reset the next setup could not boot: the backend the app had just stopped still held :4242 and :4243. The agent measured that SIGTERM is accepted and never acted on (CIRISAgent#1152) and that SIGKILL releases the ports ~2s AFTER the pid is gone. Underneath that, our own shutdown never escalated: Process.waitFor(5s) returns false on timeout and the SIGKILL lived only in a catch, so every reset left the backend running. Now one SIGTERM, a 5s grace (kept, not relied on), SIGKILL, then a real bind() on :8080/:4243/:4242 until they clear (15s), and the same wait before any launch, with a message naming the held ports if they never do. Never a second SIGTERM. Desktop only; mobile runtimes are unchanged. Pairs with every agent and node 0.5.204 does.",
+      "published": null
     }
   ]
 }
