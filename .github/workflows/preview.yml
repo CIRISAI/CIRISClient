@@ -29,12 +29,20 @@
 #   1. PyPI REFUSES local versions. So a preview wheel cannot reach the index
 #      by any accident, misfire or future edit of this file. That is a
 #      structural guarantee rather than a policy someone has to remember.
-#   2. It is unmistakable in a log. `CLIENT_VERSION` is generated from the same
-#      VERSION file, so the running desktop app reports the preview and its
-#      sha — which is exactly what you want when a gate run says something
-#      surprising and the question is "what was actually installed".
+#   2. It is unmistakable in a `pip list` or a wheel filename, which is what
+#      you want when a gate run says something surprising and the question is
+#      "what was actually installed".
 #
-# Stamping happens AFTER the gates, because `compat/validate.py` and
+# It reaches the WHEEL and not the jar. Stamping before Gradle looked tidier
+# and broke every Gradle job on the first run: Compose Desktop validates the
+# native package version as strict MAJOR[.MINOR][.PATCH] and rejects a PEP 440
+# local segment at project configuration. So each job builds with the real
+# VERSION and stamps immediately afterwards, before staging — the manifest is
+# written from VERSION at staging time, so manifest and wheel still agree.
+# `CLIENT_VERSION` inside the jar is therefore the base version; the release
+# notes carry the sha, which is the thing you actually need to identify a build.
+#
+# Stamping is also after the gates, because `compat/validate.py` and
 # `check_pins.py` legitimately require the tree's real VERSION to match the
 # matrix row and the `[web]` pin.
 name: preview
@@ -110,19 +118,26 @@ jobs:
         if: matrix.name == 'linux-x86_64'
         run: bash packaging/gates.sh .emitters
 
-      # AFTER the gates. See the header for why this version and not a bump.
-      - name: Stamp this as a preview
-        shell: bash
-        run: |
-          set -euo pipefail
-          base=$(cat VERSION)
-          echo "${base}+preview.g${GITHUB_SHA:0:7}" > VERSION
-          echo "building $(cat VERSION)"
-
       - name: Desktop uber-jar for this OS
         working-directory: client
         shell: bash
         run: ./gradlew --no-daemon :desktopApp:packageUberJarForCurrentOS
+
+      # STAMPED AFTER GRADLE, DELIBERATELY. Compose Desktop validates the
+      # native package version as strict MAJOR[.MINOR][.PATCH], so a PEP 440
+      # local segment fails at project CONFIGURATION:
+      #   > Illegal version for 'Dmg': '1.5.208+preview' is not a valid version
+      # which took out every Gradle job on this workflow's first run while the
+      # one job with no Gradle passed. The jar therefore reports the base
+      # version and the WHEEL reports the preview; the manifest is written
+      # from VERSION at staging time, after this step, so manifest and wheel
+      # still agree and the consumption contract still holds.
+      - name: Stamp this as a preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
+          echo "wheel version: $(cat VERSION)"
 
       - name: Stage the jar, stamped with the platform it was built for
         shell: bash
@@ -245,14 +260,23 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: python3 -m pip install --upgrade pip build
 
+      - name: The web bundle
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:wasmJsBrowserDistribution
+
+      # STAMPED AFTER GRADLE, DELIBERATELY. Compose Desktop validates the
+      # native package version as strict MAJOR[.MINOR][.PATCH], so a PEP 440
+      # local segment fails at project CONFIGURATION:
+      #   > Illegal version for 'Dmg': '1.5.208+preview' is not a valid version
+      # which took out every Gradle job on this workflow's first run while the
+      # one job with no Gradle passed. The jar therefore reports the base
+      # version and the WHEEL reports the preview; the manifest is written
+      # from VERSION at staging time, after this step, so manifest and wheel
+      # still agree and the consumption contract still holds.
       - name: Stamp this as a preview
         run: |
           set -euo pipefail
           echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
-
-      - name: The web bundle
-        working-directory: client
-        run: ./gradlew --no-daemon :shared:wasmJsBrowserDistribution
 
       - name: Stage it
         run: |
@@ -297,14 +321,23 @@ jobs:
         with:
           cache-read-only: true
 
+      - name: The fat AAR
+        working-directory: client
+        run: ./gradlew --no-daemon :shared:fatReleaseAar
+
+      # STAMPED AFTER GRADLE, DELIBERATELY. Compose Desktop validates the
+      # native package version as strict MAJOR[.MINOR][.PATCH], so a PEP 440
+      # local segment fails at project CONFIGURATION:
+      #   > Illegal version for 'Dmg': '1.5.208+preview' is not a valid version
+      # which took out every Gradle job on this workflow's first run while the
+      # one job with no Gradle passed. The jar therefore reports the base
+      # version and the WHEEL reports the preview; the manifest is written
+      # from VERSION at staging time, after this step, so manifest and wheel
+      # still agree and the consumption contract still holds.
       - name: Stamp this as a preview
         run: |
           set -euo pipefail
           echo "$(cat VERSION)+preview.g${GITHUB_SHA:0:7}" > VERSION
-
-      - name: The fat AAR
-        working-directory: client
-        run: ./gradlew --no-daemon :shared:fatReleaseAar
 
       - name: Stage it
         run: |
