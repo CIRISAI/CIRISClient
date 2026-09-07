@@ -150,6 +150,7 @@ object TestAutomationState {
     val scrollRequests: StateFlow<ScrollRequest?> = _scrollRequests
 
     private val scrollables = mutableListOf<Long>()
+    private val scrollableCapacity = mutableMapOf<Long, Int>()
     private var nextScrollToken = 1L
 
     /** Claim a token for a scrollable that is now composed. */
@@ -161,10 +162,33 @@ object TestAutomationState {
 
     fun unregisterScrollable(token: Long) {
         scrollables.remove(token)
+        scrollableCapacity.remove(token)
     }
 
-    /** The most recently composed scrollable owns the dispatch. */
-    fun isActiveScrollable(token: Long): Boolean = scrollables.lastOrNull() == token
+    /** How far this scrollable can travel right now; 0 means no overflow. */
+    fun setScrollableCapacity(token: Long, maxValue: Int) {
+        scrollableCapacity[token] = maxValue
+    }
+
+    /**
+     * Which scrollable owns the dispatch.
+     *
+     * THE MOST RECENT ONE THAT CAN ACTUALLY MOVE. "Most recent" alone sends the
+     * request to whatever composed last -- a scaffold, a drawer, a sibling that
+     * happens to scroll -- and if that container has no overflow it consumes
+     * the request, does not move, and truthfully reports success while the
+     * element the caller wants stays off screen (CIRISClient#44). Preferring a
+     * scrollable with somewhere to go picks the one the request is about
+     * without needing to know the layout tree.
+     *
+     * When none has overflow the most recent still wins, so the outcome is
+     * reported as "no overflow" rather than "nothing consumed it" -- a real
+     * answer either way.
+     */
+    fun isActiveScrollable(token: Long): Boolean {
+        val movable = scrollables.lastOrNull { (scrollableCapacity[it] ?: 0) > 0 }
+        return (movable ?: scrollables.lastOrNull()) == token
+    }
 
     /** Whether anything on screen can act on a scroll request at all. */
     fun hasScrollable(): Boolean = scrollables.isNotEmpty()
@@ -175,6 +199,29 @@ object TestAutomationState {
 
     fun clearScrollRequest() {
         _scrollRequests.value = null
+    }
+
+    /**
+     * WHAT THE LAST SCROLL ACTUALLY DID.
+     *
+     * Acknowledging that a request was consumed is not the same as saying the
+     * screen moved: a scrollable with no overflow, or one already at its end,
+     * consumes the request and stays exactly where it was. `/scroll` then
+     * answered 200 and a caller could not tell that from a scroll that worked
+     * (CIRISClient#44) -- the two were byte-identical. The consumer records
+     * the offsets so handleScroll can answer for the MOVEMENT.
+     */
+    private var _lastScrollOutcome: ScrollOutcome? = null
+
+    fun recordScrollOutcome(from: Int, to: Int, max: Int) {
+        _lastScrollOutcome = ScrollOutcome(from, to, max)
+    }
+
+    /** Read once and forget, so a later request can never read a stale answer. */
+    fun takeScrollOutcome(): ScrollOutcome? {
+        val outcome = _lastScrollOutcome
+        _lastScrollOutcome = null
+        return outcome
     }
 }
 

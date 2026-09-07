@@ -51,6 +51,12 @@ fun rememberTestableScrollState(initial: Int = 0): ScrollState {
         onDispose { TestAutomationState.unregisterScrollable(token) }
     }
 
+    // Publish how far this scrollable can travel, so the dispatcher can pick a
+    // container that is able to move rather than merely the newest one.
+    LaunchedEffect(token, state.maxValue) {
+        TestAutomationState.setScrollableCapacity(token, state.maxValue)
+    }
+
     LaunchedEffect(token, state) {
         TestAutomationState.scrollRequests.collectLatest { request ->
             if (request == null || !TestAutomationState.isActiveScrollable(token)) return@collectLatest
@@ -58,7 +64,13 @@ fun rememberTestableScrollState(initial: Int = 0): ScrollState {
                 "up" -> -request.amount
                 else -> request.amount
             }
+            val before = state.value
             state.animateScrollBy(delta.toFloat())
+            // REPORT THE MOVEMENT, NOT THE ATTEMPT. A scrollable with no
+            // overflow, or one already at its end, consumes the request and
+            // does not move; without these offsets `/scroll` answered 200 for
+            // that exactly as for a scroll that worked (CIRISClient#44).
+            TestAutomationState.recordScrollOutcome(before, state.value, state.maxValue)
             // CLEARING IS THE ACKNOWLEDGEMENT. handleScroll waits for this, so
             // it must happen after the scroll has run, never before.
             TestAutomationState.clearScrollRequest()

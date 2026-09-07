@@ -123,6 +123,10 @@ data class ScreenshotRequest(val path: String, val format: String? = "png")
 @Serializable
 data class ScrollRequest(val testTag: String, val direction: String = "down", val amount: Int = 300)
 
+/** Where the scrollable was, where it ended up, and how far it can go. */
+@Serializable
+data class ScrollOutcome(val from: Int, val to: Int, val max: Int)
+
 @Serializable
 data class ActionResponse(
     val success: Boolean,

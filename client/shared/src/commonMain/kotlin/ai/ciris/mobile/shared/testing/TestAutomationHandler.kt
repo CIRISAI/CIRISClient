@@ -377,6 +377,7 @@ object TestAutomationHandler {
                 error = "a previous /scroll was still unapplied after ${APPLY_TIMEOUT_MS}ms",
             )
         }
+        TestAutomationState.takeScrollOutcome()
         TestAutomationState.requestScroll(request.testTag, request.direction, request.amount)
         if (!awaitScrollIdle()) {
             return ActionResponse(
@@ -384,11 +385,36 @@ object TestAutomationHandler {
                 error = "the screen did not apply the scroll within ${APPLY_TIMEOUT_MS}ms",
             )
         }
+
+        // ACCEPTED IS NOT MOVED (CIRISClient#44). The offsets say which.
+        val outcome = TestAutomationState.takeScrollOutcome()
+            ?: return ActionResponse(
+                success = false, element = request.testTag, action = "scroll",
+                error = "the screen consumed the request but reported no outcome",
+            )
+        val moved = "moved ${outcome.from}\u2192${outcome.to} of ${outcome.max}"
+        if (outcome.from == outcome.to) {
+            val why = when {
+                outcome.max == 0 ->
+                    "the scrollable on screen '${TestAutomationState.currentScreen}' has NO overflow " +
+                        "(maxValue=0), so this is not the container holding what you are looking for"
+                request.direction.lowercase() == "up" && outcome.from == 0 ->
+                    "already at the top"
+                outcome.from >= outcome.max ->
+                    "already at the bottom (${outcome.from} of ${outcome.max})"
+                else -> "the scrollable did not move ($moved)"
+            }
+            return ActionResponse(
+                success = false, element = request.testTag, action = "scroll",
+                text = moved,
+                error = "$why; " + onScreenHint(),
+            )
+        }
         return ActionResponse(
             success = true,
             element = request.testTag,
             action = "scroll",
-            text = "${request.direction}:${request.amount}"
+            text = "${request.direction}:${request.amount} $moved"
         )
     }
 
