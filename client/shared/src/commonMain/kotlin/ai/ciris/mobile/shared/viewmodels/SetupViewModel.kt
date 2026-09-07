@@ -189,6 +189,13 @@ class SetupViewModel(
     fun selectLocalOnDeviceProvider() {
         _state.value = _state.value.copy(
             setupMode = SetupMode.BYOK,
+            // Choosing on-device inference IS choosing an AI. setLlmProvider()
+            // clears runWithoutAi for exactly this reason and this path did
+            // not, so a person who said "without AI" and then picked on-device
+            // would have sent BOTH answers — run_without_ai=true beside a
+            // configured local provider. Two answers to one question, and the
+            // agent picks whichever it reads first.
+            runWithoutAi = false,
             llmProvider = LOCAL_ON_DEVICE_PROVIDER_ID,
             llmApiKey = "",
             llmBaseUrl = LOCAL_ON_DEVICE_BASE_URL,
