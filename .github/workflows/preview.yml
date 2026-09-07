@@ -445,6 +445,16 @@ jobs:
           EOF
           )"
           fi
+          # A RE-RUN REPLACES THE ASSET SET, it does not add to it. Asset names
+          # carry the sha, so `--clobber` only overwrites same-named files and a
+          # previous run's assets linger beside this one's — the first run of
+          # this workflow left a universal wheel and a localization bundle from
+          # a FAILED build sitting next to the good ones, two of each with
+          # different shas and nothing saying which was current.
+          for old in $(gh release view "$tag" --repo "$GITHUB_REPOSITORY" \
+                         --json assets -q '.assets[].name'); do
+            gh release delete-asset "$tag" "$old" --repo "$GITHUB_REPOSITORY" --yes
+          done
           gh release upload "$tag" "${files[@]}" --repo "$GITHUB_REPOSITORY" --clobber
           echo "preview published: $tag"
           echo "  $(printf '%s\n' "${files[@]}" | wc -l) asset(s)"
