@@ -456,6 +456,27 @@ fun CIRISApp(
     // the probe lands, while the LANDING must default to the node surface —
     // opening on a chat with no brain behind it is the worse wrong guess.
     val homeTarget = homeScreen(hasAgent = clientMode?.isAgent ?: false)
+    /**
+     * Should the WORK-STATE WAIT run — the three 150 × 200 ms polls for a
+     * cognitive state (CIRISClient#48).
+     *
+     * Deliberately NOT [isAgentMode], for the same reason [homeTarget] is not,
+     * and the cost of conflating them was measured: `isAgentMode` defaults to
+     * AGENT so copy reads naturally before the probe lands, and that default
+     * leaked into CONTROL FLOW. On a run-without-AI install the gate is still
+     * unprobed at login, so `!isAgentMode` never fired, and the client polled
+     * `getSystemStatus()` for a cognitive state on a bare node for the loop's
+     * full 30-second budget before composing Interact — 34.1 s on linux, 36.1 on
+     * macOS, 40.1 on Windows, against a credential login that had already
+     * SUCCEEDED in ~200 ms.
+     *
+     * One identifier answering two questions is the same defect as the one that
+     * opened #48, where `nodeBaseUrl` resolved from `CIRIS_API_URL`. Wording may
+     * guess; a wait may not. **Not probed yet is not a reason to wait for a
+     * brain** — if the gate later says AGENT the surfaces light up then, which
+     * is what `clientMode == null` has always meant.
+     */
+    val shouldWaitForAgent = ai.ciris.mobile.shared.models.shouldWaitForAgent(clientMode)
 
     // Navigation state
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Startup) }
@@ -1116,6 +1137,63 @@ fun CIRISApp(
     // Watch startup phase to check first-run when ready
     val phase by startupViewModel.phase.collectAsState()
 
+    /**
+     * Commit a RESOLVED [ModeProbe] to the one gate and everything that reads it.
+     *
+     * Extracted so the inline path and the background fold retry (CIRISClient#48)
+     * commit through the SAME code. They used to be one block because the retry
+     * was inline; when it moved off the startup path the alternative was a second
+     * copy of the `isNode` re-probe, the two setters and the log line — and a gate
+     * that resolves differently depending on WHEN it resolved is precisely the
+     * drift this repo exists to measure.
+     *
+     * Callers must check [ModeProbe.undetermined] first: an unresolved probe has
+     * nothing to commit and latching one is what rendered a real agent as a bare
+     * node for a whole session.
+     */
+    suspend fun commitGate(
+        probe: ai.ciris.mobile.shared.models.ModeProbe,
+        health: ai.ciris.mobile.shared.api.NodeHealth,
+    ) {
+        var mode = probe.mode
+        if (mode.isNode) {
+            // Bare node health — ask the brain whether it is running on top.
+            // KEPT for pre-0.5.168 nodes and split deployments where the
+            // brain has its own port. brainUnconfigured is passed here
+            // too: without it this probe sees "SETUP" and promotes the
+            // half-started brain straight back to AGENT.
+            runCatching { apiClient.getSystemStatus() }
+                .onSuccess { sys ->
+                    mode = ai.ciris.mobile.shared.models.clientModeFrom(
+                        sys.cognitive_state, sys.services_total, brainUnconfigured,
+                        role = sys.role,
+                    )
+                }
+                .onFailure { e ->
+                    platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
+                }
+        }
+        clientMode = mode
+        // The wizard's question, from the same probe. See setupHasAgent.
+        brainPresent = probe.brainPresent
+        platformLog(TAG, "[INFO][gate] brainPresent=${probe.brainPresent} (folded/reachable, independent of readiness)")
+        // Node mode has no 22 cognitive service lights — drive the count
+        // from the gate rather than the hardcoded agent default.
+        startupViewModel.setClientMode(mode)
+        // Push the gate into the shared API client so EVERY poller that
+        // shares it stops calling AGENT-only endpoints (history / billing
+        // / llm config / WA / adapters / capacity / agent audit / verify)
+        // on a bare node — those 404/405 and just flood the log.
+        apiClient.setClientMode(mode)
+        platformLog(
+            TAG,
+            "[INFO][gate] clientMode=$mode (role=${health.role}, " +
+                "cognitive_state=${health.cognitiveState}, services=${health.serviceCount}, " +
+                "folded=${health.agentFolded}, reachable=${health.agentReachable}, " +
+                "version=${health.version})",
+        )
+    }
+
     LaunchedEffect(phase) {
         if (phase == StartupPhase.READY && !checkingFirstRun) {
             checkingFirstRun = true
@@ -1130,7 +1208,10 @@ fun CIRISApp(
             // Probe that second and let it upgrade the gate: AGENT iff either
             // surface reports a cognitive_state / a non-empty service map.
             try {
-                var nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
+                // `val` since the fold retry moved off this path (CIRISClient#48):
+                // the only thing that used to reassign these was the inline retry
+                // loop, and it now owns its own copies.
+                val nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
                 nodeVersion = nodeHealth.version
                 // Is the brain configured at all? A brain with no config runs 10 of
                 // its 22 services to serve the wizard and reports cognitive_state
@@ -1148,7 +1229,7 @@ fun CIRISApp(
                 // answering yet" are three different facts; the re-vendor collapsed
                 // the third into the first, which latches NODE against a brain we
                 // KNOW exists.
-                var probe = ai.ciris.mobile.shared.models.clientModeFrom(
+                val probe = ai.ciris.mobile.shared.models.clientModeFrom(
                     nodeHealth.cognitiveState, nodeHealth.serviceCount,
                     nodeHealth.agentFolded, nodeHealth.agentReachable,
                     brainUnconfigured,
@@ -1157,22 +1238,58 @@ fun CIRISApp(
                 // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
                 // brain on a daemon thread AFTER the node composes, so a probe at
                 // READY can legitimately see folded=true/reachable=false.
+                //
+                // THE RETRY IS NOT SOMETHING THE USER WAITS ON (CIRISClient#48).
+                //
+                // It used to run inline, right here, ahead of the reconfigure hold and
+                // of every routing decision below it — so a node that reported a fold
+                // it could not reach held the whole app on the startup spinner for the
+                // budget's full 60 seconds before Login was drivable at all. Measured
+                // on Android as 62 s of nothing to touch.
+                //
+                // Nothing in the routing below needs the answer. `clientMode == null`
+                // is a state this file already defines and every consumer already
+                // handles — it means "not probed yet", and the surfaces light up when
+                // it lands. So the retry moves to its own coroutine and the startup
+                // path carries straight on.
+                //
+                // Launched on `coroutineScope`, NOT this LaunchedEffect: the comment on
+                // the reconfigure hold below records that any setPhase() cancels this
+                // block mid-poll. Tying the retry to the composition instead means a
+                // phase change no longer kills a probe that was about to answer.
+                //
+                // WHY THE FOLD IS UNREACHABLE AT ALL on a run-without-AI install is not
+                // this repo's to fix: the node reports `agent.folded=true` for a brain
+                // that will never answer, and nothing the client can see contradicts it
+                // — `/v1/setup/status` carries no `run_without_ai`. Recorded in
+                // evidence/blocked_upstream.tsv. This change makes the wrong answer
+                // cost nothing rather than pretending to know better.
                 if (probe.undetermined) {
                     val maxModePolls = ai.ciris.mobile.shared.ui.components.StartupBudget.seconds()
-                    var modePolls = 0
-                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s")
-                    while (probe.undetermined && modePolls < maxModePolls) {
-                        kotlinx.coroutines.delay(1000)
-                        modePolls++
-                        runCatching { apiClient.getNodeHealth(nodeBaseUrl) }.onSuccess { nh ->
-                            nodeHealth = nh
-                            nodeVersion = nh.version
-                            probe = ai.ciris.mobile.shared.models.clientModeFrom(
-                                nh.cognitiveState, nh.serviceCount,
-                                nh.agentFolded, nh.agentReachable,
-                                brainUnconfigured,
-                                role = nh.role,
-                            )
+                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s IN BACKGROUND; startup continues with the gate unset")
+                    coroutineScope.launch {
+                        var bgProbe = probe
+                        var bgHealth = nodeHealth
+                        var modePolls = 0
+                        while (bgProbe.undetermined && modePolls < maxModePolls) {
+                            kotlinx.coroutines.delay(1000)
+                            modePolls++
+                            runCatching { apiClient.getNodeHealth(nodeBaseUrl) }.onSuccess { nh ->
+                                bgHealth = nh
+                                nodeVersion = nh.version
+                                bgProbe = ai.ciris.mobile.shared.models.clientModeFrom(
+                                    nh.cognitiveState, nh.serviceCount,
+                                    nh.agentFolded, nh.agentReachable,
+                                    brainUnconfigured,
+                                    role = nh.role,
+                                )
+                            }
+                        }
+                        if (bgProbe.undetermined) {
+                            platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole ${maxModePolls}s budget — leaving clientMode unset")
+                        } else {
+                            commitGate(bgProbe, bgHealth)
+                            platformLog(TAG, "[INFO][gate] resolved in background after ${modePolls}s → ${bgProbe.mode}")
                         }
                     }
                 }
@@ -1181,45 +1298,13 @@ fun CIRISApp(
                     // KNOW exists — a node switch or the next launch can still
                     // resolve it. Guessing here is what made a real agent render as
                     // a bare node for the rest of the session.
-                    platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole budget — leaving clientMode unset")
+                    //
+                    // The bounded retry launched above may still resolve it and commit
+                    // through the SAME `commitGate` this branch's else-arm uses; until
+                    // it does, `clientMode` stays null and nothing waits on it.
+                    platformLog(TAG, "[INFO][gate] gate unset for now — the background retry owns it; startup continues")
                 } else {
-                    var mode = probe.mode
-                    if (mode.isNode) {
-                        // Bare node health — ask the brain whether it is running on top.
-                        // KEPT for pre-0.5.168 nodes and split deployments where the
-                        // brain has its own port. brainUnconfigured is passed here
-                        // too: without it this probe sees "SETUP" and promotes the
-                        // half-started brain straight back to AGENT.
-                        runCatching { apiClient.getSystemStatus() }
-                            .onSuccess { sys ->
-                                mode = ai.ciris.mobile.shared.models.clientModeFrom(
-                                    sys.cognitive_state, sys.services_total, brainUnconfigured,
-                                    role = sys.role,
-                                )
-                            }
-                            .onFailure { e ->
-                                platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
-                            }
-                    }
-                    clientMode = mode
-                    // The wizard's question, from the same probe. See setupHasAgent.
-                    brainPresent = probe.brainPresent
-                    platformLog(TAG, "[INFO][gate] brainPresent=${probe.brainPresent} (folded/reachable, independent of readiness)")
-                    // Node mode has no 22 cognitive service lights — drive the count
-                    // from the gate rather than the hardcoded agent default.
-                    startupViewModel.setClientMode(mode)
-                    // Push the gate into the shared API client so EVERY poller that
-                    // shares it stops calling AGENT-only endpoints (history / billing
-                    // / llm config / WA / adapters / capacity / agent audit / verify)
-                    // on a bare node — those 404/405 and just flood the log.
-                    apiClient.setClientMode(mode)
-                    platformLog(
-                        TAG,
-                        "[INFO][gate] clientMode=$mode (role=${nodeHealth.role}, " +
-                            "cognitive_state=${nodeHealth.cognitiveState}, services=${nodeHealth.serviceCount}, " +
-                            "folded=${nodeHealth.agentFolded}, reachable=${nodeHealth.agentReachable}, " +
-                            "version=${nodeHealth.version})",
-                    )
+                    commitGate(probe, nodeHealth)
                 }
             } catch (e: Exception) {
                 // Probe failed — leave the gate unset (defaults to agent wording).
@@ -1499,7 +1584,7 @@ fun CIRISApp(
                                 // Keep timer running during backend polling
                                 startupViewModel.setKeepTimerAlive(true)
                                 startupViewModel.setStatus(
-                                    if (isAgentMode) LocalizationHelper.getString("mobile.status_waiting_agent")
+                                    if (shouldWaitForAgent) LocalizationHelper.getString("mobile.status_waiting_agent")
                                     else "Connecting to node..."
                                 )
 
@@ -1510,15 +1595,16 @@ fun CIRISApp(
                                 val maxPollAttempts = 150 // 30 seconds (150 * 200ms)
                                 var lastState = "UNKNOWN"
 
-                                if (!isAgentMode) {
-                                    // NODE mode: no cognitive brain / WORK state to wait for.
-                                    PlatformLogger.i(TAG, " NODE mode — skipping agent WORK-state wait")
+                                if (!shouldWaitForAgent) {
+                                    // NODE mode, or a gate that has not answered yet — either
+                                    // way there is no cognitive brain / WORK state to wait for.
+                                    PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                     startupViewModel.setStatus("Node ready")
                                     agentReady = true
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (isAgentMode) {
+                                if (shouldWaitForAgent) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
@@ -1564,7 +1650,11 @@ fun CIRISApp(
                                     PlatformLogger.w(TAG, " Agent did not reach WORK state within timeout, proceeding anyway")
                                     startupViewModel.setStatus("Agent ready (timeout)")
                                 } else {
-                                    startupViewModel.setStatus(if (isAgentMode) "Agent ready!" else "Node ready!")
+                                    // `shouldWaitForAgent`, not `isAgentMode`: this line
+                                    // reports the OUTCOME of the wait above, and on an
+                                    // unprobed gate that wait was skipped after setting
+                                    // "Node ready" — the agent default contradicted it.
+                                    startupViewModel.setStatus(if (shouldWaitForAgent) "Agent ready!" else "Node ready!")
                                 }
 
                                 // Brief pause to show ready state
@@ -1832,18 +1922,19 @@ fun CIRISApp(
 
                                                     // Check for degraded mode first - skip WORK state wait if no LLM
                                                     loginStatusMessage =
-                                                        if (isAgentMode) "Waiting for agent..." else "Connecting to node..."
+                                                        if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
                                                     var agentReady = false
                                                     var inDegradedMode = false
                                                     var pollAttempts = 0
 
-                                                    if (!isAgentMode) {
-                                                        // NODE mode: no cognitive brain / WORK state to wait for.
+                                                    if (!shouldWaitForAgent) {
+                                                        // NODE mode, or an unprobed gate — nothing to wait for.
+                                                        PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                                         agentReady = true
                                                     }
 
                                                     // Quick check for degraded mode via health endpoint (agent only)
-                                                    if (isAgentMode) {
+                                                    if (shouldWaitForAgent) {
                                                         try {
                                                             val health = apiClient.getSystemHealth()
                                                             if (health.degradedMode) {
@@ -2099,20 +2190,30 @@ fun CIRISApp(
                                     .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
 
                                 // Check for degraded mode first - skip WORK state wait if no LLM
-                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (isAgentMode) "agent" else "node"}...")
+                                // THIS LOG LINE IS THE DIAGNOSIS (CIRISClient#48). It read
+                                // "waiting for agent" on a bare node for the 30 s the loop
+                                // below then spent, and that is how the 34-40 s was found.
+                                // It now names the gate rather than a default, so the next
+                                // reader gets the fact instead of the guess.
+                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (shouldWaitForAgent) "agent" else "node"} (clientMode=${clientMode ?: "unprobed"})...")
                                 loginStatusMessage =
-                                    if (isAgentMode) "Waiting for agent..." else "Connecting to node..."
+                                    if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
                                 var agentReady = false
                                 var inDegradedMode = false
                                 var pollAttempts = 0
 
-                                if (!isAgentMode) {
-                                    // NODE mode: no cognitive brain / WORK state to wait for.
+                                if (!shouldWaitForAgent) {
+                                    // NODE mode, or an unprobed gate — nothing to wait for.
+                                    // THIS IS THE 34-40 SECONDS (CIRISClient#48). The gate is
+                                    // routinely still null here: login is reached BEFORE the
+                                    // probe resolves on a run-without-AI install, so the old
+                                    // `!isAgentMode` test read "agent" and fell into the poll.
+                                    PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                     agentReady = true
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (isAgentMode) {
+                                if (shouldWaitForAgent) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
