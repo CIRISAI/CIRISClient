@@ -842,6 +842,39 @@
       },
       "notes": "TWO STARTUP DEFECTS THE 0.5.209 RE-POINT EXPOSED, NEITHER INTRODUCED BY IT. (#47) A waitForServices timeout was a plain `throw`, and one of its two callers launches it bare -- viewModelScope.launch { waitForServices() } -- so on Dispatchers.Main with no handler it reached the main thread and ENDED THE PROCESS: Android FATAL EXCEPTION, iOS self-sent SIGABRT after ~100s with nothing to relaunch it, so the next gate leg found no test server at all. Whether a timeout was survivable depended on WHICH caller ran it. It is now an error state via onErrorDetected, fixed inside waitForServices rather than by a catch at the bare call site. Separately the wait had nothing to count: after the hand-off the backend is the node on :4243, which serves no 22-service agent roster, so when ActiveBackend names the node the roster wait is skipped. A slow agent boot could have produced the same fatal timeout on any release. (#46) After a successful with-AI login the client re-entered the post-setup 'node is restarting' hold and never left Login, while the agent was alive on :8080 in `work`. `reconfiguring` is a latch cleared only by the routing that exits the hold, but the hold runs inside LaunchedEffect(phase) and any setPhase() cancels it mid-poll, leaving the latch set with nothing routed; a later phase change re-enters it. A LIVE SESSION NOW ENDS THE HOLD -- a session is exactly the evidence the hold exists to gather. Guarded at the reader, since the latch has one reader and eight token writers. Passing on Windows and failing on macOS in the same run is the signature of the race. 0.5.210 published its wheels to PyPI but its ios-xcframework job was CANCELLED to free runners for this cut, so the v0.5.210 GitHub release carries no XCFramework -- take iOS artifacts from v0.5.211. Pairs with every agent and node 0.5.210 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.212",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The first-run probe now asks the backend in effect; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE FIRST-RUN CHECK FOLLOWS THE BACKEND IN EFFECT (#48). After a run-without-AI hand-off the agent is gone and only the node on :4243 answers, but checkFirstRunStatus kept asking :8080 for /v1/setup/status -- 61 attempts on every desktop -- then returned null, which renders as 'Backend unreachable. Please restart the app.' while the client's own reviver was logging a healthy :4243 a few lines away. Every desktop no-AI LOGIN leg died on it while setup itself was 7/7. For a node the question is settled by its answering: the flag was recorded, the hand-off happened, and a node that responds is configured. Retries still apply so a node mid-rebind is waited for rather than declared unreachable. FOURTH CALLER OF ONE CLASS: #43 was the node URL and then the API client, #47 the service roster, #48 the first-run probe -- each deciding where to talk without consulting ActiveBackend. No lint was added: the ~5 remaining hardcoded :8080 literals are legitimate defaults (installs predating the flag serve :8080), and this bug arrived through a PARAMETER with no literal in it, so a string lint would flag the innocent and miss the guilty. Known and unchanged: BillingViewModel and AdaptersViewModel default baseUrl to :8080; they are not on the no-AI path. 0.5.210 and 0.5.211 both published their wheels to PyPI but their ios-xcframework jobs were CANCELLED to free runners -- neither GitHub release carries an XCFramework. TAKE iOS ARTIFACTS FROM v0.5.212. Pairs with every agent and node 0.5.211 does.",
+      "published": null
     }
   ]
 }
