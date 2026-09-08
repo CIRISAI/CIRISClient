@@ -809,6 +809,39 @@
       },
       "notes": "THE API CLIENT MOVES WITH THE BACKEND, NOT JUST THE NODE URL (#43, completing 0.5.209). 0.5.209 re-pointed CIRISApiClient.LOCAL_NODE_URL, which the FEDERATION call sites read. Every ordinary call -- login included -- goes through the client's own baseUrl, and CIRISApp builds that once inside a `remember` from apiBaseUrl, defaulting to :8080. So after a run-without-AI hand-off the node URL moved to :4243 and login still went to the port that had just gone away. Found by checking the agent team's forecast that Android in-session login would pass on 0.5.209 -- it would not have. syncBackendFrom now takes the api client as a REQUIRED argument and calls updateBaseUrl, which recreates the ~13 generated SDK instances as well as the direct HTTP path; required rather than optional because this whole issue exists from a function that had to be called and was not, and an optional argument is the same trap one storey down. Still only in the run-without-AI direction, so a with-AI home and an operator attached to another node are untouched (#26). WHAT THIS UNBLOCKS: the agent hosts a node fold on :4243 DURING the wizard, so once it stops ending its process that fold keeps serving -- the hand-off needs no restart and no in-place node boot, and the client only has to talk to it. Android no-AI setup is 7/7 on the agent's side; this is the client half of the login that follows it. Pairs with agent 2.11.0 and with every agent and node 0.5.209 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.211",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Startup and routing fixes; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "TWO STARTUP DEFECTS THE 0.5.209 RE-POINT EXPOSED, NEITHER INTRODUCED BY IT. (#47) A waitForServices timeout was a plain `throw`, and one of its two callers launches it bare -- viewModelScope.launch { waitForServices() } -- so on Dispatchers.Main with no handler it reached the main thread and ENDED THE PROCESS: Android FATAL EXCEPTION, iOS self-sent SIGABRT after ~100s with nothing to relaunch it, so the next gate leg found no test server at all. Whether a timeout was survivable depended on WHICH caller ran it. It is now an error state via onErrorDetected, fixed inside waitForServices rather than by a catch at the bare call site. Separately the wait had nothing to count: after the hand-off the backend is the node on :4243, which serves no 22-service agent roster, so when ActiveBackend names the node the roster wait is skipped. A slow agent boot could have produced the same fatal timeout on any release. (#46) After a successful with-AI login the client re-entered the post-setup 'node is restarting' hold and never left Login, while the agent was alive on :8080 in `work`. `reconfiguring` is a latch cleared only by the routing that exits the hold, but the hold runs inside LaunchedEffect(phase) and any setPhase() cancels it mid-poll, leaving the latch set with nothing routed; a later phase change re-enters it. A LIVE SESSION NOW ENDS THE HOLD -- a session is exactly the evidence the hold exists to gather. Guarded at the reader, since the latch has one reader and eight token writers. Passing on Windows and failing on macOS in the same run is the signature of the race. 0.5.210 published its wheels to PyPI but its ios-xcframework job was CANCELLED to free runners for this cut, so the v0.5.210 GitHub release carries no XCFramework -- take iOS artifacts from v0.5.211. Pairs with every agent and node 0.5.210 does.",
+      "published": null
     }
   ]
 }
