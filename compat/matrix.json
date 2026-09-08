@@ -908,6 +908,39 @@
       },
       "notes": "THE NODE PROBE MUST GO TO THE NODE (#48, and 0.5.212's fix for it was not enough). Main.kt resolves BOTH apiBaseUrl AND nodeBaseUrl from CIRIS_NODE_URL ?: CIRIS_API_URL ?: :4243, and the launcher sets CIRIS_API_URL to the AGENT's :8080 -- so on a run-without-AI install the parameter NAMED nodeBaseUrl is the agent port. 0.5.212's node branch therefore ran on every attempt and probed :8080: 61 inits at the agent port and ZERO at :4243, which is the count that proves nothing ever asked the node. Both existing fallbacks (the 404-degrade and the after-all-retries degrade) fail the same way for the same reason. Probes now use ActiveBackend and LOCAL_NODE_URL, the resolved address #26 established as the single source of truth. Every attempt also logs ActiveBackend's port, because the previous round's logs could not distinguish 'branch skipped' from 'branch never evaluated'. ABSENCE IS NOT AN ANSWER: ActiveBackend.resolveFrom read a Boolean, folding 'the flag is absent' into 'the owner said no', so a re-resolve over an unreadable or not-yet-written .env moved the client back to the agent port and undid a recorded hand-off silently. Three-state now -- true selects the node, false selects the agent (the documented one-run override is a statement, not a silence), absent KEEPS WHAT WE HAVE. That is the endpoint half of the #43 invariant; 0.5.209 guarded only the URL. THE claim_pin FILE OUTRANKS THE LOG BANNER (#49). After a factory reset Android sent the PREVIOUS boot's PIN -- 401 auth.claim.pin_invalid, then announce 409 not owner-bound. Android had no readLocalClaimPin() override and fell through to the protocol's null, leaving only a latest.log tail; and the provider asked the banner BEFORE the file on every platform. A log outlives the boot that wrote it, so the durable 0600 <home>/claim_pin -- which the node names as claim_pin_file in its setup status -- now goes first everywhere. The banner remains the fallback for a claim that beats the file being written. NOT ADDRESSED: #50 (iOS SIGABRT entering the AI step) awaits the .ips crash report; the ai_preference keys are present in all three bundles and read through l10nOr, which falls back rather than throwing. 0.5.210 and 0.5.211 carry no XCFramework (iOS jobs cancelled to free runners); 0.5.212 and this release do. Pairs with every agent and node 0.5.212 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.214",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. This release only stops the client waiting on a gate that has not answered; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "AN UNPROBED NODE-VS-AGENT GATE IS NOT A REASON TO WAIT (#48). `isAgentMode` defaulted an unresolved gate to AGENT — correct for WORDING, and behind it sat three 150x200ms WORK-state waits. On a run-without-AI install the gate is still unprobed when the credential login returns, so all four driven platforms stalled at whichever wait they reached first: 34.1s linux / 36.1 macOS / 40.1 Windows after a login that had already succeeded in ~200ms, iOS 7/8 on wait_for_post_login, and Android never reaching Login at all (2/8) because the folded-brain retry ran inline ahead of every routing decision. The wait rule is now shouldWaitForAgent() in ClientMode.kt, pinned by a test; the fold retry runs in the background and both paths commit through one commitGate. Deferrals: a bare node 502s /v1/wa/deferrals and the poller runs every 30s, so the absence is now handled (empty, logged once, still polling) rather than gated off — the node is going to serve that endpoint. The node reporting agent.folded=true for a brain that will never answer is upstream and is recorded in evidence/blocked_upstream.tsv.",
+      "published": null
     }
   ]
 }
