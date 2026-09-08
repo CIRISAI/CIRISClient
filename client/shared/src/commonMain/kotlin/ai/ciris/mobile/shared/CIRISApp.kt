@@ -17,6 +17,7 @@ import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
 import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.LOOPBACK_HOST
 import ai.ciris.mobile.shared.platform.NODE_ONLY_ENDPOINT
 import ai.ciris.mobile.shared.platform.syncBackendFromEnv
 import ai.ciris.mobile.shared.viewmodels.shouldHoldForReconfigure
@@ -4822,6 +4823,25 @@ private suspend fun checkFirstRunStatus(
     maxRetries: Int = 0,
     onStatusUpdate: ((String) -> Unit)? = null
 ): Boolean? {
+    // THE NODE PROBE MUST GO TO THE NODE.
+    //
+    // On desktop `Main.kt` resolves BOTH apiBaseUrl and nodeBaseUrl from
+    // `CIRIS_NODE_URL ?: CIRIS_API_URL ?: :4243`, and the launcher sets
+    // CIRIS_API_URL to the AGENT's :8080. So on a run-without-AI install the
+    // parameter named `nodeBaseUrl` is the agent port, and every "is the node
+    // up?" question in this function was asked of a process that had already
+    // handed off — 61 probes of :8080 and not one of :4243, then "Backend
+    // unreachable" while the reviver logged a healthy node (CIRISClient#48).
+    //
+    // ActiveBackend knows which backend is serving and LOCAL_NODE_URL is the
+    // resolved address #26 established as the single source of truth, so ask
+    // those rather than a parameter that means different things per platform.
+    val nodeUrl = if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+        ActiveBackend.endpoint.baseUrl(LOOPBACK_HOST)
+    } else {
+        nodeBaseUrl
+    }
+
     var attempts = 0
     while (attempts <= maxRetries) {
         try {
@@ -4841,7 +4861,7 @@ private suspend fun checkFirstRunStatus(
             // configured one. Retries still apply, so a node mid-rebind is
             // waited for rather than declared unreachable.
             if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
-                if (isNodeReachable(nodeBaseUrl)) {
+                if (isNodeReachable(nodeUrl)) {
                     platformLog(
                         "checkFirstRunStatus",
                         "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers — setup complete",
@@ -4901,7 +4921,7 @@ private suspend fun checkFirstRunStatus(
             //
             // So: node-ownership suppresses the CLAIM, never the setup. If the
             // brain has no config, the wizard runs.
-            if (setupStatus.data.setup_required && nodeHasOwner(nodeBaseUrl)) {
+            if (setupStatus.data.setup_required && nodeHasOwner(nodeUrl)) {
                 // An OWNED node is not a first run, whether or not the brain is
                 // configured. The two cases diverge AFTER this point:
                 //
@@ -4937,7 +4957,7 @@ private suspend fun checkFirstRunStatus(
             val absent = e::class.simpleName?.contains("NoTransformation") == true ||
                 e.message?.contains("404") == true ||
                 e.message?.contains("/v1/setup/status") == true
-            if (absent && isNodeReachable(nodeBaseUrl)) {
+            if (absent && isNodeReachable(nodeUrl)) {
                 // OWNER-AWARE degrade: setup-status is unavailable, but a node
                 // that already has an OWNER — claimed OR legacy-owned — is
                 // CONFIGURED, not first-run. Only a genuinely FRESH node is
@@ -4945,7 +4965,7 @@ private suspend fun checkFirstRunStatus(
                 // which setup-status is briefly unreachable / the node-fold
                 // rebinds 4243) degrades to first-run and the app loops the
                 // wizard/login forever on an owned node.
-                if (nodeHasOwner(nodeBaseUrl)) {
+                if (nodeHasOwner(nodeUrl)) {
                     platformLog("checkFirstRunStatus", "[INFO] setup-status absent but node has an OWNER → configured, NOT first-run")
                     return false
                 }
@@ -4964,11 +4984,11 @@ private suspend fun checkFirstRunStatus(
                 // If the node's read API answers (GET /v1/identity 2xx), treat this
                 // as a fresh first-run so the app reaches the federation-ID wizard
                 // instead of dead-ending on "Backend unreachable".
-                if (isNodeReachable(nodeBaseUrl)) {
+                if (isNodeReachable(nodeUrl)) {
                     // OWNER-AWARE (see the fast-degrade branch above): an owned
                     // node is configured, not first-run — don't loop the wizard
                     // just because setup-status is transiently unreachable.
-                    if (nodeHasOwner(nodeBaseUrl)) {
+                    if (nodeHasOwner(nodeUrl)) {
                         platformLog("checkFirstRunStatus", "[INFO] setup status unavailable but node has an OWNER → configured, NOT first-run")
                         return false
                     }

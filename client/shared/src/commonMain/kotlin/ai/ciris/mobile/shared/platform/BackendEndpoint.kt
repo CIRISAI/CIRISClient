@@ -90,6 +90,30 @@ fun backendEndpoint(runWithoutAi: Boolean): BackendEndpoint =
  * comments, casing — because a mis-parse here does not fail loudly. It sends the
  * client to a port nothing is listening on, and the user sees a spinner.
  */
+/**
+ * Did the home RECORD an answer, and which one?
+ *
+ * `true`/`false` when `CIRIS_RUN_WITHOUT_AI` is present; **null when it is
+ * absent** — a first run, a wiped home, a file we could not read, or a home
+ * the flag has not been written to yet. Distinguishing the third state is the
+ * whole point: [runWithoutAiFromEnv] answers a Boolean and so cannot tell
+ * "the owner said no" from "nobody has said anything", and reading the second
+ * as the first is how a recorded hand-off got undone (CIRISClient#48).
+ */
+fun runWithoutAiRecorded(envContent: String?): Boolean? {
+    if (envContent.isNullOrBlank()) return null
+    for (raw in envContent.lineSequence()) {
+        val line = raw.trim()
+        if (line.isEmpty() || line.startsWith("#")) continue
+        val key = line.substringBefore('=', "").trim()
+        if (!key.equals("CIRIS_RUN_WITHOUT_AI", ignoreCase = true)) continue
+        val value = line.substringAfter('=', "").trim()
+            .removeSurrounding("\"").removeSurrounding("'").trim()
+        return value.lowercase() in setOf("true", "1", "yes")
+    }
+    return null
+}
+
 fun runWithoutAiFromEnv(envContent: String?): Boolean {
     if (envContent.isNullOrBlank()) return false
     for (raw in envContent.lineSequence()) {
@@ -133,8 +157,29 @@ object ActiveBackend {
         private set
 
     /** Read the wizard's answer out of `.env` content and select the endpoint. */
+    /**
+     * Select the backend from `.env` content.
+     *
+     * THREE STATES, NOT TWO (CIRISClient#48, second cut). This used to read
+     * `runWithoutAiFromEnv`, which answers a Boolean and therefore folds
+     * "absent" into "false" — correct for a FIRST read, and wrong for every
+     * one after it. A re-resolve over an unreadable or not-yet-written `.env`
+     * silently moved the client back to the agent port, undoing a hand-off
+     * that had already happened, and nothing logged that it had.
+     *
+     * So absence now means KEEP WHAT WE HAVE. Only an explicit
+     * `CIRIS_RUN_WITHOUT_AI=false` moves back to the agent — that is the
+     * documented one-run override, and it is a statement rather than a
+     * silence. This is the endpoint half of the invariant the agent asked for
+     * on #43: once run-without-AI is recorded, nothing may quietly put the
+     * client back on the agent port.
+     */
     fun resolveFrom(envContent: String?) {
-        endpoint = backendEndpoint(runWithoutAiFromEnv(envContent))
+        endpoint = when (runWithoutAiRecorded(envContent)) {
+            true -> NODE_ONLY_ENDPOINT
+            false -> AGENT_ENDPOINT
+            null -> endpoint
+        }
     }
 
     /** Back to the default. For tests, and for a wipe that removes the home. */

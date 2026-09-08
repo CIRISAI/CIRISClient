@@ -127,3 +127,57 @@ class BackendWiringTest {
         assertTrue(NODE_ONLY_ENDPOINT.baseUrl(LOOPBACK_HOST).endsWith(":4243"))
     }
 }
+
+/**
+ * Absence is not an answer (CIRISClient#48, second cut).
+ *
+ * `resolveFrom` used to read a Boolean, which folds "the flag is absent" into
+ * "the owner said no" — right for a first read, wrong for every one after it.
+ * A re-resolve over an unreadable or not-yet-written `.env` moved the client
+ * back to the agent port, undoing a hand-off that had already happened, and
+ * nothing logged that it had.
+ */
+class BackendRecordedStateTest {
+
+    @kotlin.test.AfterTest fun tearDown() = ActiveBackend.reset()
+
+    @kotlin.test.Test
+    fun the_three_states_are_distinguishable() {
+        assertEquals(true, runWithoutAiRecorded("CIRIS_RUN_WITHOUT_AI=true"))
+        assertEquals(false, runWithoutAiRecorded("CIRIS_RUN_WITHOUT_AI=false"))
+        assertEquals(null, runWithoutAiRecorded("CIRIS_CONFIGURED=true"), "absent is not false")
+        assertEquals(null, runWithoutAiRecorded(null), "unreadable is not false")
+        assertEquals(null, runWithoutAiRecorded(""), "empty is not false")
+    }
+
+    @kotlin.test.Test
+    fun an_absent_flag_cannot_undo_a_recorded_hand_off() {
+        // THE DEFECT. The node was selected; a later resolve over a home the
+        // client could not read put it back on the agent port, and the desktop
+        // no-AI login legs died polling :8080.
+        ActiveBackend.resolveFrom("CIRIS_RUN_WITHOUT_AI=true")
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint)
+        ActiveBackend.resolveFrom(null)
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint, "an unreadable home must not move the client")
+        ActiveBackend.resolveFrom("CIRIS_CONFIGURED=true")
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint, "a home without the flag must not move the client")
+    }
+
+    @kotlin.test.Test
+    fun an_explicit_false_still_moves_back_to_the_agent() {
+        // The documented one-run override is a STATEMENT, not a silence, so it
+        // must still work — otherwise this guard becomes a one-way trapdoor.
+        ActiveBackend.resolveFrom("CIRIS_RUN_WITHOUT_AI=true")
+        ActiveBackend.resolveFrom("CIRIS_RUN_WITHOUT_AI=false")
+        assertEquals(AGENT_ENDPOINT, ActiveBackend.endpoint)
+    }
+
+    @kotlin.test.Test
+    fun a_first_read_of_an_empty_home_still_means_the_agent() {
+        // Absence keeps the CURRENT value, and the current value starts as the
+        // agent — where every install predating the flag serves.
+        ActiveBackend.reset()
+        ActiveBackend.resolveFrom(null)
+        assertEquals(AGENT_ENDPOINT, ActiveBackend.endpoint)
+    }
+}
