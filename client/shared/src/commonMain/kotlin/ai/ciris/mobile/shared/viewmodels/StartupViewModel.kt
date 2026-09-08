@@ -14,6 +14,8 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.datetime.Clock
+import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.NODE_ONLY_ENDPOINT
 
 /**
  * Manages CIRIS startup sequence
@@ -329,6 +331,24 @@ class StartupViewModel(
         PlatformLogger.w(TAG, "[STARTUP][WAIT][${ts}ms] === waitForServices() CALLED ===")
         PlatformLogger.w(TAG, "[STARTUP][WAIT][${ts}ms] Current state: services=${_servicesOnline.value}/${_totalServices.value}, slots=${_startedServiceSlots.value}")
 
+        // A NODE HAS NO AGENT SERVICES TO COUNT (CIRISClient#47).
+        //
+        // After a run-without-AI hand-off the backend is the node on :4243. It
+        // does not serve the agent's 22-service roster, so this wait counted to
+        // a number that could never arrive and then timed out — the reported
+        // 10/22 is the last thing the agent showed before it handed off.
+        // Readiness for a node is its endpoint answering, which the startup
+        // poll has already established by the time we get here.
+        if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+            PlatformLogger.i(
+                TAG,
+                "[STARTUP][WAIT][${ts}ms] backend is the node on :${ActiveBackend.endpoint.port} — " +
+                    "no agent service roster to wait for",
+            )
+            showReadyAndComplete()
+            return
+        }
+
         // If services were already fully loaded during startFastAPIServer() polling, skip waiting
         if (_servicesOnline.value >= _totalServices.value && _servicesOnline.value > 0) {
             PlatformLogger.i(TAG, "[STARTUP][WAIT][${ts}ms] All ${_servicesOnline.value} services already loaded, skipping wait")
@@ -414,7 +434,22 @@ class StartupViewModel(
             return
         }
 
-        throw Exception("Timeout waiting for services (${_servicesOnline.value}/${_totalServices.value} online)")
+        // A TIMEOUT IS A UI STATE, NEVER A THROW (CIRISClient#47).
+        //
+        // This used to `throw`, and one of the two callers launches it bare:
+        // `viewModelScope.launch { waitForServices() }`. On Dispatchers.Main
+        // with no handler that reaches the main thread and ENDS THE PROCESS —
+        // Android logged FATAL EXCEPTION and died, iOS self-sent SIGABRT after
+        // ~100s, and on iOS nothing relaunches, so the app simply vanished and
+        // the next leg found no test server at all.
+        //
+        // Handled here rather than by adding a catch at the bare call site: a
+        // startup wait that can kill the app depending on WHICH caller ran it
+        // is one refactor away from being fatal again. The failure is reported
+        // the same way every other startup failure is.
+        onErrorDetected(
+            "Timeout waiting for services (${_servicesOnline.value}/${_totalServices.value} online)"
+        )
     }
 
     /**
