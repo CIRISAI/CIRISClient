@@ -116,6 +116,27 @@ enum class SetupStep {
  */
 fun hasAiStep(hasAgent: Boolean, runWithoutAi: Boolean): Boolean = hasAgent && !runWithoutAi
 
+/**
+ * Should the client still hold the post-setup "the node is restarting" state?
+ *
+ * ONLY WHILE THERE IS NO SESSION. `reconfiguring` is a latch set when setup
+ * completes and cleared by whichever branch routes out of the hold — but the
+ * hold runs inside `LaunchedEffect(phase)`, so any setPhase() cancels it
+ * mid-poll and leaves the latch set with nothing routed. A later phase change
+ * re-enters it, and when that lands after the owner has signed back in the app
+ * holds "Restarting your node…" over a working session and strands them on
+ * Login (CIRISClient#46 — a SYSTEM_ADMIN login succeeding against an agent
+ * alive in `work`, with the client's own gate line saying so).
+ *
+ * A session is exactly the evidence the hold exists to gather: it proves the
+ * backend came back AND that the owner can talk to it. So holding one makes
+ * the hold moot however we arrived. One predicate, because the latch has one
+ * reader and eight writers and guarding the reader is what makes this true by
+ * construction rather than by everyone remembering.
+ */
+fun shouldHoldForReconfigure(reconfiguring: Boolean, hasSession: Boolean): Boolean =
+    reconfiguring && !hasSession
+
 fun nextSetupStep(current: SetupStep, hasAiStep: Boolean): SetupStep = when (current) {
     SetupStep.YOU -> SetupStep.JOIN_FEDERATION
     SetupStep.JOIN_FEDERATION -> if (hasAiStep) SetupStep.AI else SetupStep.COMPLETE

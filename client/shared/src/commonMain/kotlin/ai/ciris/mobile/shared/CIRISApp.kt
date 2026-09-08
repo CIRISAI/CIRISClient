@@ -17,6 +17,7 @@ import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
 import ai.ciris.mobile.shared.platform.syncBackendFromEnv
+import ai.ciris.mobile.shared.viewmodels.shouldHoldForReconfigure
 import ai.ciris.mobile.shared.platform.createPythonRuntime
 import ai.ciris.mobile.shared.platform.createSecureStorage
 import ai.ciris.mobile.shared.platform.getOAuthProviderName
@@ -1239,6 +1240,32 @@ fun CIRISApp(
             // WaCert, no fed-ID owner-binding) is already configured, and
             // sending it back to Setup is the 2.9.13 loop — setup/root 409s and
             // we land right back here. Only FRESH goes to Setup.
+            // A LIVE SESSION ENDS THE HOLD (CIRISClient#46).
+            //
+            // `reconfiguring` is a LATCH: set once at setup completion and
+            // cleared only by the routing below. But this whole block lives in
+            // `LaunchedEffect(phase)`, and any setPhase() cancels it mid-poll —
+            // which leaves the latch set with nothing having routed. A later
+            // phase change re-enters the hold, and when that happens AFTER the
+            // owner has signed back in, the app holds "Restarting your node…"
+            // over a perfectly good session and strands them on Login: the
+            // report has a SYSTEM_ADMIN login succeed against an agent that is
+            // alive on :8080 in `work`, with the client's own gate line saying
+            // so one line earlier.
+            //
+            // Authentication is exactly the evidence this hold exists to
+            // gather, so holding it makes the hold moot no matter how we got
+            // here. Guarded at the READER rather than at the eight places that
+            // set a token: one reader, eight writers, and guarding the reader
+            // is what makes this true by construction instead of by everyone
+            // remembering. That the leg passed on Windows and failed on macOS
+            // in the SAME run is the signature of a race, not of a path.
+            if (reconfiguring && !shouldHoldForReconfigure(reconfiguring, currentAccessToken != null)) {
+                platformLog(TAG, "[INFO] Session already open — the post-setup hold is moot, releasing it")
+                reconfiguring = false
+                startupViewModel.setKeepTimerAlive(false)
+            }
+
             if (reconfiguring) {
                 platformLog(TAG, "[INFO] Setup complete — holding reconfiguring state while the node restarts")
 
