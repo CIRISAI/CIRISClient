@@ -540,10 +540,71 @@ jobs:
           path: client/shared/build/XCFrameworks/release
           key: xcf-${{ runner.os }}-${{ hashFiles('client/shared/src/commonMain/**', 'client/shared/src/iosMain/**', 'client/shared/src/iosArm64Main/**', 'client/shared/src/iosSimulatorArm64Main/**', 'client/generated-api/src/**', 'client/shared/build.gradle.kts', 'client/generated-api/build.gradle.kts', 'client/build.gradle.kts', 'client/gradle.properties', 'VERSION') }}
 
+      - name: Prebuilt XCFramework
+        # THE STEP ABOVE CANNOT BE PRIMED FROM OUTSIDE A RUNNER, AND VERSION IS
+        # IN ITS KEY. Together those mean the cache only ever pays off on a
+        # RE-TAG, and every genuinely new version pays the full ~161 minutes.
+        # This step is the other half: the same question, asked against a store
+        # a developer's Mac can write to.
+        #
+        # `packaging/build_xcframework_local.sh` builds the identical Gradle
+        # task on Apple silicon and uploads the zip to the `xcframework-prebuilt`
+        # prerelease under a content-addressed name. `macos-14` is a 3-core M1
+        # with 7 GB; release linking is whole-program LLVM optimisation, so it
+        # is bound by single-core speed and memory headroom, and a current
+        # desktop has 3-4x of both. Measured: ~161 min here, well under an hour
+        # there.
+        #
+        # THE KEY IS COMPUTED BY A SCRIPT, NOT BY hashFiles(). It has to be
+        # askable on both sides, and `hashFiles()` is an Actions expression with
+        # no local equivalent. `packaging/xcframework_key.py` mirrors the input
+        # list above exactly — change one and change the other in the same
+        # commit.
+        #
+        # ONE WRITER, DELIBERATELY. CI does not upload back here after a cold
+        # build. It could, and it would spare a re-tag — but `actions/cache`
+        # above already covers a re-tag inside its 7-day window, so the write
+        # path would buy almost nothing and would need `contents: write` on a
+        # job that builds untrusted-by-construction artifacts. The laptop is the
+        # only writer; this job only reads.
+        #
+        # A MISS IS NOT A FAILURE. Nobody is obliged to prebuild; the whole
+        # arrangement degrades to exactly the previous behaviour, which is why
+        # this does not use `gh release download`'s exit code as a gate on
+        # anything but the skip.
+        id: prebuilt
+        if: matrix.name == 'ios-xcframework' && steps.xcf-cache.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          key=$(python3 packaging/xcframework_key.py)
+          asset="shared-${key}.xcframework.zip"
+          echo "looking for $asset on the xcframework-prebuilt release"
+          if gh release download xcframework-prebuilt --pattern "$asset" --dir /tmp/prebuilt 2>/dev/null; then
+            mkdir -p client/shared/build/XCFrameworks/release
+            unzip -q "/tmp/prebuilt/$asset" -d client/shared/build/XCFrameworks/release
+            # ASSERT THE SHAPE BEFORE TRUSTING IT. An asset that unzipped to
+            # nothing recognisable must fall through to a real build, not skip
+            # one and hand Collect an empty directory — a job that "succeeded"
+            # with no framework is the failure this arrangement must not add.
+            if [ -n "$(find client/shared/build/XCFrameworks/release -maxdepth 1 -name '*.xcframework' -print -quit)" ]; then
+              echo "hit=true" >> "$GITHUB_OUTPUT"
+              echo "restored $asset — skipping the build"
+              exit 0
+            fi
+            echo "::warning::$asset did not contain an .xcframework — building instead"
+            rm -rf client/shared/build/XCFrameworks/release
+          else
+            echo "no prebuilt for key $key — building"
+          fi
+          echo "hit=false" >> "$GITHUB_OUTPUT"
+
       - name: Build
-        # Skipped entirely on an XCFramework cache hit — the four hours are the
-        # link, so the only way not to pay them is not to run it.
-        if: matrix.name != 'ios-xcframework' || steps.xcf-cache.outputs.cache-hit != 'true'
+        # Skipped entirely on an XCFramework cache hit or a prebuilt hit — the
+        # four hours are the link, so the only way not to pay them is not to run
+        # it.
+        if: matrix.name != 'ios-xcframework' || (steps.xcf-cache.outputs.cache-hit != 'true' && steps.prebuilt.outputs.hit != 'true')
         working-directory: client
         run: |
           ../packaging/run_with_watchdog.sh \
@@ -551,9 +612,17 @@ jobs:
             -- ./gradlew --no-daemon ${{ matrix.task }}
 
       - name: Restored, not rebuilt
-        if: matrix.name == 'ios-xcframework' && steps.xcf-cache.outputs.cache-hit == 'true'
+        # SAY WHICH STORE IT CAME FROM. The two have different trust stories —
+        # the cache was written by a previous run of this job, the prebuilt was
+        # written by a person — and a log line that conflated them would make
+        # the question unanswerable after the fact.
+        if: matrix.name == 'ios-xcframework' && (steps.xcf-cache.outputs.cache-hit == 'true' || steps.prebuilt.outputs.hit == 'true')
         run: |
-          echo "XCFramework restored from cache — the Kotlin that feeds it is unchanged."
+          if [ "${{ steps.xcf-cache.outputs.cache-hit }}" = "true" ]; then
+            echo "XCFramework restored from the Actions cache — the Kotlin that feeds it is unchanged."
+          else
+            echo "XCFramework restored from the xcframework-prebuilt release, built locally for key $(python3 packaging/xcframework_key.py)."
+          fi
           find client/shared/build/XCFrameworks/release -maxdepth 1 -name '*.xcframework' -exec du -sh {} +
 
       - name: Collect

@@ -39,6 +39,10 @@ dist/
 build/
 *.egg-info/
 
+# Where packaging/build_xcframework_local.sh leaves the zipped framework before
+# it goes to the prebuilt release. A 114 MB build output, not content.
+dist-xcframework/
+
 # A local emitter checkout for check_localization_sync.py --server-src.
 # Scratch: the emitters are CIRISServer's, pinned per run, never content here.
 .emitters/
