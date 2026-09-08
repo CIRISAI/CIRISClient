@@ -16,6 +16,8 @@ import ai.ciris.mobile.shared.platform.PythonRuntime
 import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
+import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.NODE_ONLY_ENDPOINT
 import ai.ciris.mobile.shared.platform.syncBackendFromEnv
 import ai.ciris.mobile.shared.viewmodels.shouldHoldForReconfigure
 import ai.ciris.mobile.shared.platform.createPythonRuntime
@@ -4823,6 +4825,35 @@ private suspend fun checkFirstRunStatus(
     var attempts = 0
     while (attempts <= maxRetries) {
         try {
+            // THE NODE DOES NOT SERVE /v1/setup/status (CIRISClient#48).
+            //
+            // After a run-without-AI hand-off the agent is gone and only the
+            // node on :4243 answers, but this kept asking :8080 — 61 attempts
+            // on every desktop — and then parked the app on "Backend
+            // unreachable. Please restart the app." while the client's OWN
+            // reviver was logging a healthy :4243 a few lines away.
+            //
+            // This is the third caller found still pinned to the agent base URL
+            // after the switch moved (#43 was the node URL, #47 the service
+            // roster). The question here is "is setup still required", and for
+            // a node the answer is settled by its ANSWERING: the flag was
+            // recorded, the hand-off happened, and a node that responds is a
+            // configured one. Retries still apply, so a node mid-rebind is
+            // waited for rather than declared unreachable.
+            if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+                if (isNodeReachable(nodeBaseUrl)) {
+                    platformLog(
+                        "checkFirstRunStatus",
+                        "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers — setup complete",
+                    )
+                    return false
+                }
+                onStatusUpdate?.invoke(LocalizationHelper.getString("mobile.status_checking_setup"))
+                attempts++
+                if (attempts <= maxRetries) kotlinx.coroutines.delay(500)
+                continue
+            }
+
             platformLog("checkFirstRunStatus", "[INFO] Attempt ${attempts + 1}/${maxRetries + 1}: Checking setup status at $apiBaseUrl")
             val client = CIRISApiClient(apiBaseUrl)
             val setupStatus = client.getSetupStatus()
