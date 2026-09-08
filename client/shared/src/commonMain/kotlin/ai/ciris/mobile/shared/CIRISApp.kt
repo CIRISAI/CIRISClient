@@ -2423,13 +2423,25 @@ fun CIRISApp(
                     // with a bounded timeout rather than snapshotting a value that
                     // may still be null at the instant COMPLETE runs.
                     claimPinProvider = {
-                        // 1) banner snapshot (if the boot-time latch caught it),
-                        // 2) DURABLE <home>/claim_pin file read on-demand — RACE-FREE: the node
-                        //    writes claim_pin a few seconds AFTER health answers, so a boot-time
-                        //    latch can miss it, but by claim time the file is present,
-                        // 3) last resort, await the banner flow with a bounded timeout.
-                        pythonRuntimeProtocol.localClaimPin.value
-                            ?: pythonRuntimeProtocol.readLocalClaimPin()
+                        // THE FILE FIRST, THEN THE BANNER (CIRISClient#49).
+                        //
+                        // <home>/claim_pin is the node's own 0600 file and the
+                        // source of truth — the node even names it as
+                        // `claim_pin_file` in its setup status. The banner
+                        // snapshot is a LOG TAIL, and a log outlives the boot
+                        // that wrote it: after a factory reset Android latched
+                        // the PREVIOUS boot's PIN, sent it, and got 401
+                        // auth.claim.pin_invalid followed by a 409 on announce.
+                        // Ordering the file first makes the stale-tail window
+                        // unreachable on every platform rather than only where
+                        // it was observed.
+                        //
+                        // The banner remains the fallback for the narrow case
+                        // it was added for: the node writes claim_pin a few
+                        // seconds AFTER health answers, so a very early claim
+                        // can still find no file.
+                        pythonRuntimeProtocol.readLocalClaimPin()
+                            ?: pythonRuntimeProtocol.localClaimPin.value
                             ?: withTimeoutOrNull(20_000L) {
                                 pythonRuntimeProtocol.localClaimPin
                                     .filterNotNull()
