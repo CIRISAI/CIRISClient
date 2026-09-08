@@ -875,6 +875,39 @@
       },
       "notes": "THE FIRST-RUN CHECK FOLLOWS THE BACKEND IN EFFECT (#48). After a run-without-AI hand-off the agent is gone and only the node on :4243 answers, but checkFirstRunStatus kept asking :8080 for /v1/setup/status -- 61 attempts on every desktop -- then returned null, which renders as 'Backend unreachable. Please restart the app.' while the client's own reviver was logging a healthy :4243 a few lines away. Every desktop no-AI LOGIN leg died on it while setup itself was 7/7. For a node the question is settled by its answering: the flag was recorded, the hand-off happened, and a node that responds is configured. Retries still apply so a node mid-rebind is waited for rather than declared unreachable. FOURTH CALLER OF ONE CLASS: #43 was the node URL and then the API client, #47 the service roster, #48 the first-run probe -- each deciding where to talk without consulting ActiveBackend. No lint was added: the ~5 remaining hardcoded :8080 literals are legitimate defaults (installs predating the flag serve :8080), and this bug arrived through a PARAMETER with no literal in it, so a string lint would flag the innocent and miss the guilty. Known and unchanged: BillingViewModel and AdaptersViewModel default baseUrl to :8080; they are not on the no-AI path. 0.5.210 and 0.5.211 both published their wheels to PyPI but their ios-xcframework jobs were CANCELLED to free runners -- neither GitHub release carries an XCFramework. TAKE iOS ARTIFACTS FROM v0.5.212. Pairs with every agent and node 0.5.211 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.213",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Node probes now address the node; the client reads nothing new from it",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE NODE PROBE MUST GO TO THE NODE (#48, and 0.5.212's fix for it was not enough). Main.kt resolves BOTH apiBaseUrl AND nodeBaseUrl from CIRIS_NODE_URL ?: CIRIS_API_URL ?: :4243, and the launcher sets CIRIS_API_URL to the AGENT's :8080 -- so on a run-without-AI install the parameter NAMED nodeBaseUrl is the agent port. 0.5.212's node branch therefore ran on every attempt and probed :8080: 61 inits at the agent port and ZERO at :4243, which is the count that proves nothing ever asked the node. Both existing fallbacks (the 404-degrade and the after-all-retries degrade) fail the same way for the same reason. Probes now use ActiveBackend and LOCAL_NODE_URL, the resolved address #26 established as the single source of truth. Every attempt also logs ActiveBackend's port, because the previous round's logs could not distinguish 'branch skipped' from 'branch never evaluated'. ABSENCE IS NOT AN ANSWER: ActiveBackend.resolveFrom read a Boolean, folding 'the flag is absent' into 'the owner said no', so a re-resolve over an unreadable or not-yet-written .env moved the client back to the agent port and undid a recorded hand-off silently. Three-state now -- true selects the node, false selects the agent (the documented one-run override is a statement, not a silence), absent KEEPS WHAT WE HAVE. That is the endpoint half of the #43 invariant; 0.5.209 guarded only the URL. THE claim_pin FILE OUTRANKS THE LOG BANNER (#49). After a factory reset Android sent the PREVIOUS boot's PIN -- 401 auth.claim.pin_invalid, then announce 409 not owner-bound. Android had no readLocalClaimPin() override and fell through to the protocol's null, leaving only a latest.log tail; and the provider asked the banner BEFORE the file on every platform. A log outlives the boot that wrote it, so the durable 0600 <home>/claim_pin -- which the node names as claim_pin_file in its setup status -- now goes first everywhere. The banner remains the fallback for a claim that beats the file being written. NOT ADDRESSED: #50 (iOS SIGABRT entering the AI step) awaits the .ips crash report; the ai_preference keys are present in all three bundles and read through l10nOr, which falls back rather than throwing. 0.5.210 and 0.5.211 carry no XCFramework (iOS jobs cancelled to free runners); 0.5.212 and this release do. Pairs with every agent and node 0.5.212 does.",
+      "published": null
     }
   ]
 }
