@@ -1,0 +1,112 @@
+name: Start the CIRIS node
+description: >
+  Boot a downloaded ciris-server and wait for it to serve, on the port and path
+  a bare NODE actually answers on.
+
+# WHY THIS IS AN ACTION AND NOT THREE COPIES OF SIX LINES.
+#
+# It was three copies, and all three asked the wrong question in the same way —
+# so the nightly gate had never once been green, and the reason was invisible
+# because each leg failed differently on the way to the same wall.
+#
+# THE PORT AND THE PATH ARE THE NODE'S.
+#
+#   AGENT_ENDPOINT     = :8080 /v1/system/health
+#   NODE_ONLY_ENDPOINT = :4243 /health
+#
+# (client/shared/.../platform/BackendEndpoint.kt — which has carried both
+# constants correctly the whole time, under a comment reading "Only :4243
+# serves; :8080 goes away.")
+#
+# The gate downloads `ciris-server` — a bare node, no brain — and polled the
+# AGENT's port and the AGENT's path at it. On Windows the log shows the node
+# coming up perfectly, `lens read API listening listen_addr=0.0.0.0:4243`, while
+# the step next to it timed out for 120 seconds and reported "the node never
+# became healthy". It was healthy. Nobody asked it.
+#
+# This is the same defect class as CIRISClient#48 — a probe aimed at the agent
+# port while the thing being probed is the node — and it is worth noticing that
+# it survived here for months precisely because the gate that would have caught
+# a client-side version of it was itself broken by it.
+#
+# `/health` serves a CONSTANT "ok" and is refused until the node is serving
+# (CIRISServer#548, health.rs::plain_health), so a 200 means serving with no
+# intermediate state to miss. Do NOT switch this to /v1/health without reading
+# the note on NODE_ONLY_ENDPOINT: there, `degraded` is also a serving state.
+
+inputs:
+  binary:
+    description: Path to the extracted ciris-server (without any .exe suffix).
+    required: false
+    default: ./node/ciris-server
+  home:
+    description: >
+      CIRIS_HOME for this run. MUST be set to somewhere the runner user can
+      write: the node defaults to /var/lib/ciris (DEFAULT_CIRIS_HOME in the
+      server's config.rs) and no hosted runner can create that, which is how the
+      macOS leg died with "create /var/lib/ciris/data: Permission denied" before
+      it ever reached the port question above.
+    required: false
+    default: ""
+  log:
+    description: Where to write the node's output. Collected by each leg's artifact upload.
+    required: false
+    default: node.log
+  timeout_seconds:
+    description: How long to wait for the node to serve before failing the leg.
+    required: false
+    default: "120"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        CIRIS_NODE_BINARY: ${{ inputs.binary }}
+        CIRIS_NODE_HOME: ${{ inputs.home }}
+        CIRIS_NODE_LOG: ${{ inputs.log }}
+        CIRIS_NODE_TIMEOUT: ${{ inputs.timeout_seconds }}
+      run: |
+        set -euo pipefail
+
+        bin="$CIRIS_NODE_BINARY"
+        # Windows runners extract ciris-server.exe; every other leg has no
+        # suffix. Resolved here rather than by a per-leg `if`, because a per-leg
+        # difference is what let three copies drift.
+        [ -x "$bin" ] || [ -f "$bin" ] || bin="${bin}.exe"
+        test -f "$bin" || { echo "::error::no ciris-server at $CIRIS_NODE_BINARY (or .exe)"; exit 1; }
+        chmod +x "$bin" 2>/dev/null || true
+
+        home="$CIRIS_NODE_HOME"
+        [ -n "$home" ] || home="${GITHUB_WORKSPACE:-$PWD}/.ciris-home"
+        mkdir -p "$home"
+        export CIRIS_HOME="$home"
+        echo "CIRIS_HOME=$home"
+
+        "$bin" > "$CIRIS_NODE_LOG" 2>&1 &
+        node_pid=$!
+
+        # THE NODE'S OWN ENDPOINT. See the header.
+        url="http://127.0.0.1:4243/health"
+        deadline=$(( CIRIS_NODE_TIMEOUT / 2 ))
+        for _ in $(seq 1 "$deadline"); do
+          # A DEAD PROCESS IS NOT A SLOW ONE. Without this the loop waits out
+          # the full budget on a node that exited in the first second, and the
+          # log tail below is the only clue anybody gets.
+          if ! kill -0 "$node_pid" 2>/dev/null; then
+            echo "::error::ciris-server exited before it began serving"
+            tail -50 "$CIRIS_NODE_LOG" || true
+            exit 1
+          fi
+          if curl -sf "$url" >/dev/null 2>&1; then
+            echo "node is serving at $url"
+            curl -s "$url" || true
+            echo
+            exit 0
+          fi
+          sleep 2
+        done
+
+        echo "::error::the node never became healthy at $url after ${CIRIS_NODE_TIMEOUT}s"
+        tail -50 "$CIRIS_NODE_LOG" || true
+        exit 1

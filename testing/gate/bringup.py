@@ -53,8 +53,25 @@ from pathlib import Path
 CLIENT_TEST_PORT = 9091
 
 #: The node's API port, and the port `adb reverse` maps back to the host so the
-#: emulator's `localhost:8080` is the node running on the runner.
-NODE_API_PORT = 8080
+#: emulator's `localhost:4243` is the node running on the runner.
+#:
+#: 4243, NOT 8080. This gate downloads a released `ciris-server` — a bare NODE,
+#: no brain — and a bare node binds :4242 (transport) and :4243 (read API) and
+#: never binds 8080. That was confirmed empirically as well as from the client's
+#: own constants: in the 2026-09-08 nightly the ONLY occurrence of 8080 anywhere
+#: in the Windows node log was the gate's own curl.
+#:
+#:      AGENT_ENDPOINT     = :8080 /v1/system/health
+#:      NODE_ONLY_ENDPOINT = :4243 /health
+#:      (client/shared/.../platform/BackendEndpoint.kt)
+#:
+#: Reversing 8080 forwarded the emulator to a host port with nothing on it.
+#:
+#: NECESSARY BUT NOT SUFFICIENT — see the module docstring: the CLIENT still
+#: resolves its own backend from `CIRIS_RUN_WITHOUT_AI` in the home's `.env`,
+#: and absent means AGENT. Until the gate seeds that, the app looks for :8080
+#: no matter which port is forwarded.
+NODE_API_PORT = 4243
 
 #: Android's test-mode switch. A file, not an env var: `am start` cannot set the
 #: environment of the process it launches, so the sentinel is the only handle a
@@ -119,7 +136,7 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
     """Emulator on this runner, node on the host, client reaching back to it.
 
     The node runs on the HOST and the app reaches it through `adb reverse`, so
-    the emulator's `localhost:8080` IS the runner's node. That keeps the client
+    the emulator's `localhost:4243` IS the runner's node. That keeps the client
     in the REMOTE-node shape described by FSD/ONE_CLIENT_N_NODES.md and means no
     Android-specific node binary is needed — which is just as well, since
     CIRISServer publishes none.
@@ -169,7 +186,7 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
     """Simulator on a macOS runner, node on the same host.
 
     No forwarding: the simulator shares the host's loopback, so the client's
-    9091 and the node's 8080 are both simply `127.0.0.1` from the runner. That
+    9091 and the node's 4243 are both simply `127.0.0.1` from the runner. That
     is why this plan is shorter than Android's rather than more complex.
 
     Test mode IS an environment variable here — `simctl launch` sets the child's

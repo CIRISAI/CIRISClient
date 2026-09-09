@@ -26,6 +26,10 @@ import yaml
 
 WF = pathlib.Path(__file__).resolve().parents[1] / ".github" / "workflows" / "five-platform-live-qa.yml"
 
+#: The shared node bring-up. It was three copies inside the legs, and all three
+#: asked the wrong question the same way — see the endpoint test below.
+NODE_ACTION = pathlib.Path(__file__).resolve().parents[1] / ".github" / "actions" / "ciris-node" / "action.yml"
+
 #: The jobs that actually drive the product. `gallery` is reporting, not a leg.
 LEGS = ("linux-android", "macos-ios", "windows")
 
@@ -92,7 +96,66 @@ def test_a_node_that_never_becomes_healthy_fails_the_leg(wf, leg):
     # Backgrounding a server and walking on is how a run drives an app whose
     # backend was never there, and then reports the CLIENT as broken.
     body = yaml.dump(wf["jobs"][leg])
-    assert "the node never became healthy" in body, f"{leg} does not verify the node came up"
+    assert "./.github/actions/ciris-node" in body, f"{leg} does not start the node through the shared action"
+    assert "the node never became healthy" in NODE_ACTION.read_text(encoding="utf-8"), (
+        "the shared action no longer fails a leg whose node never served"
+    )
+
+
+def test_the_node_is_probed_where_a_NODE_answers_and_not_where_an_AGENT_would():
+    """THE ASSERTION THIS FILE WAS MISSING, AND THE COST OF MISSING IT.
+
+    The guard above has always checked that a dead node FAILS the leg. It never
+    checked that the liveness question was addressed to the right place — so for
+    the whole life of this gate all three legs polled `:8080/v1/system/health`,
+    the AGENT's endpoint, at a bare `ciris-server`. The node came up correctly
+    on `:4243` every single night and the gate reported "the node never became
+    healthy". It has never once been green.
+
+    A check that reports the right failure for the wrong reason is worse than no
+    check: it produces a red that everyone learns to expect and nobody reads.
+
+        AGENT_ENDPOINT     = :8080 /v1/system/health
+        NODE_ONLY_ENDPOINT = :4243 /health     <- what this gate stands up
+
+    (client/shared/.../platform/BackendEndpoint.kt, and confirmed empirically:
+    in the 2026-09-08 Windows run the only occurrence of 8080 anywhere in the
+    log was our own curl command.)
+    """
+    action = NODE_ACTION.read_text(encoding="utf-8")
+    probe = [ln for ln in action.splitlines() if "url=" in ln and "http" in ln]
+    assert probe, "the action no longer contains a health URL to check"
+    joined = "\n".join(probe)
+    assert "4243" in joined and "/health" in joined, (
+        f"the node is not probed on :4243/health — found {joined!r}"
+    )
+    assert "8080" not in joined, (
+        f"the node is probed on the AGENT's port; a bare ciris-server never binds 8080 — {joined!r}"
+    )
+
+
+def test_the_node_gets_a_writable_home():
+    """`/var/lib/ciris` is not creatable by any hosted runner user.
+
+    The macOS leg died with `create /var/lib/ciris/data: Permission denied`
+    before it ever reached the port question above — a second, independent
+    reason the same step could never succeed. The server's DEFAULT_CIRIS_HOME
+    (config.rs) is only overridable by CIRIS_HOME, so the action must set it.
+
+    THE VAR MUST BE EXPORTED, NOT MENTIONED. The first version of this test
+    asserted `"CIRIS_HOME" in action` and PASSED against a planted defect that
+    had removed the export and left only the prose — a substring check over a
+    file that documents itself is nearly always green. Assert the assignment.
+    """
+    action = NODE_ACTION.read_text(encoding="utf-8")
+    exports = [
+        ln.strip() for ln in action.splitlines()
+        if ln.strip().startswith("export CIRIS_HOME=") or ln.strip().startswith("CIRIS_HOME=")
+    ]
+    assert exports, (
+        "the action never assigns CIRIS_HOME, so the node defaults to "
+        "/var/lib/ciris and cannot create it on any hosted runner"
+    )
 
 
 @pytest.mark.parametrize("leg", ("linux-android", "macos-ios"))

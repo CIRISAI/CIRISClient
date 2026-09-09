@@ -25,9 +25,20 @@
 #
 # THE NODE IS REAL. Every leg downloads a released ciris-server and the client
 # talks to it: on Android through `adb reverse`, so the emulator's
-# localhost:8080 IS the runner's node. That keeps the client in the REMOTE shape
+# localhost:4243 IS the runner's node. That keeps the client in the REMOTE shape
 # FSD/ONE_CLIENT_N_NODES.md describes and is why no Android node binary is
 # needed — CIRISServer publishes none.
+#
+# :4243 AND NOT :8080. A bare ciris-server has no brain and never binds the
+# agent's port; see .github/actions/ciris-node. This comment said 8080 for the
+# whole life of the gate, and so did every probe and forward under it.
+#
+# STILL OUTSTANDING (CIRISClient#31): nothing here seeds the client's home with
+# `CIRIS_RUN_WITHOUT_AI=true`, and `backendEndpoint()` reads an ABSENT flag as
+# "with AI" — i.e. the agent on :8080. So the app still resolves a backend this
+# gate does not run. Fixing the probe and the forward was necessary and is not
+# sufficient; the flag has to be written into each platform's home before
+# launch, which is the next change and needs a home path per platform.
 #
 # WHAT MAKES IT A GATE RATHER THAN A REPORT, and each is guarded by
 # tests/test_five_platform_workflow.py because a gate that can be quietly
@@ -91,6 +102,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # CHAQUOPY NEEDS A REAL 3.10, AND THE IMAGE STOPPED HAVING ONE.
+      # `ubuntu-latest` moved to 24.04 (Python 3.12), so the hardcoded
+      # /usr/bin/python3.10 in androidApp/build.gradle vanished and this leg has
+      # died at :androidApp:installDebugPythonRequirements every night since.
+      # Provision it explicitly and hand Gradle the path, rather than hoping the
+      # image keeps a version it no longer ships.
+      - uses: actions/setup-python@v5
+        id: py310
+        with:
+          python-version: '3.10'
+
       - name: The node this client will be a client of
         id: node
         env:
@@ -117,7 +139,8 @@ jobs:
           set -euo pipefail
           cd client
           ./gradlew :desktopApp:packageUberJarForCurrentOS :androidApp:assembleDebug \
-            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" --console=plain
+            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" \
+            -PchaquopyBuildPython="${{ steps.py310.outputs.python-path }}" --console=plain
 
       # THE CANDIDATE, NOT WHATEVER IS ON DISK. This asserts the artifact
       # carries this tree's version -- "freshest on disk" and "built from this
@@ -131,13 +154,7 @@ jobs:
           echo "apk=$(python3 -m testing.gate.candidate_artifacts --kind android_apk | tail -1)" >> "$GITHUB_OUTPUT"
 
       - name: Start the node
-        run: |
-          ./node/ciris-server > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: Linux desktop
         run: |
@@ -200,13 +217,7 @@ jobs:
         run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
 
       - name: Start the node
-        run: |
-          ./node/ciris-server > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: macOS desktop
         run: |
@@ -270,14 +281,7 @@ jobs:
         run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
 
       - name: Start the node
-        shell: bash
-        run: |
-          ./node/ciris-server.exe > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: Windows desktop
         shell: bash

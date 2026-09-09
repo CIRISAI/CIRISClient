@@ -56,7 +56,26 @@ android {
         // Chaquopy Python configuration
         python {
             version "3.10"
-            buildPython "/usr/bin/python3.10"
+            // AN ABSOLUTE PATH INTO THE RUNNER IMAGE IS A PIN TO A RUNNER IMAGE.
+            //
+            // This was `"/usr/bin/python3.10"`, and it stopped existing when
+            // `ubuntu-latest` moved to 24.04 (which ships 3.12). The nightly
+            // five-platform gate's whole Linux+Android leg has died at
+            // `:androidApp:installDebugPythonRequirements` ever since:
+            //
+            //   [/usr/bin/python3.10] is not a valid Python 3.10 command:
+            //   '/usr/bin/python3.10' does not exist
+            //
+            // The path stays as the DEFAULT because a developer machine that
+            // has it should keep working with no flag. CI passes the
+            // interpreter it actually provisioned:
+            //
+            //   -PchaquopyBuildPython="$(which python3.10)"
+            //
+            // Chaquopy still enforces that whatever this resolves to really is
+            // 3.10, so this widens where the interpreter may live without
+            // widening which interpreter is acceptable.
+            buildPython project.findProperty("chaquopyBuildPython") ?: "/usr/bin/python3.10"
             // Extract packages to real filesystem so they can be scanned for code integrity
             // ciris_engine MUST be included for startup hash verification to work!
             // ciris_edge added in 2.9.4 — Edge is the third leg of the
