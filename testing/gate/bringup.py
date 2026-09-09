@@ -67,10 +67,12 @@ CLIENT_TEST_PORT = 9091
 #:
 #: Reversing 8080 forwarded the emulator to a host port with nothing on it.
 #:
-#: NECESSARY BUT NOT SUFFICIENT — see the module docstring: the CLIENT still
-#: resolves its own backend from `CIRIS_RUN_WITHOUT_AI` in the home's `.env`,
-#: and absent means AGENT. Until the gate seeds that, the app looks for :8080
-#: no matter which port is forwarded.
+#: SUFFICIENT ON ITS OWN. An earlier note here said the client would still look
+#: for :8080 until the gate seeded `CIRIS_RUN_WITHOUT_AI` into each platform's
+#: home. That was wrong: `syncBackendFrom` only moves the base URL when the
+#: resolved endpoint is NODE_ONLY_ENDPOINT, so an absent .env leaves the app on
+#: its `:4243` default rather than sending it to the agent port. Confirmed by the
+#: gate itself — every desktop leg reports clientMode=NODE at :4243.
 NODE_API_PORT = 4243
 
 #: Android's test-mode switch. A file, not an env var: `am start` cannot set the

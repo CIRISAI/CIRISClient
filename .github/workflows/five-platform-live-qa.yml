@@ -33,12 +33,20 @@
 # agent's port; see .github/actions/ciris-node. This comment said 8080 for the
 # whole life of the gate, and so did every probe and forward under it.
 #
-# STILL OUTSTANDING (CIRISClient#31): nothing here seeds the client's home with
-# `CIRIS_RUN_WITHOUT_AI=true`, and `backendEndpoint()` reads an ABSENT flag as
-# "with AI" — i.e. the agent on :8080. So the app still resolves a backend this
-# gate does not run. Fixing the probe and the forward was necessary and is not
-# sufficient; the flag has to be written into each platform's home before
-# launch, which is the next change and needs a home path per platform.
+# NO .env SEEDING IS NEEDED, and an earlier version of this comment claimed
+# otherwise. The claim was: `backendEndpoint()` reads an ABSENT
+# `CIRIS_RUN_WITHOUT_AI` as "with AI" (:8080), so the gate must write the flag
+# into each platform's home or drive a client pointed at a port it does not run.
+#
+# That was wrong, and wrong in the direction that invents work. `syncBackendFrom`
+# only calls `updateBaseUrl` when the resolved endpoint is NODE_ONLY_ENDPOINT —
+# with no .env it resolves to AGENT and then does NOTHING, leaving Main.kt's
+# `:4243` default in place. The reasoning had read `backendEndpoint()`'s return
+# value without checking what the caller does with it.
+#
+# Settled by evidence rather than by re-reading: all three desktops now report
+#     [OK ] state: clientMode=NODE node=http://127.0.0.1:4243
+# and pass the walk end to end.
 #
 # WHAT MAKES IT A GATE RATHER THAN A REPORT, and each is guarded by
 # tests/test_five_platform_workflow.py because a gate that can be quietly
