@@ -1307,8 +1307,20 @@ fun CIRISApp(
                     commitGate(probe, nodeHealth)
                 }
             } catch (e: Exception) {
-                // Probe failed — leave the gate unset (defaults to agent wording).
-                platformLog(TAG, "[WARN][gate] clientMode probe failed: ${e.message?.take(80)}")
+                // Probe failed. This does NOT set the gate — but it does not clear a
+                // previously-committed one either, so SAY WHICH IT IS. The comment
+                // here used to read "leave the gate unset", which was true only on a
+                // first probe; on a re-probe the gate keeps whatever the last backend
+                // answered, and that silence is what let a stale AGENT survive the
+                // post-setup hand-off for a whole release (CIRISClient#48). The
+                // hand-off now clears the gate before this can run, so an unset gate
+                // is the expected case — and if it is ever NOT unset here, the log
+                // says so rather than leaving the next reader to infer it.
+                platformLog(
+                    TAG,
+                    "[WARN][gate] clientMode probe failed: ${e.message?.take(80)} " +
+                        "— gate stays ${clientMode ?: "unset"}",
+                )
             }
 
             // ─── Post-setup RECONFIGURING hold ──────────────────────────────
@@ -2563,9 +2575,36 @@ fun CIRISApp(
                         // keeps polling the port it chose before the answer
                         // existed — 109 API inits at :8080 and "Restarting your
                         // node…" forever.
+                        //
+                        // AND THE GATE IS AN ANSWER *ABOUT A BACKEND* (CIRISClient#48).
+                        // The paragraph above is the port; this is the verdict, and it
+                        // went stale the same way. clientMode was derived against the
+                        // AGENT on :8080 and nothing invalidated it when :4243 took
+                        // over, so the re-probe's `Connection refused` — which is what
+                        // an absent agent port SHOULD look like — hit the catch, the
+                        // catch preserved the previous answer, and the post-login path
+                        // waited 30 s for an agent that setup had just removed:
+                        //
+                        //   [WARN][gate] clientMode probe failed: Connection refused
+                        //   Local login successful, waiting for agent (clientMode=AGENT)
+                        //
+                        // 0.5.214 stopped the probe BLOCKING startup and made that
+                        // second line name the gate; it did not stop the gate being
+                        // wrong. Discarding it here is what does: `checkingFirstRun`
+                        // is reset below, so a probe re-runs either way — on a with-AI
+                        // setup it succeeds and re-commits AGENT, and on run-without-AI
+                        // it fails and correctly leaves the gate unset, which
+                        // `shouldWaitForAgent` already reads as "do not wait".
+                        //
+                        // Cleared rather than latched to NODE: a transport error is not
+                        // a verdict, and inventing one here is the mistake the
+                        // three-state probe exists to avoid. "I no longer know" is the
+                        // true statement, and it is the one that costs nothing.
+                        clientMode = null
+                        brainPresent = null
                         coroutineScope.launch {
                             val endpoint = syncBackendFromEnv(envFileUpdater, apiClient)
-                            platformLog(TAG, "[INFO][BACKEND] after setup the backend is :${endpoint.port}")
+                            platformLog(TAG, "[INFO][BACKEND] after setup the backend is :${endpoint.port} — gate discarded, it described the previous backend")
                         }
                         // After setup completes, exchange OAuth ID token for CIRIS access token
                         // Run on IO dispatcher to avoid blocking main thread during network/file operations
