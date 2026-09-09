@@ -257,9 +257,18 @@ def desktop_plan(jar: Path, display_wrapped: bool = True) -> Plan:
 #: otherwise leave a Compose window behind on every invocation.
 _BACKGROUND: list[subprocess.Popen] = []
 
+#: Open log files for spawned steps, closed alongside them.
+_BACKGROUND_LOGS: list = []
+
 
 def terminate_background() -> None:
     """Stop anything `run()` spawned. Safe to call twice, and never raises."""
+    while _BACKGROUND_LOGS:
+        handle = _BACKGROUND_LOGS.pop()
+        try:
+            handle.close()
+        except Exception:  # noqa: BLE001
+            pass
     while _BACKGROUND:
         proc = _BACKGROUND.pop()
         try:
@@ -283,10 +292,23 @@ def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[St
                 # Spawned, not awaited. Liveness is proven by wait_for_server;
                 # the only failure this can report is "it would not start at
                 # all", which Popen raises as FileNotFoundError below.
+                # THE APP'S OWN OUTPUT IS THE DIAGNOSTIC CHANNEL, AND I THREW
+                # IT AWAY. The first version of this sent stdout and stderr to
+                # DEVNULL, which is how `screenshot: capture unavailable` became
+                # a failure with no reason attached on three platforms at once —
+                # the app was surely saying why and nobody could hear it. This
+                # gate's own rule is that a failure you cannot diagnose from the
+                # artifact costs a re-run to learn what the first run already
+                # knew.
+                #
+                # Written beside the node's log, which each leg already uploads.
+                log_path = Path(f"{step.name}-app.log")
+                log_handle = open(log_path, "wb")  # noqa: SIM115 — closed by the reaper
+                _BACKGROUND_LOGS.append(log_handle)
                 proc_bg = subprocess.Popen(
                     step.cmd,
-                    stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
                 )
                 _BACKGROUND.append(proc_bg)
                 results.append((step, 0))

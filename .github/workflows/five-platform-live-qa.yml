@@ -242,6 +242,7 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
 
   macos-ios:
     name: macos desktop + ios simulator
@@ -305,6 +306,7 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
 
   windows:
     name: windows desktop
@@ -355,6 +357,7 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
 
   gallery:
     name: screenshot gallery
