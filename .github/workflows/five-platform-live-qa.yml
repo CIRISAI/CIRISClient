@@ -76,6 +76,22 @@ permissions:
 
 env:
   CIRIS_AGENT_ROOT: ${{ github.workspace }}/.agent
+  # THE APP SERVES /health ON 9091 ONLY IN TEST MODE, AND NOTHING SET IT.
+  #
+  # `TestAutomationServer.isTestModeEnabled()` reads CIRIS_TEST_MODE and the
+  # desktop starts its automation server only when that is true. The workflow
+  # never set it, so every desktop leg launched an app with no automation
+  # server and then failed the one thing it exists to prove:
+  #
+  #   [OK ] bring-up: launch
+  #   [FAIL] drive: automation server never came up within 120s:
+  #          GET /health -> no answer from http://127.0.0.1:9091
+  #
+  # Job-level rather than per-leg: three legs need it and a fourth would forget.
+  # Android arms the same switch with a sentinel file instead (an `am start`
+  # cannot set the environment of the process it launches — see bringup.py's
+  # ANDROID_TEST_SENTINEL), which is why that leg does not depend on this.
+  CIRIS_TEST_MODE: "true"
 
 jobs:
   linux-android:

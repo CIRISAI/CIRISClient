@@ -1211,7 +1211,17 @@ fun CIRISApp(
                 // `val` since the fold retry moved off this path (CIRISClient#48):
                 // the only thing that used to reassign these was the inline retry
                 // loop, and it now owns its own copies.
-                val nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
+                // THE LIVE NODE ADDRESS, NOT THE PARAMETER (CIRISClient#52).
+                //
+                // `nodeBaseUrl` is a composable parameter: resolved once when
+                // CIRISApp was called, and frozen. LOCAL_NODE_URL is the live
+                // answer — the operator's if they named one, and updated by the
+                // run-without-AI hand-off otherwise. a55ac98 introduced exactly
+                // this resolution for #48 but placed it ~3500 lines below here,
+                // so this probe and the reconfigure hold kept reading the frozen
+                // one and asking the AGENT's port whether the NODE was up.
+                val liveNodeUrl = CIRISApiClient.LOCAL_NODE_URL
+                val nodeHealth = apiClient.getNodeHealth(liveNodeUrl)
                 nodeVersion = nodeHealth.version
                 // Is the brain configured at all? A brain with no config runs 10 of
                 // its 22 services to serve the wizard and reports cognitive_state
@@ -1274,7 +1284,7 @@ fun CIRISApp(
                         while (bgProbe.undetermined && modePolls < maxModePolls) {
                             kotlinx.coroutines.delay(1000)
                             modePolls++
-                            runCatching { apiClient.getNodeHealth(nodeBaseUrl) }.onSuccess { nh ->
+                            runCatching { apiClient.getNodeHealth(CIRISApiClient.LOCAL_NODE_URL) }.onSuccess { nh ->
                                 bgHealth = nh
                                 nodeVersion = nh.version
                                 bgProbe = ai.ciris.mobile.shared.models.clientModeFrom(
@@ -1377,8 +1387,14 @@ fun CIRISApp(
                 var reconfigPolls = 0
                 var routed = false
                 while (reconfigPolls < maxReconfigPolls) {
-                    if (isNodeReachable(nodeBaseUrl)) {
-                        val ownership = probeNodeOwnership(nodeBaseUrl)
+                    // THE LIVE ADDRESS, re-read each poll (#52). Read from the
+                    // frozen parameter this loop polled a dead agent port ~180
+                    // times while the node was serving, logging "Restarting your
+                    // node…" and never exiting — on macOS, which is slow enough
+                    // that the hand-off lands before the first poll.
+                    val holdNodeUrl = CIRISApiClient.LOCAL_NODE_URL
+                    if (isNodeReachable(holdNodeUrl)) {
+                        val ownership = probeNodeOwnership(holdNodeUrl)
                         if (ownership.isOwned) {
                             // Back + owned (claimed OR legacy-owned) → configured.
                             // The reload invalidated the setup token, so the owner

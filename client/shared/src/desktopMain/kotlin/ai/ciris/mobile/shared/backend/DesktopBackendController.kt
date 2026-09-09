@@ -53,6 +53,29 @@ class DesktopBackendController(
      */
     override suspend fun revive(): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
+            // NEVER A SECOND NODE (CIRISClient#52).
+            //
+            // The doc above claimed `startServer` "attaches to a listening node
+            // rather than starting a second one". It cannot: `shutdown()` runs
+            // first and clears the started flag, so the attach check that would
+            // have caught this is answered from state we just erased. When the
+            // supervisor was probing the wrong port it called this three times
+            // against a perfectly healthy node, and the third launched a second
+            // ciris-server that bound :4243 — two boot banners, one home, which
+            // is the family CIRISServer#563 and #568 were about.
+            //
+            // So ask the NODE, not our own bookkeeping, and ask before killing
+            // anything. A node that answers is a node that must not be
+            // restarted: whatever the supervisor believed, the evidence in front
+            // of us says the thing it wants is already true.
+            val nodeUrl = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
+            if (probe(nodeUrl) == ProbeOutcome.ANSWERED) {
+                ai.ciris.mobile.shared.platform.PlatformLogger.i(
+                    "DesktopBackendController",
+                    "[revive] $nodeUrl is answering — not restarting, and NOT starting a second node",
+                )
+                return@runCatching Unit
+            }
             runtime.shutdown()
             runtime.startServer().getOrThrow()
             Unit
@@ -70,7 +93,15 @@ class DesktopBackendController(
             withContext(Dispatchers.IO) {
                 var conn: HttpURLConnection? = null
                 try {
-                    conn = (URL("$url/v1/system/health").openConnection() as HttpURLConnection).apply {
+                    // THE PATH BELONGS TO THE ENDPOINT, NOT TO THIS FUNCTION.
+                    //
+                    // Hardcoded `/v1/system/health` is the AGENT's health route
+                    // (AGENT_ENDPOINT); a bare node serves `/health`
+                    // (NODE_ONLY_ENDPOINT). Asking a node the agent's question
+                    // is CIRISClient#48's shape, and here it fed the supervisor
+                    // the death evidence that made it restart a healthy node.
+                    val healthPath = ai.ciris.mobile.shared.platform.ActiveBackend.endpoint.healthPath
+                    conn = (URL("$url$healthPath").openConnection() as HttpURLConnection).apply {
                         connectTimeout = timeoutMs
                         readTimeout = timeoutMs
                         requestMethod = "GET"

@@ -101,8 +101,24 @@ fun main() {
     // Same supervisor, same policy, same tests as Android and iOS. Only a
     // loopback node is ever restarted; pointed at someone else's node this
     // observes and reports.
+    // CIRIS_NODE_URL NAMES THE NODE. CIRIS_API_URL NAMES THE AGENT, AND THE
+    // FALLBACK BETWEEN THEM IS CIRISClient#48's ROOT (and #52's).
+    //
+    // This read `CIRIS_NODE_URL ?: CIRIS_API_URL ?: default`, so on any host
+    // that sets CIRIS_API_URL — the QA gate does — every "is the node up?"
+    // question was addressed to the AGENT's port. After a run-without-AI
+    // hand-off that port is dead by design, which produced #52 whole:
+    //
+    //   the supervisor probed :8080, called BudgetExpired three times while its
+    //   own health check reported :4243 healthy, and on the third attempt
+    //   launched a SECOND ciris-server against the same home;
+    //   the post-setup hold polled :8080 ~180 times and never exited.
+    //
+    // A custom port is honoured verbatim through CIRIS_NODE_URL, which is the
+    // documented way to move the node. CIRIS_API_URL no longer reaches this
+    // value at all — one name, one meaning.
     val nodeUrl = System.getenv("CIRIS_NODE_URL")
-        ?: System.getenv("CIRIS_API_URL") ?: ai.ciris.mobile.shared.api.CIRISApiClient.DEFAULT_LOCAL_NODE_URL
+        ?: ai.ciris.mobile.shared.api.CIRISApiClient.DEFAULT_LOCAL_NODE_URL
 
     // WHICH local node this is (CIRISClient#26). Every federation call site —
     // mintUserIdentity, upgradeOwnerToFedId, announceOwnership, getSelfKeyRecord
@@ -110,7 +126,12 @@ fun main() {
     // value, so a client attached to :4343 minted the owner's identity on a node
     // the operator had never attached to. Declared once, here, before anything
     // that could mint a key.
-    ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(nodeUrl)
+    // `explicit` iff the operator named it; a defaulted address stays
+    // inferable so the hand-off may still correct it (#52).
+    ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(
+        nodeUrl,
+        explicit = System.getenv("CIRIS_NODE_URL") != null,
+    )
     val backendSupervisor = ai.ciris.mobile.shared.backend.BackendSupervisor(
         probe = { ai.ciris.mobile.shared.backend.DesktopBackendController.probe(nodeUrl) },
         controller = ai.ciris.mobile.shared.backend.DesktopBackendController(pythonRuntime),
@@ -217,10 +238,12 @@ fun main() {
                     // would aim every shared-client call at a dead port.
                     // CIRIS_NODE_URL is the upstream name; CIRIS_API_URL is kept
                     // because this build has always used it to mean the node.
-                    apiBaseUrl = System.getenv("CIRIS_NODE_URL")
-                        ?: System.getenv("CIRIS_API_URL") ?: "http://127.0.0.1:4243",
-                    nodeBaseUrl = System.getenv("CIRIS_NODE_URL")
-                        ?: System.getenv("CIRIS_API_URL") ?: "http://127.0.0.1:4243",
+                    // Both from CIRIS_NODE_URL, and NOT from CIRIS_API_URL —
+                    // see the note on `nodeUrl` above. `nodeUrl` is already
+                    // resolved there and is reused rather than re-derived: two
+                    // expressions computing one address is how they drift.
+                    apiBaseUrl = nodeUrl,
+                    nodeBaseUrl = nodeUrl,
                     pythonRuntime = pythonRuntime,
                     secureStorage = createSecureStorage(),
                     envFileUpdater = createEnvFileUpdater(),

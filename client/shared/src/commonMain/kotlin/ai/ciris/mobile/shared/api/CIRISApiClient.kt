@@ -400,16 +400,58 @@ class CIRISApiClient(
             private set
 
         /**
+         * Was [LOCAL_NODE_URL] set by the operator, rather than defaulted?
+         *
+         * An operator who names a node — `CIRIS_NODE_URL`, or a CLI flag — has
+         * said where it is, including its port. Nothing derived afterwards may
+         * overrule that (CIRISClient#52).
+         */
+        @kotlin.concurrent.Volatile
+        var localNodeUrlIsExplicit: Boolean = false
+            private set
+
+        /**
          * Declare which local node this app actually drives. Call once, early,
          * from the platform entry point — before any federation call site runs.
+         *
+         * @param explicit the operator named this address (env var or CLI flag),
+         *   so a later inference must not overwrite it. See [setInferredLocalNodeUrl].
          */
-        fun setLocalNodeUrl(url: String) {
+        fun setLocalNodeUrl(url: String, explicit: Boolean = false) {
             val trimmed = url.trim().trimEnd('/')
             require(trimmed.isNotEmpty()) { "local node url must not be blank" }
             if (trimmed != LOCAL_NODE_URL) {
                 PlatformLogger.i(TAG, "[setLocalNodeUrl] local node is $trimmed (was $LOCAL_NODE_URL)")
             }
             LOCAL_NODE_URL = trimmed
+            // ASSIGNED, NOT LATCHED. Each declaration states its own
+            // authority; a latch would make the flag depend on call order and
+            // could never be cleared, which is also what made it untestable.
+            // The hand-off cannot clear it by accident — it goes through
+            // [setInferredLocalNodeUrl], which returns before reaching here.
+            localNodeUrlIsExplicit = explicit
+        }
+
+        /**
+         * Move the local node to an address we INFERRED — the run-without-AI
+         * hand-off deciding the node is now the backend.
+         *
+         * A CUSTOM PORT SURVIVES THIS. The hand-off resolves the node from
+         * `NODE_ONLY_ENDPOINT`, whose port is the 4243 default, so calling
+         * [setLocalNodeUrl] from there would silently move an operator who runs
+         * on :9999 back onto :4243 the moment setup completed — replacing one
+         * address the client cannot reach with another. An operator's answer
+         * outranks our inference; if they named it, we leave it alone.
+         */
+        fun setInferredLocalNodeUrl(url: String) {
+            if (localNodeUrlIsExplicit) {
+                PlatformLogger.i(
+                    TAG,
+                    "[setLocalNodeUrl] keeping the operator's $LOCAL_NODE_URL; not moving to inferred $url",
+                )
+                return
+            }
+            setLocalNodeUrl(url)
         }
 
         // Mask token for logging (show first 8 and last 4 chars)

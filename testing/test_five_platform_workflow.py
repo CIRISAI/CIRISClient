@@ -216,3 +216,24 @@ def test_the_gate_is_not_wired_to_every_push(wf):
     on = wf.get("on") or wf.get(True)
     assert "push" not in on, "too expensive to gate every push; nightly is the point"
     assert "schedule" in on, "nothing would ever run it"
+
+
+def test_test_mode_is_armed_or_the_automation_server_never_starts():
+    """The app serves /health on 9091 only when CIRIS_TEST_MODE is set.
+
+    `TestAutomationServer.isTestModeEnabled()` reads that variable, and the
+    desktop starts its automation server only when it is true. Nothing set it,
+    so every desktop leg launched an app with no automation server and then
+    failed the single thing the gate exists to prove:
+
+        [OK ] bring-up: launch
+        [FAIL] drive: automation server never came up within 120s
+
+    A launch that succeeds and a client that can be driven are different facts,
+    and the gate was asserting the first while reporting the second.
+    """
+    env = yaml.safe_load(WF.read_text(encoding="utf-8")).get("env") or {}
+    assert str(env.get("CIRIS_TEST_MODE", "")).lower() in ("true", "1", "yes"), (
+        "CIRIS_TEST_MODE is not armed, so no desktop leg can reach the "
+        "automation server it drives the app through"
+    )

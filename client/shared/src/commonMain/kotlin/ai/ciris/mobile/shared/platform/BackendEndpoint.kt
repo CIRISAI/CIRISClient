@@ -263,7 +263,8 @@ suspend fun syncBackendFrom(
     val endpoint = ActiveBackend.endpoint
     if (endpoint == NODE_ONLY_ENDPOINT) {
         val url = endpoint.baseUrl(LOOPBACK_HOST)
-        ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(url)
+        // INFERRED, not declared — an operator's custom port outranks it (#52).
+        ai.ciris.mobile.shared.api.CIRISApiClient.setInferredLocalNodeUrl(url)
         // updateBaseUrl recreates every SDK instance, so this reaches the
         // ~13 generated APIs as well as the direct HTTP calls.
         if (apiClient.baseUrl != url) apiClient.updateBaseUrl(url)
