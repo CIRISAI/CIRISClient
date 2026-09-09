@@ -1,261 +1,249 @@
-# CSD-B — the Buildable Profile
+# CSD/3 — the lifecycle form
 
-**Profile id**: `buildable`
-**Profiles**: `FSD/CSD_STANDARD.md` v1.0 (CIRISAgent, `release/2.11.0`)
-**Status**: Draft
-**Date**: 2026-09-08
-**Namespace registry**: CIRISConstitution `manifests/namespace_registry.json` @ `rc5`
-(`cc_version: 1.0-rc5`, `source_sha256: 87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5`)
+**Version**: 3.0 (draft)
+**Supersedes**: CSD-B "buildable profile" (this file, v2), which added sample
+outputs and namespaces as two tables and left the DSL unable to check either.
+**Profiles**: `FSD/CSD_STANDARD.md` v1.0 (CIRISAgent) — §1–§6, the flow
+byte-identity rule and `check_csd.py` are inherited and unchanged unless named.
+**Registry**: CIRISConstitution `manifests/namespace_registry.json`, pinned per
+document by `source_sha256`.
 
-## 0. What this is, and what it is not
+## 0. What changed, and why a third version
 
-A **CIRIS Specification Document (CSD)** is Mission Driven Development applied to
-one user-facing surface: MISSION / SCHEMAS / PROTOCOLS / LOGIC for a single
-screen, plus a flow in the UI DSL that a machine executes to prove the surface
-does what the document says. That standard exists, it is good, and this file does
-**not** replace it. `FSD/CSD_STANDARD.md` in CIRISAgent remains the normative
-definition of §1–§6, the DSL, and the `check_csd.py` flow-identity rule.
+v1 documents a surface someone already built. v2 (CSD-B) reversed the arrow so a
+surface could be designed first, and added §2a sample outputs and §3a namespaces.
+Both v2 sections were **richer than the DSL could check** — the strongest value
+predicate was `text: {tag: substring}`, so a CSD could promise "six capacities,
+each a factor, and a composite equal to their minimum" and assert only that a
+card was on screen.
 
-This is a **conformance profile** over it: two additional required sections and
-one reversed arrow. A CSD that satisfies the parent standard and both sections
-below is a **CSD-B**.
+A specification whose claims cannot be checked is a document, not a contract.
 
-A profile rather than a fork, for the reason this repo states in AGENTS.md — *do
-not add a second source for anything that already has one* — and for the reason
-OASIS gives for conformance clauses: a clause that strengthens a normative
-statement must refer to the original and say plainly that it is strengthening
-it.[^oasis] Everything not named here is inherited unchanged. The acronym, the
-numbering (`CSD-001`…), the `Flow` line and the byte-identity rule are all the
-parent's, deliberately, so a CSD-B is still a CSD and `check_csd.py` still runs.
+v3 does three things:
 
-### The reversed arrow
+1. **The DSL expresses what the UI shows** — counts, numbers, ranges, sets,
+   relations between values, and the empty/loading/error states — so §2a stops
+   outrunning §4.
+2. **The CEG prefix IS the field identifier.** v2's two tables become one. A
+   field is named by its constitutional family, so the registry validates the
+   vocabulary and the UI contract in a single pass, and a surface cannot render
+   a value without saying which family it belongs to.
+3. **The document is machine-readable and STAGED.** A CSD is written before the
+   feature exists and accumulates implementation data as it is built, by
+   different hands. The checker validates *for the declared stage*, so a missing
+   route at `sketched` is expected and the same absence at `building` is a
+   defect.
 
-The parent standard is written **downstream of an implementation**. §6 step 3:
+## 1. The lifecycle
 
-> Fill §2 from the client PR's tag list. **Do not add tags the PR does not name.**
+```yaml csd:stage
+stage: sketched          # envisioned|sketched|building|testable|verified|shipped
+owner: CIRISClient       # who holds the pen at this stage
+```
 
-and §6 step 4 offers the literal word `unconfirmed` where a contract is unknown.
-Both are correct for documenting a surface someone has already built, and both
-make it impossible to *design* one. The goal of this profile is a document a team
-can implement **from** — mission, surface, sample outputs, namespaces and flow
-decided before the first Kotlin file — so `guaranteed by` in §2 stops citing a PR
-that already exists and starts naming the PR that will satisfy it.
+| stage | pen | lands in this stage | checker requires |
+|---|---|---|---|
+| `envisioned` | steward | §1 mission, §2 `ceg:` families touched | §1 falsifiable; every `ceg:` resolves in the registry |
+| `sketched` | client | §2 screens/tags/`shows:`/`states:`, §4 flow | tags may be `proposed:`; flow must parse; floor `unreleased` |
+| `building` | substrate | §3 contracts — routes, owners, payload shapes | no `unconfirmed` left in §3; `shows:` types match the route |
+| `testable` | client | floor flips off `unreleased`; flow runs on the matrix | every `shows:` row asserted in §4 or disclaimed in §5 |
+| `verified` | steward | §5 acceptance signed; the untested list accepted | flow green on its declared platforms; gallery has a shot per step |
+| `shipped` | — | the release that carries it | floor names a published version |
 
-The parent's caution survives intact and is the reason §2a exists in the shape it
-does: *a guessed tag is the #39 defect in its purest form*. Designing forward is
-not licence to guess. It is a promotion of the guess to a **commitment**, written
-down, with a checker that fails when the implementation and the commitment
-disagree. `unconfirmed` stays available and stays honest.
+**Absence is stage-relative, and that is the whole point.** A `sketched` CSD with
+`unconfirmed` contracts is correct. The same document at `building` is a
+document waiting on someone who has stopped. The checker tells them apart, so
+"not yet" and "stalled" stop looking identical — which is the failure this repo
+keeps finding under other names.
 
-## 1. Prior and convergent art
+**A stage never advances itself.** The pen-holder edits `stage:` deliberately,
+and the checker refuses an advance whose requirements are unmet, naming the
+missing row. Nothing infers readiness from a green run.
 
-This profile is not novel and should not pretend to be. What follows is what it
-borrows and, more usefully, where each source stops.
+## 2. Surface — `shows:` (the unified field spec)
 
-**Specification by Example / Gherkin.** One artifact that is simultaneously the
-requirement and the test — the parent standard's core idea, and its
-`requires`/`do`/`expect` is Given/When/Then in another coat. The well-documented
-failure is over-specification: scenarios that encode interactions rather than
-behaviour multiply and break on every UI change, and practitioners converge on
-keeping interface-specific terms *out* of the spec.[^gherkin][^gherkin2] The
-parent standard already resists this by making the runner, not the flow, own the
-navigation hop. **Where it stops:** Gherkin has no vocabulary for *what a value
-looks like*. `Then I see the capacity card` is as much as it can say.
+> Replaces v2 §2a **and** §3a. One row per rendered value; the CEG family is the
+> identifier.
 
-**Approval / golden-master testing.** The established answer to "assert a complex
-output without predicting it": capture a blessed rendering and diff.[^approval]
-The known weakness is decisive here — golden tests verify *consistency, not
-correctness*; a flawed baseline keeps passing.[^golden] So §2a takes the *idea*
-of a concrete expected output and rejects the mechanism: a CSD-B writes its
-examples **by hand, before the code**, where they are a claim someone can be
-wrong about, rather than capturing whatever the implementation happened to emit.
+```yaml csd:shows
+registry_sha256: 87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5
+fields:
+  - ceg: capacity:composite
+    use: display-only            # read | display-only | emit
+    type: float
+    example: 0.68
+    renders: "𝒞_CIRIS — 0.68 (lowest factor: incompleteness awareness)"
+    tag: value_capacity_composite
+    assert:
+      relation: {op: min_of, of: [capacity:core_identity, capacity:integrity,
+                                  capacity:resilience,
+                                  capacity:incompleteness_awareness,
+                                  capacity:sustained_coherence]}
+  - ceg: capacity:core_identity
+    use: display-only
+    type: float
+    example: 0.82
+    renders: "Core identity — 0.82"
+    tag: row_capacity_core_identity
+```
 
-**Spec-Driven Development (2025–26).** The now-mainstream position that a
-version-controlled, executable spec is the source of truth and code is derived
-from it, across GitHub Spec Kit, Kiro, OpenSpec and others.[^sdd][^sdd2] Research
-systems push further into dual specs — architecture and behaviour compiled from
-one feature description.[^codespec] **Where it stops:** SDD specs are generally
-bound to a *codebase*, not to an external normative vocabulary. Nothing in that
-lineage answers "which of these strings am I allowed to emit."
+### 2.1 Required keys
 
-**Controlled vocabularies and conformance clauses.** 1EdTech VDEX and Dublin
-Core-style term registries make specific fields normative — term IRI, definition,
-usage — and define conformance against them.[^vdex][^dcterms] This is the direct
-model for §3a: the CIRISConstitution namespace registry already *is* such a
-registry (116 families, `reserved` flags, `reserved_rule`, owning component), and
-a UI spec that renders constitutional values should cite it the way a metadata
-profile cites its vocabulary.
-
-**Design by Contract.** Meyer's contracts between software elements are the
-ancestor of §3's owner column.[^contract] The registry's `owning_repo` turns that
-column from an assertion into a lookup.
-
-**The gap this profile fills.** None of the above binds *sample rendered output*
-and *normative vocabulary* into the same document as the executable flow. That
-combination is the whole point: it is what lets a designer write a card, a
-developer build it, and a gate check it, from one file.
-
-## 2a. Sample output (REQUIRED)
-
-> **Strengthens** parent §2 "Collects / shows", which specifies `field | source |
-> required` and no more. That is enough to test that *something* rendered and not
-> enough to build anything.
-
-Today CSD-004's entire data specification is one row:
-
-| field | source (§3) | required |
+| key | meaning | checked against |
 |---|---|---|
-| capacity attestations | capacity read | shows |
+| `ceg` | the family, exactly as the registry spells it | the pinned registry, or the `x_private:` prefix it reserves |
+| `use` | `read` · `display-only` · `emit` | `reserved` + `reserved_rule`: an `emit` on a reserved family this component does not own is a **load error** |
+| `type` | `string` · `int` · `float` · `bool` · `enum[…]` · `list[…]` · `timestamp` · `unconfirmed` | §3's route, once the stage is `building` |
+| `example` | a literal value as it would arrive | shape only; a redacted real value beats an invented one |
+| `renders` | what the user sees for that example | prose; the sentence a designer would write |
+| `tag` | the §2 tag carrying it, `proposed:` prefixed until a PR names it | must appear in a §4 step by `testable` |
+| `assert` | the predicate §4 must enforce (below) | the DSL |
 
-A developer cannot build a card from that: not the field names, not the value
-types, not what "none yet" looks like. Worse, CSD-004's own mission forbids
-exactly the failure this vagueness invites — *"a placeholder that looks like data
-is the metric-dishonesty MDD's anti-Goodhart measures name"* — while giving no
-way to say what the real thing renders as.
+### 2.2 Parameterised families
 
-### 2a.1 Required content
+The registry declares placeholder classes per segment (`vocab`, `value`,
+`external`, `hex`, `literal`). A CSD binding a parameterised family states the
+instantiation and the checker validates each segment against its class and the
+`vocab_pattern` `^[a-z0-9][a-z0-9_.-]*$`:
 
-For every field in §2 "Collects / shows", a CSD-B gives:
+```yaml
+  - ceg: capacity_assurance:witness:{domain}:{band}:v1
+    bind: {domain: medical, band: full}     # each checked against its class
+```
 
-| column | meaning | rule |
+Case is **byte-exact** and consumers must not case-fold (`compare:` in the
+registry). A malformed segment is refused with the registry's own token,
+`namespace_dimension_case_malformed`, rather than a bespoke message.
+
+### 2.3 States — all four, always
+
+```yaml csd:states
+populated: {tag: federation_capacity_live}
+empty:     {tag: text_capacity_empty,  renders: "No capacity attestations for this node yet."}
+loading:   {renders: "card frame with a progress affordance; NOT the empty sentence"}
+error:     {tag: text_capacity_error,  renders: "Could not read capacity attestations."}
+```
+
+`error` is **mandatory and must be distinguishable from `empty`**. A surface that
+renders a failed read as an empty one tells the user a different and more
+flattering thing than the truth, and CSD-003 states the principle: a safety
+surface that silently fails to render is worse than one that is absent, because
+absence is at least visible.
+
+## 3. The DSL, v2 — expressing what the UI shows
+
+> Extends the parent's §3. `requires`/`do`/`expect`, `visible`/`absent`/`text`
+> and the action verbs are unchanged. These are additions to `expect:`.
+
+| predicate | form | says |
 |---|---|---|
-| `field` | the same name used in §2 | must match §2 exactly |
-| `type` | `string` · `int` · `float` · `bool` · `enum[…]` · `list[…]` · `timestamp` | one of these; a new type is a change to this profile |
-| `example` | a **literal** value as it would arrive | real-shaped, not `foo`; a redacted real value beats an invented one |
-| `renders as` | what the user sees for that example | the sentence a designer would write |
-| `tag` | the §2 tag this value appears in | must be a tag §2 declares |
+| `count` | `count: {of: <tag-glob>, eq\|min\|max: N}` | how many elements match |
+| `number` | `number: {tag: {min: , max: , eq: }}` | the element's text parses as a number in range |
+| `matches` | `matches: {tag: <regex>}` | anchored regex over the element's text |
+| `one_of` | `one_of: {tag: [a, b, c]}` | membership in a closed set |
+| `each` | `each: {of: <tag-glob>, <predicate>}` | the predicate holds for every match |
+| `relation` | `relation: {left: <tag>, op: eq\|ne\|lt\|lte\|gt\|gte\|min_of\|max_of\|sum_of, right\|of: …}` | a value's relationship to other values |
+| `state` | `state: populated\|empty\|loading\|error` | the surface is in that §2.3 state |
 
-### 2a.2 The three states, all required
+**Rules, each a load error:**
 
-A field table with only a happy path is incomplete, and the omission is where
-safety surfaces fail quietly. Every CSD-B states, per surface:
+* **A predicate names tags that §2 declares.** A glob that matches nothing fails
+  the step rather than passing vacuously — the empty-set trap, which is how a
+  gate reports "everything tagged is drivable" about a screen with no elements.
+* **`relation` operands are `ceg:` field ids, not tags.** The relationship is
+  between *values*, and the constitutional meaning travels with the family; the
+  tag is only where it is drawn. `capacity:composite` being the minimum of five
+  factors is a fact about the vocabulary, and a UI that renders it as an average
+  misstates the Constitution rather than merely looking wrong.
+* **`number` refuses a non-numeric text** rather than reading 0. Reading a
+  missing value as a zero is a score where there is none.
+* **No predicate may be satisfied by absence.** `count: {eq: 0}` is legal only
+  against an explicit `state: empty`.
 
-* **empty** — the value is legitimately absent. *What is on screen?* "Nothing
-  yet" and "we could not ask" are different and must render differently.
-* **loading** — the read is in flight.
-* **error** — the read failed. **Naming the failure is mandatory**: a surface
-  that renders an error as an empty state is the metric-dishonesty case in its
-  most literal form, and CSD-003 says why in its mission — *a safety surface that
-  silently fails to render is worse than one that is absent, because absence is
-  at least visible.*
+### 3.1 What this buys, on the CSD that needed it
 
-### 2a.3 What the flow must then assert
+CSD-004 could previously assert that a card was on screen. It can now assert what
+the card *means*:
 
-§2a is not decoration; it is a promise §4 has to keep. Each of the three states
-gets either:
+```yaml
+expect:
+  state: populated
+  count: {of: "row_capacity_*", eq: 5}
+  each:  {of: "row_capacity_*", number: {min: 0.0, max: 1.0}}
+  relation: {left: capacity:composite, op: min_of,
+             of: [capacity:core_identity, capacity:integrity, capacity:resilience,
+                  capacity:incompleteness_awareness, capacity:sustained_coherence]}
+  visible: [text_capacity_attested_by]
+```
 
-* a step in the flow that asserts it, or
-* a line in §5's **"Untested and must be established"** saying it does not.
+The last line is constitutional rather than cosmetic: `capacity:*` carries
+`no-self-emit (attesting_key_id != attested_key_id)` at CC 3.4.5, so a score with
+no visible attester invites exactly the reading the Constitution forbids.
 
-A CSD-B whose §2a lists an error state that neither §4 asserts nor §5 disclaims
-fails the checker.
+**The range in that example is `unconfirmed` today.** The registry gives each
+family a symbol and a `signed` polarity, not bounds. A CSD at `sketched` writes
+`type: float, range: unconfirmed`; the `building` stage is where CIRISLensCore
+supplies it, and the checker refuses to advance until it does. That is the
+mechanism working, not a gap in the example.
 
-**Known limitation, stated rather than hidden.** The parent DSL's strongest
-value assertion is `text: {tag: substr}` — substring containment. It cannot check
-a type, a count, or a range, so today §4 can assert *"the card says
-`sustained_coherence`"* but not *"six capacities each with a score in 0..1"*.
-§2a is therefore currently richer than §4 can verify. That is a deliberate,
-temporary asymmetry: the specification is the thing worth having first, and the
-DSL extension (`count:`, `matches:`, `each:`) is a change to the parent standard
-that must be proposed there, not smuggled in here. Until it lands, the gap goes
-in §5.
+## 4. Machine readability
 
-## 3a. Namespaces (REQUIRED)
+Every normative section is a fenced ```yaml csd:<section>``` block, so one file
+serves both readers and the checker never parses prose. This is the parent's §4
+flow-embedding idea generalised — and it is not decoration: **four separate
+checks written in this repo in one day passed against their own explanatory
+comments**, because a check over self-documenting text that reads the whole file
+finds the paragraph describing the defect. Typed blocks make "what executes" and
+"what explains" mechanically distinct.
 
-> **Adds to** parent §3 "Contracts", which names endpoints and owners. It does not
-> name the constitutional vocabulary those endpoints carry.
+`check_csd.py` gains, alongside the flow diff it already does:
 
-**Measured, in the current corpus:** across `CSD_STANDARD.md` and all four CSDs
-there is **one** CC reference — `CC 4.2`, in CSD-003 §1, in prose, wrapped across
-a line break — and **zero** namespace prefixes. Meanwhile CSD-004 renders
-"capacity attestations" and records its contract as `unconfirmed`, while the RC5
-registry already defines its six families normatively.
+* every block parses and validates against the schema for its section;
+* `stage:` requirements are met, or the advance is refused naming the missing row;
+* every `ceg:` resolves in the registry pinned by `registry_sha256`, or is
+  `x_private:`; parameterised binds validate per segment class;
+* no `use: emit` on a `reserved` family whose `reserved_rule` excludes this
+  component;
+* every `shows:` row is asserted in §4 or disclaimed in §5 — at `testable`;
+* every DSL predicate names declared tags and cannot be satisfied by an empty set.
 
-### 3a.1 The table
+## 5. What v3 does not do, stated plainly
 
-| column | meaning |
-|---|---|
-| `prefix` | the family exactly as the registry spells it, e.g. `capacity:composite` |
-| `CC` | `cc_section` from the registry, e.g. `3.1.8.1` |
-| `use` | `read` · `display-only` · `emit` (below) |
-| `why` | one clause: what this surface does with the value |
+* **The runner must learn the new predicates.** `flow_spec.py` today implements
+  `screen`/`visible`/`absent`/`text`. §3 is a specification of work, not work
+  done, and until it lands a v3 CSD can express more than any harness enforces —
+  which is the exact failure v3 exists to end, temporarily reintroduced at a
+  different layer. It should be implemented before v3 is declared Active.
+* **`relation` needs values, not pixels.** Comparing `capacity:composite` to five
+  factors means parsing five rendered strings back into numbers. That is
+  tolerable for a scalar row and will not extend to structured payloads; a
+  future version may need the client to expose a typed read.
+* **Nothing here checks that a screenshot exists.** §5 of every CSD says shots
+  are emitted per step and rendered in the gallery; nothing asserts it. Worth
+  pinning, on the evidence that a screenshot step was recently the only
+  non-vacuous assertion in an entire gate.
+* **This is still ours, not the standard.** v3 belongs upstream in
+  `FSD/CSD_STANDARD.md` with `check_csd.py`. Two standards for one artifact is
+  the drift this repo exists to measure, and every day it lives here is a day
+  that drift is real.
 
-### 3a.2 `use`, and why it is three values
+## 6. Lineage
 
-* **`read`** — the surface fetches values in this family.
-* **`display-only`** — it renders them and cannot originate them. The honest
-  answer for most cards, and distinct from `read` because it is a *promise not to
-  write*.
-* **`emit`** — the surface can cause a value in this family to be written.
+v1 CIRISAgent `FSD/CSD_STANDARD.md` — MDD for one surface; spec and test one
+document; flow byte-identity. Unchanged and inherited.
 
-`emit` is checkable and must be checked. 35 of the 116 families are `reserved`
-and carry a `reserved_rule` naming who may emit — `accord:*` is
-`accord_holder-only` per CC 3.4.1, and all six `capacity:*` families are reserved
-to `lens`. **A CSD-B claiming `emit` on a reserved family it does not own is a
-checker failure, not a review comment.**
+v2 CSD-B (this file) — reversed the arrow; §2a sample outputs; §3a namespaces.
+Correct in aim, and both sections outran the DSL.
 
-### 3a.3 Rules
+v3 — the DSL checks what §2 promises; the CEG family becomes the field
+identifier so the two tables are one; the document is staged and machine-readable
+so a feature can be specified before it exists and filled in as it is built.
 
-1. Every prefix must exist in the pinned registry, or carry the
-   `x_private:` prefix the registry reserves for exactly this
-   (`_meta.private_use_prefix`). An unregistered bare prefix fails the load.
-2. The registry is **pinned by `source_sha256`** in the CSD header, as the
-   registry pins its own source. A registry bump is a deliberate edit, not a
-   silent drift — the same argument the parent makes for embedding the flow
-   rather than linking it.
-3. `owning_component` / `owning_repo` come from the registry, never from the
-   author. This is what turns §3's owner column from an assertion into a lookup.
-4. A surface that renders **no** constitutional values writes `none` and says
-   why. An empty §3a and an absent §3a are different, and the parent standard's
-   own instinct applies: absent means false, so absence must be impossible to
-   reach by accident.
-
-## 4. Checker requirements
-
-`check_csd.py` gains, in the same spirit as its existing flow-identity diff:
-
-* §2a exists, and every `field` matches a §2 field and every `tag` a §2 tag;
-* the three states are all present for every surface;
-* each state is asserted in §4 or disclaimed in §5;
-* §3a exists; every prefix resolves in the pinned registry or is `x_private:`;
-* the header's `source_sha256` matches the registry it validated against;
-* no `emit` on a `reserved` family whose `reserved_rule` excludes this component.
-
-Each is a load error, not a convention — the parent's rule, for the parent's
-reason: *a spec with a typo'd key would otherwise assert nothing and pass.*
-
-## 5. Worked example
-
-`FSD/CSD/CSD-004-capacity-attestations.md` in this repo is CSD-004 retrofitted to
-this profile. It was chosen because it fails both gaps at once: its data spec is a
-single row, and its contract is `unconfirmed` while the registry already names its
-six capacities.
-
-## 6. Status and what must go upstream
-
-This profile is **drafted here because #45's surfaces are ours**, and it is not
-finished until:
-
-1. §2a and §3a are proposed into `FSD/CSD_STANDARD.md` in CIRISAgent, where the
-   parent standard and `check_csd.py` live. Two standards for one artifact is the
-   drift this repo exists to measure.
-2. The DSL gains the value assertions §2a currently outruns (`count:`, `matches:`,
-   `each:`), or §2a's scope is cut to what the DSL can check. The asymmetry is
-   acceptable as a draft and not as a steady state.
-3. The retrofitted CSD-004's `unconfirmed` contract is resolved with CIRISServer /
-   CIRISLensCore — the registry names the families, but not the route that serves
-   them.
-
----
-
-[^oasis]: OASIS, *Guidelines to Writing Conformance Clauses* — https://docs.oasis-open.org/templates/TCHandbook/ConformanceGuidelines.html
-[^gherkin]: *Why Gherkin (Cucumber, SpecFlow…) Always Failed with UI Test Automation* — https://medium.com/swlh/why-gerkin-cucumber-specflow-always-failed-with-ui-test-automation-c85a8030c07d
-[^gherkin2]: *Writing Great Specifications: Using Specification by Example and Gherkin* — https://livebook.manning.com/book/writing-great-specifications/chapter-1/v-12/
-[^approval]: ApprovalTests — https://github.com/approvals/ApprovalTests.Python
-[^golden]: *Golden Tests in AI: Ensuring Reliability Without Slowing Innovation* — https://tullie.ai/blog/golden-tests-in-ai
-[^sdd]: *Spec-Driven Development in 2026: What It Is, the Tooling, and How Teams Actually Use It* — https://dev.to/krlz/spec-driven-development-in-2026-what-it-is-the-tooling-and-how-teams-actually-use-it-2fk2
-[^sdd2]: *Spec-Driven Development (SDD): The Definitive 2026 Guide* — https://www.thebcms.com/blog/spec-driven-development/
-[^codespec]: *CodeSpec: Dual Executable Specifications for Agentic Long-Horizon Feature Development* — https://arxiv.org/html/2607.26777v1
-[^vdex]: 1EdTech *VDEX Conformance Requirements v1.0* — https://www.imsglobal.org/vdex/vdexv1p0/imsvdex_confv1p0.html
-[^dcterms]: Audiovisual Core, *Controlled Vocabulary for Dublin Core format* — https://ac.tdwg.org/format/
-[^contract]: OASIS conformance guidelines, on "contract" and programming-by-contract (Meyer) — https://docs.oasis-open.org/templates/TCHandbook/ConformanceGuidelines.html
+Prior art unchanged from v2 and worth re-reading before extending the DSL:
+Specification by Example (one artifact, requirement and test) and its
+over-specification failure mode; approval testing (concrete expected output —
+whose weakness, verifying consistency rather than correctness, is why `example:`
+is written by hand before the code); spec-driven development (a versioned spec as
+source of truth, bound to a codebase and never to an external vocabulary, which
+is the gap §2 closes); VDEX and Dublin Core controlled vocabularies (normative
+term registries, the model for binding to the CEG namespace); design by contract.
