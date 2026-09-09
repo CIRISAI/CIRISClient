@@ -941,6 +941,39 @@
       },
       "notes": "AN UNPROBED NODE-VS-AGENT GATE IS NOT A REASON TO WAIT (#48). `isAgentMode` defaulted an unresolved gate to AGENT — correct for WORDING, and behind it sat three 150x200ms WORK-state waits. On a run-without-AI install the gate is still unprobed when the credential login returns, so all four driven platforms stalled at whichever wait they reached first: 34.1s linux / 36.1 macOS / 40.1 Windows after a login that had already succeeded in ~200ms, iOS 7/8 on wait_for_post_login, and Android never reaching Login at all (2/8) because the folded-brain retry ran inline ahead of every routing decision. The wait rule is now shouldWaitForAgent() in ClientMode.kt, pinned by a test; the fold retry runs in the background and both paths commit through one commitGate. Deferrals: a bare node 502s /v1/wa/deferrals and the poller runs every 30s, so the absence is now handled (empty, logged once, still polling) rather than gated off — the node is going to serve that endpoint. The node reporting agent.folded=true for a brain that will never answer is upstream and is recorded in evidence/blocked_upstream.tsv.",
       "published": null
+    },
+    {
+      "client_version": "0.5.215",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client discards a stale gate; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE GATE IS AN ANSWER ABOUT A BACKEND AND MUST NOT OUTLIVE IT (#48, the last leg). 0.5.214 stopped the probe blocking startup and made the post-login line name the gate; the gate run then showed `clientMode probe failed: Connection refused` followed by `waiting for agent (clientMode=AGENT)`. Not unprobed — AGENT, derived against the agent on :8080 and never invalidated when setup replaced that process with the node on :4243, so the failed re-probe hit a catch that preserves the previous answer and the post-login path waited 30s for an agent setup had just removed (Windows/Linux 7/8, wait_for_post_login). The hand-off already re-reads the PORT for this reason (#43); the gate is the same kind of fact and is now discarded there too. Cleared rather than latched to NODE: a transport error is not a verdict. CIRISServer#574 would close the same leg from the substrate side.",
+      "published": null
     }
   ]
 }
