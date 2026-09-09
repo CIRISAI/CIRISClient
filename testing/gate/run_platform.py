@@ -91,6 +91,26 @@ def teardown_for(args) -> bringup.Plan | None:
     return None
 
 
+
+def state_problems(mode: str, node_url: str) -> list[str]:
+    """What is wrong with `/state` for a client driven against a BARE node.
+
+    Split out of [walk] so it is testable without a device — the assertions this
+    gate makes are exactly the ones worth having a red path for, and one needing
+    an emulator to exercise is one nobody exercises.
+
+    `unset` is deliberately ACCEPTED. The gate probe may not have answered yet
+    when the walk runs, and "not probed" is a real state this client defines
+    (CIRISClient#48) — reading it as a failure would make the gate flaky and
+    would punish the client for being honest.
+    """
+    problems: list[str] = []
+    if mode.upper() == "AGENT":
+        problems.append("clientMode=AGENT against a bare node (no brain is folded here)")
+    if node_url and ":8080" in node_url:
+        problems.append(f"pointed at the agent port: {node_url}")
+    return problems
+
 def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
     """The smallest walk that would have caught every defect of the last month.
 
@@ -104,8 +124,31 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
     """
     rep.add("health", True, json.dumps(drv.health()))
 
+    # THIS STEP USED TO BE A REPORT, NOT A CHECK — `rep.add("state", True, …)`
+    # passed unconditionally and printed two values nobody asserted. That is the
+    # vacuous green this file's own docstring is about, sitting in the middle of
+    # it.
+    #
+    # Both values ARE assertable here, without navigating anywhere, because this
+    # gate always stands up a bare `ciris-server`: no brain, and the node's own
+    # port. So:
+    #
+    #   clientMode must never be AGENT — there is no brain to be an agent of.
+    #     A client that says AGENT against this node has a wrong or stale gate,
+    #     which is CIRISClient#48 exactly: a verdict derived against :8080 that
+    #     outlived the backend it described. `unset` is ACCEPTED — the probe may
+    #     legitimately not have answered yet, and "not probed" is not "wrong".
+    #
+    #   nodeUrl must be the node's :4243 and not the agent's :8080. A client
+    #     pointed at the agent port against a node is the same defect wearing
+    #     its other face, and it is the one that made every leg of this gate
+    #     report "the node never became healthy" while the node was serving.
     state = drv.state()
-    rep.add("state", True, f"clientMode={state.get('clientMode')} node={state.get('nodeUrl')}")
+    mode = str(state.get("clientMode", "unset"))
+    node_url = str(state.get("nodeUrl", ""))
+    problems = state_problems(mode, node_url)
+    detail = f"clientMode={mode} node={node_url}"
+    rep.add("state", not problems, detail if not problems else f"{detail} — {'; '.join(problems)}")
 
     # The pre-flight this repo tells harnesses to run, now served everywhere.
     try:
