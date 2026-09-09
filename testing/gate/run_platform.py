@@ -179,6 +179,14 @@ def main() -> int:
             bringup.run(td, check=False)
 
     if args.report:
+        # MAKE THE DIRECTORY. `--report reports/<platform>.json` names a path in a
+        # directory nothing creates: the workflow passes it, the artifact upload
+        # collects it, and no step mkdirs it. The whole run — build, node, launch,
+        # drive — completed and then died on
+        # `FileNotFoundError: 'reports\\windows.json'` at the last line, throwing
+        # away the result it had just spent five minutes earning, and reporting a
+        # driving failure that had not happened.
+        args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(asdict(rep), indent=2), encoding="utf-8")
     for s in rep.steps:
         print(f"  [{'OK ' if s.ok else 'FAIL'}] {s.name}: {s.detail}")

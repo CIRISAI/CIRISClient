@@ -142,20 +142,38 @@ def test_the_node_gets_a_writable_home():
     reason the same step could never succeed. The server's DEFAULT_CIRIS_HOME
     (config.rs) is only overridable by CIRIS_HOME, so the action must set it.
 
-    THE VAR MUST BE EXPORTED, NOT MENTIONED. The first version of this test
-    asserted `"CIRIS_HOME" in action` and PASSED against a planted defect that
-    had removed the export and left only the prose — a substring check over a
-    file that documents itself is nearly always green. Assert the assignment.
+    A FLAG, NOT AN ENV VAR — AND THIS TEST GOT THAT WRONG FIRST.
+
+    Two rewrites, both instructive:
+
+      1. It asserted `"CIRIS_HOME" in action`, which is green on a mention in a
+         comment — in a file that documents itself heavily. A planted defect
+         that removed the export passed.
+      2. It then asserted `export CIRIS_HOME=`, which was green AND WRONG: the
+         server reads no environment at all. config.rs, first line: "Server 0.5
+         — zero env vars. ciris-server boots with NO environment variables. The
+         bootstrap floor is conventions + a single --home flag." The dispatched
+         run exported the variable, the node ignored it, and macOS died on
+         /var/lib/ciris exactly as before.
+
+    Both versions asserted a MECHANISM the test's own author had invented. The
+    property is "the node is told where to write, in the way it actually reads",
+    and only the flag expresses that.
     """
     action = NODE_ACTION.read_text(encoding="utf-8")
-    exports = [
+    invocations = [
         ln.strip() for ln in action.splitlines()
-        if ln.strip().startswith("export CIRIS_HOME=") or ln.strip().startswith("CIRIS_HOME=")
+        if '"$bin"' in ln and not ln.strip().startswith("#")
     ]
-    assert exports, (
-        "the action never assigns CIRIS_HOME, so the node defaults to "
-        "/var/lib/ciris and cannot create it on any hosted runner"
+    assert invocations, "the action no longer invokes the node binary"
+    launch = [ln for ln in invocations if "--home" in ln]
+    assert launch, (
+        "the node is launched without --home, so it uses DEFAULT_CIRIS_HOME "
+        f"(/var/lib/ciris) and cannot create it on any hosted runner. Found: {invocations!r}"
     )
+    assert not any(
+        ln.strip().startswith("export CIRIS_HOME=") for ln in action.splitlines()
+    ), "exporting CIRIS_HOME is a no-op for ciris-server (zero env vars) and misleads the next reader"
 
 
 @pytest.mark.parametrize("leg", ("linux-android", "macos-ios"))

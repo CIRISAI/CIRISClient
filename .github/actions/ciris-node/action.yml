@@ -41,11 +41,19 @@ inputs:
     default: ./node/ciris-server
   home:
     description: >
-      CIRIS_HOME for this run. MUST be set to somewhere the runner user can
-      write: the node defaults to /var/lib/ciris (DEFAULT_CIRIS_HOME in the
+      The node's data root, passed as `--home`. MUST be somewhere the runner user
+      can write: the node defaults to /var/lib/ciris (DEFAULT_CIRIS_HOME in the
       server's config.rs) and no hosted runner can create that, which is how the
       macOS leg died with "create /var/lib/ciris/data: Permission denied" before
       it ever reached the port question above.
+
+      A FLAG, NOT AN ENV VAR, AND THAT DISTINCTION COST A RUN. The first version
+      of this action exported CIRIS_HOME and the node ignored it — config.rs says
+      so in its first line: "Server 0.5 — zero env vars. ciris-server boots with
+      NO environment variables. The bootstrap floor is conventions + a single
+      --home flag." CIRIS_HOME is the CLIENT's home variable (EnvFileUpdater);
+      the two are different homes and grepping for the name found the server's
+      DEFAULT_CIRIS_HOME constant, which is not an env read.
     required: false
     default: ""
   log:
@@ -80,10 +88,10 @@ runs:
         home="$CIRIS_NODE_HOME"
         [ -n "$home" ] || home="${GITHUB_WORKSPACE:-$PWD}/.ciris-home"
         mkdir -p "$home"
-        export CIRIS_HOME="$home"
-        echo "CIRIS_HOME=$home"
+        echo "node home (--home): $home"
 
-        "$bin" > "$CIRIS_NODE_LOG" 2>&1 &
+        # `--home`, not an exported env var — see the input's description.
+        "$bin" --home "$home" > "$CIRIS_NODE_LOG" 2>&1 &
         node_pid=$!
 
         # THE NODE'S OWN ENDPOINT. See the header.
