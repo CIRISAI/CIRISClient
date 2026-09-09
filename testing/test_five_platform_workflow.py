@@ -237,3 +237,53 @@ def test_test_mode_is_armed_or_the_automation_server_never_starts():
         "CIRIS_TEST_MODE is not armed, so no desktop leg can reach the "
         "automation server it drives the app through"
     )
+
+
+def test_the_ios_leg_names_a_gradle_task_that_exists():
+    """`assembleDebugXCFramework` is not a task; `assembleSharedDebugXCFramework` is.
+
+    The framework is declared `XCFramework("shared")`, which produces
+    assembleShared{Debug,Release}XCFramework. publish.yml has used the release
+    twin correctly since it was written; this leg asked for a name Gradle calls
+    ambiguous and failed in 2 seconds.
+    """
+    # COMMANDS, NOT PROSE. A `run:` block's shell comments are part of its
+    # string, so a whole-body match sees the paragraph EXPLAINING the bad task
+    # name and reports the defect it documents. This test failed that way on its
+    # first run — the third time today a check matched its own explanation
+    # (the Android wheel step's version regex found 0.5.188 inside the comment
+    # saying why the pin left 0.5.188, and a CIRIS_HOME guard passed on a
+    # mention). Filter the comments out and assert on what actually executes.
+    job = yaml.safe_load(WF.read_text(encoding="utf-8"))["jobs"]["macos-ios"]
+    commands = [
+        ln.strip()
+        for step in job["steps"]
+        for ln in str(step.get("run", "")).splitlines()
+        if ln.strip() and not ln.strip().startswith("#")
+    ]
+    gradle = [ln for ln in commands if "XCFramework" in ln]
+    assert gradle, "the iOS leg assembles no XCFramework at all"
+    assert any("assembleSharedDebugXCFramework" in ln for ln in gradle), (
+        f"the iOS leg names no valid XCFramework task: {gradle}"
+    )
+    assert not any(":shared:assembleDebugXCFramework" in ln for ln in gradle), (
+        f"':shared:assembleDebugXCFramework' is ambiguous and does not exist: {gradle}"
+    )
+
+
+def test_no_step_can_leak_its_working_directory():
+    """`cd X && … && cd ..` leaves the shell in X whenever the middle fails.
+
+    That is how a bad Gradle task name was reported as a missing Xcode project:
+    the gradle call failed, `cd ..` never ran, and xcodebuild resolved
+    client/iosApp/… as client/client/iosApp/…. The error named the wrong thing
+    entirely, which costs more than the failure it was hiding.
+
+    A subshell or `working-directory:` cannot leak, however the command ends.
+    """
+    raw = WF.read_text(encoding="utf-8")
+    offenders = [
+        ln.strip() for ln in raw.splitlines()
+        if "cd .." in ln and not ln.strip().startswith("#")
+    ]
+    assert not offenders, f"a step can leak its cwd on failure: {offenders}"

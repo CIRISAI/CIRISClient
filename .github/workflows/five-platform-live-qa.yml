@@ -288,7 +288,24 @@ jobs:
       - name: iOS simulator
         run: |
           set -euo pipefail
-          cd client && ./gradlew :shared:assembleDebugXCFramework --console=plain && cd ..
+          # THE TASK NAME, AND THE DIRECTORY, BOTH WRONG — AND THE SECOND HID THE FIRST.
+          #
+          # `:shared:assembleDebugXCFramework` does not exist. The framework is
+          # declared `XCFramework("shared")`, so the tasks are
+          # assembleShared{Debug,Release}XCFramework — publish.yml has used the
+          # release twin correctly all along and this line never got the same
+          # correction. Gradle answered "task is ambiguous" and failed in 2s.
+          #
+          # Then `cd client && … && cd ..` left the shell IN client/ when the
+          # gradle step failed, so xcodebuild resolved client/iosApp/… as
+          # client/client/iosApp/… and reported
+          # "'client/iosApp/iosApp.xcodeproj' does not exist" — a missing-project
+          # error for a problem that was a task name two lines earlier, which is
+          # the most expensive kind of wrong message.
+          #
+          # A subshell cannot leak a directory no matter how the command inside
+          # it ends.
+          ( cd client && ./gradlew :shared:assembleSharedDebugXCFramework --console=plain )
           xcodebuild -project client/iosApp/iosApp.xcodeproj -scheme iosApp \
             -sdk iphonesimulator -configuration Debug \
             -derivedDataPath dd build CODE_SIGNING_ALLOWED=NO
