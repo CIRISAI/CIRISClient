@@ -47,42 +47,42 @@ fields:
     range: unconfirmed
     example: 0.82
     renders: "Core identity — 0.82"
-    tag: "proposed:row_capacity_core_identity"
+    tag: factor_row_c
   - ceg: capacity:integrity
     use: display-only
     type: float
     range: unconfirmed
     example: 0.91
     renders: "Integrity — 0.91"
-    tag: "proposed:row_capacity_integrity"
+    tag: factor_row_i_int
   - ceg: capacity:resilience
     use: display-only
     type: float
     range: unconfirmed
     example: 0.77
     renders: "Resilience — 0.77"
-    tag: "proposed:row_capacity_resilience"
+    tag: factor_row_r
   - ceg: capacity:incompleteness_awareness
     use: display-only
     type: float
     range: unconfirmed
     example: 0.68
     renders: "Incompleteness awareness — 0.68"
-    tag: "proposed:row_capacity_incompleteness_awareness"
+    tag: factor_row_i_inc
   - ceg: capacity:sustained_coherence
     use: display-only
     type: float
     range: unconfirmed
     example: 0.74
     renders: "Sustained coherence — 0.74"
-    tag: "proposed:row_capacity_sustained_coherence"
+    tag: factor_row_s
   - ceg: capacity:composite
     use: display-only
     type: float
     range: unconfirmed
     example: 0.68
     renders: "𝒞_CIRIS — 0.68 (lowest factor: incompleteness awareness)"
-    tag: "proposed:value_capacity_composite"
+    tag: card_capacity_composite
     assert:
       relation:
         left: capacity:composite
@@ -117,16 +117,21 @@ because the registry names the *rule* and not a family for the key itself.
 
 ```yaml csd:states
 populated: {tag: federation_capacity_live}
-empty:     {tag: "proposed:text_capacity_empty",  renders: "No capacity attestations for this node yet."}
+empty:     {tag: federation_capacity_warming_up, renders: "the card, with the factors not yet attested"}
 loading:   {renders: "the card frame with a progress affordance — NOT the empty sentence"}
 error:     {tag: "proposed:text_capacity_error",  renders: "Could not read capacity attestations."}
 ```
 
-`federation_capacity_live` distinguishes live from gated. It does **not**
-distinguish empty from broken, and nothing in #45 currently does — which is why
-`error` has its own tag. A card that renders a failed read as "no attestations"
-tells the user this node has never been attested: a different and more flattering
-claim than the truth.
+**`federation_capacity_warming_up` was DISCOVERED, not designed.** Running this
+CSD's flow against a #45 build on a fresh node showed the card present and the
+live marker absent, with `federation_capacity_warming_up` in its place — a real
+fifth state nobody had written down. It is recorded here as `empty` because that
+is what it means: the node exists and nothing has attested it yet.
+
+`error` is still `proposed:` and still the gap that matters. A fresh node
+produces `warming_up`; a failed read produces nothing distinguishable from it,
+so the mission's own distinction — "we could not ask" versus "nothing has
+happened" — is not yet expressible on this surface.
 
 ### Namespaces, from the registry rather than by hand
 
@@ -150,19 +155,27 @@ conversation before.
 
 The flow embedded upstream asserts only that the card and `federation_capacity_live`
 are on screen — everything above was unassertable before CSD/3 §3. **This is what
-it becomes once the proposed tags are real**, and it is written here rather than
-in the flow file because a `proposed:` tag may never enter a flow:
+it becomes**, using the tags a #45 build actually serves:
 
 ```yaml
 expect:
   state: populated
-  count: {of: "row_capacity_*", eq: 5}
-  each:  {of: "row_capacity_*", number: {min: 0.0, max: 1.0}}   # bounds pending §3
+  count: {of: "factor_row_*", eq: 5}
+  each:  {of: "factor_row_*", number: {min: 0.0, max: 1.0}}   # bounds pending §3
   relation: {left: capacity:composite, op: min_of,
              of: [capacity:core_identity, capacity:integrity, capacity:resilience,
                   capacity:incompleteness_awareness, capacity:sustained_coherence]}
-  visible: [federation_capacity_live, text_capacity_attested_by]
+  visible: [federation_capacity_live]
 ```
+
+RUN AGAINST A REAL BUILD, THIS IS THE VERDICT IT RETURNED:
+
+    [FAIL] expect: 'federation_capacity_live' is not on screen
+
+and it is correct. `card_federation_capacity_attestations` WAS present; the live
+marker was not, because the node was fresh. That is this flow's stated purpose
+working — "a gate placeholder would satisfy the card tag alone" — distinguishing
+a rendered card from live data on the first run that could reach the screen.
 
 ## 5. QA plan
 
