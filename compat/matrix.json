@@ -974,6 +974,39 @@
       },
       "notes": "THE GATE IS AN ANSWER ABOUT A BACKEND AND MUST NOT OUTLIVE IT (#48, the last leg). 0.5.214 stopped the probe blocking startup and made the post-login line name the gate; the gate run then showed `clientMode probe failed: Connection refused` followed by `waiting for agent (clientMode=AGENT)`. Not unprobed — AGENT, derived against the agent on :8080 and never invalidated when setup replaced that process with the node on :4243, so the failed re-probe hit a catch that preserves the previous answer and the post-login path waited 30s for an agent setup had just removed (Windows/Linux 7/8, wait_for_post_login). The hand-off already re-reads the PORT for this reason (#43); the gate is the same kind of fact and is now discarded there too. Cleared rather than latched to NODE: a transport error is not a verdict. CIRISServer#574 would close the same leg from the substrate side.",
       "published": null
+    },
+    {
+      "client_version": "0.5.216",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A nav surface and a bundled-node pin; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "A RUN-WITHOUT-AI INSTALL CAN SIGN OUT AGAIN (#51). Screen.Settings carries btn_logout and on a node install nothing reached it: AgentSettings is in AGENT_GROUP, dropped when hasAgent=false, and the governance menu that also offers logout is in CIRISTopBar, used on the agent home alone. So no platform could sign out, and because device reset lives in the Login footer, none could factory-reset. The desktops only escaped it before 0.5.215 because a stale clientMode=AGENT landed them on Interact (#48) — fixing that gate exposed this on all five at once. NavSurface.Account routes to the same Screen.Settings from MANAGE_GROUP, present in BOTH modes because narrowingIsPurelySubtractive pins the node nav as a subset of the agent nav, and labelled 'Account' so the agent build does not show two rows with one label. Also: the Android bundled-node pin moved 0.5.188 -> 0.5.204 because 0.5.188 is no longer on PyPI and every androidApp build failed on it. That is ABOVE node_max_tested (0.5.198) and this row is deliberately not widened — bundling a version is not the same fact as having driven it.",
+      "published": null
     }
   ]
 }
