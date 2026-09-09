@@ -1040,6 +1040,39 @@
       },
       "notes": "ONE NAME FOR THE NODE'S ADDRESS, AND NEVER A SECOND NODE (#52). macOS never left the post-setup hold and the supervisor launched a second ciris-server on :4243 while its own health check said the node was healthy. One root cause, #48's family: the desktop resolved the node address as CIRIS_NODE_URL ?: CIRIS_API_URL ?: default, and CIRIS_API_URL names the AGENT — so after the run-without-AI hand-off every 'is the node up?' went to a port dead by design. The hold polled it ~180 times (entered once, routed zero times) and the supervisor correctly concluded death about the wrong port. Fixed four ways: CIRIS_NODE_URL alone names the node so a custom port is honoured verbatim; the gate probe and the hold read the live address instead of a composable parameter frozen before the hand-off existed; an operator's declared address outranks the hand-off's inferred 4243 default; and revive() asks the node before killing anything, with probe() taking its health path from the active endpoint rather than hardcoding the agent's /v1/system/health. Not macOS-specific — macOS is merely slow enough that the probe lands after the agent goes away.",
       "published": null
+    },
+    {
+      "client_version": "0.5.218",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client asks the node's own /health instead of /v1/identity; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "LIVENESS IS 'DID ANYTHING ANSWER' (#52). The post-setup reconfigure hold asked isNodeReachable -> isLocalNodeUp -> /v1/identity, the node's identity AGGREGATE — a question about what the node has, used to decide whether the node is. Counted from the 2026-09-09 nightly artifact: one entry into the hold, 18 status re-asserts (~180 polls, three minutes), zero routes, never reaching its own 240-poll timeout, while the backend supervisor polling /health on the SAME node logged it healthy twice in that window. The hold now asks the active endpoint's health path, and isEndpointAnswering is split out so liveness and identity stop being one function: ANY HTTP response counts, including 404 and 503, because something replied. Also in this release: two Login controls that a harness could see and not press (btn_privacy_policy, btn_server_status used testable, which registers position and no click handler — #30, found by our own five-platform gate), and Android's startTestAutomationServer() actual, which was a no-op TODO in front of a fully written Ktor server.",
+      "published": null
     }
   ]
 }
