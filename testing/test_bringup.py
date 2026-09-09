@@ -12,10 +12,13 @@ plan has seven steps" would pass through every one of them.
 
 from __future__ import annotations
 
+import sys
+import time
 from pathlib import Path
 
 import pytest
 
+from testing.gate import bringup
 from testing.gate.bringup import (
     ANDROID_TEST_SENTINEL,
     CLIENT_TEST_PORT,
@@ -201,3 +204,56 @@ def test_a_missing_tool_on_a_required_step_still_names_the_step():
 def test_teardown_survives_a_machine_with_no_adb():
     # The end-to-end version of the above: this is what crashed.
     run(android_teardown(PKG), check=False)
+
+
+# ── The desktop launch is the app, not a command about the app ──────────────
+#
+# `run()` used to execute EVERY step with `subprocess.run()`, which waits for
+# exit. That is right for `adb install`, `am start -W` and `simctl launch` —
+# they do a thing and return. It is wrong for the desktop, where `java -jar
+# <app>.jar` IS the running client: the step waited the full 300s and failed
+# with exit 124 on every platform that has a desktop leg, so that leg could
+# never pass. `desktop_plan`'s own docstring called itself "kept as a plan for
+# symmetry", which is what a stub nobody ran looks like from outside.
+#
+# Liveness is proven afterwards by `wait_for_server`, which is the honest test
+# anyway: a launch that returned 0 says nothing about whether the app came up.
+
+def test_the_desktop_launch_is_a_background_step():
+    plan = bringup.desktop_plan(Path("/tmp/whatever.jar"), display_wrapped=False)
+    launch = plan.steps[plan.index_of("launch")]
+    assert launch.background, (
+        "the desktop launch must be spawned; awaiting it waits for someone to "
+        "close the window, which is exit 124 after the timeout"
+    )
+
+
+def test_a_background_step_returns_immediately_and_is_tracked():
+    bringup.terminate_background()
+    started = time.time()
+    bringup.run(bringup.Plan(platform="t", steps=[
+        bringup.Step("spawn", [sys.executable, "-c", "import time; time.sleep(30)"],
+                     background=True),
+    ]))
+    elapsed = time.time() - started
+    assert elapsed < 5, f"background step blocked for {elapsed:.1f}s"
+    assert len(bringup._BACKGROUND) == 1, "spawned process was not tracked for teardown"
+    bringup.terminate_background()
+    assert not bringup._BACKGROUND
+
+
+def test_a_foreground_step_still_waits():
+    # The fix must not turn every step into fire-and-forget: an `adb install`
+    # that is not awaited is a launch racing an installation.
+    started = time.time()
+    bringup.run(bringup.Plan(platform="t", steps=[
+        bringup.Step("await", [sys.executable, "-c", "import time; time.sleep(1)"]),
+    ]))
+    assert time.time() - started >= 1
+
+
+def test_the_mobile_launches_are_NOT_backgrounded():
+    # `am start -W` and simctl's launch return once the activity is up; making
+    # them background would drop the only synchronisation those plans have.
+    android = bringup.android_plan(Path("/tmp/a.apk"), "pkg")
+    assert not android.steps[android.index_of("launch")].background

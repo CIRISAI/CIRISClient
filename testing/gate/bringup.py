@@ -96,6 +96,23 @@ class Step:
     cmd: list[str]
     #: Failing this step is not fatal — teardown of something that may not exist.
     optional: bool = False
+    #: THE COMMAND IS THE APP, NOT A COMMAND ABOUT THE APP.
+    #:
+    #: Every other step here asks something to do a thing and exits: `adb
+    #: install`, `am start -W`, `simctl launch`. The desktop app is different —
+    #: `java -jar <app>.jar` IS the running client, and waiting for it to exit
+    #: waits until somebody closes the window.
+    #:
+    #: So the desktop leg could never pass. It timed out at 300s with exit 124
+    #: on every platform that has one, and the plan's own docstring called
+    #: itself "kept as a plan for symmetry", which is what a stub that was never
+    #: run looks like from the outside.
+    #:
+    #: A background step is SPAWNED and its liveness is proven afterwards by
+    #: `wait_for_server` — which run_platform already calls, and which is the
+    #: honest test anyway: a launch that returned 0 proves nothing about whether
+    #: the app came up.
+    background: bool = False
 
 
 @dataclass
@@ -231,8 +248,25 @@ def desktop_plan(jar: Path, display_wrapped: bool = True) -> Plan:
     return Plan(
         platform="desktop",
         test_url=f"http://127.0.0.1:{CLIENT_TEST_PORT}",
-        steps=[Step("launch", cmd)],
+        steps=[Step("launch", cmd, background=True)],
     )
+
+
+#: Handles for steps spawned with `background=True`, so a caller can reap them.
+#: CI tears the whole runner down, but a developer running this locally would
+#: otherwise leave a Compose window behind on every invocation.
+_BACKGROUND: list[subprocess.Popen] = []
+
+
+def terminate_background() -> None:
+    """Stop anything `run()` spawned. Safe to call twice, and never raises."""
+    while _BACKGROUND:
+        proc = _BACKGROUND.pop()
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+        except Exception:  # noqa: BLE001 — teardown must not hide a real failure
+            pass
 
 
 def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[Step, int]]:
@@ -245,6 +279,18 @@ def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[St
     results: list[tuple[Step, int]] = []
     for step in plan.steps:
         try:
+            if step.background:
+                # Spawned, not awaited. Liveness is proven by wait_for_server;
+                # the only failure this can report is "it would not start at
+                # all", which Popen raises as FileNotFoundError below.
+                proc_bg = subprocess.Popen(
+                    step.cmd,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                _BACKGROUND.append(proc_bg)
+                results.append((step, 0))
+                continue
             proc = subprocess.run(step.cmd, capture_output=True, text=True, timeout=timeout)
             code, stderr = proc.returncode, proc.stderr or ""
         except (FileNotFoundError, NotADirectoryError) as e:

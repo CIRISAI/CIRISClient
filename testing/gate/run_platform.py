@@ -215,6 +215,10 @@ def main() -> int:
         except Exception:  # noqa: BLE001
             pass
     finally:
+        # Reap anything spawned with background=True. CI tears the runner down
+        # anyway; a developer running this locally would otherwise accumulate a
+        # Compose window per invocation.
+        bringup.terminate_background()
         td = teardown_for(args)
         if td is not None:
             # check=False: teardown runs after failures too, and one that fails
