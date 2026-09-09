@@ -5862,6 +5862,9 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.GraphMemory -> Screen.GraphMemory
     ai.ciris.mobile.shared.ui.nav.NavSurface.WiseAuthority -> Screen.WiseAuthority
     ai.ciris.mobile.shared.ui.nav.NavSurface.AgentSettings -> Screen.Settings
+    // Same screen, reachable without a brain (CIRISClient#51). Screen.Settings
+    // carries btn_logout, and on a node install nothing else reaches it.
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Account -> Screen.Settings
     ai.ciris.mobile.shared.ui.nav.NavSurface.LLMSettings -> Screen.LLMSettings
     ai.ciris.mobile.shared.ui.nav.NavSurface.System -> Screen.System
     ai.ciris.mobile.shared.ui.nav.NavSurface.Runtime -> Screen.Runtime

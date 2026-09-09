@@ -125,6 +125,38 @@ sealed class NavSurface(
         children = listOf(LLMSettings, System, Runtime, Config, Skills),
         labelKey = "nav.surface.agent_settings",)
 
+    /**
+     * Settings, reachable WITHOUT a brain (CIRISClient#51).
+     *
+     * `Screen.Settings` carries `btn_logout`, and on a node install nothing
+     * reached it: [AgentSettings] lives in AGENT_GROUP, which is dropped when
+     * `hasAgent = false`, and the governance menu that also offers logout is in
+     * `CIRISTopBar`, which only the agent home renders. So a run-without-AI
+     * owner could not sign out on ANY platform — and because the device-reset
+     * affordance lives in the Login footer, could not factory-reset either.
+     *
+     * The desktops appeared to escape this until 0.5.215 only because a stale
+     * `clientMode=AGENT` was landing them on Interact by accident (#48).
+     *
+     * CHILDLESS ON PURPOSE. [AgentSettings]'s children — LLM, System, Runtime,
+     * Config, Skills — are agent configuration and have nothing to configure on
+     * a bare node. This surface is the account, not the agent.
+     *
+     * PRESENT IN BOTH MODES, and that is not incidental — `narrowingIsPurely-
+     * Subtractive` pins that the node nav is a SUBSET of the agent nav, so a
+     * surface that appears only when narrowed is a defect by this repo's own
+     * rule. The first cut of this fix added it on the node build alone and that
+     * test caught it. Labelled "Account" rather than "Settings" so the agent
+     * build, which also offers [AgentSettings], does not show two identically
+     * named rows routing to the same screen.
+     *
+     * Reuses `mobile.settings_account`, which is already "Account" in all 29
+     * bundles — a new key would need a value in each, kept at parity by a check.
+     */
+    object Account : NavSurface(
+        id = "account", label = "Account", icon = CIRISIcons.person,
+        labelKey = "mobile.settings_account",)
+
     // ═══════════════════════════════════════════════════════════════════════════
     // Manage group — operator surfaces
     // ═══════════════════════════════════════════════════════════════════════════
@@ -581,7 +613,8 @@ val MANAGE_GROUP = NavGroup(
     id = "manage",
     label = "Manage",
     icon = CIRISIcons.handler,
-    surfaces = listOf(
+    surfaces = buildList {
+        addAll(listOf(
         NavSurface.HealthReputation,
         NavSurface.Contacts,        // known federation identities (peer store browser)
         NavSurface.Video,           // A/V mesh — gated on the edge v18 adoption (#451)
@@ -600,7 +633,12 @@ val MANAGE_GROUP = NavGroup(
         NavSurface.Storage,         // Persist — graph store + disk facts
         NavSurface.Data,            // + Audit, Consent
         NavSurface.Billing,         // + Wallet
-    ),
+        ))
+        // CIRISClient#51 — the only route to Screen.Settings, and therefore to
+        // btn_logout, when AGENT_GROUP is absent. Unconditional: the node nav
+        // must stay a subset of the agent nav.
+        add(NavSurface.Account)
+    },
         labelKey = "nav.group.manage",)
 
 /**

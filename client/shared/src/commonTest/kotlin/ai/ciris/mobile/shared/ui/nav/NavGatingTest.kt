@@ -60,6 +60,43 @@ class NavGatingTest {
     }
 
     @Test
+    fun aBareNodeCanStillReachSettings_andThereforeSignOut() {
+        // CIRISClient#51. Screen.Settings carries `btn_logout`, and on a
+        // run-without-AI install NOTHING reached it: AgentSettings lives in
+        // AGENT_GROUP (dropped here), and the governance menu that also offers
+        // logout is in CIRISTopBar, which only the agent home renders. So the
+        // owner could not sign out on any platform — and because device reset
+        // lives in the Login footer, could not factory-reset either.
+        //
+        // The desktops looked fine until 0.5.215 purely by accident: a stale
+        // clientMode=AGENT was landing them on Interact, which has the top bar
+        // (#48). Fixing that gate is what exposed this on all five platforms at
+        // once, which is why this assertion is about the NODE build.
+        assertTrue(
+            NavSurface.Account in MANAGE_GROUP.surfaces,
+            "a bare node offers no way to sign out",
+        )
+        assertTrue(
+            MANAGE_GROUP.id in epistemicNavGroups(hasAgent = false).map { it.id },
+            "…and the group carrying it must survive narrowing",
+        )
+    }
+
+    @Test
+    fun accountIsPresentInBothModesAndDoesNotCollideWithAgentSettings() {
+        // Account must NOT be node-only: narrowingIsPurelySubtractive pins that
+        // the node nav is a subset of the agent nav, and the first cut of the
+        // #51 fix added Account on the node build alone. That test caught it.
+        assertTrue(NavSurface.Account in MANAGE_GROUP.surfaces)
+        assertTrue(NavSurface.AgentSettings in AGENT_GROUP.surfaces)
+        // Both route to Screen.Settings, so they must not read as duplicates.
+        assertTrue(
+            NavSurface.Account.labelKey != NavSurface.AgentSettings.labelKey,
+            "two rows routing to the same screen must not share a label",
+        )
+    }
+
+    @Test
     fun narrowingHidesSurfacesWithoutBreakingTheirRoutes() {
         // The sidebar narrows; the ROUTE TABLE does not. A restored screen or a
         // deep link has to keep resolving, or a node that gains a brain strands

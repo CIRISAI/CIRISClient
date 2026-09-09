@@ -121,7 +121,22 @@ android {
                 // may sit one release behind Cargo.toml. A client feature that
                 // needs a NEWER node route must degrade honestly rather than
                 // assume the embedded node has it.
-                install "ciris-server==0.5.188"
+                // 0.5.204, bumped 2026-09-08 because 0.5.188 IS NO LONGER ON
+                // PyPI — the oldest available is 0.5.193, so this pin named a
+                // version that could not be resolved and EVERY androidApp build
+                // failed at :androidApp:installDebugPythonRequirements with
+                // "No matching distribution found for ciris-server==0.5.188".
+                // The published AAR is unaffected (it is :shared:fatReleaseAar,
+                // which bundles no Python), which is why this went unnoticed:
+                // nothing in the release path builds androidApp.
+                //
+                // ABOVE node_max_tested. compat/matrix.json records 0.5.198 as
+                // the highest node this client has been driven against; 0.5.204
+                // is the latest published and is what the app now embeds. That
+                // gap is a deliberate choice and not a claim of testing — the
+                // matrix row is NOT widened to match, because bundling a version
+                // and having exercised it are different facts.
+                install "ciris-server==0.5.204"
                 // ciris-lens-core is REQUIRED by the accord_metrics adapter
                 // (CIRISAgent#866 LensCore fold) — the fourth substrate leg.
                 // Its Android wheels are committed to wheels/ like the other
