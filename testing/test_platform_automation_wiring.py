@@ -92,3 +92,52 @@ def test_the_actual_is_not_an_empty_stub(source_set):
         if ln.strip() and not ln.strip().startswith("//")
     ]
     assert code, f"{source_set}'s startTestAutomationServer() is a comment-only stub"
+
+
+# ── The reconfigure hold must ask a LIVENESS endpoint (CIRISClient#52) ────────
+
+CIRISAPP = SHARED / "commonMain" / "kotlin" / "ai" / "ciris" / "mobile" / "shared" / "CIRISApp.kt"
+
+
+def _is_node_reachable_body() -> str:
+    text = CIRISAPP.read_text(encoding="utf-8")
+    m = re.search(
+        r"private suspend fun isNodeReachable\(nodeBaseUrl: String\): Boolean \{(.*?)\n\}",
+        text,
+        re.S,
+    )
+    assert m, "isNodeReachable() not found — the hold's liveness probe moved"
+    return "\n".join(
+        ln for ln in m.group(1).splitlines()
+        if ln.strip() and not ln.strip().startswith("//")
+    )
+
+
+def test_the_hold_probes_liveness_not_identity():
+    """`/v1/identity` is a question about node STATE, not about whether it is up.
+
+    Using it to end the post-setup hold trapped macOS for 180 polls while the
+    supervisor's /health probe reported the same node healthy throughout.
+
+    This guard exists because the unit test alone did not catch it: the
+    EndpointAnsweringTest pins what `isEndpointAnswering` MEANS, and reverting
+    `isNodeReachable` to `isLocalNodeUp` left the whole Kotlin suite green. A
+    primitive's contract and its use at the one call site that matters are two
+    different assertions, and only one of them was being made.
+    """
+    body = _is_node_reachable_body()
+    assert "isEndpointAnswering" in body, (
+        f"the hold's liveness probe does not ask a liveness endpoint: {body!r}"
+    )
+    assert "isLocalNodeUp" not in body, (
+        "isLocalNodeUp asks /v1/identity — an identity aggregate, not liveness"
+    )
+
+
+def test_the_hold_takes_its_health_path_from_the_active_endpoint():
+    """Not a literal. A node on a custom port and an agent build ask their own
+    question, and #52's whole family is probes aimed at the wrong surface."""
+    body = _is_node_reachable_body()
+    assert "ActiveBackend.endpoint.healthPath" in body, (
+        f"the health path is hardcoded rather than resolved: {body!r}"
+    )

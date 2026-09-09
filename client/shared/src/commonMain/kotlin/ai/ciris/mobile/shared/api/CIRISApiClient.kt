@@ -2078,6 +2078,30 @@ class CIRISApiClient(
         }
     }
 
+    /**
+     * Does [url] answer at all — transport-level liveness, nothing more.
+     *
+     * Separate from [isLocalNodeUp], which asks `/v1/identity` and therefore
+     * answers a question about node STATE. A caller waiting for a restart wants
+     * "is anything serving here", and CIRISClient#52 is what happens when those
+     * two are the same function: the reconfigure hold polled an identity
+     * aggregate 180 times while the node answered /health throughout.
+     *
+     * Any HTTP response counts, including a non-2xx: something replied, so the
+     * socket is up and the node is listening. Only a transport failure is false.
+     */
+    suspend fun isEndpointAnswering(url: String): Boolean {
+        val client = federationHttpClient()
+        return try {
+            client.get(url)
+            true
+        } catch (_: Exception) {
+            false
+        } finally {
+            client.close()
+        }
+    }
+
     suspend fun isLocalNodeUp(nodeUrl: String = baseUrl): Boolean {
         val client = federationHttpClient()
         return try {

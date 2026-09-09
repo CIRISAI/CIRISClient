@@ -5174,9 +5174,36 @@ private suspend fun checkFirstRunStatus(
  * Lightweight node-up probe for the local ciris-server read API.
  * GET /v1/identity returning any 2xx means the node is serving.
  */
+/**
+ * Is the node ANSWERING — a liveness question, asked of a liveness endpoint.
+ *
+ * THIS USED TO ASK `/v1/identity` (CIRISClient#52). That is the node's identity
+ * AGGREGATE, assembled at compose time and dependent on node state; using it to
+ * mean "is the node back?" conflates liveness with readiness, which is the same
+ * mistake as probing the agent's port to ask about the node.
+ *
+ * It trapped the post-setup reconfigure hold on macOS. From the 2026-09-09
+ * nightly, on one continuous loop: ONE entry into the hold, 18 status
+ * re-asserts (~180 polls over three minutes), ZERO routes, and the loop never
+ * even reached its 240-poll timeout — while the backend supervisor, polling
+ * `/health` on the SAME node, logged "Server already running and healthy at
+ * http://127.0.0.1:4243" twice in the same window. Two probes, one node,
+ * opposite answers.
+ *
+ * `/health` is the endpoint for this: it serves a CONSTANT "ok" and is refused
+ * until the node is serving (CIRISServer#548), so a 200 means serving with no
+ * intermediate state to miss — which is exactly what a hold waiting for a
+ * restart needs to hear. `/v1/identity` can be slow or unhappy on a node that
+ * has just restarted and is perfectly alive.
+ *
+ * The path comes from the ACTIVE endpoint rather than a literal, so a node on a
+ * custom port and an agent build both ask their own question.
+ */
 private suspend fun isNodeReachable(nodeBaseUrl: String): Boolean {
+    val base = nodeBaseUrl.trimEnd('/')
+    val healthPath = ai.ciris.mobile.shared.platform.ActiveBackend.endpoint.healthPath
     return try {
-        CIRISApiClient(nodeBaseUrl).isLocalNodeUp(nodeBaseUrl.trimEnd('/'))
+        CIRISApiClient(base).isEndpointAnswering("$base$healthPath")
     } catch (_: Exception) {
         false
     }
