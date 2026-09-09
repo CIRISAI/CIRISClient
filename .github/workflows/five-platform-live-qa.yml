@@ -134,6 +134,46 @@ jobs:
           chmod +x node/ciris-server
           echo "version=$used" >> "$GITHUB_OUTPUT"
 
+      # REHYDRATE THE ANDROID WHEELS. `client/androidApp/wheels/` is a §2
+      # never-vendor class — 86 MB of other repos' release artifacts that this
+      # tree deliberately does not carry, because a copy here would be a third
+      # one drifting against the two that already exist (VENDORING.md §2).
+      #
+      # The consequence is that `:androidApp:assembleDebug` CANNOT build from a
+      # clean checkout. Chaquopy's `--find-links wheels` finds no directory
+      # ("Location 'wheels' is ignored"), falls through to PyPI, and dies on
+      # `No matching distribution found for pydantic-core==2.23.4 (from
+      # versions: 0.0.1)` — 2.23.4 exists for Android and NOT under PyPI's
+      # generic tags, so no amount of pip flags will produce it.
+      #
+      # COPIED FROM THE CHECKOUT THIS JOB ALREADY MAKES, not fetched. The six
+      # wheels live in CIRISAgent at apps/android/wheels/ — 3 ciris_server and
+      # 3 pydantic_core, one per ABI — which is the same set §2 lists, and this
+      # job already clones that repo into .agent for the Python runtime. So the
+      # artifacts come from the repo that owns them, are staged rather than
+      # vendored, and no network fetch or credential is involved.
+      #
+      # `ciris-server` itself is NOT taken from here: the build pins an exact
+      # version from PyPI (androidApp/build.gradle), whose Android wheel does
+      # publish. Only the dependencies that PyPI cannot serve for Android need
+      # staging, which is why a stale ciris_server wheel in this set is harmless.
+      - name: Rehydrate the Android wheels (§2 never-vendor, staged not carried)
+        run: |
+          set -euo pipefail
+          src=.agent/apps/android/wheels
+          test -d "$src" || {
+            echo "::error::$src is absent — CIRISAgent's layout moved, and"
+            echo "::error::androidApp cannot build without the §2 wheels"
+            exit 1; }
+          mkdir -p client/androidApp/wheels
+          cp "$src"/*.whl client/androidApp/wheels/
+          count=$(find client/androidApp/wheels -maxdepth 1 -name '*.whl' | wc -l | tr -d ' ')
+          # A silently empty stage would fail later as a confusing pip error,
+          # which is how this cost a run in the first place.
+          test "$count" -gt 0 || { echo "::error::staged no wheels"; exit 1; }
+          echo "staged $count wheel(s) from $src:"
+          find client/androidApp/wheels -maxdepth 1 -name '*.whl' -exec basename {} \;
+
       - name: Build the candidate
         run: |
           set -euo pipefail
