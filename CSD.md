@@ -60,10 +60,36 @@ keeps finding under other names.
 and the checker refuses an advance whose requirements are unmet, naming the
 missing row. Nothing infers readiness from a green run.
 
-## 2. Surface — `shows:` (the unified field spec)
+## 2. Surface — `surface:` and `shows:`
+
+### 2.0 Name the surface, not the route
+
+```yaml csd:surface
+surface: health-reputation      # the NavSurface id, verbatim from EpistemicNav.kt
+screen: HealthReputation        # the Screen the router lands on
+```
+
+**The hop is derived and must not be written down.** `EpistemicSidebar.kt`
+computes a surface's tag as `nav_epistemic_${id.replace('-','_')}` and a group's
+as `nav_group_${group.id}`; `EpistemicNav.kt` holds group membership and the
+parent of every child surface. So `testing/gate/nav_map.py` answers "where does
+this screen live" from the client itself — `constitutional` resolves to
+`nav_group_commons-layers -> nav_epistemic_layer_global_commons ->
+nav_epistemic_constitutional` without anyone typing that chain.
+
+v1's §2 had a "reached from / leaves to" table. It was a second source for a
+question the client already answers, and it drifts the first time a surface
+changes group — silently, because a wrong hop looks exactly like a screen that
+failed to compose. A CSD names the surface; the runner does the walking, which
+is what FSD/CSD_STANDARD.md §5 already assigns it.
+
+The checker resolves `surface:` through the same map, so a CSD naming a surface
+the sidebar cannot reach fails at load rather than at 2am against a timeout.
+
+## 2.1 Fields — `shows:` (the unified field spec)
 
 > Replaces v2 §2a **and** §3a. One row per rendered value; the CEG family is the
-> identifier.
+> identifier, so the constitutional vocabulary and the UI contract are one table.
 
 ```yaml csd:shows
 registry_sha256: 87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5
@@ -87,7 +113,7 @@ fields:
     tag: row_capacity_core_identity
 ```
 
-### 2.1 Required keys
+### 2.1.1 Required keys
 
 | key | meaning | checked against |
 |---|---|---|
@@ -99,7 +125,7 @@ fields:
 | `tag` | the §2 tag carrying it, `proposed:` prefixed until a PR names it | must appear in a §4 step by `testable` |
 | `assert` | the predicate §4 must enforce (below) | the DSL |
 
-### 2.2 Parameterised families
+### 2.1.2 Parameterised families
 
 The registry declares placeholder classes per segment (`vocab`, `value`,
 `external`, `hex`, `literal`). A CSD binding a parameterised family states the
@@ -115,7 +141,7 @@ Case is **byte-exact** and consumers must not case-fold (`compare:` in the
 registry). A malformed segment is refused with the registry's own token,
 `namespace_dimension_case_malformed`, rather than a bespoke message.
 
-### 2.3 States — all four, always
+### 2.2 States — all four, always
 
 ```yaml csd:states
 populated: {tag: federation_capacity_live}

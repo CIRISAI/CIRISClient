@@ -49,7 +49,11 @@ REQUIRED_AT = {
 }
 
 USES = {"read", "display-only", "emit"}
-TYPES = {"string", "int", "float", "bool", "timestamp", "unconfirmed"}
+#: The standard's §2.1.1 set. `enum[…]` and `list[…]` are parameterised, so the
+#: check is on the base name — and `list` was missing from the first version,
+#: which failed two CSDs that were correct. A checker's own vocabulary drifting
+#: from the standard it enforces is the same defect class it exists to catch.
+TYPES = {"string", "int", "float", "bool", "timestamp", "unconfirmed", "enum", "list"}
 VOCAB = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 
 
@@ -197,11 +201,39 @@ def check(doc: Path, reg: dict) -> list[str]:
 
         typ = field.get("type")
         base = str(typ).split("[")[0] if typ else None
-        if base not in TYPES and not str(typ).startswith("enum"):
+        if base not in TYPES:
             problems.append(f"{ceg}: type {typ!r} is not a declared type")
 
         if "example" not in field:
             problems.append(f"{ceg}: no `example:` — a field with no sample output cannot be built from")
+
+    # THE SURFACE MUST BE REACHABLE, and the client answers that — not the CSD.
+    # A CSD naming a surface the sidebar cannot reach fails here rather than at
+    # 2am against a timeout, and the hop itself is never written down: it is
+    # derived from the client's own tag rules (testing/gate/nav_map.py).
+    surface = blocks.get("surface") or {}
+    if surface:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+            from testing.gate import nav_map  # noqa: PLC0415 — optional, repo-local
+            hops = nav_map.build()
+        except Exception as e:  # noqa: BLE001
+            problems.append(f"surface: could not derive the nav map ({type(e).__name__}: {e})")
+        else:
+            screen = surface.get("screen")
+            sid = surface.get("surface")
+            if screen and screen not in hops:
+                problems.append(
+                    f"surface: no sidebar route to Screen.{screen} — a flow starting "
+                    f"there cannot be reached, so the CSD cannot be tested"
+                )
+            elif screen and sid:
+                want = nav_map.nav_tag(sid)
+                if hops[screen][-1] != want:
+                    problems.append(
+                        f"surface: {sid!r} derives {want!r} but Screen.{screen} is reached "
+                        f"via {hops[screen][-1]!r} — the surface id and the screen disagree"
+                    )
 
     states = blocks.get("states") or {}
     if states:

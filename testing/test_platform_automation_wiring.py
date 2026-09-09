@@ -141,3 +141,48 @@ def test_the_hold_takes_its_health_path_from_the_active_endpoint():
     assert "ActiveBackend.endpoint.healthPath" in body, (
         f"the health path is hardcoded rather than resolved: {body!r}"
     )
+
+
+# ── The CSDs in this repo must validate against the pinned registry ──────────
+
+CSD_DIR = pathlib.Path(__file__).resolve().parents[1] / "FSD" / "CSD"
+STANDARD = pathlib.Path(__file__).resolve().parents[1] / "CSD.md"
+REGISTRY = pathlib.Path("/tmp/nsreg.json")
+
+
+@pytest.mark.skipif(not REGISTRY.exists(), reason="registry snapshot not fetched")
+@pytest.mark.parametrize(
+    "doc", [STANDARD] + sorted(CSD_DIR.glob("CSD-*.md")), ids=lambda p: p.name
+)
+def test_every_csd_validates(doc):
+    """A CSD that does not validate is a document, not a contract.
+
+    The checker's own type vocabulary drifted from the standard's on its first
+    run — `list[…]` is declared in §2.1.1 and was missing from the checker, so
+    two correct CSDs failed. A checker disagreeing with the standard it enforces
+    is the defect class it exists to catch, one level up.
+    """
+    import subprocess
+    got = subprocess.run(
+        ["python3", "packaging/check_csd_v3.py", str(doc), "--registry", str(REGISTRY)],
+        capture_output=True, text=True,
+        cwd=pathlib.Path(__file__).resolve().parents[1],
+    )
+    assert got.returncode == 0, got.stdout
+
+
+@pytest.mark.skipif(not REGISTRY.exists(), reason="registry snapshot not fetched")
+def test_every_csd_surface_is_reachable():
+    """A CSD naming a surface the sidebar cannot reach cannot be tested at all.
+
+    Resolved through the same `nav_map` the runner walks, so the CSD and the
+    harness cannot disagree about where a screen lives.
+    """
+    import re as _re
+    from testing.gate import nav_map
+    hops = nav_map.build()
+    for doc in sorted(CSD_DIR.glob("CSD-*.md")):
+        m = _re.search(r"```yaml csd:surface\n(.*?)```", doc.read_text(), _re.S)
+        assert m, f"{doc.name}: no csd:surface block"
+        screen = _re.search(r"screen:\s*(\w+)", m.group(1)).group(1)
+        assert screen in hops, f"{doc.name}: no sidebar route to Screen.{screen}"
