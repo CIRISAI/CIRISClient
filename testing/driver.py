@@ -280,6 +280,37 @@ class TestAutomationServer:
                 time.sleep(1.0)
         raise DriverError(f"automation server never came up within {timeout:.0f}s: {last}")
 
+    def wait_for_ui(self, timeout: float = 120.0) -> int:
+        """Block until the app has actually COMPOSED something. Returns the count.
+
+        `wait_for_server` proves the automation SERVER answers. It is not the
+        same fact as the app having a UI, and on desktop it is not even close:
+        `Main.kt` starts the server before `application { Window { … } }`, so
+        /health returns 200 in about half a second while the tree is still
+        empty. Measured on the 0.5.217 jar, at the instant /health answered:
+
+            /state       screen="unknown"  clientMode="unset"  nodeUrl=""
+            /tree        0 elements
+            /screenshot  503 — window not available
+
+        A caller that walks at that moment asserts nothing: "everything tagged
+        is drivable" and "no ghosts" are both trivially true of an empty tree.
+        Returns 0 rather than raising, so the caller decides — the gate reports
+        it as a failed step with a reason, which is more useful than an
+        exception that loses the count.
+        """
+        deadline = time.monotonic() + timeout
+        best = 0
+        while time.monotonic() < deadline:
+            try:
+                best = len(self.tree())
+                if best > 0:
+                    return best
+            except DriverError:
+                pass
+            time.sleep(0.5)
+        return best
+
     def wait_for_element(self, test_tag: str, timeout: float = 60.0) -> Element:
         deadline = time.monotonic() + timeout
         seen: set[str] = set()

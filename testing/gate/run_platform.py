@@ -111,7 +111,8 @@ def state_problems(mode: str, node_url: str) -> list[str]:
         problems.append(f"pointed at the agent port: {node_url}")
     return problems
 
-def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
+def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
+         args_timeout: float = 120.0) -> None:
     """The smallest walk that would have caught every defect of the last month.
 
     Deliberately not a product tour. Each assertion here maps to a real
@@ -123,6 +124,36 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
       ghost check     the tree is describing THIS screen (#30)
     """
     rep.add("health", True, json.dumps(drv.health()))
+
+    # THE SERVER IS NOT THE APP. `/health` is served by the automation server,
+    # which `Main.kt` starts BEFORE `application { Window { … } }` — so it
+    # answers in ~0.5s while the UI has not composed at all. Measured locally on
+    # the 0.5.217 jar: at the instant /health returns 200,
+    #
+    #     /state       screen="unknown"  clientMode="unset"  nodeUrl=""
+    #     /tree        0 elements
+    #     /screenshot  503 (window not available)
+    #
+    # which is the five-platform board this gate has been producing, exactly.
+    #
+    # AND THREE OF THE STEPS BELOW PASS VACUOUSLY ON THAT. `undrivable` is clean
+    # when there is nothing to be undrivable; `no-ghosts` is none when there are
+    # no elements; `state` accepts `unset` by design. Only the screenshot failed,
+    # because it is the only assertion that needs the UI to exist — it was the
+    # sole thing standing between this gate and a green run against an app with
+    # no interface. That is the defect this file's docstring is about, inside
+    # this file.
+    #
+    # So wait for the UI, and ASSERT it arrived. A tree that never fills is a
+    # real failure — the app started and never rendered — and it is now reported
+    # as one rather than as four quiet passes.
+    composed = drv.wait_for_ui(timeout=args_timeout)
+    rep.add(
+        "ui-composed",
+        composed > 0,
+        f"{composed} element(s) on screen" if composed else
+        "the app started but never composed a UI — every check below would be vacuous",
+    )
 
     # THIS STEP USED TO BE A REPORT, NOT A CHECK — `rep.add("state", True, …)`
     # passed unconditionally and printed two values nobody asserted. That is the
@@ -201,7 +232,7 @@ def main() -> int:
         drv = TestAutomationServer(base_url=plan.test_url)
         # PROVEN, NOT ASSUMED.
         drv.wait_for_server(timeout=args.timeout)
-        walk(drv, rep, args.shots, platform)
+        walk(drv, rep, args.shots, platform, args_timeout=args.timeout)
         rep.ok = all(s.ok for s in rep.steps)
     except bringup.CannotRun as e:
         # LOUD. Not a skip: the caller decides what to exclude, and it does so
