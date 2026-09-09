@@ -287,3 +287,27 @@ def test_no_step_can_leak_its_working_directory():
         if "cd .." in ln and not ln.strip().startswith("#")
     ]
     assert not offenders, f"a step can leak its cwd on failure: {offenders}"
+
+
+def test_the_emulator_script_has_no_line_continuations():
+    """`script:` is not a `run:` block, and does not honour `\\`-newline.
+
+    android-emulator-runner hands its `script` to the emulator wrapper, which
+    passes backslash-newline through literally. argparse then said
+
+        run_platform.py: error: unrecognized arguments: \\
+
+    AFTER booting an emulator — the most expensive point in the leg at which to
+    discover a quoting problem. One line reads worse and is the form that runs.
+    """
+    job = yaml.safe_load(WF.read_text(encoding="utf-8"))["jobs"]["linux-android"]
+    scripts = [
+        str(step["with"]["script"])
+        for step in job["steps"]
+        if "android-emulator-runner" in str(step.get("uses", "")) and "script" in (step.get("with") or {})
+    ]
+    assert scripts, "the Android leg runs no script"
+    for script in scripts:
+        assert "\\" not in script, (
+            "a line continuation in `script:` reaches the runner as a literal argument"
+        )

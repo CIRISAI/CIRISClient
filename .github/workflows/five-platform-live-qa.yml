@@ -226,11 +226,16 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
-          script: |
-            python3 -m testing.gate.run_platform --platform android \
-              --apk "${{ steps.art.outputs.apk }}" \
-              --node-version "${{ steps.node.outputs.version }}" \
-              --shots shots --report reports/android.json
+          # ONE LINE, NO CONTINUATIONS. `script:` is not a `run:` block —
+          # android-emulator-runner hands it to the emulator wrapper, which does
+          # not honour backslash-newline, so each `\` arrived as a literal
+          # argument and argparse said:
+          #
+          #     run_platform.py: error: unrecognized arguments: \
+          #
+          # after the emulator had booted and the whole leg had been paid for.
+          # It reads worse on one line and it is the form that runs.
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.
