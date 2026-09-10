@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.BufferedReader
+import kotlinx.coroutines.runBlocking
 
 /**
  * Desktop PythonRuntime implementation — drives a local **ciris-server** node.
@@ -108,8 +109,8 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         val existingServerState = checkExistingServer()
 
         when (existingServerState) {
-            ExistingServerState.HEALTHY -> {
-                println("[PythonRuntime.desktop] Server already running and healthy at $serverUrl")
+            ExistingServerState.PRESENT -> {
+                println("[PythonRuntime.desktop] A backend is already serving $serverUrl — attaching to it")
             }
             ExistingServerState.STUCK_SHUTDOWN -> {
                 println("[PythonRuntime.desktop] Detected stuck server in shutdown state - attempting to kill...")
@@ -266,31 +267,56 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * State of an existing server process.
      */
     private enum class ExistingServerState {
-        NOT_RUNNING,      // No server on port
-        HEALTHY,          // Server running in WORK or SETUP state
+        NOT_RUNNING,      // Nothing accepted a connection on the port
+        // PRESENT, not HEALTHY. The old name is how CIRISClient#53 happened: a
+        // FIRST-RUN backend is SUPPOSED to be unhealthy — no admin user, no LLM
+        // configured, that is what the wizard is for — and calling the state
+        // "healthy" invited a probe that answered the wrong question. What this
+        // decides is only "is something already on this port", and an
+        // unhealthy answer is still an answer.
+        PRESENT,
         STUCK_SHUTDOWN    // Server responding but in shutdown or other bad state
     }
 
     /**
      * Check if there's an existing server and what state it's in.
      */
+    /**
+     * Is something ALREADY serving this port?
+     *
+     * ANY ANSWER MEANS OCCUPIED, INCLUDING AN UNHAPPY ONE (CIRISClient#53).
+     *
+     * This asked `/v1/identity` alone and required 2xx. That endpoint is the
+     * NODE's read API — NODE VENDOR DRIFT #15 moved the probe here because the
+     * old one demanded an agent `cognitive_state`, which a node never reports,
+     * so every node boot read as NOT_RUNNING. The move fixed the node and
+     * broke the agent: a FIRST-RUN agent in SETUP does not serve
+     * `/v1/identity`, so a backend that was up and answering read as absent,
+     * the app launched a second `ciris-server` on the same port, and the
+     * collision it created became a hard startup failure telling the user to
+     * kill their own agent.
+     *
+     * Two backends, two readiness endpoints, and a probe that knew one of
+     * them. So ask both — and treat a 4xx or 5xx as PRESENT too, because a
+     * process that refuses a request is still a process holding the port.
+     * Only a refused CONNECTION means nothing is there.
+     */
     private suspend fun checkExistingServer(): ExistingServerState {
-        return try {
-            // NODE VENDOR DRIFT #15 (restored after the 2.9.28 re-vendor dropped it):
-            // ciris-server readiness: GET /v1/identity returning 200 means the
-            // node's read API is up. There is no agent-style cognitive_state /
-            // SHUTDOWN concept here, so any 2xx == HEALTHY. Upstream probes
-            // /v1/system/health and demands a WORK/SETUP cognitive_state, which
-            // a node NEVER reports — every boot read as NOT_RUNNING.
-            val response = httpClient.get("$serverUrl/v1/identity")
-            if (response.status.value in 200..299) {
-                ExistingServerState.HEALTHY
-            } else {
-                ExistingServerState.NOT_RUNNING
+        // The node's read API first (this build usually drives a node), then
+        // the agent's health endpoint.
+        for (path in listOf("/v1/identity", "/v1/system/health")) {
+            try {
+                val response = httpClient.get("$serverUrl$path")
+                println(
+                    "[PythonRuntime.desktop] $serverUrl$path answered ${response.status.value} — " +
+                        "a backend is present"
+                )
+                return ExistingServerState.PRESENT
+            } catch (_: Exception) {
+                // Connection refused / no route: try the next shape.
             }
-        } catch (_: Exception) {
-            ExistingServerState.NOT_RUNNING
         }
+        return ExistingServerState.NOT_RUNNING
     }
 
     /**
@@ -414,9 +440,27 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         // rather than letting Edge init fail in its.
         val held = PortRelease.awaitFree(backendPorts(), timeoutMs = 15_000)
         if (held.isNotEmpty()) {
+            // ASK AGAIN BEFORE BLAMING ANYONE (CIRISClient#53).
+            //
+            // The old text asserted "nothing is answering", which this code had
+            // not checked — it knew only that a port was busy. When the probe
+            // above was wrong about a first-run backend, that produced a hard
+            // failure telling the user to `kill -9` the very agent they were
+            // setting up, in an error whose two halves contradicted each other:
+            // held by another process, and nothing answering.
+            //
+            // A held port with something answering on it is not a stuck
+            // shutdown — it is a backend, and the right response is to use it.
+            if (runBlocking { checkExistingServer() } != ExistingServerState.NOT_RUNNING) {
+                println(
+                    "[PythonRuntime.desktop] ports $held are held BY A LIVE BACKEND at $serverUrl — " +
+                        "attaching instead of starting a second one"
+                )
+                return
+            }
             throw RuntimeException(
-                "Cannot start the CIRIS backend: port(s) $held are still held by another process " +
-                "and nothing is answering on $serverUrl. A previous backend is most likely still " +
+                "Cannot start the CIRIS backend: port(s) $held are held and nothing answered on " +
+                "$serverUrl when asked. A previous backend is most likely still " +
                 "shutting down or stuck (CIRISAgent#1152).\n\n" +
                 "  Linux/Mac: lsof -i :${held.first()} | grep LISTEN | awk '{print \$2}' | xargs kill -9\n" +
                 "  Windows: netstat -ano | findstr :${held.first()} then taskkill /PID <pid> /F\n\n" +
