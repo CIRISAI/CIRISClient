@@ -1073,6 +1073,39 @@
       },
       "notes": "LIVENESS IS 'DID ANYTHING ANSWER' (#52). The post-setup reconfigure hold asked isNodeReachable -> isLocalNodeUp -> /v1/identity, the node's identity AGGREGATE — a question about what the node has, used to decide whether the node is. Counted from the 2026-09-09 nightly artifact: one entry into the hold, 18 status re-asserts (~180 polls, three minutes), zero routes, never reaching its own 240-poll timeout, while the backend supervisor polling /health on the SAME node logged it healthy twice in that window. The hold now asks the active endpoint's health path, and isEndpointAnswering is split out so liveness and identity stop being one function: ANY HTTP response counts, including 404 and 503, because something replied. Also in this release: two Login controls that a harness could see and not press (btn_privacy_policy, btn_server_status used testable, which registers position and no click handler — #30, found by our own five-platform gate), and Android's startTestAutomationServer() actual, which was a no-op TODO in front of a fully written Ktor server.",
       "published": null
+    },
+    {
+      "client_version": "0.5.219",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A desktop backend-detection fix; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "AN UNHEALTHY BACKEND IS STILL A BACKEND (#53). On a with-AI first run the desktop app decided nothing was on :8080, launched its own ciris-server there, and turned the collision it had just created into a hard startup failure telling the user to kill -9 the agent they were setting up; the wizard never appeared. checkExistingServer asked /v1/identity alone and required 2xx -- that is the NODE's read API, which VENDOR DRIFT #15 moved the probe to because the previous one demanded an agent cognitive_state a node never reports. The move fixed the node and broke the agent: a FIRST-RUN agent in SETUP does not serve /v1/identity, so a live backend read as absent. It now asks BOTH endpoints and treats 4xx/5xx as present too, because a process that refuses a request is still a process holding the port; only a refused CONNECTION means nothing is there. The state is renamed PRESENT rather than HEALTHY -- a first-run backend is SUPPOSED to be unhealthy, and calling the state health invited a probe that answered a different question. Also corrects an error message shipped in 0.5.205 (#40): 'port(s) held by another process AND NOTHING IS ANSWERING' asserted something the code never checked, since it knew only that a port was busy. It now re-probes before failing, and a held port with a live backend behind it is ATTACHED TO rather than reported as a stuck shutdown. The kill -9 remedy survives only for ports held with nothing answering. Pairs with every agent and node 0.5.218 does.",
+      "published": null
     }
   ]
 }
