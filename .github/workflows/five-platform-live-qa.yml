@@ -232,8 +232,25 @@ jobs:
         with:
           api-level: 30
           arch: x86_64
+          # AN ATD IMAGE, BECAUSE THE FULL ONE CANNOT CARRY THIS.
+          #
+          # On the default image the emulator took 424 SECONDS to boot and then
+          # System UI itself ANR'd -- the failure screenshot is the launcher
+          # showing "System UI isn't responding", with our app nowhere on it.
+          # The app was installed and launched; it never got enough CPU to
+          # start its test server, so the leg failed with "automation server
+          # never came up within 120s" and read like a client defect.
+          #
+          # aosp_atd is Google's automated-test-device image: no GMS, no Play
+          # services, a fraction of the boot cost, and built for exactly this.
+          # The gate drives our own UI over HTTP, so nothing under test needs
+          # the parts it drops.
+          target: aosp_atd
           profile: pixel_2
+          cores: 2
+          ram-size: 4096M
           disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           # ONE LINE, NO CONTINUATIONS. `script:` is not a `run:` block —
           # android-emulator-runner hands it to the emulator wrapper, which does
           # not honour backslash-newline, so each `\` arrived as a literal
@@ -243,7 +260,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json || (adb logcat -d > logcat.txt 2>&1; exit 1)
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.
@@ -256,11 +273,21 @@ jobs:
             reports/
             node.log
             *-app.log
+            logcat.txt
 
   macos-ios:
     name: macos desktop + ios simulator
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos') || contains(inputs.platforms, 'ios') }}
-    runs-on: macos-14
+    # macos-15, NOT macos-14. `client/iosApp/iosApp.xcodeproj` is
+    # `objectVersion = 77` -- the Xcode 16 project format -- and macos-14 ships
+    # Xcode 15.4, which cannot read it:
+    #
+    #     xcodebuild: error: Unable to read project 'iosApp.xcodeproj'
+    #
+    # That is why the iOS leg has never once passed here (17 runs, 17
+    # failures). It is not a regression, and no client change would have fixed
+    # it: the runner could not open the project.
+    runs-on: macos-15
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
