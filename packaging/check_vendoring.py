@@ -84,10 +84,16 @@ FORBIDDEN = (
     "client/androidApp/wheels/*",
     "client/androidApp/src/main/jniLibs/*",
     "client/androidApp/src/main/assets/bin/*",
+    # client/iosApp/{Frameworks,app_packages_native,Resources.zip} WERE here.
+    # They are the iOS substrate, and §2 excluded them on the argument that a
+    # vendored copy of another repo's release binaries is the same defect one
+    # level down. That argument still holds and was overruled deliberately: the
+    # iOS leg of the five-platform gate could not build without them and so had
+    # never passed, which bought a third copy's worth of drift risk in exchange
+    # for an end-to-end test on a platform we ship. `Resources/` stays out — the
+    # 137 MB tree is only needed where the rsync build phase runs, and that
+    # phase is guarded on a `ciris_engine/` this repo does not have.
     "client/iosApp/Resources/*",
-    "client/iosApp/Resources.zip",
-    "client/iosApp/Frameworks/*",
-    "client/iosApp/app_packages_native/*",
     "client/*/.ciris_keys/*",
     "client/.ciris_keys/*",
     "*/__pycache__/*",

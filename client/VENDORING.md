@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `2f080c7a1eff6e5cd6f452a39874fa7ba452fea52f502cac04650987e8a98551`
+**state digest:** `52e379f6c2af55d7061d8bcd64bde1ab13b9b3910e63c9376f8ae9431c83b94e`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -68,7 +68,28 @@ Xcode or Gradle build could find them without a network fetch.
 | `client/iosApp/Frameworks/` | 5 | 9.2 MB | `CIRISVerify.xcframework` |
 | `client/androidApp/src/main/assets/bin/` | 1 | 11.2 MB | `llama-server-arm64` |
 
-**Why they are out.** This repo exists so that one client is built once and
+**Three of them are now IN, as of CIRISClient#24.** `iosApp/Frameworks/`,
+`iosApp/app_packages_native/` and `iosApp/Resources.zip` (~55 MB) are vendored.
+The argument below still holds and was overruled deliberately: the iOS leg of
+the five-platform gate **cannot build without them**, and so had never passed —
+17 runs, 17 failures. We bought a third copy's worth of drift risk in exchange
+for an end-to-end test on a platform we ship. If they drift, the symptom will
+be an iOS build that passes here and fails on a device, so re-hydrate them from
+CIRISAgent's `refresh-ios-substrate.yml` output when that workflow moves.
+
+`iosApp/Resources/` stays OUT, and not as a compromise: the 137 MB tree is only
+read by the rsync build phase, which is guarded on `$CIRIS_ROOT/ciris_engine`
+— a directory this repo does not have — so in this tree the phase no-ops and
+Xcode consumes the committed `Resources.zip`. Vendoring the tree would add 137
+MB that nothing here reads.
+
+**`Python.xcframework` is still missing and is the remaining blocker.** It is
+the output of a `briefcase build iOS` and lives only at a hardcoded path on one
+Mac (`prepare_python_bundle.sh:19`), published by no repo. The iOS leg will
+fail on it until someone copies it in or the upstream
+`beeware/Python-Apple-support` port in the table below is done.
+
+**Why they were out.** This repo exists so that one client is built once and
 consumed as a dependency, instead of each consumer keeping its own copy. A
 vendored copy of *CIRISVerify's* and *CIRISServer's* release binaries inside
 the client is the same defect one level down — and the copy here would be a
