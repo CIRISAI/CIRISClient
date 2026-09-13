@@ -227,6 +227,29 @@ jobs:
             --node-version "${{ steps.node.outputs.version }}" \
             --shots shots --report reports/linux.json
 
+      # WITHOUT THIS THE EMULATOR RUNS IN SOFTWARE AND DIES.
+      #
+      # The runner HAS /dev/kvm and the `runner` user is not in the `kvm`
+      # group, so the emulator probed it, gave up, and fell back to pure
+      # software emulation:
+      #
+      #     ProbeKVM: This user doesn't have permissions to use KVM (/dev/kvm).
+      #     The KVM line in /etc/group is: [kvm:x:993:]
+      #     Disabling Linux hardware acceleration.
+      #
+      # That is a 346-second boot, after which the watchdog killed
+      # system_server outright — `android.os.DeadSystemException` — and the leg
+      # failed before run_platform could write a report. Every Android failure
+      # this workflow has ever produced traces back here; none of them was the
+      # client. The udev rule is what reactivecircus/android-emulator-runner
+      # documents for ubuntu runners.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
