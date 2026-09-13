@@ -177,6 +177,31 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             Step("reverse-node", adb + ["reverse", f"tcp:{NODE_API_PORT}", f"tcp:{NODE_API_PORT}"]),
             Step("forward-automation", adb + ["forward", f"tcp:{host_port}", f"tcp:{CLIENT_TEST_PORT}"]),
             Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/.MainActivity"]),
+            # A LAUNCH THAT RETURNED 0 IS NOT A PROCESS.
+            #
+            # `am start -W` reported success and the app never started: logcat
+            # shows `START u0 {cmp=ai.ciris.mobile.debug/.MainActivity}` with no
+            # matching `Start proc`, because the package was still being
+            # dex-optimized — dexopt ran a full MINUTE after the start, on a
+            # debuggable APK freshly installed. The gate then waited 120s for an
+            # automation server inside a process that did not exist and reported
+            # "automation server never came up", which reads like a broken
+            # client and is not one.
+            #
+            # So ask the only question that settles it — is there a pid — and
+            # re-issue the start until there is. On device, because a shell loop
+            # here would pay adb's round trip 30 times.
+            Step(
+                "await-process",
+                adb + [
+                    "shell",
+                    "for i in $(seq 1 30); do "
+                    f"pidof {package} > /dev/null 2>&1 && exit 0; "
+                    f"am start -n {package}/.MainActivity > /dev/null 2>&1; "
+                    "sleep 2; done; "
+                    "echo 'no process after 60s'; exit 1",
+                ],
+            ),
         ],
     )
 
