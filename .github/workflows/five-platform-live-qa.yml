@@ -264,11 +264,13 @@ jobs:
           # start its test server, so the leg failed with "automation server
           # never came up within 120s" and read like a client defect.
           #
-          # aosp_atd is Google's automated-test-device image: no GMS, no Play
-          # services, a fraction of the boot cost, and built for exactly this.
-          # The gate drives our own UI over HTTP, so nothing under test needs
-          # the parts it drops.
-          target: aosp_atd
+          # WAS aosp_atd, AND THAT WAS A GUESS THAT COST A RUN. The ATD image
+          # was added to fight a 424-second boot; the actual cause was KVM being
+          # unavailable (see the step above), and with acceleration the full
+          # image is fast enough. On ATD the app never started at all — repeated
+          # `am start` with no `Start proc` and no crash — so the image is a
+          # variable worth removing before reading anything else into it.
+          target: default
           profile: pixel_2
           cores: 2
           ram-size: 4096M
