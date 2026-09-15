@@ -30,9 +30,10 @@ CIRCLES = [
     ("Agent (Self)", "layer-agent",
      "You and the agent that works for you. Your own reasoning, your own notes."),
     ("Family", "layer-family",
-     "The people you live your closest life with. The strictest circle: "
-     "family-scoped data is not advertised at all, so outsiders cannot route "
-     "to it, read it, or even learn it exists."),
+     "The people you live your closest life with. The strictest circle. The "
+     "mechanism has a name: family-scoped data <b>sends no directory "
+     "advertisement</b> — nothing is announced on the discovery destination — "
+     "so outsiders cannot route to it, read it, or learn it exists."),
     ("Local Community", "layer-local-community",
      "Where you actually are. Neighbours, a school, a clinic, a town."),
     ("Global Communities", "layer-global-communities",
@@ -103,9 +104,11 @@ SECTIONS = [
             "can still pull it.”",
             "<b>Five things travel with every flow:</b> the subject, the sender, "
             "the recipient, the <b>information type</b>, and the <b>transmission "
-            "principle</b> — the rule the flow must follow next. Not free text: "
-            "<code>consent:{kind}</code> is a catalogued family, open in its "
-            "parameters and closed in its leaves.",
+            "principle</b> — the rule the flow must follow next. Each is both "
+            "<b>named and signed</b>, not merely labelled: the reconstruction "
+            "test split on exactly this point, and the answer is both. Not free "
+            "text either — <code>consent:{kind}</code> is a catalogued family, "
+            "open in its parameters and closed in its leaves.",
             "<b>The information type is a real, shared list.</b> 116 namespace "
             "families across 9 components, generated into "
             "<code>namespace_registry.json</code>. When a field on screen is "
@@ -173,13 +176,32 @@ ANSWERED = [
      "catalogued <code>consent:{kind}</code> leaf — retain, share, analyze, "
      "train, publish. A free-text box here would be a bug."),
     ("“No promise beats another” — is there anything positive to design?",
-     "Yes: Wisdom-Based Deferral. The positive expression is the deferral "
-     "surface — the moment the system stops and hands a conflict to a human, "
-     "with the reasoning attached. That is a screen, not an absence."),
+     "Yes. The designer's brief came out entirely negative — don't rank them, "
+     "don't trade them off in copy — because nobody had named the mechanism. It "
+     "is <b>Wisdom-Based Deferral</b>: the moment the system stops and hands the "
+     "conflict to a human, with the reasoning attached. That is a screen, not an "
+     "absence. Who receives it is the next answer."),
     ("How many circles are there, and can people make more?",
      "Five, fixed — folded down from seven in CEG 0.6. They are not "
      "user-created. Each is a hub showing Identities, Trust and Policies at that "
      "scope."),
+    ("\u201cIt stops and asks a grown-up it trusts\u201d — who is that, exactly?",
+     "The <b>Wise Authority</b>, and this client already has the surface: "
+     "<i>Wise Authority</i>, under Node. Two distinct things share the "
+     "initials — <b>Wisdom-Based Deferral (WBD)</b> is the moment of handing a "
+     "conflict over; the <b>Wise Authority</b> is who adjudicates it, and "
+     "rulings are logged durably in the Wisdom Bank Database. Separately, the "
+     "safety halt is held by 2-of-3 named humans on a live quorum. So \u201cno "
+     "principle beats another\u201d does have a positive expression on screen: the "
+     "deferral, the adjudicator, and the record."),
+    ("How does someone take their yes back, in the machine's own terms?",
+     "Three things together, none of which is a support ticket. The envelope "
+     "carries <code>subject_key_ids</code>, so the person a claim is ABOUT holds "
+     "authority over it and not only the person who made it. Two of the four "
+     "lifecycle verbs — <code>withdraws</code> and <code>recants</code> — exist "
+     "purely to undo a claim. And the <code>consent:</code> family carries the "
+     "leaves that close a consent's lifecycle. Design the door; the wire already "
+     "has the hinge."),
     ("What do the audit screens actually show?",
      "An agent's own reasoning trace, carried envelope-native "
      "(<code>trace:complete:v1</code>), post-scrub. They are Integrity made "

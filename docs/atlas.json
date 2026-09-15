@@ -1284,7 +1284,7 @@
       [
         "Family",
         "layer-family",
-        "The people you live your closest life with. The strictest circle: family-scoped data is not advertised at all, so outsiders cannot route to it, read it, or even learn it exists."
+        "The people you live your closest life with. The strictest circle. The mechanism has a name: family-scoped data <b>sends no directory advertisement</b> \u2014 nothing is announced on the discovery destination \u2014 so outsiders cannot route to it, read it, or learn it exists."
       ],
       [
         "Local Community",
@@ -1331,7 +1331,7 @@
         "body": [
           "None of this is a promise in a policy document. It is in the bytes, and a designer can rely on it.",
           "<b>Every claim names two authorities, not one.</b> The envelope carries <code>attesting_key_id</code> \u2014 who said it \u2014 and <code>subject_key_ids</code> \u2014 who it is about. The Constitution is blunt about why: \u201cConsent is incomplete if only the producer of data has authority over it\u2026 a person who appears in someone else's data can still pull it.\u201d",
-          "<b>Five things travel with every flow:</b> the subject, the sender, the recipient, the <b>information type</b>, and the <b>transmission principle</b> \u2014 the rule the flow must follow next. Not free text: <code>consent:{kind}</code> is a catalogued family, open in its parameters and closed in its leaves.",
+          "<b>Five things travel with every flow:</b> the subject, the sender, the recipient, the <b>information type</b>, and the <b>transmission principle</b> \u2014 the rule the flow must follow next. Each is both <b>named and signed</b>, not merely labelled: the reconstruction test split on exactly this point, and the answer is both. Not free text either \u2014 <code>consent:{kind}</code> is a catalogued family, open in its parameters and closed in its leaves.",
           "<b>The information type is a real, shared list.</b> 116 namespace families across 9 components, generated into <code>namespace_registry.json</code>. When a field on screen is \u201cnamed by its family\u201d, that is the list it is named from. Nobody has to invent categories.",
           "<b>Taking it back is a verb, not a support ticket.</b> The wire surface is 1+4: <code>scores</code> plus <code>delegates_to</code>, <code>supersedes</code>, <code>withdraws</code>, <code>recants</code>. Two of those four exist purely so a claim can be undone. The surface is conformance-frozen \u2014 changing those bytes is a defect, not an edit."
         ]
@@ -1372,11 +1372,19 @@
       ],
       [
         "\u201cNo promise beats another\u201d \u2014 is there anything positive to design?",
-        "Yes: Wisdom-Based Deferral. The positive expression is the deferral surface \u2014 the moment the system stops and hands a conflict to a human, with the reasoning attached. That is a screen, not an absence."
+        "Yes. The designer's brief came out entirely negative \u2014 don't rank them, don't trade them off in copy \u2014 because nobody had named the mechanism. It is <b>Wisdom-Based Deferral</b>: the moment the system stops and hands the conflict to a human, with the reasoning attached. That is a screen, not an absence. Who receives it is the next answer."
       ],
       [
         "How many circles are there, and can people make more?",
         "Five, fixed \u2014 folded down from seven in CEG 0.6. They are not user-created. Each is a hub showing Identities, Trust and Policies at that scope."
+      ],
+      [
+        "\u201cIt stops and asks a grown-up it trusts\u201d \u2014 who is that, exactly?",
+        "The <b>Wise Authority</b>, and this client already has the surface: <i>Wise Authority</i>, under Node. Two distinct things share the initials \u2014 <b>Wisdom-Based Deferral (WBD)</b> is the moment of handing a conflict over; the <b>Wise Authority</b> is who adjudicates it, and rulings are logged durably in the Wisdom Bank Database. Separately, the safety halt is held by 2-of-3 named humans on a live quorum. So \u201cno principle beats another\u201d does have a positive expression on screen: the deferral, the adjudicator, and the record."
+      ],
+      [
+        "How does someone take their yes back, in the machine's own terms?",
+        "Three things together, none of which is a support ticket. The envelope carries <code>subject_key_ids</code>, so the person a claim is ABOUT holds authority over it and not only the person who made it. Two of the four lifecycle verbs \u2014 <code>withdraws</code> and <code>recants</code> \u2014 exist purely to undo a claim. And the <code>consent:</code> family carries the leaves that close a consent's lifecycle. Design the door; the wire already has the hinge."
       ],
       [
         "What do the audit screens actually show?",
