@@ -34,7 +34,7 @@ def hops() -> dict[str, list[str]]:
 def test_the_tag_rule_matches_the_clients_own(hops):
     """`navTag` is one rule; two copies of it is one copy too many."""
     src = nav_map.SIDEBAR.read_text(encoding="utf-8")
-    m = re.search(r'"nav_epistemic_\$\{surfaceId\.replace\(\'-\', \'_\'\)\}"', src)
+    m = re.search(r'"nav_epistemic_\$\{navSlug\(surfaceId\)\}"', src)
     assert m, (
         "EpistemicSidebar's navTag no longer spells the rule this module mirrors — "
         "re-read it before trusting any hop"
@@ -44,7 +44,7 @@ def test_the_tag_rule_matches_the_clients_own(hops):
 
 def test_the_group_tag_rule_matches_the_clients_own(hops):
     src = nav_map.SIDEBAR.read_text(encoding="utf-8")
-    assert 'testableClickable("nav_group_${group.id}")' in src, (
+    assert 'testableClickable(groupTag(group.id))' in src, (
         "the group toggle tag rule moved"
     )
     assert nav_map.group_tag("manage") == "nav_group_manage"
@@ -64,7 +64,7 @@ def test_a_child_surface_is_reached_through_its_parent(hops):
     that is indistinguishable from a broken screen."""
     chain = hops["Constitutional"]
     assert chain == [
-        "nav_group_commons-layers",
+        "nav_group_commons_layers",
         "nav_epistemic_layer_global_commons",
         "nav_epistemic_constitutional",
     ], chain

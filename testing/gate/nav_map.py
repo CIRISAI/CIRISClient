@@ -37,17 +37,42 @@ SIDEBAR = CLIENT / "ui" / "nav" / "EpistemicSidebar.kt"
 APP = CLIENT / "CIRISApp.kt"
 
 
+def slug(nav_id: str) -> str:
+    """`navSlug` from EpistemicSidebar.kt — the one rule, mirrored.
+
+    It is one rule on each side and a test holds them together, because the
+    alternative was measured: the client slugged the surface row and did not
+    slug the chevron beside it, so one surface answered to
+    `nav_epistemic_agent_settings` and `nav_expand_agent-settings` at once, and
+    anything deriving the second from the first addressed a tag that did not
+    exist.
+    """
+    return nav_id.replace("-", "_")
+
+
 def nav_tag(surface_id: str) -> str:
     """`navTag` from EpistemicSidebar.kt, kept as one rule in one place."""
-    return "nav_epistemic_" + surface_id.replace("-", "_")
+    return "nav_epistemic_" + slug(surface_id)
+
+
+def expand_tag(surface_id: str) -> str:
+    """`expandTag` — the chevron that opens a surface's children.
+
+    Distinct from [nav_tag]: the row navigates TO a surface, the chevron opens
+    what is UNDER it. Clicking the row to reveal a child goes to that screen and
+    reveals nothing, which is why Sessions, Scheduler, LLM Settings and Skill
+    Studio all read as unreachable from their parents.
+    """
+    return "nav_expand_" + slug(surface_id)
 
 
 def group_tag(group_id: str) -> str:
-    return f"nav_group_{group_id}"
+    """`groupTag` — slugged like the other two, as of the DRY pass."""
+    return "nav_group_" + slug(group_id)
 
 
 def _declarations(nav_src: str):
-    """Yield (surface name, argument text) for every `object X : NavSurface(...)`.
+    r"""Yield (surface name, argument text) for every `object X : NavSurface(...)`.
 
     PAREN-BALANCED, NOT REGEX-TERMINATED. These declarations close with `,)` on
     the same line as the last argument and nest `listOf(...)` inside, so a

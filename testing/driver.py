@@ -254,6 +254,33 @@ class TestAutomationServer:
     def navigate(self, screen: str) -> None:
         self._call("POST", "/navigate", {"screen": screen})
 
+    def scroll_to(self, test_tag: str, direction: str = "down",
+                  amount: int = 300, container: str | None = None) -> Any:
+        """Move the screen's registered scrollable, so a click can land.
+
+        `/click` REFUSES an element that is composed but off screen
+        (CIRISClient#33) — a control the person cannot see is not a control the
+        harness may drive. The remedy the app ships for that is `/scroll`, and
+        this driver simply never had the method: `flow_helper.scroll_into_view`
+        calls it inside a `catch AttributeError` and has therefore been quietly
+        returning False on every client, for every flow, since it was written.
+
+        The cost was measured on the nav rail, which registers a
+        `rememberTestableScrollState` precisely so this would work: the screen
+        atlas could reach 32 of 54 surfaces, and the 22 it missed were the ones
+        sitting below the fold of a sidebar nothing could scroll.
+        """
+        body: dict[str, Any] = {
+            "testTag": test_tag, "direction": direction, "amount": amount,
+        }
+        # `container` names WHICH scrollable to move. Without it the app guesses
+        # — most-recent-that-can-move — and on a screen whose content scrolls
+        # the guess is always the content, so the nav rail cannot be moved at
+        # all from a detail screen.
+        if container:
+            body["container"] = container
+        return self._call("POST", "/scroll", body)
+
     def act(self, action: str, **kw: Any) -> Any:
         return self._call("POST", "/act", {"action": action, **kw})
 

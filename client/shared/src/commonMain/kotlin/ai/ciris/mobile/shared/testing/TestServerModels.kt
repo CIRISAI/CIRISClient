@@ -121,7 +121,21 @@ data class WaitRequest(val testTag: String, val timeoutMs: Int? = 5000)
 data class ScreenshotRequest(val path: String, val format: String? = "png")
 
 @Serializable
-data class ScrollRequest(val testTag: String, val direction: String = "down", val amount: Int = 300)
+data class ScrollRequest(
+    val testTag: String,
+    val direction: String = "down",
+    val amount: Int = 300,
+    /**
+     * WHICH scrollable to move, when the screen has more than one.
+     *
+     * Without this the dispatcher can only guess — most-recent-that-can-move —
+     * and on a screen whose content scrolls, every request went to the content.
+     * The nav rail therefore could not be scrolled at all from a detail screen,
+     * so a harness could not reach a group header that had scrolled out of
+     * view, and the screens under it were unreachable. Null keeps the guess.
+     */
+    val container: String? = null,
+)
 
 /** Where the scrollable was, where it ended up, and how far it can go. */
 @Serializable

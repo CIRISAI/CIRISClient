@@ -143,7 +143,7 @@ function renderGrid(list, title){
     card.onclick = () => show(s);
     card.innerHTML = (s.ok
         ? `<img loading="lazy" src="shots/${s.shot}" alt="${s.screen}">`
-        : `<div class="gap">not captured<br><small>${(s.detail||'').slice(0,70)}</small></div>`)
+        : `<div class="gap">${s.flow_only ? 'no nav route' : 'not captured'}<br><small>${(s.detail||'').slice(0,70)}</small></div>`)
       + `<div class="cap"><b>${s.screen}</b><span>${(s.chain||[]).map(LBL).join(' › ')}</span></div>`;
     grid.appendChild(card);
   }

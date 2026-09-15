@@ -42,6 +42,11 @@ FLOW_ONLY = {
     "Startup", "Login", "Setup", "ServerConnection", "ClaimNode",
     "VerifyAgent", "AddFederationId", "DutyConferral", "Help",
     "SkillImport", "Manage",
+    # Declared in EpistemicNav but in NO group, and its own doc comment says
+    # "Reachable from the Accord screen ONLY when no accord family exists yet".
+    # nav_map still hands it a one-hop chain, so it read as a screen the atlas
+    # kept failing to reach. It is not a gap; there is no rail route to it.
+    "AccordCeremony",
 }
 
 
@@ -97,6 +102,98 @@ def sign_in(drv: TestAutomationServer, user: str, password: str, settle: float) 
     return "submitted, but no nav surface appeared"
 
 
+#: The nav rail's scroll container, named so `/scroll` moves the rail and not
+#: whatever the current screen happens to scroll. Mirrors NAV_RAIL_SCROLLABLE.
+NAV_RAIL = "nav_rail"
+
+
+def on_screen(drv: TestAutomationServer, tag: str) -> bool:
+    """Has this tag real pixels?
+
+    SIZE, NOT PRESENCE. A row below the rail's fold is composed and in the
+    element map with a zero-size rect, so `tags()` reports it and a click on it
+    is refused. Asking for width and height is the only question whose answer
+    means "you may click this now".
+    """
+    el = drv.element(tag)
+    return bool(el and el.width > 0 and el.height > 0)
+
+
+def reach(drv: TestAutomationServer, tag: str, settle: float, tries: int = 16) -> None:
+    """Bring `tag` into the rail and click it.
+
+    Rewinds the rail to the top before scanning down, because the rail keeps
+    its position between screens and is usually left at the bottom: a target
+    ABOVE the viewport is never found by scrolling further down.
+    """
+    from testing.driver import DriverError
+
+    def nudge(direction: str, amount: int) -> bool:
+        # "already at the bottom" comes back as a 404. That is an answer, not a
+        # failure: stop going that way.
+        try:
+            drv.scroll_to(tag, direction, amount, container=NAV_RAIL)
+            return True
+        except DriverError:
+            return False
+
+    if on_screen(drv, tag):
+        drv.click(tag)
+        return
+    for _ in range(12):
+        if not nudge("up", 400):
+            break
+    for _ in range(tries):
+        if on_screen(drv, tag):
+            drv.click(tag)
+            return
+        if not nudge("down", 200):
+            break
+        time.sleep(settle / 3)
+    drv.click(tag)  # let the app refuse it, so the reason reaches the report
+
+
+def open_hop(drv: TestAutomationServer, hop: str, child: str, settle: float) -> bool:
+    """Open `hop` until `child` exists, and correct the toggle if it shut it.
+
+    Inferring a group's state from whether its children are in the tree is not
+    enough. The check can read the tree mid-recomposition, conclude the group is
+    shut, click it — and close a group that was open, after which the child
+    never composes and the screen is reported unreachable. That is most of what
+    the atlas was missing: `nav_epistemic_safety` "never appeared" on the screen
+    immediately after a capture that had just used it.
+
+    So this does not predict the toggle's state; it acts and then checks, and a
+    hop that made things worse is simply clicked again.
+    """
+    for _ in range(3):
+        if child in drv.tags():
+            return True
+        # THE CHEVRON IS NOT THE ROW. A surface with children renders two
+        # separate controls: `nav_epistemic_<id>` navigates to it, and
+        # `nav_expand_<id>` opens its subtree (EpistemicSidebar.kt:518).
+        # Clicking the row for Interact, Tickets or Agent Settings therefore
+        # went to that screen and revealed nothing, which is why their
+        # children — Sessions, Scheduler, LLM Settings — read as unreachable.
+        # Prefer the expander when the rail offers one.
+        # nav_map owns the tag rule; this asks it rather than doing string
+        # surgery on a tag, which is how the two spellings went unnoticed.
+        tags = drv.tags()
+        expander = nav_map.expand_tag(hop[len("nav_epistemic_"):]) \
+            if hop.startswith("nav_epistemic_") else None
+        control = expander if expander in tags else hop
+        try:
+            drv.wait_for_element(control, timeout=6.0)
+            reach(drv, control, settle)
+        except Exception:  # noqa: BLE001
+            return False
+        for _ in range(8):
+            time.sleep(settle / 2)
+            if child in drv.tags():
+                return True
+    return child in drv.tags()
+
+
 def capture(drv: TestAutomationServer, shots: Path, hops: dict[str, list[str]],
             settle: float) -> list[dict]:
     """Walk to every screen and photograph it.
@@ -113,6 +210,13 @@ def capture(drv: TestAutomationServer, shots: Path, hops: dict[str, list[str]],
     results: list[dict] = []
     ordered = sorted(hops.items(), key=lambda kv: (kv[1][:-1], kv[0]))
     for screen, chain in ordered:
+        if screen in FLOW_ONLY:
+            results.append({"screen": screen, "chain": chain, "ok": False,
+                            "shot": None, "tags": 0, "resolved": "",
+                            "detail": "no nav route — reached inside a flow",
+                            "flow_only": True})
+            print(f"  [FLOW] {screen:28s} no nav route by design")
+            continue
         entry = {"screen": screen, "chain": chain, "ok": False,
                  "shot": None, "detail": "", "tags": 0, "resolved": ""}
         try:
@@ -135,13 +239,27 @@ def capture(drv: TestAutomationServer, shots: Path, hops: dict[str, list[str]],
             # not already reachable.
             for i, tag in enumerate(chain):
                 nxt = chain[i + 1] if i + 1 < len(chain) else None
-                if nxt and nxt in drv.tags():
-                    continue
-                drv.wait_for_element(tag, timeout=6.0)
-                drv.click(tag)
-                time.sleep(settle)
+                if nxt is None:
+                    drv.wait_for_element(tag, timeout=6.0)
+                    reach(drv, tag, settle)
+                    time.sleep(settle)
+                elif not open_hop(drv, tag, nxt, settle):
+                    raise RuntimeError(f"{tag} would not reveal {nxt}")
             time.sleep(settle)
             after = drv.screen()
+            # THE RAIL MOVES UNDER THE CLICK. Opening a subtree re-lays the
+            # sidebar, and a click resolved against the old layout lands on the
+            # neighbouring row — "landed on ManageNodes, not Contacts". Once the
+            # rail has settled the same click goes to the right place, so a
+            # single honest retry beats widening every timeout.
+            if after.lower() != screen.lower():
+                time.sleep(settle * 2)
+                try:
+                    reach(drv, chain[-1], settle)
+                    time.sleep(settle)
+                    after = drv.screen()
+                except Exception:  # noqa: BLE001
+                    pass
             entry["resolved"] = after
             if after.lower() != screen.lower():
                 entry["detail"] = f"landed on {after}, not {screen}"

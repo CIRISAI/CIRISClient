@@ -39,9 +39,19 @@ import ai.ciris.mobile.shared.platform.rememberTestableScrollState
  * surface is highlighted in `CIRISColors.AccentCyan`.
  *
  * Test tags follow the pattern:
- *   nav_group_{group.id}              — group expand/collapse toggle
+ *   nav_group_{slug}                  — group expand/collapse toggle
  *   nav_epistemic_{slug}              — surface row (clickable via test server)
+ *   nav_expand_{slug}                 — the chevron that opens a surface's subtree
  *   nav_substrate_gate_{surface.id}   — Coming Soon chip when surface is gated
+ *
+ * EVERY ONE OF THEM IS SLUGGED, and that is not cosmetic. `nav_epistemic_*`
+ * normalised hyphens while `nav_group_*` and `nav_expand_*` interpolated the
+ * raw id, so one surface answered to two spellings: the row was
+ * `nav_epistemic_agent_settings` and its chevron was
+ * `nav_expand_agent-settings`. A harness that derived one from the other
+ * looked for a tag that had never existed, concluded the subtree could not be
+ * opened, and reported every screen under it as unreachable — which is exactly
+ * what the screen atlas did until someone read the live tag list.
  *
  * Slugs are the surface id with hyphens normalized to underscores so the QA
  * walk-test can use stable Python-identifier-style names (e.g.
@@ -53,8 +63,17 @@ import ai.ciris.mobile.shared.platform.rememberTestableScrollState
  * testTags) will need updating to the new `nav_epistemic_*` testTags. This is
  * expected scope for the 2.9.4 rewire — the old chrome is fully replaced.
  */
-private fun navTag(surfaceId: String): String =
-    "nav_epistemic_${surfaceId.replace('-', '_')}"
+/** The name the nav rail's scroll container answers to over `/scroll`. */
+const val NAV_RAIL_SCROLLABLE: String = "nav_rail"
+
+/** The one place a nav id becomes a testTag slug. */
+private fun navSlug(id: String): String = id.replace('-', '_')
+
+private fun navTag(surfaceId: String): String = "nav_epistemic_${navSlug(surfaceId)}"
+
+private fun expandTag(surfaceId: String): String = "nav_expand_${navSlug(surfaceId)}"
+
+private fun groupTag(groupId: String): String = "nav_group_${navSlug(groupId)}"
 @Composable
 fun EpistemicSidebar(
     activeSurface: NavSurface?,
@@ -92,7 +111,11 @@ fun EpistemicSidebar(
     badges: Map<String, Int> = emptyMap(),
     modifier: Modifier = Modifier,
 ) {
-    val scroll = rememberTestableScrollState()
+    // NAMED, so a harness can move the rail itself. On a screen whose content
+    // scrolls, an unnamed request goes to the content every time, and a group
+    // header that has scrolled out of the rail can then never be brought back
+    // — which is how a third of the screen atlas became unreachable.
+    val scroll = rememberTestableScrollState(name = NAV_RAIL_SCROLLABLE)
 
     // The nav is now a FUNCTION of the probed mode (CIRISServer#479), resolved
     // once per composition rather than baked at compile time.
@@ -352,7 +375,7 @@ private fun NavGroupHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .testableClickable("nav_group_${group.id}") { onToggle() }
+            .testableClickable(groupTag(group.id)) { onToggle() }
             .padding(horizontal = 10.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -515,7 +538,7 @@ private fun NavSurfaceRow(
         if (hasChildren) {
             Box(
                 modifier = Modifier
-                    .testableClickable("nav_expand_${surface.id}") {
+                    .testableClickable(expandTag(surface.id)) {
                         expandedMap[surface.id] = !isExpanded
                     }
                     .padding(start = 4.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
