@@ -92,6 +92,14 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
   color:var(--muted);margin-bottom:9px;word-break:break-all}
 .doc p{margin:7px 0;font-size:13.5px;line-height:1.55}
 .doc .mu{color:var(--muted)}
+.rings{display:grid;gap:9px;margin:14px 0 4px}
+.ring{display:flex;gap:12px;align-items:flex-start;background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:11px 13px}
+.ring .n{flex:0 0 26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+.ring b{font-size:14px}
+.ring code{display:block;font-size:11px;color:var(--muted);margin:1px 0 4px}
+.ring p{margin:0;font-size:13px;color:var(--muted);max-width:66ch}
 .figs{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 2px}
 .fig{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 13px}
 .fig b{display:block;font-size:19px;line-height:1.2}
@@ -105,7 +113,8 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
   <nav><input type="search" id="q" placeholder="Filter screens…"><div id="tree"></div></nav>
   <main>
     <div class="tabs">
-      <div class="tab on" data-view="screens">Screens</div>
+      <div class="tab on" data-view="start">Start here</div>
+      <div class="tab" data-view="screens">Screens</div>
       <div class="tab" data-view="ia">How the routes relate</div>
       <div class="tab" data-view="why">Why it is shaped this way</div>
     </div>
@@ -129,9 +138,10 @@ function boot(){
     document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
     const v = t.dataset.view;
     if (v === 'ia') renderIA(); else if (v === 'why') renderWhy();
+    else if (v === 'start') renderStart();
     else renderGrid(DATA.screens, 'All screens');
   });
-  renderTree(); renderGrid(DATA.screens, 'All screens');
+  renderTree(); renderStart();
   document.getElementById('q').addEventListener('input', e => {
     const term = e.target.value.toLowerCase();
     renderTree(term);
@@ -258,6 +268,51 @@ function renderIA(){
   const p = document.createElement('p'); p.className = 'note';
   p.innerHTML = 'A row in grey has no screenshot: a surface the atlas could not photograph, or one with no route at all.';
   m.appendChild(p);
+}
+
+function renderStart(){
+  const m = document.getElementById('main'); const e = DATA.explainer;
+  if (!e){ m.innerHTML = '<p class="note">No explainer in this manifest.</p>'; return; }
+  m.innerHTML = `<h2 style="font-size:19px;margin:0 0 4px;letter-spacing:-.01em">
+      What this is for</h2>
+    <p class="note" style="margin:0 0 18px;max-width:64ch">Read this before the
+    screenshots. It is the shortest path from what CIRIS believes to what the
+    interface has to do about it.</p>`;
+  const wrap = document.createElement('div'); wrap.className = 'why';
+  for (const sec of e.sections){
+    const el = document.createElement('div'); el.className = 'doc';
+    let html = `<h3 style="font-size:16px;margin-bottom:8px">${sec.h}</h3>`;
+    for (const para of sec.body) html += `<p style="max-width:72ch">${para}</p>`;
+    if (sec.circles){
+      html += '<div class="rings">';
+      e.circles.forEach((c, i) => {
+        html += `<div class="ring"><span class="n">${i+1}</span>
+          <div><b>${c[0]}</b><code>${c[1]}</code><p>${c[2]}</p></div></div>`;
+      });
+      html += '</div>';
+    }
+    el.innerHTML = html; wrap.appendChild(el);
+  }
+  m.appendChild(wrap);
+
+  const h = document.createElement('h2');
+  h.style.cssText = 'font-size:15px;margin:26px 0 4px';
+  h.textContent = 'Questions a designer asked, answered by name';
+  m.appendChild(h);
+  const p2 = document.createElement('p'); p2.className = 'note';
+  p2.style.cssText = 'margin:0 0 12px;max-width:72ch';
+  p2.innerHTML = 'This page was tested by having it rewritten for a five-year-old, '
+    + 'then reconstructed by readers who saw only that. Nearly everything survived — '
+    + 'the ideas are not hard. These are the places where the reconstruction hit a wall '
+    + 'because a real mechanism had never been named.';
+  m.appendChild(p2);
+  const w2 = document.createElement('div'); w2.className = 'why';
+  for (const pair of e.answered){
+    const el = document.createElement('div'); el.className = 'doc';
+    el.innerHTML = `<h3>${pair[0]}</h3><p style="max-width:72ch">${pair[1]}</p>`;
+    w2.appendChild(el);
+  }
+  m.appendChild(w2);
 }
 
 function renderWhy(){

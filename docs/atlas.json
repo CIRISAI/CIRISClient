@@ -1274,6 +1274,116 @@
     "source": "constitution/part_3_the_namespace.md",
     "source_sha256": "87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5"
   },
+  "explainer": {
+    "circles": [
+      [
+        "Agent (Self)",
+        "layer-agent",
+        "You and the agent that works for you. Your own reasoning, your own notes."
+      ],
+      [
+        "Family",
+        "layer-family",
+        "The people you live your closest life with. The strictest circle: family-scoped data is not advertised at all, so outsiders cannot route to it, read it, or even learn it exists."
+      ],
+      [
+        "Local Community",
+        "layer-local-community",
+        "Where you actually are. Neighbours, a school, a clinic, a town."
+      ],
+      [
+        "Global Communities",
+        "layer-global-communities",
+        "The groups you choose to belong to, wherever they are. Affiliation rather than geography."
+      ],
+      [
+        "Global Commons",
+        "layer-global-commons",
+        "Everyone. What is genuinely shared, and the only circle where \u201cpublic\u201d means what people usually think it means."
+      ]
+    ],
+    "sections": [
+      {
+        "h": "The one idea, first",
+        "body": [
+          "Most software sorts information into <b>secret</b> and <b>public</b>. This one does not. Information belongs to a <b>circle</b>, and the harm is moving it out of the circle it belongs to.",
+          "Your doctor knowing your symptom is fine \u2014 that is what the medical circle is for. The same doctor selling it is not fine. Nothing about the fact changed. What changed is which circle it moved into. That is the whole model, and everything below is machinery for enforcing it.",
+          "So the first question any screen must be able to answer is not \u201cis this allowed?\u201d but <b>\u201cwhich circle is this in, and which rule let it come here?\u201d</b>"
+        ]
+      },
+      {
+        "h": "The circles, smallest first",
+        "body": [
+          "There are five, they are fixed, and they are the top level of the navigation for that reason. They are not a filter, a dropdown or a set of chips \u2014 they are the contexts whose rules decide whether a flow is appropriate. Collapse them into one and the model is gone."
+        ],
+        "circles": true
+      },
+      {
+        "h": "Keep everything as low as it will go",
+        "body": [
+          "This is <b>subsidiarity</b>, and it comes from Catholic social teaching by way of <b>Magnifica Humanitas</b> \u2014 the Vatican's 2026 document, one of the four frameworks CIRIS maps itself to on <code>ciris.ai/compliance</code>. The old formulation: nothing should be done by a larger and higher body that can be done as well by a smaller and lower one.",
+          "On the compliance page it appears as the dimension <code>locality:decision:{scale}</code> \u2014 \u201cdecision routing at lowest competent scale\u201d. It is stated there about <b>decisions</b>. Applied to <b>data</b> it gives the same instruction, and contextual integrity says it in the other direction: family-scoped data does not leave the family, to the point of not announcing that it exists.",
+          "<b>For the UI:</b> the default is always the smallest circle that works. A screen that quietly widens scope \u2014 a share control that defaults outward, a list that shows the global view first \u2014 is not a convenience. It is the one thing the whole design is against."
+        ]
+      },
+      {
+        "h": "How the wire actually enforces it",
+        "body": [
+          "None of this is a promise in a policy document. It is in the bytes, and a designer can rely on it.",
+          "<b>Every claim names two authorities, not one.</b> The envelope carries <code>attesting_key_id</code> \u2014 who said it \u2014 and <code>subject_key_ids</code> \u2014 who it is about. The Constitution is blunt about why: \u201cConsent is incomplete if only the producer of data has authority over it\u2026 a person who appears in someone else's data can still pull it.\u201d",
+          "<b>Five things travel with every flow:</b> the subject, the sender, the recipient, the <b>information type</b>, and the <b>transmission principle</b> \u2014 the rule the flow must follow next. Not free text: <code>consent:{kind}</code> is a catalogued family, open in its parameters and closed in its leaves.",
+          "<b>The information type is a real, shared list.</b> 116 namespace families across 9 components, generated into <code>namespace_registry.json</code>. When a field on screen is \u201cnamed by its family\u201d, that is the list it is named from. Nobody has to invent categories.",
+          "<b>Taking it back is a verb, not a support ticket.</b> The wire surface is 1+4: <code>scores</code> plus <code>delegates_to</code>, <code>supersedes</code>, <code>withdraws</code>, <code>recants</code>. Two of those four exist purely so a claim can be undone. The surface is conformance-frozen \u2014 changing those bytes is a defect, not an edit."
+        ]
+      },
+      {
+        "h": "Nobody is in charge, and that is structural",
+        "body": [
+          "There is no admin. \u201cAny operator can create an equally valid root, and every client chooses which roots to trust. The shipped root is a default, not the root.\u201d Peers find each other through signed records rather than app stores, package registries or domain names.",
+          "Standing is <b>earned</b>: non-transferable credits for contributions that are attributable and costly to fake \u2014 \u201cnot bought and not mined\u201d. There is no tier to buy and none to be promoted into.",
+          "<b>For the UI:</b> two people can open the same screen and correctly see different things, and neither is being restricted. So the permission idiom is wrong here. \u201cYou don't have access\u201d describes a hierarchy that does not exist."
+        ]
+      },
+      {
+        "h": "Safety is a floor, not a feature",
+        "body": [
+          "There is a halt \u201cno score, no argument, and no attacker can override\u201d, held by <b>2-of-3 named humans on a live quorum</b> so it still works if the roster is attacked or comms are jammed. When two principles genuinely conflict, the system does not resolve it cleverly \u2014 it stops and asks a trusted human.",
+          "And when something breaks: \u201cit fails in the record, under its own name.\u201d",
+          "<b>For the UI:</b> the halt and the deferral are surfaces a person must be able to find under stress, not settings. An error state is not a failure of the design \u2014 telling the truth about uncertainty is one of the six principles, which is why every surface owes four states and why <i>error</i> must never look like <i>empty</i>."
+        ]
+      }
+    ],
+    "answered": [
+      [
+        "\u201cThe group a thing belongs to\u201d \u2014 what is the real list?",
+        "116 namespace families, 9 owning components (8 normative), generated into <code>manifests/namespace_registry.json</code> at CC 1.0-rc5. It is the shared taxonomy every tag component depends on. Do not invent categories."
+      ],
+      [
+        "\u201cA note with your own name on it\u201d \u2014 what does add-a-contact accept?",
+        "A federation identity (fed-ID) and its fedcode \u2014 self-minted, signed, no registry involved. The client already has the surface: My Identity mints this device's fed-ID, and enrolment takes a pasted or scanned fedcode."
+      ],
+      [
+        "\u201cStickers you cannot hand to anyone\u201d \u2014 is unforgeability visible?",
+        "It is Proof of Benefit: non-transferable earned credits. Remove every transfer and purchase affordance. Verification is the network's job, not a step to put in front of a person."
+      ],
+      [
+        "\u201cThe promise about where it may go next\u201d \u2014 vocabulary or free text?",
+        "A controlled vocabulary. The transmission principle is named by a catalogued <code>consent:{kind}</code> leaf \u2014 retain, share, analyze, train, publish. A free-text box here would be a bug."
+      ],
+      [
+        "\u201cNo promise beats another\u201d \u2014 is there anything positive to design?",
+        "Yes: Wisdom-Based Deferral. The positive expression is the deferral surface \u2014 the moment the system stops and hands a conflict to a human, with the reasoning attached. That is a screen, not an absence."
+      ],
+      [
+        "How many circles are there, and can people make more?",
+        "Five, fixed \u2014 folded down from seven in CEG 0.6. They are not user-created. Each is a hub showing Identities, Trust and Policies at that scope."
+      ],
+      [
+        "What do the audit screens actually show?",
+        "An agent's own reasoning trace, carried envelope-native (<code>trace:complete:v1</code>), post-scrub. They are Integrity made visible \u2014 \u201ctransparent, auditable reasoning\u201d \u2014 which is why they cannot be tidied away for looking like developer tooling."
+      ]
+    ]
+  },
   "principles": [
     {
       "id": "equality",
