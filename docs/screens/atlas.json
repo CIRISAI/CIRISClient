@@ -687,5 +687,646 @@
       "resolved": "Moderation"
     }
   ],
-  "routable": 53
+  "routable": 53,
+  "structure": {
+    "surfaces": {
+      "Sessions": {
+        "id": "sessions",
+        "group": null,
+        "parent": "Interact",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Interact": {
+        "id": "interact",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Sessions"
+        ]
+      },
+      "Scheduler": {
+        "id": "scheduler",
+        "group": null,
+        "parent": "Tickets",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Tickets": {
+        "id": "tickets",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Scheduler"
+        ]
+      },
+      "Tools": {
+        "id": "tools",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Services": {
+        "id": "services",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Logs": {
+        "id": "logs",
+        "group": null,
+        "parent": "Telemetry",
+        "parent_group": "node",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Transport": {
+        "id": "transport",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Telemetry": {
+        "id": "telemetry",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Logs"
+        ]
+      },
+      "GraphMemory": {
+        "id": "graph-memory",
+        "group": "node",
+        "parent": "Memory",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Memory": {
+        "id": "memory",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "GraphMemory"
+        ]
+      },
+      "WiseAuthority": {
+        "id": "wise-authority",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LLMSettings": {
+        "id": "llm-settings",
+        "group": null,
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "System": {
+        "id": "system",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Runtime": {
+        "id": "runtime",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Config": {
+        "id": "config",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Skills": {
+        "id": "skills",
+        "group": null,
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "AgentSettings": {
+        "id": "agent-settings",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "Config",
+          "LLMSettings",
+          "Runtime",
+          "Skills",
+          "System"
+        ]
+      },
+      "Account": {
+        "id": "account",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "HealthReputation": {
+        "id": "health-reputation",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Users": {
+        "id": "users",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Adapters": {
+        "id": "adapters",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "NetworkOps": {
+        "id": "network-ops",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Storage": {
+        "id": "storage",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Audit": {
+        "id": "audit",
+        "group": null,
+        "parent": "Data",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Consent": {
+        "id": "consent",
+        "group": null,
+        "parent": "Data",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Data": {
+        "id": "data",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "Audit",
+          "Consent"
+        ]
+      },
+      "Trust": {
+        "id": "trust",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Nodes": {
+        "id": "nodes",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "ManageConsent": {
+        "id": "manage-consent",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Contacts": {
+        "id": "contacts",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Delegations": {
+        "id": "delegations",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "IdentityManagement": {
+        "id": "identity-management",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Accord": {
+        "id": "accord",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ProvisionAccordHolder": {
+        "id": "provision-accord-holder",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "AccordCeremony": {
+        "id": "accord-ceremony",
+        "group": null,
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Moderation": {
+        "id": "moderation",
+        "group": "safety",
+        "parent": "Safety",
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ChildSafety": {
+        "id": "child-safety",
+        "group": "safety",
+        "parent": "Safety",
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Safety": {
+        "id": "safety",
+        "group": null,
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "ChildSafety",
+          "Moderation"
+        ]
+      },
+      "Wallet": {
+        "id": "wallet",
+        "group": null,
+        "parent": "Billing",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Billing": {
+        "id": "billing",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Wallet"
+        ]
+      },
+      "LayerAgent": {
+        "id": "layer-agent",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Participate": {
+        "id": "participate",
+        "group": null,
+        "parent": "LayerGlobalCommunities",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "EnvironmentGraph": {
+        "id": "environment-graph",
+        "group": null,
+        "parent": "LayerGlobalCommons",
+        "parent_group": "commons-layers",
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "Delegation": {
+        "id": "delegation",
+        "group": null,
+        "parent": "LayerFamily",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Constitutional": {
+        "id": "constitutional",
+        "group": null,
+        "parent": "LayerGlobalCommons",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Video": {
+        "id": "video",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Voting": {
+        "id": "voting",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "PrivateGroups": {
+        "id": "private-groups",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Commons": {
+        "id": "commons",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LayerFamily": {
+        "id": "layer-family",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Delegation"
+        ]
+      },
+      "LayerLocalCommunity": {
+        "id": "layer-local-community",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LayerGlobalCommunities": {
+        "id": "layer-global-communities",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Participate"
+        ]
+      },
+      "LayerGlobalCommons": {
+        "id": "layer-global-commons",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Constitutional",
+          "EnvironmentGraph"
+        ]
+      },
+      "AgentsList": {
+        "id": "agents-list",
+        "group": "client",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ClientInterface": {
+        "id": "client-interface",
+        "group": "client",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      }
+    },
+    "groups": [
+      "agent",
+      "client",
+      "commons-layers",
+      "manage",
+      "node",
+      "safety"
+    ],
+    "ungrouped": [
+      "AccordCeremony",
+      "Audit",
+      "Consent",
+      "Constitutional",
+      "Delegation",
+      "EnvironmentGraph",
+      "LLMSettings",
+      "Logs",
+      "Participate",
+      "Safety",
+      "Scheduler",
+      "Sessions",
+      "Skills",
+      "Wallet"
+    ],
+    "cross_framed": [
+      "Config",
+      "GraphMemory",
+      "Runtime",
+      "System"
+    ]
+  },
+  "namespaces": {
+    "cc_version": "1.0-rc5",
+    "families": 116,
+    "components": 9,
+    "components_normative": 8,
+    "per_component": {
+      "accord-agent": 19,
+      "anti-sybil": 6,
+      "attestation": 18,
+      "cirisbench": 1,
+      "lens": 15,
+      "node": 35,
+      "persist": 6,
+      "registry": 11,
+      "transport-delivery": 5
+    },
+    "source": "constitution/part_3_the_namespace.md",
+    "source_sha256": "87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5"
+  },
+  "lineage": [
+    {
+      "id": "constitution",
+      "title": "CIRIS Constitution \u2014 Part III, The Namespace",
+      "where": "CIRISConstitution/constitution/part_3_the_namespace.md",
+      "says": "A federation needs a shared vocabulary before it can have a shared judgment. Part III is that vocabulary: every component's namespace families, generated into a registry rather than asserted in prose.",
+      "means_for_ui": "The words on screen are not UI copy. A field belongs to a constitutional family, and the family is what makes it checkable."
+    },
+    {
+      "id": "csd",
+      "title": "CSD/3 \u2014 the lifecycle form",
+      "where": "CIRISClient/CSD.md",
+      "says": "A surface is specified BEFORE it is built, and the specification is machine-checked. v3's central move: the CEG prefix IS the field identifier, so one pass validates both the vocabulary and the UI contract. \u201cA specification whose claims cannot be checked is a document, not a contract.\u201d",
+      "means_for_ui": "Every surface owes four states \u2014 populated, empty, loading, error \u2014 and a redesign that shows only the populated one is half a design."
+    },
+    {
+      "id": "ui-language",
+      "title": "FSD \u2014 The CIRIS UI language",
+      "where": "CIRISClient/docs/FSD-ui-language.md",
+      "says": "One language, two halves. RENDERING (`interactive_config`, owned by the agent) declares what the UI shows; EXPOSURE (test tags, owned by the client) declares what it exposes. The seam is a naming rule: the outputs vocabulary of the first is the addressing vocabulary of the second.",
+      "means_for_ui": "The intended model is HyperCard: a CARD has title, contents, sources, links and outputs; a STACK is an ordered list of cards; a FLOW is a stack across screens. Screens are the accident; cards are the unit."
+    },
+    {
+      "id": "epistemic-nav",
+      "title": "Epistemic Commons Framework navigation",
+      "where": "client/shared/\u2026/ui/nav/EpistemicNav.kt",
+      "says": "Groups are epistemic scopes, not feature folders. Safety sits high deliberately \u2014 \u201cfoundational, not a bolt-on\u201d. The Commons group is the five CEG 0.6 cohort scopes, folded from seven.",
+      "means_for_ui": "Which groups exist is a function of the PROBED node, not of the build: a node that gains a brain reveals the agent surfaces on the next probe rather than the next reinstall."
+    },
+    {
+      "id": "first-run",
+      "title": "FSD \u2014 Remote first-run claim",
+      "where": "CIRISClient/docs/FSD-remote-first-run-claim.md",
+      "says": "Only ONE setup route is reachable off-host, and the consequences of that are stated plainly rather than designed around.",
+      "means_for_ui": "First-run is a constrained flow, not a screen that can be rearranged freely."
+    }
+  ],
+  "observations": [
+    [
+      "Two axes, not one",
+      "A surface has a GROUP (the rail section it is filed under) and a PARENT (the chevron that reveals it). They are independent. Config, Runtime and System are filed under <b>node</b> while hanging off AgentSettings, which is filed under <b>agent</b>; GraphMemory is filed under node beneath Memory. The nav calls this deliberate \u2014 the agent framing alongside the node-infra framing \u2014 but a reader expecting one tree mis-reads all four."
+    ],
+    [
+      "Thirteen surfaces have no group",
+      "They reach the rail only through a parent's chevron: Sessions under Interact, Scheduler under Tickets, LLM Settings and Skills under Agent Settings, Audit and Consent under Data, Wallet under Billing, Logs under Telemetry, and the four Layer children. Collapse the parent and they are gone \u2014 which is why they were the last screens the atlas could reach."
+    ],
+    [
+      "One surface has no route at all",
+      "AccordCeremony is in no group and under no parent. Its own declaration says it opens from the Accord screen only while no accord family exists yet, so it is a flow, not a destination."
+    ],
+    [
+      "The row and the chevron are different controls",
+      "Clicking a parent row NAVIGATES to it; opening its children needs the chevron beside it. A person who clicks the word expecting the subtree gets the parent screen instead \u2014 the same confusion that cost the atlas a third of its coverage."
+    ]
+  ]
 }

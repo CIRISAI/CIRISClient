@@ -167,6 +167,56 @@ def build() -> dict[str, list[str]]:
     return hops
 
 
+def structure() -> dict:
+    """The nav as a SHAPE, not just a set of routes.
+
+    `build()` answers "what do I click to get there". A person redesigning the
+    IA needs the other question — how the surfaces relate — and the answer is
+    that there are TWO axes, not one:
+
+      * **group** — which section of the rail a surface is filed under;
+      * **parent** — which surface's chevron has to be open to reveal it.
+
+    They are independent, and four surfaces prove it: `Config`, `Runtime` and
+    `System` are filed under **node** while hanging off `AgentSettings`, which
+    is filed under **agent**; `GraphMemory` is filed under node beneath
+    `Memory`. The nav comment calls this deliberate — "the agent framing
+    alongside the node-infra framing" — so a reader who assumes a single tree
+    will mis-read those four every time.
+
+    Fourteen surfaces carry no group at all. Thirteen of them are children and
+    reach the rail through a parent; one, `AccordCeremony`, reaches it through
+    nothing, because its own declaration says it opens from the Accord screen
+    only when no accord family exists yet.
+    """
+    nav_src = NAV.read_text(encoding="utf-8")
+    app_src = APP.read_text(encoding="utf-8")
+    ids, kids, groups = _surface_ids(nav_src), _children(nav_src), _groups(nav_src)
+    routed = set(_screen_routes(app_src))
+
+    surfaces = {}
+    for obj, surface_id in ids.items():
+        parent = kids.get(obj)
+        surfaces[obj] = {
+            "id": surface_id,
+            "group": groups.get(obj),
+            "parent": parent,
+            "parent_group": groups.get(parent) if parent else None,
+            "has_screen": obj in routed,
+        }
+    for obj, rec in surfaces.items():
+        rec["cross_framed"] = bool(
+            rec["parent_group"] and rec["group"] and rec["parent_group"] != rec["group"]
+        )
+        rec["children"] = sorted(o for o, r in surfaces.items() if r["parent"] == obj)
+    return {
+        "surfaces": surfaces,
+        "groups": sorted({g for g in groups.values()}),
+        "ungrouped": sorted(o for o, r in surfaces.items() if not r["group"]),
+        "cross_framed": sorted(o for o, r in surfaces.items() if r["cross_framed"]),
+    }
+
+
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)

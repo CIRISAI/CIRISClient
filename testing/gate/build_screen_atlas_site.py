@@ -108,6 +108,35 @@ button.back{background:none;border:1px solid var(--line);border-radius:8px;paddi
   cursor:pointer;color:var(--ink);font-size:13px;margin-bottom:14px}
 code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
 .note{color:var(--muted);font-size:12.5px;margin:14px 0 0}
+.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:7px 14px;border:1px solid var(--line);background:var(--panel);
+  border-radius:999px;cursor:pointer;font-size:13px;color:var(--ink)}
+.tab.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ia{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px 4px}
+.ia .grp{padding:12px 14px 6px;font-weight:700;font-size:13px;letter-spacing:.04em;
+  text-transform:uppercase;color:var(--accent)}
+.ia .row{display:flex;align-items:center;gap:8px;padding:5px 14px;font-size:13.5px;
+  border-left:2px solid transparent;cursor:pointer}
+.ia .row:hover{background:var(--bg)}
+.ia .row.kid{padding-left:40px;border-left-color:var(--line)}
+.ia .row.kid::before{content:"└";color:var(--muted);margin-left:-14px;margin-right:4px}
+.ia .row .nm{font-weight:500}
+.ia .row.noshot .nm{color:var(--miss)}
+.tag{font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);
+  color:var(--muted);white-space:nowrap}
+.tag.cross{border-color:var(--accent);color:var(--accent)}
+.tag.orphan{border-color:var(--miss);color:var(--miss)}
+.why{display:grid;gap:14px}
+.doc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+.doc h3{margin:0 0 4px;font-size:14.5px}
+.doc .where{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;
+  color:var(--muted);margin-bottom:9px;word-break:break-all}
+.doc p{margin:7px 0;font-size:13.5px;line-height:1.55}
+.doc .mu{color:var(--muted)}
+.figs{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0 2px}
+.fig{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 13px}
+.fig b{display:block;font-size:19px;line-height:1.2}
+.fig span{font-size:11.5px;color:var(--muted)}
 </style></head><body>
 <header>
   <h1>CIRIS Screen Atlas</h1>
@@ -115,7 +144,14 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
 </header>
 <div class="wrap">
   <nav><input type="search" id="q" placeholder="Filter screens…"><div id="tree"></div></nav>
-  <main id="main"></main>
+  <main>
+    <div class="tabs">
+      <div class="tab on" data-view="screens">Screens</div>
+      <div class="tab" data-view="ia">How the routes relate</div>
+      <div class="tab" data-view="why">Why it is shaped this way</div>
+    </div>
+    <div id="main"></div>
+  </main>
 </div>
 <script>
 const LBL = t => t.replace(/^nav_(group|epistemic)_/,'').replace(/[-_]/g,' ')
@@ -127,8 +163,15 @@ fetch('atlas.json').then(r => r.json()).then(d => { DATA = d; boot(); })
 
 function boot(){
   const ok = DATA.screens.filter(s => s.ok).length;
+  const routable = DATA.routable || DATA.screens.length;
   document.getElementById('meta').textContent =
-    `${ok}/${DATA.screens.length} screens · mode ${DATA.mode} · ${DATA.jar || ''}`;
+    `${ok}/${routable} screens · mode ${DATA.mode} · ${DATA.jar || ''}`;
+  document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+    const v = t.dataset.view;
+    if (v === 'ia') renderIA(); else if (v === 'why') renderWhy();
+    else renderGrid(DATA.screens, 'All screens');
+  });
   renderTree(); renderGrid(DATA.screens, 'All screens');
   document.getElementById('q').addEventListener('input', e => {
     const term = e.target.value.toLowerCase();
@@ -206,6 +249,97 @@ function renderGrid(list, title){
   renderTree(document.getElementById('q').value.toLowerCase());
 }
 
+const shotFor = name => (DATA.screens.find(x => x.screen === name) || {});
+
+function selectTab(v){
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x.dataset.view === v));
+}
+
+function addRow(box, name, S, kid){
+  const r = S[name] || {}; const shot = shotFor(name);
+  const row = document.createElement('div');
+  row.className = 'row' + (kid ? ' kid' : '') + (shot.ok ? '' : ' noshot');
+  let tags = '';
+  if (r.cross_framed) tags += `<span class="tag cross">filed under ${r.group}, child of ${r.parent}</span>`;
+  else if (kid && r.parent) tags += `<span class="tag">child of ${r.parent}</span>`;
+  if (!r.group && !r.parent) tags += '<span class="tag orphan">no route</span>';
+  if (r.children && r.children.length) tags += `<span class="tag">${r.children.length} child${r.children.length>1?'ren':''}</span>`;
+  row.innerHTML = `<span class="nm">${name}</span>${tags}`;
+  if (shot.ok) row.onclick = () => { selectTab('screens'); show(shot); };
+  box.appendChild(row);
+}
+
+function renderIA(){
+  const st = DATA.structure; const m = document.getElementById('main');
+  if (!st){ m.innerHTML = '<p class="note">No structure in this manifest.</p>'; return; }
+  const S = st.surfaces;
+  m.innerHTML = `<h2 style="font-size:15px;margin:0 0 6px">How the routes relate</h2>
+    <p class="note" style="margin:0 0 14px">Two axes, not one. A surface has a
+    <b>group</b> — the rail section it is filed under — and a <b>parent</b>, the chevron
+    that reveals it. They are independent, and where they disagree the surface is marked
+    <span class="tag cross">cross-framed</span>.</p>`;
+  const box = document.createElement('div'); box.className = 'ia';
+  const byGroup = {};
+  for (const [name, r] of Object.entries(S)) if (r.group) (byGroup[r.group] = byGroup[r.group] || []).push(name);
+  for (const g of st.groups){
+    const names = (byGroup[g] || []).sort();
+    if (!names.length) continue;
+    const h = document.createElement('div'); h.className = 'grp';
+    h.textContent = `${g.replace(/-/g,' ')} · ${names.length}`; box.appendChild(h);
+    const roots = names.filter(n => !S[n].parent || !names.includes(S[n].parent));
+    for (const n of roots){
+      addRow(box, n, S, false);
+      for (const kid of (S[n].children || [])) addRow(box, kid, S, true);
+    }
+  }
+  const orph = document.createElement('div'); orph.className = 'grp';
+  orph.textContent = `no group · ${st.ungrouped.length}`; box.appendChild(orph);
+  for (const n of st.ungrouped) addRow(box, n, S, !!S[n].parent);
+  m.appendChild(box);
+  const p = document.createElement('p'); p.className = 'note';
+  p.innerHTML = 'A row in grey has no screenshot: a surface the atlas could not photograph, or one with no route at all.';
+  m.appendChild(p);
+}
+
+function renderWhy(){
+  const m = document.getElementById('main'); const ns = DATA.namespaces || {};
+  m.innerHTML = `<h2 style="font-size:15px;margin:0 0 6px">Why it is shaped this way</h2>
+    <p class="note" style="margin:0 0 6px">The arrangement is the visible end of a
+    specification chain. These are the documents that decided it, in the order they decided it.</p>`;
+  if (ns.families){
+    const f = document.createElement('div'); f.className = 'figs';
+    f.innerHTML = `<div class="fig"><b>${ns.families}</b><span>namespace families</span></div>
+      <div class="fig"><b>${ns.components}</b><span>owning components (${ns.components_normative} normative)</span></div>
+      <div class="fig"><b>${ns.cc_version}</b><span>Constitution version</span></div>`;
+    m.appendChild(f);
+    const note = document.createElement('p'); note.className = 'note';
+    note.innerHTML = `Read from <code>manifests/namespace_registry.json</code>, generated from `
+      + `<code>${ns.source || ''}</code> — the Constitution says to take the count from there, `
+      + `never from a number restated in prose.`;
+    m.appendChild(note);
+  }
+  const wrap = document.createElement('div'); wrap.className = 'why'; wrap.style.marginTop = '16px';
+  for (const d of (DATA.lineage || [])){
+    const el = document.createElement('div'); el.className = 'doc';
+    el.innerHTML = `<h3>${d.title}</h3><div class="where">${d.where}</div>
+      <p>${d.says}</p><p class="mu"><b>For the UI:</b> ${d.means_for_ui}</p>`;
+    wrap.appendChild(el);
+  }
+  m.appendChild(wrap);
+  if (DATA.observations && DATA.observations.length){
+    const h = document.createElement('h2');
+    h.style.cssText = 'font-size:15px;margin:22px 0 6px'; h.textContent = 'What the atlas found';
+    m.appendChild(h);
+    const w2 = document.createElement('div'); w2.className = 'why';
+    for (const pair of DATA.observations){
+      const el = document.createElement('div'); el.className = 'doc';
+      el.innerHTML = `<h3>${pair[0]}</h3><p>${pair[1]}</p>`;
+      w2.appendChild(el);
+    }
+    m.appendChild(w2);
+  }
+}
+
 function show(s){
   CURRENT = s.screen;
   const m = document.getElementById('main');
@@ -240,6 +374,13 @@ def main() -> int:
     args = ap.parse_args()
 
     manifest = json.loads((args.atlas / "atlas.json").read_text())
+    # The SHAPE and the REASONS ride along with the pictures, so the page can
+    # explain an arrangement instead of merely listing it.
+    from testing.gate import atlas_context, nav_map
+    manifest["structure"] = nav_map.structure()
+    manifest["namespaces"] = atlas_context.namespaces()
+    manifest["lineage"] = atlas_context.LINEAGE
+    manifest["observations"] = atlas_context.OBSERVATIONS
     args.out.mkdir(parents=True, exist_ok=True)
     shots_out = args.out / "shots"
     if shots_out.exists():
