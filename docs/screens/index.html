@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CIRIS Screen Atlas</title>
+<style>
+:root{
+  --bg:#f6f7f9; --panel:#fff; --ink:#15181d; --muted:#666e7a; --line:#e3e6ea;
+  --accent:#2f6df6; --miss:#c2410c; --missbg:#fff4ed;
+  color-scheme:light;
+}
+:root[data-theme="dark"], :root:not([data-theme="light"]){}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#12141a; --panel:#181b22; --ink:#e8eaee; --muted:#98a0ad; --line:#272b34;
+  --accent:#6f9bff; --miss:#ff9a6b; --missbg:#2a1a12; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#12141a; --panel:#181b22; --ink:#e8eaee; --muted:#98a0ad; --line:#272b34;
+  --accent:#6f9bff; --miss:#ff9a6b; --missbg:#2a1a12; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:14px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:18px 20px;border-bottom:1px solid var(--line);background:var(--panel);
+  display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+h1{font-size:16px;margin:0;letter-spacing:-.01em}
+.meta{color:var(--muted);font-size:12.5px}
+.wrap{display:grid;grid-template-columns:290px 1fr;gap:0;min-height:calc(100vh - 62px)}
+@media (max-width:820px){.wrap{grid-template-columns:1fr}
+  nav{border-right:0!important;border-bottom:1px solid var(--line)}}
+nav{border-right:1px solid var(--line);background:var(--panel);padding:14px 10px;
+  max-height:calc(100vh - 62px);overflow:auto;position:sticky;top:62px}
+main{padding:20px;min-width:0}
+input[type=search]{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);color:var(--ink);margin-bottom:10px;font-size:13px}
+details{margin:2px 0}
+summary{cursor:pointer;padding:5px 8px;border-radius:7px;font-weight:600;font-size:13px;
+  list-style:none;display:flex;justify-content:space-between;gap:8px}
+summary::-webkit-details-marker{display:none}
+summary:hover{background:var(--bg)}
+summary .n{color:var(--muted);font-weight:400;font-size:12px}
+.sub{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;
+  letter-spacing:.05em;padding:8px 8px 3px}
+a.item{display:block;padding:5px 8px 5px 14px;border-radius:7px;color:var(--ink);
+  text-decoration:none;font-size:13px}
+a.item:hover{background:var(--bg)}
+a.item.on{background:var(--accent);color:#fff}
+a.item.missing{color:var(--miss)}
+a.item.on.missing{color:#fff}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:16px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  cursor:pointer;display:flex;flex-direction:column}
+.card:hover{border-color:var(--accent)}
+.card img{width:100%;display:block;aspect-ratio:16/10;object-fit:cover;object-position:top center;
+  background:var(--bg)}
+.card .cap{padding:9px 11px;border-top:1px solid var(--line)}
+.card .cap b{font-size:13px;display:block}
+.card .cap span{color:var(--muted);font-size:11.5px}
+.gap{aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;
+  background:var(--missbg);color:var(--miss);font-size:12px;text-align:center;padding:12px}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.detail img{max-width:100%;border:1px solid var(--line);border-radius:8px;display:block;margin:12px 0}
+.chain{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.hop{background:var(--bg);border:1px solid var(--line);border-radius:999px;
+  padding:3px 10px;font-size:12px;color:var(--muted)}
+.hop.last{color:var(--ink);border-color:var(--accent)}
+button.back{background:none;border:1px solid var(--line);border-radius:8px;padding:6px 12px;
+  cursor:pointer;color:var(--ink);font-size:13px;margin-bottom:14px}
+code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
+.note{color:var(--muted);font-size:12.5px;margin:14px 0 0}
+</style></head><body>
+<header>
+  <h1>CIRIS Screen Atlas</h1>
+  <span class="meta" id="meta">loading…</span>
+</header>
+<div class="wrap">
+  <nav><input type="search" id="q" placeholder="Filter screens…"><div id="tree"></div></nav>
+  <main id="main"></main>
+</div>
+<script>
+const LBL = t => t.replace(/^nav_(group|epistemic)_/,'').replace(/[-_]/g,' ')
+  .replace(/\b\w/g, c => c.toUpperCase());
+let DATA = null, CURRENT = null;
+
+fetch('atlas.json').then(r => r.json()).then(d => { DATA = d; boot(); })
+  .catch(e => { document.getElementById('main').textContent = 'Could not load atlas.json: ' + e; });
+
+function boot(){
+  const ok = DATA.screens.filter(s => s.ok).length;
+  document.getElementById('meta').textContent =
+    `${ok}/${DATA.screens.length} screens · mode ${DATA.mode} · ${DATA.jar || ''}`;
+  renderTree(); renderGrid(DATA.screens, 'All screens');
+  document.getElementById('q').addEventListener('input', e => {
+    const term = e.target.value.toLowerCase();
+    renderTree(term);
+    if (term) renderGrid(DATA.screens.filter(s => s.screen.toLowerCase().includes(term)),
+                         `Matching “${term}”`);
+  });
+}
+
+function groups(){
+  const g = {};
+  for (const s of DATA.screens){
+    const c = s.chain || [];
+    const grp = c.length ? LBL(c[0]) : 'Unrouted';
+    const par = c.length > 2 ? LBL(c[1]) : '';
+    ((g[grp] = g[grp] || {})[par] = g[grp][par] || []).push(s);
+  }
+  return g;
+}
+
+function renderTree(filter){
+  const host = document.getElementById('tree'); host.innerHTML = '';
+  const g = groups();
+  for (const [grp, parents] of Object.entries(g).sort()){
+    const all = Object.values(parents).flat()
+      .filter(s => !filter || s.screen.toLowerCase().includes(filter));
+    if (!all.length) continue;
+    const d = document.createElement('details'); d.open = !!filter || true;
+    d.innerHTML = `<summary>${grp}<span class="n">${all.length}</span></summary>`;
+    for (const [par, list] of Object.entries(parents).sort()){
+      const shown = list.filter(s => !filter || s.screen.toLowerCase().includes(filter));
+      if (!shown.length) continue;
+      if (par){ const h = document.createElement('div'); h.className='sub'; h.textContent=par; d.appendChild(h); }
+      for (const s of shown.sort((a,b)=>a.screen.localeCompare(b.screen))){
+        const a = document.createElement('a');
+        a.className = 'item' + (s.ok ? '' : ' missing') + (CURRENT===s.screen ? ' on' : '');
+        a.textContent = s.screen; a.href = '#' + s.screen;
+        a.onclick = ev => { ev.preventDefault(); show(s); };
+        d.appendChild(a);
+      }
+    }
+    host.appendChild(d);
+  }
+}
+
+function renderGrid(list, title){
+  CURRENT = null;
+  const m = document.getElementById('main');
+  m.innerHTML = `<h2 style="font-size:15px;margin:0 0 14px">${title} <span class="meta">(${list.length})</span></h2>`;
+  const grid = document.createElement('div'); grid.className = 'grid';
+  for (const s of list.sort((a,b)=>a.screen.localeCompare(b.screen))){
+    const card = document.createElement('div'); card.className = 'card';
+    card.onclick = () => show(s);
+    card.innerHTML = (s.ok
+        ? `<img loading="lazy" src="shots/${s.shot}" alt="${s.screen}">`
+        : `<div class="gap">not captured<br><small>${(s.detail||'').slice(0,70)}</small></div>`)
+      + `<div class="cap"><b>${s.screen}</b><span>${(s.chain||[]).map(LBL).join(' › ')}</span></div>`;
+    grid.appendChild(card);
+  }
+  m.appendChild(grid);
+  const prov = document.createElement('p'); prov.className = 'note';
+  prov.innerHTML = `<b>How these were captured.</b> Desktop build <code>${DATA.jar||'?'}</code>
+    driven through its test-automation server against a live CIRIS agent running the
+    <b>mock LLM</b>, in <code>${DATA.mode}</code> mode — the mode that shows the Agent,
+    Node, Safety and Manage groups. Captured ${DATA.captured_at||'—'}.
+    Screens are photographed only when the app confirms it actually navigated, so a
+    gap below is a real gap, not a mislabelled duplicate.`;
+  m.appendChild(prov);
+  if (DATA.flow_only && DATA.flow_only.length){
+    const n = document.createElement('p'); n.className = 'note';
+    n.innerHTML = '<b>Not in the nav tree</b> (reached only inside a flow, so not captured here): '
+      + DATA.flow_only.map(x => `<code>${x}</code>`).join(' ');
+    m.appendChild(n);
+  }
+  renderTree(document.getElementById('q').value.toLowerCase());
+}
+
+function show(s){
+  CURRENT = s.screen;
+  const m = document.getElementById('main');
+  m.innerHTML = '';
+  const back = document.createElement('button');
+  back.className = 'back'; back.textContent = '← All screens';
+  back.onclick = () => renderGrid(DATA.screens, 'All screens');
+  m.appendChild(back);
+  const d = document.createElement('div'); d.className = 'detail';
+  const chain = (s.chain||[]).map((h,i,a) =>
+    `<span class="hop${i===a.length-1?' last':''}">${LBL(h)}</span>`).join('');
+  d.innerHTML = `<h2 style="margin:0;font-size:17px">${s.screen}</h2>
+    <div class="chain">${chain || '<span class="hop">no nav route</span>'}</div>`
+    + (s.ok ? `<img src="shots/${s.shot}" alt="${s.screen}">`
+            : `<div class="gap" style="border-radius:8px;margin:12px 0">not captured — ${s.detail||''}</div>`)
+    + (s.resolved && s.ok && s.resolved.toLowerCase() !== s.screen.toLowerCase()
+        ? `<p class="note" style="color:var(--miss)"><b>Mismatch:</b> the app reported
+           <code>${s.resolved}</code> here, not <code>${s.screen}</code>.</p>` : '')
+    + `<p class="meta">${s.ok ? `${s.tags} test tags on screen` : ''}
+       ${s.detail && s.ok ? ' · resolved as <code>'+s.detail+'</code>' : ''}</p>`;
+  m.appendChild(d);
+  renderTree(document.getElementById('q').value.toLowerCase());
+}
+</script></body></html>

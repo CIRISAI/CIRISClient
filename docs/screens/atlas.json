@@ -1,0 +1,688 @@
+{
+  "captured_at": "2026-09-15 16:41 UTC",
+  "mode": "AGENT",
+  "api": "http://127.0.0.1:4343",
+  "jar": "CIRIS-linux-x64-1.5.219.jar",
+  "captured": 32,
+  "total": 54,
+  "flow_only": [
+    "AddFederationId",
+    "ClaimNode",
+    "DutyConferral",
+    "Help",
+    "Login",
+    "Manage",
+    "ServerConnection",
+    "Setup",
+    "SkillImport",
+    "Startup",
+    "VerifyAgent"
+  ],
+  "screens": [
+    {
+      "screen": "AccordCeremony",
+      "chain": [
+        "nav_epistemic_accord_ceremony"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_accord_ceremony' never appeared within 6s (screen='Interact'; registered: btn_adapters_menu, btn_agent_state, btn_attach, bt",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Interact",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_interact"
+      ],
+      "ok": true,
+      "shot": "Interact.png",
+      "detail": "Interact",
+      "tags": 33,
+      "resolved": "Interact"
+    },
+    {
+      "screen": "Memory",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_memory"
+      ],
+      "ok": true,
+      "shot": "Memory.png",
+      "detail": "Memory",
+      "tags": 28,
+      "resolved": "Memory"
+    },
+    {
+      "screen": "Settings",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings"
+      ],
+      "ok": true,
+      "shot": "Settings.png",
+      "detail": "Settings",
+      "tags": 21,
+      "resolved": "Settings"
+    },
+    {
+      "screen": "Tickets",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tickets"
+      ],
+      "ok": true,
+      "shot": "Tickets.png",
+      "detail": "Tickets",
+      "tags": 22,
+      "resolved": "Tickets"
+    },
+    {
+      "screen": "Tools",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tools"
+      ],
+      "ok": true,
+      "shot": "Tools.png",
+      "detail": "Tools",
+      "tags": 25,
+      "resolved": "Tools"
+    },
+    {
+      "screen": "LLMSettings",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_llm_settings"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_llm_settings' never appeared within 6s (screen='Settings'; registered: btn_back, btn_brightness_dark, btn_brightness_light, ",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "SkillStudio",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_skills"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_skills' never appeared within 6s (screen='Settings'; registered: btn_back, btn_brightness_dark, btn_brightness_light, btn_br",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Sessions",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_interact",
+        "nav_epistemic_sessions"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_sessions' never appeared within 6s (screen='Interact'; registered: btn_adapters_menu, btn_agent_state, btn_attach, btn_brigh",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Scheduler",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tickets",
+        "nav_epistemic_scheduler"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_scheduler' never appeared within 6s (screen='Tickets'; registered: btn_brightness_dark, btn_brightness_light, btn_brightness",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "AgentsList",
+      "chain": [
+        "nav_group_client",
+        "nav_epistemic_agents_list"
+      ],
+      "ok": true,
+      "shot": "AgentsList.png",
+      "detail": "AgentsList",
+      "tags": 12,
+      "resolved": "AgentsList"
+    },
+    {
+      "screen": "VizSettings",
+      "chain": [
+        "nav_group_client",
+        "nav_epistemic_client_interface"
+      ],
+      "ok": true,
+      "shot": "VizSettings.png",
+      "detail": "VizSettings",
+      "tags": 47,
+      "resolved": "VizSettings"
+    },
+    {
+      "screen": "Commons",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_commons"
+      ],
+      "ok": true,
+      "shot": "Commons.png",
+      "detail": "Commons",
+      "tags": 27,
+      "resolved": "Commons"
+    },
+    {
+      "screen": "LayerAgent",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_agent"
+      ],
+      "ok": true,
+      "shot": "LayerAgent.png",
+      "detail": "LayerAgent",
+      "tags": 25,
+      "resolved": "LayerAgent"
+    },
+    {
+      "screen": "LayerFamily",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_family"
+      ],
+      "ok": true,
+      "shot": "LayerFamily.png",
+      "detail": "LayerFamily",
+      "tags": 25,
+      "resolved": "LayerFamily"
+    },
+    {
+      "screen": "LayerGlobalCommons",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommons.png",
+      "detail": "LayerGlobalCommons",
+      "tags": 50,
+      "resolved": "LayerGlobalCommons"
+    },
+    {
+      "screen": "LayerGlobalCommunities",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_communities"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommunities.png",
+      "detail": "LayerGlobalCommunities",
+      "tags": 25,
+      "resolved": "LayerGlobalCommunities"
+    },
+    {
+      "screen": "LayerLocalCommunity",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_local_community"
+      ],
+      "ok": true,
+      "shot": "LayerLocalCommunity.png",
+      "detail": "LayerLocalCommunity",
+      "tags": 25,
+      "resolved": "LayerLocalCommunity"
+    },
+    {
+      "screen": "Voting",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_voting"
+      ],
+      "ok": true,
+      "shot": "Voting.png",
+      "detail": "Voting",
+      "tags": 20,
+      "resolved": "Voting"
+    },
+    {
+      "screen": "Delegation",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_family",
+        "nav_epistemic_delegation"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_delegation' never appeared within 6s (screen='LayerFamily'; registered: btn_brightness_dark, btn_brightness_light, btn_brigh",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Constitutional",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons",
+        "nav_epistemic_constitutional"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_constitutional' never appeared within 6s (screen='LayerGlobalCommons'; registered: btn_brightness_dark, btn_brightness_light",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "EnvironmentInfo",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons",
+        "nav_epistemic_environment_graph"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_environment_graph' never appeared within 6s (screen='LayerGlobalCommons'; registered: btn_brightness_dark, btn_brightness_li",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Participate",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_communities",
+        "nav_epistemic_participate"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_participate' never appeared within 6s (screen='LayerGlobalCommunities'; registered: btn_brightness_dark, btn_brightness_ligh",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Accord",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_accord"
+      ],
+      "ok": true,
+      "shot": "Accord.png",
+      "detail": "Accord",
+      "tags": 36,
+      "resolved": "Accord"
+    },
+    {
+      "screen": "Adapters",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_adapters"
+      ],
+      "ok": true,
+      "shot": "Adapters.png",
+      "detail": "Adapters",
+      "tags": 33,
+      "resolved": "Adapters"
+    },
+    {
+      "screen": "Billing",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_billing"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on Adapters, not Billing",
+      "tags": 0,
+      "resolved": "Adapters"
+    },
+    {
+      "screen": "Contacts",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_contacts"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on ManageNodes, not Contacts",
+      "tags": 0,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "DataManagement",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on ManageNodes, not DataManagement",
+      "tags": 0,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "Delegations",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_delegations"
+      ],
+      "ok": true,
+      "shot": "Delegations.png",
+      "detail": "Delegations",
+      "tags": 42,
+      "resolved": "Delegations"
+    },
+    {
+      "screen": "HealthReputation",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_health_reputation"
+      ],
+      "ok": true,
+      "shot": "HealthReputation.png",
+      "detail": "HealthReputation",
+      "tags": 31,
+      "resolved": "HealthReputation"
+    },
+    {
+      "screen": "IdentityManagement",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_identity_management"
+      ],
+      "ok": true,
+      "shot": "IdentityManagement.png",
+      "detail": "IdentityManagement",
+      "tags": 48,
+      "resolved": "IdentityManagement"
+    },
+    {
+      "screen": "ManageConsent",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_manage_consent"
+      ],
+      "ok": true,
+      "shot": "ManageConsent.png",
+      "detail": "ManageConsent",
+      "tags": 33,
+      "resolved": "ManageConsent"
+    },
+    {
+      "screen": "ManageNodes",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_nodes"
+      ],
+      "ok": true,
+      "shot": "ManageNodes.png",
+      "detail": "ManageNodes",
+      "tags": 36,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "NetworkOps",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_network_ops"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on ManageNodes, not NetworkOps",
+      "tags": 0,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "PrivateGroups",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_private_groups"
+      ],
+      "ok": true,
+      "shot": "PrivateGroups.png",
+      "detail": "PrivateGroups",
+      "tags": 30,
+      "resolved": "PrivateGroups"
+    },
+    {
+      "screen": "ProvisionAccordHolder",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_provision_accord_holder"
+      ],
+      "ok": true,
+      "shot": "ProvisionAccordHolder.png",
+      "detail": "ProvisionAccordHolder",
+      "tags": 37,
+      "resolved": "ProvisionAccordHolder"
+    },
+    {
+      "screen": "Storage",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_storage"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on ProvisionAccordHolder, not Storage",
+      "tags": 0,
+      "resolved": "ProvisionAccordHolder"
+    },
+    {
+      "screen": "Trust",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_trust"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "landed on ProvisionAccordHolder, not Trust",
+      "tags": 0,
+      "resolved": "ProvisionAccordHolder"
+    },
+    {
+      "screen": "Users",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_users"
+      ],
+      "ok": true,
+      "shot": "Users.png",
+      "detail": "Users",
+      "tags": 40,
+      "resolved": "Users"
+    },
+    {
+      "screen": "Video",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_video"
+      ],
+      "ok": true,
+      "shot": "Video.png",
+      "detail": "Video",
+      "tags": 30,
+      "resolved": "Video"
+    },
+    {
+      "screen": "Wallet",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_billing",
+        "nav_epistemic_wallet"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_wallet' never appeared within 6s (screen='Video'; registered: btn_brightness_dark, btn_brightness_light, btn_brightness_syst",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Audit",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data",
+        "nav_epistemic_audit"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_audit' never appeared within 6s (screen='Video'; registered: btn_brightness_dark, btn_brightness_light, btn_brightness_syste",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Consent",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data",
+        "nav_epistemic_consent"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_consent' never appeared within 6s (screen='Video'; registered: btn_brightness_dark, btn_brightness_light, btn_brightness_sys",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Services",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_services"
+      ],
+      "ok": true,
+      "shot": "Services.png",
+      "detail": "Services",
+      "tags": 24,
+      "resolved": "Services"
+    },
+    {
+      "screen": "Telemetry",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_telemetry"
+      ],
+      "ok": true,
+      "shot": "Telemetry.png",
+      "detail": "Telemetry",
+      "tags": 21,
+      "resolved": "Telemetry"
+    },
+    {
+      "screen": "Transport",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_transport"
+      ],
+      "ok": true,
+      "shot": "Transport.png",
+      "detail": "Transport",
+      "tags": 32,
+      "resolved": "Transport"
+    },
+    {
+      "screen": "WiseAuthority",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_wise_authority"
+      ],
+      "ok": true,
+      "shot": "WiseAuthority.png",
+      "detail": "WiseAuthority",
+      "tags": 21,
+      "resolved": "WiseAuthority"
+    },
+    {
+      "screen": "Config",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_config"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_agent_settings' never appeared within 6s (screen='WiseAuthority'; registered: btn_brightness_dark, btn_brightness_light, btn",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Runtime",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_runtime"
+      ],
+      "ok": true,
+      "shot": "Runtime.png",
+      "detail": "Runtime",
+      "tags": 29,
+      "resolved": "Runtime"
+    },
+    {
+      "screen": "System",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_system"
+      ],
+      "ok": true,
+      "shot": "System.png",
+      "detail": "System",
+      "tags": 27,
+      "resolved": "System"
+    },
+    {
+      "screen": "GraphMemory",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_memory",
+        "nav_epistemic_graph_memory"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_graph_memory' never appeared within 6s (screen='Memory'; registered: btn_brightness_dark, btn_brightness_light, btn_brightne",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "Logs",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_telemetry",
+        "nav_epistemic_logs"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_logs' never appeared within 6s (screen='Telemetry'; registered: btn_brightness_dark, btn_brightness_light, btn_brightness_sy",
+      "tags": 0,
+      "resolved": ""
+    },
+    {
+      "screen": "ChildSafety",
+      "chain": [
+        "nav_group_safety",
+        "nav_epistemic_safety",
+        "nav_epistemic_child_safety"
+      ],
+      "ok": true,
+      "shot": "ChildSafety.png",
+      "detail": "ChildSafety",
+      "tags": 22,
+      "resolved": "ChildSafety"
+    },
+    {
+      "screen": "Moderation",
+      "chain": [
+        "nav_group_safety",
+        "nav_epistemic_safety",
+        "nav_epistemic_moderation"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "DriverError: element 'nav_epistemic_safety' never appeared within 6s (screen='ChildSafety'; registered: btn_brightness_dark, btn_brightness_light, btn_brightnes",
+      "tags": 0,
+      "resolved": ""
+    }
+  ]
+}
