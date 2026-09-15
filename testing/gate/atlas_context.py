@@ -39,7 +39,151 @@ def namespaces() -> dict:
     }
 
 
-#: The documents that decided the shape, in the order the shape was decided.
+#: THE REASON, in the terms it was actually decided in. Not the spec chain —
+#: that is where it is written down, which is a different question from why.
+PRINCIPLES = [
+    {
+        "id": "equality",
+        "title": "Everyone is equal — so there is no admin",
+        "source": "ciris.ai/constitutional-mesh",
+        "url": "https://ciris.ai/constitutional-mesh",
+        "quote": (
+            "Any operator can create an equally valid root, and every client "
+            "chooses which roots to trust. The shipped root is a default, not "
+            "the root."
+        ),
+        "gist": (
+            "The mesh has no hierarchy. Peers find each other through signed "
+            "records rather than app stores, registries or domain names, and "
+            "standing is earned rather than bought — non-transferable credits "
+            "for contributions that are costly to fake."
+        ),
+        "ui": (
+            "There is no admin tier to design for, and no user tier either. The "
+            "same surfaces exist for everyone; what differs is what a person can "
+            "attest to. So the familiar idiom — a greyed control with "
+            "\u201cyou don't have permission\u201d — is the wrong one here. Nobody is "
+            "above anybody. The honest message is about the flow, not the rank."
+        ),
+    },
+    {
+        "id": "contextual-integrity",
+        "title": "Privacy is appropriate flow, not secrecy",
+        "source": "ciris.ai/contextual-integrity",
+        "url": "https://ciris.ai/contextual-integrity",
+        "quote": (
+            "Privacy is the appropriate flow of information. Every part of life "
+            "has its own rules for how information should move."
+        ),
+        "gist": (
+            "Five signed parameters decide whether a flow is appropriate: the "
+            "data subject, the sender, the recipient, the information type, and "
+            "the transmission principle — the rule the flow must follow. A "
+            "doctor knowing your diagnosis fits the rules of that context; the "
+            "same doctor selling it does not, \u201ceven if a form said they could\u201d."
+        ),
+        "ui": (
+            "Every surface that shows data owes an answer to \u201cunder which rule am "
+            "I seeing this?\u201d That is why a field is named by its constitutional "
+            "family: the family IS the information type, one of the five "
+            "parameters. Show a value without its scope and the screen has "
+            "dropped a parameter the protocol enforces."
+        ),
+    },
+    {
+        "id": "attestation-set",
+        "title": "What you can see is relative to the attestation set",
+        "source": "ciris.ai/contextual-integrity · ciris.ai/constitutional-mesh",
+        "url": "https://ciris.ai/contextual-integrity",
+        "quote": (
+            "Family-scoped data sends no directory advertisement. Outsiders "
+            "cannot route to it, read it, or even learn that it exists."
+        ),
+        "gist": (
+            "Access is not a permission bit on an account. It is a function of "
+            "which CEG attestations are in play — signed claims a peer can "
+            "verify — so two people on the same screen can correctly see "
+            "different things, and neither is being restricted."
+        ),
+        "ui": (
+            "EMPTY AND INVISIBLE ARE DIFFERENT STATES, and this is the one a "
+            "redesign is most likely to get wrong. \u201cNothing here yet\u201d invites "
+            "the person to add something. \u201cNot yours to know exists\u201d must not "
+            "even hint that there is something to be let into — the protocol "
+            "goes to the trouble of not advertising it, and the UI can give that "
+            "away in a way the wire never would."
+        ),
+    },
+    {
+        "id": "six-principles",
+        "title": "Six principles, none of which may override another",
+        "source": "ciris.ai/values",
+        "url": "https://ciris.ai/values",
+        "quote": (
+            "Promote sustainable adaptive coherence: the living conditions under "
+            "which diverse sentient beings may pursue their own flourishing in "
+            "justice and wonder."
+        ),
+        "gist": (
+            "Beneficence, Non-maleficence, Integrity, Fidelity & Transparency, "
+            "Respect for Autonomy, Justice. \u201cNo principle grants license to "
+            "violate another\u201d — unresolved conflicts escalate to trusted humans "
+            "rather than being resolved algorithmically."
+        ),
+        "ui": (
+            "Several surfaces that look like developer tools are principles made "
+            "visible, and cannot be tidied away: Audit, Logs and Telemetry are "
+            "Integrity's \u201ctransparent, auditable reasoning\u201d; Manage Consent is "
+            "Autonomy's revocability, which is why it is a first-class surface "
+            "and not a settings row; Safety sits high in the rail because "
+            "non-maleficence is foundational rather than a bolt-on. An error or "
+            "loading state is Fidelity: communicating uncertainty truthfully is "
+            "a principle, which is why every surface owes four states."
+        ),
+    },
+]
+
+
+#: What a redesign must not break, stated as rules rather than as background.
+DESIGN_RULES = [
+    (
+        "Do not add a role hierarchy",
+        "No admin view, no permission tiers, no \u201cupgrade to see this\u201d. Equality "
+        "is structural, not a setting."
+    ),
+    (
+        "Never render a value without its scope",
+        "The constitutional family is the information type — one of the five "
+        "parameters that make a flow appropriate. A number with no family is an "
+        "unlabelled flow."
+    ),
+    (
+        "Distinguish empty from invisible",
+        "Empty invites action. Invisible must not advertise that anything exists. "
+        "Same blank area on screen, opposite obligations."
+    ),
+    (
+        "Four states per surface, always",
+        "Populated, empty, loading, error. Error must be visually distinct from "
+        "empty — CSD/3 requires it because communicating uncertainty is a "
+        "principle, not a nicety."
+    ),
+    (
+        "Group by scope, not by feature",
+        "The five Commons layers — Agent, Family, Local Community, Global "
+        "Communities, Global Commons — are the CONTEXTS whose norms decide "
+        "appropriate flow. They are not a feature menu, and collapsing them into "
+        "one would erase the distinction the whole model rests on."
+    ),
+    (
+        "Consent is revocable, so show the way out",
+        "Every surface that collects or shares owes a visible path to withdraw. "
+        "Machine-readable and revocable is the standard the protocol holds."
+    ),
+]
+
+
+#: Where it is written down, once the reason is understood.
 LINEAGE = [
     {
         "id": "constitution",

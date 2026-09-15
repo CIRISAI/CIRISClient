@@ -263,35 +263,85 @@ function renderIA(){
 function renderWhy(){
   const m = document.getElementById('main'); const ns = DATA.namespaces || {};
   m.innerHTML = `<h2 style="font-size:15px;margin:0 0 6px">Why it is shaped this way</h2>
-    <p class="note" style="margin:0 0 6px">The arrangement is the visible end of a
-    specification chain. These are the documents that decided it, in the order they decided it.</p>`;
+    <p class="note" style="margin:0 0 4px">The shape is not an engineering convention.
+    It follows from three commitments — everyone is equal, privacy is appropriate flow
+    rather than secrecy, and what you can see depends on the attestations in play.
+    Each one rules out a familiar UI move.</p>`;
+
+  const wrap = document.createElement('div'); wrap.className='why'; wrap.style.marginTop='16px';
+  for (const d of (DATA.principles || [])){
+    const el = document.createElement('div'); el.className='doc';
+    el.innerHTML = `<h3>${d.title}</h3>
+      <div class="where"><a href="${d.url}" target="_blank" rel="noopener">${d.source}</a></div>
+      <blockquote style="margin:8px 0;padding-left:12px;border-left:3px solid var(--accent);
+        font-size:13.5px;line-height:1.55">${d.quote}</blockquote>
+      <p>${d.gist}</p>
+      <p class="mu"><b>What this forces in the UI:</b> ${d.ui}</p>`;
+    wrap.appendChild(el);
+  }
+  m.appendChild(wrap);
+
+  if (DATA.design_rules && DATA.design_rules.length){
+    const h = document.createElement('h2');
+    h.style.cssText='font-size:15px;margin:24px 0 6px';
+    h.textContent = 'Rules a redesign must not break';
+    m.appendChild(h);
+    const w = document.createElement('div'); w.className='why';
+    for (const r of DATA.design_rules){
+      const el = document.createElement('div'); el.className='doc';
+      el.innerHTML = `<h3>${r[0]}</h3><p>${r[1]}</p>`;
+      w.appendChild(el);
+    }
+    m.appendChild(w);
+  }
+
   if (ns.families){
+    const h = document.createElement('h2');
+    h.style.cssText='font-size:15px;margin:24px 0 6px';
+    h.textContent = 'The vocabulary the UI names its fields from';
+    m.appendChild(h);
     const f = document.createElement('div'); f.className = 'figs';
     f.innerHTML = `<div class="fig"><b>${ns.families}</b><span>namespace families</span></div>
       <div class="fig"><b>${ns.components}</b><span>owning components (${ns.components_normative} normative)</span></div>
       <div class="fig"><b>${ns.cc_version}</b><span>Constitution version</span></div>`;
     m.appendChild(f);
     const note = document.createElement('p'); note.className = 'note';
-    note.innerHTML = `Read from <code>manifests/namespace_registry.json</code>, generated from `
-      + `<code>${ns.source || ''}</code> — the Constitution says to take the count from there, `
-      + `never from a number restated in prose.`;
+    note.innerHTML = `A field is named by its constitutional family, because the family is the `
+      + `<b>information type</b> — one of the five parameters that decide whether a flow is `
+      + `appropriate. Counts are read from <code>manifests/namespace_registry.json</code>, `
+      + `generated from <code>${ns.source || ''}</code>; the Constitution says to take them from `
+      + `there and never from a number restated in prose.`;
     m.appendChild(note);
   }
-  const wrap = document.createElement('div'); wrap.className = 'why'; wrap.style.marginTop = '16px';
-  for (const d of (DATA.lineage || [])){
-    const el = document.createElement('div'); el.className = 'doc';
-    el.innerHTML = `<h3>${d.title}</h3><div class="where">${d.where}</div>
-      <p>${d.says}</p><p class="mu"><b>For the UI:</b> ${d.means_for_ui}</p>`;
-    wrap.appendChild(el);
+
+  if (DATA.lineage && DATA.lineage.length){
+    const h = document.createElement('h2');
+    h.style.cssText='font-size:15px;margin:24px 0 6px';
+    h.textContent = 'Where it is written down';
+    m.appendChild(h);
+    const p2 = document.createElement('p'); p2.className='note';
+    p2.style.margin='0 0 12px';
+    p2.textContent = 'The specifications that carry the commitments above into the build. '
+      + 'Useful when you need the exact wording; not the reason itself.';
+    m.appendChild(p2);
+    const w = document.createElement('div'); w.className='why';
+    for (const d of DATA.lineage){
+      const el = document.createElement('div'); el.className='doc';
+      el.innerHTML = `<h3>${d.title}</h3><div class="where">${d.where}</div>
+        <p>${d.says}</p><p class="mu"><b>For the UI:</b> ${d.means_for_ui}</p>`;
+      w.appendChild(el);
+    }
+    m.appendChild(w);
   }
-  m.appendChild(wrap);
+
   if (DATA.observations && DATA.observations.length){
     const h = document.createElement('h2');
-    h.style.cssText = 'font-size:15px;margin:22px 0 6px'; h.textContent = 'What the atlas found';
+    h.style.cssText = 'font-size:15px;margin:24px 0 6px';
+    h.textContent = 'What the atlas found in the nav itself';
     m.appendChild(h);
     const w2 = document.createElement('div'); w2.className = 'why';
     for (const pair of DATA.observations){
-      const el = document.createElement('div'); el.className = 'doc';
+      const el = document.createElement('div'); el.className='doc';
       el.innerHTML = `<h3>${pair[0]}</h3><p>${pair[1]}</p>`;
       w2.appendChild(el);
     }
