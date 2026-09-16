@@ -4762,7 +4762,14 @@ fun CIRISApp(
                         } else {
                             emptyMap()
                         },
-                        appVersion = "v2.9.4",
+                        // THE GENERATED VERSION, NOT A LITERAL. This read
+                        // "v2.9.4" while the build generated CLIENT_VERSION =
+                        // 0.5.219 two files away and another call site in this
+                        // same file already passed it — so the rail advertised a
+                        // client seven minors stale against a 2.11.3 agent, on
+                        // every screen, including all 53 in the screen atlas
+                        // (CIRISClient#58).
+                        appVersion = "v" + ai.ciris.mobile.shared.models.CLIENT_VERSION,
                         // Theme strip at the bottom of the drawer — Light /
                         // System / Dark segmented control. Wired straight to
                         // SettingsViewModel so the user can flip themes from

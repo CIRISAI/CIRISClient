@@ -20,7 +20,13 @@ actual fun openUrlInBrowser(url: String) {
     window.open(url, "_blank")
 }
 
-actual fun getAppVersion(): String = "2.3.2"
+// The other three platforms read the packaged version from the artifact that
+// carries them — JAR manifest, CFBundleShortVersionString, Android versionName.
+// wasm has no bundle to ask, and answered with a literal that was staler than
+// the sidebar's (CIRISClient#58). CLIENT_VERSION is generated from the same
+// release: the packaged major is pinned to 1 and tracks it digit for digit
+// (0.5.219 -> 1.5.219), so this names the same build the others do.
+actual fun getAppVersion(): String = ai.ciris.mobile.shared.models.CLIENT_VERSION
 
 actual fun getAppBuildNumber(): String = "0"
 
