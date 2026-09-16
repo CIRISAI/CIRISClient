@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.platform
 
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import ai.ciris.mobile.shared.models.capability.BackendOwnership
 
 /**
  * Protocol/interface for Python runtime operations.
@@ -77,6 +78,18 @@ interface PythonRuntimeProtocol {
      * On iOS, this calls Py_Finalize()
      */
     fun shutdown()
+
+    /**
+     * Whether the backend is one this runtime launched, or one it attached to.
+     *
+     * A typed fact, not a nullable handle. [shutdown] can only stop a process it
+     * holds; a caller about to delete that process's files needs to know whether
+     * shutdown() will actually stop anything BEFORE it deletes, and the only
+     * prior signal was `_serverProcess == null` — which also means "nothing is
+     * running" (CIRISClient#55). Defaults to UNDETERMINED so runtimes that never
+     * launch anything (mobile) do not have to say anything.
+     */
+    val backendOwnership: BackendOwnership get() = BackendOwnership.UNDETERMINED
 
     /**
      * Check if Python is already initialized

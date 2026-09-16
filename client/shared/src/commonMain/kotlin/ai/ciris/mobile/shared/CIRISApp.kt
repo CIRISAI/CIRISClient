@@ -746,19 +746,10 @@ fun CIRISApp(
         }
     }
 
-    // Monitor .token_refresh_needed signal from Python billing provider
-    // Polls every 10 seconds (matches old Android TokenRefreshManager)
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(10_000)
-            if (envFileUpdater.checkTokenRefreshSignal()) {
-                PlatformLogger.i(TAG, "Token refresh signal detected from Python - triggering silent refresh")
-                tokenManager.on401Error()
-            }
-        }
-    }
-
-    // Monitor .token_refresh_needed signal from Python billing provider
+    // Monitor .token_refresh_needed signal from Python billing provider.
+    // ONCE. This block was pasted twice, so every signal fired on401Error()
+    // twice — half of the 127 "interactive login required" lines in
+    // CIRISClient#59 were the same signal counted again.
     // Polls every 10 seconds (matches old Android TokenRefreshManager)
     LaunchedEffect(Unit) {
         while (true) {
@@ -827,6 +818,25 @@ fun CIRISApp(
     }
     val billingViewModel: BillingViewModel = viewModel {
         BillingViewModel(apiClient, apiBaseUrl)
+    }
+
+    // THE ANSWER NOBODY COLLECTED (CIRISClient#59). TokenManager reaches the
+    // right conclusion — "interactive login required" — and publishes it as
+    // needsInteractiveLogin. No file in the client read it. So the knowledge
+    // that a person had to sign in again died in a WARN line 127 times while
+    // the wallet showed 0 credits for 25 hours against a balance of 398. Here
+    // it goes to the two surfaces the person is actually looking at.
+    LaunchedEffect(tokenManager) {
+        tokenManager.needsInteractiveLogin.collect { needed ->
+            if (needed) {
+                platformLog(TAG, "[WARN][auth] session expired and no silent path — surfacing sign-in on Interact and Billing")
+                interactViewModel.onAuthExpired()
+                billingViewModel.onAuthExpired()
+            } else {
+                interactViewModel.onAuthRestored()
+                billingViewModel.onAuthRestored()
+            }
+        }
     }
     val sessionsViewModel: SessionsViewModel = viewModel {
         SessionsViewModel(apiClient)
@@ -2108,19 +2118,31 @@ fun CIRISApp(
                             // password manager and 2FA, short enough that an
                             // abandoned attempt does not spin forever.
                             var token: ai.ciris.mobile.shared.models.OAuthHandoff? = null
+                            // The node's own reason for refusing, when it gives one. A
+                            // 410 with `reason_id` is the server saying STOP, and the
+                            // old loop polled through three of them: collectOAuthHandoff
+                            // cast the typed Failed to null, and null read as "not
+                            // yet" (CIRISClient#57).
+                            var refusal: String? = null
                             var attempts = 0
-                            while (token == null && attempts < 90) {
+                            while (token == null && refusal == null && attempts < 90) {
                                 kotlinx.coroutines.delay(2000)
                                 attempts++
                                 // After ~20s our own tab has had its chance;
                                 // accept a sign-in that completed in a stray
                                 // tab rather than spin while the node holds a
                                 // perfectly good session.
-                                token = apiClient.collectOAuthHandoff(
+                                when (val poll = apiClient.pollOAuthHandoff(
                                     nonce,
                                     nodeBaseUrl,
                                     allowUnbound = attempts > 10,
-                                )
+                                )) {
+                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Ready ->
+                                        token = poll.handoff
+                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Failed ->
+                                        refusal = poll.reasonId ?: "auth.oauth.flow_expired"
+                                    ai.ciris.mobile.shared.models.OAuthHandoffPoll.Pending -> Unit
+                                }
                                 // Heartbeat every ~20s: "still waiting" must be
                                 // visible, or a stalled flow looks like a crashed one.
                                 if (token == null && attempts % 10 == 0) {
@@ -2130,6 +2152,18 @@ fun CIRISApp(
                             isLoginLoading = false
                             loginStatusMessage = null
                             val collected = token
+                            if (refusal != null) {
+                                // THE REASON, IN THE APP. The node's reason_id is a
+                                // localisation key ("auth.oauth.flow_expired" is in
+                                // en.json verbatim), so the message the person only
+                                // ever saw in a browser tab they may have closed is now
+                                // on the screen they are looking at — including the
+                                // recovery instruction that would have ended the
+                                // incident before it reached Reset (CIRISClient#57).
+                                loginErrorMessage = LocalizationHelper.getString(refusal)
+                                platformLog(TAG, "[WARN][onGoogleSignIn] node refused the hand-off: $refusal")
+                                return@launch
+                            }
                             if (collected == null) {
                                 // Say WHICH failure this is. "Sign-in failed" would
                                 // cover both "you closed the tab" and "the node is
@@ -2387,6 +2421,28 @@ fun CIRISApp(
                                 h
                             } else {
                                 null
+                            }
+
+                            // THE GUARD THE COMMENT ABOVE DISMISSES — for a reason it
+                            // does not consider. It argues no ownership guard is
+                            // needed because the wipe's SCOPE is fixed by which node
+                            // we ask. True, and beside the point: shutdown() can only
+                            // stop a process it launched. Attached to a node that was
+                            // already running, it stops nothing, the wipe deletes the
+                            // files out from under a live process that keeps serving
+                            // them from open handles, and the reset reports ok=true
+                            // (CIRISClient#55). A recovery that reports success and
+                            // changes nothing spends the person's trust before their
+                            // time. So: if it is not ours to stop, do not delete.
+                            if (pythonRuntimeProtocol.backendOwnership ==
+                                ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
+                            ) {
+                                platformLog(TAG, "[WARN][onResetSetup] refusing: attached to a backend this app did not launch and cannot stop")
+                                loginErrorMessage =
+                                    "Reset did not run: this app is attached to a CIRIS node it did not start, " +
+                                        "so it cannot stop it before erasing its data. Stop that node, then try again."
+                                currentScreen = Screen.Login
+                                return@launch
                             }
 
                             val wiped = withContext(Dispatchers.Default) {

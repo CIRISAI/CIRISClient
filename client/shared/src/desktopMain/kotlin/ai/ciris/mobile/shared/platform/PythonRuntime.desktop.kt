@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import ai.ciris.mobile.shared.models.capability.BackendOwnership
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.BufferedReader
@@ -72,6 +73,13 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
     // Server process we launched (null if server was already running)
     private var _serverProcess: Process? = null
 
+    // THE FACT THE COMMENT ABOVE ENCODES AS A NULL. "null if server was already
+    // running" is also null when nothing is running and null after we stopped
+    // our own — three states in one absence. Decided once in startServer() and
+    // kept, so a caller can ask before acting on it (CIRISClient#55).
+    private var _ownership = BackendOwnership.UNDETERMINED
+    override val backendOwnership: BackendOwnership get() = _ownership
+
     // Stdout reader coroutine scope
     private val _readerScope = CoroutineScope(Dispatchers.IO)
 
@@ -111,6 +119,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         when (existingServerState) {
             ExistingServerState.PRESENT -> {
                 println("[PythonRuntime.desktop] A backend is already serving $serverUrl — attaching to it")
+                _ownership = BackendOwnership.ATTACHED
             }
             ExistingServerState.STUCK_SHUTDOWN -> {
                 println("[PythonRuntime.desktop] Detected stuck server in shutdown state - attempting to kill...")
@@ -125,10 +134,12 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 }
                 println("[PythonRuntime.desktop] Killed stuck server, launching fresh instance...")
                 launchServerProcess()
+                _ownership = BackendOwnership.LAUNCHED
             }
             ExistingServerState.NOT_RUNNING -> {
                 println("[PythonRuntime.desktop] No server detected, launching backend...")
                 launchServerProcess()
+                _ownership = BackendOwnership.LAUNCHED
             }
         }
 
@@ -678,6 +689,13 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 
     actual override fun shutdown() {
         _serverStarted = false
+        if (_serverProcess == null && _ownership == BackendOwnership.ATTACHED) {
+            // SAY SO. This used to fall through silently, and the caller — a
+            // Reset about to delete the node's files — read the silence as
+            // "stopped" (CIRISClient#55). The process is not ours to stop.
+            println("[PythonRuntime.desktop] shutdown(): attached to a backend we did not launch — not stopping it")
+            return
+        }
         // Kill the server process if we launched it
         _serverProcess?.let { proc ->
             println("[PythonRuntime.desktop] Shutting down server process (PID: ${proc.pid()})...")
@@ -705,6 +723,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 try { proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) {}
             }
             _serverProcess = null
+            _ownership = BackendOwnership.NONE
             // The pid being gone is not the ports being free: SIGKILL releases
             // them about 2s later, and a backend started in that gap dies on
             // "Edge transport ports are held by another process".

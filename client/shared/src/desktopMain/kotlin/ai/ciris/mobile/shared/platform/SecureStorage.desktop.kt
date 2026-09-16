@@ -15,7 +15,17 @@ import java.util.Base64
  * Stores encrypted values in the system preferences.
  */
 actual class SecureStorage actual constructor() {
-    private val prefs = Preferences.userNodeForPackage(SecureStorage::class.java)
+    // RESOLVED ON EVERY USE, NOT CACHED. "IllegalStateException: Node has been
+    // removed" is java.util.prefs talking, not CIRIS: it is what a Preferences
+    // handle throws once removeNode() has been called on it. The Reset wipe
+    // removes this exact node (LocalDataWipe.desktop.kt), and logout() then
+    // touched the cached handle — so the expected recovery path logged an ERROR,
+    // and because that throw skipped logout's completion callback, the restart
+    // after a successful wipe never ran (CIRISClient#56). A fresh
+    // userNodeForPackage() returns the live node while it exists and a new one
+    // after it was removed, so every operation here is wipe-safe.
+    private val prefs: Preferences
+        get() = Preferences.userNodeForPackage(SecureStorage::class.java)
     private val secretKey: SecretKeySpec by lazy { deriveKey() }
 
     private fun deriveKey(): SecretKeySpec {

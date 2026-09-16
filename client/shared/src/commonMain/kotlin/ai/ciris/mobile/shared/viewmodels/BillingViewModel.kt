@@ -113,6 +113,28 @@ class BillingViewModel(
 
     // Detailed credit status
     private val _creditStatus = MutableStateFlow<CreditStatusData?>(null)
+
+    /**
+     * The billing credential is stale and only a sign-in renews it.
+     *
+     * Not an error message and not a balance. handleBalanceError set -1 and a
+     * generic string; the screen rendered "0 credits" and a Buy button for a
+     * problem money cannot fix (CIRISClient#59). This is the state the Billing
+     * screen renders instead.
+     */
+    private val _authExpired = MutableStateFlow(false)
+    val authExpired: StateFlow<Boolean> = _authExpired.asStateFlow()
+
+    fun onAuthExpired() {
+        _authExpired.value = true
+        _errorMessage.value =
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString("auth.session_expired")
+    }
+
+    fun onAuthRestored() {
+        _authExpired.value = false
+        _errorMessage.value = null
+    }
     val creditStatus: StateFlow<CreditStatusData?> = _creditStatus.asStateFlow()
 
     // Purchase in progress
@@ -187,8 +209,17 @@ class BillingViewModel(
                         delay(2000)
                         continue // Retry
                     }
+                    if (isAuthError) {
+                        // RETRIES EXHAUSTED ON AUTH. Refresh did not produce a usable
+                        // token — on desktop it cannot, there is no silent path — so
+                        // say that, rather than "failed to load balance", which the
+                        // screen rendered as an empty wallet (CIRISClient#59).
+                        onAuthExpired()
+                        _isLoading.value = false
+                        return@launch
+                    }
 
-                    // Non-auth error or retry exhausted
+                    // Non-auth error
                     break
                 }
             }
