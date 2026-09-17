@@ -2464,10 +2464,10 @@ fun CIRISApp(
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
 
                             if (wiped && attachedLive != null) {
-                                // On desktop the app exits below (restartApp is exitProcess),
-                                // so there this is a log line; on iOS the app returns to
-                                // Startup and the person reads it. Either way the record
-                                // says what was reset and what was not.
+                                // Desktop and iOS return to Startup below and the person
+                                // reads this on Login; Android relaunches and it is a log
+                                // line. Either way the record says what was reset and what
+                                // was not.
                                 platformLog(TAG, "[WARN][onResetSetup] local data erased; the CIRIS node at $attachedLive is still running with its previous state — restart it to finish")
                                 loginErrorMessage =
                                     "Local data erased. The CIRIS node at $attachedLive is still running " +
@@ -2493,21 +2493,39 @@ fun CIRISApp(
                             } else {
                                 settingsViewModel.logout {
                                     currentAccessToken = null
-                                    // The desktop backend was already stopped above, before
-                                    // its files were deleted — restartApp() is exitProcess(0)
-                                    // here and the Python node is a CHILD PROCESS that
-                                    // exiting the UI does not take with it.
+                                    // DESKTOP AND iOS DO NOT EXIT. They return to Startup,
+                                    // whose retry() calls startServer(): it re-attaches to a
+                                    // backend that is still serving, or relaunches the one
+                                    // this app had stopped above, now from a wiped home —
+                                    // so the next screen is a genuine first run, which is
+                                    // what the dialog promises. Android relaunches itself
+                                    // through AppRestarter and lands in the same place.
                                     //
-                                    // NOT ON iOS. restartApp() there checks for
-                                    // `Documents/ciris/.server_ready` and treats its absence
-                                    // as a dead runtime, falling back to exit(0) — and the
-                                    // wipe has just deleted the directory that file lives in.
-                                    // So Reset ALWAYS killed the app instead of returning to
-                                    // the wizard the dialog promises (Codex, PR #9). The app
-                                    // is still running and the home is gone, so the next
-                                    // startup is a genuine first run: just go there.
-                                    if (ai.ciris.mobile.shared.platform.isIOS()) {
-                                        platformLog(TAG, "[INFO][onResetSetup] iOS — returning to setup rather than exiting")
+                                    // iOS had to work this way from the start: restartApp()
+                                    // there checked for `Documents/ciris/.server_ready`,
+                                    // treated its absence as a dead runtime and fell back to
+                                    // exit(0) — and the wipe had just deleted that directory,
+                                    // so Reset ALWAYS killed the app (Codex, PR #9).
+                                    //
+                                    // Desktop's restartApp() is exitProcess(0) with a
+                                    // "please restart manually" on stdout, and until 0.5.220
+                                    // it never ran: the java.util.prefs throw (#56) skipped
+                                    // this callback, so every desktop reset since 0.5.19x
+                                    // left the app on Login — which is what CIRISAgent's
+                                    // five-platform gate has asserted against all along
+                                    // (its desktop check is "Login with btn_local_login, or
+                                    // Setup"; it reads the screen 1 s after the confirm and
+                                    // does not relaunch a desktop). Fixing #56 made the exit
+                                    // real, and 0.5.221's Linux leg lost the race with it
+                                    // (run 35199231784) while Windows won it. An app that
+                                    // exits with "restart me" after a reset is worse for the
+                                    // person than one that shows them the first-run screen,
+                                    // and under the launcher (CIRISClient#61) it also throws
+                                    // away the Login line that names the still-running node.
+                                    if (ai.ciris.mobile.shared.platform.isIOS() ||
+                                        ai.ciris.mobile.shared.platform.isDesktop()
+                                    ) {
+                                        platformLog(TAG, "[INFO][onResetSetup] returning to Startup rather than exiting")
                                         startupViewModel.retry()
                                         checkingFirstRun = false
                                         isFirstRun = true
