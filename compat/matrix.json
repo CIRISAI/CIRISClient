@@ -1139,6 +1139,39 @@
       },
       "notes": "A NULL IS NOT A FACT ABOUT THE HOST (#55 #56 #57 #59), AND THE CLIENT CAN REACH THE BRAIN IT SHOWS (#54). Four issues from one desktop session were one defect three times over -- a typed answer collapsed into a nullable, then the nullable read as a capability: 'can I silently refresh' was googleSignInCallback != null, 'do I own the backend' was _serverProcess != null, 'is sign-in finished' was (poll as? Ready)?.handoff == null. HostCapabilities and BackendOwnership name those answers the way NodeCapabilities already names the node's. Reset now refuses to wipe under a backend it did not launch and cannot stop (#55, verified live). 'Node has been removed' was java.util.prefs, not CIRIS -- a Preferences handle cached across the wipe; re-resolved per use, and the throw that skipped logout's completion callback (so the post-wipe restart never ran) is gone (#56). A 410 on the OAuth hand-off is now terminal and the node's reason_id -- already a localisation key -- is shown in the app with its recovery instruction (#57). TokenManager's 'interactive login required' was a StateFlow nothing collected; it is collected into an authExpired state that Interact and Billing render with a Sign In control, and the pasted-twice signal poll fires once (#59). #54: Main.kt built the ordinary client on the node because 'this is the NODE client' -- true of the build, false of a runtime that shows agent surfaces; apiBaseUrl honours CIRIS_API_URL, and syncBackendFrom now moves a loopback default to :8080 if and only if a brain answers, so the gate's bare-node desktops change nothing. Also: sidebar shows the generated version, not a literal (#58); /scroll can name the nav rail (container=nav_rail) and every nav testTag shares one slug rule (#42 #44 verified fixed); a browsable screen atlas of all 53 routable screens in AGENT mode at cirisai.github.io/CIRISClient. MAIN CI HAD BEEN RED SINCE 0.5.219: setup-android's default asked for the retired 'tools' package, so no Kotlin compiled or tested on main for seven runs; the vendoring digest recorder could record a digest over a tree missing an unstaged new file (it now refuses); one iOS-caught unit test asserted the very behaviour #59 fixed. Pairs with every agent and node 0.5.219 does. Open: #60, desktop /screenshot returns screen pixels at the window's coordinates and can capture another application when the raise loses focus.",
       "published": null
+    },
+    {
+      "client_version": "0.5.221",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "ATTACHED IS THE NORMAL CASE, NOT THE EXCEPTION (#61). 0.5.220 refused Reset when the backend was one the client did not launch, to keep a wipe from claiming success under a live node it could not stop (#55). Right harm, wrong condition: CIRISAgent's desktop_launcher starts the API and then spawns the client against it, so every launcher-started desktop is attached and 0.5.220 refused on the whole product — the agent's five-platform gate caught it on its first run against the pin. 0.5.221 wipes regardless of ownership (the next backend boot is a first run, which is what the dialog promises), probes the attached node at reset time, and when it is still answering says so on Login and in the log: the node keeps its previous state until it restarts. Desktop still exits after the wipe as 0.5.219 did, because the launcher's next --launch binds :9091 directly. No wire change, no capability change.",
+      "published": null
     }
   ]
 }
