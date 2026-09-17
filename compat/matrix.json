@@ -1172,6 +1172,39 @@
       },
       "notes": "ATTACHED IS THE NORMAL CASE, NOT THE EXCEPTION (#61). 0.5.220 refused Reset when the backend was one the client did not launch, to keep a wipe from claiming success under a live node it could not stop (#55). Right harm, wrong condition: CIRISAgent's desktop_launcher starts the API and then spawns the client against it, so every launcher-started desktop is attached and 0.5.220 refused on the whole product — the agent's five-platform gate caught it on its first run against the pin. 0.5.221 wipes regardless of ownership (the next backend boot is a first run, which is what the dialog promises), probes the attached node at reset time, and when it is still answering says so on Login and in the log: the node keeps its previous state until it restarts. Desktop still exits after the wipe as 0.5.219 did, because the launcher's next --launch binds :9091 directly. No wire change, no capability change.",
       "published": null
+    },
+    {
+      "client_version": "0.5.222",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "DESKTOP RETURNS TO STARTUP AFTER A RESET INSTEAD OF EXITING. Desktop restartApp() is exitProcess(0) and until 0.5.220 never ran after a reset -- the java.util.prefs throw (#56) skipped logout's completion callback, so every desktop reset left the app on Login, which is what CIRISAgent's five-platform gate has asserted against all along (its desktop check reads 'Login with btn_local_login, or Setup' one second after the confirm and does not relaunch a desktop). Fixing #56 made the exit real; on the 0.5.221 pin (run 35199231784) Linux and macOS lost the race with it and Windows won. Desktop now does what iOS does: Startup -> retry() -> startServer() re-attaches to a still-serving backend (the launcher case, #61) or relaunches its own from the wiped home, so the next screen is a genuine first run and the #61 'node still running' line is visible on Login. Android keeps its AppRestarter relaunch. No wire change, no capability change.",
+      "published": null
     }
   ]
 }
