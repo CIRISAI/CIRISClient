@@ -69,10 +69,13 @@ CLIENT_TEST_PORT = 9091
 #:
 #: SUFFICIENT ON ITS OWN. An earlier note here said the client would still look
 #: for :8080 until the gate seeded `CIRIS_RUN_WITHOUT_AI` into each platform's
-#: home. That was wrong: `syncBackendFrom` only moves the base URL when the
-#: resolved endpoint is NODE_ONLY_ENDPOINT, so an absent .env leaves the app on
-#: its `:4243` default rather than sending it to the agent port. Confirmed by the
-#: gate itself — every desktop leg reports clientMode=NODE at :4243.
+#: home. That was wrong, and the reason has since changed once more
+#: (CIRISClient#54): with an absent .env the endpoint resolves to AGENT and
+#: `syncBackendFrom` now moves the client to :8080 ONLY IF a brain answers
+#: there. The gate runs a bare node and nothing on :8080, so the probe fails
+#: and the app stays on its `:4243` default — the same outcome, now for a
+#: reason that also serves a real with-AI install. Confirmed by the gate
+#: itself — every desktop leg reports clientMode=NODE at :4243.
 NODE_API_PORT = 4243
 
 #: Android's test-mode switch. A file, not an env var: `am start` cannot set the

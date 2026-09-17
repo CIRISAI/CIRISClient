@@ -132,8 +132,8 @@ class BillingViewModelTest {
     }
 
     @Test
-    fun loadBalance_401Error_retryAlsoFails_showsError() = runTest {
-        // Both calls throw 401 — should show error after retry exhausted
+    fun loadBalance_401Error_retryAlsoFails_signalsAuthExpired() = runTest {
+        // Both calls throw 401 — the refresh produced no usable token.
         val apiClient = FakeCIRISApiClientForBilling(
             getCreditsException = Exception("HTTP 401 Unauthorized")
         )
@@ -143,9 +143,20 @@ class BillingViewModelTest {
         advanceTimeBy(5000) // Past both attempt + retry delay
         advanceUntilIdle()
 
-        // Should show error after retry fails
+        // THIS USED TO ASSERT THE BUG. The old contract showed the raw
+        // exception text — "HTTP 401 Unauthorized" — as the wallet's error,
+        // which the screen rendered as an empty balance with a Buy button for
+        // 25 hours against 398 real credits (CIRISClient#59). An exhausted
+        // auth retry is not a balance failure; it is a stale credential that
+        // only a person can renew. So the contract is the expired state, and
+        // the message is the one that tells them what to do about it.
+        assertTrue(viewModel.authExpired.value, "exhausted auth retry must flag the session as expired")
         assertNotNull(viewModel.errorMessage.value)
-        assertTrue(viewModel.errorMessage.value!!.contains("401"))
+        assertEquals(
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString("auth.session_expired"),
+            viewModel.errorMessage.value,
+            "the error is the sign-in-again sentence, not an HTTP code",
+        )
     }
 
     // --- Purchase flow tests ---

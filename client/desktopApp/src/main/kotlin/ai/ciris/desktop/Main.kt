@@ -238,11 +238,22 @@ fun main() {
                     // would aim every shared-client call at a dead port.
                     // CIRIS_NODE_URL is the upstream name; CIRIS_API_URL is kept
                     // because this build has always used it to mean the node.
-                    // Both from CIRIS_NODE_URL, and NOT from CIRIS_API_URL —
-                    // see the note on `nodeUrl` above. `nodeUrl` is already
-                    // resolved there and is reused rather than re-derived: two
-                    // expressions computing one address is how they drift.
-                    apiBaseUrl = nodeUrl,
+                    // THE PREMISE ABOVE WAS TRUE OF THE BUILD AND FALSE OF THE
+                    // RUNTIME (CIRISClient#54). This client probes ClientMode
+                    // and shows the agent surfaces when a brain answers; a
+                    // with-AI install HAS a brain on :8080, and every
+                    // brain-only route — add provider, list-models,
+                    // /v1/system/llm — lives there. Building the ordinary
+                    // client on the node aimed all of them at a port that
+                    // serves none of them: "404 when I try to do anything."
+                    //
+                    // nodeBaseUrl stays CIRIS_NODE_URL-only — that is #48/#52
+                    // and it is right. apiBaseUrl now honours an operator who
+                    // NAMED the brain with CIRIS_API_URL; absent that it still
+                    // starts on the node, and syncBackendFrom moves it to the
+                    // brain at runtime if — and only if — one answers. The
+                    // gate's bare-node desktops therefore change nothing.
+                    apiBaseUrl = System.getenv("CIRIS_API_URL") ?: nodeUrl,
                     nodeBaseUrl = nodeUrl,
                     pythonRuntime = pythonRuntime,
                     secureStorage = createSecureStorage(),

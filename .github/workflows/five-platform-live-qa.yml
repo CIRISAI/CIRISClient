@@ -38,13 +38,17 @@
 # `CIRIS_RUN_WITHOUT_AI` as "with AI" (:8080), so the gate must write the flag
 # into each platform's home or drive a client pointed at a port it does not run.
 #
-# That was wrong, and wrong in the direction that invents work. `syncBackendFrom`
-# only calls `updateBaseUrl` when the resolved endpoint is NODE_ONLY_ENDPOINT —
-# with no .env it resolves to AGENT and then does NOTHING, leaving Main.kt's
-# `:4243` default in place. The reasoning had read `backendEndpoint()`'s return
-# value without checking what the caller does with it.
+# That was wrong, and wrong in the direction that invents work. With no .env
+# the endpoint resolves to AGENT, and `syncBackendFrom` then moves the client
+# to :8080 ONLY IF A BRAIN ANSWERS THERE (CIRISClient#54 — before that fix the
+# agent branch did not exist at all, and the client simply stayed on Main.kt's
+# `:4243` default). These desktops run a bare ciris-server and nothing on
+# :8080, so the probe fails and nothing moves. Same outcome, and now for a
+# reason that also serves the shipped with-AI install instead of only this
+# gate. `BackendSyncAgentBranchTest` pins the "nothing on :8080 → stay on the
+# node" case by name, because this gate depends on it.
 #
-# Settled by evidence rather than by re-reading: all three desktops now report
+# Settled by evidence rather than by re-reading: all three desktops report
 #     [OK ] state: clientMode=NODE node=http://127.0.0.1:4243
 # and pass the walk end to end.
 #

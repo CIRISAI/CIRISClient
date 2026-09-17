@@ -258,16 +258,57 @@ interface EnvReader {
 suspend fun syncBackendFrom(
     reader: EnvReader,
     apiClient: ai.ciris.mobile.shared.api.CIRISApiClient,
+    /**
+     * Does a BRAIN answer at this URL? Injectable so the wiring is testable
+     * without a network. The default asks the real health route and requires
+     * the answer to come from an agent — a node that happens to be listening
+     * says `role = "fabric-node"` and does not count.
+     */
+    agentAnswers: suspend (String) -> Boolean = { url ->
+        runCatching { apiClient.getNodeHealth(url) }
+            .map { it.role != "fabric-node" }
+            .getOrDefault(false)
+    },
 ): BackendEndpoint {
     ActiveBackend.resolveFrom(runCatching { reader.readRawEnv() }.getOrNull())
     val endpoint = ActiveBackend.endpoint
-    if (endpoint == NODE_ONLY_ENDPOINT) {
-        val url = endpoint.baseUrl(LOOPBACK_HOST)
-        // INFERRED, not declared — an operator's custom port outranks it (#52).
-        ai.ciris.mobile.shared.api.CIRISApiClient.setInferredLocalNodeUrl(url)
-        // updateBaseUrl recreates every SDK instance, so this reaches the
-        // ~13 generated APIs as well as the direct HTTP calls.
-        if (apiClient.baseUrl != url) apiClient.updateBaseUrl(url)
+    // ONLY A DEFAULT IS MOVED. An operator who named an address — CIRIS_API_URL
+    // to a remote brain, say — is not second-guessed by a loopback probe. The
+    // two loopback defaults are the only bases this function will ever change.
+    val loopbackDefaults = setOf(
+        AGENT_ENDPOINT.baseUrl(LOOPBACK_HOST),
+        NODE_ONLY_ENDPOINT.baseUrl(LOOPBACK_HOST),
+    )
+    when (endpoint) {
+        NODE_ONLY_ENDPOINT -> {
+            val url = endpoint.baseUrl(LOOPBACK_HOST)
+            // INFERRED, not declared — an operator's custom port outranks it (#52).
+            ai.ciris.mobile.shared.api.CIRISApiClient.setInferredLocalNodeUrl(url)
+            // updateBaseUrl recreates every SDK instance, so this reaches the
+            // ~13 generated APIs as well as the direct HTTP calls.
+            if (apiClient.baseUrl != url) apiClient.updateBaseUrl(url)
+        }
+        AGENT_ENDPOINT -> {
+            // THE OTHER HALF OF THE SWITCH (CIRISClient#54). This branch used to
+            // be absent: the function re-pointed the client TOWARD the node and
+            // never toward the brain. On a with-AI install with no CIRIS_NODE_URL
+            // the client therefore lived on Main.kt's :4243 default for good,
+            // and every brain-only route — add provider, list-models,
+            // /v1/system/llm — 404ed against a node that serves none of them.
+            //
+            // PROBE-GATED, NOT ASSUMED. The gate's desktops run a bare node with
+            // no .env, which resolves to AGENT here too; moving them to :8080
+            // unconditionally would aim them at a dead port. So the brain has
+            // to answer first. Nothing on :8080 means nothing changes, and the
+            // gate keeps reporting clientMode=NODE at :4243 exactly as before.
+            val url = endpoint.baseUrl(LOOPBACK_HOST)
+            if (apiClient.baseUrl in loopbackDefaults &&
+                apiClient.baseUrl != url &&
+                agentAnswers(url)
+            ) {
+                apiClient.updateBaseUrl(url)
+            }
+        }
     }
     return endpoint
 }

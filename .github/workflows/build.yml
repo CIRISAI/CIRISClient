@@ -203,6 +203,18 @@ jobs:
       - uses: android-actions/setup-android@v3
         # :shared applies com.android.library, so the Android SDK is needed to
         # CONFIGURE the build even when only the desktop target is compiled.
+        #
+        # `packages` IS NAMED, because the action's default is not safe. With
+        # no `with:` this step asks sdkmanager for `tools platform-tools`, and
+        # the legacy `tools` package no longer exists in Google's SDK
+        # repository — cmdline-tools replaced it. Every run of this job died
+        # here with "Failed to find package 'tools'", before a line of Kotlin
+        # was compiled, which is how main stayed red across four commits and
+        # the desktopTest step below never ran on any of them. The runner
+        # image already carries the platforms and build-tools the build
+        # configures against; platform-tools is all this step must ensure.
+        with:
+          packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v4
         with:

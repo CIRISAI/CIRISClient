@@ -181,3 +181,57 @@ class BackendRecordedStateTest {
         assertEquals(AGENT_ENDPOINT, ActiveBackend.endpoint)
     }
 }
+
+/**
+ * The agent half of [syncBackendFrom] (CIRISClient#54).
+ *
+ * The node half was tested above and worked. The agent half did not exist:
+ * with no .env the endpoint resolves to AGENT and the function did nothing,
+ * so a client built on the node stayed there and 404ed every brain-only
+ * route. These four cases are the contract that closes it — including the
+ * one the five-platform gate depends on, where nothing answers :8080 and the
+ * client must NOT move.
+ */
+class BackendSyncAgentBranchTest {
+    private class Env(private val content: String?) : EnvReader {
+        override suspend fun readRawEnv(): String? = content
+    }
+
+    private val node = NODE_ONLY_ENDPOINT.baseUrl(LOOPBACK_HOST)
+    private val agent = AGENT_ENDPOINT.baseUrl(LOOPBACK_HOST)
+
+    @BeforeTest fun fresh() = ActiveBackend.reset()
+    @AfterTest fun clean() = ActiveBackend.reset()
+
+    @Test
+    fun `no env and a brain answering moves the client to the agent`() = runTest {
+        val api = CIRISApiClient(node, null)
+        val endpoint = syncBackendFrom(Env(null), api, agentAnswers = { true })
+        assertEquals(AGENT_ENDPOINT, endpoint)
+        assertEquals(agent, api.baseUrl, "the with-AI install: brain-only routes must reach :8080")
+    }
+
+    @Test
+    fun `no env and nothing on 8080 leaves the client on the node`() = runTest {
+        // The gate's desktops: bare ciris-server, no .env, nothing on :8080.
+        val api = CIRISApiClient(node, null)
+        syncBackendFrom(Env(null), api, agentAnswers = { false })
+        assertEquals(node, api.baseUrl, "a dead port is not a backend; the gate must keep passing")
+    }
+
+    @Test
+    fun `an operator-named remote address is never moved by a loopback probe`() = runTest {
+        val remote = "https://brain.example.net"
+        val api = CIRISApiClient(remote, null)
+        syncBackendFrom(Env(null), api, agentAnswers = { true })
+        assertEquals(remote, api.baseUrl, "CIRIS_API_URL to a remote brain outranks any probe")
+    }
+
+    @Test
+    fun `run-without-ai still lands on the node whatever the probe says`() = runTest {
+        val api = CIRISApiClient(agent, null)
+        val endpoint = syncBackendFrom(Env("CIRIS_RUN_WITHOUT_AI=true"), api, agentAnswers = { true })
+        assertEquals(NODE_ONLY_ENDPOINT, endpoint)
+        assertEquals(node, api.baseUrl, "the hand-off (#48) is unchanged by the agent branch")
+    }
+}
