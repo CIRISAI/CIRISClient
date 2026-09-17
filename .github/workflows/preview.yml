@@ -93,6 +93,13 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        # `packages` IS NAMED: the action's default asks sdkmanager for the
+        # retired `tools` package and dies before any Kotlin compiles. The
+        # full account is on the same step in build.yml. Seven publish jobs
+        # failed here on v0.5.220 because that fix reached one workflow of
+        # three; this is the other two.
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - run: python3 -m pip install --upgrade pip build wheel
 
@@ -257,6 +264,13 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        # `packages` IS NAMED: the action's default asks sdkmanager for the
+        # retired `tools` package and dies before any Kotlin compiles. The
+        # full account is on the same step in build.yml. Seven publish jobs
+        # failed here on v0.5.220 because that fix reached one workflow of
+        # three; this is the other two.
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - run: python3 -m pip install --upgrade pip build
 
@@ -317,6 +331,13 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: android-actions/setup-android@v3
+        # `packages` IS NAMED: the action's default asks sdkmanager for the
+        # retired `tools` package and dies before any Kotlin compiles. The
+        # full account is on the same step in build.yml. Seven publish jobs
+        # failed here on v0.5.220 because that fix reached one workflow of
+        # three; this is the other two.
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: true
