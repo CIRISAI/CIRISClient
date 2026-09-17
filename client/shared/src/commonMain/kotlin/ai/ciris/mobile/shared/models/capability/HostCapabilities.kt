@@ -39,7 +39,14 @@ enum class BackendOwnership {
     /** This runtime launched the process and holds its handle. It can stop it. */
     LAUNCHED,
 
-    /** A backend was already serving when we started. We attached; it is not ours to stop. */
+    /**
+     * A backend was already serving when we started. We attached; it is not
+     * ours to stop. On a launcher-started desktop this is EVERY run — the
+     * agent's desktop_launcher brings the API up and then spawns the client
+     * against it — so nothing may refuse on ATTACHED alone (CIRISClient#61,
+     * where 0.5.220's Reset did and refused on the whole product). Reset
+     * wipes regardless and names the running node it could not stop.
+     */
     ATTACHED,
 
     /** No backend: never started, or ours was stopped. */

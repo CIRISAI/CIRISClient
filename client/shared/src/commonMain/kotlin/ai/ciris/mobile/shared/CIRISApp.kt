@@ -2423,26 +2423,37 @@ fun CIRISApp(
                                 null
                             }
 
-                            // THE GUARD THE COMMENT ABOVE DISMISSES — for a reason it
-                            // does not consider. It argues no ownership guard is
-                            // needed because the wipe's SCOPE is fixed by which node
-                            // we ask. True, and beside the point: shutdown() can only
-                            // stop a process it launched. Attached to a node that was
-                            // already running, it stops nothing, the wipe deletes the
-                            // files out from under a live process that keeps serving
-                            // them from open handles, and the reset reports ok=true
-                            // (CIRISClient#55). A recovery that reports success and
-                            // changes nothing spends the person's trust before their
-                            // time. So: if it is not ours to stop, do not delete.
-                            if (pythonRuntimeProtocol.backendOwnership ==
-                                ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
-                            ) {
-                                platformLog(TAG, "[WARN][onResetSetup] refusing: attached to a backend this app did not launch and cannot stop")
-                                loginErrorMessage =
-                                    "Reset did not run: this app is attached to a CIRIS node it did not start, " +
-                                        "so it cannot stop it before erasing its data. Stop that node, then try again."
-                                currentScreen = Screen.Login
-                                return@launch
+                            // ATTACHED IS THE NORMAL CASE, NOT THE EXCEPTION (CIRISClient#61).
+                            // 0.5.220 REFUSED to wipe when the backend was one this app did
+                            // not launch, reasoning that a wipe under a live process the app
+                            // cannot stop leaves the node serving stale state while the reset
+                            // claims success (#55). Right about the harm, wrong about where
+                            // "attached" happens: the agent's desktop_launcher starts the API
+                            // and THEN spawns this JAR against it ("the desktop app connects
+                            // to the running CIRIS API server"), so on every launcher-started
+                            // desktop the client is attached, and 0.5.220's Reset refused on
+                            // the whole product. CIRISAgent's five-platform gate has the same
+                            // topology and caught it on its first run.
+                            //
+                            // So: wipe regardless of ownership — the wipe DOES change durable
+                            // state (the next backend boot is a first run), which is what the
+                            // dialog promises — and be honest about the one thing it cannot
+                            // do. If the attached backend is still answering, say that it
+                            // keeps its previous state until it restarts. #55's complaint was
+                            // a reset that reported success and changed nothing; this changes
+                            // what it can and names what it cannot.
+                            val attachedLive: String? = run {
+                                if (pythonRuntimeProtocol.backendOwnership !=
+                                    ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
+                                ) return@run null
+                                val url = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
+                                val alive = runCatching { apiClient.getNodeHealth(url) }.isSuccess
+                                platformLog(
+                                    TAG,
+                                    "[INFO][onResetSetup] attached backend at $url is " +
+                                        if (alive) "still answering — it keeps its state until restarted" else "not answering — nothing to protect",
+                                )
+                                if (alive) url else null
                             }
 
                             val wiped = withContext(Dispatchers.Default) {
@@ -2451,6 +2462,17 @@ fun CIRISApp(
                                 )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
+
+                            if (wiped && attachedLive != null) {
+                                // On desktop the app exits below (restartApp is exitProcess),
+                                // so there this is a log line; on iOS the app returns to
+                                // Startup and the person reads it. Either way the record
+                                // says what was reset and what was not.
+                                platformLog(TAG, "[WARN][onResetSetup] local data erased; the CIRIS node at $attachedLive is still running with its previous state — restart it to finish")
+                                loginErrorMessage =
+                                    "Local data erased. The CIRIS node at $attachedLive is still running " +
+                                        "with its previous state — restart it to finish the reset."
+                            }
 
                             if (!wiped) {
                                 // STAY ON LOGIN. This used to set the message and then
