@@ -3019,6 +3019,7 @@ fun CIRISApp(
                 val products by billingViewModel.products.collectAsState()
                 val isBillingLoading by billingViewModel.isLoading.collectAsState()
                 val billingError by billingViewModel.errorMessage.collectAsState()
+                val billingAuthExpired by billingViewModel.authExpired.collectAsState()
                 val billingSuccess by billingViewModel.successMessage.collectAsState()
                 val isByokMode by billingViewModel.isByokMode.collectAsState()
 
@@ -3094,7 +3095,18 @@ fun CIRISApp(
                     },
                     onDismissError = {
                         billingViewModel.clearError()
-                    }
+                    },
+                    authExpired = billingAuthExpired,
+                    // The same door Interact's 401 path has always opened: drop
+                    // the session and go to Login, where the browser sign-in
+                    // that mints a fresh token starts (CIRISClient#59).
+                    onSignInAgain = {
+                        platformLog(TAG, "[INFO][Billing] sign in again — billing credential expired")
+                        interactViewModel.resetState()
+                        currentAccessToken = null
+                        coroutineScope.launch { secureStorage.deleteAccessToken() }
+                        currentScreen = Screen.Login
+                    },
                 )
             }
 
