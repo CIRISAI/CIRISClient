@@ -71,7 +71,8 @@ def plan_for(args) -> bringup.Plan:
     if args.platform == "android":
         if not args.apk:
             raise bringup.CannotRun("--apk is required for android")
-        return bringup.android_plan(Path(args.apk), args.package, serial=args.serial)
+        return bringup.android_plan(Path(args.apk), args.package, serial=args.serial,
+                                    activity=args.activity)
     if args.platform == "ios":
         if not args.app:
             raise bringup.CannotRun("--app is required for ios")
@@ -207,6 +208,8 @@ def main() -> int:
     ap.add_argument("--platform", required=True, choices=("desktop", "android", "ios"))
     ap.add_argument("--apk"); ap.add_argument("--app"); ap.add_argument("--jar")
     ap.add_argument("--package", default="ai.ciris.mobile.debug")
+    ap.add_argument("--activity", default=bringup.ANDROID_ACTIVITY,
+                    help="fully-qualified activity class; NOT relative to --package")
     ap.add_argument("--bundle-id", default="ai.ciris.mobile")
     ap.add_argument("--serial"); ap.add_argument("--udid", default="booted")
     ap.add_argument("--xvfb", action="store_true", help="wrap desktop in xvfb-run")

@@ -101,6 +101,11 @@ class Step:
     cmd: list[str]
     #: Failing this step is not fatal — teardown of something that may not exist.
     optional: bool = False
+    #: Extra environment for THIS command, layered over the process's own.
+    #: `simctl launch` forwards `SIMCTL_CHILD_*` into the app; nothing else
+    #: reaches a simulator process, so the iOS launch step carries test mode
+    #: this way. Read by [run].
+    env: dict[str, str] = field(default_factory=dict)
     #: THE COMMAND IS THE APP, NOT A COMMAND ABOUT THE APP.
     #:
     #: Every other step here asks something to do a thing and exits: `adb
@@ -153,8 +158,20 @@ def _adb(serial: str | None = None) -> list[str]:
     return base + (["-s", serial] if serial else [])
 
 
+#: The launch component's CLASS. Not derived from the package: the debug APK's
+#: package is `ai.ciris.mobile.debug` (applicationIdSuffix) but its activity is
+#: declared `.MainActivity` relative to the NAMESPACE, `ai.ciris.mobile`. So
+#: `am start -n ai.ciris.mobile.debug/.MainActivity` names
+#: `ai.ciris.mobile.debug.MainActivity`, a class that does not exist — and
+#: `am start` prints "Error: Activity class ... does not exist" and EXITS 0.
+#: Every Android leg of this gate failed at await-process on exactly that, and
+#: the failure read as "the app never started" (it never could). CIRISAgent's
+#: driver has it right: ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity".
+ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity"
+
+
 def android_plan(apk: Path, package: str, serial: str | None = None,
-                 host_port: int = 19091) -> Plan:
+                 host_port: int = 19091, activity: str = ANDROID_ACTIVITY) -> Plan:
     """Emulator on this runner, node on the host, client reaching back to it.
 
     The node runs on the HOST and the app reaches it through `adb reverse`, so
@@ -179,30 +196,33 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             # INVARIANT 2: the node is reachable before the app probes it.
             Step("reverse-node", adb + ["reverse", f"tcp:{NODE_API_PORT}", f"tcp:{NODE_API_PORT}"]),
             Step("forward-automation", adb + ["forward", f"tcp:{host_port}", f"tcp:{CLIENT_TEST_PORT}"]),
-            Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/.MainActivity"]),
+            Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/{activity}"]),
             # A LAUNCH THAT RETURNED 0 IS NOT A PROCESS.
             #
             # `am start -W` reported success and the app never started: logcat
-            # shows `START u0 {cmp=ai.ciris.mobile.debug/.MainActivity}` with no
-            # matching `Start proc`, because the package was still being
-            # dex-optimized — dexopt ran a full MINUTE after the start, on a
-            # debuggable APK freshly installed. The gate then waited 120s for an
-            # automation server inside a process that did not exist and reported
-            # "automation server never came up", which reads like a broken
-            # client and is not one.
+            # showed `START u0 {cmp=ai.ciris.mobile.debug/.MainActivity}` with no
+            # matching `Start proc`. That was first read as dexopt running late
+            # on a freshly installed debuggable APK; the component name was the
+            # actual cause (see ANDROID_ACTIVITY). The pid loop stays, because a
+            # launch that returned 0 still proves nothing about a process.
             #
             # So ask the only question that settles it — is there a pid — and
             # re-issue the start until there is. On device, because a shell loop
             # here would pay adb's round trip 30 times.
+            #
+            # The last `am start`'s output is KEPT and printed on failure. It was
+            # sent to /dev/null, which is how a component name that resolved to
+            # no class at all ("Error: Activity class {...} does not exist",
+            # exit 0) spent months looking like a slow dexopt.
             Step(
                 "await-process",
                 adb + [
                     "shell",
                     "for i in $(seq 1 30); do "
                     f"pidof {package} > /dev/null 2>&1 && exit 0; "
-                    f"am start -n {package}/.MainActivity > /dev/null 2>&1; "
+                    f"out=$(am start -n {package}/{activity} 2>&1); "
                     "sleep 2; done; "
-                    "echo 'no process after 60s'; exit 1",
+                    "echo 'no process after 60s'; echo \"last am start: $out\"; exit 1",
                 ],
             ),
         ],
@@ -249,9 +269,16 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             Step("install", ["xcrun", "simctl", "install", udid, str(app_bundle)]),
             # --terminate-existing: without it a previous instance survives and
             # the new launch is a no-op against a stale process holding 9091.
+            #
+            # TEST MODE HAS TO BE SAID HERE. The app reads CIRIS_TEST_MODE with
+            # getenv (TestAutomationServer.ios.kt) and starts its automation
+            # server only when it is set; `simctl launch` hands the child only
+            # the SIMCTL_CHILD_* variables of ITS environment. The workflow's
+            # CIRIS_TEST_MODE=true never crossed that boundary, so even a built
+            # app would have come up with no server to drive.
             Step("launch", [
                 "xcrun", "simctl", "launch", "--terminate-existing", udid, bundle_id,
-            ]),
+            ], env={"SIMCTL_CHILD_CIRIS_TEST_MODE": "true"}),
         ],
     )
 
@@ -339,11 +366,15 @@ def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[St
                     step.cmd,
                     stdout=log_handle,
                     stderr=subprocess.STDOUT,
+                    env={**os.environ, **step.env} if step.env else None,
                 )
                 _BACKGROUND.append(proc_bg)
                 results.append((step, 0))
                 continue
-            proc = subprocess.run(step.cmd, capture_output=True, text=True, timeout=timeout)
+            proc = subprocess.run(
+                step.cmd, capture_output=True, text=True, timeout=timeout,
+                env={**os.environ, **step.env} if step.env else None,
+            )
             code, stderr = proc.returncode, proc.stderr or ""
         except (FileNotFoundError, NotADirectoryError) as e:
             # A MISSING TOOL IS A STEP FAILURE, NOT AN EXCEPTION THAT ESCAPES.

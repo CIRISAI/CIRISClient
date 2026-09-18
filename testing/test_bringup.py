@@ -43,6 +43,17 @@ BID = "ai.ciris.mobile"
 # ---- invariant 1: test mode armed before the app starts ---------------------
 
 
+def test_android_launches_the_class_the_manifest_declares():
+    # The debug package is ai.ciris.mobile.debug; the activity is
+    # ai.ciris.mobile.MainActivity. `pkg/.MainActivity` would name a class that
+    # does not exist, and `am start` exits 0 on that.
+    p = android_plan(APK, PKG)
+    for name in ("launch", "await-process"):
+        joined = " ".join(p.steps[p.index_of(name)].cmd)
+        assert f"{PKG}/ai.ciris.mobile.MainActivity" in joined, joined
+        assert f"{PKG}/.MainActivity" not in joined, joined
+
+
 def test_android_arms_test_mode_before_launching():
     # The sentinel is read ONCE at startup. Touched after `am start`, the app
     # runs with no automation server and a /health that never answers — which
@@ -127,6 +138,14 @@ def test_ios_needs_no_forwarding_and_says_so_in_the_url():
     p = ios_simulator_plan(APP, BID)
     assert p.test_url == f"http://127.0.0.1:{CLIENT_TEST_PORT}"
     assert not any("forward" in " ".join(s.cmd) for s in p.steps)
+
+
+def test_ios_launch_carries_test_mode_across_simctl():
+    # simctl forwards only SIMCTL_CHILD_*; the app reads CIRIS_TEST_MODE via getenv.
+    p = ios_simulator_plan(APP, BID)
+    launch = p.steps[p.index_of("launch")]
+    assert launch.env.get("SIMCTL_CHILD_CIRIS_TEST_MODE") == "true"
+    assert all(not s.env for s in p.steps if s.name != "launch")
 
 
 def test_ios_terminates_any_existing_instance_on_launch():
