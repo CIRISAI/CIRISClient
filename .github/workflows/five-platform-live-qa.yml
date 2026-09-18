@@ -566,11 +566,23 @@ jobs:
           # architecture 'x86_64'" and the link failed (run 35350176282), after
           # the whole substrate had materialized correctly. The natives are
           # arm64 IOSSIMULATOR too; macos-15 is arm64. Say so.
+          # SIGNED, AD HOC, WITH ITS ENTITLEMENTS — Xcode's simulator default,
+          # and what the agent's rebuild_and_deploy.sh gets by passing no
+          # signing flag at all. `CODE_SIGNING_ALLOWED=NO` was here from the
+          # days when the project could not build at all; with the bundle
+          # complete it became the actual failure: an unentitled binary gets
+          # OSStatus -34018 on every keychain op, ciris_keyring falls back to
+          # software per open, and its tier-mismatch rule then SUPERSEDED the
+          # node key it had minted seconds earlier — the identity dir showed
+          # `ciris-node-bootstrap.ed25519.seed.blob.superseded-pre-v8` and
+          # edge found nothing to open (run 35372833410, ciris-server.log).
+          # The agent's log on the same runner image says the other half:
+          # "hardware_backed: true - ENABLED (ECIES via Secure Enclave)".
           xcodebuild -project client/iosApp/iosApp.xcodeproj -scheme iosApp \
             -sdk iphonesimulator -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
             ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
-            -derivedDataPath dd build CODE_SIGNING_ALLOWED=NO
+            -derivedDataPath dd build
           app=$(find dd -name 'iosApp.app' -maxdepth 6 | head -1)
           test -n "$app" || { echo "::error::no iosApp.app was produced"; exit 1; }
           # A SIMULATOR HAS TO BE BOOTED BY SOMEONE. The bring-up plan's
