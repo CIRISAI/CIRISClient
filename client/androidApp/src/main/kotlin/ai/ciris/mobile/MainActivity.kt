@@ -649,7 +649,15 @@ class MainActivity : ComponentActivity() {
         // ownership of a remote baseUrl would let the supervisor answer about
         // two different nodes in a single decision — reporting NotOurs on the
         // strength of a loopback probe, or worse.
-        val nodeUrl = { apiClient?.baseUrl }
+        // THE ATTACHED BACKEND OUTRANKS THE CLIENT'S BASE URL. apiClient is
+        // built in initBilling against :8080 and re-pointed inside setContent
+        // once attachIfAnswering() has answered; the supervisor starts in
+        // onStart, between the two. Its first probe therefore asked :8080,
+        // got Refused, and Login showed "Restarting the agent… attempt 1" for
+        // a backend that was answering on :4243 the whole time (run
+        // 35359571538). One probe later it corrected itself; the screen had
+        // already said something false.
+        val nodeUrl = { AndroidBackendController.attachedTo ?: apiClient?.baseUrl }
         BackendSupervisor(
             probe = {
                 nodeUrl()?.let { AndroidBackendController.probe(it) }
