@@ -571,9 +571,43 @@ jobs:
           echo "simulator: $UDID"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
+          rc=0
           python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/ios.json
+            --shots shots --report reports/ios.json || rc=$?
+
+          # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
+          # to a real screen — "Engine Failed to Start: server did not become
+          # healthy within 30 seconds" — and the artifact carried nothing that
+          # said why: os_log is the only place a Swift/Kotlin line lands, and
+          # the embedded interpreter writes its own failure report to
+          # Documents/python_error.log (the traceback of why kmp_main did not
+          # start) with the engine's logs under Documents/ciris/logs. The
+          # agent's driver collects exactly this set; so does this leg now.
+          mkdir -p ios-logs
+          xcrun simctl spawn "$UDID" log show --last 15m --style syslog \
+            --predicate 'process == "iosApp" OR subsystem CONTAINS "ai.ciris.mobile"' \
+            > ios-logs/oslog.txt 2>&1 || true
+          echo "oslog: $(wc -l < ios-logs/oslog.txt) lines"
+          APPBOX=$(xcrun simctl get_app_container "$UDID" ai.ciris.mobile app 2>/dev/null || true)
+          if [ -n "$APPBOX" ] && [ -d "$APPBOX/Frameworks" ]; then
+            ls "$APPBOX/Frameworks" > ios-logs/app-frameworks.txt
+            echo "app Frameworks/: $(wc -l < ios-logs/app-frameworks.txt) entries; _struct.framework $(grep -q '^_struct.framework$' ios-logs/app-frameworks.txt && echo present || echo MISSING)"
+          fi
+          DATABOX=$(xcrun simctl get_app_container "$UDID" ai.ciris.mobile data 2>/dev/null || true)
+          if [ -n "$DATABOX" ] && [ -d "$DATABOX/Documents" ]; then
+            find "$DATABOX/Documents" -maxdepth 1 -name "*.log" -exec cp {} ios-logs/ \; 2>/dev/null || true
+            if [ -d "$DATABOX/Documents/ciris" ]; then
+              find "$DATABOX/Documents/ciris" \( -name "*.log" -o -name "*.txt" \) -type f -exec cp {} ios-logs/ \; 2>/dev/null || true
+            fi
+            echo "app logs: $(ls ios-logs | wc -l) file(s)"
+            for f in ios-logs/python_error.log ios-logs/incidents_latest.log; do
+              [ -f "$f" ] && { echo "--- $f (last 40 lines) ---"; tail -40 "$f"; }
+            done
+          else
+            echo "app logs: no Documents in the data container — the app had not started writing"
+          fi
+          exit $rc
 
       - if: always()
         uses: actions/upload-artifact@v4
@@ -584,6 +618,7 @@ jobs:
             reports/
             node.log
             *-app.log
+            ios-logs/
             client/iosApp/app_packages_native_sim/MANIFEST.txt
             client/iosApp/substrate.lock.json
 
