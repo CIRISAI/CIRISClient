@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "전송 성공! TX: {tx}",
     "wallet_trust_degraded": "하드웨어 신뢰 저하됨",
     "wallet_warning": "경고",
+    "trace_consent_decline_note": "옵트아웃을 선택하면 에이전트가 역량 점수를 쌓거나 커먼즈 크레딧을 얻을 수 없습니다. 나중에 변경할 수 있습니다.",
     "verify_title": "빌드 검증",
     "verify_hash_label": "빌드 해시",
     "verify_button": "확인",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "해결",
   "wa_service_status": "서비스 상태",
   "wa_status": "상태",
+  "setup_validation_trace_consent_required": "트레이스 전송 여부를 선택하세요",
   "chat": {
     "author_signer_unavailable": "채팅 메시지는 작성자 본인이 서명하며, 이 노드는 지금 그 신원을 사용할 수 없습니다.",
     "community_create_failed": "노드가 채팅 커뮤니티를 생성하지 못했습니다. 변경된 것은 없습니다.",

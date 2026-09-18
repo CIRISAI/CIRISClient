@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Transferência bem-sucedida! TX: {tx}",
     "wallet_trust_degraded": "Confiança de Hardware Degradada",
     "wallet_warning": "Aviso",
+    "trace_consent_decline_note": "Recusar significa que seu agente não pode construir uma pontuação de capacidade nem ganhar créditos comuns. Você pode alterar isso depois.",
     "verify_title": "Verificar uma build",
     "verify_hash_label": "Hash da build",
     "verify_button": "Verificar",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Resolver",
   "wa_service_status": "Status do Serviço",
   "wa_status": "Status",
+  "setup_validation_trace_consent_required": "Por favor, escolha se deseja enviar traços.",
   "chat": {
     "author_signer_unavailable": "Uma mensagem de conversa é assinada pela pessoa que a escreveu, e este nó não pode usar essa identidade agora.",
     "community_create_failed": "O nó não conseguiu criar a comunidade de conversa. Nada foi alterado.",

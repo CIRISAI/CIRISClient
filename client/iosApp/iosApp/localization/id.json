@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Transfer berhasil! TX: {tx}",
     "wallet_trust_degraded": "Kepercayaan Perangkat Keras Menurun",
     "wallet_warning": "Peringatan",
+    "trace_consent_decline_note": "Memilih keluar berarti agen Anda tidak dapat membangun skor kapasitas atau mendapatkan kredit komunitas. Anda dapat mengubahnya nanti.",
     "verify_title": "Verifikasi build",
     "verify_hash_label": "Hash build",
     "verify_button": "Periksa",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Selesaikan",
   "wa_service_status": "Status Layanan",
   "wa_status": "Status",
+  "setup_validation_trace_consent_required": "Silakan pilih apakah akan mengirim jejak.",
   "chat": {
     "author_signer_unavailable": "Pesan obrolan ditandatangani oleh orang yang menulisnya, dan node ini tidak dapat menggunakan identitas tersebut saat ini.",
     "community_create_failed": "Node tidak dapat membuat komunitas obrolan. Tidak ada yang diubah.",

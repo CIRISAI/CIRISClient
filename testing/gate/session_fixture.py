@@ -13,7 +13,7 @@ client actually does on a fresh node, observed step by step through /tree:
     Login (isFirstRun=true)     `btn_local_login`
       -> Setup, step `you`      username / password / confirm / device name,
                                 an age band, then `btn_next`
-      -> Setup, step `join_federation`   consent toggles, `btn_next`
+      -> Setup, step `join_federation`   `trace_consent_yes`, consent toggles, `btn_next`
       -> `setup_ownership_claimed`       no advance control: the claim is work,
                                          not a step, and it finishes on its own
       -> Login, now with `txt_owner_hint`
@@ -102,6 +102,12 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         tags = _tags(drv)
         if "setup_ownership_claimed" in tags or drv.screen() != "Setup":
             break
+        # Screen 2 asks whether to send traces and will not advance until
+        # answered (no default, like the age band above). Yes is the fixture's
+        # answer for the same reason age_band_adult is: the unrestricted path.
+        if "trace_consent_yes" in tags:
+            drv.click("trace_consent_yes")
+            tags = _tags(drv)
         nxt = "btn_wizard_complete" if "btn_wizard_complete" in tags else "btn_next"
         if nxt not in tags:
             raise SessionUnavailable(

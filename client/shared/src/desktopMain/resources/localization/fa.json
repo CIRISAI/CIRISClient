@@ -2928,6 +2928,7 @@
     "wallet_transfer_success": "انتقال با موفقیت انجام شد! TX: {tx}",
     "wallet_trust_degraded": "افت اعتماد سخت‌افزاری",
     "wallet_warning": "هشدار",
+    "trace_consent_decline_note": "انصراف به این معناست که عامل شما نمی‌تواند امتیاز ظرفیت بسازد یا اعتبارهای مشترک کسب کند. می‌توانید بعداً این را تغییر دهید.",
     "verify_title": "تأیید یک نسخه",
     "verify_hash_label": "هش نسخه",
     "verify_button": "بررسی",
@@ -4260,6 +4261,7 @@
   "wa_resolve": "حل",
   "wa_service_status": "وضعیت سرویس",
   "wa_status": "وضعیت",
+  "setup_validation_trace_consent_required": "لطفاً انتخاب کنید که آیا می‌خواهید ردها را ارسال کنید یا نه.",
   "chat": {
     "author_signer_unavailable": "پیام گفتگو به‌دست کسی که آن را نوشته امضا می‌شود، و این گره در حال حاضر نمی‌تواند از آن هویت استفاده کند.",
     "community_create_failed": "گره نتوانست جامعهٔ گفتگو را ایجاد کند. چیزی تغییر نکرد.",

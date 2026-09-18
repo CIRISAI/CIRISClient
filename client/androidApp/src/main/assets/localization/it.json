@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Trasferimento riuscito! TX: {tx}",
     "wallet_trust_degraded": "Fiducia Hardware Degradata",
     "wallet_warning": "Avviso",
+    "trace_consent_decline_note": "Se rinunci, il tuo agente non potrà costruire un punteggio di capacità né guadagnare crediti commons. Puoi modificarlo in seguito.",
     "verify_title": "Verifica una build",
     "verify_hash_label": "Hash della build",
     "verify_button": "Verifica",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Risolvi",
   "wa_service_status": "Stato del Servizio",
   "wa_status": "Stato",
+  "setup_validation_trace_consent_required": "Scegli se inviare le tracce.",
   "chat": {
     "author_signer_unavailable": "Un messaggio di chat viene firmato dalla persona che lo ha scritto, e questo nodo non può usare quell'identità in questo momento.",
     "community_create_failed": "Il nodo non è riuscito a creare la community della chat. Nulla è stato modificato.",

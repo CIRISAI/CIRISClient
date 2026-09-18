@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Chuyển khoản thành công! TX: {tx}",
     "wallet_trust_degraded": "Tin tưởng Suy giảm",
     "wallet_warning": "Cảnh báo",
+    "trace_consent_decline_note": "Việc từ chối tham gia có nghĩa là tác nhân của bạn không thể xây dựng điểm năng lực hoặc kiếm tín dụng cộng đồng. Bạn có thể thay đổi điều này sau.",
     "verify_title": "Xác minh một bản dựng",
     "verify_hash_label": "Hash bản dựng",
     "verify_button": "Kiểm tra",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Giải Quyết",
   "wa_service_status": "Trạng Thái Dịch Vụ",
   "wa_status": "Trạng Thái",
+  "setup_validation_trace_consent_required": "Vui lòng chọn có gửi dấu vết hay không.",
   "chat": {
     "author_signer_unavailable": "Một tin nhắn trò chuyện được ký bởi người đã viết ra nó, và nút này hiện không thể sử dụng danh tính đó.",
     "community_create_failed": "Nút không thể tạo cộng đồng trò chuyện. Không có gì bị thay đổi.",

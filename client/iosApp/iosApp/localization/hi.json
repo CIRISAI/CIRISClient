@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "स्थानांतरण सफल! TX: {tx}",
     "wallet_trust_degraded": "हार्डवेयर ट्रस्ट कम हुआ",
     "wallet_warning": "चेतावनी",
+    "trace_consent_decline_note": "अगर आप मना करते हैं, तो आपका एजेंट कोई क्षमता स्कोर नहीं बना सकेगा और न ही कॉमन्स क्रेडिट्स अर्जित कर सकेगा। आप इसे बाद में बदल सकते हैं।",
     "verify_title": "बिल्ड सत्यापित करें",
     "verify_hash_label": "बिल्ड हैश",
     "verify_button": "जाँच करें",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "समाधान करें",
   "wa_service_status": "सेवा स्थिति",
   "wa_status": "स्थिति",
+  "setup_validation_trace_consent_required": "कृपया चुनें कि ट्रेस भेजना है या नहीं।",
   "chat": {
     "author_signer_unavailable": "चैट संदेश उस व्यक्ति द्वारा हस्ताक्षरित होता है जिसने उसे लिखा है, और यह नोड अभी उस पहचान का उपयोग नहीं कर सकता।",
     "community_create_failed": "नोड चैट समुदाय नहीं बना सका। कुछ भी बदला नहीं गया।",

@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Aika ya yi nasara! TX: {tx}",
     "wallet_trust_degraded": "Tabbas Kayan Aiki Ya Rage",
     "wallet_warning": "Gargaɗi",
+    "trace_consent_decline_note": "Ƙin shiga yana nufin wakilinku ba zai iya gina makin capacity ko samun kiredit na gama-gari ba. Kuna iya canza wannan daga baya.",
     "verify_title": "Tabbatar da build",
     "verify_hash_label": "Hash na build",
     "verify_button": "Duba",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Warware",
   "wa_service_status": "Matsayin Sabis",
   "wa_status": "Matsayi",
+  "setup_validation_trace_consent_required": "Don Allah ku zaɓi ko za ku aika sawu.",
   "chat": {
     "author_signer_unavailable": "Saƙon hira mai sa hannu ne na mutumin da ya rubuta shi, kuma wannan node ba zai iya amfani da wannan shaida a yanzu ba.",
     "community_create_failed": "Node ɗin ya kasa ƙirƙirar al'ummar hira. Ba a canza komai ba.",

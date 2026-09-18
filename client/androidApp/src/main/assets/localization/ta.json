@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "பரிமாற்றம் வெற்றிகரம்! TX: {tx}",
     "wallet_trust_degraded": "Hardware நம்பகத்தன்மை Degraded",
     "wallet_warning": "எச்சரிக்கை",
+    "trace_consent_decline_note": "மறுத்தால், உங்கள் முகவர் திறன் மதிப்பெண்ணை உருவாக்கவோ பொதுவுடைமை கிரெடிட்களைப் பெறவோ முடியாது. இதை நீங்கள் பின்னர் மாற்றலாம்.",
     "verify_title": "ஒரு பதிப்பைச் சரிபார்",
     "verify_hash_label": "பதிப்பு ஹாஷ்",
     "verify_button": "சரிபார்",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "தீர்",
   "wa_service_status": "சேவை நிலை",
   "wa_status": "நிலை",
+  "setup_validation_trace_consent_required": "தடயங்களை அனுப்ப வேண்டுமா என்பதைத் தேர்ந்தெடுக்கவும்.",
   "chat": {
     "author_signer_unavailable": "ஓர் அரட்டைச் செய்தி அதை எழுதிய நபரால் கையொப்பமிடப்படுகிறது; தற்போது இந்த நோடு அந்த அடையாளத்தைப் பயன்படுத்த முடியாது.",
     "community_create_failed": "நோடு அரட்டைச் சமூகத்தை உருவாக்க முடியவில்லை. எதுவும் மாற்றப்படவில்லை.",

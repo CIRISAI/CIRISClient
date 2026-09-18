@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "送金成功！TX: {tx}",
     "wallet_trust_degraded": "ハードウェア信頼が低下しました",
     "wallet_warning": "警告",
+    "trace_consent_decline_note": "オプトアウトすると、あなたのエージェントはcapacityスコアを構築したり、コモンズクレジットを獲得したりできなくなります。後から変更できます。",
     "verify_title": "ビルドを検証する",
     "verify_hash_label": "ビルドハッシュ",
     "verify_button": "確認",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "解決",
   "wa_service_status": "サービスステータス",
   "wa_status": "ステータス",
+  "setup_validation_trace_consent_required": "トレースを送信するかどうかを選択してください",
   "chat": {
     "author_signer_unavailable": "チャットメッセージはそれを書いた本人によって署名されますが、このノードは現在そのアイデンティティを使用できません。",
     "community_create_failed": "ノードはチャットコミュニティを作成できませんでした。何も変更されていません。",

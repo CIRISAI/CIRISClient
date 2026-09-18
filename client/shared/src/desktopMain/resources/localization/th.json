@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Transfer สำเร็จful! TX: {tx}",
     "wallet_trust_degraded": "ความน่าเชื่อถือของฮาร์ดแวร์ลดลง",
     "wallet_warning": "คำเตือน",
+    "trace_consent_decline_note": "การเลือกไม่เข้าร่วมหมายความว่าเอเจนต์ของคุณไม่สามารถสร้างคะแนน capacity หรือรับเครดิต commons ได้ คุณสามารถเปลี่ยนได้ภายหลัง",
     "verify_title": "ตรวจสอบ build",
     "verify_hash_label": "Hash ของ build",
     "verify_button": "ตรวจสอบ",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "แก้ไข",
   "wa_service_status": "บริการ Status",
   "wa_status": "สถานะ",
+  "setup_validation_trace_consent_required": "โปรดเลือกว่าจะส่ง trace หรือไม่",
   "chat": {
     "author_signer_unavailable": "ข้อความแชทจะถูกลงนามโดยบุคคลที่เขียนข้อความนั้น และโหนดนี้ไม่สามารถใช้ตัวตนดังกล่าวได้ในขณะนี้",
     "community_create_failed": "โหนดไม่สามารถสร้างชุมชนแชทได้ ไม่มีสิ่งใดถูกเปลี่ยนแปลง",

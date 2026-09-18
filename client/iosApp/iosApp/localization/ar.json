@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "نجح التحويل! TX: {tx}",
     "wallet_trust_degraded": "تدهورت ثقة الأجهزة",
     "wallet_warning": "تحذير",
+    "trace_consent_decline_note": "الانسحاب يعني أن وكيلك لن يتمكن من بناء درجة قدرة أو كسب أرصدة المشتركات. يمكنك تغيير ذلك لاحقاً.",
     "verify_title": "التحقق من إصدار",
     "verify_hash_label": "بصمة الإصدار",
     "verify_button": "تحقّق",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "حل",
   "wa_service_status": "حالة الخدمة",
   "wa_status": "الحالة",
+  "setup_validation_trace_consent_required": "الرجاء اختيار ما إذا كنت ترغب في إرسال الآثار.",
   "chat": {
     "author_signer_unavailable": "تُوقَّع رسالة المحادثة من الشخص الذي كتبها، وهذه العقدة لا يمكنها استخدام تلك الهوية الآن.",
     "community_create_failed": "تعذّر على العقدة إنشاء مجتمع المحادثة. لم يتغيّر شيء.",

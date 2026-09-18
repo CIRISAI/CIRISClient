@@ -889,40 +889,50 @@ private fun JoinFederationStep(
             )
         }
 
-        // ── The two grants: separate consents on opposite edges ─────────────
+        // ── Send traces: a QUESTION, not a switch ───────────────────────────
+        // The substrate's own title and permits line, then Yes / No with
+        // neither pre-selected — the same shape as the age band on screen 1,
+        // and for the same reason: a default the person can leave alone is
+        // not an answer. Next is disabled until one is chosen
+        // (SetupFormState.traceConsentAnswered). The cost of No is stated on
+        // the question, before the choice: no capacity score, no commons
+        // credits. What follows — be scored, location — only applies to traces
+        // that are sent, so it appears once the answer is Yes.
         d.grant("replication")?.let { g ->
-            ConsentGrantRow(
+            TraceConsentQuestion(
                 grant = g,
-                checked = state.accordMetricsConsent,
-                onCheckedChange = { viewModel.setAccordMetricsConsent(it) },
-                testTag = "toggle_trace_opt_in",
-                showDetail = expanded,
-                declining = null,
-            )
-        }
-        d.grant("analyze")?.let { g ->
-            ConsentGrantRow(
-                grant = g,
-                checked = state.traceAnalyze,
-                onCheckedChange = { viewModel.setTraceAnalyze(it) },
-                testTag = "toggle_trace_analyze",
-                showDetail = expanded,
-                declining = d.decliningAnalyze,
+                answered = state.traceConsentAnswered,
+                consented = state.accordMetricsConsent,
+                onAnswer = { viewModel.setAccordMetricsConsent(it) },
             )
         }
 
-        if (expanded) {
-            Text(
-                text = disclosureText(d.independent),
-                color = SetupColors.TextSecondary,
-                fontSize = 12.sp,
-                lineHeight = 17.sp,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
-            )
+        val sendsTraces = state.traceConsentAnswered && state.accordMetricsConsent
+        if (sendsTraces) {
+            d.grant("analyze")?.let { g ->
+                ConsentGrantRow(
+                    grant = g,
+                    checked = state.traceAnalyze,
+                    onCheckedChange = { viewModel.setTraceAnalyze(it) },
+                    testTag = "toggle_trace_analyze",
+                    showDetail = expanded,
+                    declining = d.decliningAnalyze,
+                )
+            }
+
+            if (expanded) {
+                Text(
+                    text = disclosureText(d.independent),
+                    color = SetupColors.TextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 12.dp)
+                )
+            }
         }
 
         // ── Location: purpose FIRST, then the bound ─────────────────────────
-        Surface(
+        if (sendsTraces) Surface(
             shape = RoundedCornerShape(12.dp),
             color = SetupColors.GrayLight,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
@@ -982,6 +992,83 @@ private fun JoinFederationStep(
 private fun disclosureText(s: DisclosureString): String {
     val localized = localizedString(s.id)
     return if (localized.isBlank() || localized == s.id) s.text else localized
+}
+
+/**
+ * The send-traces question. Yes / No side by side, nothing pre-selected, the
+ * cost of No stated underneath so it is read before choosing — the age band's
+ * shape (see [AgeRangeSection]), because it is the same kind of question: one
+ * the person has to answer, not one they may leave on its default.
+ *
+ * Tags mirror the age band's: `trace_consent_yes` / `trace_consent_no`.
+ */
+@Composable
+private fun TraceConsentQuestion(
+    grant: ConsentGrantDisclosure,
+    answered: Boolean,
+    consented: Boolean,
+    onAnswer: (Boolean) -> Unit,
+) {
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)) {
+        Text(
+            text = disclosureText(grant.title),
+            color = SetupColors.TextPrimary,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
+        Text(
+            text = disclosureText(grant.permits),
+            color = SetupColors.TextSecondary,
+            fontSize = 13.sp,
+            lineHeight = 19.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 10.dp)
+        )
+        // THE TWO ANSWERS SHARE ONE ROW, AND NOTHING ELSE JOINS THEM — the
+        // zero-width lesson of CIRISClient#42 (an unweighted child in a Row of
+        // weighted ones takes the whole row).
+        val options = listOf(
+            true to ("yes" to localizedString("mobile.common_yes")),
+            false to ("no" to localizedString("mobile.common_no")),
+        )
+        Row(modifier = Modifier.fillMaxWidth()) {
+            options.forEach { (value, meta) ->
+                val (token, label) = meta
+                val selected = answered && consented == value
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selected) SetupColors.Primary.copy(alpha = 0.18f) else SetupColors.InfoLight,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = if (value) 8.dp else 0.dp)
+                        .testableClickable("trace_consent_$token") { onAnswer(value) }
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
+                    ) {
+                        RadioButton(
+                            selected = selected,
+                            onClick = { onAnswer(value) },
+                        )
+                        Text(
+                            text = label,
+                            color = SetupColors.InfoDark,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
+                }
+            }
+        }
+        // The consequence, on the question rather than discovered afterwards.
+        Text(
+            text = localizedString("mobile.trace_consent_decline_note"),
+            color = SetupColors.TextSecondary,
+            fontSize = 12.sp,
+            lineHeight = 17.sp,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
 }
 
 @Composable
@@ -2160,7 +2247,8 @@ private fun FederationIdentitySection(
                             announce = state.announceOwnership,
                             onAnnounceChange = { on ->
                                 viewModel.setAnnounceOwnership(on)
-                                if (!on) viewModel.setAccordMetricsConsent(false)
+                                // A consequence, not an answer: screen 2 still asks.
+                                if (!on) viewModel.setAccordMetricsConsent(false, answered = false)
                             },
                             traceOptIn = state.accordMetricsConsent,
                             onTraceOptInChange = { viewModel.setAccordMetricsConsent(it) },

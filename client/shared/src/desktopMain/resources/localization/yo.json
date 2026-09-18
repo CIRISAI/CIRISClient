@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Gbígbé ṣe àṣeyọrí! TX: {tx}",
     "wallet_trust_degraded": "Ìgbẹ́kẹ̀lé Ohun Ẹ̀rọ Ti Dín Kù",
     "wallet_warning": "Ìkìlọ̀",
+    "trace_consent_decline_note": "Kíkọ̀ túmọ̀ sí pé aṣojú rẹ kò lè kọ́ àmì agbára tàbí jèrè kirẹ́díìtì àjọpọ̀. O lè yí èyí padà lẹ́yìn náà.",
     "verify_title": "Jẹ́rìísí build kan",
     "verify_hash_label": "Hash build",
     "verify_button": "Ṣàyẹ̀wò",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Yanjú",
   "wa_service_status": "Ipò Iṣẹ́ Ìrànwọ́",
   "wa_status": "Ipò",
+  "setup_validation_trace_consent_required": "Jọ̀wọ́ yan bóyá láti fi àwọn ìtọpa ránṣẹ́.",
   "chat": {
     "author_signer_unavailable": "Ẹnikẹ́ni tí ó bá kọ ìfiránṣẹ́ ìfọ̀rọ̀wérọ̀ ni ó ń fọwọ́ sí i, nóòdù yìí kò sì lè lo ìdánimọ̀ náà lọ́wọ́lọ́wọ́ báyìí.",
     "community_create_failed": "Nóòdù náà kò lè ṣẹ̀dá àwùjọ ìfọ̀rọ̀wérọ̀ náà. Kò sí ohun tí ó yí padà.",

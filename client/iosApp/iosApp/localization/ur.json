@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "ٹرانسفر کامیاب! TX: {tx}",
     "wallet_trust_degraded": "ہارڈ ویئر اعتماد کمزور پڑ گیا",
     "wallet_warning": "انتباہ",
+    "trace_consent_decline_note": "شمولیت سے انکار کرنے کا مطلب ہے کہ آپ کا ایجنٹ نہ تو capacity سکور بنا سکتا ہے نہ ہی commons کریڈٹس حاصل کر سکتا ہے۔ آپ اسے بعد میں تبدیل کر سکتے ہیں۔",
     "verify_title": "بلڈ کی تصدیق کریں",
     "verify_hash_label": "بلڈ ہیش",
     "verify_button": "جانچیں",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "[EN] Resolve",
   "wa_service_status": "[EN] Service Status",
   "wa_status": "[EN] Status",
+  "setup_validation_trace_consent_required": "براہ کرم منتخب کریں کہ آیا آپ ٹریسز بھیجنا چاہتے ہیں۔",
   "chat": {
     "author_signer_unavailable": "چیٹ پیغام اُس شخص کے دستخط سے تصدیق شدہ ہوتا ہے جس نے اسے لکھا، اور یہ نوڈ ابھی اس شناخت کو استعمال نہیں کر سکتا۔",
     "community_create_failed": "نوڈ چیٹ کمیونٹی نہیں بنا سکا۔ کچھ تبدیل نہیں ہوا۔",

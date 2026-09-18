@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Transfer başarılı! TX: {tx}",
     "wallet_trust_degraded": "Donanım Güveni Düşmüş",
     "wallet_warning": "Uyarı",
+    "trace_consent_decline_note": "Vazgeçmek, ajanınızın bir kapasite skoru oluşturamayacağı veya commons kredisi kazanamayacağı anlamına gelir. Bunu daha sonra değiştirebilirsiniz.",
     "verify_title": "Bir derlemeyi doğrula",
     "verify_hash_label": "Derleme hash'i",
     "verify_button": "Kontrol Et",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Çöz",
   "wa_service_status": "Hizmet Durumu",
   "wa_status": "Durum",
+  "setup_validation_trace_consent_required": "Lütfen izleri gönderip göndermeyeceğinizi seçin.",
   "chat": {
     "author_signer_unavailable": "Bir sohbet mesajı, onu yazan kişi tarafından imzalanır ve bu düğüm şu anda o kimliği kullanamıyor.",
     "community_create_failed": "Düğüm sohbet topluluğunu oluşturamadı. Hiçbir şey değiştirilmedi.",

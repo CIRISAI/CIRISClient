@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Transfert réussi ! TX: {tx}",
     "wallet_trust_degraded": "Confiance Matérielle Dégradée",
     "wallet_warning": "Avertissement",
+    "trace_consent_decline_note": "Refuser signifie que votre agent ne peut pas bâtir de score de capacité ni gagner de crédits communs. Vous pourrez le modifier plus tard.",
     "verify_title": "Vérifier un build",
     "verify_hash_label": "Empreinte du build",
     "verify_button": "Vérifier",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Résoudre",
   "wa_service_status": "État du service",
   "wa_status": "Statut",
+  "setup_validation_trace_consent_required": "Veuillez choisir si vous souhaitez envoyer des traces.",
   "chat": {
     "author_signer_unavailable": "Un message de discussion est signé par la personne qui l'a écrit, et ce nœud ne peut pas utiliser cette identité pour le moment.",
     "community_create_failed": "Le nœud n’a pas pu créer la communauté de discussion. Rien n’a été modifié.",

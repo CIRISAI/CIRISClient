@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "ਟ੍ਰਾਂਸਫਰ ਸਫਲ! TX: {tx}",
     "wallet_trust_degraded": "ਹਾਰਡਵੇਅਰ ਭਰੋਸਾ ਘਟਿਆ",
     "wallet_warning": "ਚੇਤਾਵਨੀ",
+    "trace_consent_decline_note": "ਇਨਕਾਰ ਕਰਨ ਦਾ ਮਤਲਬ ਹੈ ਕਿ ਤੁਹਾਡਾ ਏਜੰਟ ਸਮਰੱਥਾ ਸਕੋਰ ਨਹੀਂ ਬਣਾ ਸਕਦਾ ਜਾਂ ਕਾਮਨਜ਼ ਕ੍ਰੈਡਿਟ ਨਹੀਂ ਕਮਾ ਸਕਦਾ। ਤੁਸੀਂ ਇਸਨੂੰ ਬਾਅਦ ਵਿੱਚ ਬਦਲ ਸਕਦੇ ਹੋ।",
     "verify_title": "ਇੱਕ ਬਿਲਡ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ",
     "verify_hash_label": "ਬਿਲਡ ਹੈਸ਼",
     "verify_button": "ਜਾਂਚ ਕਰੋ",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "ਹੱਲ ਕਰੋ",
   "wa_service_status": "ਸੇਵਾ ਸਥਿਤੀ",
   "wa_status": "ਸਥਿਤੀ",
+  "setup_validation_trace_consent_required": "ਕਿਰਪਾ ਕਰਕੇ ਚੁਣੋ ਕਿ ਟਰੇਸ ਭੇਜਣੇ ਹਨ ਜਾਂ ਨਹੀਂ।",
   "chat": {
     "author_signer_unavailable": "ਚੈਟ ਸੁਨੇਹੇ ਉੱਤੇ ਉਸੇ ਵਿਅਕਤੀ ਦੇ ਦਸਤਖ਼ਤ ਹੁੰਦੇ ਹਨ ਜਿਸਨੇ ਇਸਨੂੰ ਲਿਖਿਆ ਹੈ, ਅਤੇ ਇਹ ਨੋਡ ਹੁਣੇ ਉਸ ਪਛਾਣ ਦੀ ਵਰਤੋਂ ਨਹੀਂ ਕਰ ਸਕਦਾ।",
     "community_create_failed": "ਨੋਡ ਚੈਟ ਭਾਈਚਾਰਾ ਨਹੀਂ ਬਣਾ ਸਕਿਆ। ਕੁਝ ਵੀ ਬਦਲਿਆ ਨਹੀਂ ਗਿਆ।",

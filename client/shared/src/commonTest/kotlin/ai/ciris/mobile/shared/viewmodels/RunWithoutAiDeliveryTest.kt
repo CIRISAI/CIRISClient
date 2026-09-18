@@ -40,13 +40,18 @@ class RunWithoutAiDeliveryTest {
     /** An agent build: the only configuration where the question is asked. */
     private fun vm() = SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = true)
 
-    /** Everything screen 1 blocks on, so nextStep() is allowed to advance. */
+    /**
+     * Everything screens 1 and 2 block on, so nextStep() is allowed to advance.
+     * Screen 2 blocks on one thing: the send-traces question, which has no
+     * default and must be answered (either way) like the age band.
+     */
     private fun SetupViewModel.satisfyScreenOne() {
         setAgeRange(AgeBand.ADULT)
         setUsername("qaadmin")
         setUserPassword("hunter2hunter2")
         setUserPasswordConfirm("hunter2hunter2")
         setFederationLabel("qaadmin")
+        setAccordMetricsConsent(true)
     }
 
     @Test

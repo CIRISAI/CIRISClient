@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "ማስተላለፍ ተሳክቷል! TX: {tx}",
     "wallet_trust_degraded": "ስልክ ሥቅ ተዳክሞ ነበር",
     "wallet_warning": "ማስጠንቀቂያ",
+    "trace_consent_decline_note": "አለመቀበል ማለት ወኪልዎ የአቅም ነጥብ መገንባት ወይም የጋራ ክሬዲቶች ማግኘት አይችልም ማለት ነው። ይህን በኋላ መቀየር ይችላሉ።",
     "verify_title": "ግንባታ ማረጋገጥ",
     "verify_hash_label": "የግንባታ ሃሽ",
     "verify_button": "አረጋግጥ",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "ፍታ",
   "wa_service_status": "የአገልግሎት ሁኔታ",
   "wa_status": "ሁኔታ",
+  "setup_validation_trace_consent_required": "እባክህ ዱካዎችን መላክ ወይም አለመላክ ምረጥ።",
   "chat": {
     "author_signer_unavailable": "የውይይት መልዕክት በጻፈው ሰው ይፈረማል፣ ይህ ኖድ ግን አሁን ያንን ማንነት መጠቀም አይችልም።",
     "community_create_failed": "ኖዱ የውይይት ማህበረሰቡን መፍጠር አልቻለም። ምንም አልተለወጠም።",

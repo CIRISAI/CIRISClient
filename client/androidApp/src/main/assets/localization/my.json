@@ -2940,6 +2940,7 @@
     "wallet_transfer_success": "Transfer အောင်မြင်ful! TX: {tx}",
     "wallet_trust_degraded": "Hardware ယုံကြည်မှု အားနည်းသွားပြီ",
     "wallet_warning": "သတိပေး",
+    "trace_consent_decline_note": "ငြင်းဆိုပါက သင်၏ အေးဂျင့်သည် capacity score ကို တည်ဆောက်နိုင်မည် မဟုတ်သည့်အပြင် commons credits ကိုလည်း ရရှိနိုင်မည် မဟုတ်ပါ။ ၎င်းကို နောင်တွင် ပြောင်းလဲနိုင်ပါသည်။",
     "verify_title": "Build တစ်ခုကို အတည်ပြုပါ",
     "verify_hash_label": "Build hash",
     "verify_button": "စစ်ဆေးပါ",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "ဖြေရှင်းပါ",
   "wa_service_status": "ဝန်ဆောင်မှု Status",
   "wa_status": "အခြေအနေ",
+  "setup_validation_trace_consent_required": "Trace များ ပို့မလား မပို့လားကို ရွေးချယ်ပါ။",
   "chat": {
     "author_signer_unavailable": "chat message တစ်ခုကို ၎င်းကို ရေးသားသူကိုယ်တိုင်က လက်မှတ်ရေးထိုးရပြီး၊ ဤ node သည် ယခုအချိန်တွင် ထို identity ကို အသုံးပြု၍ မရပါ။",
     "community_create_failed": "node သည် chat community ကို ဖန်တီး၍မရပါ။ ဘာမှ ပြောင်းလဲမသွားပါ။",

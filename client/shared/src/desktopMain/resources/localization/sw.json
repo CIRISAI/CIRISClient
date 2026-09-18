@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "Uhamisho umefanikiwa! TX: {tx}",
     "wallet_trust_degraded": "Kuaminika kwa Maunzi Kumedhoofika",
     "wallet_warning": "Onyo",
+    "trace_consent_decline_note": "Kukataa kunamaanisha wakala wako hawezi kujenga alama ya uwezo au kupata mikopo ya jamii. Unaweza kubadilisha hili baadaye.",
     "verify_title": "Thibitisha toleo",
     "verify_hash_label": "Hash ya toleo",
     "verify_button": "Kagua",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Funga",
   "wa_service_status": "Hali ya Huduma",
   "wa_status": "Hali",
+  "setup_validation_trace_consent_required": "Tafadhali chagua iwapo utatuma nyayo.",
   "chat": {
     "author_signer_unavailable": "Ujumbe wa gumzo hutiwa saini na mtu aliyeuandika, na nodi hii haiwezi kutumia utambulisho huo kwa sasa.",
     "community_create_failed": "Nodi haikuweza kuunda jumuiya ya gumzo. Hakuna kilichobadilishwa.",

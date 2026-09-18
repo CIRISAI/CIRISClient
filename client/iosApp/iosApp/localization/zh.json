@@ -2922,6 +2922,7 @@
     "wallet_transfer_success": "转账成功！TX: {tx}",
     "wallet_trust_degraded": "硬件信任降级",
     "wallet_warning": "警告",
+    "trace_consent_decline_note": "选择退出意味着您的智能体无法建立 capacity 分数，也无法获得公共积分（commons credits）。您可以稍后更改此设置。",
     "verify_title": "验证构建版本",
     "verify_hash_label": "构建哈希",
     "verify_button": "检查",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "解决",
   "wa_service_status": "服务状态",
   "wa_status": "状态",
+  "setup_validation_trace_consent_required": "请选择是否发送追踪",
   "chat": {
     "author_signer_unavailable": "聊天消息由撰写者本人签名，而此节点当前无法使用该身份。",
     "community_create_failed": "节点无法创建聊天社区。未做任何更改。",

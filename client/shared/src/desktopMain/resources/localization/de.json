@@ -2946,6 +2946,7 @@
     "wallet_transfer_success": "Überweisung erfolgreich! TX: {tx}",
     "wallet_trust_degraded": "Hardware-Vertrauen herabgestuft",
     "wallet_warning": "Warnung",
+    "trace_consent_decline_note": "Wenn Sie sich dagegen entscheiden, kann Ihr Agent keinen Capacity-Score aufbauen oder Commons-Credits verdienen. Sie können dies später ändern.",
     "verify_title": "Build verifizieren",
     "verify_hash_label": "Build-Hash",
     "verify_button": "Prüfen",
@@ -4254,6 +4255,7 @@
   "wa_resolve": "Auflösen",
   "wa_service_status": "Dienststatus",
   "wa_status": "Status",
+  "setup_validation_trace_consent_required": "Bitte wählen Sie, ob Sie Traces senden möchten.",
   "chat": {
     "author_signer_unavailable": "Eine Chat-Nachricht wird von der Person signiert, die sie geschrieben hat, und dieser Knoten kann diese Identität derzeit nicht verwenden.",
     "community_create_failed": "Der Knoten konnte die Chat-Community nicht erstellen. Es wurde nichts geändert.",
