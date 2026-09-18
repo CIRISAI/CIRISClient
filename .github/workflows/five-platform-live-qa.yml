@@ -622,11 +622,21 @@ jobs:
           if [ -n "$DATABOX" ] && [ -d "$DATABOX/Documents" ]; then
             find "$DATABOX/Documents" -maxdepth 1 -name "*.log" -exec cp {} ios-logs/ \; 2>/dev/null || true
             if [ -d "$DATABOX/Documents/ciris" ]; then
-              find "$DATABOX/Documents/ciris" \( -name "*.log" -o -name "*.txt" \) -type f -exec cp {} ios-logs/ \; 2>/dev/null || true
+              # `*.log*`, not `*.log`: the substrate's Rust tracing lands in
+              # ciris-server.log.<date>, and that is the file that says which
+              # keystore path edge opened and what it found there. Run
+              # 35368634186 failed on "could not open the sealed Ed25519 node
+              # identity" and the one log that explains it was left behind.
+              find "$DATABOX/Documents/ciris" \( -name "*.log*" -o -name "*.txt" \) -type f -exec cp {} ios-logs/ \; 2>/dev/null || true
+              echo "--- identity dir ---"; ls -la "$DATABOX/Documents/ciris/identity" 2>/dev/null || echo "(no identity dir)"
+              find "$DATABOX/Documents/ciris" -maxdepth 3 -type d | sed "s#$DATABOX/Documents/ciris#<ciris>#" | head -40
             fi
             echo "app logs: $(ls ios-logs | wc -l) file(s)"
             for f in ios-logs/python_error.log ios-logs/incidents_latest.log; do
               [ -f "$f" ] && { echo "--- $f (last 40 lines) ---"; tail -40 "$f"; }
+            done
+            for f in ios-logs/ciris-server.log*; do
+              [ -f "$f" ] && { echo "--- $f: keystore / identity lines ---"; grep -i "keystore\|ed25519\|identity\|provision\|sealed\|alias" "$f" | tail -40; }
             done
           else
             echo "app logs: no Documents in the data container — the app had not started writing"
