@@ -1205,6 +1205,39 @@
       },
       "notes": "DESKTOP RETURNS TO STARTUP AFTER A RESET INSTEAD OF EXITING. Desktop restartApp() is exitProcess(0) and until 0.5.220 never ran after a reset -- the java.util.prefs throw (#56) skipped logout's completion callback, so every desktop reset left the app on Login, which is what CIRISAgent's five-platform gate has asserted against all along (its desktop check reads 'Login with btn_local_login, or Setup' one second after the confirm and does not relaunch a desktop). Fixing #56 made the exit real; on the 0.5.221 pin (run 35199231784) Linux and macOS lost the race with it and Windows won. Desktop now does what iOS does: Startup -> retry() -> startServer() re-attaches to a still-serving backend (the launcher case, #61) or relaunches its own from the wiped home, so the next screen is a genuine first run and the #61 'node still running' line is visible on Login. Android keeps its AppRestarter relaunch. No wire change, no capability change.",
       "published": null
+    },
+    {
+      "client_version": "0.5.223",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3925
+      },
+      "notes": "SEND TRACES IS A QUESTION, NOT A SWITCH. Screen 2's replication consent was a switch defaulted ON; it is now Yes / No with no default, Next disabled until answered (the age band's shape), with the cost of declining -- no capacity score, no commons credits -- stated on the question. Be-scored and location appear once the answer is Yes. Unanswered reads as not-consented. New tags trace_consent_yes / trace_consent_no replace toggle_trace_opt_in ON SCREEN 2 (the YOU-step catch-up card keeps toggle_trace_opt_in); drivers must ANSWER rather than toggle a default off -- CIRISAgent's qa_runner changes with the pin. Two new catalogue keys (mobile.trace_consent_decline_note, setup_validation_trace_consent_required), 29 locales. No wire change: the request still carries the same booleans.",
+      "published": null
     }
   ]
 }
