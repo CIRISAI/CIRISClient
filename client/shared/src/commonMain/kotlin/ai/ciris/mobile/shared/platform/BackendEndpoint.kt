@@ -186,6 +186,19 @@ object ActiveBackend {
     fun reset() {
         endpoint = AGENT_ENDPOINT
     }
+
+    /**
+     * A backend is ALREADY ANSWERING at [endpoint] on the loopback, and this
+     * process is going to be its client rather than start its own. What is
+     * serving outranks what `.env` predicts: the `.env` answers "which port
+     * would our backend use", and an answering port has already settled it.
+     * [resolveFrom] still applies afterwards — an explicit
+     * `CIRIS_RUN_WITHOUT_AI` moves the client as documented; an absent one
+     * keeps this.
+     */
+    fun attach(answering: BackendEndpoint) {
+        endpoint = answering
+    }
 }
 
 /**

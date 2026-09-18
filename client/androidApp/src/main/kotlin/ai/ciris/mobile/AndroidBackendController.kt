@@ -3,6 +3,10 @@ package ai.ciris.mobile
 import ai.ciris.mobile.shared.backend.HostLiveness
 import ai.ciris.mobile.shared.backend.LocalBackendController
 import ai.ciris.mobile.shared.backend.ProbeOutcome
+import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.AGENT_ENDPOINT
+import ai.ciris.mobile.shared.platform.BackendEndpoint
+import ai.ciris.mobile.shared.platform.NODE_ONLY_ENDPOINT
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -48,8 +52,15 @@ class AndroidBackendController(context: Context) : LocalBackendController {
      * lets the supervisor skip its thaw window instead of waiting out a clock
      * for something already known dead.
      */
-    override suspend fun hostLiveness(): HostLiveness =
-        if (PythonRuntimeService.isRunning) HostLiveness.ALIVE else HostLiveness.DEAD
+    override suspend fun hostLiveness(): HostLiveness = when {
+        // Attached to a backend this process did not start: the service flag
+        // says nothing about it. UNKNOWN is the honest answer, and it is the
+        // safe one — the supervisor degrades to patience and lets the probe
+        // decide, instead of reading "our service is not running" as death.
+        attachIfAnswering() != null -> HostLiveness.UNKNOWN
+        PythonRuntimeService.isRunning -> HostLiveness.ALIVE
+        else -> HostLiveness.DEAD
+    }
 
     /**
      * Idempotent by construction: `onStartCommand` guards on `serverStarted`,
@@ -59,6 +70,17 @@ class AndroidBackendController(context: Context) : LocalBackendController {
      * this call.
      */
     override suspend fun revive(): Result<Unit> = withContext(Dispatchers.IO) {
+        // NOT OURS TO START. A backend that was already answering on the
+        // loopback when this process began is the one we use; starting the
+        // embedded service beside it would put two backends on one device,
+        // which is the collision desktop stopped in 0.5.217 (revive refuses
+        // while a node is answering). Reported, not repaired — the supervisor
+        // shows the person that the backend they attached to is gone.
+        attachIfAnswering()?.let { url ->
+            return@withContext Result.failure(
+                IllegalStateException("attached to a backend this app did not start ($url); not starting a second one"),
+            )
+        }
         // A PREVIOUS FAILURE IS THE MOST USEFUL THING WE KNOW.
         //
         // If the runtime already tried and failed — a missing native module, a
@@ -99,6 +121,73 @@ class AndroidBackendController(context: Context) : LocalBackendController {
         private const val TAG = "AndroidBackendCtl"
 
         /**
+         * The loopback backend this process ATTACHED to instead of starting
+         * its own, or null. Decided once, at the first question, and kept —
+         * the same fact desktop records as `BackendOwnership.ATTACHED`.
+         *
+         * On a phone nothing else serves 127.0.0.1, both probes are refused in
+         * a millisecond, and the embedded service starts as it always has. On
+         * an emulator with `adb reverse tcp:4243`, or any device where a node
+         * is already up, the client becomes what FSD/ONE_CLIENT_N_NODES.md
+         * says it is: a client of that node. Before this the app asked only
+         * its own service whether "the runtime" was running, so it started a
+         * second backend beside a live one and then spent two minutes on the
+         * Startup screen waiting for 22 services the node would never report
+         * (the client's five-platform gate, every Android run).
+         */
+        @Volatile
+        var attachedTo: String? = null
+            private set
+
+        @Volatile
+        private var attachDecided = false
+
+        /**
+         * Is a backend already answering on the loopback? Asked ONCE per
+         * process, node shape first (this build usually drives a node), then
+         * the agent's. Any HTTP answer — a 4xx or 5xx included — means a
+         * process holds the port; only a refused connection means nothing is
+         * there (CIRISClient#53). On an answer the active endpoint and the
+         * client's local-node address follow it, so every later probe asks the
+         * port that is actually serving.
+         */
+        suspend fun attachIfAnswering(): String? {
+            if (attachDecided) return attachedTo
+            for (endpoint in listOf(NODE_ONLY_ENDPOINT, AGENT_ENDPOINT)) {
+                val base = endpoint.baseUrl("127.0.0.1")
+                if (somethingAnswers(base, endpoint.healthPath)) {
+                    attachedTo = base
+                    ActiveBackend.attach(endpoint)
+                    ai.ciris.mobile.shared.api.CIRISApiClient.setLocalNodeUrl(base)
+                    Log.i(TAG, "attached to a backend already answering at $base${endpoint.healthPath} — not starting PythonRuntimeService")
+                    break
+                }
+            }
+            attachDecided = true
+            return attachedTo
+        }
+
+        private suspend fun somethingAnswers(base: String, path: String, timeoutMs: Int = 1_500): Boolean =
+            withContext(Dispatchers.IO) {
+                var conn: HttpURLConnection? = null
+                try {
+                    conn = (URL("$base$path").openConnection() as HttpURLConnection).apply {
+                        connectTimeout = timeoutMs
+                        readTimeout = timeoutMs
+                        requestMethod = "GET"
+                    }
+                    conn.responseCode > 0
+                } catch (e: ConnectException) {
+                    false
+                } catch (e: Exception) {
+                    // Could not ask, or asked and got no HTTP: not an answer.
+                    false
+                } finally {
+                    conn?.disconnect()
+                }
+            }
+
+        /**
          * Health probe that reports WHY it failed.
          *
          * The distinction is the whole reason a generous thaw budget is safe.
@@ -114,8 +203,12 @@ class AndroidBackendController(context: Context) : LocalBackendController {
         suspend fun probe(url: String, timeoutMs: Int = 2_000): ProbeOutcome =
             withContext(Dispatchers.IO) {
                 var conn: HttpURLConnection? = null
+                // The ACTIVE endpoint's readiness path, not the agent's by name:
+                // a node serves /health and 404s /v1/system/health, which read
+                // as TIMEOUT forever against a node that was perfectly alive.
+                val path = ActiveBackend.endpoint.healthPath
                 try {
-                    conn = (URL("$url/v1/system/health").openConnection() as HttpURLConnection).apply {
+                    conn = (URL("$url$path").openConnection() as HttpURLConnection).apply {
                         connectTimeout = timeoutMs
                         readTimeout = timeoutMs
                         requestMethod = "GET"

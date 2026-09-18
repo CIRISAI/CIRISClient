@@ -181,8 +181,18 @@ class MainActivity : ComponentActivity() {
                     Log.i(TAG, "Showing CIRISApp immediately for startup animation")
                     pythonReady = true
 
-                    // Start Python via foreground service (survives activity backgrounding for OAuth)
-                    if (!PythonRuntimeService.isRunning) {
+                    // A BACKEND ALREADY ANSWERING ON THE LOOPBACK IS THE ONE WE USE.
+                    // Decided once, here and in the supervisor (whichever asks
+                    // first); on a phone this is two refused connects and the
+                    // service starts as before. See AndroidBackendController.
+                    val attached = AndroidBackendController.attachIfAnswering()
+                    if (attached != null) {
+                        Log.i(TAG, "[backend] attached to $attached — the embedded runtime is not started")
+                        // Nothing to mark: initialize() sets its own flag and
+                        // startServer() polls checkHealth, which a node answers
+                        // on the first try.
+                        apiClient?.updateBaseUrl(attached)
+                    } else if (!PythonRuntimeService.isRunning) {
                         Log.i(TAG, "Starting PythonRuntimeService...")
                         val serviceIntent = Intent(this@MainActivity, PythonRuntimeService::class.java)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

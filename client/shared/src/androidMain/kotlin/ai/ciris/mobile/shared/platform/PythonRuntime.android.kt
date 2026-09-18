@@ -359,6 +359,17 @@ actual class PythonRuntime : PythonRuntimeProtocol {
                 return@withContext Result.success(false)
             }
 
+            // THE NODE IS READY WHEN IT ANSWERS. There is no cognitive_state
+            // and no service roster on the node's /health — those are the
+            // brain's — so the parse below would say "not ready" for 120
+            // attempts against a node that was serving the whole time
+            // (desktop learned this as CIRISClient#52: liveness is "did
+            // anything answer").
+            if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+                connection.disconnect()
+                return@withContext Result.success(true)
+            }
+
             // Parse the response to check cognitive_state
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             connection.disconnect()

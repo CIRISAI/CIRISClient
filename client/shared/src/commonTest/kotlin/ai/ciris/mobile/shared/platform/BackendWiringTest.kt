@@ -235,3 +235,26 @@ class BackendSyncAgentBranchTest {
         assertEquals(node, api.baseUrl, "the hand-off (#48) is unchanged by the agent branch")
     }
 }
+
+class ActiveBackendAttachTest {
+    @AfterTest
+    fun reset() = ActiveBackend.reset()
+
+    @Test
+    fun anAnsweringBackendOutranksTheEnvDefault() {
+        ActiveBackend.attach(NODE_ONLY_ENDPOINT)
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint)
+        // An absent .env keeps what is serving (three-state: absence is not "false").
+        ActiveBackend.resolveFrom(null)
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint)
+        ActiveBackend.resolveFrom("OPENAI_API_KEY=x\n")
+        assertEquals(NODE_ONLY_ENDPOINT, ActiveBackend.endpoint)
+    }
+
+    @Test
+    fun anExplicitEnvStatementStillMovesTheClient() {
+        ActiveBackend.attach(NODE_ONLY_ENDPOINT)
+        ActiveBackend.resolveFrom("CIRIS_RUN_WITHOUT_AI=false\n")
+        assertEquals(AGENT_ENDPOINT, ActiveBackend.endpoint)
+    }
+}

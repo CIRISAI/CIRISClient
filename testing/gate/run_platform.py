@@ -149,10 +149,16 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
     # real failure — the app started and never rendered — and it is now reported
     # as one rather than as four quiet passes.
     composed = drv.wait_for_ui(timeout=args_timeout)
+    # A SCREEN THAT NAMES ITSELF HAS COMPOSED, tags or not. /state reports
+    # screen="unknown" until something is on screen, so a named screen with an
+    # empty tree is a screen with nothing to press — Startup, before 0.5.224
+    # tagged itself — and not an app that never rendered. The Android leg
+    # reported the latter while its own screenshot showed the boot lights.
+    screen = drv.screen() or "unknown"
     rep.add(
         "ui-composed",
-        composed > 0,
-        f"{composed} element(s) on screen" if composed else
+        composed > 0 or screen != "unknown",
+        f"{composed} element(s) on screen {screen!r}" if composed or screen != "unknown" else
         "the app started but never composed a UI — every check below would be vacuous",
     )
 
