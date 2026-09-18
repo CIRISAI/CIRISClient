@@ -289,7 +289,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json || (adb logcat -d > logcat.txt 2>&1; exit 1)
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.

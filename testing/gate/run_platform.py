@@ -162,6 +162,30 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
         "the app started but never composed a UI — every check below would be vacuous",
     )
 
+    # THE APP HAS TO ARRIVE SOMEWHERE. Startup composing is not the app being
+    # usable: the Android leg went green the moment its Startup screen carried
+    # a tag, at 0.0s, having asserted nothing about whether the client ever
+    # reached the node it was pointed at. Every desktop leg lands on Login in
+    # seconds against this same bare node; the Android client now attaches to
+    # it instead of booting an embedded runtime, and this is the check that
+    # says so. Setup is accepted for a node with no owner yet; Interact /
+    # Contacts / ManageNodes for a session that survived a previous pass.
+    entry = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
+    started = time.monotonic()
+    landed = ""
+    while time.monotonic() - started < args_timeout:
+        cur = drv.screen() or ""
+        if cur in entry:
+            landed = cur
+            break
+        time.sleep(1.0)
+    rep.add(
+        "entry-screen",
+        bool(landed),
+        f"{landed!r} after {time.monotonic() - started:.0f}s" if landed else
+        f"still on {drv.screen()!r} after {args_timeout:.0f}s — the app never reached Login/Setup",
+    )
+
     # THIS STEP USED TO BE A REPORT, NOT A CHECK — `rep.add("state", True, …)`
     # passed unconditionally and printed two values nobody asserted. That is the
     # vacuous green this file's own docstring is about, sitting in the middle of
