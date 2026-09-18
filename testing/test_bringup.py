@@ -148,12 +148,16 @@ def test_ios_launch_carries_test_mode_across_simctl():
     assert all(not s.env for s in p.steps if s.name != "launch")
 
 
-def test_ios_terminates_any_existing_instance_on_launch():
-    # Without --terminate-existing the launch is a no-op against a stale process
-    # still holding 9091, and the run drives the OLD build.
+def test_ios_terminates_any_existing_instance_before_launch():
+    # Without it the launch is a no-op against a stale process still holding
+    # 9091, and the run drives the OLD build. As a step, not a flag: simctl
+    # has no --terminate-existing (that is devicectl's), and rejected it.
     p = ios_simulator_plan(APP, BID)
+    assert p.index_of("terminate") < p.index_of("launch")
+    assert p.steps[p.index_of("terminate")].optional
     launch = p.steps[p.index_of("launch")]
-    assert "--terminate-existing" in launch.cmd
+    assert "--terminate-existing" not in launch.cmd
+    assert launch.cmd[:3] == ["xcrun", "simctl", "launch"]
 
 
 def test_ios_waits_for_boot_before_installing():

@@ -267,9 +267,15 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             Step("wait-for-boot", ["xcrun", "simctl", "bootstatus", udid, "-b"]),
             Step("uninstall", ["xcrun", "simctl", "uninstall", udid, bundle_id], optional=True),
             Step("install", ["xcrun", "simctl", "install", udid, str(app_bundle)]),
-            # --terminate-existing: without it a previous instance survives and
-            # the new launch is a no-op against a stale process holding 9091.
-            #
+            # A PREVIOUS INSTANCE IS ENDED FIRST, AS ITS OWN STEP. Without
+            # that a stale process keeps 9091 and the new launch is a no-op
+            # against the OLD build. This used to be `launch
+            # --terminate-existing`, which is devicectl's flag for a physical
+            # device; simctl rejected it ("Invalid device: --terminate-existing",
+            # exit 148) on the first run that ever reached the launch (run
+            # 35353482427). Optional: on a fresh simulator there is nothing to
+            # end.
+            Step("terminate", ["xcrun", "simctl", "terminate", udid, bundle_id], optional=True),
             # TEST MODE HAS TO BE SAID HERE. The app reads CIRIS_TEST_MODE with
             # getenv (TestAutomationServer.ios.kt) and starts its automation
             # server only when it is set; `simctl launch` hands the child only
@@ -277,7 +283,7 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             # CIRIS_TEST_MODE=true never crossed that boundary, so even a built
             # app would have come up with no server to drive.
             Step("launch", [
-                "xcrun", "simctl", "launch", "--terminate-existing", udid, bundle_id,
+                "xcrun", "simctl", "launch", udid, bundle_id,
             ], env={"SIMCTL_CHILD_CIRIS_TEST_MODE": "true"}),
         ],
     )

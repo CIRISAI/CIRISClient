@@ -553,8 +553,20 @@ jobs:
           # `simctl boot booted` is a no-op by construction and its
           # `bootstatus booted -b` needs a device that is already up; nothing
           # here started one, so the leg could never have got past install.
+          # The newest iOS runtime's newest numbered iPhone — the agent's gate
+          # drives an iPhone 16 class device; a list-order pick landed on an
+          # iPhone SE (3rd generation).
           UDID=$(xcrun simctl list devices available -j \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for r,v in d.items() if "iOS" in r for x in v if x.get("isAvailable") and "iPhone" in x["name"]]; print(c[-1]["udid"] if c else "")')
+            | python3 -c '
+          import json, re, sys
+          d = json.load(sys.stdin)["devices"]
+          def key(rt): return [int(x) for x in re.findall(r"\d+", rt)]
+          best = None
+          for rt in sorted((r for r in d if "iOS" in r), key=key, reverse=True):
+              ph = [x for x in d[rt] if x.get("isAvailable") and re.match(r"iPhone \d+", x["name"]) and "Pro" not in x["name"] and "Plus" not in x["name"]]
+              if ph:
+                  best = sorted(ph, key=lambda x: key(x["name"]))[-1]; break
+          print(best["udid"] if best else "")')
           test -n "$UDID" || { echo "::error::no available iPhone simulator on this runner"; xcrun simctl list devices available; exit 1; }
           echo "simulator: $UDID"
           xcrun simctl boot "$UDID" || true
