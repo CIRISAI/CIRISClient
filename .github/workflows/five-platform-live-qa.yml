@@ -585,6 +585,28 @@ jobs:
             -derivedDataPath dd build
           app=$(find dd -name 'iosApp.app' -maxdepth 6 | head -1)
           test -n "$app" || { echo "::error::no iosApp.app was produced"; exit 1; }
+          # THE HOST NODE HAS TO BE GONE FIRST. The iOS app embeds its own
+          # node, which binds 0.0.0.0:4242 (Reticulum) and :4243 (read API) on
+          # the loopback the simulator SHARES with the runner — and the node
+          # this job started for the macOS desktop leg was still holding both:
+          # "Edge transport ports are held by another process ... Address
+          # already in use (os error 48)" (run 35376950849, the first in which
+          # the engine got past its identity). The agent's gate frees 4242 4243
+          # 8080 9091 between every leg for the same reason. Kill by listener,
+          # not by name: what matters is that nothing answers on those ports.
+          for port in 4242 4243 8080; do
+            pids=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+            [ -n "$pids" ] && { echo "freeing :$port (pids: $(echo $pids | tr '\n' ' '))"; kill $pids 2>/dev/null || true; }
+          done
+          sleep 2
+          for port in 4242 4243 8080; do
+            pids=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+            [ -n "$pids" ] && { echo "still held :$port — SIGKILL"; kill -9 $pids 2>/dev/null || true; }
+          done
+          for port in 4242 4243 8080; do
+            lsof -ti "tcp:$port" -sTCP:LISTEN >/dev/null 2>&1 && { echo "::error:::$port is still held; the embedded node cannot bind"; exit 1; } || echo ":$port free"
+          done
+
           # A SIMULATOR HAS TO BE BOOTED BY SOMEONE. The bring-up plan's
           # `simctl boot booted` is a no-op by construction and its
           # `bootstatus booted -b` needs a device that is already up; nothing
