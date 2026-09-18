@@ -414,7 +414,31 @@ jobs:
             || { echo "::error::the agent's Resources.zip carries no python/lib — not the bundle this expects"; exit 1; }
           unzip -l "$IOS/Resources.zip" | grep -q " app/ciris_engine/" \
             || { echo "::error::the agent's Resources.zip carries no ciris_engine"; exit 1; }
-          echo "Resources.zip: $(unzip -l "$IOS/Resources.zip" | tail -1)"
+
+          # THE ENGINE IN THE ZIP IS AS OLD AS THE ZIP; THE ENGINE IN THE TREE
+          # IS CURRENT. The tracked Resources.zip is rebuilt by hand, and its
+          # app/ciris_ios/kmp_main.py had already moved ahead of the
+          # app/ciris_engine beside it: `from ciris_engine import node_only`
+          # against a ciris_engine with no node_only.py — the engine died on
+          # its first import and the app reported "Engine Failed to Start"
+          # (run 35363746850, python_error.log). The agent's own gate never
+          # sees this because rebuild_and_deploy.sh --quick overlays
+          # ciris_engine + ciris_adapters from the checkout and re-zips before
+          # every build. Same overlay, same excludes, here.
+          echo "Resources.zip (as tracked): $(unzip -l "$IOS/Resources.zip" | tail -1)"
+          rm -rf "$RUNNER_TEMP/res" && mkdir -p "$RUNNER_TEMP/res"
+          (cd "$RUNNER_TEMP/res" && unzip -qo "$GITHUB_WORKSPACE/$IOS/Resources.zip")
+          EXCL=(--exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='*.pyo'
+                --exclude='gui_static' --exclude='desktop_app' --exclude='android_gui_static'
+                --exclude='README*' --exclude='*.md' --exclude='examples/' --exclude='tests/' --exclude='adapters/discord')
+          rsync -a --delete "${EXCL[@]}" .agent/ciris_engine/   "$RUNNER_TEMP/res/app/ciris_engine/"
+          rsync -a --delete "${EXCL[@]}" .agent/ciris_adapters/ "$RUNNER_TEMP/res/app/ciris_adapters/"
+          find "$RUNNER_TEMP/res" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+          test -f "$RUNNER_TEMP/res/app/ciris_engine/node_only.py" \
+            || { echo "::error::overlaid ciris_engine still has no node_only.py — the agent checkout is not what kmp_main expects"; exit 1; }
+          rm -f "$IOS/Resources.zip"
+          (cd "$RUNNER_TEMP/res" && zip -q -r "$GITHUB_WORKSPACE/$IOS/Resources.zip" .)
+          echo "Resources.zip (engine overlaid from .agent @ $(git -C .agent rev-parse --short HEAD)): $(unzip -l "$IOS/Resources.zip" | tail -1)"
 
           gh release download "$PY_TAG" --repo beeware/Python-Apple-support -p "$PY_ASSET" -O "$RUNNER_TEMP/pysupport.tar.gz"
           mkdir -p "$RUNNER_TEMP/pysupport" && tar -xzf "$RUNNER_TEMP/pysupport.tar.gz" -C "$RUNNER_TEMP/pysupport"
