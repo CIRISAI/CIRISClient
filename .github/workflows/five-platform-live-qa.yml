@@ -352,6 +352,166 @@ jobs:
             --node-version "${{ steps.node.outputs.version }}" \
             --shots shots --report reports/macos.json
 
+      # ── THE iOS BUNDLE, MATERIALIZED THE WAY THE AGENT'S GATE DOES IT ──────
+      #
+      # The app shows its Compose view — and the test server inside it — only
+      # after the EMBEDDED Python runtime reports healthy (ContentView.swift:
+      # extractResources → initializePython → startRuntime → checkHealth). So
+      # the simulator needs the whole substrate, not just a project that
+      # compiles:
+      #
+      #   1. Resources.zip — the stdlib + engine + app packages. The copy this
+      #      tree vendors (CIRISClient#24) is a 77-file stub with no python/lib
+      #      and no ciris_engine; the agent's tracked apps/ios/Resources.zip is
+      #      the real 5,958-file bundle. Take theirs, refreshed to their pin by
+      #      their own tool, so the PyO3 slices and the pure-Python packages
+      #      are one consistent set.
+      #   2. Python.xcframework — beeware/Python-Apple-support 3.10-b14, which
+      #      briefcase would download for the same build. Its simulator slice
+      #      keeps lib-dynload under lib-arm64/ and lib-x86_64/ rather than
+      #      lib/; the re-vendored embed_native_frameworks.sh reads that layout.
+      #      The old note that adopting it "is a port, not a download" predates
+      #      that script change and was wrong by the time it was written down.
+      #   3. The simulator natives — ciris_server's PyO3 slice (laid down by
+      #      update_substrate_libs from the CIRISServer release), cffi /
+      #      aiohttp / cryptography (BeeWare's prebuilt simulator wheels), and
+      #      pydantic_core, which publishes no iOS wheel anywhere and is
+      #      cross-built with cargo against the slice. This is the agent's
+      #      refresh-ios-substrate.yml `build_sim_natives` recipe, carried here
+      #      because that reusable workflow checks out the CALLER's repository
+      #      and so cannot be `uses:`d from this one.
+      #
+      # Every step asserts what it produced, because a missing piece does not
+      # fail xcodebuild — it produces an app that installs and launches to a
+      # spinner, which is the failure mode this gate exists to stop.
+      - name: Check out the agent, whose iOS bundle this app embeds
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISAgent
+          path: .agent
+
+      - name: Refresh the agent's iOS substrate to its pin, then take the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PY_TAG: "3.10-b14"
+          PY_ASSET: "Python-3.10-iOS-support.b14.tar.gz"
+        run: |
+          set -euo pipefail
+          IOS=client/iosApp
+          S=$(grep -oE "^ciris-server[>=<!~ ]*[0-9]+\.[0-9]+\.[0-9]+" .agent/requirements.txt | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+          [ -n "$S" ] || { echo "::error::no ciris-server pin in .agent/requirements.txt"; exit 1; }
+          echo "agent pins ciris-server $S"
+          ( cd .agent && python3 tools/update_substrate_libs.py --platform ios --lib server "$S" )
+
+          for p in Resources.zip app_packages_native substrate.lock.json; do
+            rm -rf "$IOS/$p"; cp -R ".agent/apps/ios/$p" "$IOS/$p"
+          done
+          rm -rf "$IOS/app_packages_native_sim"
+          [ -d .agent/apps/ios/app_packages_native_sim ] && cp -R .agent/apps/ios/app_packages_native_sim "$IOS/" || true
+          rm -rf "$IOS/Frameworks/CIRISVerify.xcframework"
+          cp -R .agent/apps/ios/Frameworks/CIRISVerify.xcframework "$IOS/Frameworks/"
+          unzip -l "$IOS/Resources.zip" | grep -q " python/lib/python3.10/" \
+            || { echo "::error::the agent's Resources.zip carries no python/lib — not the bundle this expects"; exit 1; }
+          unzip -l "$IOS/Resources.zip" | grep -q " app/ciris_engine/" \
+            || { echo "::error::the agent's Resources.zip carries no ciris_engine"; exit 1; }
+          echo "Resources.zip: $(unzip -l "$IOS/Resources.zip" | tail -1)"
+
+          gh release download "$PY_TAG" --repo beeware/Python-Apple-support -p "$PY_ASSET" -O "$RUNNER_TEMP/pysupport.tar.gz"
+          mkdir -p "$RUNNER_TEMP/pysupport" && tar -xzf "$RUNNER_TEMP/pysupport.tar.gz" -C "$RUNNER_TEMP/pysupport"
+          XCF=$(find "$RUNNER_TEMP/pysupport" -maxdepth 3 -name "Python.xcframework" -type d | head -1)
+          [ -n "$XCF" ] || { echo "::error::$PY_ASSET carried no Python.xcframework"; exit 1; }
+          rm -rf "$IOS/Frameworks/Python.xcframework"; cp -R "$XCF" "$IOS/Frameworks/"
+          test -d "$IOS/Frameworks/Python.xcframework/ios-arm64_x86_64-simulator/lib-arm64/python3.10/lib-dynload" \
+            || { echo "::error::Python.xcframework's simulator slice has no lib-arm64/python3.10/lib-dynload"; exit 1; }
+          echo "Python.xcframework: $(du -sh "$IOS/Frameworks/Python.xcframework" | cut -f1)"
+
+      - name: Set up Python 3.10 (build-side interpreter for the cp310 iOS embed)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Materialize the simulator natives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEEWARE_INDEX: "https://pypi.anaconda.org/beeware/simple"
+          IOS_SIM_TAG: "ios_13_0_arm64_iphonesimulator"
+        run: |
+          set -uo pipefail
+          IOS=client/iosApp
+          OUT="$IOS/app_packages_native_sim"; mkdir -p "$OUT"
+          WORK="$RUNNER_TEMP/simnat"; mkdir -p "$WORK/wheels" "$WORK/src" "$WORK/x"
+          status=()
+          test -f "$OUT/ciris_server/_native.abi3.so" \
+            || { echo "::error::no simulator ciris_server at $OUT/ciris_server/_native.abi3.so — update_substrate_libs did not lay it down"; exit 1; }
+          status+=("ciris_server=refreshed")
+
+          ver_of() { unzip -l "$IOS/Resources.zip" | awk '{print $4}' | grep -oE "app_packages/$1-[0-9][0-9.]*\.dist-info" | head -1 | sed -E "s/.*$1-([0-9.]+)\.dist-info/\1/"; }
+          V_PYDC=$(ver_of pydantic_core); V_CRYPTO=$(ver_of cryptography); V_AIO=$(ver_of aiohttp); V_CFFI=$(ver_of cffi)
+          echo "versions:  pydantic_core=$V_PYDC cryptography=$V_CRYPTO aiohttp=$V_AIO cffi=$V_CFFI"
+          for v in "$V_PYDC" "$V_CRYPTO" "$V_AIO" "$V_CFFI"; do [ -n "$v" ] || { echo "::error::could not read a bundled version from Resources.zip"; exit 1; }; done
+
+          # --- 1. the three C extensions: BeeWare's prebuilt simulator wheels ---
+          fetch_wheel() { # name version
+            if python -m pip download -q --no-deps --only-binary :all: --index-url "$BEEWARE_INDEX" \
+                 --platform "$IOS_SIM_TAG" --python-version 3.10 --implementation cp --abi cp310 \
+                 "$1==$2" -d "$WORK/wheels" 2>&1 | tail -5; then
+              status+=("$1=fetched")
+            else
+              status+=("$1=MISSING-ON-INDEX"); echo "::warning::no cp310 $IOS_SIM_TAG wheel for $1==$2 on $BEEWARE_INDEX"
+            fi
+          }
+          fetch_wheel cffi "$V_CFFI"
+          fetch_wheel aiohttp "$V_AIO"
+          fetch_wheel cryptography "$V_CRYPTO"
+
+          # --- 2. pydantic_core: cargo, cross-compiled with PyO3 against the slice ---
+          SLICE="$IOS/Frameworks/Python.xcframework/ios-arm64_x86_64-simulator"
+          rustup target add aarch64-apple-ios-sim >/dev/null 2>&1 || true
+          python -m pip install -q typing_extensions   # build.rs runs generate_self_schema.py on the host
+          SDIST_URL=$(curl -s "https://pypi.org/pypi/pydantic-core/$V_PYDC/json" | python -c 'import json,sys; print(next(u["url"] for u in json.load(sys.stdin)["urls"] if u["packagetype"]=="sdist"))')
+          if [ -n "$SDIST_URL" ] && curl -sSL "$SDIST_URL" -o "$WORK/src/pydantic_core.tar.gz" \
+             && tar -xzf "$WORK/src/pydantic_core.tar.gz" -C "$WORK/src" \
+             && ( cd "$WORK/src"/pydantic_core-*/ \
+                  && SDKROOT="$(xcrun --sdk iphonesimulator --show-sdk-path)" IPHONEOS_DEPLOYMENT_TARGET=13.0 \
+                     PYO3_PYTHON="$(command -v python3.10)" \
+                     PYO3_CROSS_LIB_DIR="$OLDPWD/$SLICE/lib-arm64" PYO3_CROSS_PYTHON_VERSION=3.10 PYO3_CROSS_PYTHON_IMPLEMENTATION=CPython \
+                     CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-undefined -C link-arg=dynamic_lookup" \
+                     cargo build --release --target aarch64-apple-ios-sim --features "pyo3/extension-module" 2>&1 | grep -vE "^\s+(Compiling|Downloading|Downloaded|Updating|Locking|Fresh) " | tail -30 \
+                  && DYLIB=$(ls target/aarch64-apple-ios-sim/release/lib_pydantic_core.dylib) \
+                  && mkdir -p "$OLDPWD/$OUT/pydantic_core" \
+                  && cp "$DYLIB" "$OLDPWD/$OUT/pydantic_core/_pydantic_core.cpython-310-iphonesimulator.so" ); then
+            status+=("pydantic_core=built")
+          else
+            status+=("pydantic_core=FAILED"); echo "::warning::simulator native build FAILED: pydantic_core"
+          fi
+
+          # --- 3. extract the wheels' .so files into app_packages_native_sim/ ---
+          for whl in "$WORK/wheels"/*.whl; do
+            [ -f "$whl" ] || continue
+            X="$WORK/x/$(basename "$whl" .whl)"; mkdir -p "$X"; unzip -qo "$whl" -d "$X"
+            while IFS= read -r so; do
+              rel="${so#$X/}"; mkdir -p "$OUT/$(dirname "$rel")"; cp "$so" "$OUT/$rel"
+            done < <(find "$X" -name "*.so" -type f)
+          done
+          echo "## simulator natives" | tee "$OUT/MANIFEST.txt"
+          printf '  %s\n' "${status[@]}" | tee -a "$OUT/MANIFEST.txt"
+          ok=true
+          for want in "ciris_server/_native" "pydantic_core/_pydantic_core" "cryptography/hazmat/bindings/_openssl" "aiohttp/_http_parser" "_cffi_backend"; do
+            f=$(find "$OUT" -path "*$want*" -name "*.so" | head -1)
+            if [ -n "$f" ]; then
+              arch=$(lipo -info "$f" 2>/dev/null | sed 's/.*: //')
+              vt=$(xcrun vtool -show-build "$f" 2>/dev/null | awk '/platform/{print $2; exit}')
+              case "$vt" in
+                IOSSIMULATOR) echo "  ok      $want  [$arch, $vt]" | tee -a "$OUT/MANIFEST.txt" ;;
+                "")           echo "  present $want  [$arch, platform unreadable -- kept; the simulator will say]" | tee -a "$OUT/MANIFEST.txt" ;;
+                *)            echo "  WRONG-PLATFORM $want  [$arch, $vt]" | tee -a "$OUT/MANIFEST.txt"; ok=false ;;
+              esac
+            else
+              echo "  MISSING $want" | tee -a "$OUT/MANIFEST.txt"; ok=false
+            fi
+          done
+          $ok || { echo "::error::not every simulator native is present and simulator-built — see MANIFEST.txt"; exit 1; }
+
       # iOS is the leg most likely to be red for reasons of its own, and it runs
       # LAST so a macOS desktop result exists either way.
       - name: iOS simulator
@@ -393,6 +553,8 @@ jobs:
             reports/
             node.log
             *-app.log
+            client/iosApp/app_packages_native_sim/MANIFEST.txt
+            client/iosApp/substrate.lock.json
 
   windows:
     name: windows desktop

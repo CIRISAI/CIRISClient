@@ -490,10 +490,11 @@ jobs:
       #      hardcoded path on one machine (/Users/macmini/CIRISAgent/…/
       #      build/ciris_ios/ios/xcode/Support/Python.xcframework). Upstream it
       #      is beeware/Python-Apple-support — release 3.10-b14 ships
-      #      Python-3.10-iOS-support.b14.tar.gz and IS fetchable — but the
-      #      lib-dynload layout embed_native_frameworks.sh reads out of the
-      #      simulator slice is the briefcase build's, so adopting it is a port,
-      #      not a download.
+      #      Python-3.10-iOS-support.b14.tar.gz and IS fetchable. It keeps the
+      #      simulator lib-dynload under lib-arm64/ and lib-x86_64/, and the
+      #      re-vendored embed_native_frameworks.sh reads that layout — so it
+      #      IS a download now, and five-platform-live-qa.yml's macOS job
+      #      does exactly that (its "iOS bundle" steps).
       #   2. CIRISVerify.xcframework — CIRISVerify DOES publish an iOS asset
       #      (ciris-verify-v14.1.0-ios.tar.gz), but the xcframework inside it is
       #      library-style and STATIC (CirisVerify.xcframework/ios-arm64-

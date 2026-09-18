@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `870c48696c25d55c91e2f1f9d2410696ee176556ce87875fb66e5cfd831790c8`
+**state digest:** `77ad7cd131864581728bba7c75eb5b2879de274dca5f867afa11d7cb05f39fee`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -83,11 +83,18 @@ read by the rsync build phase, which is guarded on `$CIRIS_ROOT/ciris_engine`
 Xcode consumes the committed `Resources.zip`. Vendoring the tree would add 137
 MB that nothing here reads.
 
-**`Python.xcframework` is still missing and is the remaining blocker.** It is
-the output of a `briefcase build iOS` and lives only at a hardcoded path on one
-Mac (`prepare_python_bundle.sh:19`), published by no repo. The iOS leg will
-fail on it until someone copies it in or the upstream
-`beeware/Python-Apple-support` port in the table below is done.
+**`Python.xcframework` is materialized in CI, not vendored.** The gate's macOS
+job downloads `beeware/Python-Apple-support` 3.10-b14 — the same asset
+briefcase would — and `embed_native_frameworks.sh` (re-vendored from the
+agent) reads its per-arch `lib-arm64/` / `lib-x86_64/` simulator layout. The
+same job takes the agent's *tracked* `apps/ios` substrate (`Resources.zip`,
+`app_packages_native`, `Frameworks`, `substrate.lock.json`), refreshed to the
+agent's own pin by `tools/update_substrate_libs.py`, and cross-builds the
+simulator natives with the agent's `build_sim_natives` recipe. **The copies
+vendored here are stale and partial** — this tree's `Resources.zip` is a
+77-file stub with no `python/lib` and no `ciris_engine` — and the gate does not
+use them; they remain for a device build on a developer machine until they are
+re-hydrated from the same artifact.
 
 **Why they were out.** This repo exists so that one client is built once and
 consumed as a dependency, instead of each consumer keeping its own copy. A
