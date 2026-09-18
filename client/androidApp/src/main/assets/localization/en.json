@@ -3049,7 +3049,8 @@
     "wallet_transfer_note": "Transfer to another Base address for fiat cashout",
     "wallet_transfer_success": "Transfer successful! TX: {tx}",
     "wallet_trust_degraded": "Hardware Trust Degraded",
-    "wallet_warning": "Warning"
+    "wallet_warning": "Warning",
+    "trace_consent_decline_note": "Opting out means your agent cannot build a capacity score or earn commons credits. You can change this later."
   },
   "moderation": {
     "ladder": {
@@ -4297,5 +4298,6 @@
   "wa_reject": "Reject",
   "wa_resolve": "Resolve",
   "wa_service_status": "Service Status",
-  "wa_status": "Status"
+  "wa_status": "Status",
+  "setup_validation_trace_consent_required": "Please choose whether to send traces."
 }
