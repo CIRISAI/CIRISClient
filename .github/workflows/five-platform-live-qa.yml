@@ -535,12 +535,31 @@ jobs:
           # A subshell cannot leak a directory no matter how the command inside
           # it ends.
           ( cd client && ./gradlew :shared:assembleSharedDebugXCFramework --console=plain )
+          # ONE ARCHITECTURE, THE RUNNER'S. `-sdk iphonesimulator` with no
+          # destination builds BOTH simulator slices, and the shared framework
+          # the link phase picks up is iosSimulatorArm64 alone — so ld ignored
+          # every one of its objects "found architecture 'arm64', required
+          # architecture 'x86_64'" and the link failed (run 35350176282), after
+          # the whole substrate had materialized correctly. The natives are
+          # arm64 IOSSIMULATOR too; macos-15 is arm64. Say so.
           xcodebuild -project client/iosApp/iosApp.xcodeproj -scheme iosApp \
             -sdk iphonesimulator -configuration Debug \
+            -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
             -derivedDataPath dd build CODE_SIGNING_ALLOWED=NO
           app=$(find dd -name 'iosApp.app' -maxdepth 6 | head -1)
           test -n "$app" || { echo "::error::no iosApp.app was produced"; exit 1; }
-          python3 -m testing.gate.run_platform --platform ios --app "$app" \
+          # A SIMULATOR HAS TO BE BOOTED BY SOMEONE. The bring-up plan's
+          # `simctl boot booted` is a no-op by construction and its
+          # `bootstatus booted -b` needs a device that is already up; nothing
+          # here started one, so the leg could never have got past install.
+          UDID=$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; c=[x for r,v in d.items() if "iOS" in r for x in v if x.get("isAvailable") and "iPhone" in x["name"]]; print(c[-1]["udid"] if c else "")')
+          test -n "$UDID" || { echo "::error::no available iPhone simulator on this runner"; xcrun simctl list devices available; exit 1; }
+          echo "simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ steps.node.outputs.version }}" \
             --shots shots --report reports/ios.json
 
