@@ -642,6 +642,12 @@ jobs:
           # Documents/python_error.log (the traceback of why kmp_main did not
           # start) with the engine's logs under Documents/ciris/logs. The
           # agent's driver collects exactly this set; so does this leg now.
+          # THE CAPTURE NEVER DECIDES THE VERDICT. This block runs under the
+          # step's `set -e`; a grep with no match exits 1, and run 35379942066
+          # — the first in which the iOS walk passed, every step [OK ] and
+          # `ios: PASS` printed — was reported failed by the diagnostic that
+          # followed it. Only $rc, the walk's own exit, leaves this step.
+          set +e
           mkdir -p ios-logs
           xcrun simctl spawn "$UDID" log show --last 15m --style syslog \
             --predicate 'process == "iosApp" OR subsystem CONTAINS "ai.ciris.mobile"' \
