@@ -3050,7 +3050,34 @@
     "wallet_transfer_success": "Transfer successful! TX: {tx}",
     "wallet_trust_degraded": "Hardware Trust Degraded",
     "wallet_warning": "Warning",
-    "trace_consent_decline_note": "Opting out means your agent cannot build a capacity score or earn commons credits. You can change this later."
+    "trace_consent_decline_note": "Opting out means your agent cannot build a capacity score or earn commons credits. You can change this later.",
+    "people_title": "People",
+    "contacts_node_too_old_body_versioned": "This node is running {version}. Contacts and chat need ciris-server 0.5.185 or newer, so it can't answer yet — everything else works normally.",
+    "receipt_title": "Receipt",
+    "receipt_open": "Open the receipt",
+    "receipt_close": "Close",
+    "receipt_holders": "Where the bytes are",
+    "receipt_holders_count": "{count} holder(s)",
+    "receipt_notes": "Notes others left",
+    "receipt_notes_none": "Nobody has left a note.",
+    "receipt_acts": "What you can do",
+    "receipt_contact_scope_note": "The grant itself is a public record. What you send each other is not.",
+    "state_loading": "Loading",
+    "state_error": "Something went wrong",
+    "state_gone": "This file is gone. Nobody holds a copy any more.",
+    "state_hidden_by_rules": "Hidden by your rules.",
+    "state_hidden_by_rules_who": "Hidden by your rules — {who} tagged it.",
+    "state_unreviewed": "Not reviewed",
+    "state_unreviewed_since": "Not reviewed since {when}",
+    "confirm_cancel": "Not now",
+    "ceremony_signed_of": "{signed} of {needed} signed",
+    "ceremony_proposed_by": "proposed by {who} · {when}",
+    "ceremony_sign": "Sign it",
+    "ceremony_refuse": "Say no",
+    "ceremony_state_proposed": "proposed",
+    "ceremony_state_signed": "signed",
+    "ceremony_state_not_yet": "not yet",
+    "receipt_this_node": "This node — you"
   },
   "moderation": {
     "ladder": {
@@ -3205,6 +3232,13 @@
       "users": "Users",
       "wallet": "Wallet",
       "wise_authority": "Wise Authority"
+    },
+    "circle": {
+      "agent": "Just me",
+      "family": "Family",
+      "local_community": "Neighbours",
+      "global_communities": "Communities and Businesses",
+      "global_commons": "Everyone"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
   "wa_resolve": "Resolve",
   "wa_service_status": "Service Status",
   "wa_status": "Status",
-  "setup_validation_trace_consent_required": "Please choose whether to send traces."
+  "setup_validation_trace_consent_required": "Please choose whether to send traces.",
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Who it is about",
+        "gloss": "The people this record names. Each of them can take it back."
+      },
+      "attesting_key_id": {
+        "label": "Who sent it",
+        "gloss": "The key that signed this record. Nobody else could have."
+      },
+      "cohort_scope": {
+        "label": "Who can see it",
+        "gloss": "The circle this record may travel in. Leaving it asks first."
+      },
+      "dimension": {
+        "label": "What it is",
+        "gloss": "The kind of record, in the shared vocabulary every node reads the same way."
+      },
+      "consent_scope": {
+        "label": "The rule it follows",
+        "gloss": "What may happen next with this record: kept, shared, or analysed."
+      },
+      "not_sent": "This node did not send this.",
+      "by_rule": "Fixed by the rule for this kind of record ({cc}); not sent by this node."
+    },
+    "consent_kind": {
+      "label": "Consent",
+      "gloss": "What a person has agreed may happen with records that name them, or what a node has agreed to send a peer."
+    },
+    "trust_job_version": {
+      "label": "Who vouches for whom",
+      "gloss": "A claim that one key stands behind another for a stated job."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Holds a copy",
+      "gloss": "A node saying it holds the bytes for a file, named by their hash."
+    },
+    "objection_state": {
+      "label": "Someone spoke up",
+      "gloss": "One person's objection, and where it stands. Never rate-limited."
+    },
+    "content_class_class": {
+      "label": "Kind of content",
+      "gloss": "What sort of thing a file is, from a closed list every node shares."
+    },
+    "credits_domain_language_subject": {
+      "label": "Commons credits",
+      "gloss": "Earned by helping. They only go up, and they cannot be sent or sold."
+    },
+    "prohibited_category": {
+      "label": "Not allowed",
+      "gloss": "A mark that something crossed one of the lines the constitution draws. It is only ever a minus."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Receipt",
+      "gloss": "A record that something was delivered. Undoing the receipt does not undo the delivery."
+    },
+    "renderer": {
+      "verified": "Verified",
+      "not_verified": "Not verified",
+      "indeterminate": "Indeterminate",
+      "violation": "Crossed a line",
+      "partial_violation": "Partly crossed a line",
+      "self_report": "Reported by the node itself",
+      "granted": "Granted",
+      "revoked": "Revoked",
+      "expired": "Expired"
+    }
+  }
 }

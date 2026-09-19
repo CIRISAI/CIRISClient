@@ -28,7 +28,7 @@
     "gloss": "What a person has agreed may happen with records that name them, or what a node has agreed to send a peer."
   },
   "trust:{job}:{version}": {
-    "label": "Vouches for",
+    "label": "Who vouches for whom",
     "gloss": "A claim that one key stands behind another for a stated job."
   },
   "holds_bytes:sha256:{prefix}": {

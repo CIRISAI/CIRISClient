@@ -47,4 +47,10 @@ fun ScopePill(scope: CohortScope, modifier: Modifier = Modifier, tag: String? = 
 
 /** The circle's plain name: Just me · Family · Neighbours · Communities and Businesses · Everyone. */
 @Composable
-fun circleName(scope: CohortScope): String = localizedString("nav.circle." + scope.id.replace('-', '_'))
+fun circleName(scope: CohortScope): String = when (scope) {
+    CohortScope.AGENT -> localizedString("nav.circle.agent")
+    CohortScope.FAMILY -> localizedString("nav.circle.family")
+    CohortScope.LOCAL_COMMUNITY -> localizedString("nav.circle.local_community")
+    CohortScope.GLOBAL_COMMUNITIES -> localizedString("nav.circle.global_communities")
+    CohortScope.GLOBAL_COMMONS -> localizedString("nav.circle.global_commons")
+}

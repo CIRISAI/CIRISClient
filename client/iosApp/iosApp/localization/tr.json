@@ -1260,6 +1260,13 @@
     "billing_check_connection": "Bağlantınızı kontrol edin ve tekrar deneyin",
     "billing_no_products": "Ürün yok",
     "billing_packages": "Kredi Paketleri",
+    "ceremony_proposed_by": "{who} tarafından önerildi · {when}",
+    "ceremony_sign": "İmzala",
+    "ceremony_refuse": "Reddet",
+    "ceremony_state_proposed": "önerildi",
+    "ceremony_state_signed": "imzalandı",
+    "ceremony_state_not_yet": "henüz değil",
+    "receipt_this_node": "Bu düğüm — siz",
     "chat_an_agent": "Bir ajan",
     "child_safety_class_csam": "CSAM (bir eşleşme otomatik olarak kaldırma bildirimi dosyalar — ayrıca kaldırma görevi gerektirir)",
     "child_safety_class_label": "İzleme listesi sınıfı",
@@ -2923,6 +2930,26 @@
     "wallet_trust_degraded": "Donanım Güveni Düşmüş",
     "wallet_warning": "Uyarı",
     "trace_consent_decline_note": "Vazgeçmek, ajanınızın bir kapasite skoru oluşturamayacağı veya commons kredisi kazanamayacağı anlamına gelir. Bunu daha sonra değiştirebilirsiniz.",
+    "people_title": "Kişiler",
+    "contacts_node_too_old_body_versioned": "Bu düğüm {version} sürümünü çalıştırıyor. Kişiler ve sohbet, ciris-server 0.5.185 veya daha yeni bir sürüm gerektirir; bu nedenle henüz yanıt veremiyor — diğer her şey normal şekilde çalışıyor.",
+    "receipt_title": "Makbuz",
+    "receipt_open": "Makbuzu aç",
+    "receipt_close": "Kapat",
+    "receipt_holders": "Baytların bulunduğu yer",
+    "receipt_holders_count": "{count} kopya sahibi",
+    "receipt_notes": "Başkalarının bıraktığı notlar",
+    "receipt_notes_none": "Henüz kimse not bırakmadı.",
+    "receipt_acts": "Yapabilecekleriniz",
+    "receipt_contact_scope_note": "İznin kendisi herkese açık bir kayıttır. Birbirinize gönderdikleriniz değildir.",
+    "state_loading": "Yükleniyor",
+    "state_error": "Bir şeyler ters gitti",
+    "state_gone": "Bu dosya artık yok. Artık kimse bir kopyasını tutmuyor.",
+    "state_hidden_by_rules": "Kurallarınız tarafından gizlendi.",
+    "state_hidden_by_rules_who": "Kurallarınız tarafından gizlendi — {who} etiketledi.",
+    "state_unreviewed": "İncelenmedi",
+    "state_unreviewed_since": "{when}'den beri incelenmedi",
+    "confirm_cancel": "Şimdi değil",
+    "ceremony_signed_of": "{needed} içinden {signed} imzalandı",
     "verify_title": "Bir derlemeyi doğrula",
     "verify_hash_label": "Derleme hash'i",
     "verify_button": "Kontrol Et",
@@ -3161,6 +3188,13 @@
       "users": "Kullanıcılar",
       "wallet": "Cüzdan",
       "wise_authority": "Bilge Otorite"
+    },
+    "circle": {
+      "agent": "Sadece ben",
+      "family": "Aile",
+      "local_community": "Komşular",
+      "global_communities": "Topluluklar ve İşletmeler",
+      "global_commons": "Herkes"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "Bu federasyon kimliği bu düğümün dizininde yok. Önce anahtarı kabul edin (eşleme) — duyurulmuş ama kabul edilmemiş bir yer imi hiçbir köken bilgisi taşımaz ve ona onay verilemez.",
     "unreachable": "Onlar tanınıyor, ancak hiçbir yanıt alınamadı. Cihazları çevrimdışı olabilir; geri döndüklerinde mesajlar onlara ulaşacaktır.",
     "unresolvable": "Bu tanımlayıcı bir kişiye çözümlenmiyor."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Kimin hakkında",
+        "gloss": "Bu kaydın adlandırdığı kişiler. Her biri onu geri alabilir."
+      },
+      "attesting_key_id": {
+        "label": "Kimin gönderdiği",
+        "gloss": "Bu kaydı imzalayan anahtar. Başka hiç kimse imzalayamazdı."
+      },
+      "cohort_scope": {
+        "label": "Kimler görebilir",
+        "gloss": "Bu kaydın içinde dolaşabileceği daire. Bu daireden çıkmak önce izin ister."
+      },
+      "dimension": {
+        "label": "Ne olduğu",
+        "gloss": "Kaydın türü; her düğümün aynı şekilde okuduğu ortak sözlükte."
+      },
+      "consent_scope": {
+        "label": "İzlediği kural",
+        "gloss": "Bu kayıtla ardından ne olabileceği: saklanması, paylaşılması veya analiz edilmesi."
+      },
+      "not_sent": "Bu düğüm bunu göndermedi.",
+      "by_rule": "Bu tür kayıt ({cc}) için kural tarafından sabitlenmiştir; bu düğüm tarafından gönderilmemiştir."
+    },
+    "consent_kind": {
+      "label": "Onay",
+      "gloss": "Bir kişinin, kendisini adlandıran kayıtlarla neler olabileceğine onay verdiği şey; ya da bir düğümün bir eşe göndermeyi kabul ettiği şey."
+    },
+    "trust_job_version": {
+      "label": "Kim kime kefil oluyor",
+      "gloss": "Bir anahtarın, belirtilen bir görev için başka bir anahtarın arkasında durduğuna dair bir beyan."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Bir kopya tutuyor",
+      "gloss": "Bir düğümün, karmasıyla adlandırılan bir dosyanın baytlarını tuttuğunu bildirmesi."
+    },
+    "objection_state": {
+      "label": "Biri sesini yükseltti",
+      "gloss": "Bir kişinin itirazı ve onun nerede durduğu. Hiçbir zaman sınırlandırılmaz."
+    },
+    "content_class_class": {
+      "label": "İçerik türü",
+      "gloss": "Bir dosyanın ne türden bir şey olduğu; her düğümün paylaştığı kapalı bir listeden."
+    },
+    "credits_domain_language_subject": {
+      "label": "Müşterekler kredisi",
+      "gloss": "Yardım ederek kazanılır. Sadece artarlar; gönderilemez veya satılamazlar."
+    },
+    "prohibited_category": {
+      "label": "İzin verilmiyor",
+      "gloss": "Bir şeyin, anayasanın çizdiği sınırlardan birini aştığına dair bir işaret. Her zaman sadece bir eksidir."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Makbuz",
+      "gloss": "Bir şeyin teslim edildiğine dair bir kayıt. Makbuzu geri almak teslimatı geri almaz."
+    },
+    "renderer": {
+      "verified": "Doğrulandı",
+      "not_verified": "Doğrulanmadı",
+      "indeterminate": "Belirsiz",
+      "violation": "Sınırı aştı",
+      "partial_violation": "Sınırı kısmen aştı",
+      "self_report": "Düğümün kendi beyanı",
+      "granted": "Verildi",
+      "revoked": "İptal edildi",
+      "expired": "Süresi doldu"
+    }
   }
 }

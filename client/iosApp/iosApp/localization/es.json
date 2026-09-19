@@ -2923,6 +2923,33 @@
     "wallet_trust_degraded": "Confianza de Hardware Degradada",
     "wallet_warning": "Advertencia",
     "trace_consent_decline_note": "Si lo rechazas, tu agente no podrá construir una puntuación de capacidad ni ganar créditos comunes. Puedes cambiarlo más adelante.",
+    "people_title": "Personas",
+    "contacts_node_too_old_body_versioned": "Este nodo ejecuta la versión {version}. Los contactos y el chat necesitan ciris-server 0.5.185 o más reciente, por lo que todavía no puede responder — todo lo demás funciona con normalidad.",
+    "receipt_title": "Recibo",
+    "receipt_open": "Abrir el recibo",
+    "receipt_close": "Cerrar",
+    "receipt_holders": "Dónde están los bytes",
+    "receipt_holders_count": "{count} titular(es)",
+    "receipt_notes": "Notas que otros dejaron",
+    "receipt_notes_none": "Nadie ha dejado una nota.",
+    "receipt_acts": "Qué puedes hacer",
+    "receipt_contact_scope_note": "La concesión en sí es un registro público. Lo que se envían entre ustedes no lo es.",
+    "state_loading": "Cargando",
+    "state_error": "Algo salió mal",
+    "state_gone": "Este archivo ya no existe. Nadie tiene una copia.",
+    "state_hidden_by_rules": "Oculto por tus reglas.",
+    "state_hidden_by_rules_who": "Oculto por tus reglas — {who} lo etiquetó.",
+    "state_unreviewed": "Sin revisar",
+    "state_unreviewed_since": "Sin revisar desde {when}",
+    "confirm_cancel": "Ahora no",
+    "ceremony_signed_of": "{signed} de {needed} firmados",
+    "ceremony_proposed_by": "propuesto por {who} · {when}",
+    "ceremony_sign": "Firmarlo",
+    "ceremony_refuse": "Decir que no",
+    "ceremony_state_proposed": "propuesto",
+    "ceremony_state_signed": "firmado",
+    "ceremony_state_not_yet": "todavía no",
+    "receipt_this_node": "Este nodo — tú",
     "verify_title": "Verificar una compilación",
     "verify_hash_label": "Hash de la compilación",
     "verify_button": "Comprobar",
@@ -3161,6 +3188,13 @@
       "users": "Usuarios",
       "wallet": "Billetera",
       "wise_authority": "Autoridad Sabia"
+    },
+    "circle": {
+      "agent": "Solo yo",
+      "family": "Familia",
+      "local_community": "Vecinos",
+      "global_communities": "Comunidades y empresas",
+      "global_commons": "Todos"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "Ese ID de federación no está en el directorio de este nodo. Admite primero la clave (peering) — un marcador anunciado pero no admitido no lleva procedencia y no puede recibir consentimiento.",
     "unreachable": "Se les conoce, pero nada respondió. Sus dispositivos pueden estar fuera de línea; los mensajes les llegarán cuando vuelvan.",
     "unresolvable": "Ese identificador no corresponde a ningún contacto."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "De quién trata",
+        "gloss": "Las personas que nombra este registro. Cada una de ellas puede retirarlo."
+      },
+      "attesting_key_id": {
+        "label": "Quién lo envió",
+        "gloss": "La clave que firmó este registro. Nadie más pudo haberlo hecho."
+      },
+      "cohort_scope": {
+        "label": "Quién puede verlo",
+        "gloss": "El círculo en el que este registro puede circular. Salir de él pide permiso primero."
+      },
+      "dimension": {
+        "label": "Qué es",
+        "gloss": "El tipo de registro, en el vocabulario compartido que todos los nodos leen igual."
+      },
+      "consent_scope": {
+        "label": "La regla que cumple",
+        "gloss": "Qué puede pasar después con este registro: conservarlo, compartirlo o analizarlo."
+      },
+      "not_sent": "Este nodo no envió esto.",
+      "by_rule": "Fijado por la regla para este tipo de registro ({cc}); no enviado por este nodo."
+    },
+    "consent_kind": {
+      "label": "Consentimiento",
+      "gloss": "Lo que una persona ha aceptado que puede ocurrir con los registros que la nombran, o lo que un nodo ha aceptado enviar a un par."
+    },
+    "trust_job_version": {
+      "label": "Quién avala a quién",
+      "gloss": "Una declaración de que una clave respalda a otra para una función especificada."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Tiene una copia",
+      "gloss": "Un nodo que declara que posee los bytes de un archivo, identificados por su hash."
+    },
+    "objection_state": {
+      "label": "Alguien objetó",
+      "gloss": "La objeción de una persona, y en qué punto se encuentra. Nunca se limita su frecuencia."
+    },
+    "content_class_class": {
+      "label": "Tipo de contenido",
+      "gloss": "Qué tipo de cosa es un archivo, de una lista cerrada que todos los nodos comparten."
+    },
+    "credits_domain_language_subject": {
+      "label": "Créditos del bien común",
+      "gloss": "Se ganan ayudando. Solo suben, y no se pueden enviar ni vender."
+    },
+    "prohibited_category": {
+      "label": "No permitido",
+      "gloss": "Una marca de que algo cruzó una de las líneas que traza la constitución. Siempre es un punto en contra."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Recibo",
+      "gloss": "Un registro de que algo fue entregado. Deshacer el recibo no deshace la entrega."
+    },
+    "renderer": {
+      "verified": "Verificado",
+      "not_verified": "No verificado",
+      "indeterminate": "Indeterminado",
+      "violation": "Cruzó una línea",
+      "partial_violation": "Cruzó parcialmente una línea",
+      "self_report": "Informado por el propio nodo",
+      "granted": "Concedido",
+      "revoked": "Revocado",
+      "expired": "Vencido"
+    }
   }
 }

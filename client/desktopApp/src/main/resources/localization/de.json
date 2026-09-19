@@ -2947,6 +2947,33 @@
     "wallet_trust_degraded": "Hardware-Vertrauen herabgestuft",
     "wallet_warning": "Warnung",
     "trace_consent_decline_note": "Wenn Sie sich dagegen entscheiden, kann Ihr Agent keinen Capacity-Score aufbauen oder Commons-Credits verdienen. Sie können dies später ändern.",
+    "people_title": "Personen",
+    "contacts_node_too_old_body_versioned": "Dieser Knoten läuft mit {version}. Kontakte und Chat benötigen ciris-server 0.5.185 oder neuer, daher kann er noch nicht antworten — alles andere funktioniert normal.",
+    "receipt_title": "Quittung",
+    "receipt_open": "Quittung öffnen",
+    "receipt_close": "Schließen",
+    "receipt_holders": "Wo sich die Bytes befinden",
+    "receipt_holders_count": "{count} Inhaber",
+    "receipt_notes": "Notizen von anderen",
+    "receipt_notes_none": "Niemand hat eine Notiz hinterlassen.",
+    "receipt_acts": "Was Sie tun können",
+    "receipt_contact_scope_note": "Die Gewährung selbst ist ein öffentlicher Datensatz. Was Sie einander senden, ist es nicht.",
+    "state_loading": "Wird geladen...",
+    "state_error": "Etwas ist schiefgelaufen",
+    "state_gone": "Diese Datei ist nicht mehr vorhanden. Niemand hält mehr eine Kopie.",
+    "state_hidden_by_rules": "Durch Ihre Regeln ausgeblendet.",
+    "state_hidden_by_rules_who": "Durch Ihre Regeln ausgeblendet — {who} hat es markiert.",
+    "state_unreviewed": "Nicht geprüft",
+    "state_unreviewed_since": "Seit {when} nicht geprüft",
+    "confirm_cancel": "Jetzt nicht",
+    "ceremony_signed_of": "{signed} von {needed} signiert",
+    "ceremony_proposed_by": "vorgeschlagen von {who} · {when}",
+    "ceremony_sign": "Signieren",
+    "ceremony_refuse": "Ablehnen",
+    "ceremony_state_proposed": "vorgeschlagen",
+    "ceremony_state_signed": "signiert",
+    "ceremony_state_not_yet": "noch nicht",
+    "receipt_this_node": "Dieser Knoten — Sie",
     "verify_title": "Build verifizieren",
     "verify_hash_label": "Build-Hash",
     "verify_button": "Prüfen",
@@ -3161,6 +3188,13 @@
       "users": "Benutzer",
       "wallet": "Wallet",
       "wise_authority": "Menschlicher Berater"
+    },
+    "circle": {
+      "agent": "Nur ich",
+      "family": "Familie",
+      "local_community": "Nachbarn",
+      "global_communities": "Gemeinschaften und Unternehmen",
+      "global_commons": "Alle"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "Diese Föderations-ID ist nicht im Verzeichnis dieses Knotens. Lassen Sie den Schlüssel zuerst zu (Peering) — ein angekündigtes, aber nicht zugelassenes Lesezeichen trägt keine Provenienz und kann keine Einwilligung erhalten.",
     "unreachable": "Diese Person ist bekannt, aber es kam keine Antwort. Ihre Geräte sind möglicherweise offline; Nachrichten erreichen sie, sobald sie wieder online sind.",
     "unresolvable": "Diese Kennung lässt sich keinem Kontakt zuordnen."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Um wen es geht",
+        "gloss": "Die Personen, die dieser Datensatz nennt. Jede von ihnen kann ihn zurückziehen."
+      },
+      "attesting_key_id": {
+        "label": "Wer es gesendet hat",
+        "gloss": "Der Schlüssel, der diesen Datensatz signiert hat. Niemand anders hätte es können."
+      },
+      "cohort_scope": {
+        "label": "Wer es sehen kann",
+        "gloss": "Der Kreis, in dem sich dieser Datensatz bewegen darf. Um ihn zu verlassen, wird zuerst gefragt."
+      },
+      "dimension": {
+        "label": "Was es ist",
+        "gloss": "Die Art des Datensatzes, im gemeinsamen Vokabular, das jeder Knoten gleich liest."
+      },
+      "consent_scope": {
+        "label": "Die Regel, der es folgt",
+        "gloss": "Was als Nächstes mit diesem Datensatz geschehen darf: aufbewahrt, geteilt oder analysiert."
+      },
+      "not_sent": "Dieser Knoten hat dies nicht gesendet.",
+      "by_rule": "Durch die Regel für diese Art von Datensatz ({cc}) festgelegt; nicht von diesem Knoten gesendet."
+    },
+    "consent_kind": {
+      "label": "Zustimmung",
+      "gloss": "Wozu eine Person zugestimmt hat, was mit Datensätzen geschehen darf, die sie nennen, oder was ein Knoten zugesagt hat, an einen Peer zu senden."
+    },
+    "trust_job_version": {
+      "label": "Wer für wen bürgt",
+      "gloss": "Die Aussage, dass ein Schlüssel bei einer angegebenen Aufgabe für einen anderen Schlüssel einsteht."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Hält eine Kopie",
+      "gloss": "Eine Aussage eines Knotens, dass er die Bytes einer Datei hält, benannt durch ihren Hash."
+    },
+    "objection_state": {
+      "label": "Jemand hat sich gemeldet",
+      "gloss": "Der Einspruch einer Person und ihr aktueller Stand. Niemals gedrosselt."
+    },
+    "content_class_class": {
+      "label": "Art des Inhalts",
+      "gloss": "Um welche Art von Datei es sich handelt, aus einer geschlossenen Liste, die jeder Knoten teilt."
+    },
+    "credits_domain_language_subject": {
+      "label": "Gemeingut-Punkte",
+      "gloss": "Durch Hilfe verdient. Sie steigen nur, und sie können weder gesendet noch verkauft werden."
+    },
+    "prohibited_category": {
+      "label": "Nicht erlaubt",
+      "gloss": "Eine Markierung, dass etwas eine der Grenzen überschritten hat, die die Verfassung zieht. Es ist immer nur ein Minus."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Quittung",
+      "gloss": "Ein Datensatz, der bestätigt, dass etwas zugestellt wurde. Das Rückgängigmachen der Quittung macht die Zustellung nicht ungeschehen."
+    },
+    "renderer": {
+      "verified": "Verifiziert",
+      "not_verified": "Nicht verifiziert",
+      "indeterminate": "Unbestimmt",
+      "violation": "Eine Grenze überschritten",
+      "partial_violation": "Teilweise eine Grenze überschritten",
+      "self_report": "Vom Knoten selbst gemeldet",
+      "granted": "Gewährt",
+      "revoked": "Widerrufen",
+      "expired": "Abgelaufen"
+    }
   }
 }

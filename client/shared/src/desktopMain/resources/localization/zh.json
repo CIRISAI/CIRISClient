@@ -1376,6 +1376,32 @@
     "consent_switch_temporary": "切换到临时将设置 14 天自动遗忘期。继续？",
     "consent_users_helped": "帮助的用户",
     "consent_view_only": "您只能查看和管理自己的同意设置。",
+    "contacts_node_too_old_body_versioned": "此节点运行的是 {version}。联系人和聊天功能需要 ciris-server 0.5.185 或更新版本，因此暂时无法响应——其他功能均正常。",
+    "receipt_title": "收据",
+    "receipt_open": "查看收据",
+    "receipt_close": "关闭",
+    "receipt_holders": "字节所在位置",
+    "receipt_holders_count": "{count} 位持有者",
+    "receipt_notes": "他人留下的备注",
+    "receipt_notes_none": "尚无人留下备注。",
+    "receipt_acts": "可执行的操作",
+    "receipt_contact_scope_note": "该授权本身是公开记录，但您们之间发送的内容并非如此。",
+    "state_loading": "加载中",
+    "state_error": "出了点问题",
+    "state_gone": "此文件已不存在。已无人持有副本。",
+    "state_hidden_by_rules": "已根据您的规则隐藏。",
+    "state_hidden_by_rules_who": "已根据您的规则隐藏 — {who} 对其打了标签。",
+    "state_unreviewed": "尚未审核",
+    "state_unreviewed_since": "自 {when} 起尚未审核",
+    "confirm_cancel": "暂不",
+    "ceremony_signed_of": "{signed}/{needed} 已签署",
+    "ceremony_proposed_by": "由 {who} 提议 · {when}",
+    "ceremony_sign": "签署",
+    "ceremony_refuse": "拒绝",
+    "ceremony_state_proposed": "已提议",
+    "ceremony_state_signed": "已签署",
+    "ceremony_state_not_yet": "尚未",
+    "receipt_this_node": "本节点 — 您",
     "credits_error_generic": "无法处理您的消息。请稍后重试。",
     "credits_error_network": "网络错误。请检查您的连接并重试。",
     "credits_error_server": "服务器暂时不可用。请稍后重试。",
@@ -2923,6 +2949,7 @@
     "wallet_trust_degraded": "硬件信任降级",
     "wallet_warning": "警告",
     "trace_consent_decline_note": "选择退出意味着您的智能体无法建立 capacity 分数，也无法获得公共积分（commons credits）。您可以稍后更改此设置。",
+    "people_title": "人物",
     "verify_title": "验证构建版本",
     "verify_hash_label": "构建哈希",
     "verify_button": "检查",
@@ -3161,6 +3188,13 @@
       "users": "用户",
       "wallet": "钱包",
       "wise_authority": "智慧权威"
+    },
+    "circle": {
+      "agent": "仅我本人",
+      "family": "家族",
+      "local_community": "邻里",
+      "global_communities": "社区与企业",
+      "global_commons": "所有人"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "该联邦 ID 不在此节点的目录中。请先准入该密钥（对等接入）——仅公告而未准入的书签不携带任何来源信息，无法对其授予同意。",
     "unreachable": "对方是已知的，但没有收到任何回应。对方的设备可能处于离线状态；待对方设备恢复后，消息将会送达。",
     "unresolvable": "该标识符无法解析为联系人。"
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "涉及对象",
+        "gloss": "此记录所指名的人。他们每一位都可以将其撤回。"
+      },
+      "attesting_key_id": {
+        "gloss": "签署此记录的密钥。任何其他人都不可能做到。",
+        "label": "由谁发送"
+      },
+      "cohort_scope": {
+        "label": "可见范围",
+        "gloss": "此记录可以流转的范围。离开此范围前会先征询同意。"
+      },
+      "dimension": {
+        "label": "类型",
+        "gloss": "记录的种类，采用所有节点以相同方式解读的共享词汇。"
+      },
+      "consent_scope": {
+        "label": "所遵循的同意规则",
+        "gloss": "此记录接下来可能发生的处理方式：保留、共享或分析。"
+      },
+      "not_sent": "本节点并未发送此内容。",
+      "by_rule": "由该类记录（{cc}）的规则固定；并非由本节点发送。"
+    },
+    "consent_kind": {
+      "label": "同意",
+      "gloss": "个人同意可以对指名自己的记录做何种处理，或节点同意向对等方发送何种内容。"
+    },
+    "trust_job_version": {
+      "label": "谁为谁作担保",
+      "gloss": "声明某一密钥在指定任务上为另一密钥作背书。"
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "持有副本",
+      "gloss": "某节点声明自己持有某文件的字节内容，以其哈希值命名。"
+    },
+    "objection_state": {
+      "label": "有人提出异议",
+      "gloss": "某一个人的异议及其当前状态。绝不会被限流。"
+    },
+    "content_class_class": {
+      "label": "内容类型",
+      "gloss": "文件属于哪一类，取自所有节点共享的一份封闭列表。"
+    },
+    "credits_domain_language_subject": {
+      "label": "公域积分",
+      "gloss": "通过帮助他人赢得。只会增加，不能被发送或出售。"
+    },
+    "prohibited_category": {
+      "label": "不允许",
+      "gloss": "表明某事越过了宪章所划定的某条界线的标记。它始终只会是扣分项。"
+    },
+    "delivery_receipt_stream_id": {
+      "label": "收据",
+      "gloss": "记录某物已被投递的凭证。撤销此凭证并不会撤销投递本身。"
+    },
+    "renderer": {
+      "verified": "已验证",
+      "not_verified": "未验证",
+      "indeterminate": "不确定",
+      "violation": "越界",
+      "partial_violation": "部分越界",
+      "self_report": "由节点自行报告",
+      "granted": "已授予",
+      "revoked": "已撤销",
+      "expired": "已过期"
+    }
   }
 }

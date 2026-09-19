@@ -2923,6 +2923,33 @@
     "wallet_trust_degraded": "ስልክ ሥቅ ተዳክሞ ነበር",
     "wallet_warning": "ማስጠንቀቂያ",
     "trace_consent_decline_note": "አለመቀበል ማለት ወኪልዎ የአቅም ነጥብ መገንባት ወይም የጋራ ክሬዲቶች ማግኘት አይችልም ማለት ነው። ይህን በኋላ መቀየር ይችላሉ።",
+    "people_title": "ሰዎች",
+    "contacts_node_too_old_body_versioned": "ይህ ኖድ {version} እያሄደ ነው። እውቂያዎች እና ውይይት ciris-server 0.5.185 ወይም አዲስ ይፈልጋሉ፣ ስለዚህ ገና መመለስ አይችልም — ሌላው ሁሉ በመደበኛነት ይሰራል።",
+    "receipt_title": "ደረሰኝ",
+    "receipt_open": "ደረሰኙን ይክፈቱ",
+    "receipt_close": "ይዝጉ",
+    "receipt_holders": "ባይቶቹ የሚገኙበት",
+    "receipt_holders_count": "{count} ያዥ(ዎች)",
+    "receipt_notes": "ሌሎች የተዉት ማስታወሻዎች",
+    "receipt_notes_none": "ማንም ማስታወሻ አልተወም።",
+    "receipt_acts": "እርስዎ ማድረግ የሚችሉት",
+    "receipt_contact_scope_note": "ራሱ ፈቃዱ የህዝብ መዝገብ ነው። እርስ በርስ የሚላኩት ግን አይደለም።",
+    "state_loading": "በመጫን ላይ",
+    "state_error": "የሆነ ችግር ተከስቷል",
+    "state_gone": "ይህ ፋይል ጠፍቷል። ከእንግዲህ ማንም ቅጂ አይዝም።",
+    "state_hidden_by_rules": "በእርስዎ ደንቦች ተደብቋል።",
+    "state_hidden_by_rules_who": "በእርስዎ ደንቦች ተደብቋል — {who} ምልክት አድርጎበታል።",
+    "state_unreviewed": "አልተገመገመም",
+    "state_unreviewed_since": "ከ{when} ጀምሮ አልተገመገመም",
+    "confirm_cancel": "አሁን አይሆንም",
+    "ceremony_signed_of": "ከ{needed} ውስጥ {signed} ተፈርመዋል",
+    "ceremony_proposed_by": "በ{who} የቀረበ · {when}",
+    "ceremony_sign": "ይፈርሙት",
+    "ceremony_refuse": "እምቢ ይበሉ",
+    "ceremony_state_proposed": "ቀርቧል",
+    "ceremony_state_signed": "ተፈርሟል",
+    "ceremony_state_not_yet": "ገና አልተፈረመም",
+    "receipt_this_node": "ይህ ኖድ — እርስዎ",
     "verify_title": "ግንባታ ማረጋገጥ",
     "verify_hash_label": "የግንባታ ሃሽ",
     "verify_button": "አረጋግጥ",
@@ -3161,6 +3188,13 @@
       "users": "ተጠቃሚዎች",
       "wallet": "ቦርሳ",
       "wise_authority": "የጥበብ ባለስልጣን"
+    },
+    "circle": {
+      "agent": "እኔ ብቻ",
+      "family": "ቤተሰብ",
+      "local_community": "ጎረቤቶች",
+      "global_communities": "ማህበረሰቦች እና ንግዶች",
+      "global_commons": "ሁሉም"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "ያ የፌዴሬሽን መለያ በዚህ ኖድ ማውጫ ውስጥ የለም። መጀመሪያ ቁልፉን ያስገቡ (peering) — የታወጀ-ግን-ያልገባ ምልክት ምንም ምንጭ የለውም እና ፈቃድ ሊሰጠው አይችልም።",
     "unreachable": "እነሱ ይታወቃሉ፣ ነገር ግን ምንም ምላሽ አልተሰጠም። መሣሪያዎቻቸው ከመስመር ውጭ ሊሆኑ ይችላሉ፤ ሲመለሱ መልዕክቶች ይደርሷቸዋል።",
     "unresolvable": "ያ መለያ ወደ እውቂያ አይፈታም።"
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "ስለ ማን እንደሆነ",
+        "gloss": "ይህ መዝገብ የሚጠቅሳቸው ሰዎች። እያንዳንዳቸው መልሰው ሊያነሱት ይችላሉ።"
+      },
+      "attesting_key_id": {
+        "label": "የላከው ማን ነው",
+        "gloss": "ይህን መዝገብ የፈረመው ቁልፍ። ሌላ ማንም ሊፈርመው አይችልም ነበር።"
+      },
+      "cohort_scope": {
+        "label": "ማን ማየት ይችላል",
+        "gloss": "ይህ መዝገብ ሊዘዋወርበት የሚችለው ክብ። ከዚያ ውጪ ከመሄዱ በፊት ይጠይቃል።"
+      },
+      "dimension": {
+        "label": "ምን እንደሆነ",
+        "gloss": "ሁሉም ኖድ በተመሳሳይ መንገድ በሚያነበው የጋራ ቃላት፣ የመዝገቡ ዓይነት።"
+      },
+      "consent_scope": {
+        "label": "የሚከተለው ደንብ",
+        "gloss": "ከዚህ መዝገብ ጋር ከዚህ በኋላ ሊሆን የሚችለው፦ መቆየት፣ መጋራት፣ ወይም መተንተን።"
+      },
+      "not_sent": "ይህ ኖድ ይህን አልላከም።",
+      "by_rule": "ለዚህ ዓይነት መዝገብ ({cc}) በደንብ የተወሰነ፤ በዚህ ኖድ አልተላከም።"
+    },
+    "consent_kind": {
+      "label": "ስምምነት",
+      "gloss": "አንድ ሰው ስሙ በሚጠቀስባቸው መዝገቦች ላይ እንዲፈጸም የተስማማበት ነገር፣ ወይም ኖድ ወደ አጋር ለመላክ የተስማማበት ነገር።"
+    },
+    "trust_job_version": {
+      "label": "ማን ለማን ይመሰክራል?",
+      "gloss": "አንድ ቁልፍ ለተነገረ ስራ ከሌላ ቁልፍ ጀርባ እንደሚቆም የሚገልጽ መግለጫ።"
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "ቅጂ ይዟል",
+      "gloss": "ኖድ ለአንድ ፋይል ባይቶችን እንደያዘ የሚናገር፣ በሃሽ ስም የተጠቀሱ።"
+    },
+    "objection_state": {
+      "label": "አንድ ሰው ተናግሯል",
+      "gloss": "የአንድ ሰው ተቃውሞ፣ እና ያለበት ሁኔታ። ፈጽሞ ገደብ አይደረግበትም።"
+    },
+    "content_class_class": {
+      "label": "የይዘት ዓይነት",
+      "gloss": "ፋይል ምን ዓይነት ነገር እንደሆነ፣ ሁሉም ኖድ ከሚጋራው ዝግ ዝርዝር።"
+    },
+    "credits_domain_language_subject": {
+      "label": "የጋራ ክሬዲቶች",
+      "gloss": "በመርዳት የሚገኙ። ወደ ላይ ብቻ ይጨምራሉ፣ ሊላኩም ሊሸጡም አይችሉም።"
+    },
+    "prohibited_category": {
+      "label": "አይፈቀድም",
+      "gloss": "ሕገ-መንግሥቱ ከሚስላቸው መስመሮች አንዱን አንድ ነገር እንዳለፈ የሚያሳይ ምልክት። ፈጽሞ ሲቀነስ ብቻ ነው።"
+    },
+    "delivery_receipt_stream_id": {
+      "label": "ደረሰኝ",
+      "gloss": "ነገር እንደተላከ የሚያሳይ መዝገብ። ደረሰኙን መሰረዝ መላኩን አይሰርዝም።"
+    },
+    "renderer": {
+      "verified": "ተረጋግጧል",
+      "not_verified": "አልተረጋገጠም",
+      "indeterminate": "ያልተወሰነ",
+      "violation": "መስመር አልፏል",
+      "partial_violation": "በከፊል መስመር አልፏል",
+      "self_report": "በኖዱ ራሱ የተሰጠ ሪፖርት",
+      "granted": "ተፈቅዷል",
+      "revoked": "ተሰርዟል",
+      "expired": "ጊዜው አልፎበታል"
+    }
   }
 }

@@ -1260,6 +1260,12 @@
     "billing_check_connection": "接続を確認してもう一度お試しください",
     "billing_no_products": "製品が利用できません",
     "billing_packages": "クレジットパッケージ",
+    "ceremony_proposed_by": "{who} が提案 · {when}",
+    "ceremony_sign": "署名する",
+    "ceremony_refuse": "拒否する",
+    "ceremony_state_proposed": "提案済み",
+    "ceremony_state_signed": "署名済み",
+    "ceremony_state_not_yet": "まだ行われていません",
     "chat_an_agent": "エージェント",
     "child_safety_class_csam": "CSAM（一致すると自動的にテイクダウンを提出 — テイクダウン責務も必要）",
     "child_safety_class_label": "ウォッチリストの分類",
@@ -2055,6 +2061,21 @@
     "provision_holder_usb_guidance": "マウント済みUSBフォルダのフルパスを入力してください。存在し、書き込み可能である必要があります。",
     "provision_holder_usb_label": "ML-DSA USBフォルダのパス",
     "provision_holder_usb_placeholder": "/media/you/USB または /Volumes/USB",
+    "receipt_holders_count": "保持者 {count} 名",
+    "receipt_notes": "他の人が残したメモ",
+    "receipt_notes_none": "メモを残した人はいません。",
+    "receipt_acts": "できること",
+    "receipt_contact_scope_note": "許可そのものは公開レコードですが、やり取りする内容は公開されません。",
+    "receipt_this_node": "このノード — あなた",
+    "state_loading": "読み込み中",
+    "state_error": "エラーが発生しました",
+    "state_gone": "このファイルは失われました。もう誰もコピーを保持していません。",
+    "state_hidden_by_rules": "あなたのルールによって非表示になっています。",
+    "state_hidden_by_rules_who": "あなたのルールによって非表示になっています — {who} がタグ付けしました。",
+    "state_unreviewed": "未確認",
+    "state_unreviewed_since": "{when} から未確認です",
+    "confirm_cancel": "今はしない",
+    "ceremony_signed_of": "{signed}/{needed} 署名済み",
     "runtime_active_tasks": "アクティブなタスク",
     "runtime_admin_hint": "ランタイム制御操作には管理者権限が必要です。現在の状態は表示できますが、ランタイム実行を変更することはできません。",
     "runtime_admin_required": "管理者アクセスが必要",
@@ -2923,6 +2944,12 @@
     "wallet_trust_degraded": "ハードウェア信頼が低下しました",
     "wallet_warning": "警告",
     "trace_consent_decline_note": "オプトアウトすると、あなたのエージェントはcapacityスコアを構築したり、コモンズクレジットを獲得したりできなくなります。後から変更できます。",
+    "people_title": "人々",
+    "contacts_node_too_old_body_versioned": "このノードは {version} で動作しています。連絡先とチャットには ciris-server 0.5.185 以降が必要なため、まだ応答できません — その他の機能は通常どおり動作します。",
+    "receipt_title": "受領記録",
+    "receipt_open": "受領記録を開く",
+    "receipt_close": "閉じる",
+    "receipt_holders": "バイト列の所在",
     "verify_title": "ビルドを検証する",
     "verify_hash_label": "ビルドハッシュ",
     "verify_button": "確認",
@@ -3161,6 +3188,13 @@
       "users": "ユーザー",
       "wallet": "ウォレット",
       "wise_authority": "賢明な権威"
+    },
+    "circle": {
+      "agent": "自分のみ",
+      "family": "ファミリー",
+      "local_community": "近隣の人々",
+      "global_communities": "コミュニティと企業",
+      "global_commons": "全員"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "そのフェデレーション ID はこのノードのディレクトリにありません。まず鍵を承認(ピアリング)してください。アナウンス済みでも未承認のブックマークには来歴がなく、同意の対象にできません。",
     "unreachable": "相手は既知ですが、応答がありませんでした。相手のデバイスがオフラインの可能性があります。メッセージは相手が戻った際に届きます。",
     "unresolvable": "その識別子は連絡先として解決できません。"
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "対象者",
+        "gloss": "このレコードが名前を挙げている人々です。それぞれが撤回できます。"
+      },
+      "attesting_key_id": {
+        "label": "送信者",
+        "gloss": "このレコードに署名した鍵です。他の誰にも署名できませんでした。"
+      },
+      "cohort_scope": {
+        "label": "閲覧できる範囲",
+        "gloss": "このレコードが移動できる範囲です。その範囲を出るには、まず確認が必要です。"
+      },
+      "dimension": {
+        "label": "種別",
+        "gloss": "すべてのノードが同じ意味で読み取る共有語彙における、レコードの種類です。"
+      },
+      "consent_scope": {
+        "gloss": "このレコードについて次に何が行われうるか：保存、共有、または分析です。",
+        "label": "従うルール"
+      },
+      "not_sent": "このノードはこれを送信していません。",
+      "by_rule": "この種類のレコード（{cc}）のルールによって固定されており、このノードが送信したものではありません。"
+    },
+    "consent_kind": {
+      "label": "同意",
+      "gloss": "本人が、自分の名前を記載したレコードについて何が行われることに同意したか、あるいはノードがピアへ送信することに同意した内容です。"
+    },
+    "trust_job_version": {
+      "gloss": "ある鍵が、定められた役割において別の鍵を保証しているという主張です。",
+      "label": "誰が誰を保証しているか"
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "コピーを保持",
+      "gloss": "ノードが、ハッシュによって特定されるファイルのバイト列を保持していると述べているものです。"
+    },
+    "objection_state": {
+      "label": "誰かが声を上げた",
+      "gloss": "一人の異議と、その現在の状態です。レート制限は決してかかりません。"
+    },
+    "content_class_class": {
+      "label": "コンテンツの種類",
+      "gloss": "ファイルがどのような種類のものかを示す、すべてのノードが共有する固定リストからの分類です。"
+    },
+    "credits_domain_language_subject": {
+      "label": "コモンズ・クレジット",
+      "gloss": "手助けによって得られるものです。増えるだけで、送信も売却もできません。"
+    },
+    "prohibited_category": {
+      "label": "許可されていない",
+      "gloss": "何かが憲法の定める境界線の一つを越えたことを示す印です。常にマイナスとしてのみ扱われます。"
+    },
+    "delivery_receipt_stream_id": {
+      "label": "受領記録",
+      "gloss": "何かが配送されたことを示すレコードです。受領記録を取り消しても、配送そのものが取り消されるわけではありません。"
+    },
+    "renderer": {
+      "verified": "検証済み",
+      "not_verified": "未検証",
+      "indeterminate": "不確定",
+      "violation": "境界を越えた",
+      "partial_violation": "部分的に境界を越えた",
+      "self_report": "ノード自身による報告",
+      "granted": "付与済み",
+      "revoked": "取り消し済み",
+      "expired": "期限切れ"
+    }
   }
 }
