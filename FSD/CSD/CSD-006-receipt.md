@@ -89,7 +89,7 @@ error:     {tag: receipt_rule, renders: "a NotSent fact renders 'This node did n
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the envelope on every list route | per surface | CIRISServer | **unconfirmed** — CSD-005 records the first ask |
+| the envelope on every list route | per surface | CIRISServer | **unconfirmed** — CIRISServer#616 is the first ask (contacts) |
 
 ## 4. Flow (how)
 

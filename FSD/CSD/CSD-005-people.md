@@ -70,8 +70,8 @@ fields:
 (`consent:scope`) and the holder count are `NotSent`: `GET /v1/contacts` omits
 the grant's `attestation_prefixes` and carries no holder information. The row
 says "This node did not send this." in the error tone rather than leaving a
-blank — an absent fact is a fact about the node. CIRISServer is asked to return
-the grant's envelope on the list route so those rows fill in without a client
+blank — an absent fact is a fact about the node. CIRISServer#616 asks for the
+grant's envelope on the list route so those rows fill in without a client
 change.
 
 `x_private:attesting_key_id` is `type: unconfirmed` deliberately: the identity
@@ -95,7 +95,7 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 |---|---|---|---|
 | contacts | `GET /v1/contacts` | CIRISServer | live since 0.5.185 |
 | add a contact | `POST /v1/contacts` | CIRISServer | live; returns `consent_prefixes` |
-| the grant's envelope on the list route | `GET /v1/contacts` — **unconfirmed** | CIRISServer | blocks `building` for `receipt_attester`, `receipt_rule`, `receipt_holders` |
+| the grant's envelope on the list route | `GET /v1/contacts` — **unconfirmed**, asked in CIRISServer#616 | CIRISServer | blocks `building` for `receipt_attester`, `receipt_rule`, `receipt_holders` |
 
 ## 4. Flow (how)
 
