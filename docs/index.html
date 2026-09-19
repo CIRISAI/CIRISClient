@@ -104,10 +104,25 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
 .fig{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 13px}
 .fig b{display:block;font-size:19px;line-height:1.2}
 .fig span{font-size:11.5px;color:var(--muted)}
+header .watch{margin-left:auto;font-size:13px;padding:6px 12px;border:1px solid var(--accent);
+  border-radius:8px;color:var(--accent);text-decoration:none;white-space:nowrap}
+header .watch:hover{background:var(--accent);color:#fff}
+.explainer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:center;
+  background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin:0 0 22px}
+.explainer img{width:100%;height:auto;border-radius:8px;border:1px solid var(--line);display:block}
+.explainer{text-decoration:none;color:inherit}
+.explainer:hover{border-color:var(--accent)}
+.explainer h2{font-size:19px;margin:0 0 6px;letter-spacing:-.01em;color:var(--ink)}
+.explainer p{margin:0 0 12px;font-size:14px;color:var(--muted);max-width:52ch}
+.explainer .cta{display:inline-block;background:var(--accent);color:#fff;text-decoration:none;
+  padding:9px 16px;border-radius:8px;font-size:14px}
+.explainer .cta:hover{filter:brightness(1.1)}
+@media (max-width:760px){.explainer{grid-template-columns:1fr}}
 </style></head><body>
 <header>
   <h1>CIRIS Screen Atlas</h1>
   <span class="meta" id="meta">loading…</span>
+  <a class="watch" href="circles.html" title="The plain-words explainer, animated (3¾ min)">▶ Watch the explainer</a>
 </header>
 <div class="wrap">
   <nav><input type="search" id="q" placeholder="Filter screens…"><div id="tree"></div></nav>
@@ -273,7 +288,14 @@ function renderIA(){
 function renderStart(){
   const m = document.getElementById('main'); const e = DATA.explainer;
   if (!e){ m.innerHTML = '<p class="note">No explainer in this manifest.</p>'; return; }
-  m.innerHTML = `<h2 style="font-size:19px;margin:0 0 4px;letter-spacing:-.01em">
+  m.innerHTML = `<a class="explainer" href="circles.html">
+      <img src="circles/poster.jpg" alt="Five circles — Just me, Family, Neighbours, Work, Everyone — with a form at the centre" width="960" height="537">
+      <div><h2>Starts close to you. Moves out only when you say so. Comes back if anyone in it asks.</h2>
+        <p>The whole idea in plain words, animated: what happens to a photo today, and what
+        CIRIS does instead — five circles, the five facts that travel with everything,
+        one person's brake, anyone-in-it takes it back. 3¾ minutes.</p>
+        <span class="cta">▶ Watch the explainer</span></div></a>
+    <h2 style="font-size:19px;margin:0 0 4px;letter-spacing:-.01em">
       What this is for</h2>
     <p class="note" style="margin:0 0 18px;max-width:64ch">Read this before the
     screenshots. It is the shortest path from what CIRIS believes to what the
