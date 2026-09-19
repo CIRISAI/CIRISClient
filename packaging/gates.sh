@@ -44,6 +44,12 @@ python3 packaging/check_vendoring.py
 python3 compat/validate.py
 python3 packaging/check_pins.py
 python3 client/tools/check_row_layout.py
+python3 client/tools/check_colour_literals.py
+python3 client/tools/gen_dimension_table.py --check
+python3 client/tools/gen_glyphs.py --check
+for f in FSD/CSD/CSD-*.md; do
+    python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
+done
 python3 client/tools/check_localization_sync.py --self-test --server-src "$EMITTERS"
 python3 client/tools/check_localization_sync.py --server-src "$EMITTERS" --strict
 echo "[OK] every release gate passed (emitters: CIRISServer@$ref)"

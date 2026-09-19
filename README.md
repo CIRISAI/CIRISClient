@@ -270,8 +270,12 @@ Two things to know:
 | `packaging/check_vendoring.py` | has anything under `client/` drifted from upstream without a row in `VENDORING.md` §3? | seconds |
 | `packaging/check_wheel_size.py` | does each wheel fit under 104,857,600 bytes? | seconds |
 | `python -m readiness` | the build-readiness gates below | seconds |
+| `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline (933 in 46 files at landing) that can only fall | seconds |
+| `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry + glosses + renderer overrides generate, and does every emitted localization key resolve? | seconds |
+| `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |
+| `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins? | seconds |
 
-All four run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
+All of them run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
 Every `apt-get` in this repo goes through
 [`.github/actions/apt`](.github/actions/apt/action.yml), which drops
 `azure.archive.ubuntu.com` and bounds the update with `timeout 300` and

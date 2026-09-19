@@ -92,7 +92,7 @@ the sidebar cannot reach fails at load rather than at 2am against a timeout.
 > identifier, so the constitutional vocabulary and the UI contract are one table.
 
 ```yaml csd:shows
-registry_sha256: 87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5
+registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
 fields:
   - ceg: capacity:composite
     use: display-only            # read | display-only | emit
