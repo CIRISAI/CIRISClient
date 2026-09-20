@@ -107,8 +107,26 @@ actual fun getAppBuildNumber(): String {
 }
 
 actual fun startTestAutomationServer() {
-    // TODO: Android test automation server (Ktor CIO)
-    // For now, no-op — Android uses adb + Espresso for UI testing
+    // THE SERVER WAS ALREADY WRITTEN; THIS NEVER CALLED IT (CIRISClient#31).
+    //
+    // `AndroidTestAutomationServer` is a complete Ktor CIO server — routes,
+    // readiness thread, idempotent start, stop — and this `actual` was a no-op
+    // whose comment said the work was still to do. So the five-platform gate's
+    // Android leg installed the APK, armed the sentinel, forwarded the port and
+    // launched the app, and then waited 120s for a server nothing had started:
+    //
+    //   [OK ] bring-up: wait-for-device -> arm-test-mode -> force-stop ->
+    //         install -> reverse-node -> forward-automation -> launch
+    //   [FAIL] drive: automation server never came up within 120s
+    //          GET /health -> Remote end closed connection without response
+    //
+    // "Remote end closed connection" is adb accepting on the HOST socket and
+    // finding nothing on the device — the exact confusion bringup.py's
+    // invariant 3 is written about.
+    //
+    // `startIfEnabled()` re-checks test mode itself and refuses to build a
+    // second server, so this stays safe to call from anywhere.
+    ai.ciris.mobile.shared.testing.AndroidTestAutomationServer.startIfEnabled()
 }
 
 /**

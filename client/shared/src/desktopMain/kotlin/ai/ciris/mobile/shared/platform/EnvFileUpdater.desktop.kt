@@ -56,6 +56,9 @@ actual class EnvFileUpdater {
         configReloadFile.writeText(System.currentTimeMillis().toString())
     }
 
+    actual suspend fun readRawEnv(): String? =
+        if (envFile.exists()) envFile.readText() else null
+
     actual suspend fun readLlmConfig(): EnvLlmConfig? {
         if (!envFile.exists()) return null
 

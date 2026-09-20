@@ -400,16 +400,58 @@ class CIRISApiClient(
             private set
 
         /**
+         * Was [LOCAL_NODE_URL] set by the operator, rather than defaulted?
+         *
+         * An operator who names a node — `CIRIS_NODE_URL`, or a CLI flag — has
+         * said where it is, including its port. Nothing derived afterwards may
+         * overrule that (CIRISClient#52).
+         */
+        @kotlin.concurrent.Volatile
+        var localNodeUrlIsExplicit: Boolean = false
+            private set
+
+        /**
          * Declare which local node this app actually drives. Call once, early,
          * from the platform entry point — before any federation call site runs.
+         *
+         * @param explicit the operator named this address (env var or CLI flag),
+         *   so a later inference must not overwrite it. See [setInferredLocalNodeUrl].
          */
-        fun setLocalNodeUrl(url: String) {
+        fun setLocalNodeUrl(url: String, explicit: Boolean = false) {
             val trimmed = url.trim().trimEnd('/')
             require(trimmed.isNotEmpty()) { "local node url must not be blank" }
             if (trimmed != LOCAL_NODE_URL) {
                 PlatformLogger.i(TAG, "[setLocalNodeUrl] local node is $trimmed (was $LOCAL_NODE_URL)")
             }
             LOCAL_NODE_URL = trimmed
+            // ASSIGNED, NOT LATCHED. Each declaration states its own
+            // authority; a latch would make the flag depend on call order and
+            // could never be cleared, which is also what made it untestable.
+            // The hand-off cannot clear it by accident — it goes through
+            // [setInferredLocalNodeUrl], which returns before reaching here.
+            localNodeUrlIsExplicit = explicit
+        }
+
+        /**
+         * Move the local node to an address we INFERRED — the run-without-AI
+         * hand-off deciding the node is now the backend.
+         *
+         * A CUSTOM PORT SURVIVES THIS. The hand-off resolves the node from
+         * `NODE_ONLY_ENDPOINT`, whose port is the 4243 default, so calling
+         * [setLocalNodeUrl] from there would silently move an operator who runs
+         * on :9999 back onto :4243 the moment setup completed — replacing one
+         * address the client cannot reach with another. An operator's answer
+         * outranks our inference; if they named it, we leave it alone.
+         */
+        fun setInferredLocalNodeUrl(url: String) {
+            if (localNodeUrlIsExplicit) {
+                PlatformLogger.i(
+                    TAG,
+                    "[setLocalNodeUrl] keeping the operator's $LOCAL_NODE_URL; not moving to inferred $url",
+                )
+                return
+            }
+            setLocalNodeUrl(url)
         }
 
         // Mask token for logging (show first 8 and last 4 chars)
@@ -2031,6 +2073,30 @@ class CIRISApiClient(
             }.map { it.lowercase() }
         } catch (_: Exception) {
             emptyList()
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Does [url] answer at all — transport-level liveness, nothing more.
+     *
+     * Separate from [isLocalNodeUp], which asks `/v1/identity` and therefore
+     * answers a question about node STATE. A caller waiting for a restart wants
+     * "is anything serving here", and CIRISClient#52 is what happens when those
+     * two are the same function: the reconfigure hold polled an identity
+     * aggregate 180 times while the node answered /health throughout.
+     *
+     * Any HTTP response counts, including a non-2xx: something replied, so the
+     * socket is up and the node is listening. Only a transport failure is false.
+     */
+    suspend fun isEndpointAnswering(url: String): Boolean {
+        val client = federationHttpClient()
+        return try {
+            client.get(url)
+            true
+        } catch (_: Exception) {
+            false
         } finally {
             client.close()
         }
@@ -8706,18 +8772,71 @@ class CIRISApiClient(
         }
     }
 
+    /**
+     * "This node does not serve deferrals **yet**" — not "something went wrong".
+     *
+     * A bare node answers 502 for `/v1/wa/deferrals`, and the deferral poller runs
+     * every 30 s for the life of the session: on iOS that produced one
+     * `API error: HTTP 502` per poll, forever (CIRISClient#48, 0.5.213 gate run).
+     *
+     * NOT SOLVED BY GATING THE CALL OFF ON A NODE. That was the obvious fix and it
+     * is the wrong one: the node is going to serve this endpoint, with anything
+     * routed to the human key on this node (CIRISServer issue filed alongside this
+     * change). A client that had learned never to ask would then keep not asking
+     * after the server started answering, and the bug would come back as silence
+     * instead of noise. So the call stays, and the ABSENCE is what gets handled.
+     *
+     * WIDER THAN `ApprovalsApi.UNSUPPORTED_ENDPOINT_STATUSES` ({404, 405, 501}),
+     * and the two extra codes are the point rather than an oversight. That set
+     * classifies a ROUTER that never heard of `/v1/tickets`; this one classifies a
+     * node that HAS the route with nothing behind it — which is a 502, the status
+     * actually observed. 503 joins it because this returns an empty list and keeps
+     * polling, so a transient outage costs one empty poll and heals on the next
+     * tick.
+     *
+     * 401/403 are excluded for the same reason they are excluded there: an expired
+     * token is a failure to READ the deferrals, not proof there are none. Anything
+     * else — a 500 with a body, a transport failure — still surfaces.
+     */
+    private val deferralsUnserved = setOf(404, 405, 501, 502, 503)
+
+    /**
+     * Latched so the unserved case is logged ONCE per transition rather than once
+     * per poll. Cleared on the first success, so a node that starts serving
+     * deferrals mid-session says so instead of going quiet forever.
+     */
+    private var deferralsUnservedLogged = false
+
     suspend fun getDeferrals(waId: String? = null): List<DeferralData> {
         val method = "getDeferrals"
-        logInfo(method, "Fetching deferrals, waId=$waId")
+        // debug, not info: this is a 30-second poll, and at info it is half the
+        // flood on its own even when every call succeeds.
+        logDebug(method, "Fetching deferrals, waId=$waId")
 
         return try {
             val response = wiseAuthorityApi.getDeferralsV1WaDeferralsGet(waId, authHeader())
             logDebug(method, "Response: status=${response.status}")
 
+            if (response.status in deferralsUnserved) {
+                if (!deferralsUnservedLogged) {
+                    deferralsUnservedLogged = true
+                    logInfo(
+                        method,
+                        "deferrals are not served at this address (HTTP ${response.status}) — " +
+                            "treating as none, and still polling so this recovers by itself " +
+                            "when the node starts serving them. Silenced until it does.",
+                    )
+                }
+                return emptyList()
+            }
+
             if (!response.success) {
                 logError(method, "API returned non-success status: ${response.status}")
                 throw RuntimeException("API error: HTTP ${response.status}")
             }
+
+            // It answered — so say so next time it stops.
+            deferralsUnservedLogged = false
 
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")

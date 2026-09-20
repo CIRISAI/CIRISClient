@@ -31,9 +31,41 @@ prevent. So the split is deliberate and recorded rather than left to inference.
 | `build_qa_gallery.py` | `tools/dev/build_qa_gallery.py` | verbatim — the screenshot gallery |
 | `platforms.py` | `tools/qa_runner/modules/web_ui/platforms.py` | **adapted** — capture transplants, bring-up could not. See below |
 | `candidate_artifacts.py` | `tools/fetch_client_artifacts.py` | **the seam**, adapted — see below |
+| `flow_spec.py` | `tools/qa_runner/modules/web_ui/flow_spec.py` | **extended** — the CSD/3 §3 predicates added; everything else verbatim. See below |
+| `flow_helper.py` | — | **ours.** The async surface `FlowRunner` drives, over this repo's sync driver |
 
 `platform_procs.py` and `build_qa_gallery.py` are stdlib-only and reference
 nothing of CIRISAgent's, which is why they transplant untouched.
+
+### `flow_spec.py` — the one that could be taken whole, and why it was extended
+
+It transplants for the reason `platforms.py`'s capture half did: 475 lines,
+stdlib plus `yaml`, and it names nothing of CIRISAgent's app shells. What it
+needs is a HELPER — an async object answering `get_elements`/`get_screen`/
+`is_element_visible`/`scroll_into_view`/`click`/`input_text`/`wait_for_element` —
+and this repo's `testing/driver.py` answers all of those synchronously. So
+`flow_helper.py` changes the tense and nothing else. Re-implementing the runner
+instead would give this repo a SECOND definition of what `visible` means, which
+is how a harness scrolls 300px of a 3142px form and reports success (#30).
+
+**Extended, not merely adapted.** CSD/3 §3 adds the predicates that let a flow
+check what the UI SHOWS — `count`, `number`, `matches`, `one_of`, `each`,
+`relation`, `state`. Before them the strongest value assertion was
+`text: substring`, so a CSD could promise "a composite equal to the minimum of
+five factors" and assert only that a card had rendered. The additions live in
+`Condition` (parse, validate, check) and are additive: every upstream spec still
+loads and behaves identically, so a re-sync is a diff against a known base rather
+than a merge of two designs.
+
+Two rules in the extension exist because their absence is a specific defect:
+`each` over a selector that matches nothing FAILS rather than passing vacuously,
+and `count: {eq: 0}` is legal only alongside an explicit `state: empty`. Both are
+the empty-set trap — the shape that let this repo's own gate report "everything
+tagged is drivable" about a screen with no elements on it.
+
+**These must go upstream.** The predicates belong in CIRISAgent's copy with
+`check_csd.py`, and two implementations of one DSL is the drift this repo exists
+to measure.
 
 ### `platforms.py` — and a mistake this file previously recorded as a fact
 

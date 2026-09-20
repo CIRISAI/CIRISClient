@@ -44,6 +44,12 @@ class _Fake(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_GET(self):
+        # The real client serves this from the moment the automation server
+        # starts — which is BEFORE the UI composes, and is exactly the
+        # distinction rule 6 below is about. A fake that 404s here cannot
+        # express "server up, app not rendered yet".
+        if self.path == "/health":
+            return self._send({"status": "ok", "testMode": True})
         if self.path.startswith("/element/"):
             tag = self.path.rsplit("/", 1)[1]
             el = type(self).elements.get(tag)
@@ -156,3 +162,47 @@ def test_an_older_client_that_cannot_say_is_not_a_ghost():
     old = Element.from_json({"testTag": "input_username"})
     assert old.can_input is None
     assert not old.is_ghost
+
+
+# ---- rule 6: the server answering is not the app having a UI ----------------
+#
+# `wait_for_server` proves the automation SERVER responds. On desktop that is
+# true about two seconds before the app has composed anything: Main.kt starts
+# the server before `application { Window { … } }`. Measured on the 0.5.217 jar,
+# server at 1.0s and a nine-element tree at 3.1s.
+#
+# A gate that walks in that window asserts nothing. "Everything tagged is
+# drivable" and "no ghosts" are both trivially TRUE of an empty tree, so three
+# of the five-platform walk's steps passed vacuously and only the screenshot —
+# the one assertion that needs a window — failed. That is how the gate produced
+# five greens and one red against an app with no interface.
+
+
+def test_wait_for_ui_returns_zero_when_nothing_ever_composes(server):
+    drv, fake = server
+    fake.elements = {}
+    # Short timeout: the point is that it RETURNS the count rather than raising,
+    # so the caller can report "started but never rendered" as the real failure
+    # it is instead of losing it inside an exception.
+    assert drv.wait_for_ui(timeout=1.0) == 0
+
+
+def test_wait_for_ui_returns_the_count_once_the_tree_fills(server):
+    drv, fake = server
+    fake.elements = {
+        "btn_login_submit": {"testTag": "btn_login_submit"},
+        "input_username": {"testTag": "input_username"},
+    }
+    assert drv.wait_for_ui(timeout=5.0) == 2
+
+
+def test_wait_for_ui_does_not_confuse_a_live_server_for_a_composed_app(server):
+    drv, fake = server
+    # The server answers /tree perfectly well — with nothing in it. This is the
+    # exact state the five-platform gate walked in, and the distinction this
+    # method exists to make.
+    fake.elements = {}
+    drv.wait_for_server(timeout=5.0)  # the server IS up
+    assert drv.wait_for_ui(timeout=1.0) == 0, (
+        "a reachable automation server was mistaken for a composed app"
+    )

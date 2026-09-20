@@ -12,6 +12,13 @@ actual class EnvFileUpdater {
         // No-op on web
     }
 
+    /**
+     * There is no home directory in a browser, so there is no `.env` to read.
+     * Null means "the agent", which is the right answer for the web build: it
+     * attaches to a backend over the network rather than hosting one.
+     */
+    actual suspend fun readRawEnv(): String? = null
+
     actual suspend fun readLlmConfig(): EnvLlmConfig? = null
 
     actual suspend fun deleteEnvFile(): Result<Boolean> = Result.success(true)

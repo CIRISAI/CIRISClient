@@ -25,9 +25,32 @@
 #
 # THE NODE IS REAL. Every leg downloads a released ciris-server and the client
 # talks to it: on Android through `adb reverse`, so the emulator's
-# localhost:8080 IS the runner's node. That keeps the client in the REMOTE shape
+# localhost:4243 IS the runner's node. That keeps the client in the REMOTE shape
 # FSD/ONE_CLIENT_N_NODES.md describes and is why no Android node binary is
 # needed — CIRISServer publishes none.
+#
+# :4243 AND NOT :8080. A bare ciris-server has no brain and never binds the
+# agent's port; see .github/actions/ciris-node. This comment said 8080 for the
+# whole life of the gate, and so did every probe and forward under it.
+#
+# NO .env SEEDING IS NEEDED, and an earlier version of this comment claimed
+# otherwise. The claim was: `backendEndpoint()` reads an ABSENT
+# `CIRIS_RUN_WITHOUT_AI` as "with AI" (:8080), so the gate must write the flag
+# into each platform's home or drive a client pointed at a port it does not run.
+#
+# That was wrong, and wrong in the direction that invents work. With no .env
+# the endpoint resolves to AGENT, and `syncBackendFrom` then moves the client
+# to :8080 ONLY IF A BRAIN ANSWERS THERE (CIRISClient#54 — before that fix the
+# agent branch did not exist at all, and the client simply stayed on Main.kt's
+# `:4243` default). These desktops run a bare ciris-server and nothing on
+# :8080, so the probe fails and nothing moves. Same outcome, and now for a
+# reason that also serves the shipped with-AI install instead of only this
+# gate. `BackendSyncAgentBranchTest` pins the "nothing on :8080 → stay on the
+# node" case by name, because this gate depends on it.
+#
+# Settled by evidence rather than by re-reading: all three desktops report
+#     [OK ] state: clientMode=NODE node=http://127.0.0.1:4243
+# and pass the walk end to end.
 #
 # WHAT MAKES IT A GATE RATHER THAN A REPORT, and each is guarded by
 # tests/test_five_platform_workflow.py because a gate that can be quietly
@@ -65,6 +88,22 @@ permissions:
 
 env:
   CIRIS_AGENT_ROOT: ${{ github.workspace }}/.agent
+  # THE APP SERVES /health ON 9091 ONLY IN TEST MODE, AND NOTHING SET IT.
+  #
+  # `TestAutomationServer.isTestModeEnabled()` reads CIRIS_TEST_MODE and the
+  # desktop starts its automation server only when that is true. The workflow
+  # never set it, so every desktop leg launched an app with no automation
+  # server and then failed the one thing it exists to prove:
+  #
+  #   [OK ] bring-up: launch
+  #   [FAIL] drive: automation server never came up within 120s:
+  #          GET /health -> no answer from http://127.0.0.1:9091
+  #
+  # Job-level rather than per-leg: three legs need it and a fourth would forget.
+  # Android arms the same switch with a sentinel file instead (an `am start`
+  # cannot set the environment of the process it launches — see bringup.py's
+  # ANDROID_TEST_SENTINEL), which is why that leg does not depend on this.
+  CIRIS_TEST_MODE: "true"
 
 jobs:
   linux-android:
@@ -91,6 +130,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # CHAQUOPY NEEDS A REAL 3.10, AND THE IMAGE STOPPED HAVING ONE.
+      # `ubuntu-latest` moved to 24.04 (Python 3.12), so the hardcoded
+      # /usr/bin/python3.10 in androidApp/build.gradle vanished and this leg has
+      # died at :androidApp:installDebugPythonRequirements every night since.
+      # Provision it explicitly and hand Gradle the path, rather than hoping the
+      # image keeps a version it no longer ships.
+      - uses: actions/setup-python@v5
+        id: py310
+        with:
+          python-version: '3.10'
+
       - name: The node this client will be a client of
         id: node
         env:
@@ -112,12 +162,53 @@ jobs:
           chmod +x node/ciris-server
           echo "version=$used" >> "$GITHUB_OUTPUT"
 
+      # REHYDRATE THE ANDROID WHEELS. `client/androidApp/wheels/` is a §2
+      # never-vendor class — 86 MB of other repos' release artifacts that this
+      # tree deliberately does not carry, because a copy here would be a third
+      # one drifting against the two that already exist (VENDORING.md §2).
+      #
+      # The consequence is that `:androidApp:assembleDebug` CANNOT build from a
+      # clean checkout. Chaquopy's `--find-links wheels` finds no directory
+      # ("Location 'wheels' is ignored"), falls through to PyPI, and dies on
+      # `No matching distribution found for pydantic-core==2.23.4 (from
+      # versions: 0.0.1)` — 2.23.4 exists for Android and NOT under PyPI's
+      # generic tags, so no amount of pip flags will produce it.
+      #
+      # COPIED FROM THE CHECKOUT THIS JOB ALREADY MAKES, not fetched. The six
+      # wheels live in CIRISAgent at apps/android/wheels/ — 3 ciris_server and
+      # 3 pydantic_core, one per ABI — which is the same set §2 lists, and this
+      # job already clones that repo into .agent for the Python runtime. So the
+      # artifacts come from the repo that owns them, are staged rather than
+      # vendored, and no network fetch or credential is involved.
+      #
+      # `ciris-server` itself is NOT taken from here: the build pins an exact
+      # version from PyPI (androidApp/build.gradle), whose Android wheel does
+      # publish. Only the dependencies that PyPI cannot serve for Android need
+      # staging, which is why a stale ciris_server wheel in this set is harmless.
+      - name: Rehydrate the Android wheels (§2 never-vendor, staged not carried)
+        run: |
+          set -euo pipefail
+          src=.agent/apps/android/wheels
+          test -d "$src" || {
+            echo "::error::$src is absent — CIRISAgent's layout moved, and"
+            echo "::error::androidApp cannot build without the §2 wheels"
+            exit 1; }
+          mkdir -p client/androidApp/wheels
+          cp "$src"/*.whl client/androidApp/wheels/
+          count=$(find client/androidApp/wheels -maxdepth 1 -name '*.whl' | wc -l | tr -d ' ')
+          # A silently empty stage would fail later as a confusing pip error,
+          # which is how this cost a run in the first place.
+          test "$count" -gt 0 || { echo "::error::staged no wheels"; exit 1; }
+          echo "staged $count wheel(s) from $src:"
+          find client/androidApp/wheels -maxdepth 1 -name '*.whl' -exec basename {} \;
+
       - name: Build the candidate
         run: |
           set -euo pipefail
           cd client
           ./gradlew :desktopApp:packageUberJarForCurrentOS :androidApp:assembleDebug \
-            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" --console=plain
+            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" \
+            -PchaquopyBuildPython="${{ steps.py310.outputs.python-path }}" --console=plain
 
       # THE CANDIDATE, NOT WHATEVER IS ON DISK. This asserts the artifact
       # carries this tree's version -- "freshest on disk" and "built from this
@@ -131,13 +222,7 @@ jobs:
           echo "apk=$(python3 -m testing.gate.candidate_artifacts --kind android_apk | tail -1)" >> "$GITHUB_OUTPUT"
 
       - name: Start the node
-        run: |
-          ./node/ciris-server > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: Linux desktop
         run: |
@@ -146,18 +231,65 @@ jobs:
             --node-version "${{ steps.node.outputs.version }}" \
             --shots shots --report reports/linux.json
 
+      # WITHOUT THIS THE EMULATOR RUNS IN SOFTWARE AND DIES.
+      #
+      # The runner HAS /dev/kvm and the `runner` user is not in the `kvm`
+      # group, so the emulator probed it, gave up, and fell back to pure
+      # software emulation:
+      #
+      #     ProbeKVM: This user doesn't have permissions to use KVM (/dev/kvm).
+      #     The KVM line in /etc/group is: [kvm:x:993:]
+      #     Disabling Linux hardware acceleration.
+      #
+      # That is a 346-second boot, after which the watchdog killed
+      # system_server outright — `android.os.DeadSystemException` — and the leg
+      # failed before run_platform could write a report. Every Android failure
+      # this workflow has ever produced traces back here; none of them was the
+      # client. The udev rule is what reactivecircus/android-emulator-runner
+      # documents for ubuntu runners.
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
       - name: Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
           arch: x86_64
+          # AN ATD IMAGE, BECAUSE THE FULL ONE CANNOT CARRY THIS.
+          #
+          # On the default image the emulator took 424 SECONDS to boot and then
+          # System UI itself ANR'd -- the failure screenshot is the launcher
+          # showing "System UI isn't responding", with our app nowhere on it.
+          # The app was installed and launched; it never got enough CPU to
+          # start its test server, so the leg failed with "automation server
+          # never came up within 120s" and read like a client defect.
+          #
+          # WAS aosp_atd, AND THAT WAS A GUESS THAT COST A RUN. The ATD image
+          # was added to fight a 424-second boot; the actual cause was KVM being
+          # unavailable (see the step above), and with acceleration the full
+          # image is fast enough. On ATD the app never started at all — repeated
+          # `am start` with no `Start proc` and no crash — so the image is a
+          # variable worth removing before reading anything else into it.
+          target: default
           profile: pixel_2
+          cores: 2
+          ram-size: 4096M
           disable-animations: true
-          script: |
-            python3 -m testing.gate.run_platform --platform android \
-              --apk "${{ steps.art.outputs.apk }}" \
-              --node-version "${{ steps.node.outputs.version }}" \
-              --shots shots --report reports/android.json
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          # ONE LINE, NO CONTINUATIONS. `script:` is not a `run:` block —
+          # android-emulator-runner hands it to the emulator wrapper, which does
+          # not honour backslash-newline, so each `\` arrived as a literal
+          # argument and argparse said:
+          #
+          #     run_platform.py: error: unrecognized arguments: \
+          #
+          # after the emulator had booted and the whole leg had been paid for.
+          # It reads worse on one line and it is the form that runs.
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.
@@ -169,11 +301,22 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
+            logcat.txt
 
   macos-ios:
     name: macos desktop + ios simulator
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos') || contains(inputs.platforms, 'ios') }}
-    runs-on: macos-14
+    # macos-15, NOT macos-14. `client/iosApp/iosApp.xcodeproj` is
+    # `objectVersion = 77` -- the Xcode 16 project format -- and macos-14 ships
+    # Xcode 15.4, which cannot read it:
+    #
+    #     xcodebuild: error: Unable to read project 'iosApp.xcodeproj'
+    #
+    # That is why the iOS leg has never once passed here (17 runs, 17
+    # failures). It is not a regression, and no client change would have fixed
+    # it: the runner could not open the project.
+    runs-on: macos-15
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
@@ -200,13 +343,7 @@ jobs:
         run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
 
       - name: Start the node
-        run: |
-          ./node/ciris-server > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: macOS desktop
         run: |
@@ -215,20 +352,336 @@ jobs:
             --node-version "${{ steps.node.outputs.version }}" \
             --shots shots --report reports/macos.json
 
+      # ── THE iOS BUNDLE, MATERIALIZED THE WAY THE AGENT'S GATE DOES IT ──────
+      #
+      # The app shows its Compose view — and the test server inside it — only
+      # after the EMBEDDED Python runtime reports healthy (ContentView.swift:
+      # extractResources → initializePython → startRuntime → checkHealth). So
+      # the simulator needs the whole substrate, not just a project that
+      # compiles:
+      #
+      #   1. Resources.zip — the stdlib + engine + app packages. The copy this
+      #      tree vendors (CIRISClient#24) is a 77-file stub with no python/lib
+      #      and no ciris_engine; the agent's tracked apps/ios/Resources.zip is
+      #      the real 5,958-file bundle. Take theirs, refreshed to their pin by
+      #      their own tool, so the PyO3 slices and the pure-Python packages
+      #      are one consistent set.
+      #   2. Python.xcframework — beeware/Python-Apple-support 3.10-b14, which
+      #      briefcase would download for the same build. Its simulator slice
+      #      keeps lib-dynload under lib-arm64/ and lib-x86_64/ rather than
+      #      lib/; the re-vendored embed_native_frameworks.sh reads that layout.
+      #      The old note that adopting it "is a port, not a download" predates
+      #      that script change and was wrong by the time it was written down.
+      #   3. The simulator natives — ciris_server's PyO3 slice (laid down by
+      #      update_substrate_libs from the CIRISServer release), cffi /
+      #      aiohttp / cryptography (BeeWare's prebuilt simulator wheels), and
+      #      pydantic_core, which publishes no iOS wheel anywhere and is
+      #      cross-built with cargo against the slice. This is the agent's
+      #      refresh-ios-substrate.yml `build_sim_natives` recipe, carried here
+      #      because that reusable workflow checks out the CALLER's repository
+      #      and so cannot be `uses:`d from this one.
+      #
+      # Every step asserts what it produced, because a missing piece does not
+      # fail xcodebuild — it produces an app that installs and launches to a
+      # spinner, which is the failure mode this gate exists to stop.
+      - name: Check out the agent, whose iOS bundle this app embeds
+        uses: actions/checkout@v4
+        with:
+          repository: CIRISAI/CIRISAgent
+          path: .agent
+
+      - name: Refresh the agent's iOS substrate to its pin, then take the bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PY_TAG: "3.10-b14"
+          PY_ASSET: "Python-3.10-iOS-support.b14.tar.gz"
+        run: |
+          set -euo pipefail
+          IOS=client/iosApp
+          S=$(grep -oE "^ciris-server[>=<!~ ]*[0-9]+\.[0-9]+\.[0-9]+" .agent/requirements.txt | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" | head -1)
+          [ -n "$S" ] || { echo "::error::no ciris-server pin in .agent/requirements.txt"; exit 1; }
+          echo "agent pins ciris-server $S"
+          ( cd .agent && python3 tools/update_substrate_libs.py --platform ios --lib server "$S" )
+
+          for p in Resources.zip app_packages_native substrate.lock.json; do
+            rm -rf "$IOS/$p"; cp -R ".agent/apps/ios/$p" "$IOS/$p"
+          done
+          rm -rf "$IOS/app_packages_native_sim"
+          [ -d .agent/apps/ios/app_packages_native_sim ] && cp -R .agent/apps/ios/app_packages_native_sim "$IOS/" || true
+          rm -rf "$IOS/Frameworks/CIRISVerify.xcframework"
+          cp -R .agent/apps/ios/Frameworks/CIRISVerify.xcframework "$IOS/Frameworks/"
+          unzip -l "$IOS/Resources.zip" | grep -q " python/lib/python3.10/" \
+            || { echo "::error::the agent's Resources.zip carries no python/lib — not the bundle this expects"; exit 1; }
+          unzip -l "$IOS/Resources.zip" | grep -q " app/ciris_engine/" \
+            || { echo "::error::the agent's Resources.zip carries no ciris_engine"; exit 1; }
+
+          # THE ENGINE IN THE ZIP IS AS OLD AS THE ZIP; THE ENGINE IN THE TREE
+          # IS CURRENT. The tracked Resources.zip is rebuilt by hand, and its
+          # app/ciris_ios/kmp_main.py had already moved ahead of the
+          # app/ciris_engine beside it: `from ciris_engine import node_only`
+          # against a ciris_engine with no node_only.py — the engine died on
+          # its first import and the app reported "Engine Failed to Start"
+          # (run 35363746850, python_error.log). The agent's own gate never
+          # sees this because rebuild_and_deploy.sh --quick overlays
+          # ciris_engine + ciris_adapters from the checkout and re-zips before
+          # every build. Same overlay, same excludes, here.
+          echo "Resources.zip (as tracked): $(unzip -l "$IOS/Resources.zip" | tail -1)"
+          rm -rf "$RUNNER_TEMP/res" && mkdir -p "$RUNNER_TEMP/res"
+          (cd "$RUNNER_TEMP/res" && unzip -qo "$GITHUB_WORKSPACE/$IOS/Resources.zip")
+          EXCL=(--exclude='__pycache__' --exclude='.pytest_cache' --exclude='*.pyc' --exclude='*.pyo'
+                --exclude='gui_static' --exclude='desktop_app' --exclude='android_gui_static'
+                --exclude='README*' --exclude='*.md' --exclude='examples/' --exclude='tests/' --exclude='adapters/discord')
+          rsync -a --delete "${EXCL[@]}" .agent/ciris_engine/   "$RUNNER_TEMP/res/app/ciris_engine/"
+          rsync -a --delete "${EXCL[@]}" .agent/ciris_adapters/ "$RUNNER_TEMP/res/app/ciris_adapters/"
+          find "$RUNNER_TEMP/res" -type d -name __pycache__ -prune -exec rm -rf {} + 2>/dev/null || true
+          test -f "$RUNNER_TEMP/res/app/ciris_engine/node_only.py" \
+            || { echo "::error::overlaid ciris_engine still has no node_only.py — the agent checkout is not what kmp_main expects"; exit 1; }
+          rm -f "$IOS/Resources.zip"
+          (cd "$RUNNER_TEMP/res" && zip -q -r "$GITHUB_WORKSPACE/$IOS/Resources.zip" .)
+          echo "Resources.zip (engine overlaid from .agent @ $(git -C .agent rev-parse --short HEAD)): $(unzip -l "$IOS/Resources.zip" | tail -1)"
+
+          gh release download "$PY_TAG" --repo beeware/Python-Apple-support -p "$PY_ASSET" -O "$RUNNER_TEMP/pysupport.tar.gz"
+          mkdir -p "$RUNNER_TEMP/pysupport" && tar -xzf "$RUNNER_TEMP/pysupport.tar.gz" -C "$RUNNER_TEMP/pysupport"
+          XCF=$(find "$RUNNER_TEMP/pysupport" -maxdepth 3 -name "Python.xcframework" -type d | head -1)
+          [ -n "$XCF" ] || { echo "::error::$PY_ASSET carried no Python.xcframework"; exit 1; }
+          rm -rf "$IOS/Frameworks/Python.xcframework"; cp -R "$XCF" "$IOS/Frameworks/"
+          test -d "$IOS/Frameworks/Python.xcframework/ios-arm64_x86_64-simulator/lib-arm64/python3.10/lib-dynload" \
+            || { echo "::error::Python.xcframework's simulator slice has no lib-arm64/python3.10/lib-dynload"; exit 1; }
+          echo "Python.xcframework: $(du -sh "$IOS/Frameworks/Python.xcframework" | cut -f1)"
+
+      - name: Set up Python 3.10 (build-side interpreter for the cp310 iOS embed)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Materialize the simulator natives
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEEWARE_INDEX: "https://pypi.anaconda.org/beeware/simple"
+          IOS_SIM_TAG: "ios_13_0_arm64_iphonesimulator"
+        run: |
+          set -uo pipefail
+          IOS=client/iosApp
+          OUT="$IOS/app_packages_native_sim"; mkdir -p "$OUT"
+          WORK="$RUNNER_TEMP/simnat"; mkdir -p "$WORK/wheels" "$WORK/src" "$WORK/x"
+          status=()
+          test -f "$OUT/ciris_server/_native.abi3.so" \
+            || { echo "::error::no simulator ciris_server at $OUT/ciris_server/_native.abi3.so — update_substrate_libs did not lay it down"; exit 1; }
+          status+=("ciris_server=refreshed")
+
+          ver_of() { unzip -l "$IOS/Resources.zip" | awk '{print $4}' | grep -oE "app_packages/$1-[0-9][0-9.]*\.dist-info" | head -1 | sed -E "s/.*$1-([0-9.]+)\.dist-info/\1/"; }
+          V_PYDC=$(ver_of pydantic_core); V_CRYPTO=$(ver_of cryptography); V_AIO=$(ver_of aiohttp); V_CFFI=$(ver_of cffi)
+          echo "versions:  pydantic_core=$V_PYDC cryptography=$V_CRYPTO aiohttp=$V_AIO cffi=$V_CFFI"
+          for v in "$V_PYDC" "$V_CRYPTO" "$V_AIO" "$V_CFFI"; do [ -n "$v" ] || { echo "::error::could not read a bundled version from Resources.zip"; exit 1; }; done
+
+          # --- 1. the three C extensions: BeeWare's prebuilt simulator wheels ---
+          fetch_wheel() { # name version
+            if python -m pip download -q --no-deps --only-binary :all: --index-url "$BEEWARE_INDEX" \
+                 --platform "$IOS_SIM_TAG" --python-version 3.10 --implementation cp --abi cp310 \
+                 "$1==$2" -d "$WORK/wheels" 2>&1 | tail -5; then
+              status+=("$1=fetched")
+            else
+              status+=("$1=MISSING-ON-INDEX"); echo "::warning::no cp310 $IOS_SIM_TAG wheel for $1==$2 on $BEEWARE_INDEX"
+            fi
+          }
+          fetch_wheel cffi "$V_CFFI"
+          fetch_wheel aiohttp "$V_AIO"
+          fetch_wheel cryptography "$V_CRYPTO"
+
+          # --- 2. pydantic_core: cargo, cross-compiled with PyO3 against the slice ---
+          SLICE="$IOS/Frameworks/Python.xcframework/ios-arm64_x86_64-simulator"
+          rustup target add aarch64-apple-ios-sim >/dev/null 2>&1 || true
+          python -m pip install -q typing_extensions   # build.rs runs generate_self_schema.py on the host
+          SDIST_URL=$(curl -s "https://pypi.org/pypi/pydantic-core/$V_PYDC/json" | python -c 'import json,sys; print(next(u["url"] for u in json.load(sys.stdin)["urls"] if u["packagetype"]=="sdist"))')
+          if [ -n "$SDIST_URL" ] && curl -sSL "$SDIST_URL" -o "$WORK/src/pydantic_core.tar.gz" \
+             && tar -xzf "$WORK/src/pydantic_core.tar.gz" -C "$WORK/src" \
+             && ( cd "$WORK/src"/pydantic_core-*/ \
+                  && SDKROOT="$(xcrun --sdk iphonesimulator --show-sdk-path)" IPHONEOS_DEPLOYMENT_TARGET=13.0 \
+                     PYO3_PYTHON="$(command -v python3.10)" \
+                     PYO3_CROSS_LIB_DIR="$OLDPWD/$SLICE/lib-arm64" PYO3_CROSS_PYTHON_VERSION=3.10 PYO3_CROSS_PYTHON_IMPLEMENTATION=CPython \
+                     CARGO_TARGET_AARCH64_APPLE_IOS_SIM_RUSTFLAGS="-C link-arg=-undefined -C link-arg=dynamic_lookup" \
+                     cargo build --release --target aarch64-apple-ios-sim --features "pyo3/extension-module" 2>&1 | grep -vE "^\s+(Compiling|Downloading|Downloaded|Updating|Locking|Fresh) " | tail -30 \
+                  && DYLIB=$(ls target/aarch64-apple-ios-sim/release/lib_pydantic_core.dylib) \
+                  && mkdir -p "$OLDPWD/$OUT/pydantic_core" \
+                  && cp "$DYLIB" "$OLDPWD/$OUT/pydantic_core/_pydantic_core.cpython-310-iphonesimulator.so" ); then
+            status+=("pydantic_core=built")
+          else
+            status+=("pydantic_core=FAILED"); echo "::warning::simulator native build FAILED: pydantic_core"
+          fi
+
+          # --- 3. extract the wheels' .so files into app_packages_native_sim/ ---
+          for whl in "$WORK/wheels"/*.whl; do
+            [ -f "$whl" ] || continue
+            X="$WORK/x/$(basename "$whl" .whl)"; mkdir -p "$X"; unzip -qo "$whl" -d "$X"
+            while IFS= read -r so; do
+              rel="${so#$X/}"; mkdir -p "$OUT/$(dirname "$rel")"; cp "$so" "$OUT/$rel"
+            done < <(find "$X" -name "*.so" -type f)
+          done
+          echo "## simulator natives" | tee "$OUT/MANIFEST.txt"
+          printf '  %s\n' "${status[@]}" | tee -a "$OUT/MANIFEST.txt"
+          ok=true
+          for want in "ciris_server/_native" "pydantic_core/_pydantic_core" "cryptography/hazmat/bindings/_openssl" "aiohttp/_http_parser" "_cffi_backend"; do
+            f=$(find "$OUT" -path "*$want*" -name "*.so" | head -1)
+            if [ -n "$f" ]; then
+              arch=$(lipo -info "$f" 2>/dev/null | sed 's/.*: //')
+              vt=$(xcrun vtool -show-build "$f" 2>/dev/null | awk '/platform/{print $2; exit}')
+              case "$vt" in
+                IOSSIMULATOR) echo "  ok      $want  [$arch, $vt]" | tee -a "$OUT/MANIFEST.txt" ;;
+                "")           echo "  present $want  [$arch, platform unreadable -- kept; the simulator will say]" | tee -a "$OUT/MANIFEST.txt" ;;
+                *)            echo "  WRONG-PLATFORM $want  [$arch, $vt]" | tee -a "$OUT/MANIFEST.txt"; ok=false ;;
+              esac
+            else
+              echo "  MISSING $want" | tee -a "$OUT/MANIFEST.txt"; ok=false
+            fi
+          done
+          $ok || { echo "::error::not every simulator native is present and simulator-built — see MANIFEST.txt"; exit 1; }
+
       # iOS is the leg most likely to be red for reasons of its own, and it runs
       # LAST so a macOS desktop result exists either way.
       - name: iOS simulator
         run: |
           set -euo pipefail
-          cd client && ./gradlew :shared:assembleDebugXCFramework --console=plain && cd ..
+          # THE TASK NAME, AND THE DIRECTORY, BOTH WRONG — AND THE SECOND HID THE FIRST.
+          #
+          # `:shared:assembleDebugXCFramework` does not exist. The framework is
+          # declared `XCFramework("shared")`, so the tasks are
+          # assembleShared{Debug,Release}XCFramework — publish.yml has used the
+          # release twin correctly all along and this line never got the same
+          # correction. Gradle answered "task is ambiguous" and failed in 2s.
+          #
+          # Then `cd client && … && cd ..` left the shell IN client/ when the
+          # gradle step failed, so xcodebuild resolved client/iosApp/… as
+          # client/client/iosApp/… and reported
+          # "'client/iosApp/iosApp.xcodeproj' does not exist" — a missing-project
+          # error for a problem that was a task name two lines earlier, which is
+          # the most expensive kind of wrong message.
+          #
+          # A subshell cannot leak a directory no matter how the command inside
+          # it ends.
+          ( cd client && ./gradlew :shared:assembleSharedDebugXCFramework --console=plain )
+          # ONE ARCHITECTURE, THE RUNNER'S. `-sdk iphonesimulator` with no
+          # destination builds BOTH simulator slices, and the shared framework
+          # the link phase picks up is iosSimulatorArm64 alone — so ld ignored
+          # every one of its objects "found architecture 'arm64', required
+          # architecture 'x86_64'" and the link failed (run 35350176282), after
+          # the whole substrate had materialized correctly. The natives are
+          # arm64 IOSSIMULATOR too; macos-15 is arm64. Say so.
+          # SIGNED, AD HOC, WITH ITS ENTITLEMENTS — Xcode's simulator default,
+          # and what the agent's rebuild_and_deploy.sh gets by passing no
+          # signing flag at all. `CODE_SIGNING_ALLOWED=NO` was here from the
+          # days when the project could not build at all; with the bundle
+          # complete it became the actual failure: an unentitled binary gets
+          # OSStatus -34018 on every keychain op, ciris_keyring falls back to
+          # software per open, and its tier-mismatch rule then SUPERSEDED the
+          # node key it had minted seconds earlier — the identity dir showed
+          # `ciris-node-bootstrap.ed25519.seed.blob.superseded-pre-v8` and
+          # edge found nothing to open (run 35372833410, ciris-server.log).
+          # The agent's log on the same runner image says the other half:
+          # "hardware_backed: true - ENABLED (ECIES via Secure Enclave)".
           xcodebuild -project client/iosApp/iosApp.xcodeproj -scheme iosApp \
             -sdk iphonesimulator -configuration Debug \
-            -derivedDataPath dd build CODE_SIGNING_ALLOWED=NO
+            -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 ONLY_ACTIVE_ARCH=YES \
+            -derivedDataPath dd build
           app=$(find dd -name 'iosApp.app' -maxdepth 6 | head -1)
           test -n "$app" || { echo "::error::no iosApp.app was produced"; exit 1; }
-          python3 -m testing.gate.run_platform --platform ios --app "$app" \
+          # THE HOST NODE HAS TO BE GONE FIRST. The iOS app embeds its own
+          # node, which binds 0.0.0.0:4242 (Reticulum) and :4243 (read API) on
+          # the loopback the simulator SHARES with the runner — and the node
+          # this job started for the macOS desktop leg was still holding both:
+          # "Edge transport ports are held by another process ... Address
+          # already in use (os error 48)" (run 35376950849, the first in which
+          # the engine got past its identity). The agent's gate frees 4242 4243
+          # 8080 9091 between every leg for the same reason. Kill by listener,
+          # not by name: what matters is that nothing answers on those ports.
+          for port in 4242 4243 8080; do
+            pids=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+            [ -n "$pids" ] && { echo "freeing :$port (pids: $(echo $pids | tr '\n' ' '))"; kill $pids 2>/dev/null || true; }
+          done
+          sleep 2
+          for port in 4242 4243 8080; do
+            pids=$(lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+            [ -n "$pids" ] && { echo "still held :$port — SIGKILL"; kill -9 $pids 2>/dev/null || true; }
+          done
+          for port in 4242 4243 8080; do
+            lsof -ti "tcp:$port" -sTCP:LISTEN >/dev/null 2>&1 && { echo "::error:::$port is still held; the embedded node cannot bind"; exit 1; } || echo ":$port free"
+          done
+
+          # A SIMULATOR HAS TO BE BOOTED BY SOMEONE. The bring-up plan's
+          # `simctl boot booted` is a no-op by construction and its
+          # `bootstatus booted -b` needs a device that is already up; nothing
+          # here started one, so the leg could never have got past install.
+          # The newest iOS runtime's newest numbered iPhone — the agent's gate
+          # drives an iPhone 16 class device; a list-order pick landed on an
+          # iPhone SE (3rd generation).
+          UDID=$(xcrun simctl list devices available -j \
+            | python3 -c '
+          import json, re, sys
+          d = json.load(sys.stdin)["devices"]
+          def key(rt): return [int(x) for x in re.findall(r"\d+", rt)]
+          best = None
+          for rt in sorted((r for r in d if "iOS" in r), key=key, reverse=True):
+              ph = [x for x in d[rt] if x.get("isAvailable") and re.match(r"iPhone \d+", x["name"]) and "Pro" not in x["name"] and "Plus" not in x["name"]]
+              if ph:
+                  best = sorted(ph, key=lambda x: key(x["name"]))[-1]; break
+          print(best["udid"] if best else "")')
+          test -n "$UDID" || { echo "::error::no available iPhone simulator on this runner"; xcrun simctl list devices available; exit 1; }
+          echo "simulator: $UDID"
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
+          rc=0
+          python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/ios.json
+            --shots shots --report reports/ios.json || rc=$?
+
+          # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
+          # to a real screen — "Engine Failed to Start: server did not become
+          # healthy within 30 seconds" — and the artifact carried nothing that
+          # said why: os_log is the only place a Swift/Kotlin line lands, and
+          # the embedded interpreter writes its own failure report to
+          # Documents/python_error.log (the traceback of why kmp_main did not
+          # start) with the engine's logs under Documents/ciris/logs. The
+          # agent's driver collects exactly this set; so does this leg now.
+          # THE CAPTURE NEVER DECIDES THE VERDICT. This block runs under the
+          # step's `set -e`; a grep with no match exits 1, and run 35379942066
+          # — the first in which the iOS walk passed, every step [OK ] and
+          # `ios: PASS` printed — was reported failed by the diagnostic that
+          # followed it. Only $rc, the walk's own exit, leaves this step.
+          set +e
+          mkdir -p ios-logs
+          xcrun simctl spawn "$UDID" log show --last 15m --style syslog \
+            --predicate 'process == "iosApp" OR subsystem CONTAINS "ai.ciris.mobile"' \
+            > ios-logs/oslog.txt 2>&1 || true
+          echo "oslog: $(wc -l < ios-logs/oslog.txt) lines"
+          APPBOX=$(xcrun simctl get_app_container "$UDID" ai.ciris.mobile app 2>/dev/null || true)
+          if [ -n "$APPBOX" ] && [ -d "$APPBOX/Frameworks" ]; then
+            ls "$APPBOX/Frameworks" > ios-logs/app-frameworks.txt
+            echo "app Frameworks/: $(wc -l < ios-logs/app-frameworks.txt) entries; _struct.framework $(grep -q '^_struct.framework$' ios-logs/app-frameworks.txt && echo present || echo MISSING)"
+          fi
+          DATABOX=$(xcrun simctl get_app_container "$UDID" ai.ciris.mobile data 2>/dev/null || true)
+          if [ -n "$DATABOX" ] && [ -d "$DATABOX/Documents" ]; then
+            find "$DATABOX/Documents" -maxdepth 1 -name "*.log" -exec cp {} ios-logs/ \; 2>/dev/null || true
+            if [ -d "$DATABOX/Documents/ciris" ]; then
+              # `*.log*`, not `*.log`: the substrate's Rust tracing lands in
+              # ciris-server.log.<date>, and that is the file that says which
+              # keystore path edge opened and what it found there. Run
+              # 35368634186 failed on "could not open the sealed Ed25519 node
+              # identity" and the one log that explains it was left behind.
+              find "$DATABOX/Documents/ciris" \( -name "*.log*" -o -name "*.txt" \) -type f -exec cp {} ios-logs/ \; 2>/dev/null || true
+              echo "--- identity dir ---"; ls -la "$DATABOX/Documents/ciris/identity" 2>/dev/null || echo "(no identity dir)"
+              find "$DATABOX/Documents/ciris" -maxdepth 3 -type d | sed "s#$DATABOX/Documents/ciris#<ciris>#" | head -40
+            fi
+            echo "app logs: $(ls ios-logs | wc -l) file(s)"
+            for f in ios-logs/python_error.log ios-logs/incidents_latest.log; do
+              [ -f "$f" ] && { echo "--- $f (last 40 lines) ---"; tail -40 "$f"; }
+            done
+            for f in ios-logs/ciris-server.log*; do
+              [ -f "$f" ] && { echo "--- $f: keystore / identity lines ---"; grep -i "keystore\|ed25519\|identity\|provision\|sealed\|alias" "$f" | tail -40; }
+            done
+          else
+            echo "app logs: no Documents in the data container — the app had not started writing"
+          fi
+          exit $rc
 
       - if: always()
         uses: actions/upload-artifact@v4
@@ -238,6 +691,10 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
+            ios-logs/
+            client/iosApp/app_packages_native_sim/MANIFEST.txt
+            client/iosApp/substrate.lock.json
 
   windows:
     name: windows desktop
@@ -270,14 +727,7 @@ jobs:
         run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
 
       - name: Start the node
-        shell: bash
-        run: |
-          ./node/ciris-server.exe > node.log 2>&1 &
-          for i in $(seq 1 60); do
-            curl -sf http://127.0.0.1:8080/v1/system/health >/dev/null && exit 0
-            sleep 2
-          done
-          echo "::error::the node never became healthy"; tail -50 node.log; exit 1
+        uses: ./.github/actions/ciris-node
 
       - name: Windows desktop
         shell: bash
@@ -295,6 +745,7 @@ jobs:
             shots/
             reports/
             node.log
+            *-app.log
 
   gallery:
     name: screenshot gallery

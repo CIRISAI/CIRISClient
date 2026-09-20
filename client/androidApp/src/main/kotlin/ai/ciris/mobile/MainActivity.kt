@@ -181,8 +181,18 @@ class MainActivity : ComponentActivity() {
                     Log.i(TAG, "Showing CIRISApp immediately for startup animation")
                     pythonReady = true
 
-                    // Start Python via foreground service (survives activity backgrounding for OAuth)
-                    if (!PythonRuntimeService.isRunning) {
+                    // A BACKEND ALREADY ANSWERING ON THE LOOPBACK IS THE ONE WE USE.
+                    // Decided once, here and in the supervisor (whichever asks
+                    // first); on a phone this is two refused connects and the
+                    // service starts as before. See AndroidBackendController.
+                    val attached = AndroidBackendController.attachIfAnswering()
+                    if (attached != null) {
+                        Log.i(TAG, "[backend] attached to $attached — the embedded runtime is not started")
+                        // Nothing to mark: initialize() sets its own flag and
+                        // startServer() polls checkHealth, which a node answers
+                        // on the first try.
+                        apiClient?.updateBaseUrl(attached)
+                    } else if (!PythonRuntimeService.isRunning) {
                         Log.i(TAG, "Starting PythonRuntimeService...")
                         val serviceIntent = Intent(this@MainActivity, PythonRuntimeService::class.java)
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -639,7 +649,15 @@ class MainActivity : ComponentActivity() {
         // ownership of a remote baseUrl would let the supervisor answer about
         // two different nodes in a single decision — reporting NotOurs on the
         // strength of a loopback probe, or worse.
-        val nodeUrl = { apiClient?.baseUrl }
+        // THE ATTACHED BACKEND OUTRANKS THE CLIENT'S BASE URL. apiClient is
+        // built in initBilling against :8080 and re-pointed inside setContent
+        // once attachIfAnswering() has answered; the supervisor starts in
+        // onStart, between the two. Its first probe therefore asked :8080,
+        // got Refused, and Login showed "Restarting the agent… attempt 1" for
+        // a backend that was answering on :4243 the whole time (run
+        // 35359571538). One probe later it corrected itself; the screen had
+        // already said something false.
+        val nodeUrl = { AndroidBackendController.attachedTo ?: apiClient?.baseUrl }
         BackendSupervisor(
             probe = {
                 nodeUrl()?.let { AndroidBackendController.probe(it) }

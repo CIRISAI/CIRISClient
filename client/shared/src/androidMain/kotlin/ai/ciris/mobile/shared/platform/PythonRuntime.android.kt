@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Android implementation of Python runtime
@@ -358,6 +359,17 @@ actual class PythonRuntime : PythonRuntimeProtocol {
                 return@withContext Result.success(false)
             }
 
+            // THE NODE IS READY WHEN IT ANSWERS. There is no cognitive_state
+            // and no service roster on the node's /health — those are the
+            // brain's — so the parse below would say "not ready" for 120
+            // attempts against a node that was serving the whole time
+            // (desktop learned this as CIRISClient#52: liveness is "did
+            // anything answer").
+            if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+                connection.disconnect()
+                return@withContext Result.success(true)
+            }
+
             // Parse the response to check cognitive_state
             val responseText = connection.inputStream.bufferedReader().use { it.readText() }
             connection.disconnect()
@@ -412,6 +424,28 @@ actual class PythonRuntime : PythonRuntimeProtocol {
     actual override suspend fun getPrepStatus(): Result<Pair<Int, Int>> = withContext(Dispatchers.IO) {
         // Return the cached values from logcat parsing
         Result.success(prepStepsCompleted to totalPrepSteps)
+    }
+
+    /**
+     * The CLAIM PIN from `<CIRIS_HOME>/claim_pin`, the node's own 0600 file.
+     *
+     * THE FILE IS THE SOURCE OF TRUTH, NOT THE LOG BANNER (CIRISClient#49).
+     * Android had no override, so it fell back to the protocol's `null` and the
+     * only PIN it could offer came from tailing `latest.log` — which after a
+     * factory reset still held the PREVIOUS boot's banner. The stale PIN was
+     * sent, the node answered 401 `auth.claim.pin_invalid`, and announce then
+     * failed 409 not-owner-bound. Desktop and iOS already read the file; this
+     * is Android catching up.
+     */
+    override suspend fun readLocalClaimPin(): String? = withContext(Dispatchers.IO) {
+        try {
+            val home = EnvFileUpdater.getCirisHome() ?: return@withContext null
+            val pin = File(home, "claim_pin").takeIf { it.exists() }?.readText()?.trim()
+            pin?.takeIf { it.isNotEmpty() }
+        } catch (e: Exception) {
+            Log.w(TAG, "Could not read claim_pin: ${e.message}")
+            null
+        }
     }
 
     actual override fun shutdown() {

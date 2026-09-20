@@ -2922,6 +2922,34 @@
     "wallet_transfer_success": "Chuyển khoản thành công! TX: {tx}",
     "wallet_trust_degraded": "Tin tưởng Suy giảm",
     "wallet_warning": "Cảnh báo",
+    "trace_consent_decline_note": "Việc từ chối tham gia có nghĩa là tác nhân của bạn không thể xây dựng điểm năng lực hoặc kiếm tín dụng cộng đồng. Bạn có thể thay đổi điều này sau.",
+    "people_title": "Mọi người",
+    "contacts_node_too_old_body_versioned": "Nút này đang chạy {version}. Danh bạ và trò chuyện cần ciris-server 0.5.185 trở lên, nên chưa thể phản hồi — mọi tính năng khác vẫn hoạt động bình thường.",
+    "receipt_title": "Biên nhận",
+    "receipt_open": "Mở biên nhận",
+    "receipt_close": "Đóng",
+    "receipt_holders": "Các byte đang ở đâu",
+    "receipt_holders_count": "{count} người giữ",
+    "receipt_notes": "Ghi chú người khác đã để lại",
+    "receipt_notes_none": "Chưa ai để lại ghi chú nào.",
+    "receipt_acts": "Bạn có thể làm gì",
+    "receipt_contact_scope_note": "Chính việc cấp quyền là một bản ghi công khai. Những gì bạn gửi cho nhau thì không.",
+    "state_loading": "Đang tải",
+    "state_error": "Đã có lỗi xảy ra",
+    "state_gone": "Tệp này không còn nữa. Không ai còn giữ bản sao nào.",
+    "state_hidden_by_rules": "Bị ẩn theo quy tắc của bạn.",
+    "state_hidden_by_rules_who": "Bị ẩn theo quy tắc của bạn — {who} đã gắn thẻ nó.",
+    "state_unreviewed": "Chưa được xem xét",
+    "state_unreviewed_since": "Chưa được xem xét từ {when}",
+    "confirm_cancel": "Không phải lúc này",
+    "ceremony_signed_of": "{signed} trong số {needed} đã ký",
+    "ceremony_proposed_by": "được đề xuất bởi {who} · {when}",
+    "ceremony_sign": "Ký",
+    "ceremony_refuse": "Từ chối",
+    "ceremony_state_proposed": "đã đề xuất",
+    "ceremony_state_signed": "đã ký",
+    "ceremony_state_not_yet": "chưa",
+    "receipt_this_node": "Nút này — bạn",
     "verify_title": "Xác minh một bản dựng",
     "verify_hash_label": "Hash bản dựng",
     "verify_button": "Kiểm tra",
@@ -3160,6 +3188,13 @@
       "users": "Người Dùng",
       "wallet": "Ví",
       "wise_authority": "Cơ Quan Sáng Suốt"
+    },
+    "circle": {
+      "agent": "Chỉ mình tôi",
+      "family": "Gia đình",
+      "local_community": "Hàng xóm",
+      "global_communities": "Cộng đồng và doanh nghiệp",
+      "global_commons": "Mọi người"
     }
   },
   "network": {
@@ -4254,6 +4289,7 @@
   "wa_resolve": "Giải Quyết",
   "wa_service_status": "Trạng Thái Dịch Vụ",
   "wa_status": "Trạng Thái",
+  "setup_validation_trace_consent_required": "Vui lòng chọn có gửi dấu vết hay không.",
   "chat": {
     "author_signer_unavailable": "Một tin nhắn trò chuyện được ký bởi người đã viết ra nó, và nút này hiện không thể sử dụng danh tính đó.",
     "community_create_failed": "Nút không thể tạo cộng đồng trò chuyện. Không có gì bị thay đổi.",
@@ -4297,5 +4333,74 @@
     "unknown_fed_id": "ID liên kết đó không có trong danh bạ của nút này. Hãy kết nạp khóa trước (peering) — một dấu trang đã được công bố nhưng chưa được kết nạp không mang nguồn gốc và không thể được chấp thuận.",
     "unreachable": "Họ đã được biết đến, nhưng không có phản hồi nào. Thiết bị của họ có thể đang ngoại tuyến; tin nhắn sẽ đến được họ khi họ trở lại.",
     "unresolvable": "Định danh đó không phân giải được thành một liên hệ."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Nói về ai",
+        "gloss": "Những người được nêu tên trong bản ghi này. Mỗi người trong số họ đều có thể thu hồi lại."
+      },
+      "attesting_key_id": {
+        "label": "Ai đã gửi",
+        "gloss": "Khóa đã ký bản ghi này. Không ai khác có thể làm được điều đó."
+      },
+      "cohort_scope": {
+        "label": "Ai có thể xem",
+        "gloss": "Vòng tròn mà bản ghi này có thể di chuyển trong đó. Rời khỏi vòng tròn này cần hỏi trước."
+      },
+      "dimension": {
+        "label": "Đây là gì",
+        "gloss": "Loại bản ghi, theo từ vựng chung mà mọi nút đều đọc theo cùng một cách."
+      },
+      "consent_scope": {
+        "label": "Quy tắc mà nó tuân theo",
+        "gloss": "Điều có thể xảy ra tiếp theo với bản ghi này: được giữ lại, chia sẻ, hoặc phân tích."
+      },
+      "not_sent": "Nút này không gửi bản ghi này.",
+      "by_rule": "Được quy định cố định bởi quy tắc cho loại bản ghi này ({cc}); không do nút này gửi."
+    },
+    "consent_kind": {
+      "label": "Sự đồng ý",
+      "gloss": "Điều mà một người đã đồng ý có thể xảy ra với các bản ghi nêu tên họ, hoặc điều mà một nút đã đồng ý gửi cho một nút ngang hàng."
+    },
+    "trust_job_version": {
+      "label": "Ai bảo đảm cho ai",
+      "gloss": "Một tuyên bố rằng một khóa đứng sau bảo đảm cho khóa khác đối với một nhiệm vụ đã nêu."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Giữ một bản sao",
+      "gloss": "Một nút cho biết rằng nó đang giữ các byte của một tệp, được xác định bằng mã băm của chúng."
+    },
+    "objection_state": {
+      "label": "Có người đã lên tiếng",
+      "gloss": "Sự phản đối của một người, và trạng thái hiện tại của nó. Không bao giờ bị giới hạn tốc độ."
+    },
+    "content_class_class": {
+      "label": "Loại nội dung",
+      "gloss": "Loại tệp thuộc dạng gì, theo một danh sách cố định mà mọi nút cùng chia sẻ."
+    },
+    "credits_domain_language_subject": {
+      "label": "Điểm tài sản chung",
+      "gloss": "Kiếm được bằng cách giúp đỡ. Chúng chỉ tăng lên, và không thể gửi hay bán."
+    },
+    "prohibited_category": {
+      "label": "Không được phép",
+      "gloss": "Một dấu hiệu cho thấy điều gì đó đã vượt qua một trong những giới hạn mà hiến pháp đặt ra. Đây luôn chỉ là một điểm trừ."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Biên nhận",
+      "gloss": "Một bản ghi cho biết điều gì đó đã được giao. Hủy biên nhận không hủy việc giao hàng."
+    },
+    "renderer": {
+      "verified": "Đã xác minh",
+      "not_verified": "Chưa được xác minh",
+      "indeterminate": "Không xác định",
+      "violation": "Đã vượt qua giới hạn",
+      "partial_violation": "Vượt qua giới hạn một phần",
+      "self_report": "Được chính nút đó báo cáo",
+      "granted": "Đã cấp",
+      "revoked": "Đã thu hồi",
+      "expired": "Đã hết hạn"
+    }
   }
 }

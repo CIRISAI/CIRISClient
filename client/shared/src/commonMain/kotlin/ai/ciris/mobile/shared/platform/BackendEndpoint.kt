@@ -90,6 +90,30 @@ fun backendEndpoint(runWithoutAi: Boolean): BackendEndpoint =
  * comments, casing — because a mis-parse here does not fail loudly. It sends the
  * client to a port nothing is listening on, and the user sees a spinner.
  */
+/**
+ * Did the home RECORD an answer, and which one?
+ *
+ * `true`/`false` when `CIRIS_RUN_WITHOUT_AI` is present; **null when it is
+ * absent** — a first run, a wiped home, a file we could not read, or a home
+ * the flag has not been written to yet. Distinguishing the third state is the
+ * whole point: [runWithoutAiFromEnv] answers a Boolean and so cannot tell
+ * "the owner said no" from "nobody has said anything", and reading the second
+ * as the first is how a recorded hand-off got undone (CIRISClient#48).
+ */
+fun runWithoutAiRecorded(envContent: String?): Boolean? {
+    if (envContent.isNullOrBlank()) return null
+    for (raw in envContent.lineSequence()) {
+        val line = raw.trim()
+        if (line.isEmpty() || line.startsWith("#")) continue
+        val key = line.substringBefore('=', "").trim()
+        if (!key.equals("CIRIS_RUN_WITHOUT_AI", ignoreCase = true)) continue
+        val value = line.substringAfter('=', "").trim()
+            .removeSurrounding("\"").removeSurrounding("'").trim()
+        return value.lowercase() in setOf("true", "1", "yes")
+    }
+    return null
+}
+
 fun runWithoutAiFromEnv(envContent: String?): Boolean {
     if (envContent.isNullOrBlank()) return false
     for (raw in envContent.lineSequence()) {
@@ -133,12 +157,171 @@ object ActiveBackend {
         private set
 
     /** Read the wizard's answer out of `.env` content and select the endpoint. */
+    /**
+     * Select the backend from `.env` content.
+     *
+     * THREE STATES, NOT TWO (CIRISClient#48, second cut). This used to read
+     * `runWithoutAiFromEnv`, which answers a Boolean and therefore folds
+     * "absent" into "false" — correct for a FIRST read, and wrong for every
+     * one after it. A re-resolve over an unreadable or not-yet-written `.env`
+     * silently moved the client back to the agent port, undoing a hand-off
+     * that had already happened, and nothing logged that it had.
+     *
+     * So absence now means KEEP WHAT WE HAVE. Only an explicit
+     * `CIRIS_RUN_WITHOUT_AI=false` moves back to the agent — that is the
+     * documented one-run override, and it is a statement rather than a
+     * silence. This is the endpoint half of the invariant the agent asked for
+     * on #43: once run-without-AI is recorded, nothing may quietly put the
+     * client back on the agent port.
+     */
     fun resolveFrom(envContent: String?) {
-        endpoint = backendEndpoint(runWithoutAiFromEnv(envContent))
+        endpoint = when (runWithoutAiRecorded(envContent)) {
+            true -> NODE_ONLY_ENDPOINT
+            false -> AGENT_ENDPOINT
+            null -> endpoint
+        }
     }
 
     /** Back to the default. For tests, and for a wipe that removes the home. */
     fun reset() {
         endpoint = AGENT_ENDPOINT
     }
+
+    /**
+     * A backend is ALREADY ANSWERING at [endpoint] on the loopback, and this
+     * process is going to be its client rather than start its own. What is
+     * serving outranks what `.env` predicts: the `.env` answers "which port
+     * would our backend use", and an answering port has already settled it.
+     * [resolveFrom] still applies afterwards — an explicit
+     * `CIRIS_RUN_WITHOUT_AI` moves the client as documented; an absent one
+     * keeps this.
+     */
+    fun attach(answering: BackendEndpoint) {
+        endpoint = answering
+    }
+}
+
+/**
+ * THE LOOPBACK NAME THIS PLATFORM MUST USE.
+ *
+ * Android has to say `localhost`: the WebView's Same-Origin Policy treats it
+ * and `127.0.0.1` as different origins, and the literal breaks it. Everywhere
+ * else `127.0.0.1` is the honest answer. Both call sites used to hardcode
+ * their own, which was fine while only `PythonRuntime` needed one and became a
+ * trap the moment a second reader appeared.
+ */
+expect val LOOPBACK_HOST: String
+
+/**
+ * Point the client at the backend the home's `.env` says is running.
+ *
+ * THE SWITCH WAS BUILT AND NEVER PLUGGED IN (CIRISClient#43). `ActiveBackend`
+ * and `runWithoutAiFromEnv` shipped in 0.5.203 with tests that call
+ * `resolveFrom` directly — and NOTHING IN PRODUCTION CALLED IT, on any
+ * platform. So `ActiveBackend.endpoint` stayed at its `AGENT_ENDPOINT` default
+ * forever: a run-without-AI install polled `:8080` after the agent had already
+ * handed off to the node on `:4243`, and the user watched "Restarting your
+ * node…" for as long as they were willing to.
+ *
+ * Call this at startup AND when setup completes. The second is not optional:
+ * the hand-off replaces the AGENT process, not the client, so a client that
+ * only resolves at startup has already decided before the answer exists.
+ *
+ * THE NODE URL IS ONLY FORCED IN THE RUN-WITHOUT-AI DIRECTION. Anything else
+ * would stamp on `CIRIS_NODE_URL` and on operators attached to someone else's
+ * node — the exact defect CIRISClient#26 was about. The invariant this
+ * enforces is the narrow one: once run-without-AI is recorded, no path may
+ * leave the client talking to the agent port.
+ *
+ * @return the endpoint now in effect.
+ */
+suspend fun syncBackendFromEnv(
+    updater: EnvFileUpdater,
+    apiClient: ai.ciris.mobile.shared.api.CIRISApiClient,
+): BackendEndpoint =
+    syncBackendFrom(
+        object : EnvReader {
+            override suspend fun readRawEnv(): String? = updater.readRawEnv()
+        },
+        apiClient,
+    )
+
+/**
+ * What [syncBackendFromEnv] needs from a home: its `.env`, or null.
+ *
+ * A one-method seam so the wiring is testable without a device. `EnvFileUpdater`
+ * is an expect class with a platform constructor, so a test cannot build one —
+ * which is a large part of why this path went unwired and unnoticed.
+ */
+interface EnvReader {
+    suspend fun readRawEnv(): String?
+}
+
+/**
+ * See [syncBackendFromEnv].
+ *
+ * [apiClient] is NOT optional, and that is the point. The first cut of this
+ * moved `LOCAL_NODE_URL` — which federation call sites read — and left the
+ * client every ORDINARY call goes through pinned at whatever it was
+ * constructed with, because `CIRISApp` builds it once inside a `remember`.
+ * So the node URL moved to :4243 and login still went to :8080. Taking the
+ * client as a required argument means the two cannot move apart again;
+ * a caller that has one cannot forget to hand it over.
+ */
+suspend fun syncBackendFrom(
+    reader: EnvReader,
+    apiClient: ai.ciris.mobile.shared.api.CIRISApiClient,
+    /**
+     * Does a BRAIN answer at this URL? Injectable so the wiring is testable
+     * without a network. The default asks the real health route and requires
+     * the answer to come from an agent — a node that happens to be listening
+     * says `role = "fabric-node"` and does not count.
+     */
+    agentAnswers: suspend (String) -> Boolean = { url ->
+        runCatching { apiClient.getNodeHealth(url) }
+            .map { it.role != "fabric-node" }
+            .getOrDefault(false)
+    },
+): BackendEndpoint {
+    ActiveBackend.resolveFrom(runCatching { reader.readRawEnv() }.getOrNull())
+    val endpoint = ActiveBackend.endpoint
+    // ONLY A DEFAULT IS MOVED. An operator who named an address — CIRIS_API_URL
+    // to a remote brain, say — is not second-guessed by a loopback probe. The
+    // two loopback defaults are the only bases this function will ever change.
+    val loopbackDefaults = setOf(
+        AGENT_ENDPOINT.baseUrl(LOOPBACK_HOST),
+        NODE_ONLY_ENDPOINT.baseUrl(LOOPBACK_HOST),
+    )
+    when (endpoint) {
+        NODE_ONLY_ENDPOINT -> {
+            val url = endpoint.baseUrl(LOOPBACK_HOST)
+            // INFERRED, not declared — an operator's custom port outranks it (#52).
+            ai.ciris.mobile.shared.api.CIRISApiClient.setInferredLocalNodeUrl(url)
+            // updateBaseUrl recreates every SDK instance, so this reaches the
+            // ~13 generated APIs as well as the direct HTTP calls.
+            if (apiClient.baseUrl != url) apiClient.updateBaseUrl(url)
+        }
+        AGENT_ENDPOINT -> {
+            // THE OTHER HALF OF THE SWITCH (CIRISClient#54). This branch used to
+            // be absent: the function re-pointed the client TOWARD the node and
+            // never toward the brain. On a with-AI install with no CIRIS_NODE_URL
+            // the client therefore lived on Main.kt's :4243 default for good,
+            // and every brain-only route — add provider, list-models,
+            // /v1/system/llm — 404ed against a node that serves none of them.
+            //
+            // PROBE-GATED, NOT ASSUMED. The gate's desktops run a bare node with
+            // no .env, which resolves to AGENT here too; moving them to :8080
+            // unconditionally would aim them at a dead port. So the brain has
+            // to answer first. Nothing on :8080 means nothing changes, and the
+            // gate keeps reporting clientMode=NODE at :4243 exactly as before.
+            val url = endpoint.baseUrl(LOOPBACK_HOST)
+            if (apiClient.baseUrl in loopbackDefaults &&
+                apiClient.baseUrl != url &&
+                agentAnswers(url)
+            ) {
+                apiClient.updateBaseUrl(url)
+            }
+        }
+    }
+    return endpoint
 }

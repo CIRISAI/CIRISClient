@@ -141,7 +141,11 @@ fun StartupScreen(
     }
 
     Surface(
-        modifier = modifier.fillMaxSize(),
+        // IN THE TREE, WITH NOTHING TO PRESS. Every other screen has a tagged
+        // control, so "/tree is empty" meant "nothing composed". Startup had
+        // none, and a harness reading the empty tree reported an app that
+        // never rendered while the screenshot showed the lights counting up.
+        modifier = modifier.fillMaxSize().testable("screen_startup"),
         color = CIRISColors.BackgroundDark
     ) {
         Column(

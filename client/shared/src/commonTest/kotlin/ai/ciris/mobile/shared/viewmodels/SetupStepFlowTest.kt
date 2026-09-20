@@ -294,17 +294,29 @@ class SetupStepValidationTest {
     }
 
     @Test
-    fun consentScreenNeverBlocks() {
-        // Every toggle has a stated default and declining all of them is valid.
-        val state = SetupFormState(
+    fun consentScreenWaitsForTheTraceAnswer() {
+        // Send traces is a QUESTION, like the age band: no default, and Next
+        // stays disabled until it is answered.
+        val unanswered = SetupFormState(currentStep = SetupStep.JOIN_FEDERATION)
+        assertFalse(unanswered.canProceedFromCurrentStep())
+        assertTrue(unanswered.getStepValidationError() != null)
+    }
+
+    @Test
+    fun eitherTraceAnswerProceeds() {
+        // Declining is an answer; so is declining everything else with it.
+        val declined = SetupFormState(
             currentStep = SetupStep.JOIN_FEDERATION,
             announceOwnership = false,
             accordMetricsConsent = false,
+            traceConsentAnswered = true,
             traceAnalyze = false,
             shareLocationInTraces = false,
         )
-        assertTrue(state.canProceedFromCurrentStep())
-        assertEquals(null, state.getStepValidationError())
+        assertTrue(declined.canProceedFromCurrentStep())
+        assertEquals(null, declined.getStepValidationError())
+        val accepted = declined.copy(accordMetricsConsent = true)
+        assertTrue(accepted.canProceedFromCurrentStep())
     }
 
     @Test
@@ -337,12 +349,15 @@ class SetupStepValidationTest {
     }
 
     @Test
-    fun announcingAndSharingAreOnByDefault() {
+    fun announcingAndScoringAreOnByDefaultAndSendingIsUnanswered() {
         // Announce is the floor for service; declining it silently unserves the
         // node, so it must not be the default. `analyze` is on but declinable.
+        // Send traces has NO default: unanswered, and reading as not-consented
+        // until it is, because an unanswered question must not send anything.
         val fresh = SetupFormState()
         assertTrue(fresh.announceOwnership)
-        assertTrue(fresh.accordMetricsConsent)
+        assertFalse(fresh.traceConsentAnswered)
+        assertFalse(fresh.accordMetricsConsent)
         assertTrue(fresh.traceAnalyze)
         assertFalse(fresh.shareLocationInTraces, "location is required:false and defaults off")
     }

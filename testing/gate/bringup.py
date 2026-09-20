@@ -53,8 +53,30 @@ from pathlib import Path
 CLIENT_TEST_PORT = 9091
 
 #: The node's API port, and the port `adb reverse` maps back to the host so the
-#: emulator's `localhost:8080` is the node running on the runner.
-NODE_API_PORT = 8080
+#: emulator's `localhost:4243` is the node running on the runner.
+#:
+#: 4243, NOT 8080. This gate downloads a released `ciris-server` — a bare NODE,
+#: no brain — and a bare node binds :4242 (transport) and :4243 (read API) and
+#: never binds 8080. That was confirmed empirically as well as from the client's
+#: own constants: in the 2026-09-08 nightly the ONLY occurrence of 8080 anywhere
+#: in the Windows node log was the gate's own curl.
+#:
+#:      AGENT_ENDPOINT     = :8080 /v1/system/health
+#:      NODE_ONLY_ENDPOINT = :4243 /health
+#:      (client/shared/.../platform/BackendEndpoint.kt)
+#:
+#: Reversing 8080 forwarded the emulator to a host port with nothing on it.
+#:
+#: SUFFICIENT ON ITS OWN. An earlier note here said the client would still look
+#: for :8080 until the gate seeded `CIRIS_RUN_WITHOUT_AI` into each platform's
+#: home. That was wrong, and the reason has since changed once more
+#: (CIRISClient#54): with an absent .env the endpoint resolves to AGENT and
+#: `syncBackendFrom` now moves the client to :8080 ONLY IF a brain answers
+#: there. The gate runs a bare node and nothing on :8080, so the probe fails
+#: and the app stays on its `:4243` default — the same outcome, now for a
+#: reason that also serves a real with-AI install. Confirmed by the gate
+#: itself — every desktop leg reports clientMode=NODE at :4243.
+NODE_API_PORT = 4243
 
 #: Android's test-mode switch. A file, not an env var: `am start` cannot set the
 #: environment of the process it launches, so the sentinel is the only handle a
@@ -79,6 +101,28 @@ class Step:
     cmd: list[str]
     #: Failing this step is not fatal — teardown of something that may not exist.
     optional: bool = False
+    #: Extra environment for THIS command, layered over the process's own.
+    #: `simctl launch` forwards `SIMCTL_CHILD_*` into the app; nothing else
+    #: reaches a simulator process, so the iOS launch step carries test mode
+    #: this way. Read by [run].
+    env: dict[str, str] = field(default_factory=dict)
+    #: THE COMMAND IS THE APP, NOT A COMMAND ABOUT THE APP.
+    #:
+    #: Every other step here asks something to do a thing and exits: `adb
+    #: install`, `am start -W`, `simctl launch`. The desktop app is different —
+    #: `java -jar <app>.jar` IS the running client, and waiting for it to exit
+    #: waits until somebody closes the window.
+    #:
+    #: So the desktop leg could never pass. It timed out at 300s with exit 124
+    #: on every platform that has one, and the plan's own docstring called
+    #: itself "kept as a plan for symmetry", which is what a stub that was never
+    #: run looks like from the outside.
+    #:
+    #: A background step is SPAWNED and its liveness is proven afterwards by
+    #: `wait_for_server` — which run_platform already calls, and which is the
+    #: honest test anyway: a launch that returned 0 proves nothing about whether
+    #: the app came up.
+    background: bool = False
 
 
 @dataclass
@@ -114,12 +158,24 @@ def _adb(serial: str | None = None) -> list[str]:
     return base + (["-s", serial] if serial else [])
 
 
+#: The launch component's CLASS. Not derived from the package: the debug APK's
+#: package is `ai.ciris.mobile.debug` (applicationIdSuffix) but its activity is
+#: declared `.MainActivity` relative to the NAMESPACE, `ai.ciris.mobile`. So
+#: `am start -n ai.ciris.mobile.debug/.MainActivity` names
+#: `ai.ciris.mobile.debug.MainActivity`, a class that does not exist — and
+#: `am start` prints "Error: Activity class ... does not exist" and EXITS 0.
+#: Every Android leg of this gate failed at await-process on exactly that, and
+#: the failure read as "the app never started" (it never could). CIRISAgent's
+#: driver has it right: ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity".
+ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity"
+
+
 def android_plan(apk: Path, package: str, serial: str | None = None,
-                 host_port: int = 19091) -> Plan:
+                 host_port: int = 19091, activity: str = ANDROID_ACTIVITY) -> Plan:
     """Emulator on this runner, node on the host, client reaching back to it.
 
     The node runs on the HOST and the app reaches it through `adb reverse`, so
-    the emulator's `localhost:8080` IS the runner's node. That keeps the client
+    the emulator's `localhost:4243` IS the runner's node. That keeps the client
     in the REMOTE-node shape described by FSD/ONE_CLIENT_N_NODES.md and means no
     Android-specific node binary is needed — which is just as well, since
     CIRISServer publishes none.
@@ -140,7 +196,35 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             # INVARIANT 2: the node is reachable before the app probes it.
             Step("reverse-node", adb + ["reverse", f"tcp:{NODE_API_PORT}", f"tcp:{NODE_API_PORT}"]),
             Step("forward-automation", adb + ["forward", f"tcp:{host_port}", f"tcp:{CLIENT_TEST_PORT}"]),
-            Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/.MainActivity"]),
+            Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/{activity}"]),
+            # A LAUNCH THAT RETURNED 0 IS NOT A PROCESS.
+            #
+            # `am start -W` reported success and the app never started: logcat
+            # showed `START u0 {cmp=ai.ciris.mobile.debug/.MainActivity}` with no
+            # matching `Start proc`. That was first read as dexopt running late
+            # on a freshly installed debuggable APK; the component name was the
+            # actual cause (see ANDROID_ACTIVITY). The pid loop stays, because a
+            # launch that returned 0 still proves nothing about a process.
+            #
+            # So ask the only question that settles it — is there a pid — and
+            # re-issue the start until there is. On device, because a shell loop
+            # here would pay adb's round trip 30 times.
+            #
+            # The last `am start`'s output is KEPT and printed on failure. It was
+            # sent to /dev/null, which is how a component name that resolved to
+            # no class at all ("Error: Activity class {...} does not exist",
+            # exit 0) spent months looking like a slow dexopt.
+            Step(
+                "await-process",
+                adb + [
+                    "shell",
+                    "for i in $(seq 1 30); do "
+                    f"pidof {package} > /dev/null 2>&1 && exit 0; "
+                    f"out=$(am start -n {package}/{activity} 2>&1); "
+                    "sleep 2; done; "
+                    "echo 'no process after 60s'; echo \"last am start: $out\"; exit 1",
+                ],
+            ),
         ],
     )
 
@@ -169,7 +253,7 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
     """Simulator on a macOS runner, node on the same host.
 
     No forwarding: the simulator shares the host's loopback, so the client's
-    9091 and the node's 8080 are both simply `127.0.0.1` from the runner. That
+    9091 and the node's 4243 are both simply `127.0.0.1` from the runner. That
     is why this plan is shorter than Android's rather than more complex.
 
     Test mode IS an environment variable here — `simctl launch` sets the child's
@@ -183,11 +267,24 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             Step("wait-for-boot", ["xcrun", "simctl", "bootstatus", udid, "-b"]),
             Step("uninstall", ["xcrun", "simctl", "uninstall", udid, bundle_id], optional=True),
             Step("install", ["xcrun", "simctl", "install", udid, str(app_bundle)]),
-            # --terminate-existing: without it a previous instance survives and
-            # the new launch is a no-op against a stale process holding 9091.
+            # A PREVIOUS INSTANCE IS ENDED FIRST, AS ITS OWN STEP. Without
+            # that a stale process keeps 9091 and the new launch is a no-op
+            # against the OLD build. This used to be `launch
+            # --terminate-existing`, which is devicectl's flag for a physical
+            # device; simctl rejected it ("Invalid device: --terminate-existing",
+            # exit 148) on the first run that ever reached the launch (run
+            # 35353482427). Optional: on a fresh simulator there is nothing to
+            # end.
+            Step("terminate", ["xcrun", "simctl", "terminate", udid, bundle_id], optional=True),
+            # TEST MODE HAS TO BE SAID HERE. The app reads CIRIS_TEST_MODE with
+            # getenv (TestAutomationServer.ios.kt) and starts its automation
+            # server only when it is set; `simctl launch` hands the child only
+            # the SIMCTL_CHILD_* variables of ITS environment. The workflow's
+            # CIRIS_TEST_MODE=true never crossed that boundary, so even a built
+            # app would have come up with no server to drive.
             Step("launch", [
-                "xcrun", "simctl", "launch", "--terminate-existing", udid, bundle_id,
-            ]),
+                "xcrun", "simctl", "launch", udid, bundle_id,
+            ], env={"SIMCTL_CHILD_CIRIS_TEST_MODE": "true"}),
         ],
     )
 
@@ -214,8 +311,34 @@ def desktop_plan(jar: Path, display_wrapped: bool = True) -> Plan:
     return Plan(
         platform="desktop",
         test_url=f"http://127.0.0.1:{CLIENT_TEST_PORT}",
-        steps=[Step("launch", cmd)],
+        steps=[Step("launch", cmd, background=True)],
     )
+
+
+#: Handles for steps spawned with `background=True`, so a caller can reap them.
+#: CI tears the whole runner down, but a developer running this locally would
+#: otherwise leave a Compose window behind on every invocation.
+_BACKGROUND: list[subprocess.Popen] = []
+
+#: Open log files for spawned steps, closed alongside them.
+_BACKGROUND_LOGS: list = []
+
+
+def terminate_background() -> None:
+    """Stop anything `run()` spawned. Safe to call twice, and never raises."""
+    while _BACKGROUND_LOGS:
+        handle = _BACKGROUND_LOGS.pop()
+        try:
+            handle.close()
+        except Exception:  # noqa: BLE001
+            pass
+    while _BACKGROUND:
+        proc = _BACKGROUND.pop()
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+        except Exception:  # noqa: BLE001 — teardown must not hide a real failure
+            pass
 
 
 def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[Step, int]]:
@@ -228,7 +351,36 @@ def run(plan: Plan, timeout: float = 300.0, check: bool = True) -> list[tuple[St
     results: list[tuple[Step, int]] = []
     for step in plan.steps:
         try:
-            proc = subprocess.run(step.cmd, capture_output=True, text=True, timeout=timeout)
+            if step.background:
+                # Spawned, not awaited. Liveness is proven by wait_for_server;
+                # the only failure this can report is "it would not start at
+                # all", which Popen raises as FileNotFoundError below.
+                # THE APP'S OWN OUTPUT IS THE DIAGNOSTIC CHANNEL, AND I THREW
+                # IT AWAY. The first version of this sent stdout and stderr to
+                # DEVNULL, which is how `screenshot: capture unavailable` became
+                # a failure with no reason attached on three platforms at once —
+                # the app was surely saying why and nobody could hear it. This
+                # gate's own rule is that a failure you cannot diagnose from the
+                # artifact costs a re-run to learn what the first run already
+                # knew.
+                #
+                # Written beside the node's log, which each leg already uploads.
+                log_path = Path(f"{step.name}-app.log")
+                log_handle = open(log_path, "wb")  # noqa: SIM115 — closed by the reaper
+                _BACKGROUND_LOGS.append(log_handle)
+                proc_bg = subprocess.Popen(
+                    step.cmd,
+                    stdout=log_handle,
+                    stderr=subprocess.STDOUT,
+                    env={**os.environ, **step.env} if step.env else None,
+                )
+                _BACKGROUND.append(proc_bg)
+                results.append((step, 0))
+                continue
+            proc = subprocess.run(
+                step.cmd, capture_output=True, text=True, timeout=timeout,
+                env={**os.environ, **step.env} if step.env else None,
+            )
             code, stderr = proc.returncode, proc.stderr or ""
         except (FileNotFoundError, NotADirectoryError) as e:
             # A MISSING TOOL IS A STEP FAILURE, NOT AN EXCEPTION THAT ESCAPES.

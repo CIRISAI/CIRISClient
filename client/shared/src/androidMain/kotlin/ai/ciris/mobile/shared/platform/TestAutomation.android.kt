@@ -59,8 +59,17 @@ actual object TestAutomation {
         return TestAutomationState.triggerClick(testTag)
     }
 
-    /** Whether automation can DRIVE this tag, as opposed to merely see it. */
-    actual fun hasClickHandler(testTag: String): Boolean = false
+    /**
+     * Whether automation can DRIVE this tag, as opposed to merely see it.
+     *
+     * THE SAME MAP THE HANDLER WENT INTO. [registerClickHandler] delegates to
+     * [TestAutomationState]; this answered `false` unconditionally, so every
+     * `btn_` on every screen of this platform read as "tagged but not
+     * drivable" (CIRISClient#30's exact symptom) the first time a harness
+     * reached a screen here and asked — the client's five-platform gate,
+     * run 35359571538, on a Login that desktop reported clean.
+     */
+    actual fun hasClickHandler(testTag: String): Boolean = TestAutomationState.hasClickHandler(testTag)
 
     private val inputSinks = mutableSetOf<String>()
 

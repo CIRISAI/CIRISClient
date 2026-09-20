@@ -116,6 +116,27 @@ enum class SetupStep {
  */
 fun hasAiStep(hasAgent: Boolean, runWithoutAi: Boolean): Boolean = hasAgent && !runWithoutAi
 
+/**
+ * Should the client still hold the post-setup "the node is restarting" state?
+ *
+ * ONLY WHILE THERE IS NO SESSION. `reconfiguring` is a latch set when setup
+ * completes and cleared by whichever branch routes out of the hold — but the
+ * hold runs inside `LaunchedEffect(phase)`, so any setPhase() cancels it
+ * mid-poll and leaves the latch set with nothing routed. A later phase change
+ * re-enters it, and when that lands after the owner has signed back in the app
+ * holds "Restarting your node…" over a working session and strands them on
+ * Login (CIRISClient#46 — a SYSTEM_ADMIN login succeeding against an agent
+ * alive in `work`, with the client's own gate line saying so).
+ *
+ * A session is exactly the evidence the hold exists to gather: it proves the
+ * backend came back AND that the owner can talk to it. So holding one makes
+ * the hold moot however we arrived. One predicate, because the latch has one
+ * reader and eight writers and guarding the reader is what makes this true by
+ * construction rather than by everyone remembering.
+ */
+fun shouldHoldForReconfigure(reconfiguring: Boolean, hasSession: Boolean): Boolean =
+    reconfiguring && !hasSession
+
 fun nextSetupStep(current: SetupStep, hasAiStep: Boolean): SetupStep = when (current) {
     SetupStep.YOU -> SetupStep.JOIN_FEDERATION
     SetupStep.JOIN_FEDERATION -> if (hasAiStep) SetupStep.AI else SetupStep.COMPLETE
@@ -665,10 +686,25 @@ data class SetupFormState(
 
     /**
      * **Send traces** — `consent:replication:v1`. The peer may HOLD your traces.
-     * ON by default: this is the primary action of screen 2 and the substrate
-     * marks the grant `required: true` within a mesh participation consent.
+     *
+     * NO DEFAULT. This used to be ON, a switch the person could leave alone;
+     * now it is a question they must answer, the same way the age band is —
+     * two options, neither pre-selected, and Next stays disabled until one is
+     * chosen ([traceConsentAnswered]). A consent that was never looked at is
+     * not a consent, and the cost of declining (no capacity score, no commons
+     * credits) belongs on the option before the choice, not in a settings
+     * screen after it. Until answered this reads false, because an unanswered
+     * question must not send anything.
      */
-    val accordMetricsConsent: Boolean = true,
+    val accordMetricsConsent: Boolean = false,
+
+    /**
+     * Whether the send-traces question has been ANSWERED — yes or no. Screen 2
+     * cannot be left until it has. Set by [SetupViewModel.setAccordMetricsConsent];
+     * clearing consent because announce was turned off does not count as an
+     * answer, because the person did not give one.
+     */
+    val traceConsentAnswered: Boolean = false,
 
     /**
      * **Be scored** — CC#46 `analyze`. The peer may SCORE your traces, which is
@@ -879,9 +915,10 @@ data class SetupFormState(
             ageOk && fedIdOk && accountOk && stewardshipOk
         }
 
-        // Every consent here is a real choice with a stated default, including
-        // declining all of them. Nothing to block on.
-        SetupStep.JOIN_FEDERATION -> true
+        // Announce, be-scored and location have stated defaults and declining
+        // any of them is valid. SEND TRACES has no default: like the age band
+        // it must be answered, and either answer proceeds.
+        SetupStep.JOIN_FEDERATION -> traceConsentAnswered
 
         SetupStep.AI -> hasUsableLlmChoice()
 
@@ -954,7 +991,11 @@ data class SetupFormState(
             ageError ?: fedIdError ?: accountError ?: stewardshipError
         }
 
-        SetupStep.JOIN_FEDERATION -> null
+        SetupStep.JOIN_FEDERATION -> if (traceConsentAnswered) {
+            null
+        } else {
+            LocalizationHelper.getString("setup_validation_trace_consent_required")
+        }
 
         SetupStep.AI -> when {
             runWithoutAi -> null

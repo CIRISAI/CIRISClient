@@ -1546,8 +1546,14 @@ class SetupViewModel(
      * LLM provider/API base URL) are shared with CIRIS L3C.
      * No message content or PII is ever sent.
      */
-    fun setAccordMetricsConsent(consent: Boolean) {
-        _state.value = _state.value.copy(accordMetricsConsent = consent)
+    fun setAccordMetricsConsent(consent: Boolean, answered: Boolean = true) {
+        // `answered = false` is for clearing consent as a CONSEQUENCE (announce
+        // turned off, so traces cannot federate) — the question on screen 2 is
+        // still open, because the person has not answered it.
+        _state.value = _state.value.copy(
+            accordMetricsConsent = consent,
+            traceConsentAnswered = _state.value.traceConsentAnswered || answered,
+        )
     }
 
     /**

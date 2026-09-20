@@ -517,6 +517,9 @@ class TestAutomationServer(
                     val testTag = json.jsonObject["testTag"]?.jsonPrimitive?.content ?: ""
                     val direction = json.jsonObject["direction"]?.jsonPrimitive?.content ?: "down"
                     val amount = json.jsonObject["amount"]?.jsonPrimitive?.int ?: 300
+                    // Optional: WHICH scrollable to move. Absent, the
+                    // dispatcher guesses; present, the named one wins.
+                    val container = json.jsonObject["container"]?.jsonPrimitive?.content
 
                     // THE SHARED HANDLER FIRST, and it answers for whether the
                     // screen MOVED (CIRISClient#33). This used to post to a
@@ -528,7 +531,9 @@ class TestAutomationServer(
                     // turned somewhere meaningless and the reply still said
                     // success.
                     val resp = ai.ciris.mobile.shared.testing.TestAutomationHandler.handleScroll(
-                        ai.ciris.mobile.shared.testing.ScrollRequest(testTag, direction, amount)
+                        ai.ciris.mobile.shared.testing.ScrollRequest(
+                            testTag, direction, amount, container
+                        )
                     )
                     if (resp.success) {
                         call.respond(resp)

@@ -38,7 +38,7 @@ import kotlinx.coroutines.flow.collectLatest
  * registration, no collector, no cost.
  */
 @Composable
-fun rememberTestableScrollState(initial: Int = 0): ScrollState {
+fun rememberTestableScrollState(initial: Int = 0, name: String? = null): ScrollState {
     val state = rememberScrollState(initial)
     if (!TestAutomation.isEnabled()) return state
 
@@ -46,7 +46,7 @@ fun rememberTestableScrollState(initial: Int = 0): ScrollState {
     // most recent one owns the dispatch, so a scrollable dialog over a
     // scrollable screen scrolls the dialog — what a person would expect, and
     // what stops two collectors racing on one request.
-    val token = remember { TestAutomationState.registerScrollable() }
+    val token = remember(name) { TestAutomationState.registerScrollable(name) }
     DisposableEffect(token) {
         onDispose { TestAutomationState.unregisterScrollable(token) }
     }
@@ -59,7 +59,9 @@ fun rememberTestableScrollState(initial: Int = 0): ScrollState {
 
     LaunchedEffect(token, state) {
         TestAutomationState.scrollRequests.collectLatest { request ->
-            if (request == null || !TestAutomationState.isActiveScrollable(token)) return@collectLatest
+            if (request == null ||
+                !TestAutomationState.isActiveScrollable(token, request.container)
+            ) return@collectLatest
             val delta = when (request.direction.lowercase()) {
                 "up" -> -request.amount
                 else -> request.amount
@@ -80,6 +82,6 @@ fun rememberTestableScrollState(initial: Int = 0): ScrollState {
 }
 
 /** `verticalScroll` over a state automation can drive. See [rememberTestableScrollState]. */
-fun Modifier.testableVerticalScroll(): Modifier = composed {
-    verticalScroll(rememberTestableScrollState())
+fun Modifier.testableVerticalScroll(name: String? = null): Modifier = composed {
+    verticalScroll(rememberTestableScrollState(name = name))
 }

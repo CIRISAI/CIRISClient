@@ -84,10 +84,16 @@ FORBIDDEN = (
     "client/androidApp/wheels/*",
     "client/androidApp/src/main/jniLibs/*",
     "client/androidApp/src/main/assets/bin/*",
+    # client/iosApp/{Frameworks,app_packages_native,Resources.zip} WERE here.
+    # They are the iOS substrate, and §2 excluded them on the argument that a
+    # vendored copy of another repo's release binaries is the same defect one
+    # level down. That argument still holds and was overruled deliberately: the
+    # iOS leg of the five-platform gate could not build without them and so had
+    # never passed, which bought a third copy's worth of drift risk in exchange
+    # for an end-to-end test on a platform we ship. `Resources/` stays out — the
+    # 137 MB tree is only needed where the rsync build phase runs, and that
+    # phase is guarded on a `ciris_engine/` this repo does not have.
     "client/iosApp/Resources/*",
-    "client/iosApp/Resources.zip",
-    "client/iosApp/Frameworks/*",
-    "client/iosApp/app_packages_native/*",
     "client/*/.ciris_keys/*",
     "client/.ciris_keys/*",
     "*/__pycache__/*",
@@ -96,6 +102,24 @@ FORBIDDEN = (
     "*secrets*key*",
 )
 
+
+
+def untracked_under_client() -> list[str]:
+    """Files under client/ that git does not track and does not ignore.
+
+    THE BLIND SPOT THAT RECORDED TWO WRONG DIGESTS. The digest walks
+    `git ls-files`, which lists TRACKED paths only. A new source file that has
+    been written but not yet `git add`ed is invisible to it, so `--print`
+    records a digest over a tree that lacks the file, the commit then includes
+    the file, and CI — hashing the committed tree — computes something else.
+    Two consecutive commits on main failed the vendoring gate exactly this way
+    (each added one new .kt). The gate was right; the recording step lied.
+    """
+    out = subprocess.run(
+        ["git", "-C", str(REPO), "ls-files", "-z", "--others", "--exclude-standard", "client"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    return sorted(p for p in out.split("\0") if p)
 
 def tracked_files() -> list[str]:
     out = subprocess.run(
@@ -175,6 +199,14 @@ if __name__ == "__main__":
         print(sha)
         sys.exit(0)
     if "--print" in sys.argv:
+        stray = untracked_under_client()
+        if stray:
+            sys.exit(
+                "[FAIL] refusing to record a digest: untracked files under client/ "
+                "would be left out of it and then committed —\n    "
+                + "\n    ".join(stray)
+                + "\n  `git add` them (or ignore them) first, then --print."
+            )
         print(compute(tracked_files()))
         sys.exit(0)
     sys.exit(main())

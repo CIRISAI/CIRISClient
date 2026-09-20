@@ -187,6 +187,11 @@ actual class EnvFileUpdater {
         }
     }
 
+    actual suspend fun readRawEnv(): String? = withContext(Dispatchers.IO) {
+        val envFile = cirisHome?.let { File(it, ENV_FILE_NAME) } ?: return@withContext null
+        if (envFile.exists()) envFile.readText() else null
+    }
+
     actual suspend fun readLlmConfig(): EnvLlmConfig? = withContext(Dispatchers.IO) {
         val envFile = cirisHome?.let { File(it, ENV_FILE_NAME) } ?: run {
             Log.w(TAG, "Cannot read .env - CIRIS_HOME not found")

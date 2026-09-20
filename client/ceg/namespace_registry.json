@@ -1,0 +1,2655 @@
+{
+  "_meta": {
+    "case_rule": {
+      "cc_ref": "CC 3.1.7 R3",
+      "classes": {
+        "external": "outside-standard token; verbatim canonical form (ISO 4217, BCP 47, rating scheme)",
+        "hex": "CC 2.6.3 digest; lowercase",
+        "literal": "CC-fixed stem; lowercase (build-gated)",
+        "value": "caller-supplied identity; verbatim, case-preserved",
+        "vocab": "CC-defined vocabulary; MUST match vocab_pattern; refuse, never fold",
+        "wildcard": "the `*` tail; not a segment value"
+      },
+      "compare": "byte-exact; consumers MUST NOT case-fold",
+      "literal_pattern": "^[a-z0-9][a-z0-9_]*$",
+      "placeholder_classes": {
+        "allegation_type": "vocab",
+        "approach_id": "value",
+        "artifact": "vocab",
+        "aspect": "vocab",
+        "authority": "value",
+        "authority_id": "value",
+        "axis": "vocab",
+        "band": "vocab",
+        "category": "vocab",
+        "cell": "value",
+        "class": "vocab",
+        "cohort": "value",
+        "community_key_id": "value",
+        "contribution_id": "value",
+        "currency": "external",
+        "domain": "vocab",
+        "entity_type": "vocab",
+        "form": "vocab",
+        "forum": "value",
+        "goal_id": "value",
+        "grounds": "vocab",
+        "id": "value",
+        "job": "vocab",
+        "key": "vocab",
+        "kind": "vocab",
+        "lang_code": "external",
+        "language": "vocab",
+        "layer": "vocab",
+        "level": "vocab",
+        "method_id": "value",
+        "model_id": "value",
+        "network": "vocab",
+        "outcome": "vocab",
+        "period": "vocab",
+        "platform": "vocab",
+        "platform_or_target": "vocab",
+        "prefix": "hex",
+        "prior_contribution_id": "value",
+        "rating": "external",
+        "reason": "vocab",
+        "relation": "vocab",
+        "resource_type": "vocab",
+        "revision_field": "vocab",
+        "role": "vocab",
+        "scale": "vocab",
+        "scheme": "vocab",
+        "scope": "vocab",
+        "source": "value",
+        "state": "vocab",
+        "stream_id": "value",
+        "subject": "value",
+        "substrate_rung": "vocab",
+        "target": "value",
+        "target_kind": "vocab",
+        "tier": "vocab",
+        "tree_size": "value",
+        "version": "vocab"
+      },
+      "policy": "case-sensitive; lowercase CC vocabulary; per-segment classes",
+      "refusal_token": "namespace_dimension_case_malformed",
+      "vocab_pattern": "^[a-z0-9][a-z0-9_.-]*$"
+    },
+    "cc_version": "1.0-rc5",
+    "components_outside_normative": [
+      "cirisbench"
+    ],
+    "generator": "tools/build_cc_namespace.py",
+    "n_components": 9,
+    "n_components_normative": 8,
+    "n_families": 116,
+    "per_component": {
+      "accord-agent": 19,
+      "anti-sybil": 6,
+      "attestation": 18,
+      "cirisbench": 1,
+      "lens": 15,
+      "node": 35,
+      "persist": 6,
+      "registry": 11,
+      "transport-delivery": 5
+    },
+    "private_use_prefix": "x_private:",
+    "source": "constitution/part_3_the_namespace.md",
+    "source_sha256": "95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839"
+  },
+  "families": [
+    {
+      "cc_section": "3.1.1",
+      "description": "Reserved \u2014 only identity_type=accord_holder may emit.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "see CC 3.4.1",
+      "prefix": "accord:*",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.1",
+        "rule": "accord_holder-only"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "accord"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.6",
+      "description": "Active vs Below-Active per 30-day window (F-AV-DORMANT).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "boolean-via-score",
+      "prefix": "activity_tier:{period}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "activity_tier"
+        },
+        {
+          "class": "vocab",
+          "segment": "{period}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Witness rung of the age ladder \u2014 {level} \u2208 provider | government, {band} \u2208 minor | adult, canonical {version} = v1.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "signed",
+      "prefix": "age_assurance:{level}:{band}:{version}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.11",
+        "rule": "witness-reserved, subject-not-self"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "age_assurance"
+        },
+        {
+          "class": "vocab",
+          "segment": "{level}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{band}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Subject's own age-band declaration \u2014 {band} \u2208 minor | adult, canonical {version} = v1.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "signed",
+      "prefix": "age_self_declared:{band}:{version}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "age_self_declared"
+        },
+        {
+          "class": "vocab",
+          "segment": "{band}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Joint claim with CC 3.1.9.1 NodeCore.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "signed",
+      "prefix": "agent_files:{kind}:{platform_or_target}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "agent_files"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{platform_or_target}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.7",
+      "description": "Strategic pathway from current state toward Goals (Piece 10 karma \u2014 the per-agent forward post-selection structure; the universal-grace half of Piece 10 is upstream-retracted, F-11).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "approach:{goal_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "approach"
+        },
+        {
+          "class": "value",
+          "segment": "{goal_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Agent source-tree byte-equal against registered manifest.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "attestation:agent_integrity",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "attestation"
+        },
+        {
+          "class": "literal",
+          "segment": "agent_integrity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Hardware-rooted attestation (TPM 2.0 / Android Keystore / iOS Secure Enclave).",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "attestation:hardware_rooted",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "attestation"
+        },
+        {
+          "class": "literal",
+          "segment": "hardware_rooted"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "License-validity claim (Registry-signed, Verify-verified).",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "attestation:license_validity",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "attestation"
+        },
+        {
+          "class": "literal",
+          "segment": "license_validity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "2-of-3 multi-source registry consensus on key / build / license validity.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score; Indeterminate allowed \u2192 RESTRICTED",
+      "prefix": "attestation:registry_consensus",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "attestation"
+        },
+        {
+          "class": "literal",
+          "segment": "registry_consensus"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Running CIRISVerify binary attests itself against its function manifest.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "attestation:self_verify",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "attestation"
+        },
+        {
+          "class": "literal",
+          "segment": "self_verify"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3",
+      "description": "",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "audit_chain:hash_continuity",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "audit_chain"
+        },
+        {
+          "class": "literal",
+          "segment": "hash_continuity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Uphold the informed agency and dignity of sentient beings.\"",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "autonomy:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "autonomy"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.10",
+      "description": "HE-300 score on category (commonsense, commonsense_hard, deontology, justice, virtue) at version (v1.0 / v1.1 / v1.2).",
+      "owning_component": "cirisbench",
+      "owning_repo": "CIRISBench",
+      "polarity": "positive-only",
+      "prefix": "benchmark:he300:{category}:{version}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "benchmark"
+        },
+        {
+          "class": "literal",
+          "segment": "he300"
+        },
+        {
+          "class": "vocab",
+          "segment": "{category}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Do Good \u2014 promote universal sentient flourishing.\"",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "beneficence:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "beneficence"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Bond posted per $1-Sybil-resistance per PoB; forfeited on revocation.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "positive-only",
+      "prefix": "bond_posted:{currency}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "bond_posted"
+        },
+        {
+          "class": "external",
+          "segment": "{currency}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Build manifest registered against the directory (precondition for L4 attestation).",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "boolean-via-score",
+      "prefix": "build:registered:{target}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "build"
+        },
+        {
+          "class": "literal",
+          "segment": "registered"
+        },
+        {
+          "class": "value",
+          "segment": "{target}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "\ud835\udc9e_CIRIS \u2014 the minimum over the five factors; anti-Goodhart unity-of-virtues",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:composite",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "composite"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "C",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:core_identity",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "core_identity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "I_inc",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:incompleteness_awareness",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "incompleteness_awareness"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "I_int",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:integrity",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "integrity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "R",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:resilience",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "resilience"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.1",
+      "description": "S",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "capacity:sustained_coherence",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "no-self-emit (attesting_key_id != attested_key_id)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity"
+        },
+        {
+          "class": "literal",
+          "segment": "sustained_coherence"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Witness rung of the adult decision-capacity ladder (CC 3.4.12): a registered qualified assessor attests a per-domain band; the subject cannot self-emit it and the proposed steward cannot be the attester.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "signed",
+      "prefix": "capacity_assurance:{level}:{domain}:{band}:{version}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.12",
+        "rule": "witness-reserved, subject-not-self, attester != steward"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "capacity_assurance"
+        },
+        {
+          "class": "vocab",
+          "segment": "{level}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{band}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Validity of a certification authority's signature.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "cert_validity:{authority}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "cert_validity"
+        },
+        {
+          "class": "value",
+          "segment": "{authority}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.3",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "coherence_standing:{cohort}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "coherence_standing"
+        },
+        {
+          "class": "value",
+          "segment": "{cohort}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Track-record of follow-through.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "commitment_fulfillment:{prior_contribution_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "commitment_fulfillment"
+        },
+        {
+          "class": "value",
+          "segment": "{prior_contribution_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9",
+      "description": "A node's declared operating configuration, published as an auditable record rather than inferred from behaviour.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "config:{scope}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "config"
+        },
+        {
+          "class": "vocab",
+          "segment": "{scope}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.3",
+      "description": "conscience-faculty verdicts.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "conscience:coherence",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "conscience"
+        },
+        {
+          "class": "literal",
+          "segment": "coherence"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.3",
+      "description": "conscience-faculty verdicts.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "conscience:entropy",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "conscience"
+        },
+        {
+          "class": "literal",
+          "segment": "entropy"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.3",
+      "description": "conscience-faculty verdicts.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "conscience:epistemic_humility",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "conscience"
+        },
+        {
+          "class": "literal",
+          "segment": "epistemic_humility"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.3",
+      "description": "conscience-faculty verdicts.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "conscience:optimization_veto",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "conscience"
+        },
+        {
+          "class": "literal",
+          "segment": "optimization_veto"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5",
+      "description": "Subject-side consent authority over Contributions naming the subject in subject_key_ids, plus the producer-side and substrate-side leaves that close its lifecycle.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "per-leaf (CC 3.3.1)",
+      "prefix": "consent:{kind}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "consent"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Catalogue row (CC 3.1.7 R1); semantics at CC 3.3.12 \u2014 incl.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "content_class:{class}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "content_class"
+        },
+        {
+          "class": "vocab",
+          "segment": "{class}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Catalogue row (CC 3.1.7 R1); semantics, schemes and the trusted-publisher emitter rule at CC 3.3.12.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "content_rating:{scheme}:{rating}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "content_rating"
+        },
+        {
+          "class": "vocab",
+          "segment": "{scheme}"
+        },
+        {
+          "class": "external",
+          "segment": "{rating}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3",
+      "description": "",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "corpus_health:n_eff_measurable",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "corpus_health"
+        },
+        {
+          "class": "literal",
+          "segment": "n_eff_measurable"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.6",
+      "description": "Sub-leaf for substrate-building labor (infrastructure maintenance, dependency contribution, documentation) not visible to the per-grounded-vote accrual loop.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "positive-only",
+      "prefix": "credits:{domain}:{language}:substrate_building",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "credits"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{language}"
+        },
+        {
+          "class": "literal",
+          "segment": "substrate_building"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.6",
+      "description": "Commons Credits (P2).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "positive-only",
+      "prefix": "credits:{domain}:{language}:{subject}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "credits"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{language}"
+        },
+        {
+          "class": "value",
+          "segment": "{subject}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Catalogue row (CC 3.1.7 R1); community content-warning semantics at CC 3.3.12.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "cw_class:{class}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "cw_class"
+        },
+        {
+          "class": "vocab",
+          "segment": "{class}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.4",
+      "description": "",
+      "owning_component": "transport-delivery",
+      "owning_repo": "CIRISEdge",
+      "polarity": "signed",
+      "prefix": "delivery:{class}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "delivery"
+        },
+        {
+          "class": "vocab",
+          "segment": "{class}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.4",
+      "description": "is Edge's too, and is registered here rather than left to CC 3.4.6 prose: subscriber-emitted, membership-gated, not a substrate-self-report.",
+      "owning_component": "transport-delivery",
+      "owning_repo": "CIRISEdge",
+      "polarity": "signed",
+      "prefix": "delivery_receipt:{stream_id}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "delivery_receipt"
+        },
+        {
+          "class": "value",
+          "segment": "{stream_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.2",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:conscience_override_rate",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "conscience_override_rate"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.4",
+      "description": "Population-scale correlated-action detector.",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:correlated_action:{axis}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "correlated_action"
+        },
+        {
+          "class": "vocab",
+          "segment": "{axis}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.2",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:cross_agent_divergence",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "cross_agent_divergence"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.5",
+      "description": "Population-scale resource-concentration detector.",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:distributive:access:{resource_type}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "distributive"
+        },
+        {
+          "class": "literal",
+          "segment": "access"
+        },
+        {
+          "class": "vocab",
+          "segment": "{resource_type}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.2",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:hash_chain_integrity",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "hash_chain_integrity"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.2",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:intra_agent_consistency",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "intra_agent_consistency"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.2",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "detection:temporal_drift",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.8",
+        "rule": "detector-only (identity_type contains lenscore_detector)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "detection"
+        },
+        {
+          "class": "literal",
+          "segment": "temporal_drift"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.1",
+      "description": "Decision-Making Algorithm verdicts about an agent's reasoning chain.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "dma:csdma:*",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "dma"
+        },
+        {
+          "class": "literal",
+          "segment": "csdma"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.1",
+      "description": "Decision-Making Algorithm verdicts about an agent's reasoning chain.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "dma:dsdma:{domain}:*",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "dma"
+        },
+        {
+          "class": "literal",
+          "segment": "dsdma"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.1",
+      "description": "Decision-Making Algorithm verdicts about an agent's reasoning chain.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "dma:idma:*",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "dma"
+        },
+        {
+          "class": "literal",
+          "segment": "idma"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.1",
+      "description": "Decision-Making Algorithm verdicts about an agent's reasoning chain.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "dma:pdma:*",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "dma"
+        },
+        {
+          "class": "literal",
+          "segment": "pdma"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "An obligation attached to a permission \u2014 the thing a permission-and-prohibition grammar cannot express, and the thing every widely-used content licence rests on (attribution, share-alike, carry-restrictions-downstream).",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "signed",
+      "prefix": "duty:{kind}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "duty"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.6",
+      "description": "Expertise standing (P3).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "expertise:{domain}:{language}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "expertise"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{language}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3",
+      "description": "",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "federation_directory:replication_lag",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "federation_directory"
+        },
+        {
+          "class": "literal",
+          "segment": "replication_lag"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "Per-response explainability SLA commitment.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "fidelity:explainability_sla:{tier}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "fidelity"
+        },
+        {
+          "class": "literal",
+          "segment": "explainability_sla"
+        },
+        {
+          "class": "vocab",
+          "segment": "{tier}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Be Honest \u2014 truthful, comprehensible information.\"",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "fidelity:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "fidelity"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.7",
+      "description": "Multi-scale belonging-projector composite.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "goal:{scale}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "goal"
+        },
+        {
+          "class": "vocab",
+          "segment": "{scale}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "Open vocabulary.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "positive-only",
+      "prefix": "hard_case:{kind}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "hard_case"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Statement that the seed lives in tpm / ios_secure_enclave / android_keystore / software_fallback.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "hardware_custody:{platform}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "hardware_custody"
+        },
+        {
+          "class": "vocab",
+          "segment": "{platform}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "External service-health observation.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "health:liveness:{version}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "health"
+        },
+        {
+          "class": "literal",
+          "segment": "liveness"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.1",
+      "description": "Substrate auto-emission per federation_blobs.put_blob.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "boolean-via-score",
+      "prefix": "holds_bytes:sha256:{prefix}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "holds_bytes"
+        },
+        {
+          "class": "literal",
+          "segment": "sha256"
+        },
+        {
+          "class": "hex",
+          "segment": "{prefix}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3",
+      "description": "",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "identity_continuity:relational_anchor",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "identity_continuity"
+        },
+        {
+          "class": "literal",
+          "segment": "relational_anchor"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Act Ethically \u2014 transparent, auditable reasoning.\"",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "integrity:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "integrity"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "Independent foundation-model judge verdict (PASS/FAIL/UNDETERMINED).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "boolean-via-score",
+      "prefix": "judge_model:verdict:{model_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "judge_model"
+        },
+        {
+          "class": "literal",
+          "segment": "verdict"
+        },
+        {
+          "class": "value",
+          "segment": "{model_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Distribute benefits and burdens equitably.\"",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "justice:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "justice"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.4",
+      "description": "",
+      "owning_component": "transport-delivery",
+      "owning_repo": "CIRISEdge",
+      "polarity": "signed",
+      "prefix": "key_boundary:{scope}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "key_boundary"
+        },
+        {
+          "class": "vocab",
+          "segment": "{scope}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "License status for a key under a named authority (authority_id is the licence's provenance \u2014 CC 2.4.1.2.1; authority is conferred by quorum, never by delegates_to).",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "signed",
+      "prefix": "licensure:{authority_id}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.9",
+        "rule": "co-stewarded (Registry + Verify)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "licensure"
+        },
+        {
+          "class": "value",
+          "segment": "{authority_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.5",
+      "description": "Names the scale at which a decision is being made.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "enumerated",
+      "prefix": "locality:decision:{scale}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "locality"
+        },
+        {
+          "class": "literal",
+          "segment": "decision"
+        },
+        {
+          "class": "vocab",
+          "segment": "{scale}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.8.3",
+      "description": "",
+      "owning_component": "lens",
+      "owning_repo": "CIRISLensCore",
+      "polarity": "signed",
+      "prefix": "manifold_conformity:{cohort}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "manifold_conformity"
+        },
+        {
+          "class": "value",
+          "segment": "{cohort}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Mesh-configuration row (CC 4.2.1, #57 ratified): trust-root-emitted on the delegation plane; relieve-never-expand; most-restrictive-across-roots; a key naming no consumer processor is refused at admission; emergency form TTL \u2264 72 h.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "mesh_config:{key}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "mesh_config"
+        },
+        {
+          "class": "vocab",
+          "segment": "{key}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.7",
+      "description": "Concrete operational practice.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "method:{approach_id}:{substrate_rung}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "method"
+        },
+        {
+          "class": "value",
+          "segment": "{approach_id}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{substrate_rung}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "ModerationEvent.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "moderation:{allegation_type}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "moderation"
+        },
+        {
+          "class": "vocab",
+          "segment": "{allegation_type}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Moderation merit.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "moderation_track_record:{community_key_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "moderation_track_record"
+        },
+        {
+          "class": "value",
+          "segment": "{community_key_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Depth of a partner's participation across federated bodies.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "signed",
+      "prefix": "multilateral_participation:{forum}:{kind}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "multilateral_participation"
+        },
+        {
+          "class": "value",
+          "segment": "{forum}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Federation-scope open-call surface \u2014 broadcast claim that an entity has a stated need.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "positive-only",
+      "prefix": "need:{domain}:{kind}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "need"
+        },
+        {
+          "class": "vocab",
+          "segment": "{domain}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.2",
+      "description": "\"Avoid Harm.\" Apophatic-bound failures (the 22 prohibited categories) are -1 only.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "non_maleficence:{aspect}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "non_maleficence"
+        },
+        {
+          "class": "vocab",
+          "segment": "{aspect}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Reverse-quorum objection marker (CIRISConstitution#67): a signed, roster-pinned objection to a pending commons act; state lifecycle per the minting cut.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "objection:{state}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "objection"
+        },
+        {
+          "class": "vocab",
+          "segment": "{state}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "The owner-binding made observable as a score.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "boolean-via-score",
+      "prefix": "ownership:{relation}:{target_kind}:{version}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ownership"
+        },
+        {
+          "class": "vocab",
+          "segment": "{relation}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{target_kind}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Partner status (community / community_plus / professional_medical / professional_legal / professional_financial / professional_full \u2014 lowercase per CC 3.1.7 R3).",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "enumerated",
+      "prefix": "partner_role:{role}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "partner_role"
+        },
+        {
+          "class": "vocab",
+          "segment": "{role}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.4",
+      "description": "",
+      "owning_component": "transport-delivery",
+      "owning_repo": "CIRISEdge",
+      "polarity": "signed",
+      "prefix": "peer_reachability:{network}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "peer_reachability"
+        },
+        {
+          "class": "vocab",
+          "segment": "{network}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.7",
+      "description": "Evidence of progress.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "progress_measure:{method_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "progress_measure"
+        },
+        {
+          "class": "value",
+          "segment": "{method_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5.4",
+      "description": "22 NEVER_ALLOWED categories from prohibitions.py.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "-1 / -0.5 only",
+      "prefix": "prohibited:{category}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "prohibited"
+        },
+        {
+          "class": "vocab",
+          "segment": "{category}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Per-target canonical-staged-runtime manifest hash equality.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "provenance:build_manifest:{target}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "provenance"
+        },
+        {
+          "class": "literal",
+          "segment": "build_manifest"
+        },
+        {
+          "class": "value",
+          "segment": "{target}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Per-locale signed sub-manifest within a target's manifest tree.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "provenance:build_manifest:{target}:locale:{lang_code}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "provenance"
+        },
+        {
+          "class": "literal",
+          "segment": "build_manifest"
+        },
+        {
+          "class": "value",
+          "segment": "{target}"
+        },
+        {
+          "class": "literal",
+          "segment": "locale"
+        },
+        {
+          "class": "external",
+          "segment": "{lang_code}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Community-skill import provenance.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "signed",
+      "prefix": "provenance:skill_import:{source}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "provenance"
+        },
+        {
+          "class": "literal",
+          "segment": "skill_import"
+        },
+        {
+          "class": "value",
+          "segment": "{source}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "SLSA build provenance levels 1-3.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "provenance:slsa:{level}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "provenance"
+        },
+        {
+          "class": "literal",
+          "segment": "slsa"
+        },
+        {
+          "class": "vocab",
+          "segment": "{level}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Subject-scoped quarantine marker (CIRISConstitution#76): slash-duty-holder-only emitter.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "quarantine:{state}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "quarantine"
+        },
+        {
+          "class": "vocab",
+          "segment": "{state}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:coordinated_voting_cluster",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "coordinated_voting_cluster"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:counter_rii:{layer}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "counter_rii"
+        },
+        {
+          "class": "vocab",
+          "segment": "{layer}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:density_anomaly",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "density_anomaly"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:expertise_attestation_anomaly",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "expertise_attestation_anomaly"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:harassment_pattern",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "harassment_pattern"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.6",
+      "description": "",
+      "owning_component": "anti-sybil",
+      "owning_repo": "RATCHET",
+      "polarity": "signed",
+      "prefix": "ratchet:flag:out_of_distribution_voting",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "ratchet"
+        },
+        {
+          "class": "literal",
+          "segment": "flag"
+        },
+        {
+          "class": "literal",
+          "segment": "out_of_distribution_voting"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "new_evidence / procedural_error / quorum_compromise.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "reconsideration:{grounds}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "reconsideration"
+        },
+        {
+          "class": "vocab",
+          "segment": "{grounds}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "Regime declaration for {artifact} \u2208 manifest/composition/gate/onwire (CIRISConstitution#81 / CIRISPersist#571): reserved \u2014 substrate-steward-emitted, the emitter rule pinned at mint per R2(a); registered to end the ProducerSteward default.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "regime:{artifact}:{version}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "regime"
+        },
+        {
+          "class": "vocab",
+          "segment": "{artifact}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "Entity revocation (agent / partner / license).",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "-1 only",
+      "prefix": "revocation:{entity_type}:{reason}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "revocation"
+        },
+        {
+          "class": "vocab",
+          "segment": "{entity_type}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{reason}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Anti-rollback \u2014 decrease in revocation revision.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "-1 only",
+      "prefix": "rollback_detected:{revision_field}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "rollback_detected"
+        },
+        {
+          "class": "vocab",
+          "segment": "{revision_field}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "Pairwise cosine of seed-holder vote vectors per voting window.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "seed_holder_voting_alignment:{cell}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "seed_holder_voting_alignment"
+        },
+        {
+          "class": "value",
+          "segment": "{cell}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3.1",
+      "description": "Which occurrence of a self is handling an addressed, stateful exchange.",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "session:{kind}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "session"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.2",
+      "description": "proven_rogue / not_proven (lowercase per CC 3.1.7 R3; the substrate's coined upheld / suspension / expertise_fraud admit as open vocab under CC 4.5.1.1).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "boolean-via-score",
+      "prefix": "slashing:{outcome}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "slashing"
+        },
+        {
+          "class": "vocab",
+          "segment": "{outcome}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.3",
+      "description": "",
+      "owning_component": "persist",
+      "owning_repo": "CIRISPersist",
+      "polarity": "signed",
+      "prefix": "system:*",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "system"
+        },
+        {
+          "class": "wildcard",
+          "segment": "*"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Preserves singular narrative of an affected party as singular witness \u2014 distinct from witness_diversity:* (which aggregates multiple reviewers toward consensus).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "testimonial_witness:{kind}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "testimonial_witness"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5",
+      "description": "An agent's own reasoning trace carried envelope-native.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "trace:{form}:{version}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "trace"
+        },
+        {
+          "class": "vocab",
+          "segment": "{form}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.5",
+      "description": "Post-scrub digest of a trace for cross-node consumption when the trace itself is out of scope or over cap.",
+      "owning_component": "accord-agent",
+      "owning_repo": "CIRISAgent",
+      "polarity": "signed",
+      "prefix": "trace_summary:{kind}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.5",
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "trace_summary"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "RFC 6962 consistency proof between two STHs.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "transparency_log:consistency",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "transparency_log"
+        },
+        {
+          "class": "literal",
+          "segment": "consistency"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "Witness cosignature on an STH (substrate-conformance path; the interim uses a per-region registry_sth_cosignatures table; see CC 5.3.1 endpoints).",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "signed",
+      "prefix": "transparency_log:cosigned:{tree_size}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.10",
+        "rule": "witness-emitter (identity_type contains witness)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "transparency_log"
+        },
+        {
+          "class": "literal",
+          "segment": "cosigned"
+        },
+        {
+          "class": "value",
+          "segment": "{tree_size}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.2",
+      "description": "RFC 6962 inclusion proof for an audit leaf.",
+      "owning_component": "attestation",
+      "owning_repo": "CIRISVerify",
+      "polarity": "boolean-via-score",
+      "prefix": "transparency_log:inclusion",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "transparency_log"
+        },
+        {
+          "class": "literal",
+          "segment": "inclusion"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.4",
+      "description": "",
+      "owning_component": "transport-delivery",
+      "owning_repo": "CIRISEdge",
+      "polarity": "signed",
+      "prefix": "transport:{kind}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": "CC 3.4.3",
+        "rule": "substrate-self-report"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "transport"
+        },
+        {
+          "class": "vocab",
+          "segment": "{kind}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.1",
+      "description": "The trust-root conferral and acceptance edges, carried as dimension values on delegates_to rows \u2014 the wire type is unchanged, so 1+4 is untouched.",
+      "owning_component": "registry",
+      "owning_repo": "CIRISRegistry",
+      "polarity": "positive-only",
+      "prefix": "trust:{job}:{version}",
+      "reserved": true,
+      "reserved_rule": {
+        "cc_ref": null,
+        "rule": "reserved (see table)"
+      },
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "trust"
+        },
+        {
+          "class": "vocab",
+          "segment": "{job}"
+        },
+        {
+          "class": "vocab",
+          "segment": "{version}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Per-subject ground-truth signal.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "truth_grounding:{subject}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "truth_grounding"
+        },
+        {
+          "class": "value",
+          "segment": "{subject}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Signed score on a Contribution (P4).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "vote:{contribution_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "vote"
+        },
+        {
+          "class": "value",
+          "segment": "{contribution_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "CC 4.3 Wise-Authority quorum adjudication finding (CIRISConstitution#73) \u2014 the attestation a wa_adjudication_ref resolves to (abandonment/seizure and successor findings).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "wa_adjudication:{state}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "wa_adjudication"
+        },
+        {
+          "class": "vocab",
+          "segment": "{state}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.4",
+      "description": "Per-group content-watchlist config.",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "watchlist:{id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "watchlist"
+        },
+        {
+          "class": "value",
+          "segment": "{id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Rolling tally per Contribution (P7).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "signed",
+      "prefix": "weighted_aggregate:{contribution_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "weighted_aggregate"
+        },
+        {
+          "class": "value",
+          "segment": "{contribution_id}"
+        }
+      ]
+    },
+    {
+      "cc_section": "3.1.9.3",
+      "description": "Witness set meets jurisdictional + organizational + software-stack + cell-expertise bars (P10).",
+      "owning_component": "node",
+      "owning_repo": "CIRISNodeCore",
+      "polarity": "boolean-via-score",
+      "prefix": "witness_diversity:{contribution_id}",
+      "reserved": false,
+      "segments": [
+        {
+          "class": "literal",
+          "segment": "witness_diversity"
+        },
+        {
+          "class": "value",
+          "segment": "{contribution_id}"
+        }
+      ]
+    }
+  ]
+}

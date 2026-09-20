@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `f8cb1c47d7ab2cddc8187bab5bfd06f746b705d505f90a0848ffaa6f0b10500c`
+**state digest:** `15610a362541f8f134fc2093dd00e1a0a9a1b324b7f1685f0bdb1a8d95511ee1`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
@@ -68,7 +68,35 @@ Xcode or Gradle build could find them without a network fetch.
 | `client/iosApp/Frameworks/` | 5 | 9.2 MB | `CIRISVerify.xcframework` |
 | `client/androidApp/src/main/assets/bin/` | 1 | 11.2 MB | `llama-server-arm64` |
 
-**Why they are out.** This repo exists so that one client is built once and
+**Three of them are now IN, as of CIRISClient#24.** `iosApp/Frameworks/`,
+`iosApp/app_packages_native/` and `iosApp/Resources.zip` (~55 MB) are vendored.
+The argument below still holds and was overruled deliberately: the iOS leg of
+the five-platform gate **cannot build without them**, and so had never passed —
+17 runs, 17 failures. We bought a third copy's worth of drift risk in exchange
+for an end-to-end test on a platform we ship. If they drift, the symptom will
+be an iOS build that passes here and fails on a device, so re-hydrate them from
+CIRISAgent's `refresh-ios-substrate.yml` output when that workflow moves.
+
+`iosApp/Resources/` stays OUT, and not as a compromise: the 137 MB tree is only
+read by the rsync build phase, which is guarded on `$CIRIS_ROOT/ciris_engine`
+— a directory this repo does not have — so in this tree the phase no-ops and
+Xcode consumes the committed `Resources.zip`. Vendoring the tree would add 137
+MB that nothing here reads.
+
+**`Python.xcframework` is materialized in CI, not vendored.** The gate's macOS
+job downloads `beeware/Python-Apple-support` 3.10-b14 — the same asset
+briefcase would — and `embed_native_frameworks.sh` (re-vendored from the
+agent) reads its per-arch `lib-arm64/` / `lib-x86_64/` simulator layout. The
+same job takes the agent's *tracked* `apps/ios` substrate (`Resources.zip`,
+`app_packages_native`, `Frameworks`, `substrate.lock.json`), refreshed to the
+agent's own pin by `tools/update_substrate_libs.py`, and cross-builds the
+simulator natives with the agent's `build_sim_natives` recipe. **The copies
+vendored here are stale and partial** — this tree's `Resources.zip` is a
+77-file stub with no `python/lib` and no `ciris_engine` — and the gate does not
+use them; they remain for a device build on a developer machine until they are
+re-hydrated from the same artifact.
+
+**Why they were out.** This repo exists so that one client is built once and
 consumed as a dependency, instead of each consumer keeping its own copy. A
 vendored copy of *CIRISVerify's* and *CIRISServer's* release binaries inside
 the client is the same defect one level down — and the copy here would be a

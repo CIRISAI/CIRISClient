@@ -12,9 +12,11 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.MutableStateFlow
+import ai.ciris.mobile.shared.models.capability.BackendOwnership
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.io.BufferedReader
+import kotlinx.coroutines.runBlocking
 
 /**
  * Desktop PythonRuntime implementation — drives a local **ciris-server** node.
@@ -71,6 +73,13 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
     // Server process we launched (null if server was already running)
     private var _serverProcess: Process? = null
 
+    // THE FACT THE COMMENT ABOVE ENCODES AS A NULL. "null if server was already
+    // running" is also null when nothing is running and null after we stopped
+    // our own — three states in one absence. Decided once in startServer() and
+    // kept, so a caller can ask before acting on it (CIRISClient#55).
+    private var _ownership = BackendOwnership.UNDETERMINED
+    override val backendOwnership: BackendOwnership get() = _ownership
+
     // Stdout reader coroutine scope
     private val _readerScope = CoroutineScope(Dispatchers.IO)
 
@@ -80,27 +89,43 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         }
     }
 
-    actual override val serverUrl: String get() = _serverUrl
+    // THE RECORDED ANSWER OUTRANKS THE ENV VAR (CIRISClient#43).
+    //
+    // `_serverUrl` comes from CIRIS_API_URL, which the launcher sets to the
+    // AGENT's :8080 — correct while the agent runs, and wrong the instant a
+    // run-without-AI setup replaces it with the node on :4243. This process is
+    // not restarted by that hand-off, so a value read once at construction is
+    // a value read before the answer existed. Only the run-without-AI
+    // direction is forced; otherwise CIRIS_API_URL still wins, because
+    // pointing an operator away from the node they attached to is
+    // CIRISClient#26.
+    actual override val serverUrl: String
+        get() = if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+            ActiveBackend.endpoint.baseUrl(LOOPBACK_HOST)
+        } else {
+            _serverUrl
+        }
 
     actual override suspend fun initialize(pythonHome: String): Result<Unit> = runCatching {
         _initialized = true
     }
 
     actual override suspend fun startServer(): Result<String> = runCatching {
-        println("[PythonRuntime.desktop] startServer() called, checking for server at $_serverUrl")
+        println("[PythonRuntime.desktop] startServer() called, checking for server at $serverUrl")
 
         // Check if server is already running and in a usable state
         val existingServerState = checkExistingServer()
 
         when (existingServerState) {
-            ExistingServerState.HEALTHY -> {
-                println("[PythonRuntime.desktop] Server already running and healthy at $_serverUrl")
+            ExistingServerState.PRESENT -> {
+                println("[PythonRuntime.desktop] A backend is already serving $serverUrl — attaching to it")
+                _ownership = BackendOwnership.ATTACHED
             }
             ExistingServerState.STUCK_SHUTDOWN -> {
                 println("[PythonRuntime.desktop] Detected stuck server in shutdown state - attempting to kill...")
                 if (!killStuckServer()) {
                     throw RuntimeException(
-                        "A CIRIS server is stuck in shutdown state on $_serverUrl but could not be killed.\n\n" +
+                        "A CIRIS server is stuck in shutdown state on $serverUrl but could not be killed.\n\n" +
                         "Please manually kill the process:\n" +
                         "  Linux/Mac: lsof -i :${getPort()} | grep LISTEN | awk '{print \$2}' | xargs kill\n" +
                         "  Windows: netstat -ano | findstr :${getPort()} then taskkill /PID <pid> /F\n\n" +
@@ -109,10 +134,12 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 }
                 println("[PythonRuntime.desktop] Killed stuck server, launching fresh instance...")
                 launchServerProcess()
+                _ownership = BackendOwnership.LAUNCHED
             }
             ExistingServerState.NOT_RUNNING -> {
                 println("[PythonRuntime.desktop] No server detected, launching backend...")
                 launchServerProcess()
+                _ownership = BackendOwnership.LAUNCHED
             }
         }
 
@@ -131,11 +158,11 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 // capture of the same secret — NOT a weakening (setup/root still
                 // verifies the PIN). Only fills if the stdout capture missed it.
                 readClaimPinFromFileIfMissing()
-                return@runCatching _serverUrl
+                return@runCatching serverUrl
             }
             delay(1000)
         }
-        throw RuntimeException("Cannot connect to CIRIS server at $_serverUrl. Please ensure the server is running.")
+        throw RuntimeException("Cannot connect to CIRIS server at $serverUrl. Please ensure the server is running.")
     }
 
     /**
@@ -208,7 +235,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * caller falls back to the environment guess.
      */
     private suspend fun declaredClaimPinFile(): String? = runCatching {
-        val body = httpClient.get("$_serverUrl/v1/setup/status").bodyAsText()
+        val body = httpClient.get("$serverUrl/v1/setup/status").bodyAsText()
         // Deliberately a narrow scrape rather than a full model bind: this runs on
         // the first-run path against a server that may be mid-boot, and a strict
         // decode failure here must not cost us the PIN.
@@ -251,38 +278,63 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * State of an existing server process.
      */
     private enum class ExistingServerState {
-        NOT_RUNNING,      // No server on port
-        HEALTHY,          // Server running in WORK or SETUP state
+        NOT_RUNNING,      // Nothing accepted a connection on the port
+        // PRESENT, not HEALTHY. The old name is how CIRISClient#53 happened: a
+        // FIRST-RUN backend is SUPPOSED to be unhealthy — no admin user, no LLM
+        // configured, that is what the wizard is for — and calling the state
+        // "healthy" invited a probe that answered the wrong question. What this
+        // decides is only "is something already on this port", and an
+        // unhealthy answer is still an answer.
+        PRESENT,
         STUCK_SHUTDOWN    // Server responding but in shutdown or other bad state
     }
 
     /**
      * Check if there's an existing server and what state it's in.
      */
+    /**
+     * Is something ALREADY serving this port?
+     *
+     * ANY ANSWER MEANS OCCUPIED, INCLUDING AN UNHAPPY ONE (CIRISClient#53).
+     *
+     * This asked `/v1/identity` alone and required 2xx. That endpoint is the
+     * NODE's read API — NODE VENDOR DRIFT #15 moved the probe here because the
+     * old one demanded an agent `cognitive_state`, which a node never reports,
+     * so every node boot read as NOT_RUNNING. The move fixed the node and
+     * broke the agent: a FIRST-RUN agent in SETUP does not serve
+     * `/v1/identity`, so a backend that was up and answering read as absent,
+     * the app launched a second `ciris-server` on the same port, and the
+     * collision it created became a hard startup failure telling the user to
+     * kill their own agent.
+     *
+     * Two backends, two readiness endpoints, and a probe that knew one of
+     * them. So ask both — and treat a 4xx or 5xx as PRESENT too, because a
+     * process that refuses a request is still a process holding the port.
+     * Only a refused CONNECTION means nothing is there.
+     */
     private suspend fun checkExistingServer(): ExistingServerState {
-        return try {
-            // NODE VENDOR DRIFT #15 (restored after the 2.9.28 re-vendor dropped it):
-            // ciris-server readiness: GET /v1/identity returning 200 means the
-            // node's read API is up. There is no agent-style cognitive_state /
-            // SHUTDOWN concept here, so any 2xx == HEALTHY. Upstream probes
-            // /v1/system/health and demands a WORK/SETUP cognitive_state, which
-            // a node NEVER reports — every boot read as NOT_RUNNING.
-            val response = httpClient.get("$_serverUrl/v1/identity")
-            if (response.status.value in 200..299) {
-                ExistingServerState.HEALTHY
-            } else {
-                ExistingServerState.NOT_RUNNING
+        // The node's read API first (this build usually drives a node), then
+        // the agent's health endpoint.
+        for (path in listOf("/v1/identity", "/v1/system/health")) {
+            try {
+                val response = httpClient.get("$serverUrl$path")
+                println(
+                    "[PythonRuntime.desktop] $serverUrl$path answered ${response.status.value} — " +
+                        "a backend is present"
+                )
+                return ExistingServerState.PRESENT
+            } catch (_: Exception) {
+                // Connection refused / no route: try the next shape.
             }
-        } catch (_: Exception) {
-            ExistingServerState.NOT_RUNNING
         }
+        return ExistingServerState.NOT_RUNNING
     }
 
     /**
      * Get port from server URL.
      */
     private fun getPort(): String {
-        return Regex(":(\\d+)").find(_serverUrl)?.groupValues?.get(1) ?: "4243"
+        return Regex(":(\\d+)").find(serverUrl)?.groupValues?.get(1) ?: "4243"
     }
 
     /**
@@ -331,7 +383,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 
             // Verify server is no longer responding
             return try {
-                httpClient.get("$_serverUrl/v1/system/health")
+                httpClient.get("$serverUrl/v1/system/health")
                 // Still responding - kill failed
                 println("[PythonRuntime.desktop] Server still responding after kill attempt")
                 false
@@ -399,9 +451,27 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         // rather than letting Edge init fail in its.
         val held = PortRelease.awaitFree(backendPorts(), timeoutMs = 15_000)
         if (held.isNotEmpty()) {
+            // ASK AGAIN BEFORE BLAMING ANYONE (CIRISClient#53).
+            //
+            // The old text asserted "nothing is answering", which this code had
+            // not checked — it knew only that a port was busy. When the probe
+            // above was wrong about a first-run backend, that produced a hard
+            // failure telling the user to `kill -9` the very agent they were
+            // setting up, in an error whose two halves contradicted each other:
+            // held by another process, and nothing answering.
+            //
+            // A held port with something answering on it is not a stuck
+            // shutdown — it is a backend, and the right response is to use it.
+            if (runBlocking { checkExistingServer() } != ExistingServerState.NOT_RUNNING) {
+                println(
+                    "[PythonRuntime.desktop] ports $held are held BY A LIVE BACKEND at $serverUrl — " +
+                        "attaching instead of starting a second one"
+                )
+                return
+            }
             throw RuntimeException(
-                "Cannot start the CIRIS backend: port(s) $held are still held by another process " +
-                "and nothing is answering on $_serverUrl. A previous backend is most likely still " +
+                "Cannot start the CIRIS backend: port(s) $held are held and nothing answered on " +
+                "$serverUrl when asked. A previous backend is most likely still " +
                 "shutting down or stuck (CIRISAgent#1152).\n\n" +
                 "  Linux/Mac: lsof -i :${held.first()} | grep LISTEN | awk '{print \$2}' | xargs kill -9\n" +
                 "  Windows: netstat -ano | findstr :${held.first()} then taskkill /PID <pid> /F\n\n" +
@@ -575,7 +645,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         if (checkHealth().getOrNull() == true) {
             onStatus?.invoke("Connected to server")
             _serverStarted = true
-            return Result.success(_serverUrl)
+            return Result.success(serverUrl)
         }
 
         onStatus?.invoke("Starting server...")
@@ -593,7 +663,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
         // ciris-server readiness: GET /v1/identity returning 200 means the node's
         // read API is up and serving. There is no agent-style cognitive_state to
         // inspect; a 2xx is the node-up signal the startup gate waits on.
-        val response = httpClient.get("$_serverUrl/v1/identity")
+        val response = httpClient.get("$serverUrl/v1/identity")
         val isReady = response.status.value in 200..299
         if (!isReady) {
             println("[PythonRuntime.desktop] Not ready yet - GET /v1/identity -> ${response.status.value}")
@@ -619,6 +689,13 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 
     actual override fun shutdown() {
         _serverStarted = false
+        if (_serverProcess == null && _ownership == BackendOwnership.ATTACHED) {
+            // SAY SO. This used to fall through silently, and the caller — a
+            // Reset about to delete the node's files — read the silence as
+            // "stopped" (CIRISClient#55). The process is not ours to stop.
+            println("[PythonRuntime.desktop] shutdown(): attached to a backend we did not launch — not stopping it")
+            return
+        }
         // Kill the server process if we launched it
         _serverProcess?.let { proc ->
             println("[PythonRuntime.desktop] Shutting down server process (PID: ${proc.pid()})...")
@@ -646,6 +723,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 try { proc.waitFor(10, java.util.concurrent.TimeUnit.SECONDS) } catch (_: Exception) {}
             }
             _serverProcess = null
+            _ownership = BackendOwnership.NONE
             // The pid being gone is not the ports being free: SIGKILL releases
             // them about 2s later, and a backend started in that gap dies on
             // "Edge transport ports are held by another process".

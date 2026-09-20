@@ -43,6 +43,33 @@ enum class ClientMode {
 }
 
 /**
+ * Should a caller SPEND TIME waiting for a cognitive brain to reach WORK?
+ *
+ * **A null gate is not a reason to wait** (CIRISClient#48). `CIRISApp` holds two
+ * derivations of the same nullable gate and they must default in OPPOSITE
+ * directions:
+ *
+ *   - `isAgentMode = clientMode?.isAgent ?: true` — WORDING. Copy reads
+ *     naturally before the probe lands, and being briefly wrong costs a noun.
+ *   - this one, `?: false` — CONTROL FLOW. Being wrong costs the user 30
+ *     seconds per wait, and there are three such waits.
+ *
+ * They were one identifier. On a run-without-AI install the gate is still
+ * unprobed when login succeeds, so the wording default leaked into the wait: the
+ * client polled `getSystemStatus()` for a cognitive state on a bare node for the
+ * loop's full 150 × 200 ms budget before composing Interact. Measured against a
+ * credential login that had already SUCCEEDED in ~200 ms: **34.1 s on linux,
+ * 36.1 on macOS, 40.1 on Windows**.
+ *
+ * A function rather than an expression at the call site so the rule is pinned by
+ * [ClientModeShouldWaitTest] instead of by three copies of `?: false` that a
+ * future edit can quietly flip back — which is exactly how this defect arrived.
+ *
+ * @param mode the probed gate; `null` means NOT PROBED YET, never "assume agent".
+ */
+fun shouldWaitForAgent(mode: ClientMode?): Boolean = mode?.isAgent ?: false
+
+/**
  * NODE VENDOR DRIFT #27 (restored after the 2.9.28 re-vendor dropped it).
  *
  * A mode derivation that can say "not yet" ([undetermined]) without growing the

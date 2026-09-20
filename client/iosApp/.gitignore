@@ -2,7 +2,9 @@
 Resources/
 
 # Python framework (from BeeWare)
-Frameworks/
+# Frameworks/ — VENDORED as of CIRISClient#24: the iOS leg cannot build
+# without CIRISVerify.xcframework. See client/VENDORING.md §2.
+
 
 # Xcode
 *.xcuserstate

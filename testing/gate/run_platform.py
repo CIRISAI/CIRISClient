@@ -71,7 +71,8 @@ def plan_for(args) -> bringup.Plan:
     if args.platform == "android":
         if not args.apk:
             raise bringup.CannotRun("--apk is required for android")
-        return bringup.android_plan(Path(args.apk), args.package, serial=args.serial)
+        return bringup.android_plan(Path(args.apk), args.package, serial=args.serial,
+                                    activity=args.activity)
     if args.platform == "ios":
         if not args.app:
             raise bringup.CannotRun("--app is required for ios")
@@ -91,7 +92,28 @@ def teardown_for(args) -> bringup.Plan | None:
     return None
 
 
-def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
+
+def state_problems(mode: str, node_url: str) -> list[str]:
+    """What is wrong with `/state` for a client driven against a BARE node.
+
+    Split out of [walk] so it is testable without a device — the assertions this
+    gate makes are exactly the ones worth having a red path for, and one needing
+    an emulator to exercise is one nobody exercises.
+
+    `unset` is deliberately ACCEPTED. The gate probe may not have answered yet
+    when the walk runs, and "not probed" is a real state this client defines
+    (CIRISClient#48) — reading it as a failure would make the gate flaky and
+    would punish the client for being honest.
+    """
+    problems: list[str] = []
+    if mode.upper() == "AGENT":
+        problems.append("clientMode=AGENT against a bare node (no brain is folded here)")
+    if node_url and ":8080" in node_url:
+        problems.append(f"pointed at the agent port: {node_url}")
+    return problems
+
+def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
+         args_timeout: float = 120.0) -> None:
     """The smallest walk that would have caught every defect of the last month.
 
     Deliberately not a product tour. Each assertion here maps to a real
@@ -104,8 +126,91 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform) -> None:
     """
     rep.add("health", True, json.dumps(drv.health()))
 
+    # THE SERVER IS NOT THE APP. `/health` is served by the automation server,
+    # which `Main.kt` starts BEFORE `application { Window { … } }` — so it
+    # answers in ~0.5s while the UI has not composed at all. Measured locally on
+    # the 0.5.217 jar: at the instant /health returns 200,
+    #
+    #     /state       screen="unknown"  clientMode="unset"  nodeUrl=""
+    #     /tree        0 elements
+    #     /screenshot  503 (window not available)
+    #
+    # which is the five-platform board this gate has been producing, exactly.
+    #
+    # AND THREE OF THE STEPS BELOW PASS VACUOUSLY ON THAT. `undrivable` is clean
+    # when there is nothing to be undrivable; `no-ghosts` is none when there are
+    # no elements; `state` accepts `unset` by design. Only the screenshot failed,
+    # because it is the only assertion that needs the UI to exist — it was the
+    # sole thing standing between this gate and a green run against an app with
+    # no interface. That is the defect this file's docstring is about, inside
+    # this file.
+    #
+    # So wait for the UI, and ASSERT it arrived. A tree that never fills is a
+    # real failure — the app started and never rendered — and it is now reported
+    # as one rather than as four quiet passes.
+    composed = drv.wait_for_ui(timeout=args_timeout)
+    # A SCREEN THAT NAMES ITSELF HAS COMPOSED, tags or not. /state reports
+    # screen="unknown" until something is on screen, so a named screen with an
+    # empty tree is a screen with nothing to press — Startup, before 0.5.224
+    # tagged itself — and not an app that never rendered. The Android leg
+    # reported the latter while its own screenshot showed the boot lights.
+    screen = drv.screen() or "unknown"
+    rep.add(
+        "ui-composed",
+        composed > 0 or screen != "unknown",
+        f"{composed} element(s) on screen {screen!r}" if composed or screen != "unknown" else
+        "the app started but never composed a UI — every check below would be vacuous",
+    )
+
+    # THE APP HAS TO ARRIVE SOMEWHERE. Startup composing is not the app being
+    # usable: the Android leg went green the moment its Startup screen carried
+    # a tag, at 0.0s, having asserted nothing about whether the client ever
+    # reached the node it was pointed at. Every desktop leg lands on Login in
+    # seconds against this same bare node; the Android client now attaches to
+    # it instead of booting an embedded runtime, and this is the check that
+    # says so. Setup is accepted for a node with no owner yet; Interact /
+    # Contacts / ManageNodes for a session that survived a previous pass.
+    entry = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
+    started = time.monotonic()
+    landed = ""
+    while time.monotonic() - started < args_timeout:
+        cur = drv.screen() or ""
+        if cur in entry:
+            landed = cur
+            break
+        time.sleep(1.0)
+    rep.add(
+        "entry-screen",
+        bool(landed),
+        f"{landed!r} after {time.monotonic() - started:.0f}s" if landed else
+        f"still on {drv.screen()!r} after {args_timeout:.0f}s — the app never reached Login/Setup",
+    )
+
+    # THIS STEP USED TO BE A REPORT, NOT A CHECK — `rep.add("state", True, …)`
+    # passed unconditionally and printed two values nobody asserted. That is the
+    # vacuous green this file's own docstring is about, sitting in the middle of
+    # it.
+    #
+    # Both values ARE assertable here, without navigating anywhere, because this
+    # gate always stands up a bare `ciris-server`: no brain, and the node's own
+    # port. So:
+    #
+    #   clientMode must never be AGENT — there is no brain to be an agent of.
+    #     A client that says AGENT against this node has a wrong or stale gate,
+    #     which is CIRISClient#48 exactly: a verdict derived against :8080 that
+    #     outlived the backend it described. `unset` is ACCEPTED — the probe may
+    #     legitimately not have answered yet, and "not probed" is not "wrong".
+    #
+    #   nodeUrl must be the node's :4243 and not the agent's :8080. A client
+    #     pointed at the agent port against a node is the same defect wearing
+    #     its other face, and it is the one that made every leg of this gate
+    #     report "the node never became healthy" while the node was serving.
     state = drv.state()
-    rep.add("state", True, f"clientMode={state.get('clientMode')} node={state.get('nodeUrl')}")
+    mode = str(state.get("clientMode", "unset"))
+    node_url = str(state.get("nodeUrl", ""))
+    problems = state_problems(mode, node_url)
+    detail = f"clientMode={mode} node={node_url}"
+    rep.add("state", not problems, detail if not problems else f"{detail} — {'; '.join(problems)}")
 
     # The pre-flight this repo tells harnesses to run, now served everywhere.
     try:
@@ -133,6 +238,8 @@ def main() -> int:
     ap.add_argument("--platform", required=True, choices=("desktop", "android", "ios"))
     ap.add_argument("--apk"); ap.add_argument("--app"); ap.add_argument("--jar")
     ap.add_argument("--package", default="ai.ciris.mobile.debug")
+    ap.add_argument("--activity", default=bringup.ANDROID_ACTIVITY,
+                    help="fully-qualified activity class; NOT relative to --package")
     ap.add_argument("--bundle-id", default="ai.ciris.mobile")
     ap.add_argument("--serial"); ap.add_argument("--udid", default="booted")
     ap.add_argument("--xvfb", action="store_true", help="wrap desktop in xvfb-run")
@@ -158,7 +265,7 @@ def main() -> int:
         drv = TestAutomationServer(base_url=plan.test_url)
         # PROVEN, NOT ASSUMED.
         drv.wait_for_server(timeout=args.timeout)
-        walk(drv, rep, args.shots, platform)
+        walk(drv, rep, args.shots, platform, args_timeout=args.timeout)
         rep.ok = all(s.ok for s in rep.steps)
     except bringup.CannotRun as e:
         # LOUD. Not a skip: the caller decides what to exclude, and it does so
@@ -172,6 +279,10 @@ def main() -> int:
         except Exception:  # noqa: BLE001
             pass
     finally:
+        # Reap anything spawned with background=True. CI tears the runner down
+        # anyway; a developer running this locally would otherwise accumulate a
+        # Compose window per invocation.
+        bringup.terminate_background()
         td = teardown_for(args)
         if td is not None:
             # check=False: teardown runs after failures too, and one that fails
@@ -179,6 +290,14 @@ def main() -> int:
             bringup.run(td, check=False)
 
     if args.report:
+        # MAKE THE DIRECTORY. `--report reports/<platform>.json` names a path in a
+        # directory nothing creates: the workflow passes it, the artifact upload
+        # collects it, and no step mkdirs it. The whole run — build, node, launch,
+        # drive — completed and then died on
+        # `FileNotFoundError: 'reports\\windows.json'` at the last line, throwing
+        # away the result it had just spent five minutes earning, and reporting a
+        # driving failure that had not happened.
+        args.report.parent.mkdir(parents=True, exist_ok=True)
         args.report.write_text(json.dumps(asdict(rep), indent=2), encoding="utf-8")
     for s in rep.steps:
         print(f"  [{'OK ' if s.ok else 'FAIL'}] {s.name}: {s.detail}")

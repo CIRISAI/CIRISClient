@@ -151,18 +151,21 @@ object TestAutomationState {
 
     private val scrollables = mutableListOf<Long>()
     private val scrollableCapacity = mutableMapOf<Long, Int>()
+    private val scrollableNames = mutableMapOf<Long, String>()
     private var nextScrollToken = 1L
 
     /** Claim a token for a scrollable that is now composed. */
-    fun registerScrollable(): Long {
+    fun registerScrollable(name: String? = null): Long {
         val token = nextScrollToken++
         scrollables.add(token)
+        if (name != null) scrollableNames[token] = name
         return token
     }
 
     fun unregisterScrollable(token: Long) {
         scrollables.remove(token)
         scrollableCapacity.remove(token)
+        scrollableNames.remove(token)
     }
 
     /** How far this scrollable can travel right now; 0 means no overflow. */
@@ -185,7 +188,15 @@ object TestAutomationState {
      * reported as "no overflow" rather than "nothing consumed it" -- a real
      * answer either way.
      */
-    fun isActiveScrollable(token: Long): Boolean {
+    fun isActiveScrollable(token: Long, wanted: String? = null): Boolean {
+        // A NAMED CONTAINER BEATS EVERY HEURISTIC. The guess below is a good
+        // one, but it cannot know that the caller meant the nav rail and not
+        // the article it is sitting next to. When the request names a
+        // registered container, that container owns the dispatch outright.
+        if (wanted != null) {
+            val named = scrollables.lastOrNull { scrollableNames[it] == wanted }
+            if (named != null) return named == token
+        }
         val movable = scrollables.lastOrNull { (scrollableCapacity[it] ?: 0) > 0 }
         return (movable ?: scrollables.lastOrNull()) == token
     }
@@ -193,8 +204,9 @@ object TestAutomationState {
     /** Whether anything on screen can act on a scroll request at all. */
     fun hasScrollable(): Boolean = scrollables.isNotEmpty()
 
-    fun requestScroll(testTag: String, direction: String, amount: Int) {
-        _scrollRequests.value = ScrollRequest(testTag, direction, amount)
+    fun requestScroll(testTag: String, direction: String, amount: Int,
+                      container: String? = null) {
+        _scrollRequests.value = ScrollRequest(testTag, direction, amount, container)
     }
 
     fun clearScrollRequest() {

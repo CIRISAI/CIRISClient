@@ -2922,6 +2922,34 @@
     "wallet_transfer_success": "Gbígbé ṣe àṣeyọrí! TX: {tx}",
     "wallet_trust_degraded": "Ìgbẹ́kẹ̀lé Ohun Ẹ̀rọ Ti Dín Kù",
     "wallet_warning": "Ìkìlọ̀",
+    "trace_consent_decline_note": "Kíkọ̀ túmọ̀ sí pé aṣojú rẹ kò lè kọ́ àmì agbára tàbí jèrè kirẹ́díìtì àjọpọ̀. O lè yí èyí padà lẹ́yìn náà.",
+    "people_title": "Àwọn ènìyàn",
+    "contacts_node_too_old_body_versioned": "Nóòdù yìí ń lo {version}. Àwọn olùbásọ̀rọ̀ àti ìfọ̀rọ̀wérọ̀ nílò ciris-server 0.5.185 tàbí èyí tí ó tuntun jù, nítorí náà kò tíì lè dáhùn — gbogbo ohun mìíràn ń ṣiṣẹ́ dáadáa.",
+    "receipt_title": "Ìwé-ẹ̀rí",
+    "receipt_open": "Ṣí ìwé-ẹ̀rí náà",
+    "receipt_close": "Ti",
+    "receipt_holders": "Ibi tí àwọn byte wà",
+    "receipt_holders_count": "{count} olùdìmú",
+    "receipt_notes": "Àwọn àkọsílẹ̀ tí àwọn ẹlòmíràn fi sílẹ̀",
+    "receipt_notes_none": "Kò sí ẹni tí ó fi àkọsílẹ̀ sílẹ̀.",
+    "receipt_acts": "Ohun tí o lè ṣe",
+    "receipt_contact_scope_note": "Ìyọ̀nda náà fúnra rẹ̀ jẹ́ àkọsílẹ̀ gbangba. Ohun tí ẹ̀yin méjèèjì fi ránṣẹ́ sí ara yín kì í ṣe bẹ́ẹ̀.",
+    "state_loading": "Ó ń ṣiṣẹ́",
+    "state_error": "Nǹkan kan kò lọ déédéé",
+    "state_gone": "Fáìlì yìí ti lọ. Kò sí ẹni tí ó ní ẹ̀dà rẹ̀ mọ́.",
+    "state_hidden_by_rules": "A fi pamọ́ nípasẹ̀ àwọn òfin rẹ.",
+    "state_hidden_by_rules_who": "A fi pamọ́ nípasẹ̀ àwọn òfin rẹ — {who} ló sàmì sí i.",
+    "state_unreviewed": "A kò tíì ṣàyẹ̀wò rẹ̀",
+    "state_unreviewed_since": "A kò tíì ṣàyẹ̀wò rẹ̀ láti {when}",
+    "confirm_cancel": "Kì í ṣe báyìí",
+    "ceremony_signed_of": "{signed} nínú {needed} ti fọwọ́ sí i",
+    "ceremony_proposed_by": "àbá láti ọwọ́ {who} · {when}",
+    "ceremony_sign": "Fọwọ́ sí i",
+    "ceremony_refuse": "Kọ̀ ọ́",
+    "ceremony_state_proposed": "ti dábàá",
+    "ceremony_state_signed": "ti fọwọ́sí",
+    "ceremony_state_not_yet": "kò tíì",
+    "receipt_this_node": "Nóòdù yìí — ìwọ",
     "verify_title": "Jẹ́rìísí build kan",
     "verify_hash_label": "Hash build",
     "verify_button": "Ṣàyẹ̀wò",
@@ -3160,6 +3188,13 @@
       "users": "Àwọn Olùmúlò",
       "wallet": "Àpò Owó",
       "wise_authority": "Aláṣẹ Ọlọ́gbọ́n"
+    },
+    "circle": {
+      "agent": "Èmi nìkan",
+      "family": "Ìdílé",
+      "local_community": "Àwọn aládùúgbò",
+      "global_communities": "Àwọn Àwùjọ àti Àwọn Ilé-iṣẹ́",
+      "global_commons": "Gbogbo ènìyàn"
     }
   },
   "network": {
@@ -4254,6 +4289,7 @@
   "wa_resolve": "Yanjú",
   "wa_service_status": "Ipò Iṣẹ́ Ìrànwọ́",
   "wa_status": "Ipò",
+  "setup_validation_trace_consent_required": "Jọ̀wọ́ yan bóyá láti fi àwọn ìtọpa ránṣẹ́.",
   "chat": {
     "author_signer_unavailable": "Ẹnikẹ́ni tí ó bá kọ ìfiránṣẹ́ ìfọ̀rọ̀wérọ̀ ni ó ń fọwọ́ sí i, nóòdù yìí kò sì lè lo ìdánimọ̀ náà lọ́wọ́lọ́wọ́ báyìí.",
     "community_create_failed": "Nóòdù náà kò lè ṣẹ̀dá àwùjọ ìfọ̀rọ̀wérọ̀ náà. Kò sí ohun tí ó yí padà.",
@@ -4297,5 +4333,74 @@
     "unknown_fed_id": "ID ìṣọ̀kan yẹn kò sí nínú àkójọ nóòdù yìí. Kọ́kọ́ gba kọ́kọ́rọ́ náà wọlé (peering) — àmì-ìrántí tí a kéde ṣùgbọ́n tí a kò tíì gbà wọlé kò ní orísun kankan, a kò sì lè yọ̀ǹda fún un.",
     "unreachable": "A mọ̀ wọn, ṣùgbọ́n kò sí ìdáhùn kankan. Àwọn ẹ̀rọ wọn lè jẹ́ tí kò sórí ayélujára; àwọn ìránṣẹ́ yóò dé ọ̀dọ̀ wọn nígbà tí wọ́n bá padà.",
     "unresolvable": "Àmì-ìdánimọ̀ yẹn kò yanjú sí olùbásọ̀rọ̀ kankan."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Ẹni tí ó dá lé lórí",
+        "gloss": "Àwọn ènìyàn tí àkọsílẹ̀ yìí dárúkọ. Ẹnìkọ̀ọ̀kan wọn lè mú un padà."
+      },
+      "attesting_key_id": {
+        "label": "Ẹni tó fi ránṣẹ́",
+        "gloss": "Kọ́kọ́rọ́ tó fọwọ́ sí àkọsílẹ̀ yìí. Kò sí ẹlòmíràn tí ó lè ṣe é."
+      },
+      "cohort_scope": {
+        "label": "Àwọn tó lè rí i",
+        "gloss": "Àyíká tí àkọsílẹ̀ yìí lè rìn nínú rẹ̀. Bí yóò bá jáde nínú rẹ̀, yóò béèrè kọ́kọ́."
+      },
+      "dimension": {
+        "label": "Ohun tí ó jẹ́",
+        "gloss": "Irú àkọsílẹ̀, nínú àwọn ọ̀rọ̀ àjọpín tí nóòdù kọ̀ọ̀kan ń kà ní ọ̀nà kan náà."
+      },
+      "consent_scope": {
+        "label": "Òfin tó ń tẹ̀lé",
+        "gloss": "Ohun tí ó lè tẹ̀lé e lórí àkọsílẹ̀ yìí: dídúró, pínpín, tàbí ṣíṣàyẹ̀wò."
+      },
+      "not_sent": "Nóòdù yìí kọ́ ló fi èyí ránṣẹ́.",
+      "by_rule": "Ó wà ní àmúró nípasẹ̀ òfin fún irú àkọsílẹ̀ yìí ({cc}); nóòdù yìí kọ́ ló fi ránṣẹ́."
+    },
+    "consent_kind": {
+      "label": "Ìyọ̀nda",
+      "gloss": "Ohun tí ẹnìkan gbà pé ó lè ṣẹlẹ̀ sí àkọsílẹ̀ tó dárúkọ rẹ̀, tàbí ohun tí nóòdù kan gbà láti fi ránṣẹ́ sí ẹlẹ́gbẹ́ rẹ̀."
+    },
+    "trust_job_version": {
+      "label": "Ta ló dúró fún ta?",
+      "gloss": "Ìtẹnumọ́ pé kọ́kọ́rọ́ kan dúró tì òmíràn fún iṣẹ́ kan pàtó."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Ní ẹ̀dà kan",
+      "gloss": "Nóòdù kan tí ń sọ pé òun ní àwọn byte fún fáìlì kan, tí a sọ lórúkọ nípasẹ̀ hash wọn."
+    },
+    "objection_state": {
+      "label": "Ẹnìkan sọ̀rọ̀ jáde",
+      "gloss": "Àtakò ẹnìkan, àti ibi tí ó wà. Kò ní ìdíwọ̀n iye ìgbà rárá."
+    },
+    "content_class_class": {
+      "label": "Irú àkóónú",
+      "gloss": "Irú nǹkan tí fáìlì jẹ́, láti inú àtòjọ tí a ti pa dé tí nóòdù kọ̀ọ̀kan ń pín."
+    },
+    "credits_domain_language_subject": {
+      "label": "Àwọn kírẹ́dítì àjọpín",
+      "gloss": "A ń rí gbà nípa ṣíṣe ìrànwọ́. Wọ́n kàn máa ń pọ̀ sí i ni, a kò sì lè fi wọ́n ránṣẹ́ tàbí tà wọ́n."
+    },
+    "prohibited_category": {
+      "label": "A kò gbà á láàyè",
+      "gloss": "Àmì pé nǹkan kan ré ọ̀kan lára àwọn ààlà tí ìlànà-ìgbékalẹ̀ fà kọjá. Ó jẹ́ àbùkù lásán."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Ìwé-ẹ̀rí",
+      "gloss": "Àkọsílẹ̀ pé a ti fi nǹkan jíṣẹ́. Píparẹ́ ìwé-ẹ̀rí kò ní pa ìfijíṣẹ́ náà rẹ́."
+    },
+    "renderer": {
+      "verified": "Ti jẹ́rìísí",
+      "not_verified": "A kò tíì jẹ́rìísí",
+      "indeterminate": "Kò dunjú",
+      "violation": "Ré ààlà kọjá",
+      "partial_violation": "Ré ààlà kọjá díẹ̀",
+      "self_report": "Ti nóòdù fúnra rẹ̀ ròyìn",
+      "granted": "Ti yọ̀nda",
+      "revoked": "Ti fagilé",
+      "expired": "Ti parí"
+    }
   }
 }

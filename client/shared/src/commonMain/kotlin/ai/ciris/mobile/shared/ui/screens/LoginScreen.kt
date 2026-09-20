@@ -533,12 +533,20 @@ fun LoginScreen(
                             text = privacyText,
                             color = LoginColors.Accent,
                             fontSize = 12.sp,
+                            // `testableClickable`, NOT `clickable` + `testable`
+                            // (CIRISClient#30). The latter registers the element's
+                            // POSITION and no click handler, so the tag is visible
+                            // to a harness and cannot be driven by it — which is
+                            // what GET /undrivable reports and what the
+                            // five-platform gate caught here on macOS and Windows
+                            // alike. Outside test mode this is still a plain
+                            // `clickable`, so nothing about the shipped behaviour
+                            // changes.
                             modifier = Modifier
-                                .clickable {
+                                .testableClickable("btn_privacy_policy") {
                                     PlatformLogger.i("LoginScreen", "[PrivacyPolicy] Privacy policy link clicked")
                                     onPrivacyPolicy()
                                 }
-                                .testable("btn_privacy_policy")
                         )
                         Text(
                             text = localizedString("mobile.login_reset_device"),
@@ -866,7 +874,10 @@ private fun ConnectionStatusBadge(
 
     Surface(
         onClick = onClick,
-        modifier = modifier.testable("btn_server_status"),
+        // Same defect as btn_privacy_policy above: `Surface(onClick = …)` gives a
+        // human something to press and `testable` gives a harness only a
+        // rectangle. The handler has to be registered for /click to reach it.
+        modifier = modifier.testableClickable("btn_server_status") { onClick() },
         shape = RoundedCornerShape(16.dp),
         color = LoginColors.White.copy(alpha = 0.15f)
     ) {

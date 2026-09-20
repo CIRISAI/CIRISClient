@@ -87,6 +87,17 @@ data class LlmHealthStatus(
  * Credit status for status bar display
  */
 data class CreditStatus(
+    /**
+     * The billing credential is no longer valid and only a person can renew it.
+     *
+     * Distinct from having no credits: the balance may be fine. TokenManager
+     * already concluded "interactive login required" and published it as a
+     * StateFlow that nothing collected, so for 25 hours the wallet showed 0
+     * and every send was blocked with a "buy credits" message against a
+     * 398-credit account (CIRISClient#59). This is that conclusion, on the
+     * screen where the person is stuck.
+     */
+    val authExpired: Boolean = false,
     val hasCredit: Boolean = false,
     val creditsRemaining: Int = 0,
     val freeUsesRemaining: Int = 0,
@@ -337,6 +348,16 @@ class InteractViewModel(
     // Credit status for status bar (only shown when isCirisProxy)
     private val _creditStatus = MutableStateFlow(CreditStatus())
     val creditStatus: StateFlow<CreditStatus> = _creditStatus.asStateFlow()
+
+    /** TokenManager said a person must sign in again. Carry it to the send path. */
+    fun onAuthExpired() {
+        _creditStatus.value = _creditStatus.value.copy(authExpired = true)
+    }
+
+    /** A fresh credential arrived. A later successful credit load clears it too. */
+    fun onAuthRestored() {
+        _creditStatus.value = _creditStatus.value.copy(authExpired = false)
+    }
 
     // Trust status for shield display
     private val _trustStatus = MutableStateFlow(TrustStatus())
@@ -777,6 +798,19 @@ class InteractViewModel(
 
         // Pre-flight credit check - only when using CIRIS proxy
         val currentCredits = _creditStatus.value
+        if (_llmHealth.value.isCirisProxy && currentCredits.authExpired) {
+            // NOT "no credits". The account may be full; the token is stale and
+            // only a sign-in fixes it. The purchase message sent people to the
+            // Buy button for a problem money cannot solve (CIRISClient#59).
+            logWarn(method, "Billing credential expired - blocking send until sign-in")
+            _messages.value = (_messages.value + ChatMessage(
+                id = generateMessageId(),
+                text = LocalizationHelper.getString("auth.session_expired"),
+                type = MessageType.SYSTEM,
+                timestamp = Clock.System.now(),
+            )).takeLast(50)
+            return
+        }
         if (_llmHealth.value.isCirisProxy && currentCredits.isLoaded && !currentCredits.canSendMessage) {
             logWarn(method, "No credits available - blocking send")
             val errorMessage = ChatMessage(

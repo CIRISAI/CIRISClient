@@ -16,6 +16,11 @@ import ai.ciris.mobile.shared.platform.PythonRuntime
 import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
+import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.LOOPBACK_HOST
+import ai.ciris.mobile.shared.platform.NODE_ONLY_ENDPOINT
+import ai.ciris.mobile.shared.platform.syncBackendFromEnv
+import ai.ciris.mobile.shared.viewmodels.shouldHoldForReconfigure
 import ai.ciris.mobile.shared.platform.createPythonRuntime
 import ai.ciris.mobile.shared.platform.createSecureStorage
 import ai.ciris.mobile.shared.platform.getOAuthProviderName
@@ -76,6 +81,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import ai.ciris.mobile.shared.ui.theme.Ground
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -355,6 +362,18 @@ fun CIRISApp(
     val coroutineScope = rememberCoroutineScope()
     val apiClient = remember { CIRISApiClient(apiBaseUrl, accessToken) }
 
+    // WHICH BACKEND IS SERVING, read from the home's `.env` (CIRISClient#43).
+    //
+    // Before anything polls a port. On an install that recorded run-without-AI
+    // the agent is gone and only the node on :4243 answers; every platform used
+    // to assume :8080 because nothing ever called `resolveFrom`. Absent means
+    // the agent, deliberately — that is where every install predating the flag
+    // serves.
+    LaunchedEffect(Unit) {
+        val endpoint = syncBackendFromEnv(envFileUpdater, apiClient)
+        PlatformLogger.i(TAG, "[BACKEND] serving on :${endpoint.port}${endpoint.healthPath}")
+    }
+
     // Start test automation server on non-desktop platforms (desktop starts it in Main.kt)
     LaunchedEffect(Unit) {
         if (!ai.ciris.mobile.shared.platform.isDesktop() && TestAutomation.isEnabled()) {
@@ -439,6 +458,27 @@ fun CIRISApp(
     // the probe lands, while the LANDING must default to the node surface —
     // opening on a chat with no brain behind it is the worse wrong guess.
     val homeTarget = homeScreen(hasAgent = clientMode?.isAgent ?: false)
+    /**
+     * Should the WORK-STATE WAIT run — the three 150 × 200 ms polls for a
+     * cognitive state (CIRISClient#48).
+     *
+     * Deliberately NOT [isAgentMode], for the same reason [homeTarget] is not,
+     * and the cost of conflating them was measured: `isAgentMode` defaults to
+     * AGENT so copy reads naturally before the probe lands, and that default
+     * leaked into CONTROL FLOW. On a run-without-AI install the gate is still
+     * unprobed at login, so `!isAgentMode` never fired, and the client polled
+     * `getSystemStatus()` for a cognitive state on a bare node for the loop's
+     * full 30-second budget before composing Interact — 34.1 s on linux, 36.1 on
+     * macOS, 40.1 on Windows, against a credential login that had already
+     * SUCCEEDED in ~200 ms.
+     *
+     * One identifier answering two questions is the same defect as the one that
+     * opened #48, where `nodeBaseUrl` resolved from `CIRIS_API_URL`. Wording may
+     * guess; a wait may not. **Not probed yet is not a reason to wait for a
+     * brain** — if the gate later says AGENT the surfaces light up then, which
+     * is what `clientMode == null` has always meant.
+     */
+    val shouldWaitForAgent = ai.ciris.mobile.shared.models.shouldWaitForAgent(clientMode)
 
     // Navigation state
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Startup) }
@@ -713,19 +753,10 @@ fun CIRISApp(
         }
     }
 
-    // Monitor .token_refresh_needed signal from Python billing provider
-    // Polls every 10 seconds (matches old Android TokenRefreshManager)
-    LaunchedEffect(Unit) {
-        while (true) {
-            kotlinx.coroutines.delay(10_000)
-            if (envFileUpdater.checkTokenRefreshSignal()) {
-                PlatformLogger.i(TAG, "Token refresh signal detected from Python - triggering silent refresh")
-                tokenManager.on401Error()
-            }
-        }
-    }
-
-    // Monitor .token_refresh_needed signal from Python billing provider
+    // Monitor .token_refresh_needed signal from Python billing provider.
+    // ONCE. This block was pasted twice, so every signal fired on401Error()
+    // twice — half of the 127 "interactive login required" lines in
+    // CIRISClient#59 were the same signal counted again.
     // Polls every 10 seconds (matches old Android TokenRefreshManager)
     LaunchedEffect(Unit) {
         while (true) {
@@ -794,6 +825,25 @@ fun CIRISApp(
     }
     val billingViewModel: BillingViewModel = viewModel {
         BillingViewModel(apiClient, apiBaseUrl)
+    }
+
+    // THE ANSWER NOBODY COLLECTED (CIRISClient#59). TokenManager reaches the
+    // right conclusion — "interactive login required" — and publishes it as
+    // needsInteractiveLogin. No file in the client read it. So the knowledge
+    // that a person had to sign in again died in a WARN line 127 times while
+    // the wallet showed 0 credits for 25 hours against a balance of 398. Here
+    // it goes to the two surfaces the person is actually looking at.
+    LaunchedEffect(tokenManager) {
+        tokenManager.needsInteractiveLogin.collect { needed ->
+            if (needed) {
+                platformLog(TAG, "[WARN][auth] session expired and no silent path — surfacing sign-in on Interact and Billing")
+                interactViewModel.onAuthExpired()
+                billingViewModel.onAuthExpired()
+            } else {
+                interactViewModel.onAuthRestored()
+                billingViewModel.onAuthRestored()
+            }
+        }
     }
     val sessionsViewModel: SessionsViewModel = viewModel {
         SessionsViewModel(apiClient)
@@ -1104,6 +1154,63 @@ fun CIRISApp(
     // Watch startup phase to check first-run when ready
     val phase by startupViewModel.phase.collectAsState()
 
+    /**
+     * Commit a RESOLVED [ModeProbe] to the one gate and everything that reads it.
+     *
+     * Extracted so the inline path and the background fold retry (CIRISClient#48)
+     * commit through the SAME code. They used to be one block because the retry
+     * was inline; when it moved off the startup path the alternative was a second
+     * copy of the `isNode` re-probe, the two setters and the log line — and a gate
+     * that resolves differently depending on WHEN it resolved is precisely the
+     * drift this repo exists to measure.
+     *
+     * Callers must check [ModeProbe.undetermined] first: an unresolved probe has
+     * nothing to commit and latching one is what rendered a real agent as a bare
+     * node for a whole session.
+     */
+    suspend fun commitGate(
+        probe: ai.ciris.mobile.shared.models.ModeProbe,
+        health: ai.ciris.mobile.shared.api.NodeHealth,
+    ) {
+        var mode = probe.mode
+        if (mode.isNode) {
+            // Bare node health — ask the brain whether it is running on top.
+            // KEPT for pre-0.5.168 nodes and split deployments where the
+            // brain has its own port. brainUnconfigured is passed here
+            // too: without it this probe sees "SETUP" and promotes the
+            // half-started brain straight back to AGENT.
+            runCatching { apiClient.getSystemStatus() }
+                .onSuccess { sys ->
+                    mode = ai.ciris.mobile.shared.models.clientModeFrom(
+                        sys.cognitive_state, sys.services_total, brainUnconfigured,
+                        role = sys.role,
+                    )
+                }
+                .onFailure { e ->
+                    platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
+                }
+        }
+        clientMode = mode
+        // The wizard's question, from the same probe. See setupHasAgent.
+        brainPresent = probe.brainPresent
+        platformLog(TAG, "[INFO][gate] brainPresent=${probe.brainPresent} (folded/reachable, independent of readiness)")
+        // Node mode has no 22 cognitive service lights — drive the count
+        // from the gate rather than the hardcoded agent default.
+        startupViewModel.setClientMode(mode)
+        // Push the gate into the shared API client so EVERY poller that
+        // shares it stops calling AGENT-only endpoints (history / billing
+        // / llm config / WA / adapters / capacity / agent audit / verify)
+        // on a bare node — those 404/405 and just flood the log.
+        apiClient.setClientMode(mode)
+        platformLog(
+            TAG,
+            "[INFO][gate] clientMode=$mode (role=${health.role}, " +
+                "cognitive_state=${health.cognitiveState}, services=${health.serviceCount}, " +
+                "folded=${health.agentFolded}, reachable=${health.agentReachable}, " +
+                "version=${health.version})",
+        )
+    }
+
     LaunchedEffect(phase) {
         if (phase == StartupPhase.READY && !checkingFirstRun) {
             checkingFirstRun = true
@@ -1118,7 +1225,20 @@ fun CIRISApp(
             // Probe that second and let it upgrade the gate: AGENT iff either
             // surface reports a cognitive_state / a non-empty service map.
             try {
-                var nodeHealth = apiClient.getNodeHealth(nodeBaseUrl)
+                // `val` since the fold retry moved off this path (CIRISClient#48):
+                // the only thing that used to reassign these was the inline retry
+                // loop, and it now owns its own copies.
+                // THE LIVE NODE ADDRESS, NOT THE PARAMETER (CIRISClient#52).
+                //
+                // `nodeBaseUrl` is a composable parameter: resolved once when
+                // CIRISApp was called, and frozen. LOCAL_NODE_URL is the live
+                // answer — the operator's if they named one, and updated by the
+                // run-without-AI hand-off otherwise. a55ac98 introduced exactly
+                // this resolution for #48 but placed it ~3500 lines below here,
+                // so this probe and the reconfigure hold kept reading the frozen
+                // one and asking the AGENT's port whether the NODE was up.
+                val liveNodeUrl = CIRISApiClient.LOCAL_NODE_URL
+                val nodeHealth = apiClient.getNodeHealth(liveNodeUrl)
                 nodeVersion = nodeHealth.version
                 // Is the brain configured at all? A brain with no config runs 10 of
                 // its 22 services to serve the wizard and reports cognitive_state
@@ -1136,7 +1256,7 @@ fun CIRISApp(
                 // answering yet" are three different facts; the re-vendor collapsed
                 // the third into the first, which latches NODE against a brain we
                 // KNOW exists.
-                var probe = ai.ciris.mobile.shared.models.clientModeFrom(
+                val probe = ai.ciris.mobile.shared.models.clientModeFrom(
                     nodeHealth.cognitiveState, nodeHealth.serviceCount,
                     nodeHealth.agentFolded, nodeHealth.agentReachable,
                     brainUnconfigured,
@@ -1145,22 +1265,58 @@ fun CIRISApp(
                 // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
                 // brain on a daemon thread AFTER the node composes, so a probe at
                 // READY can legitimately see folded=true/reachable=false.
+                //
+                // THE RETRY IS NOT SOMETHING THE USER WAITS ON (CIRISClient#48).
+                //
+                // It used to run inline, right here, ahead of the reconfigure hold and
+                // of every routing decision below it — so a node that reported a fold
+                // it could not reach held the whole app on the startup spinner for the
+                // budget's full 60 seconds before Login was drivable at all. Measured
+                // on Android as 62 s of nothing to touch.
+                //
+                // Nothing in the routing below needs the answer. `clientMode == null`
+                // is a state this file already defines and every consumer already
+                // handles — it means "not probed yet", and the surfaces light up when
+                // it lands. So the retry moves to its own coroutine and the startup
+                // path carries straight on.
+                //
+                // Launched on `coroutineScope`, NOT this LaunchedEffect: the comment on
+                // the reconfigure hold below records that any setPhase() cancels this
+                // block mid-poll. Tying the retry to the composition instead means a
+                // phase change no longer kills a probe that was about to answer.
+                //
+                // WHY THE FOLD IS UNREACHABLE AT ALL on a run-without-AI install is not
+                // this repo's to fix: the node reports `agent.folded=true` for a brain
+                // that will never answer, and nothing the client can see contradicts it
+                // — `/v1/setup/status` carries no `run_without_ai`. Recorded in
+                // evidence/blocked_upstream.tsv. This change makes the wrong answer
+                // cost nothing rather than pretending to know better.
                 if (probe.undetermined) {
                     val maxModePolls = ai.ciris.mobile.shared.ui.components.StartupBudget.seconds()
-                    var modePolls = 0
-                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s")
-                    while (probe.undetermined && modePolls < maxModePolls) {
-                        kotlinx.coroutines.delay(1000)
-                        modePolls++
-                        runCatching { apiClient.getNodeHealth(nodeBaseUrl) }.onSuccess { nh ->
-                            nodeHealth = nh
-                            nodeVersion = nh.version
-                            probe = ai.ciris.mobile.shared.models.clientModeFrom(
-                                nh.cognitiveState, nh.serviceCount,
-                                nh.agentFolded, nh.agentReachable,
-                                brainUnconfigured,
-                                role = nh.role,
-                            )
+                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s IN BACKGROUND; startup continues with the gate unset")
+                    coroutineScope.launch {
+                        var bgProbe = probe
+                        var bgHealth = nodeHealth
+                        var modePolls = 0
+                        while (bgProbe.undetermined && modePolls < maxModePolls) {
+                            kotlinx.coroutines.delay(1000)
+                            modePolls++
+                            runCatching { apiClient.getNodeHealth(CIRISApiClient.LOCAL_NODE_URL) }.onSuccess { nh ->
+                                bgHealth = nh
+                                nodeVersion = nh.version
+                                bgProbe = ai.ciris.mobile.shared.models.clientModeFrom(
+                                    nh.cognitiveState, nh.serviceCount,
+                                    nh.agentFolded, nh.agentReachable,
+                                    brainUnconfigured,
+                                    role = nh.role,
+                                )
+                            }
+                        }
+                        if (bgProbe.undetermined) {
+                            platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole ${maxModePolls}s budget — leaving clientMode unset")
+                        } else {
+                            commitGate(bgProbe, bgHealth)
+                            platformLog(TAG, "[INFO][gate] resolved in background after ${modePolls}s → ${bgProbe.mode}")
                         }
                     }
                 }
@@ -1169,49 +1325,29 @@ fun CIRISApp(
                     // KNOW exists — a node switch or the next launch can still
                     // resolve it. Guessing here is what made a real agent render as
                     // a bare node for the rest of the session.
-                    platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole budget — leaving clientMode unset")
+                    //
+                    // The bounded retry launched above may still resolve it and commit
+                    // through the SAME `commitGate` this branch's else-arm uses; until
+                    // it does, `clientMode` stays null and nothing waits on it.
+                    platformLog(TAG, "[INFO][gate] gate unset for now — the background retry owns it; startup continues")
                 } else {
-                    var mode = probe.mode
-                    if (mode.isNode) {
-                        // Bare node health — ask the brain whether it is running on top.
-                        // KEPT for pre-0.5.168 nodes and split deployments where the
-                        // brain has its own port. brainUnconfigured is passed here
-                        // too: without it this probe sees "SETUP" and promotes the
-                        // half-started brain straight back to AGENT.
-                        runCatching { apiClient.getSystemStatus() }
-                            .onSuccess { sys ->
-                                mode = ai.ciris.mobile.shared.models.clientModeFrom(
-                                    sys.cognitive_state, sys.services_total, brainUnconfigured,
-                                    role = sys.role,
-                                )
-                            }
-                            .onFailure { e ->
-                                platformLog(TAG, "[DEBUG][gate] brain health absent (${e.message?.take(60)}) — bare NODE")
-                            }
-                    }
-                    clientMode = mode
-                    // The wizard's question, from the same probe. See setupHasAgent.
-                    brainPresent = probe.brainPresent
-                    platformLog(TAG, "[INFO][gate] brainPresent=${probe.brainPresent} (folded/reachable, independent of readiness)")
-                    // Node mode has no 22 cognitive service lights — drive the count
-                    // from the gate rather than the hardcoded agent default.
-                    startupViewModel.setClientMode(mode)
-                    // Push the gate into the shared API client so EVERY poller that
-                    // shares it stops calling AGENT-only endpoints (history / billing
-                    // / llm config / WA / adapters / capacity / agent audit / verify)
-                    // on a bare node — those 404/405 and just flood the log.
-                    apiClient.setClientMode(mode)
-                    platformLog(
-                        TAG,
-                        "[INFO][gate] clientMode=$mode (role=${nodeHealth.role}, " +
-                            "cognitive_state=${nodeHealth.cognitiveState}, services=${nodeHealth.serviceCount}, " +
-                            "folded=${nodeHealth.agentFolded}, reachable=${nodeHealth.agentReachable}, " +
-                            "version=${nodeHealth.version})",
-                    )
+                    commitGate(probe, nodeHealth)
                 }
             } catch (e: Exception) {
-                // Probe failed — leave the gate unset (defaults to agent wording).
-                platformLog(TAG, "[WARN][gate] clientMode probe failed: ${e.message?.take(80)}")
+                // Probe failed. This does NOT set the gate — but it does not clear a
+                // previously-committed one either, so SAY WHICH IT IS. The comment
+                // here used to read "leave the gate unset", which was true only on a
+                // first probe; on a re-probe the gate keeps whatever the last backend
+                // answered, and that silence is what let a stale AGENT survive the
+                // post-setup hand-off for a whole release (CIRISClient#48). The
+                // hand-off now clears the gate before this can run, so an unset gate
+                // is the expected case — and if it is ever NOT unset here, the log
+                // says so rather than leaving the next reader to infer it.
+                platformLog(
+                    TAG,
+                    "[WARN][gate] clientMode probe failed: ${e.message?.take(80)} " +
+                        "— gate stays ${clientMode ?: "unset"}",
+                )
             }
 
             // ─── Post-setup RECONFIGURING hold ──────────────────────────────
@@ -1231,6 +1367,32 @@ fun CIRISApp(
             // WaCert, no fed-ID owner-binding) is already configured, and
             // sending it back to Setup is the 2.9.13 loop — setup/root 409s and
             // we land right back here. Only FRESH goes to Setup.
+            // A LIVE SESSION ENDS THE HOLD (CIRISClient#46).
+            //
+            // `reconfiguring` is a LATCH: set once at setup completion and
+            // cleared only by the routing below. But this whole block lives in
+            // `LaunchedEffect(phase)`, and any setPhase() cancels it mid-poll —
+            // which leaves the latch set with nothing having routed. A later
+            // phase change re-enters the hold, and when that happens AFTER the
+            // owner has signed back in, the app holds "Restarting your node…"
+            // over a perfectly good session and strands them on Login: the
+            // report has a SYSTEM_ADMIN login succeed against an agent that is
+            // alive on :8080 in `work`, with the client's own gate line saying
+            // so one line earlier.
+            //
+            // Authentication is exactly the evidence this hold exists to
+            // gather, so holding it makes the hold moot no matter how we got
+            // here. Guarded at the READER rather than at the eight places that
+            // set a token: one reader, eight writers, and guarding the reader
+            // is what makes this true by construction instead of by everyone
+            // remembering. That the leg passed on Windows and failed on macOS
+            // in the SAME run is the signature of a race, not of a path.
+            if (reconfiguring && !shouldHoldForReconfigure(reconfiguring, currentAccessToken != null)) {
+                platformLog(TAG, "[INFO] Session already open — the post-setup hold is moot, releasing it")
+                reconfiguring = false
+                startupViewModel.setKeepTimerAlive(false)
+            }
+
             if (reconfiguring) {
                 platformLog(TAG, "[INFO] Setup complete — holding reconfiguring state while the node restarts")
 
@@ -1242,8 +1404,14 @@ fun CIRISApp(
                 var reconfigPolls = 0
                 var routed = false
                 while (reconfigPolls < maxReconfigPolls) {
-                    if (isNodeReachable(nodeBaseUrl)) {
-                        val ownership = probeNodeOwnership(nodeBaseUrl)
+                    // THE LIVE ADDRESS, re-read each poll (#52). Read from the
+                    // frozen parameter this loop polled a dead agent port ~180
+                    // times while the node was serving, logging "Restarting your
+                    // node…" and never exiting — on macOS, which is slow enough
+                    // that the hand-off lands before the first poll.
+                    val holdNodeUrl = CIRISApiClient.LOCAL_NODE_URL
+                    if (isNodeReachable(holdNodeUrl)) {
+                        val ownership = probeNodeOwnership(holdNodeUrl)
                         if (ownership.isOwned) {
                             // Back + owned (claimed OR legacy-owned) → configured.
                             // The reload invalidated the setup token, so the owner
@@ -1461,7 +1629,7 @@ fun CIRISApp(
                                 // Keep timer running during backend polling
                                 startupViewModel.setKeepTimerAlive(true)
                                 startupViewModel.setStatus(
-                                    if (isAgentMode) LocalizationHelper.getString("mobile.status_waiting_agent")
+                                    if (shouldWaitForAgent) LocalizationHelper.getString("mobile.status_waiting_agent")
                                     else "Connecting to node..."
                                 )
 
@@ -1472,15 +1640,16 @@ fun CIRISApp(
                                 val maxPollAttempts = 150 // 30 seconds (150 * 200ms)
                                 var lastState = "UNKNOWN"
 
-                                if (!isAgentMode) {
-                                    // NODE mode: no cognitive brain / WORK state to wait for.
-                                    PlatformLogger.i(TAG, " NODE mode — skipping agent WORK-state wait")
+                                if (!shouldWaitForAgent) {
+                                    // NODE mode, or a gate that has not answered yet — either
+                                    // way there is no cognitive brain / WORK state to wait for.
+                                    PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                     startupViewModel.setStatus("Node ready")
                                     agentReady = true
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (isAgentMode) {
+                                if (shouldWaitForAgent) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
@@ -1526,7 +1695,11 @@ fun CIRISApp(
                                     PlatformLogger.w(TAG, " Agent did not reach WORK state within timeout, proceeding anyway")
                                     startupViewModel.setStatus("Agent ready (timeout)")
                                 } else {
-                                    startupViewModel.setStatus(if (isAgentMode) "Agent ready!" else "Node ready!")
+                                    // `shouldWaitForAgent`, not `isAgentMode`: this line
+                                    // reports the OUTCOME of the wait above, and on an
+                                    // unprobed gate that wait was skipped after setting
+                                    // "Node ready" — the agent default contradicted it.
+                                    startupViewModel.setStatus(if (shouldWaitForAgent) "Agent ready!" else "Node ready!")
                                 }
 
                                 // Brief pause to show ready state
@@ -1586,27 +1759,18 @@ fun CIRISApp(
         BrightnessPreference.SYSTEM -> systemInDarkTheme
     }
 
-    // Apply color scheme with selected color theme applied immediately
-    val colorScheme = if (isDarkMode) {
-        darkColorScheme(
-            primary = selectedColorTheme.primary,
-            secondary = selectedColorTheme.secondary,
-            tertiary = selectedColorTheme.tertiary
-        )
-    } else {
-        lightColorScheme(
-            primary = selectedColorTheme.primary,
-            secondary = selectedColorTheme.secondary,
-            tertiary = selectedColorTheme.tertiary
-        )
-    }
+    // The ground follows the brightness preference exactly as the Material
+    // scheme did; CirisTheme resolves the sixteen tokens for it AND builds the
+    // Material scheme (neutrals from the tokens, accents from the chosen
+    // ColorTheme) — see ui/theme/CirisTheme.kt.
+    val ground = if (isDarkMode) Ground.INSTRUMENT else Ground.PAPER
 
     // Provide localization and currency to entire Compose tree
     CompositionLocalProvider(
         LocalLocalization provides localizationManager,
         LocalCurrency provides currencyManager
     ) {
-        MaterialTheme(colorScheme = colorScheme) {
+        CirisTheme(ground = ground, accent = selectedColorTheme) {
             // ─── 2.9.4 — Epistemic Commons sidebar shell ─────────────────────
             // Pre-login screens (Startup/Login/Setup/ServerConnection) and the
             // Help utility have no NavSurface; for those the sidebar is hidden
@@ -1794,18 +1958,19 @@ fun CIRISApp(
 
                                                     // Check for degraded mode first - skip WORK state wait if no LLM
                                                     loginStatusMessage =
-                                                        if (isAgentMode) "Waiting for agent..." else "Connecting to node..."
+                                                        if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
                                                     var agentReady = false
                                                     var inDegradedMode = false
                                                     var pollAttempts = 0
 
-                                                    if (!isAgentMode) {
-                                                        // NODE mode: no cognitive brain / WORK state to wait for.
+                                                    if (!shouldWaitForAgent) {
+                                                        // NODE mode, or an unprobed gate — nothing to wait for.
+                                                        PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                                         agentReady = true
                                                     }
 
                                                     // Quick check for degraded mode via health endpoint (agent only)
-                                                    if (isAgentMode) {
+                                                    if (shouldWaitForAgent) {
                                                         try {
                                                             val health = apiClient.getSystemHealth()
                                                             if (health.degradedMode) {
@@ -1951,19 +2116,31 @@ fun CIRISApp(
                             // password manager and 2FA, short enough that an
                             // abandoned attempt does not spin forever.
                             var token: ai.ciris.mobile.shared.models.OAuthHandoff? = null
+                            // The node's own reason for refusing, when it gives one. A
+                            // 410 with `reason_id` is the server saying STOP, and the
+                            // old loop polled through three of them: collectOAuthHandoff
+                            // cast the typed Failed to null, and null read as "not
+                            // yet" (CIRISClient#57).
+                            var refusal: String? = null
                             var attempts = 0
-                            while (token == null && attempts < 90) {
+                            while (token == null && refusal == null && attempts < 90) {
                                 kotlinx.coroutines.delay(2000)
                                 attempts++
                                 // After ~20s our own tab has had its chance;
                                 // accept a sign-in that completed in a stray
                                 // tab rather than spin while the node holds a
                                 // perfectly good session.
-                                token = apiClient.collectOAuthHandoff(
+                                when (val poll = apiClient.pollOAuthHandoff(
                                     nonce,
                                     nodeBaseUrl,
                                     allowUnbound = attempts > 10,
-                                )
+                                )) {
+                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Ready ->
+                                        token = poll.handoff
+                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Failed ->
+                                        refusal = poll.reasonId ?: "auth.oauth.flow_expired"
+                                    ai.ciris.mobile.shared.models.OAuthHandoffPoll.Pending -> Unit
+                                }
                                 // Heartbeat every ~20s: "still waiting" must be
                                 // visible, or a stalled flow looks like a crashed one.
                                 if (token == null && attempts % 10 == 0) {
@@ -1973,6 +2150,18 @@ fun CIRISApp(
                             isLoginLoading = false
                             loginStatusMessage = null
                             val collected = token
+                            if (refusal != null) {
+                                // THE REASON, IN THE APP. The node's reason_id is a
+                                // localisation key ("auth.oauth.flow_expired" is in
+                                // en.json verbatim), so the message the person only
+                                // ever saw in a browser tab they may have closed is now
+                                // on the screen they are looking at — including the
+                                // recovery instruction that would have ended the
+                                // incident before it reached Reset (CIRISClient#57).
+                                loginErrorMessage = LocalizationHelper.getString(refusal)
+                                platformLog(TAG, "[WARN][onGoogleSignIn] node refused the hand-off: $refusal")
+                                return@launch
+                            }
                             if (collected == null) {
                                 // Say WHICH failure this is. "Sign-in failed" would
                                 // cover both "you closed the tab" and "the node is
@@ -2061,20 +2250,30 @@ fun CIRISApp(
                                     .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
 
                                 // Check for degraded mode first - skip WORK state wait if no LLM
-                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (isAgentMode) "agent" else "node"}...")
+                                // THIS LOG LINE IS THE DIAGNOSIS (CIRISClient#48). It read
+                                // "waiting for agent" on a bare node for the 30 s the loop
+                                // below then spent, and that is how the 34-40 s was found.
+                                // It now names the gate rather than a default, so the next
+                                // reader gets the fact instead of the guess.
+                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (shouldWaitForAgent) "agent" else "node"} (clientMode=${clientMode ?: "unprobed"})...")
                                 loginStatusMessage =
-                                    if (isAgentMode) "Waiting for agent..." else "Connecting to node..."
+                                    if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
                                 var agentReady = false
                                 var inDegradedMode = false
                                 var pollAttempts = 0
 
-                                if (!isAgentMode) {
-                                    // NODE mode: no cognitive brain / WORK state to wait for.
+                                if (!shouldWaitForAgent) {
+                                    // NODE mode, or an unprobed gate — nothing to wait for.
+                                    // THIS IS THE 34-40 SECONDS (CIRISClient#48). The gate is
+                                    // routinely still null here: login is reached BEFORE the
+                                    // probe resolves on a run-without-AI install, so the old
+                                    // `!isAgentMode` test read "agent" and fell into the poll.
+                                    PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                     agentReady = true
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (isAgentMode) {
+                                if (shouldWaitForAgent) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
@@ -2222,12 +2421,56 @@ fun CIRISApp(
                                 null
                             }
 
+                            // ATTACHED IS THE NORMAL CASE, NOT THE EXCEPTION (CIRISClient#61).
+                            // 0.5.220 REFUSED to wipe when the backend was one this app did
+                            // not launch, reasoning that a wipe under a live process the app
+                            // cannot stop leaves the node serving stale state while the reset
+                            // claims success (#55). Right about the harm, wrong about where
+                            // "attached" happens: the agent's desktop_launcher starts the API
+                            // and THEN spawns this JAR against it ("the desktop app connects
+                            // to the running CIRIS API server"), so on every launcher-started
+                            // desktop the client is attached, and 0.5.220's Reset refused on
+                            // the whole product. CIRISAgent's five-platform gate has the same
+                            // topology and caught it on its first run.
+                            //
+                            // So: wipe regardless of ownership — the wipe DOES change durable
+                            // state (the next backend boot is a first run), which is what the
+                            // dialog promises — and be honest about the one thing it cannot
+                            // do. If the attached backend is still answering, say that it
+                            // keeps its previous state until it restarts. #55's complaint was
+                            // a reset that reported success and changed nothing; this changes
+                            // what it can and names what it cannot.
+                            val attachedLive: String? = run {
+                                if (pythonRuntimeProtocol.backendOwnership !=
+                                    ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
+                                ) return@run null
+                                val url = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
+                                val alive = runCatching { apiClient.getNodeHealth(url) }.isSuccess
+                                platformLog(
+                                    TAG,
+                                    "[INFO][onResetSetup] attached backend at $url is " +
+                                        if (alive) "still answering — it keeps its state until restarted" else "not answering — nothing to protect",
+                                )
+                                if (alive) url else null
+                            }
+
                             val wiped = withContext(Dispatchers.Default) {
                                 ai.ciris.mobile.shared.platform.wipeLocalData(
                                     declaredHome,
                                 )
                             }
                             platformLog(TAG, "[INFO][onResetSetup] wipeLocalData -> $wiped")
+
+                            if (wiped && attachedLive != null) {
+                                // Desktop and iOS return to Startup below and the person
+                                // reads this on Login; Android relaunches and it is a log
+                                // line. Either way the record says what was reset and what
+                                // was not.
+                                platformLog(TAG, "[WARN][onResetSetup] local data erased; the CIRIS node at $attachedLive is still running with its previous state — restart it to finish")
+                                loginErrorMessage =
+                                    "Local data erased. The CIRIS node at $attachedLive is still running " +
+                                        "with its previous state — restart it to finish the reset."
+                            }
 
                             if (!wiped) {
                                 // STAY ON LOGIN. This used to set the message and then
@@ -2248,21 +2491,39 @@ fun CIRISApp(
                             } else {
                                 settingsViewModel.logout {
                                     currentAccessToken = null
-                                    // The desktop backend was already stopped above, before
-                                    // its files were deleted — restartApp() is exitProcess(0)
-                                    // here and the Python node is a CHILD PROCESS that
-                                    // exiting the UI does not take with it.
+                                    // DESKTOP AND iOS DO NOT EXIT. They return to Startup,
+                                    // whose retry() calls startServer(): it re-attaches to a
+                                    // backend that is still serving, or relaunches the one
+                                    // this app had stopped above, now from a wiped home —
+                                    // so the next screen is a genuine first run, which is
+                                    // what the dialog promises. Android relaunches itself
+                                    // through AppRestarter and lands in the same place.
                                     //
-                                    // NOT ON iOS. restartApp() there checks for
-                                    // `Documents/ciris/.server_ready` and treats its absence
-                                    // as a dead runtime, falling back to exit(0) — and the
-                                    // wipe has just deleted the directory that file lives in.
-                                    // So Reset ALWAYS killed the app instead of returning to
-                                    // the wizard the dialog promises (Codex, PR #9). The app
-                                    // is still running and the home is gone, so the next
-                                    // startup is a genuine first run: just go there.
-                                    if (ai.ciris.mobile.shared.platform.isIOS()) {
-                                        platformLog(TAG, "[INFO][onResetSetup] iOS — returning to setup rather than exiting")
+                                    // iOS had to work this way from the start: restartApp()
+                                    // there checked for `Documents/ciris/.server_ready`,
+                                    // treated its absence as a dead runtime and fell back to
+                                    // exit(0) — and the wipe had just deleted that directory,
+                                    // so Reset ALWAYS killed the app (Codex, PR #9).
+                                    //
+                                    // Desktop's restartApp() is exitProcess(0) with a
+                                    // "please restart manually" on stdout, and until 0.5.220
+                                    // it never ran: the java.util.prefs throw (#56) skipped
+                                    // this callback, so every desktop reset since 0.5.19x
+                                    // left the app on Login — which is what CIRISAgent's
+                                    // five-platform gate has asserted against all along
+                                    // (its desktop check is "Login with btn_local_login, or
+                                    // Setup"; it reads the screen 1 s after the confirm and
+                                    // does not relaunch a desktop). Fixing #56 made the exit
+                                    // real, and 0.5.221's Linux leg lost the race with it
+                                    // (run 35199231784) while Windows won it. An app that
+                                    // exits with "restart me" after a reset is worse for the
+                                    // person than one that shows them the first-run screen,
+                                    // and under the launcher (CIRISClient#61) it also throws
+                                    // away the Login line that names the still-running node.
+                                    if (ai.ciris.mobile.shared.platform.isIOS() ||
+                                        ai.ciris.mobile.shared.platform.isDesktop()
+                                    ) {
+                                        platformLog(TAG, "[INFO][onResetSetup] returning to Startup rather than exiting")
                                         startupViewModel.retry()
                                         checkingFirstRun = false
                                         isFirstRun = true
@@ -2385,13 +2646,25 @@ fun CIRISApp(
                     // with a bounded timeout rather than snapshotting a value that
                     // may still be null at the instant COMPLETE runs.
                     claimPinProvider = {
-                        // 1) banner snapshot (if the boot-time latch caught it),
-                        // 2) DURABLE <home>/claim_pin file read on-demand — RACE-FREE: the node
-                        //    writes claim_pin a few seconds AFTER health answers, so a boot-time
-                        //    latch can miss it, but by claim time the file is present,
-                        // 3) last resort, await the banner flow with a bounded timeout.
-                        pythonRuntimeProtocol.localClaimPin.value
-                            ?: pythonRuntimeProtocol.readLocalClaimPin()
+                        // THE FILE FIRST, THEN THE BANNER (CIRISClient#49).
+                        //
+                        // <home>/claim_pin is the node's own 0600 file and the
+                        // source of truth — the node even names it as
+                        // `claim_pin_file` in its setup status. The banner
+                        // snapshot is a LOG TAIL, and a log outlives the boot
+                        // that wrote it: after a factory reset Android latched
+                        // the PREVIOUS boot's PIN, sent it, and got 401
+                        // auth.claim.pin_invalid followed by a 409 on announce.
+                        // Ordering the file first makes the stale-tail window
+                        // unreachable on every platform rather than only where
+                        // it was observed.
+                        //
+                        // The banner remains the fallback for the narrow case
+                        // it was added for: the node writes claim_pin a few
+                        // seconds AFTER health answers, so a very early claim
+                        // can still find no file.
+                        pythonRuntimeProtocol.readLocalClaimPin()
+                            ?: pythonRuntimeProtocol.localClaimPin.value
                             ?: withTimeoutOrNull(20_000L) {
                                 pythonRuntimeProtocol.localClaimPin
                                     .filterNotNull()
@@ -2405,6 +2678,44 @@ fun CIRISApp(
                     nodeCodeProvider = { pythonRuntimeProtocol.localNodeCode.value },
                     onSetupComplete = {
                         platformLog(TAG, "[INFO] onSetupComplete called - exchanging tokens...")
+                        // THE HAND-OFF MOMENT (CIRISClient#43). A run-without-AI
+                        // setup replaces the AGENT process with the node: :8080
+                        // goes away and :4243 starts serving. The CLIENT is not
+                        // restarted, so unless it re-reads the answer here it
+                        // keeps polling the port it chose before the answer
+                        // existed — 109 API inits at :8080 and "Restarting your
+                        // node…" forever.
+                        //
+                        // AND THE GATE IS AN ANSWER *ABOUT A BACKEND* (CIRISClient#48).
+                        // The paragraph above is the port; this is the verdict, and it
+                        // went stale the same way. clientMode was derived against the
+                        // AGENT on :8080 and nothing invalidated it when :4243 took
+                        // over, so the re-probe's `Connection refused` — which is what
+                        // an absent agent port SHOULD look like — hit the catch, the
+                        // catch preserved the previous answer, and the post-login path
+                        // waited 30 s for an agent that setup had just removed:
+                        //
+                        //   [WARN][gate] clientMode probe failed: Connection refused
+                        //   Local login successful, waiting for agent (clientMode=AGENT)
+                        //
+                        // 0.5.214 stopped the probe BLOCKING startup and made that
+                        // second line name the gate; it did not stop the gate being
+                        // wrong. Discarding it here is what does: `checkingFirstRun`
+                        // is reset below, so a probe re-runs either way — on a with-AI
+                        // setup it succeeds and re-commits AGENT, and on run-without-AI
+                        // it fails and correctly leaves the gate unset, which
+                        // `shouldWaitForAgent` already reads as "do not wait".
+                        //
+                        // Cleared rather than latched to NODE: a transport error is not
+                        // a verdict, and inventing one here is the mistake the
+                        // three-state probe exists to avoid. "I no longer know" is the
+                        // true statement, and it is the one that costs nothing.
+                        clientMode = null
+                        brainPresent = null
+                        coroutineScope.launch {
+                            val endpoint = syncBackendFromEnv(envFileUpdater, apiClient)
+                            platformLog(TAG, "[INFO][BACKEND] after setup the backend is :${endpoint.port} — gate discarded, it described the previous backend")
+                        }
                         // After setup completes, exchange OAuth ID token for CIRIS access token
                         // Run on IO dispatcher to avoid blocking main thread during network/file operations
                         coroutineScope.launch {
@@ -2746,6 +3057,7 @@ fun CIRISApp(
                 val products by billingViewModel.products.collectAsState()
                 val isBillingLoading by billingViewModel.isLoading.collectAsState()
                 val billingError by billingViewModel.errorMessage.collectAsState()
+                val billingAuthExpired by billingViewModel.authExpired.collectAsState()
                 val billingSuccess by billingViewModel.successMessage.collectAsState()
                 val isByokMode by billingViewModel.isByokMode.collectAsState()
 
@@ -2821,7 +3133,18 @@ fun CIRISApp(
                     },
                     onDismissError = {
                         billingViewModel.clearError()
-                    }
+                    },
+                    authExpired = billingAuthExpired,
+                    // The same door Interact's 401 path has always opened: drop
+                    // the session and go to Login, where the browser sign-in
+                    // that mints a fresh token starts (CIRISClient#59).
+                    onSignInAgain = {
+                        platformLog(TAG, "[INFO][Billing] sign in again — billing credential expired")
+                        interactViewModel.resetState()
+                        currentAccessToken = null
+                        coroutineScope.launch { secureStorage.deleteAccessToken() }
+                        currentScreen = Screen.Login
+                    },
                 )
             }
 
@@ -3770,6 +4093,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.Contacts] Rendering contacts screen (picker=${contactsPickerSourceScreen != null})")
                 ContactsScreen(
                     viewModel = contactsViewModel,
+                    nodeVersion = nodeVersion,
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null
@@ -4572,7 +4896,14 @@ fun CIRISApp(
                         } else {
                             emptyMap()
                         },
-                        appVersion = "v2.9.4",
+                        // THE GENERATED VERSION, NOT A LITERAL. This read
+                        // "v2.9.4" while the build generated CLIENT_VERSION =
+                        // 0.5.219 two files away and another call site in this
+                        // same file already passed it — so the rail advertised a
+                        // client seven minors stale against a 2.11.3 agent, on
+                        // every screen, including all 53 in the screen atlas
+                        // (CIRISClient#58).
+                        appVersion = "v" + ai.ciris.mobile.shared.models.CLIENT_VERSION,
                         // Theme strip at the bottom of the drawer — Light /
                         // System / Dark segmented control. Wired straight to
                         // SettingsViewModel so the user can flip themes from
@@ -4804,9 +5135,57 @@ private suspend fun checkFirstRunStatus(
     maxRetries: Int = 0,
     onStatusUpdate: ((String) -> Unit)? = null
 ): Boolean? {
+    // THE NODE PROBE MUST GO TO THE NODE.
+    //
+    // On desktop `Main.kt` resolves BOTH apiBaseUrl and nodeBaseUrl from
+    // `CIRIS_NODE_URL ?: CIRIS_API_URL ?: :4243`, and the launcher sets
+    // CIRIS_API_URL to the AGENT's :8080. So on a run-without-AI install the
+    // parameter named `nodeBaseUrl` is the agent port, and every "is the node
+    // up?" question in this function was asked of a process that had already
+    // handed off — 61 probes of :8080 and not one of :4243, then "Backend
+    // unreachable" while the reviver logged a healthy node (CIRISClient#48).
+    //
+    // ActiveBackend knows which backend is serving and LOCAL_NODE_URL is the
+    // resolved address #26 established as the single source of truth, so ask
+    // those rather than a parameter that means different things per platform.
+    val nodeUrl = if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+        ActiveBackend.endpoint.baseUrl(LOOPBACK_HOST)
+    } else {
+        nodeBaseUrl
+    }
+
     var attempts = 0
     while (attempts <= maxRetries) {
         try {
+            // THE NODE DOES NOT SERVE /v1/setup/status (CIRISClient#48).
+            //
+            // After a run-without-AI hand-off the agent is gone and only the
+            // node on :4243 answers, but this kept asking :8080 — 61 attempts
+            // on every desktop — and then parked the app on "Backend
+            // unreachable. Please restart the app." while the client's OWN
+            // reviver was logging a healthy :4243 a few lines away.
+            //
+            // This is the third caller found still pinned to the agent base URL
+            // after the switch moved (#43 was the node URL, #47 the service
+            // roster). The question here is "is setup still required", and for
+            // a node the answer is settled by its ANSWERING: the flag was
+            // recorded, the hand-off happened, and a node that responds is a
+            // configured one. Retries still apply, so a node mid-rebind is
+            // waited for rather than declared unreachable.
+            if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
+                if (isNodeReachable(nodeUrl)) {
+                    platformLog(
+                        "checkFirstRunStatus",
+                        "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers — setup complete",
+                    )
+                    return false
+                }
+                onStatusUpdate?.invoke(LocalizationHelper.getString("mobile.status_checking_setup"))
+                attempts++
+                if (attempts <= maxRetries) kotlinx.coroutines.delay(500)
+                continue
+            }
+
             platformLog("checkFirstRunStatus", "[INFO] Attempt ${attempts + 1}/${maxRetries + 1}: Checking setup status at $apiBaseUrl")
             val client = CIRISApiClient(apiBaseUrl)
             val setupStatus = client.getSetupStatus()
@@ -4854,7 +5233,7 @@ private suspend fun checkFirstRunStatus(
             //
             // So: node-ownership suppresses the CLAIM, never the setup. If the
             // brain has no config, the wizard runs.
-            if (setupStatus.data.setup_required && nodeHasOwner(nodeBaseUrl)) {
+            if (setupStatus.data.setup_required && nodeHasOwner(nodeUrl)) {
                 // An OWNED node is not a first run, whether or not the brain is
                 // configured. The two cases diverge AFTER this point:
                 //
@@ -4890,7 +5269,7 @@ private suspend fun checkFirstRunStatus(
             val absent = e::class.simpleName?.contains("NoTransformation") == true ||
                 e.message?.contains("404") == true ||
                 e.message?.contains("/v1/setup/status") == true
-            if (absent && isNodeReachable(nodeBaseUrl)) {
+            if (absent && isNodeReachable(nodeUrl)) {
                 // OWNER-AWARE degrade: setup-status is unavailable, but a node
                 // that already has an OWNER — claimed OR legacy-owned — is
                 // CONFIGURED, not first-run. Only a genuinely FRESH node is
@@ -4898,7 +5277,7 @@ private suspend fun checkFirstRunStatus(
                 // which setup-status is briefly unreachable / the node-fold
                 // rebinds 4243) degrades to first-run and the app loops the
                 // wizard/login forever on an owned node.
-                if (nodeHasOwner(nodeBaseUrl)) {
+                if (nodeHasOwner(nodeUrl)) {
                     platformLog("checkFirstRunStatus", "[INFO] setup-status absent but node has an OWNER → configured, NOT first-run")
                     return false
                 }
@@ -4917,11 +5296,11 @@ private suspend fun checkFirstRunStatus(
                 // If the node's read API answers (GET /v1/identity 2xx), treat this
                 // as a fresh first-run so the app reaches the federation-ID wizard
                 // instead of dead-ending on "Backend unreachable".
-                if (isNodeReachable(nodeBaseUrl)) {
+                if (isNodeReachable(nodeUrl)) {
                     // OWNER-AWARE (see the fast-degrade branch above): an owned
                     // node is configured, not first-run — don't loop the wizard
                     // just because setup-status is transiently unreachable.
-                    if (nodeHasOwner(nodeBaseUrl)) {
+                    if (nodeHasOwner(nodeUrl)) {
                         platformLog("checkFirstRunStatus", "[INFO] setup status unavailable but node has an OWNER → configured, NOT first-run")
                         return false
                     }
@@ -4939,9 +5318,36 @@ private suspend fun checkFirstRunStatus(
  * Lightweight node-up probe for the local ciris-server read API.
  * GET /v1/identity returning any 2xx means the node is serving.
  */
+/**
+ * Is the node ANSWERING — a liveness question, asked of a liveness endpoint.
+ *
+ * THIS USED TO ASK `/v1/identity` (CIRISClient#52). That is the node's identity
+ * AGGREGATE, assembled at compose time and dependent on node state; using it to
+ * mean "is the node back?" conflates liveness with readiness, which is the same
+ * mistake as probing the agent's port to ask about the node.
+ *
+ * It trapped the post-setup reconfigure hold on macOS. From the 2026-09-09
+ * nightly, on one continuous loop: ONE entry into the hold, 18 status
+ * re-asserts (~180 polls over three minutes), ZERO routes, and the loop never
+ * even reached its 240-poll timeout — while the backend supervisor, polling
+ * `/health` on the SAME node, logged "Server already running and healthy at
+ * http://127.0.0.1:4243" twice in the same window. Two probes, one node,
+ * opposite answers.
+ *
+ * `/health` is the endpoint for this: it serves a CONSTANT "ok" and is refused
+ * until the node is serving (CIRISServer#548), so a 200 means serving with no
+ * intermediate state to miss — which is exactly what a hold waiting for a
+ * restart needs to hear. `/v1/identity` can be slow or unhappy on a node that
+ * has just restarted and is perfectly alive.
+ *
+ * The path comes from the ACTIVE endpoint rather than a literal, so a node on a
+ * custom port and an agent build both ask their own question.
+ */
 private suspend fun isNodeReachable(nodeBaseUrl: String): Boolean {
+    val base = nodeBaseUrl.trimEnd('/')
+    val healthPath = ai.ciris.mobile.shared.platform.ActiveBackend.endpoint.healthPath
     return try {
-        CIRISApiClient(nodeBaseUrl).isLocalNodeUp(nodeBaseUrl.trimEnd('/'))
+        CIRISApiClient(base).isEndpointAnswering("$base$healthPath")
     } catch (_: Exception) {
         false
     }
@@ -5643,6 +6049,9 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.GraphMemory -> Screen.GraphMemory
     ai.ciris.mobile.shared.ui.nav.NavSurface.WiseAuthority -> Screen.WiseAuthority
     ai.ciris.mobile.shared.ui.nav.NavSurface.AgentSettings -> Screen.Settings
+    // Same screen, reachable without a brain (CIRISClient#51). Screen.Settings
+    // carries btn_logout, and on a node install nothing else reaches it.
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Account -> Screen.Settings
     ai.ciris.mobile.shared.ui.nav.NavSurface.LLMSettings -> Screen.LLMSettings
     ai.ciris.mobile.shared.ui.nav.NavSurface.System -> Screen.System
     ai.ciris.mobile.shared.ui.nav.NavSurface.Runtime -> Screen.Runtime

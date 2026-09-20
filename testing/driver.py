@@ -254,6 +254,33 @@ class TestAutomationServer:
     def navigate(self, screen: str) -> None:
         self._call("POST", "/navigate", {"screen": screen})
 
+    def scroll_to(self, test_tag: str, direction: str = "down",
+                  amount: int = 300, container: str | None = None) -> Any:
+        """Move the screen's registered scrollable, so a click can land.
+
+        `/click` REFUSES an element that is composed but off screen
+        (CIRISClient#33) — a control the person cannot see is not a control the
+        harness may drive. The remedy the app ships for that is `/scroll`, and
+        this driver simply never had the method: `flow_helper.scroll_into_view`
+        calls it inside a `catch AttributeError` and has therefore been quietly
+        returning False on every client, for every flow, since it was written.
+
+        The cost was measured on the nav rail, which registers a
+        `rememberTestableScrollState` precisely so this would work: the screen
+        atlas could reach 32 of 54 surfaces, and the 22 it missed were the ones
+        sitting below the fold of a sidebar nothing could scroll.
+        """
+        body: dict[str, Any] = {
+            "testTag": test_tag, "direction": direction, "amount": amount,
+        }
+        # `container` names WHICH scrollable to move. Without it the app guesses
+        # — most-recent-that-can-move — and on a screen whose content scrolls
+        # the guess is always the content, so the nav rail cannot be moved at
+        # all from a detail screen.
+        if container:
+            body["container"] = container
+        return self._call("POST", "/scroll", body)
+
     def act(self, action: str, **kw: Any) -> Any:
         return self._call("POST", "/act", {"action": action, **kw})
 
@@ -279,6 +306,37 @@ class TestAutomationServer:
                 last = str(e)
                 time.sleep(1.0)
         raise DriverError(f"automation server never came up within {timeout:.0f}s: {last}")
+
+    def wait_for_ui(self, timeout: float = 120.0) -> int:
+        """Block until the app has actually COMPOSED something. Returns the count.
+
+        `wait_for_server` proves the automation SERVER answers. It is not the
+        same fact as the app having a UI, and on desktop it is not even close:
+        `Main.kt` starts the server before `application { Window { … } }`, so
+        /health returns 200 in about half a second while the tree is still
+        empty. Measured on the 0.5.217 jar, at the instant /health answered:
+
+            /state       screen="unknown"  clientMode="unset"  nodeUrl=""
+            /tree        0 elements
+            /screenshot  503 — window not available
+
+        A caller that walks at that moment asserts nothing: "everything tagged
+        is drivable" and "no ghosts" are both trivially true of an empty tree.
+        Returns 0 rather than raising, so the caller decides — the gate reports
+        it as a failed step with a reason, which is more useful than an
+        exception that loses the count.
+        """
+        deadline = time.monotonic() + timeout
+        best = 0
+        while time.monotonic() < deadline:
+            try:
+                best = len(self.tree())
+                if best > 0:
+                    return best
+            except DriverError:
+                pass
+            time.sleep(0.5)
+        return best
 
     def wait_for_element(self, test_tag: str, timeout: float = 60.0) -> Element:
         deadline = time.monotonic() + timeout

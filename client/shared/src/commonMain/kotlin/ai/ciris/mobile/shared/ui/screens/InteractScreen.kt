@@ -11,6 +11,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.components.emojiToIconOrDefault
 import ai.ciris.mobile.shared.ui.components.emojiBusColor
 import androidx.compose.material3.Icon
+import ai.ciris.mobile.shared.ui.components.SessionExpiredBanner
 import androidx.compose.ui.graphics.vector.ImageVector
 import ai.ciris.mobile.shared.models.MessageType
 import ai.ciris.mobile.shared.viewmodels.AgentProcessingState
@@ -432,6 +433,21 @@ fun InteractScreen(
                 onSessionsClick = onOpenSessions,
                 theme = theme
             )
+
+            // THE DOOR, NOT JUST THE SIGN. authExpired is TokenManager's own
+            // conclusion that only a person can renew the credential; the send
+            // path already refuses with the sentence. This is the action the
+            // sentence implies, on the surface the person is stuck on, wired to
+            // the same sign-in-again the Interact 401 path has always used
+            // (CIRISClient#59).
+            if (creditStatus.authExpired) {
+                SessionExpiredBanner(
+                    onSignInAgain = onSessionExpired,
+                    tag = "btn_sign_in_again",
+                    background = theme.warningBackground,
+                    foreground = theme.warningText,
+                )
+            }
 
             // Node switcher (change #1) — first-class control to hold + switch
             // between fabric nodes (A, B, …). Mirrors the badge-row pattern: a

@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CIRIS Circles</title>
+<meta name="description" content="Starts close to you. Moves out only when you say so. Comes back if anyone in it asks. A plain-words explainer of how CIRIS moves what you make.">
+<link rel="icon" href="circles/ciris-signet.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#0D1117; color:#F4F5F7; }
+  * { box-sizing:border-box; }
+  a { color:#22C0E8; text-decoration:none; }
+  a:hover { color:#5AD4F2; }
+  /* the stage: the same 16:9 host the design page used, filling the viewport */
+  #stage { width:100%; aspect-ratio:16/9; min-height:100vh; position:relative; background:#0D1117; }
+  #stage > div { position:absolute; inset:0; }
+  /* a strip under the stage so the page is not a dead end */
+  .foot {
+    font: 400 14px Geist, ui-sans-serif, system-ui, sans-serif; color:#8A93A0;
+    display:flex; gap:18px; flex-wrap:wrap; align-items:center; justify-content:center;
+    padding:14px 16px 22px;
+  }
+  .foot code { font: 500 13px 'Geist Mono', ui-monospace, monospace; color:#C6CCD4; }
+  .foot .sep { opacity:.35 }
+  noscript { display:block; padding:40px; text-align:center; font:400 18px Geist, system-ui, sans-serif; }
+</style>
+</head>
+<body>
+<!-- The scene list and playback setting, exactly as authored in the design
+     (Circles Explainer.dc.html). The engine derives its cue table from
+     these; CirclesAnimation keys every motion to the cue names below. -->
+<script>window.OM_SCENES = '[{"name":"Today","dur":14,"desc":"How it works now: you post a photo and it lands in a big tech datacenter, not yours."},{"name":"Copies","dur":14,"desc":"Copies fan out to ads, AI training and partners. Nobody asks you first."},{"name":"NoTakeBack","dur":12,"desc":"Delete only hides it from you. The copies stay, and a red line strikes through the box."},{"name":"Different","dur":14,"desc":"Transition: the CIRIS signet, the line CIRIS is built open, free, and different, and the ciris.ai callout."},{"name":"Open","dur":10,"desc":"The five circles appear, closest first, and are named in plain words."},{"name":"Contacts","dur":12,"desc":"People pop onto the rings — a circle is just the people in it."},{"name":"Born","dur":8,"desc":"A form appears in the middle circle, with you."},{"name":"Envelope","dur":18,"desc":"The five facts that travel with everything build up one at a time, in plain English."},{"name":"Photo","dur":12,"desc":"A beach photo is taken. It starts in the middle circle and sits in files, not inside a chat."},{"name":"PhotoOut","dur":16,"desc":"The photo is shared outward: first to family, then to the neighbours, each step a clear question."},{"name":"Move","dur":16,"desc":"The form follows the same path outward, and leaves a receipt."},{"name":"Content","dur":14,"desc":"The Files tab: photo, form, video and plans together, sorted by your own rules."},{"name":"PhotoLabel","dur":12,"desc":"A neighbour tags the photo. The tag is an opinion; your rules blur it rather than delete it."},{"name":"Object","dur":16,"desc":"One person speaks up. The three windows fill: anyone, then the named helpers, then the group."},{"name":"TakeBack","dur":12,"desc":"Mira is in the photo, so Mira can take it back — not only the person who shared it."},{"name":"PhotoGone","dur":12,"desc":"The photo returns to the middle. The record still shows it was shared, and copies were told to delete."},{"name":"Close","dur":12,"desc":"The rings dim, the closing lines land, and the two ciris.ai links appear."}]';</script>
+<script>window.OM_PLAYBACK = '{"mode":"loop"}';</script>
+
+<div id="stage"><div id="root"></div></div>
+
+<div class="foot">
+  <span>Space pauses. Drag the bar to scrub.</span>
+  <span class="sep">·</span>
+  <a href="index.html">Screen atlas</a>
+  <span class="sep">·</span>
+  <a href="https://ciris.ai/contextual-integrity" target="_blank" rel="noopener">ciris.ai/contextual-integrity</a>
+  <span class="sep">·</span>
+  <a href="https://ciris.ai/safety" target="_blank" rel="noopener">ciris.ai/safety</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/CIRISAI/CIRISClient" target="_blank" rel="noopener"><code>CIRISAI/CIRISClient</code></a>
+</div>
+<noscript>This explainer is an animation and needs JavaScript. The words are at <a href="https://ciris.ai/contextual-integrity">ciris.ai/contextual-integrity</a>.</noscript>
+
+<!-- React 18.3.1 UMD — the same builds the design runtime pins, with its SRI hashes. -->
+<script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" integrity="sha384-DGyLxAyjq0f9SPpVevD6IgztCFlnMF6oW/XQGmfe+IsZ8TqEiDrcHkMLKI6fiB/Z" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" integrity="sha384-gTGxhz21lVGYNMcdJOyq01Edg0jhn/c22nsx0kyqP0TxaV5WVdsSH1fSDUf5YJj1" crossorigin="anonymous"></script>
+<!-- animations-v3.jsx + circles-scene.jsx, precompiled once (see docs/circles/README.md) so
+     the page ships no in-browser transpiler. -->
+<script src="circles/circles-explainer.js"></script>
+<script>
+  ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(window.CirclesAnimation));
+</script>
+</body>
+</html>

@@ -743,6 +743,501 @@
       },
       "notes": "BOTH AGE BANDS RENDERED AT ZERO WIDTH FROM 0.5.203 (#42). 'Prefer not to say' sat inside the same Row as the two bands carrying fillMaxWidth(); Row measures unweighted children first against the full width and gives the weighted ones what remains, so that child took all of it and both bands measured to zero. USER-FACING, not a harness artifact: the bands were invisible to a person, so the only selectable answer on a required question was 'prefer not to say', which is treated as under-18 WITH STEWARDSHIP -- every setup since 0.5.203 took the protective path whether or not the owner wanted it. It hid because the controls were still composed and still registered click handlers, so the pre-0.5.206 coordinate fallback clicked a zero-size rect and automation looked green; 0.5.206's honest visibility reporting is what surfaced it, the agent's gate reading four drivable controls on the YOU step with NEITHER band among them. Adds client/tools/check_row_layout.py, a hard-zero lint in build.yml and the release gates that walks each Row's children seeing THROUGH control flow (the bands were inside a forEach, which is why no direct-child reading of the source put them beside the offender) and stopping at nested layout containers; mutation-verified in both directions. 0.5.207 published its wheels to PyPI but its ios-xcframework job was CANCELLED to cut this release, so the v0.5.207 GitHub release carries no XCFramework -- take iOS artifacts from v0.5.208. Pairs with every agent and node 0.5.206 does.",
       "published": null
+    },
+    {
+      "client_version": "0.5.209",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client now TALKS to the node it was already meant to; it reads nothing new from it",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE RUN-WITHOUT-AI SWITCH WAS NEVER PLUGGED IN (#43). After the hand-off the client kept polling :8080 -- 109 CIRISApiClient inits at the agent port, none at :4243, and 'Restarting your node...' forever while the node was serving the whole time. Not an overwrite: :4243 was never chosen. ActiveBackend, runWithoutAiFromEnv and BackendEndpoint shipped in 0.5.203 with fifteen passing tests and ActiveBackend.resolveFrom HAD NO PRODUCTION CALLER ON ANY PLATFORM -- its only references were that test and a doc comment saying 'a platform that has not wired resolveFrom yet', which described every platform. Desktop never consulted it and took its port from CIRIS_API_URL (the launcher sets the agent's :8080); iOS and Android read it and so carried the SAME BUG LATENT, undriven. Now resolved at BOTH moments it must hold: at startup before anything polls, and when setup COMPLETES, because the hand-off replaces the agent process and not the client. EnvFileUpdater.readRawEnv() (expect + four actuals) is the read, syncBackendFromEnv the seam, and desktop's PythonRuntime.serverUrl follows the same answer so the health poll moves too. The node URL is forced ONLY in the run-without-AI direction: the other way would stamp on CIRIS_NODE_URL and on an operator attached to someone else's node (#26). LOOPBACK_HOST replaces two hardcoded call sites -- Android must say localhost for the WebView's Same-Origin Policy. MOBILE IS FIXED BY THE SAME CHANGE, having been broken the same way without anyone driving it. Pairs with agent 2.11.0, which shuts the brain down and serves only :4243, and with every agent and node 0.5.208 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.210",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Completes the 0.5.209 re-point; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE API CLIENT MOVES WITH THE BACKEND, NOT JUST THE NODE URL (#43, completing 0.5.209). 0.5.209 re-pointed CIRISApiClient.LOCAL_NODE_URL, which the FEDERATION call sites read. Every ordinary call -- login included -- goes through the client's own baseUrl, and CIRISApp builds that once inside a `remember` from apiBaseUrl, defaulting to :8080. So after a run-without-AI hand-off the node URL moved to :4243 and login still went to the port that had just gone away. Found by checking the agent team's forecast that Android in-session login would pass on 0.5.209 -- it would not have. syncBackendFrom now takes the api client as a REQUIRED argument and calls updateBaseUrl, which recreates the ~13 generated SDK instances as well as the direct HTTP path; required rather than optional because this whole issue exists from a function that had to be called and was not, and an optional argument is the same trap one storey down. Still only in the run-without-AI direction, so a with-AI home and an operator attached to another node are untouched (#26). WHAT THIS UNBLOCKS: the agent hosts a node fold on :4243 DURING the wizard, so once it stops ending its process that fold keeps serving -- the hand-off needs no restart and no in-place node boot, and the client only has to talk to it. Android no-AI setup is 7/7 on the agent's side; this is the client half of the login that follows it. Pairs with agent 2.11.0 and with every agent and node 0.5.209 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.211",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Startup and routing fixes; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "TWO STARTUP DEFECTS THE 0.5.209 RE-POINT EXPOSED, NEITHER INTRODUCED BY IT. (#47) A waitForServices timeout was a plain `throw`, and one of its two callers launches it bare -- viewModelScope.launch { waitForServices() } -- so on Dispatchers.Main with no handler it reached the main thread and ENDED THE PROCESS: Android FATAL EXCEPTION, iOS self-sent SIGABRT after ~100s with nothing to relaunch it, so the next gate leg found no test server at all. Whether a timeout was survivable depended on WHICH caller ran it. It is now an error state via onErrorDetected, fixed inside waitForServices rather than by a catch at the bare call site. Separately the wait had nothing to count: after the hand-off the backend is the node on :4243, which serves no 22-service agent roster, so when ActiveBackend names the node the roster wait is skipped. A slow agent boot could have produced the same fatal timeout on any release. (#46) After a successful with-AI login the client re-entered the post-setup 'node is restarting' hold and never left Login, while the agent was alive on :8080 in `work`. `reconfiguring` is a latch cleared only by the routing that exits the hold, but the hold runs inside LaunchedEffect(phase) and any setPhase() cancels it mid-poll, leaving the latch set with nothing routed; a later phase change re-enters it. A LIVE SESSION NOW ENDS THE HOLD -- a session is exactly the evidence the hold exists to gather. Guarded at the reader, since the latch has one reader and eight token writers. Passing on Windows and failing on macOS in the same run is the signature of the race. 0.5.210 published its wheels to PyPI but its ios-xcframework job was CANCELLED to free runners for this cut, so the v0.5.210 GitHub release carries no XCFramework -- take iOS artifacts from v0.5.211. Pairs with every agent and node 0.5.210 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.212",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The first-run probe now asks the backend in effect; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE FIRST-RUN CHECK FOLLOWS THE BACKEND IN EFFECT (#48). After a run-without-AI hand-off the agent is gone and only the node on :4243 answers, but checkFirstRunStatus kept asking :8080 for /v1/setup/status -- 61 attempts on every desktop -- then returned null, which renders as 'Backend unreachable. Please restart the app.' while the client's own reviver was logging a healthy :4243 a few lines away. Every desktop no-AI LOGIN leg died on it while setup itself was 7/7. For a node the question is settled by its answering: the flag was recorded, the hand-off happened, and a node that responds is configured. Retries still apply so a node mid-rebind is waited for rather than declared unreachable. FOURTH CALLER OF ONE CLASS: #43 was the node URL and then the API client, #47 the service roster, #48 the first-run probe -- each deciding where to talk without consulting ActiveBackend. No lint was added: the ~5 remaining hardcoded :8080 literals are legitimate defaults (installs predating the flag serve :8080), and this bug arrived through a PARAMETER with no literal in it, so a string lint would flag the innocent and miss the guilty. Known and unchanged: BillingViewModel and AdaptersViewModel default baseUrl to :8080; they are not on the no-AI path. 0.5.210 and 0.5.211 both published their wheels to PyPI but their ios-xcframework jobs were CANCELLED to free runners -- neither GitHub release carries an XCFramework. TAKE iOS ARTIFACTS FROM v0.5.212. Pairs with every agent and node 0.5.211 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.213",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Node probes now address the node; the client reads nothing new from it",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE NODE PROBE MUST GO TO THE NODE (#48, and 0.5.212's fix for it was not enough). Main.kt resolves BOTH apiBaseUrl AND nodeBaseUrl from CIRIS_NODE_URL ?: CIRIS_API_URL ?: :4243, and the launcher sets CIRIS_API_URL to the AGENT's :8080 -- so on a run-without-AI install the parameter NAMED nodeBaseUrl is the agent port. 0.5.212's node branch therefore ran on every attempt and probed :8080: 61 inits at the agent port and ZERO at :4243, which is the count that proves nothing ever asked the node. Both existing fallbacks (the 404-degrade and the after-all-retries degrade) fail the same way for the same reason. Probes now use ActiveBackend and LOCAL_NODE_URL, the resolved address #26 established as the single source of truth. Every attempt also logs ActiveBackend's port, because the previous round's logs could not distinguish 'branch skipped' from 'branch never evaluated'. ABSENCE IS NOT AN ANSWER: ActiveBackend.resolveFrom read a Boolean, folding 'the flag is absent' into 'the owner said no', so a re-resolve over an unreadable or not-yet-written .env moved the client back to the agent port and undid a recorded hand-off silently. Three-state now -- true selects the node, false selects the agent (the documented one-run override is a statement, not a silence), absent KEEPS WHAT WE HAVE. That is the endpoint half of the #43 invariant; 0.5.209 guarded only the URL. THE claim_pin FILE OUTRANKS THE LOG BANNER (#49). After a factory reset Android sent the PREVIOUS boot's PIN -- 401 auth.claim.pin_invalid, then announce 409 not owner-bound. Android had no readLocalClaimPin() override and fell through to the protocol's null, leaving only a latest.log tail; and the provider asked the banner BEFORE the file on every platform. A log outlives the boot that wrote it, so the durable 0600 <home>/claim_pin -- which the node names as claim_pin_file in its setup status -- now goes first everywhere. The banner remains the fallback for a claim that beats the file being written. NOT ADDRESSED: #50 (iOS SIGABRT entering the AI step) awaits the .ips crash report; the ai_preference keys are present in all three bundles and read through l10nOr, which falls back rather than throwing. 0.5.210 and 0.5.211 carry no XCFramework (iOS jobs cancelled to free runners); 0.5.212 and this release do. Pairs with every agent and node 0.5.212 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.214",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. This release only stops the client waiting on a gate that has not answered; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "AN UNPROBED NODE-VS-AGENT GATE IS NOT A REASON TO WAIT (#48). `isAgentMode` defaulted an unresolved gate to AGENT — correct for WORDING, and behind it sat three 150x200ms WORK-state waits. On a run-without-AI install the gate is still unprobed when the credential login returns, so all four driven platforms stalled at whichever wait they reached first: 34.1s linux / 36.1 macOS / 40.1 Windows after a login that had already succeeded in ~200ms, iOS 7/8 on wait_for_post_login, and Android never reaching Login at all (2/8) because the folded-brain retry ran inline ahead of every routing decision. The wait rule is now shouldWaitForAgent() in ClientMode.kt, pinned by a test; the fold retry runs in the background and both paths commit through one commitGate. Deferrals: a bare node 502s /v1/wa/deferrals and the poller runs every 30s, so the absence is now handled (empty, logged once, still polling) rather than gated off — the node is going to serve that endpoint. The node reporting agent.folded=true for a brain that will never answer is upstream and is recorded in evidence/blocked_upstream.tsv.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.215",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client discards a stale gate; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "THE GATE IS AN ANSWER ABOUT A BACKEND AND MUST NOT OUTLIVE IT (#48, the last leg). 0.5.214 stopped the probe blocking startup and made the post-login line name the gate; the gate run then showed `clientMode probe failed: Connection refused` followed by `waiting for agent (clientMode=AGENT)`. Not unprobed — AGENT, derived against the agent on :8080 and never invalidated when setup replaced that process with the node on :4243, so the failed re-probe hit a catch that preserves the previous answer and the post-login path waited 30s for an agent setup had just removed (Windows/Linux 7/8, wait_for_post_login). The hand-off already re-reads the PORT for this reason (#43); the gate is the same kind of fact and is now discarded there too. Cleared rather than latched to NODE: a transport error is not a verdict. CIRISServer#574 would close the same leg from the substrate side.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.216",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A nav surface and a bundled-node pin; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "A RUN-WITHOUT-AI INSTALL CAN SIGN OUT AGAIN (#51). Screen.Settings carries btn_logout and on a node install nothing reached it: AgentSettings is in AGENT_GROUP, dropped when hasAgent=false, and the governance menu that also offers logout is in CIRISTopBar, used on the agent home alone. So no platform could sign out, and because device reset lives in the Login footer, none could factory-reset. The desktops only escaped it before 0.5.215 because a stale clientMode=AGENT landed them on Interact (#48) — fixing that gate exposed this on all five at once. NavSurface.Account routes to the same Screen.Settings from MANAGE_GROUP, present in BOTH modes because narrowingIsPurelySubtractive pins the node nav as a subset of the agent nav, and labelled 'Account' so the agent build does not show two rows with one label. Also: the Android bundled-node pin moved 0.5.188 -> 0.5.204 because 0.5.188 is no longer on PyPI and every androidApp build failed on it. That is ABOVE node_max_tested (0.5.198) and this row is deliberately not widened — bundling a version is not the same fact as having driven it.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.217",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client stops asking the AGENT's port whether the NODE is up; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "ONE NAME FOR THE NODE'S ADDRESS, AND NEVER A SECOND NODE (#52). macOS never left the post-setup hold and the supervisor launched a second ciris-server on :4243 while its own health check said the node was healthy. One root cause, #48's family: the desktop resolved the node address as CIRIS_NODE_URL ?: CIRIS_API_URL ?: default, and CIRIS_API_URL names the AGENT — so after the run-without-AI hand-off every 'is the node up?' went to a port dead by design. The hold polled it ~180 times (entered once, routed zero times) and the supervisor correctly concluded death about the wrong port. Fixed four ways: CIRIS_NODE_URL alone names the node so a custom port is honoured verbatim; the gate probe and the hold read the live address instead of a composable parameter frozen before the hand-off existed; an operator's declared address outranks the hand-off's inferred 4243 default; and revive() asks the node before killing anything, with probe() taking its health path from the active endpoint rather than hardcoding the agent's /v1/system/health. Not macOS-specific — macOS is merely slow enough that the probe lands after the agent goes away.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.218",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The client asks the node's own /health instead of /v1/identity; it reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "LIVENESS IS 'DID ANYTHING ANSWER' (#52). The post-setup reconfigure hold asked isNodeReachable -> isLocalNodeUp -> /v1/identity, the node's identity AGGREGATE — a question about what the node has, used to decide whether the node is. Counted from the 2026-09-09 nightly artifact: one entry into the hold, 18 status re-asserts (~180 polls, three minutes), zero routes, never reaching its own 240-poll timeout, while the backend supervisor polling /health on the SAME node logged it healthy twice in that window. The hold now asks the active endpoint's health path, and isEndpointAnswering is split out so liveness and identity stop being one function: ANY HTTP response counts, including 404 and 503, because something replied. Also in this release: two Login controls that a harness could see and not press (btn_privacy_policy, btn_server_status used testable, which registers position and no click handler — #30, found by our own five-platform gate), and Android's startTestAutomationServer() actual, which was a no-op TODO in front of a fully written Ktor server.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.219",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. A desktop backend-detection fix; the client reads nothing new from the node",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "AN UNHEALTHY BACKEND IS STILL A BACKEND (#53). On a with-AI first run the desktop app decided nothing was on :8080, launched its own ciris-server there, and turned the collision it had just created into a hard startup failure telling the user to kill -9 the agent they were setting up; the wizard never appeared. checkExistingServer asked /v1/identity alone and required 2xx -- that is the NODE's read API, which VENDOR DRIFT #15 moved the probe to because the previous one demanded an agent cognitive_state a node never reports. The move fixed the node and broke the agent: a FIRST-RUN agent in SETUP does not serve /v1/identity, so a live backend read as absent. It now asks BOTH endpoints and treats 4xx/5xx as present too, because a process that refuses a request is still a process holding the port; only a refused CONNECTION means nothing is there. The state is renamed PRESENT rather than HEALTHY -- a first-run backend is SUPPOSED to be unhealthy, and calling the state health invited a probe that answered a different question. Also corrects an error message shipped in 0.5.205 (#40): 'port(s) held by another process AND NOTHING IS ANSWERING' asserted something the code never checked, since it knew only that a port was busy. It now re-probes before failing, and a held port with a live backend behind it is ATTACHED TO rather than reported as a stuck shutdown. The kill -9 remedy survives only for ports held with nothing answering. Pairs with every agent and node 0.5.218 does.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.220",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "A NULL IS NOT A FACT ABOUT THE HOST (#55 #56 #57 #59), AND THE CLIENT CAN REACH THE BRAIN IT SHOWS (#54). Four issues from one desktop session were one defect three times over -- a typed answer collapsed into a nullable, then the nullable read as a capability: 'can I silently refresh' was googleSignInCallback != null, 'do I own the backend' was _serverProcess != null, 'is sign-in finished' was (poll as? Ready)?.handoff == null. HostCapabilities and BackendOwnership name those answers the way NodeCapabilities already names the node's. Reset now refuses to wipe under a backend it did not launch and cannot stop (#55, verified live). 'Node has been removed' was java.util.prefs, not CIRIS -- a Preferences handle cached across the wipe; re-resolved per use, and the throw that skipped logout's completion callback (so the post-wipe restart never ran) is gone (#56). A 410 on the OAuth hand-off is now terminal and the node's reason_id -- already a localisation key -- is shown in the app with its recovery instruction (#57). TokenManager's 'interactive login required' was a StateFlow nothing collected; it is collected into an authExpired state that Interact and Billing render with a Sign In control, and the pasted-twice signal poll fires once (#59). #54: Main.kt built the ordinary client on the node because 'this is the NODE client' -- true of the build, false of a runtime that shows agent surfaces; apiBaseUrl honours CIRIS_API_URL, and syncBackendFrom now moves a loopback default to :8080 if and only if a brain answers, so the gate's bare-node desktops change nothing. Also: sidebar shows the generated version, not a literal (#58); /scroll can name the nav rail (container=nav_rail) and every nav testTag shares one slug rule (#42 #44 verified fixed); a browsable screen atlas of all 53 routable screens in AGENT mode at cirisai.github.io/CIRISClient. MAIN CI HAD BEEN RED SINCE 0.5.219: setup-android's default asked for the retired 'tools' package, so no Kotlin compiled or tested on main for seven runs; the vendoring digest recorder could record a digest over a tree missing an unstaged new file (it now refuses); one iOS-caught unit test asserted the very behaviour #59 fixed. Pairs with every agent and node 0.5.219 does. Open: #60, desktop /screenshot returns screen pixels at the window's coordinates and can capture another application when the raise loses focus.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.221",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "ATTACHED IS THE NORMAL CASE, NOT THE EXCEPTION (#61). 0.5.220 refused Reset when the backend was one the client did not launch, to keep a wipe from claiming success under a live node it could not stop (#55). Right harm, wrong condition: CIRISAgent's desktop_launcher starts the API and then spawns the client against it, so every launcher-started desktop is attached and 0.5.220 refused on the whole product — the agent's five-platform gate caught it on its first run against the pin. 0.5.221 wipes regardless of ownership (the next backend boot is a first run, which is what the dialog promises), probes the attached node at reset time, and when it is still answering says so on Login and in the log: the node keeps its previous state until it restarts. Desktop still exits after the wipe as 0.5.219 did, because the launcher's next --launch binds :9091 directly. No wire change, no capability change.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.222",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3923
+      },
+      "notes": "DESKTOP RETURNS TO STARTUP AFTER A RESET INSTEAD OF EXITING. Desktop restartApp() is exitProcess(0) and until 0.5.220 never ran after a reset -- the java.util.prefs throw (#56) skipped logout's completion callback, so every desktop reset left the app on Login, which is what CIRISAgent's five-platform gate has asserted against all along (its desktop check reads 'Login with btn_local_login, or Setup' one second after the confirm and does not relaunch a desktop). Fixing #56 made the exit real; on the 0.5.221 pin (run 35199231784) Linux and macOS lost the race with it and Windows won. Desktop now does what iOS does: Startup -> retry() -> startServer() re-attaches to a still-serving backend (the launcher case, #61) or relaunches its own from the wiped home, so the next screen is a genuine first run and the #61 'node still running' line is visible on Login. Android keeps its AppRestarter relaunch. No wire change, no capability change.",
+      "published": null
+    },
+    {
+      "client_version": "0.5.223",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node; the agent branch of the backend switch probes /v1/system/health, which every node since the floor serves",
+      "node_max_tested": "0.5.198",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 3925
+      },
+      "notes": "SEND TRACES IS A QUESTION, NOT A SWITCH. Screen 2's replication consent was a switch defaulted ON; it is now Yes / No with no default, Next disabled until answered (the age band's shape), with the cost of declining -- no capacity score, no commons credits -- stated on the question. Be-scored and location appear once the answer is Yes. Unanswered reads as not-consented. New tags trace_consent_yes / trace_consent_no replace toggle_trace_opt_in ON SCREEN 2 (the YOU-step catch-up card keeps toggle_trace_opt_in); drivers must ANSWER rather than toggle a default off -- CIRISAgent's qa_runner changes with the pin. Two new catalogue keys (mobile.trace_consent_decline_note, setup_validation_trace_consent_required), 29 locales. No wire change: the request still carries the same booleans.",
+      "published": null
     }
   ]
 }

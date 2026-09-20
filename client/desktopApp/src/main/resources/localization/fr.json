@@ -2922,6 +2922,34 @@
     "wallet_transfer_success": "Transfert réussi ! TX: {tx}",
     "wallet_trust_degraded": "Confiance Matérielle Dégradée",
     "wallet_warning": "Avertissement",
+    "trace_consent_decline_note": "Refuser signifie que votre agent ne peut pas bâtir de score de capacité ni gagner de crédits communs. Vous pourrez le modifier plus tard.",
+    "people_title": "Personnes",
+    "contacts_node_too_old_body_versioned": "Ce nœud exécute {version}. Les contacts et la discussion nécessitent ciris-server 0.5.185 ou plus récent, il ne peut donc pas encore répondre — tout le reste fonctionne normalement.",
+    "receipt_title": "Reçu",
+    "receipt_open": "Ouvrir le reçu",
+    "receipt_close": "Fermer",
+    "receipt_holders": "Où se trouvent les octets",
+    "receipt_holders_count": "{count} détenteur(s)",
+    "receipt_notes": "Notes laissées par d'autres",
+    "receipt_notes_none": "Personne n'a laissé de note.",
+    "receipt_acts": "Ce que vous pouvez faire",
+    "receipt_contact_scope_note": "L'octroi lui-même est un enregistrement public. Ce que vous vous envoyez ne l'est pas.",
+    "state_loading": "Chargement",
+    "state_error": "Une erreur s'est produite",
+    "state_gone": "Ce fichier a disparu. Personne n'en détient plus de copie.",
+    "state_hidden_by_rules": "Masqué par vos règles.",
+    "state_hidden_by_rules_who": "Masqué par vos règles — {who} l'a marqué.",
+    "state_unreviewed": "Non examiné",
+    "state_unreviewed_since": "Non examiné depuis {when}",
+    "confirm_cancel": "Pas maintenant",
+    "ceremony_signed_of": "{signed} sur {needed} signé(s)",
+    "ceremony_proposed_by": "proposé par {who} · {when}",
+    "ceremony_sign": "Signer",
+    "ceremony_refuse": "Refuser",
+    "ceremony_state_proposed": "proposé",
+    "ceremony_state_signed": "signé",
+    "ceremony_state_not_yet": "pas encore",
+    "receipt_this_node": "Ce nœud — vous",
     "verify_title": "Vérifier un build",
     "verify_hash_label": "Empreinte du build",
     "verify_button": "Vérifier",
@@ -3160,6 +3188,13 @@
       "users": "Utilisateurs",
       "wallet": "Portefeuille",
       "wise_authority": "Wise Authority"
+    },
+    "circle": {
+      "agent": "Moi seul",
+      "family": "Famille",
+      "local_community": "Voisins",
+      "global_communities": "Communautés et entreprises",
+      "global_commons": "Tout le monde"
     }
   },
   "network": {
@@ -4254,6 +4289,7 @@
   "wa_resolve": "Résoudre",
   "wa_service_status": "État du service",
   "wa_status": "Statut",
+  "setup_validation_trace_consent_required": "Veuillez choisir si vous souhaitez envoyer des traces.",
   "chat": {
     "author_signer_unavailable": "Un message de discussion est signé par la personne qui l'a écrit, et ce nœud ne peut pas utiliser cette identité pour le moment.",
     "community_create_failed": "Le nœud n’a pas pu créer la communauté de discussion. Rien n’a été modifié.",
@@ -4297,5 +4333,74 @@
     "unknown_fed_id": "Cet identifiant de fédération n’est pas dans l’annuaire de ce nœud. Admettez d’abord la clé (appairage) — un signet annoncé mais non admis ne porte aucune provenance et ne peut pas faire l’objet d’un consentement.",
     "unreachable": "Ils sont connus, mais rien n'a répondu. Leurs appareils sont peut-être hors ligne ; les messages les atteindront à leur retour.",
     "unresolvable": "Cet identifiant ne correspond à aucun contact."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "De qui il s'agit",
+        "gloss": "Les personnes que cet enregistrement nomme. Chacune d'elles peut le retirer."
+      },
+      "attesting_key_id": {
+        "label": "Qui l'a envoyé",
+        "gloss": "La clé qui a signé cet enregistrement. Aucune autre n'aurait pu le faire."
+      },
+      "cohort_scope": {
+        "label": "Qui peut le voir",
+        "gloss": "Le cercle dans lequel cet enregistrement peut circuler. En sortir demande d'abord la permission."
+      },
+      "dimension": {
+        "label": "Ce qu'il est",
+        "gloss": "Le type d'enregistrement, dans le vocabulaire partagé que tous les nœuds lisent de la même façon."
+      },
+      "consent_scope": {
+        "label": "La règle qu'il suit",
+        "gloss": "Ce qui peut advenir ensuite de cet enregistrement : conservé, partagé ou analysé."
+      },
+      "not_sent": "Ce nœud n'a pas envoyé ceci.",
+      "by_rule": "Fixé par la règle propre à ce type d'enregistrement ({cc}) ; non envoyé par ce nœud."
+    },
+    "consent_kind": {
+      "label": "Consentement",
+      "gloss": "Ce qu'une personne a accepté qu'il puisse advenir des enregistrements qui la nomment, ou ce qu'un nœud a accepté d'envoyer à un pair."
+    },
+    "trust_job_version": {
+      "label": "Qui se porte garant pour qui",
+      "gloss": "Une déclaration selon laquelle une clé se porte garante d'une autre pour une tâche précisée."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Détient une copie",
+      "gloss": "Un nœud déclarant détenir les octets d'un fichier, désignés par leur empreinte (hash)."
+    },
+    "objection_state": {
+      "label": "Quelqu'un s'est exprimé",
+      "gloss": "L'objection d'une personne, et où elle se trouve. Jamais limitée en fréquence."
+    },
+    "content_class_class": {
+      "label": "Type de contenu",
+      "gloss": "Le type de fichier, choisi dans une liste fermée que tous les nœuds partagent."
+    },
+    "credits_domain_language_subject": {
+      "label": "Crédits du bien commun",
+      "gloss": "Gagnés en aidant. Ils ne font qu'augmenter et ne peuvent être envoyés ni vendus."
+    },
+    "prohibited_category": {
+      "label": "Interdit",
+      "gloss": "Une marque indiquant qu'une chose a franchi une des limites tracées par la constitution. Ce n'est jamais qu'un point négatif."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Reçu",
+      "gloss": "Un enregistrement attestant qu'une chose a été livrée. Annuler le reçu n'annule pas la livraison."
+    },
+    "renderer": {
+      "verified": "Vérifié",
+      "not_verified": "Non vérifié",
+      "indeterminate": "Indéterminé",
+      "violation": "A franchi une limite",
+      "partial_violation": "A partiellement franchi une limite",
+      "self_report": "Rapporté par le nœud lui-même",
+      "granted": "Accordé",
+      "revoked": "Révoqué",
+      "expired": "Expiré"
+    }
   }
 }

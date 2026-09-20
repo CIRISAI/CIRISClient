@@ -233,6 +233,35 @@ Without a Gradle run, `--placeholder "<reason>"` stages a payload that **raises
 on every artifact lookup and names the reason**. A build that cannot produce a
 client should say so, not produce something that installs and does nothing.
 
+### Build the iOS XCFramework locally, before you tag
+
+```bash
+packaging/build_xcframework_local.sh     # ~45 min on Apple silicon; then push the tag
+```
+
+The release XCFramework is two sequential Kotlin/Native release links and
+essentially nothing else — **~161 minutes measured on `macos-14`**, which is a
+3-core M1 with 7 GB. Release linking is whole-program LLVM optimisation over all
+of Compose Multiplatform, so it is bound by single-core speed and memory
+headroom, and a current Apple-silicon desktop has several times both. Recent
+publishes ran 3h15m and 3h40m end to end; the iOS leg was all of it.
+
+The script builds the same Gradle task and uploads the zip to the
+`xcframework-prebuilt` prerelease under a content-addressed name from
+`packaging/xcframework_key.py`. `publish.yml`'s `ios-xcframework` leg looks for
+that key and restores instead of linking, so the publish finishes in minutes.
+
+Two things to know:
+
+- **Run it before pushing the tag.** `VERSION` is in the key — on purpose,
+  because `generateBuildFlavor` compiles `CLIENT_VERSION` into `commonMain`, so
+  a new version genuinely is a different binary. Run it after the tag and you
+  are racing the job you meant to spare.
+- **Nothing depends on it.** A miss just builds, exactly as before. There is no
+  per-job cancel on GitHub — `gh run cancel` takes the wheels and the release
+  assets with it — so the leg has to decline the work itself, and a prebuilt is
+  how you let it.
+
 ## Checks
 
 | check | asks | cost |
@@ -241,8 +270,12 @@ client should say so, not produce something that installs and does nothing.
 | `packaging/check_vendoring.py` | has anything under `client/` drifted from upstream without a row in `VENDORING.md` §3? | seconds |
 | `packaging/check_wheel_size.py` | does each wheel fit under 104,857,600 bytes? | seconds |
 | `python -m readiness` | the build-readiness gates below | seconds |
+| `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline (933 in 46 files at landing) that can only fall | seconds |
+| `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry + glosses + renderer overrides generate, and does every emitted localization key resolve? | seconds |
+| `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |
+| `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins? | seconds |
 
-All four run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
+All of them run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
 Every `apt-get` in this repo goes through
 [`.github/actions/apt`](.github/actions/apt/action.yml), which drops
 `azure.archive.ubuntu.com` and bounds the update with `timeout 300` and

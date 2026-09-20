@@ -179,6 +179,34 @@ jobs:
         # to click them via the coordinate fallback.
         run: python3 client/tools/check_row_layout.py
 
+      - name: No colour literal outside the theme file
+        # The sixteen tokens are resolved per ground and read by name; a
+        # component never names a hex (design handoff, "Design tokens"). The
+        # tree held 933 literals in 46 files when the rule landed, so this is a
+        # BASELINE like the drivability check above: it fails on NEW literals
+        # and the number can only fall. The theme, the primitives, the glyphs
+        # and the People screen start at zero.
+        run: python3 client/tools/check_colour_literals.py
+
+      - name: The dimension table is the registry, and it is current
+        # `ceg/Dimensions.kt` is GENERATED from the pinned CEG namespace
+        # registry (client/ceg/). A screen names `Dim.x`; a family with no
+        # registry row cannot be named, so cannot be rendered (CC 3.1.7 R2).
+        # This regenerates and diffs, and refuses a gloss or a renderer
+        # override the registry does not know.
+        run: python3 client/tools/gen_dimension_table.py --check
+
+      - name: The glyph table is the design's path data, and it is current
+        run: python3 client/tools/gen_glyphs.py --check
+
+      - name: Every CSD validates against the pinned registry
+        # packaging/check_csd_v3.py existed but nothing ran it: there was no
+        # registry in the tree to run it against. Now there is.
+        run: |
+          for f in FSD/CSD/CSD-*.md; do
+            python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
+          done
+
 
   # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:
@@ -203,6 +231,18 @@ jobs:
       - uses: android-actions/setup-android@v3
         # :shared applies com.android.library, so the Android SDK is needed to
         # CONFIGURE the build even when only the desktop target is compiled.
+        #
+        # `packages` IS NAMED, because the action's default is not safe. With
+        # no `with:` this step asks sdkmanager for `tools platform-tools`, and
+        # the legacy `tools` package no longer exists in Google's SDK
+        # repository — cmdline-tools replaced it. Every run of this job died
+        # here with "Failed to find package 'tools'", before a line of Kotlin
+        # was compiled, which is how main stayed red across four commits and
+        # the desktopTest step below never ran on any of them. The runner
+        # image already carries the platforms and build-tools the build
+        # configures against; platform-tools is all this step must ensure.
+        with:
+          packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -478,10 +518,11 @@ jobs:
       #      hardcoded path on one machine (/Users/macmini/CIRISAgent/…/
       #      build/ciris_ios/ios/xcode/Support/Python.xcframework). Upstream it
       #      is beeware/Python-Apple-support — release 3.10-b14 ships
-      #      Python-3.10-iOS-support.b14.tar.gz and IS fetchable — but the
-      #      lib-dynload layout embed_native_frameworks.sh reads out of the
-      #      simulator slice is the briefcase build's, so adopting it is a port,
-      #      not a download.
+      #      Python-3.10-iOS-support.b14.tar.gz and IS fetchable. It keeps the
+      #      simulator lib-dynload under lib-arm64/ and lib-x86_64/, and the
+      #      re-vendored embed_native_frameworks.sh reads that layout — so it
+      #      IS a download now, and five-platform-live-qa.yml's macOS job
+      #      does exactly that (its "iOS bundle" steps).
       #   2. CIRISVerify.xcframework — CIRISVerify DOES publish an iOS asset
       #      (ciris-verify-v14.1.0-ios.tar.gz), but the xcframework inside it is
       #      library-style and STATIC (CirisVerify.xcframework/ios-arm64-

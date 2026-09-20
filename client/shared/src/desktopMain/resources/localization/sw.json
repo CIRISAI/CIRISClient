@@ -2922,6 +2922,34 @@
     "wallet_transfer_success": "Uhamisho umefanikiwa! TX: {tx}",
     "wallet_trust_degraded": "Kuaminika kwa Maunzi Kumedhoofika",
     "wallet_warning": "Onyo",
+    "trace_consent_decline_note": "Kukataa kunamaanisha wakala wako hawezi kujenga alama ya uwezo au kupata mikopo ya jamii. Unaweza kubadilisha hili baadaye.",
+    "people_title": "Watu",
+    "contacts_node_too_old_body_versioned": "Nodi hii inatumia {version}. Anwani na gumzo zinahitaji ciris-server 0.5.185 au mpya zaidi, kwa hivyo haiwezi kujibu bado — mengine yote yanafanya kazi kama kawaida.",
+    "receipt_title": "Risiti",
+    "receipt_open": "Fungua risiti",
+    "receipt_close": "Funga",
+    "receipt_holders": "Baiti ziko wapi",
+    "receipt_holders_count": "{count} washikilizi",
+    "receipt_notes": "Maelezo waliyoyaacha wengine",
+    "receipt_notes_none": "Hakuna aliyeacha maelezo.",
+    "receipt_acts": "Unayoweza kufanya",
+    "receipt_contact_scope_note": "Ruhusa yenyewe ni rekodi ya umma. Kile mnachotumiana si hivyo.",
+    "state_loading": "Inapakia",
+    "state_error": "Hitilafu imetokea",
+    "state_gone": "Faili hii imepotea. Hakuna anayeshikilia nakala tena.",
+    "state_hidden_by_rules": "Imefichwa na kanuni zako.",
+    "state_hidden_by_rules_who": "Imefichwa na kanuni zako — {who} aliitia lebo.",
+    "state_unreviewed": "Haijakaguliwa",
+    "state_unreviewed_since": "Haijakaguliwa tangu {when}",
+    "confirm_cancel": "Si sasa",
+    "ceremony_signed_of": "{signed} kati ya {needed} zimesainiwa",
+    "ceremony_proposed_by": "ilipendekezwa na {who} · {when}",
+    "ceremony_sign": "Tia saini",
+    "ceremony_refuse": "Kataa",
+    "ceremony_state_proposed": "imependekezwa",
+    "ceremony_state_signed": "imetiwa saini",
+    "ceremony_state_not_yet": "bado",
+    "receipt_this_node": "Nodi hii — wewe",
     "verify_title": "Thibitisha toleo",
     "verify_hash_label": "Hash ya toleo",
     "verify_button": "Kagua",
@@ -3160,6 +3188,13 @@
       "users": "Watumiaji",
       "wallet": "Mkoba",
       "wise_authority": "Mshauri wa Kibinadamu"
+    },
+    "circle": {
+      "agent": "Mimi tu",
+      "family": "Familia",
+      "local_community": "Majirani",
+      "global_communities": "Jumuiya na Biashara",
+      "global_commons": "Kila mtu"
     }
   },
   "network": {
@@ -4254,6 +4289,7 @@
   "wa_resolve": "Funga",
   "wa_service_status": "Hali ya Huduma",
   "wa_status": "Hali",
+  "setup_validation_trace_consent_required": "Tafadhali chagua iwapo utatuma nyayo.",
   "chat": {
     "author_signer_unavailable": "Ujumbe wa gumzo hutiwa saini na mtu aliyeuandika, na nodi hii haiwezi kutumia utambulisho huo kwa sasa.",
     "community_create_failed": "Nodi haikuweza kuunda jumuiya ya gumzo. Hakuna kilichobadilishwa.",
@@ -4297,5 +4333,74 @@
     "unknown_fed_id": "Kitambulisho hicho cha shirikisho hakimo katika orodha ya nodi hii. Kubali ufunguo kwanza (peering) — alamisho lililotangazwa bila kukubaliwa halina asili na haliwezi kupewa idhini.",
     "unreachable": "Wanajulikana, lakini hakuna kilichojibu. Vifaa vyao vinaweza kuwa nje ya mtandao; jumbe zitawafikia watakaporejea.",
     "unresolvable": "Kitambulisho hicho hakipatikani kama anwani."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Inayohusu nani",
+        "gloss": "Watu ambao rekodi hii inawataja. Kila mmoja wao anaweza kuirejesha."
+      },
+      "attesting_key_id": {
+        "label": "Aliyeituma",
+        "gloss": "Ufunguo uliotia saini rekodi hii. Hakuna mwingine angeweza."
+      },
+      "cohort_scope": {
+        "label": "Wanaoweza kuiona",
+        "gloss": "Duara ambalo rekodi hii inaweza kusafiri ndani yake. Kuliacha huuliza kwanza."
+      },
+      "dimension": {
+        "label": "Ni nini",
+        "gloss": "Aina ya rekodi, katika msamiati wa pamoja unaosomwa na nodi zote kwa njia moja."
+      },
+      "consent_scope": {
+        "label": "Kanuni inayoifuata",
+        "gloss": "Kitakachofanyika baadaye na rekodi hii: kuhifadhiwa, kushirikiwa, au kuchanganuliwa."
+      },
+      "not_sent": "Nodi hii haikutuma hii.",
+      "by_rule": "Imewekwa na kanuni ya aina hii ya rekodi ({cc}); haikutumwa na nodi hii."
+    },
+    "consent_kind": {
+      "label": "Idhini",
+      "gloss": "Kile mtu alichokubali kifanyike kwa rekodi zinazomtaja, au kile ambacho nodi imekubali kutuma kwa mwenza."
+    },
+    "trust_job_version": {
+      "label": "Nani anamdhamini nani",
+      "gloss": "Dai kwamba ufunguo mmoja unamsimamia mwingine kwa kazi iliyotajwa."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Inashikilia nakala",
+      "gloss": "Nodi ikisema inashikilia baiti za faili, zinazotambuliwa kwa hashi yao."
+    },
+    "objection_state": {
+      "label": "Mtu ametoa pingamizi",
+      "gloss": "Pingamizi la mtu mmoja, na hali yake ilivyo. Kamwe haliwekewi kikomo cha idadi."
+    },
+    "content_class_class": {
+      "label": "Aina ya maudhui",
+      "gloss": "Aina ya kitu faili ni, kutoka orodha funge inayoshirikiwa na nodi zote."
+    },
+    "credits_domain_language_subject": {
+      "label": "Alama za mali ya pamoja",
+      "gloss": "Hupatikana kwa kusaidia. Huongezeka tu, na haviwezi kutumwa wala kuuzwa."
+    },
+    "prohibited_category": {
+      "label": "Hairuhusiwi",
+      "gloss": "Alama kwamba kitu kimevuka mojawapo ya mistari inayowekwa na katiba. Huwa ni alama hasi pekee."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Risiti",
+      "gloss": "Rekodi kwamba kitu kimewasilishwa. Kubatilisha risiti hakubatilishi uwasilishaji."
+    },
+    "renderer": {
+      "verified": "Imethibitishwa",
+      "not_verified": "Haijathibitishwa",
+      "indeterminate": "Haijulikani",
+      "violation": "Imevuka mstari",
+      "partial_violation": "Imevuka mstari kwa sehemu",
+      "self_report": "Imeripotiwa na nodi yenyewe",
+      "granted": "Imetolewa",
+      "revoked": "Imebatilishwa",
+      "expired": "Muda umeisha"
+    }
   }
 }

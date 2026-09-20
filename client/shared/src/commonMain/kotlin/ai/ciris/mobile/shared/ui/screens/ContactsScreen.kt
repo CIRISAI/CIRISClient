@@ -1,15 +1,35 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.ceg.formatDate
+import ai.ciris.mobile.shared.ceg.shortKey
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
 import ai.ciris.mobile.shared.platform.testable
-import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
+import ai.ciris.mobile.shared.ui.glyphs.Glyph
+import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
+import ai.ciris.mobile.shared.ui.primitives.CardShell
+import ai.ciris.mobile.shared.ui.primitives.Chip
+import ai.ciris.mobile.shared.ui.primitives.ChipKind
+import ai.ciris.mobile.shared.ui.primitives.ChipSpec
+import ai.ciris.mobile.shared.ui.primitives.CirisButton
+import ai.ciris.mobile.shared.ui.primitives.CirisTextButton
+import ai.ciris.mobile.shared.ui.primitives.CirisTextField
+import ai.ciris.mobile.shared.ui.primitives.FieldRow
+import ai.ciris.mobile.shared.ui.primitives.ItemRow
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.Receipt
+import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
+import ai.ciris.mobile.shared.ui.primitives.RowFlag
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import ai.ciris.mobile.shared.ui.theme.Tone
+import ai.ciris.mobile.shared.ui.theme.tone
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,33 +40,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,47 +59,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.datetime.Instant
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
 
 /**
- * **Contacts** — the node client's home surface.
+ * **People** — the node client's home surface, and wave 0's proof that the
+ * nine primitives can express a real screen: a list, an empty state, and the
+ * one honoured "node fact" error (a node too old to serve the route).
  *
  * Two modes, and they read two different sets on purpose:
  *
  *  - **Browse mode** (default): the owner's CONTACTS (``GET /v1/contacts``) —
  *    the people a `consent:replication:v1` grant stands with, each carrying the
  *    derived `chat_community_id` for their two-person room. Tapping one opens
- *    the chat. When the list is EMPTY the screen lands on the add-by-fedID card
- *    as the primary action, because an empty contacts list has exactly one
- *    useful next move.
+ *    the chat; long-press (or the hamburger) opens its receipt. When the list
+ *    is EMPTY the screen lands on the add-a-contact card as the primary action,
+ *    because an empty list has exactly one useful next move.
  *  - **Picker mode** ([onPeerPicked] != null): the node's KNOWN PEERS
- *    (``GET /v1/federation/peers``), each row offering a "Choose" chip.
- *    Delegation targets need not be contacts, so narrowing this to contacts
- *    would silently remove valid choices.
+ *    (``GET /v1/federation/peers``), each row offering a "Choose" chip. A peer
+ *    listing is furniture, not a claim, so those rows carry no receipt.
  *
- * Test tags:
- *  - ``contacts_list``            — the LazyColumn
- *  - ``input_contacts_search``    — the search field
- *  - ``contacts_row_<keyId>``     — each row (full key_id, no truncation)
- *  - ``btn_contacts_pick_<keyId>``— the "Choose" chip (picker mode only)
- *  - ``btn_contacts_chat_<keyId>``— open the chat with that contact
- *  - ``card_contacts_add``        — the add-a-contact card
- *  - ``input_contacts_add_key``   — the fedID field
- *  - ``btn_contacts_add_submit``  — submit the add
- *  - ``btn_contacts_add_open``    — reveal the add card when the list is non-empty
- *  - ``contacts_add_refusal``     — the typed refusal banner
- *  - ``btn_contacts_refresh``     — the refresh icon button
- *  - ``btn_contacts_back``        — back navigation
+ * Every element is built from `ui/primitives`; the file names no colour and
+ * reads no Material scheme. Test tags are the downstream contract and are
+ * unchanged from the Contacts screen this replaces — see [PeopleTags].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -107,8 +91,12 @@ fun ContactsScreen(
     onOpenChat: (Contact) -> Unit = {},
     /** When non-null the screen is in picker mode — each row shows a "Choose" button. */
     onPeerPicked: ((LocalPeerState) -> Unit)? = null,
+    /** The node's reported version, so the too-old state can name it. */
+    nodeVersion: String? = null,
 ) {
     val pickerMode = onPeerPicked != null
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
 
     val contacts by viewModel.contacts.collectAsState()
     val contactsLoaded by viewModel.contactsLoaded.collectAsState()
@@ -134,25 +122,37 @@ fun ContactsScreen(
     val showAddCard = !pickerMode && !routeUnsupported &&
         (addExpanded || (contactsLoaded && listIsEmpty))
 
+    // The receipt sheet: one at a time, opened from a row's hamburger or long-press.
+    var receiptFor by remember { mutableStateOf<Receipt?>(null) }
+    val thisNodeLabel = localizedString("mobile.receipt_this_node")
+    val openChatLabel = localizedString("mobile.contacts_open_chat")
+    val scopeNote = localizedString("mobile.receipt_contact_scope_note")
+
     Scaffold(
+        containerColor = t.ground,
         topBar = {
             TopAppBar(
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = t.ground,
+                    scrolledContainerColor = t.ground,
+                    titleContentColor = t.ink,
+                    navigationIconContentColor = t.dim,
+                    actionIconContentColor = t.dim,
+                ),
                 title = {
                     Text(
                         if (pickerMode) localizedString("mobile.contacts_title_picker")
-                        else localizedString("mobile.contacts_title"),
+                        else localizedString("mobile.people_title"),
+                        style = type.title,
                     )
                 },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.testableClickable("btn_contacts_back") { onBack() },
+                            modifier = Modifier.testableWithHandler(PeopleTags.BACK) { onBack() },
                         ) {
-                            Icon(
-                                CIRISIcons.arrowBack,
-                                contentDescription = localizedString("common_back"),
-                            )
+                            Icon(CIRISIcons.arrowBack, contentDescription = localizedString("common_back"), tint = t.dim)
                         }
                     } else {
                         Spacer(Modifier.width(56.dp))
@@ -162,71 +162,43 @@ fun ContactsScreen(
                     if (!pickerMode) {
                         IconButton(
                             onClick = { addExpanded = !addExpanded },
-                            modifier = Modifier.testableClickable("btn_contacts_add_open") {
-                                addExpanded = !addExpanded
-                            },
+                            modifier = Modifier.testableWithHandler(PeopleTags.ADD_OPEN) { addExpanded = !addExpanded },
                         ) {
-                            Icon(
-                                Icons.Filled.Add,
-                                contentDescription = localizedString("mobile.contacts_add_title"),
-                            )
+                            Glyph(GlyphName.INVITE, tint = t.dim, contentDescription = localizedString("mobile.contacts_add_title"))
                         }
                     }
                     IconButton(
                         onClick = { viewModel.refresh() },
                         enabled = !loading,
-                        modifier = Modifier.testableClickable("btn_contacts_refresh") { viewModel.refresh() },
+                        modifier = Modifier.testableWithHandler(PeopleTags.REFRESH) { if (!loading) viewModel.refresh() },
                     ) {
-                        Icon(
-                            CIRISIcons.refresh,
-                            contentDescription = localizedString("common_refresh"),
-                        )
+                        Glyph(GlyphName.REFRESH, tint = if (loading) t.mute else t.dim, contentDescription = localizedString("common_refresh"))
                     }
                 },
             )
         },
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-        ) {
+        Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
             // ── Search ────────────────────────────────────────────────────────
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = viewModel::setSearchQuery,
-                singleLine = true,
-                label = {
-                    Text(
-                        if (pickerMode) localizedString("mobile.contacts_search_peers_hint")
-                        else localizedString("mobile.contacts_search_hint"),
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-                    .testable("input_contacts_search"),
-            )
-
-            // ── Error banner (list-level) ─────────────────────────────────────
-            error?.let { msg ->
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    Text(
-                        msg,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                        modifier = Modifier.padding(10.dp),
-                    )
-                }
+            Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                CirisTextField(
+                    tag = PeopleTags.SEARCH,
+                    value = searchQuery,
+                    onValueChange = viewModel::setSearchQuery,
+                    placeholder = if (pickerMode) localizedString("mobile.contacts_search_peers_hint")
+                    else localizedString("mobile.contacts_search_hint"),
+                )
             }
 
-            // ── Add a Contact ─────────────────────────────────────────────────
+            // ── Error (list-level) — an error, never mistaken for an empty list ──
+            error?.let { msg ->
+                StateBlock(
+                    ListState.Error(title = msg), tag = PeopleTags.ERROR, inline = true,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+
+            // ── Add someone ───────────────────────────────────────────────────
             if (showAddCard) {
                 AddContactCard(
                     keyId = addKeyId,
@@ -251,71 +223,63 @@ fun ContactsScreen(
 
             // ── The node predates this surface ────────────────────────────────
             // Checked BEFORE loading/empty, because both of those would be a
-            // wrong answer to a question this node cannot answer at all.
+            // wrong answer to a question this node cannot answer at all. It is
+            // the error treatment (never the empty one), with the copy that says
+            // it is a version fact and everything else works — the one honoured
+            // "node fact" state in the no-gating rule.
             if (routeUnsupported && !pickerMode) {
+                Box(modifier = Modifier.fillMaxSize().padding(16.dp), contentAlignment = Alignment.Center) {
+                    StateBlock(
+                        ListState.Error(
+                            title = localizedString("mobile.contacts_node_too_old_title"),
+                            body = if (nodeVersion != null)
+                                localizedString("mobile.contacts_node_too_old_body_versioned", "version", nodeVersion)
+                            else localizedString("mobile.contacts_node_too_old_body"),
+                        ),
+                        tag = PeopleTags.UNSUPPORTED,
+                    )
+                }
+                return@Column
+            }
+
+            // ── Loading ───────────────────────────────────────────────────────
+            val listEmptyNow = if (pickerMode) peers.isEmpty() else contacts.isEmpty()
+            if (loading && listEmptyNow) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.padding(32.dp).testable("contacts_unsupported"),
-                    ) {
-                        Icon(
-                            Icons.Filled.Info,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            localizedString("mobile.contacts_node_too_old_title"),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            localizedString("mobile.contacts_node_too_old_body"),
-                            fontSize = 13.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    StateBlock(ListState.Loading, tag = PeopleTags.LOADING)
+                }
+                return@Column
+            }
+
+            // ── Empty ─────────────────────────────────────────────────────────
+            if (listEmptyNow) {
+                // With the add card already on screen the empty list needs no
+                // second "nothing here" block — it would repeat the card's own
+                // copy directly beneath it.
+                if (!showAddCard) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        StateBlock(
+                            ListState.Empty(
+                                message = when {
+                                    searchQuery.isNotBlank() && pickerMode ->
+                                        localizedString("mobile.contacts_peers_no_match", "query", searchQuery)
+                                    searchQuery.isNotBlank() ->
+                                        localizedString("mobile.contacts_no_match", "query", searchQuery)
+                                    pickerMode -> localizedString("mobile.contacts_peers_empty")
+                                    else -> localizedString("mobile.contacts_empty_title")
+                                },
+                                glyph = GlyphName.PERSON,
+                            ),
+                            tag = PeopleTags.EMPTY,
                         )
                     }
                 }
                 return@Column
             }
 
-            // ── Loading spinner ───────────────────────────────────────────────
-            val listEmptyNow = if (pickerMode) peers.isEmpty() else contacts.isEmpty()
-            if (loading && listEmptyNow) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                return@Column
-            }
-
-            // ── Empty state ───────────────────────────────────────────────────
-            if (listEmptyNow) {
-                // With the add card already on screen the empty list needs no
-                // second "nothing here" panel — it would repeat the card's own
-                // copy directly beneath it.
-                if (!showAddCard) {
-                    EmptyPanel(
-                        message = when {
-                            searchQuery.isNotBlank() && pickerMode ->
-                                localizedString("mobile.contacts_peers_no_match", "query", searchQuery)
-                            searchQuery.isNotBlank() ->
-                                localizedString("mobile.contacts_no_match", "query", searchQuery)
-                            pickerMode -> localizedString("mobile.contacts_peers_empty")
-                            else -> localizedString("mobile.contacts_empty_title")
-                        },
-                    )
-                }
-                return@Column
-            }
-
             // ── The list ──────────────────────────────────────────────────────
             LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .testable("contacts_list"),
+                modifier = Modifier.fillMaxSize().testable(PeopleTags.LIST),
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -328,7 +292,12 @@ fun ContactsScreen(
                         ContactRow(
                             contact = contact,
                             chatIneligible = contact.keyId in chatIneligible,
+                            receipt = contactReceipt(
+                                contact, thisNodeLabel, openChatLabel, scopeNote,
+                                onOpenChat = { receiptFor = null; onOpenChat(contact) },
+                            ),
                             onOpenChat = { onOpenChat(contact) },
+                            onOpenReceipt = { receiptFor = it },
                         )
                     }
                 }
@@ -336,20 +305,24 @@ fun ContactsScreen(
             }
         }
     }
+
+    receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
-// Add a Contact
+// Add someone
 // ═════════════════════════════════════════════════════════════════════════════
 
 /**
- * The add-by-fedID flow, and the primary action when the contact list is empty.
+ * The add-by-code flow, and the primary action when the contact list is empty.
+ * (Scanning in person and showing your own code arrive with the contacts,
+ * groups and rosters work — not stubbed here.)
  *
  * Refusals are rendered from the node's typed `reason_id` — not from the English
  * sentence — because two of them have remedies that point in opposite
  * directions: `contacts.unknown_fed_id` means the key must be ADMITTED first
  * (peering), and `contacts.self_contact` means the key is this node's own. The
- * server's English is kept as the fallback line for any id the bundle does not
+ * server's English is kept as the detail line for any id the bundle does not
  * carry, which is the designed degradation rather than an error.
  */
 @Composable
@@ -365,116 +338,71 @@ private fun AddContactCard(
     onOpenChat: () -> Unit,
     onDismissAdded: () -> Unit,
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .testable("card_contacts_add"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-        ),
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    CardShell(
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        tag = PeopleTags.ADD_CARD,
+        accent = t.brand,
     ) {
-        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(
-                localizedString("mobile.contacts_add_title"),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                if (emptyState) localizedString("mobile.contacts_empty_body")
-                else localizedString("mobile.contacts_add_hint"),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-            Spacer(Modifier.height(12.dp))
-            OutlinedTextField(
-                value = keyId,
-                onValueChange = onKeyIdChange,
-                singleLine = true,
-                enabled = !busy,
-                label = { Text(localizedString("mobile.contacts_add_field_label")) },
-                modifier = Modifier.fillMaxWidth().testable("input_contacts_add_key"),
-            )
-
-            // ── The typed refusal ─────────────────────────────────────────────
-            if (refusalReasonId != null || refusalDetail != null) {
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.errorContainer,
-                    modifier = Modifier.fillMaxWidth().testable("contacts_add_refusal"),
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        // The localized answer for the id the node returned. An
-                        // id the bundle does not carry resolves to itself, which
-                        // is why the server's English follows it rather than
-                        // replacing it.
-                        refusalReasonId?.let { id ->
-                            Text(
-                                localizedString(id),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                        }
-                        refusalDetail?.takeIf { it.isNotBlank() }?.let { detail ->
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                detail,
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ── Success ───────────────────────────────────────────────────────
-            justAdded?.let { added ->
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Column(modifier = Modifier.padding(10.dp)) {
-                        Text(
-                            localizedString(
-                                "mobile.contacts_added",
-                                "who",
-                                added.keyId.take(16) + "…",
-                            ),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Row {
-                            TextButton(
-                                onClick = onOpenChat,
-                                modifier = Modifier.testableClickable("btn_contacts_add_open_chat") { onOpenChat() },
-                            ) { Text(localizedString("mobile.contacts_open_chat")) }
-                            TextButton(
-                                onClick = onDismissAdded,
-                                modifier = Modifier.testableClickable("btn_contacts_add_dismiss") { onDismissAdded() },
-                            ) { Text(localizedString("common_close")) }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(12.dp))
-            Button(
-                onClick = onSubmit,
-                enabled = !busy && keyId.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_contacts_add_submit") { onSubmit() },
-            ) {
-                Text(
-                    if (busy) localizedString("mobile.contacts_add_submit_busy")
-                    else localizedString("mobile.contacts_add_submit"),
+        Text(localizedString("mobile.contacts_add_title"), style = type.title, color = t.ink)
+        Spacer(Modifier.height(4.dp))
+        Text(
+            if (emptyState) localizedString("mobile.contacts_empty_body")
+            else localizedString("mobile.contacts_add_hint"),
+            style = type.body, color = t.dim,
+        )
+        Spacer(Modifier.height(6.dp))
+        FieldRow(
+            label = localizedString("mobile.contacts_add_field_label"),
+            divider = false,
+            input = {
+                CirisTextField(
+                    tag = PeopleTags.ADD_KEY,
+                    value = keyId,
+                    onValueChange = onKeyIdChange,
+                    enabled = !busy,
+                    mono = true,
                 )
+            },
+        )
+
+        // ── The typed refusal ─────────────────────────────────────────────────
+        if (refusalReasonId != null || refusalDetail != null) {
+            // The localized answer for the id the node returned. An id the
+            // bundle does not carry resolves to itself, which is why the
+            // server's English follows it rather than replacing it.
+            StateBlock(
+                ListState.Error(
+                    title = refusalReasonId?.let { localizedString(it) } ?: refusalDetail.orEmpty(),
+                    detail = refusalDetail?.takeIf { it.isNotBlank() && refusalReasonId != null },
+                ),
+                tag = PeopleTags.ADD_REFUSAL,
+                inline = true,
+                modifier = Modifier.padding(top = 8.dp),
+            )
+        }
+
+        // ── Success ───────────────────────────────────────────────────────────
+        justAdded?.let { added ->
+            Spacer(Modifier.height(8.dp))
+            Text(
+                localizedString("mobile.contacts_added", "who", shortKey(added.keyId)),
+                style = type.body, color = t.ok,
+            )
+            Row {
+                CirisTextButton(localizedString("mobile.contacts_open_chat"), tag = PeopleTags.ADD_OPEN_CHAT, onClick = onOpenChat)
+                CirisTextButton(localizedString("common_close"), tag = PeopleTags.ADD_DISMISS, onClick = onDismissAdded)
             }
         }
+
+        Spacer(Modifier.height(12.dp))
+        CirisButton(
+            label = if (busy) localizedString("mobile.contacts_add_submit_busy") else localizedString("mobile.contacts_add_submit"),
+            tag = PeopleTags.ADD_SUBMIT,
+            enabled = !busy && keyId.isNotBlank(),
+            onClick = onSubmit,
+        )
     }
 }
 
@@ -490,270 +418,88 @@ private fun ContactRow(
      * cannot replicate (CIRISServer#458). Said out loud on the row, because a
      * contact that silently cannot receive anything is the failure mode that
      * defect hid behind.
-     *
-     * A DEGRADED state, not a common one: a current node only lists peers whose
-     * grant already covers chat, so this fires for an older node's wider listing
-     * — which is precisely when the reader most needs telling.
      */
     chatIneligible: Boolean,
+    receipt: Receipt,
     onOpenChat: () -> Unit,
+    onOpenReceipt: (Receipt) -> Unit,
 ) {
-    val (icon, tint) = trustGlyph(contact.trust)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testableClickable("contacts_row_${contact.keyId}") { onOpenChat() },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TrustGlyph(icon, tint, contact.trust)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (contact.canonical) {
-                        MiniBadge(
-                            localizedString("mobile.contacts_badge_canonical"),
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                    MiniBadge(trustLabel(contact.trust), tint.copy(alpha = 0.15f), tint)
-                }
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = contact.keyId.take(16) + "…",
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = if (contact.chatStarted) localizedString("mobile.contacts_chat_started")
-                    else localizedString("mobile.contacts_chat_not_started"),
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                if (contact.occurrenceKeyIds.isNotEmpty()) {
-                    Text(
-                        text = localizedString(
-                            "mobile.contacts_occurrences",
-                            "count",
-                            contact.occurrenceKeyIds.size.toString(),
-                        ),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                    )
-                }
-                // The de-admitted-but-still-consented arm. Said out loud rather
-                // than rendered as a normal row, because the grant is real and
-                // only the human can retract it.
-                if (contact.projectionMissing) {
-                    Text(
-                        text = localizedString("mobile.contacts_projection_missing"),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                if (chatIneligible) {
-                    Text(
-                        text = localizedString("mobile.contacts_chat_not_covered"),
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.testable("contacts_chat_ineligible_${contact.keyId}"),
-                    )
-                }
-            }
-
-            AssistChip(
+    val t = CirisTheme.tokens
+    val (glyph, tone) = contact.trust.reading()
+    val flags = buildList {
+        // The de-admitted-but-still-consented arm. Said out loud rather than
+        // rendered as a normal row, because the grant is real and only the
+        // human can retract it.
+        if (contact.projectionMissing) add(RowFlag(localizedString("mobile.contacts_projection_missing")))
+        if (chatIneligible) add(RowFlag(localizedString("mobile.contacts_chat_not_covered"), tag = PeopleTags.ineligible(contact.keyId)))
+    }
+    val secondary = buildList {
+        add(if (contact.chatStarted) localizedString("mobile.contacts_chat_started") else localizedString("mobile.contacts_chat_not_started"))
+        if (contact.occurrenceKeyIds.isNotEmpty()) {
+            add(localizedString("mobile.contacts_occurrences", "count", contact.occurrenceKeyIds.size.toString()))
+        }
+    }.joinToString(" · ")
+    ItemRow(
+        glyph = glyph,
+        glyphTint = t.tone(tone),
+        title = contact.aliasOverride ?: shortKey(contact.keyId, head = 12, tail = 0),
+        meta = shortKey(contact.keyId, head = 16, tail = 0),
+        secondary = secondary,
+        chips = trustChips(contact.canonical, contact.trust),
+        flags = flags,
+        receipt = receipt,
+        trailing = {
+            Chip(ChipSpec(
+                label = localizedString("mobile.contacts_open_chat"),
+                tag = PeopleTags.chat(contact.keyId),
+                kind = ChipKind.CHOICE,
+                tone = Tone.BRAND,
                 onClick = onOpenChat,
-                label = { Text(localizedString("mobile.contacts_open_chat"), fontSize = 12.sp) },
-                modifier = Modifier.testableClickable("btn_contacts_chat_${contact.keyId}") { onOpenChat() },
-            )
-        }
-    }
+            ))
+        },
+        tag = PeopleTags.row(contact.keyId),
+        onClick = onOpenChat,
+        onOpenReceipt = onOpenReceipt,
+    )
 }
 
 @Composable
-private fun PeerRow(
-    peer: LocalPeerState,
-    onPick: () -> Unit,
-) {
-    val (icon, tint) = trustGlyph(peer.trust)
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testable("contacts_row_${peer.keyId}"),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            TrustGlyph(icon, tint, peer.trust)
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Text(
-                        text = peer.aliasOverride ?: (peer.keyId.take(12) + "…"),
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (peer.canonical) {
-                        MiniBadge(
-                            localizedString("mobile.contacts_badge_canonical"),
-                            MaterialTheme.colorScheme.secondaryContainer,
-                            MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    }
-                    MiniBadge(trustLabel(peer.trust), tint.copy(alpha = 0.15f), tint)
-                }
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = peer.keyId.take(16) + "…",
-                    fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = localizedString(
-                        "mobile.contacts_pubkey",
-                        "short",
-                        peer.pubkeyEd25519Base64.take(10) + "…",
-                    ),
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    text = localizedString(
-                        "mobile.contacts_first_seen",
-                        "when",
-                        formatInstant(peer.firstSeen),
-                    ),
-                    fontSize = 10.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                )
-            }
-
-            AssistChip(
+private fun PeerRow(peer: LocalPeerState, onPick: () -> Unit) {
+    val t = CirisTheme.tokens
+    val (glyph, tone) = peer.trust.reading()
+    ItemRow(
+        glyph = glyph,
+        glyphTint = t.tone(tone),
+        title = peer.aliasOverride ?: shortKey(peer.keyId, head = 12, tail = 0),
+        meta = shortKey(peer.keyId, head = 16, tail = 0),
+        secondary = localizedString("mobile.contacts_pubkey", "short", peer.pubkeyEd25519Base64.take(10) + "…") +
+            " · " + localizedString("mobile.contacts_first_seen", "when", formatDate(peer.firstSeen)),
+        chips = trustChips(peer.canonical, peer.trust),
+        trailing = {
+            Chip(ChipSpec(
+                label = localizedString("mobile.contacts_choose"),
+                tag = PeopleTags.pick(peer.keyId),
+                kind = ChipKind.CHOICE,
+                tone = Tone.BRAND,
                 onClick = onPick,
-                label = { Text(localizedString("mobile.contacts_choose"), fontSize = 12.sp) },
-                modifier = Modifier.testableClickable("btn_contacts_pick_${peer.keyId}") { onPick() },
-            )
-        }
-    }
+            ))
+        },
+        tag = PeopleTags.row(peer.keyId),
+        onClick = null,
+    )
 }
 
-// ═════════════════════════════════════════════════════════════════════════════
-// Helpers
-// ═════════════════════════════════════════════════════════════════════════════
-
+/** The canonical badge and the trust state as READING MATTER, not the wire token. */
 @Composable
-private fun TrustGlyph(icon: ImageVector, tint: Color, trust: PeerTrustState) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(tint.copy(alpha = 0.15f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = trustLabel(trust),
-            tint = tint,
-            modifier = Modifier.size(22.dp),
-        )
-    }
+private fun trustChips(canonical: Boolean, trust: PeerTrustState): List<ChipSpec> = buildList {
+    if (canonical) add(ChipSpec(localizedString("mobile.contacts_badge_canonical"), tone = Tone.BRAND))
+    add(ChipSpec(trustLabel(trust), tone = trust.reading().second))
 }
 
-/**
- * The trust state as READING MATTER, not as the wire token.
- *
- * `PeerTrustState.wire` is a protocol value — it is English by accident of the
- * protocol being written in English, and rendering it straight makes the badge
- * and its screen-reader description the one thing on this surface that never
- * translates.
- */
 @Composable
 private fun trustLabel(trust: PeerTrustState): String = when (trust) {
     PeerTrustState.TRUSTED -> localizedString("mobile.contacts_trust_trusted")
     PeerTrustState.UNTRUSTED -> localizedString("mobile.contacts_trust_untrusted")
     PeerTrustState.BLOCKED -> localizedString("mobile.contacts_trust_blocked")
     PeerTrustState.UNKNOWN -> localizedString("mobile.contacts_trust_unknown")
-}
-
-@Composable
-private fun MiniBadge(text: String, bg: Color, fg: Color) {
-    Surface(shape = RoundedCornerShape(4.dp), color = bg) {
-        Text(
-            text,
-            fontSize = 10.sp,
-            color = fg,
-            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp),
-        )
-    }
-}
-
-@Composable
-private fun EmptyPanel(message: String) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Filled.Person,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                message,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 14.sp,
-            )
-        }
-    }
-}
-
-private fun trustGlyph(trust: PeerTrustState): Pair<ImageVector, Color> = when (trust) {
-    PeerTrustState.TRUSTED -> Icons.Filled.Check to Color(0xFF4CAF50)
-    PeerTrustState.UNKNOWN -> Icons.Filled.Person to Color(0xFF9E9E9E)
-    PeerTrustState.UNTRUSTED -> Icons.Filled.Warning to Color(0xFFFF9800)
-    PeerTrustState.BLOCKED -> Icons.Filled.Warning to Color(0xFFF44336)
-}
-
-private fun formatInstant(instant: Instant): String = try {
-    val local = instant.toLocalDateTime(TimeZone.currentSystemDefault())
-    "${local.year}-${local.monthNumber.toString().padStart(2, '0')}-${local.dayOfMonth.toString().padStart(2, '0')}"
-} catch (_: Exception) {
-    instant.toString().take(10)
 }

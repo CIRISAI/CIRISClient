@@ -56,7 +56,26 @@ android {
         // Chaquopy Python configuration
         python {
             version "3.10"
-            buildPython "/usr/bin/python3.10"
+            // AN ABSOLUTE PATH INTO THE RUNNER IMAGE IS A PIN TO A RUNNER IMAGE.
+            //
+            // This was `"/usr/bin/python3.10"`, and it stopped existing when
+            // `ubuntu-latest` moved to 24.04 (which ships 3.12). The nightly
+            // five-platform gate's whole Linux+Android leg has died at
+            // `:androidApp:installDebugPythonRequirements` ever since:
+            //
+            //   [/usr/bin/python3.10] is not a valid Python 3.10 command:
+            //   '/usr/bin/python3.10' does not exist
+            //
+            // The path stays as the DEFAULT because a developer machine that
+            // has it should keep working with no flag. CI passes the
+            // interpreter it actually provisioned:
+            //
+            //   -PchaquopyBuildPython="$(which python3.10)"
+            //
+            // Chaquopy still enforces that whatever this resolves to really is
+            // 3.10, so this widens where the interpreter may live without
+            // widening which interpreter is acceptable.
+            buildPython project.findProperty("chaquopyBuildPython") ?: "/usr/bin/python3.10"
             // Extract packages to real filesystem so they can be scanned for code integrity
             // ciris_engine MUST be included for startup hash verification to work!
             // ciris_edge added in 2.9.4 — Edge is the third leg of the
@@ -102,7 +121,22 @@ android {
                 // may sit one release behind Cargo.toml. A client feature that
                 // needs a NEWER node route must degrade honestly rather than
                 // assume the embedded node has it.
-                install "ciris-server==0.5.188"
+                // 0.5.204, bumped 2026-09-08 because 0.5.188 IS NO LONGER ON
+                // PyPI — the oldest available is 0.5.193, so this pin named a
+                // version that could not be resolved and EVERY androidApp build
+                // failed at :androidApp:installDebugPythonRequirements with
+                // "No matching distribution found for ciris-server==0.5.188".
+                // The published AAR is unaffected (it is :shared:fatReleaseAar,
+                // which bundles no Python), which is why this went unnoticed:
+                // nothing in the release path builds androidApp.
+                //
+                // ABOVE node_max_tested. compat/matrix.json records 0.5.198 as
+                // the highest node this client has been driven against; 0.5.204
+                // is the latest published and is what the app now embeds. That
+                // gap is a deliberate choice and not a claim of testing — the
+                // matrix row is NOT widened to match, because bundling a version
+                // and having exercised it are different facts.
+                install "ciris-server==0.5.204"
                 // ciris-lens-core is REQUIRED by the accord_metrics adapter
                 // (CIRISAgent#866 LensCore fold) — the fourth substrate leg.
                 // Its Android wheels are committed to wheels/ like the other

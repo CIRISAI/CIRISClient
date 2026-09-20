@@ -194,6 +194,10 @@ class TokenManager(
             when (val result = callback()) {
                 is SilentSignInResult.Success -> {
                     logInfo(method, "Silent sign-in successful! provider=${result.provider}")
+                    // A fresh credential retires the "sign in again" state; it is
+                    // now collected and rendered (CIRISClient#59), so it must also
+                    // be cleared, or the banner outlives the problem.
+                    _needsInteractiveLogin.value = false
                     currentProvider = result.provider
                     handleNewToken(result.idToken, result.provider)
                     true

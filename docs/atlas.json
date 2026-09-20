@@ -1,0 +1,1514 @@
+{
+  "captured_at": "2026-09-15 19:00 UTC",
+  "mode": "AGENT",
+  "api": "http://127.0.0.1:4343",
+  "jar": "CIRIS-linux-x64-1.5.219.jar",
+  "captured": 53,
+  "total": 54,
+  "flow_only": [
+    "AccordCeremony",
+    "AddFederationId",
+    "ClaimNode",
+    "DutyConferral",
+    "Help",
+    "Login",
+    "Manage",
+    "ServerConnection",
+    "Setup",
+    "SkillImport",
+    "Startup",
+    "VerifyAgent"
+  ],
+  "screens": [
+    {
+      "screen": "AccordCeremony",
+      "chain": [
+        "nav_epistemic_accord_ceremony"
+      ],
+      "ok": false,
+      "shot": null,
+      "detail": "no nav route \u2014 reached inside a flow",
+      "tags": 0,
+      "resolved": "",
+      "flow_only": true
+    },
+    {
+      "screen": "Interact",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_interact"
+      ],
+      "ok": true,
+      "shot": "Interact.png",
+      "detail": "Interact",
+      "tags": 33,
+      "resolved": "Interact"
+    },
+    {
+      "screen": "Memory",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_memory"
+      ],
+      "ok": true,
+      "shot": "Memory.png",
+      "detail": "Memory",
+      "tags": 28,
+      "resolved": "Memory"
+    },
+    {
+      "screen": "Settings",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings"
+      ],
+      "ok": true,
+      "shot": "Settings.png",
+      "detail": "Settings",
+      "tags": 21,
+      "resolved": "Settings"
+    },
+    {
+      "screen": "Tickets",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tickets"
+      ],
+      "ok": true,
+      "shot": "Tickets.png",
+      "detail": "Tickets",
+      "tags": 22,
+      "resolved": "Tickets"
+    },
+    {
+      "screen": "Tools",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tools"
+      ],
+      "ok": true,
+      "shot": "Tools.png",
+      "detail": "Tools",
+      "tags": 25,
+      "resolved": "Tools"
+    },
+    {
+      "screen": "LLMSettings",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_llm_settings"
+      ],
+      "ok": true,
+      "shot": "LLMSettings.png",
+      "detail": "LLMSettings",
+      "tags": 26,
+      "resolved": "LLMSettings"
+    },
+    {
+      "screen": "SkillStudio",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_skills"
+      ],
+      "ok": true,
+      "shot": "SkillStudio.png",
+      "detail": "SkillStudio",
+      "tags": 37,
+      "resolved": "SkillStudio"
+    },
+    {
+      "screen": "Sessions",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_interact",
+        "nav_epistemic_sessions"
+      ],
+      "ok": true,
+      "shot": "Sessions.png",
+      "detail": "Sessions",
+      "tags": 25,
+      "resolved": "Sessions"
+    },
+    {
+      "screen": "Scheduler",
+      "chain": [
+        "nav_group_agent",
+        "nav_epistemic_tickets",
+        "nav_epistemic_scheduler"
+      ],
+      "ok": true,
+      "shot": "Scheduler.png",
+      "detail": "Scheduler",
+      "tags": 23,
+      "resolved": "Scheduler"
+    },
+    {
+      "screen": "AgentsList",
+      "chain": [
+        "nav_group_client",
+        "nav_epistemic_agents_list"
+      ],
+      "ok": true,
+      "shot": "AgentsList.png",
+      "detail": "AgentsList",
+      "tags": 12,
+      "resolved": "AgentsList"
+    },
+    {
+      "screen": "VizSettings",
+      "chain": [
+        "nav_group_client",
+        "nav_epistemic_client_interface"
+      ],
+      "ok": true,
+      "shot": "VizSettings.png",
+      "detail": "VizSettings",
+      "tags": 47,
+      "resolved": "VizSettings"
+    },
+    {
+      "screen": "Commons",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_commons"
+      ],
+      "ok": true,
+      "shot": "Commons.png",
+      "detail": "Commons",
+      "tags": 27,
+      "resolved": "Commons"
+    },
+    {
+      "screen": "LayerAgent",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_agent"
+      ],
+      "ok": true,
+      "shot": "LayerAgent.png",
+      "detail": "LayerAgent",
+      "tags": 25,
+      "resolved": "LayerAgent"
+    },
+    {
+      "screen": "LayerFamily",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_family"
+      ],
+      "ok": true,
+      "shot": "LayerFamily.png",
+      "detail": "LayerFamily",
+      "tags": 25,
+      "resolved": "LayerFamily"
+    },
+    {
+      "screen": "LayerGlobalCommons",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommons.png",
+      "detail": "LayerGlobalCommons",
+      "tags": 50,
+      "resolved": "LayerGlobalCommons"
+    },
+    {
+      "screen": "LayerGlobalCommunities",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_communities"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommunities.png",
+      "detail": "LayerGlobalCommunities",
+      "tags": 25,
+      "resolved": "LayerGlobalCommunities"
+    },
+    {
+      "screen": "LayerLocalCommunity",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_local_community"
+      ],
+      "ok": true,
+      "shot": "LayerLocalCommunity.png",
+      "detail": "LayerLocalCommunity",
+      "tags": 25,
+      "resolved": "LayerLocalCommunity"
+    },
+    {
+      "screen": "Voting",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_voting"
+      ],
+      "ok": true,
+      "shot": "Voting.png",
+      "detail": "Voting",
+      "tags": 20,
+      "resolved": "Voting"
+    },
+    {
+      "screen": "Delegation",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_family",
+        "nav_epistemic_delegation"
+      ],
+      "ok": true,
+      "shot": "Delegation.png",
+      "detail": "Delegation",
+      "tags": 21,
+      "resolved": "Delegation"
+    },
+    {
+      "screen": "Constitutional",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons",
+        "nav_epistemic_constitutional"
+      ],
+      "ok": true,
+      "shot": "Constitutional.png",
+      "detail": "Constitutional",
+      "tags": 22,
+      "resolved": "Constitutional"
+    },
+    {
+      "screen": "EnvironmentInfo",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_commons",
+        "nav_epistemic_environment_graph"
+      ],
+      "ok": true,
+      "shot": "EnvironmentInfo.png",
+      "detail": "EnvironmentInfo",
+      "tags": 26,
+      "resolved": "EnvironmentInfo"
+    },
+    {
+      "screen": "Participate",
+      "chain": [
+        "nav_group_commons-layers",
+        "nav_epistemic_layer_global_communities",
+        "nav_epistemic_participate"
+      ],
+      "ok": true,
+      "shot": "Participate.png",
+      "detail": "Participate",
+      "tags": 21,
+      "resolved": "Participate"
+    },
+    {
+      "screen": "Accord",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_accord"
+      ],
+      "ok": true,
+      "shot": "Accord.png",
+      "detail": "Accord",
+      "tags": 36,
+      "resolved": "Accord"
+    },
+    {
+      "screen": "Adapters",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_adapters"
+      ],
+      "ok": true,
+      "shot": "Adapters.png",
+      "detail": "Adapters",
+      "tags": 33,
+      "resolved": "Adapters"
+    },
+    {
+      "screen": "Billing",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_billing"
+      ],
+      "ok": true,
+      "shot": "Billing.png",
+      "detail": "Billing",
+      "tags": 39,
+      "resolved": "Billing"
+    },
+    {
+      "screen": "Contacts",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_contacts"
+      ],
+      "ok": true,
+      "shot": "Contacts.png",
+      "detail": "Contacts",
+      "tags": 35,
+      "resolved": "Contacts"
+    },
+    {
+      "screen": "DataManagement",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data"
+      ],
+      "ok": true,
+      "shot": "DataManagement.png",
+      "detail": "DataManagement",
+      "tags": 39,
+      "resolved": "DataManagement"
+    },
+    {
+      "screen": "Delegations",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_delegations"
+      ],
+      "ok": true,
+      "shot": "Delegations.png",
+      "detail": "Delegations",
+      "tags": 42,
+      "resolved": "Delegations"
+    },
+    {
+      "screen": "HealthReputation",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_health_reputation"
+      ],
+      "ok": true,
+      "shot": "HealthReputation.png",
+      "detail": "HealthReputation",
+      "tags": 31,
+      "resolved": "HealthReputation"
+    },
+    {
+      "screen": "IdentityManagement",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_identity_management"
+      ],
+      "ok": true,
+      "shot": "IdentityManagement.png",
+      "detail": "IdentityManagement",
+      "tags": 48,
+      "resolved": "IdentityManagement"
+    },
+    {
+      "screen": "ManageConsent",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_manage_consent"
+      ],
+      "ok": true,
+      "shot": "ManageConsent.png",
+      "detail": "ManageConsent",
+      "tags": 33,
+      "resolved": "ManageConsent"
+    },
+    {
+      "screen": "ManageNodes",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_nodes"
+      ],
+      "ok": true,
+      "shot": "ManageNodes.png",
+      "detail": "ManageNodes",
+      "tags": 36,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "NetworkOps",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_network_ops"
+      ],
+      "ok": true,
+      "shot": "NetworkOps.png",
+      "detail": "NetworkOps",
+      "tags": 54,
+      "resolved": "NetworkOps"
+    },
+    {
+      "screen": "PrivateGroups",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_private_groups"
+      ],
+      "ok": true,
+      "shot": "PrivateGroups.png",
+      "detail": "PrivateGroups",
+      "tags": 30,
+      "resolved": "PrivateGroups"
+    },
+    {
+      "screen": "ProvisionAccordHolder",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_provision_accord_holder"
+      ],
+      "ok": true,
+      "shot": "ProvisionAccordHolder.png",
+      "detail": "ProvisionAccordHolder",
+      "tags": 37,
+      "resolved": "ProvisionAccordHolder"
+    },
+    {
+      "screen": "Storage",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_storage"
+      ],
+      "ok": true,
+      "shot": "Storage.png",
+      "detail": "Storage",
+      "tags": 47,
+      "resolved": "Storage"
+    },
+    {
+      "screen": "Trust",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_trust"
+      ],
+      "ok": true,
+      "shot": "Trust.png",
+      "detail": "Trust",
+      "tags": 33,
+      "resolved": "Trust"
+    },
+    {
+      "screen": "Users",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_users"
+      ],
+      "ok": true,
+      "shot": "Users.png",
+      "detail": "Users",
+      "tags": 40,
+      "resolved": "Users"
+    },
+    {
+      "screen": "Video",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_video"
+      ],
+      "ok": true,
+      "shot": "Video.png",
+      "detail": "Video",
+      "tags": 30,
+      "resolved": "Video"
+    },
+    {
+      "screen": "Wallet",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_billing",
+        "nav_epistemic_wallet"
+      ],
+      "ok": true,
+      "shot": "Wallet.png",
+      "detail": "Wallet",
+      "tags": 40,
+      "resolved": "Wallet"
+    },
+    {
+      "screen": "Audit",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data",
+        "nav_epistemic_audit"
+      ],
+      "ok": true,
+      "shot": "Audit.png",
+      "detail": "Audit",
+      "tags": 38,
+      "resolved": "Audit"
+    },
+    {
+      "screen": "Consent",
+      "chain": [
+        "nav_group_manage",
+        "nav_epistemic_data",
+        "nav_epistemic_consent"
+      ],
+      "ok": true,
+      "shot": "Consent.png",
+      "detail": "Consent",
+      "tags": 36,
+      "resolved": "Consent"
+    },
+    {
+      "screen": "Services",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_services"
+      ],
+      "ok": true,
+      "shot": "Services.png",
+      "detail": "Services",
+      "tags": 24,
+      "resolved": "Services"
+    },
+    {
+      "screen": "Telemetry",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_telemetry"
+      ],
+      "ok": true,
+      "shot": "Telemetry.png",
+      "detail": "Telemetry",
+      "tags": 21,
+      "resolved": "Telemetry"
+    },
+    {
+      "screen": "Transport",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_transport"
+      ],
+      "ok": true,
+      "shot": "Transport.png",
+      "detail": "Transport",
+      "tags": 32,
+      "resolved": "Transport"
+    },
+    {
+      "screen": "WiseAuthority",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_wise_authority"
+      ],
+      "ok": true,
+      "shot": "WiseAuthority.png",
+      "detail": "WiseAuthority",
+      "tags": 21,
+      "resolved": "WiseAuthority"
+    },
+    {
+      "screen": "Config",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_config"
+      ],
+      "ok": true,
+      "shot": "Config.png",
+      "detail": "Config",
+      "tags": 0,
+      "resolved": "Config"
+    },
+    {
+      "screen": "Runtime",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_runtime"
+      ],
+      "ok": true,
+      "shot": "Runtime.png",
+      "detail": "Runtime",
+      "tags": 29,
+      "resolved": "Runtime"
+    },
+    {
+      "screen": "System",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_agent_settings",
+        "nav_epistemic_system"
+      ],
+      "ok": true,
+      "shot": "System.png",
+      "detail": "System",
+      "tags": 27,
+      "resolved": "System"
+    },
+    {
+      "screen": "GraphMemory",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_memory",
+        "nav_epistemic_graph_memory"
+      ],
+      "ok": true,
+      "shot": "GraphMemory.png",
+      "detail": "GraphMemory",
+      "tags": 0,
+      "resolved": "GraphMemory"
+    },
+    {
+      "screen": "Logs",
+      "chain": [
+        "nav_group_node",
+        "nav_epistemic_telemetry",
+        "nav_epistemic_logs"
+      ],
+      "ok": true,
+      "shot": "Logs.png",
+      "detail": "Logs",
+      "tags": 24,
+      "resolved": "Logs"
+    },
+    {
+      "screen": "ChildSafety",
+      "chain": [
+        "nav_group_safety",
+        "nav_epistemic_safety",
+        "nav_epistemic_child_safety"
+      ],
+      "ok": true,
+      "shot": "ChildSafety.png",
+      "detail": "ChildSafety",
+      "tags": 22,
+      "resolved": "ChildSafety"
+    },
+    {
+      "screen": "Moderation",
+      "chain": [
+        "nav_group_safety",
+        "nav_epistemic_safety",
+        "nav_epistemic_moderation"
+      ],
+      "ok": true,
+      "shot": "Moderation.png",
+      "detail": "Moderation",
+      "tags": 0,
+      "resolved": "Moderation"
+    }
+  ],
+  "routable": 53,
+  "structure": {
+    "surfaces": {
+      "Sessions": {
+        "id": "sessions",
+        "group": null,
+        "parent": "Interact",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Interact": {
+        "id": "interact",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Sessions"
+        ]
+      },
+      "Scheduler": {
+        "id": "scheduler",
+        "group": null,
+        "parent": "Tickets",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Tickets": {
+        "id": "tickets",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Scheduler"
+        ]
+      },
+      "Tools": {
+        "id": "tools",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Services": {
+        "id": "services",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Logs": {
+        "id": "logs",
+        "group": null,
+        "parent": "Telemetry",
+        "parent_group": "node",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Transport": {
+        "id": "transport",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Telemetry": {
+        "id": "telemetry",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Logs"
+        ]
+      },
+      "GraphMemory": {
+        "id": "graph-memory",
+        "group": "node",
+        "parent": "Memory",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Memory": {
+        "id": "memory",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "GraphMemory"
+        ]
+      },
+      "WiseAuthority": {
+        "id": "wise-authority",
+        "group": "node",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LLMSettings": {
+        "id": "llm-settings",
+        "group": null,
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "System": {
+        "id": "system",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Runtime": {
+        "id": "runtime",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Config": {
+        "id": "config",
+        "group": "node",
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": true,
+        "cross_framed": true,
+        "children": []
+      },
+      "Skills": {
+        "id": "skills",
+        "group": null,
+        "parent": "AgentSettings",
+        "parent_group": "agent",
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "AgentSettings": {
+        "id": "agent-settings",
+        "group": "agent",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "Config",
+          "LLMSettings",
+          "Runtime",
+          "Skills",
+          "System"
+        ]
+      },
+      "Account": {
+        "id": "account",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "HealthReputation": {
+        "id": "health-reputation",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Users": {
+        "id": "users",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Adapters": {
+        "id": "adapters",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "NetworkOps": {
+        "id": "network-ops",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Storage": {
+        "id": "storage",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Audit": {
+        "id": "audit",
+        "group": null,
+        "parent": "Data",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Consent": {
+        "id": "consent",
+        "group": null,
+        "parent": "Data",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Data": {
+        "id": "data",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "Audit",
+          "Consent"
+        ]
+      },
+      "Trust": {
+        "id": "trust",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Nodes": {
+        "id": "nodes",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "ManageConsent": {
+        "id": "manage-consent",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Contacts": {
+        "id": "contacts",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Delegations": {
+        "id": "delegations",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "IdentityManagement": {
+        "id": "identity-management",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Accord": {
+        "id": "accord",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ProvisionAccordHolder": {
+        "id": "provision-accord-holder",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "AccordCeremony": {
+        "id": "accord-ceremony",
+        "group": null,
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Moderation": {
+        "id": "moderation",
+        "group": "safety",
+        "parent": "Safety",
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ChildSafety": {
+        "id": "child-safety",
+        "group": "safety",
+        "parent": "Safety",
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Safety": {
+        "id": "safety",
+        "group": null,
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": [
+          "ChildSafety",
+          "Moderation"
+        ]
+      },
+      "Wallet": {
+        "id": "wallet",
+        "group": null,
+        "parent": "Billing",
+        "parent_group": "manage",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Billing": {
+        "id": "billing",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Wallet"
+        ]
+      },
+      "LayerAgent": {
+        "id": "layer-agent",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Participate": {
+        "id": "participate",
+        "group": null,
+        "parent": "LayerGlobalCommunities",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "EnvironmentGraph": {
+        "id": "environment-graph",
+        "group": null,
+        "parent": "LayerGlobalCommons",
+        "parent_group": "commons-layers",
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      },
+      "Delegation": {
+        "id": "delegation",
+        "group": null,
+        "parent": "LayerFamily",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Constitutional": {
+        "id": "constitutional",
+        "group": null,
+        "parent": "LayerGlobalCommons",
+        "parent_group": "commons-layers",
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Video": {
+        "id": "video",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Voting": {
+        "id": "voting",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "PrivateGroups": {
+        "id": "private-groups",
+        "group": "manage",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "Commons": {
+        "id": "commons",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LayerFamily": {
+        "id": "layer-family",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Delegation"
+        ]
+      },
+      "LayerLocalCommunity": {
+        "id": "layer-local-community",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "LayerGlobalCommunities": {
+        "id": "layer-global-communities",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Participate"
+        ]
+      },
+      "LayerGlobalCommons": {
+        "id": "layer-global-commons",
+        "group": "commons-layers",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": [
+          "Constitutional",
+          "EnvironmentGraph"
+        ]
+      },
+      "AgentsList": {
+        "id": "agents-list",
+        "group": "client",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": true,
+        "cross_framed": false,
+        "children": []
+      },
+      "ClientInterface": {
+        "id": "client-interface",
+        "group": "client",
+        "parent": null,
+        "parent_group": null,
+        "has_screen": false,
+        "cross_framed": false,
+        "children": []
+      }
+    },
+    "groups": [
+      "agent",
+      "client",
+      "commons-layers",
+      "manage",
+      "node",
+      "safety"
+    ],
+    "ungrouped": [
+      "AccordCeremony",
+      "Audit",
+      "Consent",
+      "Constitutional",
+      "Delegation",
+      "EnvironmentGraph",
+      "LLMSettings",
+      "Logs",
+      "Participate",
+      "Safety",
+      "Scheduler",
+      "Sessions",
+      "Skills",
+      "Wallet"
+    ],
+    "cross_framed": [
+      "Config",
+      "GraphMemory",
+      "Runtime",
+      "System"
+    ]
+  },
+  "namespaces": {
+    "cc_version": "1.0-rc5",
+    "families": 116,
+    "components": 9,
+    "components_normative": 8,
+    "per_component": {
+      "accord-agent": 19,
+      "anti-sybil": 6,
+      "attestation": 18,
+      "cirisbench": 1,
+      "lens": 15,
+      "node": 35,
+      "persist": 6,
+      "registry": 11,
+      "transport-delivery": 5
+    },
+    "source": "constitution/part_3_the_namespace.md",
+    "source_sha256": "87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5"
+  },
+  "explainer": {
+    "circles": [
+      [
+        "Agent (Self)",
+        "layer-agent",
+        "You and the agent that works for you. Your own reasoning, your own notes."
+      ],
+      [
+        "Family",
+        "layer-family",
+        "The people you live your closest life with. The strictest circle. The mechanism has a name: family-scoped data <b>sends no directory advertisement</b> \u2014 nothing is announced on the discovery destination \u2014 so outsiders cannot route to it, read it, or learn it exists."
+      ],
+      [
+        "Local Community",
+        "layer-local-community",
+        "Where you actually are. Neighbours, a school, a clinic, a town."
+      ],
+      [
+        "Global Communities",
+        "layer-global-communities",
+        "The groups you choose to belong to, wherever they are. Affiliation rather than geography."
+      ],
+      [
+        "Global Commons",
+        "layer-global-commons",
+        "Everyone. What is genuinely shared, and the only circle where \u201cpublic\u201d means what people usually think it means."
+      ]
+    ],
+    "sections": [
+      {
+        "h": "The one idea, first",
+        "body": [
+          "Most software sorts information into <b>secret</b> and <b>public</b>. This one does not. Information belongs to a <b>circle</b>, and the harm is moving it out of the circle it belongs to.",
+          "Your doctor knowing your symptom is fine \u2014 that is what the medical circle is for. The same doctor selling it is not fine. Nothing about the fact changed. What changed is which circle it moved into. That is the whole model, and everything below is machinery for enforcing it.",
+          "So the first question any screen must be able to answer is not \u201cis this allowed?\u201d but <b>\u201cwhich circle is this in, and which rule let it come here?\u201d</b>"
+        ]
+      },
+      {
+        "h": "The circles, smallest first",
+        "body": [
+          "There are five, they are fixed, and they are the top level of the navigation for that reason. They are not a filter, a dropdown or a set of chips \u2014 they are the contexts whose rules decide whether a flow is appropriate. Collapse them into one and the model is gone."
+        ],
+        "circles": true
+      },
+      {
+        "h": "Keep everything as low as it will go",
+        "body": [
+          "This is <b>subsidiarity</b>, and it comes from Catholic social teaching by way of <b>Magnifica Humanitas</b> \u2014 the Vatican's 2026 document, one of the four frameworks CIRIS maps itself to on <code>ciris.ai/compliance</code>. The old formulation: nothing should be done by a larger and higher body that can be done as well by a smaller and lower one.",
+          "On the compliance page it appears as the dimension <code>locality:decision:{scale}</code> \u2014 \u201cdecision routing at lowest competent scale\u201d. It is stated there about <b>decisions</b>. Applied to <b>data</b> it gives the same instruction, and contextual integrity says it in the other direction: family-scoped data does not leave the family, to the point of not announcing that it exists.",
+          "<b>For the UI:</b> the default is always the smallest circle that works. A screen that quietly widens scope \u2014 a share control that defaults outward, a list that shows the global view first \u2014 is not a convenience. It is the one thing the whole design is against."
+        ]
+      },
+      {
+        "h": "How the wire actually enforces it",
+        "body": [
+          "None of this is a promise in a policy document. It is in the bytes, and a designer can rely on it.",
+          "<b>Every claim names two authorities, not one.</b> The envelope carries <code>attesting_key_id</code> \u2014 who said it \u2014 and <code>subject_key_ids</code> \u2014 who it is about. The Constitution is blunt about why: \u201cConsent is incomplete if only the producer of data has authority over it\u2026 a person who appears in someone else's data can still pull it.\u201d",
+          "<b>Five things travel with every flow:</b> the subject, the sender, the recipient, the <b>information type</b>, and the <b>transmission principle</b> \u2014 the rule the flow must follow next. Each is both <b>named and signed</b>, not merely labelled: the reconstruction test split on exactly this point, and the answer is both. Not free text either \u2014 <code>consent:{kind}</code> is a catalogued family, open in its parameters and closed in its leaves.",
+          "<b>The information type is a real, shared list.</b> 116 namespace families across 9 components, generated into <code>namespace_registry.json</code>. When a field on screen is \u201cnamed by its family\u201d, that is the list it is named from. Nobody has to invent categories.",
+          "<b>Taking it back is a verb, not a support ticket.</b> The wire surface is 1+4: <code>scores</code> plus <code>delegates_to</code>, <code>supersedes</code>, <code>withdraws</code>, <code>recants</code>. Two of those four exist purely so a claim can be undone. The surface is conformance-frozen \u2014 changing those bytes is a defect, not an edit."
+        ]
+      },
+      {
+        "h": "Nobody is in charge, and that is structural",
+        "body": [
+          "There is no admin. \u201cAny operator can create an equally valid root, and every client chooses which roots to trust. The shipped root is a default, not the root.\u201d Peers find each other through signed records rather than app stores, package registries or domain names.",
+          "Standing is <b>earned</b>: non-transferable credits for contributions that are attributable and costly to fake \u2014 \u201cnot bought and not mined\u201d. There is no tier to buy and none to be promoted into.",
+          "<b>For the UI:</b> two people can open the same screen and correctly see different things, and neither is being restricted. So the permission idiom is wrong here. \u201cYou don't have access\u201d describes a hierarchy that does not exist."
+        ]
+      },
+      {
+        "h": "Safety is a floor, not a feature",
+        "body": [
+          "There is a halt \u201cno score, no argument, and no attacker can override\u201d, held by <b>2-of-3 named humans on a live quorum</b> so it still works if the roster is attacked or comms are jammed. When two principles genuinely conflict, the system does not resolve it cleverly \u2014 it stops and asks a trusted human.",
+          "And when something breaks: \u201cit fails in the record, under its own name.\u201d",
+          "<b>For the UI:</b> the halt and the deferral are surfaces a person must be able to find under stress, not settings. An error state is not a failure of the design \u2014 telling the truth about uncertainty is one of the six principles, which is why every surface owes four states and why <i>error</i> must never look like <i>empty</i>."
+        ]
+      }
+    ],
+    "answered": [
+      [
+        "\u201cThe group a thing belongs to\u201d \u2014 what is the real list?",
+        "116 namespace families, 9 owning components (8 normative), generated into <code>manifests/namespace_registry.json</code> at CC 1.0-rc5. It is the shared taxonomy every tag component depends on. Do not invent categories."
+      ],
+      [
+        "\u201cA note with your own name on it\u201d \u2014 what does add-a-contact accept?",
+        "A federation identity (fed-ID) and its fedcode \u2014 self-minted, signed, no registry involved. The client already has the surface: My Identity mints this device's fed-ID, and enrolment takes a pasted or scanned fedcode."
+      ],
+      [
+        "\u201cStickers you cannot hand to anyone\u201d \u2014 is unforgeability visible?",
+        "It is Proof of Benefit: non-transferable earned credits. Remove every transfer and purchase affordance. Verification is the network's job, not a step to put in front of a person."
+      ],
+      [
+        "\u201cThe promise about where it may go next\u201d \u2014 vocabulary or free text?",
+        "A controlled vocabulary. The transmission principle is named by a catalogued <code>consent:{kind}</code> leaf \u2014 retain, share, analyze, train, publish. A free-text box here would be a bug."
+      ],
+      [
+        "\u201cNo promise beats another\u201d \u2014 is there anything positive to design?",
+        "Yes. The designer's brief came out entirely negative \u2014 don't rank them, don't trade them off in copy \u2014 because nobody had named the mechanism. It is <b>Wisdom-Based Deferral</b>: the moment the system stops and hands the conflict to a human, with the reasoning attached. That is a screen, not an absence. Who receives it is the next answer."
+      ],
+      [
+        "How many circles are there, and can people make more?",
+        "Five, fixed \u2014 folded down from seven in CEG 0.6. They are not user-created. Each is a hub showing Identities, Trust and Policies at that scope."
+      ],
+      [
+        "\u201cIt stops and asks a grown-up it trusts\u201d \u2014 who is that, exactly?",
+        "The <b>Wise Authority</b>, and this client already has the surface: <i>Wise Authority</i>, under Node. Two distinct things share the initials \u2014 <b>Wisdom-Based Deferral (WBD)</b> is the moment of handing a conflict over; the <b>Wise Authority</b> is who adjudicates it, and rulings are logged durably in the Wisdom Bank Database. Separately, the safety halt is held by 2-of-3 named humans on a live quorum. So \u201cno principle beats another\u201d does have a positive expression on screen: the deferral, the adjudicator, and the record."
+      ],
+      [
+        "How does someone take their yes back, in the machine's own terms?",
+        "Three things together, none of which is a support ticket. The envelope carries <code>subject_key_ids</code>, so the person a claim is ABOUT holds authority over it and not only the person who made it. Two of the four lifecycle verbs \u2014 <code>withdraws</code> and <code>recants</code> \u2014 exist purely to undo a claim. And the <code>consent:</code> family carries the leaves that close a consent's lifecycle. Design the door; the wire already has the hinge."
+      ],
+      [
+        "What do the audit screens actually show?",
+        "An agent's own reasoning trace, carried envelope-native (<code>trace:complete:v1</code>), post-scrub. They are Integrity made visible \u2014 \u201ctransparent, auditable reasoning\u201d \u2014 which is why they cannot be tidied away for looking like developer tooling."
+      ]
+    ]
+  },
+  "principles": [
+    {
+      "id": "equality",
+      "title": "Everyone is equal \u2014 so there is no admin",
+      "source": "ciris.ai/constitutional-mesh",
+      "url": "https://ciris.ai/constitutional-mesh",
+      "quote": "Any operator can create an equally valid root, and every client chooses which roots to trust. The shipped root is a default, not the root.",
+      "gist": "The mesh has no hierarchy. Peers find each other through signed records rather than app stores, registries or domain names, and standing is earned rather than bought \u2014 non-transferable credits for contributions that are costly to fake.",
+      "ui": "There is no admin tier to design for, and no user tier either. The same surfaces exist for everyone; what differs is what a person can attest to. So the familiar idiom \u2014 a greyed control with \u201cyou don't have permission\u201d \u2014 is the wrong one here. Nobody is above anybody. The honest message is about the flow, not the rank."
+    },
+    {
+      "id": "contextual-integrity",
+      "title": "Privacy is appropriate flow, not secrecy",
+      "source": "ciris.ai/contextual-integrity",
+      "url": "https://ciris.ai/contextual-integrity",
+      "quote": "Privacy is the appropriate flow of information. Every part of life has its own rules for how information should move.",
+      "gist": "Five signed parameters decide whether a flow is appropriate: the data subject, the sender, the recipient, the information type, and the transmission principle \u2014 the rule the flow must follow. A doctor knowing your diagnosis fits the rules of that context; the same doctor selling it does not, \u201ceven if a form said they could\u201d.",
+      "ui": "Every surface that shows data owes an answer to \u201cunder which rule am I seeing this?\u201d That is why a field is named by its constitutional family: the family IS the information type, one of the five parameters. Show a value without its scope and the screen has dropped a parameter the protocol enforces."
+    },
+    {
+      "id": "attestation-set",
+      "title": "What you can see is relative to the attestation set",
+      "source": "ciris.ai/contextual-integrity \u00b7 ciris.ai/constitutional-mesh",
+      "url": "https://ciris.ai/contextual-integrity",
+      "quote": "Family-scoped data sends no directory advertisement. Outsiders cannot route to it, read it, or even learn that it exists.",
+      "gist": "Access is not a permission bit on an account. It is a function of which CEG attestations are in play \u2014 signed claims a peer can verify \u2014 so two people on the same screen can correctly see different things, and neither is being restricted.",
+      "ui": "EMPTY AND INVISIBLE ARE DIFFERENT STATES, and this is the one a redesign is most likely to get wrong. \u201cNothing here yet\u201d invites the person to add something. \u201cNot yours to know exists\u201d must not even hint that there is something to be let into \u2014 the protocol goes to the trouble of not advertising it, and the UI can give that away in a way the wire never would."
+    },
+    {
+      "id": "six-principles",
+      "title": "Six principles, none of which may override another",
+      "source": "ciris.ai/values",
+      "url": "https://ciris.ai/values",
+      "quote": "Promote sustainable adaptive coherence: the living conditions under which diverse sentient beings may pursue their own flourishing in justice and wonder.",
+      "gist": "Beneficence, Non-maleficence, Integrity, Fidelity & Transparency, Respect for Autonomy, Justice. \u201cNo principle grants license to violate another\u201d \u2014 unresolved conflicts escalate to trusted humans rather than being resolved algorithmically.",
+      "ui": "Several surfaces that look like developer tools are principles made visible, and cannot be tidied away: Audit, Logs and Telemetry are Integrity's \u201ctransparent, auditable reasoning\u201d; Manage Consent is Autonomy's revocability, which is why it is a first-class surface and not a settings row; Safety sits high in the rail because non-maleficence is foundational rather than a bolt-on. An error or loading state is Fidelity: communicating uncertainty truthfully is a principle, which is why every surface owes four states."
+    }
+  ],
+  "design_rules": [
+    [
+      "Do not add a role hierarchy",
+      "No admin view, no permission tiers, no \u201cupgrade to see this\u201d. Equality is structural, not a setting."
+    ],
+    [
+      "Never render a value without its scope",
+      "The constitutional family is the information type \u2014 one of the five parameters that make a flow appropriate. A number with no family is an unlabelled flow."
+    ],
+    [
+      "Distinguish empty from invisible",
+      "Empty invites action. Invisible must not advertise that anything exists. Same blank area on screen, opposite obligations."
+    ],
+    [
+      "Four states per surface, always",
+      "Populated, empty, loading, error. Error must be visually distinct from empty \u2014 CSD/3 requires it because communicating uncertainty is a principle, not a nicety."
+    ],
+    [
+      "Group by scope, not by feature",
+      "The five Commons layers \u2014 Agent, Family, Local Community, Global Communities, Global Commons \u2014 are the CONTEXTS whose norms decide appropriate flow. They are not a feature menu, and collapsing them into one would erase the distinction the whole model rests on."
+    ],
+    [
+      "Consent is revocable, so show the way out",
+      "Every surface that collects or shares owes a visible path to withdraw. Machine-readable and revocable is the standard the protocol holds."
+    ]
+  ],
+  "lineage": [
+    {
+      "id": "constitution",
+      "title": "CIRIS Constitution \u2014 Part III, The Namespace",
+      "where": "CIRISConstitution/constitution/part_3_the_namespace.md",
+      "says": "A federation needs a shared vocabulary before it can have a shared judgment. Part III is that vocabulary: every component's namespace families, generated into a registry rather than asserted in prose.",
+      "means_for_ui": "The words on screen are not UI copy. A field belongs to a constitutional family, and the family is what makes it checkable."
+    },
+    {
+      "id": "csd",
+      "title": "CSD/3 \u2014 the lifecycle form",
+      "where": "CIRISClient/CSD.md",
+      "says": "A surface is specified BEFORE it is built, and the specification is machine-checked. v3's central move: the CEG prefix IS the field identifier, so one pass validates both the vocabulary and the UI contract. \u201cA specification whose claims cannot be checked is a document, not a contract.\u201d",
+      "means_for_ui": "Every surface owes four states \u2014 populated, empty, loading, error \u2014 and a redesign that shows only the populated one is half a design."
+    },
+    {
+      "id": "ui-language",
+      "title": "FSD \u2014 The CIRIS UI language",
+      "where": "CIRISClient/docs/FSD-ui-language.md",
+      "says": "One language, two halves. RENDERING (`interactive_config`, owned by the agent) declares what the UI shows; EXPOSURE (test tags, owned by the client) declares what it exposes. The seam is a naming rule: the outputs vocabulary of the first is the addressing vocabulary of the second.",
+      "means_for_ui": "The intended model is HyperCard: a CARD has title, contents, sources, links and outputs; a STACK is an ordered list of cards; a FLOW is a stack across screens. Screens are the accident; cards are the unit."
+    },
+    {
+      "id": "epistemic-nav",
+      "title": "Epistemic Commons Framework navigation",
+      "where": "client/shared/\u2026/ui/nav/EpistemicNav.kt",
+      "says": "Groups are epistemic scopes, not feature folders. Safety sits high deliberately \u2014 \u201cfoundational, not a bolt-on\u201d. The Commons group is the five CEG 0.6 cohort scopes, folded from seven.",
+      "means_for_ui": "Which groups exist is a function of the PROBED node, not of the build: a node that gains a brain reveals the agent surfaces on the next probe rather than the next reinstall."
+    },
+    {
+      "id": "first-run",
+      "title": "FSD \u2014 Remote first-run claim",
+      "where": "CIRISClient/docs/FSD-remote-first-run-claim.md",
+      "says": "Only ONE setup route is reachable off-host, and the consequences of that are stated plainly rather than designed around.",
+      "means_for_ui": "First-run is a constrained flow, not a screen that can be rearranged freely."
+    }
+  ],
+  "observations": [
+    [
+      "Two axes, not one",
+      "A surface has a GROUP (the rail section it is filed under) and a PARENT (the chevron that reveals it). They are independent. Config, Runtime and System are filed under <b>node</b> while hanging off AgentSettings, which is filed under <b>agent</b>; GraphMemory is filed under node beneath Memory. The nav calls this deliberate \u2014 the agent framing alongside the node-infra framing \u2014 but a reader expecting one tree mis-reads all four."
+    ],
+    [
+      "Thirteen surfaces have no group",
+      "They reach the rail only through a parent's chevron: Sessions under Interact, Scheduler under Tickets, LLM Settings and Skills under Agent Settings, Audit and Consent under Data, Wallet under Billing, Logs under Telemetry, and the four Layer children. Collapse the parent and they are gone \u2014 which is why they were the last screens the atlas could reach."
+    ],
+    [
+      "One surface has no route at all",
+      "AccordCeremony is in no group and under no parent. Its own declaration says it opens from the Accord screen only while no accord family exists yet, so it is a flow, not a destination."
+    ],
+    [
+      "The row and the chevron are different controls",
+      "Clicking a parent row NAVIGATES to it; opening its children needs the chevron beside it. A person who clicks the word expecting the subtree gets the parent screen instead \u2014 the same confusion that cost the atlas a third of its coverage."
+    ]
+  ]
+}

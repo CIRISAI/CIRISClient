@@ -167,6 +167,13 @@ actual class EnvFileUpdater {
         }
     }
 
+    actual suspend fun readRawEnv(): String? {
+        val home = cirisHome ?: return null
+        val envPath = "$home/$ENV_FILE_NAME"
+        if (!NSFileManager.defaultManager.fileExistsAtPath(envPath)) return null
+        return (NSString.stringWithContentsOfFile(envPath, NSUTF8StringEncoding, null) as String?)
+    }
+
     actual suspend fun readLlmConfig(): EnvLlmConfig? {
         val home = cirisHome ?: run {
             println("[$TAG] Cannot read .env - cirisHome not found")

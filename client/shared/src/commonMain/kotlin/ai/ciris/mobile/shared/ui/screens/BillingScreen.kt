@@ -12,6 +12,7 @@ import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import androidx.compose.material3.*
+import ai.ciris.mobile.shared.ui.components.SessionExpiredBanner
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -44,6 +45,9 @@ fun BillingScreen(
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
     onDismissError: () -> Unit = {},
+    /** The billing credential is stale and only a sign-in renews it (CIRISClient#59). */
+    authExpired: Boolean = false,
+    onSignInAgain: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -103,6 +107,18 @@ fun BillingScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // FIRST, ABOVE THE BALANCE. When the credential is stale the
+                // balance below is not a fact about the account — it rendered
+                // as 0 for 25 hours against 398 real credits — so the banner
+                // outranks it, and the button is the only fix money cannot
+                // buy (CIRISClient#59).
+                if (authExpired) {
+                    SessionExpiredBanner(
+                        onSignInAgain = onSignInAgain,
+                        tag = "btn_billing_sign_in_again",
+                    )
+                }
+
                 // Current balance card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
