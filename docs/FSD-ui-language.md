@@ -278,10 +278,28 @@ the receipt on every contact row. The screen class, nav id and every
 `contacts_*` tag are unchanged — they are the contract CIRISAgent's
 five-platform gate drives — and the file names no colour.
 
-**Next, in order.** Wave 1: the shell — five circles in a bottom bar (rail at
-≥900dp), seven tabs per circle, the pinned Stop, one nav tree, the SOON badge
-deleted. Then Geist as the faces behind the two `CirisType` family slots. Then
-wave 2, one agent per circle, sweeping the literal baseline to zero as it goes.
+**The shell (wave 1).** `ui/shell/CirclesShell.kt`: five circles in a fixed
+bottom bar (a 208dp rail at ≥900dp, subtitles and the five instruments under
+it), the seven tabs above the content (scrolling below 700dp, all fitting
+above), My things (the avatar, top left — not a sixth circle) and Stop
+everything (top right, every circle, every tab, above the scroll). The one
+tree is `ui/nav/CirclesNav.kt`: every surface placed once, in a tab for some
+circles or under an instrument, from the Card Atlas; `CirclesNavTest` pins
+no orphans, no double placements, and the node build a subset of the agent
+build. A tab with one card shows it (People *is* Contacts); with several,
+rows; with none, the honest sentence for that circle. The SOON badge, the
+placeholder component, the substrate gates, the six rail groups and the five
+placeholder-only screens are deleted, not restyled.
+
+Tags: `circle_<slug>`, `tab_<id>`, `btn_my_things`, `nav_instrument_<id>`,
+`btn_stop_everything`, and `nav_epistemic_<surface>` wherever a surface is
+listed; `testing/gate/nav_map.py` derives every hop from the tree.
+
+**Next, in order.** Geist as the faces behind the two `CirisType` family
+slots. Then wave 2, one agent per circle (Just me and Family first), each
+finishing all seven tabs — per-screen top bars go, the literal baseline falls
+to zero, the receipt lands on every row. Files (wave 3) lands with the first
+circle.
 
 ## 6. Not built, in order
 

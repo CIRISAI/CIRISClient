@@ -3187,7 +3187,8 @@
       "trust": "信任",
       "users": "用户",
       "wallet": "钱包",
-      "wise_authority": "智慧权威"
+      "wise_authority": "智慧权威",
+      "help": "帮助"
     },
     "circle": {
       "agent": "仅我本人",
@@ -3195,6 +3196,62 @@
       "local_community": "邻里",
       "global_communities": "社区与企业",
       "global_commons": "所有人"
+    },
+    "tab": {
+      "files": "文件",
+      "chats": "对话",
+      "people": "成员",
+      "safety": "安全",
+      "rules": "规则",
+      "decisions": "决策",
+      "record": "记录"
+    },
+    "circle_sub": {
+      "agent": "仅限您",
+      "family": "家族",
+      "local_community": "本地社区",
+      "global_communities": "自选群体",
+      "global_commons": "公域"
+    },
+    "circle_rule": {
+      "agent": "没有其他人",
+      "family": "对外部所有人隐藏",
+      "local_community": "任何人都可以停止某事；只有多数人才能撤销该操作",
+      "global_communities": "相同的制动机制，窗口期更短",
+      "global_commons": "公开，且基本是单向的"
+    },
+    "instrument": {
+      "devices_keys": "设备与密钥",
+      "everything_i_shared": "我分享的所有内容",
+      "this_node": "此节点",
+      "someone_i_trust": "我信任的人",
+      "help": "帮助"
+    },
+    "empty": {
+      "files": "此圈子的文件中还没有内容。您创建的内容从“仅我本人”开始，只有在您发出指示时才会向外流转。",
+      "chats": "此圈子中暂无对话。",
+      "people": "此圈子中还没有人。",
+      "safety": "此处暂无需要留意的安全事项。",
+      "rules": "此圈子尚未设置规则。",
+      "decisions": "此处暂无待决事项。",
+      "record": "此圈子中还没有发生任何事。",
+      "files_agent": "这里还没有内容。一切都从这里开始，且这里的内容不会被公开。",
+      "decisions_agent": "这里没有可以共同决策的人。决策从“家族”开始。",
+      "decisions_family": "家族通过交谈做出决策。这里没有需要投票的事项。"
+    },
+    "my_things": "我的内容",
+    "stop_everything": "停止一切",
+    "stop": {
+      "title": "停止一切？",
+      "fact_what_label": "停止内容",
+      "fact_what": "您的助手将立即停止为您思考、回答和行动。",
+      "fact_keeps_label": "保留内容",
+      "fact_keeps": "您的文件、圈子以及所有记录都将原样保留。",
+      "fact_again_label": "重新开始",
+      "fact_again": "从“我的内容 › 此节点”，随时可以重新开始。",
+      "confirm": "停止一切",
+      "nothing_title": "当前没有任何内容在为您运行",
+      "nothing_body": "此节点上没有任何助手在思考或行动，因此没有需要停止的内容。此按钮仍显示在这里，位置不变，因为它一直如此。"
     }
   },
   "network": {

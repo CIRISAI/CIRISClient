@@ -3187,7 +3187,8 @@
       "trust": "Güven",
       "users": "Kullanıcılar",
       "wallet": "Cüzdan",
-      "wise_authority": "Bilge Otorite"
+      "wise_authority": "Bilge Otorite",
+      "help": "Yardım"
     },
     "circle": {
       "agent": "Sadece ben",
@@ -3195,6 +3196,62 @@
       "local_community": "Komşular",
       "global_communities": "Topluluklar ve İşletmeler",
       "global_commons": "Herkes"
+    },
+    "tab": {
+      "files": "Dosyalar",
+      "chats": "Sohbetler",
+      "people": "Kişiler",
+      "safety": "Güvenlik",
+      "rules": "Kurallar",
+      "decisions": "Kararlar",
+      "record": "Kayıt"
+    },
+    "circle_sub": {
+      "agent": "yalnızca siz",
+      "family": "Aile",
+      "local_community": "Yerel Topluluk",
+      "global_communities": "seçili gruplar",
+      "global_commons": "kamu"
+    },
+    "circle_rule": {
+      "agent": "başka hiç kimse",
+      "family": "dışarıdaki herkesten gizli",
+      "local_community": "herkes bir şeyi durdurabilir; bunu yalnızca çoğunluk geri alabilir",
+      "global_communities": "aynı fren, daha kısa zaman aralıklarıyla",
+      "global_commons": "herkese açık ve çoğunlukla tek yönlü"
+    },
+    "instrument": {
+      "devices_keys": "Cihazlar ve anahtarlar",
+      "everything_i_shared": "Paylaştığım her şey",
+      "this_node": "Bu düğüm",
+      "someone_i_trust": "Güvendiğim biri",
+      "help": "Yardım"
+    },
+    "empty": {
+      "files": "Bu çevrenin dosyalarında henüz bir şey yok. Oluşturduklarınız Sadece ben'de başlar ve yalnızca siz izin verdiğinizde dışarı çıkar.",
+      "chats": "Bu çevrede henüz sohbet yok.",
+      "people": "Bu çevrede henüz kimse yok.",
+      "safety": "Burada ilgilenilecek bir şey yok.",
+      "rules": "Bu çevre için kural belirlenmedi.",
+      "decisions": "Burada henüz karar verilecek bir şey yok.",
+      "record": "Bu çevrede henüz bir şey olmadı.",
+      "files_agent": "Burada henüz bir şey yok. Her şey buradan başlar ve burada hiçbir şey ilan edilmez.",
+      "decisions_agent": "Burada birlikte karar verecek kimse yok. Kararlar Aile'de başlar.",
+      "decisions_family": "Bir aile konuşarak karar verir. Burada oylanacak bir şey yok."
+    },
+    "my_things": "Kendi şeylerim",
+    "stop_everything": "Her şeyi durdur",
+    "stop": {
+      "title": "Her şey durdurulsun mu?",
+      "fact_what_label": "Ne durur",
+      "fact_what": "Asistanınız sizin için düşünmeyi, yanıt vermeyi ve hareket etmeyi hemen şimdi durdurur.",
+      "fact_keeps_label": "Ne kalır",
+      "fact_keeps": "Dosyalarınız, çevreleriniz ve her kayıt tam olarak oldukları gibi kalır.",
+      "fact_again_label": "Yeniden başlatma",
+      "fact_again": "Kendi şeylerim › Bu düğüm üzerinden, istediğiniz zaman.",
+      "confirm": "Her şeyi durdur",
+      "nothing_title": "Sizin için çalışan bir şey yok",
+      "nothing_body": "Bu düğümde düşünen veya hareket eden bir asistan yok, dolayısıyla durdurulacak bir şey yok. Buton yine de burada, her zaman olduğu aynı yerde."
     }
   },
   "network": {

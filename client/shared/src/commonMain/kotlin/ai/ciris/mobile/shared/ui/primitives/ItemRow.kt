@@ -65,6 +65,8 @@ fun ItemRow(
     flags: List<RowFlag> = emptyList(),
     receipt: Receipt? = null,
     trailing: (@Composable () -> Unit)? = null,
+    /** Replaces the glyph in the leading tile — for a legacy ImageVector icon until every surface has a glyph. */
+    leading: (@Composable () -> Unit)? = null,
     onClick: (() -> Unit)? = null,
     onOpenReceipt: ((Receipt) -> Unit)? = null,
 ) {
@@ -97,7 +99,7 @@ fun ItemRow(
                 .background(glyphTint.copy(alpha = 0.12f).compositeOver(t.raised)),
             contentAlignment = Alignment.Center,
         ) {
-            Glyph(glyph, tint = glyphTint, size = 20.dp)
+            if (leading != null) leading() else Glyph(glyph, tint = glyphTint, size = 20.dp)
         }
         Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {

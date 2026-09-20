@@ -3187,7 +3187,8 @@
       "trust": "Amincewa",
       "users": "Masu amfani",
       "wallet": "Jakar kuɗi",
-      "wise_authority": "Hukumar Hikima"
+      "wise_authority": "Hukumar Hikima",
+      "help": "Taimako"
     },
     "circle": {
       "agent": "Ni kaɗai",
@@ -3195,6 +3196,62 @@
       "local_community": "Makwabta",
       "global_communities": "Al'ummomi da Kasuwanci",
       "global_commons": "Kowa"
+    },
+    "tab": {
+      "files": "Fayiloli",
+      "chats": "Tattaunawa",
+      "people": "Mutane",
+      "safety": "Aminci",
+      "rules": "Ƙa'idodi",
+      "decisions": "Yanke shawara",
+      "record": "Rikodi"
+    },
+    "circle_sub": {
+      "agent": "Kai",
+      "family": "Iyali",
+      "local_community": "Al'umma ta gida",
+      "global_communities": "Ƙungiyoyin da aka zaɓa",
+      "global_commons": "Jama'a"
+    },
+    "circle_rule": {
+      "agent": "Babu wani",
+      "family": "An ɓoye daga kowa a waje",
+      "global_commons": "Na jama'a ne, kuma galibi hanya ɗaya ce",
+      "local_community": "Kowa yana iya dakatar da wani abu; mafiya rinjaye ne kaɗai za su iya soke hakan",
+      "global_communities": "Irin birki ɗaya, tare da taguna gajeru"
+    },
+    "instrument": {
+      "devices_keys": "Na'urori da maɓallai",
+      "everything_i_shared": "Duk abin da na raba",
+      "this_node": "Wannan kumburi",
+      "someone_i_trust": "Wani da nake amincewa da shi",
+      "help": "Taimako"
+    },
+    "empty": {
+      "files": "Babu wani abu a fayilolin wannan da'ira tukuna. Abin da kuka ƙirƙira yana farawa a cikin \"Ni kaɗai\" kuma yana fita ne kawai idan kun faɗi haka.",
+      "chats": "Babu tattaunawa a wannan da'ira tukuna.",
+      "people": "Babu kowa a wannan da'ira tukuna.",
+      "safety": "Babu abin da za a kula da shi a nan.",
+      "rules": "Babu ƙa'idodin da aka saita wa wannan da'ira.",
+      "decisions": "Babu abin da za a yanke shawara a nan tukuna.",
+      "record": "Babu abin da ya faru a wannan da'ira tukuna.",
+      "files_agent": "Babu komai a nan tukuna. Nan ne duk abu yake farawa, kuma babu abin da ake sanarwa a nan.",
+      "decisions_agent": "Babu wani a nan da za ku yanke shawara tare da shi. Yanke shawara yana farawa a Iyali.",
+      "decisions_family": "Iyali yana yanke shawara ta hanyar tattaunawa. Babu abin da za a kada kuri'a a kai a nan."
+    },
+    "my_things": "Abubuwana",
+    "stop_everything": "Tsayar da komai",
+    "stop": {
+      "title": "Tsayar da komai?",
+      "fact_what_label": "Abin da ke tsayawa",
+      "fact_what": "Mataimakinku zai daina tunani, amsawa da yin aiki dominku, nan take.",
+      "fact_keeps_label": "Abin da ya rage",
+      "fact_keeps": "Fayilolinku, da'irorinku da kowane rikodi za su kasance daidai yadda suke.",
+      "fact_again_label": "Sake farawa",
+      "fact_again": "Daga Abubuwana › Wannan kumburi, duk lokacin da kuka zaɓa.",
+      "confirm": "Tsayar da komai",
+      "nothing_title": "Babu abin da ke gudana dominku",
+      "nothing_body": "Babu mataimaki da yake tunani ko aiki a kan wannan kumburi, don haka babu abin da za a tsayar. Ko da yake, maɓallin yana nan, a wuri guda, domin haka ne yake kasancewa a koda yaushe."
     }
   },
   "network": {

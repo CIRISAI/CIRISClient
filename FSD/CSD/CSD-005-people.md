@@ -25,10 +25,10 @@ surface: contacts
 screen: Contacts
 ```
 
-`nav_map` derives `nav_group_manage -> nav_epistemic_contacts`. The screen
-class, the nav id and every `contacts_*` tag are unchanged from the surface this
-replaces; the visible title is "People". Wave 1 re-homes it as the People tab of
-each circle.
+`nav_map` derives `circle_<circle> -> tab_people`: Contacts IS the People tab
+in every circle, so the shell shows it directly and the chain ends on the tab
+(wave 1). The screen class, the nav id and every `contacts_*` tag are unchanged
+from the surface this replaces; the visible title is "People".
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839

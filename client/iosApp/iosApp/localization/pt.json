@@ -3187,7 +3187,8 @@
       "trust": "Confiança",
       "users": "Usuários",
       "wallet": "Carteira",
-      "wise_authority": "Autoridade Sábia"
+      "wise_authority": "Autoridade Sábia",
+      "help": "Ajuda"
     },
     "circle": {
       "agent": "Só eu",
@@ -3195,6 +3196,62 @@
       "local_community": "Vizinhos",
       "global_communities": "Comunidades e Empresas",
       "global_commons": "Todos"
+    },
+    "tab": {
+      "files": "Arquivos",
+      "chats": "Conversas",
+      "people": "Pessoas",
+      "safety": "Segurança",
+      "rules": "Regras",
+      "decisions": "Decisões",
+      "record": "Registro"
+    },
+    "circle_sub": {
+      "agent": "só você",
+      "family": "família",
+      "local_community": "comunidade local",
+      "global_communities": "grupos escolhidos",
+      "global_commons": "público"
+    },
+    "circle_rule": {
+      "agent": "mais ninguém",
+      "family": "oculto de todos fora dela",
+      "local_community": "qualquer um pode parar algo; apenas uma maioria pode desfazer isso",
+      "global_communities": "o mesmo freio, com janelas mais curtas",
+      "global_commons": "público, e majoritariamente de mão única"
+    },
+    "instrument": {
+      "devices_keys": "Dispositivos e chaves",
+      "everything_i_shared": "Tudo o que compartilhei",
+      "this_node": "Este nó",
+      "someone_i_trust": "Alguém em quem confio",
+      "help": "Ajuda"
+    },
+    "empty": {
+      "files": "Ainda não há nada nos arquivos deste círculo. O que você cria começa em Só eu e só se move quando você decide.",
+      "chats": "Ainda não há conversas neste círculo.",
+      "people": "Ainda não há ninguém neste círculo.",
+      "safety": "Nada para cuidar aqui.",
+      "rules": "Nenhuma regra definida para este círculo.",
+      "decisions": "Ainda não há nada para decidir aqui.",
+      "record": "Ainda não aconteceu nada neste círculo.",
+      "files_agent": "Ainda não há nada aqui. É aqui que tudo começa, e nada aqui é divulgado.",
+      "decisions_agent": "Não há ninguém aqui com quem decidir. As decisões começam em Família.",
+      "decisions_family": "Uma família decide conversando. Não há nada para votar aqui."
+    },
+    "my_things": "Minhas coisas",
+    "stop_everything": "Parar tudo",
+    "stop": {
+      "title": "Parar tudo?",
+      "fact_what_label": "O que para",
+      "fact_what": "Seu assistente para de pensar, responder e agir por você, agora.",
+      "fact_keeps_label": "O que permanece",
+      "fact_keeps": "Seus arquivos, seus círculos e todos os registros permanecem exatamente como estão.",
+      "fact_again_label": "Recomeçar",
+      "fact_again": "Em Minhas coisas › Este nó, quando você quiser.",
+      "confirm": "Parar tudo",
+      "nothing_title": "Nada está em execução para você",
+      "nothing_body": "Nenhum assistente está pensando ou agindo neste nó, então não há nada para parar. O botão está aqui mesmo assim, no mesmo lugar, porque ele sempre está."
     }
   },
   "network": {

@@ -3187,7 +3187,8 @@
       "trust": "Ìgbẹ́kẹ̀lé",
       "users": "Àwọn Olùmúlò",
       "wallet": "Àpò Owó",
-      "wise_authority": "Aláṣẹ Ọlọ́gbọ́n"
+      "wise_authority": "Aláṣẹ Ọlọ́gbọ́n",
+      "help": "Ìrànlọ́wọ́"
     },
     "circle": {
       "agent": "Èmi nìkan",
@@ -3195,6 +3196,62 @@
       "local_community": "Àwọn aládùúgbò",
       "global_communities": "Àwọn Àwùjọ àti Àwọn Ilé-iṣẹ́",
       "global_commons": "Gbogbo ènìyàn"
+    },
+    "tab": {
+      "files": "Àwọn Fáìlù",
+      "chats": "Ìjíròrò",
+      "people": "Àwọn Ènìyàn",
+      "safety": "Ààbò",
+      "rules": "Àwọn Òfin",
+      "decisions": "Àwọn Ìpinnu",
+      "record": "Àkọsílẹ̀"
+    },
+    "circle_sub": {
+      "agent": "ara ẹni",
+      "family": "Ìdílé",
+      "local_community": "Àdúgbò Ìbílẹ̀",
+      "global_communities": "àwọn àwùjọ tí a yàn",
+      "global_commons": "ìlú gbangba"
+    },
+    "circle_rule": {
+      "agent": "kò sí ẹnikẹ́ni mìíràn",
+      "family": "a fi pamọ́ kúrò lọ́wọ́ gbogbo ẹni tí ó wà lóde",
+      "local_community": "ẹnikẹ́ni lè dá ohunkóhun dúró; ìpín púpọ̀ nìkan ló lè ṣí i padà",
+      "global_communities": "ìdádúró kan náà, pẹ̀lú àwọn àkókò tó kúkúrú sí i",
+      "global_commons": "ìlú gbangba, ó sì máa ń lọ ní ọ̀nà kan ṣoṣo lọ́pọ̀ ìgbà"
+    },
+    "instrument": {
+      "devices_keys": "Àwọn Ẹ̀rọ àti Kọ́kọ́rọ́",
+      "everything_i_shared": "Ohun gbogbo tí mo pín",
+      "this_node": "Nódù yìí",
+      "someone_i_trust": "Ẹnìkan tí mo gbẹ́kẹ̀lé",
+      "help": "Ìrànlọ́wọ́"
+    },
+    "empty": {
+      "files": "Kò sí ohunkóhun nínú àwọn fáìlù àyíká yìí síbẹ̀. Ohun tí o bá ṣe ń bẹ̀rẹ̀ ní Èmi nìkan, ó sì ń jáde nìkan nígbà tí o bá sọ pé kí ó jáde.",
+      "chats": "Kò sí ìjíròrò kankan nínú àyíká yìí síbẹ̀.",
+      "people": "Kò sí ẹnikẹ́ni nínú àyíká yìí síbẹ̀.",
+      "safety": "Kò sí ohunkóhun láti tọ́jú níbí.",
+      "rules": "Kò sí òfin tí a ti ṣèto fún àyíká yìí.",
+      "decisions": "Kò sí ohunkóhun láti pinnu níbí síbẹ̀.",
+      "record": "Kò sí ohunkóhun tí ó ṣẹlẹ̀ nínú àyíká yìí síbẹ̀.",
+      "files_agent": "Kò sí ohunkóhun níbí síbẹ̀. Níbí ni gbogbo ohun ti ń bẹ̀rẹ̀, kò sì sí ohun tí a ń kéde níbí.",
+      "decisions_agent": "Kò sí ẹnikẹ́ni níbí láti pinnu pẹ̀lú. Àwọn ìpinnu ń bẹ̀rẹ̀ ní Ìdílé.",
+      "decisions_family": "Ìdílé ń pinnu nípasẹ̀ ìsọ̀rọ̀. Kò sí ohunkóhun láti dìbò lé níbí."
+    },
+    "my_things": "Àwọn ohun mi",
+    "stop_everything": "Dá ohun gbogbo dúró",
+    "stop": {
+      "title": "Dá ohun gbogbo dúró?",
+      "fact_what_label": "Ohun tí ó dúró",
+      "fact_what": "Olùrànlọ́wọ́ rẹ á dá ìrònú, ìdáhùn àti ìṣe dúró fún ọ, ní ìsinsìnyí.",
+      "fact_keeps_label": "Ohun tí ó ṣì wà",
+      "fact_keeps": "Àwọn fáìlù rẹ, àwọn àyíká rẹ àti àkọsílẹ̀ kọ̀ọ̀kan yóò dúró gẹ́gẹ́ bí wọ́n ṣe wà.",
+      "fact_again_label": "Ìbẹ̀rẹ̀ lẹ́ẹ̀kan síi",
+      "fact_again": "Láti Àwọn ohun mi › Nódù yìí, nígbàkigbà tí o bá yàn.",
+      "confirm": "Dá ohun gbogbo dúró",
+      "nothing_title": "Kò sí ohunkóhun tí ń ṣiṣẹ́ fún ọ",
+      "nothing_body": "Kò sí olùrànlọ́wọ́ tí ń ronú tàbí ṣe iṣẹ́ lórí nódù yìí, nítorí náà kò sí ohunkóhun láti dá dúró. Bọ́tìnnì náà wà níbí síbẹ̀, ní ipò kan náà, nítorí ó máa ń wà níbẹ̀ nígbà gbogbo."
     }
   },
   "network": {

@@ -26,9 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testable
-import ai.ciris.mobile.shared.ui.components.ComingSoonPlaceholder
 import ai.ciris.mobile.shared.ui.nav.NavSurface
-import ai.ciris.mobile.shared.ui.nav.SubstrateGate
 import ai.ciris.mobile.shared.ui.screens.graph.CellVizState
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState

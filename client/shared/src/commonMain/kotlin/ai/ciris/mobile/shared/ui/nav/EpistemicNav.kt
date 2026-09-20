@@ -4,14 +4,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 
 /**
- * Epistemic Commons Framework navigation — 2.9.4.
+ * The navigable surfaces — the screens the app can show.
  *
- * Three-group collapsible sidebar (Agent / Manage / Federation) plus a Client
- * group. Each top-level surface may have nested sub-surfaces; sidebar shows
- * top-level on collapse, expands inline to show children.
+ * This file is the INVENTORY. The one tree that places each surface in a
+ * circle and a tab, or under an instrument, is `CirclesNav.kt` (the locked
+ * spec, wave 1). The six collapsible rail groups, the parent/child chevrons
+ * and the SOON gate that used to live here are gone with the shell they
+ * belonged to.
  *
- * Source design: Figma Make `oC84aP8FdamRjISS5UPvz3` (issue #799).
- * Umbrella: CIRISAgent#800.
+ * Origin: Figma Make `oC84aP8FdamRjISS5UPvz3` (issue #799), CIRISAgent#800.
  *
  * **Iconography**: every surface uses a `CIRISIcons.*` entry (the CIRIS
  * brand icon set from `ui/components/CIRISIcons.kt`). No Material icons are
@@ -20,18 +21,16 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
  * was specifically designed to avoid (see `CIRISColors` doc on
  * non-uniform hue distribution).
  *
- * Group/surface structure is stable across 2.9.4 → 2.9.X. As substrate APIs
- * land, individual leaves lift their gate and consume their new data source;
- * the surface itself does not move.
+ * A surface's id is its test-tag stem: `nav_epistemic_<id with - as _>`.
  */
 
 /**
- * A single navigable surface in the nav. May have [children] — sub-surfaces
- * rendered indented under this one when the parent is expanded.
- *
- * Convention: a surface with children may itself be navigable (the parent
- * screen is a useful overview), or may be purely a header (in which case
- * navigating to it routes to its first child).
+ * A single navigable surface: a screen the app can show. WHERE it lives —
+ * which circle and tab, or which instrument under My things — is the one
+ * tree in `CirclesNav.kt`. A surface no longer carries a group, a parent or a
+ * gate: the two independent axes that put Config under one group while it
+ * hung off a parent in another are gone, and so is the SOON badge (every
+ * surface here is fully built and reachable — the locked spec's no-gating rule).
  */
 sealed class NavSurface(
     val id: String,
@@ -42,10 +41,6 @@ sealed class NavSurface(
      */
     val label: String,
     val icon: ImageVector,
-    /** Substrate issue blocking this surface, or null if it ships today. */
-    val gate: SubstrateGate? = null,
-    /** Nested sub-surfaces, in display order. Empty = leaf. */
-    val children: List<NavSurface> = emptyList(),
     /**
      * Optional localization key for the sidebar / card title. When set the
      * sidebar resolves `localizedString(labelKey)` and falls back to [label]
@@ -61,30 +56,28 @@ sealed class NavSurface(
     // ═══════════════════════════════════════════════════════════════════════════
 
     object Sessions : NavSurface("sessions", "Sessions", CIRISIcons.dateRange,
-        labelKey = "nav.surface.sessions",)
+        labelKey = "nav.surface.sessions")
     object Interact : NavSurface(
         id = "interact", label = "Interact", icon = CIRISIcons.thought,
-        children = listOf(Sessions),
-        labelKey = "nav.surface.interact",)
+        labelKey = "nav.surface.interact")
 
     object Scheduler : NavSurface("scheduler", "Scheduler", CIRISIcons.stage,
-        labelKey = "nav.surface.scheduler",)
+        labelKey = "nav.surface.scheduler")
     object Tickets : NavSurface(
         id = "tickets", label = "Tickets", icon = CIRISIcons.task,
-        children = listOf(Scheduler),
-        labelKey = "nav.surface.tickets",)
+        labelKey = "nav.surface.tickets")
 
     object Tools : NavSurface("tools", "Tools", CIRISIcons.tools,
-        labelKey = "nav.surface.tools",)
+        labelKey = "nav.surface.tools")
     // Node form: Services is a node-infra keeper; the agent-only Tools child is
     // dropped from the surfaced tree (the Tools object remains defined for
     // route compatibility).
     object Services : NavSurface(
         id = "services", label = "Services", icon = CIRISIcons.bus,
-        labelKey = "nav.surface.services",)
+        labelKey = "nav.surface.services")
 
     object Logs : NavSurface("logs", "Logs", CIRISIcons.log,
-        labelKey = "nav.surface.logs",)
+        labelKey = "nav.surface.logs")
 
     /**
      * Transport — node transports + serial LoRa (RNode) radio configuration. A
@@ -93,37 +86,34 @@ sealed class NavSurface(
      * config. Radio activation is desktop-only. Live (no gate).
      */
     object Transport : NavSurface("transport", "Transport", CIRISIcons.bus,
-        labelKey = "nav.surface.transport",)
+        labelKey = "nav.surface.transport")
     object Telemetry : NavSurface(
         id = "telemetry", label = "Telemetry", icon = CIRISIcons.telemetry,
-        children = listOf(Logs),
-        labelKey = "nav.surface.telemetry",)
+        labelKey = "nav.surface.telemetry")
 
     object GraphMemory : NavSurface("graph-memory", "Graph", CIRISIcons.graph,
-        labelKey = "nav.surface.graph_memory",)
+        labelKey = "nav.surface.graph_memory")
     object Memory : NavSurface(
         id = "memory", label = "Memory", icon = CIRISIcons.memory,
-        children = listOf(GraphMemory),
-        labelKey = "nav.surface.memory",)
+        labelKey = "nav.surface.memory")
 
     object WiseAuthority : NavSurface("wise-authority", "Wise Authority", CIRISIcons.agent,
-        labelKey = "nav.surface.wise_authority",)
+        labelKey = "nav.surface.wise_authority")
 
     // Settings sub-tree — collects LLM / System / Runtime / Config / Skills
     object LLMSettings : NavSurface("llm-settings", "LLM", CIRISIcons.model,
-        labelKey = "nav.surface.llm_settings",)
+        labelKey = "nav.surface.llm_settings")
     object System : NavSurface("system", "System", CIRISIcons.requirements,
-        labelKey = "nav.surface.system",)
+        labelKey = "nav.surface.system")
     object Runtime : NavSurface("runtime", "Runtime", CIRISIcons.processing,
-        labelKey = "nav.surface.runtime",)
+        labelKey = "nav.surface.runtime")
     object Config : NavSurface("config", "Config", CIRISIcons.instructions,
-        labelKey = "nav.surface.config",)
+        labelKey = "nav.surface.config")
     object Skills : NavSurface("skills", "Skills", CIRISIcons.skill,
-        labelKey = "nav.surface.skills",)
+        labelKey = "nav.surface.skills")
     object AgentSettings : NavSurface(
         id = "agent-settings", label = "Settings", icon = CIRISIcons.settings,
-        children = listOf(LLMSettings, System, Runtime, Config, Skills),
-        labelKey = "nav.surface.agent_settings",)
+        labelKey = "nav.surface.agent_settings")
 
     /**
      * Settings, reachable WITHOUT a brain (CIRISClient#51).
@@ -155,7 +145,7 @@ sealed class NavSurface(
      */
     object Account : NavSurface(
         id = "account", label = "Account", icon = CIRISIcons.person,
-        labelKey = "mobile.settings_account",)
+        labelKey = "mobile.settings_account")
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Manage group — operator surfaces
@@ -167,11 +157,11 @@ sealed class NavSurface(
     // LENSCORE_CAPACITY gate; the surface itself is not gated.
     object HealthReputation : NavSurface(
         id = "health-reputation", label = "Health & Reputation", icon = CIRISIcons.identity,
-        labelKey = "nav.surface.health_reputation",)
+        labelKey = "nav.surface.health_reputation")
     object Users : NavSurface("users", "Users", CIRISIcons.person,
-        labelKey = "nav.surface.users",)
+        labelKey = "nav.surface.users")
     object Adapters : NavSurface("adapters", "Adapters", CIRISIcons.adapter,
-        labelKey = "nav.surface.adapters",)
+        labelKey = "nav.surface.adapters")
     /**
      * Network (CIRISEdge operator view) — THIS node's local edge facts:
      * federation signer_key_id, agent mode (client/proxy/server), disk budget,
@@ -179,7 +169,7 @@ sealed class NavSurface(
      * SOCIAL view; this is the operator-infra slice. Live (no gate).
      */
     object NetworkOps : NavSurface("network-ops", "Network", CIRISIcons.bus,
-        labelKey = "nav.surface.network_ops",)
+        labelKey = "nav.surface.network_ops")
 
     /**
      * Storage (CIRISPersist operator view) — the graph store + on-disk facts:
@@ -187,19 +177,18 @@ sealed class NavSurface(
      * Live (no gate).
      */
     object Storage : NavSurface("storage", "Storage", CIRISIcons.pkg,
-        labelKey = "nav.surface.storage",)
+        labelKey = "nav.surface.storage")
 
     object Audit : NavSurface("audit", "Audit", CIRISIcons.audit,
-        labelKey = "nav.surface.audit",)
+        labelKey = "nav.surface.audit")
     object Consent : NavSurface("consent", "Consent", CIRISIcons.lock,
-        labelKey = "nav.surface.consent",)
+        labelKey = "nav.surface.consent")
     object Data : NavSurface(
         id = "data", label = "Data", icon = CIRISIcons.pkg,
-        children = listOf(Audit, Consent),
-        labelKey = "nav.surface.data",)
+        labelKey = "nav.surface.data")
 
     object Trust : NavSurface("trust", "Trust", CIRISIcons.shield,
-        labelKey = "nav.surface.trust",)
+        labelKey = "nav.surface.trust")
 
     /**
      * Nodes — the first-class node-management surface (promoted from the
@@ -208,7 +197,7 @@ sealed class NavSurface(
      * Live (no gate) — it manages locally-held profiles.
      */
     object Nodes : NavSurface("nodes", "Nodes", CIRISIcons.bus,
-        labelKey = "nav.surface.nodes",)
+        labelKey = "nav.surface.nodes")
 
     /**
      * Manage Consent — view + manage the consent objects this device holds
@@ -216,7 +205,7 @@ sealed class NavSurface(
      * the existing Consent surface). Live (no gate).
      */
     object ManageConsent : NavSurface("manage-consent", "Manage Consent", CIRISIcons.lock,
-        labelKey = "nav.surface.manage_consent",)
+        labelKey = "nav.surface.manage_consent")
 
     /**
      * Contacts / Identities — browsable list of known federation identities
@@ -224,7 +213,7 @@ sealed class NavSurface(
      * and as the picker when delegating to an existing fed-ID. Live (no gate).
      */
     object Contacts : NavSurface("contacts", "Contacts", CIRISIcons.person,
-        labelKey = "nav.surface.contacts",)
+        labelKey = "nav.surface.contacts")
 
     /**
      * Delegations — who the owner has authorized to act on their behalf (active
@@ -232,7 +221,7 @@ sealed class NavSurface(
      * human-consent gate for an agent acting on-behalf-of. Live (no gate).
      */
     object Delegations : NavSurface("delegations", "Delegations", CIRISIcons.keySecure,
-        labelKey = "nav.surface.delegations",)
+        labelKey = "nav.surface.delegations")
 
     /**
      * Identity Management — manage your self fed-ID + the roster of devices
@@ -241,7 +230,7 @@ sealed class NavSurface(
      * §11.7). The app holds no keys; the node signs. Live (no gate).
      */
     object IdentityManagement : NavSurface("identity-management", "My Identity", CIRISIcons.identity,
-        labelKey = "nav.surface.identity_management",)
+        labelKey = "nav.surface.identity_management")
 
     /**
      * Accord — the HUMANITY_ACCORD constitutional surface (CIRISServer #41). The
@@ -251,7 +240,7 @@ sealed class NavSurface(
      * on. Read view + owner-gated concur; the app holds no keys. Live (no gate).
      */
     object Accord : NavSurface("accord", "Trust Root", CIRISIcons.shield,
-        labelKey = "nav.surface.accord",)
+        labelKey = "nav.surface.accord")
 
     /**
      * Provision Accord Holder — the foolproof guided flow (CIRISServer #41, the
@@ -295,7 +284,7 @@ sealed class NavSurface(
      * and the delegable-duty concept. Moderation is a DUTY, not a role.
      */
     object Moderation : NavSurface("moderation", "Moderation", CIRISIcons.handler,
-        labelKey = "nav.surface.moderation",)
+        labelKey = "nav.surface.moderation")
 
     /**
      * Child Safety — per-group content watchlist (opt-in, default OFF, NEVER
@@ -303,23 +292,13 @@ sealed class NavSurface(
      * (`GET /v1/safety/status`). Honest framing is load-bearing.
      */
     object ChildSafety : NavSurface("child-safety", "Child Safety", CIRISIcons.shield,
-        labelKey = "nav.surface.child_safety",)
-
-    /**
-     * Safety (top-level surface) — the umbrella over Moderation + Child Safety.
-     * Navigating to the parent routes to its first child (Moderation).
-     */
-    object Safety : NavSurface(
-        id = "safety", label = "Safety", icon = CIRISIcons.shield,
-        children = listOf(Moderation, ChildSafety),
-        labelKey = "nav.surface.safety",)
+        labelKey = "nav.surface.child_safety")
 
     object Wallet : NavSurface("wallet", "Wallet", CIRISIcons.keySecure,
-        labelKey = "nav.surface.wallet",)
+        labelKey = "nav.surface.wallet")
     object Billing : NavSurface(
         id = "billing", label = "Billing", icon = CIRISIcons.wallet,
-        children = listOf(Wallet),
-        labelKey = "nav.surface.billing",)
+        labelKey = "nav.surface.billing")
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Commons group — 5 UX-facing CEG 0.6 cohort scopes (per CEG §02 grammar:137).
@@ -338,12 +317,6 @@ sealed class NavSurface(
 
     // ── Surfaces folded onto scale layers below (was the standalone Federation
     // group, deleted 2.9.6). Defined before the Layer* parents that nest them.
-
-    object Participate : NavSurface(
-        id = "participate", label = "Participate", icon = CIRISIcons.add,
-        gate = SubstrateGate.NODECORE_NEEDS,
-        labelKey = "commons.federation.participate.title",
-    )
     object EnvironmentGraph : NavSurface(
         // Ungated 2.9.6 — routes to the live EnvironmentInfo screen
         // (/v1/memory?scope=environment). Reachable under Local Community.
@@ -361,21 +334,6 @@ sealed class NavSurface(
 
     // ── The edge v18 trio — gated placeholders (CIRISServer#451). Each is a
     // real registry consumer so the reservation cannot rot as a dead entry.
-    object Video : NavSurface(
-        id = "video", label = "Video", icon = CIRISIcons.play,
-        gate = SubstrateGate.EDGE_V18_VIDEO,
-        labelKey = "mesh.video.title",
-    )
-    object Voting : NavSurface(
-        id = "voting", label = "Voting", icon = CIRISIcons.check,
-        gate = SubstrateGate.EDGE_V18_VOTING,
-        labelKey = "mesh.voting.title",
-    )
-    object PrivateGroups : NavSurface(
-        id = "private-groups", label = "Private Groups", icon = CIRISIcons.lock,
-        gate = SubstrateGate.EDGE_V18_PRIVATE_GROUPS,
-        labelKey = "mesh.private_groups.title",
-    )
 
     /**
      * **Commons** — the reverse-quorum plane a community polices itself with
@@ -390,319 +348,54 @@ sealed class NavSurface(
      * the quorum are the layers beside it. Live (no gate).
      */
     object Commons : NavSurface("commons", "Commons", CIRISIcons.handler,
-        labelKey = "nav.surface.commons",)
+        labelKey = "nav.surface.commons")
 
     /** Other CIRIS occurrences sharing the operator's identity. */
     object LayerFamily : NavSurface(
         id = "layer-family", label = "Family", icon = CIRISIcons.home,
-        children = listOf(Delegation),
         labelKey = "commons.layer.family.title",
     )
 
     /** One home channel / Discord guild / household — locally-trusted peers. */
     object LayerLocalCommunity : NavSurface(
         id = "layer-local-community", label = "Local Community", icon = CIRISIcons.location,
-        children = listOf(EnvironmentGraph),
         labelKey = "commons.layer.local_community.title",
     )
 
     /** Cross-community affinity groups the agent has joined (CEG affiliations). */
     object LayerGlobalCommunities : NavSurface(
         id = "layer-global-communities", label = "Global Communities", icon = CIRISIcons.shield,
-        children = listOf(Participate),
         labelKey = "commons.layer.global_communities.title",
     )
 
     /** The federation as the universal layer (folds species + planet + federation). */
     object LayerGlobalCommons : NavSurface(
         id = "layer-global-commons", label = "Global Commons", icon = CIRISIcons.globe,
-        children = listOf(Constitutional),
         labelKey = "commons.layer.global_commons.title",
     )
 
     // ═══════════════════════════════════════════════════════════════════════════
     // Client group — multi-agent + interface
     // ═══════════════════════════════════════════════════════════════════════════
-
-    object AgentsList : NavSurface(
-        id = "agents-list", label = "Agents", icon = CIRISIcons.identity,
-        gate = SubstrateGate.POST_SUBSTRATE_SUBSTITUTION,
-        labelKey = "nav.surface.agents_list",)
     object ClientInterface : NavSurface("client-interface", "Interface", CIRISIcons.home,
-        labelKey = "nav.surface.client_interface",)
+        labelKey = "nav.surface.client_interface")
+
+    /** Help — under My things, always reachable. */
+    object Help : NavSurface("help", "Help", CIRISIcons.info, labelKey = "nav.surface.help")
 }
 
 /**
- * A blocking substrate issue + the FSD-002 prefix family the surface consumes.
- * Surfaces this metadata on the Coming Soon placeholder so users see *which*
- * upstream produces the data — "the wait itself teaches the architecture".
- */
-enum class SubstrateGate(
-    val repo: String,
-    val issueNumber: Int,
-    val prefixFamily: String,
-    val fsdSection: String,
-) {
-    NODECORE_NEEDS(
-        repo = "CIRISNodeCore", issueNumber = 12,
-        prefixFamily = "need:{domain}:{kind} (new primitive, in flight)",
-        fsdSection = "FSD-002 §3.6 (extension)",
-    ),
-    POST_SUBSTRATE_SUBSTITUTION(
-        repo = "CIRISAgent", issueNumber = 800,
-        prefixFamily = "client / relay / node peer taxonomy (post Step-4)",
-        fsdSection = "substrate-substitution trajectory",
-    ),
-
-    // ── The edge v18 adoption trio (CIRISServer#451) — reserved at the
-    // three-way merge so the three unrepresented mesh surfaces get the
-    // established SOON idiom instead of no representation at all
-    // (FSD/ONE_CLIENT_N_NODES.md §9 Phase 0).
-    EDGE_V18_VIDEO(
-        repo = "CIRISServer", issueNumber = 451,
-        prefixFamily = "A/V mesh session: join → subscribe → publish → heal → seal (MLS-keyed X-Wing hybrid)",
-        fsdSection = "edge v18 adoption — A/V spine",
-    ),
-    EDGE_V18_VOTING(
-        repo = "CIRISServer", issueNumber = 451,
-        prefixFamily = "AccordQuorumEvidence M-of-N at the wire + MergeBallot quorum-above-time (the full ballot plane; Commons objection-ballots already ship)",
-        fsdSection = "edge v18 adoption — voting substrate",
-    ),
-    EDGE_V18_PRIVATE_GROUPS(
-        repo = "CIRISServer", issueNumber = 451,
-        prefixFamily = "scope-native addressing: derived, never-announced group addresses (CC 5.4.6; armed server-side at 0.5.183)",
-        fsdSection = "edge v18 adoption — private groups + docs/SCOPE_PRIVACY.md",
-    ),
-    ;
-
-    val url: String get() = "https://github.com/CIRISAI/$repo/issues/$issueNumber"
-    val shortRef: String get() = "$repo#$issueNumber"
-}
-
-// ─── Group definitions ────────────────────────────────────────────────────────
-
-/** A nav group — collapsible section in the sidebar. */
-data class NavGroup(
-    val id: String,
-    val label: String,
-    val icon: ImageVector,
-    val surfaces: List<NavSurface>,
-    /** Optional accent color hex; null = use default. */
-    val accentHex: String? = null,
-    /**
-     * Optional localization key for the group's ALL-CAPS section header. When
-     * set the sidebar resolves `localizedString(labelKey)` and falls back to
-     * [label] if the locale has no entry. Per 2.9.4 release-prep: every group
-     * carries one.
-     */
-    val labelKey: String? = null,
-)
-
-/**
- * The node-observation group (was "Agent"). This client is the standalone,
- * AI-free CIRIS node client (agent optional): the pure agent/brain cards
- * (Interact/Sessions, Tickets/Scheduler, Tools, Skills, LLM/Agent settings,
- * the agent task Memory card) are pruned from the nav. The keepers are the
- * generic node-observation + node-infra surfaces:
- *   - GraphMemory (the memory graph) and WiseAuthority (escalations/deferrals)
- *     moved here from the old Agent group.
- *   - Telemetry (+ Logs), Services, and System/Runtime/Config — node-infra,
- *     surfaced directly (previously buried under the agent Settings sub-tree).
- * The dropped NavSurface objects remain defined (route compatibility) but are
- * no longer surfaced in any group.
- */
-/**
- * The AGENT group — the agent's own brain cards, re-applied on top of the
- * inherited server (node) nav shell ONLY on the agent build (gated in
- * [epistemicNavGroups] on the probed mode). This is the FULL agent
- * client = the node client + the agent's cards. The server prunes these pure
- * agent/brain surfaces for its standalone AI-free node build; on the agent build
- * they are surfaced again so the agent's Interact reasoning-stream chat, sessions,
- * tasks/scheduler, tools, task-memory and the agent Settings sub-tree (LLM /
- * System / Runtime / Config / Skills) are reachable. Node-observation infra
- * (GraphMemory, WiseAuthority, Telemetry+Logs, Services, System/Runtime/Config)
- * also lives in the [NODE_GROUP] below; a few surfaces intentionally appear in
- * both — the agent framing (a Settings sub-tree, a Memory→Graph card) alongside
- * the node-infra framing. Defined unconditionally (route/reference stability);
- * only surfaced when the probed node carries a brain.
- */
-val AGENT_GROUP = NavGroup(
-    id = "agent",
-    label = "Agent",
-    icon = CIRISIcons.thought,
-    surfaces = listOf(
-        NavSurface.Interact,        // + Sessions (agent chat / reasoning stream)
-        NavSurface.Tickets,         // + Scheduler (agent tasks)
-        NavSurface.Tools,           // agent tools
-        NavSurface.Memory,          // + Graph (agent task memory)
-        NavSurface.AgentSettings,   // + LLM, System, Runtime, Config, Skills
-    ),
-        labelKey = "nav.group.agent",)
-
-val NODE_GROUP = NavGroup(
-    id = "node",
-    label = "Node",
-    icon = CIRISIcons.identity,
-    surfaces = listOf(
-        NavSurface.GraphMemory,     // memory graph (moved from Agent)
-        NavSurface.WiseAuthority,   // escalations / deferrals (moved from Agent)
-        NavSurface.Telemetry,       // + Logs (node-infra)
-        NavSurface.Transport,       // node transports + LoRa/RNode radio config
-        NavSurface.Services,        // node-infra (Tools child dropped)
-        NavSurface.System,          // node-infra (lifted out of agent Settings)
-        NavSurface.Runtime,         // node-infra (lifted out of agent Settings)
-        NavSurface.Config,          // node-infra (lifted out of agent Settings)
-    ),
-        labelKey = "nav.group.node",)
-
-/**
- * The holistic SAFETY group — safety built in FIRST, ahead of content
- * (CIRISServer v0.4.6, the `/v1/safety/` routes). Placed high in the nav (right after
- * Agent) to reflect that the superset's safety layer is foundational, not a
- * bolt-on. Both leaves ship live (the node has the endpoints; the app drives
- * the local node, no crypto in the app).
- */
-val SAFETY_GROUP = NavGroup(
-    id = "safety",
-    label = "Safety",
-    icon = CIRISIcons.shield,
-    surfaces = listOf(
-        NavSurface.Moderation,
-        NavSurface.ChildSafety,
-    ),
-        labelKey = "nav.group.safety",)
-
-val MANAGE_GROUP = NavGroup(
-    id = "manage",
-    label = "Manage",
-    icon = CIRISIcons.handler,
-    surfaces = buildList {
-        addAll(listOf(
-        NavSurface.HealthReputation,
-        NavSurface.Contacts,        // known federation identities (peer store browser)
-        NavSurface.Video,           // A/V mesh — gated on the edge v18 adoption (#451)
-        NavSurface.PrivateGroups,   // scope-native addressing — gated on #451
-        NavSurface.IdentityManagement, // my self fed-ID + device roster (occurrences)
-        NavSurface.Nodes,           // first-class node management (CRUD + switch)
-        NavSurface.ManageConsent,   // consent:replication + user-data consent
-        NavSurface.Delegations,     // device-auth grants — authorize an agent on-behalf
-        NavSurface.Accord,          // HUMANITY_ACCORD — constitutional 2/3 kill-switch
-        NavSurface.ProvisionAccordHolder, // mint a portable-2FA accord-holder identity
-        NavSurface.Users,
-        NavSurface.Adapters,
-        // The substrate operator-infra trio: Edge / Verify / Persist.
-        NavSurface.NetworkOps,      // Edge — local federation/transport facts
-        NavSurface.Trust,           // Verify — attestation ladder (Security)
-        NavSurface.Storage,         // Persist — graph store + disk facts
-        NavSurface.Data,            // + Audit, Consent
-        NavSurface.Billing,         // + Wallet
-        ))
-        // CIRISClient#51 — the only route to Screen.Settings, and therefore to
-        // btn_logout, when AGENT_GROUP is absent. Unconditional: the node nav
-        // must stay a subset of the agent nav.
-        add(NavSurface.Account)
-    },
-        labelKey = "nav.group.manage",)
-
-/**
- * The 5 CEG 0.6 cohort scopes (folded 7 → 5; see [CohortScope.kt]). Each surface
- * is a LayerHubScreen showing Identities · Trust · Policies at that scope. Phase A
- * lands the scaffolding; Phase B folds existing Network federation surface into
- * LayerGlobalCommons.
- */
-/**
- * The Commons group. **A FUNCTION OF THE PROBED MODE, not of the build**
- * (CIRISServer#479): `LayerAgent` is surfaced when the attached node actually
- * carries a brain, so a node that gains one reveals it on the next probe
- * instead of on the next reinstall.
- */
-fun commonsGroup(hasAgent: Boolean) = NavGroup(
-    id = "commons-layers",
-    label = "Commons",
-    icon = CIRISIcons.globe,
-    accentHex = "#C96A38", // CIRISColors.BusTool — shares the federation accent
-    surfaces = buildList {
-        // LayerAgent (Agent/Self) — the agent's own self-scope layer hub. Surfaced
-        // only on the agent build; dropped from the AI-free node client's nav (the
-        // object remains defined for route compatibility).
-        if (hasAgent) add(NavSurface.LayerAgent)
-        add(NavSurface.LayerFamily)
-        add(NavSurface.LayerLocalCommunity)
-        add(NavSurface.LayerGlobalCommunities)
-        add(NavSurface.LayerGlobalCommons)
-        // The reverse-quorum plane those rosters are the quorum OF.
-        add(NavSurface.Commons)
-        // The full ballot plane the commons' objection-ballots foreshadow —
-        // gated on the edge v18 adoption (#451).
-        add(NavSurface.Voting)
-    },
-        labelKey = "nav.group.commons_layers",)
-
-// FEDERATION_GROUP deleted 2.9.6 — it duplicated COMMONS_GROUP (same domain,
-// same accent/icon, sliced by feature instead of by scale). Its surfaces folded
-// onto the scale layers: Participate → Global Communities, Delegation → Family,
-// EnvironmentGraph + Constitutional → Global Commons (as children). "The Commons"
-// (redundant with LayerGlobalCommons) and "Trust Topology" (subsumed by the
-// per-scope Trust sections + NetworkTrustGraph) were removed entirely.
-
-// CLIENT_GROUP — surfaced only on the agent build (gated in [EPISTEMIC_NAV_GROUPS]
-// on the probed mode). Its surfaces (AgentsList, ClientInterface) are pure
-// agent/client cards the server drops for its standalone AI-free node build; on
-// the agent build they are surfaced again. Defined unconditionally for
-// route/reference stability.
-val CLIENT_GROUP = NavGroup(
-    id = "client",
-    label = "Client",
-    icon = CIRISIcons.home,
-    surfaces = listOf(
-        NavSurface.AgentsList,
-        NavSurface.ClientInterface,
-    ),
-        labelKey = "nav.group.client",)
-
-/** All groups in display order. The scale-organized Commons group absorbs what
- *  used to be the separate Federation group (deleted 2.9.6). The former "Agent"
- *  group is now the node-observation "Node" group.
+ * Surfaces NOT placed in any circle or instrument — flow-only screens reached
+ * by direct app routing (the pre-login flow, ceremonies, the top-bar
+ * utilities). Listed here so the nav module has a single authoritative
+ * inventory for the no-orphans test in `CirclesNavTest`.
  *
- *  Agent-only groups (AGENT_GROUP, CLIENT_GROUP) are gated on the PROBED
- *  mode (CIRISServer#479) — absent while the attached node carries no brain,
- *  present the moment it does, with no reinstall. Under `hasAgent` the client
- *  leads with AGENT_GROUP (agent brain cards), followed by the inherited
- *  node-observation NODE_GROUP + the shared Safety / Manage / Commons shells, with
- *  CLIENT_GROUP last. */
-fun epistemicNavGroups(hasAgent: Boolean): List<NavGroup> = buildList {
-    if (hasAgent) add(AGENT_GROUP)
-    add(NODE_GROUP)
-    add(SAFETY_GROUP)
-    add(MANAGE_GROUP)
-    add(commonsGroup(hasAgent))
-    if (hasAgent) add(CLIENT_GROUP)
-}
-
-/**
- * Walk the entire surface tree (depth-first) — used by routers needing the
- * full leaf catalog without re-traversing the group structure each time.
- */
-fun allSurfaces(): List<NavSurface> = epistemicNavGroups(hasAgent = true).flatMap { group ->
-    group.surfaces.flatMap { surface -> surface.descendantsAndSelf() }
-}
-
-/** This surface plus all transitive children (depth-first). */
-fun NavSurface.descendantsAndSelf(): List<NavSurface> =
-    listOf(this) + children.flatMap { it.descendantsAndSelf() }
-
-/**
- * Surfaces NOT exposed via [EPISTEMIC_NAV_GROUPS] — flow-only screens reached
- * by direct app routing (pre-login flow, top-bar utilities). Listed here so the
- * nav module has a single authoritative inventory for testing the no-orphans
- * invariant.
- *
- * IDs only (no NavSurface instances) — these aren't sidebar-navigable.
+ * IDs only (no NavSurface instances) — these aren't navigable from the shell.
  */
 val FLOW_ONLY_SURFACES = listOf(
     "startup",
     "login",
     "setup",
     "server-connection",
-    "help",
+    "accord-ceremony",
 )

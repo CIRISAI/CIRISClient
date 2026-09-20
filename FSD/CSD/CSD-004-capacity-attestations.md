@@ -35,8 +35,9 @@ screen: HealthReputation
 ```
 
 No "reached from" column: `nav_map` derives
-`nav_group_manage -> nav_epistemic_health_reputation` from the client's own tag
-rules, and the checker refuses this block if that route does not exist.
+`circle_local_community -> tab_decisions` (Neighbours › Decisions, where the
+tab's only card is this screen) from the client's own tag rules, and the
+checker refuses this block if that route does not exist.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -179,8 +180,8 @@ a rendered card from live data on the first run that could reach the screen.
 
 ## 5. QA plan
 
-**Platforms.** All five. The hop is `nav_group_manage ->
-nav_epistemic_health_reputation`, derived, and identical on each.
+**Platforms.** All five. The hop is `circle_local_community -> tab_decisions`,
+derived, and identical on each.
 
 **Acceptance — functional**
 1. A person sees capacity attestations that are live data, not a gate.

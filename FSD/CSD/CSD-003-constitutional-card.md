@@ -27,11 +27,11 @@ surface: constitutional
 screen: Constitutional
 ```
 
-A **child** surface: `nav_map` derives `nav_group_commons-layers ->
-nav_epistemic_layer_global_commons -> nav_epistemic_constitutional`. Clicking it
-directly would fail as "element not found" on a sidebar whose parent had not
-expanded — indistinguishable from a broken screen, which on a safety surface is
-the worst possible confusion.
+A card in Everyone › Files: `nav_map` derives `circle_global_commons ->
+tab_files -> nav_epistemic_constitutional` (wave 1 — the founding record is a
+file in the public circle). Clicking the row before its tab is on screen would
+fail as "element not found" — indistinguishable from a broken screen, which on
+a safety surface is the worst possible confusion; the runner walks the chain.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839

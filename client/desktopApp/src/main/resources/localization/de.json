@@ -3187,7 +3187,8 @@
       "trust": "Vertrauen",
       "users": "Benutzer",
       "wallet": "Wallet",
-      "wise_authority": "Menschlicher Berater"
+      "wise_authority": "Menschlicher Berater",
+      "help": "Hilfe"
     },
     "circle": {
       "agent": "Nur ich",
@@ -3195,6 +3196,62 @@
       "local_community": "Nachbarn",
       "global_communities": "Gemeinschaften und Unternehmen",
       "global_commons": "Alle"
+    },
+    "tab": {
+      "files": "Dateien",
+      "chats": "Chats",
+      "people": "Personen",
+      "safety": "Sicherheit",
+      "rules": "Regeln",
+      "decisions": "Entscheidungen",
+      "record": "Protokoll"
+    },
+    "circle_sub": {
+      "agent": "Nur Sie",
+      "family": "Familie",
+      "local_community": "Lokale Gemeinschaft",
+      "global_communities": "Ausgewählte Gruppen",
+      "global_commons": "Öffentlich"
+    },
+    "circle_rule": {
+      "agent": "niemand sonst",
+      "family": "vor allen außerhalb der Familie verborgen",
+      "local_community": "jeder kann etwas stoppen; nur eine Mehrheit kann das rückgängig machen",
+      "global_communities": "die gleiche Bremse, mit kürzeren Zeitfenstern",
+      "global_commons": "öffentlich und meist einseitig"
+    },
+    "instrument": {
+      "devices_keys": "Geräte & Schlüssel",
+      "everything_i_shared": "Alles, was ich geteilt habe",
+      "this_node": "Dieser Knoten",
+      "someone_i_trust": "Jemand, dem ich vertraue",
+      "help": "Hilfe"
+    },
+    "empty": {
+      "files": "Noch nichts in den Dateien dieses Kreises. Was Sie erstellen, beginnt in Nur ich und verlässt diesen Bereich erst, wenn Sie es sagen.",
+      "chats": "Noch keine Unterhaltungen in diesem Kreis.",
+      "people": "Noch niemand in diesem Kreis.",
+      "safety": "Hier gibt es nichts, worum man sich kümmern müsste.",
+      "rules": "Für diesen Kreis sind keine Regeln festgelegt.",
+      "decisions": "Hier gibt es noch nichts zu entscheiden.",
+      "record": "In diesem Kreis ist noch nichts passiert.",
+      "files_agent": "Noch nichts hier. Hier beginnt alles, und nichts davon wird angekündigt.",
+      "decisions_agent": "Hier ist niemand, mit dem Sie entscheiden könnten. Entscheidungen beginnen in Familie.",
+      "decisions_family": "Eine Familie entscheidet durch Gespräche. Hier gibt es nichts, worüber abgestimmt werden könnte."
+    },
+    "my_things": "Meine Sachen",
+    "stop_everything": "Alles stoppen",
+    "stop": {
+      "title": "Alles stoppen?",
+      "fact_what_label": "Was stoppt",
+      "fact_what": "Ihr Assistent hört sofort auf, für Sie zu denken, zu antworten und zu handeln.",
+      "fact_keeps_label": "Was bleibt",
+      "fact_keeps": "Ihre Dateien, Ihre Kreise und jeder Datensatz bleiben genau so, wie sie sind.",
+      "fact_again_label": "Erneuter Start",
+      "fact_again": "Über Meine Sachen › Dieser Knoten, wann immer Sie möchten.",
+      "confirm": "Alles stoppen",
+      "nothing_title": "Für Sie läuft nichts",
+      "nothing_body": "Auf diesem Knoten denkt oder handelt kein Assistent, daher gibt es nichts zu stoppen. Die Schaltfläche ist trotzdem hier, an derselben Stelle, weil sie es immer ist."
     }
   },
   "network": {

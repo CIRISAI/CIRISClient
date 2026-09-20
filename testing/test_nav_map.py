@@ -1,4 +1,4 @@
-"""The sidebar hop is derived from the client, and must stay derived.
+"""The shell hop is derived from the client, and must stay derived.
 
 FSD/CSD_STANDARD.md §5: a flow never encodes the walk to its first screen. The
 runner does it, so a sidebar reorder is one fix instead of one per flow. That
@@ -31,43 +31,47 @@ def hops() -> dict[str, list[str]]:
     return nav_map.build()
 
 
-def test_the_tag_rule_matches_the_clients_own(hops):
-    """`navTag` is one rule; two copies of it is one copy too many."""
-    src = nav_map.SIDEBAR.read_text(encoding="utf-8")
-    m = re.search(r'"nav_epistemic_\$\{navSlug\(surfaceId\)\}"', src)
-    assert m, (
-        "EpistemicSidebar's navTag no longer spells the rule this module mirrors — "
-        "re-read it before trusting any hop"
-    )
+def test_the_tag_rules_match_the_clients_own(hops):
+    """`navTag`, `circleTag`, `Tab.tag` and `Instrument.tag` are one rule each; two copies is one too many."""
+    src = nav_map.TREE.read_text(encoding="utf-8")
+    assert 'fun navTag(surface: NavSurface): String = "nav_epistemic_" + slug(surface.id)' in src
+    assert 'fun circleTag(scope: CohortScope): String = "circle_" + slug(scope.id)' in src
+    assert 'val tag: String get() = "tab_$id"' in src
+    assert 'val tag: String get() = "nav_instrument_" + id.replace(\'-\', \'_\')' in src
+    assert 'const val MY_THINGS_TAG = "btn_my_things"' in src
     assert nav_map.nav_tag("health-reputation") == "nav_epistemic_health_reputation"
-
-
-def test_the_group_tag_rule_matches_the_clients_own(hops):
-    src = nav_map.SIDEBAR.read_text(encoding="utf-8")
-    assert 'testableClickable(groupTag(group.id))' in src, (
-        "the group toggle tag rule moved"
-    )
-    assert nav_map.group_tag("manage") == "nav_group_manage"
+    assert nav_map.circle_tag("local-community") == "circle_local_community"
+    assert nav_map.instrument_tag("this-node") == "nav_instrument_this_node"
 
 
 @pytest.mark.parametrize("screen", CSD_SCREENS)
 def test_every_csd_screen_has_a_route(hops, screen):
     chain = hops.get(screen)
-    assert chain, f"no sidebar route to {screen!r} — a CSD flow starting there cannot be reached"
-    assert chain[-1].startswith("nav_epistemic_"), f"{screen}: the hop must end on a surface"
+    assert chain, f"no route to {screen!r} — a CSD flow starting there cannot be reached"
+    assert chain[0].startswith("circle_") or chain[0] == nav_map.MY_THINGS, f"{screen}: a chain starts on a circle or on My things"
+    assert chain[-1].startswith(("nav_epistemic_", "tab_")), f"{screen}: the hop must end on a row or on the tab that shows it directly"
 
 
-def test_a_child_surface_is_reached_through_its_parent(hops):
-    """`Constitutional` is a child of the Global Commons layer, not a top-level
-    entry. A hop that clicked it directly would fail on a sidebar that has not
-    expanded its parent — and would fail as "element not found", the message
-    that is indistinguishable from a broken screen."""
-    chain = hops["Constitutional"]
-    assert chain == [
-        "nav_group_commons_layers",
-        "nav_epistemic_layer_global_commons",
-        "nav_epistemic_constitutional",
-    ], chain
+def test_a_single_card_tab_shows_the_card_and_the_chain_ends_on_the_tab(hops):
+    """People is Contacts: in every circle but one it is the tab's only card, so
+    the shell shows it directly and there is no row to click. A chain that
+    named `nav_epistemic_contacts` there would be a ghost."""
+    assert hops["Contacts"] == ["circle_agent", "tab_people"], hops["Contacts"]
+    assert nav_map.expected_tail("contacts") == "tab_people"
+    # and a multi-card tab ends on the row
+    assert hops["Constitutional"] == ["circle_global_commons", "tab_files", "nav_epistemic_constitutional"], hops["Constitutional"]
+    assert nav_map.expected_tail("constitutional") == "nav_epistemic_constitutional"
+
+
+def test_an_instrument_surface_is_reached_through_my_things(hops):
+    assert hops["ManageNodes"] == [nav_map.MY_THINGS, "nav_instrument_this_node", "nav_epistemic_nodes"], hops["ManageNodes"]
+
+
+def test_the_node_build_is_a_subset(hops):
+    node = nav_map.build(has_agent=False)
+    assert "Interact" not in node and "Interact" in hops
+    for screen, chain in node.items():
+        assert screen in hops, screen
 
 
 def test_the_map_is_not_trivially_small(hops):

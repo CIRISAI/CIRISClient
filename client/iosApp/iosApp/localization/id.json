@@ -3187,7 +3187,8 @@
       "trust": "Kepercayaan",
       "users": "Pengguna",
       "wallet": "Dompet",
-      "wise_authority": "Otoritas Bijak"
+      "wise_authority": "Otoritas Bijak",
+      "help": "Bantuan"
     },
     "circle": {
       "agent": "Hanya saya",
@@ -3195,6 +3196,62 @@
       "local_community": "Tetangga",
       "global_communities": "Komunitas dan bisnis",
       "global_commons": "Semua orang"
+    },
+    "tab": {
+      "files": "Berkas",
+      "chats": "Obrolan",
+      "people": "Orang",
+      "safety": "Keamanan",
+      "rules": "Aturan",
+      "decisions": "Keputusan",
+      "record": "Catatan"
+    },
+    "circle_sub": {
+      "agent": "hanya Anda",
+      "family": "Keluarga",
+      "local_community": "Komunitas lokal",
+      "global_communities": "kelompok pilihan",
+      "global_commons": "publik"
+    },
+    "circle_rule": {
+      "agent": "tidak ada orang lain",
+      "family": "tersembunyi dari semua orang di luar",
+      "local_community": "siapa pun bisa menghentikannya; hanya mayoritas yang bisa membatalkannya",
+      "global_communities": "rem yang sama, dengan jendela yang lebih singkat",
+      "global_commons": "publik, dan sebagian besar satu arah"
+    },
+    "instrument": {
+      "devices_keys": "Perangkat & kunci",
+      "everything_i_shared": "Semua yang saya bagikan",
+      "this_node": "Node ini",
+      "someone_i_trust": "Seseorang yang saya percayai",
+      "help": "Bantuan"
+    },
+    "empty": {
+      "files": "Belum ada apa pun di berkas lingkaran ini. Apa yang Anda buat dimulai di Hanya saya dan hanya berpindah ke luar saat Anda mengizinkannya.",
+      "chats": "Belum ada percakapan di lingkaran ini.",
+      "people": "Belum ada siapa pun di lingkaran ini.",
+      "safety": "Tidak ada yang perlu dijaga di sini.",
+      "rules": "Belum ada aturan yang ditetapkan untuk lingkaran ini.",
+      "decisions": "Belum ada yang perlu diputuskan di sini.",
+      "record": "Belum ada yang terjadi di lingkaran ini.",
+      "files_agent": "Belum ada apa pun di sini. Di sinilah semuanya dimulai, dan tidak ada yang diumumkan ke luar.",
+      "decisions_agent": "Tidak ada siapa pun di sini untuk memutuskan bersama. Keputusan dimulai di Keluarga.",
+      "decisions_family": "Keluarga memutuskan dengan berbicara. Tidak ada yang perlu dipungut suara di sini."
+    },
+    "my_things": "Milik saya",
+    "stop_everything": "Hentikan semuanya",
+    "stop": {
+      "title": "Hentikan semuanya?",
+      "fact_what_label": "Yang berhenti",
+      "fact_what": "Asisten Anda berhenti berpikir, menjawab, dan bertindak untuk Anda, sekarang juga.",
+      "fact_keeps_label": "Yang tetap ada",
+      "fact_keeps": "Berkas, lingkaran, dan setiap catatan Anda tetap sama seperti sebelumnya.",
+      "fact_again_label": "Memulai lagi",
+      "fact_again": "Dari Milik saya › Node ini, kapan pun Anda pilih.",
+      "confirm": "Hentikan semuanya",
+      "nothing_title": "Tidak ada yang berjalan untuk Anda",
+      "nothing_body": "Tidak ada asisten yang berpikir atau bertindak di node ini, jadi tidak ada yang perlu dihentikan. Tombol ini tetap ada di sini, di tempat yang sama, karena memang selalu begitu."
     }
   },
   "network": {

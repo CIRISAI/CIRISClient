@@ -40,7 +40,6 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.CohortScope
-import ai.ciris.mobile.shared.ui.nav.SubstrateGate
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 
 /**
@@ -68,7 +67,6 @@ fun LayerHubScreen(
     onOpenDelegations: (() -> Unit)? = null,
     onIssueClick: (String) -> Unit = {},
 ) {
-    val gate = scopeGate(scope)
     val scrollState = rememberTestableScrollState()
     Box(
         modifier = Modifier
@@ -97,7 +95,6 @@ fun LayerHubScreen(
                 icon = CIRISIcons.person,
                 titleKey = "commons.layer.section.identities",
                 descriptionKey = identitiesDescriptionKey(scope),
-                gate = gate,
                 onIssueClick = onIssueClick,
             )
 
@@ -106,7 +103,6 @@ fun LayerHubScreen(
                 icon = CIRISIcons.shield,
                 titleKey = "commons.layer.section.trust",
                 descriptionKey = trustDescriptionKey(scope),
-                gate = gate,
                 onIssueClick = onIssueClick,
             )
 
@@ -115,7 +111,6 @@ fun LayerHubScreen(
                 icon = CIRISIcons.lock,
                 titleKey = "commons.layer.section.policies",
                 descriptionKey = policiesDescriptionKey(scope),
-                gate = gate,
                 onIssueClick = onIssueClick,
             )
         }
@@ -288,7 +283,6 @@ private fun LayerSection(
     icon: ImageVector,
     titleKey: String,
     descriptionKey: String,
-    gate: SubstrateGate? = null,
     onIssueClick: (String) -> Unit,
 ) {
     Surface(
@@ -319,80 +313,19 @@ private fun LayerSection(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                if (gate != null) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    ComingSoonBadge()
-                }
             }
             Text(
                 text = localizedString(descriptionKey),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             )
-            if (gate != null) {
-                GateRow(gate = gate, onIssueClick = onIssueClick)
-            }
         }
     }
 }
 
-@Composable
-private fun ComingSoonBadge() {
-    Surface(
-        color = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.18f),
-        shape = RoundedCornerShape(4.dp),
-    ) {
-        Text(
-            text = localizedString("commons.layer.badge.coming_soon"),
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
-    }
-}
 
 
 
-@Composable
-private fun GateRow(gate: SubstrateGate, onIssueClick: (String) -> Unit) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testableClickable("layer_gate_${gate.name.lowercase()}") {
-                onIssueClick(gate.url)
-            },
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        shape = RoundedCornerShape(8.dp),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Text(
-                text = "🔗",
-                fontSize = 11.sp,
-            )
-            Text(
-                text = gate.shortRef,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.primary,
-            )
-            Text(
-                text = "·",
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = gate.fsdSection,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
 
 // ─── Per-scope metadata ──────────────────────────────────────────────────────
 
@@ -404,14 +337,6 @@ private fun scopeIcon(scope: CohortScope): ImageVector = when (scope) {
     CohortScope.GLOBAL_COMMONS -> CIRISIcons.globe
 }
 
-private fun scopeGate(scope: CohortScope): SubstrateGate? = when (scope) {
-    // EDGE_PEERRESOLVER (CIRISEdge#22) has shipped; all cohort scopes are live.
-    CohortScope.AGENT,
-    CohortScope.FAMILY,
-    CohortScope.LOCAL_COMMUNITY,
-    CohortScope.GLOBAL_COMMUNITIES,
-    CohortScope.GLOBAL_COMMONS -> null
-}
 
 private fun scopeTitleKey(scope: CohortScope): String = "commons.layer.${scope.id.replace('-', '_')}.title"
 
