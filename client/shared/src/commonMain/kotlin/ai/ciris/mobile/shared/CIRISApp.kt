@@ -875,7 +875,7 @@ fun CIRISApp(
             wiseAuthorityViewModel.stopApprovalWatch()
         }
     }
-    // Drives the nav badge — see EpistemicSidebar(badges = ...) below.
+    // The count of approvals waiting on the person; wave 2 puts it on the Decisions tab.
     val pendingApprovalCount by wiseAuthorityViewModel.pendingApprovalCount.collectAsState()
 
     val servicesViewModel: ServicesViewModel = viewModel {
@@ -1772,10 +1772,9 @@ fun CIRISApp(
     ) {
         CirisTheme(ground = ground, accent = selectedColorTheme) {
             // ─── 2.9.4 — Epistemic Commons sidebar shell ─────────────────────
-            // Pre-login screens (Startup/Login/Setup/ServerConnection) and the
-            // Help utility have no NavSurface; for those the sidebar is hidden
-            // and content fills the screen. After login, the sidebar replaces
-            // the old top-bar dropdown nav as the SOLE navigation chrome.
+            // Pre-login screens (Startup/Login/Setup/ServerConnection) have no
+            // shell and fill the window. After login the circles shell is the
+            // SOLE navigation chrome.
             val activeSurface = screenToSurface(currentScreen)
             val showSidebar = currentScreen !is Screen.Startup &&
                 currentScreen !is Screen.Login &&
@@ -1789,18 +1788,6 @@ fun CIRISApp(
             val capacityForCard by interactViewModel.cellVizState.collectAsState()
             val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
 
-            // Mobile-aware nav chrome. On narrow viewports (Material 3 compact
-            // window class, <600.dp wide) the EpistemicSidebar is dismissed by
-            // default and surfaced through a `ModalNavigationDrawer` — slides
-            // in from the left, scrims the content, dismisses on tap-outside,
-            // and self-closes when the user selects a destination. A persistent
-            // top-left hamburger button (`btn_nav_drawer_open`) overlays the
-            // content as the affordance to open the drawer. On wider viewports
-            // the sidebar stays permanently in a `Row` alongside content — the
-            // existing desktop / tablet layout. The 600.dp breakpoint matches
-            // Material 3's WindowWidthSizeClass.Compact boundary.
-            val drawerState = rememberDrawerState(DrawerValue.Closed)
-            val drawerScope = rememberCoroutineScope()
 
             val mainScreenContent: @Composable (androidx.compose.ui.Modifier) -> Unit = { contentModifier ->
                 androidx.compose.foundation.layout.Box(modifier = contentModifier) {
@@ -4710,26 +4697,6 @@ fun CIRISApp(
                     apiClient = apiClient,
                 )
             }
-            Screen.Participate -> {
-                ai.ciris.mobile.shared.ui.screens.federation.ParticipateScreen(
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
-            Screen.Video -> {
-                ai.ciris.mobile.shared.ui.screens.mesh.VideoScreen(
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
-            Screen.Voting -> {
-                ai.ciris.mobile.shared.ui.screens.mesh.VotingScreen(
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
-            Screen.PrivateGroups -> {
-                ai.ciris.mobile.shared.ui.screens.mesh.PrivateGroupsScreen(
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
             Screen.Delegation -> {
                 val delegationsList by delegationsViewModel.delegations.collectAsState()
                 val isDelegationsLoading by delegationsViewModel.loading.collectAsState()
@@ -4758,11 +4725,6 @@ fun CIRISApp(
                     onNavigateBack = { currentScreen = Screen.LayerGlobalCommons },
                     onOpenAccordCeremony = { currentScreen = Screen.AccordCeremony },
                     onOpenProvisionHolder = { currentScreen = Screen.ProvisionAccordHolder },
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
-            Screen.AgentsList -> {
-                ai.ciris.mobile.shared.ui.screens.AgentsListScreen(
                     onIssueClick = { url -> uriHandler.openUri(url) },
                 )
             }
@@ -4844,6 +4806,27 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
+            is Screen.CircleTab -> {
+                val sc = currentScreen as Screen.CircleTab
+                val c = ai.ciris.mobile.shared.ui.nav.CohortScope.fromId(sc.circleId)
+                val tb = ai.ciris.mobile.shared.ui.nav.Tab.entries.firstOrNull { it.id == sc.tabId }
+                if (c != null && tb != null) {
+                    ai.ciris.mobile.shared.ui.shell.TabPage(
+                        circle = c, tab = tb, hasAgent = clientMode?.isAgent ?: false,
+                        onOpen = { surf -> currentScreen = surfaceToScreen(surf) },
+                    )
+                }
+            }
+            is Screen.Instrument -> {
+                val sc = currentScreen as Screen.Instrument
+                val inst = ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments.firstOrNull { it.id == sc.id }
+                if (inst != null) {
+                    ai.ciris.mobile.shared.ui.shell.InstrumentPage(
+                        instrument = inst, hasAgent = clientMode?.isAgent ?: false,
+                        onOpen = { surf -> currentScreen = surfaceToScreen(surf) },
+                    )
+                }
+            }
             Screen.LayerFamily -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY,
                 hasAgent = clientMode?.isAgent ?: false,
@@ -4867,249 +4850,123 @@ fun CIRISApp(
                 } // close Box(modifier = contentModifier)
             } // close mainScreenContent lambda
 
-            androidx.compose.foundation.layout.BoxWithConstraints(
-                modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-            ) {
-                val isCompactWindow = maxWidth < 600.dp
-
-                val sidebarComposable: @Composable () -> Unit = {
-                    ai.ciris.mobile.shared.ui.nav.EpistemicSidebar(
-                        hasAgent = clientMode?.isAgent ?: false,
-                        activeSurface = activeSurface,
-                        onSurfaceSelected = { surf ->
-                            currentScreen = surfaceToScreen(surf)
-                            // Auto-close the drawer on mobile after a
-                            // destination is picked so the user lands on the
-                            // chosen screen instead of staring at the open
-                            // drawer they just used.
-                            if (isCompactWindow) {
-                                drawerScope.launch { drawerState.close() }
-                            }
-                        },
-                        onIssueClick = { url -> uriHandler.openUri(url) },
-                        // "The agent is blocked waiting on you", visible from
-                        // every screen. Keyed by NavSurface.id.
-                        badges = if (pendingApprovalCount > 0) {
-                            mapOf(
-                                ai.ciris.mobile.shared.ui.nav.NavSurface.WiseAuthority.id to pendingApprovalCount
+            // ─── The shell (locked spec, wave 1) ─────────────────────────────
+            // Five circles, seven tabs, My things and Stop in the top bar. The
+            // circle is state of its own; the tab is derived from the screen
+            // (a card knows which tab it lives in). Pre-login screens have no
+            // shell and fill the window.
+            val hasAgentNow = clientMode?.isAgent ?: false
+            val defaultCircle = if (hasAgentNow) ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT
+                else ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY
+            var currentCircle by remember { mutableStateOf<ai.ciris.mobile.shared.ui.nav.CohortScope?>(null) }
+            var showMyThings by remember { mutableStateOf(false) }
+            var showStop by remember { mutableStateOf(false) }
+            val circleNow = currentCircle ?: defaultCircle
+            // A placed surface pulls the circle to one it is in (a deep route,
+            // a back target); the current circle wins when it is there.
+            LaunchedEffect(currentScreen) {
+                val surf = screenToSurface(currentScreen)
+                val sc = currentScreen
+                when {
+                    sc is Screen.CircleTab -> ai.ciris.mobile.shared.ui.nav.CohortScope.fromId(sc.circleId)?.let { currentCircle = it }
+                    surf != null -> ai.ciris.mobile.shared.ui.nav.CirclesNav.circleFor(surf, circleNow)?.let { currentCircle = it }
+                }
+            }
+            val tabNow: ai.ciris.mobile.shared.ui.nav.Tab? = when (val sc = currentScreen) {
+                is Screen.CircleTab -> ai.ciris.mobile.shared.ui.nav.Tab.entries.firstOrNull { it.id == sc.tabId }
+                else -> activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.tabOf(it) }
+            }
+            fun openTab(c: ai.ciris.mobile.shared.ui.nav.CohortScope, t: ai.ciris.mobile.shared.ui.nav.Tab) {
+                val cards = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(c, t, hasAgentNow)
+                currentCircle = c
+                currentScreen = if (cards.size == 1) surfaceToScreen(cards[0]) else Screen.CircleTab(c.id, t.id)
+            }
+            // Back inside the shell: a card opened from a multi-card tab returns
+            // to that tab; an instrument surface returns to its instrument; the
+            // legacy sub-screen map (network screens → the Everyone hub, etc.)
+            // still applies first.
+            val shellBack: Screen? = run {
+                val legacy: Screen? = when (currentScreen) {
+                    Screen.NetworkIdentity, Screen.NetworkMap, Screen.NetworkTrustGraph, Screen.NetworkPeers,
+                    Screen.NetworkInterfaces, Screen.NetworkPaths, Screen.NetworkAnnounces, Screen.NetworkQueue,
+                    Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
+                    is Screen.NetworkPeerDetail -> Screen.NetworkPeers
+                    is Screen.UserChat -> Screen.Contacts
+                    Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+                    Screen.Delegation -> Screen.LayerFamily
+                    Screen.Constitutional -> Screen.LayerGlobalCommons
+                    Screen.GraphMemory -> Screen.Memory
+                    Screen.SkillStudio -> Screen.Adapters
+                    Screen.VizSettings -> Screen.Settings
+                    Screen.ServerConnection, Screen.ClaimNode -> Screen.Interact
+                    Screen.VerifyAgent -> Screen.ManageNodes
+                    else -> null
+                }
+                if (legacy != null) return@run legacy
+                val surf = activeSurface ?: return@run null
+                val placement = ai.ciris.mobile.shared.ui.nav.CirclesNav.placementOf(surf)
+                if (placement != null) {
+                    val t = placement.tab
+                    return@run if (ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circleNow, t, hasAgentNow).size > 1)
+                        Screen.CircleTab(circleNow.id, t.id) else null
+                }
+                ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(surf)?.let { Screen.Instrument(it.id) }
+            }
+            if (!showSidebar) {
+                mainScreenContent(androidx.compose.ui.Modifier.fillMaxSize())
+            } else {
+                ai.ciris.mobile.shared.ui.shell.CirclesShell(
+                    circle = circleNow,
+                    tab = tabNow,
+                    hasAgent = hasAgentNow,
+                    onBack = shellBack?.let { target -> { currentScreen = target } },
+                    onCircle = { c -> openTab(c, tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES) },
+                    onTab = { t -> openTab(circleNow, t) },
+                    onMyThings = { showMyThings = true },
+                    onStop = { showStop = true },
+                    rail = {
+                        for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
+                            ai.ciris.mobile.shared.ui.shell.InstrumentRow(
+                                label = localizedString(inst.labelKey),
+                                glyph = inst.glyph,
+                                tag = inst.tag,
+                                selected = (currentScreen as? Screen.Instrument)?.id == inst.id ||
+                                    (activeSurface != null && ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(activeSurface) == inst),
+                                onClick = { currentScreen = Screen.Instrument(inst.id) },
                             )
-                        } else {
-                            emptyMap()
-                        },
-                        // THE GENERATED VERSION, NOT A LITERAL. This read
-                        // "v2.9.4" while the build generated CLIENT_VERSION =
-                        // 0.5.219 two files away and another call site in this
-                        // same file already passed it — so the rail advertised a
-                        // client seven minors stale against a 2.11.3 agent, on
-                        // every screen, including all 53 in the screen atlas
-                        // (CIRISClient#58).
-                        appVersion = "v" + ai.ciris.mobile.shared.models.CLIENT_VERSION,
-                        // Theme strip at the bottom of the drawer — Light /
-                        // System / Dark segmented control. Wired straight to
-                        // SettingsViewModel so the user can flip themes from
-                        // the global nav surface (matches Material 3 nav
-                        // drawer guidance for global affordances).
-                        brightnessPreference = brightnessPreference,
-                        onBrightnessChange = { settingsViewModel.setBrightnessPreference(it) },
-                        // CIRIS signet at the top of the drawer doubles as the
-                        // close button — matches the open affordance (also a
-                        // CIRIS signet) so the icon contract is "tap the CIRIS
-                        // signet to toggle the drawer, always and everywhere".
-                        onCloseRequest = if (isCompactWindow) {
-                            { drawerScope.launch { drawerState.close() } }
-                        } else null,
-                    )
+                        }
+                    },
+                ) {
+                    // Card screens read this to drop their own back arrow: inside
+                    // the shell the top bar is the one back affordance at EVERY
+                    // width (a tab is not a sub-screen), which is the contract the
+                    // drawer overlay used to provide on phones only. Wave 2 removes
+                    // the per-screen bars altogether.
+                    CompositionLocalProvider(
+                        ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow provides true,
+                    ) {
+                        mainScreenContent(androidx.compose.ui.Modifier.fillMaxSize())
+                    }
                 }
+            }
 
-                if (showSidebar && isCompactWindow) {
-                    ModalNavigationDrawer(
-                        drawerState = drawerState,
-                        drawerContent = {
-                            ModalDrawerSheet { sidebarComposable() }
-                        },
-                    ) {
-                        androidx.compose.foundation.layout.Box(
-                            modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                        ) {
-                            // Federation screens read this to suppress their
-                            // own top-bar back arrow on compact viewports —
-                            // the global overlay below handles back here.
-                            CompositionLocalProvider(
-                                ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow provides true,
-                            ) {
-                                mainScreenContent(androidx.compose.ui.Modifier.fillMaxSize())
-                            }
-                            // ─── 3-state global nav icon ───────────────────
-                            // ONE button at the top-left, three states:
-                            //   1. Drawer OPEN              → hamburger (closes drawer)
-                            //   2. Drawer closed, sub-screen → back arrow (back to parent)
-                            //   3. Drawer closed, top-level → larger CIRIS signet (opens drawer)
-                            // Eliminates the prior "stacked back-arrow + signet"
-                            // problem (Samsung-reported) where each federation
-                            // Scaffold also rendered its own back arrow. The
-                            // federation screens now suppress THEIR back arrow
-                            // on compact viewports via `LocalIsCompactWindow`;
-                            // this button is the single source of truth.
-                            // GLOBAL STANDARD: this top-left icon is the single
-                            // back affordance for every sub-screen on compact.
-                            // Map each sub-screen to its parent; every screen
-                            // listed here suppresses its OWN TopAppBar back arrow
-                            // on compact via LocalIsCompactWindow, so the signet/
-                            // back never co-exist (Samsung-reported). Roots
-                            // (Interact / Login / Layer* hubs) fall to `else` and
-                            // show the CIRIS signet (opens the drawer) instead.
-                            val backTarget: Screen? = when (currentScreen) {
-                                // Federation sub-screens → the Global Commons hub
-                                Screen.NetworkIdentity,
-                                Screen.NetworkMap,
-                                Screen.NetworkTrustGraph,
-                                Screen.NetworkPeers,
-                                Screen.NetworkInterfaces,
-                                Screen.NetworkPaths,
-                                Screen.NetworkAnnounces,
-                                Screen.NetworkQueue,
-                                Screen.NetworkDiagnostics,
-                                Screen.NetworkContent -> Screen.LayerGlobalCommons
-                                is Screen.NetworkPeerDetail -> Screen.NetworkPeers
-                                // A chat → the contact list it was opened from.
-                                // This is a SECOND, independent mapping: the
-                                // PlatformBackHandler `when` above drives the
-                                // hardware/gesture back, this one drives the
-                                // compact-window overlay's affordance. ChatScreen
-                                // suppresses its OWN back button below 600dp and
-                                // relies on this — so an omission here renders the
-                                // drawer signet instead of a back arrow, and on
-                                // iOS and web (where PlatformBackHandler is a
-                                // no-op) leaves no way out of a chat at all.
-                                is Screen.UserChat -> Screen.Contacts
-                                // Layer hub sub-screens
-                                Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
-                                Screen.Delegation -> Screen.LayerFamily
-                                Screen.Constitutional -> Screen.LayerGlobalCommons
-                                // Nested sub-screens → their direct parent
-                                Screen.GraphMemory -> Screen.Memory
-                                Screen.SkillStudio -> Screen.Adapters
-                                Screen.VizSettings -> Screen.Settings
-                                Screen.ServerConnection -> Screen.Interact
-                                Screen.ClaimNode -> Screen.Interact
-                                Screen.VerifyAgent -> Screen.ManageNodes
-                                // Sub-screens of the home (Interact)
-                                Screen.Adapters,
-                                Screen.Audit,
-                                Screen.Billing,
-                                Screen.Config,
-                                Screen.Consent,
-                                Screen.DataManagement,
-                                Screen.Help,
-                                Screen.LLMSettings,
-                                Screen.Logs,
-                                Screen.Transport,
-                                Screen.Memory,
-                                Screen.Runtime,
-                                Screen.Scheduler,
-                                Screen.Services,
-                                Screen.Sessions,
-                                Screen.Settings,
-                                Screen.System,
-                                Screen.Telemetry,
-                                Screen.Tickets,
-                                Screen.Tools,
-                                Screen.Trust,
-                                Screen.Users,
-                                Screen.Wallet,
-                                Screen.WiseAuthority -> Screen.Interact
-                                else -> null
-                            }
-                            val isDrawerOpen = drawerState.currentValue == DrawerValue.Open
-                            val iconTestTag = when {
-                                isDrawerOpen -> "btn_nav_drawer_close"
-                                backTarget != null -> "btn_nav_back"
-                                else -> "btn_nav_drawer_open"
-                            }
-                            // Container sized to match the status-bar badge row
-                            // height (badges ~56dp tall after padding). Top pad
-                            // shifted down to vertically center on that row, so
-                            // the signet doesn't read as floating above the
-                            // badges. Inner glyphs sized to nearly fill (4dp
-                            // breathing room) — the prior 36dp signet in a 48dp
-                            // box looked under-sized.
-                            Box(
-                                modifier = androidx.compose.ui.Modifier
-                                    .align(androidx.compose.ui.Alignment.TopStart)
-                                    // Sit below the system status bar — this is a
-                                    // raw overlay (outside the screen's Scaffold),
-                                    // so it must consume the status-bar inset
-                                    // itself or it renders up under the Android
-                                    // clock/notification icons (Samsung-reported).
-                                    .statusBarsPadding()
-                                    // top = 4.dp matches the status-bar badge row
-                                    // (InteractScreen badge Row uses top = 4.dp), so
-                                    // the signet's vertical center lines up with the
-                                    // badge icons rather than sitting slightly low.
-                                    .padding(top = 4.dp, start = 8.dp)
-                                    .size(56.dp)
-                                    // Theme-aware circular scrim so the glyph never
-                                    // disappears: many sub-screen TopAppBars use
-                                    // containerColor = colorScheme.primary, which is
-                                    // the SAME color the glyph used to be tinted — so
-                                    // the back arrow vanished against the bar. Sitting
-                                    // the glyph on a `surface` disc guarantees
-                                    // surface/onSurface contrast over ANY bar color in
-                                    // both light and dark mode. On the home status bar
-                                    // (also `surface`) the disc blends in invisibly, so
-                                    // the top-level signet looks unchanged.
-                                    .background(MaterialTheme.colorScheme.surface, CircleShape)
-                                    .testableClickable(iconTestTag) {
-                                        when {
-                                            isDrawerOpen -> drawerScope.launch { drawerState.close() }
-                                            backTarget != null -> { currentScreen = backTarget }
-                                            else -> drawerScope.launch { drawerState.open() }
-                                        }
-                                    },
-                                contentAlignment = androidx.compose.ui.Alignment.Center,
-                            ) {
-                                when {
-                                    isDrawerOpen -> Icon(
-                                        imageVector = Icons.Filled.Menu,
-                                        contentDescription = "Close navigation",
-                                        // onSurface (not primary): the glyph sits on the
-                                        // `surface` scrim disc, so onSurface guarantees
-                                        // contrast regardless of the bar color behind it.
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = androidx.compose.ui.Modifier.size(40.dp),
-                                    )
-                                    backTarget != null -> Icon(
-                                        imageVector = ai.ciris.mobile.shared.ui.components.CIRISIcons.arrowBack,
-                                        contentDescription = "Go back",
-                                        // onSurface (not primary): see note above — the
-                                        // back arrow used to vanish on primary-colored
-                                        // sub-screen TopAppBars (CIRISAgent #title-overlap).
-                                        tint = MaterialTheme.colorScheme.onSurface,
-                                        modifier = androidx.compose.ui.Modifier.size(40.dp),
-                                    )
-                                    else -> ai.ciris.mobile.shared.ui.components.CIRISSignet(
-                                        modifier = androidx.compose.ui.Modifier.size(52.dp),
-                                        tintColor = MaterialTheme.colorScheme.primary,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    androidx.compose.foundation.layout.Row(
-                        modifier = androidx.compose.ui.Modifier.fillMaxSize(),
-                    ) {
-                        if (showSidebar) {
-                            sidebarComposable()
-                        }
-                        mainScreenContent(
-                            androidx.compose.ui.Modifier
-                                .weight(1f)
-                                .fillMaxHeight(),
-                        )
-                    }
-                }
-            } // close BoxWithConstraints
+            if (showMyThings) {
+                ai.ciris.mobile.shared.ui.shell.MyThingsSheet(
+                    hasAgent = hasAgentNow,
+                    version = "v" + ai.ciris.mobile.shared.models.CLIENT_VERSION,
+                    brightness = brightnessPreference,
+                    onBrightness = { settingsViewModel.setBrightnessPreference(it) },
+                    onInstrument = { inst -> showMyThings = false; currentScreen = Screen.Instrument(inst.id) },
+                    onDismiss = { showMyThings = false },
+                )
+            }
+            if (showStop) {
+                ai.ciris.mobile.shared.ui.shell.StopSheet(
+                    hasAgent = hasAgentNow,
+                    onConfirm = { showStop = false; interactViewModel.shutdown(emergency = true) },
+                    onDismiss = { showStop = false },
+                )
+            }
         } // close MaterialTheme
     } // CompositionLocalProvider
 }
@@ -5812,6 +5669,10 @@ private fun homeScreen(hasAgent: Boolean): Screen =
  * Navigation screens
  */
 private sealed class Screen {
+    /** A circle's tab: the list of cards that live there, or the honest empty. */
+    data class CircleTab(val circleId: String, val tabId: String) : Screen()
+    /** One of the five instruments under My things: its surfaces as rows. */
+    data class Instrument(val id: String) : Screen()
     object Startup : Screen()
     object Login : Screen()
     object Setup : Screen()
@@ -5902,13 +5763,8 @@ private sealed class Screen {
     // HealthReputation ships with a real card (CellVizState-backed).
     // The other six are Coming Soon placeholders pinned to their substrate issue.
     object HealthReputation : Screen()
-    object Participate : Screen()
-    object Video : Screen()
-    object Voting : Screen()
-    object PrivateGroups : Screen()
     object Delegation : Screen()
     object Constitutional : Screen()
-    object AgentsList : Screen()
 
     // Network hub federation sub-screens — all ten live since T-E / T-E-D
     // (2.9.4→2.9.6). Reached via the 10-tile grid on NetworkScreen; not
@@ -6014,14 +5870,9 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Storage -> ai.ciris.mobile.shared.ui.nav.NavSurface.Storage
     Screen.Billing -> ai.ciris.mobile.shared.ui.nav.NavSurface.Billing
     Screen.Wallet -> ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet
-    Screen.Participate -> ai.ciris.mobile.shared.ui.nav.NavSurface.Participate
-    Screen.Video -> ai.ciris.mobile.shared.ui.nav.NavSurface.Video
-    Screen.Voting -> ai.ciris.mobile.shared.ui.nav.NavSurface.Voting
-    Screen.PrivateGroups -> ai.ciris.mobile.shared.ui.nav.NavSurface.PrivateGroups
     Screen.EnvironmentInfo -> ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph
     Screen.Delegation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation
     Screen.Constitutional -> ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional
-    Screen.AgentsList -> ai.ciris.mobile.shared.ui.nav.NavSurface.AgentsList
     Screen.VizSettings -> ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface
     // CEG 0.6 layer hubs (2.9.4 Phase A)
     Screen.LayerAgent -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerAgent
@@ -6032,7 +5883,9 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
     // Flow-only / no sidebar
     Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection, Screen.ClaimNode,
-    Screen.AddFederationId, Screen.Help, Screen.VerifyAgent -> null
+    Screen.Help -> ai.ciris.mobile.shared.ui.nav.NavSurface.Help
+    is Screen.CircleTab, is Screen.Instrument -> null
+    Screen.AddFederationId, Screen.VerifyAgent -> null
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {
@@ -6074,21 +5927,16 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.ProvisionAccordHolder -> Screen.ProvisionAccordHolder
     ai.ciris.mobile.shared.ui.nav.NavSurface.AccordCeremony -> Screen.AccordCeremony
     // Safety parent routes to its first child (Moderation); the two leaves map 1:1.
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Safety -> Screen.Moderation
     ai.ciris.mobile.shared.ui.nav.NavSurface.Moderation -> Screen.Moderation
     ai.ciris.mobile.shared.ui.nav.NavSurface.ChildSafety -> Screen.ChildSafety
     ai.ciris.mobile.shared.ui.nav.NavSurface.Storage -> Screen.Storage
     ai.ciris.mobile.shared.ui.nav.NavSurface.Billing -> Screen.Billing
     ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet -> Screen.Wallet
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Participate -> Screen.Participate
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Video -> Screen.Video
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Voting -> Screen.Voting
-    ai.ciris.mobile.shared.ui.nav.NavSurface.PrivateGroups -> Screen.PrivateGroups
     ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph -> Screen.EnvironmentInfo
     ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation -> Screen.Delegation
     ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional -> Screen.Constitutional
-    ai.ciris.mobile.shared.ui.nav.NavSurface.AgentsList -> Screen.AgentsList
     ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface -> Screen.VizSettings
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Help -> Screen.Help
     // CEG 0.6 layer hubs (2.9.4 Phase A)
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerAgent -> Screen.LayerAgent
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerFamily -> Screen.LayerFamily
