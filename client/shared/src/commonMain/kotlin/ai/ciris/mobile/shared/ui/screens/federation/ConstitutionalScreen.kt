@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens.federation
 
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -153,7 +155,7 @@ fun ConstitutionalScreen(
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Surface(
-                                    color = if (family != null) CIRISColors.SignetTeal.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.08f),
+                                    color = if (family != null) CIRISColors.SignetTeal.copy(alpha = 0.18f) else CirisTheme.tokens.sunken,
                                     shape = RoundedCornerShape(4.dp),
                                 ) {
                                     Text(

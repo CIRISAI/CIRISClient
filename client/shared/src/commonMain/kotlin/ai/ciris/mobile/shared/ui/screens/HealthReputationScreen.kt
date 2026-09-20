@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -175,7 +177,7 @@ private fun CompositeScoreHero(state: CellVizState) {
             .testable("card_capacity_composite"),
         color = CIRISColors.BackgroundDarker,
         shape = RoundedCornerShape(14.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CirisTheme.tokens.hairline),
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -233,7 +235,7 @@ private fun CompositeScoreHero(state: CellVizState) {
                         .height(6.dp)
                         .clip(RoundedCornerShape(3.dp)),
                     color = CIRISColors.AccentCyan,
-                    trackColor = Color.White.copy(alpha = 0.08f),
+                    trackColor = CirisTheme.tokens.sunken,
                 )
             }
             // FRAGILITY — only when measurably elevated, and restored here.
@@ -270,7 +272,7 @@ private fun FactorRow(
             .testable("factor_row_${symbol.lowercase()}"),
         color = CIRISColors.BackgroundDarker,
         shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.05f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CirisTheme.tokens.hairline),
     ) {
         Row(
             modifier = Modifier.padding(14.dp),
@@ -281,7 +283,7 @@ private fun FactorRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.06f)),
+                    .background(CirisTheme.tokens.sunken),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -326,7 +328,7 @@ private fun CapacityMaturityNote(state: CellVizState) {
             .testable("card_capacity_maturity"),
         color = CIRISColors.BackgroundDarker.copy(alpha = 0.6f),
         shape = RoundedCornerShape(10.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.04f)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, CirisTheme.tokens.hairline),
     ) {
         Row(
             modifier = Modifier.padding(12.dp),
@@ -355,7 +357,7 @@ private fun FederationAttestationsSection(state: CellVizState) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(10.dp))
             .background(CIRISColors.BackgroundDarker.copy(alpha = 0.5f))
-            .border(1.dp, Color.White.copy(alpha = 0.06f), RoundedCornerShape(10.dp))
+            .border(1.dp, CirisTheme.tokens.hairline, RoundedCornerShape(10.dp))
             .padding(14.dp)
             .testable("card_federation_capacity_attestations"),
         verticalArrangement = Arrangement.spacedBy(6.dp),
