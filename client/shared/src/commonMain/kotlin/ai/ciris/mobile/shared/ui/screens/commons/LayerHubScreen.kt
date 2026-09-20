@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens.commons
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +18,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -24,17 +27,21 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.CohortScope
 import ai.ciris.mobile.shared.ui.nav.SubstrateGate
-import ai.ciris.mobile.shared.platform.rememberTestableScrollState
+import ai.ciris.mobile.shared.ui.theme.CIRISColors
 
 /**
  * Generic layer hub for the 5 UX-facing cohort scopes. Renders three
@@ -49,21 +56,16 @@ import ai.ciris.mobile.shared.platform.rememberTestableScrollState
  * - **Policies** — trust policies that govern automatic trust at this
  *   scope.
  *
- * Phase A (this commit): three section stubs each pinned to the
- * substrate gate that needs to ship before per-layer data can flow
- * (Edge's PeerResolver for per-scope identity queries). The Global
- * Commons scope routes through this generic hub for now; Phase B will
- * fold the existing NetworkScreen federation surface into the Global
- * Commons hub directly.
- *
- * CEG 0.6 mapping at the wire level: each scope corresponds to one or
- * more `cohort_scope` values from CEG §02 grammar:137 (`self / family /
- * community / affiliations / species / planet / federation`). The 7 →
- * 5 fold is documented on [CohortScope].
+ * EDGE_PEERRESOLVER (CIRISEdge#22) has shipped; the cohort-aware views
+ * are active. Local Community exposes the Environment & Resources surface
+ * directly to allow sharing physical resources, tools, and inventory.
  */
 @Composable
 fun LayerHubScreen(
     scope: CohortScope,
+    hasAgent: Boolean = false,
+    onOpenEnvironment: (() -> Unit)? = null,
+    onOpenDelegations: (() -> Unit)? = null,
     onIssueClick: (String) -> Unit = {},
 ) {
     val gate = scopeGate(scope)
@@ -82,6 +84,13 @@ fun LayerHubScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             LayerHeader(scope = scope, icon = scopeIcon(scope))
+
+            // ── Scope-specific feature cards ──
+            if (scope == CohortScope.LOCAL_COMMUNITY && hasAgent && onOpenEnvironment != null) {
+                LocalCommunityEnvironmentCard(onOpenEnvironment = onOpenEnvironment)
+            } else if (scope == CohortScope.FAMILY && onOpenDelegations != null) {
+                FamilyDelegationsCard(onOpenDelegations = onOpenDelegations)
+            }
 
             LayerSection(
                 testTag = "layer_section_identities_${scope.id.replace('-', '_')}",
@@ -154,12 +163,132 @@ private fun LayerHeader(scope: CohortScope, icon: ImageVector) {
 }
 
 @Composable
+private fun LocalCommunityEnvironmentCard(onOpenEnvironment: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testable("card_local_community_environment"),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = CIRISIcons.snapshot,
+                    contentDescription = null,
+                    tint = CIRISColors.AccentCyan,
+                    modifier = Modifier.size(22.dp),
+                )
+                Text(
+                    text = localizedString("commons.federation.environment_graph.title"),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = localizedString("commons.federation.environment_graph.description"),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            )
+            Button(
+                onClick = onOpenEnvironment,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testableWithHandler("btn_open_environment") { onOpenEnvironment() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    imageVector = CIRISIcons.snapshot,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = localizedString("commons.federation.environment_graph.title"),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FamilyDelegationsCard(onOpenDelegations: () -> Unit) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .testable("card_family_delegations"),
+        color = MaterialTheme.colorScheme.surface,
+        shape = RoundedCornerShape(12.dp),
+        tonalElevation = 2.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Icon(
+                    imageVector = CIRISIcons.send,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+                Text(
+                    text = localizedString("commons.federation.delegation.title"),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Text(
+                text = localizedString("commons.federation.delegation.description"),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
+            )
+            Button(
+                onClick = onOpenDelegations,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testableWithHandler("btn_open_delegations") { onOpenDelegations() },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                ),
+            ) {
+                Icon(
+                    imageVector = CIRISIcons.keySecure,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = localizedString("nav.surface.delegations"),
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun LayerSection(
     testTag: String,
     icon: ImageVector,
     titleKey: String,
     descriptionKey: String,
-    gate: SubstrateGate,
+    gate: SubstrateGate? = null,
     onIssueClick: (String) -> Unit,
 ) {
     Surface(
@@ -190,15 +319,19 @@ private fun LayerSection(
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
-                Spacer(modifier = Modifier.weight(1f))
-                ComingSoonBadge()
+                if (gate != null) {
+                    Spacer(modifier = Modifier.weight(1f))
+                    ComingSoonBadge()
+                }
             }
             Text(
                 text = localizedString(descriptionKey),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
             )
-            GateRow(gate = gate, onIssueClick = onIssueClick)
+            if (gate != null) {
+                GateRow(gate = gate, onIssueClick = onIssueClick)
+            }
         }
     }
 }
@@ -218,6 +351,8 @@ private fun ComingSoonBadge() {
         )
     }
 }
+
+
 
 @Composable
 private fun GateRow(gate: SubstrateGate, onIssueClick: (String) -> Unit) {
@@ -269,16 +404,13 @@ private fun scopeIcon(scope: CohortScope): ImageVector = when (scope) {
     CohortScope.GLOBAL_COMMONS -> CIRISIcons.globe
 }
 
-private fun scopeGate(scope: CohortScope): SubstrateGate = when (scope) {
-    // Per-cohort identity / trust queries land with Edge's PeerResolver
-    // surface (CIRISEdge#22). The Global Commons surface already has the
-    // federation transport substrate in place — the gate is the per-scope
-    // cohort-aware view, not the substrate itself.
+private fun scopeGate(scope: CohortScope): SubstrateGate? = when (scope) {
+    // EDGE_PEERRESOLVER (CIRISEdge#22) has shipped; all cohort scopes are live.
     CohortScope.AGENT,
     CohortScope.FAMILY,
     CohortScope.LOCAL_COMMUNITY,
     CohortScope.GLOBAL_COMMUNITIES,
-    CohortScope.GLOBAL_COMMONS -> SubstrateGate.EDGE_PEERRESOLVER
+    CohortScope.GLOBAL_COMMONS -> null
 }
 
 private fun scopeTitleKey(scope: CohortScope): String = "commons.layer.${scope.id.replace('-', '_')}.title"
