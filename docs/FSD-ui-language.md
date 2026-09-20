@@ -217,6 +217,72 @@ no `current_step` is complete.
 
 ---
 
+## 5a. The look — two grounds, sixteen tokens, nine primitives (wave 0)
+
+The locked spec (Claude Design, 2026-09) settles how the client looks and what
+it is made of. Wave 0 landed the spine; everything after it composes from it.
+
+**Two grounds.** Paper (light) and Instrument (dark), following the brightness
+preference. Sixteen tokens resolved per ground in `ui/theme/CirisTokens.kt` —
+the ONLY file that may name a colour — and read by name:
+`CirisTheme.tokens.mute`, `CirisTheme.tokens.circle(CohortScope.FAMILY)`.
+Three surfaces (ground · raised · sunken) and no fourth; raised is lighter than
+ground and sunken darker in BOTH grounds; every text token clears 4.5:1 on
+every surface (`CirisTokensContrastTest` measures it — two shipped values were
+re-resolved because they did not). `CirisTheme` also feeds Material's neutral
+slots from the tokens, so the 1,600 existing `MaterialTheme.colorScheme` reads
+land on the grounds without being touched; the three accents stay on the
+person's `ColorTheme` until wave 2 decides.
+
+**The lint.** `client/tools/check_colour_literals.py` refuses a NEW colour
+literal anywhere else (a baseline of 933 in 46 files at landing that can only
+fall). Type is a five-step scale (`CirisType`: display · title · body · label ·
+signed — mono marks everything signed); shape is 5–6dp radius, hairlines, no
+shadows (`CirisShape`).
+
+**Nine primitives** under `ui/primitives/`, and every screen is made of them
+and nothing else: `CardShell` (never nests — a nested shell throws in test
+mode), `FieldRow` (label above value by default; two-column at ≥560dp, the
+one layout that differs), `ItemRow` (icon · title · meta · hamburger),
+`ReceiptSheet` (the five facts, generic over any claim), `ScopePill` (the only
+place a circle colour is rendered), `Chip`, `StateBlock` (populated · empty ·
+loading · error · gone · hidden-by-your-rules · UNREVIEWED — error never looks
+like empty, unreviewed is never green), `ConfirmSheet` (exactly three facts),
+`CeremonyBlock`. A tenth primitive means a misclassified family or a design
+inventing something the wire cannot carry.
+
+**The receipt is the test.** If a row came off the wire as a signed claim its
+`ItemRow` carries a `Receipt` and therefore a hamburger (`btn_receipt_<id>`)
+that opens the same five facts as a long-press: who it is about ·
+who sent it · who can see it · what it is · the rule it follows
+(`subject_key_ids` · `attesting_key_id` · `cohort_scope` · `dimension` ·
+`consent:scope`). A fact is `Wire` (the node sent it), `ByRule` (the
+constitution fixes it, section named) or `NotSent` ("This node did not send
+this." in the error tone) — never a guess, never blank, never reduced. A row
+with no hamburger is furniture. CSD-006 is the template; CSD-005 (People) is
+its first binding.
+
+**The namespace is the design system.** `ceg/Dimensions.kt` is generated from
+the pinned CEG registry (`client/ceg/`, rc5@44ae7b2): one `Dim.<name>` per
+family with its polarity, renderer class, and label/gloss localization keys.
+A screen names `Dim.consentKind`; a family with no registry row cannot be
+named, so cannot be rendered (CC 3.1.7 R2). `gen_dimension_table.py --check`
+keeps the table current and refuses a gloss or renderer override the registry
+does not know. The 71 glyphs are generated the same way from the design's path
+data (`client/design/icon-paths.json` → `ui/glyphs/CirisGlyphs.kt`; `Glyph()`
+draws them, dashes honoured).
+
+**The proof screen** is People (`ui/screens/ContactsScreen.kt`): a list, an
+empty state that lands on "add someone", loading, the node-too-old error, and
+the receipt on every contact row. The screen class, nav id and every
+`contacts_*` tag are unchanged — they are the contract CIRISAgent's
+five-platform gate drives — and the file names no colour.
+
+**Next, in order.** Wave 1: the shell — five circles in a bottom bar (rail at
+≥900dp), seven tabs per circle, the pinned Stop, one nav tree, the SOON badge
+deleted. Then Geist as the faces behind the two `CirisType` family slots. Then
+wave 2, one agent per circle, sweeping the literal baseline to zero as it goes.
+
 ## 6. Not built, in order
 
 1. **`/tree` on timeout prints what is on screen** — done in 0.5.204 for `/wait`, `/click`, `/input`.

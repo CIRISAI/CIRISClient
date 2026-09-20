@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "what": "Plain-English label and gloss per CEG dimension the UI touches. Keys are exact registry prefixes, or envelope:<member> for the CC 2.1 envelope members the receipt shows. Every key must resolve or gen_dimension_table.py refuses.",
+    "how": "Add a row when a screen first renders the family. The generator emits localization keys ceg.<slug>.label / ceg.<slug>.gloss; the English lives in en.json and the 28 locales follow through localization/localize.py."
+  },
+  "envelope:subject_key_ids": {
+    "label": "Who it is about",
+    "gloss": "The people this record names. Each of them can take it back."
+  },
+  "envelope:attesting_key_id": {
+    "label": "Who sent it",
+    "gloss": "The key that signed this record. Nobody else could have."
+  },
+  "envelope:cohort_scope": {
+    "label": "Who can see it",
+    "gloss": "The circle this record may travel in. Leaving it asks first."
+  },
+  "envelope:dimension": {
+    "label": "What it is",
+    "gloss": "The kind of record, in the shared vocabulary every node reads the same way."
+  },
+  "envelope:consent:scope": {
+    "label": "The rule it follows",
+    "gloss": "What may happen next with this record: kept, shared, or analysed."
+  },
+  "consent:{kind}": {
+    "label": "Consent",
+    "gloss": "What a person has agreed may happen with records that name them, or what a node has agreed to send a peer."
+  },
+  "trust:{job}:{version}": {
+    "label": "Who vouches for whom",
+    "gloss": "A claim that one key stands behind another for a stated job."
+  },
+  "holds_bytes:sha256:{prefix}": {
+    "label": "Holds a copy",
+    "gloss": "A node saying it holds the bytes for a file, named by their hash."
+  },
+  "objection:{state}": {
+    "label": "Someone spoke up",
+    "gloss": "One person's objection, and where it stands. Never rate-limited."
+  },
+  "content_class:{class}": {
+    "label": "Kind of content",
+    "gloss": "What sort of thing a file is, from a closed list every node shares."
+  },
+  "credits:{domain}:{language}:{subject}": {
+    "label": "Commons credits",
+    "gloss": "Earned by helping. They only go up, and they cannot be sent or sold."
+  },
+  "prohibited:{category}": {
+    "label": "Not allowed",
+    "gloss": "A mark that something crossed one of the lines the constitution draws. It is only ever a minus."
+  },
+  "delivery_receipt:{stream_id}": {
+    "label": "Receipt",
+    "gloss": "A record that something was delivered. Undoing the receipt does not undo the delivery."
+  }
+}

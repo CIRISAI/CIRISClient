@@ -2923,6 +2923,33 @@
     "wallet_trust_degraded": "Tabbas Kayan Aiki Ya Rage",
     "wallet_warning": "Gargaɗi",
     "trace_consent_decline_note": "Ƙin shiga yana nufin wakilinku ba zai iya gina makin capacity ko samun kiredit na gama-gari ba. Kuna iya canza wannan daga baya.",
+    "people_title": "Mutane",
+    "contacts_node_too_old_body_versioned": "Wannan node yana amfani da {version}. Lambobin sadarwa da hira suna bukatar ciris-server 0.5.185 ko sabuwa, don haka ba zai iya amsawa ba tukuna — sauran komai yana aiki kamar yadda aka saba.",
+    "receipt_title": "Rasit",
+    "receipt_open": "Bude rasit",
+    "receipt_close": "Rufe",
+    "receipt_holders": "Inda bytes suke",
+    "receipt_holders_count": "{count} masu riƙe",
+    "receipt_notes": "Bayanan da wasu suka bari",
+    "receipt_notes_none": "Babu wanda ya bar bayani.",
+    "receipt_acts": "Abin da za ku iya yi",
+    "receipt_contact_scope_note": "Bayarwar kanta rikodi ne na fili. Abin da kuke aika wa juna ba na fili ba ne.",
+    "state_loading": "Ana lodi",
+    "state_error": "Wani abu bai yi daidai ba",
+    "state_gone": "Wannan fayil ya ɓace. Babu wanda ke riƙe da kwafi kuma.",
+    "state_hidden_by_rules": "An ɓoye shi ta ƙa'idodinku.",
+    "state_hidden_by_rules_who": "An ɓoye shi ta ƙa'idodinku — {who} ne ya yi masa alama.",
+    "state_unreviewed": "Ba a bincika ba",
+    "state_unreviewed_since": "Ba a bincika tun {when} ba",
+    "confirm_cancel": "Ba yanzu ba",
+    "ceremony_signed_of": "{signed} daga cikin {needed} sun sa hannu",
+    "ceremony_proposed_by": "an gabatar da shi daga {who} · {when}",
+    "ceremony_sign": "Ku sa hannu",
+    "ceremony_refuse": "Ku ƙi",
+    "ceremony_state_proposed": "an gabatar",
+    "ceremony_state_signed": "an sa hannu",
+    "ceremony_state_not_yet": "ba tukuna ba",
+    "receipt_this_node": "Wannan kumburi — ku",
     "verify_title": "Tabbatar da build",
     "verify_hash_label": "Hash na build",
     "verify_button": "Duba",
@@ -3161,6 +3188,13 @@
       "users": "Masu amfani",
       "wallet": "Jakar kuɗi",
       "wise_authority": "Hukumar Hikima"
+    },
+    "circle": {
+      "agent": "Ni kaɗai",
+      "family": "Iyali",
+      "local_community": "Makwabta",
+      "global_communities": "Al'ummomi da Kasuwanci",
+      "global_commons": "Kowa"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "Wannan ID na tarayya ba ya cikin jerin adireshin wannan node. Fara shigar da mabuɗin (peering) — alamar da aka sanar amma ba a shigar ba ba ta da tushen asali kuma ba za a iya ba ta yarda ba.",
     "unreachable": "An san su, amma babu wanda ya amsa. Na'urorinsu na iya kasancewa ba a kan layi ba; saƙonni za su kai musu lokacin da suka dawo.",
     "unresolvable": "Wannan mai ganewa ba ya komawa ga wani abokin hulɗa ba."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Wanda ya shafa",
+        "gloss": "Mutanen da wannan rikodin ya ambace su. Kowannensu na iya janye shi."
+      },
+      "attesting_key_id": {
+        "label": "Wanda ya aika shi",
+        "gloss": "Maɓallin da ya sa hannu kan wannan rikodin. Babu wani wanda zai iya yin haka."
+      },
+      "cohort_scope": {
+        "label": "Wanda zai iya ganin shi",
+        "gloss": "Da'irar da wannan rikodin zai iya tafiya a cikinta. Fitowa daga ciki na neman izini tukuna."
+      },
+      "dimension": {
+        "label": "Abin da yake",
+        "gloss": "Irin rikodin, cikin ƙamus ɗin da aka raba wanda kowane kumburi yake karantawa daidai."
+      },
+      "consent_scope": {
+        "label": "Ka'idar da yake bi",
+        "gloss": "Abin da zai iya faruwa da wannan rikodin nan gaba: ajiye shi, raba shi, ko bincika shi."
+      },
+      "not_sent": "Wannan kumburi bai aika wannan ba.",
+      "by_rule": "An ƙayyade shi ta ka'idar wannan irin rikodin ({cc}); wannan kumburi bai aika shi ba."
+    },
+    "consent_kind": {
+      "label": "Yarda",
+      "gloss": "Abin da wani ya yarda zai iya faruwa da rikodin da ke ambaton sa, ko abin da kumburi ya yarda zai aika wa wani abokin tarayya."
+    },
+    "trust_job_version": {
+      "label": "Wanene ke ba da tabbaci ga wa",
+      "gloss": "Da'awar cewa maɓalli ɗaya yana goyon bayan wani don wani aiki da aka ambata."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Yana riƙe da kwafi",
+      "gloss": "Kumburin da ke cewa yana riƙe da bytes na fayil, wanda hash ɗinsu ya ambace shi."
+    },
+    "objection_state": {
+      "label": "Wani ya yi magana",
+      "gloss": "Ƙorafin mutum ɗaya, da inda ya tsaya. Ba a taɓa iyakance yawan sa ba."
+    },
+    "content_class_class": {
+      "label": "Irin abun ciki",
+      "gloss": "Irin abu da fayil yake, daga jerin da aka rufe wanda kowane kumburi ya raba."
+    },
+    "credits_domain_language_subject": {
+      "label": "Kiredit na gama-gari",
+      "gloss": "An samu ta hanyar taimako. Suna ƙaruwa ne kawai, kuma ba za a iya aika su ko sayar da su ba."
+    },
+    "prohibited_category": {
+      "label": "Ba a yarda ba",
+      "gloss": "Alama cewa wani abu ya ƙetare wani layi daga cikin layukan da kundin tsarin mulki ya zana. Koyaushe alamar ragi ce kawai."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Rasit",
+      "gloss": "Rikodin da ke nuna cewa an isar da wani abu. Sokewar rasit ba ya soke isar da shi ba."
+    },
+    "renderer": {
+      "verified": "An tabbatar",
+      "not_verified": "Ba a tabbatar ba",
+      "indeterminate": "Ba a tantance ba",
+      "violation": "Ya ƙetare iyaka",
+      "partial_violation": "Ya ƙetare iyaka wani ɓangare",
+      "self_report": "Rahoton da kumburin kansa ya bayar",
+      "granted": "An ba da izini",
+      "revoked": "An soke",
+      "expired": "Ya ƙare"
+    }
   }
 }

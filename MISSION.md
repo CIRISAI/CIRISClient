@@ -91,6 +91,10 @@ the report so a worklist is never mistaken for a verdict.
 | `substrate-binaries` | code | An artifact missing its substrate is an artifact that fails on a user's device, not in CI |
 | `toolchain` | code | Fails at the start of the day rather than twenty minutes into a build |
 | `compat-matrix` | normative | "Which client works with which node, and what does it do when they mismatch" must be a published, validated record — not support folklore (`compat/matrix.json`, FSD §6). The record and the code must AGREE: the matrix's `node_min` and the client's `MIN_NODE_VERSION` are one fact written twice, and a banner reading a different floor than the record publishes is folklore with a version number |
+| `colour-literals` (`client/tools/check_colour_literals.py`) | code | A colour named in a screen is a colour that fails in the other ground for one audience and nobody checks; sixteen tokens read by name is what makes both grounds one product |
+| `dimension-table` (`client/tools/gen_dimension_table.py --check`) | normative | A family the UI renders that the registry does not know admits under an authority nobody chose (CC 3.1.7 R2); generating the table from the pinned registry is what makes that a build failure instead of a review note |
+| `glyph-table` (`client/tools/gen_glyphs.py --check`) | code | Seventy-one glyphs drawn once, from the design's path data; a hand-edited copy is the drift the generator exists to prevent |
+| `csd-registry` (`packaging/check_csd_v3.py`) | normative | A CSD that names a family the pinned registry lacks is a contract about vocabulary nobody ratified |
 
 ## 4. Dependencies & gating
 

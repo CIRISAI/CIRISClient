@@ -2923,6 +2923,33 @@
     "wallet_trust_degraded": "하드웨어 신뢰 저하됨",
     "wallet_warning": "경고",
     "trace_consent_decline_note": "옵트아웃을 선택하면 에이전트가 역량 점수를 쌓거나 커먼즈 크레딧을 얻을 수 없습니다. 나중에 변경할 수 있습니다.",
+    "people_title": "사람들",
+    "contacts_node_too_old_body_versioned": "이 노드는 {version}을 실행 중입니다. 연락처와 채팅 기능에는 ciris-server 0.5.185 이상이 필요하여 아직 응답할 수 없지만, 다른 기능은 모두 정상적으로 작동합니다.",
+    "receipt_title": "영수증",
+    "receipt_open": "영수증 열기",
+    "receipt_close": "닫기",
+    "receipt_holders": "바이트가 있는 위치",
+    "receipt_holders_count": "홀더 {count}명",
+    "receipt_notes": "다른 사람들이 남긴 노트",
+    "receipt_notes_none": "아직 아무도 노트를 남기지 않았습니다.",
+    "receipt_acts": "할 수 있는 일",
+    "receipt_contact_scope_note": "승인 자체는 공개 기록입니다. 서로 주고받는 내용은 그렇지 않습니다.",
+    "state_loading": "로드 중",
+    "state_error": "문제가 발생했습니다",
+    "state_gone": "이 파일은 사라졌습니다. 더 이상 아무도 사본을 보유하고 있지 않습니다.",
+    "state_hidden_by_rules": "내 규칙에 의해 숨겨졌습니다.",
+    "state_hidden_by_rules_who": "내 규칙에 의해 숨겨졌습니다 — {who}님이 태그했습니다.",
+    "state_unreviewed": "검토되지 않음",
+    "state_unreviewed_since": "{when} 이후 검토되지 않음",
+    "confirm_cancel": "지금은 아니요",
+    "ceremony_signed_of": "{signed}/{needed}명 서명됨",
+    "ceremony_proposed_by": "{who}님이 제안 · {when}",
+    "ceremony_sign": "서명하기",
+    "ceremony_refuse": "거부하기",
+    "ceremony_state_proposed": "제안됨",
+    "ceremony_state_signed": "서명됨",
+    "ceremony_state_not_yet": "아직",
+    "receipt_this_node": "이 노드 — 나",
     "verify_title": "빌드 검증",
     "verify_hash_label": "빌드 해시",
     "verify_button": "확인",
@@ -3161,6 +3188,13 @@
       "users": "사용자",
       "wallet": "지갑",
       "wise_authority": "담당자"
+    },
+    "circle": {
+      "agent": "나만",
+      "family": "패밀리",
+      "local_community": "이웃",
+      "global_communities": "커뮤니티와 기업",
+      "global_commons": "모두"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "해당 연합 ID가 이 노드의 디렉터리에 없습니다. 먼저 키를 승인(피어링)하세요 — 알려졌지만 아직 승인되지 않은 북마크는 출처 증명이 없어 동의 대상이 될 수 없습니다.",
     "unreachable": "상대방은 알려져 있지만 응답이 없었습니다. 상대방의 기기가 오프라인일 수 있으며, 다시 접속하면 메시지가 전달됩니다.",
     "unresolvable": "그 식별자는 연락처로 해석되지 않습니다."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "대상 인물",
+        "gloss": "이 기록이 지목하는 사람들입니다. 그들 각자가 이를 되돌릴 수 있습니다."
+      },
+      "attesting_key_id": {
+        "label": "보낸 사람",
+        "gloss": "이 기록에 서명한 키입니다. 다른 누구도 서명할 수 없었습니다."
+      },
+      "cohort_scope": {
+        "label": "볼 수 있는 사람",
+        "gloss": "이 기록이 이동할 수 있는 범위입니다. 그 범위를 벗어나려면 먼저 물어야 합니다."
+      },
+      "dimension": {
+        "label": "이것의 종류",
+        "gloss": "기록의 종류로, 모든 노드가 동일하게 읽는 공유 어휘로 표현됩니다."
+      },
+      "consent_scope": {
+        "label": "따르는 규칙",
+        "gloss": "이 기록에 다음으로 일어날 수 있는 일입니다: 보관, 공유, 또는 분석."
+      },
+      "not_sent": "이 노드는 이것을 전송하지 않았습니다.",
+      "by_rule": "이 종류의 기록({cc})에 대한 규칙으로 정해져 있으며, 이 노드가 전송한 것이 아닙니다."
+    },
+    "consent_kind": {
+      "label": "동의",
+      "gloss": "한 사람이 자신을 지목하는 기록에 대해 일어날 수 있다고 동의한 것, 또는 한 노드가 피어에게 전송하기로 동의한 것입니다."
+    },
+    "trust_job_version": {
+      "label": "누가 누구를 보증하는지",
+      "gloss": "한 키가 명시된 역할에 대해 다른 키를 보증한다는 주장입니다."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "사본 보유",
+      "gloss": "어떤 노드가 해시로 식별되는 파일의 바이트를 보유하고 있다고 밝히는 것입니다."
+    },
+    "objection_state": {
+      "label": "이의 제기됨",
+      "gloss": "한 사람의 이의 제기와 그것의 현재 상태입니다. 절대 속도 제한이 걸리지 않습니다."
+    },
+    "content_class_class": {
+      "label": "콘텐츠 종류",
+      "gloss": "파일이 어떤 종류의 것인지를 나타내며, 모든 노드가 공유하는 고정된 목록에서 정해집니다."
+    },
+    "credits_domain_language_subject": {
+      "label": "커먼즈 크레딧",
+      "gloss": "도움을 줌으로써 얻습니다. 오직 늘어나기만 하며, 전송하거나 판매할 수 없습니다."
+    },
+    "prohibited_category": {
+      "label": "허용되지 않음",
+      "gloss": "헌장이 그은 선 중 하나를 넘었다는 표시입니다. 이는 언제나 감점일 뿐입니다."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "영수증",
+      "gloss": "무언가가 전달되었다는 기록입니다. 영수증을 취소해도 전달 자체가 취소되지는 않습니다."
+    },
+    "renderer": {
+      "verified": "검증됨",
+      "not_verified": "검증되지 않음",
+      "indeterminate": "판정 불가",
+      "violation": "선을 넘음",
+      "partial_violation": "일부 선을 넘음",
+      "self_report": "노드 자체에서 보고됨",
+      "granted": "승인됨",
+      "revoked": "해지됨",
+      "expired": "만료됨"
+    }
   }
 }

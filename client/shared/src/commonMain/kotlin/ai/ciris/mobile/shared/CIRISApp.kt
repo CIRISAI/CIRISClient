@@ -81,6 +81,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import ai.ciris.mobile.shared.ui.theme.Ground
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -1752,27 +1754,18 @@ fun CIRISApp(
         BrightnessPreference.SYSTEM -> systemInDarkTheme
     }
 
-    // Apply color scheme with selected color theme applied immediately
-    val colorScheme = if (isDarkMode) {
-        darkColorScheme(
-            primary = selectedColorTheme.primary,
-            secondary = selectedColorTheme.secondary,
-            tertiary = selectedColorTheme.tertiary
-        )
-    } else {
-        lightColorScheme(
-            primary = selectedColorTheme.primary,
-            secondary = selectedColorTheme.secondary,
-            tertiary = selectedColorTheme.tertiary
-        )
-    }
+    // The ground follows the brightness preference exactly as the Material
+    // scheme did; CirisTheme resolves the sixteen tokens for it AND builds the
+    // Material scheme (neutrals from the tokens, accents from the chosen
+    // ColorTheme) — see ui/theme/CirisTheme.kt.
+    val ground = if (isDarkMode) Ground.INSTRUMENT else Ground.PAPER
 
     // Provide localization and currency to entire Compose tree
     CompositionLocalProvider(
         LocalLocalization provides localizationManager,
         LocalCurrency provides currencyManager
     ) {
-        MaterialTheme(colorScheme = colorScheme) {
+        CirisTheme(ground = ground, accent = selectedColorTheme) {
             // ─── 2.9.4 — Epistemic Commons sidebar shell ─────────────────────
             // Pre-login screens (Startup/Login/Setup/ServerConnection) and the
             // Help utility have no NavSurface; for those the sidebar is hidden
@@ -4095,6 +4088,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.Contacts] Rendering contacts screen (picker=${contactsPickerSourceScreen != null})")
                 ContactsScreen(
                     viewModel = contactsViewModel,
+                    nodeVersion = nodeVersion,
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null

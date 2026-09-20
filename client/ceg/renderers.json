@@ -1,0 +1,31 @@
+{
+  "_meta": {
+    "what": "Renderer overrides by exact registry prefix, applied after the polarity default (see gen_dimension_table.py). A key that is not a registry prefix, or an override that contradicts the family's polarity, refuses generation.",
+    "default_by_polarity": {
+      "SIGNED": "SIGNED_SCORE",
+      "BOOLEAN_VIA_SCORE": "BOOLEAN_VIA_SCORE",
+      "POSITIVE_ONLY": "POSITIVE_ONLY_ACCRUAL",
+      "MINUS_ONE_ONLY": "VIOLATION_MARKER",
+      "MINUS_ONE_OR_HALF": "VIOLATION_MARKER",
+      "ENUMERATED": "ENUMERATED_CHIP",
+      "PER_LEAF": "CONSENT_LEAF",
+      "BY_RULE": "SIGNED_SCORE"
+    },
+    "rule_overrides": {
+      "substrate-self-report": "CONFIG_RECORD"
+    }
+  },
+  "objection:{state}": "STATE_PILL",
+  "quarantine:{state}": "STATE_PILL",
+  "wa_adjudication:{state}": "STATE_PILL",
+  "content_class:{class}": "ENUMERATED_CHIP",
+  "cw_class:{class}": "ENUMERATED_CHIP",
+  "content_rating:{scheme}:{rating}": "ENUMERATED_CHIP",
+  "partner_role:{role}": "ENUMERATED_CHIP",
+  "config:{scope}": "CONFIG_RECORD",
+  "mesh_config:{key}": "CONFIG_RECORD",
+  "watchlist:{id}": "CONFIG_RECORD",
+  "holds_bytes:sha256:{prefix}": "CONTENT_REFERENCE",
+  "delivery_receipt:{stream_id}": "SETTLEMENT_RECEIPT",
+  "trust:{job}:{version}": "RELATION_EDGE"
+}

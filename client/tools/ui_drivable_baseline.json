@@ -96,10 +96,6 @@
     "input_config_edit_value",
     "input_config_search"
   ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ContactsScreen.kt": [
-    "input_contacts_add_key",
-    "input_contacts_search"
-  ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/DelegationsScreen.kt": [
     "input_delegation_code",
     "input_delegation_key_id",
@@ -137,8 +133,6 @@
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LoginScreen.kt": [
     "btn_login_back",
-    "btn_privacy_policy",
-    "btn_server_status",
     "input_password",
     "input_username"
   ],

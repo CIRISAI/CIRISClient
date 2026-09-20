@@ -1,6 +1,8 @@
 package ai.ciris.mobile.shared.platform
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -266,4 +268,36 @@ fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = c
         }
     }
     this.testTag(tag).trackPosition(tag, null)
+}
+
+/**
+ * Track an element, register a programmatic click handler, and add
+ * `combinedClickable` — a tap AND a long-press on ONE gesture node.
+ *
+ * `ItemRow` needs both: tap opens the item, long-press opens its receipt.
+ * Stacking `combinedClickable` on top of [testableClickable]'s `clickable`
+ * would put two gesture detectors on the same node racing for the press, so
+ * this is its own variant. The long-press is NOT automation-drivable (there is
+ * no `/long-press`), which is exactly why the receipt also has its own tagged
+ * button — see `ui/primitives/ItemRow.kt`.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+fun Modifier.testableCombinedClickable(
+    tag: String,
+    text: String? = null,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+): Modifier = composed {
+    if (!TestAutomation.isEnabled()) {
+        return@composed this.testTag(tag).combinedClickable(onLongClick = onLongClick) { onClick() }
+    }
+    val currentOnClick by rememberUpdatedState(onClick)
+    DisposableEffect(tag) {
+        TestAutomation.registerClickHandler(tag) { currentOnClick() }
+        onDispose {
+            TestAutomation.unregisterClickHandler(tag)
+            TestAutomation.unregisterElement(tag)
+        }
+    }
+    this.testTag(tag).combinedClickable(onLongClick = onLongClick) { onClick() }.trackPosition(tag, text)
 }

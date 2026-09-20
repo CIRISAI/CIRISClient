@@ -2923,6 +2923,33 @@
     "wallet_trust_degraded": "Kepercayaan Perangkat Keras Menurun",
     "wallet_warning": "Peringatan",
     "trace_consent_decline_note": "Memilih keluar berarti agen Anda tidak dapat membangun skor kapasitas atau mendapatkan kredit komunitas. Anda dapat mengubahnya nanti.",
+    "people_title": "Orang-orang",
+    "contacts_node_too_old_body_versioned": "Node ini menjalankan {version}. Kontak dan obrolan memerlukan ciris-server 0.5.185 atau yang lebih baru, jadi belum bisa merespons — semua yang lain berfungsi seperti biasa.",
+    "receipt_title": "Tanda terima",
+    "receipt_open": "Buka tanda terima",
+    "receipt_close": "Tutup",
+    "receipt_holders": "Di mana byte-nya berada",
+    "receipt_holders_count": "{count} pemegang",
+    "receipt_notes": "Catatan yang ditinggalkan orang lain",
+    "receipt_notes_none": "Belum ada yang meninggalkan catatan.",
+    "receipt_acts": "Yang dapat Anda lakukan",
+    "receipt_contact_scope_note": "Pemberian akses itu sendiri merupakan catatan publik. Apa yang Anda kirim satu sama lain bukan catatan publik.",
+    "state_loading": "Memuat",
+    "state_error": "Terjadi kesalahan",
+    "state_gone": "Berkas ini sudah hilang. Tidak ada lagi yang memegang salinannya.",
+    "state_hidden_by_rules": "Disembunyikan oleh aturan Anda.",
+    "state_hidden_by_rules_who": "Disembunyikan oleh aturan Anda — {who} menandainya.",
+    "state_unreviewed": "Belum ditinjau",
+    "state_unreviewed_since": "Belum ditinjau sejak {when}",
+    "confirm_cancel": "Bukan sekarang",
+    "ceremony_signed_of": "{signed} dari {needed} telah menandatangani",
+    "ceremony_proposed_by": "diusulkan oleh {who} · {when}",
+    "ceremony_sign": "Tandatangani",
+    "ceremony_refuse": "Tolak",
+    "ceremony_state_proposed": "diusulkan",
+    "ceremony_state_signed": "ditandatangani",
+    "ceremony_state_not_yet": "belum",
+    "receipt_this_node": "Node ini — Anda",
     "verify_title": "Verifikasi build",
     "verify_hash_label": "Hash build",
     "verify_button": "Periksa",
@@ -3161,6 +3188,13 @@
       "users": "Pengguna",
       "wallet": "Dompet",
       "wise_authority": "Otoritas Bijak"
+    },
+    "circle": {
+      "agent": "Hanya saya",
+      "family": "Keluarga",
+      "local_community": "Tetangga",
+      "global_communities": "Komunitas dan bisnis",
+      "global_commons": "Semua orang"
     }
   },
   "network": {
@@ -4299,5 +4333,74 @@
     "unknown_fed_id": "ID federasi itu tidak ada di direktori node ini. Terima kuncinya terlebih dahulu (peering) — penanda yang sudah diumumkan tetapi belum diterima tidak membawa provenans dan tidak dapat diberi persetujuan.",
     "unreachable": "Mereka dikenal, tetapi tidak ada yang merespons. Perangkat mereka mungkin sedang offline; pesan akan sampai kepada mereka setelah mereka kembali.",
     "unresolvable": "Pengenal itu tidak dapat diresolusi menjadi kontak."
+  },
+  "ceg": {
+    "envelope": {
+      "subject_key_ids": {
+        "label": "Tentang siapa ini",
+        "gloss": "Orang-orang yang disebut dalam catatan ini. Masing-masing dari mereka dapat menariknya kembali."
+      },
+      "attesting_key_id": {
+        "label": "Siapa yang mengirimkannya",
+        "gloss": "Kunci yang menandatangani catatan ini. Tidak ada pihak lain yang bisa melakukannya."
+      },
+      "cohort_scope": {
+        "label": "Siapa yang bisa melihatnya",
+        "gloss": "Lingkaran tempat catatan ini boleh beredar. Keluar dari lingkaran ini harus meminta izin terlebih dahulu."
+      },
+      "dimension": {
+        "label": "Apa itu",
+        "gloss": "Jenis catatan, dalam kosakata bersama yang dibaca sama oleh setiap node."
+      },
+      "consent_scope": {
+        "label": "Aturan yang diikutinya",
+        "gloss": "Apa yang boleh terjadi selanjutnya pada catatan ini: disimpan, dibagikan, atau dianalisis."
+      },
+      "not_sent": "Node ini tidak mengirimkan ini.",
+      "by_rule": "Ditetapkan oleh aturan untuk jenis catatan ini ({cc}); bukan dikirim oleh node ini."
+    },
+    "consent_kind": {
+      "label": "Persetujuan",
+      "gloss": "Apa yang telah disetujui seseorang boleh terjadi pada catatan yang menyebut namanya, atau apa yang telah disetujui sebuah node untuk dikirim ke peer."
+    },
+    "trust_job_version": {
+      "label": "Siapa menjamin siapa",
+      "gloss": "Klaim bahwa satu kunci menjamin kunci lain untuk tugas tertentu."
+    },
+    "holds_bytes_sha256_prefix": {
+      "label": "Memegang salinan",
+      "gloss": "Sebuah node yang menyatakan memegang byte untuk suatu berkas, yang dikenali melalui hash-nya."
+    },
+    "objection_state": {
+      "label": "Seseorang bersuara",
+      "gloss": "Keberatan satu orang, dan status keberatan itu. Tidak pernah dibatasi lajunya."
+    },
+    "content_class_class": {
+      "label": "Jenis konten",
+      "gloss": "Jenis suatu berkas, dari daftar tertutup yang dibagikan oleh setiap node."
+    },
+    "credits_domain_language_subject": {
+      "label": "Kredit ranah bersama",
+      "gloss": "Diperoleh dengan membantu. Nilainya hanya bisa naik, dan tidak dapat dikirim atau dijual."
+    },
+    "prohibited_category": {
+      "label": "Tidak diizinkan",
+      "gloss": "Tanda bahwa sesuatu telah melewati salah satu batas yang digariskan konstitusi. Tanda ini selalu bernilai minus."
+    },
+    "delivery_receipt_stream_id": {
+      "label": "Tanda terima",
+      "gloss": "Catatan bahwa sesuatu telah dikirimkan. Membatalkan tanda terima tidak membatalkan pengiriman itu."
+    },
+    "renderer": {
+      "verified": "Terverifikasi",
+      "not_verified": "Belum diverifikasi",
+      "indeterminate": "Tidak dapat ditentukan",
+      "violation": "Melewati batas",
+      "partial_violation": "Sebagian melewati batas",
+      "self_report": "Dilaporkan oleh node itu sendiri",
+      "granted": "Diberikan",
+      "revoked": "Dicabut",
+      "expired": "Kedaluwarsa"
+    }
   }
 }
