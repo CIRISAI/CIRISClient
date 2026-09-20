@@ -1,29 +1,33 @@
-"""Where a flow's first screen lives in the sidebar, derived from the client.
+"""Where a flow's first screen lives in the shell, derived from the client.
 
     python3 -m testing.gate.nav_map                 # print the map
     python3 -m testing.gate.nav_map --screen HealthReputation
 
 THE FLOW NEVER ENCODES THE HOP (FSD/CSD_STANDARD.md §5). Before a flow runs, the
-runner walks to its first step's `requires: screen:` through the sidebar; the
-flow asserts arrival and nothing else. That is why a sidebar reorder is one fix
-in the runner instead of one per flow — and it only works if the runner can
-answer "where does Screen X live" without anybody maintaining a table by hand.
+runner walks to its first step's `requires: screen:` through the shell; the
+flow asserts arrival and nothing else. That is why a re-home is one fix in the
+runner instead of one per flow — and it only works if the runner can answer
+"where does Screen X live" without anybody maintaining a table by hand.
 
 DERIVED, NOT TRANSCRIBED. Everything here comes out of the client's own sources:
 
-    EpistemicSidebar.kt   navTag(id) = "nav_epistemic_${id.replace('-','_')}"
-                          group toggle = "nav_group_${group.id}"
-    EpistemicNav.kt       object <Name> : NavSurface(id = "<surface-id>", …)
-                          <GROUP> = NavGroup(id = "<g>", surfaces = listOf(…))
-                          children = listOf(…)   — a child is reached via its parent
-    CIRISApp.kt           NavSurface.<Name> -> Screen.<Screen>
+    CirclesNav.kt        Placement(NavSurface.X, Tab.Y, <circles>, agentOnly)
+                         Instrument("<id>", …, listOf(NavSurface.A, …))
+                         circleTag / Tab.tag / Instrument.tag / navTag — the tag rules
+    EpistemicNav.kt      object <Name> : NavSurface(id = "<surface-id>", …)
+    CIRISApp.kt          NavSurface.<Name> -> Screen.<Screen>
+
+THE SHELL (locked spec, wave 1). Five circles, seven tabs, five instruments —
+ONE tree. A surface in a tab is reached by its circle, then its tab, then its
+row; a surface under an instrument by My things, the instrument, then its row.
+A tab holding exactly ONE card shows that card directly, so its chain ends on
+the tab — there is no row to click, and inventing one would be a ghost.
 
 A hand-written map would be a second source for a question the client already
-answers, and it would drift the first time a surface moved group — silently,
-because a wrong hop looks exactly like a screen that failed to compose. Parsed
-with `re` per AGENTS.md: a check that requires a build has already lost.
+answers, and it would drift the first time a surface moved — silently, because
+a wrong hop looks exactly like a screen that failed to compose. Parsed with `re`
+per AGENTS.md: a check that requires a build has already lost.
 """
-
 from __future__ import annotations
 
 import argparse
@@ -33,53 +37,48 @@ from pathlib import Path
 
 CLIENT = Path(__file__).resolve().parents[2] / "client" / "shared" / "src" / "commonMain" / "kotlin" / "ai" / "ciris" / "mobile" / "shared"
 NAV = CLIENT / "ui" / "nav" / "EpistemicNav.kt"
-SIDEBAR = CLIENT / "ui" / "nav" / "EpistemicSidebar.kt"
+TREE = CLIENT / "ui" / "nav" / "CirclesNav.kt"
 APP = CLIENT / "CIRISApp.kt"
+
+#: The five circles, in rail order, by CohortScope id (ui/nav/CohortScope.kt).
+CIRCLES = ["agent", "family", "local-community", "global-communities", "global-commons"]
+#: The named circle sets CirclesNav.kt uses, mirrored so a placement resolves.
+CIRCLE_SETS = {
+    "ALL": CIRCLES,
+    "FAMILY_OUT": CIRCLES[1:],
+    "NEIGHBOURS_OUT": CIRCLES[2:],
+}
+SCOPE_NAMES = {
+    "AGENT": "agent", "FAMILY": "family", "LOCAL_COMMUNITY": "local-community",
+    "GLOBAL_COMMUNITIES": "global-communities", "GLOBAL_COMMONS": "global-commons",
+}
+MY_THINGS = "btn_my_things"
 
 
 def slug(nav_id: str) -> str:
-    """`navSlug` from EpistemicSidebar.kt — the one rule, mirrored.
-
-    It is one rule on each side and a test holds them together, because the
-    alternative was measured: the client slugged the surface row and did not
-    slug the chevron beside it, so one surface answered to
-    `nav_epistemic_agent_settings` and `nav_expand_agent-settings` at once, and
-    anything deriving the second from the first addressed a tag that did not
-    exist.
-    """
+    """`CirclesNav.slug` — the one rule, mirrored: `-` becomes `_`."""
     return nav_id.replace("-", "_")
 
 
 def nav_tag(surface_id: str) -> str:
-    """`navTag` from EpistemicSidebar.kt, kept as one rule in one place."""
+    """`CirclesNav.navTag` — a surface's row, wherever it is listed."""
     return "nav_epistemic_" + slug(surface_id)
 
 
-def expand_tag(surface_id: str) -> str:
-    """`expandTag` — the chevron that opens a surface's children.
-
-    Distinct from [nav_tag]: the row navigates TO a surface, the chevron opens
-    what is UNDER it. Clicking the row to reveal a child goes to that screen and
-    reveals nothing, which is why Sessions, Scheduler, LLM Settings and Skill
-    Studio all read as unreachable from their parents.
-    """
-    return "nav_expand_" + slug(surface_id)
+def circle_tag(scope_id: str) -> str:
+    return "circle_" + slug(scope_id)
 
 
-def group_tag(group_id: str) -> str:
-    """`groupTag` — slugged like the other two, as of the DRY pass."""
-    return "nav_group_" + slug(group_id)
+def tab_tag(tab_id: str) -> str:
+    return "tab_" + tab_id
+
+
+def instrument_tag(instrument_id: str) -> str:
+    return "nav_instrument_" + slug(instrument_id)
 
 
 def _declarations(nav_src: str):
-    r"""Yield (surface name, argument text) for every `object X : NavSurface(...)`.
-
-    PAREN-BALANCED, NOT REGEX-TERMINATED. These declarations close with `,)` on
-    the same line as the last argument and nest `listOf(...)` inside, so a
-    pattern ending at `\n\s*\)` silently skipped every surface written that way
-    — including two of the four the CSD flows need. A missing surface reads as
-    "no sidebar route", which looks like a nav gap rather than a parser bug.
-    """
+    r"""Yield (surface name, argument text) for every `object X : NavSurface(...)`, paren-balanced."""
     for m in re.finditer(r"object\s+(\w+)\s*:\s*NavSurface\(", nav_src):
         name = m.group(1)
         i, depth = m.end(), 1
@@ -106,29 +105,42 @@ def _surface_ids(nav_src: str) -> dict[str, str]:
     return out
 
 
-def _children(nav_src: str) -> dict[str, str]:
-    """child surface -> parent surface. A child is reached through its parent."""
-    out: dict[str, str] = {}
-    for parent, body in _declarations(nav_src):
-        kids = re.search(r"children\s*=\s*listOf\(([^)]*)\)", body, re.S)
-        if not kids:
-            continue
-        for kid in re.findall(r"\b([A-Z]\w+)\b", kids.group(1)):
-            out.setdefault(kid, parent)
+def _placements(tree_src: str) -> list[dict]:
+    """Every `Placement(NavSurface.X, Tab.Y, <circles>, agentOnly = …)` in CirclesNav.kt."""
+    out: list[dict] = []
+    for m in re.finditer(r"Placement\(\s*NavSurface\.(\w+)\s*,\s*Tab\.(\w+)\s*,\s*(.*?)\)\s*,?\s*\n", tree_src):
+        surface, tab, rest = m.group(1), m.group(2).lower(), m.group(3)
+        agent_only = "agentOnly = true" in rest
+        circles_txt = rest.split(", agentOnly")[0].strip()
+        if circles_txt in CIRCLE_SETS:
+            circles = list(CIRCLE_SETS[circles_txt])
+        else:
+            names = re.findall(r"\b([A-Z_]+)\b", circles_txt)
+            circles = [SCOPE_NAMES[n] for n in names if n in SCOPE_NAMES]
+        if not circles:
+            raise ValueError(f"placement of {surface}: could not read its circles from {circles_txt!r}")
+        out.append({"surface": surface, "tab": tab, "circles": circles, "agent_only": agent_only})
+    if not out:
+        raise ValueError("no Placement(...) parsed from CirclesNav.kt — the parser is wrong, not the tree")
     return out
 
 
-def _groups(nav_src: str) -> dict[str, str]:
-    """surface name -> the id of the group that offers it."""
-    out: dict[str, str] = {}
-    # `val X = NavGroup(` and `fun xGroup(...) = NavGroup(` both appear.
-    for m in re.finditer(r"(?:val\s+\w+|fun\s+\w+\([^)]*\))\s*=\s*NavGroup\((.*?)\n\s*labelKey", nav_src, re.S):
-        body = m.group(1)
-        gid = re.search(r'id\s*=\s*"([a-z0-9-]+)"', body)
-        if not gid:
-            continue
-        for surface in re.findall(r"NavSurface\.(\w+)", body):
-            out.setdefault(surface, gid.group(1))
+def _instruments(tree_src: str) -> list[dict]:
+    """Every `Instrument("id", …, listOf(NavSurface.A, …), agentOnly = setOf(…))`."""
+    out: list[dict] = []
+    for m in re.finditer(r'Instrument\(\s*"([a-z-]+)"', tree_src):
+        i, depth = m.end(), 1
+        while i < len(tree_src) and depth:
+            depth += (tree_src[i] == "(") - (tree_src[i] == ")")
+            i += 1
+        body = tree_src[m.end():i - 1]
+        lists = re.findall(r"listOf\((.*?)\)", body, re.S)
+        surfaces = re.findall(r"NavSurface\.(\w+)", lists[0]) if lists else []
+        agent_only = re.findall(r"NavSurface\.(\w+)", (re.search(r"agentOnly\s*=\s*setOf\((.*?)\)", body, re.S) or [None, ""])[1]) \
+            if "agentOnly" in body else []
+        out.append({"id": m.group(1), "surfaces": surfaces, "agent_only": agent_only})
+    if not out:
+        raise ValueError("no Instrument(...) parsed from CirclesNav.kt — the parser is wrong, not the tree")
     return out
 
 
@@ -137,83 +149,107 @@ def _screen_routes(app_src: str) -> dict[str, str]:
     out: dict[str, str] = {}
     for m in re.finditer(r"NavSurface\.(\w+)\s*->\s*Screen\.(\w+)", app_src):
         surface, screen = m.group(1), m.group(2)
-        # First writer wins: `Safety -> Moderation` precedes `Moderation ->
-        # Moderation`, and the leaf is the honest way to reach that screen.
         out.setdefault(screen, surface)
         if surface == screen:
             out[screen] = surface
     return out
 
 
-def build() -> dict[str, list[str]]:
-    """screen -> the tags to click, in order, to get there."""
+def _cards(placements: list[dict], circle: str, tab: str, has_agent: bool) -> list[str]:
+    return [p["surface"] for p in placements
+            if p["tab"] == tab and circle in p["circles"] and (has_agent or not p["agent_only"])]
+
+
+def build(has_agent: bool = True) -> dict[str, list[str]]:
+    """screen -> the tags to click, in order, to get there.
+
+    `has_agent` picks the build: the node build is a subset (a placement
+    marked agentOnly is absent), and a tab that has ONE card on this build
+    shows it directly, so the chain ends on the tab.
+    """
     nav_src = NAV.read_text(encoding="utf-8")
+    tree_src = TREE.read_text(encoding="utf-8")
     app_src = APP.read_text(encoding="utf-8")
-    ids, kids, groups = _surface_ids(nav_src), _children(nav_src), _groups(nav_src)
+    ids = _surface_ids(nav_src)
+    placements = _placements(tree_src)
+    instruments = _instruments(tree_src)
+    by_surface = {p["surface"]: p for p in placements}
+    inst_of = {s: inst for inst in instruments for s in inst["surfaces"]}
 
     hops: dict[str, list[str]] = {}
     for screen, surface in _screen_routes(app_src).items():
         if surface not in ids:
             continue
-        chain: list[str] = []
-        gid = groups.get(surface) or groups.get(kids.get(surface, ""))
-        if gid:
-            chain.append(group_tag(gid))
-        parent = kids.get(surface)
-        if parent and parent in ids:
-            chain.append(nav_tag(ids[parent]))
-        chain.append(nav_tag(ids[surface]))
-        hops[screen] = chain
+        p = by_surface.get(surface)
+        if p is not None:
+            if p["agent_only"] and not has_agent:
+                continue
+            circle = p["circles"][0]
+            chain = [circle_tag(circle), tab_tag(p["tab"])]
+            if len(_cards(placements, circle, p["tab"], has_agent)) > 1:
+                chain.append(nav_tag(ids[surface]))
+            hops[screen] = chain
+            continue
+        inst = inst_of.get(surface)
+        if inst is not None:
+            if surface in inst["agent_only"] and not has_agent:
+                continue
+            hops[screen] = [MY_THINGS, instrument_tag(inst["id"]), nav_tag(ids[surface])]
     return hops
 
 
+def expected_tail(surface_id: str, has_agent: bool = True) -> str | None:
+    """The tag a chain to this surface must END on — its row, or its tab when it is the tab's only card."""
+    nav_src = NAV.read_text(encoding="utf-8")
+    tree_src = TREE.read_text(encoding="utf-8")
+    ids = _surface_ids(nav_src)
+    name = next((n for n, i in ids.items() if i == surface_id), None)
+    if name is None:
+        return None
+    placements = _placements(tree_src)
+    p = next((p for p in placements if p["surface"] == name), None)
+    if p is None:
+        return nav_tag(surface_id)
+    circle = p["circles"][0]
+    return nav_tag(surface_id) if len(_cards(placements, circle, p["tab"], has_agent)) > 1 else tab_tag(p["tab"])
+
+
 def structure() -> dict:
-    """The nav as a SHAPE, not just a set of routes.
+    """The nav as a SHAPE: one tree. Circles × tabs holding cards, and instruments.
 
     `build()` answers "what do I click to get there". A person redesigning the
-    IA needs the other question — how the surfaces relate — and the answer is
-    that there are TWO axes, not one:
-
-      * **group** — which section of the rail a surface is filed under;
-      * **parent** — which surface's chevron has to be open to reveal it.
-
-    They are independent, and four surfaces prove it: `Config`, `Runtime` and
-    `System` are filed under **node** while hanging off `AgentSettings`, which
-    is filed under **agent**; `GraphMemory` is filed under node beneath
-    `Memory`. The nav comment calls this deliberate — "the agent framing
-    alongside the node-infra framing" — so a reader who assumes a single tree
-    will mis-read those four every time.
-
-    Fourteen surfaces carry no group at all. Thirteen of them are children and
-    reach the rail through a parent; one, `AccordCeremony`, reaches it through
-    nothing, because its own declaration says it opens from the Accord screen
-    only when no accord family exists yet.
+    IA needs the other question — how the surfaces relate — and since wave 1 the
+    answer is a single tree: every surface is placed once, in a tab for some
+    circles or under an instrument; nothing is cross-framed and nothing is
+    reached only through a chevron.
     """
     nav_src = NAV.read_text(encoding="utf-8")
+    tree_src = TREE.read_text(encoding="utf-8")
     app_src = APP.read_text(encoding="utf-8")
-    ids, kids, groups = _surface_ids(nav_src), _children(nav_src), _groups(nav_src)
+    ids = _surface_ids(nav_src)
+    placements = _placements(tree_src)
+    instruments = _instruments(tree_src)
     routed = set(_screen_routes(app_src))
-
-    surfaces = {}
-    for obj, surface_id in ids.items():
-        parent = kids.get(obj)
-        surfaces[obj] = {
-            "id": surface_id,
-            "group": groups.get(obj),
-            "parent": parent,
-            "parent_group": groups.get(parent) if parent else None,
-            "has_screen": obj in routed,
+    surfaces: dict[str, dict] = {}
+    for p in placements:
+        surfaces[p["surface"]] = {
+            "id": ids.get(p["surface"]), "tab": p["tab"], "circles": p["circles"],
+            "agent_only": p["agent_only"], "instrument": None, "has_screen": p["surface"] in routed,
         }
-    for obj, rec in surfaces.items():
-        rec["cross_framed"] = bool(
-            rec["parent_group"] and rec["group"] and rec["parent_group"] != rec["group"]
-        )
-        rec["children"] = sorted(o for o, r in surfaces.items() if r["parent"] == obj)
+    for inst in instruments:
+        for s in inst["surfaces"]:
+            surfaces[s] = {
+                "id": ids.get(s), "tab": None, "circles": [], "agent_only": s in inst["agent_only"],
+                "instrument": inst["id"], "has_screen": s in routed,
+            }
+    placed = set(surfaces)
     return {
+        "circles": CIRCLES,
+        "tabs": ["files", "chats", "people", "safety", "rules", "decisions", "record"],
+        "instruments": [i["id"] for i in instruments],
         "surfaces": surfaces,
-        "groups": sorted({g for g in groups.values()}),
-        "ungrouped": sorted(o for o, r in surfaces.items() if not r["group"]),
-        "cross_framed": sorted(o for o, r in surfaces.items() if r["cross_framed"]),
+        "unplaced": sorted(n for n in ids if n not in placed),
+        "cross_framed": [],
     }
 
 
@@ -221,19 +257,20 @@ def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--screen", help="print the hop for one screen")
+    ap.add_argument("--node", action="store_true", help="the node build (no agent-only surfaces)")
     args = ap.parse_args(argv)
 
-    hops = build()
+    hops = build(has_agent=not args.node)
     if args.screen:
         chain = hops.get(args.screen)
         if not chain:
-            print(f"no sidebar route to {args.screen!r}", file=sys.stderr)
+            print(f"no route to {args.screen!r}", file=sys.stderr)
             return 1
         print(" -> ".join(chain))
         return 0
     for screen in sorted(hops):
         print(f"  {screen:<28} {' -> '.join(hops[screen])}")
-    print(f"\n  {len(hops)} screens reachable from the sidebar")
+    print(f"\n  {len(hops)} screens reachable from the shell")
     return 0
 
 

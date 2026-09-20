@@ -228,8 +228,10 @@ def check(doc: Path, reg: dict) -> list[str]:
                     f"there cannot be reached, so the CSD cannot be tested"
                 )
             elif screen and sid:
-                want = nav_map.nav_tag(sid)
-                if hops[screen][-1] != want:
+                # A surface's chain ends on its row — or on its tab, when it is
+                # the tab's only card and the shell shows it directly.
+                want = nav_map.expected_tail(sid)
+                if want is None or hops[screen][-1] != want:
                     problems.append(
                         f"surface: {sid!r} derives {want!r} but Screen.{screen} is reached "
                         f"via {hops[screen][-1]!r} — the surface id and the screen disagree"

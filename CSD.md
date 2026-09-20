@@ -69,13 +69,13 @@ surface: health-reputation      # the NavSurface id, verbatim from EpistemicNav.
 screen: HealthReputation        # the Screen the router lands on
 ```
 
-**The hop is derived and must not be written down.** `EpistemicSidebar.kt`
-computes a surface's tag as `nav_epistemic_${id.replace('-','_')}` and a group's
-as `nav_group_${group.id}`; `EpistemicNav.kt` holds group membership and the
-parent of every child surface. So `testing/gate/nav_map.py` answers "where does
-this screen live" from the client itself — `constitutional` resolves to
-`nav_group_commons-layers -> nav_epistemic_layer_global_commons ->
-nav_epistemic_constitutional` without anyone typing that chain.
+**The hop is derived and must not be written down.** `CirclesNav.kt` is the one
+nav tree — a surface's row is `nav_epistemic_${id.replace('-','_')}`, a circle
+is `circle_<id>`, a tab `tab_<id>`, an instrument `nav_instrument_<id>` — and
+`testing/gate/nav_map.py` answers "where does this screen live" from it:
+`constitutional` resolves to `circle_global_commons -> tab_files ->
+nav_epistemic_constitutional` without anyone typing that chain. A tab whose
+only card is the surface shows it directly, so that chain ends on the tab.
 
 v1's §2 had a "reached from / leaves to" table. It was a second source for a
 question the client already answers, and it drifts the first time a surface

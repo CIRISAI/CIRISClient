@@ -22,7 +22,7 @@ from pathlib import Path
 #: Turn `nav_group_commons-layers` / `nav_epistemic_agent_settings` into words a
 #: designer reads, not tags an engineer greps.
 def label(tag: str) -> str:
-    for prefix in ("nav_group_", "nav_epistemic_"):
+    for prefix in ("nav_group_", "nav_epistemic_", "nav_instrument_", "circle_", "tab_"):
         if tag.startswith(prefix):
             tag = tag[len(prefix):]
     return tag.replace("-", " ").replace("_", " ").title()

@@ -97,14 +97,14 @@ def sign_in(drv: TestAutomationServer, user: str, password: str, settle: float) 
     # The submit is a network round trip; the sidebar appears only after it.
     for _ in range(60):
         time.sleep(1.0)
-        if "nav_group_manage" in drv.tags() or "btn_nav_drawer_open" in drv.tags():
+        if "btn_my_things" in drv.tags() or "circle_local_community" in drv.tags():
             return "signed in"
     return "submitted, but no nav surface appeared"
 
 
-#: The nav rail's scroll container, named so `/scroll` moves the rail and not
-#: whatever the current screen happens to scroll. Mirrors NAV_RAIL_SCROLLABLE.
-NAV_RAIL = "nav_rail"
+#: The shell rail's scroll container, named so `/scroll` moves the rail and not
+#: whatever the current screen happens to scroll. Mirrors CirclesNav.RAIL_SCROLLABLE.
+NAV_RAIL = "shell_rail"
 
 
 def on_screen(drv: TestAutomationServer, tag: str) -> bool:
@@ -169,19 +169,9 @@ def open_hop(drv: TestAutomationServer, hop: str, child: str, settle: float) -> 
     for _ in range(3):
         if child in drv.tags():
             return True
-        # THE CHEVRON IS NOT THE ROW. A surface with children renders two
-        # separate controls: `nav_epistemic_<id>` navigates to it, and
-        # `nav_expand_<id>` opens its subtree (EpistemicSidebar.kt:518).
-        # Clicking the row for Interact, Tickets or Agent Settings therefore
-        # went to that screen and revealed nothing, which is why their
-        # children — Sessions, Scheduler, LLM Settings — read as unreachable.
-        # Prefer the expander when the rail offers one.
-        # nav_map owns the tag rule; this asks it rather than doing string
-        # surgery on a tag, which is how the two spellings went unnoticed.
-        tags = drv.tags()
-        expander = nav_map.expand_tag(hop[len("nav_epistemic_"):]) \
-            if hop.startswith("nav_epistemic_") else None
-        control = expander if expander in tags else hop
+        # Since wave 1 the shell has no chevrons: a hop is a circle, a tab, an
+        # instrument or a row, and each is the control to click.
+        control = hop
         try:
             drv.wait_for_element(control, timeout=6.0)
             reach(drv, control, settle)
@@ -230,13 +220,9 @@ def capture(drv: TestAutomationServer, shots: Path, hops: dict[str, list[str]],
             # So the screen the app REPORTS is what decides `ok`. If it did not
             # move, this says so and keeps no picture.
             before = drv.screen()
-            # A GROUP HEADER IS A TOGGLE, NOT A ROUTE. Clicking `nav_group_manage`
-            # while MANAGE is already open COLLAPSES it, and the child click that
-            # follows lands on nothing — which is why the first verified run said
-            # "no navigation: still on Interact" for every screen under an open
-            # group, and "never appeared" for the ones whose group it had just
-            # shut. A hop is therefore clicked only when what it should reveal is
-            # not already reachable.
+            # A hop is clicked only when what it should reveal is not already
+            # reachable: the circle and the tab are idempotent, but My things is
+            # a sheet and clicking it twice would close it.
             for i, tag in enumerate(chain):
                 nxt = chain[i + 1] if i + 1 < len(chain) else None
                 if nxt is None:

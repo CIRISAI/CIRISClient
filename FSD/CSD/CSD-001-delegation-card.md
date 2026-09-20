@@ -24,9 +24,10 @@ surface: layer-family
 screen: LayerFamily
 ```
 
-`nav_map` derives `nav_group_commons-layers -> nav_epistemic_layer_family`. The
-screen the card OPENS (`Delegation`) is a child surface and the flow drives the
-click; only the entry point is named here.
+`nav_map` derives `circle_family -> tab_rules -> nav_epistemic_layer_family`
+(the family circle's Rules tab; wave 1). The screen the card OPENS
+(`Delegation`) is reached by the flow's own click; only the entry point is
+named here.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
