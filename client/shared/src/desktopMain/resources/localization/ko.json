@@ -3187,7 +3187,8 @@
       "trust": "신뢰",
       "users": "사용자",
       "wallet": "지갑",
-      "wise_authority": "담당자"
+      "wise_authority": "담당자",
+      "help": "도움말"
     },
     "circle": {
       "agent": "나만",
@@ -3195,6 +3196,62 @@
       "local_community": "이웃",
       "global_communities": "커뮤니티와 기업",
       "global_commons": "모두"
+    },
+    "tab": {
+      "files": "파일",
+      "chats": "채팅",
+      "people": "사람들",
+      "safety": "안전",
+      "rules": "규칙",
+      "decisions": "결정",
+      "record": "기록"
+    },
+    "circle_sub": {
+      "agent": "나만",
+      "family": "패밀리",
+      "local_community": "로컬 커뮤니티",
+      "global_communities": "선택된 그룹",
+      "global_commons": "공개"
+    },
+    "circle_rule": {
+      "agent": "나 외에는 아무도 없음",
+      "family": "외부에는 전혀 보이지 않음",
+      "local_community": "누구나 중단할 수 있고, 과반수가 이를 되돌릴 수 있습니다",
+      "global_communities": "동일한 제동, 기간만 더 짧음",
+      "global_commons": "공개, 대부분 일방향"
+    },
+    "instrument": {
+      "devices_keys": "기기 및 키",
+      "everything_i_shared": "내가 공유한 모든 것",
+      "this_node": "이 노드",
+      "someone_i_trust": "신뢰하는 사람",
+      "help": "도움말"
+    },
+    "empty": {
+      "files": "이 서클의 파일에는 아직 아무것도 없습니다. 만든 것은 '나만'에서 시작되며, 직접 밖으로 내보내겠다고 하실 때만 이동합니다.",
+      "chats": "이 서클에는 아직 대화가 없습니다.",
+      "people": "이 서클에는 아직 아무도 없습니다.",
+      "safety": "이곳에는 돌볼 것이 없습니다.",
+      "rules": "이 서클에는 설정된 규칙이 없습니다.",
+      "decisions": "아직 여기서 결정할 것이 없습니다.",
+      "record": "이 서클에서는 아직 아무 일도 일어나지 않았습니다.",
+      "files_agent": "아직 여기에는 아무것도 없습니다. 모든 것이 여기서 시작되며, 이곳의 어떤 것도 외부에 알려지지 않습니다.",
+      "decisions_agent": "여기에는 함께 결정할 사람이 없습니다. 결정은 패밀리에서 시작됩니다.",
+      "decisions_family": "패밀리는 대화로 결정합니다. 여기에는 투표할 것이 없습니다."
+    },
+    "my_things": "내 것",
+    "stop_everything": "모두 중단",
+    "stop": {
+      "title": "모두 중단하시겠습니까?",
+      "fact_what_label": "중단되는 것",
+      "fact_what": "지금 즉시 어시스턴트가 생각하고, 답하고, 행동하는 것을 멈춥니다.",
+      "fact_keeps_label": "유지되는 것",
+      "fact_keeps": "파일, 서클, 그리고 모든 기록은 그대로 유지됩니다.",
+      "fact_again_label": "다시 시작하기",
+      "fact_again": "내 것 › 이 노드에서, 원하실 때 언제든지 가능합니다.",
+      "confirm": "모두 중단",
+      "nothing_title": "실행 중인 것이 없습니다",
+      "nothing_body": "이 노드에서는 어시스턴트가 생각하거나 행동하고 있지 않으므로 중단할 것이 없습니다. 그래도 버튼은 항상 있던 자리에 그대로 있습니다."
     }
   },
   "network": {

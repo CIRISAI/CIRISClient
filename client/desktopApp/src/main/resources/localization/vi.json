@@ -3187,7 +3187,8 @@
       "trust": "Tin Cậy",
       "users": "Người Dùng",
       "wallet": "Ví",
-      "wise_authority": "Cơ Quan Sáng Suốt"
+      "wise_authority": "Cơ Quan Sáng Suốt",
+      "help": "Trợ giúp"
     },
     "circle": {
       "agent": "Chỉ mình tôi",
@@ -3195,6 +3196,62 @@
       "local_community": "Hàng xóm",
       "global_communities": "Cộng đồng và doanh nghiệp",
       "global_commons": "Mọi người"
+    },
+    "tab": {
+      "files": "Tệp",
+      "chats": "Trò chuyện",
+      "people": "Mọi người",
+      "safety": "An toàn",
+      "rules": "Quy tắc",
+      "decisions": "Quyết định",
+      "record": "Bản ghi"
+    },
+    "circle_sub": {
+      "agent": "chỉ mình bạn",
+      "family": "Gia đình",
+      "local_community": "Cộng đồng địa phương",
+      "global_communities": "nhóm đã chọn",
+      "global_commons": "công khai"
+    },
+    "circle_rule": {
+      "agent": "không ai khác",
+      "family": "ẩn với tất cả những người bên ngoài",
+      "local_community": "ai cũng có thể dừng việc gì đó; chỉ đa số mới có thể đảo lại điều đó",
+      "global_communities": "cùng cơ chế dừng, với các khoảng thời gian ngắn hơn",
+      "global_commons": "công khai, và chủ yếu một chiều"
+    },
+    "instrument": {
+      "devices_keys": "Thiết bị & khóa",
+      "everything_i_shared": "Mọi thứ tôi đã chia sẻ",
+      "this_node": "Nút này",
+      "someone_i_trust": "Người tôi tin cậy",
+      "help": "Trợ giúp"
+    },
+    "empty": {
+      "files": "Chưa có gì trong tệp của vòng này. Những gì bạn tạo ra bắt đầu ở Chỉ mình tôi và chỉ chuyển ra ngoài khi bạn cho phép.",
+      "chats": "Chưa có cuộc trò chuyện nào trong vòng này.",
+      "people": "Chưa có ai trong vòng này.",
+      "safety": "Không có gì cần chăm sóc ở đây.",
+      "rules": "Chưa có quy tắc nào được đặt cho vòng này.",
+      "decisions": "Chưa có gì để quyết định ở đây.",
+      "record": "Chưa có gì xảy ra trong vòng này.",
+      "files_agent": "Chưa có gì ở đây. Đây là nơi mọi thứ bắt đầu, và không gì ở đây được công bố.",
+      "decisions_agent": "Không có ai ở đây để cùng quyết định. Quyết định bắt đầu từ Gia đình.",
+      "decisions_family": "Một gia đình quyết định bằng cách trò chuyện. Không có gì để bỏ phiếu ở đây."
+    },
+    "my_things": "Của tôi",
+    "stop_everything": "Dừng tất cả",
+    "stop": {
+      "title": "Dừng tất cả?",
+      "fact_what_label": "Những gì dừng lại",
+      "fact_what": "Trợ lý của bạn ngừng suy nghĩ, trả lời và hành động cho bạn, ngay bây giờ.",
+      "fact_keeps_label": "Những gì được giữ lại",
+      "fact_keeps": "Tệp của bạn, vòng của bạn và mọi bản ghi vẫn giữ nguyên như hiện tại.",
+      "fact_again_label": "Bắt đầu lại",
+      "fact_again": "Từ Của tôi › Nút này, bất cứ khi nào bạn muốn.",
+      "confirm": "Dừng tất cả",
+      "nothing_title": "Không có gì đang chạy cho bạn",
+      "nothing_body": "Không có trợ lý nào đang suy nghĩ hoặc hành động trên nút này, nên không có gì để dừng. Nút bấm vẫn ở đây, cùng một vị trí, vì nó luôn như vậy."
     }
   },
   "network": {

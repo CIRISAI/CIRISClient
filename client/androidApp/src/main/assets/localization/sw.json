@@ -3187,7 +3187,8 @@
       "trust": "Uaminifu",
       "users": "Watumiaji",
       "wallet": "Mkoba",
-      "wise_authority": "Mshauri wa Kibinadamu"
+      "wise_authority": "Mshauri wa Kibinadamu",
+      "help": "Msaada"
     },
     "circle": {
       "agent": "Mimi tu",
@@ -3195,6 +3196,62 @@
       "local_community": "Majirani",
       "global_communities": "Jumuiya na Biashara",
       "global_commons": "Kila mtu"
+    },
+    "tab": {
+      "files": "Faili",
+      "chats": "Mazungumzo",
+      "people": "Watu",
+      "safety": "Usalama",
+      "rules": "Kanuni",
+      "decisions": "Maamuzi",
+      "record": "Rekodi"
+    },
+    "circle_sub": {
+      "agent": "wewe tu",
+      "family": "Familia",
+      "local_community": "Jamii ya Karibu",
+      "global_communities": "makundi yaliyochaguliwa",
+      "global_commons": "Umma"
+    },
+    "circle_rule": {
+      "agent": "hakuna mwingine",
+      "family": "imefichwa kutoka kwa kila mtu wa nje",
+      "local_community": "yeyote anaweza kusimamisha kitu; ni walio wengi tu wanaoweza kubatilisha hilo",
+      "global_communities": "breki ile ile, yenye madirisha mafupi zaidi",
+      "global_commons": "hadharani, na kwa kiasi kikubwa upande mmoja"
+    },
+    "instrument": {
+      "devices_keys": "Vifaa na funguo",
+      "everything_i_shared": "Kila kitu nilichoshiriki",
+      "this_node": "Nodi hii",
+      "someone_i_trust": "Mtu ninayemwamini",
+      "help": "Msaada"
+    },
+    "empty": {
+      "files": "Hakuna chochote katika faili za duara hii bado. Kile unachokitengeneza huanzia katika Mimi Peke Yangu na hutoka nje tu pale unaposema hivyo.",
+      "chats": "Hakuna mazungumzo katika duara hii bado.",
+      "people": "Hakuna mtu katika duara hii bado.",
+      "safety": "Hakuna la kulinda hapa.",
+      "rules": "Hakuna kanuni zilizowekwa kwa duara hii.",
+      "decisions": "Hakuna la kuamua hapa bado.",
+      "record": "Hakuna kilichotokea katika duara hii bado.",
+      "files_agent": "Hakuna chochote hapa bado. Hapa ndipo kila kitu huanzia, na hakuna kinachotangazwa hapa.",
+      "decisions_agent": "Hakuna mtu hapa wa kuamua naye. Maamuzi huanzia katika Familia.",
+      "decisions_family": "Familia huamua kwa kuzungumza. Hakuna la kupigia kura hapa."
+    },
+    "my_things": "Vitu vyangu",
+    "stop_everything": "Simamisha kila kitu",
+    "stop": {
+      "title": "Simamisha kila kitu?",
+      "fact_what_label": "Kinachosimama",
+      "fact_what": "Msaidizi wako huacha kufikiri, kujibu na kutenda kwa niaba yako, sasa hivi.",
+      "fact_keeps_label": "Kinachobaki",
+      "fact_keeps": "Faili zako, duara zako na kila rekodi hubaki kama zilivyo.",
+      "fact_again_label": "Kuanza tena",
+      "fact_again": "Kutoka Vitu vyangu › Nodi hii, wakati wowote utakapochagua.",
+      "confirm": "Simamisha kila kitu",
+      "nothing_title": "Hakuna kinachofanya kazi kwa niaba yako",
+      "nothing_body": "Hakuna msaidizi anayefikiri au kutenda kwenye nodi hii, hivyo hakuna la kusimamisha. Kitufe hiki kipo hapa hata hivyo, mahali pale pale, kwa sababu kipo daima."
     }
   },
   "network": {

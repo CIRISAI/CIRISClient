@@ -3187,7 +3187,8 @@
       "trust": "Confiance",
       "users": "Utilisateurs",
       "wallet": "Portefeuille",
-      "wise_authority": "Wise Authority"
+      "wise_authority": "Wise Authority",
+      "help": "Aide"
     },
     "circle": {
       "agent": "Moi seul",
@@ -3195,6 +3196,62 @@
       "local_community": "Voisins",
       "global_communities": "Communautés et entreprises",
       "global_commons": "Tout le monde"
+    },
+    "tab": {
+      "files": "Fichiers",
+      "chats": "Discussions",
+      "people": "Personnes",
+      "safety": "Sécurité",
+      "rules": "Règles",
+      "decisions": "Décisions",
+      "record": "Journal"
+    },
+    "circle_sub": {
+      "agent": "vous seul",
+      "family": "famille",
+      "local_community": "communauté locale",
+      "global_communities": "groupes choisis",
+      "global_commons": "public"
+    },
+    "circle_rule": {
+      "agent": "personne d'autre",
+      "family": "invisible pour tout le monde à l'extérieur",
+      "local_community": "quiconque peut arrêter quelque chose ; seule une majorité peut annuler cela",
+      "global_communities": "même frein, fenêtres plus courtes",
+      "global_commons": "public, et principalement à sens unique"
+    },
+    "instrument": {
+      "devices_keys": "Appareils et clés",
+      "everything_i_shared": "Tout ce que j'ai partagé",
+      "this_node": "Ce nœud",
+      "someone_i_trust": "Quelqu'un en qui j'ai confiance",
+      "help": "Aide"
+    },
+    "empty": {
+      "decisions_family": "Une famille décide en parlant. Il n'y a rien sur quoi voter ici.",
+      "files": "Aucun fichier dans ce cercle pour l'instant. Ce que vous créez commence dans Juste moi et n'en sort que lorsque vous le décidez.",
+      "chats": "Aucune conversation dans ce cercle pour l'instant.",
+      "people": "Personne dans ce cercle pour l'instant.",
+      "safety": "Rien à surveiller ici.",
+      "rules": "Aucune règle définie pour ce cercle.",
+      "decisions": "Rien à décider ici pour l'instant.",
+      "record": "Rien ne s'est encore passé dans ce cercle.",
+      "files_agent": "Rien ici pour l'instant. C'est ici que tout commence, et rien ici n'est annoncé.",
+      "decisions_agent": "Il n'y a personne ici avec qui décider. Les décisions commencent en Famille."
+    },
+    "my_things": "Mes affaires",
+    "stop_everything": "Tout arrêter",
+    "stop": {
+      "title": "Tout arrêter ?",
+      "fact_what_label": "Ce qui s'arrête",
+      "fact_what": "Votre assistant arrête de penser, de répondre et d'agir pour vous, dès maintenant.",
+      "fact_keeps_label": "Ce qui reste",
+      "fact_keeps": "Vos fichiers, vos cercles et chaque enregistrement restent exactement comme ils sont.",
+      "fact_again_label": "Redémarrage",
+      "fact_again": "Depuis Mes affaires › Ce nœud, quand vous le souhaitez.",
+      "confirm": "Tout arrêter",
+      "nothing_title": "Rien n'est en cours pour vous",
+      "nothing_body": "Aucun assistant ne pense ni n'agit sur ce nœud, il n'y a donc rien à arrêter. Le bouton est ici quand même, au même endroit, car il y est toujours."
     }
   },
   "network": {

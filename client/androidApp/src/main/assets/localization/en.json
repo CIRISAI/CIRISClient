@@ -3231,7 +3231,8 @@
       "trust": "Trust",
       "users": "Users",
       "wallet": "Wallet",
-      "wise_authority": "Wise Authority"
+      "wise_authority": "Wise Authority",
+      "help": "Help"
     },
     "circle": {
       "agent": "Just me",
@@ -3239,6 +3240,62 @@
       "local_community": "Neighbours",
       "global_communities": "Communities and Businesses",
       "global_commons": "Everyone"
+    },
+    "tab": {
+      "files": "Files",
+      "chats": "Chats",
+      "people": "People",
+      "safety": "Safety",
+      "rules": "Rules",
+      "decisions": "Decisions",
+      "record": "Record"
+    },
+    "circle_sub": {
+      "agent": "only you",
+      "family": "family",
+      "local_community": "local community",
+      "global_communities": "chosen groups",
+      "global_commons": "public"
+    },
+    "circle_rule": {
+      "agent": "nobody else",
+      "family": "hidden from everyone outside",
+      "local_community": "anyone can stop something; only a majority can undo that",
+      "global_communities": "the same brake, with shorter windows",
+      "global_commons": "public, and mostly one-way"
+    },
+    "instrument": {
+      "devices_keys": "Devices & keys",
+      "everything_i_shared": "Everything I shared",
+      "this_node": "This node",
+      "someone_i_trust": "Someone I trust",
+      "help": "Help"
+    },
+    "empty": {
+      "files": "Nothing in this circle's files yet. What you make starts in Just me and moves out only when you say so.",
+      "chats": "No conversations in this circle yet.",
+      "people": "Nobody in this circle yet.",
+      "safety": "Nothing to look after here.",
+      "rules": "No rules set for this circle.",
+      "decisions": "Nothing to decide here yet.",
+      "record": "Nothing has happened in this circle yet.",
+      "files_agent": "Nothing here yet. This is where everything starts, and nothing here is advertised.",
+      "decisions_agent": "There is nobody here to decide with. Decisions start in Family.",
+      "decisions_family": "A family decides by talking. There is nothing to vote on here."
+    },
+    "my_things": "My things",
+    "stop_everything": "Stop everything",
+    "stop": {
+      "title": "Stop everything?",
+      "fact_what_label": "What stops",
+      "fact_what": "Your assistant stops thinking, answering and acting for you, right now.",
+      "fact_keeps_label": "What stays",
+      "fact_keeps": "Your files, your circles and every record stay exactly as they are.",
+      "fact_again_label": "Starting again",
+      "fact_again": "From My things › This node, whenever you choose.",
+      "confirm": "Stop everything",
+      "nothing_title": "Nothing is running for you",
+      "nothing_body": "No assistant is thinking or acting on this node, so there is nothing to stop. The button is here anyway, in the same place, because it always is."
     }
   },
   "network": {

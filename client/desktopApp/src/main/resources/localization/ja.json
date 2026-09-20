@@ -3187,7 +3187,8 @@
       "trust": "信頼",
       "users": "ユーザー",
       "wallet": "ウォレット",
-      "wise_authority": "賢明な権威"
+      "wise_authority": "賢明な権威",
+      "help": "ヘルプ"
     },
     "circle": {
       "agent": "自分のみ",
@@ -3195,6 +3196,62 @@
       "local_community": "近隣の人々",
       "global_communities": "コミュニティと企業",
       "global_commons": "全員"
+    },
+    "tab": {
+      "files": "ファイル",
+      "chats": "チャット",
+      "people": "メンバー",
+      "safety": "安全",
+      "rules": "ルール",
+      "decisions": "決定",
+      "record": "レコード"
+    },
+    "circle_sub": {
+      "agent": "自分だけ",
+      "family": "ファミリー",
+      "local_community": "ローカルコミュニティ",
+      "global_communities": "選択したグループ",
+      "global_commons": "パブリック"
+    },
+    "circle_rule": {
+      "agent": "他には誰も",
+      "family": "外部の全員から非公開",
+      "local_community": "誰でも止められる、過半数で解除できる",
+      "global_communities": "ブレーキは同じ、期間はより短い",
+      "global_commons": "公開、そしてほぼ一方向"
+    },
+    "instrument": {
+      "devices_keys": "デバイスと鍵",
+      "everything_i_shared": "共有したすべて",
+      "this_node": "このノード",
+      "someone_i_trust": "信頼する人",
+      "help": "ヘルプ"
+    },
+    "empty": {
+      "files": "このサークルのファイルにはまだ何もありません。あなたが作るものは「自分だけ」から始まり、あなたが指示したときだけ外に出ます。",
+      "chats": "このサークルにはまだ会話がありません。",
+      "people": "このサークルにはまだ誰もいません。",
+      "safety": "ここには見守るべきものはありません。",
+      "rules": "このサークルにはルールが設定されていません。",
+      "decisions": "ここではまだ決定すべきことがありません。",
+      "record": "このサークルではまだ何も起きていません。",
+      "files_agent": "ここにはまだ何もありません。ここはすべての出発点であり、ここにあるものは公開されません。",
+      "decisions_agent": "ここには一緒に決める相手がいません。決定はファミリーから始まります。",
+      "decisions_family": "ファミリーは話し合いで決めます。ここには投票すべきものはありません。"
+    },
+    "my_things": "自分のもの",
+    "stop_everything": "すべてを停止",
+    "stop": {
+      "title": "すべてを停止しますか？",
+      "fact_what_label": "停止するもの",
+      "fact_what": "あなたのアシスタントは今すぐ、考えること、答えること、行動することを止めます。",
+      "fact_keeps_label": "保持されるもの",
+      "fact_keeps": "あなたのファイル、サークル、そしてすべてのレコードは、そのまま保持されます。",
+      "fact_again_label": "再開",
+      "fact_again": "「自分のもの › このノード」から、いつでも。",
+      "confirm": "すべてを停止",
+      "nothing_title": "あなたのために動いているものはありません",
+      "nothing_body": "このノードでは、考えているアシスタントも行動しているアシスタントもいないため、停止すべきものはありません。それでもこのボタンは、いつもと同じ場所に置かれています。"
     }
   },
   "network": {

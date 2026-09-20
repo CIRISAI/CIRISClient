@@ -3187,7 +3187,8 @@
       "trust": "Fiducia",
       "users": "Utenti",
       "wallet": "Portafoglio",
-      "wise_authority": "Wise Authority"
+      "wise_authority": "Wise Authority",
+      "help": "Aiuto"
     },
     "circle": {
       "agent": "Solo io",
@@ -3195,6 +3196,62 @@
       "local_community": "Vicini",
       "global_communities": "Comunità e aziende",
       "global_commons": "Tutti"
+    },
+    "tab": {
+      "files": "File",
+      "chats": "Chat",
+      "people": "Persone",
+      "safety": "Sicurezza",
+      "rules": "Regole",
+      "decisions": "Decisioni",
+      "record": "Registro"
+    },
+    "circle_sub": {
+      "agent": "solo tu",
+      "family": "Famiglia",
+      "local_community": "comunità locale",
+      "global_communities": "gruppi scelti",
+      "global_commons": "pubblico"
+    },
+    "circle_rule": {
+      "agent": "nessun altro",
+      "family": "nascosto a chiunque sia esterno",
+      "local_community": "chiunque può fermarlo, solo una maggioranza può annullarlo",
+      "global_communities": "stesso freno, finestre più brevi",
+      "global_commons": "pubblico, e per lo più a senso unico"
+    },
+    "instrument": {
+      "devices_keys": "Dispositivi e chiavi",
+      "everything_i_shared": "Tutto ciò che ho condiviso",
+      "this_node": "Questo nodo",
+      "someone_i_trust": "Qualcuno di cui mi fido",
+      "help": "Aiuto"
+    },
+    "empty": {
+      "files": "Ancora nulla nei file di questo cerchio. Ciò che crei inizia in Solo io e si sposta all'esterno solo quando lo decidi tu.",
+      "chats": "Ancora nessuna conversazione in questo cerchio.",
+      "people": "Ancora nessuno in questo cerchio.",
+      "safety": "Nulla di cui occuparsi qui.",
+      "rules": "Nessuna regola impostata per questo cerchio.",
+      "decisions": "Ancora nulla da decidere qui.",
+      "record": "Non è ancora successo nulla in questo cerchio.",
+      "files_agent": "Ancora nulla qui. È qui che tutto inizia, e nulla qui viene pubblicizzato.",
+      "decisions_agent": "Non c'è nessuno qui con cui decidere. Le decisioni iniziano in Famiglia.",
+      "decisions_family": "Una famiglia decide parlando. Non c'è nulla su cui votare qui."
+    },
+    "my_things": "Le mie cose",
+    "stop_everything": "Ferma tutto",
+    "stop": {
+      "title": "Fermare tutto?",
+      "fact_what_label": "Cosa si ferma",
+      "fact_what": "Il tuo assistente smette di pensare, rispondere e agire per te, da subito.",
+      "fact_keeps_label": "Cosa resta",
+      "fact_keeps": "I tuoi file, i tuoi cerchi e ogni registrazione restano esattamente come sono.",
+      "fact_again_label": "Ripartire",
+      "fact_again": "Da Le mie cose › Questo nodo, quando vuoi.",
+      "confirm": "Ferma tutto",
+      "nothing_title": "Non c'è nulla in esecuzione per te",
+      "nothing_body": "Nessun assistente sta pensando o agendo su questo nodo, quindi non c'è nulla da fermare. Il pulsante è qui comunque, nello stesso posto, perché è sempre lì."
     }
   },
   "network": {
