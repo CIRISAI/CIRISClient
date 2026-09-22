@@ -34,7 +34,7 @@ def tree(screens: list[dict]) -> dict:
     for rec in screens:
         chain = rec.get("chain") or []
         group = label(chain[0]) if chain else "Unrouted"
-        parent = label(chain[1]) if len(chain) > 2 else ""
+        parent = label(chain[1]) if len(chain) > 1 else ""
         out.setdefault(group, {}).setdefault(parent, []).append(rec)
     return out
 
@@ -163,7 +163,8 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
   </main>
 </div>
 <script>
-const LBL = t => t.replace(/^nav_(group|epistemic)_/,'').replace(/[-_]/g,' ')
+const LBL = t => t.replace(/^(nav_(group|epistemic|instrument)_|circle_|tab_)/,'')
+  .replace(/^btn_my_things$/,'my things').replace(/[-_]/g,' ')
   .replace(/\\b\\w/g, c => c.toUpperCase());
 let DATA = null, CURRENT = null;
 
@@ -196,7 +197,7 @@ function groups(){
   for (const s of DATA.screens){
     const c = s.chain || [];
     const grp = c.length ? LBL(c[0]) : 'Unrouted';
-    const par = c.length > 2 ? LBL(c[1]) : '';
+    const par = c.length > 1 ? LBL(c[1]) : '';
     ((g[grp] = g[grp] || {})[par] = g[grp][par] || []).push(s);
   }
   return g;
@@ -270,10 +271,9 @@ function addRow(box, name, S, kid){
   const row = document.createElement('div');
   row.className = 'row' + (kid ? ' kid' : '') + (shot.ok ? '' : ' noshot');
   let tags = '';
-  if (r.cross_framed) tags += `<span class="tag cross">filed under ${r.group}, child of ${r.parent}</span>`;
-  else if (kid && r.parent) tags += `<span class="tag">child of ${r.parent}</span>`;
-  if (!r.group && !r.parent) tags += '<span class="tag orphan">no route</span>';
-  if (r.children && r.children.length) tags += `<span class="tag">${r.children.length} child${r.children.length>1?'ren':''}</span>`;
+  if (r.agent_only) tags += '<span class="tag">agent build</span>';
+  if (r.tab) tags += `<span class="tag">${r.tab} · ${(r.circles || []).length} circle${(r.circles || []).length === 1 ? '' : 's'}</span>`;
+  if (!r.tab && !r.instrument) tags += '<span class="tag orphan">flow</span>';
   row.innerHTML = `<span class="nm">${name}</span>${tags}`;
   if (shot.ok) row.onclick = () => { selectTab('screens'); show(shot); };
   box.appendChild(row);
@@ -281,33 +281,44 @@ function addRow(box, name, S, kid){
 
 function renderIA(){
   const st = DATA.structure; const m = document.getElementById('main');
-  if (!st){ m.innerHTML = '<p class="note">No structure in this manifest.</p>'; return; }
+  if (!st || !st.circles){ m.innerHTML = '<p class="note">No structure in this manifest.</p>'; return; }
   const S = st.surfaces;
-  m.innerHTML = `<h2 style="font-size:15px;margin:0 0 6px">How the routes relate</h2>
-    <p class="note" style="margin:0 0 14px">Two axes, not one. A surface has a
-    <b>group</b> — the rail section it is filed under — and a <b>parent</b>, the chevron
-    that reveals it. They are independent, and where they disagree the surface is marked
-    <span class="tag cross">cross-framed</span>.</p>`;
+  m.innerHTML = `<h2 style="font-size:15px;margin:0 0 6px">One tree: five circles × seven tabs, and five instruments</h2>
+    <p class="note" style="margin:0 0 14px">Since wave 1 a surface lives in exactly one place: a tab, for the
+    circles it applies to, or under an instrument behind My things. A cell with one card shows that
+    card directly; with several, a list; with none, the honest sentence for that circle.</p>`;
   const box = document.createElement('div'); box.className = 'ia';
-  const byGroup = {};
-  for (const [name, r] of Object.entries(S)) if (r.group) (byGroup[r.group] = byGroup[r.group] || []).push(name);
-  for (const g of st.groups){
-    const names = (byGroup[g] || []).sort();
-    if (!names.length) continue;
-    const h = document.createElement('div'); h.className = 'grp';
-    h.textContent = `${g.replace(/-/g,' ')} · ${names.length}`; box.appendChild(h);
-    const roots = names.filter(n => !S[n].parent || !names.includes(S[n].parent));
-    for (const n of roots){
-      addRow(box, n, S, false);
-      for (const kid of (S[n].children || [])) addRow(box, kid, S, true);
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:120px repeat(' + st.tabs.length + ',minmax(120px,1fr));gap:4px;font-size:12px;overflow-x:auto';
+  const cell = (html, cls) => { const d = document.createElement('div'); d.className = cls || ''; d.style.cssText = 'padding:6px 8px;border:1px solid var(--line);border-radius:6px;min-height:34px'; d.innerHTML = html; return d; };
+  grid.appendChild(cell('<b>circle</b>'));
+  for (const t of st.tabs) grid.appendChild(cell('<b>' + t + '</b>'));
+  for (const c of st.circles){
+    grid.appendChild(cell('<b>' + LBL('circle_' + c) + '</b>'));
+    for (const t of st.tabs){
+      const names = Object.entries(S).filter(([n, r]) => r.tab === t && (r.circles || []).includes(c)).map(([n]) => n).sort();
+      const inner = names.length ? names.map(n => { const sh = shotFor(n); return `<a href="#${n}" data-n="${n}" style="display:block;color:${sh.ok ? 'var(--accent)' : 'var(--muted)'}">${n}${S[n].agent_only ? ' <span class="tag">agent</span>' : ''}</a>`; }).join('') : '<span class="muted">— honest empty</span>';
+      const d = cell(inner);
+      d.querySelectorAll('a').forEach(a => a.onclick = ev => { ev.preventDefault(); const sh = shotFor(a.dataset.n); if (sh.ok){ selectTab('screens'); show(sh); } });
+      grid.appendChild(d);
     }
   }
-  const orph = document.createElement('div'); orph.className = 'grp';
-  orph.textContent = `no group · ${st.ungrouped.length}`; box.appendChild(orph);
-  for (const n of st.ungrouped) addRow(box, n, S, !!S[n].parent);
+  box.appendChild(grid);
+  const h = document.createElement('div'); h.className = 'grp'; h.textContent = 'my things · ' + st.instruments.length + ' instruments'; box.appendChild(h);
+  for (const i of st.instruments){
+    const names = Object.entries(S).filter(([n, r]) => r.instrument === i).map(([n]) => n);
+    const row = document.createElement('div'); row.className = 'row';
+    row.innerHTML = `<span class="nm">${LBL('nav_instrument_' + i)}</span><span class="tag">${names.length} surface${names.length === 1 ? '' : 's'}</span>`;
+    box.appendChild(row);
+    for (const n of names) addRow(box, n, S, true);
+  }
+  if (st.unplaced && st.unplaced.length){
+    const u = document.createElement('div'); u.className = 'grp'; u.textContent = 'flows, not placed · ' + st.unplaced.length; box.appendChild(u);
+    for (const n of st.unplaced) addRow(box, n, S, false);
+  }
   m.appendChild(box);
   const p = document.createElement('p'); p.className = 'note';
-  p.innerHTML = 'A row in grey has no screenshot: a surface the atlas could not photograph, or one with no route at all.';
+  p.innerHTML = 'A name in grey has no screenshot: a surface this capture could not photograph (an agent-only surface on a node capture, or a flow).';
   m.appendChild(p);
 }
 

@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Delegate moderation duty** — confer `slash` / `moderate` / `review` on another
@@ -106,7 +107,7 @@ fun DutyConferralScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("duty.title")) },
                 navigationIcon = {
                     IconButton(

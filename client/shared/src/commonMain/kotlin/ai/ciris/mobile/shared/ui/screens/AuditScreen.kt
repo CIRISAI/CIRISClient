@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -58,7 +59,7 @@ fun AuditScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_system_audit")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

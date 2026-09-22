@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.*
 import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -219,7 +220,7 @@ private fun EditingScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text("Skill Studio") },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state
@@ -356,7 +357,7 @@ private fun PreviewScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text("Preview") },
                 navigationIcon = {
                     // NOT compact-guarded: this is INTERNAL navigation (Preview →
@@ -457,7 +458,7 @@ private fun SecurityReviewScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text("Security Report") },
                 navigationIcon = {
                     // NOT compact-guarded: INTERNAL navigation (Security → Editor

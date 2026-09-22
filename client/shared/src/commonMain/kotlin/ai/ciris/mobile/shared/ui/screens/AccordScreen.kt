@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Trust Root** — the HUMANITY_ACCORD constitutional surface (CIRISServer #41),
@@ -169,7 +170,7 @@ fun AccordScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.accord_title")) },
                 navigationIcon = {
                     IconButton(

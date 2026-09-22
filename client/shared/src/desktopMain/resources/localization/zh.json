@@ -3252,7 +3252,9 @@
       "confirm": "停止一切",
       "nothing_title": "当前没有任何内容在为您运行",
       "nothing_body": "此节点上没有任何助手在思考或行动，因此没有需要停止的内容。此按钮仍显示在这里，位置不变，因为它一直如此。"
-    }
+    },
+    "rail_open": "显示侧栏",
+    "rail_close": "隐藏侧栏"
   },
   "network": {
     "announces": {

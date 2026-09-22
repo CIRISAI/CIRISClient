@@ -64,6 +64,7 @@ import kotlinx.coroutines.withContext
 import androidx.compose.runtime.rememberCoroutineScope
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Settings screen
@@ -180,7 +181,7 @@ fun SettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.settings_title")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

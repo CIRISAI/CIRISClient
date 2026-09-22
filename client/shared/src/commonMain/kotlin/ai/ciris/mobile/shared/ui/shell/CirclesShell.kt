@@ -37,6 +37,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -77,25 +81,41 @@ fun CirclesShell(
     onTab: (Tab) -> Unit,
     onMyThings: () -> Unit,
     onStop: () -> Unit,
+    /** The open card's plain name — the title the screen no longer draws for itself. */
+    cardTitle: String? = null,
     rail: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
     val band = LocalLayoutBand.current
     val t = CirisTheme.tokens
+    // The left side can be put away. Open by default where there is room for
+    // it; the mark in the top bar is the one control, at every width.
+    var railOpen by rememberSaveable { mutableStateOf(true) }
+    val railShown = band.rail && railOpen
     if (band.rail) {
         Row(modifier = Modifier.fillMaxSize().background(t.ground)) {
-            Rail(circle, hasAgent, onCircle, rail)
-            VerticalDivider(thickness = CirisShape.hairlineWidth, color = t.hairline)
+            if (railShown) {
+                Rail(circle, hasAgent, onCircle, rail)
+                VerticalDivider(thickness = CirisShape.hairlineWidth, color = t.hairline)
+            }
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                TopBar(circle, onBack, onMyThings, onStop, compact = false)
+                TopBar(circle, onMyThings, onStop, compact = false, railOpen = railShown,
+                    onToggleRail = { railOpen = !railOpen })
                 TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
+                CardHeader(cardTitle, onBack)
                 Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
+                // Put the side away and the circles come back as the bar they
+                // are on a phone. They are the one piece of chrome that never
+                // moves (locked spec §1) — a toggle that could hide them would
+                // be a toggle that hides the product.
+                if (!railShown) BottomBar(circle, onCircle)
             }
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().background(t.ground)) {
-            TopBar(circle, onBack, onMyThings, onStop, compact = true)
+            TopBar(circle, onMyThings, onStop, compact = true, railOpen = false, onToggleRail = null)
             TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
+            CardHeader(cardTitle, onBack)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
             BottomBar(circle, onCircle)
         }
@@ -107,10 +127,12 @@ fun CirclesShell(
 @Composable
 private fun TopBar(
     circle: CohortScope,
-    onBack: (() -> Unit)?,
     onMyThings: () -> Unit,
     onStop: () -> Unit,
     compact: Boolean,
+    railOpen: Boolean,
+    /** Non-null only where there is a rail to put away (≥900dp). */
+    onToggleRail: (() -> Unit)?,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -125,12 +147,30 @@ private fun TopBar(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        if (onBack != null) {
+        // The mark, top left: it opens and closes the left side wherever there
+        // is one, and is My things where there is not — one icon, one place,
+        // and on a narrow window My things IS the left side, as a sheet.
+        if (onToggleRail != null) {
             Box(
-                modifier = Modifier.size(40.dp).clip(CircleShape).testableClickable("btn_nav_back") { onBack() },
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (railOpen) t.sunken else t.raised)
+                    .border(CirisShape.hairlineWidth, t.hairlineStrong, CircleShape)
+                    .testableClickable(
+                        CirclesNav.RAIL_TOGGLE_TAG,
+                        localizedString(if (railOpen) "nav.rail_close" else "nav.rail_open"),
+                    ) { onToggleRail() },
                 contentAlignment = Alignment.Center,
             ) {
-                Glyph(GlyphName.ARROW_FORWARD, tint = t.dim, size = 20.dp, modifier = Modifier.mirrored())
+                // The 71 glyphs carry no chevron, and inventing one here would
+                // put a path outside the generated set. The arrow points the
+                // way the side is about to move: left to put it away, right to
+                // bring it back.
+                Glyph(
+                    GlyphName.ARROW_FORWARD, tint = t.dim, size = 20.dp,
+                    modifier = if (railOpen) Modifier.mirrored() else Modifier,
+                )
             }
         }
         // My things: the avatar. Not a sixth circle, so it cannot join the bar.
@@ -179,6 +219,49 @@ private fun TopBar(
 }
 
 private fun Modifier.mirrored(): Modifier = this.scale(scaleX = -1f, scaleY = 1f)
+
+// ── The open card: its name, and the one back ────────────────────────────────
+
+/**
+ * ONE BACK, ONE TITLE. A card screen inside the shell draws neither: this row
+ * does, directly under the tabs, so back always sits in the same place and
+ * always means the same thing — the tab or the instrument this card was opened
+ * from. A tab is not a sub-screen, so on a tab there is nothing to go back to
+ * and the arrow is absent rather than disabled.
+ */
+@Composable
+private fun CardHeader(title: String?, onBack: (() -> Unit)?) {
+    if (title == null && onBack == null) return
+    val t = CirisTheme.tokens
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(t.ground)
+            .padding(start = 6.dp, end = 12.dp, top = 4.dp, bottom = 4.dp)
+            .testable("shell_card_header"),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        if (onBack != null) {
+            Box(
+                modifier = Modifier.size(36.dp).clip(CircleShape).testableClickable("btn_nav_back") { onBack() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Glyph(GlyphName.ARROW_FORWARD, tint = t.dim, size = 18.dp, modifier = Modifier.mirrored())
+            }
+        } else {
+            Spacer(Modifier.width(6.dp))
+        }
+        if (title != null) {
+            Text(
+                title,
+                style = CirisTheme.type.title, color = t.ink,
+                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.testable("shell_card_title"),
+            )
+        }
+    }
+}
 
 // ── Tabs ─────────────────────────────────────────────────────────────────────
 

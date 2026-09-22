@@ -48,6 +48,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Claim-Ownership screen — the last UI piece of the founder flow.
@@ -101,7 +102,7 @@ fun ClaimNodeScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.claim_node_title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

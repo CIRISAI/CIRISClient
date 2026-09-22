@@ -37,6 +37,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.localization.LocalizationHelper
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * View mode for memory exploration.
@@ -77,7 +78,7 @@ fun MemoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_memory_explorer")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

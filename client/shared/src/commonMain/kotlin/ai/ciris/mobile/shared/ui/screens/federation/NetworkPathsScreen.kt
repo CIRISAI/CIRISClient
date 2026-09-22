@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.viewmodels.federation.NetworkPathsViewModel
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -73,7 +74,7 @@ fun NetworkPathsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("network.paths.title")) },
                 actions = { ConnectionDot(connectionState, indicatorTag = "indicator_paths_connection") },
                 colors = TopAppBarDefaults.topAppBarColors(

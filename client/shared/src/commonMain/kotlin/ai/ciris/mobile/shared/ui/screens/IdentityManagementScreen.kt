@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Identity Management** — "manage my self + log in as myself on another device"
@@ -112,7 +113,7 @@ fun IdentityManagementScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.identity_title")) },
                 navigationIcon = {
                     IconButton(

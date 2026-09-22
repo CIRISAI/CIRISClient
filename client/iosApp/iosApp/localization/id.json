@@ -3252,7 +3252,9 @@
       "confirm": "Hentikan semuanya",
       "nothing_title": "Tidak ada yang berjalan untuk Anda",
       "nothing_body": "Tidak ada asisten yang berpikir atau bertindak di node ini, jadi tidak ada yang perlu dihentikan. Tombol ini tetap ada di sini, di tempat yang sama, karena memang selalu begitu."
-    }
+    },
+    "rail_open": "Tampilkan panel samping",
+    "rail_close": "Sembunyikan panel samping"
   },
   "network": {
     "announces": {

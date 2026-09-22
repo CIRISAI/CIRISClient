@@ -27,6 +27,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * "Delegation" — delegates_to scope graph and authorization roster.
@@ -55,7 +56,7 @@ fun DelegationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("commons.federation.delegation.title").ifEmpty { "Delegation Graph" }) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

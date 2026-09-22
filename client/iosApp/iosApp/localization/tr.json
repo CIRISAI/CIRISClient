@@ -3252,7 +3252,9 @@
       "confirm": "Her şeyi durdur",
       "nothing_title": "Sizin için çalışan bir şey yok",
       "nothing_body": "Bu düğümde düşünen veya hareket eden bir asistan yok, dolayısıyla durdurulacak bir şey yok. Buton yine de burada, her zaman olduğu aynı yerde."
-    }
+    },
+    "rail_open": "Yan paneli göster",
+    "rail_close": "Yan paneli gizle"
   },
   "network": {
     "announces": {

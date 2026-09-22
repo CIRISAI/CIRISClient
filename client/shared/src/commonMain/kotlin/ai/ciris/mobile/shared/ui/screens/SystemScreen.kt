@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * System management and control screen
@@ -79,7 +80,7 @@ fun SystemScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.nav_system")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

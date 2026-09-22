@@ -13,6 +13,7 @@ import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.viewmodels.NetworkPeersViewModel
 import ai.ciris.mobile.shared.viewmodels.PeerTrustFilter
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -88,7 +89,7 @@ fun NetworkPeersScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("network.peers.title")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — global 3-state

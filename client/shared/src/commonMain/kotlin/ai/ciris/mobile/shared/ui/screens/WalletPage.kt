@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Gas cost estimate for a standard transfer.
@@ -178,7 +179,7 @@ fun WalletPage(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_wallet")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

@@ -85,12 +85,22 @@ def sign_in(drv: TestAutomationServer, user: str, password: str, settle: float) 
     also offers OAuth; on a build that shows the form outright the button is
     absent and the fields are already there, so its absence is not an error.
     """
-    tags = drv.tags()
+    # The login form composes a beat after the mode settles; reading the tree
+    # once, at that instant, saw an empty screen and reported "already signed
+    # in" for a client that was sitting on Login. Wait for something to appear.
+    tags: set[str] = set()
+    for _ in range(60):
+        tags = drv.tags()
+        if tags & {"btn_local_login", "input_username", "btn_my_things", "circle_local_community"}:
+            break
+        time.sleep(1.0)
+    if "btn_my_things" in tags or "circle_local_community" in tags:
+        return "already signed in"
     if "btn_local_login" in tags:
         drv.click("btn_local_login")
         time.sleep(settle)
     if "input_username" not in drv.tags():
-        return "no login form (already signed in?)"
+        return "no login form and no shell — the app is on " + (drv.screen() or "an unknown screen")
     drv.input("input_username", user)
     drv.input("input_password", password)
     drv.click("btn_login_submit")
@@ -167,10 +177,13 @@ def open_hop(drv: TestAutomationServer, hop: str, child: str, settle: float) -> 
     hop that made things worse is simply clicked again.
     """
     for _ in range(3):
-        if child in drv.tags():
+        # A circle or a tab is ALWAYS clicked: the seven tabs are on screen in
+        # every circle, so "the child already exists" says nothing about which
+        # circle is selected — the first shell atlas photographed other
+        # circles' tabs for that reason. My things is a sheet, so it is opened
+        # only when its instruments are not already showing.
+        if not hop.startswith(("circle_", "tab_")) and child in drv.tags():
             return True
-        # Since wave 1 the shell has no chevrons: a hop is a circle, a tab, an
-        # instrument or a row, and each is the control to click.
         control = hop
         try:
             drv.wait_for_element(control, timeout=6.0)
@@ -303,8 +316,10 @@ def main() -> int:
         if args.user:
             print(f"login: {sign_in(drv, args.user, args.password, args.settle)}")
 
-        hops = nav_map.build()
-        print(f"{len(hops)} screens in the nav tree")
+        # The node build is a subset: an agent-only surface is not a miss on a
+        # node capture, it is absent by design.
+        hops = nav_map.build(has_agent=(mode == "AGENT"))
+        print(f"{len(hops)} screens in the nav tree ({mode})")
         results = capture(drv, shots, hops, args.settle)
 
         manifest = {

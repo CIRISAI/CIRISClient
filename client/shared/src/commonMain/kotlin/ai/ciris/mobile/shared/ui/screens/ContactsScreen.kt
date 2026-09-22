@@ -30,6 +30,7 @@ import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.ui.theme.tone
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -131,7 +132,7 @@ fun ContactsScreen(
     Scaffold(
         containerColor = t.ground,
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = t.ground,
                     scrolledContainerColor = t.ground,

@@ -30,6 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Consent management screen for GDPR/privacy controls
@@ -57,7 +58,7 @@ fun ConsentScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_consent_management")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

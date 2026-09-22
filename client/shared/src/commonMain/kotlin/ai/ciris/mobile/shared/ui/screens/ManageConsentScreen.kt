@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Manage Consent — view + manage the consent objects this device holds.
@@ -90,7 +91,7 @@ fun ManageConsentScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.manage_consent_title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

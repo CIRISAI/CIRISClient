@@ -4924,6 +4924,11 @@ fun CIRISApp(
                     onTab = { t -> openTab(circleNow, t) },
                     onMyThings = { showMyThings = true },
                     onStop = { showStop = true },
+                    // The card's name, shown once, by the shell. A tab shows
+                    // its own list and needs no title; a card that IS its tab's
+                    // only content (Contacts in People) is titled all the same,
+                    // because the tab strip names the tab, not the card.
+                    cardTitle = activeSurface?.let { ai.ciris.mobile.shared.ui.shell.surfaceLabel(it) },
                     rail = {
                         for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
                             ai.ciris.mobile.shared.ui.shell.InstrumentRow(
@@ -4937,13 +4942,15 @@ fun CIRISApp(
                         }
                     },
                 ) {
-                    // Card screens read this to drop their own back arrow: inside
-                    // the shell the top bar is the one back affordance at EVERY
-                    // width (a tab is not a sub-screen), which is the contract the
-                    // drawer overlay used to provide on phones only. Wave 2 removes
-                    // the per-screen bars altogether.
+                    // INSIDE THE SHELL — said with the name that means it.
+                    // Screens read this to draw no bar of their own: the shell
+                    // carries the circle, the tabs, the card's name and the one
+                    // back arrow, and `ScreenTopBar` keeps their actions.
+                    // `LocalIsCompactWindow` is left alone here on purpose: it
+                    // answers how wide the window is, and wave 1 forcing it true
+                    // at every width told every screen the desktop was a phone.
                     CompositionLocalProvider(
-                        ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow provides true,
+                        ai.ciris.mobile.shared.ui.nav.LocalInsideShell provides true,
                     ) {
                         mainScreenContent(androidx.compose.ui.Modifier.fillMaxSize())
                     }

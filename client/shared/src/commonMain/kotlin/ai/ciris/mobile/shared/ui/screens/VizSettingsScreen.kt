@@ -51,6 +51,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import kotlin.math.roundToLong
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Visualization Settings screen — step 11 of FSD/CELL_VIZ_REDESIGN.md.
@@ -82,7 +83,7 @@ fun VizSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text("Visualization") },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

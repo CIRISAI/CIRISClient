@@ -32,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import kotlinx.coroutines.launch
 
 /**
@@ -75,7 +76,7 @@ fun LogsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_system_logs")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

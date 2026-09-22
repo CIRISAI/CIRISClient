@@ -43,6 +43,7 @@ import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Users management screen.
@@ -71,7 +72,7 @@ fun UsersScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_users")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

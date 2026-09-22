@@ -3252,7 +3252,9 @@
       "confirm": "Simamisha kila kitu",
       "nothing_title": "Hakuna kinachofanya kazi kwa niaba yako",
       "nothing_body": "Hakuna msaidizi anayefikiri au kutenda kwenye nodi hii, hivyo hakuna la kusimamisha. Kitufe hiki kipo hapa hata hivyo, mahali pale pale, kwa sababu kipo daima."
-    }
+    },
+    "rail_open": "Onyesha upande",
+    "rail_close": "Ficha upande"
   },
   "network": {
     "announces": {

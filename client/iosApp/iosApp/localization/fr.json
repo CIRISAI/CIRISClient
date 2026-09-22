@@ -3252,7 +3252,9 @@
       "confirm": "Tout arrêter",
       "nothing_title": "Rien n'est en cours pour vous",
       "nothing_body": "Aucun assistant ne pense ni n'agit sur ce nœud, il n'y a donc rien à arrêter. Le bouton est ici quand même, au même endroit, car il y est toujours."
-    }
+    },
+    "rail_open": "Afficher le panneau latéral",
+    "rail_close": "Masquer le panneau latéral"
   },
   "network": {
     "announces": {
