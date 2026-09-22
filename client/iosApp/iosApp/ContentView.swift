@@ -190,16 +190,54 @@ struct ContentView: View {
             return
         }
 
-        // Wait for server to be ready (poll health endpoint AND status file)
+        // WAIT ON PROGRESS, NOT ON A STOPWATCH.
+        //
+        // This loop used to give up after a flat 30 seconds. A cold simulator
+        // on a slow runner reached its API in 41s — RUNTIME_INIT alone took 21
+        // of them — so the host declared "Engine Failed to Start" while the
+        // engine was still walking its phases, Compose never ran, and with it
+        // the in-app automation server the QA gate drives (run 35752974798; the
+        // green run before it made the same journey in 25.5s, 4.5s of headroom).
+        // A fixed deadline cannot tell a slow boot from a dead one, and picking
+        // a bigger number only moves the cliff.
+        //
+        // So: fail when the engine STOPS MAKING PROGRESS, not when a clock runs
+        // out. Every advertised step advances `current_step`; while that keeps
+        // moving we keep waiting, up to a ceiling that exists only so a wedged
+        // process cannot hang the app forever. The message names the last step
+        // we saw, because "did not become healthy" told the person nothing they
+        // could act on and nothing we could debug from a photograph.
         var attempts = 0
-        let maxAttempts = 30  // 30 seconds max
+        let maxAttempts = 300          // ceiling: a wedged engine still surfaces
+        let idleLimit = 60             // no progress for this long = wedged
+        var lastProgressAt = 0
+        var lastSeen = -1
+        var lastPhase = ""
+        var lastStepName = "starting"
 
         while attempts < maxAttempts {
             try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
             attempts += 1
 
+            // What the engine has done lately: this keeps moving after the
+            // advertised steps are done, and it is what separates a slow boot
+            // from a dead one.
+            let signature = engineProgressSignature()
+            if !signature.isEmpty && signature != lastPhase {
+                lastPhase = signature
+                lastProgressAt = attempts
+                if let phaseName = signature.split(separator: "/").first, !phaseName.hasPrefix("logs:") {
+                    lastStepName = String(phaseName)
+                }
+            }
+
             // Check startup status file first
             if let status = loadStartupStatus() {
+                if status.current_step != lastSeen {
+                    lastSeen = status.current_step
+                    lastProgressAt = attempts
+                    lastStepName = status.steps.last(where: { $0.status != "pending" })?.name ?? "step \(status.current_step)"
+                }
                 if let allPassed = status.all_passed {
                     if !allPassed {
                         // Startup checks failed - show error immediately
@@ -231,10 +269,16 @@ struct ContentView: View {
                 return
             }
 
-            NSLog("[ContentView] Waiting for server... (\(attempts)/\(maxAttempts))")
+            if attempts - lastProgressAt >= idleLimit {
+                NSLog("[ContentView] No startup progress for \(idleLimit)s; last step: %{public}@", lastStepName)
+                initError = "The engine stopped during startup, at: \(lastStepName)"
+                return
+            }
+
+            NSLog("[ContentView] Waiting for server... (\(attempts)s, last step: %{public}@)", lastStepName)
         }
 
-        initError = "Server did not become healthy within 30 seconds"
+        initError = "The engine did not finish starting after \(maxAttempts) seconds (last step: \(lastStepName))"
     }
 
     /// Trigger App Attest at startup so the CIRISVerify FFI handle caches the
@@ -243,6 +287,38 @@ struct ContentView: View {
     // The Python-side CIRISVerify FFI runs run_attestation_sync at startup which
     // would race with Swift (both fetch nonces from the registry). On-demand
     // attestation via onDeviceAttestationRequested (Trust page) is still active.
+
+    /// What the engine has done lately, as one string.
+    ///
+    /// The advertised startup STEPS stop at 6 and sit there for the whole
+    /// runtime boot, so they cannot tell "still working" from "wedged". These
+    /// two can: the phase file the runtime writes when it has one, and the size
+    /// of its logs, which grow while it works whatever else is or is not being
+    /// written. Any change is progress.
+    private func engineProgressSignature() -> String {
+        let fm = FileManager.default
+        guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return "" }
+        let ciris = docs.appendingPathComponent("ciris")
+        var parts: [String] = []
+
+        let phaseFile = ciris.appendingPathComponent("runtime_status.json")
+        if let data = try? Data(contentsOf: phaseFile),
+           let status = try? JSONDecoder().decode(RuntimeStatus.self, from: data) {
+            parts.append("\(status.phase)/\(status.status)/\(status.timestamp.map { String($0) } ?? "-")")
+        }
+
+        let logs = ciris.appendingPathComponent("logs")
+        if let names = try? fm.contentsOfDirectory(atPath: logs.path) {
+            var total = 0
+            for name in names where name.hasSuffix(".log") {
+                let path = logs.appendingPathComponent(name).path
+                let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? Int ?? 0
+                total += size
+            }
+            parts.append("logs:\(total)")
+        }
+        return parts.joined(separator: " ")
+    }
 
     private func loadStartupStatus() -> StartupStatus? {
         let fileManager = FileManager.default
