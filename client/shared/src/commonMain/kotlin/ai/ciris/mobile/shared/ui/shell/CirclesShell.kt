@@ -163,14 +163,7 @@ private fun TopBar(
                     ) { onToggleRail() },
                 contentAlignment = Alignment.Center,
             ) {
-                // The 71 glyphs carry no chevron, and inventing one here would
-                // put a path outside the generated set. The arrow points the
-                // way the side is about to move: left to put it away, right to
-                // bring it back.
-                Glyph(
-                    GlyphName.ARROW_FORWARD, tint = t.dim, size = 20.dp,
-                    modifier = if (railOpen) Modifier.mirrored() else Modifier,
-                )
+                RailMark(open = railOpen)
             }
         }
         // My things: the avatar. Not a sixth circle, so it cannot join the bar.
@@ -219,6 +212,32 @@ private fun TopBar(
 }
 
 private fun Modifier.mirrored(): Modifier = this.scale(scaleX = -1f, scaleY = 1f)
+
+/**
+ * The mark on the rail toggle: a page with its side band filled when the side
+ * is showing, hollow when it is away.
+ *
+ * NOT AN ARROW. The first pass drew a mirrored `ARROW_FORWARD` here, which put
+ * two left-pointing arrows within 90dp of each other — one meaning "hide the
+ * side", the other "go back" — in the corner of a shell whose whole point this
+ * week was that back means one thing and lives in one place. The 71 glyphs
+ * carry no panel icon and inventing a path would put it outside the generated
+ * set, so this is drawn from the primitives instead: two boxes and a border,
+ * in tokens, showing the thing it toggles.
+ */
+@Composable
+private fun RailMark(open: Boolean) {
+    val t = CirisTheme.tokens
+    Row(
+        modifier = Modifier
+            .width(20.dp)
+            .height(15.dp)
+            .clip(CirisShape.input)
+            .border(CirisShape.hairlineWidth, t.dim, CirisShape.input),
+    ) {
+        Box(Modifier.width(6.dp).fillMaxHeight().background(if (open) t.dim else t.ground))
+    }
+}
 
 // ── The open card: its name, and the one back ────────────────────────────────
 
