@@ -1159,49 +1159,6 @@ struct StartupErrorView: View {
     ///
     /// Order matters: incidents first, because a boot failure writes there and it
     /// is the shortest path to a cause. `latest.log` is the fallback — long, but a
-// ── LogTail ─────────────────────────────────────────────────────────────────
-// Foundation ONLY — no SwiftUI, no shared-module imports. The block between
-// these markers is EXTRACTED VERBATIM and compiled standalone by
-// client/iosApp/scripts/test_logtail.sh on the macOS runner, so the logic that
-// guards the error path is tested on the real toolchain without needing the
-// full app build. Keep it dependency-free or the extraction gate fails.
-enum LogTail {
-    /// The last `maxLines` COMPLETE lines of the file, reading at most
-    /// `maxBytes` from its END.
-    ///
-    /// The predecessor was `String(contentsOf:)` from the button action: it
-    /// loaded the ENTIRE file before discarding all but 400 lines, so a large
-    /// `latest.log` froze the main thread or exhausted memory exactly on the
-    /// startup-error screen — the one place the diagnostic must not fail. The
-    /// byte cap bounds the read no matter how big the file grew; seeking from
-    /// the end reads only the window that can possibly matter.
-    ///
-    /// Returns nil for a missing, unreadable, or empty file — same verdict the
-    /// old `!data.isEmpty` guard reached, so the caller's candidate loop keeps
-    /// its behavior.
-    static func tail(of url: URL, maxLines: Int = 400, maxBytes: UInt64 = 512 * 1024) -> String? {
-        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? fh.close() }
-        guard let size = try? fh.seekToEnd(), size > 0 else { return nil }
-        let start = size > maxBytes ? size - maxBytes : 0
-        guard (try? fh.seek(toOffset: start)) != nil,
-              let data = try? fh.readToEnd(), !data.isEmpty else { return nil }
-        // Lossy-safe: a window that starts mid-code-point decodes its first
-        // bytes to replacement characters instead of failing the whole read.
-        var text = String(decoding: data, as: UTF8.self)
-        if start > 0 {
-            // The window almost certainly opens mid-line; drop everything up to
-            // the first newline so every kept line is a COMPLETE line.
-            if let nl = text.firstIndex(of: "\n") {
-                text = String(text[text.index(after: nl)...])
-            }
-        }
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).suffix(maxLines)
-        let joined = lines.joined(separator: "\n")
-        return joined.isEmpty ? nil : joined
-    }
-}
-// ── end LogTail ─────────────────────────────────────────────────────────────
 
     /// startup that never reaches the incident writer still leaves a trace in it.
     /// The Swift/KMP bridge logs come last; they catch the case where the Python
@@ -1277,6 +1234,54 @@ enum LogTail {
         """
     }
 }
+
+// LIFTED TO FILE SCOPE. It lived inside StartupErrorView, where only that
+// screen could see it — so the startup wait, which needs exactly this bounded
+// read once a second, could not. The markers stay: the standalone gate
+// extracts the block between them verbatim.
+// ── LogTail ─────────────────────────────────────────────────────────────────
+// Foundation ONLY — no SwiftUI, no shared-module imports. The block between
+// these markers is EXTRACTED VERBATIM and compiled standalone by
+// client/iosApp/scripts/test_logtail.sh on the macOS runner, so the logic that
+// guards the error path is tested on the real toolchain without needing the
+// full app build. Keep it dependency-free or the extraction gate fails.
+enum LogTail {
+    /// The last `maxLines` COMPLETE lines of the file, reading at most
+    /// `maxBytes` from its END.
+    ///
+    /// The predecessor was `String(contentsOf:)` from the button action: it
+    /// loaded the ENTIRE file before discarding all but 400 lines, so a large
+    /// `latest.log` froze the main thread or exhausted memory exactly on the
+    /// startup-error screen — the one place the diagnostic must not fail. The
+    /// byte cap bounds the read no matter how big the file grew; seeking from
+    /// the end reads only the window that can possibly matter.
+    ///
+    /// Returns nil for a missing, unreadable, or empty file — same verdict the
+    /// old `!data.isEmpty` guard reached, so the caller's candidate loop keeps
+    /// its behavior.
+    static func tail(of url: URL, maxLines: Int = 400, maxBytes: UInt64 = 512 * 1024) -> String? {
+        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? fh.close() }
+        guard let size = try? fh.seekToEnd(), size > 0 else { return nil }
+        let start = size > maxBytes ? size - maxBytes : 0
+        guard (try? fh.seek(toOffset: start)) != nil,
+              let data = try? fh.readToEnd(), !data.isEmpty else { return nil }
+        // Lossy-safe: a window that starts mid-code-point decodes its first
+        // bytes to replacement characters instead of failing the whole read.
+        var text = String(decoding: data, as: UTF8.self)
+        if start > 0 {
+            // The window almost certainly opens mid-line; drop everything up to
+            // the first newline so every kept line is a COMPLETE line.
+            if let nl = text.firstIndex(of: "\n") {
+                text = String(text[text.index(after: nl)...])
+            }
+        }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).suffix(maxLines)
+        let joined = lines.joined(separator: "\n")
+        return joined.isEmpty ? nil : joined
+    }
+}
+// ── end LogTail ─────────────────────────────────────────────────────────────
 
 // MARK: - Compose Multiplatform Integration
 
