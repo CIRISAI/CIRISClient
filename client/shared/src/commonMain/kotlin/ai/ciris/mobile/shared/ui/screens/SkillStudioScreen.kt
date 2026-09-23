@@ -359,7 +359,7 @@ private fun PreviewScreen(
         topBar = {
             ScreenTopBar(
                 title = { Text("Preview") },
-                navigationIcon = {
+                flowNavigationIcon = {
                     // NOT compact-guarded: this is INTERNAL navigation (Preview →
                     // Editor via onBack), not the screen's top-level back. The
                     // global overlay only knows the screen's parent (Adapters),
@@ -460,7 +460,7 @@ private fun SecurityReviewScreen(
         topBar = {
             ScreenTopBar(
                 title = { Text("Security Report") },
-                navigationIcon = {
+                flowNavigationIcon = {
                     // NOT compact-guarded: INTERNAL navigation (Security → Editor
                     // via onBack), not the screen's top-level back. Must always
                     // render — the global overlay only knows the parent (Adapters).

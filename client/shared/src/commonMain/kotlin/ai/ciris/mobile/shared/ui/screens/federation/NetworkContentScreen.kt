@@ -98,7 +98,7 @@ fun NetworkContentScreen(
                         },
                     )
                 },
-                navigationIcon = {
+                flowNavigationIcon = {
                     if (step == ContentStep.FETCH) {
                         IconButton(onClick = { vm.backToPicker() }) {
                             Icon(

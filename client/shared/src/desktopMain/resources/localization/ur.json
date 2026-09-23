@@ -3254,7 +3254,8 @@
       "fact_what_label": "کیا رکتا ہے"
     },
     "rail_open": "سائیڈ دکھائیں",
-    "rail_close": "سائیڈ چھپائیں"
+    "rail_close": "سائیڈ چھپائیں",
+    "back": "واپس"
   },
   "network": {
     "announces": {

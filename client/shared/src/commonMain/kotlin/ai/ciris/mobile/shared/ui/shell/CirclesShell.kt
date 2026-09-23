@@ -34,9 +34,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -46,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -92,6 +96,11 @@ fun CirclesShell(
     // it; the mark in the top bar is the one control, at every width.
     var railOpen by rememberSaveable { mutableStateOf(true) }
     val railShown = band.rail && railOpen
+    // What the hosted screen says it is showing right now. Null until one
+    // publishes; then it wins over the card's name, because a step ("Preview")
+    // and a leaf (a chat, a federation page) know what they are and the card
+    // does not.
+    val publishedTitle = rememberShellCardTitleSlot()
     if (band.rail) {
         Row(modifier = Modifier.fillMaxSize().background(t.ground)) {
             if (railShown) {
@@ -102,8 +111,10 @@ fun CirclesShell(
                 TopBar(circle, onMyThings, onStop, compact = false, railOpen = railShown,
                     onToggleRail = { railOpen = !railOpen })
                 TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
-                CardHeader(cardTitle, onBack)
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
+                CardHeader(cardTitle, onBack, publishedTitle.value)
+                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                    CompositionLocalProvider(LocalShellCardTitle provides publishedTitle) { content() }
+                }
                 // Put the side away and the circles come back as the bar they
                 // are on a phone. They are the one piece of chrome that never
                 // moves (locked spec §1) — a toggle that could hide them would
@@ -115,8 +126,10 @@ fun CirclesShell(
         Column(modifier = Modifier.fillMaxSize().background(t.ground)) {
             TopBar(circle, onMyThings, onStop, compact = true, railOpen = false, onToggleRail = null)
             TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
-            CardHeader(cardTitle, onBack)
-            Box(modifier = Modifier.weight(1f).fillMaxWidth()) { content() }
+            CardHeader(cardTitle, onBack, publishedTitle.value)
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                CompositionLocalProvider(LocalShellCardTitle provides publishedTitle) { content() }
+            }
             BottomBar(circle, onCircle)
         }
     }
@@ -163,10 +176,11 @@ private fun TopBar(
                     ) { onToggleRail() },
                 contentAlignment = Alignment.Center,
             ) {
-                RailMark(open = railOpen)
+                RailMark(open = railOpen, label = localizedString(if (railOpen) "nav.rail_close" else "nav.rail_open"))
             }
         }
         // My things: the avatar. Not a sixth circle, so it cannot join the bar.
+        val myThingsLabel = localizedString("nav.my_things")
         Box(
             modifier = Modifier
                 .size(40.dp)
@@ -176,7 +190,10 @@ private fun TopBar(
                 .testableClickable(CirclesNav.MY_THINGS_TAG, localizedString("nav.my_things")) { onMyThings() },
             contentAlignment = Alignment.Center,
         ) {
-            CIRISSignet(modifier = Modifier.size(24.dp), tintColor = t.brand)
+            CIRISSignet(
+                modifier = Modifier.size(24.dp).semantics { contentDescription = myThingsLabel },
+                tintColor = t.brand,
+            )
         }
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -205,7 +222,7 @@ private fun TopBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Glyph(GlyphName.STOP, tint = t.danger, size = 16.dp)
+            Glyph(GlyphName.STOP, tint = t.danger, size = 16.dp, contentDescription = localizedString("nav.stop_everything"))
             if (!compact) Text(localizedString("nav.stop_everything"), style = type.label, color = t.danger)
         }
     }
@@ -226,14 +243,15 @@ private fun Modifier.mirrored(): Modifier = this.scale(scaleX = -1f, scaleY = 1f
  * in tokens, showing the thing it toggles.
  */
 @Composable
-private fun RailMark(open: Boolean) {
+private fun RailMark(open: Boolean, label: String) {
     val t = CirisTheme.tokens
     Row(
         modifier = Modifier
             .width(20.dp)
             .height(15.dp)
             .clip(CirisShape.input)
-            .border(CirisShape.hairlineWidth, t.dim, CirisShape.input),
+            .border(CirisShape.hairlineWidth, t.dim, CirisShape.input)
+            .semantics { contentDescription = label },
     ) {
         Box(Modifier.width(6.dp).fillMaxHeight().background(if (open) t.dim else t.ground))
     }
@@ -249,8 +267,8 @@ private fun RailMark(open: Boolean) {
  * and the arrow is absent rather than disabled.
  */
 @Composable
-private fun CardHeader(title: String?, onBack: (() -> Unit)?) {
-    if (title == null && onBack == null) return
+private fun CardHeader(title: String?, onBack: (() -> Unit)?, published: (@Composable () -> Unit)?) {
+    if (title == null && onBack == null && published == null) return
     val t = CirisTheme.tokens
     Row(
         modifier = Modifier
@@ -262,16 +280,27 @@ private fun CardHeader(title: String?, onBack: (() -> Unit)?) {
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         if (onBack != null) {
+            val label = localizedString("nav.back")
             Box(
-                modifier = Modifier.size(36.dp).clip(CircleShape).testableClickable("btn_nav_back") { onBack() },
+                modifier = Modifier.size(36.dp).clip(CircleShape).testableClickable("btn_nav_back", label) { onBack() },
                 contentAlignment = Alignment.Center,
             ) {
-                Glyph(GlyphName.ARROW_FORWARD, tint = t.dim, size = 18.dp, modifier = Modifier.mirrored())
+                // The label is the screen reader's only handle on this control:
+                // the per-screen arrows that carried one are gone, and a test
+                // tag is not a description.
+                Glyph(
+                    GlyphName.ARROW_FORWARD, tint = t.dim, size = 18.dp,
+                    contentDescription = label, modifier = Modifier.mirrored(),
+                )
             }
         } else {
             Spacer(Modifier.width(6.dp))
         }
-        if (title != null) {
+        if (published != null) {
+            Box(modifier = Modifier.testable("shell_card_title")) {
+                ProvideTextStyle(CirisTheme.type.title.copy(color = t.ink)) { published() }
+            }
+        } else if (title != null) {
             Text(
                 title,
                 style = CirisTheme.type.title, color = t.ink,

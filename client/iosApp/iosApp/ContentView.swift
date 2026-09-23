@@ -219,6 +219,16 @@ struct ContentView: View {
             try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
             attempts += 1
 
+            // A runtime that has ALREADY said it failed is not slow, and
+            // waiting out the idle limit to say so in generic words throws away
+            // the reason it just gave us.
+            if let runtime = loadRuntimeStatus(),
+               runtime.status.lowercased() == "failed" || runtime.phase.uppercased() == "ERROR" {
+                NSLog("[ContentView] Runtime reported failure in \(runtime.phase): \(runtime.error ?? "no detail")")
+                initError = runtime.error ?? "The engine failed during \(runtime.phase)"
+                return
+            }
+
             // What the engine has done lately: this keeps moving after the
             // advertised steps are done, and it is what separates a slow boot
             // from a dead one.
@@ -288,36 +298,52 @@ struct ContentView: View {
     // would race with Swift (both fetch nonces from the registry). On-demand
     // attestation via onDeviceAttestationRequested (Trust page) is still active.
 
-    /// What the engine has done lately, as one string.
+    /// What the engine has done lately, as one string — and nothing it does on
+    /// a timer.
     ///
     /// The advertised startup STEPS stop at 6 and sit there for the whole
-    /// runtime boot, so they cannot tell "still working" from "wedged". These
-    /// two can: the phase file the runtime writes when it has one, and the size
-    /// of its logs, which grow while it works whatever else is or is not being
-    /// written. Any change is progress.
+    /// runtime boot, so they cannot tell "still working" from "wedged". The
+    /// runtime's own phase can, and so can its log — but only if the log's
+    /// heartbeat is left out of it: the watchdog writes one every 30s whatever
+    /// else is happening, which is inside the 60s idle limit, so counting bytes
+    /// alone would call a hung engine "progress" forever and the wait would run
+    /// to its ceiling instead of failing at a minute.
     private func engineProgressSignature() -> String {
         let fm = FileManager.default
         guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return "" }
         let ciris = docs.appendingPathComponent("ciris")
         var parts: [String] = []
 
-        let phaseFile = ciris.appendingPathComponent("runtime_status.json")
-        if let data = try? Data(contentsOf: phaseFile),
-           let status = try? JSONDecoder().decode(RuntimeStatus.self, from: data) {
-            parts.append("\(status.phase)/\(status.status)/\(status.timestamp.map { String($0) } ?? "-")")
+        if let status = loadRuntimeStatus() {
+            parts.append("\(status.phase)/\(status.status)")
         }
 
+        // The last line the runtime wrote that was not a heartbeat.
         let logs = ciris.appendingPathComponent("logs")
         if let names = try? fm.contentsOfDirectory(atPath: logs.path) {
-            var total = 0
+            var newest: (path: String, at: Date)? = nil
             for name in names where name.hasSuffix(".log") {
                 let path = logs.appendingPathComponent(name).path
-                let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? Int ?? 0
-                total += size
+                let at = (try? fm.attributesOfItem(atPath: path))?[.modificationDate] as? Date ?? .distantPast
+                if newest == nil || at > newest!.at { newest = (path, at) }
             }
-            parts.append("logs:\(total)")
+            if let file = newest?.path, let text = try? String(contentsOfFile: file, encoding: .utf8) {
+                let lines = text.split(separator: "\n").suffix(60)
+                    .filter { !$0.contains("watchdog") }
+                if let last = lines.last { parts.append(String(last.suffix(120))) }
+            }
         }
         return parts.joined(separator: " ")
+    }
+
+    /// The runtime's own phase file, decoded — `nil` when it has not written one.
+    private func loadRuntimeStatus() -> RuntimeStatus? {
+        let fm = FileManager.default
+        guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let file = docs.appendingPathComponent("ciris/runtime_status.json")
+        guard let data = try? Data(contentsOf: file),
+              let status = try? JSONDecoder().decode(RuntimeStatus.self, from: data) else { return nil }
+        return status
     }
 
     private func loadStartupStatus() -> StartupStatus? {

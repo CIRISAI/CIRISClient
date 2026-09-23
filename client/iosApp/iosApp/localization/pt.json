@@ -3254,7 +3254,8 @@
       "nothing_body": "Nenhum assistente está pensando ou agindo neste nó, então não há nada para parar. O botão está aqui mesmo assim, no mesmo lugar, porque ele sempre está."
     },
     "rail_open": "Mostrar painel lateral",
-    "rail_close": "Ocultar painel lateral"
+    "rail_close": "Ocultar painel lateral",
+    "back": "Voltar"
   },
   "network": {
     "announces": {

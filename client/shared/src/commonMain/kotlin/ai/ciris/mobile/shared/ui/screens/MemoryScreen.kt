@@ -108,8 +108,7 @@ fun MemoryScreen(
                         modifier = Modifier.testableClickable("btn_memory_switch_graph") { onSwitchToGraph() }
                     ) {
                         Text(
-                            localizedString("graph_title"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            localizedString("graph_title")
                         )
                     }
                     TextButton(
@@ -117,8 +116,7 @@ fun MemoryScreen(
                         modifier = Modifier.testableClickable("btn_memory_toggle_filters") { showFilters = !showFilters }
                     ) {
                         Text(
-                            if (showFilters) localizedString("settings_hide") else localizedString("graph_filters"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            if (showFilters) localizedString("settings_hide") else localizedString("graph_filters")
                         )
                     }
                     IconButton(

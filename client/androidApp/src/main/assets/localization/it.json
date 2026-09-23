@@ -3254,7 +3254,8 @@
       "nothing_body": "Nessun assistente sta pensando o agendo su questo nodo, quindi non c'è nulla da fermare. Il pulsante è qui comunque, nello stesso posto, perché è sempre lì."
     },
     "rail_open": "Mostra la barra laterale",
-    "rail_close": "Nascondi la barra laterale"
+    "rail_close": "Nascondi la barra laterale",
+    "back": "Indietro"
   },
   "network": {
     "announces": {

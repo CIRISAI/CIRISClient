@@ -111,8 +111,7 @@ fun TicketsScreen(
                         modifier = Modifier.testableClickable("btn_tickets_toggle_filters") { showFilters = !showFilters }
                     ) {
                         Text(
-                            if (showFilters) localizedString("mobile.tickets_hide_filters") else localizedString("mobile.tickets_filters"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            if (showFilters) localizedString("mobile.tickets_hide_filters") else localizedString("mobile.tickets_filters")
                         )
                     }
                     IconButton(

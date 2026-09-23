@@ -3254,7 +3254,8 @@
       "nothing_body": "Không có trợ lý nào đang suy nghĩ hoặc hành động trên nút này, nên không có gì để dừng. Nút bấm vẫn ở đây, cùng một vị trí, vì nó luôn như vậy."
     },
     "rail_open": "Hiển thị thanh bên",
-    "rail_close": "Ẩn thanh bên"
+    "rail_close": "Ẩn thanh bên",
+    "back": "Quay lại"
   },
   "network": {
     "announces": {

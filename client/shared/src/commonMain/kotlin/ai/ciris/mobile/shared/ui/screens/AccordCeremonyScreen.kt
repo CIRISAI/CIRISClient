@@ -78,7 +78,7 @@ fun AccordCeremonyScreen(
         topBar = {
             ScreenTopBar(
                 title = { Text(localizedString("mobile.accord_ceremony_title")) },
-                navigationIcon = {
+                flowNavigationIcon = {
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_accord_ceremony_back") { onBack() },

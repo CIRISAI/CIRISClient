@@ -168,14 +168,29 @@ def reach(drv: TestAutomationServer, tag: str, settle: float, tries: int = 16) -
     """
     from testing.driver import DriverError
 
+    # The rail is not the only thing that scrolls any more. A long instrument
+    # list (This node carries twenty rows since the spine moved the machine's
+    # own surfaces there) has its own scrollable, named for the page, and a row
+    # below ITS fold is not reachable by scrolling the rail. Try the rail, then
+    # whatever page container the tree is currently showing.
+    def containers() -> list[str]:
+        found = [NAV_RAIL]
+        for t in drv.tags():
+            if t.startswith(("instrument_", "tab_cards_")) and t not in found:
+                found.append(t)
+        return found
+
     def nudge(direction: str, amount: int) -> bool:
         # "already at the bottom" comes back as a 404. That is an answer, not a
-        # failure: stop going that way.
-        try:
-            drv.scroll_to(tag, direction, amount, container=NAV_RAIL)
-            return True
-        except DriverError:
-            return False
+        # failure: stop going that way — but only once every container says so.
+        moved = False
+        for container in containers():
+            try:
+                drv.scroll_to(tag, direction, amount, container=container)
+                moved = True
+            except DriverError:
+                continue
+        return moved
 
     if on_screen(drv, tag):
         drv.click(tag)

@@ -554,10 +554,12 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
-            // Sub-screens of layer hubs
-            is Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+            // Sub-screens of layer hubs. The platform's back must land where
+            // the shell's arrow lands, so a card that the spine re-homed goes
+            // back to the TAB it is now in, not to the hub it used to hang off.
+            is Screen.EnvironmentInfo -> Screen.CircleTab("local-community", "decisions")
             is Screen.Delegation -> Screen.LayerFamily
-            is Screen.Constitutional -> Screen.LayerGlobalCommons
+            is Screen.Constitutional -> Screen.CircleTab("global-commons", "safety")
 
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
@@ -2838,7 +2840,14 @@ fun CIRISApp(
                 // `InteractScreen`) becomes the visible top chrome. On
                 // tablet/desktop where the sidebar is permanent and there's
                 // no overlay button, keep the full CIRISTopBar for now.
-                val showTopBar = !ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow.current
+                // INSIDE THE SHELL THERE IS NO SECOND BAR. This used to read
+                // `!LocalIsCompactWindow`, which was false only because wave 1
+                // forced that local true at every width; with the local telling
+                // the truth again, a desktop Interact grew THREE stacked bars —
+                // the shell's, the card header, and this dropdown menu — and
+                // every destination in the menu is now a row under My things.
+                val showTopBar = !ai.ciris.mobile.shared.ui.nav.LocalInsideShell.current &&
+                    !ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow.current
                 Scaffold(
                     topBar = {
                         if (showTopBar) {
@@ -4892,9 +4901,12 @@ fun CIRISApp(
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
                     is Screen.UserChat -> Screen.Contacts
-                    Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+                    // EnvironmentInfo and Constitutional USED to hang off a
+                    // layer hub; the spine placed them in Decisions and Safety,
+                    // and this map wins before the placement rule — so leaving
+                    // them here sent the one back arrow to a tab the card is no
+                    // longer in. Their placement answers it now.
                     Screen.Delegation -> Screen.LayerFamily
-                    Screen.Constitutional -> Screen.LayerGlobalCommons
                     Screen.GraphMemory -> Screen.Memory
                     Screen.SkillStudio -> Screen.Adapters
                     Screen.VizSettings -> Screen.Settings
