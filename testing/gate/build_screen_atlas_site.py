@@ -145,10 +145,18 @@ code{background:var(--bg);padding:1px 6px;border-radius:5px;font-size:12px}
 .fig{background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:9px 13px}
 .fig b{display:block;font-size:19px;line-height:1.2}
 .fig span{font-size:11.5px;color:var(--muted)}
+.watch{margin-left:auto;font:500 13px/1 system-ui;color:var(--accent);text-decoration:none;
+      border:1px solid var(--line);border-radius:6px;padding:7px 10px;background:var(--panel)}
+.watch:hover{text-decoration:underline}
 </style></head><body>
 <header>
   <h1>CIRIS Screen Atlas</h1>
   <span class="meta" id="meta">loading…</span>
+  <!-- The explainer sits beside the atlas at the published root. The link used
+       to be hand-added to the generated page after every run, which meant one
+       regeneration would silently drop the front door; it is emitted here so it
+       survives. -->
+  <a class="watch" href="circles.html" title="The plain-words explainer, animated (3¾ min)">▶ Watch the explainer</a>
 </header>
 <div class="wrap">
   <nav><input type="search" id="q" placeholder="Filter screens…"><div id="tree"></div></nav>

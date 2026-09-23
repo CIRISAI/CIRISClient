@@ -40,8 +40,13 @@ TEST_PORT = 9091
 #: the manifest can say "known unreachable" instead of "failed".
 FLOW_ONLY = {
     "Startup", "Login", "Setup", "ServerConnection", "ClaimNode",
-    "VerifyAgent", "AddFederationId", "DutyConferral", "Help",
+    "VerifyAgent", "AddFederationId", "DutyConferral",
     "SkillImport", "Manage",
+    # Help was here until the spine pass. It has had a real route since the
+    # shell landed — My things › Help — and listing it here meant the atlas
+    # skipped a screen the tree can reach, which is this file keeping a second
+    # opinion about the nav. When a surface gets placed, it comes out of this
+    # set; nothing else in it is in the tree at all.
     # Declared in EpistemicNav but in NO group, and its own doc comment says
     # "Reachable from the Accord screen ONLY when no accord family exists yet".
     # nav_map still hands it a one-hop chain, so it read as a screen the atlas

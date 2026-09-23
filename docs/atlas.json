@@ -1,16 +1,15 @@
 {
-  "captured_at": "2026-09-15 19:00 UTC",
+  "captured_at": "2026-09-23 01:20 UTC",
   "mode": "AGENT",
-  "api": "http://127.0.0.1:4343",
-  "jar": "CIRIS-linux-x64-1.5.219.jar",
-  "captured": 53,
-  "total": 54,
+  "api": "http://127.0.0.1:8080",
+  "jar": "CIRIS-linux-x64-1.5.223.jar",
+  "captured": 49,
+  "total": 49,
   "flow_only": [
     "AccordCeremony",
     "AddFederationId",
     "ClaimNode",
     "DutyConferral",
-    "Help",
     "Login",
     "Manage",
     "ServerConnection",
@@ -21,1239 +20,1149 @@
   ],
   "screens": [
     {
-      "screen": "AccordCeremony",
-      "chain": [
-        "nav_epistemic_accord_ceremony"
-      ],
-      "ok": false,
-      "shot": null,
-      "detail": "no nav route \u2014 reached inside a flow",
-      "tags": 0,
-      "resolved": "",
-      "flow_only": true
-    },
-    {
-      "screen": "Interact",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_interact"
-      ],
-      "ok": true,
-      "shot": "Interact.png",
-      "detail": "Interact",
-      "tags": 33,
-      "resolved": "Interact"
-    },
-    {
-      "screen": "Memory",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_memory"
-      ],
-      "ok": true,
-      "shot": "Memory.png",
-      "detail": "Memory",
-      "tags": 28,
-      "resolved": "Memory"
-    },
-    {
-      "screen": "Settings",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_agent_settings"
-      ],
-      "ok": true,
-      "shot": "Settings.png",
-      "detail": "Settings",
-      "tags": 21,
-      "resolved": "Settings"
-    },
-    {
-      "screen": "Tickets",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_tickets"
-      ],
-      "ok": true,
-      "shot": "Tickets.png",
-      "detail": "Tickets",
-      "tags": 22,
-      "resolved": "Tickets"
-    },
-    {
-      "screen": "Tools",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_tools"
-      ],
-      "ok": true,
-      "shot": "Tools.png",
-      "detail": "Tools",
-      "tags": 25,
-      "resolved": "Tools"
-    },
-    {
-      "screen": "LLMSettings",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_agent_settings",
-        "nav_epistemic_llm_settings"
-      ],
-      "ok": true,
-      "shot": "LLMSettings.png",
-      "detail": "LLMSettings",
-      "tags": 26,
-      "resolved": "LLMSettings"
-    },
-    {
-      "screen": "SkillStudio",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_agent_settings",
-        "nav_epistemic_skills"
-      ],
-      "ok": true,
-      "shot": "SkillStudio.png",
-      "detail": "SkillStudio",
-      "tags": 37,
-      "resolved": "SkillStudio"
-    },
-    {
-      "screen": "Sessions",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_interact",
-        "nav_epistemic_sessions"
-      ],
-      "ok": true,
-      "shot": "Sessions.png",
-      "detail": "Sessions",
-      "tags": 25,
-      "resolved": "Sessions"
-    },
-    {
-      "screen": "Scheduler",
-      "chain": [
-        "nav_group_agent",
-        "nav_epistemic_tickets",
-        "nav_epistemic_scheduler"
-      ],
-      "ok": true,
-      "shot": "Scheduler.png",
-      "detail": "Scheduler",
-      "tags": 23,
-      "resolved": "Scheduler"
-    },
-    {
-      "screen": "AgentsList",
-      "chain": [
-        "nav_group_client",
-        "nav_epistemic_agents_list"
-      ],
-      "ok": true,
-      "shot": "AgentsList.png",
-      "detail": "AgentsList",
-      "tags": 12,
-      "resolved": "AgentsList"
-    },
-    {
-      "screen": "VizSettings",
-      "chain": [
-        "nav_group_client",
-        "nav_epistemic_client_interface"
-      ],
-      "ok": true,
-      "shot": "VizSettings.png",
-      "detail": "VizSettings",
-      "tags": 47,
-      "resolved": "VizSettings"
-    },
-    {
-      "screen": "Commons",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_commons"
-      ],
-      "ok": true,
-      "shot": "Commons.png",
-      "detail": "Commons",
-      "tags": 27,
-      "resolved": "Commons"
-    },
-    {
-      "screen": "LayerAgent",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_agent"
-      ],
-      "ok": true,
-      "shot": "LayerAgent.png",
-      "detail": "LayerAgent",
-      "tags": 25,
-      "resolved": "LayerAgent"
-    },
-    {
-      "screen": "LayerFamily",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_family"
-      ],
-      "ok": true,
-      "shot": "LayerFamily.png",
-      "detail": "LayerFamily",
-      "tags": 25,
-      "resolved": "LayerFamily"
-    },
-    {
-      "screen": "LayerGlobalCommons",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_global_commons"
-      ],
-      "ok": true,
-      "shot": "LayerGlobalCommons.png",
-      "detail": "LayerGlobalCommons",
-      "tags": 50,
-      "resolved": "LayerGlobalCommons"
-    },
-    {
-      "screen": "LayerGlobalCommunities",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_global_communities"
-      ],
-      "ok": true,
-      "shot": "LayerGlobalCommunities.png",
-      "detail": "LayerGlobalCommunities",
-      "tags": 25,
-      "resolved": "LayerGlobalCommunities"
-    },
-    {
-      "screen": "LayerLocalCommunity",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_local_community"
-      ],
-      "ok": true,
-      "shot": "LayerLocalCommunity.png",
-      "detail": "LayerLocalCommunity",
-      "tags": 25,
-      "resolved": "LayerLocalCommunity"
-    },
-    {
-      "screen": "Voting",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_voting"
-      ],
-      "ok": true,
-      "shot": "Voting.png",
-      "detail": "Voting",
-      "tags": 20,
-      "resolved": "Voting"
-    },
-    {
-      "screen": "Delegation",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_family",
-        "nav_epistemic_delegation"
-      ],
-      "ok": true,
-      "shot": "Delegation.png",
-      "detail": "Delegation",
-      "tags": 21,
-      "resolved": "Delegation"
-    },
-    {
-      "screen": "Constitutional",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_global_commons",
-        "nav_epistemic_constitutional"
-      ],
-      "ok": true,
-      "shot": "Constitutional.png",
-      "detail": "Constitutional",
-      "tags": 22,
-      "resolved": "Constitutional"
-    },
-    {
-      "screen": "EnvironmentInfo",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_global_commons",
-        "nav_epistemic_environment_graph"
-      ],
-      "ok": true,
-      "shot": "EnvironmentInfo.png",
-      "detail": "EnvironmentInfo",
-      "tags": 26,
-      "resolved": "EnvironmentInfo"
-    },
-    {
-      "screen": "Participate",
-      "chain": [
-        "nav_group_commons-layers",
-        "nav_epistemic_layer_global_communities",
-        "nav_epistemic_participate"
-      ],
-      "ok": true,
-      "shot": "Participate.png",
-      "detail": "Participate",
-      "tags": 21,
-      "resolved": "Participate"
-    },
-    {
-      "screen": "Accord",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_accord"
-      ],
-      "ok": true,
-      "shot": "Accord.png",
-      "detail": "Accord",
-      "tags": 36,
-      "resolved": "Accord"
-    },
-    {
-      "screen": "Adapters",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_adapters"
-      ],
-      "ok": true,
-      "shot": "Adapters.png",
-      "detail": "Adapters",
-      "tags": 33,
-      "resolved": "Adapters"
-    },
-    {
-      "screen": "Billing",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_billing"
-      ],
-      "ok": true,
-      "shot": "Billing.png",
-      "detail": "Billing",
-      "tags": 39,
-      "resolved": "Billing"
-    },
-    {
-      "screen": "Contacts",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_contacts"
-      ],
-      "ok": true,
-      "shot": "Contacts.png",
-      "detail": "Contacts",
-      "tags": 35,
-      "resolved": "Contacts"
-    },
-    {
-      "screen": "DataManagement",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_data"
-      ],
-      "ok": true,
-      "shot": "DataManagement.png",
-      "detail": "DataManagement",
-      "tags": 39,
-      "resolved": "DataManagement"
-    },
-    {
-      "screen": "Delegations",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_delegations"
-      ],
-      "ok": true,
-      "shot": "Delegations.png",
-      "detail": "Delegations",
-      "tags": 42,
-      "resolved": "Delegations"
-    },
-    {
-      "screen": "HealthReputation",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_health_reputation"
-      ],
-      "ok": true,
-      "shot": "HealthReputation.png",
-      "detail": "HealthReputation",
-      "tags": 31,
-      "resolved": "HealthReputation"
-    },
-    {
       "screen": "IdentityManagement",
       "chain": [
-        "nav_group_manage",
+        "btn_my_things",
+        "nav_instrument_devices_keys",
         "nav_epistemic_identity_management"
       ],
       "ok": true,
       "shot": "IdentityManagement.png",
       "detail": "IdentityManagement",
-      "tags": 48,
+      "tags": 42,
       "resolved": "IdentityManagement"
     },
     {
-      "screen": "ManageConsent",
+      "screen": "DataManagement",
       "chain": [
-        "nav_group_manage",
-        "nav_epistemic_manage_consent"
+        "btn_my_things",
+        "nav_instrument_everything_i_shared",
+        "nav_epistemic_data"
       ],
       "ok": true,
-      "shot": "ManageConsent.png",
-      "detail": "ManageConsent",
-      "tags": 33,
-      "resolved": "ManageConsent"
-    },
-    {
-      "screen": "ManageNodes",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_nodes"
-      ],
-      "ok": true,
-      "shot": "ManageNodes.png",
-      "detail": "ManageNodes",
-      "tags": 36,
-      "resolved": "ManageNodes"
-    },
-    {
-      "screen": "NetworkOps",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_network_ops"
-      ],
-      "ok": true,
-      "shot": "NetworkOps.png",
-      "detail": "NetworkOps",
-      "tags": 54,
-      "resolved": "NetworkOps"
-    },
-    {
-      "screen": "PrivateGroups",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_private_groups"
-      ],
-      "ok": true,
-      "shot": "PrivateGroups.png",
-      "detail": "PrivateGroups",
-      "tags": 30,
-      "resolved": "PrivateGroups"
-    },
-    {
-      "screen": "ProvisionAccordHolder",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_provision_accord_holder"
-      ],
-      "ok": true,
-      "shot": "ProvisionAccordHolder.png",
-      "detail": "ProvisionAccordHolder",
-      "tags": 37,
-      "resolved": "ProvisionAccordHolder"
+      "shot": "DataManagement.png",
+      "detail": "DataManagement",
+      "tags": 34,
+      "resolved": "DataManagement"
     },
     {
       "screen": "Storage",
       "chain": [
-        "nav_group_manage",
+        "btn_my_things",
+        "nav_instrument_everything_i_shared",
         "nav_epistemic_storage"
       ],
       "ok": true,
       "shot": "Storage.png",
       "detail": "Storage",
-      "tags": 47,
+      "tags": 52,
       "resolved": "Storage"
     },
     {
-      "screen": "Trust",
+      "screen": "Help",
       "chain": [
-        "nav_group_manage",
-        "nav_epistemic_trust"
+        "btn_my_things",
+        "nav_instrument_help",
+        "nav_epistemic_help"
       ],
       "ok": true,
-      "shot": "Trust.png",
-      "detail": "Trust",
+      "shot": "Help.png",
+      "detail": "Help",
       "tags": 33,
-      "resolved": "Trust"
-    },
-    {
-      "screen": "Users",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_users"
-      ],
-      "ok": true,
-      "shot": "Users.png",
-      "detail": "Users",
-      "tags": 40,
-      "resolved": "Users"
-    },
-    {
-      "screen": "Video",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_video"
-      ],
-      "ok": true,
-      "shot": "Video.png",
-      "detail": "Video",
-      "tags": 30,
-      "resolved": "Video"
-    },
-    {
-      "screen": "Wallet",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_billing",
-        "nav_epistemic_wallet"
-      ],
-      "ok": true,
-      "shot": "Wallet.png",
-      "detail": "Wallet",
-      "tags": 40,
-      "resolved": "Wallet"
-    },
-    {
-      "screen": "Audit",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_data",
-        "nav_epistemic_audit"
-      ],
-      "ok": true,
-      "shot": "Audit.png",
-      "detail": "Audit",
-      "tags": 38,
-      "resolved": "Audit"
-    },
-    {
-      "screen": "Consent",
-      "chain": [
-        "nav_group_manage",
-        "nav_epistemic_data",
-        "nav_epistemic_consent"
-      ],
-      "ok": true,
-      "shot": "Consent.png",
-      "detail": "Consent",
-      "tags": 36,
-      "resolved": "Consent"
-    },
-    {
-      "screen": "Services",
-      "chain": [
-        "nav_group_node",
-        "nav_epistemic_services"
-      ],
-      "ok": true,
-      "shot": "Services.png",
-      "detail": "Services",
-      "tags": 24,
-      "resolved": "Services"
-    },
-    {
-      "screen": "Telemetry",
-      "chain": [
-        "nav_group_node",
-        "nav_epistemic_telemetry"
-      ],
-      "ok": true,
-      "shot": "Telemetry.png",
-      "detail": "Telemetry",
-      "tags": 21,
-      "resolved": "Telemetry"
-    },
-    {
-      "screen": "Transport",
-      "chain": [
-        "nav_group_node",
-        "nav_epistemic_transport"
-      ],
-      "ok": true,
-      "shot": "Transport.png",
-      "detail": "Transport",
-      "tags": 32,
-      "resolved": "Transport"
+      "resolved": "Help"
     },
     {
       "screen": "WiseAuthority",
       "chain": [
-        "nav_group_node",
+        "btn_my_things",
+        "nav_instrument_someone_i_trust",
         "nav_epistemic_wise_authority"
       ],
       "ok": true,
       "shot": "WiseAuthority.png",
       "detail": "WiseAuthority",
-      "tags": 21,
+      "tags": 27,
       "resolved": "WiseAuthority"
+    },
+    {
+      "screen": "Adapters",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_adapters"
+      ],
+      "ok": true,
+      "shot": "Adapters.png",
+      "detail": "Adapters",
+      "tags": 28,
+      "resolved": "Adapters"
     },
     {
       "screen": "Config",
       "chain": [
-        "nav_group_node",
-        "nav_epistemic_agent_settings",
+        "btn_my_things",
+        "nav_instrument_this_node",
         "nav_epistemic_config"
       ],
       "ok": true,
       "shot": "Config.png",
       "detail": "Config",
-      "tags": 0,
+      "tags": 37,
       "resolved": "Config"
-    },
-    {
-      "screen": "Runtime",
-      "chain": [
-        "nav_group_node",
-        "nav_epistemic_agent_settings",
-        "nav_epistemic_runtime"
-      ],
-      "ok": true,
-      "shot": "Runtime.png",
-      "detail": "Runtime",
-      "tags": 29,
-      "resolved": "Runtime"
-    },
-    {
-      "screen": "System",
-      "chain": [
-        "nav_group_node",
-        "nav_epistemic_agent_settings",
-        "nav_epistemic_system"
-      ],
-      "ok": true,
-      "shot": "System.png",
-      "detail": "System",
-      "tags": 27,
-      "resolved": "System"
     },
     {
       "screen": "GraphMemory",
       "chain": [
-        "nav_group_node",
-        "nav_epistemic_memory",
+        "btn_my_things",
+        "nav_instrument_this_node",
         "nav_epistemic_graph_memory"
       ],
       "ok": true,
       "shot": "GraphMemory.png",
       "detail": "GraphMemory",
-      "tags": 0,
+      "tags": 26,
       "resolved": "GraphMemory"
+    },
+    {
+      "screen": "LLMSettings",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_llm_settings"
+      ],
+      "ok": true,
+      "shot": "LLMSettings.png",
+      "detail": "LLMSettings",
+      "tags": 27,
+      "resolved": "LLMSettings"
     },
     {
       "screen": "Logs",
       "chain": [
-        "nav_group_node",
-        "nav_epistemic_telemetry",
+        "btn_my_things",
+        "nav_instrument_this_node",
         "nav_epistemic_logs"
       ],
       "ok": true,
       "shot": "Logs.png",
       "detail": "Logs",
-      "tags": 24,
+      "tags": 29,
       "resolved": "Logs"
+    },
+    {
+      "screen": "ManageNodes",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_nodes"
+      ],
+      "ok": true,
+      "shot": "ManageNodes.png",
+      "detail": "ManageNodes",
+      "tags": 31,
+      "resolved": "ManageNodes"
+    },
+    {
+      "screen": "Memory",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_memory"
+      ],
+      "ok": true,
+      "shot": "Memory.png",
+      "detail": "Memory",
+      "tags": 33,
+      "resolved": "Memory"
+    },
+    {
+      "screen": "NetworkOps",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_network_ops"
+      ],
+      "ok": true,
+      "shot": "NetworkOps.png",
+      "detail": "NetworkOps",
+      "tags": 50,
+      "resolved": "NetworkOps"
+    },
+    {
+      "screen": "Runtime",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_runtime"
+      ],
+      "ok": true,
+      "shot": "Runtime.png",
+      "detail": "Runtime",
+      "tags": 30,
+      "resolved": "Runtime"
+    },
+    {
+      "screen": "Scheduler",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_scheduler"
+      ],
+      "ok": true,
+      "shot": "Scheduler.png",
+      "detail": "Scheduler",
+      "tags": 28,
+      "resolved": "Scheduler"
+    },
+    {
+      "screen": "Services",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_services"
+      ],
+      "ok": true,
+      "shot": "Services.png",
+      "detail": "Services",
+      "tags": 30,
+      "resolved": "Services"
+    },
+    {
+      "screen": "Sessions",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_sessions"
+      ],
+      "ok": true,
+      "shot": "Sessions.png",
+      "detail": "Sessions",
+      "tags": 30,
+      "resolved": "Sessions"
+    },
+    {
+      "screen": "Settings",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_agent_settings"
+      ],
+      "ok": true,
+      "shot": "Settings.png",
+      "detail": "Settings",
+      "tags": 58,
+      "resolved": "Settings"
+    },
+    {
+      "screen": "SkillStudio",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_skills"
+      ],
+      "ok": true,
+      "shot": "SkillStudio.png",
+      "detail": "SkillStudio",
+      "tags": 36,
+      "resolved": "SkillStudio"
+    },
+    {
+      "screen": "System",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_system"
+      ],
+      "ok": true,
+      "shot": "System.png",
+      "detail": "System",
+      "tags": 28,
+      "resolved": "System"
+    },
+    {
+      "screen": "Telemetry",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_telemetry"
+      ],
+      "ok": true,
+      "shot": "Telemetry.png",
+      "detail": "Telemetry",
+      "tags": 27,
+      "resolved": "Telemetry"
+    },
+    {
+      "screen": "Tickets",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_tickets"
+      ],
+      "ok": true,
+      "shot": "Tickets.png",
+      "detail": "Tickets",
+      "tags": 28,
+      "resolved": "Tickets"
+    },
+    {
+      "screen": "Tools",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_tools"
+      ],
+      "ok": true,
+      "shot": "Tools.png",
+      "detail": "Tools",
+      "tags": 31,
+      "resolved": "Tools"
+    },
+    {
+      "screen": "Transport",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_transport"
+      ],
+      "ok": true,
+      "shot": "Transport.png",
+      "detail": "Transport",
+      "tags": 42,
+      "resolved": "Transport"
+    },
+    {
+      "screen": "VizSettings",
+      "chain": [
+        "btn_my_things",
+        "nav_instrument_this_node",
+        "nav_epistemic_client_interface"
+      ],
+      "ok": true,
+      "shot": "VizSettings.png",
+      "detail": "VizSettings",
+      "tags": 60,
+      "resolved": "VizSettings"
+    },
+    {
+      "screen": "Audit",
+      "chain": [
+        "circle_agent",
+        "tab_record"
+      ],
+      "ok": true,
+      "shot": "Audit.png",
+      "detail": "Audit",
+      "tags": 29,
+      "resolved": "Audit"
     },
     {
       "screen": "ChildSafety",
       "chain": [
-        "nav_group_safety",
-        "nav_epistemic_safety",
-        "nav_epistemic_child_safety"
+        "circle_agent",
+        "tab_safety"
       ],
       "ok": true,
       "shot": "ChildSafety.png",
       "detail": "ChildSafety",
-      "tags": 22,
+      "tags": 34,
       "resolved": "ChildSafety"
+    },
+    {
+      "screen": "Contacts",
+      "chain": [
+        "circle_agent",
+        "tab_people"
+      ],
+      "ok": true,
+      "shot": "Contacts.png",
+      "detail": "Contacts",
+      "tags": 29,
+      "resolved": "Contacts"
+    },
+    {
+      "screen": "Interact",
+      "chain": [
+        "circle_agent",
+        "tab_chats"
+      ],
+      "ok": true,
+      "shot": "Interact.png",
+      "detail": "Interact",
+      "tags": 39,
+      "resolved": "Interact"
+    },
+    {
+      "screen": "Consent",
+      "chain": [
+        "circle_agent",
+        "tab_rules",
+        "nav_epistemic_consent"
+      ],
+      "ok": true,
+      "shot": "Consent.png",
+      "detail": "Consent",
+      "tags": 29,
+      "resolved": "Consent"
+    },
+    {
+      "screen": "Delegations",
+      "chain": [
+        "circle_agent",
+        "tab_rules",
+        "nav_epistemic_delegations"
+      ],
+      "ok": true,
+      "shot": "Delegations.png",
+      "detail": "Delegations",
+      "tags": 36,
+      "resolved": "Delegations"
+    },
+    {
+      "screen": "LayerAgent",
+      "chain": [
+        "circle_agent",
+        "tab_rules",
+        "nav_epistemic_layer_agent"
+      ],
+      "ok": true,
+      "shot": "LayerAgent.png",
+      "detail": "LayerAgent",
+      "tags": 30,
+      "resolved": "LayerAgent"
+    },
+    {
+      "screen": "ManageConsent",
+      "chain": [
+        "circle_agent",
+        "tab_rules",
+        "nav_epistemic_manage_consent"
+      ],
+      "ok": true,
+      "shot": "ManageConsent.png",
+      "detail": "ManageConsent",
+      "tags": 28,
+      "resolved": "ManageConsent"
+    },
+    {
+      "screen": "Trust",
+      "chain": [
+        "circle_agent",
+        "tab_rules",
+        "nav_epistemic_trust"
+      ],
+      "ok": true,
+      "shot": "Trust.png",
+      "detail": "Trust",
+      "tags": 41,
+      "resolved": "Trust"
+    },
+    {
+      "screen": "Delegation",
+      "chain": [
+        "circle_family",
+        "tab_rules",
+        "nav_epistemic_delegation"
+      ],
+      "ok": true,
+      "shot": "Delegation.png",
+      "detail": "Delegation",
+      "tags": 33,
+      "resolved": "Delegation"
+    },
+    {
+      "screen": "LayerFamily",
+      "chain": [
+        "circle_family",
+        "tab_rules",
+        "nav_epistemic_layer_family"
+      ],
+      "ok": true,
+      "shot": "LayerFamily.png",
+      "detail": "LayerFamily",
+      "tags": 32,
+      "resolved": "LayerFamily"
+    },
+    {
+      "screen": "Commons",
+      "chain": [
+        "circle_global_commons",
+        "tab_decisions",
+        "nav_epistemic_commons"
+      ],
+      "ok": true,
+      "shot": "Commons.png",
+      "detail": "Commons",
+      "tags": 32,
+      "resolved": "Commons"
+    },
+    {
+      "screen": "LayerGlobalCommons",
+      "chain": [
+        "circle_global_commons",
+        "tab_rules",
+        "nav_epistemic_layer_global_commons"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommons.png",
+      "detail": "LayerGlobalCommons",
+      "tags": 56,
+      "resolved": "LayerGlobalCommons"
+    },
+    {
+      "screen": "Accord",
+      "chain": [
+        "circle_global_commons",
+        "tab_safety",
+        "nav_epistemic_accord"
+      ],
+      "ok": true,
+      "shot": "Accord.png",
+      "detail": "Accord",
+      "tags": 35,
+      "resolved": "Accord"
+    },
+    {
+      "screen": "Constitutional",
+      "chain": [
+        "circle_global_commons",
+        "tab_safety",
+        "nav_epistemic_constitutional"
+      ],
+      "ok": true,
+      "shot": "Constitutional.png",
+      "detail": "Constitutional",
+      "tags": 34,
+      "resolved": "Constitutional"
+    },
+    {
+      "screen": "ProvisionAccordHolder",
+      "chain": [
+        "circle_global_commons",
+        "tab_safety",
+        "nav_epistemic_provision_accord_holder"
+      ],
+      "ok": true,
+      "shot": "ProvisionAccordHolder.png",
+      "detail": "ProvisionAccordHolder",
+      "tags": 32,
+      "resolved": "ProvisionAccordHolder"
+    },
+    {
+      "screen": "Users",
+      "chain": [
+        "circle_global_communities",
+        "tab_people",
+        "nav_epistemic_users"
+      ],
+      "ok": true,
+      "shot": "Users.png",
+      "detail": "Users",
+      "tags": 29,
+      "resolved": "Users"
+    },
+    {
+      "screen": "Billing",
+      "chain": [
+        "circle_global_communities",
+        "tab_rules",
+        "nav_epistemic_billing"
+      ],
+      "ok": true,
+      "shot": "Billing.png",
+      "detail": "Billing",
+      "tags": 34,
+      "resolved": "Billing"
+    },
+    {
+      "screen": "LayerGlobalCommunities",
+      "chain": [
+        "circle_global_communities",
+        "tab_rules",
+        "nav_epistemic_layer_global_communities"
+      ],
+      "ok": true,
+      "shot": "LayerGlobalCommunities.png",
+      "detail": "LayerGlobalCommunities",
+      "tags": 30,
+      "resolved": "LayerGlobalCommunities"
+    },
+    {
+      "screen": "Wallet",
+      "chain": [
+        "circle_global_communities",
+        "tab_rules",
+        "nav_epistemic_wallet"
+      ],
+      "ok": true,
+      "shot": "Wallet.png",
+      "detail": "Wallet",
+      "tags": 34,
+      "resolved": "Wallet"
+    },
+    {
+      "screen": "EnvironmentInfo",
+      "chain": [
+        "circle_local_community",
+        "tab_decisions",
+        "nav_epistemic_environment_graph"
+      ],
+      "ok": true,
+      "shot": "EnvironmentInfo.png",
+      "detail": "EnvironmentInfo",
+      "tags": 28,
+      "resolved": "EnvironmentInfo"
+    },
+    {
+      "screen": "HealthReputation",
+      "chain": [
+        "circle_local_community",
+        "tab_decisions",
+        "nav_epistemic_health_reputation"
+      ],
+      "ok": true,
+      "shot": "HealthReputation.png",
+      "detail": "HealthReputation",
+      "tags": 36,
+      "resolved": "HealthReputation"
+    },
+    {
+      "screen": "LayerLocalCommunity",
+      "chain": [
+        "circle_local_community",
+        "tab_rules",
+        "nav_epistemic_layer_local_community"
+      ],
+      "ok": true,
+      "shot": "LayerLocalCommunity.png",
+      "detail": "LayerLocalCommunity",
+      "tags": 32,
+      "resolved": "LayerLocalCommunity"
     },
     {
       "screen": "Moderation",
       "chain": [
-        "nav_group_safety",
-        "nav_epistemic_safety",
+        "circle_local_community",
+        "tab_safety",
         "nav_epistemic_moderation"
       ],
       "ok": true,
       "shot": "Moderation.png",
       "detail": "Moderation",
-      "tags": 0,
+      "tags": 56,
       "resolved": "Moderation"
     }
   ],
-  "routable": 53,
   "structure": {
+    "circles": [
+      "agent",
+      "family",
+      "local-community",
+      "global-communities",
+      "global-commons"
+    ],
+    "tabs": [
+      "files",
+      "chats",
+      "people",
+      "safety",
+      "rules",
+      "decisions",
+      "record"
+    ],
+    "instruments": [
+      "devices-keys",
+      "everything-i-shared",
+      "this-node",
+      "someone-i-trust",
+      "help"
+    ],
     "surfaces": {
-      "Sessions": {
-        "id": "sessions",
-        "group": null,
-        "parent": "Interact",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
       "Interact": {
         "id": "interact",
-        "group": "agent",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Sessions"
-        ]
-      },
-      "Scheduler": {
-        "id": "scheduler",
-        "group": null,
-        "parent": "Tickets",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Tickets": {
-        "id": "tickets",
-        "group": "agent",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Scheduler"
-        ]
-      },
-      "Tools": {
-        "id": "tools",
-        "group": "agent",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Services": {
-        "id": "services",
-        "group": "node",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Logs": {
-        "id": "logs",
-        "group": null,
-        "parent": "Telemetry",
-        "parent_group": "node",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Transport": {
-        "id": "transport",
-        "group": "node",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Telemetry": {
-        "id": "telemetry",
-        "group": "node",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Logs"
-        ]
-      },
-      "GraphMemory": {
-        "id": "graph-memory",
-        "group": "node",
-        "parent": "Memory",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": true,
-        "children": []
-      },
-      "Memory": {
-        "id": "memory",
-        "group": "agent",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "GraphMemory"
-        ]
-      },
-      "WiseAuthority": {
-        "id": "wise-authority",
-        "group": "node",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "LLMSettings": {
-        "id": "llm-settings",
-        "group": null,
-        "parent": "AgentSettings",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "System": {
-        "id": "system",
-        "group": "node",
-        "parent": "AgentSettings",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": true,
-        "children": []
-      },
-      "Runtime": {
-        "id": "runtime",
-        "group": "node",
-        "parent": "AgentSettings",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": true,
-        "children": []
-      },
-      "Config": {
-        "id": "config",
-        "group": "node",
-        "parent": "AgentSettings",
-        "parent_group": "agent",
-        "has_screen": true,
-        "cross_framed": true,
-        "children": []
-      },
-      "Skills": {
-        "id": "skills",
-        "group": null,
-        "parent": "AgentSettings",
-        "parent_group": "agent",
-        "has_screen": false,
-        "cross_framed": false,
-        "children": []
-      },
-      "AgentSettings": {
-        "id": "agent-settings",
-        "group": "agent",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": [
-          "Config",
-          "LLMSettings",
-          "Runtime",
-          "Skills",
-          "System"
-        ]
-      },
-      "Account": {
-        "id": "account",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": []
-      },
-      "HealthReputation": {
-        "id": "health-reputation",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Users": {
-        "id": "users",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Adapters": {
-        "id": "adapters",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "NetworkOps": {
-        "id": "network-ops",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Storage": {
-        "id": "storage",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Audit": {
-        "id": "audit",
-        "group": null,
-        "parent": "Data",
-        "parent_group": "manage",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Consent": {
-        "id": "consent",
-        "group": null,
-        "parent": "Data",
-        "parent_group": "manage",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Data": {
-        "id": "data",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": [
-          "Audit",
-          "Consent"
-        ]
-      },
-      "Trust": {
-        "id": "trust",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Nodes": {
-        "id": "nodes",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": []
-      },
-      "ManageConsent": {
-        "id": "manage-consent",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "chats",
+        "circles": [
+          "agent"
+        ],
+        "agent_only": true,
+        "instrument": null,
+        "has_screen": true
       },
       "Contacts": {
         "id": "contacts",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "people",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
-      "Delegations": {
-        "id": "delegations",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "IdentityManagement": {
-        "id": "identity-management",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Accord": {
-        "id": "accord",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "ProvisionAccordHolder": {
-        "id": "provision-accord-holder",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "AccordCeremony": {
-        "id": "accord-ceremony",
-        "group": null,
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+      "Users": {
+        "id": "users",
+        "tab": "people",
+        "circles": [
+          "global-communities"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "Moderation": {
         "id": "moderation",
-        "group": "safety",
-        "parent": "Safety",
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "safety",
+        "circles": [
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "ChildSafety": {
         "id": "child-safety",
-        "group": "safety",
-        "parent": "Safety",
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "safety",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
-      "Safety": {
-        "id": "safety",
-        "group": null,
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": [
-          "ChildSafety",
-          "Moderation"
-        ]
+      "Accord": {
+        "id": "accord",
+        "tab": "safety",
+        "circles": [
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
-      "Wallet": {
-        "id": "wallet",
-        "group": null,
-        "parent": "Billing",
-        "parent_group": "manage",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Billing": {
-        "id": "billing",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Wallet"
-        ]
-      },
-      "LayerAgent": {
-        "id": "layer-agent",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Participate": {
-        "id": "participate",
-        "group": null,
-        "parent": "LayerGlobalCommunities",
-        "parent_group": "commons-layers",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "EnvironmentGraph": {
-        "id": "environment-graph",
-        "group": null,
-        "parent": "LayerGlobalCommons",
-        "parent_group": "commons-layers",
-        "has_screen": false,
-        "cross_framed": false,
-        "children": []
-      },
-      "Delegation": {
-        "id": "delegation",
-        "group": null,
-        "parent": "LayerFamily",
-        "parent_group": "commons-layers",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+      "ProvisionAccordHolder": {
+        "id": "provision-accord-holder",
+        "tab": "safety",
+        "circles": [
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "Constitutional": {
         "id": "constitutional",
-        "group": null,
-        "parent": "LayerGlobalCommons",
-        "parent_group": "commons-layers",
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "safety",
+        "circles": [
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
-      "Video": {
-        "id": "video",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Voting": {
-        "id": "voting",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "PrivateGroups": {
-        "id": "private-groups",
-        "group": "manage",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
-      },
-      "Commons": {
-        "id": "commons",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+      "LayerAgent": {
+        "id": "layer-agent",
+        "tab": "rules",
+        "circles": [
+          "agent"
+        ],
+        "agent_only": true,
+        "instrument": null,
+        "has_screen": true
       },
       "LayerFamily": {
         "id": "layer-family",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Delegation"
-        ]
+        "tab": "rules",
+        "circles": [
+          "family"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "LayerLocalCommunity": {
         "id": "layer-local-community",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+        "tab": "rules",
+        "circles": [
+          "local-community"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "LayerGlobalCommunities": {
         "id": "layer-global-communities",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Participate"
-        ]
+        "tab": "rules",
+        "circles": [
+          "global-communities"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
       "LayerGlobalCommons": {
         "id": "layer-global-commons",
-        "group": "commons-layers",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": [
-          "Constitutional",
-          "EnvironmentGraph"
-        ]
+        "tab": "rules",
+        "circles": [
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
       },
-      "AgentsList": {
-        "id": "agents-list",
-        "group": "client",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": true,
-        "cross_framed": false,
-        "children": []
+      "Trust": {
+        "id": "trust",
+        "tab": "rules",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "ManageConsent": {
+        "id": "manage-consent",
+        "tab": "rules",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Consent": {
+        "id": "consent",
+        "tab": "rules",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Delegations": {
+        "id": "delegations",
+        "tab": "rules",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Delegation": {
+        "id": "delegation",
+        "tab": "rules",
+        "circles": [
+          "family"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Billing": {
+        "id": "billing",
+        "tab": "rules",
+        "circles": [
+          "global-communities"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Wallet": {
+        "id": "wallet",
+        "tab": "rules",
+        "circles": [
+          "global-communities"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "HealthReputation": {
+        "id": "health-reputation",
+        "tab": "decisions",
+        "circles": [
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "EnvironmentGraph": {
+        "id": "environment-graph",
+        "tab": "decisions",
+        "circles": [
+          "local-community"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": false
+      },
+      "Commons": {
+        "id": "commons",
+        "tab": "decisions",
+        "circles": [
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "Audit": {
+        "id": "audit",
+        "tab": "record",
+        "circles": [
+          "agent",
+          "family",
+          "local-community",
+          "global-communities",
+          "global-commons"
+        ],
+        "agent_only": false,
+        "instrument": null,
+        "has_screen": true
+      },
+      "IdentityManagement": {
+        "id": "identity-management",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "devices-keys",
+        "has_screen": true
+      },
+      "Account": {
+        "id": "account",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "devices-keys",
+        "has_screen": false
+      },
+      "Data": {
+        "id": "data",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "everything-i-shared",
+        "has_screen": false
+      },
+      "Storage": {
+        "id": "storage",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "everything-i-shared",
+        "has_screen": true
+      },
+      "Nodes": {
+        "id": "nodes",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": false
+      },
+      "AgentSettings": {
+        "id": "agent-settings",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": false
+      },
+      "LLMSettings": {
+        "id": "llm-settings",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Adapters": {
+        "id": "adapters",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "NetworkOps": {
+        "id": "network-ops",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Services": {
+        "id": "services",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Telemetry": {
+        "id": "telemetry",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Logs": {
+        "id": "logs",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Transport": {
+        "id": "transport",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "System": {
+        "id": "system",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Runtime": {
+        "id": "runtime",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Config": {
+        "id": "config",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "GraphMemory": {
+        "id": "graph-memory",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Memory": {
+        "id": "memory",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Sessions": {
+        "id": "sessions",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Tickets": {
+        "id": "tickets",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Scheduler": {
+        "id": "scheduler",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Tools": {
+        "id": "tools",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": true
+      },
+      "Skills": {
+        "id": "skills",
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": false
       },
       "ClientInterface": {
         "id": "client-interface",
-        "group": "client",
-        "parent": null,
-        "parent_group": null,
-        "has_screen": false,
-        "cross_framed": false,
-        "children": []
+        "tab": null,
+        "circles": [],
+        "agent_only": true,
+        "instrument": "this-node",
+        "has_screen": false
+      },
+      "WiseAuthority": {
+        "id": "wise-authority",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "someone-i-trust",
+        "has_screen": true
+      },
+      "Help": {
+        "id": "help",
+        "tab": null,
+        "circles": [],
+        "agent_only": false,
+        "instrument": "help",
+        "has_screen": true
       }
     },
-    "groups": [
-      "agent",
-      "client",
-      "commons-layers",
-      "manage",
-      "node",
-      "safety"
+    "unplaced": [
+      "AccordCeremony"
     ],
-    "ungrouped": [
-      "AccordCeremony",
-      "Audit",
-      "Consent",
-      "Constitutional",
-      "Delegation",
-      "EnvironmentGraph",
-      "LLMSettings",
-      "Logs",
-      "Participate",
-      "Safety",
-      "Scheduler",
-      "Sessions",
-      "Skills",
-      "Wallet"
-    ],
-    "cross_framed": [
-      "Config",
-      "GraphMemory",
-      "Runtime",
-      "System"
-    ]
+    "cross_framed": []
   },
   "namespaces": {
     "cc_version": "1.0-rc5",
@@ -1272,7 +1181,7 @@
       "transport-delivery": 5
     },
     "source": "constitution/part_3_the_namespace.md",
-    "source_sha256": "87aede5012064288fd5ce8770d3e77a8c5131cd61d27799c4c06558507b9a9f5"
+    "source_sha256": "95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839"
   },
   "explainer": {
     "circles": [
