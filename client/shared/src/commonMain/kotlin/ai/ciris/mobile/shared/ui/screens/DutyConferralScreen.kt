@@ -109,7 +109,7 @@ fun DutyConferralScreen(
         topBar = {
             ScreenTopBar(
                 title = { Text(localizedString("duty.title")) },
-                navigationIcon = {
+                flowNavigationIcon = {
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_duty_back") { onBack() },

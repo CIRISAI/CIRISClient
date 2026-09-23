@@ -3255,7 +3255,8 @@
     },
     "rail_open": "Hiển thị thanh bên",
     "rail_close": "Ẩn thanh bên",
-    "back": "Quay lại"
+    "back": "Quay lại",
+    "instrument_line": "những thứ của riêng bạn — không nằm trong một vòng tròn"
   },
   "network": {
     "announces": {

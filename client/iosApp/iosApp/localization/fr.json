@@ -3255,7 +3255,8 @@
     },
     "rail_open": "Afficher le panneau latéral",
     "rail_close": "Masquer le panneau latéral",
-    "back": "Retour"
+    "back": "Retour",
+    "instrument_line": "Vos propres affaires — pas dans un cercle"
   },
   "network": {
     "announces": {

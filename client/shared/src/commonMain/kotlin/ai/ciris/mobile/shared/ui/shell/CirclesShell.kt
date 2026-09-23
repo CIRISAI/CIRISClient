@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.ui.glyphs.Glyph
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.nav.CirclesNav
 import ai.ciris.mobile.shared.ui.nav.CohortScope
+import ai.ciris.mobile.shared.ui.nav.Instrument
 import ai.ciris.mobile.shared.ui.nav.Tab
 import ai.ciris.mobile.shared.ui.theme.CirisShape
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
@@ -87,6 +88,15 @@ fun CirclesShell(
     onStop: () -> Unit,
     /** The open card's plain name — the title the screen no longer draws for itself. */
     cardTitle: String? = null,
+    /**
+     * The instrument this page belongs to, when it is one of My things rather
+     * than a card in a circle. The circle stays selected underneath — it is
+     * where the tabs and the bottom bar will take you back to — but the top bar
+     * must not claim it OWNS this page: the node's own graph is the node's, not
+     * the neighbourhood's, and a governance line above it that reads "anyone
+     * can stop something" is a false statement about node attestations.
+     */
+    instrument: Instrument? = null,
     rail: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -104,11 +114,11 @@ fun CirclesShell(
     if (band.rail) {
         Row(modifier = Modifier.fillMaxSize().background(t.ground)) {
             if (railShown) {
-                Rail(circle, hasAgent, onCircle, rail)
+                Rail(circle, inACircle = instrument == null, onCircle = onCircle, below = rail)
                 VerticalDivider(thickness = CirisShape.hairlineWidth, color = t.hairline)
             }
             Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                TopBar(circle, onMyThings, onStop, compact = false, railOpen = railShown,
+                TopBar(circle, instrument, onMyThings, onStop, compact = false, railOpen = railShown,
                     onToggleRail = { railOpen = !railOpen })
                 TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
                 CardHeader(cardTitle, onBack, publishedTitle.value)
@@ -119,18 +129,18 @@ fun CirclesShell(
                 // are on a phone. They are the one piece of chrome that never
                 // moves (locked spec §1) — a toggle that could hide them would
                 // be a toggle that hides the product.
-                if (!railShown) BottomBar(circle, onCircle)
+                if (!railShown) BottomBar(circle, inACircle = instrument == null, onCircle = onCircle)
             }
         }
     } else {
         Column(modifier = Modifier.fillMaxSize().background(t.ground)) {
-            TopBar(circle, onMyThings, onStop, compact = true, railOpen = false, onToggleRail = null)
+            TopBar(circle, instrument, onMyThings, onStop, compact = true, railOpen = false, onToggleRail = null)
             TabStrip(circle, tab, hasAgent, onTab, fits = band.tabsFit)
             CardHeader(cardTitle, onBack, publishedTitle.value)
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(LocalShellCardTitle provides publishedTitle) { content() }
             }
-            BottomBar(circle, onCircle)
+            BottomBar(circle, inACircle = instrument == null, onCircle = onCircle)
         }
     }
 }
@@ -140,6 +150,7 @@ fun CirclesShell(
 @Composable
 private fun TopBar(
     circle: CohortScope,
+    instrument: Instrument?,
     onMyThings: () -> Unit,
     onStop: () -> Unit,
     compact: Boolean,
@@ -197,16 +208,22 @@ private fun TopBar(
         }
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                Box(Modifier.size(9.dp).clip(CircleShape).background(colour))
+                if (instrument == null) {
+                    Box(Modifier.size(9.dp).clip(CircleShape).background(colour))
+                } else {
+                    Glyph(instrument.glyph, tint = t.dim, size = 16.dp)
+                }
                 Text(
-                    localizedString(CirclesNav.circleNameKey(circle)),
+                    if (instrument == null) localizedString(CirclesNav.circleNameKey(circle))
+                    else localizedString(instrument.labelKey),
                     style = type.title, color = t.ink,
                     maxLines = 1, overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.testable("shell_circle_name"),
+                    modifier = Modifier.testable(if (instrument == null) "shell_circle_name" else "shell_instrument_name"),
                 )
             }
             Text(
-                localizedString(CirclesNav.circleRuleKey(circle)),
+                if (instrument == null) localizedString(CirclesNav.circleRuleKey(circle))
+                else localizedString("nav.instrument_line"),
                 style = type.label, color = t.mute,
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
@@ -352,7 +369,7 @@ private fun TabStrip(circle: CohortScope, tab: Tab?, hasAgent: Boolean, onTab: (
 // ── The five circles: bottom bar (phone) ─────────────────────────────────────
 
 @Composable
-private fun BottomBar(circle: CohortScope, onCircle: (CohortScope) -> Unit) {
+private fun BottomBar(circle: CohortScope, inACircle: Boolean, onCircle: (CohortScope) -> Unit) {
     val t = CirisTheme.tokens
     Column(modifier = Modifier.fillMaxWidth().background(t.raised).testable("shell_bottom_bar")) {
         HorizontalDivider(thickness = CirisShape.hairlineWidth, color = t.hairline)
@@ -361,7 +378,10 @@ private fun BottomBar(circle: CohortScope, onCircle: (CohortScope) -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             for (c in CirclesNav.circles) {
-                val on = c == circle
+                // Lit only while you are actually IN a circle. On one of My
+                // things the circle is where the tabs will take you back to,
+                // not where you are, and a lit row there says otherwise.
+                val on = inACircle && c == circle
                 val colour = t.circle(c)
                 Column(
                     modifier = Modifier
@@ -394,7 +414,7 @@ private fun BottomBar(circle: CohortScope, onCircle: (CohortScope) -> Unit) {
 @Composable
 private fun Rail(
     circle: CohortScope,
-    hasAgent: Boolean,
+    inACircle: Boolean,
     onCircle: (CohortScope) -> Unit,
     below: @Composable () -> Unit,
 ) {
@@ -421,7 +441,7 @@ private fun Rail(
         }
         Spacer(Modifier.height(6.dp))
         for (c in CirclesNav.circles) {
-            val on = c == circle
+            val on = inACircle && c == circle
             val colour = t.circle(c)
             Row(
                 modifier = Modifier

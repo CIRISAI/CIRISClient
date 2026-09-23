@@ -3255,7 +3255,8 @@
     },
     "rail_open": "사이드바 표시",
     "rail_close": "사이드바 숨기기",
-    "back": "뒤로"
+    "back": "뒤로",
+    "instrument_line": "내 것들 — 어느 서클에도 속하지 않음"
   },
   "network": {
     "announces": {

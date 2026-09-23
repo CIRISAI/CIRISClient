@@ -3255,7 +3255,8 @@
     },
     "rail_open": "显示侧栏",
     "rail_close": "隐藏侧栏",
-    "back": "返回"
+    "back": "返回",
+    "instrument_line": "您自己的内容——不在任何圈子内"
   },
   "network": {
     "announces": {

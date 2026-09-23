@@ -3299,7 +3299,8 @@
     },
     "rail_open": "Show the side panel",
     "rail_close": "Hide the side panel",
-    "back": "Back"
+    "back": "Back",
+    "instrument_line": "your own things — not in a circle"
   },
   "network": {
     "announces": {

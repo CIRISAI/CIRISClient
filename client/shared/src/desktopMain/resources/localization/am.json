@@ -3255,7 +3255,8 @@
     },
     "rail_open": "ጎኑን አሳይ",
     "rail_close": "ጎኑን ደብቅ",
-    "back": "ወደ ኋላ"
+    "back": "ወደ ኋላ",
+    "instrument_line": "የእርስዎ ነገሮች — በክበብ ውስጥ ያልሆኑ"
   },
   "network": {
     "announces": {

@@ -3255,7 +3255,8 @@
     },
     "rail_open": "साइड दिखाएं",
     "rail_close": "साइड छिपाएं",
-    "back": "वापस"
+    "back": "वापस",
+    "instrument_line": "आपकी अपनी चीज़ें — किसी सर्कल में नहीं"
   },
   "network": {
     "announces": {

@@ -3255,7 +3255,8 @@
     },
     "rail_open": "Mostra la barra laterale",
     "rail_close": "Nascondi la barra laterale",
-    "back": "Indietro"
+    "back": "Indietro",
+    "instrument_line": "le tue cose — non in un cerchio"
   },
   "network": {
     "announces": {

@@ -208,6 +208,7 @@ struct ContentView: View {
         // we saw, because "did not become healthy" told the person nothing they
         // could act on and nothing we could debug from a photograph.
         var attempts = 0
+        let launchedAt = Date().timeIntervalSince1970
         let maxAttempts = 300          // ceiling: a wedged engine still surfaces
         let idleLimit = 60             // no progress for this long = wedged
         var lastProgressAt = 0
@@ -221,8 +222,14 @@ struct ContentView: View {
 
             // A runtime that has ALREADY said it failed is not slow, and
             // waiting out the idle limit to say so in generic words throws away
-            // the reason it just gave us.
+            // the reason it just gave us — but only if it is THIS run's
+            // failure. `runtime_status.json` outlives the process that wrote
+            // it and no startup path clears it, so a launch after a bad one
+            // would otherwise read yesterday's error and refuse to start at
+            // all. A status with no timestamp cannot be placed in time, so it
+            // is not treated as terminal either.
             if let runtime = loadRuntimeStatus(),
+               let wrote = runtime.timestamp, wrote >= launchedAt,
                runtime.status.lowercased() == "failed" || runtime.phase.uppercased() == "ERROR" {
                 NSLog("[ContentView] Runtime reported failure in \(runtime.phase): \(runtime.error ?? "no detail")")
                 initError = runtime.error ?? "The engine failed during \(runtime.phase)"
@@ -327,9 +334,13 @@ struct ContentView: View {
                 let at = (try? fm.attributesOfItem(atPath: path))?[.modificationDate] as? Date ?? .distantPast
                 if newest == nil || at > newest!.at { newest = (path, at) }
             }
-            if let file = newest?.path, let text = try? String(contentsOfFile: file, encoding: .utf8) {
-                let lines = text.split(separator: "\n").suffix(60)
-                    .filter { !$0.contains("watchdog") }
+            // LogTail, not String(contentsOfFile:): this runs once a SECOND
+            // during startup, and `latest.log` on a long-lived install is the
+            // file that froze the main thread the last time something read it
+            // whole (see LogTail's own note).
+            if let file = newest?.path,
+               let text = LogTail.tail(of: URL(fileURLWithPath: file), maxLines: 60, maxBytes: 32 * 1024) {
+                let lines = text.split(separator: "\n").filter { !$0.contains("watchdog") }
                 if let last = lines.last { parts.append(String(last.suffix(120))) }
             }
         }

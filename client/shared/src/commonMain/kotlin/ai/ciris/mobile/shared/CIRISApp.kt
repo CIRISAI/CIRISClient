@@ -533,9 +533,6 @@ fun CIRISApp(
             // for the manual entry, Interact for the post-login auto-present.
             is Screen.AddFederationId -> addFederationIdReturnScreen
 
-            // DataManagement and LLMSettings go back to the landing screen
-            is Screen.DataManagement -> homeTarget
-            is Screen.LLMSettings -> homeTarget
             is Screen.VizSettings -> Screen.Settings
 
             // Federation sub-screens (reached from Global Commons hub tiles) go
@@ -554,12 +551,7 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
-            // Sub-screens of layer hubs. The platform's back must land where
-            // the shell's arrow lands, so a card that the spine re-homed goes
-            // back to the TAB it is now in, not to the hub it used to hang off.
-            is Screen.EnvironmentInfo -> Screen.CircleTab("local-community", "decisions")
             is Screen.Delegation -> Screen.LayerFamily
-            is Screen.Constitutional -> Screen.CircleTab("global-commons", "safety")
 
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
@@ -571,8 +563,9 @@ fun CIRISApp(
             // A chat goes back to the contact list it was opened from
             is Screen.UserChat -> Screen.Contacts
 
-            // All other screens go back to the landing screen
-            else -> homeTarget
+            // Everything the tree places answers for itself, so the button and
+            // the shell's arrow cannot drift apart when a card moves.
+            else -> placedBackTarget(currentScreen, clientMode?.isAgent ?: false) ?: homeTarget
         }
     }
 
@@ -4941,6 +4934,13 @@ fun CIRISApp(
                     // only content (Contacts in People) is titled all the same,
                     // because the tab strip names the tab, not the card.
                     cardTitle = activeSurface?.let { ai.ciris.mobile.shared.ui.shell.surfaceLabel(it) },
+                    // My things pages belong to no circle. Saying which one is
+                    // merely selected underneath would put a governance line
+                    // that reads "anyone can stop something" above this node's
+                    // own attestations, which is not true of them.
+                    instrument = (currentScreen as? Screen.Instrument)
+                        ?.let { sc -> ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments.firstOrNull { it.id == sc.id } }
+                        ?: activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(it) },
                     rail = {
                         for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
                             ai.ciris.mobile.shared.ui.shell.InstrumentRow(
@@ -5832,6 +5832,32 @@ private sealed class Screen {
  * Help utility have no NavSurface (they're [FLOW_ONLY_SURFACES]); the
  * function returns null and the sidebar is hidden by the shell.
  */
+/**
+ * WHERE BACK GOES, FOR A CARD THAT THE TREE PLACES.
+ *
+ * The shell's arrow and the platform's back button must land in the same
+ * place, and the only way to keep that true as cards move is to ask the tree
+ * rather than to maintain a second list. A card under an instrument returns to
+ * that instrument; a card in a tab returns to the tab when the tab is a list,
+ * and to nothing when the tab shows it directly (there is no list to return
+ * to). Null means "this screen is not placed" — the caller decides.
+ *
+ * The spine moved five cards, and every hand-written back target for them was
+ * silently wrong until someone pressed the button: Memory fell through to the
+ * landing screen instead of This node, Constitutional to the Rules hub it no
+ * longer lives in.
+ */
+private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
+    val surface = screenToSurface(screen) ?: return null
+    ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(surface)?.let {
+        return Screen.Instrument(it.id)
+    }
+    val placement = ai.ciris.mobile.shared.ui.nav.CirclesNav.placementOf(surface) ?: return null
+    val circle = placement.circles.first()
+    val siblings = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circle, placement.tab, hasAgent)
+    return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
+}
+
 private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
     Screen.Sessions -> ai.ciris.mobile.shared.ui.nav.NavSurface.Sessions

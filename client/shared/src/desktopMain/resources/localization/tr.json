@@ -3255,7 +3255,8 @@
     },
     "rail_open": "Yan paneli göster",
     "rail_close": "Yan paneli gizle",
-    "back": "Geri"
+    "back": "Geri",
+    "instrument_line": "kendi şeyleriniz — bir çemberde değil"
   },
   "network": {
     "announces": {
