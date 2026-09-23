@@ -270,12 +270,12 @@ struct ContentView: View {
             }
 
             if attempts - lastProgressAt >= idleLimit {
-                NSLog("[ContentView] No startup progress for \(idleLimit)s; last step: %{public}@", lastStepName)
+                NSLog("[ContentView] No startup progress for \(idleLimit)s; last step: \(lastStepName)")
                 initError = "The engine stopped during startup, at: \(lastStepName)"
                 return
             }
 
-            NSLog("[ContentView] Waiting for server... (\(attempts)s, last step: %{public}@)", lastStepName)
+            NSLog("[ContentView] Waiting for server... (\(attempts)s, last step: \(lastStepName))")
         }
 
         initError = "The engine did not finish starting after \(maxAttempts) seconds (last step: \(lastStepName))"
