@@ -50,6 +50,31 @@ FLOW_ONLY = {
 }
 
 
+def refuse_if_port_taken() -> None:
+    """A test server already answering on our port is ANOTHER app, so stop.
+
+    The client binds :9091 for automation; a second instance loses the bind,
+    logs `BindException: Address already in use`, and carries on with no test
+    server of its own. The atlas then drives the FIRST app — a different build,
+    parked on whatever screen it was left on — and reports its confusion as
+    missing screens (a run that captured 19 of 49, every miss in the circle the
+    stale client happened to be sitting in). The photographs are evidence, and
+    evidence taken from an app you did not launch is worthless.
+    """
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{TEST_PORT}/health", timeout=2) as r:
+            answer = r.read(200).decode("utf-8", "replace").strip()
+    except Exception:  # noqa: BLE001 — nothing there is exactly what we want
+        return
+    raise SystemExit(
+        f"[refuse] something is already answering on :{TEST_PORT} — {answer}\n"
+        "  That is another CIRIS client. This run would photograph IT, not the\n"
+        "  jar you just named. Close it (or free the port) and run again."
+    )
+
+
 def launch(jar: Path, api: str, log: Path, xvfb: bool = True) -> subprocess.Popen:
     """The app, in test mode, pointed at a real agent."""
     env = dict(os.environ)
@@ -290,6 +315,7 @@ def main() -> int:
 
     shots = args.out / "shots"
     shots.mkdir(parents=True, exist_ok=True)
+    refuse_if_port_taken()
     proc = launch(args.jar, args.api, args.out / "app.log", xvfb=not args.no_xvfb)
 
     try:
