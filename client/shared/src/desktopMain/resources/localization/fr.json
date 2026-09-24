@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "signé",
     "ceremony_state_not_yet": "pas encore",
     "receipt_this_node": "Ce nœud — vous",
+    "setup_finish_unclaimed": "Terminer sans revendiquer ce nœud",
     "verify_title": "Vérifier un build",
     "verify_hash_label": "Empreinte du build",
     "verify_button": "Vérifier",

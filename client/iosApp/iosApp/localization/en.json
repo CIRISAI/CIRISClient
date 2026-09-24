@@ -3077,7 +3077,8 @@
     "ceremony_state_proposed": "proposed",
     "ceremony_state_signed": "signed",
     "ceremony_state_not_yet": "not yet",
-    "receipt_this_node": "This node — you"
+    "receipt_this_node": "This node — you",
+    "setup_finish_unclaimed": "Finish without claiming this node"
   },
   "moderation": {
     "ladder": {

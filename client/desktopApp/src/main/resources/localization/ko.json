@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "서명됨",
     "ceremony_state_not_yet": "아직",
     "receipt_this_node": "이 노드 — 나",
+    "setup_finish_unclaimed": "노드 소유권 주장 없이 완료",
     "verify_title": "빌드 검증",
     "verify_hash_label": "빌드 해시",
     "verify_button": "확인",

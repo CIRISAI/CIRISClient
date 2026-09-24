@@ -2302,7 +2302,7 @@ fun CIRISApp(
                                 platformLog(TAG, "[ERROR] Local login failed: ${e::class.simpleName}: ${e.message}")
                                 isLoginLoading = false
                                 loginStatusMessage = null
-                                loginErrorMessage = "Login failed: ${e.message}"
+                                loginErrorMessage = loginRefusalText(e) ?: "Login failed: ${e.message}"
                             }
                         }
                     },
@@ -2783,7 +2783,7 @@ fun CIRISApp(
                                     }
                                 }
                             } catch (e: Exception) {
-                                PlatformLogger.e(TAG, " Token exchange failed: ${e::class.simpleName}: ${e.message}")
+                                PlatformLogger.e(TAG, " Post-setup sign-in refused: ${loginRefusalText(e) ?: "${e::class.simpleName}: ${e.message}"}")
                                 PlatformLogger.e(TAG, " Stack trace: ${e.stackTraceToString().take(500)}")
                             }
 
@@ -5832,6 +5832,22 @@ private sealed class Screen {
  * Help utility have no NavSurface (they're [FLOW_ONLY_SURFACES]); the
  * function returns null and the sidebar is hidden by the shell.
  */
+
+/**
+ * A sign-in refusal in the reader's language, or null when [e] is not one the
+ * node typed (CIRISClient#70). The node's `reason_id` is a bundle key
+ * (`auth.login.ambiguous_name`, `auth.login.invalid_credentials`, …); when the
+ * bundle lacks it, the node's own English is still better than our guess.
+ */
+private fun loginRefusalText(e: Throwable): String? {
+    val refusal = e as? ai.ciris.mobile.shared.api.NodeRefusal ?: return null
+    refusal.reasonId?.let { id ->
+        val text = LocalizationHelper.getString(id)
+        if (text != id && text.isNotBlank()) return text
+    }
+    return refusal.detail
+}
+
 /**
  * WHERE BACK GOES, FOR A CARD THAT THE TREE PLACES.
  *

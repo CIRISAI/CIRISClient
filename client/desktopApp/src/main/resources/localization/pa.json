@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ਦਸਤਖ਼ਤ ਹੋਇਆ",
     "ceremony_state_not_yet": "ਹਾਲੇ ਨਹੀਂ",
     "receipt_this_node": "ਇਹ ਨੋਡ — ਤੁਸੀਂ",
+    "setup_finish_unclaimed": "ਇਸ ਨੋਡ ਦਾ ਦਾਅਵਾ ਕੀਤੇ ਬਿਨਾਂ ਪੂਰਾ ਕਰੋ",
     "verify_title": "ਇੱਕ ਬਿਲਡ ਦੀ ਪੁਸ਼ਟੀ ਕਰੋ",
     "verify_hash_label": "ਬਿਲਡ ਹੈਸ਼",
     "verify_button": "ਜਾਂਚ ਕਰੋ",

@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "firmado",
     "ceremony_state_not_yet": "todavía no",
     "receipt_this_node": "Este nodo — tú",
+    "setup_finish_unclaimed": "Finalizar sin reclamar este nodo",
     "verify_title": "Verificar una compilación",
     "verify_hash_label": "Hash de la compilación",
     "verify_button": "Comprobar",

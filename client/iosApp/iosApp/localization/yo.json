@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ti fọwọ́sí",
     "ceremony_state_not_yet": "kò tíì",
     "receipt_this_node": "Nóòdù yìí — ìwọ",
+    "setup_finish_unclaimed": "Parí láì gba nódù yìí",
     "verify_title": "Jẹ́rìísí build kan",
     "verify_hash_label": "Hash build",
     "verify_button": "Ṣàyẹ̀wò",

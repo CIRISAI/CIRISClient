@@ -2974,6 +2974,7 @@
     "ceremony_state_signed": "signiert",
     "ceremony_state_not_yet": "noch nicht",
     "receipt_this_node": "Dieser Knoten — Sie",
+    "setup_finish_unclaimed": "Abschließen, ohne diesen Knoten zu übernehmen",
     "verify_title": "Build verifizieren",
     "verify_hash_label": "Build-Hash",
     "verify_button": "Prüfen",

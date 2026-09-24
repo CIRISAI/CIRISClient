@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "đã ký",
     "ceremony_state_not_yet": "chưa",
     "receipt_this_node": "Nút này — bạn",
+    "setup_finish_unclaimed": "Kết thúc mà không nhận quyền nút này",
     "verify_title": "Xác minh một bản dựng",
     "verify_hash_label": "Hash bản dựng",
     "verify_button": "Kiểm tra",

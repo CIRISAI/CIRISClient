@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "دستخط شدہ",
     "ceremony_state_not_yet": "ابھی نہیں",
     "receipt_this_node": "یہ نوڈ — آپ",
+    "setup_finish_unclaimed": "اس نوڈ کا دعویٰ کیے بغیر مکمل کریں",
     "verify_title": "بلڈ کی تصدیق کریں",
     "verify_hash_label": "بلڈ ہیش",
     "verify_button": "جانچیں",

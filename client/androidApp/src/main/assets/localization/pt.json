@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "assinado",
     "ceremony_state_not_yet": "ainda não",
     "receipt_this_node": "Este nó — você",
+    "setup_finish_unclaimed": "Concluir sem reivindicar este nó",
     "verify_title": "Verificar uma build",
     "verify_hash_label": "Hash da build",
     "verify_button": "Verificar",
