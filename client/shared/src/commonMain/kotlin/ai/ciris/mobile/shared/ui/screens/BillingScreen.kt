@@ -23,6 +23,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.getAppVersion
 import ai.ciris.mobile.shared.platform.getAppBuildNumber
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Billing screen for purchasing CIRIS credits
@@ -65,7 +66,7 @@ fun BillingScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_billing")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

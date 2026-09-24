@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Configuration management screen
@@ -87,7 +88,7 @@ fun ConfigScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_configuration")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Storage — CIRISPersist operator view (Manage group, 2.9.6).
@@ -56,7 +57,7 @@ fun StorageScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(title = { Text(localizedString("nav.surface.storage").ifEmpty { "Storage" }) })
+            ScreenTopBar(title = { Text(localizedString("nav.surface.storage").ifEmpty { "Storage" }) })
         },
     ) { padding ->
         Column(

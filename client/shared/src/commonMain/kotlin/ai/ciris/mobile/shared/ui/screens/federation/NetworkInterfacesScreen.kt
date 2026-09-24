@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.federation.NetworkInterfacesViewModel
 import ai.ciris.mobile.shared.viewmodels.federation.TransportRow
 import ai.ciris.mobile.shared.viewmodels.federation.TransportStatus
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -78,7 +79,7 @@ fun NetworkInterfacesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("network.tiles.interfaces")) },
                 actions = {
                     IconButton(

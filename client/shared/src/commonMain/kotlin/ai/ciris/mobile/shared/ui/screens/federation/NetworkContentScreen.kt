@@ -62,6 +62,7 @@ import androidx.compose.ui.unit.sp
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Network → Content sub-screen.
@@ -88,7 +89,7 @@ fun NetworkContentScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = {
                     Text(
                         when (step) {
@@ -97,7 +98,7 @@ fun NetworkContentScreen(
                         },
                     )
                 },
-                navigationIcon = {
+                flowNavigationIcon = {
                     if (step == ContentStep.FETCH) {
                         IconButton(onClick = { vm.backToPicker() }) {
                             Icon(

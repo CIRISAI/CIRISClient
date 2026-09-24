@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Genesis ceremony** — the guided HUMANITY_ACCORD genesis wizard (CIRISServer
@@ -75,9 +76,9 @@ fun AccordCeremonyScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.accord_ceremony_title")) },
-                navigationIcon = {
+                flowNavigationIcon = {
                     IconButton(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_accord_ceremony_back") { onBack() },

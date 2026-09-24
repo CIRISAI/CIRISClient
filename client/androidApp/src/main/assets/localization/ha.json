@@ -3252,7 +3252,11 @@
       "confirm": "Tsayar da komai",
       "nothing_title": "Babu abin da ke gudana dominku",
       "nothing_body": "Babu mataimaki da yake tunani ko aiki a kan wannan kumburi, don haka babu abin da za a tsayar. Ko da yake, maɓallin yana nan, a wuri guda, domin haka ne yake kasancewa a koda yaushe."
-    }
+    },
+    "rail_open": "Nuna gefe",
+    "rail_close": "Ɓoye gefe",
+    "back": "Komawa",
+    "instrument_line": "Abubuwanku — ba a cikin da'ira ba"
   },
   "network": {
     "announces": {

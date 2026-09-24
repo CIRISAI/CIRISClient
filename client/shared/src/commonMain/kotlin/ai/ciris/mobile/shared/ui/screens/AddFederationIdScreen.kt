@@ -45,6 +45,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Add Federation ID (catch-up flow)** — the guided path for an EXISTING logged-in
@@ -136,7 +137,7 @@ fun AddFederationIdScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = {
                     Text(l10nOr("mobile.add_fedid_title", "Add Federation ID"))
                 },

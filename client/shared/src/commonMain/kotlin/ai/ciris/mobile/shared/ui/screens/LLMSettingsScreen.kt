@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * LLM Settings screen for comprehensive LLMBus configuration.
@@ -206,7 +207,7 @@ fun LLMSettingsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.llm_settings_title")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

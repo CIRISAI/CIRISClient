@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -81,7 +82,7 @@ fun TicketsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_tickets")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state
@@ -110,8 +111,7 @@ fun TicketsScreen(
                         modifier = Modifier.testableClickable("btn_tickets_toggle_filters") { showFilters = !showFilters }
                     ) {
                         Text(
-                            if (showFilters) localizedString("mobile.tickets_hide_filters") else localizedString("mobile.tickets_filters"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            if (showFilters) localizedString("mobile.tickets_hide_filters") else localizedString("mobile.tickets_filters")
                         )
                     }
                     IconButton(

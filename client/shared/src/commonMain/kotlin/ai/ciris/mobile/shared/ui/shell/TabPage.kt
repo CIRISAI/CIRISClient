@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.shell
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.nav.CirclesNav
 import ai.ciris.mobile.shared.ui.nav.CohortScope
@@ -14,12 +15,10 @@ import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -64,16 +63,26 @@ fun InstrumentPage(instrument: Instrument, hasAgent: Boolean, onOpen: (NavSurfac
 /**
  * Rows of surfaces. These rows are app chrome — a way to a screen, not a
  * signed claim — so they carry no receipt and therefore no hamburger.
+ *
+ * A COLUMN, NOT A LAZY ONE. At most a couple of dozen rows of chrome: lazy
+ * composition saves nothing here and costs the thing that matters, because a
+ * row that has not been composed has no test tag, and a row with no test tag
+ * cannot be driven, photographed for the atlas, or proved to exist. Nine rows
+ * under This node were unreachable to the harness for exactly that reason
+ * while sitting one flick below the fold for a person.
  */
 @Composable
 private fun SurfaceList(surfaces: List<NavSurface>, tag: String, onOpen: (NavSurface) -> Unit) {
     val t = CirisTheme.tokens
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().testable(tag),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .testable(tag)
+            .testableVerticalScroll(name = tag)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(surfaces, key = { it.id }) { s ->
+        for (s in surfaces) {
             ItemRow(
                 glyph = GlyphName.CIRCLE,
                 glyphTint = t.dim,

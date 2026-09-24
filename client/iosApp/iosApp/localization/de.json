@@ -3252,7 +3252,11 @@
       "confirm": "Alles stoppen",
       "nothing_title": "Für Sie läuft nichts",
       "nothing_body": "Auf diesem Knoten denkt oder handelt kein Assistent, daher gibt es nichts zu stoppen. Die Schaltfläche ist trotzdem hier, an derselben Stelle, weil sie es immer ist."
-    }
+    },
+    "rail_open": "Seitenleiste anzeigen",
+    "rail_close": "Seitenleiste ausblenden",
+    "back": "Zurück",
+    "instrument_line": "Ihre eigenen Sachen – nicht in einem Kreis"
   },
   "network": {
     "announces": {

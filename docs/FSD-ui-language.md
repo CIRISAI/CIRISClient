@@ -278,6 +278,26 @@ the receipt on every contact row. The screen class, nav id and every
 `contacts_*` tag are unchanged — they are the contract CIRISAgent's
 five-platform gate drives — and the file names no colour.
 
+**The spine (after wave 1).** A live run showed the frame was not yet sound,
+and five things were fixed before any more cards were built on it. *A tab is
+named for what it holds*: Files holds files, so until the files spine (B3)
+exists it holds nothing and says so, and the memory graph, the environment
+snapshot, the commons, the cognitive sessions, tickets and the scheduler moved
+to where they honestly belong. *The accord is in one place* — Everyone ›
+Safety carries the trust root, the holder flow and the `accord:*` attestations,
+because in an emergency nobody should have to remember which of three tabs we
+filed the kill switch under. *Settings is this device's*, not a rule of a
+circle, and every build can reach it. *One top bar and one back*: a screen
+inside the shell draws neither — `LocalInsideShell` says the frame is already
+there and `ui/shell/ScreenTopBar.kt` keeps the screen's own actions while
+dropping its title and its arrow, so the shell's card header is the only
+title and `btn_nav_back` the only back. Wave 1 had said "inside the shell" by
+forcing `LocalIsCompactWindow` true at every width, which told a 1600dp desktop
+it was a phone; the two questions now have two names. *The side can be put
+away*: `btn_rail_toggle` on the mark opens and closes the rail, and the circles
+fall back to the bottom bar when it is closed, because they are the one piece
+of chrome that never moves.
+
 **The shell (wave 1).** `ui/shell/CirclesShell.kt`: five circles in a fixed
 bottom bar (a 208dp rail at ≥900dp, subtitles and the five instruments under
 it), the seven tabs above the content (scrolling below 700dp, all fitting
@@ -292,8 +312,10 @@ placeholder component, the substrate gates, the six rail groups and the five
 placeholder-only screens are deleted, not restyled.
 
 Tags: `circle_<slug>`, `tab_<id>`, `btn_my_things`, `nav_instrument_<id>`,
-`btn_stop_everything`, and `nav_epistemic_<surface>` wherever a surface is
-listed; `testing/gate/nav_map.py` derives every hop from the tree.
+`btn_stop_everything`, `btn_rail_toggle`, `shell_card_header` /
+`shell_card_title`, `btn_nav_back`, and `nav_epistemic_<surface>` wherever a
+surface is listed; `testing/gate/nav_map.py` derives every hop from the tree,
+and all 49 of them were driven on a live agent build after the spine pass.
 
 **Next, in order.** Geist as the faces behind the two `CirisType` family
 slots. Then wave 2, one agent per circle (Just me and Family first), each

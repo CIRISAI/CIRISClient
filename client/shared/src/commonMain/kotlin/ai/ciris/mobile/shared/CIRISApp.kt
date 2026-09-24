@@ -533,9 +533,6 @@ fun CIRISApp(
             // for the manual entry, Interact for the post-login auto-present.
             is Screen.AddFederationId -> addFederationIdReturnScreen
 
-            // DataManagement and LLMSettings go back to the landing screen
-            is Screen.DataManagement -> homeTarget
-            is Screen.LLMSettings -> homeTarget
             is Screen.VizSettings -> Screen.Settings
 
             // Federation sub-screens (reached from Global Commons hub tiles) go
@@ -554,10 +551,7 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
-            // Sub-screens of layer hubs
-            is Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
             is Screen.Delegation -> Screen.LayerFamily
-            is Screen.Constitutional -> Screen.LayerGlobalCommons
 
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
@@ -569,8 +563,9 @@ fun CIRISApp(
             // A chat goes back to the contact list it was opened from
             is Screen.UserChat -> Screen.Contacts
 
-            // All other screens go back to the landing screen
-            else -> homeTarget
+            // Everything the tree places answers for itself, so the button and
+            // the shell's arrow cannot drift apart when a card moves.
+            else -> placedBackTarget(currentScreen, clientMode?.isAgent ?: false) ?: homeTarget
         }
     }
 
@@ -2838,7 +2833,14 @@ fun CIRISApp(
                 // `InteractScreen`) becomes the visible top chrome. On
                 // tablet/desktop where the sidebar is permanent and there's
                 // no overlay button, keep the full CIRISTopBar for now.
-                val showTopBar = !ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow.current
+                // INSIDE THE SHELL THERE IS NO SECOND BAR. This used to read
+                // `!LocalIsCompactWindow`, which was false only because wave 1
+                // forced that local true at every width; with the local telling
+                // the truth again, a desktop Interact grew THREE stacked bars —
+                // the shell's, the card header, and this dropdown menu — and
+                // every destination in the menu is now a row under My things.
+                val showTopBar = !ai.ciris.mobile.shared.ui.nav.LocalInsideShell.current &&
+                    !ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow.current
                 Scaffold(
                     topBar = {
                         if (showTopBar) {
@@ -4892,9 +4894,12 @@ fun CIRISApp(
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
                     is Screen.UserChat -> Screen.Contacts
-                    Screen.EnvironmentInfo -> Screen.LayerLocalCommunity
+                    // EnvironmentInfo and Constitutional USED to hang off a
+                    // layer hub; the spine placed them in Decisions and Safety,
+                    // and this map wins before the placement rule — so leaving
+                    // them here sent the one back arrow to a tab the card is no
+                    // longer in. Their placement answers it now.
                     Screen.Delegation -> Screen.LayerFamily
-                    Screen.Constitutional -> Screen.LayerGlobalCommons
                     Screen.GraphMemory -> Screen.Memory
                     Screen.SkillStudio -> Screen.Adapters
                     Screen.VizSettings -> Screen.Settings
@@ -4924,6 +4929,18 @@ fun CIRISApp(
                     onTab = { t -> openTab(circleNow, t) },
                     onMyThings = { showMyThings = true },
                     onStop = { showStop = true },
+                    // The card's name, shown once, by the shell. A tab shows
+                    // its own list and needs no title; a card that IS its tab's
+                    // only content (Contacts in People) is titled all the same,
+                    // because the tab strip names the tab, not the card.
+                    cardTitle = activeSurface?.let { ai.ciris.mobile.shared.ui.shell.surfaceLabel(it) },
+                    // My things pages belong to no circle. Saying which one is
+                    // merely selected underneath would put a governance line
+                    // that reads "anyone can stop something" above this node's
+                    // own attestations, which is not true of them.
+                    instrument = (currentScreen as? Screen.Instrument)
+                        ?.let { sc -> ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments.firstOrNull { it.id == sc.id } }
+                        ?: activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(it) },
                     rail = {
                         for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
                             ai.ciris.mobile.shared.ui.shell.InstrumentRow(
@@ -4937,13 +4954,15 @@ fun CIRISApp(
                         }
                     },
                 ) {
-                    // Card screens read this to drop their own back arrow: inside
-                    // the shell the top bar is the one back affordance at EVERY
-                    // width (a tab is not a sub-screen), which is the contract the
-                    // drawer overlay used to provide on phones only. Wave 2 removes
-                    // the per-screen bars altogether.
+                    // INSIDE THE SHELL — said with the name that means it.
+                    // Screens read this to draw no bar of their own: the shell
+                    // carries the circle, the tabs, the card's name and the one
+                    // back arrow, and `ScreenTopBar` keeps their actions.
+                    // `LocalIsCompactWindow` is left alone here on purpose: it
+                    // answers how wide the window is, and wave 1 forcing it true
+                    // at every width told every screen the desktop was a phone.
                     CompositionLocalProvider(
-                        ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow provides true,
+                        ai.ciris.mobile.shared.ui.nav.LocalInsideShell provides true,
                     ) {
                         mainScreenContent(androidx.compose.ui.Modifier.fillMaxSize())
                     }
@@ -5813,6 +5832,32 @@ private sealed class Screen {
  * Help utility have no NavSurface (they're [FLOW_ONLY_SURFACES]); the
  * function returns null and the sidebar is hidden by the shell.
  */
+/**
+ * WHERE BACK GOES, FOR A CARD THAT THE TREE PLACES.
+ *
+ * The shell's arrow and the platform's back button must land in the same
+ * place, and the only way to keep that true as cards move is to ask the tree
+ * rather than to maintain a second list. A card under an instrument returns to
+ * that instrument; a card in a tab returns to the tab when the tab is a list,
+ * and to nothing when the tab shows it directly (there is no list to return
+ * to). Null means "this screen is not placed" — the caller decides.
+ *
+ * The spine moved five cards, and every hand-written back target for them was
+ * silently wrong until someone pressed the button: Memory fell through to the
+ * landing screen instead of This node, Constitutional to the Rules hub it no
+ * longer lives in.
+ */
+private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
+    val surface = screenToSurface(screen) ?: return null
+    ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(surface)?.let {
+        return Screen.Instrument(it.id)
+    }
+    val placement = ai.ciris.mobile.shared.ui.nav.CirclesNav.placementOf(surface) ?: return null
+    val circle = placement.circles.first()
+    val siblings = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circle, placement.tab, hasAgent)
+    return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
+}
+
 private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
     Screen.Sessions -> ai.ciris.mobile.shared.ui.nav.NavSurface.Sessions
