@@ -1936,6 +1936,7 @@ fun CIRISApp(
                                                     secureStorage.saveAccessToken(cirisToken)
                                                         .onSuccess { PlatformLogger.i(TAG, " CIRIS token saved to secure storage") }
                                                         .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
+                                                    settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.fromProvider(result.provider))
 
                                                     // Update .env file with fresh OAuth ID token for billing
                                                     PlatformLogger.i(TAG, " Writing OAuth ID token to .env for Python billing...")
@@ -2171,6 +2172,8 @@ fun CIRISApp(
                                 currentAccessToken = collected.accessToken
                                 apiClient.setAccessToken(collected.accessToken)
                                 secureStorage.saveAccessToken(collected.accessToken)
+                                // The desktop browser hand-off is the Google flow (onGoogleSignIn).
+                                settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.GOOGLE)
                                 onTokenUpdated?.invoke(collected.accessToken)
                                 if (isFirstRun == true) {
                                     // Hand the identity to the wizard: it derives the
@@ -2245,6 +2248,7 @@ fun CIRISApp(
                                 secureStorage.saveAccessToken(cirisToken)
                                     .onSuccess { PlatformLogger.i(TAG, " CIRIS token saved to secure storage") }
                                     .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
+                                settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.PASSWORD)
 
                                 // Check for degraded mode first - skip WORK state wait if no LLM
                                 // THIS LOG LINE IS THE DIAGNOSIS (CIRISClient#48). It read
@@ -2733,6 +2737,7 @@ fun CIRISApp(
                                         secureStorage.saveAccessToken(token)
                                             .onSuccess { PlatformLogger.i(TAG, " Token saved to secure storage") }
                                             .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token to secure storage: ${e.message}") }
+                                        settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.fromProvider(provider))
 
                                         // Update .env file with fresh OAuth ID token for billing
                                         PlatformLogger.i(TAG, " Writing OAuth ID token to .env for Python billing...")
@@ -2785,6 +2790,7 @@ fun CIRISApp(
                                             secureStorage.saveAccessToken(token)
                                                 .onSuccess { PlatformLogger.i(TAG, " Token saved to secure storage") }
                                                 .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token to secure storage: ${e.message}") }
+                                            settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.PASSWORD)
 
                                             token
                                         }
@@ -4165,6 +4171,17 @@ fun CIRISApp(
                     // an openable URL.
                     onOpenRepair = { url -> uriHandler.openUri(url) },
                     nodeBaseUrl = nodeBaseUrl,
+                    // Sign-out lives here on every build (CIRISClient#51) — the
+                    // same path Settings' onLogout takes, not a second one.
+                    onLogout = {
+                        PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
+                        interactViewModel.resetState()
+                        settingsViewModel.logout {
+                            currentAccessToken = null
+                            currentScreen = Screen.Login
+                        }
+                    },
+                    signInMethod = settingsViewModel.signInMethod.collectAsState().value,
                 )
             }
 
@@ -4957,7 +4974,7 @@ fun CIRISApp(
                         ?.let { sc -> ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments.firstOrNull { it.id == sc.id } }
                         ?: activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(it) },
                     rail = {
-                        for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
+                        for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments(hasAgentNow)) {
                             ai.ciris.mobile.shared.ui.shell.InstrumentRow(
                                 label = localizedString(inst.labelKey),
                                 glyph = inst.glyph,
@@ -5700,9 +5717,10 @@ private fun homeScreen(hasAgent: Boolean): Screen =
     if (hasAgent) Screen.Interact else Screen.Contacts
 
 /**
- * Navigation screens
+ * Navigation screens. `internal` (not private) only so ScreenToSurfaceTest can
+ * pin [screenToSurface]; nothing outside this file navigates by it.
  */
-private sealed class Screen {
+internal sealed class Screen {
     /** A circle's tab: the list of cards that live there, or the honest empty. */
     data class CircleTab(val circleId: String, val tabId: String) : Screen()
     /** One of the five instruments under My things: its surfaces as rows. */
@@ -5889,7 +5907,7 @@ private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
     return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
 }
 
-private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
+internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
     Screen.Sessions -> ai.ciris.mobile.shared.ui.nav.NavSurface.Sessions
     Screen.Tickets -> ai.ciris.mobile.shared.ui.nav.NavSurface.Tickets
@@ -5957,11 +5975,19 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities
     Screen.LayerGlobalCommons -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
-    // Flow-only / no sidebar
-    Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection, Screen.ClaimNode,
     Screen.Help -> ai.ciris.mobile.shared.ui.nav.NavSurface.Help
+    // Three kinds of screen with no nav row of their own, three answers — they
+    // were one branch once and it sent five of them to Help (CSD-085 §2).
+    // 1. Pre-shell: no sidebar (the same four `showSidebar` drops), so no surface.
+    Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection -> null
+    // 2. In-shell leaves of Nodes — both of ClaimNode's entries and
+    //    VerifyAgent's entry and exit are Manage Nodes / the shell — keep the
+    //    Nodes card lit, the convention UserChat -> Contacts states above.
+    Screen.ClaimNode, Screen.VerifyAgent -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
+    // 3. No single parent: AddFederationId returns to whoever called it and can
+    //    be auto-pushed over the landing screen.
+    Screen.AddFederationId -> null
     is Screen.CircleTab, is Screen.Instrument -> null
-    Screen.AddFederationId, Screen.VerifyAgent -> null
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {
@@ -5978,9 +6004,6 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.GraphMemory -> Screen.GraphMemory
     ai.ciris.mobile.shared.ui.nav.NavSurface.WiseAuthority -> Screen.WiseAuthority
     ai.ciris.mobile.shared.ui.nav.NavSurface.AgentSettings -> Screen.Settings
-    // Same screen, reachable without a brain (CIRISClient#51). Screen.Settings
-    // carries btn_logout, and on a node install nothing else reaches it.
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Account -> Screen.Settings
     ai.ciris.mobile.shared.ui.nav.NavSurface.LLMSettings -> Screen.LLMSettings
     ai.ciris.mobile.shared.ui.nav.NavSurface.System -> Screen.System
     ai.ciris.mobile.shared.ui.nav.NavSurface.Runtime -> Screen.Runtime

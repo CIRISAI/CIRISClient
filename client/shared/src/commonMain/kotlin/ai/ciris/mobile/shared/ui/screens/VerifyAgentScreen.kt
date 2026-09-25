@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.models.capability.CapabilityState
 import ai.ciris.mobile.shared.models.capability.LookupResult
 import ai.ciris.mobile.shared.models.capability.NodeCapabilities
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -267,20 +268,21 @@ fun VerifyAgentScreen(
         VerifyAgentCapabilityNotice(capabilities, onRetry = onRetryProbe)
 
         if (usable) {
+            rememberTextInputDriver("input_verify_hash", hash) { hash = it; result = null }
             OutlinedTextField(
                 value = hash,
                 onValueChange = { hash = it; result = null },
                 label = { Text(localizedString("mobile.verify_hash_label")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions.Default,
-                modifier = Modifier.fillMaxWidth().testable("input_verify_hash"),
+                modifier = Modifier.fillMaxWidth().testable("input_verify_hash", hash),
             )
             Button(
                 onClick = { submit(hash) },
                 enabled = !inFlight && hash.isNotBlank(),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable("btn_verify_submit") { submit(hash) },
+                    .testableClickable("btn_verify_submit", enabled = !inFlight && hash.isNotBlank()) { submit(hash) },
             ) {
                 Text(localizedString("mobile.verify_button"))
             }

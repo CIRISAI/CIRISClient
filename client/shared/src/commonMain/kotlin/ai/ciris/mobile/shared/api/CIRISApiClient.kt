@@ -2811,24 +2811,38 @@ class CIRISApiClient(
     /**
      * The device roster — `GET {nodeUrl}/v1/self/occurrences?identity_key_id=…`.
      *
-     * UNAUTHENTICATED by design: an occurrence roster is public §5.6.8.8 binding
-     * metadata (pubkeys + device_class), same posture as the self-key-record. Returns
-     * the currently-ACTIVE occurrences (admitted, not revoked) of [identityKeyId].
+     * The roster itself is public §5.6.8.8 binding metadata (pubkeys +
+     * device_class), same posture as the self-key-record, so the route answers
+     * without a session. The session is SENT anyway: since 0.5.216 the owner's
+     * own session also gets each device's `label`, which is not public.
+     *
+     * [includeRevoked] asks a 0.5.216+ node for the revoked devices too (each
+     * `revoked: true`, after the active ones). An older node ignores the query
+     * and its rows carry no `revoked` at all — see
+     * [ai.ciris.mobile.shared.models.federation.nodeReportsRevocation].
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
      */
     suspend fun getSelfOccurrences(
         identityKeyId: String,
         nodeUrl: String = LOCAL_NODE_URL,
+        includeRevoked: Boolean = false,
+        token: String? = accessToken,
     ): ai.ciris.mobile.shared.models.federation.SelfOccurrencesResponse {
         val method = "getSelfOccurrences"
-        logDebug(method, "GET $nodeUrl/v1/self/occurrences identity=${identityKeyId.take(16)}…")
+        logDebug(method, "GET $nodeUrl/v1/self/occurrences identity=${identityKeyId.take(16)}… include_revoked=$includeRevoked")
         val client = federationHttpClient()
         return try {
             val response = client.get("$nodeUrl/v1/self/occurrences") {
-                url { parameters.append("identity_key_id", identityKeyId) }
+                url {
+                    parameters.append("identity_key_id", identityKeyId)
+                    if (includeRevoked) parameters.append("include_revoked", "true")
+                }
+                token?.let { header("Authorization", "Bearer $it") }
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("self-occurrences fetch failed: ${response.status}: ${raw.take(160)}")
+                throw nodeRefusal(method, response.status, raw)
             }
             decodeFederationEnvelope(
                 raw,
@@ -2836,6 +2850,103 @@ class CIRISApiClient(
             )
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl, identity=$identityKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Name a device — `POST {nodeUrl}/v1/self/occurrence/label` (0.5.216).
+     *
+     * Owner session only. The node writes an owner-signed label row attested to
+     * the occurrence (the first a `scores`, each rename a `supersedes`); the
+     * label is display-only. Refusals are typed: `self.label_empty` (blank or
+     * over 64 characters), `self.not_your_device`, `self.owner_session_required`,
+     * `self.delegate_may_not_author`, … A node older than 0.5.216 answers a bare
+     * 404 (no `reason_id`): the route does not exist there.
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun labelOccurrence(
+        occurrenceKeyId: String,
+        label: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse {
+        val method = "labelOccurrence"
+        logInfo(method, "POST $nodeUrl/v1/self/occurrence/label occurrence=${occurrenceKeyId.take(16)}…")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceRequest(occurrenceKeyId, label),
+            )
+            val response = client.post("$nodeUrl/v1/self/occurrence/label") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw nodeRefusal(method, response.status, raw)
+            }
+            decodeFederationEnvelope(
+                raw,
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse.serializer(),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, occurrence=$occurrenceKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Release a node the owner owns — `POST {nodeUrl}/v1/self/nodes/{node_key_id}/release`
+     * (0.5.216).
+     *
+     * Owner session only. The node withdraws every live owner-binding the owner
+     * holds on [nodeKeyId], signed with the owner's own pen, then re-reads
+     * `nodes_owned_by` to prove it. Releasing the node that is ANSWERING needs
+     * [forceSelf]; without it the node refuses `self.release_self_requires_force`
+     * (409). Other refusals: `self.not_your_node` (403, also for a node it has
+     * never heard of), `self.release_incomplete` (500: signed, but still listed).
+     * A node older than 0.5.216 answers a bare 404.
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun releaseNode(
+        nodeKeyId: String,
+        forceSelf: Boolean = false,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse {
+        val method = "releaseNode"
+        logInfo(method, "POST $nodeUrl/v1/self/nodes/${nodeKeyId.take(16)}…/release force_self=$forceSelf")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeRequest(forceSelf = forceSelf),
+            )
+            val path = nodeKeyId.encodeURLPathPart()
+            val response = client.post("$nodeUrl/v1/self/nodes/$path/release") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw nodeRefusal(method, response.status, raw)
+            }
+            decodeFederationEnvelope(
+                raw,
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse.serializer(),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, node=$nodeKeyId")
             throw e
         } finally {
             client.close()
