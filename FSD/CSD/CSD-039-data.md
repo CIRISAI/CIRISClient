@@ -117,7 +117,7 @@ error:     {tag: "proposed:data_error", renders: "the read failed — a SNACKBAR
 | accord sharing settings + counters | `GET /v1/my-data/accord-settings`, `PUT` the same | **CIRISAgent only** (`routes/my_data.py:579`, `:688`) | **wrong-host** — no `accord-settings` route in CIRISServer `src/*.rs` on 0.5.217 |
 | delete the traces already sent | `DELETE /v1/my-data/lens-traces` | **CIRISAgent only** (`routes/my_data.py:458`) | **wrong-host** — no such route in CIRISServer |
 | peers / peering state | `GET /v1/federation/peers` | CIRISServer | live — `src/federation_peers.rs` |
-| grant federation consent | `POST /v1/accord/canonical-servers` | CIRISServer | live |
+| grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live. (`/v1/accord/canonical-servers`, the path this row first named, 404s — the client's own comment records it) |
 | erase the account | `POST /v1/system/data/reset-account` | CIRISServer | live — `src/system_data.rs:379`, owner + `CapabilityVerb::Wipe`, non-delegable |
 | erase the signing key | `POST /v1/system/data/wipe-signing-key` | CIRISServer | live — `src/system_data.rs:383`, same gate |
 | **see what was shared** | — | — | **missing everywhere** — see §6 |
