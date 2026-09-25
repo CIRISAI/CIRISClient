@@ -1404,7 +1404,13 @@ fun CIRISApp(
                     // times while the node was serving, logging "Restarting your
                     // node…" and never exiting — on macOS, which is slow enough
                     // that the hand-off lands before the first poll.
-                    val holdNodeUrl = CIRISApiClient.LOCAL_NODE_URL
+                    //
+                    // AND THE RECONCILED ONE (CIRISClient#66): re-reading was
+                    // not enough while the launcher's pin named the agent — the
+                    // pin never moved, so every re-read named the same closed
+                    // port. reconcileLocalNode follows the hand-off once the pin
+                    // stops answering and the node's address serves.
+                    val holdNodeUrl = CIRISApiClient.reconcileLocalNode { isNodeReachable(it) }
                     if (isNodeReachable(holdNodeUrl)) {
                         val ownership = probeNodeOwnership(holdNodeUrl)
                         if (ownership.isOwned) {
@@ -1519,9 +1525,18 @@ fun CIRISApp(
                 // session; a fresh launch requires re-login. Returning a null token
                 // here routes through the existing "No stored token → Login" path
                 // below, so the local-node login flow stays intact.
+                //
+                // BUT A SESSION ALREADY OPEN IN THIS PROCESS IS NOT A RESTORE
+                // (CIRISClient#67). This block re-runs whenever the phase
+                // changes, not only at launch — and when it re-ran mid-session
+                // it answered "no stored token", sent a signed-in owner back to
+                // Login, and threw away the session setup had just minted. #125
+                // forbids resurrecting a token across launches; keeping the one
+                // this process is holding is exactly what #125 says to keep.
+                val liveSession = currentAccessToken
                 val tokenResult = try {
                     kotlinx.coroutines.withTimeout(5000) {
-                        Result.success<String?>(null)
+                        Result.success<String?>(liveSession)
                     }
                 } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
                     startupViewModel.setStatus("Token load timeout!")
@@ -1535,7 +1550,7 @@ fun CIRISApp(
 
                 tokenResult.onSuccess { storedToken ->
                         if (storedToken != null) {
-                            platformLog(TAG, "[INFO] Loaded stored token: ${storedToken.take(8)}...${storedToken.takeLast(4)}")
+                            platformLog(TAG, "[INFO] Keeping this process's live session: ${storedToken.take(8)}...${storedToken.takeLast(4)}")
                             startupViewModel.setStatus(LocalizationHelper.getString("mobile.status_token_loaded"))
 
                             // Check token validity and refresh if needed
