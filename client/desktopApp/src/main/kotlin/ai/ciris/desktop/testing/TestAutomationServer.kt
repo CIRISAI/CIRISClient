@@ -18,6 +18,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.awt.Rectangle
 import java.awt.Robot
+import org.jetbrains.skiko.toBufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
@@ -119,6 +120,53 @@ class TestAutomationServer(
             // capture can still catch the previous stacking order.
             Thread.sleep(450)
         }
+    }
+
+    /**
+     * THE WINDOW'S OWN PIXELS, NOT THE SCREEN'S (CIRISClient#60).
+     *
+     * [raiseWindow] was the first answer to "a screenshot of somebody else's
+     * terminal", and it is not enough: a window manager with focus-stealing
+     * prevention may decline the raise, and then `Robot` captures whatever is
+     * stacked on top — while reporting success. It happened again on
+     * 2026-09-22, on a developer desktop, mid-atlas.
+     *
+     * Compose draws into a skiko `SkiaLayer`, and the layer can read back its
+     * own last frame. That frame is the app and nothing else, whatever the
+     * stacking order, on any display. The screen capture remains only as a
+     * fallback, and the response says which one it was, so a caller never
+     * mistakes a region of the screen for evidence of the app.
+     */
+    private fun captureWindow(window: java.awt.Window): Pair<java.awt.image.BufferedImage, String> {
+        val layer = findSkiaLayer(window)
+        if (layer != null) {
+            val own = runCatching {
+                var bitmap: org.jetbrains.skia.Bitmap? = null
+                javax.swing.SwingUtilities.invokeAndWait { bitmap = layer.screenshot() }
+                bitmap?.toBufferedImage()
+            }.getOrNull()
+            if (own != null && own.width > 0 && own.height > 0) {
+                // skiko hands back its own pixel layout, which ImageIO's PNG
+                // writer rejects mid-file ("Index -1 out of bounds"), leaving a
+                // truncated PNG behind a success response. Redraw into plain ARGB.
+                val argb = java.awt.image.BufferedImage(own.width, own.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+                val g = argb.createGraphics()
+                try { g.drawImage(own, 0, 0, null) } finally { g.dispose() }
+                return argb to "window"
+            }
+        }
+        println("[TestAutomation] screenshot: no readable render layer — falling back to a SCREEN capture, which may include other windows")
+        raiseWindow()
+        val b = window.bounds
+        return robot.createScreenCapture(Rectangle(b.x, b.y, b.width, b.height)) to "screen"
+    }
+
+    private fun findSkiaLayer(c: java.awt.Component): org.jetbrains.skiko.SkiaLayer? {
+        if (c is org.jetbrains.skiko.SkiaLayer) return c
+        if (c is java.awt.Container) {
+            for (child in c.components) findSkiaLayer(child)?.let { return it }
+        }
+        return null
     }
 
     // Callback for navigation requests
@@ -729,10 +777,7 @@ class TestAutomationServer(
                     }
 
                     try {
-                        raiseWindow()
-                        val bounds = window.bounds
-                        val screenRect = Rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
-                        val image = robot.createScreenCapture(screenRect)
+                        val (image, source) = captureWindow(window)
 
                         val format = call.request.queryParameters["format"] ?: "png"
 
@@ -743,9 +788,10 @@ class TestAutomationServer(
                             val encoded = java.util.Base64.getEncoder().encodeToString(baos.toByteArray())
                             call.respond(mapOf(
                                 "success" to true,
-                                "width" to bounds.width,
-                                "height" to bounds.height,
+                                "width" to image.width,
+                                "height" to image.height,
                                 "format" to format,
+                                "source" to source,
                                 "data" to encoded
                             ))
                         } else {
@@ -780,10 +826,8 @@ class TestAutomationServer(
 
                     try {
                         val request = call.receive<ScreenshotRequest>()
-                        raiseWindow()
-                        val bounds = window.bounds
-                        val screenRect = Rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
-                        val image = robot.createScreenCapture(screenRect)
+                        val (image, source) = captureWindow(window)
+                        println("[TestAutomation] screenshot -> ${request.path} (source=$source)")
 
                         val file = java.io.File(request.path)
                         file.parentFile?.mkdirs()
