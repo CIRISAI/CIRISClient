@@ -48,13 +48,13 @@ fields:
     type: string
     example: "eric-moore-v1"
     renders: "the self fed-ID the roster belongs to — the node's BOUND OWNER, not the node key"
-    tag: "proposed:identity_self_key_id"
+    tag: identity_self_key_id
   - ceg: x_private:occurrence_key_id
     use: display-only
     type: string
     example: "ciris-phone-4a19c2"
     renders: "ciris-pho…19c2 (mono, middle-truncated) — one row per device"
-    tag: "proposed:identity_row_{occurrenceKeyId}"
+    tag: "identity_row_{occurrenceKeyId}"
   - ceg: x_private:device_class
     use: display-only
     type: "enum[phone,laptop,agent]"
@@ -92,22 +92,43 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED — the node serves `revoked` under `include_revoked=1` and the client never asks, so an evicted device leaves no visible trace"
     tag: "proposed:identity_row_revoked"
+  - ceg: "ownership:{relation}:{target_kind}:{version}"
+    bind: {relation: responsible_party, target_kind: node, version: v1}
+    use: display-only
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "on every row, 'Reachable' (announced: people can find you through this device) or 'Private' (only you see it). Announce is PER DEVICE (#655): it widens that node's owner-binding to federation, and strangers see only the reachable rows. The per-row field name is unconfirmed until CIRISClient#78"
+    tag: "proposed:identity_row_reachability_{occurrenceKeyId}"
   - ceg: x_private:minted_fedcode
     use: display-only
     type: string
     example: "ciris1q…"
     renders: "this new device's fedcode, as text and QR, for the primary to enroll"
-    tag: "proposed:identity_enrolled_fedcode"
+    tag: identity_enroll_fedcode
 ```
 
-Six of the nine rows are `proposed:` and three are `unconfirmed`. That is the
-honest state of a screen whose list items carry **no test tags at all**: the only
-tagged things on the roster are the buttons
-(`btn_identity_revoke_{occurrenceKeyId}`, `IdentityManagementScreen.kt:288`), so
-a flow can click a device it cannot read.
+Seven of the ten rows are `proposed:` and four are `unconfirmed`. The roster
+itself is tagged (`identity_device_list`, `identity_row_{occurrenceKeyId}`,
+`identity_self_key_id`: `IdentityManagementScreen.kt:170, 228, 236`; and the enrolled fedcode, `identity_enroll_fedcode` at `:423`), but
+nothing inside a row is, so a flow can count devices and click one it cannot
+read.
+
+**Reachable or private, per device (0.5.218).** The maintainer ruled on #655
+that announce is per device, and that the public roster is exactly the devices
+a person chose to announce on. This page is the owner's view, so it shows
+every device and says which kind each is. The words are "Reachable" and
+"Private", not "announced", because that is what the choice means to the
+person. Making a device reachable from here is planned, not built: this
+device's own announce is `POST /v1/federation/announce` (live), and a
+per-device "make this device reachable" on the approving side is #678, still
+building. A private row therefore offers "Make reachable" only when it is the
+device in hand.
+
+**Approve a new device** (CSD-094) sits directly below the roster, because it
+adds a device to this person's identity (CC 3.3.6).
 
 ```yaml csd:states
-populated: {tag: "proposed:identity_roster"}
+populated: {tag: identity_device_list}
 empty:     {tag: "proposed:identity_roster_empty", renders: "mobile.identity_roster_empty (IdentityManagementScreen.kt:223) — untagged today"}
 loading:   {tag: "proposed:identity_loading", renders: "a 14dp progress affordance beside the roster heading and NO empty sentence (:217)"}
 error:     {tag: identity_error, renders: "the error banner at :202 — a real tag, and the only one of the four that exists"}
@@ -123,11 +144,14 @@ an error also must not look alike.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the self fed-ID | `GET /v1/setup/owned-nodes` → `owner`, falling back to `GET /v1/federation/self-key-record` | CIRISServer | live — `bootstrap.rs:1489`, `federation_admin.rs:900` |
-| the roster | `GET /v1/self/occurrences?identity_key_id=…` | CIRISServer | live — `src/auth/occurrence.rs:668`, **unauthenticated** |
+| the roster | `GET /v1/self/occurrences?identity_key_id=…` | CIRISServer | live — `src/auth/occurrence.rs:668`, **unauthenticated** on `main`. **0.5.218 (#655), built, unmerged:** the owner's session sees every device (labels, and revoked rows under `include_revoked=true`); anyone else sees only announced devices, and an empty list when nothing is announced (the same answer as for an unknown person). Not readable: no branch or PR is pushed. The owner's view here does not change |
+| reachable / private on a row | same route, owner session | CIRISServer | **unconfirmed** field name, until CIRISClient#78 |
+| make a device reachable | this device: `POST /v1/federation/announce` (`src/claim_remote.rs:1250`, live, owner-gated, loopback; the RNS announce follows on next boot). Another device: planned on the approving side | CIRISServer | this device **live**; another device **not built** (#678, still building) |
+| approve a new device | `POST /v1/setup/claim-remote` | CIRISServer | live; specified in CSD-094 |
 | add a device | `POST /v1/self/occurrence` | CIRISServer | live — `occurrence.rs:663`, hybrid request-signature |
 | evict a device | `POST /v1/self/occurrence/revoke` | CIRISServer | live — `occurrence.rs:665` |
 | mint this device's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `identity.rs:1945`, loopback-only |
-| portable ID / repair | `POST /v1/self/occurrence/portable`, `POST /v1/self/associate` | CIRISServer | live — `portable_occurrence.rs:1152`, `:1155`, loopback-only |
+| portable ID / repair | `POST /v1/self/occurrence/portable`, `POST /v1/self/associate` | CIRISServer | live — `portable_occurrence.rs:1152`, `:1155`, loopback-only. **0.5.218 (#639), built, unmerged:** `associate {device: "tpm"}` is refused by name when no TPM is available, instead of silently minting a software key. The card shows the refusal and offers software custody as an explicit choice |
 | `revoked` on a row | `GET /v1/self/occurrences?include_revoked=1` | CIRISServer | live; **wired in #94** (before it, the client never sent the parameter) |
 | `label` on a row | same route; owner-session only | CIRISServer | live; **wired in #94** (before it, `SelfOccurrence.kt` had no field) |
 | name a device | `POST /v1/self/occurrence/label` | CIRISServer | live (`src/self_devices.rs:473`); **wired in #94** |
@@ -141,13 +165,13 @@ Sign in on an enrolled device; open My things › Devices & keys › My Identity
 ```yaml
 expect:
   state: populated
-  visible: ["proposed:identity_self_key_id", "proposed:identity_roster"]
+  visible: [identity_self_key_id, identity_device_list]
   count: {of: "proposed:identity_row_*", min: 1}
   each: {of: "proposed:identity_row_device_class", one_of: [phone, laptop, agent]}
 ```
 
 Enroll a second device: on the new device click `btn_identity_enroll_this_device`,
-copy `proposed:identity_enrolled_fedcode`, paste it into
+copy `identity_enroll_fedcode`, paste it into
 `input_identity_device_code` on the primary, click `btn_identity_add_device`.
 
 ```yaml

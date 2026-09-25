@@ -123,6 +123,7 @@ identical from outside.
 | owner hint | `GET /v1/auth/owner-hint` | CIRISServer (`src/auth/session.rs`, `src/auth/oauth.rs`) | live |
 | sign in | `POST /v1/auth/login` | CIRISServer (`src/auth/session.rs`, `src/claim_remote.rs`); the agent serves its own | live |
 | Google / Apple handoff | platform OAuth + the node's OAuth link routes (`src/auth/oauth.rs`, `src/auth/oauth_link.rs`) | CIRISServer | live |
+| **post-login redirect: a contract the client must meet** | `GET /v1/auth/oauth/{provider}/login?redirect_uri=…&app_nonce=…` | CIRISServer | **behaviour change, built, unmerged** (0.5.218, CIRISServer#672, still open; not readable, since no branch or PR is pushed). The redirect is now **parsed**, and only a **same-origin path** (`/…`, not `//…` or `/\…`) or an **exact loopback host** (`localhost`, `127.0.0.1` or `[::1]`, any port, over `http`) is accepted. An absolute `https://` redirect, which `main` accepts for any host (`is_safe_redirect`, `src/auth/oauth.rs:1850-1864` @ `046e1b39`), is **refused**. The refusal id is `auth.oauth.unsafe_redirect` on `main` (`oauth.rs:1790-1799`, a browser refusal page); the brief says new ids land under `oauth.*`, so the 0.5.218 id is **unconfirmed** until CIRISClient#78. **The client complies today by omission:** the desktop browser flow sends only `app_nonce` (`CIRISApiClient.oauthBrowserLoginUrl`, `CIRISApiClient.kt:2102-2106`), so the node's default `/` applies; Android and iOS sign in natively and do not use this route; and the web build sends no `redirect_uri` (no match in `wasmJsMain`). **The rule for any future caller:** send a path, or `http://localhost:<port>/…` for a loopback listener. Never an `https://` URL, and never an app-scheme URL unless the server posts an allow-list for one |
 | is this a first run | `GET /v1/setup/status` | CIRISAgent `routes/setup/status.py:45`; CIRISServer `src/auth/bootstrap.rs` (**loopback-only**) | live, with CIRISAgent#1195 open |
 | reset the device | local wipe + node reset | CIRISClient | live (CIRISClient#55/#56/#61 closed) |
 
@@ -171,6 +172,12 @@ expect:
 to this screen, and `session_fixture` cannot establish a session without them.
 `input_username` and `input_password` declare their sinks at
 `LoginScreen.kt:690`, so both are drivable by construction.
+
+**The redirect contract (CIRISServer#672).** A `commonTest` pins
+`oauthBrowserLoginUrl`: its query carries either no `redirect_uri`, or one that
+is a same-origin path or an exact loopback host. It must be shown red first by
+planting an `https://` redirect. That is the one part of the OAuth round trip
+the client controls, so it is tested here even though the round trip is not.
 
 **Not tested here.** The OAuth round trip (the browser handoff leaves the app —
 `btn_google_signin` / `btn_apple_signin` can be pressed, and nothing after that
