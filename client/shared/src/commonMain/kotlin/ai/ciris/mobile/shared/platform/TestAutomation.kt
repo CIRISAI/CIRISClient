@@ -228,27 +228,53 @@ fun Modifier.testable(tag: String, text: String? = null): Modifier = composed {
 }
 
 /**
+ * Register [tag]'s programmatic click handler only while the control is
+ * [enabled]; a disabled control has none.
+ *
+ * With no handler `/click` answers "No click handler" and `/tree` reports
+ * `canClick: false` — which is what a disabled control IS. The handler used to
+ * be registered unconditionally, so `/click btn_next` ran the wizard's final
+ * step while Next was greyed out for a step already in flight (CIRISClient#69):
+ * a robot could do what no person could.
+ */
+internal fun bindClickHandler(tag: String, enabled: Boolean, handler: () -> Unit) {
+    if (enabled) TestAutomation.registerClickHandler(tag, handler)
+    else TestAutomation.unregisterClickHandler(tag)
+}
+
+/**
  * Track an element AND register a programmatic click handler, plus `clickable`.
  *
  * `rememberUpdatedState` is the whole of #32: the DisposableEffect is keyed on
  * the tag so it runs once, and without the indirection the handler it registered
  * would keep calling the FIRST composition's lambda forever.
+ *
+ * [enabled] must be the same value the control's own `enabled` has (a Button's
+ * `enabled = …`): false removes both the `clickable` and the automation handler,
+ * so neither a pointer nor `/click` can press what the screen has disabled. The
+ * handler follows [enabled] in its own effect; the element's registration does
+ * not, because re-registering a position on every toggle would drop it from
+ * `/tree` until the next layout.
  */
 fun Modifier.testableClickable(
     tag: String,
     text: String? = null,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ): Modifier = composed {
-    if (!TestAutomation.isEnabled()) return@composed this.testTag(tag).clickable { onClick() }
+    if (!TestAutomation.isEnabled()) return@composed this.testTag(tag).clickable(enabled = enabled) { onClick() }
     val currentOnClick by rememberUpdatedState(onClick)
     DisposableEffect(tag) {
-        TestAutomation.registerClickHandler(tag) { currentOnClick() }
         onDispose {
             TestAutomation.unregisterClickHandler(tag)
             TestAutomation.unregisterElement(tag)
         }
     }
-    this.testTag(tag).clickable { onClick() }.trackPosition(tag, text)
+    DisposableEffect(tag, enabled) {
+        bindClickHandler(tag, enabled) { currentOnClick() }
+        onDispose { TestAutomation.unregisterClickHandler(tag) }
+    }
+    this.testTag(tag).clickable(enabled = enabled) { onClick() }.trackPosition(tag, text)
 }
 
 /**

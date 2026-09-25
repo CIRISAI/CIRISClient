@@ -35,24 +35,23 @@ from testing.gate import nav_map  # noqa: E402
 #: Where the app's automation server listens. Same port the gate drives.
 TEST_PORT = 9091
 
-#: Surfaces the nav tree does not reach: pre-login, wizards, and screens that
-#: only exist inside a flow. Captured separately or not at all — listed here so
-#: the manifest can say "known unreachable" instead of "failed".
-FLOW_ONLY = {
-    "Startup", "Login", "Setup", "ServerConnection", "ClaimNode",
-    "VerifyAgent", "AddFederationId", "DutyConferral",
-    "SkillImport", "Manage",
-    # Help was here until the spine pass. It has had a real route since the
-    # shell landed — My things › Help — and listing it here meant the atlas
-    # skipped a screen the tree can reach, which is this file keeping a second
-    # opinion about the nav. When a surface gets placed, it comes out of this
-    # set; nothing else in it is in the tree at all.
-    # Declared in EpistemicNav but in NO group, and its own doc comment says
-    # "Reachable from the Accord screen ONLY when no accord family exists yet".
-    # nav_map still hands it a one-hop chain, so it read as a screen the atlas
-    # kept failing to reach. It is not a gap; there is no rail route to it.
-    "AccordCeremony",
-}
+#: The shell's own screens: every chain passes through them, so they are
+#: neither a nav destination nor flow-only.
+SHELL = {"CircleTab", "Instrument"}
+
+
+def flow_only() -> set[str]:
+    """Screens the nav tree does not reach on ANY build: pre-login, wizards, leaves.
+
+    DERIVED: (members of `sealed class Screen`) − (screens nav_map reaches on
+    the agent build, the superset) − [SHELL] — the subtraction
+    `packaging/check_csd_v3.py` does. This was a hand-written set, and it was
+    dead code: the branch that read it sat inside a loop over nav_map's hops,
+    and no member was ever a hop, so its `[FLOW]` line never printed. Its only
+    live effect was the `flow_only` array in atlas.json — a coverage CLAIM that
+    had come to list a `Manage` that does not exist and to miss `UserChat`.
+    """
+    return nav_map.screen_classes() - set(nav_map.build(has_agent=True)) - SHELL
 
 
 def refuse_if_port_taken() -> None:
@@ -258,14 +257,7 @@ def capture(drv: TestAutomationServer, shots: Path, hops: dict[str, list[str]],
     results: list[dict] = []
     ordered = sorted(hops.items(), key=lambda kv: (kv[1][:-1], kv[0]))
     for screen, chain in ordered:
-        if screen in FLOW_ONLY:
-            results.append({"screen": screen, "chain": chain, "ok": False,
-                            "shot": None, "tags": 0, "resolved": "",
-                            "detail": "no nav route — reached inside a flow",
-                            "flow_only": True})
-            print(f"  [FLOW] {screen:28s} no nav route by design")
-            continue
-        entry = {"screen": screen, "chain": chain, "ok": False,
+        entry ={"screen": screen, "chain": chain, "ok": False,
                  "shot": None, "detail": "", "tags": 0, "resolved": ""}
         try:
             # A PICTURE IS NOT A NAVIGATION. The first run of this tool wrote
@@ -375,7 +367,7 @@ def main() -> int:
             "jar": args.jar.name,
             "captured": sum(1 for r in results if r["ok"]),
             "total": len(results),
-            "flow_only": sorted(FLOW_ONLY),
+            "flow_only": sorted(flow_only()),
             "screens": results,
         }
         (args.out / "atlas.json").write_text(json.dumps(manifest, indent=2))

@@ -5717,9 +5717,10 @@ private fun homeScreen(hasAgent: Boolean): Screen =
     if (hasAgent) Screen.Interact else Screen.Contacts
 
 /**
- * Navigation screens
+ * Navigation screens. `internal` (not private) only so ScreenToSurfaceTest can
+ * pin [screenToSurface]; nothing outside this file navigates by it.
  */
-private sealed class Screen {
+internal sealed class Screen {
     /** A circle's tab: the list of cards that live there, or the honest empty. */
     data class CircleTab(val circleId: String, val tabId: String) : Screen()
     /** One of the five instruments under My things: its surfaces as rows. */
@@ -5906,7 +5907,7 @@ private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
     return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
 }
 
-private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
+internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
     Screen.Sessions -> ai.ciris.mobile.shared.ui.nav.NavSurface.Sessions
     Screen.Tickets -> ai.ciris.mobile.shared.ui.nav.NavSurface.Tickets
@@ -5974,11 +5975,19 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities
     Screen.LayerGlobalCommons -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
-    // Flow-only / no sidebar
-    Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection, Screen.ClaimNode,
     Screen.Help -> ai.ciris.mobile.shared.ui.nav.NavSurface.Help
+    // Three kinds of screen with no nav row of their own, three answers — they
+    // were one branch once and it sent five of them to Help (CSD-085 §2).
+    // 1. Pre-shell: no sidebar (the same four `showSidebar` drops), so no surface.
+    Screen.Startup, Screen.Login, Screen.Setup, Screen.ServerConnection -> null
+    // 2. In-shell leaves of Nodes — both of ClaimNode's entries and
+    //    VerifyAgent's entry and exit are Manage Nodes / the shell — keep the
+    //    Nodes card lit, the convention UserChat -> Contacts states above.
+    Screen.ClaimNode, Screen.VerifyAgent -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
+    // 3. No single parent: AddFederationId returns to whoever called it and can
+    //    be auto-pushed over the landing screen.
+    Screen.AddFederationId -> null
     is Screen.CircleTab, is Screen.Instrument -> null
-    Screen.AddFederationId, Screen.VerifyAgent -> null
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {

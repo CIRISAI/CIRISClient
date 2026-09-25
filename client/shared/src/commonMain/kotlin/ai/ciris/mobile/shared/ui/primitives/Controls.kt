@@ -82,6 +82,39 @@ fun CirisTextButton(
 }
 
 /**
+ * What makes a text field `/input`-drivable, for a field that is not a
+ * [CirisTextField] (it needs a label, a keyboard type, a weight in a Row):
+ * declares the sink for [tag], applies the automation request addressed to it
+ * through the SAME [onValueChange] a keystroke uses, and reports what the field
+ * holds. Call it beside the field; tag the field `.testable(tag, value)`.
+ *
+ * A field carrying only the `testable` tag, with none of this, is visible to `/tree` and
+ * types nothing — `/input` refuses it with 422 (CIRISClient#30), so a flow
+ * cannot fill it at all. `check_ui_drivable.py` counts this call as the sink.
+ *
+ * A disabled field declares no sink, so `/input` refuses it the way a person's
+ * keyboard is refused, instead of typing into a field the screen has locked.
+ */
+@Composable
+fun rememberTextInputDriver(
+    tag: String,
+    value: String,
+    enabled: Boolean = true,
+    onValueChange: (String) -> Unit,
+) {
+    if (enabled) rememberInputSinks(tag)
+    val request by TestAutomation.textInputRequests.collectAsState()
+    LaunchedEffect(request, enabled) {
+        val r = request ?: return@LaunchedEffect
+        if (enabled && r.testTag == tag) {
+            onValueChange(if (r.clearFirst) r.text else value + r.text)
+            TestAutomation.clearTextInputRequest()
+        }
+    }
+    LaunchedEffect(value) { TestAutomation.setInputValue(tag, value) }
+}
+
+/**
  * A text field that is `/input`-drivable BY CONSTRUCTION: it declares its own
  * sink, consumes the automation request addressed to its tag, and reports what
  * it holds. A screen built on this cannot ship a field the gate cannot type
@@ -100,16 +133,7 @@ fun CirisTextField(
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
-    rememberInputSinks(tag)
-    val request by TestAutomation.textInputRequests.collectAsState()
-    LaunchedEffect(request) {
-        val r = request ?: return@LaunchedEffect
-        if (r.testTag == tag) {
-            onValueChange(if (r.clearFirst) r.text else value + r.text)
-            TestAutomation.clearTextInputRequest()
-        }
-    }
-    LaunchedEffect(value) { TestAutomation.setInputValue(tag, value) }
+    rememberTextInputDriver(tag, value, enabled, onValueChange)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,

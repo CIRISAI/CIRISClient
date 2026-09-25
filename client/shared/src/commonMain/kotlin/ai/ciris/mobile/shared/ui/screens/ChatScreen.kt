@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.models.chat.Presentation
 import ai.ciris.mobile.shared.models.chat.chatEntryText
 import ai.ciris.mobile.shared.models.chat.presentationOf
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.AttKind
@@ -287,13 +288,14 @@ fun ChatScreen(
             val draftBytes = remember(draft) { draft.utf8Size() }
             Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    rememberTextInputDriver("input_chat_body", draft, enabled = !sending, onValueChange = viewModel::setDraft)
                     Row(verticalAlignment = Alignment.Bottom) {
                         OutlinedTextField(
                             value = draft,
                             onValueChange = viewModel::setDraft,
                             enabled = !sending,
                             label = { Text(localizedString("mobile.chat_input_hint")) },
-                            modifier = Modifier.weight(1f).testable("input_chat_body"),
+                            modifier = Modifier.weight(1f).testable("input_chat_body", draft),
                         )
                         Spacer(Modifier.width(8.dp))
                         // ONE predicate for the human and the robot. The

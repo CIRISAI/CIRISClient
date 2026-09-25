@@ -152,15 +152,130 @@ def _instruments(tree_src: str) -> list[dict]:
     return out
 
 
-def _screen_routes(app_src: str) -> dict[str, str]:
-    """Screen name -> NavSurface name, from CIRISApp's route table."""
-    out: dict[str, str] = {}
-    for m in re.finditer(r"NavSurface\.(\w+)\s*->\s*Screen\.(\w+)", app_src):
-        surface, screen = m.group(1), m.group(2)
-        out.setdefault(screen, surface)
-        if surface == screen:
-            out[screen] = surface
+def _routes(app_src: str) -> list[tuple[str, str]]:
+    """Every (NavSurface, Screen) pair in `surfaceToScreen` — ALL of them.
+
+    Two surfaces may open one screen: `Account` and `AgentSettings` both route
+    to `Screen.Settings` (CIRISClient#51). A Screen-keyed dict can hold one, and
+    the `setdefault` this replaces kept AgentSettings and dropped Account without
+    a word — 49 hops where there are 50, and a CSD for the Account card refused
+    for a hop the map had thrown away.
+    """
+    pairs = [(m.group(1), m.group(2))
+             for m in re.finditer(r"NavSurface\.(\w+)\s*->\s*Screen\.(\w+)", app_src)]
+    if not pairs:
+        raise ValueError("no NavSurface.X -> Screen.Y parsed from CIRISApp.kt — the parser is wrong, not the app")
+    return pairs
+
+
+def _lit_surfaces(app_src: str) -> dict[str, str | None]:
+    """Screen -> the NavSurface `screenToSurface` lights for it (None for `-> null`).
+
+    The app's own answer to "which card is this screen", read from the function
+    rather than guessed, so a screen that two surfaces open is keyed by the one
+    the shell highlights on it.
+    """
+    start = app_src.find("fun screenToSurface(")
+    if start < 0:
+        raise ValueError("fun screenToSurface not found in CIRISApp.kt — the parser is wrong, not the app")
+    open_at = app_src.find("{", start)
+    depth, i = 0, open_at
+    while i < len(app_src):
+        depth += {"{": 1, "}": -1}.get(app_src[i], 0)
+        if depth == 0:
+            break
+        i += 1
+    body = app_src[open_at + 1:i]
+    out: dict[str, str | None] = {}
+    branch = re.compile(
+        r"((?:(?:is\s+)?Screen\.\w+\s*,\s*)*(?:is\s+)?Screen\.\w+)\s*->\s*"
+        r"(?:[\w.]*NavSurface\.(\w+)|null)"
+    )
+    for m in branch.finditer(body):
+        for screen in re.findall(r"Screen\.(\w+)", m.group(1)):
+            out[screen] = m.group(2)
+    if not out:
+        raise ValueError("screenToSurface found but no branch parsed — the parser is wrong, not the app")
     return out
+
+
+def _screen_routes(app_src: str) -> dict[str, str]:
+    """Screen name -> THE NavSurface its hop is keyed by.
+
+    One surface per screen: the only one, or — when several open it — the one
+    `screenToSurface` lights. A screen several surfaces open and the app does
+    not disambiguate is an ERROR, not a coin toss: a parser that silently keeps
+    one answer is how Account went missing. Every surface's own hop, including
+    the ones this cannot key by screen, is in [build_surfaces].
+    """
+    by_screen: dict[str, list[str]] = {}
+    for surface, screen in _routes(app_src):
+        by_screen.setdefault(screen, [])
+        if surface not in by_screen[screen]:
+            by_screen[screen].append(surface)
+    lit: dict[str, str | None] | None = None
+    out: dict[str, str] = {}
+    for screen, surfaces in by_screen.items():
+        if len(surfaces) == 1:
+            out[screen] = surfaces[0]
+            continue
+        if lit is None:
+            lit = _lit_surfaces(app_src)
+        pick = lit.get(screen)
+        if pick not in surfaces:
+            raise ValueError(
+                f"Screen.{screen} is opened by {surfaces} and screenToSurface lights "
+                f"{pick!r}, which is none of them — the map cannot say which hop "
+                f"Screen.{screen} is, and will not guess"
+            )
+        out[screen] = pick
+    return out
+
+
+def _hop(surface: str, ids: dict[str, str], placements: list[dict], by_surface: dict[str, dict],
+         inst_of: dict[str, dict], has_agent: bool) -> list[str] | None:
+    """The chain to one surface on this build, or None when it has no row here."""
+    if surface not in ids:
+        return None
+    p = by_surface.get(surface)
+    if p is not None:
+        if p["agent_only"] and not has_agent:
+            return None
+        circle = p["circles"][0]
+        chain = [circle_tag(circle), tab_tag(p["tab"])]
+        if len(_cards(placements, circle, p["tab"], has_agent)) > 1:
+            chain.append(nav_tag(ids[surface]))
+        return chain
+    inst = inst_of.get(surface)
+    if inst is not None:
+        if surface in inst["agent_only"] and not has_agent:
+            return None
+        return [MY_THINGS, instrument_tag(inst["id"]), nav_tag(ids[surface])]
+    return None
+
+
+def screen_classes() -> set[str]:
+    """Every member of `sealed class Screen` in CIRISApp.kt, brace-matched.
+
+    The same read `packaging/check_csd_v3.py:_screen_classes` does: a one-line
+    regex misses multi-line declarations (`UserChat`). Empty is an error — the
+    class plainly exists, so finding nothing means the parser is wrong.
+    """
+    src = APP.read_text(encoding="utf-8")
+    start = src.find("sealed class Screen")
+    open_at = src.find("{", start)
+    if start < 0 or open_at < 0:
+        raise ValueError("sealed class Screen not found in CIRISApp.kt — the parser is wrong, not the app")
+    depth, i = 0, open_at
+    while i < len(src):
+        depth += {"{": 1, "}": -1}.get(src[i], 0)
+        if depth == 0:
+            break
+        i += 1
+    members = set(re.findall(r"^\s+(?:data\s+)?(?:object|class)\s+(\w+)", src[open_at + 1:i], re.M))
+    if not members:
+        raise ValueError("sealed class Screen has no parsed members — the parser is wrong, not the app")
+    return members
 
 
 def _cards(placements: list[dict], circle: str, tab: str, has_agent: bool) -> list[str]:
@@ -186,24 +301,41 @@ def build(has_agent: bool = True) -> dict[str, list[str]]:
 
     hops: dict[str, list[str]] = {}
     for screen, surface in _screen_routes(app_src).items():
-        if surface not in ids:
-            continue
-        p = by_surface.get(surface)
-        if p is not None:
-            if p["agent_only"] and not has_agent:
-                continue
-            circle = p["circles"][0]
-            chain = [circle_tag(circle), tab_tag(p["tab"])]
-            if len(_cards(placements, circle, p["tab"], has_agent)) > 1:
-                chain.append(nav_tag(ids[surface]))
+        chain = _hop(surface, ids, placements, by_surface, inst_of, has_agent)
+        if chain is not None:
             hops[screen] = chain
-            continue
-        inst = inst_of.get(surface)
-        if inst is not None:
-            if surface in inst["agent_only"] and not has_agent:
-                continue
-            hops[screen] = [MY_THINGS, instrument_tag(inst["id"]), nav_tag(ids[surface])]
     return hops
+
+
+def build_surfaces(has_agent: bool = True) -> dict[str, list[str]]:
+    """NavSurface -> its chain, for EVERY routed surface.
+
+    [build] is keyed by Screen, and a Screen two surfaces open can have one key.
+    This is keyed by surface, so both `Account` and `AgentSettings` — two rows,
+    two hops, one `Screen.Settings` — are here.
+    """
+    nav_src = NAV.read_text(encoding="utf-8")
+    tree_src = TREE.read_text(encoding="utf-8")
+    app_src = APP.read_text(encoding="utf-8")
+    ids = _surface_ids(nav_src)
+    placements = _placements(tree_src)
+    instruments = _instruments(tree_src)
+    by_surface = {p["surface"]: p for p in placements}
+    inst_of = {s: inst for inst in instruments for s in inst["surfaces"]}
+    out: dict[str, list[str]] = {}
+    for surface, _screen in _routes(app_src):
+        chain = _hop(surface, ids, placements, by_surface, inst_of, has_agent)
+        if chain is not None:
+            out[surface] = chain
+    return out
+
+
+def screen_of(surface: str) -> str | None:
+    """The Screen a surface opens, from `surfaceToScreen`."""
+    for s, screen in _routes(APP.read_text(encoding="utf-8")):
+        if s == surface:
+            return screen
+    return None
 
 
 def expected_tail(surface_id: str, has_agent: bool = True) -> str | None:
@@ -237,7 +369,10 @@ def structure() -> dict:
     ids = _surface_ids(nav_src)
     placements = _placements(tree_src)
     instruments = _instruments(tree_src)
-    routed = set(_screen_routes(app_src))
+    # Surfaces that open a screen. This was the set of SCREEN names, tested
+    # against surface names, so `has_screen` was true only where the two
+    # happened to be spelled alike.
+    routed = {surface for surface, _screen in _routes(app_src)}
     surfaces: dict[str, dict] = {}
     for p in placements:
         surfaces[p["surface"]] = {

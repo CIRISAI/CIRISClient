@@ -84,4 +84,19 @@ class DimensionsTest {
         assertEquals(ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT, cohortScopeOf("self"))
         assertNull(cohortScopeOf("everyone"), "not a wire value")
     }
+
+    /**
+     * Every one of CC rc5's seven `cohort_scope` tokens resolves. `biosphere`
+     * returned null while `planet` (only its colloquial alias) resolved, so a
+     * receipt scoped to the living community showed no circle at all.
+     */
+    @Test
+    fun everyCanonicalCohortScopeTokenResolves() {
+        val canonical = listOf("self", "family", "community", "affiliations", "species", "biosphere", "federation")
+        for (token in canonical) {
+            assertNotNull(cohortScopeOf(token), "cohort_scope '$token' is canonical and must resolve")
+        }
+        assertEquals(ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMONS, cohortScopeOf("biosphere"))
+        assertEquals(ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMONS, cohortScopeOf(" Biosphere "))
+    }
 }
