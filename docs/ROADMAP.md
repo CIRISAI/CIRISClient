@@ -2,59 +2,92 @@
 
 The order the client redesign is built in, and where it stands. **Updated 2026-09-25.**
 
-This file is the Gantt. The two Gantt artifacts were deleted, and the plan now lives here and in
-backlog issue #71. The Card Atlas, the execution plan and the handoff are still the design's own
+This file is the plan. It tracks dependencies, not dates. The two Gantt artifacts were deleted,
+and the plan now lives here and in backlog issue #71. The Card Atlas, the execution plan and the handoff are still the design's own
 documents; this page records only what order they are built in and how far along each part is.
 The item IDs (F, S, N, B, G) are the execution plan's.
 
 ## Where we are
 
-- **Done:** foundation, shell and spine, and the bug lane. Waves 0 and 1, the spine (#64) and every
-  client bug the lane named are merged and **released in 0.5.224** (2026-09-25).
-- **In review:** B3 Files (#77). It needs one pass for server 0.5.217, below.
-- **Next:** B4 Just me, then B5 Family. The server shipped what both need on 2026-09-25.
+- **Done:** foundation, shell and spine, and the bug lane (released in **0.5.224**).
+- **In review:** B3 Files (#77). It needs one pass for server 0.5.217 (below).
+- **Next:** B4 Just me, then B5 Family. Everything they need upstream has shipped.
+- **The CSD track is behind the build track.** B1 and B2 shipped ahead of the S1 receipt CSD they
+  were meant to wait on, and 7 of 62 CSDs exist. Each circle's CSDs get written with the circle,
+  and G3 holds the line: no circle is called shipped until its CSDs verify.
+
+## Dependencies
+
+Arrows read "must come before". Upstream items (red hexagons, dotted arrows) are what another repo still owes:
+the lane can start, but cannot fully close without it. Done work is folded into the one green box.
 
 ```mermaid
-gantt
-    title Locked Spec (bars after 2026-09-25 are projected, not committed)
-    dateFormat YYYY-MM-DD
-    axisFormat %m-%d
-    todayMarker stroke-width:3px,stroke:#C4157F
+flowchart TD
+    classDef done fill:#1D7F45,stroke:#1D7F45,color:#fff
+    classDef part fill:#F8EEDC,stroke:#B8791C,color:#000
+    classDef todo fill:#fff,stroke:#6E6875,color:#000
+    classDef next fill:#E3EEF3,stroke:#2B6E8C,stroke-width:3px,color:#000
+    classDef up fill:#F6E2E2,stroke:#B23A3A,color:#000
 
-    section Foundation
-    F1 namespace table · F3 tokens · F4 glyphs · F5 primitives (#62) :done, f, 2026-09-19, 2026-09-20
-    F2 eleven renderers (enum done, composables per card)             :active, f2, 2026-09-20, 2026-10-10
-    F6 invariant guards (partial, in the primitives)                  :active, f6, 2026-09-20, 2026-10-03
-    F7 CSD DSL (state / each)                                         :f7, 2026-09-29, 2026-10-03
-    F8 scopes on the CSD surface                                      :f8, after f7, 3d
+    BASE[Done: F1 F3 F4 F5 foundation, N1-N10 shell and spine, G2 atlas, G4 nav contract, B1 People, B2 receipt sheet]:::done
+    F2[F2 renderers, per card]:::part
+    F6[F6 invariant guards]:::part
+    F7[F7 CSD DSL]:::todo
+    F8[F8 scopes on the surface]:::todo
+    S1[S1 receipt CSD]:::part
+    S2[S2 moderation CSD]:::todo
+    G1[G1 moderation exposure contract]:::todo
+    S3[S3 universal cards x9, 1 written]:::part
+    S4[S4 divergent cards x7]:::todo
+    S5[S5 new cards x16]:::todo
+    S6[S6 identity, rosters, ledgers x14, 1 written]:::part
+    S7[S7 instruments and flows x14]:::todo
+    B3[B3 Files, #77]:::next
+    B4[B4 Just me]:::next
+    B5[B5 Family]:::todo
+    B6[B6 Neighbours]:::todo
+    B7[B7 Communities and Businesses]:::todo
+    B8[B8 Everyone]:::todo
+    B9[B9 instruments]:::part
+    B10[B10 setup wizard]:::todo
+    B11[B11 multi-self]:::todo
+    B12[B12 contacts, groups, rosters]:::todo
+    G3[G3 per-circle CSD verification]:::todo
 
-    section Shell and spine
-    N1–N4 one nav tree, rail, seven tabs, gating deleted (#63)        :done, n1, 2026-09-20, 1d
-    N5–N10 the spine, tabs hold what they name, one back, one top bar, rail toggle (#64) :done, n5, 2026-09-22, 2026-09-24
-    G2 atlas regenerated · G4 nav contract (#64)                      :done, g2, 2026-09-23, 2026-09-24
+    U614{{Server 614: renditions}}:::up
+    U646{{Edge 646: bytes on own devices}}:::up
+    U675{{Edge 675: file signed by the person}}:::up
+    U910{{Persist 910: family roster replication}}:::up
+    U907{{Persist 907: late community members}}:::up
+    UB7{{No routes: terms, ledgers, group book}}:::up
+    U248{{Server 248: signed trust root}}:::up
+    UB8{{No route: shared knowledge}}:::up
 
-    section Bug lane
-    Bugs #66 #67 hand-off (#73) · #68 #69 #70 setup (#74) · #60 (#75, #79) · #50 recorder (#76) :done, bugs, 2026-09-24, 2026-09-25
-    Release 0.5.224                                                   :milestone, done, rel, 2026-09-25, 0d
-    Close #43 #47 #48 when CIRISAgent#1184 is green                   :active, close, 2026-09-25, 2d
-
-    section CSDs (7 of 62)
-    S1 receipt CSD (CSD-006, envisioned)                              :active, s1, 2026-09-20, 2026-09-30
-    S2 moderation CSD + G1 exposure contract                          :s2, 2026-10-01, 4d
-    S3–S7 card CSDs, written with each circle                         :s3, 2026-09-26, 2026-10-24
-
-    section Build
-    B1 People · B2 receipt sheet (#62)                                :done, b1, 2026-09-19, 2026-09-20
-    B3 Files (#77, rework for 0.5.217)                                :active, b3, 2026-09-25, 2026-09-27
-    B4 Just me                                                        :b4, after b3, 4d
-    B5 Family                                                         :b5, after b4, 5d
-    B6 Neighbours (needs S2, G1)                                      :b6, after b5, 6d
-    B7 Communities and Businesses                                     :b7, after b6, 6d
-    B8 Everyone                                                       :b8, after b7, 5d
-    B11 multi-self · B12 contacts, groups, rosters                    :b11, after b5, 6d
-    B9 instruments · B10 setup wizard                                 :b9, 2026-10-06, 8d
-    G3 per-circle CSD verification                                    :g3, 2026-10-06, 2026-10-24
+    BASE --> F2 & F6 & B3 & B9 & B10
+    F7 --> F8 --> S1 & S2
+    F7 --> G3
+    S1 --> S3 & S4 & S5 & S6 & S7
+    S3 --> B3 --> B4 --> B5 --> B6 --> B7 --> B8
+    S2 --> G1 --> B6
+    S4 --> B6
+    F6 --> B6
+    S6 --> B7 & B11 & B12
+    S5 --> B8
+    S7 --> B9
+    B4 --> B11
+    B5 --> B12
+    U614 -.-> B3
+    U646 -.-> B3
+    U675 -.-> B3
+    U646 -.-> B11
+    U910 -.-> B5
+    U907 -.-> B6
+    UB7 -.-> B7
+    U248 -.-> B8
+    UB8 -.-> B8
 ```
+
+Green = done · amber = partial · blue outline = next · white = not started · red hexagon = owed upstream.
 
 ## Plan against actual
 
