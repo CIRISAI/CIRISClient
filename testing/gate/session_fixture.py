@@ -79,7 +79,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     if "txt_owner_hint" in _tags(drv):
         return  # already owned; nothing to do
 
-    drv.click("btn_local_login")
+    # Desktop's first run shows Login; a client whose first run opens the wizard
+    # directly is already where this click would take it, and clicking a
+    # `btn_local_login` that is not on screen fails the fixture for nothing.
+    if drv.screen() != "Setup":
+        drv.click("btn_local_login")
     if not _settle(drv, "Setup", timeout=30):
         raise SessionUnavailable(
             f"btn_local_login did not reach Setup (on {drv.screen()!r}); on a node "

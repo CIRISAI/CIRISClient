@@ -141,6 +141,12 @@ jobs:
         with:
           python-version: '3.10'
 
+      # THE CSD FLOWS NEED PyYAML (testing/gate/flow_spec.py reads the flow and
+      # its CSD's typed blocks). Everything else the legs run is stdlib; this is
+      # the one install, and it goes into the interpreter every leg below uses.
+      - name: The flow runner's one dependency
+        run: python3 -m pip install --quiet pyyaml
+
       - name: The node this client will be a client of
         id: node
         env:
@@ -224,12 +230,18 @@ jobs:
       - name: Start the node
         uses: ./.github/actions/ciris-node
 
+      # THE SMOKE WALK, THEN THE CSD FLOWS, IN ONE PROCESS AGAINST ONE APP.
+      # `--flows` runs every testing/flows/*.yaml after the walk passes, in the
+      # app the walk just proved, signing in once (session_fixture). A flow
+      # refused by its `client:` floor is reported and does not redden the leg;
+      # a flow that fails, or never reaches its first screen, does. See
+      # testing/flows/README.md. Every leg below passes the same flag.
       - name: Linux desktop
         run: |
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/linux.json
+            --shots shots --report reports/linux.json --flows testing/flows
 
       # WITHOUT THIS THE EMULATOR RUNS IN SOFTWARE AND DIES.
       #
@@ -289,7 +301,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.
@@ -325,6 +337,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # A PROVISIONED INTERPRETER for the macOS desktop leg, so the flow runner's
+      # PyYAML goes into a Python this job owns rather than the image's
+      # externally-managed one. The iOS leg switches to 3.10 further down and
+      # installs it again there.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: The flow runner's one dependency
+        run: python3 -m pip install --quiet pyyaml
+
       - name: The node this client will be a client of
         id: node
         env:
@@ -350,7 +373,7 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/macos.json
+            --shots shots --report reports/macos.json --flows testing/flows
 
       # ── THE iOS BUNDLE, MATERIALIZED THE WAY THE AGENT'S GATE DOES IT ──────
       #
@@ -541,6 +564,9 @@ jobs:
       - name: iOS simulator
         run: |
           set -euo pipefail
+          # `python3` is the 3.10 set up above now, not the 3.12 the macOS leg
+          # installed PyYAML into — the flow runner needs it here too.
+          python3 -m pip install --quiet pyyaml
           # THE TASK NAME, AND THE DIRECTORY, BOTH WRONG — AND THE SECOND HID THE FIRST.
           #
           # `:shared:assembleDebugXCFramework` does not exist. The framework is
@@ -632,7 +658,7 @@ jobs:
           rc=0
           python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/ios.json || rc=$?
+            --shots shots --report reports/ios.json --flows testing/flows || rc=$?
 
           # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
           # to a real screen — "Engine Failed to Start: server did not become
@@ -732,10 +758,11 @@ jobs:
       - name: Windows desktop
         shell: bash
         run: |
+          python3 -m pip install --quiet pyyaml
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/windows.json
+            --shots shots --report reports/windows.json --flows testing/flows
 
       - if: always()
         uses: actions/upload-artifact@v4
