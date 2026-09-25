@@ -57,6 +57,33 @@ TYPES = {"string", "int", "float", "bool", "timestamp", "unconfirmed", "enum", "
 VOCAB = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 
 
+#: The keys `csd:surface` may carry. `scopes:` is F8 (one CSD, several circles).
+SURFACE_KEYS = {"surface", "screen", "scopes", "flow_only", "entry", "exit"}
+
+SCREEN_MEMBER = re.compile(r"^\s+(?:data\s+)?(?:object|class)\s+(\w+)", re.M)
+
+
+def _screen_classes() -> set[str]:
+    """Every member of `sealed class Screen` in CIRISApp.kt, read by brace-matching
+    its body — a one-line regex missed multi-line declarations (`UserChat`)."""
+    app = (Path(__file__).resolve().parents[1] / "client/shared/src/commonMain/kotlin/"
+           "ai/ciris/mobile/shared/CIRISApp.kt")
+    if not app.exists():
+        return set()
+    src = app.read_text()
+    start = src.find("sealed class Screen")
+    open_at = src.find("{", start)
+    if start < 0 or open_at < 0:
+        return set()
+    depth, i = 0, open_at
+    while i < len(src):
+        depth += {"{": 1, "}": -1}.get(src[i], 0)
+        if depth == 0:
+            break
+        i += 1
+    return set(SCREEN_MEMBER.findall(src[open_at + 1:i]))
+
+
 def load_registry(path: Path) -> dict:
     raw = path.read_bytes()
     reg = json.loads(raw)
@@ -212,6 +239,27 @@ def check(doc: Path, reg: dict) -> list[str]:
     # 2am against a timeout, and the hop itself is never written down: it is
     # derived from the client's own tag rules (testing/gate/nav_map.py).
     surface = blocks.get("surface") or {}
+    # AN UNKNOWN KEY IS A FAILURE, NOT A NO-OP. `screen_class:` was briefly the
+    # convention for flow-only screens; it is not a key this checker reads, so it
+    # made `screen` None and skipped both checks below. A CSD claiming Nodes is
+    # Screen.Telemetry passed that way, and so did the typo `screeen:`.
+    unknown = sorted(set(surface) - SURFACE_KEYS)
+    if unknown:
+        problems.append(
+            f"surface: unknown key(s) {unknown} — known: {sorted(SURFACE_KEYS)}. "
+            f"An unread key silently disables the reachability check"
+        )
+    if surface.get("flow_only"):
+        # A screen no sidebar row reaches (Startup, Login, Setup, a claim, a
+        # ceremony): it must exist, must NOT be sidebar-reachable, and must say
+        # how a person arrives, since no hop can.
+        screen = surface.get("screen")
+        if not screen:
+            problems.append("surface: flow_only needs `screen:` — the Screen class the flow lands on")
+        elif screen not in _screen_classes():
+            problems.append(f"surface: Screen.{screen} is not declared in CIRISApp.kt")
+        if not str(surface.get("entry") or "").strip():
+            problems.append("surface: flow_only needs `entry:` — how a person reaches this screen")
     if surface:
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -222,7 +270,13 @@ def check(doc: Path, reg: dict) -> list[str]:
         else:
             screen = surface.get("screen")
             sid = surface.get("surface")
-            if screen and screen not in hops:
+            if surface.get("flow_only"):
+                if screen and screen in hops:
+                    problems.append(
+                        f"surface: Screen.{screen} is sidebar-reachable via {hops[screen][-1]!r}, "
+                        f"so it is not flow_only — name its surface instead"
+                    )
+            elif screen and screen not in hops:
                 problems.append(
                     f"surface: no sidebar route to Screen.{screen} — a flow starting "
                     f"there cannot be reached, so the CSD cannot be tested"

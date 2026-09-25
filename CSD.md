@@ -86,6 +86,27 @@ is what FSD/CSD_STANDARD.md §5 already assigns it.
 The checker resolves `surface:` through the same map, so a CSD naming a surface
 the sidebar cannot reach fails at load rather than at 2am against a timeout.
 
+**Known keys only.** `csd:surface` may carry `surface`, `screen`, `scopes`,
+`flow_only`, `entry` and `exit`. Any other key fails. An unread key is not
+harmless: `screen_class:` was briefly used for flow-only screens, and because
+the checker never read it, `screen` was empty and both checks were skipped. A CSD
+declaring the Nodes card as `Screen.Telemetry` passed that way, and so did the
+typo `screeen:`.
+
+**A screen no sidebar row reaches** (Startup, Login, Setup, a claim, a ceremony)
+says so, and the checker holds it to that:
+
+```yaml csd:surface
+surface: null
+screen: Startup                 # must be a member of `sealed class Screen`
+flow_only: true                 # fails if the sidebar CAN reach this screen
+entry: the router's initial screen, and after a reset  # required: how a person arrives
+```
+
+A card that is placed and reachable, but whose hop `nav_map` cannot express,
+is not `flow_only`: the checker rejects that, because the screen resolves. Such
+a card keeps its explanation in prose until the nav map can say it (CSD-038).
+
 ## 2.1 Fields — `shows:` (the unified field spec)
 
 > Replaces v2 §2a **and** §3a. One row per rendered value; the CEG family is the
