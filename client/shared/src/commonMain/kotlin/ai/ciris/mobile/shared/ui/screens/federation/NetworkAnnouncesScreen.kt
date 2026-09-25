@@ -9,6 +9,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.viewmodels.federation.FederationStreamConnectionState
 import ai.ciris.mobile.shared.viewmodels.federation.NetworkAnnouncesViewModel
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -83,7 +84,7 @@ fun NetworkAnnouncesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(localizedString("network.announces.title"))

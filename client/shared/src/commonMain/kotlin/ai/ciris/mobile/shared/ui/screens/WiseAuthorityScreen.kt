@@ -49,6 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Wise Authority screen — the human-in-the-loop approval surface.
@@ -115,7 +116,7 @@ fun WiseAuthorityScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_human_deferrals")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "assinado",
     "ceremony_state_not_yet": "ainda não",
     "receipt_this_node": "Este nó — você",
+    "setup_finish_unclaimed": "Concluir sem reivindicar este nó",
     "verify_title": "Verificar uma build",
     "verify_hash_label": "Hash da build",
     "verify_button": "Verificar",
@@ -3252,7 +3253,11 @@
       "confirm": "Parar tudo",
       "nothing_title": "Nada está em execução para você",
       "nothing_body": "Nenhum assistente está pensando ou agindo neste nó, então não há nada para parar. O botão está aqui mesmo assim, no mesmo lugar, porque ele sempre está."
-    }
+    },
+    "rail_open": "Mostrar painel lateral",
+    "rail_close": "Ocultar painel lateral",
+    "back": "Voltar",
+    "instrument_line": "suas próprias coisas — não em círculo"
   },
   "network": {
     "announces": {

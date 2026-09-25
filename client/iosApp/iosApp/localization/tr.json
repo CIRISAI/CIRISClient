@@ -1267,6 +1267,7 @@
     "ceremony_state_signed": "imzalandı",
     "ceremony_state_not_yet": "henüz değil",
     "receipt_this_node": "Bu düğüm — siz",
+    "setup_finish_unclaimed": "Bu düğümü sahiplenmeden bitir",
     "chat_an_agent": "Bir ajan",
     "child_safety_class_csam": "CSAM (bir eşleşme otomatik olarak kaldırma bildirimi dosyalar — ayrıca kaldırma görevi gerektirir)",
     "child_safety_class_label": "İzleme listesi sınıfı",
@@ -3252,7 +3253,11 @@
       "confirm": "Her şeyi durdur",
       "nothing_title": "Sizin için çalışan bir şey yok",
       "nothing_body": "Bu düğümde düşünen veya hareket eden bir asistan yok, dolayısıyla durdurulacak bir şey yok. Buton yine de burada, her zaman olduğu aynı yerde."
-    }
+    },
+    "rail_open": "Yan paneli göster",
+    "rail_close": "Yan paneli gizle",
+    "back": "Geri",
+    "instrument_line": "kendi şeyleriniz — bir çemberde değil"
   },
   "network": {
     "announces": {

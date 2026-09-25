@@ -27,6 +27,7 @@ import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.viewmodels.CommonsViewModel
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **The Commons** — persist's reverse-quorum plane, rendered
@@ -85,7 +86,7 @@ fun CommonsScreen(
     Scaffold(
         modifier = modifier,
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("surfaces.commons.title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

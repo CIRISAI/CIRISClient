@@ -37,6 +37,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.localization.LocalizationHelper
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * View mode for memory exploration.
@@ -77,7 +78,7 @@ fun MemoryScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_memory_explorer")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state
@@ -107,8 +108,7 @@ fun MemoryScreen(
                         modifier = Modifier.testableClickable("btn_memory_switch_graph") { onSwitchToGraph() }
                     ) {
                         Text(
-                            localizedString("graph_title"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            localizedString("graph_title")
                         )
                     }
                     TextButton(
@@ -116,8 +116,7 @@ fun MemoryScreen(
                         modifier = Modifier.testableClickable("btn_memory_toggle_filters") { showFilters = !showFilters }
                     ) {
                         Text(
-                            if (showFilters) localizedString("settings_hide") else localizedString("graph_filters"),
-                            color = MaterialTheme.colorScheme.onPrimary
+                            if (showFilters) localizedString("settings_hide") else localizedString("graph_filters")
                         )
                     }
                     IconButton(

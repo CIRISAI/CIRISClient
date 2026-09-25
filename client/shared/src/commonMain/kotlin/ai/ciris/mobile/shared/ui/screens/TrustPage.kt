@@ -49,6 +49,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Trust Page - Full-page view of CIRISVerify attestation status
@@ -141,7 +142,7 @@ fun TrustPage(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_trust_security")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

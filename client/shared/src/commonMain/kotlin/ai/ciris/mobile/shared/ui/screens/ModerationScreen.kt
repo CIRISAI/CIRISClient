@@ -60,6 +60,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Moderation card** — moderation as a delegable DUTY, not a role (CC §4.5.x).
@@ -113,7 +114,7 @@ fun ModerationScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.moderation_title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

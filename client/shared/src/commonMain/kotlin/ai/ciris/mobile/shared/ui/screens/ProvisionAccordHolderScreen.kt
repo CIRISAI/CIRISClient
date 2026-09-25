@@ -47,6 +47,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Provision Accord Holder** — the foolproof guided flow (CIRISServer #41, the
@@ -84,7 +85,7 @@ fun ProvisionAccordHolderScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.provision_holder_title")) },
                 navigationIcon = {
                     IconButton(

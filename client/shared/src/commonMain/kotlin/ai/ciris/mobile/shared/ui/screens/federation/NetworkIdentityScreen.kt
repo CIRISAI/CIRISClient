@@ -43,6 +43,7 @@ import kotlinx.coroutines.launch
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Network → Identity sub-screen (T-E-UI Batch A).
@@ -78,7 +79,7 @@ fun NetworkIdentityScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("network.identity_card.title")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

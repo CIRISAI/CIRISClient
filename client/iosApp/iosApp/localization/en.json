@@ -3077,7 +3077,8 @@
     "ceremony_state_proposed": "proposed",
     "ceremony_state_signed": "signed",
     "ceremony_state_not_yet": "not yet",
-    "receipt_this_node": "This node — you"
+    "receipt_this_node": "This node — you",
+    "setup_finish_unclaimed": "Finish without claiming this node"
   },
   "moderation": {
     "ladder": {
@@ -3296,7 +3297,11 @@
       "confirm": "Stop everything",
       "nothing_title": "Nothing is running for you",
       "nothing_body": "No assistant is thinking or acting on this node, so there is nothing to stop. The button is here anyway, in the same place, because it always is."
-    }
+    },
+    "rail_open": "Show the side panel",
+    "rail_close": "Hide the side panel",
+    "back": "Back",
+    "instrument_line": "your own things — not in a circle"
   },
   "network": {
     "announces": {

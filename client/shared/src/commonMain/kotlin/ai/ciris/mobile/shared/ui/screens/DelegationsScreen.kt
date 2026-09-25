@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Delegations** — authorize an agent or another person to act on your behalf.
@@ -174,7 +175,7 @@ fun DelegationsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.delegations_title")) },
                 navigationIcon = {
                     IconButton(

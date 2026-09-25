@@ -24,6 +24,7 @@ import ai.ciris.mobile.shared.platform.getAppVersion
 import ai.ciris.mobile.shared.platform.getAppBuildNumber
 import ai.ciris.mobile.shared.platform.openUrlInBrowser
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Help screen providing user documentation and support resources.
@@ -45,7 +46,7 @@ fun HelpScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_help")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

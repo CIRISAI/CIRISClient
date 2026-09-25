@@ -190,16 +190,71 @@ struct ContentView: View {
             return
         }
 
-        // Wait for server to be ready (poll health endpoint AND status file)
+        // WAIT ON PROGRESS, NOT ON A STOPWATCH.
+        //
+        // This loop used to give up after a flat 30 seconds. A cold simulator
+        // on a slow runner reached its API in 41s — RUNTIME_INIT alone took 21
+        // of them — so the host declared "Engine Failed to Start" while the
+        // engine was still walking its phases, Compose never ran, and with it
+        // the in-app automation server the QA gate drives (run 35752974798; the
+        // green run before it made the same journey in 25.5s, 4.5s of headroom).
+        // A fixed deadline cannot tell a slow boot from a dead one, and picking
+        // a bigger number only moves the cliff.
+        //
+        // So: fail when the engine STOPS MAKING PROGRESS, not when a clock runs
+        // out. Every advertised step advances `current_step`; while that keeps
+        // moving we keep waiting, up to a ceiling that exists only so a wedged
+        // process cannot hang the app forever. The message names the last step
+        // we saw, because "did not become healthy" told the person nothing they
+        // could act on and nothing we could debug from a photograph.
         var attempts = 0
-        let maxAttempts = 30  // 30 seconds max
+        let launchedAt = Date().timeIntervalSince1970
+        let maxAttempts = 300          // ceiling: a wedged engine still surfaces
+        let idleLimit = 60             // no progress for this long = wedged
+        var lastProgressAt = 0
+        var lastSeen = -1
+        var lastPhase = ""
+        var lastStepName = "starting"
 
         while attempts < maxAttempts {
             try? await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
             attempts += 1
 
+            // A runtime that has ALREADY said it failed is not slow, and
+            // waiting out the idle limit to say so in generic words throws away
+            // the reason it just gave us — but only if it is THIS run's
+            // failure. `runtime_status.json` outlives the process that wrote
+            // it and no startup path clears it, so a launch after a bad one
+            // would otherwise read yesterday's error and refuse to start at
+            // all. A status with no timestamp cannot be placed in time, so it
+            // is not treated as terminal either.
+            if let runtime = loadRuntimeStatus(),
+               let wrote = runtime.timestamp, wrote >= launchedAt,
+               runtime.status.lowercased() == "failed" || runtime.phase.uppercased() == "ERROR" {
+                NSLog("[ContentView] Runtime reported failure in \(runtime.phase): \(runtime.error ?? "no detail")")
+                initError = runtime.error ?? "The engine failed during \(runtime.phase)"
+                return
+            }
+
+            // What the engine has done lately: this keeps moving after the
+            // advertised steps are done, and it is what separates a slow boot
+            // from a dead one.
+            let signature = engineProgressSignature()
+            if !signature.isEmpty && signature != lastPhase {
+                lastPhase = signature
+                lastProgressAt = attempts
+                if let phaseName = signature.split(separator: "/").first, !phaseName.hasPrefix("logs:") {
+                    lastStepName = String(phaseName)
+                }
+            }
+
             // Check startup status file first
             if let status = loadStartupStatus() {
+                if status.current_step != lastSeen {
+                    lastSeen = status.current_step
+                    lastProgressAt = attempts
+                    lastStepName = status.steps.last(where: { $0.status != "pending" })?.name ?? "step \(status.current_step)"
+                }
                 if let allPassed = status.all_passed {
                     if !allPassed {
                         // Startup checks failed - show error immediately
@@ -231,10 +286,16 @@ struct ContentView: View {
                 return
             }
 
-            NSLog("[ContentView] Waiting for server... (\(attempts)/\(maxAttempts))")
+            if attempts - lastProgressAt >= idleLimit {
+                NSLog("[ContentView] No startup progress for \(idleLimit)s; last step: \(lastStepName)")
+                initError = "The engine stopped during startup, at: \(lastStepName)"
+                return
+            }
+
+            NSLog("[ContentView] Waiting for server... (\(attempts)s, last step: \(lastStepName))")
         }
 
-        initError = "Server did not become healthy within 30 seconds"
+        initError = "The engine did not finish starting after \(maxAttempts) seconds (last step: \(lastStepName))"
     }
 
     /// Trigger App Attest at startup so the CIRISVerify FFI handle caches the
@@ -243,6 +304,58 @@ struct ContentView: View {
     // The Python-side CIRISVerify FFI runs run_attestation_sync at startup which
     // would race with Swift (both fetch nonces from the registry). On-demand
     // attestation via onDeviceAttestationRequested (Trust page) is still active.
+
+    /// What the engine has done lately, as one string — and nothing it does on
+    /// a timer.
+    ///
+    /// The advertised startup STEPS stop at 6 and sit there for the whole
+    /// runtime boot, so they cannot tell "still working" from "wedged". The
+    /// runtime's own phase can, and so can its log — but only if the log's
+    /// heartbeat is left out of it: the watchdog writes one every 30s whatever
+    /// else is happening, which is inside the 60s idle limit, so counting bytes
+    /// alone would call a hung engine "progress" forever and the wait would run
+    /// to its ceiling instead of failing at a minute.
+    private func engineProgressSignature() -> String {
+        let fm = FileManager.default
+        guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return "" }
+        let ciris = docs.appendingPathComponent("ciris")
+        var parts: [String] = []
+
+        if let status = loadRuntimeStatus() {
+            parts.append("\(status.phase)/\(status.status)")
+        }
+
+        // The last line the runtime wrote that was not a heartbeat.
+        let logs = ciris.appendingPathComponent("logs")
+        if let names = try? fm.contentsOfDirectory(atPath: logs.path) {
+            var newest: (path: String, at: Date)? = nil
+            for name in names where name.hasSuffix(".log") {
+                let path = logs.appendingPathComponent(name).path
+                let at = (try? fm.attributesOfItem(atPath: path))?[.modificationDate] as? Date ?? .distantPast
+                if newest == nil || at > newest!.at { newest = (path, at) }
+            }
+            // LogTail, not String(contentsOfFile:): this runs once a SECOND
+            // during startup, and `latest.log` on a long-lived install is the
+            // file that froze the main thread the last time something read it
+            // whole (see LogTail's own note).
+            if let file = newest?.path,
+               let text = LogTail.tail(of: URL(fileURLWithPath: file), maxLines: 60, maxBytes: 32 * 1024) {
+                let lines = text.split(separator: "\n").filter { !$0.contains("watchdog") }
+                if let last = lines.last { parts.append(String(last.suffix(120))) }
+            }
+        }
+        return parts.joined(separator: " ")
+    }
+
+    /// The runtime's own phase file, decoded — `nil` when it has not written one.
+    private func loadRuntimeStatus() -> RuntimeStatus? {
+        let fm = FileManager.default
+        guard let docs = fm.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let file = docs.appendingPathComponent("ciris/runtime_status.json")
+        guard let data = try? Data(contentsOf: file),
+              let status = try? JSONDecoder().decode(RuntimeStatus.self, from: data) else { return nil }
+        return status
+    }
 
     private func loadStartupStatus() -> StartupStatus? {
         let fileManager = FileManager.default
@@ -1046,49 +1159,6 @@ struct StartupErrorView: View {
     ///
     /// Order matters: incidents first, because a boot failure writes there and it
     /// is the shortest path to a cause. `latest.log` is the fallback — long, but a
-// ── LogTail ─────────────────────────────────────────────────────────────────
-// Foundation ONLY — no SwiftUI, no shared-module imports. The block between
-// these markers is EXTRACTED VERBATIM and compiled standalone by
-// client/iosApp/scripts/test_logtail.sh on the macOS runner, so the logic that
-// guards the error path is tested on the real toolchain without needing the
-// full app build. Keep it dependency-free or the extraction gate fails.
-enum LogTail {
-    /// The last `maxLines` COMPLETE lines of the file, reading at most
-    /// `maxBytes` from its END.
-    ///
-    /// The predecessor was `String(contentsOf:)` from the button action: it
-    /// loaded the ENTIRE file before discarding all but 400 lines, so a large
-    /// `latest.log` froze the main thread or exhausted memory exactly on the
-    /// startup-error screen — the one place the diagnostic must not fail. The
-    /// byte cap bounds the read no matter how big the file grew; seeking from
-    /// the end reads only the window that can possibly matter.
-    ///
-    /// Returns nil for a missing, unreadable, or empty file — same verdict the
-    /// old `!data.isEmpty` guard reached, so the caller's candidate loop keeps
-    /// its behavior.
-    static func tail(of url: URL, maxLines: Int = 400, maxBytes: UInt64 = 512 * 1024) -> String? {
-        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
-        defer { try? fh.close() }
-        guard let size = try? fh.seekToEnd(), size > 0 else { return nil }
-        let start = size > maxBytes ? size - maxBytes : 0
-        guard (try? fh.seek(toOffset: start)) != nil,
-              let data = try? fh.readToEnd(), !data.isEmpty else { return nil }
-        // Lossy-safe: a window that starts mid-code-point decodes its first
-        // bytes to replacement characters instead of failing the whole read.
-        var text = String(decoding: data, as: UTF8.self)
-        if start > 0 {
-            // The window almost certainly opens mid-line; drop everything up to
-            // the first newline so every kept line is a COMPLETE line.
-            if let nl = text.firstIndex(of: "\n") {
-                text = String(text[text.index(after: nl)...])
-            }
-        }
-        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).suffix(maxLines)
-        let joined = lines.joined(separator: "\n")
-        return joined.isEmpty ? nil : joined
-    }
-}
-// ── end LogTail ─────────────────────────────────────────────────────────────
 
     /// startup that never reaches the incident writer still leaves a trace in it.
     /// The Swift/KMP bridge logs come last; they catch the case where the Python
@@ -1164,6 +1234,54 @@ enum LogTail {
         """
     }
 }
+
+// LIFTED TO FILE SCOPE. It lived inside StartupErrorView, where only that
+// screen could see it — so the startup wait, which needs exactly this bounded
+// read once a second, could not. The markers stay: the standalone gate
+// extracts the block between them verbatim.
+// ── LogTail ─────────────────────────────────────────────────────────────────
+// Foundation ONLY — no SwiftUI, no shared-module imports. The block between
+// these markers is EXTRACTED VERBATIM and compiled standalone by
+// client/iosApp/scripts/test_logtail.sh on the macOS runner, so the logic that
+// guards the error path is tested on the real toolchain without needing the
+// full app build. Keep it dependency-free or the extraction gate fails.
+enum LogTail {
+    /// The last `maxLines` COMPLETE lines of the file, reading at most
+    /// `maxBytes` from its END.
+    ///
+    /// The predecessor was `String(contentsOf:)` from the button action: it
+    /// loaded the ENTIRE file before discarding all but 400 lines, so a large
+    /// `latest.log` froze the main thread or exhausted memory exactly on the
+    /// startup-error screen — the one place the diagnostic must not fail. The
+    /// byte cap bounds the read no matter how big the file grew; seeking from
+    /// the end reads only the window that can possibly matter.
+    ///
+    /// Returns nil for a missing, unreadable, or empty file — same verdict the
+    /// old `!data.isEmpty` guard reached, so the caller's candidate loop keeps
+    /// its behavior.
+    static func tail(of url: URL, maxLines: Int = 400, maxBytes: UInt64 = 512 * 1024) -> String? {
+        guard let fh = try? FileHandle(forReadingFrom: url) else { return nil }
+        defer { try? fh.close() }
+        guard let size = try? fh.seekToEnd(), size > 0 else { return nil }
+        let start = size > maxBytes ? size - maxBytes : 0
+        guard (try? fh.seek(toOffset: start)) != nil,
+              let data = try? fh.readToEnd(), !data.isEmpty else { return nil }
+        // Lossy-safe: a window that starts mid-code-point decodes its first
+        // bytes to replacement characters instead of failing the whole read.
+        var text = String(decoding: data, as: UTF8.self)
+        if start > 0 {
+            // The window almost certainly opens mid-line; drop everything up to
+            // the first newline so every kept line is a COMPLETE line.
+            if let nl = text.firstIndex(of: "\n") {
+                text = String(text[text.index(after: nl)...])
+            }
+        }
+        let lines = text.split(separator: "\n", omittingEmptySubsequences: false).suffix(maxLines)
+        let joined = lines.joined(separator: "\n")
+        return joined.isEmpty ? nil : joined
+    }
+}
+// ── end LogTail ─────────────────────────────────────────────────────────────
 
 // MARK: - Compose Multiplatform Integration
 

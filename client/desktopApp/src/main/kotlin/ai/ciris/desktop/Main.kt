@@ -132,10 +132,24 @@ fun main() {
         nodeUrl,
         explicit = System.getenv("CIRIS_NODE_URL") != null,
     )
+    // THE LIVE ADDRESS, NOT THE ONE READ AT LAUNCH (CIRISClient#67). The
+    // supervisor used to probe `nodeUrl` — a value captured here, once — so
+    // when a run-without-AI hand-off retired the agent the launcher had
+    // pinned, it probed a closed port forever, called a healthy node dead,
+    // and revived it in a loop while the runtime had already attached to the
+    // node. It now asks the one reconciled answer every other wait asks.
     val backendSupervisor = ai.ciris.mobile.shared.backend.BackendSupervisor(
-        probe = { ai.ciris.mobile.shared.backend.DesktopBackendController.probe(nodeUrl) },
+        probe = {
+            val live = ai.ciris.mobile.shared.api.CIRISApiClient.reconcileLocalNode { url ->
+                ai.ciris.mobile.shared.backend.DesktopBackendController.probe(url) ==
+                    ai.ciris.mobile.shared.backend.ProbeOutcome.ANSWERED
+            }
+            ai.ciris.mobile.shared.backend.DesktopBackendController.probe(live)
+        },
         controller = ai.ciris.mobile.shared.backend.DesktopBackendController(pythonRuntime),
-        ownership = { ai.ciris.mobile.shared.backend.ownershipOf(nodeUrl) },
+        ownership = {
+            ai.ciris.mobile.shared.backend.ownershipOf(ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL)
+        },
         now = { System.currentTimeMillis() },
         log = { println("[backend] $it") },
     )

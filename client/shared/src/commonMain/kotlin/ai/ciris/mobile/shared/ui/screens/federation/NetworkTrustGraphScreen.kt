@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.federation.NetworkTrustGraphViewModel
 import ai.ciris.mobile.shared.viewmodels.federation.PeerWithReachability
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -109,7 +110,7 @@ fun NetworkTrustGraphScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = {
                     Column {
                         Text(localizedString("network.tiles.trust_graph"))

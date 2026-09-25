@@ -40,14 +40,44 @@ TEST_PORT = 9091
 #: the manifest can say "known unreachable" instead of "failed".
 FLOW_ONLY = {
     "Startup", "Login", "Setup", "ServerConnection", "ClaimNode",
-    "VerifyAgent", "AddFederationId", "DutyConferral", "Help",
+    "VerifyAgent", "AddFederationId", "DutyConferral",
     "SkillImport", "Manage",
+    # Help was here until the spine pass. It has had a real route since the
+    # shell landed — My things › Help — and listing it here meant the atlas
+    # skipped a screen the tree can reach, which is this file keeping a second
+    # opinion about the nav. When a surface gets placed, it comes out of this
+    # set; nothing else in it is in the tree at all.
     # Declared in EpistemicNav but in NO group, and its own doc comment says
     # "Reachable from the Accord screen ONLY when no accord family exists yet".
     # nav_map still hands it a one-hop chain, so it read as a screen the atlas
     # kept failing to reach. It is not a gap; there is no rail route to it.
     "AccordCeremony",
 }
+
+
+def refuse_if_port_taken() -> None:
+    """A test server already answering on our port is ANOTHER app, so stop.
+
+    The client binds :9091 for automation; a second instance loses the bind,
+    logs `BindException: Address already in use`, and carries on with no test
+    server of its own. The atlas then drives the FIRST app — a different build,
+    parked on whatever screen it was left on — and reports its confusion as
+    missing screens (a run that captured 19 of 49, every miss in the circle the
+    stale client happened to be sitting in). The photographs are evidence, and
+    evidence taken from an app you did not launch is worthless.
+    """
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{TEST_PORT}/health", timeout=2) as r:
+            answer = r.read(200).decode("utf-8", "replace").strip()
+    except Exception:  # noqa: BLE001 — nothing there is exactly what we want
+        return
+    raise SystemExit(
+        f"[refuse] something is already answering on :{TEST_PORT} — {answer}\n"
+        "  That is another CIRIS client. This run would photograph IT, not the\n"
+        "  jar you just named. Close it (or free the port) and run again."
+    )
 
 
 def launch(jar: Path, api: str, log: Path, xvfb: bool = True) -> subprocess.Popen:
@@ -85,12 +115,22 @@ def sign_in(drv: TestAutomationServer, user: str, password: str, settle: float) 
     also offers OAuth; on a build that shows the form outright the button is
     absent and the fields are already there, so its absence is not an error.
     """
-    tags = drv.tags()
+    # The login form composes a beat after the mode settles; reading the tree
+    # once, at that instant, saw an empty screen and reported "already signed
+    # in" for a client that was sitting on Login. Wait for something to appear.
+    tags: set[str] = set()
+    for _ in range(60):
+        tags = drv.tags()
+        if tags & {"btn_local_login", "input_username", "btn_my_things", "circle_local_community"}:
+            break
+        time.sleep(1.0)
+    if "btn_my_things" in tags or "circle_local_community" in tags:
+        return "already signed in"
     if "btn_local_login" in tags:
         drv.click("btn_local_login")
         time.sleep(settle)
     if "input_username" not in drv.tags():
-        return "no login form (already signed in?)"
+        return "no login form and no shell — the app is on " + (drv.screen() or "an unknown screen")
     drv.input("input_username", user)
     drv.input("input_password", password)
     drv.click("btn_login_submit")
@@ -128,14 +168,29 @@ def reach(drv: TestAutomationServer, tag: str, settle: float, tries: int = 16) -
     """
     from testing.driver import DriverError
 
+    # The rail is not the only thing that scrolls any more. A long instrument
+    # list (This node carries twenty rows since the spine moved the machine's
+    # own surfaces there) has its own scrollable, named for the page, and a row
+    # below ITS fold is not reachable by scrolling the rail. Try the rail, then
+    # whatever page container the tree is currently showing.
+    def containers() -> list[str]:
+        found = [NAV_RAIL]
+        for t in drv.tags():
+            if t.startswith(("instrument_", "tab_cards_")) and t not in found:
+                found.append(t)
+        return found
+
     def nudge(direction: str, amount: int) -> bool:
         # "already at the bottom" comes back as a 404. That is an answer, not a
-        # failure: stop going that way.
-        try:
-            drv.scroll_to(tag, direction, amount, container=NAV_RAIL)
-            return True
-        except DriverError:
-            return False
+        # failure: stop going that way — but only once every container says so.
+        moved = False
+        for container in containers():
+            try:
+                drv.scroll_to(tag, direction, amount, container=container)
+                moved = True
+            except DriverError:
+                continue
+        return moved
 
     if on_screen(drv, tag):
         drv.click(tag)
@@ -167,10 +222,13 @@ def open_hop(drv: TestAutomationServer, hop: str, child: str, settle: float) -> 
     hop that made things worse is simply clicked again.
     """
     for _ in range(3):
-        if child in drv.tags():
+        # A circle or a tab is ALWAYS clicked: the seven tabs are on screen in
+        # every circle, so "the child already exists" says nothing about which
+        # circle is selected — the first shell atlas photographed other
+        # circles' tabs for that reason. My things is a sheet, so it is opened
+        # only when its instruments are not already showing.
+        if not hop.startswith(("circle_", "tab_")) and child in drv.tags():
             return True
-        # Since wave 1 the shell has no chevrons: a hop is a circle, a tab, an
-        # instrument or a row, and each is the control to click.
         control = hop
         try:
             drv.wait_for_element(control, timeout=6.0)
@@ -277,6 +335,7 @@ def main() -> int:
 
     shots = args.out / "shots"
     shots.mkdir(parents=True, exist_ok=True)
+    refuse_if_port_taken()
     proc = launch(args.jar, args.api, args.out / "app.log", xvfb=not args.no_xvfb)
 
     try:
@@ -303,8 +362,10 @@ def main() -> int:
         if args.user:
             print(f"login: {sign_in(drv, args.user, args.password, args.settle)}")
 
-        hops = nav_map.build()
-        print(f"{len(hops)} screens in the nav tree")
+        # The node build is a subset: an agent-only surface is not a miss on a
+        # node capture, it is absent by design.
+        hops = nav_map.build(has_agent=(mode == "AGENT"))
+        print(f"{len(hops)} screens in the nav tree ({mode})")
         results = capture(drv, shots, hops, args.settle)
 
         manifest = {

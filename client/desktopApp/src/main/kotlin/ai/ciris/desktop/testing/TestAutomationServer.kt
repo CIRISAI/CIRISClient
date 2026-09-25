@@ -121,6 +121,88 @@ class TestAutomationServer(
         }
     }
 
+    /**
+     * THE WINDOW'S OWN PIXELS, NOT THE SCREEN'S (CIRISClient#60).
+     *
+     * [raiseWindow] was the first answer to "a screenshot of somebody else's
+     * terminal", and it is not enough: a window manager with focus-stealing
+     * prevention may decline the raise, and then `Robot` captures whatever is
+     * stacked on top — while reporting success. It happened again on
+     * 2026-09-22, on a developer desktop, mid-atlas.
+     *
+     * Compose draws into a skiko `SkiaLayer`, and the layer can read back its
+     * own last frame. That frame is the app and nothing else, whatever the
+     * stacking order, on any display. The screen capture remains only as a
+     * fallback, and the response says which one it was, so a caller never
+     * mistakes a region of the screen for evidence of the app.
+     */
+    private fun captureWindow(window: java.awt.Window): Pair<java.awt.image.BufferedImage, String> {
+        val layer = findSkiaLayer(window)
+        if (layer != null) {
+            // THE PIXELS ARE COPIED OUT BEFORE THE BITMAP CAN GO AWAY. The first
+            // version returned the skia Bitmap from invokeAndWait and converted
+            // it afterwards, on this thread, with nothing keeping the native
+            // bitmap alive. The JVM crashed reading freed memory
+            // (EXCEPTION_ACCESS_VIOLATION in ScopedMemoryAccess.getByte,
+            // Windows leg, 2026-09-25 11:16). It was a race, so it passed on
+            // other runs. Now the copy into a Java array and the close both
+            // happen inside the one block that owns the bitmap.
+            val own = runCatching {
+                var copied: java.awt.image.BufferedImage? = null
+                javax.swing.SwingUtilities.invokeAndWait {
+                    val bitmap = layer.screenshot() ?: return@invokeAndWait
+                    try {
+                        copied = copyToArgb(bitmap)
+                    } finally {
+                        bitmap.close()
+                    }
+                }
+                copied
+            }.getOrNull()
+            if (own != null && own.width > 0 && own.height > 0) return own to "window"
+        }
+        println("[TestAutomation] screenshot: no readable render layer — falling back to a SCREEN capture, which may include other windows")
+        raiseWindow()
+        val b = window.bounds
+        return robot.createScreenCapture(Rectangle(b.x, b.y, b.width, b.height)) to "screen"
+    }
+
+    /**
+     * The bitmap's pixels as a plain ARGB image on the Java heap. It is read
+     * as BGRA unpremultiplied bytes, a copy the bitmap no longer owns. Plain
+     * ARGB also suits ImageIO's PNG writer, which rejects skiko's own layout
+     * mid-file ("Index -1 out of bounds").
+     */
+    private fun copyToArgb(bitmap: org.jetbrains.skia.Bitmap): java.awt.image.BufferedImage? {
+        val w = bitmap.width
+        val h = bitmap.height
+        if (w <= 0 || h <= 0) return null
+        val info = org.jetbrains.skia.ImageInfo(
+            w, h, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.UNPREMUL,
+        )
+        val bytes = bitmap.readPixels(info, w * 4, 0, 0) ?: return null
+        val argb = IntArray(w * h)
+        for (i in argb.indices) {
+            val o = i * 4
+            val b = bytes[o].toInt() and 0xFF
+            val g = bytes[o + 1].toInt() and 0xFF
+            val r = bytes[o + 2].toInt() and 0xFF
+            val a = bytes[o + 3].toInt() and 0xFF
+            argb[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        return java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB).apply {
+            setRGB(0, 0, w, h, argb, 0, w)
+        }
+    }
+
+    private fun findSkiaLayer(c: java.awt.Component): org.jetbrains.skiko.SkiaLayer? {
+        if (c is org.jetbrains.skiko.SkiaLayer) return c
+        if (c is java.awt.Container) {
+            for (child in c.components) findSkiaLayer(child)?.let { return it }
+        }
+        return null
+    }
+
     // Callback for navigation requests
     var onNavigationRequest: ((String) -> Unit)? = null
 
@@ -729,10 +811,7 @@ class TestAutomationServer(
                     }
 
                     try {
-                        raiseWindow()
-                        val bounds = window.bounds
-                        val screenRect = Rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
-                        val image = robot.createScreenCapture(screenRect)
+                        val (image, source) = captureWindow(window)
 
                         val format = call.request.queryParameters["format"] ?: "png"
 
@@ -743,9 +822,10 @@ class TestAutomationServer(
                             val encoded = java.util.Base64.getEncoder().encodeToString(baos.toByteArray())
                             call.respond(mapOf(
                                 "success" to true,
-                                "width" to bounds.width,
-                                "height" to bounds.height,
+                                "width" to image.width,
+                                "height" to image.height,
                                 "format" to format,
+                                "source" to source,
                                 "data" to encoded
                             ))
                         } else {
@@ -780,10 +860,8 @@ class TestAutomationServer(
 
                     try {
                         val request = call.receive<ScreenshotRequest>()
-                        raiseWindow()
-                        val bounds = window.bounds
-                        val screenRect = Rectangle(bounds.x, bounds.y, bounds.width, bounds.height)
-                        val image = robot.createScreenCapture(screenRect)
+                        val (image, source) = captureWindow(window)
+                        println("[TestAutomation] screenshot -> ${request.path} (source=$source)")
 
                         val file = java.io.File(request.path)
                         file.parentFile?.mkdirs()

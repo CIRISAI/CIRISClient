@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Warning
 import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -66,7 +67,7 @@ fun ServicesScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_service_management")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

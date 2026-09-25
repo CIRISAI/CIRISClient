@@ -27,9 +27,10 @@ surface: constitutional
 screen: Constitutional
 ```
 
-A card in Everyone › Files: `nav_map` derives `circle_global_commons ->
-tab_files -> nav_epistemic_constitutional` (wave 1 — the founding record is a
-file in the public circle). Clicking the row before its tab is on screen would
+A card in Everyone › Safety: `nav_map` derives `circle_global_commons ->
+tab_safety -> nav_epistemic_constitutional` (the spine pass — `accord:*` is
+the accord's own attestation surface, and the accord lives in one place, next
+to the kill switch it belongs to; Files holds files). Clicking the row before its tab is on screen would
 fail as "element not found" — indistinguishable from a broken screen, which on
 a safety surface is the worst possible confusion; the runner walks the chain.
 

@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ti fọwọ́sí",
     "ceremony_state_not_yet": "kò tíì",
     "receipt_this_node": "Nóòdù yìí — ìwọ",
+    "setup_finish_unclaimed": "Parí láì gba nódù yìí",
     "verify_title": "Jẹ́rìísí build kan",
     "verify_hash_label": "Hash build",
     "verify_button": "Ṣàyẹ̀wò",
@@ -3252,7 +3253,11 @@
       "confirm": "Dá ohun gbogbo dúró",
       "nothing_title": "Kò sí ohunkóhun tí ń ṣiṣẹ́ fún ọ",
       "nothing_body": "Kò sí olùrànlọ́wọ́ tí ń ronú tàbí ṣe iṣẹ́ lórí nódù yìí, nítorí náà kò sí ohunkóhun láti dá dúró. Bọ́tìnnì náà wà níbí síbẹ̀, ní ipò kan náà, nítorí ó máa ń wà níbẹ̀ nígbà gbogbo."
-    }
+    },
+    "rail_open": "Ṣàfihàn apá ẹ̀gbẹ́",
+    "rail_close": "Fi apá ẹ̀gbẹ́ pamọ́",
+    "back": "Padà Sẹ́yìn",
+    "instrument_line": "Àwọn ohun tirẹ — kì í ṣe apá ìyíká kan"
   },
   "network": {
     "announces": {

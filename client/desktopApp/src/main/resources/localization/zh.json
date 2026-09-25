@@ -1402,6 +1402,7 @@
     "ceremony_state_signed": "已签署",
     "ceremony_state_not_yet": "尚未",
     "receipt_this_node": "本节点 — 您",
+    "setup_finish_unclaimed": "不认领此节点并完成",
     "credits_error_generic": "无法处理您的消息。请稍后重试。",
     "credits_error_network": "网络错误。请检查您的连接并重试。",
     "credits_error_server": "服务器暂时不可用。请稍后重试。",
@@ -3252,7 +3253,11 @@
       "confirm": "停止一切",
       "nothing_title": "当前没有任何内容在为您运行",
       "nothing_body": "此节点上没有任何助手在思考或行动，因此没有需要停止的内容。此按钮仍显示在这里，位置不变，因为它一直如此。"
-    }
+    },
+    "rail_open": "显示侧栏",
+    "rail_close": "隐藏侧栏",
+    "back": "返回",
+    "instrument_line": "您自己的内容——不在任何圈子内"
   },
   "network": {
     "announces": {

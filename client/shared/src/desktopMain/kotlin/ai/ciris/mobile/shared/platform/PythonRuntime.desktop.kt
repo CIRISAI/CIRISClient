@@ -34,7 +34,9 @@ import kotlinx.coroutines.runBlocking
  * talks to.
  *
  * PREREQUISITE: the `ciris-server` console command must be on PATH. Install with:
- *     pip install ciris-server==<version>   (the app names the exact version, [CLIENT_VERSION], in its error message)
+ *     pip install --upgrade ciris-server
+ * (No version: the client's and the server's release numbers are separate lines.
+ * Pinning [CLIENT_VERSION] named ciris-server releases that do not exist.)
  *
  * PORTS: the node listens on its base port (default :4242). ciris-server serves its
  * read/control API (the v1 identity, self-identity, setup, federation, auth and the
@@ -411,7 +413,12 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      * This is the federation node client — it launches `ciris-server`, NOT the
      * Python `ciris-agent`. The `ciris-server` console command is installed via:
      *
-     *     pip install ciris-server==<version>   ([CLIENT_VERSION] — kept fresh by the release stamp)
+     *     pip install --upgrade ciris-server
+     *
+     * NO VERSION, ON PURPOSE. This used to name `ciris-server==$CLIENT_VERSION`,
+     * back when the two version lines moved together. They separated at 0.5.216,
+     * and from client 0.5.217 on it told every desktop user without a node to
+     * install a ciris-server release that does not exist.
      *
      * The node is started as:
      *
@@ -433,7 +440,7 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
             throw RuntimeException(
                 "Could not find the 'ciris-server' executable on PATH.\n\n" +
                 "This is the local CIRIS federation node — install it with:\n" +
-                "    pip install ciris-server==$CLIENT_VERSION\n\n" +
+                "    pip install --upgrade ciris-server\n\n" +
                 "Then make sure the 'ciris-server' console command is on your PATH " +
                 "(the same environment this app launches from) and restart the app."
             )

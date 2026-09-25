@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Scheduler screen showing scheduled tasks and statistics.
@@ -52,7 +53,7 @@ fun SchedulerScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_task_scheduler")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

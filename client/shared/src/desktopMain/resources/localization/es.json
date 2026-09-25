@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "firmado",
     "ceremony_state_not_yet": "todavía no",
     "receipt_this_node": "Este nodo — tú",
+    "setup_finish_unclaimed": "Finalizar sin reclamar este nodo",
     "verify_title": "Verificar una compilación",
     "verify_hash_label": "Hash de la compilación",
     "verify_button": "Comprobar",
@@ -3252,7 +3253,11 @@
       "confirm": "Detener todo",
       "nothing_title": "No hay nada en ejecución para ti",
       "nothing_body": "Ningún asistente está pensando ni actuando en este nodo, así que no hay nada que detener. El botón está aquí de todos modos, en el mismo lugar, porque siempre lo está."
-    }
+    },
+    "rail_open": "Mostrar el panel lateral",
+    "rail_close": "Ocultar el panel lateral",
+    "back": "Atrás",
+    "instrument_line": "tus propias cosas — no en círculo"
   },
   "network": {
     "announces": {

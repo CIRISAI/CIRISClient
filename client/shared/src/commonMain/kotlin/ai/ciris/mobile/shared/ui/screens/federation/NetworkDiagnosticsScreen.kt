@@ -56,6 +56,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Network → Diagnostics sub-screen. Unified diagnostic feed across all
@@ -95,7 +96,7 @@ fun NetworkDiagnosticsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("network.diagnostics.title")) },
                 actions = { ConnectionDot(connectionState, indicatorTag = "indicator_diagnostics_connection") },
                 colors = TopAppBarDefaults.topAppBarColors(

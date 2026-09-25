@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Telemetry screen for system metrics and service health
@@ -84,7 +85,7 @@ fun TelemetryScreen(
 ) {
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_system_telemetry")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

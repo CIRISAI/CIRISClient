@@ -43,6 +43,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * **Child-safety / watchlist card** (CC 4.5.7).
@@ -78,7 +79,7 @@ fun ChildSafetyScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.child_safety_title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

@@ -31,6 +31,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * "Constitutional" — accord-holder identity + reserved-prefix attestations.
@@ -64,7 +65,7 @@ fun ConstitutionalScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("commons.federation.constitutional.title").ifEmpty { "Constitutional Standing" }) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {

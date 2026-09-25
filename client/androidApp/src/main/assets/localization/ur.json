@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "دستخط شدہ",
     "ceremony_state_not_yet": "ابھی نہیں",
     "receipt_this_node": "یہ نوڈ — آپ",
+    "setup_finish_unclaimed": "اس نوڈ کا دعویٰ کیے بغیر مکمل کریں",
     "verify_title": "بلڈ کی تصدیق کریں",
     "verify_hash_label": "بلڈ ہیش",
     "verify_button": "جانچیں",
@@ -3252,7 +3253,11 @@
       "nothing_body": "اس نوڈ پر کوئی اسسٹنٹ نہ سوچ رہا ہے نہ کارروائی کر رہا ہے، اس لیے روکنے کو کچھ نہیں۔ بٹن پھر بھی یہاں، اسی جگہ موجود ہے، کیونکہ یہ ہمیشہ یہیں ہوتا ہے۔",
       "title": "سب کچھ روکیں؟",
       "fact_what_label": "کیا رکتا ہے"
-    }
+    },
+    "rail_open": "سائیڈ دکھائیں",
+    "rail_close": "سائیڈ چھپائیں",
+    "back": "واپس",
+    "instrument_line": "آپ کی اپنی چیزیں — کسی دائرے میں نہیں"
   },
   "network": {
     "announces": {

@@ -59,7 +59,7 @@ def test_a_single_card_tab_shows_the_card_and_the_chain_ends_on_the_tab(hops):
     assert hops["Contacts"] == ["circle_agent", "tab_people"], hops["Contacts"]
     assert nav_map.expected_tail("contacts") == "tab_people"
     # and a multi-card tab ends on the row
-    assert hops["Constitutional"] == ["circle_global_commons", "tab_files", "nav_epistemic_constitutional"], hops["Constitutional"]
+    assert hops["Constitutional"] == ["circle_global_commons", "tab_safety", "nav_epistemic_constitutional"], hops["Constitutional"]
     assert nav_map.expected_tail("constitutional") == "nav_epistemic_constitutional"
 
 

@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "an sa hannu",
     "ceremony_state_not_yet": "ba tukuna ba",
     "receipt_this_node": "Wannan kumburi — ku",
+    "setup_finish_unclaimed": "Kammala ba tare da karɓar wannan kumburi ba",
     "verify_title": "Tabbatar da build",
     "verify_hash_label": "Hash na build",
     "verify_button": "Duba",
@@ -3252,7 +3253,11 @@
       "confirm": "Tsayar da komai",
       "nothing_title": "Babu abin da ke gudana dominku",
       "nothing_body": "Babu mataimaki da yake tunani ko aiki a kan wannan kumburi, don haka babu abin da za a tsayar. Ko da yake, maɓallin yana nan, a wuri guda, domin haka ne yake kasancewa a koda yaushe."
-    }
+    },
+    "rail_open": "Nuna gefe",
+    "rail_close": "Ɓoye gefe",
+    "back": "Komawa",
+    "instrument_line": "Abubuwanku — ba a cikin da'ira ba"
   },
   "network": {
     "announces": {

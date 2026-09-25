@@ -74,36 +74,42 @@ object CirclesNav {
     val circles: List<CohortScope> = CohortScope.entries.toList()
 
     val placements: List<Placement> = listOf(
-        // ── Files — the spine. Most of it is wave 3; what exists today: ──
-        Placement(NavSurface.Memory, Tab.FILES, setOf(AGENT), agentOnly = true),
-        Placement(NavSurface.EnvironmentGraph, Tab.FILES, setOf(LOCAL_COMMUNITY)),
-        Placement(NavSurface.Commons, Tab.FILES, setOf(GLOBAL_COMMONS)),
-        Placement(NavSurface.Constitutional, Tab.FILES, setOf(GLOBAL_COMMONS)),
+        // ── Files — FILES. The tab is named for what it holds, so nothing
+        // else may sit in it: the memory graph moved to This node, the
+        // environment snapshot and the commons to Decisions, the accord's
+        // attestations to Safety. Until the files spine exists (B3) every
+        // circle's Files tab says so, which is a fact about the data and not
+        // a gap in the build. ──
 
-        // ── Chats ──
+        // ── Chats — CONVERSATIONS. The agent conversation is one today.
+        // Cognitive sessions, tickets and the scheduler are how the machine
+        // runs, not who you talk to; they live under This node. ──
         Placement(NavSurface.Interact, Tab.CHATS, setOf(AGENT), agentOnly = true),
-        Placement(NavSurface.Sessions, Tab.CHATS, setOf(AGENT), agentOnly = true),
-        Placement(NavSurface.Tickets, Tab.CHATS, ALL, agentOnly = true),
-        Placement(NavSurface.Scheduler, Tab.CHATS, ALL, agentOnly = true),
 
         // ── People — the constituent of every circle. Contacts IS the tab;
-        // who may act for whom becomes a property of a contact's row in wave 2
-        // and lives under Rules until then. ──
+        // who may act for whom is a rule, so Delegations sits under Rules. ──
         Placement(NavSurface.Contacts, Tab.PEOPLE, ALL),
         Placement(NavSurface.Users, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
 
-        // ── Safety ──
+        // ── Safety — what looks after the circle, and in Everyone that is the
+        // accord: the 2-of-3 human kill switch, its holder roster, the flow
+        // that provisions a holder, and the `accord:*` attestations only a
+        // holder may emit. One place, because in an emergency a person should
+        // not have to know which of three tabs we filed it under. ──
         Placement(NavSurface.Moderation, Tab.SAFETY, NEIGHBOURS_OUT),
         Placement(NavSurface.ChildSafety, Tab.SAFETY, ALL),
+        Placement(NavSurface.Accord, Tab.SAFETY, setOf(GLOBAL_COMMONS)),
+        Placement(NavSurface.ProvisionAccordHolder, Tab.SAFETY, setOf(GLOBAL_COMMONS)),
+        Placement(NavSurface.Constitutional, Tab.SAFETY, setOf(GLOBAL_COMMONS)),
 
-        // ── Rules — the circle's own hub first, then what you set ──
+        // ── Rules — the circle's own hub first, then what you set. App and
+        // model settings are NOT rules of a circle; they are this device's,
+        // and they moved there. ──
         Placement(NavSurface.LayerAgent, Tab.RULES, setOf(AGENT), agentOnly = true),
         Placement(NavSurface.LayerFamily, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.LayerLocalCommunity, Tab.RULES, setOf(LOCAL_COMMUNITY)),
         Placement(NavSurface.LayerGlobalCommunities, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.LayerGlobalCommons, Tab.RULES, setOf(GLOBAL_COMMONS)),
-        Placement(NavSurface.AgentSettings, Tab.RULES, setOf(AGENT), agentOnly = true),
-        Placement(NavSurface.LLMSettings, Tab.RULES, setOf(AGENT), agentOnly = true),
         Placement(NavSurface.Trust, Tab.RULES, ALL),
         Placement(NavSurface.ManageConsent, Tab.RULES, ALL),
         Placement(NavSurface.Consent, Tab.RULES, ALL),
@@ -111,11 +117,13 @@ object CirclesNav {
         Placement(NavSurface.Delegation, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.Billing, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.Wallet, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
-        // Trust roots live in Everyone, under Rules (locked spec §6).
-        Placement(NavSurface.Accord, Tab.RULES, setOf(GLOBAL_COMMONS)),
 
-        // ── Decisions ──
+        // ── Decisions — how the circle is doing and what it is weighing:
+        // standing and health, the local environment it depends on, and the
+        // commons' reverse quorum. ──
         Placement(NavSurface.HealthReputation, Tab.DECISIONS, NEIGHBOURS_OUT),
+        Placement(NavSurface.EnvironmentGraph, Tab.DECISIONS, setOf(LOCAL_COMMUNITY)),
+        Placement(NavSurface.Commons, Tab.DECISIONS, setOf(GLOBAL_COMMONS)),
 
         // ── Record — one card, five homes ──
         Placement(NavSurface.Audit, Tab.RECORD, ALL),
@@ -133,16 +141,23 @@ object CirclesNav {
         Instrument(
             "this-node", "nav.instrument.this_node", GlyphName.TELEMETRY,
             listOf(
-                NavSurface.Nodes, NavSurface.Adapters, NavSurface.NetworkOps, NavSurface.Services,
+                NavSurface.Nodes, NavSurface.AgentSettings, NavSurface.LLMSettings,
+                NavSurface.Adapters, NavSurface.NetworkOps, NavSurface.Services,
                 NavSurface.Telemetry, NavSurface.Logs, NavSurface.Transport, NavSurface.System,
-                NavSurface.Runtime, NavSurface.Config, NavSurface.GraphMemory,
+                NavSurface.Runtime, NavSurface.Config, NavSurface.GraphMemory, NavSurface.Memory,
+                NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler,
                 NavSurface.Tools, NavSurface.Skills, NavSurface.ClientInterface,
             ),
-            agentOnly = setOf(NavSurface.Tools, NavSurface.Skills, NavSurface.ClientInterface),
+            // Settings is every build's — language, ground, sign out. The rest
+            // of what the brain runs on is the agent build's only.
+            agentOnly = setOf(
+                NavSurface.LLMSettings, NavSurface.Memory, NavSurface.Sessions, NavSurface.Tickets,
+                NavSurface.Scheduler, NavSurface.Tools, NavSurface.Skills, NavSurface.ClientInterface,
+            ),
         ),
         Instrument(
             "someone-i-trust", "nav.instrument.someone_i_trust", GlyphName.DEFER,
-            listOf(NavSurface.WiseAuthority, NavSurface.ProvisionAccordHolder),
+            listOf(NavSurface.WiseAuthority),
         ),
         Instrument("help", "nav.instrument.help", GlyphName.QUESTION, listOf(NavSurface.Help)),
     )
@@ -178,6 +193,8 @@ object CirclesNav {
     fun circleTag(scope: CohortScope): String = "circle_" + slug(scope.id)
     fun navTag(surface: NavSurface): String = "nav_epistemic_" + slug(surface.id)
     const val MY_THINGS_TAG = "btn_my_things"
+    /** The mark in the top bar: it opens and closes the left side. */
+    const val RAIL_TOGGLE_TAG = "btn_rail_toggle"
     const val STOP_TAG = "btn_stop_everything"
     const val TABS_SCROLLABLE = "shell_tabs"
     const val RAIL_SCROLLABLE = "shell_rail"

@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "موقَّع",
     "ceremony_state_not_yet": "ليس بعد",
     "receipt_this_node": "هذه العقدة — أنت",
+    "setup_finish_unclaimed": "إنهاء بدون المطالبة بهذه العقدة",
     "verify_title": "التحقق من إصدار",
     "verify_hash_label": "بصمة الإصدار",
     "verify_button": "تحقّق",
@@ -3252,7 +3253,11 @@
       "confirm": "أوقف كل شيء",
       "nothing_title": "لا شيء يعمل من أجلك",
       "nothing_body": "لا يوجد مساعد يفكر أو يتصرف على هذه العقدة، فلا شيء لإيقافه. الزر موجود هنا مع ذلك، في نفس المكان، لأنه موجود دائماً."
-    }
+    },
+    "rail_open": "إظهار الشريط الجانبي",
+    "rail_close": "إخفاء الشريط الجانبي",
+    "back": "رجوع",
+    "instrument_line": "أشياؤك الخاصة — خارج أي دائرة"
   },
   "network": {
     "announces": {

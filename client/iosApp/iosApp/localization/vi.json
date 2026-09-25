@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "đã ký",
     "ceremony_state_not_yet": "chưa",
     "receipt_this_node": "Nút này — bạn",
+    "setup_finish_unclaimed": "Kết thúc mà không nhận quyền nút này",
     "verify_title": "Xác minh một bản dựng",
     "verify_hash_label": "Hash bản dựng",
     "verify_button": "Kiểm tra",
@@ -3252,7 +3253,11 @@
       "confirm": "Dừng tất cả",
       "nothing_title": "Không có gì đang chạy cho bạn",
       "nothing_body": "Không có trợ lý nào đang suy nghĩ hoặc hành động trên nút này, nên không có gì để dừng. Nút bấm vẫn ở đây, cùng một vị trí, vì nó luôn như vậy."
-    }
+    },
+    "rail_open": "Hiển thị thanh bên",
+    "rail_close": "Ẩn thanh bên",
+    "back": "Quay lại",
+    "instrument_line": "những thứ của riêng bạn — không nằm trong một vòng tròn"
   },
   "network": {
     "announces": {

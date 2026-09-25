@@ -26,6 +26,7 @@ import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
  * Sessions screen for cognitive session management
@@ -51,7 +52,7 @@ fun SessionsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
+            ScreenTopBar(
                 title = { Text(localizedString("mobile.screen_cognitive_sessions")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state

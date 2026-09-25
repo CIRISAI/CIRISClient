@@ -4,6 +4,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -97,6 +98,69 @@ class CirclesNavTest {
         assertEquals("this-node", CirclesNav.instrumentOf(NavSurface.Nodes)?.id)
         assertEquals("nav_epistemic_layer_family", CirclesNav.navTag(NavSurface.LayerFamily))
         assertEquals("circle_local_community", CirclesNav.circleTag(CohortScope.LOCAL_COMMUNITY))
+    }
+
+    /**
+     * A TAB IS NAMED FOR WHAT IT HOLDS. The live shell showed Just me › Files
+     * rendering the memory-graph list and Chats carrying the scheduler; both
+     * read as the tab lying about its contents, and every card built on top
+     * would have inherited that. Files holds files — so until the files spine
+     * exists it holds NOTHING, and says so.
+     */
+    @Test
+    fun filesHoldsOnlyFiles() {
+        for (c in CirclesNav.circles) for (hasAgent in listOf(false, true)) {
+            assertTrue(
+                CirclesNav.cards(c, Tab.FILES, hasAgent).isEmpty(),
+                "${c.id} › files (agent=$hasAgent): only files belong in Files — the spine is B3",
+            )
+        }
+        assertEquals("nav.empty.files_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.FILES))
+        assertNull(CirclesNav.tabOf(NavSurface.Memory), "the memory graph is an instrument, not a file")
+        assertEquals("this-node", CirclesNav.instrumentOf(NavSurface.Memory)?.id)
+    }
+
+    @Test
+    fun chatsHoldsOnlyConversations() {
+        for (c in CirclesNav.circles) {
+            val cards = CirclesNav.cards(c, Tab.CHATS, hasAgent = true)
+            assertTrue(cards.all { it == NavSurface.Interact }, "${c.id} › chats holds something that is not a conversation: $cards")
+        }
+        // How the machine runs is not who you talk to.
+        for (s in listOf(NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler)) {
+            assertNull(CirclesNav.tabOf(s), "${s.id} is in a circle tab")
+            assertEquals("this-node", CirclesNav.instrumentOf(s)?.id, s.id)
+        }
+    }
+
+    /**
+     * ONE PLACE FOR THE ACCORD. In an emergency nobody should have to remember
+     * which of three tabs the kill switch was filed under: the accord family,
+     * its holder roster, the flow that provisions a holder and the `accord:*`
+     * attestations are all Everyone › Safety.
+     */
+    @Test
+    fun theAccordIsAllUnderEveryoneSafety() {
+        val accord = listOf(NavSurface.Accord, NavSurface.ProvisionAccordHolder, NavSurface.Constitutional)
+        for (s in accord) {
+            assertEquals(Tab.SAFETY, CirclesNav.tabOf(s), "${s.id} is not in Safety")
+            assertEquals(
+                setOf(CohortScope.GLOBAL_COMMONS),
+                CirclesNav.placementOf(s)?.circles,
+                "${s.id} is not in Everyone alone",
+            )
+        }
+        assertTrue(CirclesNav.cards(CohortScope.GLOBAL_COMMONS, Tab.SAFETY, hasAgent = false).containsAll(accord))
+    }
+
+    /** Settings is this device's, not a rule of a circle — and every build has one. */
+    @Test
+    fun settingsLivesUnderThisDeviceOnEveryBuild() {
+        assertNull(CirclesNav.tabOf(NavSurface.AgentSettings))
+        val inst = CirclesNav.instrumentOf(NavSurface.AgentSettings)
+        assertEquals("this-node", inst?.id)
+        assertTrue(NavSurface.AgentSettings in inst!!.surfaces(hasAgent = false), "a node build cannot reach Settings")
+        assertFalse(NavSurface.LLMSettings in inst.surfaces(hasAgent = false), "a node build has no model to configure")
     }
 
     @Test

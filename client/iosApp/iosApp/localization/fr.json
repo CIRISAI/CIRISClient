@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "signé",
     "ceremony_state_not_yet": "pas encore",
     "receipt_this_node": "Ce nœud — vous",
+    "setup_finish_unclaimed": "Terminer sans revendiquer ce nœud",
     "verify_title": "Vérifier un build",
     "verify_hash_label": "Empreinte du build",
     "verify_button": "Vérifier",
@@ -3252,7 +3253,11 @@
       "confirm": "Tout arrêter",
       "nothing_title": "Rien n'est en cours pour vous",
       "nothing_body": "Aucun assistant ne pense ni n'agit sur ce nœud, il n'y a donc rien à arrêter. Le bouton est ici quand même, au même endroit, car il y est toujours."
-    }
+    },
+    "rail_open": "Afficher le panneau latéral",
+    "rail_close": "Masquer le panneau latéral",
+    "back": "Retour",
+    "instrument_line": "Vos propres affaires — pas dans un cercle"
   },
   "network": {
     "announces": {
