@@ -89,6 +89,37 @@ loading:   {tag: files_loading, renders: "the frame with a progress affordance a
 error:     {tag: files_error, renders: "the node's refusal, in words; and files_node_too_old when the route 404s with no reason id: This node doesn't hold files yet — it is running {version}; files need ciris-server 0.5.215 or newer"}
 ```
 
+### What an opened file shows (CC 5.3.2.6)
+
+The sheet never decides from the declared `media_type`. `RenderTier.decide`
+works from the bytes:
+
+1. Sniff the first 2 KB with a masked-prefix table and the `ftyp` brand.
+2. Refuse a **polyglot**: a ZIP end-of-central-directory record in the last 64 KB, or bytes after PNG `IEND` or JPEG `FFD9`.
+3. Require the sniffed essence to **equal** the declared one. A mismatch is a refusal, not a correction.
+4. Apply the policy table.
+
+The table is `MediaPolicy.RECOMMENDED`: the CC 5.3.2.6 recommended set, with
+the caps from "The Media Edge" brief (2026-09-19, §3). A node may narrow it
+and the client must not widen it. When the node publishes
+`GET /v1/media/policy`, that value replaces the compiled-in one.
+
+| sniffed | shows | save a copy |
+|---|---|---|
+| `text/plain`, valid UTF-8, ≤ 1 MB | the text, with every bidi control shown as a mark (`⟨RLO⟩`) | yes |
+| `text/plain`, not UTF-8 | "not shown", no guessed rendering | yes |
+| Tier A image / audio / video | **waiting for the node's rendition**: a client renders only bytes a memory-safe encoder we control produced (brief §7), and CIRISServer#614 has not built it | yes |
+| PDF, Tier B raw (HEIC, AVIF, WebM, MOV, Ogg, FLAC, WAV), over-cap, unknown binary | no preview | yes |
+| HTML, SVG, archives, executables, scripts | refused | no if it runs code (sniffed, or by the saved name's extension) |
+| mismatch or polyglot | refused, in the error tone | **no** |
+
+Tags: `file_preview_text`, `file_not_rendered`, `file_save_blocked`.
+
+**Not done: full-SHA verification (CC 5.3.2.5).** Neither `/v1/drive` nor
+`/v1/files/{id}` carries a digest, so the client has nothing to verify against.
+The client is reading its own node's plaintext, and the node opened the seal.
+Verification lands with the digest on the wire (CIRISServer#615 §2).
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -98,7 +129,9 @@ error:     {tag: files_error, renders: "the node's refusal, in words; and files_
 | add a file | `POST /v1/files` | CIRISServer | live; inline cap 1 MiB, checked by the client **before** upload |
 | notes | `GET`/`POST /v1/notes` | CIRISServer | live since 0.5.215 |
 | family files | `POST /v1/files {cohort: family}` | CIRISServer | **not in production** — CIRISServer#627 |
-| the content hash on the listing | `GET /v1/drive` — **unconfirmed** | CIRISServer | blocks `building` for `receipt_dimension` |
+| the content hash on the listing | `GET /v1/drive` — **unconfirmed** | CIRISServer | blocks `building` for `receipt_dimension` and CC 5.3.2.5 verification |
+| the node's render policy | `GET /v1/media/policy` (CIRISServer#615 §1, CIRISEdge#638 item 5) | CIRISServer / CIRISEdge | **not built**; the client uses `MediaPolicy.RECOMMENDED` until it is |
+| renditions (display / thumb / poster) | the ingest pipeline, CIRISServer#614; `derived_from` index (V149) | CIRISServer | **not built**; Tier A media waits on it |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
 reads the id from `error` when it is dotted. The `drive.*` and `notes.*` ids

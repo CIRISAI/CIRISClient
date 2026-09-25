@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.ceg.Dim
 import ai.ciris.mobile.shared.ceg.shortKey
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.drive.ByteState
+import ai.ciris.mobile.shared.models.drive.RenderTier
 import ai.ciris.mobile.shared.models.drive.DriveEntry
 import ai.ciris.mobile.shared.models.drive.FileWrite
 import ai.ciris.mobile.shared.platform.FilePickerDialog
@@ -315,7 +316,22 @@ private fun AddStatus(add: AddState, onDismiss: () -> Unit) {
     }
 }
 
-/** One file, opened. Text is shown; anything else is saved as a copy for the device's own viewer. */
+/** Why an opened file is not shown, in words. */
+@Composable
+private fun renderDecisionText(d: RenderTier.Decision): String = when (d) {
+    is RenderTier.Decision.Text -> ""
+    is RenderTier.Decision.AwaitingNodeRendition -> localizedString("mobile.files_render_awaiting_node", "format", d.format)
+    is RenderTier.Decision.DownloadOnly -> localizedString("mobile.files_preview_unavailable")
+    is RenderTier.Decision.Refused -> localizedString("mobile.files_render_refused", "format", d.format)
+    RenderTier.Decision.NotUtf8 -> localizedString("mobile.files_render_not_utf8")
+    is RenderTier.Decision.Mismatch -> localizedString("mobile.files_render_mismatch", mapOf("declared" to d.declared, "sniffed" to d.sniffed))
+    is RenderTier.Decision.Polyglot -> localizedString("mobile.files_render_polyglot", "format", d.format)
+}
+
+/**
+ * One file, opened. What shows is [RenderTier]'s decision over the bytes
+ * (CC 5.3.2.6); a copy may be saved unless it is disguised or runs code.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileSheet(open: OpenState, onClose: () -> Unit) {
@@ -347,25 +363,40 @@ private fun FileSheet(open: OpenState, onClose: () -> Unit) {
                     val media = open.file.mediaType ?: open.entry.mediaType ?: "application/octet-stream"
                     Text(name, style = CirisTheme.type.title, color = t.ink)
                     Text("$media · ${humanBytes(open.bytes.size.toLong())}", style = CirisTheme.type.label, color = t.mute)
-                    if (media.startsWith("text/")) {
-                        Box(
+                    // CC 5.3.2.6: the render tier comes from the sniffed bytes, never from `media`.
+                    val decision = remember(open) { RenderTier.decide(media, open.bytes) }
+                    val saveAllowed = remember(open) { RenderTier.saveAllowed(decision, name, open.bytes) }
+                    when (decision) {
+                        is RenderTier.Decision.Text -> Box(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
                                 .verticalScroll(rememberScrollState()).testable("file_preview_text"),
                         ) {
-                            Text(open.bytes.decodeToString().take(20_000), style = CirisTheme.type.body, color = t.ink)
+                            Text(decision.visible.take(20_000), style = CirisTheme.type.body, color = t.ink)
                         }
-                    } else {
-                        Text(localizedString("mobile.files_preview_unavailable"), style = CirisTheme.type.body, color = t.dim)
+                        else -> Text(
+                            renderDecisionText(decision),
+                            style = CirisTheme.type.body,
+                            color = if (decision is RenderTier.Decision.Mismatch || decision is RenderTier.Decision.Polyglot) t.danger else t.dim,
+                            modifier = Modifier.testable("file_not_rendered"),
+                        )
                     }
-                    CirisButton(
-                        label = localizedString("mobile.files_save_copy"),
-                        tag = FilesTags.SAVE_COPY,
-                        onClick = {
-                            val path = saveFileCopy(name, media, open.bytes)
-                            savedTo = path
-                            saveFailed = path == null
-                        },
-                    )
+                    if (saveAllowed) {
+                        CirisButton(
+                            label = localizedString("mobile.files_save_copy"),
+                            tag = FilesTags.SAVE_COPY,
+                            onClick = {
+                                val path = saveFileCopy(name, media, open.bytes)
+                                savedTo = path
+                                saveFailed = path == null
+                            },
+                        )
+                    } else {
+                        Text(
+                            localizedString("mobile.files_save_blocked"),
+                            style = CirisTheme.type.body, color = t.dim,
+                            modifier = Modifier.testable("file_save_blocked"),
+                        )
+                    }
                     savedTo?.let {
                         Text(localizedString("mobile.files_saved_to", "path", it), style = CirisTheme.type.body, color = t.dim,
                             modifier = Modifier.testable("file_saved_to"))
