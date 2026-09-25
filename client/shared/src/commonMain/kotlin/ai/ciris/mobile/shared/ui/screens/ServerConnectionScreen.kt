@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.ConnectionStatus
 import ai.ciris.mobile.shared.viewmodels.ServerConnectionViewModel
@@ -408,7 +409,7 @@ private fun LocalServerControlsCard(
                     enabled = !isLoading && isLocalServer,
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_restart_server") { onRestart() },
+                        .testableClickable("btn_restart_server", enabled = !isLoading && isLocalServer) { onRestart() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -423,13 +424,14 @@ private fun LocalServerControlsCard(
                 }
 
                 // Stop button
+                val canStop = !isLoading && isLocalServer &&
+                    connectionStatus != ConnectionStatus.DISCONNECTED
                 OutlinedButton(
                     onClick = onStop,
-                    enabled = !isLoading && isLocalServer &&
-                              connectionStatus != ConnectionStatus.DISCONNECTED,
+                    enabled = canStop,
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_stop_server") { onStop() }
+                        .testableClickable("btn_stop_server", enabled = canStop) { onStop() }
                 ) {
                     Icon(
                         imageVector = CIRISIcons.close,
@@ -487,13 +489,14 @@ private fun RemoteConnectionCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // URL input field
+            // URL input field — drivable: /input types through onUrlChange.
+            rememberTextInputDriver("input_server_url", urlInput, onValueChange = onUrlChange)
             OutlinedTextField(
                 value = urlInput,
                 onValueChange = onUrlChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testable("input_server_url"),
+                    .testable("input_server_url", urlInput),
                 label = { Text("Server URL") },
                 placeholder = { Text(localizedString("mobile.server_url_placeholder")) },
                 singleLine = true,
@@ -519,7 +522,7 @@ private fun RemoteConnectionCard(
                     enabled = !isLoading && urlInput.isNotBlank(),
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_connect") { onConnect() },
+                        .testableClickable("btn_connect", enabled = !isLoading && urlInput.isNotBlank()) { onConnect() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -540,7 +543,7 @@ private fun RemoteConnectionCard(
                         enabled = !isLoading,
                         modifier = Modifier
                             .weight(1f)
-                            .testableClickable("btn_disconnect") { onDisconnect() }
+                            .testableClickable("btn_disconnect", enabled = !isLoading) { onDisconnect() }
                     ) {
                         Icon(
                             imageVector = CIRISIcons.close,
