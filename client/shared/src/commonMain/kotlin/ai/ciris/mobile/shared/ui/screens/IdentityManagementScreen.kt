@@ -93,6 +93,14 @@ fun IdentityManagementScreen(
     onOpenRepair: (String) -> Unit,
     /** The node this client is attached to, for resolving a relative repair route. */
     nodeBaseUrl: String = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL,
+    /**
+     * Sign this device out — the SAME callback CIRISApp gives Settings. No
+     * default, for the reason [onOpenRepair] has none: a sign-out button that
+     * does nothing is worse than no button. See [ThisDeviceSignIn].
+     */
+    onLogout: () -> Unit,
+    /** How this device signed in, as the login flow recorded it; null = not recorded. */
+    signInMethod: ai.ciris.mobile.shared.models.SignInMethod?,
 ) {
     val identityKeyId by viewModel.identityKeyId.collectAsState()
     val occurrences by viewModel.occurrences.collectAsState()
@@ -171,6 +179,8 @@ fun IdentityManagementScreen(
                     )
                 }
             }
+
+            ThisDeviceSignIn(identityKeyId = identityKeyId, signInMethod = signInMethod, onLogout = onLogout)
 
             // ── Notice / error banners ────────────────────────────────────────
             notice?.let { msg ->
@@ -778,6 +788,58 @@ private fun FedcodeQr(value: String, modifier: Modifier = Modifier) {
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * THIS DEVICE — who it is signed in as, and the way to sign it out.
+ *
+ * There is no "account" in CIRIS, only identities; signing out is something
+ * you do to THIS DEVICE's hold on your identity, so it lives on My Identity,
+ * which every build offers (Devices & keys is never agent-gated). That keeps
+ * CIRISClient#51 closed without the second route onto Settings the "Account"
+ * row was. Same `btn_logout` tag Settings carries, so a driver's last click
+ * does not change; the logout itself is the caller's — the one CIRISApp
+ * already hands Settings — not a second implementation.
+ *
+ * Self-contained on purpose: one call site in the screen, everything else here.
+ */
+@Composable
+private fun ThisDeviceSignIn(
+    identityKeyId: String?,
+    signInMethod: ai.ciris.mobile.shared.models.SignInMethod?,
+    onLogout: () -> Unit,
+) {
+    val who = identityKeyId?.let { truncMid(it) } ?: localizedString("mobile.identity_self_unresolved")
+    // How, only when the login flow recorded it — never the platform's guess.
+    val line = ai.ciris.mobile.shared.models.signedInLine(who, signInMethod)
+    Spacer(Modifier.height(12.dp))
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().testable("identity_this_device"),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Text(
+                localizedString("mobile.identity_this_device_title"),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                localizedString(line.key, line.params),
+                fontSize = 12.sp,
+                modifier = Modifier.testable("identity_signed_in_as"),
+            )
+            Spacer(Modifier.height(8.dp))
+            OutlinedButton(
+                onClick = onLogout,
+                modifier = Modifier.fillMaxWidth().testableClickable("btn_logout") { onLogout() },
+            ) {
+                Text(localizedString("mobile.identity_sign_out"))
             }
         }
     }

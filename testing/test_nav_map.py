@@ -95,15 +95,30 @@ def test_no_hop_repeats_a_tag(hops):
 
 
 def test_two_surfaces_one_screen_keeps_both_hops():
-    """Account and AgentSettings both open Screen.Settings (CIRISClient#51). The
-    Screen-keyed `setdefault` kept one and dropped Account without a word; the
-    surface-keyed map carries both rows."""
-    by_surface = nav_map.build_surfaces()
-    assert by_surface["Account"] == [nav_map.MY_THINGS, "nav_instrument_devices_keys", "nav_epistemic_account"]
-    assert by_surface["AgentSettings"] == [nav_map.MY_THINGS, "nav_instrument_this_node", "nav_epistemic_agent_settings"]
-    assert nav_map.screen_of("Account") == nav_map.screen_of("AgentSettings") == "Settings"
-    # Screen.Settings is keyed by the surface the shell lights on it.
-    assert nav_map.build()["Settings"] == by_surface["AgentSettings"]
+    """Two surfaces that open one Screen each keep their own route. The first
+    case was Account and AgentSettings, both opening Screen.Settings: the
+    Screen-keyed `setdefault` dropped Account without a word. Account is gone
+    (#93: there is no account, only identities), so the property is pinned
+    on a synthetic source rather than on a surface that no longer exists."""
+    src = (
+        "private fun surfaceToScreen(s: NavSurface): Screen = when (s) {\n"
+        "    ai.ciris.NavSurface.A -> Screen.Shared\n"
+        "    ai.ciris.NavSurface.B -> Screen.Shared\n"
+        "}\n"
+        "internal fun screenToSurface(s: Screen): NavSurface? = when (s) {\n"
+        "    Screen.Shared -> ai.ciris.NavSurface.B\n"
+        "}\n"
+    )
+    routes = nav_map._routes(src)
+    assert ("A", "Shared") in routes and ("B", "Shared") in routes, routes
+    # Screen.Shared is keyed by the surface the shell lights on it.
+    assert nav_map._screen_routes(src) == {"Shared": "B"}
+
+
+def test_there_is_no_account_surface():
+    """#93 deleted the Account row: sign-out lives on My Identity."""
+    assert "Account" not in nav_map.build_surfaces()
+    assert "Account" not in nav_map.build_surfaces(has_agent=False)
 
 
 def test_an_undisambiguated_shared_screen_fails_loudly():
