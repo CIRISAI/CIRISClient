@@ -416,11 +416,17 @@ data class EnrichmentCacheStatsData(
  */
 data class ServiceProviderData(
     val name: String,
-    val priority: String,
-    val priorityGroup: Int,
-    val strategy: String,
-    val circuitBreakerState: String,
-    val capabilities: List<String>
+    // Null = the wire did not carry it. `GET /v1/system/services` sends name,
+    // type, healthy, available, uptime and metrics — none of the five below —
+    // and a constant standing in for a read is worse than an absent field
+    // (CSD-016).
+    val priority: String? = null,
+    val priorityGroup: Int? = null,
+    val strategy: String? = null,
+    val circuitBreakerState: String? = null,
+    val capabilities: List<String>? = null,
+    /** The one health fact the wire does carry (`ServiceStatus.healthy`). */
+    val healthy: Boolean? = null,
 )
 
 // ===== Runtime API Data Models =====
@@ -430,8 +436,10 @@ data class ServiceProviderData(
  */
 data class RuntimeStateResponse(
     val processorState: String,
-    val cognitiveState: String,
-    val queueDepth: Int,
+    /** Null when the response did not carry it — never defaulted to "WORK" (CSD-024). */
+    val cognitiveState: String?,
+    /** Null when the response did not carry it — never defaulted to 0 (CSD-024). */
+    val queueDepth: Int?,
     val activeTasks: List<RuntimeTaskData>
 )
 

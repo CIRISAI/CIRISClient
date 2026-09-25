@@ -159,7 +159,8 @@ fun LogsScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(8.dp),
+                        .padding(8.dp)
+                        .testable("logs_error", error),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -195,12 +196,16 @@ fun LogsScreen(
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface)
                     }
-                } else if (logsState.logs.isEmpty()) {
+                } else if (logsShowsEmpty(logsState)) {
+                    // "No matching logs" only after a read that SUCCEEDED. A
+                    // failed read is the error card above, alone: a refusal is
+                    // not a filter that matched nothing (CSD-029, CSD/3 §2.2).
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
+                            modifier = Modifier.testable("logs_empty"),
                             text = localizedString("mobile.logs_no_matching"),
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             style = MaterialTheme.typography.bodyMedium
@@ -654,6 +659,13 @@ enum class LogsSource { NODE, AGENT }
 /**
  * State for the Logs screen
  */
+/**
+ * Pure: does [state] draw "No matching logs"? Only for a read that SUCCEEDED
+ * and matched nothing — never under a failed read (CSD-029).
+ */
+internal fun logsShowsEmpty(state: LogsScreenState): Boolean =
+    !state.isLoading && state.logs.isEmpty() && state.error == null
+
 data class LogsScreenState(
     val logs: List<LogEntryData> = emptyList(),
     val isLoading: Boolean = false,

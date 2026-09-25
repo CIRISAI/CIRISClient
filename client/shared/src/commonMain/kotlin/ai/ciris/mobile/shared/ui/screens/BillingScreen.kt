@@ -120,6 +120,17 @@ fun BillingScreen(
                     )
                 }
 
+                if (currentBalance == BALANCE_NOT_ON_THIS_NODE) {
+                    // This node has no billing route. Say THAT — not a balance:
+                    // the old node path fabricated hasCredit=true, 0 credits,
+                    // which is a fact about an account nobody asked about
+                    // (CSD-056). No balance, no packages to buy.
+                    ReadFailureBlock(
+                        failure = ReadFailure.NotOnThisNode(),
+                        tagPrefix = "billing",
+                        notOnThisNode = localizedString("mobile.billing_not_on_this_node"),
+                    )
+                } else {
                 // Current balance card
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -214,6 +225,7 @@ fun BillingScreen(
                         }
                     }
                 }
+                } // not BALANCE_NOT_ON_THIS_NODE
 
                 // Version info at bottom
                 Spacer(modifier = Modifier.weight(if (products.isEmpty() && !isLoading) 1f else 0.01f))
@@ -295,6 +307,13 @@ private fun ProductCard(
         }
     }
 }
+
+/**
+ * [BillingScreen]'s `currentBalance` when this node serves no billing route.
+ * Distinct from -1 ("not loaded / sign in"): it is a fact about the node, and
+ * the screen draws neither a balance nor anything to buy.
+ */
+const val BALANCE_NOT_ON_THIS_NODE = -2
 
 /**
  * Data class for credit products

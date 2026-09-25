@@ -190,7 +190,8 @@ fun MemoryScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .testable("memory_error", error),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -271,10 +272,12 @@ fun MemoryScreen(
                 ) {
                     CircularProgressIndicator()
                 }
-            } else {
-                // Empty state
+            } else if (memoryShowsEmpty(memoryState)) {
+                // Empty state — only after a read that SUCCEEDED. A refused
+                // query is the error card above, alone; "No memories" under it
+                // would say the refusal was an empty memory (CSD-027).
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testable("memory_empty"),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -688,6 +691,14 @@ private data class ScopeOption(val value: String, val label: String)
 /**
  * State for the Memory screen
  */
+/**
+ * Pure: does [state] draw "No memories"? Only for a read that SUCCEEDED and
+ * found nothing. A refused query is the error card, alone (CSD-027).
+ */
+internal fun memoryShowsEmpty(state: MemoryScreenState): Boolean =
+    state.selectedNode == null && state.searchResults.isEmpty() && state.timelineNodes.isEmpty() &&
+        !state.isLoading && state.error == null
+
 data class MemoryScreenState(
     val searchResults: List<MemoryNodeData> = emptyList(),
     val timelineNodes: List<MemoryNodeData> = emptyList(),

@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.federation.FederationIdentity
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -73,11 +74,11 @@ class TransportViewModel(
                     TAG,
                     "transports loaded: signer=${identity.signerKeyId.take(12)}…, peers=${identity.peerCountTotal}",
                 )
-                _state.update { it.copy(identity = identity, isLoading = false, error = null) }
+                _state.update { it.copy(identity = identity, isLoading = false, error = null, loadFailure = null) }
             } catch (e: Exception) {
                 PlatformLogger.e(TAG, "loadTransports failed: ${e.message}", e)
                 _state.update {
-                    it.copy(isLoading = false, error = "Failed to load transports: ${e.message}")
+                    it.withLoadFailure(e)
                 }
             }
         }
@@ -139,10 +140,21 @@ class TransportViewModel(
  * the editable radio form fields. Numeric radio fields are held as strings so the
  * text inputs round-trip cleanly (validated/coerced on write).
  */
+/**
+ * A failed transports read: the load's own state, drawn in the transports card
+ * as "this node doesn't report…" or "couldn't read" — not the one speculative
+ * "node degraded?" sentence, and not in `error`, which stays for the form's
+ * writes (CSD-031).
+ */
+internal fun TransportScreenState.withLoadFailure(e: Throwable): TransportScreenState =
+    copy(isLoading = false, loadFailure = ReadFailure.of(e))
+
 data class TransportScreenState(
     // Read-only current transports
     val identity: FederationIdentity? = null,
     val isLoading: Boolean = false,
+    /** Why the transports read produced no facts; null after a success. */
+    val loadFailure: ReadFailure? = null,
     val error: String? = null,
     val successMessage: String? = null,
     // Radio (LoRa / RNode) form

@@ -26,8 +26,20 @@ import androidx.compose.ui.unit.dp
 import ai.ciris.api.models.GraphScope
 import ai.ciris.api.models.NodeType
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.platform.testable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+
+/** What the graph area is showing. Error and empty are never both true (CSD/3 §2.2). */
+enum class GraphBody { LOADING, FAILED, EMPTY, POPULATED }
+
+/** Pure: which body [state] draws. The empty card needs a SUCCESSFUL read that found nothing. */
+fun graphBody(state: GraphDisplayState): GraphBody = when {
+    state.isLoading -> GraphBody.LOADING
+    state.error != null -> GraphBody.FAILED
+    state.nodes.isEmpty() -> GraphBody.EMPTY
+    else -> GraphBody.POPULATED
+}
 
 /**
  * Graph visualization screen for memory exploration.
@@ -265,12 +277,15 @@ fun GraphMemoryScreen(
             )
         }
 
-        // Empty state message when no nodes
-        if (!state.isLoading && state.nodes.isEmpty()) {
+        // Empty state message when no nodes — ONLY when the read succeeded.
+        // A failed read used to draw this card under the error banner, and
+        // its advice ("try widening your filter") cannot fix a 500 (CSD-028).
+        if (graphBody(state) == GraphBody.EMPTY) {
             Surface(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .padding(32.dp),
+                    .padding(32.dp)
+                    .testable("graph_memory_empty"),
                 color = GraphColors.BackgroundLight.copy(alpha = 0.95f),
                 shape = RoundedCornerShape(16.dp)
             ) {
@@ -307,7 +322,8 @@ fun GraphMemoryScreen(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .padding(top = 80.dp)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = 16.dp)
+                    .testable("graph_memory_error", error),
                 color = MaterialTheme.colorScheme.errorContainer,
                 shape = RoundedCornerShape(8.dp)
             ) {
