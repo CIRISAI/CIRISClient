@@ -5,6 +5,15 @@ import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.models.federation.repairUrl
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.platform.testableWithHandler
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
+import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
+import ai.ciris.mobile.shared.viewmodels.ReleaseState
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel
 import androidx.compose.foundation.Canvas
@@ -110,8 +119,31 @@ fun IdentityManagementScreen(
     val error by viewModel.error.collectAsState()
     val notice by viewModel.notice.collectAsState()
     val subjectBlind by viewModel.subjectBlind.collectAsState()
+    val ownedNodes by viewModel.ownedNodes.collectAsState()
+    val devicesUnsupported by viewModel.devicesUnsupported.collectAsState()
+    val labelling by viewModel.labelling.collectAsState()
+    val labelRefusal by viewModel.labelRefusal.collectAsState()
+    val release by viewModel.release.collectAsState()
 
     var deviceCode by remember { mutableStateOf("") }
+    // The name being typed for the device in [labelling]; reset when the editor moves.
+    var labelDraft by remember(labelling) {
+        mutableStateOf(occurrences.firstOrNull { it.occurrenceKeyId == labelling }?.label.orEmpty())
+    }
+
+    // Test automation: /input reaches the device-name field through this sink.
+    val textInputRequest by TestAutomation.textInputRequests.collectAsState()
+    rememberInputSinks("input_identity_device_label")
+    LaunchedEffect(textInputRequest) {
+        textInputRequest?.let { request ->
+            when (request.testTag) {
+                "input_identity_device_label" -> {
+                    labelDraft = if (request.clearFirst) request.text else labelDraft + request.text
+                    TestAutomation.clearTextInputRequest()
+                }
+            }
+        }
+    }
     var pendingRevoke by remember { mutableStateOf<String?>(null) }
     // Portable software identity occurrence + associate-existing-fedID state.
     var portableDir by remember { mutableStateOf("") }
@@ -214,6 +246,24 @@ fun IdentityManagementScreen(
                 }
             }
 
+            // ── A node too old for 0.5.216's device routes ───────────────────
+            // Said, rather than shown as an empty list or a button that 404s.
+            if (devicesUnsupported) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        localizedString("mobile.identity_devices_node_too_old"),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(10.dp).testable("identity_devices_too_old"),
+                    )
+                }
+            }
+
             // ── Device roster ─────────────────────────────────────────────────
             Spacer(Modifier.height(16.dp))
             Text(
@@ -257,13 +307,36 @@ fun IdentityManagementScreen(
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Column(modifier = Modifier.weight(1f)) {
+                                    occ.label?.let { name ->
+                                        Text(
+                                            name,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            modifier = Modifier.testable("identity_label_${occ.occurrenceKeyId}", name),
+                                        )
+                                    }
                                     Text(
                                         truncMid(occ.occurrenceKeyId),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        fontSize = if (occ.label != null) 11.sp else 13.sp,
+                                        fontWeight = if (occ.label != null) FontWeight.Normal else FontWeight.Bold,
                                         fontFamily = FontFamily.Monospace,
                                     )
                                     Row(verticalAlignment = Alignment.CenterVertically) {
+                                        if (occ.revoked == true) {
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = MaterialTheme.colorScheme.errorContainer,
+                                                modifier = Modifier.testable("identity_revoked_${occ.occurrenceKeyId}"),
+                                            ) {
+                                                Text(
+                                                    localizedString("mobile.identity_revoked_badge"),
+                                                    fontSize = 10.sp,
+                                                    color = MaterialTheme.colorScheme.onErrorContainer,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp),
+                                                )
+                                            }
+                                            Spacer(Modifier.width(8.dp))
+                                        }
                                         Text(
                                             occ.deviceClass,
                                             fontSize = 11.sp,
@@ -292,20 +365,119 @@ fun IdentityManagementScreen(
                                         )
                                     }
                                 }
-                                OutlinedButton(
-                                    onClick = { pendingRevoke = occ.occurrenceKeyId },
-                                    enabled = !busy,
-                                    modifier = Modifier.testableClickable("btn_identity_revoke_${occ.occurrenceKeyId}") {
-                                        pendingRevoke = occ.occurrenceKeyId
-                                    },
-                                ) {
-                                    Text(localizedString("mobile.identity_revoke"))
+                                // Naming needs a 0.5.216 node; an older one gets the
+                                // card above instead of a button that 404s.
+                                if (!devicesUnsupported) {
+                                    TextButton(
+                                        onClick = { viewModel.startLabel(occ.occurrenceKeyId) },
+                                        enabled = !busy,
+                                        modifier = Modifier.testableClickable("btn_identity_label_${occ.occurrenceKeyId}") {
+                                            viewModel.startLabel(occ.occurrenceKeyId)
+                                        },
+                                    ) {
+                                        Text(localizedString("mobile.identity_label_button"))
+                                    }
+                                }
+                                // A revoked device is history: nothing left to revoke.
+                                if (occ.revoked != true) {
+                                    OutlinedButton(
+                                        onClick = { pendingRevoke = occ.occurrenceKeyId },
+                                        enabled = !busy,
+                                        modifier = Modifier.testableClickable("btn_identity_revoke_${occ.occurrenceKeyId}") {
+                                            pendingRevoke = occ.occurrenceKeyId
+                                        },
+                                    ) {
+                                        Text(localizedString("mobile.identity_revoke"))
+                                    }
+                                }
+                            }
+                        }
+                        if (labelling == occ.occurrenceKeyId) {
+                            DeviceLabelEditor(
+                                draft = labelDraft,
+                                onDraft = { labelDraft = it },
+                                busy = busy,
+                                refusal = labelRefusal,
+                                onSave = { viewModel.saveLabel(labelDraft) },
+                                onCancel = { viewModel.cancelLabel() },
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── Your nodes (release) ──────────────────────────────────────────
+            Spacer(Modifier.height(20.dp))
+            Text(
+                localizedString("mobile.identity_nodes_title"),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                localizedString("mobile.identity_nodes_desc"),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (ownedNodes.isEmpty()) {
+                Text(
+                    localizedString("mobile.identity_nodes_empty"),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("identity_nodes_empty"),
+                )
+            } else {
+                Column(modifier = Modifier.fillMaxWidth().testable("identity_node_list")) {
+                    ownedNodes.forEach { node ->
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 8.dp)
+                                .testable("identity_node_row_${node.keyId}"),
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        truncMid(node.keyId),
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace,
+                                    )
+                                    if (node.isSelf) {
+                                        Text(
+                                            localizedString("mobile.identity_node_this"),
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
+                                    }
+                                }
+                                if (!devicesUnsupported) {
+                                    OutlinedButton(
+                                        onClick = { viewModel.askRelease(node.keyId) },
+                                        enabled = release !is ReleaseState.Working,
+                                        modifier = Modifier.testableClickable("btn_identity_release_${node.keyId}") {
+                                            viewModel.askRelease(node.keyId)
+                                        },
+                                    ) {
+                                        Text(localizedString("mobile.identity_release_button"))
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            ReleaseOutcome(
+                state = release,
+                onForce = { viewModel.askForceRelease() },
+                onDismiss = { viewModel.cancelRelease() },
+            )
 
             // ── Add a device (on the primary) ─────────────────────────────────
             Spacer(Modifier.height(20.dp))
@@ -689,6 +861,40 @@ fun IdentityManagementScreen(
         }
     }
 
+    // ── Release confirmations ─────────────────────────────────────────────────
+    // The first names the node, what changes, and who signs. The second is only
+    // reachable after the node refused because it is the one you are talking
+    // to, and names what that costs: this session.
+    when (val r = release) {
+        is ReleaseState.Confirming -> ConfirmSheet(
+            title = localizedString("mobile.identity_release_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_signer"), localizedString("mobile.identity_release_signer")),
+            ),
+            confirmLabel = localizedString("mobile.identity_release_button"),
+            onConfirm = { viewModel.confirmRelease() },
+            onDismiss = { viewModel.cancelRelease() },
+            destructive = true,
+            tagPrefix = "release",
+        )
+        is ReleaseState.ConfirmingForce -> ConfirmSheet(
+            title = localizedString("mobile.identity_release_force_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_session"), localizedString("mobile.identity_release_session_ends")),
+            ),
+            confirmLabel = localizedString("mobile.identity_release_force_confirm"),
+            onConfirm = { viewModel.confirmForceRelease() },
+            onDismiss = { viewModel.cancelRelease() },
+            destructive = true,
+            tagPrefix = "release_force",
+        )
+        else -> Unit
+    }
+
     // ── Revoke confirmation dialog ────────────────────────────────────────────
     pendingRevoke?.let { keyId ->
         AlertDialog(
@@ -723,6 +929,141 @@ fun IdentityManagementScreen(
                 }
             },
         )
+    }
+}
+
+/**
+ * A node refusal in the reader's language: the bundle's text for the node's
+ * `reason_id`, else the node's own English, else the status. Never a raw id.
+ */
+@Composable
+private fun refusalText(r: NodeRefusal): String {
+    val id = r.reasonId
+    if (id != null) {
+        val text = localizedString(id)
+        if (text != id && text.isNotBlank()) return text
+    }
+    return r.detail ?: id ?: localizedString("mobile.identity_refusal_status", "status", r.statusCode.toString())
+}
+
+/** The name editor for one device: a field, save, cancel, and the node's refusal by name. */
+@Composable
+private fun DeviceLabelEditor(
+    draft: String,
+    onDraft: (String) -> Unit,
+    busy: Boolean,
+    refusal: NodeRefusal?,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+) {
+    val focus = remember { FocusRequester() }
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).testable("identity_label_editor"),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            OutlinedTextField(
+                value = draft,
+                onValueChange = onDraft,
+                singleLine = true,
+                enabled = !busy,
+                label = { Text(localizedString("mobile.identity_label_field")) },
+                supportingText = { Text(localizedString("mobile.identity_label_hint")) },
+                // Clicking focuses it; /input reaches it through the sink the
+                // screen declares (rememberInputSinks).
+                modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                    .testableWithHandler("input_identity_device_label") { focus.requestFocus() },
+            )
+            refusal?.let {
+                Text(
+                    refusalText(it),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testable("identity_label_refusal", it.reasonId),
+                )
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = onSave,
+                    enabled = !busy && draft.isNotBlank(),
+                    modifier = Modifier.testableClickable("btn_identity_label_save") {
+                        if (!busy && draft.isNotBlank()) onSave()
+                    },
+                ) {
+                    Text(localizedString("mobile.identity_label_save"))
+                }
+                Spacer(Modifier.width(8.dp))
+                TextButton(
+                    onClick = onCancel,
+                    modifier = Modifier.testableClickable("btn_identity_label_cancel") { onCancel() },
+                ) {
+                    Text(localizedString("mobile.common_cancel"))
+                }
+            }
+        }
+    }
+}
+
+/**
+ * What a release came to: done, refused by name, or — for the node you are
+ * talking to — why it was refused and the one way on, which leads to a SECOND
+ * confirm, never straight to a forced release.
+ */
+@Composable
+private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onDismiss: () -> Unit) {
+    val (text, isError) = when (state) {
+        is ReleaseState.Released -> if (state.releasedSelf) {
+            localizedString("mobile.identity_released_self") to false
+        } else {
+            localizedString("mobile.identity_released", "node", truncMid(state.nodeKeyId)) to false
+        }
+        is ReleaseState.NeedsForce -> localizedString("mobile.identity_release_self_body") to true
+        is ReleaseState.Refused -> refusalText(state.refusal) to true
+        is ReleaseState.Working -> localizedString("mobile.common_loading") to false
+        else -> return
+    }
+    Spacer(Modifier.height(8.dp))
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.secondaryContainer,
+        modifier = Modifier.fillMaxWidth().testable("identity_release_outcome"),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(10.dp)) {
+            if (state is ReleaseState.NeedsForce) {
+                Text(
+                    localizedString("mobile.identity_release_self_title"),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+                Spacer(Modifier.height(4.dp))
+            }
+            Text(
+                text,
+                fontSize = 12.sp,
+                color = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSecondaryContainer,
+                modifier = Modifier.testable("identity_release_message", (state as? ReleaseState.Refused)?.refusal?.reasonId),
+            )
+            if (state !is ReleaseState.Working) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (state is ReleaseState.NeedsForce) {
+                        TextButton(
+                            onClick = onForce,
+                            modifier = Modifier.testableClickable("btn_identity_release_force") { onForce() },
+                        ) {
+                            Text(localizedString("mobile.identity_release_self_offer"))
+                        }
+                    }
+                    TextButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.testableClickable("btn_identity_release_dismiss") { onDismiss() },
+                    ) {
+                        Text(localizedString("mobile.common_dismiss"))
+                    }
+                }
+            }
+        }
     }
 }
 
