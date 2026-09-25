@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Vifaa na funguo",
       "everything_i_shared": "Kila kitu nilichoshiriki",
+      "this_agent": "Wakala huyu",
       "this_node": "Nodi hii",
       "someone_i_trust": "Mtu ninayemwamini",
       "help": "Msaada"
@@ -3237,6 +3238,7 @@
       "decisions": "Hakuna la kuamua hapa bado.",
       "record": "Hakuna kilichotokea katika duara hii bado.",
       "files_agent": "Hakuna chochote hapa bado. Hapa ndipo kila kitu huanzia, na hakuna kinachotangazwa hapa.",
+      "chats_agent": "Hakuna wakala kwenye nodi hii, kwa hivyo hakuna mtu hapa wa kuzungumza naye. Sanidi mmoja na mazungumzo yako naye yatakuwa hapa.",
       "decisions_agent": "Hakuna mtu hapa wa kuamua naye. Maamuzi huanzia katika Familia.",
       "decisions_family": "Familia huamua kwa kuzungumza. Hakuna la kupigia kura hapa."
     },

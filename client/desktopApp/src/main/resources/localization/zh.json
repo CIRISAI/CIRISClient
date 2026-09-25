@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "设备与密钥",
       "everything_i_shared": "我分享的所有内容",
+      "this_agent": "此智能体",
       "this_node": "此节点",
       "someone_i_trust": "我信任的人",
       "help": "帮助"
@@ -3237,6 +3238,7 @@
       "decisions": "此处暂无待决事项。",
       "record": "此圈子中还没有发生任何事。",
       "files_agent": "这里还没有内容。一切都从这里开始，且这里的内容不会被公开。",
+      "chats_agent": "此节点上没有智能体，因此这里没有可以交流的对象。设置一个后，您与它的对话记录将显示在这里。",
       "decisions_agent": "这里没有可以共同决策的人。决策从“家族”开始。",
       "decisions_family": "家族通过交谈做出决策。这里没有需要投票的事项。"
     },

@@ -132,8 +132,8 @@ sealed class NavSurface(
      * Config, Skills — are agent configuration and have nothing to configure on
      * a bare node. This surface is the account, not the agent.
      *
-     * PRESENT IN BOTH MODES, and that is not incidental — `narrowingIsPurely-
-     * Subtractive` pins that the node nav is a SUBSET of the agent nav, so a
+     * PRESENT IN BOTH MODES, and that is not incidental — `theNodeBuildIsA-
+     * SubsetOfTheAgentBuild` pins that the node nav is a SUBSET of the agent nav, so a
      * surface that appears only when narrowed is a defect by this repo's own
      * rule. The first cut of this fix added it on the node build alone and that
      * test caught it. Labelled "Account" rather than "Settings" so the agent

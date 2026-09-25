@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Cihazlar ve anahtarlar",
       "everything_i_shared": "Paylaştığım her şey",
+      "this_agent": "Bu ajan",
       "this_node": "Bu düğüm",
       "someone_i_trust": "Güvendiğim biri",
       "help": "Yardım"
@@ -3237,6 +3238,7 @@
       "decisions": "Burada henüz karar verilecek bir şey yok.",
       "record": "Bu çevrede henüz bir şey olmadı.",
       "files_agent": "Burada henüz bir şey yok. Her şey buradan başlar ve burada hiçbir şey ilan edilmez.",
+      "chats_agent": "Bu düğümde bir ajan yok, bu yüzden burada konuşacak kimse yok. Bir ajan kurun; onunla olan sohbetleriniz burada olacak.",
       "decisions_agent": "Burada birlikte karar verecek kimse yok. Kararlar Aile'de başlar.",
       "decisions_family": "Bir aile konuşarak karar verir. Burada oylanacak bir şey yok."
     },

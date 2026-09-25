@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Perangkat & kunci",
       "everything_i_shared": "Semua yang saya bagikan",
+      "this_agent": "Agen ini",
       "this_node": "Node ini",
       "someone_i_trust": "Seseorang yang saya percayai",
       "help": "Bantuan"
@@ -3237,6 +3238,7 @@
       "decisions": "Belum ada yang perlu diputuskan di sini.",
       "record": "Belum ada yang terjadi di lingkaran ini.",
       "files_agent": "Belum ada apa pun di sini. Di sinilah semuanya dimulai, dan tidak ada yang diumumkan ke luar.",
+      "chats_agent": "Tidak ada agen di node ini, sehingga tidak ada siapa pun di sini untuk diajak bicara. Siapkan satu, dan percakapan Anda dengannya akan ada di sini.",
       "decisions_agent": "Tidak ada siapa pun di sini untuk memutuskan bersama. Keputusan dimulai di Keluarga.",
       "decisions_family": "Keluarga memutuskan dengan berbicara. Tidak ada yang perlu dipungut suara di sini."
     },

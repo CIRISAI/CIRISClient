@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Thiết bị & khóa",
       "everything_i_shared": "Mọi thứ tôi đã chia sẻ",
+      "this_agent": "Tác nhân này",
       "this_node": "Nút này",
       "someone_i_trust": "Người tôi tin cậy",
       "help": "Trợ giúp"
@@ -3237,6 +3238,7 @@
       "decisions": "Chưa có gì để quyết định ở đây.",
       "record": "Chưa có gì xảy ra trong vòng này.",
       "files_agent": "Chưa có gì ở đây. Đây là nơi mọi thứ bắt đầu, và không gì ở đây được công bố.",
+      "chats_agent": "Không có tác nhân nào trên nút này, nên không có ai ở đây để nói chuyện. Hãy thiết lập một tác nhân và các cuộc trò chuyện của bạn với nó sẽ ở đây.",
       "decisions_agent": "Không có ai ở đây để cùng quyết định. Quyết định bắt đầu từ Gia đình.",
       "decisions_family": "Một gia đình quyết định bằng cách trò chuyện. Không có gì để bỏ phiếu ở đây."
     },

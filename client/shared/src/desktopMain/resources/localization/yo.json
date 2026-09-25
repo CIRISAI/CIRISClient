@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Àwọn Ẹ̀rọ àti Kọ́kọ́rọ́",
       "everything_i_shared": "Ohun gbogbo tí mo pín",
+      "this_agent": "Aṣojú yìí",
       "this_node": "Nódù yìí",
       "someone_i_trust": "Ẹnìkan tí mo gbẹ́kẹ̀lé",
       "help": "Ìrànlọ́wọ́"
@@ -3237,6 +3238,7 @@
       "decisions": "Kò sí ohunkóhun láti pinnu níbí síbẹ̀.",
       "record": "Kò sí ohunkóhun tí ó ṣẹlẹ̀ nínú àyíká yìí síbẹ̀.",
       "files_agent": "Kò sí ohunkóhun níbí síbẹ̀. Níbí ni gbogbo ohun ti ń bẹ̀rẹ̀, kò sì sí ohun tí a ń kéde níbí.",
+      "chats_agent": "Kò sí aṣojú lórí nódù yìí, nítorí náà kò sí ẹnikẹ́ni níbí láti bá sọ̀rọ̀. Ṣètò ọ̀kan kí àwọn ìjíròrò rẹ pẹ̀lú rẹ̀ lè wà níbí.",
       "decisions_agent": "Kò sí ẹnikẹ́ni níbí láti pinnu pẹ̀lú. Àwọn ìpinnu ń bẹ̀rẹ̀ ní Ìdílé.",
       "decisions_family": "Ìdílé ń pinnu nípasẹ̀ ìsọ̀rọ̀. Kò sí ohunkóhun láti dìbò lé níbí."
     },

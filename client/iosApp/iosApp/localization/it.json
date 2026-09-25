@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Dispositivi e chiavi",
       "everything_i_shared": "Tutto ciò che ho condiviso",
+      "this_agent": "Questo agente",
       "this_node": "Questo nodo",
       "someone_i_trust": "Qualcuno di cui mi fido",
       "help": "Aiuto"
@@ -3237,6 +3238,7 @@
       "decisions": "Ancora nulla da decidere qui.",
       "record": "Non è ancora successo nulla in questo cerchio.",
       "files_agent": "Ancora nulla qui. È qui che tutto inizia, e nulla qui viene pubblicizzato.",
+      "chats_agent": "Non c'è alcun agente su questo nodo, quindi non c'è nessuno con cui parlare qui. Configurane uno e le tue conversazioni con lui saranno qui.",
       "decisions_agent": "Non c'è nessuno qui con cui decidere. Le decisioni iniziano in Famiglia.",
       "decisions_family": "Una famiglia decide parlando. Non c'è nulla su cui votare qui."
     },

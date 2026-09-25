@@ -4957,7 +4957,7 @@ fun CIRISApp(
                         ?.let { sc -> ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments.firstOrNull { it.id == sc.id } }
                         ?: activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(it) },
                     rail = {
-                        for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments) {
+                        for (inst in ai.ciris.mobile.shared.ui.nav.CirclesNav.instruments(hasAgentNow)) {
                             ai.ciris.mobile.shared.ui.shell.InstrumentRow(
                                 label = localizedString(inst.labelKey),
                                 glyph = inst.glyph,

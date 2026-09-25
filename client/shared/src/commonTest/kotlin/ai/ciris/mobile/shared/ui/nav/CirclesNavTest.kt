@@ -67,6 +67,18 @@ class CirclesNavTest {
         assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES))
     }
 
+    /**
+     * WITH NO AGENT, JUST ME › CHATS IS EMPTY FOR A REASON, AND IT IS NOT
+     * "no conversations yet". There is nobody to converse with; saying
+     * otherwise tells a node owner to wait for something that is not coming.
+     */
+    @Test
+    fun justMeChatsWithNoAgentSaysThereIsNoAgent() {
+        assertTrue(CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false).isEmpty())
+        assertEquals("nav.empty.chats_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.CHATS))
+        assertEquals("nav.empty.chats", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.CHATS))
+    }
+
     @Test
     fun theNodeBuildIsASubsetOfTheAgentBuild() {
         for (c in CirclesNav.circles) for (t in Tab.entries) {
@@ -75,16 +87,65 @@ class CirclesNavTest {
             assertTrue(agent.containsAll(node), "${c.id} › ${t.id}: the node build offers something the agent build does not")
         }
         for (i in CirclesNav.instruments) assertTrue(i.surfaces(true).containsAll(i.surfaces(false)), i.id)
+        assertTrue(CirclesNav.instruments(true).containsAll(CirclesNav.instruments(false)))
         assertFalse(NavSurface.Interact in CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false), "Interact offered against a bare node")
         assertTrue(NavSurface.Interact in CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = true))
     }
 
     @Test
     fun aBareNodeCanStillReachAccountAndThereforeSignOut() {
-        val inst = CirclesNav.instrumentOf(NavSurface.Account)
-        assertNotNull(inst)
-        assertTrue(NavSurface.Account in inst.surfaces(hasAgent = false))
-        assertEquals("nav_instrument_devices_keys", inst.tag)
+        for (s in listOf(NavSurface.Account, NavSurface.AgentSettings)) {
+            val inst = CirclesNav.instrumentOf(s)
+            assertNotNull(inst, s.id)
+            assertTrue(s in inst.surfaces(hasAgent = false), "${s.id}: a bare node cannot reach Settings, so cannot sign out")
+            assertEquals("nav_instrument_devices_keys", inst.tag)
+            assertTrue(inst in CirclesNav.instruments(hasAgent = false), "${s.id}: its instrument is not offered on a bare node")
+        }
+    }
+
+    /**
+     * THIS AGENT IS THE BRAIN; THIS NODE IS THE SUBSTRATE (CC 4.4.3.4.3:
+     * `agency:*` vs `infra:*`). The split is also the host split, so every
+     * This-agent row calls routes only the agent serves and the whole
+     * instrument goes with the agent — while This node keeps every row on a
+     * bare node, Memory included, because the node serves `/v1/memory/stats`, `timeline` and `query`.
+     */
+    @Test
+    fun thisAgentIsTheBrainAndGoesWithIt() {
+        val agent = CirclesNav.instruments.single { it.id == "this-agent" }
+        assertEquals("nav_instrument_this_agent", agent.tag)
+        assertEquals(
+            setOf(
+                NavSurface.LLMSettings, NavSurface.Adapters, NavSurface.Services, NavSurface.Telemetry,
+                NavSurface.Runtime, NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler,
+                NavSurface.Tools, NavSurface.Skills,
+            ),
+            agent.surfaces.toSet(),
+        )
+        for (s in agent.surfaces) assertTrue(CirclesNav.isAgentOnly(s), "${s.id} calls only agent routes and is offered to a bare node")
+        assertTrue(agent.isEmpty(hasAgent = false))
+        assertFalse(agent in CirclesNav.instruments(hasAgent = false), "an empty This agent is offered to a bare node")
+        assertTrue(agent in CirclesNav.instruments(hasAgent = true))
+
+        val node = CirclesNav.instruments.single { it.id == "this-node" }
+        assertEquals(
+            setOf(
+                NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
+                NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
+            ),
+            node.surfaces.toSet(),
+        )
+        assertEquals(node.surfaces, node.surfaces(hasAgent = false), "This node hides something the node itself serves")
+    }
+
+    /** The four the CSDs caught offered to a bare node, and the one caught hidden from it. */
+    @Test
+    fun theAgentOnlyFlagsFollowTheRoutes() {
+        for (s in listOf(NavSurface.Adapters, NavSurface.Services, NavSurface.Runtime, NavSurface.Telemetry, NavSurface.WiseAuthority)) {
+            assertTrue(CirclesNav.isAgentOnly(s), "${s.id}: every route it calls is the agent's")
+        }
+        assertFalse(CirclesNav.isAgentOnly(NavSurface.Memory), "memory: the node serves /v1/memory/stats|timeline|query")
+        assertFalse(CirclesNav.isAgentOnly(NavSurface.GraphMemory), "graph-memory: same store as memory")
     }
 
     @Test
@@ -129,7 +190,7 @@ class CirclesNavTest {
         // How the machine runs is not who you talk to.
         for (s in listOf(NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler)) {
             assertNull(CirclesNav.tabOf(s), "${s.id} is in a circle tab")
-            assertEquals("this-node", CirclesNav.instrumentOf(s)?.id, s.id)
+            assertEquals("this-agent", CirclesNav.instrumentOf(s)?.id, s.id)
         }
     }
 
@@ -158,9 +219,10 @@ class CirclesNavTest {
     fun settingsLivesUnderThisDeviceOnEveryBuild() {
         assertNull(CirclesNav.tabOf(NavSurface.AgentSettings))
         val inst = CirclesNav.instrumentOf(NavSurface.AgentSettings)
-        assertEquals("this-node", inst?.id)
+        assertEquals("devices-keys", inst?.id)
         assertTrue(NavSurface.AgentSettings in inst!!.surfaces(hasAgent = false), "a node build cannot reach Settings")
-        assertFalse(NavSurface.LLMSettings in inst.surfaces(hasAgent = false), "a node build has no model to configure")
+        assertEquals("devices-keys", CirclesNav.instrumentOf(NavSurface.ClientInterface)?.id)
+        assertFalse(NavSurface.LLMSettings in CirclesNav.instrumentOf(NavSurface.LLMSettings)!!.surfaces(hasAgent = false), "a node build has no model to configure")
     }
 
     @Test

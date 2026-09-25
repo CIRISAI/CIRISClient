@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Geräte & Schlüssel",
       "everything_i_shared": "Alles, was ich geteilt habe",
+      "this_agent": "Dieser Agent",
       "this_node": "Dieser Knoten",
       "someone_i_trust": "Jemand, dem ich vertraue",
       "help": "Hilfe"
@@ -3237,6 +3238,7 @@
       "decisions": "Hier gibt es noch nichts zu entscheiden.",
       "record": "In diesem Kreis ist noch nichts passiert.",
       "files_agent": "Noch nichts hier. Hier beginnt alles, und nichts davon wird angekündigt.",
+      "chats_agent": "Dieser Knoten hat keinen Agenten, daher ist hier niemand, mit dem Sie sprechen könnten. Richten Sie einen ein, und Ihre Unterhaltungen mit ihm werden hier erscheinen.",
       "decisions_agent": "Hier ist niemand, mit dem Sie entscheiden könnten. Entscheidungen beginnen in Familie.",
       "decisions_family": "Eine Familie entscheidet durch Gespräche. Hier gibt es nichts, worüber abgestimmt werden könnte."
     },

@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Na'urori da maɓallai",
       "everything_i_shared": "Duk abin da na raba",
+      "this_agent": "Wannan wakili",
       "this_node": "Wannan kumburi",
       "someone_i_trust": "Wani da nake amincewa da shi",
       "help": "Taimako"
@@ -3237,6 +3238,7 @@
       "decisions": "Babu abin da za a yanke shawara a nan tukuna.",
       "record": "Babu abin da ya faru a wannan da'ira tukuna.",
       "files_agent": "Babu komai a nan tukuna. Nan ne duk abu yake farawa, kuma babu abin da ake sanarwa a nan.",
+      "chats_agent": "Babu wakili a wannan kumburi, don haka babu wani a nan da za ku yi magana da shi. Ku kafa ɗaya kuma tattaunawar ku da shi za ta kasance a nan.",
       "decisions_agent": "Babu wani a nan da za ku yanke shawara tare da shi. Yanke shawara yana farawa a Iyali.",
       "decisions_family": "Iyali yana yanke shawara ta hanyar tattaunawa. Babu abin da za a kada kuri'a a kai a nan."
     },

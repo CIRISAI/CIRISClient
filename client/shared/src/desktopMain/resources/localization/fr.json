@@ -3224,6 +3224,7 @@
     "instrument": {
       "devices_keys": "Appareils et clés",
       "everything_i_shared": "Tout ce que j'ai partagé",
+      "this_agent": "Cet agent",
       "this_node": "Ce nœud",
       "someone_i_trust": "Quelqu'un en qui j'ai confiance",
       "help": "Aide"
@@ -3238,6 +3239,7 @@
       "decisions": "Rien à décider ici pour l'instant.",
       "record": "Rien ne s'est encore passé dans ce cercle.",
       "files_agent": "Rien ici pour l'instant. C'est ici que tout commence, et rien ici n'est annoncé.",
+      "chats_agent": "Il n'y a aucun agent sur ce nœud, il n'y a donc personne ici à qui parler. Configurez-en un et vos conversations avec lui apparaîtront ici.",
       "decisions_agent": "Il n'y a personne ici avec qui décider. Les décisions commencent en Famille."
     },
     "my_things": "Mes affaires",

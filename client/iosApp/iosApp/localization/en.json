@@ -3268,6 +3268,7 @@
     "instrument": {
       "devices_keys": "Devices & keys",
       "everything_i_shared": "Everything I shared",
+      "this_agent": "This agent",
       "this_node": "This node",
       "someone_i_trust": "Someone I trust",
       "help": "Help"
@@ -3281,6 +3282,7 @@
       "decisions": "Nothing to decide here yet.",
       "record": "Nothing has happened in this circle yet.",
       "files_agent": "Nothing here yet. This is where everything starts, and nothing here is advertised.",
+      "chats_agent": "There is no agent on this node, so there is nobody here to talk to. Set one up and your conversations with it will be here.",
       "decisions_agent": "There is nobody here to decide with. Decisions start in Family.",
       "decisions_family": "A family decides by talking. There is nothing to vote on here."
     },

@@ -17,7 +17,7 @@ DERIVED, NOT TRANSCRIBED. Everything here comes out of the client's own sources:
     EpistemicNav.kt      object <Name> : NavSurface(id = "<surface-id>", …)
     CIRISApp.kt          NavSurface.<Name> -> Screen.<Screen>
 
-THE SHELL (locked spec, wave 1). Five circles, seven tabs, five instruments —
+THE SHELL (locked spec, wave 1). Five circles, seven tabs, six instruments —
 ONE tree. A surface in a tab is reached by its circle, then its tab, then its
 row; a surface under an instrument by My things, the instrument, then its row.
 A tab holding exactly ONE card shows that card directly, so its chain ends on
@@ -138,9 +138,17 @@ def _instruments(tree_src: str) -> list[dict]:
         surfaces = re.findall(r"NavSurface\.(\w+)", lists[0]) if lists else []
         agent_only = re.findall(r"NavSurface\.(\w+)", (re.search(r"agentOnly\s*=\s*setOf\((.*?)\)", body, re.S) or [None, ""])[1]) \
             if "agentOnly" in body else []
+        # `requiresAgent = true` — the whole instrument goes with the agent (This agent).
+        if re.search(r"requiresAgent\s*=\s*true", body):
+            agent_only = list(surfaces)
         out.append({"id": m.group(1), "surfaces": surfaces, "agent_only": agent_only})
     if not out:
         raise ValueError("no Instrument(...) parsed from CirclesNav.kt — the parser is wrong, not the tree")
+    # A comment between `Instrument(` and its id hid a whole instrument once,
+    # and its surfaces simply vanished from the map. Every construction must parse.
+    declared = len(re.findall(r"\n\s*Instrument\(", tree_src))
+    if declared != len(out):
+        raise ValueError(f"{declared} Instrument(...) in CirclesNav.kt but {len(out)} parsed — the parser is wrong, not the tree")
     return out
 
 
