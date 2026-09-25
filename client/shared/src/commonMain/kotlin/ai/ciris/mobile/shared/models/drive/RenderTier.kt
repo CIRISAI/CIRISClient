@@ -2,10 +2,10 @@ package ai.ciris.mobile.shared.models.drive
 
 /**
  * The receiver's media policy: which sniffed formats are Tier A here, and
- * their caps. [RECOMMENDED] is CC 5.3.2.6's recommended table as "The Media
- * Edge" brief (2026-09-19, §3) sets it. The constitution makes the table
+ * their caps. [RECOMMENDED] is CC 5.3.2.6's recommended table with the caps
+ * in `FSD/MEDIA_EDGE.md` §3. The constitution makes the table
  * recommended, not normative, and a node may narrow it. When the node
- * publishes its own (`GET /v1/media/policy`, CIRISServer#615 §1 /
+ * publishes its own (`GET /v1/media/policy`, CIRISServer#643 /
  * CIRISEdge#638 item 5), that value replaces this one. The client must not
  * widen it.
  */
@@ -40,13 +40,13 @@ data class MediaPolicy(
  * `text/plain`.
  *
  * The client renders only Tier A `text/plain` itself. Tier A images, audio and
- * video render from the node's rendition. The brief's rule is that a client
+ * video render from the node's rendition. `FSD/MEDIA_EDGE.md` §7's rule is that a client
  * renders only bytes produced by a memory-safe encoder we control. CIRISServer
  * has not built that pipeline yet (#614), so those formats are named as
  * waiting, not decoded here.
  *
  * Not done here: full-SHA verification (CC 5.3.2.5). Neither `/v1/drive` nor
- * `/v1/files/{id}` carries a digest yet, so there is nothing to verify against.
+ * `/v1/files/{id}` carries a digest yet (CIRISServer#641), so there is nothing to verify against.
  */
 object RenderTier {
 
@@ -121,7 +121,7 @@ object RenderTier {
 
     /**
      * The essence the leading bytes show: a masked-prefix table plus the
-     * `ftyp` brand, the brief's §4 step 2. No libmagic. Unknown binary is
+     * `ftyp` brand, `FSD/MEDIA_EDGE.md` §4 step 2. No libmagic. Unknown binary is
      * `application/octet-stream`.
      */
     fun sniff(bytes: ByteArray): String {
@@ -223,7 +223,7 @@ object RenderTier {
         for (c in text) append(BIDI_MARKS[c] ?: c.toString())
     }
 
-    /** The brief's sniff window (§4 step 2: "the first 2 KB"). */
+    /** `FSD/MEDIA_EDGE.md` §4 step 2: "the first 2 KB". */
     private const val SNIFF_BYTES = 2048
     private const val ZIP_EOCD_WINDOW = 65_536 + 22
 

@@ -100,7 +100,7 @@ works from the bytes:
 4. Apply the policy table.
 
 The table is `MediaPolicy.RECOMMENDED`: the CC 5.3.2.6 recommended set, with
-the caps from "The Media Edge" brief (2026-09-19, §3). A node may narrow it
+the caps from [`FSD/MEDIA_EDGE.md`](../MEDIA_EDGE.md) §3, which also records what is still missing (§8). A node may narrow it
 and the client must not widen it. When the node publishes
 `GET /v1/media/policy`, that value replaces the compiled-in one.
 
@@ -108,7 +108,7 @@ and the client must not widen it. When the node publishes
 |---|---|---|
 | `text/plain`, valid UTF-8, ≤ 1 MB | the text, with every bidi control shown as a mark (`⟨RLO⟩`) | yes |
 | `text/plain`, not UTF-8 | "not shown", no guessed rendering | yes |
-| Tier A image / audio / video | **waiting for the node's rendition**: a client renders only bytes a memory-safe encoder we control produced (brief §7), and CIRISServer#614 has not built it | yes |
+| Tier A image / audio / video | **waiting for the node's rendition**: a client renders only bytes a memory-safe encoder we control produced (MEDIA_EDGE §7), and CIRISServer#614 has not built it | yes |
 | PDF, Tier B raw (HEIC, AVIF, WebM, MOV, Ogg, FLAC, WAV), over-cap, unknown binary | no preview | yes |
 | HTML, SVG, archives, executables, scripts | refused | no if it runs code (sniffed, or by the saved name's extension) |
 | mismatch or polyglot | refused, in the error tone | **no** |
@@ -118,7 +118,7 @@ Tags: `file_preview_text`, `file_not_rendered`, `file_save_blocked`.
 **Not done: full-SHA verification (CC 5.3.2.5).** Neither `/v1/drive` nor
 `/v1/files/{id}` carries a digest, so the client has nothing to verify against.
 The client is reading its own node's plaintext, and the node opened the seal.
-Verification lands with the digest on the wire (CIRISServer#615 §2).
+Verification lands with the digest on the wire (CIRISServer#641).
 
 ## 3. Contracts (who)
 
@@ -129,8 +129,8 @@ Verification lands with the digest on the wire (CIRISServer#615 §2).
 | add a file | `POST /v1/files` | CIRISServer | live; inline cap 1 MiB, checked by the client **before** upload |
 | notes | `GET`/`POST /v1/notes` | CIRISServer | live since 0.5.215 |
 | family files | `POST /v1/files {cohort: family}` | CIRISServer | **not in production** — CIRISServer#627 |
-| the content hash on the listing | `GET /v1/drive` — **unconfirmed** | CIRISServer | blocks `building` for `receipt_dimension` and CC 5.3.2.5 verification |
-| the node's render policy | `GET /v1/media/policy` (CIRISServer#615 §1, CIRISEdge#638 item 5) | CIRISServer / CIRISEdge | **not built**; the client uses `MediaPolicy.RECOMMENDED` until it is |
+| the descriptor (digest, size, renditions, placeholder) on the listing | `GET /v1/drive`, `GET /v1/files/{id}`: **CIRISServer#641** | CIRISServer | blocks `building` for `receipt_dimension` and CC 5.3.2.5 verification |
+| the node's render policy | `GET /v1/media/policy` (CIRISServer#643, CIRISEdge#638 item 5) | CIRISServer / CIRISEdge | **not built**; the client uses `MediaPolicy.RECOMMENDED` until it is |
 | renditions (display / thumb / poster) | the ingest pipeline, CIRISServer#614; `derived_from` index (V149) | CIRISServer | **not built**; Tier A media waits on it |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
