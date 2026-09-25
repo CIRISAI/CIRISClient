@@ -311,8 +311,9 @@ def build_surfaces(has_agent: bool = True) -> dict[str, list[str]]:
     """NavSurface -> its chain, for EVERY routed surface.
 
     [build] is keyed by Screen, and a Screen two surfaces open can have one key.
-    This is keyed by surface, so both `Account` and `AgentSettings` — two rows,
-    two hops, one `Screen.Settings` — are here.
+    This is keyed by surface, so two rows that open one Screen keep two hops.
+    (The first case was Account and AgentSettings on `Screen.Settings`; Account
+    was deleted in #93.)
     """
     nav_src = NAV.read_text(encoding="utf-8")
     tree_src = TREE.read_text(encoding="utf-8")
