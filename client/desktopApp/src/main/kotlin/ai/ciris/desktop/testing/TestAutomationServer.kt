@@ -18,7 +18,6 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.awt.Rectangle
 import java.awt.Robot
-import org.jetbrains.skiko.toBufferedImage
 import java.io.ByteArrayOutputStream
 import java.util.concurrent.ConcurrentHashMap
 import javax.imageio.ImageIO
@@ -140,25 +139,60 @@ class TestAutomationServer(
     private fun captureWindow(window: java.awt.Window): Pair<java.awt.image.BufferedImage, String> {
         val layer = findSkiaLayer(window)
         if (layer != null) {
+            // THE PIXELS ARE COPIED OUT BEFORE THE BITMAP CAN GO AWAY. The first
+            // version returned the skia Bitmap from invokeAndWait and converted
+            // it afterwards, on this thread, with nothing keeping the native
+            // bitmap alive. The JVM crashed reading freed memory
+            // (EXCEPTION_ACCESS_VIOLATION in ScopedMemoryAccess.getByte,
+            // Windows leg, 2026-09-25 11:16). It was a race, so it passed on
+            // other runs. Now the copy into a Java array and the close both
+            // happen inside the one block that owns the bitmap.
             val own = runCatching {
-                var bitmap: org.jetbrains.skia.Bitmap? = null
-                javax.swing.SwingUtilities.invokeAndWait { bitmap = layer.screenshot() }
-                bitmap?.toBufferedImage()
+                var copied: java.awt.image.BufferedImage? = null
+                javax.swing.SwingUtilities.invokeAndWait {
+                    val bitmap = layer.screenshot() ?: return@invokeAndWait
+                    try {
+                        copied = copyToArgb(bitmap)
+                    } finally {
+                        bitmap.close()
+                    }
+                }
+                copied
             }.getOrNull()
-            if (own != null && own.width > 0 && own.height > 0) {
-                // skiko hands back its own pixel layout, which ImageIO's PNG
-                // writer rejects mid-file ("Index -1 out of bounds"), leaving a
-                // truncated PNG behind a success response. Redraw into plain ARGB.
-                val argb = java.awt.image.BufferedImage(own.width, own.height, java.awt.image.BufferedImage.TYPE_INT_ARGB)
-                val g = argb.createGraphics()
-                try { g.drawImage(own, 0, 0, null) } finally { g.dispose() }
-                return argb to "window"
-            }
+            if (own != null && own.width > 0 && own.height > 0) return own to "window"
         }
         println("[TestAutomation] screenshot: no readable render layer — falling back to a SCREEN capture, which may include other windows")
         raiseWindow()
         val b = window.bounds
         return robot.createScreenCapture(Rectangle(b.x, b.y, b.width, b.height)) to "screen"
+    }
+
+    /**
+     * The bitmap's pixels as a plain ARGB image on the Java heap. It is read
+     * as BGRA unpremultiplied bytes, a copy the bitmap no longer owns. Plain
+     * ARGB also suits ImageIO's PNG writer, which rejects skiko's own layout
+     * mid-file ("Index -1 out of bounds").
+     */
+    private fun copyToArgb(bitmap: org.jetbrains.skia.Bitmap): java.awt.image.BufferedImage? {
+        val w = bitmap.width
+        val h = bitmap.height
+        if (w <= 0 || h <= 0) return null
+        val info = org.jetbrains.skia.ImageInfo(
+            w, h, org.jetbrains.skia.ColorType.BGRA_8888, org.jetbrains.skia.ColorAlphaType.UNPREMUL,
+        )
+        val bytes = bitmap.readPixels(info, w * 4, 0, 0) ?: return null
+        val argb = IntArray(w * h)
+        for (i in argb.indices) {
+            val o = i * 4
+            val b = bytes[o].toInt() and 0xFF
+            val g = bytes[o + 1].toInt() and 0xFF
+            val r = bytes[o + 2].toInt() and 0xFF
+            val a = bytes[o + 3].toInt() and 0xFF
+            argb[i] = (a shl 24) or (r shl 16) or (g shl 8) or b
+        }
+        return java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB).apply {
+            setRGB(0, 0, w, h, argb, 0, w)
+        }
     }
 
     private fun findSkiaLayer(c: java.awt.Component): org.jetbrains.skiko.SkiaLayer? {
