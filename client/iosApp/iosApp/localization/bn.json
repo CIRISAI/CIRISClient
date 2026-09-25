@@ -2951,6 +2951,7 @@
     "ceremony_state_signed": "স্বাক্ষরিত",
     "ceremony_state_not_yet": "এখনও হয়নি",
     "receipt_this_node": "এই নোড — আপনি",
+    "setup_finish_unclaimed": "এই নোড দাবি না করে সম্পূর্ণ করুন",
     "verify_title": "একটি বিল্ড যাচাই করুন",
     "verify_hash_label": "বিল্ড হ্যাশ",
     "verify_button": "পরীক্ষা করুন",

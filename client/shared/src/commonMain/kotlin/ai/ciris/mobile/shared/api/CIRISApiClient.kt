@@ -1432,12 +1432,9 @@ class CIRISApiClient(
      * status, which is still a better answer than a parse exception.
      */
     private fun nodeRefusal(method: String, status: HttpStatusCode, raw: String): NodeRefusal {
-        val obj = try { Json.parseToJsonElement(raw).jsonObject } catch (_: Exception) { null }
-        val reason = obj?.get("reason_id")?.jsonPrimitive?.contentOrNull
-        val detail = obj?.get("error")?.jsonPrimitive?.contentOrNull
-            ?: obj?.get("detail")?.jsonPrimitive?.contentOrNull
-        logError(method, "status=$status reason_id=${reason ?: "<none>"} body=${raw.take(200)}")
-        return NodeRefusal(reasonId = reason, detail = detail, statusCode = status.value)
+        val refusal = NodeRefusal.fromBody(status.value, raw)
+        logError(method, "status=$status reason_id=${refusal.reasonId ?: "<none>"} body=${raw.take(200)}")
+        return refusal
     }
 
     // CONTACTS/CHAT FOLLOW THE ACTIVE NODE (codex, #464 sweep 6): these FIVE
@@ -6078,6 +6075,17 @@ class CIRISApiClient(
             val request = SdkLoginRequest(username = username, password = password)
             val response = authApi.loginV1AuthLoginPost(request)
             logDebug(method, "Response: status=${response.status}")
+
+            // STATUS BEFORE BODY (CIRISClient#70). A refusal carries
+            // `{error, reason_id}`, not a LoginResponse, so binding it threw a
+            // JsonConvertException and the person read "Token exchange failed"
+            // while the node had said exactly what was wrong — e.g.
+            // `auth.login.ambiguous_name`, which has a translation in every
+            // bundle. Throw the refusal the node typed instead.
+            if (!response.success) {
+                val raw = runCatching { response.response.bodyAsText() }.getOrDefault("")
+                throw nodeRefusal(method, response.response.status, raw)
+            }
 
             val body = response.body()
             logInfo(method, "Login successful: userId=${body.userId}, role=${body.role}")

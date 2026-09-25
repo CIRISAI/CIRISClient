@@ -392,10 +392,44 @@ fun SetupScreen(
                             // would be a second way to claim, not a retry of the
                             // first.
                             onRetryClaim = {
-                                viewModel.claimLocalNodeOwnership(
-                                    claimPinProvider = claimPinProvider,
-                                    nodeCodeProvider = nodeCodeProvider,
-                                )
+                                if (viewModel.beginFinalStep()) {
+                                    coroutineScope.launch {
+                                        try {
+                                            viewModel.claimLocalNodeOwnership(
+                                                claimPinProvider = claimPinProvider,
+                                                nodeCodeProvider = nodeCodeProvider,
+                                            )
+                                            kotlinx.coroutines.withTimeoutOrNull(90_000) {
+                                                viewModel.state.first { !it.ownershipClaim.inProgress }
+                                            }
+                                            // Setup is not complete yet — the first
+                                            // attempt stopped here on purpose — so a
+                                            // claim that lands now finishes it.
+                                            if (viewModel.state.value.ownershipClaim.claimed) {
+                                                PlatformLogger.i(TAG, "[ORDER] retry claimed — completing setup")
+                                                withContext(Dispatchers.Default) {
+                                                    viewModel.completeSetup { apiClient.completeSetup(it) }
+                                                }
+                                            }
+                                        } finally {
+                                            viewModel.endFinalStep()
+                                        }
+                                    }
+                                }
+                            },
+                            onFinishUnclaimed = {
+                                if (viewModel.beginFinalStep()) {
+                                    coroutineScope.launch {
+                                        try {
+                                            PlatformLogger.i(TAG, "[ORDER] finishing setup WITHOUT a claim, by the person's choice")
+                                            withContext(Dispatchers.Default) {
+                                                viewModel.completeSetup { apiClient.completeSetup(it) }
+                                            }
+                                        } finally {
+                                            viewModel.endFinalStep()
+                                        }
+                                    }
+                                }
                             },
                         )
                 }
@@ -519,6 +553,10 @@ fun SetupScreen(
                         // config + reload. Doing complete-first left the claim to
                         // hit a dead session → 401 → node stays unclaimed → the
                         // first-run nav loop.
+                        if (!viewModel.beginFinalStep()) {
+                            PlatformLogger.i(TAG, " Final step already running — ignoring the second press (#69)")
+                            return@NavigationButtons
+                        }
                         PlatformLogger.i(TAG, " Final step - CLAIM then COMPLETE")
                         coroutineScope.launch {
                             try {
@@ -541,6 +579,18 @@ fun SetupScreen(
                                     PlatformLogger.w(TAG, "[ORDER] settle_await TIMEOUT (90s) — proceeding; conformance will flag")
                                 }
                                 val claimed = viewModel.state.value.ownershipClaim.claimed
+                                // A CLAIM THAT DID NOT HAPPEN IS NOT A SUCCESS
+                                // (CIRISClient#68). Completing here restarted the
+                                // runtime underneath the "This node could not be
+                                // claimed" panel, so it flashed and vanished and
+                                // setup reported done. Stop on COMPLETE and let the
+                                // person choose: Retry (which finishes setup once
+                                // the claim lands) or Finish without claiming.
+                                if (!claimed && viewModel.state.value.ownershipClaim.error != null) {
+                                    PlatformLogger.i(TAG, "[ORDER] claim failed — holding on COMPLETE for the person's choice")
+                                    viewModel.nextStep()
+                                    return@launch
+                                }
                                 PlatformLogger.i(TAG, "[ORDER] settle_await released claimed=$claimed — advancing then completing")
 
                                 // 2) Advance to COMPLETE NOW — the node is owned,
@@ -569,6 +619,8 @@ fun SetupScreen(
                             } catch (e: Exception) {
                                 PlatformLogger.i(TAG, " EXCEPTION in claim/completeSetup: ${e.message}")
                                 e.printStackTrace()
+                            } finally {
+                                viewModel.endFinalStep()
                             }
                         }
                     } else {
@@ -3174,6 +3226,8 @@ private fun CompleteStep(
      * retry the self-claim — offered only for a RECOVERABLE failure.
      */
     onRetryClaim: (() -> Unit)? = null,
+    /** Complete setup with the node unclaimed — an explicit choice, never a silent default (#68). */
+    onFinishUnclaimed: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // Hold here until the LOCAL-node ownership self-claim settles (success or
@@ -3265,6 +3319,15 @@ private fun CompleteStep(
                     onRetry = if (ownershipClaim.errorRecoverable) onRetryClaim else null,
                     modifier = Modifier.testable("setup_ownership_error"),
                 )
+                if (onFinishUnclaimed != null) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    TextButton(
+                        onClick = onFinishUnclaimed,
+                        modifier = Modifier.testableClickable("btn_setup_finish_unclaimed") { onFinishUnclaimed() },
+                    ) {
+                        Text(localizedString("mobile.setup_finish_unclaimed"))
+                    }
+                }
             }
         }
 

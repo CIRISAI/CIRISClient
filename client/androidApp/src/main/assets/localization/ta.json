@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "கையொப்பமிடப்பட்டது",
     "ceremony_state_not_yet": "இன்னும் இல்லை",
     "receipt_this_node": "இந்த முனை — நீங்கள்",
+    "setup_finish_unclaimed": "இந்த நோடைக் கோராமல் நிறைவு செய்",
     "verify_title": "ஒரு பதிப்பைச் சரிபார்",
     "verify_hash_label": "பதிப்பு ஹாஷ்",
     "verify_button": "சரிபார்",

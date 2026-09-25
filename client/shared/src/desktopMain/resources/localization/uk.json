@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "підписано",
     "ceremony_state_not_yet": "ще ні",
     "receipt_this_node": "Цей вузол — ви",
+    "setup_finish_unclaimed": "Завершити без заявлення права на цей вузол",
     "verify_title": "Перевірити збірку",
     "verify_hash_label": "Хеш збірки",
     "verify_button": "Перевірити",

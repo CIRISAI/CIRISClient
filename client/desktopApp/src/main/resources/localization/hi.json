@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "हस्ताक्षरित",
     "ceremony_state_not_yet": "अभी नहीं",
     "receipt_this_node": "यह नोड — आप",
+    "setup_finish_unclaimed": "इस नोड का दावा किए बिना पूरा करें",
     "verify_title": "बिल्ड सत्यापित करें",
     "verify_hash_label": "बिल्ड हैश",
     "verify_button": "जाँच करें",

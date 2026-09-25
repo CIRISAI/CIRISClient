@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ተፈርሟል",
     "ceremony_state_not_yet": "ገና አልተፈረመም",
     "receipt_this_node": "ይህ ኖድ — እርስዎ",
+    "setup_finish_unclaimed": "ይህን ኖድ ሳይጠይቁ ይጨርሱ",
     "verify_title": "ግንባታ ማረጋገጥ",
     "verify_hash_label": "የግንባታ ሃሽ",
     "verify_button": "አረጋግጥ",
