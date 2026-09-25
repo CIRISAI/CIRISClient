@@ -1936,6 +1936,7 @@ fun CIRISApp(
                                                     secureStorage.saveAccessToken(cirisToken)
                                                         .onSuccess { PlatformLogger.i(TAG, " CIRIS token saved to secure storage") }
                                                         .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
+                                                    settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.fromProvider(result.provider))
 
                                                     // Update .env file with fresh OAuth ID token for billing
                                                     PlatformLogger.i(TAG, " Writing OAuth ID token to .env for Python billing...")
@@ -2171,6 +2172,8 @@ fun CIRISApp(
                                 currentAccessToken = collected.accessToken
                                 apiClient.setAccessToken(collected.accessToken)
                                 secureStorage.saveAccessToken(collected.accessToken)
+                                // The desktop browser hand-off is the Google flow (onGoogleSignIn).
+                                settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.GOOGLE)
                                 onTokenUpdated?.invoke(collected.accessToken)
                                 if (isFirstRun == true) {
                                     // Hand the identity to the wizard: it derives the
@@ -2245,6 +2248,7 @@ fun CIRISApp(
                                 secureStorage.saveAccessToken(cirisToken)
                                     .onSuccess { PlatformLogger.i(TAG, " CIRIS token saved to secure storage") }
                                     .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token: ${e.message}") }
+                                settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.PASSWORD)
 
                                 // Check for degraded mode first - skip WORK state wait if no LLM
                                 // THIS LOG LINE IS THE DIAGNOSIS (CIRISClient#48). It read
@@ -2733,6 +2737,7 @@ fun CIRISApp(
                                         secureStorage.saveAccessToken(token)
                                             .onSuccess { PlatformLogger.i(TAG, " Token saved to secure storage") }
                                             .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token to secure storage: ${e.message}") }
+                                        settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.fromProvider(provider))
 
                                         // Update .env file with fresh OAuth ID token for billing
                                         PlatformLogger.i(TAG, " Writing OAuth ID token to .env for Python billing...")
@@ -2785,6 +2790,7 @@ fun CIRISApp(
                                             secureStorage.saveAccessToken(token)
                                                 .onSuccess { PlatformLogger.i(TAG, " Token saved to secure storage") }
                                                 .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token to secure storage: ${e.message}") }
+                                            settingsViewModel.recordSignIn(ai.ciris.mobile.shared.models.SignInMethod.PASSWORD)
 
                                             token
                                         }
@@ -4175,6 +4181,7 @@ fun CIRISApp(
                             currentScreen = Screen.Login
                         }
                     },
+                    signInMethod = settingsViewModel.signInMethod.collectAsState().value,
                 )
             }
 

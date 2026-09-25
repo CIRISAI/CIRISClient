@@ -99,6 +99,8 @@ fun IdentityManagementScreen(
      * does nothing is worse than no button. See [ThisDeviceSignIn].
      */
     onLogout: () -> Unit,
+    /** How this device signed in, as the login flow recorded it; null = not recorded. */
+    signInMethod: ai.ciris.mobile.shared.models.SignInMethod?,
 ) {
     val identityKeyId by viewModel.identityKeyId.collectAsState()
     val occurrences by viewModel.occurrences.collectAsState()
@@ -178,7 +180,7 @@ fun IdentityManagementScreen(
                 }
             }
 
-            ThisDeviceSignIn(identityKeyId = identityKeyId, onLogout = onLogout)
+            ThisDeviceSignIn(identityKeyId = identityKeyId, signInMethod = signInMethod, onLogout = onLogout)
 
             // ── Notice / error banners ────────────────────────────────────────
             notice?.let { msg ->
@@ -805,8 +807,14 @@ private fun FedcodeQr(value: String, modifier: Modifier = Modifier) {
  * Self-contained on purpose: one call site in the screen, everything else here.
  */
 @Composable
-private fun ThisDeviceSignIn(identityKeyId: String?, onLogout: () -> Unit) {
+private fun ThisDeviceSignIn(
+    identityKeyId: String?,
+    signInMethod: ai.ciris.mobile.shared.models.SignInMethod?,
+    onLogout: () -> Unit,
+) {
     val who = identityKeyId?.let { truncMid(it) } ?: localizedString("mobile.identity_self_unresolved")
+    // How, only when the login flow recorded it — never the platform's guess.
+    val line = ai.ciris.mobile.shared.models.signedInLine(who, signInMethod)
     Spacer(Modifier.height(12.dp))
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -822,10 +830,7 @@ private fun ThisDeviceSignIn(identityKeyId: String?, onLogout: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                localizedString(
-                    "mobile.identity_signed_in_as",
-                    mapOf("identity" to who, "provider" to ai.ciris.mobile.shared.platform.getOAuthProviderName()),
-                ),
+                localizedString(line.key, line.params),
                 fontSize = 12.sp,
                 modifier = Modifier.testable("identity_signed_in_as"),
             )

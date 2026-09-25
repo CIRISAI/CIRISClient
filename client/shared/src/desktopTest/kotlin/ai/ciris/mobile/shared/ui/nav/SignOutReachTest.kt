@@ -39,4 +39,29 @@ class SignOutReachTest {
         assertTrue("onLogout =" in args, "CIRISApp does not pass onLogout to My Identity")
         assertTrue("settingsViewModel.logout" in args, "My Identity's sign-out is not the logout Settings uses")
     }
+
+    /**
+     * ONE LOGOUT PER CLICK. Settings' button used to run
+     * `viewModel.logout { onLogout() }` while CIRISApp's `onLogout` runs
+     * `settingsViewModel.logout` itself — two revocations, two token wipes, per
+     * click. `onLogout` is the logout; the screens only call it.
+     * SettingsViewModel is concrete over real storage and HTTP, so this reads
+     * the source rather than counting through a fake.
+     */
+    @Test
+    fun theScreensCallOnLogoutAndNeverTheViewModelsLogout() {
+        for (rel in listOf("ui/screens/SettingsScreen.kt", "ui/screens/IdentityManagementScreen.kt")) {
+            val screen = src(rel)
+            assertTrue(!Regex("""\bviewModel\.logout\s*[({]""").containsMatchIn(screen), "$rel calls viewModel.logout as well as onLogout: logout runs twice")
+            assertTrue("testableClickable(\"btn_logout\") { onLogout() }" in screen, "$rel's btn_logout does not call onLogout")
+        }
+    }
+
+    /** "Signed in via …" is what the login flow RECORDED, never the platform's guess. */
+    @Test
+    fun theSignInLinesDoNotGuessTheProvider() {
+        for (rel in listOf("ui/screens/SettingsScreen.kt", "ui/screens/IdentityManagementScreen.kt")) {
+            assertTrue("getOAuthProviderName" !in src(rel), "$rel names the platform's OAuth provider as how this device signed in")
+        }
+    }
 }
