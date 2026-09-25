@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      QR scanning (platform/QrScanner.android.kt). Declared by the library that
+      uses it so every host app gets it through manifest merging, including
+      shells that consume the AAR as a bare file.
+
+      required="false": a device with no camera still installs the app. It
+      loses the scan shortcut, never the flow; the paste field is always there.
+    -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature
+        android:name="android.hardware.camera.any"
+        android:required="false" />
+</manifest>
