@@ -133,6 +133,20 @@ class SettingsViewModel(
     private val _brightnessPreference = MutableStateFlow(BrightnessPreference.SYSTEM)
     val brightnessPreference: StateFlow<BrightnessPreference> = _brightnessPreference.asStateFlow()
 
+    // How this device's session was established — recorded by the login flow
+    // that made it, cleared on sign-out; null = not recorded (see SignInMethod).
+    private val _signInMethod = MutableStateFlow<ai.ciris.mobile.shared.models.SignInMethod?>(null)
+    val signInMethod: StateFlow<ai.ciris.mobile.shared.models.SignInMethod?> = _signInMethod.asStateFlow()
+
+    /** Record the method a login flow just used. Null forgets it (an unknown provider stays unknown). */
+    fun recordSignIn(method: ai.ciris.mobile.shared.models.SignInMethod?) {
+        _signInMethod.value = method
+        viewModelScope.launch {
+            val key = ai.ciris.mobile.shared.models.SignInMethod.STORAGE_KEY
+            if (method == null) secureStorage.delete(key) else secureStorage.save(key, method.stored)
+        }
+    }
+
     // ========== Location Settings ==========
 
     // Location search state
@@ -238,6 +252,10 @@ class SettingsViewModel(
                     logInfo("loadDisplaySettings", ">>> Color theme loaded: ${_colorTheme.value}")
                 }.onFailure {
                     _colorTheme.value = ColorTheme.DEFAULT
+                }
+
+                secureStorage.get(ai.ciris.mobile.shared.models.SignInMethod.STORAGE_KEY).onSuccess { value ->
+                    _signInMethod.value = ai.ciris.mobile.shared.models.SignInMethod.fromStored(value)
                 }
 
                 // Load brightness preference
@@ -720,6 +738,8 @@ class SettingsViewModel(
                 logDebug(method, "Clearing user info")
                 secureStorage.delete("user_id")
                 secureStorage.delete("user_email")
+                secureStorage.delete(ai.ciris.mobile.shared.models.SignInMethod.STORAGE_KEY)
+                _signInMethod.value = null
 
                 // Call logout API (revokes token server-side)
                 logDebug(method, "Calling API logout")

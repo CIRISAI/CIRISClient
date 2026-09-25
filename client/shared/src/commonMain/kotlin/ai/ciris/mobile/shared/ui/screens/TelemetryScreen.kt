@@ -11,6 +11,8 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.LazyColumnScrollbar
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -141,6 +143,27 @@ fun TelemetryScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+            // No reading, no metrics. A failed or absent read used to render
+            // TelemetryData() — 0/0 services, 0% CPU, 0 MB, cognitive state
+            // WORK — which is a positive claim of health about an agent nobody
+            // reached (CSD-030, CSD/3 §2.2). The export section below still
+            // renders: it is its own read with its own failure.
+            val failure = telemetryData.readFailure
+            if (failure != null) {
+                item {
+                    ReadFailureBlock(
+                        failure = failure,
+                        tagPrefix = "telemetry",
+                        notOnThisNode = localizedString("mobile.telemetry_not_on_this_node"),
+                    )
+                }
+            } else if (!telemetryData.hasReading) {
+                item {
+                    StateBlock(state = ListState.Loading, tag = "telemetry_loading")
+                }
+            }
+
+            if (telemetryData.hasReading) {
             // Services overview
             item {
                 ServicesOverviewCard(
@@ -198,6 +221,7 @@ fun TelemetryScreen(
                     ServiceHealthRow(item = item)
                 }
             }
+            } // hasReading
 
             // Export Destinations section
             item {
@@ -221,7 +245,20 @@ fun TelemetryScreen(
                 }
             }
 
-            if (exportDestinations.isEmpty()) {
+            val destinationsFailure = telemetryData.destinationsFailure
+            if (destinationsFailure != null) {
+                // The destinations read failed: say so, instead of "no export
+                // destinations", which would tell an owner nothing is leaving
+                // when this screen simply could not ask (CSD-030).
+                item {
+                    ReadFailureBlock(
+                        failure = destinationsFailure,
+                        tagPrefix = "telemetry_destinations",
+                        notOnThisNode = localizedString("mobile.telemetry_not_on_this_node"),
+                        inline = true,
+                    )
+                }
+            } else if (exportDestinations.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
@@ -233,7 +270,7 @@ fun TelemetryScreen(
                             text = localizedString("mobile.telemetry_no_export"),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(16.dp)
+                            modifier = Modifier.padding(16.dp).testable("telemetry_destinations_empty")
                         )
                     }
                 }
@@ -274,7 +311,7 @@ fun TelemetryScreen(
 private fun ServicesOverviewCard(
     healthyServices: Int,
     totalServices: Int,
-    cognitiveState: String,
+    cognitiveState: String?,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -322,10 +359,10 @@ private fun ServicesOverviewCard(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = cognitiveState,
+                    text = cognitiveState ?: NOT_READ,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = getCognitiveStateColor(cognitiveState)
+                    color = getCognitiveStateColor(cognitiveState ?: "")
                 )
                 Text(
                     text = localizedString("mobile.telemetry_state"),
@@ -341,7 +378,7 @@ private fun ServicesOverviewCard(
 private fun ResourceUsageCard(
     cpuPercent: Int,
     memoryMb: Int,
-    diskUsedMb: Double,
+    diskUsedMb: Double?,
     modifier: Modifier = Modifier
 ) {
     Card(modifier = modifier.fillMaxWidth()) {
@@ -368,7 +405,9 @@ private fun ResourceUsageCard(
                 color = getUsageColor(memoryPercent)
             )
 
-            // Disk
+            // Disk — only when the read carried it. `/v1/telemetry/overview`
+            // does not, and a "0 MB" row is a measurement nobody took.
+            if (diskUsedMb != null) {
             val diskGb = diskUsedMb / 1024.0
             val diskPercent = ((diskUsedMb / 10240.0) * 100).toInt().coerceIn(0, 100)
             ResourceUsageRow(
@@ -377,6 +416,7 @@ private fun ResourceUsageCard(
                 progress = diskPercent / 100f,
                 color = getUsageColor(diskPercent)
             )
+            }
         }
     }
 }
@@ -951,14 +991,22 @@ private fun getUsageColor(percent: Int): Color {
 data class TelemetryData(
     val healthyServices: Int = 0,
     val totalServices: Int = 0,
-    val cognitiveState: String = "WORK",
+    /** Null when the read did not carry it — never a default "WORK" (CSD-030). */
+    val cognitiveState: String? = null,
     val cpuPercent: Int = 0,
     val memoryMb: Int = 0,
-    val diskUsedMb: Double = 0.0,
+    /** Null = not carried by the read; the row is not drawn. */
+    val diskUsedMb: Double? = null,
     val messagesProcessed24h: Int = 0,
     val tasksCompleted24h: Int = 0,
     val errors24h: Int = 0,
-    val serviceHealthItems: List<ServiceHealthItem> = emptyList()
+    val serviceHealthItems: List<ServiceHealthItem> = emptyList(),
+    /** True only when the fields above came from a successful read. */
+    val hasReading: Boolean = false,
+    /** Why the last overview read produced no reading; null after a success. */
+    val readFailure: ReadFailure? = null,
+    /** Why the export-destinations read failed; null when it succeeded. */
+    val destinationsFailure: ReadFailure? = null,
 )
 
 data class ServiceHealthItem(

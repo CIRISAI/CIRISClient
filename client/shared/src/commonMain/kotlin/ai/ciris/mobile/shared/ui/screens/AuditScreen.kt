@@ -121,8 +121,20 @@ fun AuditScreen(
                 )
             }
 
-            // Error message
-            auditState.error?.let { error ->
+            // A read that failed, or that this node has no route for, is said
+            // here — and the empty card below is withheld (CSD-071).
+            val readFailure = auditState.readFailure
+            if (readFailure != null) {
+                ReadFailureBlock(
+                    failure = readFailure,
+                    tagPrefix = "audit",
+                    notOnThisNode = localizedString("mobile.audit_not_on_this_node"),
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+
+            // Error message (anything not already said above)
+            auditState.error?.takeIf { readFailure == null }?.let { error ->
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -139,11 +151,13 @@ fun AuditScreen(
                 }
             }
 
-            // Stats bar
-            AuditStatsBar(
-                totalEntries = auditState.totalEntries,
-                displayedEntries = auditState.entries.size
-            )
+            // Stats bar — a count is a reading, so not without one.
+            if (readFailure == null) {
+                AuditStatsBar(
+                    totalEntries = auditState.totalEntries,
+                    displayedEntries = auditState.entries.size
+                )
+            }
 
             // Entries list
             LazyColumn(
@@ -162,12 +176,16 @@ fun AuditScreen(
                             CircularProgressIndicator()
                         }
                     }
-                } else if (auditState.entries.isEmpty()) {
+                } else if (auditState.entries.isEmpty() && auditState.error == null && readFailure == null) {
+                    // "No entries / try the filters" only after a read that
+                    // SUCCEEDED. On a node build the read has no host, and the
+                    // filters were never the problem (CSD-071).
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(32.dp)
+                                .testable("audit_empty"),
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -682,7 +700,9 @@ data class AuditScreenState(
     val error: String? = null,
     val filter: AuditFilter = AuditFilter(),
     val totalEntries: Int = 0,
-    val hasMore: Boolean = false
+    val hasMore: Boolean = false,
+    /** Why the last read produced no entries; null after a success. */
+    val readFailure: ReadFailure? = null,
 )
 
 /**

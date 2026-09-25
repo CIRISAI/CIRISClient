@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.api.ScheduledTaskData
+import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.SchedulerOverviewData
 import ai.ciris.mobile.shared.viewmodels.SchedulerScreenState
@@ -185,11 +186,21 @@ fun SchedulerScreen(
                 }
             }
 
-            // Task list
-            if (state.tasks.isEmpty() && !state.isLoading) {
+            // Task list. Three distinct states: a failed read says so; the
+            // empty card needs a read that SUCCEEDED and found nothing (CSD-012).
+            val tasksFailure = state.tasksFailure
+            if (tasksFailure != null) {
+                item {
+                    ReadFailureBlock(
+                        failure = tasksFailure,
+                        tagPrefix = "scheduler",
+                        notOnThisNode = localizedString("mobile.scheduler_not_on_this_node"),
+                    )
+                }
+            } else if (state.tasks.isEmpty() && !state.isLoading && state.hasTasksReading) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testable("scheduler_empty"),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -306,21 +317,25 @@ private fun SchedulerStatsRow(overview: SchedulerOverviewData) {
         SchedulerStatCard(
             icon = CIRISIcons.dateRange,
             label = localizedString("mobile.scheduler_stat_pending"),
-            value = overview.pendingCount.toString(),
-            color = if (overview.pendingCount > 0) semantic.warning else semantic.success,
+            value = overview.pendingCount?.toString() ?: NOT_READ,
+            color = when {
+                overview.pendingCount == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                overview.pendingCount > 0 -> semantic.warning
+                else -> semantic.success
+            },
             modifier = Modifier.weight(1f)
         )
         SchedulerStatCard(
             icon = CIRISIcons.refresh,
             label = localizedString("mobile.scheduler_stat_recurring"),
-            value = overview.recurringCount.toString(),
+            value = overview.recurringCount?.toString() ?: NOT_READ,
             color = semantic.info,
             modifier = Modifier.weight(1f)
         )
         SchedulerStatCard(
             icon = CIRISIcons.checkCircle,
             label = localizedString("mobile.scheduler_stat_completed"),
-            value = overview.completedTotal.toString(),
+            value = overview.completedTotal?.toString() ?: NOT_READ,
             color = semantic.success,
             modifier = Modifier.weight(1f)
         )

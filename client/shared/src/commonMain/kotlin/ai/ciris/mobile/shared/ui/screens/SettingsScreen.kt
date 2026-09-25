@@ -17,7 +17,6 @@ import ai.ciris.mobile.shared.viewmodels.SettingsViewModel
 import ai.ciris.mobile.shared.viewmodels.VerifyStatusResponse
 import ai.ciris.mobile.shared.viewmodels.SUPPORTED_CURRENCIES
 import ai.ciris.mobile.shared.viewmodels.SUPPORTED_LANGUAGES
-import ai.ciris.mobile.shared.platform.getOAuthProviderName
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
@@ -419,15 +418,22 @@ fun SettingsScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // Account Section
+                // Sign-in section. Sign-out's home is My Identity (every build,
+                // CIRISClient#51); this copy stays only because CIRISAgent's gate
+                // falls back to the Settings row to find `btn_logout`
+                // (qa_runner/modules/web_ui/__main__.py). It goes once
+                // CIRISAgent#1181's gate routes to identity-management.
                 Text(
-                    text = localizedString("mobile.settings_account"),
+                    text = localizedString("mobile.settings_sign_in"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Explain that OAuth login IS the API key
-                val providerName = getOAuthProviderName()
+                // How this device signed in, as recorded by the login flow — not
+                // the platform's guess (a password sign-in is never "Google").
+                // "Your OAuth login IS the API key" only for an OAuth sign-in.
+                val signInMethod by viewModel.signInMethod.collectAsState()
+                val signInLine = ai.ciris.mobile.shared.models.settingsSignInLine(signInMethod)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -444,7 +450,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = localizedString("mobile.settings_authentication_desc", "provider", providerName),
+                            text = localizedString(signInLine.key, signInLine.params),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
@@ -453,16 +459,12 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Logout button
+                // Logout button. onLogout() IS the logout (CIRISApp runs
+                // SettingsViewModel.logout inside it); calling viewModel.logout
+                // here as well revoked the token twice per click.
                 OutlinedButton(
-                    onClick = {
-                        viewModel.logout {
-                            onLogout()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().testableClickable("btn_logout") {
-                        viewModel.logout { onLogout() }
-                    }
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth().testableClickable("btn_logout") { onLogout() }
                 ) {
                     Text(localizedString("mobile.settings_logout"))
                 }

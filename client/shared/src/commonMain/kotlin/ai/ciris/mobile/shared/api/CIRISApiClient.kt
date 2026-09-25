@@ -2811,24 +2811,38 @@ class CIRISApiClient(
     /**
      * The device roster — `GET {nodeUrl}/v1/self/occurrences?identity_key_id=…`.
      *
-     * UNAUTHENTICATED by design: an occurrence roster is public §5.6.8.8 binding
-     * metadata (pubkeys + device_class), same posture as the self-key-record. Returns
-     * the currently-ACTIVE occurrences (admitted, not revoked) of [identityKeyId].
+     * The roster itself is public §5.6.8.8 binding metadata (pubkeys +
+     * device_class), same posture as the self-key-record, so the route answers
+     * without a session. The session is SENT anyway: since 0.5.216 the owner's
+     * own session also gets each device's `label`, which is not public.
+     *
+     * [includeRevoked] asks a 0.5.216+ node for the revoked devices too (each
+     * `revoked: true`, after the active ones). An older node ignores the query
+     * and its rows carry no `revoked` at all — see
+     * [ai.ciris.mobile.shared.models.federation.nodeReportsRevocation].
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
      */
     suspend fun getSelfOccurrences(
         identityKeyId: String,
         nodeUrl: String = LOCAL_NODE_URL,
+        includeRevoked: Boolean = false,
+        token: String? = accessToken,
     ): ai.ciris.mobile.shared.models.federation.SelfOccurrencesResponse {
         val method = "getSelfOccurrences"
-        logDebug(method, "GET $nodeUrl/v1/self/occurrences identity=${identityKeyId.take(16)}…")
+        logDebug(method, "GET $nodeUrl/v1/self/occurrences identity=${identityKeyId.take(16)}… include_revoked=$includeRevoked")
         val client = federationHttpClient()
         return try {
             val response = client.get("$nodeUrl/v1/self/occurrences") {
-                url { parameters.append("identity_key_id", identityKeyId) }
+                url {
+                    parameters.append("identity_key_id", identityKeyId)
+                    if (includeRevoked) parameters.append("include_revoked", "true")
+                }
+                token?.let { header("Authorization", "Bearer $it") }
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("self-occurrences fetch failed: ${response.status}: ${raw.take(160)}")
+                throw nodeRefusal(method, response.status, raw)
             }
             decodeFederationEnvelope(
                 raw,
@@ -2836,6 +2850,103 @@ class CIRISApiClient(
             )
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl, identity=$identityKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Name a device — `POST {nodeUrl}/v1/self/occurrence/label` (0.5.216).
+     *
+     * Owner session only. The node writes an owner-signed label row attested to
+     * the occurrence (the first a `scores`, each rename a `supersedes`); the
+     * label is display-only. Refusals are typed: `self.label_empty` (blank or
+     * over 64 characters), `self.not_your_device`, `self.owner_session_required`,
+     * `self.delegate_may_not_author`, … A node older than 0.5.216 answers a bare
+     * 404 (no `reason_id`): the route does not exist there.
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun labelOccurrence(
+        occurrenceKeyId: String,
+        label: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse {
+        val method = "labelOccurrence"
+        logInfo(method, "POST $nodeUrl/v1/self/occurrence/label occurrence=${occurrenceKeyId.take(16)}…")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceRequest(occurrenceKeyId, label),
+            )
+            val response = client.post("$nodeUrl/v1/self/occurrence/label") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw nodeRefusal(method, response.status, raw)
+            }
+            decodeFederationEnvelope(
+                raw,
+                ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse.serializer(),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, occurrence=$occurrenceKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Release a node the owner owns — `POST {nodeUrl}/v1/self/nodes/{node_key_id}/release`
+     * (0.5.216).
+     *
+     * Owner session only. The node withdraws every live owner-binding the owner
+     * holds on [nodeKeyId], signed with the owner's own pen, then re-reads
+     * `nodes_owned_by` to prove it. Releasing the node that is ANSWERING needs
+     * [forceSelf]; without it the node refuses `self.release_self_requires_force`
+     * (409). Other refusals: `self.not_your_node` (403, also for a node it has
+     * never heard of), `self.release_incomplete` (500: signed, but still listed).
+     * A node older than 0.5.216 answers a bare 404.
+     *
+     * Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun releaseNode(
+        nodeKeyId: String,
+        forceSelf: Boolean = false,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse {
+        val method = "releaseNode"
+        logInfo(method, "POST $nodeUrl/v1/self/nodes/${nodeKeyId.take(16)}…/release force_self=$forceSelf")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeRequest(forceSelf = forceSelf),
+            )
+            val path = nodeKeyId.encodeURLPathPart()
+            val response = client.post("$nodeUrl/v1/self/nodes/$path/release") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw nodeRefusal(method, response.status, raw)
+            }
+            decodeFederationEnvelope(
+                raw,
+                ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse.serializer(),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, node=$nodeKeyId")
             throw e
         } finally {
             client.close()
@@ -6030,6 +6141,12 @@ class CIRISApiClient(
             val response = telemetryApi.getTelemetryOverviewV1TelemetryOverviewGet(authHeader())
             logDebug(method, "Response: status=${response.status}")
 
+            // Say the status. Without this a node's 404 surfaced as a body
+            // decode failure, which a screen cannot tell from a broken agent.
+            if (!response.success) {
+                throw RuntimeException("API error: HTTP ${response.status}")
+            }
+
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")
 
@@ -7652,17 +7769,11 @@ class CIRISApiClient(
 
     override suspend fun getCredits(): CreditStatusData {
         val method = "getCredits"
-        // AGENT-only: billing/credits is 404 on a bare node. Report "free / no
-        // billing" so the node UI shows no purchase prompts.
-        if (nodeSkip(method)) return CreditStatusData(
-            hasCredit = true,
-            creditsRemaining = 0,
-            freeUsesRemaining = 0,
-            dailyFreeUsesRemaining = null,
-            totalUses = 0,
-            planName = null,
-            purchaseRequired = false,
-        )
+        // AGENT-only: billing/credits is 404 on a bare node. RAISE: this used to
+        // return hasCredit=true, creditsRemaining=0 — a balance in the host's
+        // voice about an account no host was asked about (CSD-056). The Billing
+        // screen renders the raise as "this node doesn't handle billing".
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/api/billing/credits")
         logDebug(method, "Fetching credit status")
 
         return try {
@@ -10617,13 +10728,10 @@ class CIRISApiClient(
             offset: Int = 0
         ): AuditEntriesData {
             val method = "getAuditEntries"
-            // AGENT-only: the agent audit feed is 404 on a bare node.
-            if (nodeSkip(method)) return AuditEntriesData(
-                entries = emptyList(),
-                total = 0,
-                offset = offset,
-                limit = limit,
-            )
+            // AGENT-only: the agent audit feed is 404 on a bare node. RAISE: an
+            // empty success here made every circle say "Try adjusting your
+            // filters" — a build fact reported as the reader's mistake (CSD-071).
+            if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/audit/entries")
             logDebug(method, "Fetching audit entries: severity=$severity, outcome=$outcome, limit=$limit, offset=$offset")
 
             return try {
@@ -11084,13 +11192,13 @@ class CIRISApiClient(
             val globalServices = mutableMapOf<String, List<ServiceProviderData>>()
             data.services.groupBy { it.type }.forEach { (serviceType, services) ->
                 globalServices[serviceType] = services.map { service ->
+                    // Only what the wire carries. Priority, priority group,
+                    // strategy, capabilities and breaker state are not on
+                    // `ServiceStatus`; they stay null rather than wear a
+                    // constant that reads like a measurement (CSD-016).
                     ServiceProviderData(
                         name = service.name,
-                        priority = "NORMAL",
-                        priorityGroup = 0,
-                        strategy = "FALLBACK",
-                        circuitBreakerState = if (service.healthy) "closed" else "open",
-                        capabilities = emptyList()
+                        healthy = service.healthy,
                     )
                 }
             }
@@ -11099,7 +11207,9 @@ class CIRISApiClient(
 
             ServicesResponse(
                 globalServices = globalServices,
-                handlers = emptyMap() // Handler-specific services not in current API
+                // Handler-specific services are not on this route. Empty here
+                // means "not carried", and the screen draws no handler section.
+                handlers = emptyMap()
             )
         } catch (e: Exception) {
             logException(method, e)
@@ -11359,8 +11469,8 @@ class CIRISApiClient(
 
             RuntimeStateResponse(
                 processorState = data.processorState,
-                cognitiveState = data.cognitiveState ?: "WORK",
-                queueDepth = data.queueDepth ?: 0,
+                cognitiveState = data.cognitiveState,
+                queueDepth = data.queueDepth,
                 activeTasks = emptyList() // Active tasks not in current API response
             )
         } catch (e: Exception) {
@@ -12860,16 +12970,40 @@ class CIRISApiClient(
             logInfo(method, "Capacity: ${data.agentName} ${data.category} " +
                     "fleet=${data.compositeScore} local=${data.localScore} cached=${data.cached}")
 
+            // ONE PATH, TWO PAYLOADS. The agent answers this URL with
+            // {composite_score, factors{…}}; CIRISServer answers the SAME URL
+            // with {subjects[{rows[…]}], unscored, truncated} (capacity_read.rs,
+            // CIRISServer#580) — a list of attestations, not a score. Every
+            // field used to fall through `?: 0.0`, so a node build rendered a
+            // composite of 0.00 and five factors at 0.00 under the live marker
+            // because the fetch "succeeded" (CSD-004). Reading a missing value
+            // as a zero is a score where there is none: an unrecognised payload
+            // RAISES, and the caller's local-only path takes over. Reconciling
+            // the two shapes is CIRISServer#659.
+            val composite = data.compositeScore
+            val c = factors?.C?.score
+            val iInt = factors?.iInt?.score
+            val r = factors?.R?.score
+            val iInc = factors?.iInc?.score
+            val s = factors?.S?.score
+            if (composite == null || c == null || iInt == null || r == null || iInc == null || s == null) {
+                throw CapacityPayloadUnrecognised(
+                    "capacity payload carries no composite score and five factors " +
+                        "(composite=$composite, factors=${factors != null}); " +
+                        "not scored rather than scored zero (CIRISServer#659)"
+                )
+            }
+
             CapacityData(
                 agentName = data.agentName ?: "",
-                compositeScore = data.compositeScore ?: 0.0,
+                compositeScore = composite,
                 fragilityIndex = data.fragilityIndex ?: 0.0,
                 category = data.category ?: "moderate",
-                c = factors?.C?.score ?: 0.0,
-                iInt = factors?.iInt?.score ?: 0.0,
-                r = factors?.R?.score ?: 0.0,
-                iInc = factors?.iInc?.score ?: 0.0,
-                s = factors?.S?.score ?: 0.0,
+                c = c,
+                iInt = iInt,
+                r = r,
+                iInc = iInc,
+                s = s,
                 windowStart = data.metadata?.windowStart,
                 windowEnd = data.metadata?.windowEnd,
                 cached = data.cached ?: false,
