@@ -216,6 +216,18 @@ sealed class NavSurface(
         labelKey = "nav.surface.contacts")
 
     /**
+     * Files (B3): a circle's files from the drive plane (CIRISServer 0.5.215).
+     * Placed in the Files tab of the circles the drive has a cohort for: Just
+     * me (`self`), and Neighbours / Communities and Businesses (`community`).
+     */
+    object Files : NavSurface("files", "Files", CIRISIcons.pkg,
+        labelKey = "nav.surface.files")
+
+    /** Notes to self: the self room's unnamed text rows, a chat of one. Just me › Chats. */
+    object Notes : NavSurface("notes", "Notes to self", CIRISIcons.edit,
+        labelKey = "nav.surface.notes")
+
+    /**
      * Delegations — who the owner has authorized to act on their behalf (active
      * device-authorization grants), plus approve-a-new / revoke. The
      * human-consent gate for an agent acting on-behalf-of. Live (no gate).

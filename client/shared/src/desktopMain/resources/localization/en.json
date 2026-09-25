@@ -3078,7 +3078,46 @@
     "ceremony_state_signed": "signed",
     "ceremony_state_not_yet": "not yet",
     "receipt_this_node": "This node — you",
-    "setup_finish_unclaimed": "Finish without claiming this node"
+    "setup_finish_unclaimed": "Finish without claiming this node",
+    "files_title": "Files",
+    "files_add": "Add a file",
+    "files_refresh": "Refresh",
+    "files_open": "Open",
+    "files_close": "Close",
+    "files_untitled": "Untitled",
+    "files_empty_self": "Nothing here yet. What you add stays on your own devices until you share it.",
+    "files_empty_community": "No files in your community rooms yet.",
+    "files_node_too_old_title": "This node can't hold files yet",
+    "files_node_too_old_body": "Files and notes need ciris-server 0.5.215 or newer. Everything else works normally.",
+    "files_node_too_old_body_versioned": "This node is running {version}. Files and notes need ciris-server 0.5.215 or newer. Everything else works normally.",
+    "files_error_title": "Files could not be listed",
+    "files_bytes_here": "On this device",
+    "files_bytes_not_fetched": "On another device",
+    "files_bytes_not_granted": "This device can't open it",
+    "files_bytes_unopened": "Can't be opened here",
+    "files_room": "Room {room}",
+    "files_choose_room": "Add it to which room?",
+    "files_uploading": "Adding {name}…",
+    "files_too_large": "{name} is {size}. Files can be at most {limit} for now.",
+    "files_written": "Added {name}.",
+    "files_written_nobody": "Added {name}, but only on this device. It reached nobody else.",
+    "files_written_partial": "Added {name}. {count} device(s) can't open it yet.",
+    "files_add_failed": "Couldn't add {name}: {reason}",
+    "files_preview_unavailable": "No preview for this kind of file here. Save a copy to open it.",
+    "files_save_copy": "Save a copy",
+    "files_saved_to": "Saved to {path}",
+    "files_save_failed": "Couldn't save a copy on this device.",
+    "files_render_awaiting_node": "Previews of {format} come from your node, which makes a safe copy first. This node can't do that yet. Save a copy to open it.",
+    "files_render_refused": "{format} files are never opened here: they can run code or load things from elsewhere.",
+    "files_render_not_utf8": "This text isn't valid UTF-8, so it isn't shown. A guessed rendering could say something the file doesn't.",
+    "files_render_mismatch": "This file says it is {declared}, but its bytes are {sniffed}. It isn't shown or saved.",
+    "files_render_polyglot": "This {format} file has a second file hidden inside it, so it isn't shown or saved.",
+    "files_save_blocked": "Saving isn't offered: this kind of file can run code on your device, or isn't what it says it is.",
+    "notes_title": "Notes to self",
+    "notes_placeholder": "Write a note to yourself…",
+    "notes_save": "Save note",
+    "notes_empty": "No notes yet. Notes stay in Just me, on your own devices.",
+    "notes_error_title": "Notes could not be read"
   },
   "moderation": {
     "ladder": {
@@ -3233,7 +3272,9 @@
       "users": "Users",
       "wallet": "Wallet",
       "wise_authority": "Wise Authority",
-      "help": "Help"
+      "help": "Help",
+      "files": "Files",
+      "notes": "Notes to self"
     },
     "circle": {
       "agent": "Just me",
@@ -3282,7 +3323,8 @@
       "record": "Nothing has happened in this circle yet.",
       "files_agent": "Nothing here yet. This is where everything starts, and nothing here is advertised.",
       "decisions_agent": "There is nobody here to decide with. Decisions start in Family.",
-      "decisions_family": "A family decides by talking. There is nothing to vote on here."
+      "decisions_family": "A family decides by talking. There is nothing to vote on here.",
+      "files_family": "Family files arrive once a family can be formed on this network."
     },
     "my_things": "My things",
     "stop_everything": "Stop everything",
@@ -4464,5 +4506,30 @@
       "revoked": "Revoked",
       "expired": "Expired"
     }
+  },
+  "drive": {
+    "author_signer_unavailable": "This node can't sign as you right now, so the file wasn't written.",
+    "community_id_required": "A community file needs to name its room.",
+    "family_id_required": "A family file needs to name its family. There is no default family.",
+    "listing_failed": "This node couldn't list the files in that room.",
+    "no_node_key": "This node couldn't find its own key.",
+    "not_a_member": "You're not a member of that room.",
+    "not_fetched": "It's on another device. Its bytes haven't reached this one yet.",
+    "not_granted": "This device holds no grant for these bytes.",
+    "not_in_room": "That isn't a file in this room.",
+    "owner_session_required": "Sign in as this node's owner to use your files.",
+    "publish_failed": "The file couldn't be published.",
+    "readable_by_nobody": "Nobody would be able to read this file, so it wasn't written.",
+    "store_unavailable": "This node couldn't reach its file store.",
+    "too_large": "That file is too large to add here.",
+    "unknown_cohort": "That isn't a place files can go. Use Just me, a family or a community.",
+    "unopened": "This device can't open it."
+  },
+  "notes": {
+    "author_signer_unavailable": "This node can't sign as you right now, so the note wasn't written.",
+    "empty": "A note with nothing in it isn't a note.",
+    "listing_failed": "This node couldn't read your notes.",
+    "no_node_key": "This node couldn't find its own key.",
+    "owner_session_required": "Sign in as this node's owner to use your notes."
   }
 }

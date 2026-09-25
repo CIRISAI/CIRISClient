@@ -1025,6 +1025,18 @@ fun CIRISApp(
     val contactsViewModel: ContactsViewModel = viewModel {
         ContactsViewModel(apiClient)
     }
+    // B3: one Files view model per cohort — a self listing and a community
+    // listing are different questions, and one model answering both would
+    // show the last circle's files in the next.
+    val selfFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-self") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(apiClient, ai.ciris.mobile.shared.viewmodels.FilesCohort.SELF)
+    }
+    val communityFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-community") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(apiClient, ai.ciris.mobile.shared.viewmodels.FilesCohort.COMMUNITY)
+    }
+    val notesViewModel: ai.ciris.mobile.shared.viewmodels.NotesViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.NotesViewModel(apiClient)
+    }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
     // survive into the next session. Declared here, not in the approval-watch
@@ -4088,6 +4100,14 @@ fun CIRISApp(
                 )
             }
 
+            is Screen.Files -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                viewModel = if ((currentScreen as Screen.Files).cohort == "community") communityFilesViewModel else selfFilesViewModel,
+                nodeVersion = nodeVersion,
+            )
+            Screen.Notes -> ai.ciris.mobile.shared.ui.screens.files.NotesScreen(
+                viewModel = notesViewModel,
+                nodeVersion = nodeVersion,
+            )
             Screen.Contacts -> {
                 // Contacts: the owner's consented peers, and the node client's
                 // HOME surface. Also reached from the Delegations picker flow
@@ -4896,7 +4916,14 @@ fun CIRISApp(
             fun openTab(c: ai.ciris.mobile.shared.ui.nav.CohortScope, t: ai.ciris.mobile.shared.ui.nav.Tab) {
                 val cards = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(c, t, hasAgentNow)
                 currentCircle = c
-                currentScreen = if (cards.size == 1) surfaceToScreen(cards[0]) else Screen.CircleTab(c.id, t.id)
+                currentScreen = when {
+                    // The same Files card lists a different cohort per circle:
+                    // your own files in Just me, community rooms elsewhere.
+                    cards.size == 1 && cards[0] == ai.ciris.mobile.shared.ui.nav.NavSurface.Files ->
+                        Screen.Files(if (c == ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT) "self" else "community")
+                    cards.size == 1 -> surfaceToScreen(cards[0])
+                    else -> Screen.CircleTab(c.id, t.id)
+                }
             }
             // Back inside the shell: a card opened from a multi-card tab returns
             // to that tab; an instrument surface returns to its instrument; the
@@ -5761,6 +5788,9 @@ private sealed class Screen {
     // client's HOME surface; also used as a picker (over the wider peer store)
     // when delegating to an existing fed-ID.
     object Contacts : Screen()
+    /** A circle's files. The cohort rides on the screen: the same card lists `self` in Just me and `community` elsewhere. */
+    data class Files(val cohort: String = "self") : Screen()
+    object Notes : Screen()
 
     /**
      * One two-member chat. Parameterised because the room is identified by the
@@ -5932,6 +5962,8 @@ private fun screenToSurface(s: Screen): ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    is Screen.Files -> ai.ciris.mobile.shared.ui.nav.NavSurface.Files
+    Screen.Notes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Notes
     // A chat keeps the Contacts card lit — it is a leaf of that surface, not a
     // sidebar destination of its own.
     is Screen.UserChat -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
@@ -5997,6 +6029,8 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Files -> Screen.Files()
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Notes -> Screen.Notes
     ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations -> Screen.Delegations
     ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement -> Screen.IdentityManagement
     ai.ciris.mobile.shared.ui.nav.NavSurface.Accord -> Screen.Accord

@@ -1558,6 +1558,22 @@
     "federation_create_secure_note": "Na'urarku ce ke tsare shi — maɓallin tsaro ko kayan aiki mai tsaro na wannan na'ura (TPM / Secure Enclave). Babu abin zaɓa; ana amfani da zaɓi mafi tsaro kai tsaye.",
     "federation_create_title": "Ƙirƙiri ID ɗin tarayyarku",
     "federation_import_usb": "Shigo da Fed ID da ke akwai daga USB",
+    "files_add_failed": "An kasa ƙara {name}: {reason}",
+    "files_preview_unavailable": "Babu duban gaba don irin wannan fayil a nan. Ajiye kwafi domin buɗe shi.",
+    "files_save_copy": "Ajiye kwafi",
+    "files_saved_to": "An ajiye zuwa {path}",
+    "files_save_failed": "An kasa ajiye kwafi a wannan na'ura.",
+    "files_render_awaiting_node": "Duban gaba na fayilolin {format} yana zuwa daga kumburinku, wanda yake yin kwafi amintacce da farko. Wannan kumburi bai iya yin hakan tukuna ba. Ajiye kwafi domin buɗe shi.",
+    "files_render_refused": "Fayilolin {format} ba a taɓa buɗe su a nan ba: suna iya gudanar da lambar shiri ko loda abubuwa daga wani wuri.",
+    "files_render_not_utf8": "Wannan rubutu ba shi da ingantacciyar UTF-8, don haka ba a nuna shi ba. Nuni na zato yana iya nuna abin da fayil ɗin bai faɗa ba.",
+    "files_render_mismatch": "Fayil ɗin ya ce shi {declared} ne, amma bytes ɗinsa {sniffed} ne. Ba a nuna shi ko a ajiye shi ba.",
+    "files_render_polyglot": "Wannan fayil na {format} yana da wani fayil na biyu a ɓoye a cikinsa, don haka ba a nuna shi ko a ajiye shi ba.",
+    "files_save_blocked": "Ba a bayar da ajiye ba: irin wannan fayil yana iya gudanar da lambar shiri a na'urarku, ko kuma ba shi ne abin da yake cewa yake ba.",
+    "notes_title": "Bayanan Kai",
+    "notes_placeholder": "Rubuta bayani wa kanku…",
+    "notes_save": "Ajiye bayani",
+    "notes_empty": "Babu bayanai tukuna. Bayanai suna zama a Kai Kaɗai, a na'urorinku ne kaɗai.",
+    "notes_error_title": "Ba a iya karanta bayanai ba",
     "filter_all": "Duka",
     "filter_clear": "Share Tace",
     "filter_error": "Kuskure",
@@ -2951,6 +2967,28 @@
     "ceremony_state_not_yet": "ba tukuna ba",
     "receipt_this_node": "Wannan kumburi — ku",
     "setup_finish_unclaimed": "Kammala ba tare da karɓar wannan kumburi ba",
+    "files_title": "Fayiloli",
+    "files_add": "Ƙara fayil",
+    "files_refresh": "Sabunta",
+    "files_open": "Buɗe",
+    "files_close": "Rufe",
+    "files_untitled": "Ba shi da suna",
+    "files_empty_self": "Babu komai a nan tukuna. Abin da kuka ƙara yana zama a na'urorinku kaɗai har sai kun raba shi.",
+    "files_empty_community": "Babu fayiloli a ɗakunan al'ummarku tukuna.",
+    "files_node_too_old_title": "Wannan kumburi ba zai iya riƙe fayiloli ba tukuna",
+    "files_node_too_old_body": "Fayiloli da bayanai suna buƙatar ciris-server 0.5.215 ko sabuwa. Sauran komai yana aiki kamar yadda aka saba.",
+    "files_node_too_old_body_versioned": "Wannan kumburi yana amfani da {version}. Fayiloli da bayanai suna buƙatar ciris-server 0.5.215 ko sabuwa. Sauran komai yana aiki kamar yadda aka saba.",
+    "files_error_title": "Ba a iya lissafo fayilolin ba",
+    "files_bytes_here": "A wannan na'ura",
+    "files_bytes_not_fetched": "A wata na'ura",
+    "files_bytes_not_granted": "Wannan na'ura ba za ta iya buɗe shi ba",
+    "files_bytes_unopened": "Ba za a iya buɗe shi a nan ba",
+    "files_room": "Ɗaki {room}",
+    "files_choose_room": "Za ku ƙara shi a wanne ɗaki?",
+    "files_uploading": "Ana ƙara {name}…",
+    "files_too_large": "{name} girmansa {size} ne. A yanzu, fayiloli za su iya kaiwa mafi girma na {limit}.",
+    "files_written": "An ƙara {name}.",
+    "files_written_nobody": "An ƙara {name}, amma a wannan na'ura kaɗai. Bai isa ga kowa ba.",
     "verify_title": "Tabbatar da build",
     "verify_hash_label": "Hash na build",
     "verify_button": "Duba",
@@ -3034,7 +3072,8 @@
     "contacts_trust_unknown": "ba a sani ba",
     "contacts_trust_untrusted": "ba amintacce ba",
     "approvals_alerts_off": "An kashe faɗakarwar amincewa. Kunna sanarwa don CIRIS a cikin saitunan na'urarka domin a sanar da kai lokacin da wakili ke bukatarka.",
-    "accord_written_by": "{who} ne ya rubuta"
+    "accord_written_by": "{who} ne ya rubuta",
+    "files_written_partial": "An ƙara {name}. Adadin na'urori {count} ba za su iya buɗe shi ba tukuna."
   },
   "moderation": {
     "ladder": {
@@ -3189,7 +3228,9 @@
       "users": "Masu amfani",
       "wallet": "Jakar kuɗi",
       "wise_authority": "Hukumar Hikima",
-      "help": "Taimako"
+      "help": "Taimako",
+      "files": "Fayiloli",
+      "notes": "Bayanan Kai"
     },
     "circle": {
       "agent": "Ni kaɗai",
@@ -3238,7 +3279,8 @@
       "record": "Babu abin da ya faru a wannan da'ira tukuna.",
       "files_agent": "Babu komai a nan tukuna. Nan ne duk abu yake farawa, kuma babu abin da ake sanarwa a nan.",
       "decisions_agent": "Babu wani a nan da za ku yanke shawara tare da shi. Yanke shawara yana farawa a Iyali.",
-      "decisions_family": "Iyali yana yanke shawara ta hanyar tattaunawa. Babu abin da za a kada kuri'a a kai a nan."
+      "decisions_family": "Iyali yana yanke shawara ta hanyar tattaunawa. Babu abin da za a kada kuri'a a kai a nan.",
+      "files_family": "Fayilolin Iyali za su iso da zarar an iya kafa Iyali a wannan hanyar sadarwa."
     },
     "my_things": "Abubuwana",
     "stop_everything": "Tsayar da komai",
@@ -4464,5 +4506,30 @@
       "revoked": "An soke",
       "expired": "Ya ƙare"
     }
+  },
+  "drive": {
+    "author_signer_unavailable": "Wannan kumburi ba zai iya sa hannu a madadinku yanzu ba, don haka ba a rubuta fayil ɗin ba.",
+    "community_id_required": "Fayil na al'umma yana buƙatar ambaton ɗakinsa.",
+    "family_id_required": "Fayil na Iyali yana buƙatar ambaton Iyalinsa. Babu Iyali na asali.",
+    "listing_failed": "Wannan kumburi bai iya lissafo fayilolin da ke wannan ɗaki ba.",
+    "no_node_key": "Wannan kumburi bai iya samun maɓallinsa na kansa ba.",
+    "not_fetched": "Yana kan wata na'ura. Bytes nasa ba su isa wannan na'ura ba tukuna.",
+    "not_granted": "Wannan na'ura ba ta riƙe izini ga waɗannan bytes ba.",
+    "not_in_room": "Wannan ba fayil a wannan ɗaki ba ne.",
+    "owner_session_required": "Ku shiga a matsayin mai wannan kumburi domin amfani da fayilolinku.",
+    "publish_failed": "Ba a iya wallafa fayil ɗin ba.",
+    "readable_by_nobody": "Babu wanda zai iya karanta wannan fayil, don haka ba a rubuta shi ba.",
+    "store_unavailable": "Wannan kumburi bai iya isa ga ma'ajiyar fayilolinsa ba.",
+    "too_large": "Wannan fayil ya yi girma sosai don a ƙara shi a nan.",
+    "unknown_cohort": "Wannan ba wuri ne da fayiloli za su iya zuwa ba. Yi amfani da Kai Kaɗai, Iyali ko al'umma.",
+    "unopened": "Wannan na'ura ba za ta iya buɗe shi ba.",
+    "not_a_member": "Ba ku cikin mambobin wannan ɗakin ba."
+  },
+  "notes": {
+    "author_signer_unavailable": "Wannan kumburi ba zai iya sa hannu a madadinku yanzu ba, don haka ba a rubuta bayani ba.",
+    "empty": "Bayani mara komai a ciki ba bayani ba ne.",
+    "listing_failed": "Wannan kumburi bai iya karanta bayananku ba.",
+    "no_node_key": "Wannan kumburi bai iya samun maɓallinsa na kansa ba.",
+    "owner_session_required": "Ku shiga a matsayin mai wannan kumburi domin amfani da bayananku."
   }
 }
