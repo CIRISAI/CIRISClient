@@ -34,6 +34,16 @@ explicit — *"on revoke, the granting node MUST cease replicating the named
 prefixes to P"*. So the gap is a missing HTTP route over an existing capability,
 which is the cheapest kind of gap and the worst kind to leave.
 
+**0.5.218 builds the route (CIRISServer#657).** The maintainer's brief update
+(2026-09-25) reports `POST /v1/federation/peering/revoke` and
+`DELETE /v1/contacts/{key_id}` as built and tested, **always signed by the
+person, never the node**. So the disabled control can be enabled once the
+release ships. There is one limit, and the screen must carry it: grants the node
+wrote before the person re-signed them cannot be withdrawn and stay live. The
+route lists them as `remaining_grants`, and each must render as **still
+active**. A withdraw that leaves any of them standing is not reported as
+complete.
+
 ## 2. Surface (what)
 
 ```yaml csd:surface
@@ -146,7 +156,9 @@ line in the same tagging PR.
 | the saved node pair | `getOwnedNodes()` — local profiles | CIRISClient | live |
 | each node's key record | `GET /v1/federation/self-key-record` | CIRISServer | live (`src/federation_admin.rs:900`), node-only |
 | grant a direction | `POST /v1/federation/peering` | CIRISServer | live (`src/federation_admin.rs:903`), node-only |
-| **withdraw a grant** | none | CIRISServer | **missing — the blocking ask.** Searched `federation_admin.rs`, `federation_peers.rs` and every `routing::delete` in the repo. CC 2.4.1.1 already gives the attester the primitive; what is absent is the route. |
+| **withdraw a grant** | `POST /v1/federation/peering/revoke`, signed by the person | CIRISServer | **built, unmerged** (0.5.218, CIRISServer#657, still open). Missing on `main` @ `046e1b39` (every `routing::delete` and the federation admin router checked; see #657's own table). Not readable: no branch or PR carrying it is pushed. Request and response keys other than `remaining_grants` are **unconfirmed** until CIRISClient#78 |
+| grants that cannot be withdrawn | `remaining_grants` on the withdraw response: grants this node wrote before the person re-signed them, which stay live | CIRISServer | **built, unmerged.** Each renders as a row in `proposed:consent_remaining_grants` reading "Still active: this node wrote it before you signed, so it can't be withdrawn here", in the normal tone, never struck through or greyed as if gone. The success line appears only when `remaining_grants` is empty |
+| un-contact a person | `DELETE /v1/contacts/{key_id}` | CIRISServer | built, unmerged (#657); the People side is CSD-005 |
 | the grant's envelope (attester, `for_key_id`, scope, dimension) | not requested by the client; `grant_receipt` exists node-side (`src/peer.rs:1525`) | CIRISServer + CIRISClient | **unconfirmed** — blocks `building` for `text_consent_attester` and `text_consent_for_key`. CIRISServer#616. |
 | the traces opt-in | `GET`/`PUT /v1/my-data/accord-settings` | **CIRISAgent** (`routes/my_data.py:580, 689`) | live on the agent — **wrong-host**: the node serves no `accord-settings` (its `/v1/my-data/*` is `lens-identifier` and `capacity` only, `src/system_data.rs:387,390`). The card is not marked `agentOnly`, so on a node build the switch reads a 404. |
 
@@ -160,10 +172,20 @@ flow today would assert that the buttons exist and not what they say.
 The step this CSD is waiting on is the one that cannot be written:
 
 ```yaml
-# blocked on a withdraw route — DO NOT land until §3's missing row is filled
+# blocked until 0.5.218 ships the withdraw route (#657); then it lands as is
 expect:
   state: populated
   text: {chip_consent_ratified: "Not ratified"}
+```
+
+Once the route ships: click `btn_consent_revoke_peering` on a grant the person
+signed. It leaves the list. On a node with a grant the node wrote before the
+person re-signed, the same click leaves that grant standing:
+
+```yaml
+expect:
+  visible: ["proposed:consent_remaining_grants"]
+  text: {"proposed:consent_remaining_grants": "Still active"}
 ```
 
 ## 5. QA plan
@@ -172,9 +194,11 @@ expect:
 where a second profile can be saved — desktop by default.
 
 **Not tested here.**
-* Revocation. There is no route, so there is no red path, and by this repo's own
-  rule a check whose red path has never run is half a check. The `expect:` block
-  above is written and deliberately not landed.
+* Revocation, until 0.5.218 ships: the route is built but not released, so
+  there is no red path yet, and by this project's own rule a check whose red
+  path has never run is half a check. The `expect:` blocks above are written and
+  land with the release. The `remaining_grants` case needs a node carrying a
+  pre-re-sign grant, which only an upgraded node has; a fresh CI node does not.
 * That a grant made on this screen is the grant the node signed. The client never
   reads the envelope back (§3).
 
