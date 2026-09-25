@@ -23,7 +23,7 @@ class CirclesNavTest {
         NavSurface.Interact, NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler, NavSurface.Tools,
         NavSurface.Services, NavSurface.Logs, NavSurface.Transport, NavSurface.Telemetry, NavSurface.GraphMemory,
         NavSurface.Memory, NavSurface.WiseAuthority, NavSurface.LLMSettings, NavSurface.System, NavSurface.Runtime,
-        NavSurface.Config, NavSurface.Skills, NavSurface.AgentSettings, NavSurface.Account, NavSurface.HealthReputation,
+        NavSurface.Config, NavSurface.Skills, NavSurface.AgentSettings, NavSurface.HealthReputation,
         NavSurface.Users, NavSurface.Adapters, NavSurface.NetworkOps, NavSurface.Storage, NavSurface.Audit,
         NavSurface.Consent, NavSurface.Data, NavSurface.Trust, NavSurface.Nodes, NavSurface.ManageConsent,
         NavSurface.Contacts, NavSurface.Delegations, NavSurface.IdentityManagement, NavSurface.Accord,
@@ -92,15 +92,29 @@ class CirclesNavTest {
         assertTrue(NavSurface.Interact in CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = true))
     }
 
+    /**
+     * A BARE NODE CAN STILL SIGN OUT (CIRISClient#51) — through My Identity,
+     * where `btn_logout` lives on every build. There is no "account" in CIRIS,
+     * only identities, so there is no Account row: it was a second route onto
+     * Settings, kept only because Settings was once agent-gated.
+     */
     @Test
-    fun aBareNodeCanStillReachAccountAndThereforeSignOut() {
-        for (s in listOf(NavSurface.Account, NavSurface.AgentSettings)) {
-            val inst = CirclesNav.instrumentOf(s)
-            assertNotNull(inst, s.id)
-            assertTrue(s in inst.surfaces(hasAgent = false), "${s.id}: a bare node cannot reach Settings, so cannot sign out")
-            assertEquals("nav_instrument_devices_keys", inst.tag)
-            assertTrue(inst in CirclesNav.instruments(hasAgent = false), "${s.id}: its instrument is not offered on a bare node")
-        }
+    fun aBareNodeCanSignOutThroughMyIdentity() {
+        val inst = CirclesNav.instrumentOf(NavSurface.IdentityManagement)
+        assertNotNull(inst)
+        assertEquals("nav_instrument_devices_keys", inst.tag)
+        assertTrue(NavSurface.IdentityManagement in inst.surfaces(hasAgent = false), "a bare node cannot reach My Identity, so cannot sign out")
+        assertTrue(inst in CirclesNav.instruments(hasAgent = false), "Devices & keys is not offered on a bare node")
+        assertFalse(CirclesNav.isAgentOnly(NavSurface.IdentityManagement))
+        // Settings stays reachable on every build too (language, ground).
+        assertTrue(NavSurface.AgentSettings in inst.surfaces(hasAgent = false))
+    }
+
+    @Test
+    fun thereIsNoAccountSurface() {
+        val placed = CirclesNav.placements.map { it.surface.id } + CirclesNav.instruments.flatMap { i -> i.surfaces.map { it.id } }
+        assertFalse("account" in placed, "an Account row is back: CIRIS has identities, not accounts")
+        assertFalse("account" in FLOW_ONLY_SURFACES)
     }
 
     /**

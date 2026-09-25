@@ -419,9 +419,13 @@ fun SettingsScreen(
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // Account Section
+                // Sign-in section. Sign-out's home is My Identity (every build,
+                // CIRISClient#51); this copy stays only because CIRISAgent's gate
+                // falls back to the Settings row to find `btn_logout`
+                // (qa_runner/modules/web_ui/__main__.py). It goes once
+                // CIRISAgent#1181's gate routes to identity-management.
                 Text(
-                    text = localizedString("mobile.settings_account"),
+                    text = localizedString("mobile.settings_sign_in"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )

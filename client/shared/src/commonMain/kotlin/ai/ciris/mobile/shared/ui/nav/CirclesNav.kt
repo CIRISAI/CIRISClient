@@ -159,12 +159,11 @@ object CirclesNav {
     val instruments: List<Instrument> = listOf(
         Instrument(
             "devices-keys", "nav.instrument.devices_keys", GlyphName.DEVICES,
-            listOf(
-                NavSurface.IdentityManagement, NavSurface.AgentSettings, NavSurface.Account,
-                NavSurface.ClientInterface,
-            ),
-            // Settings is this device's and every build's — language, ground,
-            // sign out (CIRISClient#51). The interface tuning calls nothing,
+            listOf(NavSurface.IdentityManagement, NavSurface.AgentSettings, NavSurface.ClientInterface),
+            // My Identity is where this device signs out, on every build
+            // (CIRISClient#51) — there is no "account" in CIRIS, only
+            // identities. Settings is this device's too — language, ground —
+            // and every build's. The interface tuning calls nothing,
             // but all it tunes is the cell on Interact, which a bare node does
             // not have: offered there it would be a control with no effect.
             agentOnly = setOf(NavSurface.ClientInterface),
