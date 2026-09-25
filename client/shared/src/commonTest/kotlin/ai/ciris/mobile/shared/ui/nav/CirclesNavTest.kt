@@ -31,7 +31,7 @@ class CirclesNavTest {
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
         NavSurface.Delegation, NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
-        NavSurface.ClientInterface, NavSurface.Help,
+        NavSurface.ClientInterface, NavSurface.Help, NavSurface.Files, NavSurface.Notes,
     )
 
     @Test
@@ -64,7 +64,7 @@ class CirclesNavTest {
         assertTrue(CirclesNav.cards(CohortScope.AGENT, Tab.DECISIONS, hasAgent = true).isEmpty(), "Just me has nobody to decide with")
         assertEquals("nav.empty.decisions_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.DECISIONS))
         assertEquals("nav.empty.decisions_family", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.DECISIONS))
-        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES))
+        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.GLOBAL_COMMONS, Tab.FILES))
     }
 
     @Test
@@ -110,12 +110,15 @@ class CirclesNavTest {
     @Test
     fun filesHoldsOnlyFiles() {
         for (c in CirclesNav.circles) for (hasAgent in listOf(false, true)) {
-            assertTrue(
-                CirclesNav.cards(c, Tab.FILES, hasAgent).isEmpty(),
-                "${c.id} › files (agent=$hasAgent): only files belong in Files — the spine is B3",
-            )
+            val cards = CirclesNav.cards(c, Tab.FILES, hasAgent)
+            assertTrue(cards.all { it == NavSurface.Files }, "${c.id} › files holds something that is not files: $cards")
         }
-        assertEquals("nav.empty.files_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.FILES))
+        // The drive has a cohort for these circles (self, community) and none for the rest.
+        for (c in listOf(CohortScope.AGENT, CohortScope.LOCAL_COMMUNITY, CohortScope.GLOBAL_COMMUNITIES)) {
+            assertEquals(listOf(NavSurface.Files), CirclesNav.cards(c, Tab.FILES, hasAgent = false), "${c.id}: files is a node feature")
+        }
+        assertTrue(CirclesNav.cards(CohortScope.FAMILY, Tab.FILES, hasAgent = true).isEmpty())
+        assertEquals("nav.empty.files_family", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES), "family says WHY it holds no files")
         assertNull(CirclesNav.tabOf(NavSurface.Memory), "the memory graph is an instrument, not a file")
         assertEquals("this-node", CirclesNav.instrumentOf(NavSurface.Memory)?.id)
     }
@@ -124,7 +127,10 @@ class CirclesNavTest {
     fun chatsHoldsOnlyConversations() {
         for (c in CirclesNav.circles) {
             val cards = CirclesNav.cards(c, Tab.CHATS, hasAgent = true)
-            assertTrue(cards.all { it == NavSurface.Interact }, "${c.id} › chats holds something that is not a conversation: $cards")
+            assertTrue(
+                cards.all { it == NavSurface.Interact || it == NavSurface.Notes },
+                "${c.id} › chats holds something that is not a conversation: $cards",
+            )
         }
         // How the machine runs is not who you talk to.
         for (s in listOf(NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler)) {

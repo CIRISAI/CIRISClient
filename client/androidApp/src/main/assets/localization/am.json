@@ -1558,6 +1558,19 @@
     "federation_create_secure_note": "በመሣሪያህ የተጠበቀ — የደህንነት ቁልፍ ወይም የዚህ መሣሪያ ደህንነቱ የተጠበቀ ሃርድዌር (TPM / Secure Enclave)። የሚመረጥ ነገር የለም፤ እጅግ ደህንነቱ የተጠበቀው አማራጭ ራስ-ሰር ጥቅም ላይ ይውላል።",
     "federation_create_title": "የፌዴሬሽን መታወቂያህን ፍጠር",
     "federation_import_usb": "ነባር Fed ID ከUSB አስመጣ",
+    "files_written": "{name} ተጨምሯል።",
+    "files_written_nobody": "{name} ተጨምሯል፣ ነገር ግን በዚህ መሣሪያ ላይ ብቻ። ወደ ሌላ ማንም አልደረሰም።",
+    "files_written_partial": "{name} ተጨምሯል። {count} መሣሪያ(ዎች) ገና ሊከፍቱት አይችሉም።",
+    "files_add_failed": "{name}ን መጨመር አልተቻለም፦ {reason}",
+    "files_preview_unavailable": "እዚህ ለዚህ ዓይነት ፋይል ቅድመ-እይታ የለም። ለመክፈት ቅጂ ያስቀምጡ።",
+    "files_save_copy": "ቅጂ አስቀምጥ",
+    "files_saved_to": "በ{path} ላይ ተቀምጧል",
+    "files_save_failed": "በዚህ መሣሪያ ላይ ቅጂ ማስቀመጥ አልተቻለም።",
+    "notes_title": "ለራስ ማስታወሻዎች",
+    "notes_placeholder": "ለራስዎ ማስታወሻ ይጻፉ…",
+    "notes_save": "ማስታወሻ አስቀምጥ",
+    "notes_empty": "እስካሁን ምንም ማስታወሻዎች የሉም። ማስታወሻዎች በ‘እኔ ብቻ’ ውስጥ፣ በራስዎ መሣሪያዎች ላይ ይቆያሉ።",
+    "notes_error_title": "ማስታወሻዎች ሊነበቡ አልቻሉም",
     "filter_all": "ሁሉም",
     "filter_clear": "ማጣሪያዎችን አጽዳ",
     "filter_error": "ስህተት",
@@ -2951,6 +2964,25 @@
     "ceremony_state_not_yet": "ገና አልተፈረመም",
     "receipt_this_node": "ይህ ኖድ — እርስዎ",
     "setup_finish_unclaimed": "ይህን ኖድ ሳይጠይቁ ይጨርሱ",
+    "files_title": "ፋይሎች",
+    "files_add": "ፋይል ጨምር",
+    "files_refresh": "አድስ",
+    "files_open": "ክፈት",
+    "files_close": "ዝጋ",
+    "files_untitled": "ርዕስ የለሽ",
+    "files_empty_self": "እስካሁን ምንም ነገር የለም። የሚጨምሩት እርስዎ እስኪያጋሩት ድረስ በራስዎ መሣሪያዎች ላይ ይቆያል።",
+    "files_empty_community": "በማህበረሰብ ክፍሎችዎ ውስጥ እስካሁን ምንም ፋይሎች የሉም።",
+    "files_node_too_old_title": "ይህ ኖድ ገና ፋይሎችን ማስቀመጥ አይችልም",
+    "files_node_too_old_body": "ፋይሎች እና ማስታወሻዎች ciris-server 0.5.215 ወይም አዲስ ይፈልጋሉ። ሌላው ሁሉ በመደበኛነት ይሰራል።",
+    "files_node_too_old_body_versioned": "ይህ ኖድ {version} እያሄደ ነው። ፋይሎች እና ማስታወሻዎች ciris-server 0.5.215 ወይም አዲስ ይፈልጋሉ። ሌላው ሁሉ በመደበኛነት ይሰራል።",
+    "files_error_title": "ፋይሎች ሊዘረዘሩ አልቻሉም",
+    "files_bytes_here": "በዚህ መሣሪያ ላይ",
+    "files_bytes_not_fetched": "በሌላ መሣሪያ ላይ",
+    "files_bytes_not_granted": "ይህ መሣሪያ ሊከፍተው አይችልም",
+    "files_bytes_unopened": "እዚህ ሊከፈት አይችልም",
+    "files_room": "ክፍል {room}",
+    "files_choose_room": "የትኛው ክፍል ውስጥ ይጨመር?",
+    "files_uploading": "{name}ን በመጨመር ላይ…",
     "verify_title": "ግንባታ ማረጋገጥ",
     "verify_hash_label": "የግንባታ ሃሽ",
     "verify_button": "አረጋግጥ",
@@ -3034,7 +3066,8 @@
     "contacts_trust_unknown": "ያልታወቀ",
     "contacts_trust_untrusted": "ያልታመነ",
     "approvals_alerts_off": "የማጽደቅ ማንቂያዎች ጠፍተዋል። ወኪሉ ሲፈልግዎት እንዲነገርዎት በስርዓት ቅንብሮችዎ ውስጥ ለ CIRIS ማሳወቂያዎችን ያብሩ።",
-    "accord_written_by": "በ{who} የተጻፈ"
+    "accord_written_by": "በ{who} የተጻፈ",
+    "files_too_large": "{name} {size} ነው። ለጊዜው ፋይሎች ቢበዛ {limit} ሊሆኑ ይችላሉ።"
   },
   "moderation": {
     "ladder": {
@@ -3189,7 +3222,9 @@
       "users": "ተጠቃሚዎች",
       "wallet": "ቦርሳ",
       "wise_authority": "የጥበብ ባለስልጣን",
-      "help": "እገዛ"
+      "help": "እገዛ",
+      "files": "ፋይሎች",
+      "notes": "ለራስ ማስታወሻዎች"
     },
     "circle": {
       "agent": "እኔ ብቻ",
@@ -3238,7 +3273,8 @@
       "record": "በዚህ ክብ ውስጥ እስካሁን ምንም ነገር አልተከሰተም።",
       "files_agent": "እዚህ እስካሁን ምንም ነገር የለም። ሁሉም ነገር የሚጀምረው እዚህ ነው፣ እና እዚህ ያለው ምንም ነገር አይታወጅም።",
       "decisions_agent": "እዚህ ውሳኔ የሚደረግበት ማንም የለም። ውሳኔዎች የሚጀምሩት በቤተሰብ ውስጥ ነው።",
-      "decisions_family": "ቤተሰብ በመነጋገር ይወስናል። እዚህ ድምፅ የሚሰጥበት ነገር የለም።"
+      "decisions_family": "ቤተሰብ በመነጋገር ይወስናል። እዚህ ድምፅ የሚሰጥበት ነገር የለም።",
+      "files_family": "የቤተሰብ ፋይሎች በዚህ መረብ ላይ ቤተሰብ ሊመሠረት ከቻለ በኋላ ይደርሳሉ።"
     },
     "my_things": "የእኔ ነገሮች",
     "stop_everything": "ሁሉንም አቁም",
@@ -4464,5 +4500,30 @@
       "revoked": "ተሰርዟል",
       "expired": "ጊዜው አልፎበታል"
     }
+  },
+  "drive": {
+    "author_signer_unavailable": "ይህ ኖድ አሁን እንደ እርስዎ መፈረም አይችልም፣ ስለዚህ ፋይሉ አልተጻፈም።",
+    "community_id_required": "የማህበረሰብ ፋይል ክፍሉን መጠቆም አለበት።",
+    "family_id_required": "የቤተሰብ ፋይል ቤተሰቡን መጠቆም አለበት። ነባር ቤተሰብ የለም።",
+    "listing_failed": "ይህ ኖድ በዚያ ክፍል ውስጥ ያሉትን ፋይሎች መዘርዘር አልቻለም።",
+    "no_node_key": "ይህ ኖድ የራሱን ቁልፍ ማግኘት አልቻለም።",
+    "not_a_member": "እርስዎ የዚያ ክፍል አባል አይደሉም።",
+    "not_fetched": "በሌላ መሣሪያ ላይ ነው። ባይቶቹ ገና ወደዚህ አልደረሱም።",
+    "not_granted": "ይህ መሣሪያ ለእነዚህ ባይቶች ምንም ፈቃድ አልያዘም።",
+    "not_in_room": "ያ በዚህ ክፍል ውስጥ ፋይል አይደለም።",
+    "owner_session_required": "ፋይሎችዎን ለመጠቀም እንደ ይህ ኖድ ባለቤት ይግቡ።",
+    "publish_failed": "ፋይሉ ሊታተም አልቻለም።",
+    "readable_by_nobody": "ማንም ይህን ፋይል ማንበብ አይችልም ነበር፣ ስለዚህ አልተጻፈም።",
+    "store_unavailable": "ይህ ኖድ የፋይል ማከማቻውን ማግኘት አልቻለም።",
+    "too_large": "ያ ፋይል እዚህ ለመጨመር በጣም ትልቅ ነው።",
+    "unknown_cohort": "ያ ፋይሎች የሚሄዱበት ቦታ አይደለም። 'እኔ ብቻ'፣ ቤተሰብ ወይም ማህበረሰብ ይጠቀሙ።",
+    "unopened": "ይህ መሣሪያ ሊከፍተው አይችልም።"
+  },
+  "notes": {
+    "author_signer_unavailable": "ይህ ኖድ አሁን እንደ እርስዎ መፈረም አይችልም፣ ስለዚህ ማስታወሻው አልተጻፈም።",
+    "empty": "ምንም ያልያዘ ማስታወሻ ማስታወሻ አይደለም።",
+    "listing_failed": "ይህ ኖድ ማስታወሻዎችዎን ማንበብ አልቻለም።",
+    "no_node_key": "ይህ ኖድ የራሱን ቁልፍ ማግኘት አልቻለም።",
+    "owner_session_required": "ማስታወሻዎችዎን ለመጠቀም እንደ ይህ ኖድ ባለቤት ይግቡ።"
   }
 }

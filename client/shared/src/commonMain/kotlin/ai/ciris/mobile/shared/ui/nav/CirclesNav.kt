@@ -77,14 +77,17 @@ object CirclesNav {
         // ── Files — FILES. The tab is named for what it holds, so nothing
         // else may sit in it: the memory graph moved to This node, the
         // environment snapshot and the commons to Decisions, the accord's
-        // attestations to Safety. Until the files spine exists (B3) every
-        // circle's Files tab says so, which is a fact about the data and not
-        // a gap in the build. ──
+        // attestations to Safety. The one card here is the drive plane
+        // itself (B3), in the circles the drive has a cohort for. ──
+
+        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
         // runs, not who you talk to; they live under This node. ──
         Placement(NavSurface.Interact, Tab.CHATS, setOf(AGENT), agentOnly = true),
+        // A note to self is the chat of one, and needs no agent: every build.
+        Placement(NavSurface.Notes, Tab.CHATS, setOf(AGENT)),
 
         // ── People — the constituent of every circle. Contacts IS the tab;
         // who may act for whom is a rule, so Delegations sits under Rules. ──
@@ -213,6 +216,10 @@ object CirclesNav {
         tab == Tab.DECISIONS && circle == AGENT -> "nav.empty.decisions_agent"
         tab == Tab.DECISIONS && circle == FAMILY -> "nav.empty.decisions_family"
         tab == Tab.FILES && circle == AGENT -> "nav.empty.files_agent"
+        // Nothing in production can form a household family yet
+        // (CIRISServer#627), so a family file cannot exist: say that, rather
+        // than an "empty" that implies there could be something here.
+        tab == Tab.FILES && circle == FAMILY -> "nav.empty.files_family"
         else -> "nav.empty." + tab.id
     }
 }

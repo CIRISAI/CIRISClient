@@ -31,7 +31,13 @@ fun initDebugBundleExport(context: Context) {
     appContext = context.applicationContext
 }
 
-actual fun saveDebugBundle(fileName: String, content: String): String? {
+actual fun saveDebugBundle(fileName: String, content: String): String? =
+    writeToDownloads(fileName, "text/plain", content.toByteArray())
+
+actual fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String? =
+    writeToDownloads(fileName, mediaType, bytes)
+
+internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArray): String? {
     val ctx = appContext ?: return null
     return runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -43,7 +49,7 @@ actual fun saveDebugBundle(fileName: String, content: String): String? {
             // sends it believing they sent their logs.
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
-                put(MediaStore.MediaColumns.MIME_TYPE, "text/plain")
+                put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
                 put(MediaStore.MediaColumns.IS_PENDING, 1)
             }
@@ -53,7 +59,7 @@ actual fun saveDebugBundle(fileName: String, content: String): String? {
             ) ?: return@runCatching null
 
             val wrote = runCatching {
-                ctx.contentResolver.openOutputStream(uri)?.use { it.write(content.toByteArray()) }
+                ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
                     ?: throw java.io.IOException("openOutputStream returned null for $uri")
             }
             if (wrote.isFailure) {
@@ -105,7 +111,7 @@ actual fun saveDebugBundle(fileName: String, content: String): String? {
             // onward, which is exactly why the Q+ branch above exists.
             val dir = ctx.getExternalFilesDir(null) ?: ctx.filesDir
             val out = File(dir, fileName)
-            out.writeText(content)
+            out.writeBytes(bytes)
             out.absolutePath
         }
     }.getOrNull()
