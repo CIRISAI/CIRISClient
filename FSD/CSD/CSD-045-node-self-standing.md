@@ -114,9 +114,9 @@ error:     {tag: "proposed:node_self_error", renders: "503 with unreadable_axes:
 | stop / resume accepting | `POST /v1/admin/self/stop-accepting` · `/resume-accepting` | CIRISServer | live |
 | declare / lift compulsion | `POST /v1/admin/self/compelled` · `/compulsion-lifted` (`self_compelled`, `self_compulsion_lifted`) | CIRISServer | live |
 | request body, every act | `{delegation_id, reason, compelled_by?}`: `delegation_id` is the owner's own `delegates_to` id and is required; `reason` is required (`admin.refusal.reason_absent`); `compelled_by` is read only by the compulsion act | CIRISServer | live |
-| where `delegation_id` comes from | the owner's own delegation to this node. The client has no read that returns it today (`GET /v1/auth/device/grants` lists grants, but not the owner's `delegates_to` to the node) | CIRISServer | **unconfirmed**: blocks `sketched` |
+| where `delegation_id` comes from | the owner's own delegation to this node. The client has no read that returns it today (`GET /v1/auth/device/grants` lists grants, but not the owner's `delegates_to` to the node) | CIRISServer | **unconfirmed**: blocks `sketched`. CIRISServer#676 |
 | reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | **missing**: CIRISAgent#1213. Until then the card calls the node URL directly |
-| a declaration that anyone else can see | the act writes a `hard_case:admin_action:{op}` row into persist's local `hard_case_events` table: unsigned, no `cohort_scope`, not an attestation, so nothing replicates it. The route's own doc says it is "the one a peer reads", but no peer can | CIRISServer / CIRISPersist | **missing**: no issue filed yet |
+| a declaration that anyone else can see | the act writes a `hard_case:admin_action:{op}` row into persist's local `hard_case_events` table: unsigned, no `cohort_scope`, not an attestation, so nothing replicates it. The route's own doc says it is "the one a peer reads", but no peer can | CIRISServer / CIRISPersist | **missing**: CIRISServer#675 |
 
 **Registry gap.** The row kind is `admin_action:{op}` (persist `hard_case.rs`,
 `ADMIN_ACTION_PREFIX`), so the full dimension is `hard_case:admin_action:self_compelled`.
