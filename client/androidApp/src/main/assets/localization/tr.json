@@ -1267,6 +1267,7 @@
     "ceremony_state_signed": "imzalandı",
     "ceremony_state_not_yet": "henüz değil",
     "receipt_this_node": "Bu düğüm — siz",
+    "setup_finish_unclaimed": "Bu düğümü sahiplenmeden bitir",
     "chat_an_agent": "Bir ajan",
     "child_safety_class_csam": "CSAM (bir eşleşme otomatik olarak kaldırma bildirimi dosyalar — ayrıca kaldırma görevi gerektirir)",
     "child_safety_class_label": "İzleme listesi sınıfı",

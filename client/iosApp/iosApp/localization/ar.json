@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "موقَّع",
     "ceremony_state_not_yet": "ليس بعد",
     "receipt_this_node": "هذه العقدة — أنت",
+    "setup_finish_unclaimed": "إنهاء بدون المطالبة بهذه العقدة",
     "verify_title": "التحقق من إصدار",
     "verify_hash_label": "بصمة الإصدار",
     "verify_button": "تحقّق",

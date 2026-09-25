@@ -2067,6 +2067,7 @@
     "receipt_acts": "できること",
     "receipt_contact_scope_note": "許可そのものは公開レコードですが、やり取りする内容は公開されません。",
     "receipt_this_node": "このノード — あなた",
+    "setup_finish_unclaimed": "このノードの所有権を取得せずに完了する",
     "state_loading": "読み込み中",
     "state_error": "エラーが発生しました",
     "state_gone": "このファイルは失われました。もう誰もコピーを保持していません。",

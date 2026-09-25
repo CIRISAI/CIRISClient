@@ -2968,6 +2968,7 @@
     "ceremony_state_signed": "လက်မှတ်ရေးထိုးပြီး",
     "ceremony_state_not_yet": "မပြီးသေး",
     "receipt_this_node": "ဤ node — သင်",
+    "setup_finish_unclaimed": "ဤ node ကို ပိုင်ဆိုင်မှု မပြောဘဲ Setup ပြီးဆုံးပါ",
     "verify_title": "Build တစ်ခုကို အတည်ပြုပါ",
     "verify_hash_label": "Build hash",
     "verify_button": "စစ်ဆေးပါ",

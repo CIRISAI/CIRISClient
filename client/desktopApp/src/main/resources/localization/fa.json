@@ -2956,6 +2956,7 @@
     "ceremony_state_signed": "امضا شده",
     "ceremony_state_not_yet": "هنوز نه",
     "receipt_this_node": "این گره — شما",
+    "setup_finish_unclaimed": "پایان بدون ادعای این گره",
     "verify_title": "تأیید یک نسخه",
     "verify_hash_label": "هش نسخه",
     "verify_button": "بررسی",
