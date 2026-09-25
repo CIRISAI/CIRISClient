@@ -92,3 +92,71 @@ def test_no_hop_repeats_a_tag(hops):
     and something else filled the gap."""
     for screen, chain in hops.items():
         assert len(chain) == len(set(chain)), f"{screen}: repeated tag in {chain}"
+
+
+def test_two_surfaces_one_screen_keeps_both_hops():
+    """Two surfaces that open one Screen each keep their own route. The first
+    case was Account and AgentSettings, both opening Screen.Settings: the
+    Screen-keyed `setdefault` dropped Account without a word. Account is gone
+    (#93: there is no account, only identities), so the property is pinned
+    on a synthetic source rather than on a surface that no longer exists."""
+    src = (
+        "private fun surfaceToScreen(s: NavSurface): Screen = when (s) {\n"
+        "    ai.ciris.NavSurface.A -> Screen.Shared\n"
+        "    ai.ciris.NavSurface.B -> Screen.Shared\n"
+        "}\n"
+        "internal fun screenToSurface(s: Screen): NavSurface? = when (s) {\n"
+        "    Screen.Shared -> ai.ciris.NavSurface.B\n"
+        "}\n"
+    )
+    routes = nav_map._routes(src)
+    assert ("A", "Shared") in routes and ("B", "Shared") in routes, routes
+    # Screen.Shared is keyed by the surface the shell lights on it.
+    assert nav_map._screen_routes(src) == {"Shared": "B"}
+
+
+def test_there_is_no_account_surface():
+    """#93 deleted the Account row: sign-out lives on My Identity."""
+    assert "Account" not in nav_map.build_surfaces()
+    assert "Account" not in nav_map.build_surfaces(has_agent=False)
+
+
+def test_an_undisambiguated_shared_screen_fails_loudly():
+    """Two surfaces, one screen, and screenToSurface naming neither: the map must
+    refuse rather than pick one."""
+    src = (
+        "private fun surfaceToScreen(s: NavSurface): Screen = when (s) {\n"
+        "    NavSurface.A -> Screen.Shared\n"
+        "    NavSurface.B -> Screen.Shared\n"
+        "}\n"
+        "internal fun screenToSurface(s: Screen): NavSurface? = when (s) {\n"
+        "    Screen.Shared -> null\n"
+        "}\n"
+    )
+    with pytest.raises(ValueError, match="will not guess"):
+        nav_map._screen_routes(src)
+    # ...and the same source, disambiguated, resolves.
+    ok = src.replace("Screen.Shared -> null", "Screen.Shared -> ai.ciris.NavSurface.B")
+    assert nav_map._screen_routes(ok) == {"Shared": "B"}
+
+
+def test_a_route_table_that_parses_to_nothing_fails_loudly():
+    with pytest.raises(ValueError):
+        nav_map._routes("fun nothing() = Unit")
+
+
+def test_flow_only_is_derived_and_disjoint_from_the_tree():
+    """screen_atlas.FLOW_ONLY was hand-written and dead: no member was ever a hop,
+    so its branch never ran, and it listed a nonexistent `Manage` and missed
+    `UserChat`. Derived, it cannot do either."""
+    from testing.gate import screen_atlas
+
+    flow = screen_atlas.flow_only()
+    screens = nav_map.screen_classes()
+    assert flow <= screens, f"flow_only names screens that do not exist: {sorted(flow - screens)}"
+    assert "Manage" not in flow
+    assert "UserChat" in flow
+    for pre in ("Startup", "Login", "Setup", "ServerConnection", "ClaimNode", "VerifyAgent", "AddFederationId"):
+        assert pre in flow, pre
+    assert not flow & set(nav_map.build(has_agent=True)), "a flow-only screen the tree reaches is not flow-only"
+    assert not flow & screen_atlas.SHELL
