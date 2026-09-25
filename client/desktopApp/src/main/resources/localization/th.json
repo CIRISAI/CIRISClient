@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ลงนามแล้ว",
     "ceremony_state_not_yet": "ยังไม่",
     "receipt_this_node": "โหนดนี้ — คุณ",
+    "setup_finish_unclaimed": "เสร็จสิ้นโดยไม่อ้างสิทธิ์โหนดนี้",
     "verify_title": "ตรวจสอบ build",
     "verify_hash_label": "Hash ของ build",
     "verify_button": "ตรวจสอบ",

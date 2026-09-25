@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "ditandatangani",
     "ceremony_state_not_yet": "belum",
     "receipt_this_node": "Node ini — Anda",
+    "setup_finish_unclaimed": "Selesaikan tanpa mengklaim node ini",
     "verify_title": "Verifikasi build",
     "verify_hash_label": "Hash build",
     "verify_button": "Periksa",

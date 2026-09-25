@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "సంతకం చేయబడింది",
     "ceremony_state_not_yet": "ఇంకా కాదు",
     "receipt_this_node": "ఈ నోడ్ — మీరు",
+    "setup_finish_unclaimed": "ఈ నోడ్‌ను క్లెయిమ్ చేయకుండా పూర్తి చేయండి",
     "verify_title": "బిల్డ్‌ను ధృవీకరించండి",
     "verify_hash_label": "బిల్డ్ హాష్",
     "verify_button": "తనిఖీ చేయండి",

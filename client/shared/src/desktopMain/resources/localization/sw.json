@@ -2950,6 +2950,7 @@
     "ceremony_state_signed": "imetiwa saini",
     "ceremony_state_not_yet": "bado",
     "receipt_this_node": "Nodi hii — wewe",
+    "setup_finish_unclaimed": "Maliza bila kudai nodi hii",
     "verify_title": "Thibitisha toleo",
     "verify_hash_label": "Hash ya toleo",
     "verify_button": "Kagua",

@@ -1101,6 +1101,59 @@ class SetupViewModel(
             ownershipClaim = _state.value.ownershipClaim.copy(inProgress = true, error = null)
         )
         viewModelScope.launch {
+            // THE FED-ID FIRST, THE PIN SECOND (CIRISClient#68). The mint used
+            // to sit after the PIN wait, so a PIN that never arrived cost the
+            // owner their federation identity as well as the claim — they
+            // landed on an unclaimed node with no fed-ID and a bare catch-up
+            // screen after login. Minting needs the setup session, not the PIN,
+            // so it runs first and survives whatever the claim does.
+            try {
+                // MINT-IF-ABSENT: the self-claim REQUIRES a responsible-user fed-ID
+                // (the node 503s "no responsible-user identity yet" otherwise). The
+                // FEDERATION_IDENTITY_SETUP step lets the user proceed on a valid
+                // *typed* label alone (canProceed = minted || admitted ||
+                // isLabelValid), so a user who fills the name but never taps "Create
+                // fed-ID" reaches here un-minted. Rather than fail the claim, mint it
+                // now from the name they provided — mint-if-absent, mirroring the
+                // node's own open_or_create unbrick. Awaited, so the fed-ID exists
+                // before claim-remote runs. A mint failure is caught just below.
+                val fed0 = _state.value.federationIdentity
+                if (!fed0.minted && !fed0.admitted) {
+                    val mintBackend = fed0.backend
+                        ?: if (_state.value.secureWith2FA) "pkcs11" else null
+                    PlatformLogger.i(TAG, "[ORDER] fedid_mint begin (session=setup url=${CIRISApiClient.LOCAL_NODE_URL})")
+                    val minted = client.mintUserIdentity(
+                        label = fed0.label.trim().ifBlank { null },
+                        backend = mintBackend,
+                        localNodeUrl = CIRISApiClient.LOCAL_NODE_URL,
+                    )
+                    _state.value = _state.value.copy(
+                        federationIdentity = _state.value.federationIdentity.copy(
+                            inProgress = false,
+                            admitted = true,
+                            minted = true,
+                            hardwareAvailable = true,
+                            identityKeyId = minted.keyId,
+                            fedcode = minted.fedcode,
+                            hardwareLabel = minted.hardwareLabel,
+                            error = null,
+                        )
+                    )
+                    PlatformLogger.i(TAG, "[ORDER] fedid_minted key_id=${minted.keyId} (was absent — minted before claim)")
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[ORDER] fedid_mint failed before the claim: ${e.message}")
+                _state.value = _state.value.copy(
+                    ownershipClaim = _state.value.ownershipClaim.copy(
+                        inProgress = false,
+                        claimed = false,
+                        error = "Could not create your federation identity: ${e.message}",
+                        errorRecoverable = true,
+                    )
+                )
+                return@launch
+            }
+
             // WAIT for the one-time PIN. The provider suspends until PythonRuntime
             // latches it from the node's boot banner (console stream OR boot-log
             // FILE fallback), with a bounded timeout. A still-null/blank result
@@ -1136,39 +1189,7 @@ class SetupViewModel(
             var sessionKind = "setup"
             var ownerLoginOk = false
             try {
-                // MINT-IF-ABSENT: the self-claim REQUIRES a responsible-user fed-ID
-                // (the node 503s "no responsible-user identity yet" otherwise). The
-                // FEDERATION_IDENTITY_SETUP step lets the user proceed on a valid
-                // *typed* label alone (canProceed = minted || admitted ||
-                // isLabelValid), so a user who fills the name but never taps "Create
-                // fed-ID" reaches here un-minted. Rather than fail the claim, mint it
-                // now from the name they provided — mint-if-absent, mirroring the
-                // node's own open_or_create unbrick. Awaited, so the fed-ID exists
-                // before claim-remote runs. A mint failure falls to the outer catch.
-                val fed0 = _state.value.federationIdentity
-                if (!fed0.minted && !fed0.admitted) {
-                    val mintBackend = fed0.backend
-                        ?: if (_state.value.secureWith2FA) "pkcs11" else null
-                    PlatformLogger.i(TAG, "[ORDER] fedid_mint begin (session=$sessionKind url=${CIRISApiClient.LOCAL_NODE_URL})")
-                    val minted = client.mintUserIdentity(
-                        label = fed0.label.trim().ifBlank { null },
-                        backend = mintBackend,
-                        localNodeUrl = CIRISApiClient.LOCAL_NODE_URL,
-                    )
-                    _state.value = _state.value.copy(
-                        federationIdentity = _state.value.federationIdentity.copy(
-                            inProgress = false,
-                            admitted = true,
-                            minted = true,
-                            hardwareAvailable = true,
-                            identityKeyId = minted.keyId,
-                            fedcode = minted.fedcode,
-                            hardwareLabel = minted.hardwareLabel,
-                            error = null,
-                        )
-                    )
-                    PlatformLogger.i(TAG, "[ORDER] fedid_minted key_id=${minted.keyId} (was absent — minted before claim)")
-                }
+                // (the fed-ID was minted above, before the PIN wait — #68)
 
                 // Resolve THIS node's own NodeCode (PUBLIC handle). Prefer the one
                 // captured from the banner; otherwise fetch it from the local node.
@@ -2691,6 +2712,34 @@ class SetupViewModel(
         val provisionedSigningKeyB64: String?,
         val keyId: String?
     )
+
+    /**
+     * ONE PRESS, ONE RUN of the wizard's final step (CIRISClient#69).
+     *
+     * The step is claim → settle → complete, and only `completeSetup` used to
+     * set [SetupFormState.isSubmitting]. Everything before it — up to ~10s
+     * waiting for the claim PIN, then up to 90s for the claim to settle — ran
+     * with Next still enabled, which is precisely when a person presses it
+     * again, because nothing on screen appears to be happening. The second
+     * press ran the whole step again: two `setup/complete` calls 64ms apart,
+     * two ROOT owners with one name, and every login after refused as
+     * ambiguous (CIRISAI/CIRISAgent#1193 is the server's half).
+     *
+     * Returns false if the step is already running, so the caller does
+     * nothing. Called synchronously from the click, before anything is
+     * launched: a double click inside one frame still lands on a flag that is
+     * already set. Pair with [endFinalStep] in a `finally`.
+     */
+    fun beginFinalStep(): Boolean {
+        if (_state.value.isSubmitting) return false
+        _state.value = _state.value.copy(isSubmitting = true, submissionError = null)
+        return true
+    }
+
+    /** Release the guard [beginFinalStep] set, whatever the step's outcome. */
+    fun endFinalStep() {
+        _state.value = _state.value.copy(isSubmitting = false)
+    }
 
     /**
      * Submit setup completion request.
