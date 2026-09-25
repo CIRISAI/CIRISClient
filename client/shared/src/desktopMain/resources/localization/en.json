@@ -3078,7 +3078,34 @@
     "ceremony_state_signed": "signed",
     "ceremony_state_not_yet": "not yet",
     "receipt_this_node": "This node — you",
-    "setup_finish_unclaimed": "Finish without claiming this node"
+    "setup_finish_unclaimed": "Finish without claiming this node",
+    "identity_revoked_badge": "Revoked",
+    "identity_devices_node_too_old": "This node can't name devices, show revoked ones, or release nodes yet. That needs ciris-server 0.5.216 or later.",
+    "identity_label_button": "Name",
+    "identity_label_field": "Device name",
+    "identity_label_hint": "Only you see this name. Up to 64 characters.",
+    "identity_label_save": "Save name",
+    "identity_refusal_status": "The node refused this ({status}).",
+    "identity_nodes_title": "Your nodes",
+    "identity_nodes_desc": "Nodes bound to you. Releasing one withdraws your ownership of it.",
+    "identity_nodes_empty": "This node lists no nodes as yours.",
+    "identity_node_this": "This node",
+    "identity_release_button": "Release",
+    "identity_release_title": "Release this node?",
+    "identity_release_fact_node": "Node",
+    "identity_release_fact_effect": "What changes",
+    "identity_release_effect": "It stops being yours. Your self room drops it and it goes back to unowned.",
+    "identity_release_fact_signer": "Signed by",
+    "identity_release_signer": "Your own key, as a withdrawal of your ownership",
+    "identity_release_self_title": "This is the node you're talking to",
+    "identity_release_self_body": "The node refused because releasing it ends your ownership here, including this session: you would be signed out and it would go back to unowned. It will only do that if you confirm a second time.",
+    "identity_release_self_offer": "Release it anyway…",
+    "identity_release_force_title": "Release the node you're using?",
+    "identity_release_fact_session": "This session",
+    "identity_release_session_ends": "Ends. You are signed out here, and the node no longer knows you as its owner.",
+    "identity_release_force_confirm": "Release and sign out",
+    "identity_released": "Released {node}. It is no longer yours.",
+    "identity_released_self": "Released this node. Your ownership here has ended, and this session with it."
   },
   "moderation": {
     "ladder": {
@@ -4464,5 +4491,17 @@
       "revoked": "Revoked",
       "expired": "Expired"
     }
+  },
+  "self": {
+    "author_signer_unavailable": "Your identity could not be opened to sign this change.",
+    "bad_request": "The node could not read that device request.",
+    "delegate_may_not_author": "A delegated session cannot change your devices. The change is signed with your own key, so sign in as yourself.",
+    "label_empty": "A device name must be between 1 and 64 characters.",
+    "not_your_device": "That key is not one of your devices.",
+    "not_your_node": "That node is not one you own, so it is not yours to release.",
+    "owner_session_required": "Your devices are the owner's own surface. Sign in as the owner of this node.",
+    "release_incomplete": "The release was signed, but the node still lists that node as yours: an ownership record it cannot see is still live. What it could withdraw stays withdrawn.",
+    "release_self_requires_force": "That is the node you are talking to. Releasing it ends your ownership here, including this session.",
+    "store_unavailable": "The node could not read or write its identity store. Nothing was changed."
   }
 }
