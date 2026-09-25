@@ -105,7 +105,9 @@ entry: the router's initial screen, and after a reset  # required: how a person 
 
 A card that is placed and reachable, but whose hop `nav_map` cannot express,
 is not `flow_only`: the checker rejects that, because the screen resolves. Such
-a card keeps its explanation in prose until the nav map can say it (CSD-038).
+a card keeps its explanation in prose until the nav map can say it. (The first case was
+Account, a second route to `Screen.Settings`; the row was deleted in #93, and #92's
+`nav_map.build_surfaces()` keeps every surface's hop when two share a screen.)
 
 ## 2.1 Fields — `shows:` (the unified field spec)
 

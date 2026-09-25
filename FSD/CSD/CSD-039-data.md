@@ -200,8 +200,8 @@ from this client.
   row can flip from "requested" to "done".
 * **Two of the three read routes are on the brain.** On a node-only build the
   accord block and the trace-deletion button have no host at all, and the screen
-  does not say so — it renders a snackbar that vanishes. Same fix as CSD-038: a
-  tagged, persistent error.
+  does not say so — it renders a snackbar that vanishes. Same fix as Settings
+  (CSD-022): a tagged, persistent error.
 * **CC guardrail this card must never cross.** CC 2.4.1.1 carves out that a
   subject-authority `withdraws` "MUST NOT withdraw a third-party `capacity:*` or
   `detection:*` row about itself; selective erasure of adverse evidence is

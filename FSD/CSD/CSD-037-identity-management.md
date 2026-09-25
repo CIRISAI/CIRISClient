@@ -128,10 +128,11 @@ an error also must not look alike.
 | evict a device | `POST /v1/self/occurrence/revoke` | CIRISServer | live — `occurrence.rs:665` |
 | mint this device's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `identity.rs:1945`, loopback-only |
 | portable ID / repair | `POST /v1/self/occurrence/portable`, `POST /v1/self/associate` | CIRISServer | live — `portable_occurrence.rs:1152`, `:1155`, loopback-only |
-| `revoked` on a row | `GET /v1/self/occurrences?include_revoked=1` | CIRISServer | **live, unasked** — the client never sends the parameter |
-| `label` on a row | same route; owner-session only | CIRISServer | **live, undecoded** — `SelfOccurrence.kt:29-46` has no field |
-| name a device | `POST /v1/self/occurrence/label` | CIRISServer | **live, uncalled** — `src/self_devices.rs:473`, no Kotlin call site |
+| `revoked` on a row | `GET /v1/self/occurrences?include_revoked=1` | CIRISServer | live; **wired in #94** (before it, the client never sent the parameter) |
+| `label` on a row | same route; owner-session only | CIRISServer | live; **wired in #94** (before it, `SelfOccurrence.kt` had no field) |
+| name a device | `POST /v1/self/occurrence/label` | CIRISServer | live (`src/self_devices.rs:473`); **wired in #94** |
 | `hardware_attestation` rendering | already on the wire | CIRISClient | **decoded and not drawn** |
+| sign out of this device | `btn_logout` in the **This device** block: "Signed in on this device as {identity}", plus "via Google/Apple" or "with a password on this node" only when the client recorded the method at sign-in (`models/SignInMethod.kt`) | CIRISClient | **in #93**: the "Account" row is deleted; there is no account in CIRIS, only identities, so sign-out lives with the identity it ends (#51 still holds: a bare node reaches it here). Settings keeps a second `btn_logout` until CIRISAgent#1181's gate routes here |
 
 ## 4. Flow (how)
 
