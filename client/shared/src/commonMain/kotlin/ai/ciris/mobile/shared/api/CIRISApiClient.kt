@@ -447,11 +447,82 @@ class CIRISApiClient(
             if (localNodeUrlIsExplicit) {
                 PlatformLogger.i(
                     TAG,
-                    "[setLocalNodeUrl] keeping the operator's $LOCAL_NODE_URL; not moving to inferred $url",
+                    "[setLocalNodeUrl] keeping the operator's $LOCAL_NODE_URL; not moving to inferred $url " +
+                        "unless it stops answering",
                 )
+                handOffUrl = url.trim().trimEnd('/')
                 return
             }
+            handOffUrl = null
             setLocalNodeUrl(url)
+        }
+
+        /**
+         * Where a run-without-AI hand-off says the node now is, when the
+         * operator had pinned a different address and we therefore did not
+         * move. Null when there was no such hand-off, or once it was followed.
+         */
+        @kotlin.concurrent.Volatile
+        var handOffUrl: String? = null
+            private set
+
+        /**
+         * WHERE THE LOCAL BACKEND IS NOW — the rule, with no I/O in it.
+         *
+         * An operator's pinned address outranks our inference while it is
+         * serving: that is what keeps a node on a custom port where the
+         * operator put it (#52). But a pin can name the AGENT — the QA launcher
+         * sets `CIRIS_NODE_URL` to the agent's :8080 — and a run-without-AI
+         * hand-off shuts that process down on purpose. Then the pin names a
+         * port nothing will ever answer on again, and every wait that polls it
+         * waits forever: macOS held "Restarting your node…" for minutes
+         * (CIRISClient#66); Windows declared a healthy node dead and revived it
+         * in a loop while the runtime itself had already attached to :4243
+         * (CIRISClient#67).
+         *
+         * So the pin wins while it answers, and yields only to evidence — the
+         * pinned address silent AND the hand-off's address serving. Both silent
+         * changes nothing: nothing has been learnt.
+         */
+        fun localNodeAfterHandOff(
+            pinned: String,
+            handOff: String?,
+            pinnedAnswers: Boolean,
+            handOffAnswers: Boolean,
+        ): String = when {
+            handOff == null || handOff == pinned -> pinned
+            pinnedAnswers -> pinned
+            handOffAnswers -> handOff
+            else -> pinned
+        }
+
+        /**
+         * Apply [localNodeAfterHandOff] with real probes, and return the address
+         * every wait should poll now. Cheap when there was no hand-off: no probe
+         * at all. Callers that decide "is the backend up" call this instead of
+         * reading [LOCAL_NODE_URL], so the supervisor, the post-setup hold and
+         * the runtime cannot disagree about where the backend is.
+         */
+        suspend fun reconcileLocalNode(answers: suspend (String) -> Boolean): String {
+            val handOff = handOffUrl ?: return LOCAL_NODE_URL
+            val pinned = LOCAL_NODE_URL
+            val pinnedAnswers = answers(pinned)
+            val chosen = localNodeAfterHandOff(
+                pinned = pinned,
+                handOff = handOff,
+                pinnedAnswers = pinnedAnswers,
+                handOffAnswers = !pinnedAnswers && answers(handOff),
+            )
+            if (chosen != pinned) {
+                PlatformLogger.i(
+                    TAG,
+                    "[setLocalNodeUrl] $pinned stopped answering after the run-without-AI hand-off " +
+                        "and $chosen is serving — following the node",
+                )
+                setLocalNodeUrl(chosen, explicit = false)
+                handOffUrl = null
+            }
+            return chosen
         }
 
         // Mask token for logging (show first 8 and last 4 chars)
