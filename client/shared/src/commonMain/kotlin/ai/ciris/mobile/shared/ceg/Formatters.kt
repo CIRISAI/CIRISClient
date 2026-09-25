@@ -26,13 +26,22 @@ sealed interface Formatted {
 fun shortKey(keyId: String, head: Int = 8, tail: Int = 4): String =
     if (keyId.length <= head + tail + 1) keyId else keyId.take(head) + "…" + keyId.takeLast(tail)
 
-/** The 7→5 fold documented on [CohortScope]: a wire `cohort_scope` to the circle that shows it. */
+/**
+ * The 7→5 fold documented on [CohortScope]: a wire `cohort_scope` to the circle that shows it.
+ *
+ * CC rc5's seven tokens are `self / family / community / affiliations /
+ * species / biosphere / federation` (CC 2.x table). `biosphere` is the living
+ * community and is what producers emit; `planet` is read too, as the
+ * colloquial alias CC 4.1 uses, so an older producer still lands somewhere.
+ * A canonical token that resolves to null is a receipt with no circle, so
+ * every one of the seven must resolve.
+ */
 fun cohortScopeOf(wire: String): CohortScope? = when (wire.trim().lowercase()) {
     "self" -> CohortScope.AGENT
     "family" -> CohortScope.FAMILY
     "community" -> CohortScope.LOCAL_COMMUNITY
     "affiliations" -> CohortScope.GLOBAL_COMMUNITIES
-    "species", "planet", "federation" -> CohortScope.GLOBAL_COMMONS
+    "species", "biosphere", "planet", "federation" -> CohortScope.GLOBAL_COMMONS
     else -> null
 }
 
