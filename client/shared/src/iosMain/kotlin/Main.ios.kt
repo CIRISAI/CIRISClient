@@ -18,6 +18,7 @@ import ai.ciris.mobile.shared.platform.StoreKitPurchaseResultBridge
  * This function is called from SwiftUI via UIViewControllerRepresentable.
  */
 fun MainViewController(): UIViewController = ComposeUIViewController {
+    ai.ciris.mobile.shared.platform.CrashRecorder.install()
     CIRISApp(
         accessToken = "",  // Empty initially, will be populated after login
         apiBaseUrl = "http://127.0.0.1:8080"  // Local Python brain (node read API defaults to :4243)
@@ -35,6 +36,7 @@ fun MainViewControllerWithAuth(
     onAppleSignInRequested: (callback: (AppleSignInResultBridge) -> Unit) -> Unit,
     onSilentSignInRequested: (callback: (AppleSignInResultBridge) -> Unit) -> Unit
 ): UIViewController {
+    ai.ciris.mobile.shared.platform.CrashRecorder.install()
     NSLog("[Main.ios][INFO] MainViewControllerWithAuth called, creating NativeSignInCallback")
 
     val callback = object : NativeSignInCallback {
@@ -95,6 +97,7 @@ fun MainViewControllerWithAuthAndStore(
     getStoreError: () -> String?,
     onDeviceAttestationRequested: ((callback: (DeviceAttestationResultBridge) -> Unit) -> Unit)? = null
 ): UIViewController {
+    ai.ciris.mobile.shared.platform.CrashRecorder.install()
     NSLog("[Main.ios][INFO] MainViewControllerWithAuthAndStore called")
 
     val signInCallback = object : NativeSignInCallback {
