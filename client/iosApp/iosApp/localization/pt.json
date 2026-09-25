@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "desconhecido",
     "contacts_trust_untrusted": "não confiável",
     "approvals_alerts_off": "Os alertas de aprovação estão desativados. Ative as notificações do CIRIS nas definições do sistema para ser avisado quando o agente precisar de si.",
-    "accord_written_by": "escrito por {who}"
+    "accord_written_by": "escrito por {who}",
+    "state_not_on_this_node": "Este nó não fornece isto. Ele pertence a um agente, e este nó funciona sem um.",
+    "state_read_failed": "Não foi possível ler isto",
+    "state_read_failed_body": "Nada aqui é uma leitura até que isto funcione. Tente atualizar.",
+    "runtime_not_on_this_node": "Este nó não tem um runtime de agente para controlar.",
+    "telemetry_not_on_this_node": "Este nó não reporta telemetria do agente.",
+    "services_not_on_this_node": "Este nó não lista serviços do agente.",
+    "services_details_not_reported": "Prioridade, estratégia e estado do circuit-breaker não são relatados para este serviço.",
+    "scheduler_not_on_this_node": "Este nó não tem um agendador de agente.",
+    "sessions_not_on_this_node": "Este nó não tem um agente, portanto não tem estado cognitivo.",
+    "transport_not_on_this_node": "Este nó não relata seus transportes.",
+    "audit_not_on_this_node": "Este nó não mantém um registro de auditoria do agente. Nada foi filtrado.",
+    "consent_not_on_this_node": "Este nó não guarda registros de consentimento. O consentimento é mantido por um agente, e este nó funciona sem um.",
+    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar."
   },
   "moderation": {
     "ladder": {

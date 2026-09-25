@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "unbekannt",
     "contacts_trust_untrusted": "nicht vertraut",
     "approvals_alerts_off": "Genehmigungsbenachrichtigungen sind deaktiviert. Aktiviere Benachrichtigungen für CIRIS in den Systemeinstellungen, um informiert zu werden, wenn der Agent dich braucht.",
-    "accord_written_by": "verfasst von {who}"
+    "accord_written_by": "verfasst von {who}",
+    "state_not_on_this_node": "Dieser Knoten stellt diesen Zustand nicht bereit. Er gehört zu einem Agenten, und dieser Knoten läuft ohne einen solchen.",
+    "state_read_failed": "Dies konnte nicht gelesen werden",
+    "state_read_failed_body": "Hier ist nichts eine Ablesung, solange das nicht funktioniert. Versuchen Sie es mit Aktualisieren.",
+    "runtime_not_on_this_node": "Dieser Knoten hat keine Agenten-Laufzeitumgebung, die gesteuert werden könnte.",
+    "telemetry_not_on_this_node": "Dieser Knoten meldet keine Agenten-Telemetrie.",
+    "services_not_on_this_node": "Dieser Knoten listet keine Agenten-Dienste.",
+    "services_details_not_reported": "Priorität, Strategie und Circuit-Breaker-Status werden für diesen Dienst nicht gemeldet.",
+    "scheduler_not_on_this_node": "Dieser Knoten hat keinen Agenten-Scheduler.",
+    "sessions_not_on_this_node": "Dieser Knoten hat keinen Agenten und daher keinen kognitiven Zustand.",
+    "transport_not_on_this_node": "Dieser Knoten meldet seine Transporte nicht.",
+    "audit_not_on_this_node": "Dieser Knoten führt kein Audit-Protokoll für den Agenten. Es wurde nichts herausgefiltert.",
+    "consent_not_on_this_node": "Dieser Knoten führt keine Zustimmungsdatensätze. Zustimmung wird von einem Agenten verwaltet, und dieser Knoten läuft ohne einen solchen.",
+    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen."
   },
   "moderation": {
     "ladder": {

@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "ያልታወቀ",
     "contacts_trust_untrusted": "ያልታመነ",
     "approvals_alerts_off": "የማጽደቅ ማንቂያዎች ጠፍተዋል። ወኪሉ ሲፈልግዎት እንዲነገርዎት በስርዓት ቅንብሮችዎ ውስጥ ለ CIRIS ማሳወቂያዎችን ያብሩ።",
-    "accord_written_by": "በ{who} የተጻፈ"
+    "accord_written_by": "በ{who} የተጻፈ",
+    "state_not_on_this_node": "ይህ ኖድ ይህን አያገለግልም። የወኪል ንብረት ነው፣ ይህ ኖድ ግን ወኪል ሳይኖረው ይሰራል።",
+    "state_read_failed": "ይህን ማንበብ አልተቻለም",
+    "state_read_failed_body": "ይህ እስኪሠራ ድረስ እዚህ ያለው ምንም ንባብ አይደለም። እንደገና ለማድስ ይሞክሩ።",
+    "runtime_not_on_this_node": "ይህ ኖድ ለመቆጣጠር የወኪል ሩንታይም የለውም።",
+    "telemetry_not_on_this_node": "ይህ ኖድ የወኪል ቴለሜትሪ አይገልጽም።",
+    "services_not_on_this_node": "ይህ ኖድ የወኪል አገልግሎቶችን አይዘርዝርም።",
+    "services_details_not_reported": "ቅድሚያ፣ ስትራተጂ እና የሲርኪት-ብሬከር ሁኔታ ለዚህ አገልግሎት አይገለጹም።",
+    "scheduler_not_on_this_node": "ይህ ኖድ የወኪል መርሐግብር የለውም።",
+    "sessions_not_on_this_node": "ይህ ኖድ ወኪል የለውም፤ ስለዚህ የግንዛቤ ሁኔታ የለውም።",
+    "transport_not_on_this_node": "ይህ ኖድ የመጓጓዣ መንገዶቹን አይገልጽም።",
+    "audit_not_on_this_node": "ይህ ኖድ የወኪል ኦዲት መዝገብ አይይዝም። ምንም አልተጣራም።",
+    "consent_not_on_this_node": "ይህ ኖድ የስምምነት መዝገቦችን አይይዝም። ስምምነት በወኪል ይያዛል፣ ይህ ኖድ ግን ወኪል ሳይኖረው ይሰራል።",
+    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።"
   },
   "moderation": {
     "ladder": {

@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "غير معروف",
     "contacts_trust_untrusted": "غير موثوق",
     "approvals_alerts_off": "تنبيهات الموافقة متوقفة. فعّل الإشعارات لتطبيق CIRIS في إعدادات النظام ليتم إعلامك عندما يحتاجك الوكيل.",
-    "accord_written_by": "كتبه {who}"
+    "accord_written_by": "كتبه {who}",
+    "state_not_on_this_node": "لا تقدّم هذه العقدة هذا. فهو يخص الوكيل، وهذه العقدة تعمل دون وكيل.",
+    "state_read_failed": "تعذّرت قراءة هذا",
+    "state_read_failed_body": "لا شيء هنا يُعدّ قراءة حتى يعمل هذا. حاول التحديث.",
+    "runtime_not_on_this_node": "لا تملك هذه العقدة بيئة تشغيل وكيل للتحكم فيها.",
+    "telemetry_not_on_this_node": "لا تُبلغ هذه العقدة عن تيليمتري الوكيل.",
+    "services_not_on_this_node": "لا تسرد هذه العقدة خدمات الوكيل.",
+    "services_details_not_reported": "لا يُبلَّغ عن الأولوية أو الاستراتيجية أو حالة قاطع الدائرة لهذه الخدمة.",
+    "scheduler_not_on_this_node": "لا تملك هذه العقدة مُجدولاً للوكيل.",
+    "sessions_not_on_this_node": "لا يوجد لدى هذه العقدة وكيل، فليست لها حالة إدراكية.",
+    "transport_not_on_this_node": "لا تُبلغ هذه العقدة عن قنوات نقلها.",
+    "audit_not_on_this_node": "لا تحتفظ هذه العقدة بسجل تدقيق للوكيل. لم يُستبعد شيء.",
+    "consent_not_on_this_node": "لا تحمل هذه العقدة سجلات الموافقة. فالموافقة يحتفظ بها الوكيل، وهذه العقدة تعمل دون وكيل.",
+    "billing_not_on_this_node": "لا تتعامل هذه العقدة مع الفوترة. لا يوجد رصيد هنا ولا شيء للشراء."
   },
   "moderation": {
     "ladder": {

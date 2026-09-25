@@ -212,7 +212,18 @@ fun ConfigScreen(
                              section.items.any { it.key.contains(searchQuery, ignoreCase = true) })
                         }
 
-                    if (filteredSections.isEmpty()) {
+                    val readFailure = configData.readFailure
+                    if (readFailure != null) {
+                        // A failed read is said. It used to fall through to
+                        // "no configurations found", which reads as a search
+                        // miss (CSD-023, CSD/3 §2.2).
+                        item {
+                            ReadFailureBlock(
+                                failure = readFailure,
+                                tagPrefix = "config",
+                            )
+                        }
+                    } else if (filteredSections.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -221,6 +232,7 @@ fun ConfigScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
+                                    modifier = Modifier.testable("config_empty"),
                                     text = localizedString("mobile.config_no_found"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -558,7 +570,9 @@ private fun EditConfigDialog(
 
 data class ConfigScreenData(
     val sections: List<ConfigSection> = emptyList(),
-    val totalConfigs: Int = 0
+    val totalConfigs: Int = 0,
+    /** Why the last list read produced no list; null after a success (CSD-023). */
+    val readFailure: ReadFailure? = null,
 )
 
 data class ConfigSection(

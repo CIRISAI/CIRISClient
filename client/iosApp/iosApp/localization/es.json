@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "desconocido",
     "contacts_trust_untrusted": "no confiable",
     "approvals_alerts_off": "Las alertas de aprobación están desactivadas. Activa las notificaciones de CIRIS en los ajustes del sistema para recibir un aviso cuando el agente te necesite.",
-    "accord_written_by": "escrito por {who}"
+    "accord_written_by": "escrito por {who}",
+    "state_not_on_this_node": "Este nodo no ofrece esto. Pertenece a un agente, y este nodo funciona sin uno.",
+    "state_read_failed": "No se pudo leer esto",
+    "state_read_failed_body": "Nada de esto es una lectura hasta que esto funcione. Intenta actualizar.",
+    "runtime_not_on_this_node": "Este nodo no tiene un entorno de ejecución de agente que controlar.",
+    "telemetry_not_on_this_node": "Este nodo no reporta telemetría del agente.",
+    "services_not_on_this_node": "Este nodo no enumera servicios de agente.",
+    "services_details_not_reported": "La prioridad, la estrategia y el estado del interruptor de circuito no se reportan para este servicio.",
+    "scheduler_not_on_this_node": "Este nodo no tiene un planificador de agente.",
+    "sessions_not_on_this_node": "Este nodo no tiene un agente, así que no tiene estado cognitivo.",
+    "transport_not_on_this_node": "Este nodo no reporta sus transportes.",
+    "audit_not_on_this_node": "Este nodo no mantiene un registro de auditoría del agente. No se filtró nada.",
+    "consent_not_on_this_node": "Este nodo no conserva registros de consentimiento. El consentimiento lo mantiene un agente, y este nodo funciona sin uno.",
+    "billing_not_on_this_node": "Este nodo no gestiona la facturación. Aquí no hay saldo ni nada que comprar."
   },
   "moderation": {
     "ladder": {

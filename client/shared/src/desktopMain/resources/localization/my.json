@@ -3069,7 +3069,20 @@
     "contacts_trust_untrusted": "မယုံကြည်ရ",
     "approvals_alerts_off": "အတည်ပြုချက် သတိပေးချက်များ ပိတ်ထားသည်။ အေးဂျင့်က သင့်ကို လိုအပ်သည့်အခါ အသိပေးနိုင်ရန် သင့်စနစ်ဆက်တင်များတွင် CIRIS အတွက် အကြောင်းကြားချက်များကို ဖွင့်ပါ။",
     "accord_written_by": "{who} မှ ရေးသားသည်",
-    "identity_signed_in_password": "ဤစက်ပေါ်တွင် {identity} အဖြစ် ဤ node ပေါ်တွင် စကားဝှက်ဖြင့် ဝင်ရောက်ထားသည်"
+    "identity_signed_in_password": "ဤစက်ပေါ်တွင် {identity} အဖြစ် ဤ node ပေါ်တွင် စကားဝှက်ဖြင့် ဝင်ရောက်ထားသည်",
+    "state_not_on_this_node": "ဤ node သည် ဤအရာကို မဝန်ဆောင်ပါ။ ၎င်းသည် အေးဂျင့်တစ်ခုပိုင် ဖြစ်ပြီး၊ ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသည်။",
+    "state_read_failed": "ဤအရာကို ဖတ်၍ မရပါ",
+    "state_read_failed_body": "ဤအရာ အလုပ်မလုပ်မချင်း ဤနေရာရှိ မည်သည့်အရာမျှ အချက်အလက်ဖတ်မှု မဟုတ်ပါ။ ပြန်လည်စတင်ကြည့်ပါ။",
+    "runtime_not_on_this_node": "ဤ node တွင် ထိန်းချုပ်ရန် အေးဂျင့် runtime မရှိပါ။",
+    "telemetry_not_on_this_node": "ဤ node သည် အေးဂျင့် telemetry ကို တင်ပြမထားပါ။",
+    "services_not_on_this_node": "ဤ node သည် အေးဂျင့် ဝန်ဆောင်မှုများကို စာရင်းပြုစုမထားပါ။",
+    "services_details_not_reported": "ဤ ဝန်ဆောင်မှု အတွက် priority, strategy နှင့် circuit-breaker အခြေအနေကို မတင်ပြထားပါ။",
+    "scheduler_not_on_this_node": "ဤ node တွင် အေးဂျင့် scheduler မရှိပါ။",
+    "sessions_not_on_this_node": "ဤ node တွင် အေးဂျင့် မရှိသဖြင့် cognitive အခြေအနေလည်း မရှိပါ။",
+    "transport_not_on_this_node": "ဤ node သည် ၎င်း၏ transport များကို တင်ပြမထားပါ။",
+    "audit_not_on_this_node": "ဤ node သည် အေးဂျင့် audit log ကို မထိန်းသိမ်းပါ။ မည်သည့်အရာကိုမျှ စစ်ထုတ်ထားခြင်း မရှိပါ။",
+    "consent_not_on_this_node": "ဤ node သည် consent မှတ်တမ်းများကို မကိုင်ဆောင်ပါ။ Consent ကို အေးဂျင့်တစ်ခုက ထိန်းသိမ်းသည်၊ ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသည်။",
+    "billing_not_on_this_node": "ဤ node သည် ငွေတောင်းခံမှုကို မကိုင်တွယ်ပါ။ ဤနေရာတွင် လက်ကျန်ငွေ မရှိသကဲ့သို့ ဝယ်ယူစရာလည်း မရှိပါ။"
   },
   "moderation": {
     "ladder": {

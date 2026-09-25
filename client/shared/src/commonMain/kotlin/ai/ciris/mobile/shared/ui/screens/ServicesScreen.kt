@@ -62,8 +62,10 @@ fun ServicesScreen(
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showResetDialog by remember { mutableStateOf(false) }
-    var selectedResetType by remember { mutableStateOf<String?>(null) }
+    // `onDiagnose` and `onResetCircuitBreakers` are still accepted so the
+    // caller compiles, and are no longer offered: there is no diagnostics route
+    // (the old one re-counted this list) and no breaker-reset route (the old
+    // one reported a reset it never made). CSD-016.
 
     Scaffold(
         topBar = {
@@ -92,16 +94,6 @@ fun ServicesScreen(
                 },
                 actions = {
                     IconButton(
-                        onClick = onDiagnose,
-                        enabled = !isLoading,
-                        modifier = Modifier.testableClickable("btn_services_diagnose") { onDiagnose() }
-                    ) {
-                        Icon(
-                            imageVector = CIRISIcons.warning,
-                            contentDescription = localizedString("mobile.services_diagnostics")
-                        )
-                    }
-                    IconButton(
                         onClick = onRefresh,
                         enabled = !isLoading,
                         modifier = Modifier.testableClickable("btn_services_refresh") { onRefresh() }
@@ -119,7 +111,7 @@ fun ServicesScreen(
             )
         }
     ) { paddingValues ->
-        if (isLoading && servicesData.globalServices.isEmpty() && servicesData.handlerServices.isEmpty()) {
+        if (isLoading && !servicesData.hasReading && servicesData.readFailure == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -136,6 +128,20 @@ fun ServicesScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // A failed or absent read is said, and nothing below draws: the
+                // overview's zeros and "No Services Found" are claims about a
+                // list nobody read (CSD-016, CSD/3 §2.2).
+                servicesData.readFailure?.let { failure ->
+                    item {
+                        ReadFailureBlock(
+                            failure = failure,
+                            tagPrefix = "services",
+                            notOnThisNode = localizedString("mobile.services_not_on_this_node"),
+                        )
+                    }
+                }
+
+                if (servicesData.hasReading) {
                 // Service Health Overview
                 item {
                     ServiceHealthOverviewCard(
@@ -144,21 +150,6 @@ fun ServicesScreen(
                         healthyServices = servicesData.healthyServices,
                         unhealthyServices = servicesData.unhealthyServices
                     )
-                }
-
-                // Circuit Breaker Management
-                item {
-                    CircuitBreakerCard(
-                        onResetAll = { showResetDialog = true; selectedResetType = null },
-                        onResetByType = { type -> showResetDialog = true; selectedResetType = type }
-                    )
-                }
-
-                // Diagnostics Results (if available)
-                if (servicesData.diagnostics != null) {
-                    item {
-                        DiagnosticsCard(diagnostics = servicesData.diagnostics)
-                    }
                 }
 
                 // Global Services Section
@@ -206,11 +197,11 @@ fun ServicesScreen(
                     }
                 }
 
-                // Empty state
+                // Empty state — a successful read that listed nothing.
                 if (servicesData.globalServices.isEmpty() && servicesData.handlerServices.isEmpty()) {
                     item {
                         Card(
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth().testable("services_empty")
                         ) {
                             Column(
                                 modifier = Modifier
@@ -223,57 +214,13 @@ fun ServicesScreen(
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Text(
-                                    text = localizedString("mobile.services_unavailable"),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
                             }
                         }
                     }
                 }
+                } // hasReading
             }
         }
-    }
-
-    // Reset Circuit Breakers Dialog
-    if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(localizedString("mobile.services_reset_title")) },
-            text = {
-                Text(
-                    if (selectedResetType != null) {
-                        localizedString("mobile.services_reset_title") + " for $selectedResetType services?"
-                    } else {
-                        localizedString("mobile.services_circuit_hint")
-                    }
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onResetCircuitBreakers(selectedResetType)
-                        showResetDialog = false
-                    },
-                    modifier = Modifier.testableClickable("btn_reset_confirm") {
-                        onResetCircuitBreakers(selectedResetType)
-                        showResetDialog = false
-                    }
-                ) {
-                    Text(localizedString("mobile.services_reset"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showResetDialog = false },
-                    modifier = Modifier.testableClickable("btn_reset_cancel") { showResetDialog = false }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
-        )
     }
 }
 
@@ -371,153 +318,6 @@ private fun HealthMetricItem(
 }
 
 @Composable
-private fun CircuitBreakerCard(
-    onResetAll: () -> Unit,
-    onResetByType: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Text(
-                text = localizedString("mobile.services_circuit_breaker"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Text(
-                text = localizedString("mobile.services_circuit_hint"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onResetAll,
-                    modifier = Modifier.weight(1f).testableClickable("btn_reset_all") { onResetAll() }
-                ) {
-                    Text(localizedString("mobile.services_reset_all"))
-                }
-
-                Box(modifier = Modifier.weight(1f)) {
-                    OutlinedButton(
-                        onClick = { expanded = true },
-                        modifier = Modifier.fillMaxWidth().testableClickable("btn_reset_by_type") { expanded = true }
-                    ) {
-                        Text(localizedString("mobile.services_reset_type"))
-                    }
-
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        val serviceTypes = listOf("llm", "communication", "memory", "audit", "tool", "wise_authority")
-                        serviceTypes.forEach { type ->
-                            DropdownMenuItem(
-                                text = { Text(type.uppercase()) },
-                                onClick = {
-                                    expanded = false
-                                    onResetByType(type)
-                                },
-                                modifier = Modifier.testableClickable("menu_reset_${type}") {
-                                    expanded = false
-                                    onResetByType(type)
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun DiagnosticsCard(
-    diagnostics: ServiceDiagnostics,
-    modifier: Modifier = Modifier
-) {
-    val semantic = SemanticColors.Default
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = when (diagnostics.overallHealth.lowercase()) {
-                "healthy" -> semantic.surfaceSuccess
-                "degraded" -> semantic.surfaceWarning
-                else -> semantic.surfaceError
-            }
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = localizedString("mobile.services_diagnostics"),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Text(
-                    text = "${diagnostics.issuesFound} ${localizedString("mobile.services_issues")}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (diagnostics.issuesFound > 0) semantic.error else semantic.success,
-                    fontWeight = FontWeight.Medium
-                )
-            }
-
-            // Issues
-            if (diagnostics.issues.isNotEmpty()) {
-                Text(
-                    text = localizedString("mobile.services_issues"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                diagnostics.issues.forEach { issue ->
-                    Text(
-                        text = "- $issue",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = semantic.error
-                    )
-                }
-            }
-
-            // Recommendations
-            if (diagnostics.recommendations.isNotEmpty()) {
-                Text(
-                    text = localizedString("mobile.services_recommendations"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                diagnostics.recommendations.forEach { rec ->
-                    Text(
-                        text = "- $rec",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = semantic.info
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 private fun ServiceTypeCard(
     serviceType: String,
     providers: List<ServiceProvider>,
@@ -576,10 +376,17 @@ private fun ServiceProviderRow(
     )
 
     val semantic = SemanticColors.Default
-    val statusColor = when (provider.circuitBreakerState.lowercase()) {
-        "closed" -> semantic.success
-        "half_open" -> semantic.warning
-        else -> semantic.error
+    // Colour from `healthy`, the one health fact the wire carries. A breaker
+    // state is shown only if the host ever sends one; it is never derived.
+    val statusColor = when (provider.healthy) {
+        true -> semantic.success
+        false -> semantic.error
+        null -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
+    val statusText = when (provider.healthy) {
+        true -> localizedString("status.online")
+        false -> localizedString("status.offline")
+        null -> NOT_READ
     }
 
     Column(modifier = modifier.fillMaxWidth()) {
@@ -623,7 +430,7 @@ private fun ServiceProviderRow(
                     color = statusColor.copy(alpha = 0.2f)
                 ) {
                     Text(
-                        text = DisplayNames.humanizeStatus(provider.circuitBreakerState),
+                        text = statusText,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
                         style = MaterialTheme.typography.labelSmall,
                         color = statusColor
@@ -654,19 +461,36 @@ private fun ServiceProviderRow(
                     .padding(start = 18.dp, bottom = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                // Priority info
-                DetailRow(label = "Priority", value = provider.priority) // Keep English for technical term
-
-                // Priority group (only show if non-zero)
-                if (provider.priorityGroup > 0) {
-                    DetailRow(label = "Priority Group", value = provider.priorityGroup.toString()) // Keep English for technical term
+                // Each detail only when the host sent it. None of these is on
+                // `GET /v1/system/services` today, so today none draws — the
+                // old constants (NORMAL / 0 / FALLBACK) drew as if read.
+                provider.priority?.let {
+                    DetailRow(label = "Priority", value = it) // Keep English for technical term
+                }
+                provider.priorityGroup?.let {
+                    DetailRow(label = "Priority Group", value = it.toString()) // Keep English for technical term
+                }
+                provider.strategy?.let {
+                    DetailRow(label = "Strategy", value = DisplayNames.humanizeStrategy(it)) // Keep English for technical term
+                }
+                provider.circuitBreakerState?.let {
+                    DetailRow(label = "Circuit breaker", value = DisplayNames.humanizeStatus(it)) // Keep English for technical term
+                }
+                if (provider.priority == null && provider.priorityGroup == null &&
+                    provider.strategy == null && provider.circuitBreakerState == null &&
+                    provider.capabilities == null
+                ) {
+                    Text(
+                        text = localizedString("mobile.services_details_not_reported"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testable("services_details_not_reported"),
+                    )
                 }
 
-                // Strategy
-                DetailRow(label = "Strategy", value = DisplayNames.humanizeStrategy(provider.strategy)) // Keep English for technical term
-
-                // Capabilities (if any)
-                if (provider.capabilities.isNotEmpty()) {
+                // Capabilities (if the host sent any)
+                val capabilities = provider.capabilities.orEmpty()
+                if (capabilities.isNotEmpty()) {
                     Text(
                         text = localizedString("mobile.services_capabilities"),
                         style = MaterialTheme.typography.labelSmall,
@@ -676,7 +500,7 @@ private fun ServiceProviderRow(
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.padding(top = 2.dp)
                     ) {
-                        provider.capabilities.take(4).forEach { capability ->
+                        capabilities.take(4).forEach { capability ->
                             SuggestionChip(
                                 onClick = {},
                                 label = {
@@ -687,9 +511,9 @@ private fun ServiceProviderRow(
                                 }
                             )
                         }
-                        if (provider.capabilities.size > 4) {
+                        if (capabilities.size > 4) {
                             Text(
-                                text = "+${provider.capabilities.size - 4}",
+                                text = "+${capabilities.size - 4}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.padding(start = 4.dp)
@@ -789,29 +613,22 @@ data class ServicesData(
     val unhealthyServices: Int = 0,
     val globalServices: Map<String, List<ServiceProvider>> = emptyMap(),
     val handlerServices: Map<String, Map<String, List<ServiceProvider>>> = emptyMap(),
-    val diagnostics: ServiceDiagnostics? = null
+    /** True only when the fields above came from a successful read. */
+    val hasReading: Boolean = false,
+    /** Why the last read produced no reading; null after a success. */
+    val readFailure: ReadFailure? = null,
 )
 
 /**
- * Service provider data
+ * Service provider data. Every field but [name] is null when the host did not
+ * send it — never a constant standing in for a read (CSD-016).
  */
 data class ServiceProvider(
     val name: String,
-    val priority: String,
-    val priorityGroup: Int,
-    val strategy: String,
-    val circuitBreakerState: String,
-    val capabilities: List<String> = emptyList()
-)
-
-/**
- * Service diagnostics results
- */
-data class ServiceDiagnostics(
-    val overallHealth: String,
-    val issuesFound: Int,
-    val globalServices: Int,
-    val handlerServices: Int,
-    val issues: List<String>,
-    val recommendations: List<String>
+    val priority: String? = null,
+    val priorityGroup: Int? = null,
+    val strategy: String? = null,
+    val circuitBreakerState: String? = null,
+    val capabilities: List<String>? = null,
+    val healthy: Boolean? = null,
 )

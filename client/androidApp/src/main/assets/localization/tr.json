@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "bilinmiyor",
     "contacts_trust_untrusted": "güvenilmeyen",
     "approvals_alerts_off": "Onay uyarıları kapalı. Ajanın size ihtiyacı olduğunda haberdar olmak için sistem ayarlarınızdan CIRIS bildirimlerini açın.",
-    "accord_written_by": "{who} tarafından yazıldı"
+    "accord_written_by": "{who} tarafından yazıldı",
+    "state_not_on_this_node": "Bu düğüm bunu sunmuyor. Bu, bir ajana aittir ve bu düğüm bir ajan olmadan çalışır.",
+    "state_read_failed": "Bu okunamadı",
+    "state_read_failed_body": "Bu çalışana kadar buradaki hiçbir şey bir okuma değildir. Yenilemeyi deneyin.",
+    "runtime_not_on_this_node": "Bu düğümde kontrol edilecek bir ajan çalışma zamanı yok.",
+    "telemetry_not_on_this_node": "Bu düğüm ajan telemetrisini bildirmiyor.",
+    "services_not_on_this_node": "Bu düğüm ajan hizmetlerini listelemiyor.",
+    "services_details_not_reported": "Bu hizmet için öncelik, strateji ve devre kesici durumu bildirilmiyor.",
+    "scheduler_not_on_this_node": "Bu düğümde bir ajan zamanlayıcısı yok.",
+    "sessions_not_on_this_node": "Bu düğümde bir ajan yok, dolayısıyla bilişsel bir durumu da yok.",
+    "transport_not_on_this_node": "Bu düğüm taşıma yöntemlerini bildirmiyor.",
+    "audit_not_on_this_node": "Bu düğüm bir ajan denetim günlüğü tutmuyor. Hiçbir şey filtrelenmedi.",
+    "consent_not_on_this_node": "Bu düğüm onay kayıtları tutmuyor. Onay bir ajan tarafından tutulur ve bu düğüm bir ajan olmadan çalışır.",
+    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok."
   },
   "moderation": {
     "ladder": {

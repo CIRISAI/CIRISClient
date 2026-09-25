@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "tidak dikenal",
     "contacts_trust_untrusted": "tidak tepercaya",
     "approvals_alerts_off": "Peringatan persetujuan sedang mati. Aktifkan notifikasi untuk CIRIS di pengaturan sistem Anda agar diberi tahu saat agen membutuhkan Anda.",
-    "accord_written_by": "ditulis oleh {who}"
+    "accord_written_by": "ditulis oleh {who}",
+    "state_not_on_this_node": "Node ini tidak melayani hal ini. Hal ini adalah milik agen, dan node ini berjalan tanpa agen.",
+    "state_read_failed": "Tidak dapat membaca ini",
+    "state_read_failed_body": "Tidak ada apa pun di sini yang merupakan pembacaan sampai ini berfungsi. Coba muat ulang.",
+    "runtime_not_on_this_node": "Node ini tidak memiliki runtime agen untuk dikendalikan.",
+    "telemetry_not_on_this_node": "Node ini tidak melaporkan telemetri agen.",
+    "services_not_on_this_node": "Node ini tidak mencantumkan layanan agen.",
+    "services_details_not_reported": "Prioritas, strategi, dan status circuit-breaker tidak dilaporkan untuk layanan ini.",
+    "scheduler_not_on_this_node": "Node ini tidak memiliki penjadwal agen.",
+    "sessions_not_on_this_node": "Node ini tidak memiliki agen, sehingga tidak memiliki status kognitif.",
+    "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
+    "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
+    "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
   },
   "moderation": {
     "ladder": {

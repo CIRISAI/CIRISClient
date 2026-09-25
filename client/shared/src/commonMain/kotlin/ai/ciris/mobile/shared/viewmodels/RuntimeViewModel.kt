@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.RuntimeData
 import ai.ciris.mobile.shared.ui.screens.StepResult
 import ai.ciris.mobile.shared.ui.screens.TrackedTask
@@ -321,7 +322,8 @@ class RuntimeViewModel(
                         lastUpdated = task.lastUpdated
                     )
                 },
-                lastStepResult = _runtimeData.value.lastStepResult // Preserve from single-step
+                lastStepResult = _runtimeData.value.lastStepResult, // Preserve from single-step
+                readFailure = null,
             )
 
             logInfo(method, "Runtime updated: state=${runtimeData.processorState}, " +
@@ -331,8 +333,16 @@ class RuntimeViewModel(
 
         } catch (e: Exception) {
             logError(method, "Failed to fetch runtime state: ${e::class.simpleName}: ${e.message}")
-            // Update stream connected status on error
-            _runtimeData.value = _runtimeData.value.copy(streamConnected = false)
+            // Say the read failed, and drop the values it would have refreshed:
+            // a failed read must not leave a confident "WORK · queue 0" on
+            // screen, whether that came from a default or from the last
+            // success (CSD-024, CSD/3 §2.2).
+            _runtimeData.value = _runtimeData.value.copy(
+                streamConnected = false,
+                cognitiveState = null,
+                queueDepth = null,
+                readFailure = ReadFailure.of(e),
+            )
             throw e
         }
     }

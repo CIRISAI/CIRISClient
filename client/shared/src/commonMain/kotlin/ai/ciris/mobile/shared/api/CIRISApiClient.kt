@@ -6141,6 +6141,12 @@ class CIRISApiClient(
             val response = telemetryApi.getTelemetryOverviewV1TelemetryOverviewGet(authHeader())
             logDebug(method, "Response: status=${response.status}")
 
+            // Say the status. Without this a node's 404 surfaced as a body
+            // decode failure, which a screen cannot tell from a broken agent.
+            if (!response.success) {
+                throw RuntimeException("API error: HTTP ${response.status}")
+            }
+
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")
 
@@ -7763,17 +7769,11 @@ class CIRISApiClient(
 
     override suspend fun getCredits(): CreditStatusData {
         val method = "getCredits"
-        // AGENT-only: billing/credits is 404 on a bare node. Report "free / no
-        // billing" so the node UI shows no purchase prompts.
-        if (nodeSkip(method)) return CreditStatusData(
-            hasCredit = true,
-            creditsRemaining = 0,
-            freeUsesRemaining = 0,
-            dailyFreeUsesRemaining = null,
-            totalUses = 0,
-            planName = null,
-            purchaseRequired = false,
-        )
+        // AGENT-only: billing/credits is 404 on a bare node. RAISE: this used to
+        // return hasCredit=true, creditsRemaining=0 — a balance in the host's
+        // voice about an account no host was asked about (CSD-056). The Billing
+        // screen renders the raise as "this node doesn't handle billing".
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/api/billing/credits")
         logDebug(method, "Fetching credit status")
 
         return try {
@@ -10728,13 +10728,10 @@ class CIRISApiClient(
             offset: Int = 0
         ): AuditEntriesData {
             val method = "getAuditEntries"
-            // AGENT-only: the agent audit feed is 404 on a bare node.
-            if (nodeSkip(method)) return AuditEntriesData(
-                entries = emptyList(),
-                total = 0,
-                offset = offset,
-                limit = limit,
-            )
+            // AGENT-only: the agent audit feed is 404 on a bare node. RAISE: an
+            // empty success here made every circle say "Try adjusting your
+            // filters" — a build fact reported as the reader's mistake (CSD-071).
+            if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/audit/entries")
             logDebug(method, "Fetching audit entries: severity=$severity, outcome=$outcome, limit=$limit, offset=$offset")
 
             return try {
@@ -11195,13 +11192,13 @@ class CIRISApiClient(
             val globalServices = mutableMapOf<String, List<ServiceProviderData>>()
             data.services.groupBy { it.type }.forEach { (serviceType, services) ->
                 globalServices[serviceType] = services.map { service ->
+                    // Only what the wire carries. Priority, priority group,
+                    // strategy, capabilities and breaker state are not on
+                    // `ServiceStatus`; they stay null rather than wear a
+                    // constant that reads like a measurement (CSD-016).
                     ServiceProviderData(
                         name = service.name,
-                        priority = "NORMAL",
-                        priorityGroup = 0,
-                        strategy = "FALLBACK",
-                        circuitBreakerState = if (service.healthy) "closed" else "open",
-                        capabilities = emptyList()
+                        healthy = service.healthy,
                     )
                 }
             }
@@ -11210,7 +11207,9 @@ class CIRISApiClient(
 
             ServicesResponse(
                 globalServices = globalServices,
-                handlers = emptyMap() // Handler-specific services not in current API
+                // Handler-specific services are not on this route. Empty here
+                // means "not carried", and the screen draws no handler section.
+                handlers = emptyMap()
             )
         } catch (e: Exception) {
             logException(method, e)
@@ -11470,8 +11469,8 @@ class CIRISApiClient(
 
             RuntimeStateResponse(
                 processorState = data.processorState,
-                cognitiveState = data.cognitiveState ?: "WORK",
-                queueDepth = data.queueDepth ?: 0,
+                cognitiveState = data.cognitiveState,
+                queueDepth = data.queueDepth,
                 activeTasks = emptyList() // Active tasks not in current API response
             )
         } catch (e: Exception) {
@@ -12971,16 +12970,40 @@ class CIRISApiClient(
             logInfo(method, "Capacity: ${data.agentName} ${data.category} " +
                     "fleet=${data.compositeScore} local=${data.localScore} cached=${data.cached}")
 
+            // ONE PATH, TWO PAYLOADS. The agent answers this URL with
+            // {composite_score, factors{…}}; CIRISServer answers the SAME URL
+            // with {subjects[{rows[…]}], unscored, truncated} (capacity_read.rs,
+            // CIRISServer#580) — a list of attestations, not a score. Every
+            // field used to fall through `?: 0.0`, so a node build rendered a
+            // composite of 0.00 and five factors at 0.00 under the live marker
+            // because the fetch "succeeded" (CSD-004). Reading a missing value
+            // as a zero is a score where there is none: an unrecognised payload
+            // RAISES, and the caller's local-only path takes over. Reconciling
+            // the two shapes is CIRISServer#659.
+            val composite = data.compositeScore
+            val c = factors?.C?.score
+            val iInt = factors?.iInt?.score
+            val r = factors?.R?.score
+            val iInc = factors?.iInc?.score
+            val s = factors?.S?.score
+            if (composite == null || c == null || iInt == null || r == null || iInc == null || s == null) {
+                throw CapacityPayloadUnrecognised(
+                    "capacity payload carries no composite score and five factors " +
+                        "(composite=$composite, factors=${factors != null}); " +
+                        "not scored rather than scored zero (CIRISServer#659)"
+                )
+            }
+
             CapacityData(
                 agentName = data.agentName ?: "",
-                compositeScore = data.compositeScore ?: 0.0,
+                compositeScore = composite,
                 fragilityIndex = data.fragilityIndex ?: 0.0,
                 category = data.category ?: "moderate",
-                c = factors?.C?.score ?: 0.0,
-                iInt = factors?.iInt?.score ?: 0.0,
-                r = factors?.R?.score ?: 0.0,
-                iInc = factors?.iInc?.score ?: 0.0,
-                s = factors?.S?.score ?: 0.0,
+                c = c,
+                iInt = iInt,
+                r = r,
+                iInc = iInc,
+                s = s,
                 windowStart = data.metadata?.windowStart,
                 windowEnd = data.metadata?.windowEnd,
                 cached = data.cached ?: false,

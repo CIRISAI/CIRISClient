@@ -41,7 +41,7 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionsScreen(
-    currentState: String,
+    currentState: CognitiveStateReading,
     isLoading: Boolean,
     onInitiateSession: (String) -> Unit,
     onRefresh: () -> Unit,
@@ -102,8 +102,18 @@ fun SessionsScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // A failed read is said. The banner then reads "—", never a seeded
+            // "WORK" about an agent nobody reached (CSD-011, CSD/3 §2.2).
+            currentState.failure?.let { failure ->
+                ReadFailureBlock(
+                    failure = failure,
+                    tagPrefix = "sessions",
+                    notOnThisNode = localizedString("mobile.sessions_not_on_this_node"),
+                )
+            }
+
             // Current state banner
-            CurrentStateBanner(currentState = currentState)
+            CurrentStateBanner(currentState = currentState.state)
 
             // Experimental warning
             val semantic = SemanticColors.Default
@@ -152,29 +162,29 @@ fun SessionsScreen(
             SessionCard(
                 title = localizedString("mobile.interact_state_dream"),
                 description = localizedString("mobile.sessions_dream_desc"),
-                isActive = currentState == "DREAM",
-                isEnabled = currentState == "WORK",
+                isActive = currentState.state == "DREAM",
+                isEnabled = currentState.state == "WORK",
                 onInitiate = { showConfirmDialog = "DREAM" }
             )
 
             SessionCard(
                 title = localizedString("mobile.interact_state_play"),
                 description = localizedString("mobile.sessions_play_desc"),
-                isActive = currentState == "PLAY",
-                isEnabled = currentState == "WORK",
+                isActive = currentState.state == "PLAY",
+                isEnabled = currentState.state == "WORK",
                 onInitiate = { showConfirmDialog = "PLAY" }
             )
 
             SessionCard(
                 title = localizedString("mobile.interact_state_solitude"),
                 description = localizedString("mobile.sessions_solitude_desc"),
-                isActive = currentState == "SOLITUDE",
-                isEnabled = currentState == "WORK",
+                isActive = currentState.state == "SOLITUDE",
+                isEnabled = currentState.state == "WORK",
                 onInitiate = { showConfirmDialog = "SOLITUDE" }
             )
 
             // Return to work button
-            if (currentState !in listOf("WORK", "WAKEUP", "SHUTDOWN")) {
+            if (currentState.state != null && currentState.state !in listOf("WORK", "WAKEUP", "SHUTDOWN", "UNKNOWN")) {
                 Button(
                     onClick = { showConfirmDialog = "WORK" },
                     modifier = Modifier
@@ -205,13 +215,13 @@ fun SessionsScreen(
 
 @Composable
 private fun CurrentStateBanner(
-    currentState: String,
+    currentState: String?,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().testable("txt_sessions_current_state", currentState ?: NOT_READ),
         colors = CardDefaults.cardColors(
-            containerColor = getCurrentStateColor(currentState).copy(alpha = 0.2f)
+            containerColor = getCurrentStateColor(currentState ?: "").copy(alpha = 0.2f)
         )
     ) {
         Row(
@@ -225,7 +235,7 @@ private fun CurrentStateBanner(
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
-                    .background(getCurrentStateColor(currentState))
+                    .background(getCurrentStateColor(currentState ?: ""))
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -239,10 +249,10 @@ private fun CurrentStateBanner(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                 )
                 Text(
-                    text = currentState,
+                    text = currentState ?: NOT_READ,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = getCurrentStateColor(currentState)
+                    color = getCurrentStateColor(currentState ?: "")
                 )
             }
         }
@@ -394,4 +404,18 @@ private fun getCurrentStateColor(state: String): Color {
         "SHUTDOWN" -> semantic.error       // Red
         else -> semantic.inactive
     }
+}
+
+/**
+ * The agent's cognitive state as last READ, or why it could not be.
+ *
+ * [state] is null until a read succeeds and again after one fails — the view
+ * model used to seed "WORK", so a screen that never reached the agent drew a
+ * confident WORK (CSD-011). [toString] keeps the caller's log line readable.
+ */
+data class CognitiveStateReading(
+    val state: String? = null,
+    val failure: ReadFailure? = null,
+) {
+    override fun toString(): String = state ?: (failure?.let { "unread ($it)" } ?: "unread")
 }

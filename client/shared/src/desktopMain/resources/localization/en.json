@@ -3113,7 +3113,20 @@
     "identity_release_session_ends": "Ends. You are signed out here, and the node no longer knows you as its owner.",
     "identity_release_force_confirm": "Release and sign out",
     "identity_released": "Released {node}. It is no longer yours.",
-    "identity_released_self": "Released this node. Your ownership here has ended, and this session with it."
+    "identity_released_self": "Released this node. Your ownership here has ended, and this session with it.",
+    "state_not_on_this_node": "This node doesn't serve this. It belongs to an agent, and this node runs without one.",
+    "state_read_failed": "Couldn't read this",
+    "state_read_failed_body": "Nothing here is a reading until this works. Try refreshing.",
+    "runtime_not_on_this_node": "This node doesn't have an agent runtime to control.",
+    "telemetry_not_on_this_node": "This node doesn't report agent telemetry.",
+    "services_not_on_this_node": "This node doesn't list agent services.",
+    "services_details_not_reported": "Priority, strategy and circuit-breaker state are not reported for this service.",
+    "scheduler_not_on_this_node": "This node doesn't have an agent scheduler.",
+    "sessions_not_on_this_node": "This node doesn't have an agent, so it has no cognitive state.",
+    "transport_not_on_this_node": "This node doesn't report its transports.",
+    "audit_not_on_this_node": "This node doesn't keep an agent audit log. Nothing was filtered out.",
+    "consent_not_on_this_node": "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one.",
+    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy."
   },
   "moderation": {
     "ladder": {

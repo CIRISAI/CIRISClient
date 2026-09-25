@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ScheduledTaskData
 import ai.ciris.mobile.shared.api.SchedulerStatsData as ApiSchedulerStatsData
@@ -30,12 +31,14 @@ data class TaskNotificationOptions(
  */
 data class SchedulerOverviewData(
     val cognitiveState: String = "UNKNOWN",
-    val activeCount: Int = 0,
-    val recurringCount: Int = 0,
-    val pendingCount: Int = 0,
-    val completedTotal: Int = 0,
-    val failedTotal: Int = 0,
-    val uptimeSeconds: Double = 0.0,
+    // Null = neither the stats read nor the task list carried it. Never `?: 0`:
+    // an absent stats envelope is not a scheduler that has done nothing (CSD-012).
+    val activeCount: Int? = null,
+    val recurringCount: Int? = null,
+    val pendingCount: Int? = null,
+    val completedTotal: Int? = null,
+    val failedTotal: Int? = null,
+    val uptimeSeconds: Double? = null,
     val hasNotificationPermission: Boolean = false,
     val hasCalendarPermission: Boolean = false
 )
@@ -49,6 +52,10 @@ data class SchedulerScreenState(
     val isLoading: Boolean = false,
     val isRefreshing: Boolean = false,
     val error: String? = null,
+    /** Why the task-list read produced no list; null after a success. */
+    val tasksFailure: ReadFailure? = null,
+    /** True once a task-list read has succeeded (the empty card needs one). */
+    val hasTasksReading: Boolean = false,
     // Create task dialog state
     val showCreateDialog: Boolean = false,
     val isCreatingTask: Boolean = false,
@@ -143,43 +150,49 @@ class SchedulerViewModel(
                     logDebug(method, "Telemetry not available: ${e.message}")
                 }
 
-                // Fetch scheduler stats
+                // Fetch scheduler stats. A failure is kept, not swallowed: the
+                // tiles it feeds read "—" instead of a 0 (CSD-012).
                 var statsData: ApiSchedulerStatsData? = null
                 try {
                     statsData = apiClient.getSchedulerStats()
                 } catch (e: Exception) {
-                    logDebug(method, "Scheduler stats not available: ${e.message}")
+                    logError(method, "Scheduler stats read failed: ${e.message}")
                 }
 
-                // Fetch scheduled tasks
-                var tasks: List<ScheduledTaskData> = emptyList()
+                // Fetch scheduled tasks. A failure is KEPT: it used to be a
+                // logDebug, so a 500 rendered as "No Scheduled Tasks" and the
+                // error card below could never be reached (CSD-012).
+                var tasks: List<ScheduledTaskData>? = null
+                var tasksFailure: ReadFailure? = null
                 try {
-                    val tasksResult = apiClient.getScheduledTasks()
-                    tasks = tasksResult.tasks
+                    tasks = apiClient.getScheduledTasks().tasks
                 } catch (e: Exception) {
-                    logDebug(method, "Scheduled tasks not available: ${e.message}")
+                    logError(method, "Scheduled tasks read failed: ${e.message}")
+                    tasksFailure = ReadFailure.of(e)
                 }
 
                 val overview = SchedulerOverviewData(
                     cognitiveState = cognitiveState,
-                    activeCount = statsData?.tasksPending ?: tasks.count { it.status == "PENDING" || it.status == "ACTIVE" },
-                    recurringCount = statsData?.recurringTasks ?: tasks.count { it.isRecurring },
-                    pendingCount = statsData?.tasksPending ?: tasks.count { it.status == "PENDING" },
-                    completedTotal = statsData?.tasksCompletedTotal ?: 0,
-                    failedTotal = statsData?.tasksFailedTotal ?: 0,
-                    uptimeSeconds = statsData?.schedulerUptimeSeconds ?: 0.0
+                    activeCount = statsData?.tasksPending ?: tasks?.count { it.status == "PENDING" || it.status == "ACTIVE" },
+                    recurringCount = statsData?.recurringTasks ?: tasks?.count { it.isRecurring },
+                    pendingCount = statsData?.tasksPending ?: tasks?.count { it.status == "PENDING" },
+                    completedTotal = statsData?.tasksCompletedTotal,
+                    failedTotal = statsData?.tasksFailedTotal,
+                    uptimeSeconds = statsData?.schedulerUptimeSeconds,
                 )
 
                 _state.update {
                     it.copy(
                         overview = overview,
-                        tasks = tasks,
+                        tasks = tasks.orEmpty(),
+                        tasksFailure = tasksFailure,
+                        hasTasksReading = tasks != null,
                         isRefreshing = false,
                         error = null
                     )
                 }
 
-                logInfo(method, "Scheduler data: cognitiveState=$cognitiveState, tasks=${tasks.size}, pending=${overview.pendingCount}")
+                logInfo(method, "Scheduler data: cognitiveState=$cognitiveState, tasks=${tasks?.size}, pending=${overview.pendingCount}")
 
             } catch (e: Exception) {
                 logError(method, "Failed to refresh: ${e.message}")

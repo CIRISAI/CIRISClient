@@ -3069,7 +3069,20 @@
     "contacts_trust_unknown": "sconosciuto",
     "contacts_trust_untrusted": "non attendibile",
     "approvals_alerts_off": "Gli avvisi di approvazione sono disattivati. Attiva le notifiche per CIRIS nelle impostazioni di sistema per essere avvisato quando l'agente ha bisogno di te.",
-    "accord_written_by": "scritto da {who}"
+    "accord_written_by": "scritto da {who}",
+    "state_not_on_this_node": "Questo nodo non fornisce questo dato. Appartiene a un agente, e questo nodo funziona senza uno.",
+    "state_read_failed": "Impossibile leggere questo dato",
+    "state_read_failed_body": "Nulla qui è una lettura finché questo non funziona. Prova ad aggiornare.",
+    "runtime_not_on_this_node": "Questo nodo non dispone di un runtime dell'agente da controllare.",
+    "telemetry_not_on_this_node": "Questo nodo non riporta la telemetria dell'agente.",
+    "services_not_on_this_node": "Questo nodo non elenca i servizi dell'agente.",
+    "services_details_not_reported": "Per questo servizio non sono riportati priorità, strategia e stato del circuit breaker.",
+    "scheduler_not_on_this_node": "Questo nodo non dispone di uno scheduler dell'agente.",
+    "sessions_not_on_this_node": "Questo nodo non ha un agente, quindi non ha uno stato cognitivo.",
+    "transport_not_on_this_node": "Questo nodo non riporta i propri trasporti.",
+    "audit_not_on_this_node": "Questo nodo non conserva un registro di controllo dell'agente. Nulla è stato filtrato.",
+    "consent_not_on_this_node": "Questo nodo non conserva registrazioni di consenso. Il consenso è conservato da un agente, e questo nodo funziona senza uno.",
+    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare."
   },
   "moderation": {
     "ladder": {
