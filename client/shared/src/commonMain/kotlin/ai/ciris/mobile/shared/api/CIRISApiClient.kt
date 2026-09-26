@@ -13892,6 +13892,69 @@ class CIRISApiClient(
         }
     }
 
+    // ── Partnership queue (CSD-054 §7) + connectors (CSD-020 §7) ────────────
+    // Agent-owned, admin-gated routes, so they go to $baseUrl and answer in
+    // three ways — read, "administrators only", failed — never collapsed to an
+    // empty list (AgentRead). On a bare node none of them exist; the call is
+    // not made and the card says so (RouteNotOnThisHost → NotOnThisNode).
+
+    suspend fun partnershipOptions(): AgentRead<PartnershipOptionsDto> =
+        agentRead("partnershipOptions", HttpMethod.Get, "/v1/partnership/options", PartnershipOptionsDto.serializer())
+
+    suspend fun partnershipPending(): AgentRead<PartnershipPendingDto> =
+        agentRead("partnershipPending", HttpMethod.Get, "/v1/partnership/pending", PartnershipPendingDto.serializer())
+
+    suspend fun partnershipMetrics(): AgentRead<PartnershipMetricsDto> =
+        agentRead("partnershipMetrics", HttpMethod.Get, "/v1/partnership/metrics", PartnershipMetricsDto.serializer())
+
+    suspend fun partnershipHistory(userId: String): AgentRead<PartnershipHistoryDto> =
+        agentRead(
+            "partnershipHistory", HttpMethod.Get,
+            "/v1/partnership/history/${userId.encodeURLPathPart()}", PartnershipHistoryDto.serializer(),
+        )
+
+    suspend fun listConnectors(): AgentRead<ConnectorListDto> =
+        agentRead("listConnectors", HttpMethod.Get, "/v1/connectors", ConnectorListDto.serializer())
+
+    /** `POST /v1/connectors/{id}/test`. A failed test is HTTP 200 with `success: false` in `data`. */
+    suspend fun testConnector(connectorId: String): AgentRead<ConnectorTestDto> =
+        agentRead(
+            "testConnector", HttpMethod.Post,
+            "/v1/connectors/${connectorId.encodeURLPathPart()}/test", ConnectorTestDto.serializer(),
+        )
+
+    /** `DELETE /v1/connectors/{id}` — removes the route's record only (`connectors.py:582-584`). */
+    suspend fun deleteConnector(connectorId: String): AgentRead<kotlinx.serialization.json.JsonObject> =
+        agentRead(
+            "deleteConnector", HttpMethod.Delete,
+            "/v1/connectors/${connectorId.encodeURLPathPart()}", kotlinx.serialization.json.JsonObject.serializer(),
+        )
+
+    private suspend fun <T> agentRead(
+        method: String,
+        verb: HttpMethod,
+        path: String,
+        serializer: kotlinx.serialization.KSerializer<T>,
+    ): AgentRead<T> {
+        if (nodeSkip(method)) {
+            return AgentRead.Failed(ai.ciris.mobile.shared.ui.screens.ReadFailure.of(RouteNotOnThisHost(path)))
+        }
+        logInfo(method, "${verb.value} $baseUrl$path")
+        val client = federationHttpClient()
+        return try {
+            val response = client.request("$baseUrl$path") {
+                this.method = verb
+                authHeader()?.let { header("Authorization", it) }
+            }
+            agentReadOf(response.status.value, response.bodyAsText(), serializer)
+        } catch (e: Exception) {
+            logException(method, e)
+            AgentRead.Failed(ai.ciris.mobile.shared.ui.screens.ReadFailure.of(e))
+        } finally {
+            client.close()
+        }
+    }
+
     override fun close() {
     logInfo("close", "Closing CIRISApiClient")
     }

@@ -84,6 +84,52 @@ fields:
     example: "unconfirmed"
     renders: "What your consent made possible — shown only for partnered and anonymous"
     tag: "proposed:card_consent_impact"
+  # §7 — the partnership queue: requests waiting on this agent's answer.
+  - ceg: "consent:{kind}"
+    bind: {kind: partnership_grant}
+    use: display-only
+    type: string
+    example: "discord:4471"
+    renders: "one row per request waiting on the agent: who asked (`user_id`), what it would cover in the meta line, their reason underneath"
+    tag: partnership_request_0
+  - ceg: "consent:{kind}"
+    bind: {kind: partnership_accept}
+    use: display-only
+    type: string
+    example: "your agent"
+    renders: "Waiting on: your agent — on every row, because CC gives the accepting half to the agent"
+    tag: partnership_request_decider_0
+  - ceg: x_private:partnership_age
+    use: display-only
+    type: "enum[normal,warning,critical]"
+    example: "warning"
+    renders: "Waiting 9 days — a chip, mute under 7 days, brand 7-14, danger over 14 (`aging_status`)"
+    tag: partnership_request_age_0
+  - ceg: x_private:partnership_history
+    use: display-only
+    type: "list[string]"
+    example: ["Deferred by agent · 2026-09-20T09:00:00Z"]
+    renders: "tapping a row opens that person's earlier answers: outcome, who decided, when, the reason given"
+    tag: partnership_history_0
+  - ceg: x_private:partnership_metrics
+    use: display-only
+    type: int
+    example: 2
+    renders: "2 waiting · 12 accepted · 4 declined · 2 deferred"
+    tag: partnership_metrics
+  - ceg: x_private:partnership_options
+    use: display-only
+    type: "list[string]"
+    example: ["interaction", "preference", "improvement"]
+    renders: "What partnering means, in the agent's words: what it always covers, what it may add, how it is ended"
+    tag: partnership_options
+  - ceg: x_private:partnership_signed_by
+    use: display-only
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "Signed by: nobody — the agent keeps partnerships as unsigned records filed under a sign-in id (CIRISServer#423)"
+    tag: partnership_unsigned
+    blocked_by: CIRISServer#423
 ```
 
 **`consent:{kind}` is reserved (CC 3.1.5) and every row is `display-only`,
@@ -164,3 +210,107 @@ independent concerns so they can be reasoned about — and enforced — separate
 Showing the same revocability card once per visibility scope implies they vary
 together. **My things › Everything I shared** already holds `Data` and `Storage`
 and is where this belongs.
+
+## 7. The partnership queue — requests waiting on your agent
+
+**Added with the partnership-decisions work (numbered CSD-107 at assignment,
+folded in here under the no-duplicate-cards rule).** The route-coverage report
+listed `/v1/partnership/*` as "a consent decision with no UI". It is not a
+second card: the Consent card already shows the person's own partnership
+status and files their request (`ConsentViewModel.requestPartnership` →
+`POST /v1/consent/grant` with `stream: partnered`). What was missing is the
+other side of the same object — the requests waiting on the agent — and it
+lives on this card, under the stream list, in `ConsentPartnershipSection.kt`.
+
+Read from CIRISAgent **main** at `2937166` (2026-09-26).
+
+**What is being decided.** Whether a person's consent moves to the
+`partnered` stream: learning from their interactions with no end date instead
+of the 14-day default. A request is filed when someone asks for that stream
+(`routes/consent.py:237` → `service.py:288-290` →
+`PartnershipManager.create_partnership_request`, `partnership.py:108`), as a
+task for the agent (`partnership_utils.py:58`). Accept writes
+`consent/{user_id}` with `stream: partnered` and `expires_at: None`
+(`routes/partnership.py:131-231`); reject leaves the stream alone; defer keeps
+the request pending (`:233-374`).
+
+**Whose answer it is — and why this card gives none.** CC 3.3.1 gives the
+pair two halves: `consent:partnership_grant`, emitted by the subject, and
+`consent:partnership_accept`, emitted by the producer — the agent
+(`part_3_the_namespace.md:693-694`); CC 3.4.7 makes the emitter normative per
+leaf (`part_3:1611`), and CC 4.4.3.5.3 counts a pair only when the producer
+half is signed by a key other than the subject's (`part_4:963-965`). Every
+request on this queue was made by a person, so every answer is the agent's,
+given in its own reasoning (`partnership_utils.py:67-73`).
+`POST /v1/partnership/decide` would let two other parties answer
+(`routes/partnership.py:583`): the requester (one party signing both halves)
+and any administrator (answering in the agent's name, which the route's own
+header forbids at `:8`, and CC 1.13.2 forbids of any principal). **So the
+card calls `/decide` for nobody, and each row says "Waiting on: your agent".**
+
+**Placement.** Unchanged — it is this card's section, in Rules. A partnership
+is a `consent:*` object on the revocability axis (CC 2.3.3), not the agent's
+machinery; and Just me › Decisions is honestly empty ("There is nobody here to
+decide with"), which on this section is literally so.
+
+**Reversibility.** The section decides nothing, so it has no ConfirmSheet. The
+decision it shows is **revocable, not undoable**: either side may end a
+partnership (`/options` `revocation`, `routes/partnership.py:426`), but
+revoking starts decay — identity severed at once, a 90-day pattern decay,
+anonymised safety patterns possibly kept (`routes/consent.py:293-297`).
+
+**Contracts.**
+
+| value | endpoint | owner | state |
+|---|---|---|---|
+| what partnering means | `GET /v1/partnership/options` | CIRISAgent (`routes/partnership.py:380`) | live; any signed-in user. `data`: `required_categories[]`, `optional_categories[]`, `approval_process`, `benefits[]`, `responsibilities[]`, `revocation` (`:403-427`) |
+| requests waiting | `GET /v1/partnership/pending` | CIRISAgent (`:434`) | live; **admin only** (`:447`). `data`: `requests[]` of `PartnershipRequest` (`schemas/consent/core.py:240-254`), `total`, `by_status` |
+| totals | `GET /v1/partnership/metrics` | CIRISAgent (`:471`) | live; admin only. `PartnershipMetrics` (`core.py:271-286`) |
+| one person's history | `GET /v1/partnership/history/{user_id}` | CIRISAgent (`:498`) | live; admin only. `PartnershipHistory` (`core.py:289-302`) |
+| answer a request | `POST /v1/partnership/decide` | CIRISAgent (`:524`) | live; **deliberately not called** |
+
+**States, and the three kinds of silence.** `partnership_pending_list`
+(populated) · `partnership_pending_empty` "Nobody is waiting on your agent for
+an answer." (empty) · `partnership_loading` (loading) · `partnership_error` /
+`partnership_not_on_this_node` (error, via `ReadFailureBlock`) — and
+`partnership_admin_only`, "Only this agent's administrators can see who is
+waiting on it.", for the 403 the three admin routes give everyone else. A 403
+is a fact about who is looking; drawing it as the empty queue would tell a
+non-administrator "nobody is waiting" about a list they were never shown.
+`PartnershipQueueTest.aForbiddenQueueIsNeverTheEmptyQueue` pins that and was
+shown red against a planted `403 → empty` defect.
+
+**Standing tags.** `partnership_section`, `partnership_options`,
+`partnership_options_revocation`, `partnership_who_decides`,
+`partnership_unsigned`, `partnership_request_<i>` (tap opens the history),
+`partnership_request_age_<i>`, `partnership_request_decider_<i>`,
+`partnership_history_<i>`, `partnership_metrics`. No accept/decline/defer tag
+exists; the flow asserts their absence.
+
+**Flow.** `testing/flows/drafts/csd-054-partnership-queue.yaml` (floor
+`unreleased`).
+
+**The delta.**
+1. **`/decide` admits the wrong parties** (`routes/partnership.py:583`). Ask
+   (CIRISAgent, draft in the PR): refuse the subject on a request the subject
+   made, and refuse an admin on a request addressed to the agent.
+2. **A request does not say who made it** (`core.py:240-254`). Until it does,
+   no row can carry a person's button. Ask: `initiated_by: subject|agent`.
+3. **The agent's own ask skips the ask.** `upgrade_relationship` writes the
+   `partnered` stream directly (`service.py:1262`) and replies
+   `"PENDING_APPROVAL"` (`:1271`) — the one path where a person would have a
+   half of their own to give writes theirs for them, and says it did not.
+4. **Nothing is signed** (`routes/partnership.py:187-205` writes a plain
+   `GraphNode`) — CIRISServer#423 names the setup-time case; the decide path
+   needs the same fix.
+5. **The queue forgets.** `_pending_partnerships` and `_partnership_history`
+   are in-memory dicts (`partnership.py:51-52`); a restart empties the queue
+   and orphans its tasks (`finalize_partnership_approval` then finds nothing,
+   `:208-210`). The section says so under the list.
+6. **Categories are not CC scopes.** `interaction|preference|improvement|
+   research|sharing` (`core.py:34-41`) has no mapping to CC 3.3.1's
+   `retain|share|analyze|train|publish`, so they are `x_private:` here.
+
+**What this does not guarantee.** English copy is written here; every other
+language is machine-translated and MQM-reviewed by a judge of a different
+model family, with no native-reviewer pass.

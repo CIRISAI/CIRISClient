@@ -70,7 +70,10 @@ fun AdaptersScreen(
     onSkillStudio: () -> Unit = {},
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Connectors (CSD-020 §7): the database credentials handed to the SQL
+    // adapter through /v1/connectors, drawn under the adapter list.
+    connectorsSection: (@Composable () -> Unit)? = null,
 ) {
     var showRemoveDialog by remember { mutableStateOf<AdapterItem?>(null) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -172,6 +175,7 @@ fun AdaptersScreen(
                         )
                     }
                 }
+                connectorsSection?.invoke()
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxWidth(),
@@ -189,6 +193,7 @@ fun AdaptersScreen(
                             onReauth = { onReauthAdapter(adapter.type.lowercase(), adapter.authStepId) }
                         )
                     }
+                    connectorsSection?.let { section -> item { section() } }
                 }
             }
 
