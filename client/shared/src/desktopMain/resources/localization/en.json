@@ -595,7 +595,15 @@
     },
     "mesh_participation": {
       "action": "Consent to CIRIS Mesh Participation"
-    }
+    },
+    "grant_not_owner_authored": "This node wrote that consent before you signed it, so it isn't yours to withdraw here, and the node will not withdraw consent on your behalf. It is still active.",
+    "delegate_may_not_withdraw": "A delegated session can't withdraw the owner's consent. The withdrawal is signed with the owner's own key.",
+    "author_signer_unavailable": "Withdrawing consent is signed by the person who gave it, and this node can't use that identity right now. Nothing was withdrawn.",
+    "withdraw_failed": "The withdrawal could not be stored. Nothing was withdrawn.",
+    "delegation_denied": "This session's delegation does not grant that action.",
+    "malformed_body": "The request did not name a grant to withdraw.",
+    "store_unavailable": "The node could not read its consent records. Nothing was withdrawn. Try again once the node is healthy.",
+    "grant_not_live": "That is not a live consent grant on this node. It may already be withdrawn."
   },
   "consent_about_desc": "Learn about how consent works in CIRIS",
   "consent_about_title": "About Consent",
@@ -641,7 +649,8 @@
     "store_unavailable": "The node could not read its contact records. Nothing was changed — try again once the node is healthy.",
     "unknown_fed_id": "That federation ID is not in this node's directory. Admit the key first (peering) — an announced-but-unadmitted bookmark carries no provenance and cannot be consented to.",
     "unreachable": "They are known, but nothing answered. Their devices may be offline; messages will reach them when they return.",
-    "unresolvable": "That identifier does not resolve to a contact."
+    "unresolvable": "That identifier does not resolve to a contact.",
+    "not_a_contact": "They are not a contact here: no live consent grant names them."
   },
   "description": "Description",
   "discord": {
@@ -3126,7 +3135,27 @@
     "transport_not_on_this_node": "This node doesn't report its transports.",
     "audit_not_on_this_node": "This node doesn't keep an agent audit log. Nothing was filtered out.",
     "consent_not_on_this_node": "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one.",
-    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy."
+    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy.",
+    "manage_consent_revoke_unsupported": "This node can't withdraw consent yet (needs ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Revoke names one grant, and this node doesn't list its peering grants yet, so it works on a grant set up here in this session.",
+    "manage_consent_revoke_confirm_title": "Withdraw this consent?",
+    "manage_consent_revoke_fact_stops_value": "{from} stops replicating to {to}.",
+    "manage_consent_revoke_confirm": "Withdraw",
+    "manage_consent_withdrawn": "Withdrawn. The node recorded your withdrawal ({id}).",
+    "consent_withdraw_fact_who": "Who",
+    "consent_withdraw_fact_stops": "What stops",
+    "consent_withdraw_fact_signs": "Who signs",
+    "consent_withdraw_signs_value": "You. The node signs the withdrawal with your key, never its own.",
+    "consent_remaining_title": "Still active",
+    "consent_remaining_row": "Still active: this node wrote it before you signed, so it can't be withdrawn here.",
+    "contacts_remove": "Remove",
+    "contacts_remove_confirm_title": "Remove {who} from your contacts?",
+    "contacts_remove_fact_stops_value": "Your consent to share with them. Your messages and shared records stop replicating to them.",
+    "contacts_removed": "Removed {who}. Your consent to them is withdrawn.",
+    "contacts_remove_remaining_title": "{who} is still a contact",
+    "contacts_remove_remaining_body": "You withdrew {count} grant(s). The grants below are still active.",
+    "contacts_remove_remaining_row": "Still active: written by this node before you signed your contacts, so it can't be withdrawn here",
+    "contacts_remove_unsupported": "This node can't remove contacts yet (needs ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {

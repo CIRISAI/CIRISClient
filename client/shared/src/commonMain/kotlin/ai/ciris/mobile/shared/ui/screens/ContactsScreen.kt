@@ -29,7 +29,10 @@ import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.ui.theme.tone
+import ai.ciris.mobile.shared.viewmodels.ContactRemoval
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -129,6 +132,12 @@ fun ContactsScreen(
     val openChatLabel = localizedString("mobile.contacts_open_chat")
     val scopeNote = localizedString("mobile.receipt_contact_scope_note")
 
+    // Remove a contact (CSD-005, CIRISServer#657): receipt act → ConfirmSheet → DELETE.
+    val removing by viewModel.removing.collectAsState()
+    val removal by viewModel.removal.collectAsState()
+    var confirmRemove by remember { mutableStateOf<Contact?>(null) }
+    val removeLabel = localizedString("mobile.contacts_remove")
+
     Scaffold(
         containerColor = t.ground,
         topBar = {
@@ -198,6 +207,9 @@ fun ContactsScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
+
+            // ── What the last removal did ─────────────────────────────────────
+            removal?.let { r -> RemovalOutcome(r, onDismiss = viewModel::clearRemoval) }
 
             // ── Add someone ───────────────────────────────────────────────────
             if (showAddCard) {
@@ -296,6 +308,8 @@ fun ContactsScreen(
                             receipt = contactReceipt(
                                 contact, thisNodeLabel, openChatLabel, scopeNote,
                                 onOpenChat = { receiptFor = null; onOpenChat(contact) },
+                                removeLabel = removeLabel.takeIf { removing == null },
+                                onRemove = { receiptFor = null; confirmRemove = contact },
                             ),
                             onOpenChat = { onOpenChat(contact) },
                             onOpenReceipt = { receiptFor = it },
@@ -308,6 +322,86 @@ fun ContactsScreen(
     }
 
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
+
+    confirmRemove?.let { c ->
+        val who = c.aliasOverride ?: shortKey(c.keyId, head = 12, tail = 0)
+        ConfirmSheet(
+            title = localizedString("mobile.contacts_remove_confirm_title", "who", who),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.consent_withdraw_fact_who"), c.keyId, mono = true),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_stops"),
+                    localizedString("mobile.contacts_remove_fact_stops_value"),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_signs"),
+                    localizedString("mobile.consent_withdraw_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.contacts_remove"),
+            onConfirm = { confirmRemove = null; viewModel.removeContact(c.keyId) },
+            onDismiss = { confirmRemove = null },
+            destructive = true,
+            tagPrefix = PeopleTags.REMOVE_CONFIRM_PREFIX,
+        )
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Remove someone
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * What a removal DID, as the node reported it ([ContactRemoval]).
+ *
+ * The still-active arm is the one this exists for: grants this node wrote
+ * before the person signed their contacts cannot be withdrawn by them, stay
+ * live, and are listed by id with that reason — in the ordinary tone, never
+ * struck through, and never under a "Removed" line.
+ */
+@Composable
+private fun RemovalOutcome(removal: ContactRemoval, onDismiss: () -> Unit) {
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    val who = shortKey(removal.keyId, head = 12, tail = 0)
+    val pad = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    when (removal) {
+        is ContactRemoval.Removed -> Row(pad.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                localizedString("mobile.contacts_removed", "who", who),
+                style = type.body, color = t.ok,
+                modifier = Modifier.weight(1f).testable(PeopleTags.REMOVE_DONE),
+            )
+            CirisTextButton(localizedString("common_close"), tag = PeopleTags.REMOVE_DISMISS, onClick = onDismiss)
+        }
+        is ContactRemoval.StillActive -> CardShell(modifier = pad, tag = PeopleTags.REMOVE_REMAINING) {
+            Text(localizedString("mobile.contacts_remove_remaining_title", "who", who), style = type.title, color = t.ink)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                localizedString("mobile.contacts_remove_remaining_body", "count", removal.withdrawn.toString()),
+                style = type.body, color = t.dim,
+            )
+            removal.remainingGrants.forEach { grant ->
+                FieldRow(
+                    label = localizedString("mobile.contacts_remove_remaining_row"),
+                    value = grant,
+                    mono = true,
+                )
+            }
+            CirisTextButton(localizedString("common_close"), tag = PeopleTags.REMOVE_DISMISS, onClick = onDismiss)
+        }
+        is ContactRemoval.Refused -> StateBlock(
+            ListState.Error(
+                title = removal.reasonId?.let { localizedString(it) } ?: removal.detail.orEmpty(),
+                detail = removal.detail?.takeIf { it.isNotBlank() && removal.reasonId != null },
+            ),
+            tag = PeopleTags.REMOVE_REFUSAL, inline = true, modifier = pad,
+        )
+        is ContactRemoval.Unsupported -> StateBlock(
+            ListState.Error(title = localizedString("mobile.contacts_remove_unsupported")),
+            tag = PeopleTags.REMOVE_UNSUPPORTED, inline = true, modifier = pad,
+        )
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
