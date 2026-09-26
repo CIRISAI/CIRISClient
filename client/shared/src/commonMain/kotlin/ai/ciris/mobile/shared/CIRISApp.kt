@@ -1032,6 +1032,22 @@ fun CIRISApp(
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
     }
+    // Communities and affiliations (CSD-102, CSD-103): one view model per tier,
+    // shared by that circle's Rules hub, People and Chats — a change its rule
+    // holds for signatures is started in one card and finished in another, and
+    // the node keeps nothing in between. Node-owned routes: the node's URL.
+    val communityViewModel: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel = viewModel(key = "communities-community") {
+        ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel(apiClient, "community") { nodeBaseUrl }
+    }
+    val affiliationsViewModel: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel = viewModel(key = "communities-affiliations") {
+        ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel(apiClient, "affiliations") { nodeBaseUrl }
+    }
+    LaunchedEffect(currentAccessToken) {
+        if (currentAccessToken == null) {
+            communityViewModel.clearSessionState()
+            affiliationsViewModel.clearSessionState()
+        }
+    }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
     // surface that cannot answer. Fall back to the PREVIOUS default (Nodes) once,
@@ -4872,11 +4888,29 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                communities = communityViewModel,
+                onOpenModeration = { currentScreen = Screen.Moderation },
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                communities = affiliationsViewModel,
+                onOpenModeration = { currentScreen = Screen.Moderation },
+            )
+            // ── Communities and affiliations (CSD-103): People and Chats ──
+            Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)
+            Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(affiliationsViewModel)
+            Screen.CommunityChats, Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
+                viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
+                // A pair room is the two-person chat CSD-091 already draws.
+                onOpenPairChat = { _, contact ->
+                    currentScreen = Screen.UserChat(
+                        contactKeyId = contact.keyId,
+                        communityId = contact.chatCommunityId,
+                        contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                    )
+                },
             )
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
@@ -5852,6 +5886,13 @@ internal sealed class Screen {
     // quorum OF. A Commons-group surface, not a settings one: nothing on it is
     // an owner privilege.
     object Commons : Screen()
+    // Communities and affiliations (CSD-102, CSD-103): who is in each room
+    // (People) and the rooms you talk in (Chats), one per tier. The community
+    // itself renders on LayerLocalCommunity / LayerGlobalCommunities.
+    object CommunityRoster : Screen()
+    object AffiliationsRoster : Screen()
+    object CommunityChats : Screen()
+    object AffiliationsChats : Screen()
 }
 
 /**
@@ -5975,6 +6016,11 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities
     Screen.LayerGlobalCommons -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
+    // Communities and affiliations (CSD-103)
+    Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster
+    Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster
+    Screen.CommunityChats -> ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityChats
+    Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsChats
     Screen.Help -> ai.ciris.mobile.shared.ui.nav.NavSurface.Help
     // Three kinds of screen with no nav row of their own, three answers — they
     // were one branch once and it sent five of them to Help (CSD-085 §2).
@@ -6043,6 +6089,11 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities -> Screen.LayerGlobalCommunities
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons -> Screen.LayerGlobalCommons
     ai.ciris.mobile.shared.ui.nav.NavSurface.Commons -> Screen.Commons
+    // Communities and affiliations (CSD-103)
+    ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster -> Screen.CommunityRoster
+    ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster -> Screen.AffiliationsRoster
+    ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityChats -> Screen.CommunityChats
+    ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsChats -> Screen.AffiliationsChats
 }
 
 /**
