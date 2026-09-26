@@ -29,7 +29,7 @@ permanently.
 
 ```yaml csd:surface
 surface: null                    # declared in EpistemicNav, placed in no circle
-screen: AccordCeremony           # `object AccordCeremony : Screen()` — CIRISApp.kt:5789
+screen: AccordCeremony           # `object AccordCeremony : Screen()` — CIRISApp.kt:5807
 flow_only: true                  # no sidebar row reaches it; the checker asserts that
 entry: AccordScreen's `[+ New]` menu, enabled only when no accord family exists; and ConstitutionalScreen's `btn_open_accord_ceremony`
 ```
@@ -37,8 +37,8 @@ entry: AccordScreen's `[+ New]` menu, enabled only when no accord family exists;
 **The ceremony is the one card in safety-commons the checker cannot resolve,
 and it is a NavSurface that was never placed** — unlike the pre-shell screens,
 which never were surfaces. `accord-ceremony` is declared with an id, a label and
-a `labelKey` (`EpistemicNav.kt:269`), routed in `CIRISApp.kt:6004`, listed in
-`FLOW_ONLY_SURFACES` (`EpistemicNav.kt:400`) and in the gate's own `FLOW_ONLY`
+a `labelKey` (`EpistemicNav.kt:236`), routed in `CIRISApp.kt:6027`, listed in
+`FLOW_ONLY_SURFACES` (`EpistemicNav.kt:368`) and in the gate's own `FLOW_ONLY`
 set (`testing/gate/screen_atlas.py:54`), and placed in **no** circle and **no**
 instrument. `nav_map.build()` therefore has no entry for
 `Screen.AccordCeremony`.
@@ -67,10 +67,10 @@ its reason is out of date.
 
 **It is reached by two clicks from inside other screens:**
 
-* `AccordScreen`'s `[+ New]` menu → `onStartCeremony` (`CIRISApp.kt:4192`),
+* `AccordScreen`'s `[+ New]` menu → `onStartCeremony` (`CIRISApp.kt:4209`),
   offered only when no accord family exists yet;
 * `ConstitutionalScreen`'s `btn_open_accord_ceremony`
-  (`ConstitutionalScreen.kt:288`) → `CIRISApp.kt:4743`.
+  (`ConstitutionalScreen.kt:288`) → `CIRISApp.kt:4760`.
 
 Both parents are Everyone › Safety, so the ceremony is *in the right place*; it
 simply has no row. Whether that should change is §2.3.
@@ -192,6 +192,24 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | the family envelope | `POST /v1/accord/genesis/envelope` | `src/accord.rs:2621` | **live** |
 | a primary's co-sign | `POST /v1/accord/family/cosign` | `src/accord_provision.rs:3701` | **live** |
 | assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **live** |
+| did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **live on this node's own machine, not called**; **remote reach** `blocked_by: CIRISServer#652` |
+| adopt the ceremony's output on another node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live, and it does NOT take this ceremony's artifact** — see below |
+
+**This ceremony's artifact is not the portable seed.** `genesis/assemble`
+returns and saves the founder-signed family genesis `SignedCegObject`
+(`src/accord.rs:890-912`, written to the CEG outbox as
+`humanity_accord_genesis.json`, the thing verify bakes). `POST
+/v1/trust-root/import` takes a `GenesisBundle` — charter, conferral, serve
+nodes, authorizations (CIRISPersist v48.0.0 `genesis/bundle.rs:121-130`) — and
+refuses anything else as `trust_root.bad_bundle` (`src/trust_root_api.rs:244-253`).
+CC 3.2 T5 says the same thing normatively: the bundle is the **only** genesis
+artifact and *"a bare record list is not a seed and MUST fail to parse"*
+(`part_3_the_namespace.md`, trust-root operational semantics). The portable
+seed is minted by the re-mint on the Accord card (`genesis/{propose,cosign}`,
+`src/accord_provision.rs:3744,3748`, saved as `mesh-genesis.json`), which reads
+this ceremony's roster. So the done state should not tell anyone this JSON is
+what other nodes attach; it is the entrenched family, and attaching happens one
+step later (CSD-067 §3.1).
 
 **Every route this ceremony needs is live.** The whole of this document's gap
 list is client-side: four states with one tag between them, no save affordance
