@@ -1376,6 +1376,21 @@
     "consent_switch_temporary": "Kubadilisha kuwa KWA MUDA kutaweka kipindi cha siku 14 cha kusahau kiotomatiki. Je, uendelee?",
     "consent_users_helped": "Watumiaji Waliosaidika",
     "consent_view_only": "Unaweza kuona na kusimamia mipangilio yako ya ridhaa pekee.",
+    "contact_code_without_transport": "Bado havijawa katika msimbo huu: {devices}. Kifaa kinaweza kuingizwa mara tu kikiwa na anwani ya mtandao hapa, baada ya nodi yake kuanza tena.",
+    "contact_code_disclosure": "Yeyote aliye na msimbo huu anaweza kuomba kukuongeza, na anaweza kuona ni vifaa vipi vyako vinavyotajwa ndani yake.",
+    "contact_code_nodes_all": "Vifaa vyangu vyote vinavyoweza kufikiwa",
+    "contact_code_nodes_list": "Chagua vifaa",
+    "contact_code_nodes_none": "Hakuna vifaa",
+    "contact_code_private_note": "Vifaa vinavyoweza kufikiwa tu ndivyo vinavyoweza kuwekwa kwenye msimbo. Vifaa vyako vingine ni vya faragha.",
+    "contact_code_list_reloaded": "Orodha yako ya vifaa vinavyoweza kufikiwa imepakiwa upya. Msimbo hapa chini ni kwa vifaa vinavyoweza kufikiwa sasa.",
+    "contact_code_unreachable": "Hakuna mtu anayeweza kukupata kwa hii bado: hakuna kifaa chako chochote kinachoweza kufikiwa. Fanya kifaa hiki kiweze kufikiwa, au shiriki msimbo unaokijumuisha.",
+    "contact_code_make_reachable": "Fanya kifaa hiki kiweze kufikiwa",
+    "contact_code_make_reachable_busy": "Inafanya kifaa hiki kiweze kufikiwa…",
+    "contact_code_made_reachable": "Kifaa hiki kinaweza kufikiwa sasa. Anwani yake ya mtandao inatangazwa wakati nodi yake itakapoanza tena.",
+    "contact_code_make_reachable_failed": "Imeshindikana kufanya kifaa hiki kiweze kufikiwa.",
+    "contact_code_error": "Imeshindikana kupata msimbo wako wa anwani.",
+    "contact_code_node_too_old": "Nodi hii haiwezi bado kutengeneza msimbo wa anwani. Inahitaji ciris-server 0.5.218 au toleo jipya zaidi.",
+    "contacts_add_already": "Tayari yupo kwenye anwani zako.",
     "credits_error_generic": "Imeshindwa kusindika ujumbe wako. Tafadhali jaribu baadaye.",
     "credits_error_network": "Hitilafu ya mtandao. Tafadhali angalia muunganisho wako na ujaribu tena.",
     "credits_error_server": "Seva haipo. Tafadhali jaribu baadaye.",
@@ -3094,7 +3109,14 @@
     "transport_not_on_this_node": "Nodi hii hairipoti njia zake za usafirishaji.",
     "audit_not_on_this_node": "Nodi hii haihifadhi kumbukumbu ya ukaguzi ya wakala. Hakuna kilichochujwa.",
     "consent_not_on_this_node": "Nodi hii haihifadhi rekodi za idhini. Idhini inahifadhiwa na wakala, na nodi hii inafanya kazi bila wakala.",
-    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua."
+    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua.",
+    "contact_code_title": "Shiriki msimbo wangu wa anwani",
+    "contact_code_qr_desc": "Msimbo wako wa anwani kama QR",
+    "contact_code_copy": "Nakili",
+    "contact_code_copied": "Imenakiliwa",
+    "contact_code_included_none": "Msimbo huu hautaji kifaa chochote chako. Watu wanakupata kupitia orodha ya shirikisho.",
+    "contact_code_included_one": "Msimbo huu unajumuisha kifaa 1: {device}.",
+    "contact_code_included_many": "Msimbo huu unajumuisha vifaa {count}: {devices}."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Vifaa vyako ni uso wa mmiliki mwenyewe. Ingia kama mmiliki wa nodi hii.",
     "release_incomplete": "Uachiliaji ulitiwa saini, lakini nodi bado inaorodhesha nodi hiyo kama yako: rekodi ya umiliki ambayo haiwezi kuiona bado ipo hai. Kile ilichoweza kuondoa kinasalia kikiwa kimeondolewa.",
     "release_self_requires_force": "Hiyo ni nodi unayoizungumza nayo. Kuiachilia kunakomesha umiliki wako hapa, ikiwa ni pamoja na kikao hiki.",
-    "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa."
+    "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa.",
+    "node_not_announced": "Kifaa hicho hakiwezi kufikiwa, hivyo hakiwezi kuwekwa katika msimbo.",
+    "contact_code_owner_key_absent": "Nodi hii haina rekodi ya ufunguo wa utambulisho wako, hivyo haiwezi kutengeneza msimbo wako wa anwani.",
+    "contact_code_not_a_person": "Utambulisho wako haujasajiliwa kama mtu, na ni mtu tu anayeweza kuongezwa kama anwani.",
+    "contact_code_key_not_derived": "key_id ya utambulisho wako haifanani na ufunguo wake, hivyo kila mtu uliyemshirikisha msimbo huo angeukataa.",
+    "contact_code_no_pqc_half": "Utambulisho wako hauna nusu ya ufunguo wa baada-ya-kwanti, hivyo hakuna angeweza kukuongeza kutoka kwa msimbo.",
+    "contact_code_unencodable": "Msimbo wako wa anwani haukuweza kutengenezwa kutoka kwa funguo ambazo nodi hii inazo."
   }
 }

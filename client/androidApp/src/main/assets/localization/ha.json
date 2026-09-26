@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Wannan kumburi ba ya bayar da rahoton transports nasa ba.",
     "audit_not_on_this_node": "Wannan kumburi ba ya riƙe littafin dubawar wakili ba. Ba a tace komai ba.",
     "consent_not_on_this_node": "Wannan kumburi ba ya riƙe bayanan amincewa ba. Wakili ne ke riƙe amincewa, kuma wannan kumburi yana gudana ba tare da wakili ba.",
-    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya."
+    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya.",
+    "contact_code_title": "Raba lambar sadarwata",
+    "contact_code_qr_desc": "Lambar sadarwarku a matsayin QR",
+    "contact_code_copy": "Kwafa",
+    "contact_code_copied": "An kwafa",
+    "contact_code_included_none": "Wannan lambar ba ta ambaci ko ɗaya daga na'urorinku ba. Mutane suna samun ku ta hanyar kundin adireshin tarayya.",
+    "contact_code_included_one": "Wannan lambar ta ƙunshi na'ura 1: {device}.",
+    "contact_code_included_many": "Wannan lambar ta ƙunshi na'urori guda {count}: {devices}.",
+    "contact_code_without_transport": "Ba a cikin wannan lambar tukuna ba: {devices}. Na'ura za ta iya shiga da zarar ta samu adireshin sadarwa a nan, bayan kumburinta ya fara aiki na gaba.",
+    "contact_code_disclosure": "Duk wanda ke da wannan lambar zai iya neman ƙara ku a matsayin abokin hulɗa, kuma yana iya ganin waɗanne daga cikin na'urorinku take ambata.",
+    "contact_code_nodes_all": "Duk na'urorina masu isa",
+    "contact_code_nodes_list": "Zaɓi na'urori",
+    "contact_code_nodes_none": "Babu na'urori",
+    "contact_code_private_note": "Na'urorin da za a iya isa gare su ne kaɗai za su iya shiga cikin lambar. Sauran na'urorinku na sirri ne.",
+    "contact_code_list_reloaded": "An sāke loda jerin na'urorinku waɗanda za a iya isa gare su. Lambar da ke ƙasa na na'urorin da za a iya isa gare su a yanzu.",
+    "contact_code_unreachable": "Babu wanda zai iya samun ku da wannan tukuna: babu wata na'urarku da za a iya isa gare ta. Sanya wannan na'urar mai isa, ko ku raba lambar da ta haɗa da ita.",
+    "contact_code_make_reachable": "Sanya a riƙa iya isa ga wannan na'urar",
+    "contact_code_make_reachable_busy": "Ana saita wannan na'urar don a riƙa iya isa gare ta…",
+    "contact_code_made_reachable": "Za a iya isa ga wannan na'urar yanzu. Za a sanar da adireshin sadarwarta a karo na gaba da kumburinta ya fara aiki.",
+    "contact_code_make_reachable_failed": "Ba a iya saita wannan na'urar don a riƙa iya isa gare ta ba.",
+    "contact_code_error": "Ba a iya samun lambar sadarwarku ba.",
+    "contact_code_node_too_old": "Wannan node bai iya yin lambar sadarwa tukuna ba. Yana buƙatar ciris-server 0.5.218 ko sabuwa.",
+    "contacts_add_already": "Ya riga ya kasance cikin abokan hulɗarku."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Na'urorinku fage ne na mai shi kansa. Ku shiga a matsayin mai wannan node.",
     "release_incomplete": "An sa hannu kan sakin, amma node ɗin har yanzu yana jera wancan node a matsayin naku: akwai rikodin mallaka da ba zai iya gani ba wanda har yanzu yana aiki. Abin da ya iya janyewa ya ci gaba da kasancewa an janye shi.",
     "release_self_requires_force": "Wancan ne node ɗin da kuke magana da shi. Sakinsa yana kawo ƙarshen mallakarku a nan, tare da wannan zama.",
-    "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba."
+    "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba.",
+    "node_not_announced": "Wannan na'urar ba za a iya isa gare ta ba, don haka ba za ta iya shiga cikin lambar ba.",
+    "contact_code_owner_key_absent": "Wannan node ba shi da rikodin maɓallin shaidarku, don haka ba zai iya yin lambar sadarwarku ba.",
+    "contact_code_not_a_person": "Ba a yi wa shaidarku rajista a matsayin mutum ba, kuma mutum ne kawai za a iya ƙara shi a matsayin abokin hulɗa.",
+    "contact_code_key_not_derived": "key_id na shaidarku bai dace da maɓallinta ba, don haka duk wanda kuka raba lambar da shi zai ƙi ta.",
+    "contact_code_no_pqc_half": "Shaidarku ba ta da rabin maɓallin post-quantum, don haka babu wanda zai iya ƙara ku daga lambar.",
+    "contact_code_unencodable": "Ba a iya yin lambar sadarwarku daga maɓallan da wannan node yake riƙe da su ba."
   }
 }

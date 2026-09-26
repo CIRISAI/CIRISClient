@@ -1376,6 +1376,21 @@
     "consent_switch_temporary": "Yíyí padà sí ÌGBÀ-DÍẸ̀ yóò ṣètò ìgbà ìgbàgbé-ara-ẹni ọjọ́ 14. Tẹ̀síwájú?",
     "consent_users_helped": "Àwọn Olùmúlò tí A Ràn Lọ́wọ́",
     "consent_view_only": "Ẹ lè wo àti ṣàkóso àwọn ìṣètò ìfohùnsọ̀kan yín nìkan.",
+    "contact_code_without_transport": "Kò sí nínú kóòdù yìí síi: {devices}. Ẹ̀rọ kan lè wọ inú rẹ̀ nígbà tí ó bá ti ní àdírẹ́sì nẹ́tíwọ̀ọ̀kì níhìín, lẹ́yìn tí nóòdù rẹ̀ bá tún bẹ̀rẹ̀.",
+    "contact_code_disclosure": "Ẹnikẹ́ni tí ó bá ní kóòdù yìí lè béèrè láti fi ọ́ kún, ó sì lè rí àwọn ẹ̀rọ rẹ tí kóòdù náà dárúkọ.",
+    "contact_code_nodes_all": "Gbogbo àwọn ẹ̀rọ mi tí a lè dé wá",
+    "contact_code_nodes_list": "Yan àwọn ẹ̀rọ",
+    "contact_code_nodes_none": "Kò sí ẹ̀rọ kankan",
+    "contact_code_private_note": "Àwọn ẹ̀rọ tí a lè dé wá nìkan ni ó lè wà nínú kóòdù kan. Àwọn ẹ̀rọ rẹ mìíràn jẹ́ àṣírí.",
+    "contact_code_list_reloaded": "A ti tún kó àkójọ àwọn ẹ̀rọ rẹ tí a lè dé wá. Kóòdù tí ó wà ní ìsàlẹ̀ jẹ́ fún àwọn ẹ̀rọ tí a lè dé wá nísinsìnyí.",
+    "contact_code_unreachable": "Kò sí ẹnikẹ́ni tí ó lè rí ọ pẹ̀lú èyí síi: kò sí ẹ̀rọ kan nínú àwọn ẹ̀rọ rẹ tí a lè dé wá. Ṣe kí ẹ̀rọ yìí lè dé wá, tàbí pín kóòdù tí ó ní i nínú.",
+    "contact_code_make_reachable": "Ṣe kí ẹ̀rọ yìí lè dé wá",
+    "contact_code_make_reachable_busy": "Ń ṣe kí ẹ̀rọ yìí lè dé wá…",
+    "contact_code_made_reachable": "Ẹ̀rọ yìí ti di ọ̀kan tí a lè dé wá nísinsìnyí. A óò kéde àdírẹ́sì nẹ́tíwọ̀ọ̀kì rẹ̀ ní ìgbà tí nóòdù rẹ̀ bá tún bẹ̀rẹ̀.",
+    "contact_code_make_reachable_failed": "A kò lè ṣe kí ẹ̀rọ yìí lè dé wá.",
+    "contact_code_error": "A kò lè rí kóòdù olùbásọ̀rọ̀ rẹ.",
+    "contact_code_node_too_old": "Nóòdù yìí kò tíì lè ṣe kóòdù olùbásọ̀rọ̀. Ó nílò ciris-server 0.5.218 tàbí èyí tí ó tuntun jù.",
+    "contacts_add_already": "Ó ti wà nínú àwọn olùbásọ̀rọ̀ rẹ tẹ́lẹ̀.",
     "credits_error_generic": "A kò lè ṣe ìṣẹ́ lórí ìránṣẹ́ yín. Ẹ jọ̀wọ́ gbìyànjú lẹ́yìn ìgbà díẹ̀.",
     "credits_error_network": "Àṣìṣe nẹ́tíwọ̀ọ̀kì. Ẹ jọ̀wọ́ ẹ ṣàyẹ̀wò ìsopọ̀ yín kí ẹ sì gbìyànjú lẹ́ẹ̀kan sí.",
     "credits_error_server": "Ẹ̀rọ amóhùnmáwòrán kò sí fún ìgbà díẹ̀. Ẹ jọ̀wọ́ gbìyànjú lẹ́ẹ̀kan sí kíákíá.",
@@ -3094,7 +3109,14 @@
     "transport_not_on_this_node": "Nódù yìí kò ṣe ìròyìn àwọn ìrìnnà rẹ̀.",
     "audit_not_on_this_node": "Nódù yìí kò ní àkọsílẹ̀ àyẹ̀wò aṣojú. Kò sí ohun tí a yọ kúrò.",
     "consent_not_on_this_node": "Nódù yìí kò ní àwọn àkọsílẹ̀ ìyọ́nda. Aṣojú ni ó ń pa ìyọ́nda mọ́, nódù yìí sì ń ṣiṣẹ́ láìsí ọ̀kan.",
-    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà."
+    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà.",
+    "contact_code_title": "Pín kóòdù olùbásọ̀rọ̀ mi",
+    "contact_code_qr_desc": "Kóòdù olùbásọ̀rọ̀ rẹ gẹ́gẹ́ bí QR",
+    "contact_code_copy": "Dàkọ",
+    "contact_code_copied": "Ti dàkọ",
+    "contact_code_included_none": "Kóòdù yìí kò dárúkọ ọ̀kankan nínú àwọn ẹ̀rọ rẹ. Àwọn ènìyàn ń rí ọ nípasẹ̀ àkójọ Ìṣọ̀kan-Àjùmọ̀ṣe.",
+    "contact_code_included_one": "Kóòdù yìí ní ẹ̀rọ 1: {device}.",
+    "contact_code_included_many": "Kóòdù yìí ní {count} ẹ̀rọ: {devices}."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Àwọn ẹ̀rọ rẹ jẹ́ ojú-ìṣàkóso tí ó jẹ́ ti olówó fúnra rẹ̀. Wọlé gẹ́gẹ́ bí olówó nóòdù yìí.",
     "release_incomplete": "A fọwọ́sí ìtúsílẹ̀ náà, ṣùgbọ́n nóòdù náà ṣì ka nóòdù yẹn sí tìrẹ: àkọsílẹ̀ ẹ̀tọ́ ìní kan tí kò lè rí ṣì wà lọ́wọ́. Ohun tí ó lè yọ kúrò ṣì dúró ní yíyọ-kúrò.",
     "release_self_requires_force": "Èyí ni nóòdù tí o ń bá sọ̀rọ̀. Títú u sílẹ̀ yóò fòpin sí ẹ̀tọ́ ìní rẹ níhìín, tí ó fi sáà yìí sínú rẹ̀.",
-    "store_unavailable": "Nóòdù náà kò lè ka tàbí kọ ilé-ìtọ́jú ìdánimọ̀ rẹ̀. Kò sí ohun tí a yí padà."
+    "store_unavailable": "Nóòdù náà kò lè ka tàbí kọ ilé-ìtọ́jú ìdánimọ̀ rẹ̀. Kò sí ohun tí a yí padà.",
+    "node_not_announced": "Ẹ̀rọ yẹn kò lè dé wá, nítorí náà kò lè wọ inú kóòdù kan.",
+    "contact_code_owner_key_absent": "Nóòdù yìí kò dì àkọsílẹ̀ kọ́kọ́rọ́ ìdánimọ̀ rẹ mọ́, nítorí náà kò lè ṣe kóòdù olùbásọ̀rọ̀ rẹ.",
+    "contact_code_not_a_person": "A kò forúkọ ìdánimọ̀ rẹ sílẹ̀ gẹ́gẹ́ bí ẹnìkan, ẹnìkan nìkan sì ni a lè fi kún gẹ́gẹ́ bí olùbásọ̀rọ̀.",
+    "contact_code_key_not_derived": "key_id ìdánimọ̀ rẹ kò bá kọ́kọ́rọ́ rẹ̀ mu, nítorí náà gbogbo ẹni tí o bá ti pín kóòdù náà fún yóò máa kọ̀ ọ́.",
+    "contact_code_no_pqc_half": "Ìdánimọ̀ rẹ kò ní ìdajì kọ́kọ́rọ́ lẹ́yìn-kùántọ̀mù, nítorí náà kò sí ẹnikẹ́ni tí ó lè fi ọ́ kún láti inú kóòdù kan.",
+    "contact_code_unencodable": "A kò lè ṣe kóòdù olùbásọ̀rọ̀ rẹ láti inú àwọn kọ́kọ́rọ́ tí nóòdù yìí dì mọ́."
   }
 }

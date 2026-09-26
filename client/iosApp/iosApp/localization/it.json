@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Questo nodo non riporta i propri trasporti.",
     "audit_not_on_this_node": "Questo nodo non conserva un registro di controllo dell'agente. Nulla è stato filtrato.",
     "consent_not_on_this_node": "Questo nodo non conserva registrazioni di consenso. Il consenso è conservato da un agente, e questo nodo funziona senza uno.",
-    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare."
+    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare.",
+    "contact_code_title": "Condividi il mio codice di contatto",
+    "contact_code_qr_desc": "Il tuo codice di contatto come QR",
+    "contact_code_copy": "Copia",
+    "contact_code_copied": "Copiato",
+    "contact_code_included_none": "Questo codice non indica nessuno dei tuoi dispositivi. Le persone ti trovano tramite l'elenco della federazione.",
+    "contact_code_included_one": "Questo codice include 1 dispositivo: {device}.",
+    "contact_code_included_many": "Questo codice include {count} dispositivi: {devices}.",
+    "contact_code_without_transport": "Non ancora incluso in questo codice: {devices}. Un dispositivo può essere incluso una volta che ha qui un indirizzo di rete, dopo il prossimo avvio del suo nodo.",
+    "contact_code_disclosure": "Chiunque abbia questo codice può chiederti di aggiungerti e può vedere quali dei tuoi dispositivi indica.",
+    "contact_code_nodes_all": "Tutti i miei dispositivi raggiungibili",
+    "contact_code_nodes_list": "Scegli i dispositivi",
+    "contact_code_nodes_none": "Nessun dispositivo",
+    "contact_code_private_note": "Solo i dispositivi raggiungibili possono essere inclusi in un codice. Gli altri tuoi dispositivi restano privati.",
+    "contact_code_list_reloaded": "L'elenco dei tuoi dispositivi raggiungibili è stato ricaricato. Il codice sottostante si riferisce ai dispositivi attualmente raggiungibili.",
+    "contact_code_unreachable": "Al momento nessuno può trovarti con questo: nessuno dei tuoi dispositivi è raggiungibile. Rendi raggiungibile questo dispositivo, oppure condividi un codice che lo includa.",
+    "contact_code_make_reachable": "Rendi raggiungibile questo dispositivo",
+    "contact_code_make_reachable_busy": "Sto rendendo raggiungibile questo dispositivo…",
+    "contact_code_made_reachable": "Questo dispositivo è ora raggiungibile. Il suo indirizzo di rete viene annunciato al prossimo avvio del suo nodo.",
+    "contact_code_make_reachable_failed": "Non è stato possibile rendere raggiungibile questo dispositivo.",
+    "contact_code_error": "Non è stato possibile ottenere il tuo codice di contatto.",
+    "contact_code_node_too_old": "Questo nodo non può ancora generare un codice di contatto. Richiede ciris-server 0.5.218 o successivo.",
+    "contacts_add_already": "Già presente nei tuoi contatti."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "I tuoi dispositivi sono la superficie propria del proprietario. Accedi come proprietario di questo nodo.",
     "release_incomplete": "Il rilascio è stato firmato, ma il nodo elenca ancora quel nodo come tuo: una registrazione di proprietà che non può vedere è ancora attiva. Ciò che ha potuto revocare resta revocato.",
     "release_self_requires_force": "Quello è il nodo con cui stai parlando. Rilasciarlo pone fine alla tua proprietà qui, inclusa questa sessione.",
-    "store_unavailable": "Il nodo non è riuscito a leggere o scrivere il proprio archivio delle identità. Non è stata apportata alcuna modifica."
+    "store_unavailable": "Il nodo non è riuscito a leggere o scrivere il proprio archivio delle identità. Non è stata apportata alcuna modifica.",
+    "node_not_announced": "Quel dispositivo non è raggiungibile, quindi non può essere incluso in un codice.",
+    "contact_code_owner_key_absent": "Questo nodo non possiede la registrazione della chiave della tua identità, quindi non può generare il tuo codice di contatto.",
+    "contact_code_not_a_person": "La tua identità non è registrata come persona, e solo una persona può essere aggiunta come contatto.",
+    "contact_code_key_not_derived": "Il key_id della tua identità non corrisponde alla sua chiave, quindi chiunque abbia ricevuto un codice da te lo rifiuterebbe.",
+    "contact_code_no_pqc_half": "La tua identità non possiede la metà della chiave post-quantistica, quindi nessuno potrebbe aggiungerti tramite un codice.",
+    "contact_code_unencodable": "Non è stato possibile generare il tuo codice di contatto dalle chiavi possedute da questo nodo."
   }
 }

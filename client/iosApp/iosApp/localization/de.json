@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Dieser Knoten meldet seine Transporte nicht.",
     "audit_not_on_this_node": "Dieser Knoten führt kein Audit-Protokoll für den Agenten. Es wurde nichts herausgefiltert.",
     "consent_not_on_this_node": "Dieser Knoten führt keine Zustimmungsdatensätze. Zustimmung wird von einem Agenten verwaltet, und dieser Knoten läuft ohne einen solchen.",
-    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen."
+    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen.",
+    "contact_code_title": "Meinen Kontakt-Code teilen",
+    "contact_code_qr_desc": "Ihr Kontakt-Code als QR-Code",
+    "contact_code_copy": "Kopieren",
+    "contact_code_copied": "Kopiert",
+    "contact_code_included_none": "Dieser Code benennt keines Ihrer Geräte. Andere finden Sie über das Föderationsverzeichnis.",
+    "contact_code_included_one": "Dieser Code umfasst 1 Gerät: {device}.",
+    "contact_code_included_many": "Dieser Code umfasst {count} Geräte: {devices}.",
+    "contact_code_without_transport": "Noch nicht in diesem Code enthalten: {devices}. Ein Gerät kann aufgenommen werden, sobald es hier eine Netzwerkadresse hat, nach dem nächsten Start seines Knotens.",
+    "contact_code_disclosure": "Jeder mit diesem Code kann darum bitten, Sie hinzuzufügen, und kann sehen, welche Ihrer Geräte er benennt.",
+    "contact_code_nodes_all": "Alle meine erreichbaren Geräte",
+    "contact_code_nodes_list": "Geräte auswählen",
+    "contact_code_nodes_none": "Keine Geräte",
+    "contact_code_private_note": "Nur erreichbare Geräte können in einen Code aufgenommen werden. Ihre übrigen Geräte bleiben privat.",
+    "contact_code_list_reloaded": "Ihre Liste erreichbarer Geräte wurde neu geladen. Der untenstehende Code gilt für die Geräte, die jetzt erreichbar sind.",
+    "contact_code_unreachable": "Damit kann Sie noch niemand finden: Keines Ihrer Geräte ist erreichbar. Machen Sie dieses Gerät erreichbar oder teilen Sie einen Code, der es enthält.",
+    "contact_code_make_reachable": "Dieses Gerät erreichbar machen",
+    "contact_code_make_reachable_busy": "Gerät wird erreichbar gemacht…",
+    "contact_code_made_reachable": "Dieses Gerät ist jetzt erreichbar. Seine Netzwerkadresse wird beim nächsten Start seines Knotens angekündigt.",
+    "contact_code_make_reachable_failed": "Dieses Gerät konnte nicht erreichbar gemacht werden.",
+    "contact_code_error": "Ihr Kontakt-Code konnte nicht abgerufen werden.",
+    "contact_code_node_too_old": "Dieser Knoten kann noch keinen Kontakt-Code erstellen. Er benötigt ciris-server 0.5.218 oder neuer.",
+    "contacts_add_already": "Bereits in Ihren Kontakten."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Ihre Geräte sind die Oberfläche des Eigentümers selbst. Melden Sie sich als Eigentümer dieses Knotens an.",
     "release_incomplete": "Die Freigabe wurde signiert, aber der Knoten führt jenen Knoten weiterhin als Ihren: Ein Eigentumseintrag, den er nicht einsehen kann, ist weiterhin aktiv. Was er entziehen konnte, bleibt entzogen.",
     "release_self_requires_force": "Das ist der Knoten, mit dem Sie sprechen. Seine Freigabe beendet Ihr Eigentum hier, einschließlich dieser Sitzung.",
-    "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert."
+    "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert.",
+    "node_not_announced": "Dieses Gerät ist nicht erreichbar und kann daher nicht in einen Code aufgenommen werden.",
+    "contact_code_owner_key_absent": "Dieser Knoten besitzt den Schlüsseldatensatz Ihrer Identität nicht und kann daher Ihren Kontakt-Code nicht erstellen.",
+    "contact_code_not_a_person": "Ihre Identität ist nicht als Person registriert, und nur eine Person kann als Kontakt hinzugefügt werden.",
+    "contact_code_key_not_derived": "Die Schlüssel-ID Ihrer Identität stimmt nicht mit ihrem Schlüssel überein, sodass jeder, mit dem Sie einen Code geteilt haben, ihn abweisen würde.",
+    "contact_code_no_pqc_half": "Ihre Identität besitzt keine Post-Quanten-Schlüsselhälfte, sodass niemand Sie über einen Code hinzufügen könnte.",
+    "contact_code_unencodable": "Ihr Kontakt-Code konnte aus den Schlüsseln, die dieser Knoten besitzt, nicht erstellt werden."
   }
 }

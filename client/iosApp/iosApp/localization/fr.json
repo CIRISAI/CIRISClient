@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Ce nœud ne rapporte pas ses transports.",
     "audit_not_on_this_node": "Ce nœud ne tient pas de journal d'audit d'agent. Rien n'a été filtré.",
     "consent_not_on_this_node": "Ce nœud ne détient pas d'enregistrements de consentement. Le consentement est conservé par un agent, et ce nœud fonctionne sans agent.",
-    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter."
+    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter.",
+    "contact_code_title": "Partager mon code de contact",
+    "contact_code_qr_desc": "Votre code de contact en QR",
+    "contact_code_copy": "Copier",
+    "contact_code_copied": "Copié",
+    "contact_code_included_none": "Ce code ne nomme aucun de vos appareils. Les personnes vous trouvent via l'annuaire de la fédération.",
+    "contact_code_included_one": "Ce code inclut 1 appareil : {device}.",
+    "contact_code_included_many": "Ce code inclut {count} appareils : {devices}.",
+    "contact_code_without_transport": "Pas encore dans ce code : {devices}. Un appareil peut y figurer une fois qu'il dispose ici d'une adresse réseau, après le prochain démarrage de son nœud.",
+    "contact_code_disclosure": "Toute personne disposant de ce code peut demander à vous ajouter, et peut voir quels appareils il nomme.",
+    "contact_code_nodes_all": "Tous mes appareils accessibles",
+    "contact_code_nodes_list": "Choisir les appareils",
+    "contact_code_nodes_none": "Aucun appareil",
+    "contact_code_private_note": "Seuls les appareils accessibles peuvent figurer dans un code. Vos autres appareils restent privés.",
+    "contact_code_list_reloaded": "Votre liste d'appareils accessibles a été actualisée. Le code ci-dessous concerne les appareils accessibles maintenant.",
+    "contact_code_unreachable": "Personne ne peut encore vous trouver avec ceci : aucun de vos appareils n'est accessible. Rendez cet appareil accessible, ou partagez un code qui l'inclut.",
+    "contact_code_make_reachable": "Rendre cet appareil accessible",
+    "contact_code_make_reachable_busy": "Rendre cet appareil accessible…",
+    "contact_code_made_reachable": "Cet appareil est accessible maintenant. Son adresse réseau sera annoncée au prochain démarrage de son nœud.",
+    "contact_code_make_reachable_failed": "Impossible de rendre cet appareil accessible.",
+    "contact_code_error": "Impossible d'obtenir votre code de contact.",
+    "contact_code_node_too_old": "Ce nœud ne peut pas encore créer de code de contact. Il nécessite ciris-server 0.5.218 ou plus récent.",
+    "contacts_add_already": "Déjà dans vos contacts."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Vos appareils relèvent de la surface propre du propriétaire. Connectez-vous en tant que propriétaire de ce nœud.",
     "release_incomplete": "La libération a été signée, mais le nœud continue de répertorier ce nœud comme vous appartenant : un enregistrement de propriété qu'il ne peut pas voir reste actif. Ce qu'il a pu retirer reste retiré.",
     "release_self_requires_force": "C'est le nœud auquel vous parlez. Le libérer mettrait fin à votre propriété ici, y compris cette session.",
-    "store_unavailable": "Le nœud n'a pas pu lire ni écrire dans son magasin d'identités. Rien n'a été modifié."
+    "store_unavailable": "Le nœud n'a pas pu lire ni écrire dans son magasin d'identités. Rien n'a été modifié.",
+    "node_not_announced": "Cet appareil n'est pas accessible ; il ne peut donc pas figurer dans un code.",
+    "contact_code_owner_key_absent": "Ce nœud ne détient pas l'enregistrement de clé de votre identité ; il ne peut donc pas créer votre code de contact.",
+    "contact_code_not_a_person": "Votre identité n'est pas enregistrée comme une personne, et seule une personne peut être ajoutée comme contact.",
+    "contact_code_key_not_derived": "L'identifiant de clé de votre identité ne correspond pas à sa clé ; toute personne à qui vous avez partagé un code le refuserait donc.",
+    "contact_code_no_pqc_half": "Votre identité n'a pas de moitié de clé post-quantique, donc personne ne pourrait vous ajouter à partir d'un code.",
+    "contact_code_unencodable": "Votre code de contact n'a pas pu être créé à partir des clés que détient ce nœud."
   }
 }

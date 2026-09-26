@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Bu düğüm taşıma yöntemlerini bildirmiyor.",
     "audit_not_on_this_node": "Bu düğüm bir ajan denetim günlüğü tutmuyor. Hiçbir şey filtrelenmedi.",
     "consent_not_on_this_node": "Bu düğüm onay kayıtları tutmuyor. Onay bir ajan tarafından tutulur ve bu düğüm bir ajan olmadan çalışır.",
-    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok."
+    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok.",
+    "contact_code_title": "Kişi kodumu paylaş",
+    "contact_code_qr_desc": "Kişi kodunuz QR kodu olarak",
+    "contact_code_copy": "Kopyala",
+    "contact_code_copied": "Kopyalandı",
+    "contact_code_included_none": "Bu kod cihazlarınızdan hiçbirini adlandırmıyor. Kişiler sizi federasyon dizini üzerinden bulur.",
+    "contact_code_included_one": "Bu kod 1 cihaz içerir: {device}.",
+    "contact_code_included_many": "Bu kod {count} cihaz içerir: {devices}.",
+    "contact_code_without_transport": "Bu kodda henüz yok: {devices}. Bir cihaz, düğümü bir sonraki başlatıldığında burada bir ağ adresine sahip olduktan sonra kodda yer alabilir.",
+    "contact_code_disclosure": "Bu koda sahip herkes sizi eklemek için istek gönderebilir ve kodun adlandırdığı cihazlarınızı görebilir.",
+    "contact_code_nodes_all": "Erişilebilir tüm cihazlarım",
+    "contact_code_nodes_list": "Cihazları seç",
+    "contact_code_nodes_none": "Cihaz yok",
+    "contact_code_private_note": "Bir koda yalnızca erişilebilir cihazlar dahil edilebilir. Diğer cihazlarınız gizlidir.",
+    "contact_code_list_reloaded": "Erişilebilir cihazlarınızın listesi yeniden yüklendi. Aşağıdaki kod, şu anda erişilebilir olan cihazlar içindir.",
+    "contact_code_unreachable": "Bu kodla henüz kimse sizi bulamaz: cihazlarınızdan hiçbiri erişilebilir değil. Bu cihazı erişilebilir yapın veya onu içeren bir kod paylaşın.",
+    "contact_code_make_reachable": "Bu cihazı erişilebilir yap",
+    "contact_code_make_reachable_busy": "Bu cihaz erişilebilir yapılıyor…",
+    "contact_code_made_reachable": "Bu cihaz şu anda erişilebilir. Ağ adresi, düğümünün bir sonraki başlatılışında duyurulacaktır.",
+    "contact_code_make_reachable_failed": "Bu cihaz erişilebilir yapılamadı.",
+    "contact_code_error": "Kişi kodunuz alınamadı.",
+    "contact_code_node_too_old": "Bu düğüm henüz bir kişi kodu oluşturamıyor. ciris-server 0.5.218 veya daha yenisine gerek var.",
+    "contacts_add_already": "Zaten kişilerinizde."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Cihazlarınız bu düğümün sahibinin kendi yüzeyidir. Bu düğümün sahibi olarak oturum açın.",
     "release_incomplete": "Serbest bırakma imzalandı, ancak düğüm hâlâ o düğümü sizin olarak listeliyor: göremediği bir sahiplik kaydı hâlâ geçerli. Geri çekebildiği şey geri çekilmiş durumda kalır.",
     "release_self_requires_force": "Bu, konuştuğunuz düğüm. Onu serbest bırakmak buradaki sahipliğinizi, bu oturum dahil, sona erdirir.",
-    "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi."
+    "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi.",
+    "node_not_announced": "O cihaz erişilebilir değil, bu nedenle bir koda dahil edilemez.",
+    "contact_code_owner_key_absent": "Bu düğüm, kimliğinizin anahtar kaydını tutmuyor, bu nedenle kişi kodunuzu oluşturamaz.",
+    "contact_code_not_a_person": "Kimliğiniz bir kişi olarak kayıtlı değil ve yalnızca bir kişi, kişi listesine eklenebilir.",
+    "contact_code_key_not_derived": "Kimliğinizin key_id'si anahtarıyla eşleşmiyor, bu nedenle kodu paylaştığınız herkes onu reddedecektir.",
+    "contact_code_no_pqc_half": "Kimliğinizin kuantum sonrası anahtar yarısı yok, bu nedenle kimse sizi bir koddan ekleyemez.",
+    "contact_code_unencodable": "Kişi kodunuz, bu düğümün tuttuğu anahtarlardan oluşturulamadı."
   }
 }
