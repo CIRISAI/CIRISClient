@@ -97,6 +97,12 @@ fields:
     example: "null"
     renders: "absent entirely once the device HAS one. When it is null: 'This device has no federation identity' plus Create — which routes to the catch-up screen on a configured node, never back through the wizard"
     tag: btn_federation_create
+  - ceg: x_private:signin_outcome
+    use: display-only
+    type: "enum[claims_this_node,admitted_as_observer,refused]"
+    example: "refused"
+    renders: "what an account this node has never seen would get if it signed in NOW, with the node's reason_id and remedy when it is `refused` — read from `GET /v1/auth/signin-state` `new_identity`, never inferred from the provider list and the owner hint"
+    tag: "proposed:txt_login_signin_outcome"
 ```
 
 **There is deliberately no federation sign-in option.** A fed-ID is an identity,
@@ -122,9 +128,23 @@ identical from outside.
 |---|---|---|---|
 | owner hint | `GET /v1/auth/owner-hint` | CIRISServer (`src/auth/session.rs`, `src/auth/oauth.rs`) | live |
 | sign in | `POST /v1/auth/login` | CIRISServer (`src/auth/session.rs`, `src/claim_remote.rs`); the agent serves its own | live |
-| Google / Apple handoff | platform OAuth + the node's OAuth link routes (`src/auth/oauth.rs`, `src/auth/oauth_link.rs`) | CIRISServer | live |
+| Google / Apple handoff | platform OAuth + the node's OAuth link routes (`src/auth/oauth.rs`, `src/auth/oauth_link.rs`) | CIRISServer | live — the concrete legs are the rows below |
+| which providers to offer (drives `txt_google_unavailable`) | `GET /v1/auth/oauth/providers` | CIRISServer `src/auth/oauth.rs:2932` (handler `:1598`) | **live** — `CIRISApiClient.getOAuthProviders` (`CIRISApiClient.kt:2126`), called once from `CIRISApp.kt:1839` |
+| configure a provider | `POST /v1/auth/oauth/providers` | CIRISServer `src/auth/oauth.rs:2933` | live, **not called** — operator configuration, not a sign-in act; no card owns it |
+| desktop: open the browser leg | `GET /v1/auth/oauth/{provider}/login?app_nonce=…` | CIRISServer `src/auth/oauth.rs:2936` (callback `:2940`) | **live** — the client builds the URL (`CIRISApiClient.kt:2106`) and hands it to the system browser; the callback is the provider's, never ours |
+| desktop: collect the session | `GET /v1/auth/oauth/handoff?app_nonce=…&allow_unbound=…` | CIRISServer `src/auth/oauth.rs:2981` (handler `:2505`) — **LOOPBACK-ONLY**, a layer not a comment (`:2982`) | **live** — `CIRISApiClient.pollOAuthHandoff` (`CIRISApiClient.kt:2080`), polled from `CIRISApp.kt:2131`; 204 = pending. The whole desktop login rests on this row |
+| Android: native Google token exchange | `POST /v1/auth/native/google` | CIRISServer `src/auth/oauth.rs:2963` | **live** — `AuthManager.android.kt:226` |
+| iOS: native Apple token exchange | `POST /v1/auth/native/apple` | CIRISServer `src/auth/oauth.rs:2964` | **live** — `AuthManager.ios.kt:138`, and `CIRISApiClient.appleAuth` (`CIRISApiClient.kt:6369`) via `:6421` |
+| **what signing in would do, right now** | `GET /v1/auth/signin-state` | CIRISServer `src/auth/oauth.rs:2972` (handler `:2326`, CIRISServer#439); unauthenticated | **live and never read.** It answers `claimed`, `managed`, `providers`, `session_delivery` (`loopback_handoff` \| `exchange_code`, per caller) and `new_identity.{outcome,reason_id,remedy}` from the same predicates `resolve_oauth_user` gates on. The screen instead infers the outcome from the provider list and the owner hint, and so cannot say "a new account would be refused here" until after someone is refused. The card SHOULD read it (`proposed:txt_login_signin_outcome` above) — a CIRISClient issue is drafted, not yet filed |
+| link an OAuth identity onto the owner's existing certificate | `POST /v1/self/oauth-link` | CIRISServer `src/auth/oauth_link.rs:49` (ROUTE), registered `:466` | live, **wired and unreached** — two client methods post it, `preprovisionOAuthEmail` (`CIRISApiClient.kt:913`) and `linkOAuthIdentity` (`:2291`), and neither has a caller. This is the remedy `signin-state` withholds ("a locally-claimed node cannot have an OAuth identity linked", #432): the node side now exists, the client side is unreached. The route-coverage report marked it CALLED |
+| sign in AS a federation identity | `POST /v1/self/login` | CIRISServer `src/auth/self_login.rs:221` | live, **wired and unreached** — `selfLogin` (`CIRISApiClient.kt:1945`) has no caller, which is consistent with "there is deliberately no federation sign-in option" (§2, CIRISClient#23); the method is dead code. Also marked CALLED in the report |
+| a web page redeems `?ciris_code=` | `POST /v1/auth/oauth/exchange` | CIRISServer `src/auth/oauth.rs:2969` | live, not a KMP leg — browser-only, deliberately not loopback-gated |
 | is this a first run | `GET /v1/setup/status` | CIRISAgent `routes/setup/status.py:45`; CIRISServer `src/auth/bootstrap.rs` (**loopback-only**) | live, with CIRISAgent#1195 open |
 | reset the device | local wipe + node reset | CIRISClient | live (CIRISClient#55/#56/#61 closed) |
+
+Routes verified against CIRISServer `origin/main` 046e1b39 (0.5.217). On
+`integ/0.5.218` (97900cf5) the OAuth set is unchanged and every line above moved
++49 (`providers` `:2981`, `signin-state` `:3021`, `handoff` `:3030`).
 
 **Owner hint may be null on a bugged install** (no SYSTEM_ADMIN): the card still
 renders, falling back to a generic body, because the user needs the two buttons
@@ -156,6 +176,13 @@ expect:
   state: error
   visible: [card_observer_blocked, btn_choose_different_account, btn_reset_setup]
 ```
+
+*Cannot yet assert:* that the refusal was stated BEFORE the attempt. On an owned
+personal node `GET /v1/auth/signin-state` already answers
+`new_identity.outcome: refused` with `auth.oauth.no_local_identity`; the step
+that belongs in front of this one is "land on Login, see
+`txt_login_signin_outcome` say a new account will be refused", and it waits on
+the card reading that route.
 
 Arrive here straight from a completed wizard.
 

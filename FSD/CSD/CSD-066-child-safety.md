@@ -187,6 +187,7 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | value | endpoint | owner | state |
 |---|---|---|---|
 | protective posture | `GET /v1/safety/status/{key_id}` | CIRISServer `src/safety/age.rs:549` | **live** |
+| a key's recorded age band | `GET /v1/safety/age-assurance/{key_id}` | CIRISServer `src/safety/age.rs:545` (the write, `POST /v1/safety/age-assurance`, is `:543`) | live, **wired and unreached** — `CIRISApiClient.getAgeAssurance` (`CIRISApiClient.kt:5816`) has no caller. The posture row above is what the card draws; the band it is derived from is never shown. The route-coverage report marked this CALLED |
 | a group's enables | `GET /v1/safety/watchlist/{group_key_id}` | CIRISServer `src/safety/watchlist.rs:511` | **live** |
 | enable / disable | `POST /v1/safety/watchlist` | CIRISServer `src/safety/watchlist.rs:509` | **live** |
 | who enabled it, and when | **missing** — `WatchlistListResponse` carries `enables[]` + `honesty{}` and no attester or timestamp | CIRISServer | blocks `row_watchlist_enablement_audit` |

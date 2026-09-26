@@ -204,8 +204,16 @@ literals in `src/accord.rs` and `src/accord_provision.rs`.
 | history (drills, announces) | `GET /v1/accord/events` | `src/accord.rs:2618` | **live** |
 | concur on an invocation | `POST /v1/accord/invocation/concur` | `src/accord.rs:2654` | **live** |
 | raise a halt | `POST /v1/accord/halt` | `src/accord.rs:2616` | **live** |
-| drill / announce | `POST /v1/accord/{drill,announce}` | `src/accord.rs:2609,2611` | **live** |
-| canonical servers + co-scrubs | `/v1/accord/canonical/*` | `src/accord_provision.rs:3707,3711,3717,3721,3753,3758,3762,3766,3776` + `canonical/address` at `src/accord.rs:2632` | **live** (the earlier `3704-3776` range was loose: `:3704` is `admit-node` and `:3770` is `yubikey-status`) |
+| drill | `POST /v1/accord/drill` | `src/accord.rs:2609` | **live** — `initiateDrill` (`CIRISApiClient.kt:3793`) from `AccordViewModel.kt:240` |
+| announce | `POST /v1/accord/announce` | `src/accord.rs:2611` | **live** — `initiateAnnounce` (`CIRISApiClient.kt:3906`) from `AccordViewModel.kt:319` (`AccordScreen.kt:1654`). The route-coverage report filed this under CSD-069; it is this screen's call |
+| admit a node to the accord's directory | `POST /v1/accord/admit-node` | `src/accord_provision.rs:3704` | **live** — `admitNode` (`CIRISApiClient.kt:4048`) from `AccordViewModel.kt:402`, the mint sheet at `AccordScreen.kt:708`. Also filed under CSD-069 by the report |
+| open an invocation | `POST /v1/accord/invocation` | `src/accord.rs:2650` | live, **not called** — the screen concurs on invocations (row above) and never opens one; `lifecycle:active` rides this route (below) |
+| the canonical servers | `GET /v1/accord/canonical/servers` | `src/accord_provision.rs:3711` | **live** — `CIRISApiClient.kt:4088` (and `:5405`) |
+| add one | `POST /v1/accord/canonical/add` | `src/accord_provision.rs:3707` | **live** — `CIRISApiClient.kt:4155` |
+| co-scrub: propose · cosign · pending | `POST /v1/accord/canonical/propose` · `POST …/cosign` · `GET …/pending` | `src/accord_provision.rs:3717, 3721, 3753` | **live** — `CIRISApiClient.kt:4306, 4370, 4548` |
+| withdraw · list withdrawals · supersede | `POST /v1/accord/canonical/withdraw` · `GET …/withdrawals` · `POST …/supersede` | `src/accord_provision.rs:3758, 3766, 3762` | **live** — `CIRISApiClient.kt:4206, 4239, 4593` |
+| a canonical's address | `POST /v1/accord/canonical/address` | `src/accord.rs:2632` | live, **not called** |
+| (peer leg) receive a gossiped partial | `POST /v1/accord/canonical/gossip-partial` | `src/accord_provision.rs:3776` | live; the OPEN peer→peer counterpart of co-scrub, deliberately not loopback-gated — not a card act |
 | confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648,649` | **live** — called from `DutyConferralViewModel.kt:335,375`, not from this screen's view model; `Screen.DutyConferral` maps to `NavSurface.Accord` (`CIRISApp.kt:5941`) and is reached from `[+ New]` (`CIRISApp.kt:4193`) |
 | a holder's hardware custody class | **missing** — `list_holders` builds `HolderSummary {key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}` (`src/accord.rs:664-668`) and `AccordHolderDto` (`models/federation/Accord.kt:53-60`) mirrors it exactly | CIRISServer | blocks `txt_holder_custody` |
 | **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` | CIRISServer | **live — the route serves it, and that makes §2.2 a shipped defect** |

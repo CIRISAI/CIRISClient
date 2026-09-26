@@ -125,9 +125,16 @@ this card exists to show — are rendered and UNTAGGED. They must be written
 |---|---|---|---|
 | signer key | `GET /v1/federation/identity` | CIRISServer | live — `src/federation_surface.rs:696` |
 | agent mode, SERVER-eligibility, disk budget, data dir | `GET /v1/system/agent-mode` | **CIRISAgent**, not the node | **wrong-host** — no such route in CIRISServer `src/*.rs` on `origin/main` (0.5.217); live on CIRISAgent `routes/system/agent_mode.py:78` (tree of 2026-08-15, may be stale) |
-| this node's own standings (tier S) | `GET /v1/admin/self`, `POST /v1/admin/self/{shed,resume-load,stop-accepting,resume-accepting,compelled,compulsion-lifted}` | CIRISServer | live — `src/admin_ops.rs:4288-4309` |
-| this node's reader policy (tier R) | `POST /v1/admin/reader/{fold,honour,…}` | CIRISServer | live — `src/admin_ops.rs:4312` (fold), `:4316` (honour), `:4320` (decline); the span is 4312-4320, not 4312-4316 |
+| this node's own standings (tier S) | `GET /v1/admin/self` | CIRISServer `src/admin_ops.rs:4288` | live — `getSelfStanding` (`CIRISApiClient.kt:5270`) from `SelfReaderOpsSection.kt:88`, mounted on this screen at `NetworkOpsScreen.kt:117`. The six tier-S and three tier-R rows below replace the brace globs this table carried; all nine are called |
+| shed load / resume | `POST /v1/admin/self/shed` · `POST /v1/admin/self/resume-load` | `src/admin_ops.rs:4289` · `:4291` | live — `selfShedLoad` / `selfResumeLoad` (`CIRISApiClient.kt:5492, 5509`) from `SelfReaderOpsSection.kt:246` |
+| stop / resume accepting | `POST /v1/admin/self/stop-accepting` · `POST /v1/admin/self/resume-accepting` | `src/admin_ops.rs:4295` · `:4299` | live — `CIRISApiClient.kt:5530, 5547` |
+| declare / lift compulsion | `POST /v1/admin/self/compelled` · `POST /v1/admin/self/compulsion-lifted` | `src/admin_ops.rs:4303` · `:4307` | live — `selfDeclareCompelled` (`CIRISApiClient.kt:5573`, from `SelfReaderOpsSection.kt:252`) · `CIRISApiClient.kt:5595`. The only rung reachable under partition; CSD-045 owns its semantics |
+| this node's reader fold (tier R) | `POST /v1/admin/reader/fold` | `src/admin_ops.rs:4312` | live — `readerFold` (`CIRISApiClient.kt:5627`) from `SelfReaderOpsSection.kt:633` |
+| honour / decline another party's judgement | `POST /v1/admin/reader/honour` · `POST /v1/admin/reader/decline` | `src/admin_ops.rs:4316` · `:4320` | live — `readerHonour` / `readerDecline` (`CIRISApiClient.kt:5713, 5741`) from `SelfReaderOpsSection.kt:749, 747` |
 | an `config:agent_mode` record signed by the node | — | CIRISServer | **missing** — see §6 |
+
+Admin lines are CIRISServer `origin/main` 046e1b39 (0.5.217); on `integ/0.5.218`
+(97900cf5) the same routes sit +96 lines lower (`:4384-4416`), unchanged in set.
 
 ## 4. Flow (how)
 

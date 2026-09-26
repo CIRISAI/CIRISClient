@@ -116,17 +116,30 @@ Same defaults-as-health failure as CSD-024: `TelemetryData()`'s
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the overview | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py`) — **404 on a node** |
+| the overview | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py:681`) — generated `getTelemetryOverviewV1TelemetryOverviewGet` (`CIRISApiClient.kt:6141, 9801, 9846`) — **404 on a node** |
 | destinations | `GET /v1/telemetry/export/destinations` | CIRISAgent | live (`telemetry_export.py`) — **404 on a node** |
 | add one | `POST /v1/telemetry/export/destinations` | CIRISAgent | live |
 | edit one | `PUT /v1/telemetry/export/destinations/{id}` | CIRISAgent | live |
 | remove one | `DELETE /v1/telemetry/export/destinations/{id}` | CIRISAgent | live |
 | test one | `POST /v1/telemetry/export/destinations/{id}/test` | CIRISAgent | live |
-| resource history | `GET /v1/telemetry/resources/history` | CIRISAgent | live; **not called** |
+| resource history | `GET /v1/telemetry/resources/history` | CIRISAgent | live (`telemetry.py:1917`); **not called** (stub `TelemetryApi.kt:216`) |
+| current resource usage | `GET /v1/telemetry/resources` | CIRISAgent (`telemetry.py:748`) | live, **not called** (stub `TelemetryApi.kt:251`) |
+| every metric, detailed | `GET /v1/telemetry/metrics` | CIRISAgent (`telemetry.py:966`) | live, **not called** (stub `TelemetryApi.kt:100`) — the card draws the overview's summary and cannot open one number |
+| one metric over time | `GET /v1/telemetry/metrics/{metric_name}?hours=` | CIRISAgent (`telemetry.py:1756`) | live, **not called** (stub `TelemetryApi.kt:65`) — this is the drill-down a tile needs |
+| reasoning traces | `GET /v1/telemetry/traces` | CIRISAgent (`telemetry.py:1260`) | live, **not called** (stub `TelemetryApi.kt:178`) |
+| the unified view | `GET /v1/telemetry/unified?view&category` | CIRISAgent (`telemetry.py:1854`) | live — called, **but not by this card**: `getBusTelemetry` (`CIRISApiClient.kt:9958`, `category=buses`) feeds `InteractViewModel.kt:2443`, and iOS probes it for boot progress (`PythonRuntime.ios.kt:230`). `getUnifiedTelemetry` (`CIRISApiClient.kt:9795`) is misnamed: it reads `overview` |
+| ad-hoc query | `POST /v1/telemetry/query` | CIRISAgent (`telemetry.py:1717`) | live, **not called** (stub `TelemetryApi.kt:406`) |
+| OTLP passthrough | `GET /v1/telemetry/otlp/{signal}` | CIRISAgent (`telemetry.py:639`) | live; machine export for a collector, not a card read |
+| the agent's delivery receipt | `GET /v1/system/runtime/delivery-receipt` | CIRISAgent (`routes/system/runtime.py:98`) | live, **not called** — the agent's half of the trace receipt, i.e. whether what telemetry says was sent was held |
 | a consent row for an export | — **unconfirmed** | CIRISAgent | blocks `building` for `telemetry_dest_consent_d1` |
 
 `CIRISServer` serves `/v1/telemetry/logs` and nothing else under
-`/v1/telemetry`. Agent tree last commit 2026-08-15.
+`/v1/telemetry`. Agent rows re-verified against CIRISAgent `main` 29371660de
+(2026-09-26). The node's own counters, `GET /v1/federation/metrics`
+(`src/federation_surface.rs:697`), are NOT drawn here: their only readers are the
+network hub's Interfaces and Queue tiles (`NetworkInterfacesViewModel.kt:86`,
+`NetworkQueueViewModel.kt:56`), so they are cited in CSD-051. A node build's
+Telemetry card has no node read at all.
 
 ## 4. Flow (how)
 

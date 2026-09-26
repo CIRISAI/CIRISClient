@@ -174,6 +174,8 @@ three options, because it is the only one that implies a filter nobody applied.
 Agent routes read from the `~/CIRISAgent` working tree, whose last commit is
 **2026-08-15** — six weeks stale at the time of writing, so the agent rows below
 are "true as of that tree" rather than "true of a running agent".
+Re-verified in the citation pass against CIRISAgent `main` 29371660de
+(2026-09-26): every line number below still holds.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -181,6 +183,7 @@ are "true as of that tree" rather than "true of a running agent".
 | one entry | `GET /v1/audit/entries/{entry_id}` | `routes/audit.py:919` | live, unused by this screen |
 | **verify an entry** | `POST /v1/audit/verify/{entry_id}` | `routes/audit.py:1006` | **live and never called.** This is the answer to `audit_chain:hash_continuity` and the card shows the hash without it |
 | export | `POST /v1/audit/export` | `routes/audit.py:1030` | live, unused |
+| full-text search over the trail | `POST /v1/audit/search` | `routes/audit.py:970` | **live and never called** — a generated stub exists (`searchAuditTrailsV1AuditSearchPost`, `generated-api/.../AuditApi.kt:197`) and nothing in `shared/` uses it; the card narrows by severity / outcome through `entries`' own query parameters (`AuditViewModel.kt:129-131`) and has no text search at all. It takes `search_text`, `entity_id`, `severity`, `outcome`, and no cohort — the same gap CIRISAgent#1205 names for `entries` |
 | **any audit feed on a node** | **missing — there is no route.** `git grep` over `origin/main -- 'src/*.rs'` finds no `/v1/*audit*` among the node's routes | CIRISServer | this is why §2.1 happens |
 | a cohort filter | **missing** on both | CIRISAgent + CIRISServer | blocks §2.2 |
 

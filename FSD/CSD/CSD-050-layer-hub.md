@@ -156,6 +156,8 @@ asked for".
 |---|---|---|---|
 | identities at a cohort scope | none — the screen issues no request | CIRISServer | **missing**. `GET /v1/federation/peers` (`src/federation_peers.rs:1435`) is the nearest route and takes no scope parameter (`:597`). The ask is a scope filter, or a new route. |
 | trust state per identity | `PUT /v1/federation/peers/{key_id}/trust` sets one (`src/federation_peers.rs:1444`) | CIRISServer | **missing** for the read shape: there is no scope-grouped trust listing. |
+| one identity, opened | `GET /v1/federation/peers/{key_id}` — one peer's `LocalPeerState`, 404 if unknown | CIRISServer `src/federation_peers.rs:1438` (handler `:629`) | **live, called — but not from this card.** `CIRISApiClient.getFederationPeer` (`CIRISApiClient.kt:1305`) is read by `NetworkPeerDetailViewModel.kt:73`, `AccordViewModel.kt:360, 590` and `NetworkTrustGraphViewModel.kt:106`. It is the detail a row in "identities at a scope" would open; `LayerHubScreen` issues no request, so today nothing opens it from here |
+| what this person calls a peer | `PUT /v1/federation/peers/{key_id}/appearance` — owner-gated | CIRISServer `src/federation_peers.rs:1448` (handler `:753`) | **live, called — not from this card**: `CIRISApiClient.setFederationPeerAppearance` (`CIRISApiClient.kt:1395`) from `NetworkPeerDetailViewModel.kt:159` |
 | trust policies at a scope | none | CIRISServer + CIRISConstitution | **missing on both**. No route (`trust_polic` has zero hits repo-wide in CIRISServer) and no registry family, so the route cannot be specified until the family exists. |
 
 `EDGE_PEERRESOLVER` is an internal Reticulum transport-address resolver in the

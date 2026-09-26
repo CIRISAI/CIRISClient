@@ -153,14 +153,20 @@ grant strands the wizard on step 2 with a disabled Finish and no visible cause.
 | what joining grants, in the substrate's words | `GET /v1/setup/consent-disclosure` | CIRISServer (`src/auth/bootstrap.rs`) | live — **loopback-only** |
 | mint the fed-ID | `POST /v1/self/identity` | CIRISServer (`src/identity.rs`) | live |
 | adopt an existing fed-ID | `POST /v1/self/associate` | CIRISServer (`src/identity.rs`, `src/auth/occurrence.rs`) | live |
+| read a keyset folder before adopting it | `POST /v1/self/identity/inspect` | CIRISServer `src/identity.rs:1951` (`:2000` on `integ/0.5.218`) | **live** — `inspectKeysetFolder` (`CIRISApiClient.kt:3182`) from `SetupViewModel.kt:1531`, the verdict the adopt path shows before `associate` |
 | this node's public handle | `GET /v1/federation/node-code` | CIRISServer (`src/federation_nodecode.rs`) | live |
 | self-claim ownership | `POST /v1/setup/claim-remote` → target's `POST /v1/setup/root` | CIRISServer (`src/claim_remote.rs`) | live; claim-remote is loopback-only and first-run-gated, `/v1/setup/root` is the one setup route reachable off-host |
 | owner session after the claim | `POST /v1/auth/login` | CIRISServer | live |
 | record the age band | `POST /v1/self/age` (loopback, post-claim) | CIRISServer (`src/auth/gate.rs`, `src/claim_remote.rs`) | live |
 | — the federation-tier route | `POST /v1/safety/age-assurance` | CIRISServer (`src/safety/age.rs`) | live, **not used pre-claim**: it needs an x-ciris signature the app cannot make |
 | mint a steward request for a minor | `POST /v1/safety/minor-steward/request` · `/accept` | CIRISServer | **missing** — no route literal in `src/*.rs`; the client synthesises a local offer artifact and says so (`SetupViewModel.kt:1000`) |
-| validate the LLM choice | `POST /v1/setup/validate-llm` | **CIRISAgent** (`routes/setup/llm_routes.py:190`) | live |
-| list models | `POST /v1/setup/list-models` | **CIRISAgent** (`routes/setup/llm_routes.py:201`) | live |
+| validate the LLM choice | `POST /v1/setup/validate-llm` | **CIRISAgent** (`routes/setup/llm_routes.py:211` on `main` 29371660de; `:190` in the 2026-08-15 tree) | live — generated `validateLlmV1SetupValidateLlmPost` (`CIRISApiClient.kt:6722`) |
+| list models | `POST /v1/setup/list-models` | **CIRISAgent** (`routes/setup/llm_routes.py:222`; was `:201`) | live — `CIRISApiClient.kt:6782` |
+| which LLM providers to offer | `GET /v1/setup/providers` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:27`) | live, **not called** — the picker is a compiled-in list (`SetupViewModel.availableProviders`, `SetupViewModel.kt:76`). A provider the agent adds never appears, and one it drops still does |
+| which agent templates to offer | `GET /v1/setup/templates` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:38`) | live, **wired and unreached** — `getSetupTemplates` (`CIRISApiClient.kt:6582`) has no caller, and `SetupViewModel.loadAvailableTemplates` (`SetupViewModel.kt:1626`) is invoked only by tests, so `availableTemplates` (`SetupState.kt:738`) is always empty. The route-coverage report marked this CALLED |
+| which communication adapters to offer | `GET /v1/setup/adapters` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:49`) | live, **wired and unreached** — `getSetupAdapters` (`CIRISApiClient.kt:6544`) has no caller and `loadAvailableAdapters` (`SetupViewModel.kt:1673`) is never invoked. Also marked CALLED in the report |
+| adapters with eligibility (ready / missing requirements) | `GET /v1/setup/adapters/available` | **CIRISAgent** (`routes/setup/providers.py:113`) | live, **not called** and no hand-written method |
+| **what each optional tool would be able to do** | `GET /v1/setup/tool-disclosure` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:61`) | live, **wired and unreached** — `getSetupToolDisclosure` (`CIRISApiClient.kt:6671`) has no caller; `SetupViewModel.loadToolDisclosure` (`SetupViewModel.kt:1714`) is exercised only by `SetupToolDisclosureTest`; and no screen reads `toolDisclosure` (`SetupState.kt:757`). The disclosure a person should read before enabling a tool is fetched by nothing and drawn by nothing. Marked CALLED in the report |
 | write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:951`) | live, and **not idempotent** — CIRISAgent#1193 |
 
 **Four upstream defects sit on this pass**, all open (CIRISAgent working tree
