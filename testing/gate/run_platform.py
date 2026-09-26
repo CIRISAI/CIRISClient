@@ -62,6 +62,8 @@ class Report:
     artifact: str = ""
     node_version: str = ""
     steps: list[StepResult] = field(default_factory=list)
+    #: One entry per CSD flow (run_flows.FlowOutcome), when `--flows` was given.
+    flows: list[dict] = field(default_factory=list)
 
     def add(self, name: str, ok: bool, detail: str = "", shot: str | None = None) -> None:
         self.steps.append(StepResult(name, ok, detail, shot))
@@ -247,6 +249,11 @@ def main() -> int:
     ap.add_argument("--report", type=Path)
     ap.add_argument("--node-version", default="")
     ap.add_argument("--timeout", type=float, default=120.0)
+    ap.add_argument("--flows", action="append",
+                    help="after the smoke walk, run these CSD flows (a file or a directory; "
+                         "repeatable) against the same app — see testing/flows/README.md")
+    ap.add_argument("--client-version", default=None,
+                    help="the version under test, for flows' `client:` floors (default: VERSION)")
     args = ap.parse_args()
 
     rep = Report(platform=args.platform, node_version=args.node_version)
@@ -254,6 +261,18 @@ def main() -> int:
 
     from testing.gate.platforms import build_platform
     platform = build_platform(args)
+
+    # FLOWS LOAD BEFORE ANYTHING BOOTS. A flow that does not parse, or names a
+    # CSD that does not, is found in a second — not after the emulator.
+    specs = None
+    if args.flows:
+        from testing.gate import run_flows
+        from testing.gate.flow_spec import SpecError
+        try:
+            specs = run_flows.load_flows(args.flows)
+        except SpecError as e:
+            rep.add("flows-load", False, str(e))
+            return _finish(args, rep)
 
     plan = None
     try:
@@ -266,6 +285,8 @@ def main() -> int:
         # PROVEN, NOT ASSUMED.
         drv.wait_for_server(timeout=args.timeout)
         walk(drv, rep, args.shots, platform, args_timeout=args.timeout)
+        if specs is not None:
+            flows(drv, rep, specs, args, platform)
         rep.ok = all(s.ok for s in rep.steps)
     except bringup.CannotRun as e:
         # LOUD. Not a skip: the caller decides what to exclude, and it does so
@@ -288,7 +309,39 @@ def main() -> int:
             # check=False: teardown runs after failures too, and one that fails
             # must not hide the failure that caused it.
             bringup.run(td, check=False)
+    return _finish(args, rep)
 
+
+def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None:
+    """The CSD flows, in the SAME app the walk just proved — no second bring-up.
+
+    Only after a clean walk: the walk is what proves there is a composed app on
+    a real node to drive, and flows run on anything less would fail for the
+    walk's reason under their own names.
+    """
+    from testing.gate import run_flows
+    from testing.gate.session_fixture import SessionUnavailable
+
+    if not all(s.ok for s in rep.steps):
+        rep.add("flows", False, "not run — the smoke walk above failed, so there is no app to drive")
+        return
+    # Per LEG, not per platform: the linux desktop and the android emulator
+    # share a runner and a `shots/` directory, and must not overwrite each other.
+    leg = args.report.stem if args.report else args.platform
+    version = args.client_version if args.client_version is not None else run_flows.default_client_version()
+    try:
+        outcomes = run_flows.run_all(specs, drv, platform=platform,
+                                     artifacts=args.shots / f"flows-{leg}",
+                                     client_version=version)
+    except SessionUnavailable as e:
+        rep.add("flows", False, f"no session to run them in: {e}")
+        return
+    rep.flows = [asdict(o) for o in outcomes]
+    rep.add("flows", run_flows.leg_ok(outcomes), run_flows.summary(outcomes))
+
+
+def _finish(args, rep: Report) -> int:
+    rep.ok = rep.ok and all(s.ok for s in rep.steps)
     if args.report:
         # MAKE THE DIRECTORY. `--report reports/<platform>.json` names a path in a
         # directory nothing creates: the workflow passes it, the artifact upload

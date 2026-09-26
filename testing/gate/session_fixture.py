@@ -79,7 +79,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     if "txt_owner_hint" in _tags(drv):
         return  # already owned; nothing to do
 
-    drv.click("btn_local_login")
+    # Desktop's first run shows Login; a client whose first run opens the wizard
+    # directly is already where this click would take it, and clicking a
+    # `btn_local_login` that is not on screen fails the fixture for nothing.
+    if drv.screen() != "Setup":
+        drv.click("btn_local_login")
     if not _settle(drv, "Setup", timeout=30):
         raise SessionUnavailable(
             f"btn_local_login did not reach Setup (on {drv.screen()!r}); on a node "
@@ -94,6 +98,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             drv.input(tag, value)
         except DriverError as e:
             raise SessionUnavailable(f"wizard: {tag} would not accept input ({e})") from e
+        # iOS needs ~2 s between fields for the value to reach the ViewModel's
+        # StateFlow (client/CLAUDE.md, "Important iOS notes"). Without it the
+        # fields read empty and Next never enables: the first iOS run of this
+        # fixture stopped at "wizard did not advance past 'you'".
+        time.sleep(2.0)
     drv.click("age_band_adult")
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
@@ -118,7 +127,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         drv.click(nxt)
         time.sleep(2.0)
         if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
-            raise SessionUnavailable(f"wizard did not advance past {before[1]!r}")
+            # Say what was on screen: a required field the fixture doesn't fill
+            # (the with-AI wizard asks for more than the node one) shows up here.
+            raise SessionUnavailable(
+                f"wizard did not advance past {before[1]!r}; on screen: {sorted(_tags(drv))}"
+            )
 
     # The claim has no button; it completes and the app returns to Login.
     if not _settle(drv, "Login", timeout=180):
