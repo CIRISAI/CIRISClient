@@ -1,0 +1,212 @@
+{
+  "_note": "Ratchet for packaging/check_csd_routes.py. Uncited routes per Screen and duplicate mutating routes, recorded; the gate fails only on NEW entries. Re-record with --baseline.",
+  "duplicate_mutations": [
+    "DELETE /v1/system/adapters/{} :: Adapters, LLMSettings",
+    "POST /v1/accord/provision-holder :: AccordCeremony, ProvisionAccordHolder",
+    "POST /v1/auth/device/delegate :: Delegations, Setup",
+    "POST /v1/auth/login :: Login, Setup",
+    "POST /v1/auth/native/apple :: Login, Setup",
+    "POST /v1/auth/native/google :: Login, Setup",
+    "POST /v1/federation/announce :: AddFederationId, Setup",
+    "POST /v1/federation/consent :: DataManagement, Setup",
+    "POST /v1/memory/query :: EnvironmentInfo, Memory",
+    "POST /v1/self/associate :: IdentityManagement, Login, Setup",
+    "POST /v1/self/identity :: AddFederationId, IdentityManagement, Login, Setup",
+    "POST /v1/self/identity/inspect :: Login, Setup",
+    "POST /v1/setup/claim-remote :: ClaimNode, Setup",
+    "POST /v1/setup/discover-local-llm :: LLMSettings, Setup",
+    "POST /v1/setup/list-models :: LLMSettings, Settings",
+    "POST /v1/setup/start-local-server :: LLMSettings, Setup",
+    "POST /v1/system/adapters/configure/{}/complete :: Adapters, Setup",
+    "POST /v1/system/adapters/configure/{}/step :: Adapters, Setup",
+    "POST /v1/system/adapters/import-skill :: SkillImport, SkillStudio",
+    "POST /v1/system/adapters/{} :: Adapters, DataManagement",
+    "POST /v1/system/adapters/{}/configure/start :: Adapters, Setup",
+    "POST /v1/system/runtime/{} :: Runtime, System",
+    "PUT /v1/config/{} :: Config, Transport",
+    "PUT /v1/my-data/accord-settings :: AddFederationId, DataManagement, ManageConsent",
+    "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings",
+    "PUT /v1/system/agent-mode :: LayerGlobalCommons, Settings"
+  ],
+  "uncited": {
+    "Accord": [
+      "GET /v1/accord/genesis/remint-source",
+      "GET /v1/federation/peers/{}",
+      "GET /v1/setup/owned-nodes",
+      "POST /v1/accord/ci-key/propose",
+      "POST /v1/accord/genesis/cosign",
+      "POST /v1/accord/genesis/propose"
+    ],
+    "AddFederationId": [
+      "GET /v1/setup/owned-nodes"
+    ],
+    "ChildSafety": [
+      "GET /v1/federation/self-key-record"
+    ],
+    "ClaimNode": [
+      "GET /v1/federation/node-code",
+      "GET /v1/identity"
+    ],
+    "Constitutional": [
+      "GET /v1/setup/owned-nodes"
+    ],
+    "Contacts": [
+      "GET /v1/federation/peers"
+    ],
+    "DataManagement": [
+      "GET /v1/system/health",
+      "POST /v1/system/adapters/{}",
+      "POST /v1/system/local-shutdown",
+      "PUT /v1/my-data/accord-settings"
+    ],
+    "Delegations": [
+      "GET /v1/contacts",
+      "GET /v1/federation/peers"
+    ],
+    "IdentityManagement": [
+      "GET /v1/system/health",
+      "POST /v1/self/nodes/{}/release"
+    ],
+    "Interact": [
+      "GET /v1/api/billing/credits",
+      "GET /v1/audit/entries",
+      "GET /v1/memory/timeline",
+      "GET /v1/memory/{}",
+      "GET /v1/setup/config",
+      "GET /v1/setup/owned-nodes",
+      "GET /v1/setup/status",
+      "GET /v1/setup/verify-status",
+      "GET /v1/system/adapters/{}",
+      "GET /v1/system/llm/ciris-services/status",
+      "GET /v1/system/llm/providers",
+      "GET /v1/system/llm/status",
+      "GET /v1/system/verify-status",
+      "GET /v1/telemetry/unified",
+      "GET /v1/wa/status",
+      "GET /v1/wallet/status",
+      "POST /v1/safety/reports"
+    ],
+    "LLMSettings": [
+      "DELETE /v1/system/adapters/{}",
+      "GET /v1/setup/config",
+      "GET /v1/system/adapters",
+      "POST /v1/setup/start-local-server",
+      "PUT /v1/system/adapters/{}/reload"
+    ],
+    "LayerGlobalCommons": [
+      "GET /v1/federation/identity",
+      "GET /v1/system/agent-mode",
+      "GET /v1/system/peers/federation-identity",
+      "PUT /v1/system/agent-mode"
+    ],
+    "Login": [
+      "? /v1/auth/oauth/{}/login",
+      "GET /v1/agent/history",
+      "GET /v1/api/billing/credits",
+      "GET /v1/audit/entries",
+      "GET /v1/auth/oauth/handoff",
+      "GET /v1/auth/oauth/providers",
+      "GET /v1/identity",
+      "GET /v1/my-data/capacity",
+      "GET /v1/setup/config",
+      "GET /v1/setup/owned-nodes",
+      "GET /v1/setup/verify-status",
+      "GET /v1/system/adapters",
+      "GET /v1/system/health",
+      "GET /v1/system/llm/ciris-services/status",
+      "GET /v1/system/runtime/reasoning-stream",
+      "GET /v1/system/verify-status",
+      "GET /v1/wa/status",
+      "GET /v1/wallet/status",
+      "POST /v1/auth/native/apple",
+      "POST /v1/auth/native/google",
+      "POST /v1/self/associate",
+      "POST /v1/self/identity",
+      "POST /v1/self/identity/inspect"
+    ],
+    "ManageConsent": [
+      "GET /v1/federation/peers",
+      "GET /v1/setup/owned-nodes"
+    ],
+    "ManageNodes": [
+      "GET /v1/federation/node-code",
+      "GET /v1/setup/status"
+    ],
+    "Moderation": [
+      "GET /v1/federation/self-key-record",
+      "GET /v1/safety/status/{}"
+    ],
+    "NetworkContent": [
+      "GET /v1/federation/peers",
+      "POST /v1/federation/content/{}"
+    ],
+    "NetworkIdentity": [
+      "GET /v1/federation/identity",
+      "GET /v1/setup/owned-nodes",
+      "GET /v1/system/peers/federation-identity",
+      "GET /v1/system/peers/my-node-code"
+    ],
+    "NetworkInterfaces": [
+      "GET /v1/federation/metrics"
+    ],
+    "NetworkMap": [
+      "GET /v1/federation/peers"
+    ],
+    "NetworkOps": [
+      "GET /v1/system/peers/federation-identity"
+    ],
+    "NetworkPeerDetail": [
+      "GET /v1/federation/peers/{}",
+      "GET /v1/federation/peers/{}/sas",
+      "PUT /v1/federation/peers/{}/appearance",
+      "PUT /v1/federation/peers/{}/trust"
+    ],
+    "NetworkPeers": [
+      "GET /v1/federation/peers",
+      "POST /v1/system/peers/add-from-code"
+    ],
+    "NetworkQueue": [
+      "GET /v1/federation/metrics"
+    ],
+    "NetworkTrustGraph": [
+      "GET /v1/federation/identity",
+      "GET /v1/federation/peers",
+      "GET /v1/federation/peers/{}"
+    ],
+    "Settings": [
+      "GET /v1/system/agent-mode",
+      "GET /v1/system/llm/ciris-services/status",
+      "POST /v1/setup/list-models",
+      "PUT /v1/system/agent-mode"
+    ],
+    "Setup": [
+      "GET /v1/accord/canonical/servers",
+      "GET /v1/api/billing/credits",
+      "GET /v1/identity",
+      "GET /v1/setup/owned-nodes",
+      "GET /v1/system/adapters",
+      "GET /v1/system/adapters/configure/{}",
+      "GET /v1/system/adapters/loadable",
+      "POST /v1/auth/device/delegate",
+      "POST /v1/auth/native/apple",
+      "POST /v1/auth/native/google",
+      "POST /v1/federation/announce",
+      "POST /v1/federation/consent",
+      "POST /v1/self/identity/inspect",
+      "POST /v1/setup/discover-local-llm",
+      "POST /v1/setup/start-local-server",
+      "POST /v1/system/adapters/configure/{}/complete",
+      "POST /v1/system/adapters/configure/{}/step",
+      "POST /v1/system/adapters/{}/configure/start"
+    ],
+    "SkillImport": [
+      "GET /v1/system/adapters/imported-skills",
+      "POST /v1/system/adapters/import-skill",
+      "POST /v1/system/adapters/import-skill/preview"
+    ],
+    "WiseAuthority": [
+      "GET /v1/tickets",
+      "PATCH /v1/tickets/{}"
+    ]
+  }
+}

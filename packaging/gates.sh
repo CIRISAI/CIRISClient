@@ -50,6 +50,10 @@ python3 client/tools/gen_glyphs.py --check
 for f in FSD/CSD/CSD-*.md; do
     python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
 done
+# Every route a screen calls is cited in a CSD on that screen, and no two
+# screens newly share a mutating route (the same card under two names).
+python3 packaging/check_csd_routes.py --self-test
+python3 packaging/check_csd_routes.py
 python3 client/tools/check_localization_sync.py --self-test --server-src "$EMITTERS"
 python3 client/tools/check_localization_sync.py --server-src "$EMITTERS" --strict
 echo "[OK] every release gate passed (emitters: CIRISServer@$ref)"

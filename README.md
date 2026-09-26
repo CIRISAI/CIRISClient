@@ -274,6 +274,7 @@ Two things to know:
 | `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry + glosses + renderer overrides generate, and does every emitted localization key resolve? | seconds |
 | `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |
 | `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins? | seconds |
+| `packaging/check_csd_routes.py` | does every route a screen calls (heuristic closure over `CIRISApp.kt` → composables → view models → `CIRISApiClient`) appear in §3 of a CSD on that screen, and has no new pair of screens started calling the same mutating route? A baseline that can only fall; `--report` is the route map, `--print CSD-NNN` generates §3 rows | seconds |
 
 All of them run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
 Every `apt-get` in this repo goes through
