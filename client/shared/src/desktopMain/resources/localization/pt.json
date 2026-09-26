@@ -3474,7 +3474,6 @@
       "reachability_title": "Alcançabilidade",
       "sas_close": "Fechar",
       "sas_digits_label": "Dígitos",
-      "sas_instructions": "Compare estes com o par por um canal confiável (voz/vídeo/pessoalmente). Se ambos os lados corresponderem, o par está verificado — mude a confiança para TRUSTED.",
       "sas_modal_title": "Cadeia curta de autenticação",
       "sas_show_button": "Mostrar código SAS",
       "sas_title": "Verificar identidade (SAS)",

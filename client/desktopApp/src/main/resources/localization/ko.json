@@ -3474,7 +3474,6 @@
       "reachability_title": "도달 가능성",
       "sas_close": "닫기",
       "sas_digits_label": "숫자",
-      "sas_instructions": "신뢰할 수 있는 채널 (음성/비디오/대면)을 통해 피어와 이를 비교하세요. 양쪽이 일치하면 피어가 검증된 것입니다 — 신뢰를 TRUSTED로 전환하세요.",
       "sas_modal_title": "짧은 인증 문자열",
       "sas_show_button": "SAS 코드 표시",
       "sas_title": "신원 확인 (SAS)",

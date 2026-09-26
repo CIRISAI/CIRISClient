@@ -3474,7 +3474,6 @@
       "reachability_title": "Accessibilité",
       "sas_close": "Fermer",
       "sas_digits_label": "Chiffres",
-      "sas_instructions": "Comparez-les avec le pair via un canal de confiance (voix/vidéo/en personne). Si les deux côtés correspondent, le pair est vérifié — basculez la confiance sur TRUSTED.",
       "sas_modal_title": "Chaîne d'authentification courte",
       "sas_show_button": "Afficher le code SAS",
       "sas_title": "Vérifier l'identité (SAS)",

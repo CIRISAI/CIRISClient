@@ -3474,7 +3474,6 @@
       "reachability_title": "Keterjangkauan",
       "sas_close": "Tutup",
       "sas_digits_label": "Digit",
-      "sas_instructions": "Bandingkan ini dengan peer melalui saluran tepercaya (suara/video/tatap muka). Jika kedua sisi cocok, peer terverifikasi — alihkan kepercayaan ke TRUSTED.",
       "sas_modal_title": "String autentikasi pendek",
       "sas_show_button": "Tampilkan kode SAS",
       "sas_title": "Verifikasi identitas (SAS)",

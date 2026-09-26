@@ -3474,7 +3474,6 @@
       "reachability_title": "可达性",
       "sas_close": "关闭",
       "sas_digits_label": "数字",
-      "sas_instructions": "通过可信渠道(语音/视频/面对面)与对等节点比较这些。如果两边匹配,则对等节点已验证 — 将信任切换为 TRUSTED。",
       "sas_modal_title": "短认证字符串",
       "sas_show_button": "显示 SAS 代码",
       "sas_title": "验证身份 (SAS)",

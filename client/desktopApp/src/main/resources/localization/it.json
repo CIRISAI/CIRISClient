@@ -3474,7 +3474,6 @@
       "reachability_title": "Raggiungibilità",
       "sas_close": "Chiudi",
       "sas_digits_label": "Cifre",
-      "sas_instructions": "Confronta queste con il peer tramite un canale fidato (voce/video/di persona). Se entrambi i lati corrispondono, il peer è verificato — passa la fiducia a TRUSTED.",
       "sas_modal_title": "Stringa di autenticazione breve",
       "sas_show_button": "Mostra codice SAS",
       "sas_title": "Verifica identità (SAS)",

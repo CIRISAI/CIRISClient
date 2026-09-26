@@ -3474,7 +3474,6 @@
       "reachability_title": "到達可能性",
       "sas_close": "閉じる",
       "sas_digits_label": "数字",
-      "sas_instructions": "信頼できるチャネル (音声/ビデオ/対面) でこれらをピアと比較してください。両側が一致すれば、ピアは検証されます — 信頼を TRUSTED に切り替えてください。",
       "sas_modal_title": "短い認証文字列",
       "sas_show_button": "SAS コードを表示",
       "sas_title": "ID の検証 (SAS)",

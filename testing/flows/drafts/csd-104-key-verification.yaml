@@ -1,0 +1,85 @@
+csd: CSD-104
+flow: csd_104_key_verification
+title: The peer detail's short-code ceremony ends in an answer, and a mismatch is not a cancel
+description: >-
+  CSD-104 §4, driven. The peer detail used to show the code with one button,
+  Close, and PUT /v1/federation/peers/{key_id}/sas had no caller. The flow
+  asserts the code is readable, both answers exist, and "they don't match"
+  opens its own sheet (three facts, the danger confirm) that writes nothing
+  when dismissed. The write itself is optional: it leaves an `untrusted`
+  override on the fixture node.
+# Floor: card_sas_verify, text_sas_words, text_sas_digits, text_sas_state,
+# text_sas_scope, btn_sas_match, btn_sas_mismatch, sas_result_mismatch and
+# sas_not_in_directory are `testable*` literals in
+# ui/screens/federation/NetworkPeerDetailScreen.kt; sheet_sas_mismatch,
+# sas_mismatch_fact_1..3 and btn_sas_mismatch_confirm/_cancel are derived by
+# ConfirmSheet from tagPrefix "sas_mismatch" (ui/primitives/ConfirmSheet.kt).
+# No release carries them yet.
+client: "unreleased"
+
+steps:
+  - step_id: the_code_and_both_answers
+    title: The peer detail shows the code, what it covers, and two answers
+    description: >-
+      Entry precondition: NetworkPeerDetail is reached by opening a peer from
+      NetworkPeers (Everyone › Rules › Global Commons › Peers), which nav_map
+      cannot express as a hop. The node must have admitted at least one other
+      key; an announced-only key renders sas_not_in_directory instead, which is
+      the next step's case.
+    requires:
+      screen: NetworkPeerDetail
+      visible: [card_sas_verify, text_sas_words]
+    expect:
+      visible: [text_sas_words, text_sas_digits, text_sas_state, text_sas_scope, btn_sas_match, btn_sas_mismatch]
+      matches: {text_sas_digits: "^[0-9]{3} [0-9]{3}$"}
+
+  - step_id: an_announced_key_has_nothing_to_compare
+    title: A key the node heard but never admitted says so, without a spinner or an error
+    description: >-
+      GET …/sas answers 404 PEER_SAS_UNAVAILABLE for a key outside the
+      directory (src/federation_peers.rs:856-864). That is a fact about the
+      key, not a missing route and not a failed read.
+    optional_step: true
+    requires:
+      screen: NetworkPeerDetail
+      visible: [sas_not_in_directory]
+    expect:
+      visible: [sas_not_in_directory]
+      absent: [sas_error, sas_loading, btn_sas_match, btn_sas_mismatch]
+
+  - step_id: mismatch_opens_its_own_sheet
+    title: The "they don't match" answer opens the mismatch sheet with three facts, never the match sheet
+    requires:
+      screen: NetworkPeerDetail
+      visible: [btn_sas_mismatch]
+    do:
+      - click: btn_sas_mismatch
+    expect:
+      visible: [sheet_sas_mismatch, sas_mismatch_fact_1, sas_mismatch_fact_2, sas_mismatch_fact_3, btn_sas_mismatch_confirm]
+      absent: [sheet_sas_match]
+
+  - step_id: dismissing_writes_nothing
+    title: Backing out of the mismatch sheet leaves the ceremony as it was
+    do:
+      - click: btn_sas_mismatch_cancel
+    expect:
+      screen: NetworkPeerDetail
+      visible: [btn_sas_mismatch, text_sas_state]
+      absent: [sheet_sas_mismatch, sas_result_mismatch]
+
+  - step_id: a_confirmed_mismatch_stays_on_screen
+    title: A confirmed mismatch shows the danger result and clears the check
+    description: >-
+      Optional: it writes trust=untrusted and verified=false to the fixture
+      node's sideband. The result must stay up (it is a safety event), and the
+      Checked line must not read "Yes".
+    optional_step: true
+    requires:
+      screen: NetworkPeerDetail
+      visible: [btn_sas_mismatch]
+    do:
+      - click: btn_sas_mismatch
+      - click: btn_sas_mismatch_confirm
+    expect:
+      visible: [sas_result_mismatch, text_sas_state]
+      absent: [sheet_sas_mismatch]

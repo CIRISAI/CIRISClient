@@ -3474,7 +3474,6 @@
       "reachability_title": "Khả năng tiếp cận",
       "sas_close": "Đóng",
       "sas_digits_label": "Chữ số",
-      "sas_instructions": "So sánh các giá trị này với đồng đẳng qua kênh đáng tin cậy (thoại/video/trực tiếp). Nếu cả hai bên khớp, đồng đẳng được xác minh — chuyển độ tin cậy sang TRUSTED.",
       "sas_modal_title": "Chuỗi xác thực ngắn",
       "sas_show_button": "Hiển thị mã SAS",
       "sas_title": "Xác minh danh tính (SAS)",

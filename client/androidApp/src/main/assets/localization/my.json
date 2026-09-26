@@ -3474,7 +3474,6 @@
       "reachability_title": "ရောက်ရှိနိုင်မှု",
       "sas_close": "ပိတ်",
       "sas_digits_label": "ဂဏန်းများ",
-      "sas_instructions": "ဤအရာများကို ယုံကြည်ရသော channel (အသံ/ဗီဒီယို/တိုက်ရိုက်) မှတဆင့် peer နှင့် နှိုင်းယှဉ်ပါ။ နှစ်ဖက်စလုံး ကိုက်ညီပါက peer ကို အတည်ပြုပြီးဖြစ်သည် — trust ကို TRUSTED သို့ ပြောင်းပါ။",
       "sas_modal_title": "Short authentication string",
       "sas_show_button": "SAS code ပြ",
       "sas_title": "Identity အတည်ပြု (SAS)",
