@@ -53,31 +53,47 @@ const val CONTACT_GRANT_CC = "CC 3.3.7"
 
 /**
  * The receipt a contact row carries. A contact IS a `consent:replication:v1`
- * grant this node holds to that peer, and CC 3.3.7 fixes that grant's
- * envelope: `attesting_key_id` = the granting node (this one),
- * `subject_key_ids = [peer]`, `cohort_scope = "federation"` — the grant is a
- * public governance record even though what the two of you send is not.
+ * grant, and since ciris-server 0.5.213 each `/v1/contacts` row carries that
+ * grant's envelope as `grant` (CIRISServer#616). Every fact is read off it:
  *
- * What `/v1/contacts` SENDS is the subject. What the constitution FIXES is
- * the attester, the scope and the dimension. What nobody sent is the rule
- * (the grant's `attestation_prefixes` are payload the list route omits) and
- * the holders. Each is said as what it is.
+ * - who it is about — `subject_key_ids`
+ * - who sent it — `attesting_key_id`, which since 0.5.211 is the PERSON who
+ *   consented (the owner's federation identity), NOT this node; [attesterGloss]
+ *   says so under the key, because "who sent it" alone reads as "the node"
+ * - who can see it — `cohort_scope`, folded to a circle by the sheet
+ * - what it is — `dimension`
+ * - the rule it follows — `consent_prefixes`
+ * - which of my agents it is for — `for_key_id`
+ *
+ * An older node sends no `grant`. Then only the subject (the row's key) is
+ * wire; the dimension and scope stay [Fact.ByRule] because the route and
+ * CC 3.3.7 fix them; and the attester is [Fact.NotSent] — it USED to be fixed
+ * as "this node", but consent moved to the person at 0.5.211, so a grant-less
+ * row cannot say who signed and the receipt must not guess. A member the
+ * grant does carry but leaves empty is likewise [Fact.NotSent].
  */
 fun contactReceipt(
     contact: Contact,
-    thisNodeLabel: String,
+    attesterGloss: String,
     openChatLabel: String,
     scopeNote: String,
     onOpenChat: () -> Unit,
-): Receipt = Receipt(
-    id = contact.keyId,
-    subject = Fact.Wire(contact.keyId),
-    attester = Fact.ByRule(thisNodeLabel, CONTACT_GRANT_CC),
-    scope = Fact.ByRule("federation", CONTACT_GRANT_CC),
-    dimension = Dim.consentKind,
-    dimensionValue = Fact.ByRule(CONTACT_GRANT_DIMENSION, CONTACT_GRANT_CC),
-    rule = Fact.NotSent,
-    holders = null,
-    acts = listOf(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onOpenChat)),
-    scopeNote = scopeNote,
-)
+): Receipt {
+    val g = contact.grant
+    fun wire(v: String?, gloss: String? = null): Fact =
+        v?.takeIf { it.isNotBlank() }?.let { Fact.Wire(it, gloss) } ?: Fact.NotSent
+    return Receipt(
+        id = contact.keyId,
+        subject = if (g == null) Fact.Wire(contact.keyId)
+        else wire(g.subjectKeyIds.filter { it.isNotBlank() }.joinToString(", ")),
+        attester = if (g == null) Fact.NotSent else wire(g.attestingKeyId, attesterGloss),
+        scope = if (g == null) Fact.ByRule("federation", CONTACT_GRANT_CC) else wire(g.cohortScope),
+        dimension = Dim.consentKind,
+        dimensionValue = if (g == null) Fact.ByRule(CONTACT_GRANT_DIMENSION, CONTACT_GRANT_CC) else wire(g.dimension),
+        rule = if (g == null) Fact.NotSent else wire(g.consentPrefixes.filter { it.isNotBlank() }.joinToString(", ")),
+        forAgent = if (g == null) null else wire(g.forKeyId),
+        holders = null,
+        acts = listOf(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onOpenChat)),
+        scopeNote = scopeNote,
+    )
+}

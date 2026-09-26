@@ -55,6 +55,13 @@ data class Contact(
     /** The devices this contact actually speaks from. Reported, never required. */
     @SerialName("occurrence_key_ids")
     val occurrenceKeyIds: List<String> = emptyList(),
+    /**
+     * The consent grant this row IS, as its envelope (CIRISServer#616, since
+     * ciris-server 0.5.213). Absent on an older node, and `null` on the wire
+     * when the node holds no readable receipt for the key; either way the
+     * receipt says "not sent" rather than filling the facts in by rule.
+     */
+    val grant: ContactGrant? = null,
 ) {
     /**
      * The key material this node can project for the contact is missing — the
@@ -63,6 +70,49 @@ data class Contact(
      */
     val projectionMissing: Boolean get() = pubkeyEd25519Base64.isNullOrBlank()
 }
+
+/**
+ * **The grant as a receipt** — `peer.rs::grant_receipt` on ciris-server, the
+ * CC 2.1 envelope members of the `consent:replication:v1` row a contact is,
+ * read off the row and never inferred.
+ *
+ * [attestingKeyId] is whoever actually SIGNED the grant. Since 0.5.211 that is
+ * the owner's federation identity — the PERSON who consented — not this node
+ * (consent is by humans), which is why the client is sent it rather than
+ * assuming CC 3.3.7's `G` is the node.
+ *
+ * Every member is optional: a field a given node cannot compute (an
+ * unparseable payload, a pre-v44.6 persist without `for_key_id`) is reported
+ * as absent, and the receipt says so for that one row.
+ */
+@Serializable
+data class ContactGrant(
+    @SerialName("attestation_id")
+    val attestationId: String? = null,
+    @SerialName("attesting_key_id")
+    val attestingKeyId: String? = null,
+    val dimension: String? = null,
+    @SerialName("subject_key_ids")
+    val subjectKeyIds: List<String> = emptyList(),
+    @SerialName("cohort_scope")
+    val cohortScope: String? = null,
+    /** The one agent of mine this consent is FOR (persist v44.6.0). */
+    @SerialName("for_key_id")
+    val forKeyId: String? = null,
+    /**
+     * What the grant covers. The server folds an unparseable payload into
+     * `[]`, so an empty list cannot be told apart from "not read".
+     */
+    @SerialName("consent_prefixes")
+    val consentPrefixes: List<String> = emptyList(),
+    @SerialName("asserted_at")
+    val assertedAt: String? = null,
+    /** The POLICY's expiry the person chose — distinct from [rowExpiresAt]. */
+    @SerialName("valid_until")
+    val validUntil: String? = null,
+    @SerialName("row_expires_at")
+    val rowExpiresAt: String? = null,
+)
 
 /** ``GET /v1/contacts`` → `{ "contacts": [...], "total": N }`. */
 @Serializable
