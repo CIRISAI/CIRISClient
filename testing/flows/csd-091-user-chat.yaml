@@ -1,0 +1,87 @@
+csd: CSD-091
+flow: csd_091_user_chat
+title: A chat with a person, and a refusal that says whether the wait resolves itself
+description: >-
+  CSD-091 §4, driven. Six node routes live, all in CIRISServer
+  src/contacts_chat.rs, so there is no wrong-host risk on this card. The flow
+  drives the transcript, the composer and the 16 KB ceiling — one number written
+  twice (MAX_MESSAGE_BYTES at contacts_chat.rs:146, mirrored at ChatScreen.kt:72)
+  — and asserts that a refusal renders as a refusal rather than as an empty room.
+# Floor: chat_transcript, input_chat_body, btn_chat_send, btn_chat_refresh,
+# btn_chat_back, chat_refusal, chat_msg_${attestationId} and
+# chat_note_${attestationId} are `testable*` literals in ui/screens/ChatScreen.kt
+# at v0.5.224.
+# NOT asserted: chat_empty, chat_loading, chat_length_counter and
+# chat_msg_duty_badge are still `proposed:` in CSD-091 §2 and in no merged PR, so
+# the empty room, the loading frame and the byte counter cannot be asserted.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_chat
+    title: The room composes a transcript and a composer
+    description: >-
+      Entry precondition: UserChat is reached by picking a contact, which the nav
+      map cannot express as a hop. Both tags are asserted because a room that
+      rendered its transcript with no composer is read-only, and CSD-091 §1 is
+      about an exchange.
+    requires:
+      screen: UserChat
+    expect:
+      visible: [chat_transcript, input_chat_body, btn_chat_send]
+
+  - step_id: the_composer_takes_text
+    title: A message can be typed without sending it
+    do:
+      - input: {input_chat_body: "hello from the flow"}
+    expect:
+      screen: UserChat
+      visible: [input_chat_body, btn_chat_send]
+
+  - step_id: refresh_stays_in_the_room
+    title: Refresh re-reads the transcript without leaving
+    do:
+      - click: btn_chat_refresh
+    expect:
+      screen: UserChat
+      visible: [chat_transcript]
+
+  - step_id: a_room_with_history
+    title: A room that has messages renders them as rows
+    description: >-
+      Optional: it needs a peered pair with a crossed message, which is what
+      CIRISServer's chat ladder builds and the client fixture does not. `count:
+      min 1` over the row class, because the flow cannot know an attestation id and
+      a transcript frame with zero rows answers `visible: [chat_transcript]`
+      correctly.
+    optional_step: true
+    requires:
+      screen: UserChat
+      visible: [chat_transcript]
+    expect:
+      state: populated
+      count: {of: "chat_msg_*", min: 1}
+
+  - step_id: a_refusal_is_not_an_empty_room
+    title: When the room cannot be served, the refusal is on screen
+    description: >-
+      `chat_refusal` and NOT an empty transcript. The node returns a reason id and
+      a note on a non-2xx, and CSD-091 §3 records the one field that is logged and
+      not returned: `converges_on_its_own` is in four wire bodies but at the send
+      refusal it goes to tracing::info! (contacts_chat.rs:2990) and never into
+      refuse() two lines later (:2994). So the screen can say "refused" and cannot
+      yet say "and it will resolve by itself" — which is the difference between a
+      person waiting and a person retrying.
+    optional_step: true
+    requires:
+      screen: UserChat
+      visible: [chat_refusal]
+    expect:
+      state: error
+      visible: [chat_refusal]
+
+  - step_id: back_leaves_the_room
+    title: Back returns to People
+    do:
+      - click: btn_chat_back
+    expect:
+      absent: [input_chat_body]

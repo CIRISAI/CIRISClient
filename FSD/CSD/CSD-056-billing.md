@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -60,7 +60,7 @@ fields:
     use: display-only
     type: "list[string]"
     example: ["500 credits — $4.99"]
-    renders: "one purchasable package per row, price from the store"
+    renders: "one purchasable package per row. NOT from the store: the three rows and their prices are a compiled-in constant (BillingViewModel.kt:47-66), never replaced — see §3"
     tag: "proposed:row_billing_product"
   - ceg: x_private:auth_expired
     use: display-only
@@ -86,8 +86,11 @@ the checker would happily pass, so the prohibition is written here instead: the
 balance is `x_private:credit_balance` and the word on screen should change, not
 the binding. Naming, not machinery.
 
-**Three tags exist on the screen**: `btn_billing_back`, `btn_billing_refresh`,
-`txt_billing_version`. No value is tagged, so every row above is `proposed:`.
+**FIVE tags exist on the screen**: `btn_billing_back`, `btn_billing_refresh`,
+`txt_billing_version`, and — per product — `item_product_${productId}`
+(`BillingScreen.kt:251`) and `btn_buy_${productId}` (`:289`). So a
+`count: {of: "item_product_*", min: 1}` is assertable today with no tagging PR;
+only the VALUE rows above are `proposed:`.
 
 ```yaml csd:states
 populated: {tag: "proposed:text_billing_balance", renders: "the balance and the purchasable packages"}
@@ -115,8 +118,21 @@ state above.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | balance, free uses, plan | `GET /v1/api/billing/credits` | **CIRISAgent** (`routes/billing.py:30, 580`) | live on the agent. The doubled `api` segment is real: the router's prefix is `/api/billing`, mounted at `/v1`. |
-| purchasable packages | the platform store (Google Play) | CIRISClient | live, platform-specific |
+| purchasable packages | **a compiled-in constant, not the store** | CIRISClient | live, and **two lists that never meet** — see below |
 | anything on a node | none | — | **wrong-host by placement.** The node serves no billing route. The card is not `agentOnly`, so on a node build it is offered in Communities › Rules and answers from a synthesised value. |
+
+**The prices on screen are not the store's.** `BillingViewModel.DEFAULT_PRODUCTS`
+(`viewmodels/BillingViewModel.kt:47-66` — `credits_100` $9.99/99, `credits_250`
+$24.99/249, `credits_600` $59.99/599) is assigned once at `:95` and there is no
+`_products.value =` anywhere else in that file. Google Play IS queried, but by a
+different object outside `shared/src`:
+`androidApp/src/main/kotlin/ai/ciris/mobile/billing/BillingManager.kt:114-120`
+(`queryProductDetailsAsync`) holds its own `_products` with the real
+`formattedPrice` (`:49-50`), and nothing in `androidApp` references
+`BillingViewModel`. Two consequences: the `renders` text above was false, and
+`proposed:text_billing_no_products` names an **unreachable** state — the list is
+never empty because it is never replaced. The `empty:` row in `csd:states` cannot
+be asserted by any flow until the two lists are joined, and §5 says so.
 
 No upstream ask. CC settles this one: billing is Portal+Stripe and off-wire by
 design, so there is nothing for CIRISServer to add and nothing for

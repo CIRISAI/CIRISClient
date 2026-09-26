@@ -6,7 +6,7 @@ the Constitutional card as one document and can no longer, because they are two
 cards in one tab with two different jobs
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -205,17 +205,41 @@ literals in `src/accord.rs` and `src/accord_provision.rs`.
 | concur on an invocation | `POST /v1/accord/invocation/concur` | `src/accord.rs:2654` | **live** |
 | raise a halt | `POST /v1/accord/halt` | `src/accord.rs:2616` | **live** |
 | drill / announce | `POST /v1/accord/{drill,announce}` | `src/accord.rs:2609,2611` | **live** |
-| canonical servers + co-scrubs | `/v1/accord/canonical/*` | `src/accord_provision.rs:3704-3776` | **live** |
-| confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648` | **live** |
-| a holder's hardware custody class | **missing** — `AccordHolderDto` carries no custody field | CIRISServer | blocks `txt_holder_custody` |
-| **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` — **unconfirmed**: `invocation_kind` is documented as the closed set `{CONSTITUTIONAL, notify, drill}` (CC 4.2.1.3 keeps resumption in its own canonical-bytes domain), so it is not yet established that a resumption ever arrives on this route at all | CIRISServer | blocks the §2.2 fix from being *tested*, not from being *made* |
+| canonical servers + co-scrubs | `/v1/accord/canonical/*` | `src/accord_provision.rs:3707,3711,3717,3721,3753,3758,3762,3766,3776` + `canonical/address` at `src/accord.rs:2632` | **live** (the earlier `3704-3776` range was loose: `:3704` is `admit-node` and `:3770` is `yubikey-status`) |
+| confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648,649` | **live** — called from `DutyConferralViewModel.kt:335,375`, not from this screen's view model; `Screen.DutyConferral` maps to `NavSurface.Accord` (`CIRISApp.kt:5941`) and is reached from `[+ New]` (`CIRISApp.kt:4193`) |
+| a holder's hardware custody class | **missing** — `list_holders` builds `HolderSummary {key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}` (`src/accord.rs:664-668`) and `AccordHolderDto` (`models/federation/Accord.kt:53-60`) mirrors it exactly | CIRISServer | blocks `txt_holder_custody` |
+| **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` | CIRISServer | **live — the route serves it, and that makes §2.2 a shipped defect** |
 
-**The last row is why §2.2 is a defect and not a bug report.** If resumptions
-arrive on a different read, the client still needs the fourth treatment and
-needs to know where to get the row; if they arrive on `invocations`, the `else`
-branch is actively mislabelling them today. Either way the four-arm fix is
-required and the CSD cannot state which failure is live until CIRISServer
-answers. That is exactly what `unconfirmed` at `sketched` is for.
+**The last row said `unconfirmed` and the answer inverts the finding.**
+`InvocationKind` is a FOUR-variant enum whose fourth is `LifecycleActive`,
+`#[serde(rename = "lifecycle:active")]` — `ciris-verify-core
+src/humanity_accord.rs:79-103` in the `v16.1.0` checkout pinned at
+`CIRISServer Cargo.toml:171` — and its own doc comment at `:97` says it "rides
+the same concurrence flow". Decisively: `create_invocation` → `open_invocation`
+(`src/accord.rs:1215-1229`, `:1385-1441`) applies **no kind filter**, unlike
+`/drill` (`:1269`), `/halt` (`:1350`) and `/announce` (`:1499`), each of which
+rejects a mismatched kind by name; the object is keyed into `pending` by
+`(invocation_kind, invocation_id)` (`:1418-1421`) and `list_invocations` echoes
+the kind verbatim (`:1763`). The closed set `{CONSTITUTIONAL, notify, drill}`
+this row previously cited is the CC 4.2.1.1 **canonical-bytes preimage domain**
+(`humanity_accord.rs:92-94`), not the route's payload — `lifecycle:active` signs
+a separate `LIFECYCLE_DOMAIN_PREFIX` (`:74`) and is still listed on the same read.
+
+So §2.2 is not a deferred question: the `else` branch **is** badging resumptions
+as `notify` today, on a route that can carry them. One caveat to carry into the
+fix: the primary production resumption path is offline — `build_release_request`'s
+`how_to_use` (`src/accord_release.rs:551-556`) and `main.rs:146-153` route it
+through a token file and `ciris-server accord release --token`, never HTTP — and
+the client calls only `/concur` (`CIRISApiClient.kt:3562`), never
+`POST /v1/accord/invocation`. A lifecycle row therefore reaches the list when a
+holder app opens one; the node never puts one there by itself. The flow must open
+one to assert the fourth arm, which is why §5 disclaims it rather than §4.
+
+**`hardware_custody` has three vocabularies, not two.** Beyond the registry's set
+and CC 4.2.2's table, the wire carries `custody_tier: "portable_2fa"`
+(`ciris-verify-core accord_custody_attestation.rs:70`, envelope key `:235`,
+`ALLOWED_CUSTODY_TIERS` at `:105` containing only that one value). The
+CIRISConstitution ask must name all three.
 
 ## 4. Flow (how)
 

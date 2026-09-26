@@ -5,7 +5,7 @@
 **Flow**: tools/qa_runner/flows/constitutional_card.yaml — **stale**, see §4
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 

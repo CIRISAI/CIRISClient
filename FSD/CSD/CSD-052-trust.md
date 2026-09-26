@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -119,9 +119,19 @@ three states off `proposed:`, which is the whole reason to write this file at
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the ladder | `GET /v1/system/verify-status` | CIRISServer | live (`src/health.rs:683`) |
-| substrate fabric versions | `getFabricVersions` (best-effort, never gates the page, `TrustPage.kt:119`) | CIRISServer | live |
-| the mobile device attestation (Play Integrity / App Attest) | `GET /v1/setup/verify-status` | **CIRISAgent** (`routes/setup/attestation.py:280`) | live, and agent-only — correctly gated off on a node (`TrustPage.kt:87, 130`) |
-| which family each rung IS | — | CIRISVerify | **unconfirmed**. The ask: does CIRISVerify's L4 emit `attestation:license_validity`, `provenance:build_manifest:{target}`, or both? §2's binding is a guess until it answers, and it blocks `building`. |
+| substrate fabric versions | `GET /v1/system/fabric` (best-effort, never gates the page, `TrustPage.kt:119`) | **CIRISAgent** (`routes/system/fabric.py:74`) | live, **agent-only** — the owner was wrong: CIRISServer has zero `system/fabric` literals, and it is not in `NODE_OWNED_PREFIXES` either, so a node build never answers it |
+| the mobile device attestation (Play Integrity / App Attest) | `GET /v1/setup/verify-status` | **CIRISAgent** (`routes/setup/attestation.py:292` on `main`) | live, and agent-only — correctly gated off on a node (`TrustPage.kt:87, 130`) |
+| which family each rung IS | — | CIRISVerify | **both are emitted** — `attestation:license_validity` at `ciris-verify-core/src/federation_provenance.rs:107` (bundle field `attest_bundle.rs:160-162`), `provenance:build_manifest:{target}` via `BuildManifest::to_attestation_entries`. And there is no upstream "L4" to bind to: **CIRISVerify dropped the L1–L5 numbering from its wire strings in v3.7.0** (`docs/THREAT_MODEL.md:761` — "the ladder concept … now it lives only in consumer-side policy, where it belongs"). |
+
+**The last row is why the five rungs are consumer-side policy, and the CSD must
+say so rather than claim a CC rung.** The node's `verify-status` payload
+(`CIRISServer src/health.rs:612-683`) names none of the five `attestation:*`
+families: it sends a coarse `max_level` of 0/2/4 plus
+`checks: {verify_loaded, key_registered, audit_chain, hardware_backed}` — no
+`module_integrity_ok`, no `file_integrity_ok`, which is exactly what
+`TrustPage.kt:588` draws as "Level 4". The binding in §2 is defensible as this
+client's own policy over that coarse level. It cannot be justified as CC 3.1.2's
+rung 4, because CIRISVerify no longer has one.
 
 The node/agent split on this screen is handled well and is worth keeping when the
 card moves: the node serves its own `verify-status`, so the tiers load and render

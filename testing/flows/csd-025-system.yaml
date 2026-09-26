@@ -1,0 +1,70 @@
+csd: CSD-025
+flow: csd_025_system
+title: This node's own state, named rather than inferred
+description: >-
+  CSD-025 §4, driven. The card's whole job is to distinguish four different kinds
+  of silence — a fact NOT OFFERED by this build, a source ABSENT, a host
+  UNREACHABLE, and a value genuinely UNKNOWN — and never to render any of them as
+  a healthy zero. The node's own code is explicit that its health carries no
+  cognitive_state (CIRISServer src/health.rs:74, :228-233), so on a node build
+  those rows are absences with names.
+# Floor: node_state_headline, node_state_unknown_list, node_state_trace_plane,
+# node_state_ingest, node_state_signals, node_state_absent_sources,
+# btn_system_refresh, btn_system_back and the runtime dialog pair are `testable*`
+# literals in ui/screens/SystemScreen.kt at v0.5.224.
+# NOT asserted: node_state_loading, node_state_not_offered and
+# node_state_unreachable are named in CSD-025 §2 but are NOT `testable*` literals
+# on that screen — CSD-025's own §2 over-claims three tags, and this flow does not
+# inherit the over-claim.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_system
+    title: The card leads with the node's headline state
+    description: >-
+      Reached via My things > This node > System. The headline is asserted first
+      because every other row on the card qualifies it; a card that rendered its
+      detail rows with no headline would be telling a person facts about a node it
+      had not identified.
+    requires:
+      screen: System
+    expect:
+      visible: [node_state_headline, btn_system_refresh]
+
+  - step_id: the_three_planes
+    title: Trace plane, ingest and signals each render as their own row
+    description: >-
+      Three tags rather than one card check. These are three independent reads
+      that fail independently, and collapsing them into one assertion is how a
+      screen comes to report "healthy" from one live plane and two silent ones.
+    expect:
+      visible: [node_state_trace_plane, node_state_ingest, node_state_signals]
+
+  - step_id: absences_are_named
+    title: What this build does not offer, and what it cannot resolve, are listed
+    description: >-
+      `node_state_absent_sources` and `node_state_unknown_list` are the two
+      honest-silence rows. Asserting both is the load-bearing part of this flow:
+      CSD-025 §1 makes "an absent fact is a fact" the card's reason to exist, and a
+      build that dropped these lists would look identical to a healthy node.
+    expect:
+      visible: [node_state_absent_sources, node_state_unknown_list]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads without leaving the screen
+    description: >-
+      Asserting we are still on System afterwards separates "it refreshed" from
+      "it navigated away or crashed to a fallback" — the distinction the
+      CIRISAgent flows established.
+    do:
+      - click: btn_system_refresh
+    expect:
+      screen: System
+      visible: [node_state_headline]
+
+  - step_id: back_to_the_instrument
+    title: Back leaves the card
+    do:
+      - click: btn_system_back
+    expect:
+      absent: [node_state_headline]

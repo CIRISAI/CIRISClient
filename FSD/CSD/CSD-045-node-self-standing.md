@@ -114,9 +114,39 @@ error:     {tag: "proposed:node_self_error", renders: "503 with unreadable_axes:
 | stop / resume accepting | `POST /v1/admin/self/stop-accepting` · `/resume-accepting` | CIRISServer | live |
 | declare / lift compulsion | `POST /v1/admin/self/compelled` · `/compulsion-lifted` (`self_compelled`, `self_compulsion_lifted`) | CIRISServer | live |
 | request body, every act | `{delegation_id, reason, compelled_by?}`: `delegation_id` is the owner's own `delegates_to` id and is required; `reason` is required (`admin.refusal.reason_absent`); `compelled_by` is read only by the compulsion act | CIRISServer | live |
-| where `delegation_id` comes from | the owner's own delegation to this node. The client has no read that returns it today (`GET /v1/auth/device/grants` lists grants, but not the owner's `delegates_to` to the node) | CIRISServer | **unconfirmed**: blocks `sketched`. CIRISServer#676 |
+| where `delegation_id` comes from | the owner's own delegation to this node | CIRISServer | **missing, confirmed** — see below. **CIRISServer#676 OPEN** (`next:0.5.218`) |
 | reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | **missing**: CIRISAgent#1213. Until then the card calls the node URL directly |
 | a declaration that anyone else can see | the act writes a `hard_case:admin_action:{op}` row into persist's local `hard_case_events` table: unsigned, no `cohort_scope`, not an attestation, so nothing replicates it. The route's own doc says it is "the one a peer reads", but no peer can | CIRISServer / CIRISPersist | **missing**: CIRISServer#675 |
+
+**`delegation_id` is confirmed unreachable, not unknown.** Every act requires
+`REQUIRED_SCOPE_SELF_DIRECTED = INFRA_SERVE` (`src/admin_ops.rs:286`) and
+`resolve_owner_authority` (`:3396`) demands a `delegates_to` row to this node
+carrying `infra:serve`. `GET /v1/auth/device/grants` (`src/auth/device_grant.rs:1211`)
+builds from `live_delegations`, which **skips exactly that class**:
+`if scope.is_empty() || scope.starts_with("infra:") { continue; }` under the
+comment "Skip owner-bindings (infra:\*) — those are node ownership, not agency"
+(`src/auth/device_grant.rs:1192-1194`). No other route among the node's 210 paths
+returns a `delegates_to` id, and `SelfFold.delegation_id` (`src/admin_ops.rs:3243`)
+is only the id recorded on a past governing act — `None` when none was declared.
+The consequence on screen is concrete: the operator must **type** the id
+(`input_self_delegation_id`, `ui/screens/SelfReaderOpsSection.kt:508, 528-534`).
+#676 proposes either returning it from `GET /v1/admin/self` or resolving it
+server-side; either closes this row.
+
+**This card's §6 is out of date and the stage stays `envisioned` for a different
+reason.** "The client has none of it: no surface, no call, no tag" is false —
+`ui/screens/SelfReaderOpsSection.kt` exists, is hosted by
+`ui/screens/NetworkOpsScreen.kt:117`, calls all seven routes
+(`CIRISApiClient.kt:5159` and the six acts at `:5381/5398/5419/5436/5462/5484`,
+all against `$nodeUrl`, as this table requires), and carries real tags:
+`section_self_reader_ops` (`:63`), `card_self_directed` (`:84`),
+`progress_self_standing` (`:141`), `chip_self_standing_$tag` (`:298`),
+`row_self_delegation_$tag` (`:323`), `text_self_distinct_zeroes`,
+`text_self_partition`, `input_self_delegation_id` (`:534`). What has NOT landed is
+§2: this card has no `csd:surface` block because the standing is a section on
+NetworkOps and not a `NavSurface`, so there is no hop to derive and no screen the
+checker can resolve. **The card stays `envisioned` until it either gets a surface
+or is folded into CSD-036**, whose §3 already carries the same seven routes.
 
 **Registry gap.** The row kind is `admin_action:{op}` (persist `hard_case.rs`,
 `ADMIN_ACTION_PREFIX`), so the full dimension is `hard_case:admin_action:self_compelled`.

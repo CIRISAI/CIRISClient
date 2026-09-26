@@ -48,7 +48,7 @@ fields:
     type: string
     example: "eric-moore-v1"
     renders: "the self fed-ID the roster belongs to — the node's BOUND OWNER, not the node key"
-    tag: "proposed:identity_self_key_id"
+    tag: identity_self_key_id
   - ceg: x_private:occurrence_key_id
     use: display-only
     type: string
@@ -141,7 +141,7 @@ Sign in on an enrolled device; open My things › Devices & keys › My Identity
 ```yaml
 expect:
   state: populated
-  visible: ["proposed:identity_self_key_id", "proposed:identity_roster"]
+  visible: [identity_self_key_id, "proposed:identity_roster"]
   count: {of: "proposed:identity_row_*", min: 1}
   each: {of: "proposed:identity_row_device_class", one_of: [phone, laptop, agent]}
 ```

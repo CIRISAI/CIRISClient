@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -194,7 +194,7 @@ comment is the specification; the assignment is the defect. CSD/3 §2.2 requires
 | the holder registry | `GET /v1/accord-holders` | CIRISServer (`src/accord.rs:2601`) | live — the same source the quorum is counted from, which is why the holder is a dropdown and not a text box |
 | token readiness | `GET /v1/accord/yubikey-status` | CIRISServer (`src/accord_provision.rs:3770`) | live |
 | prefill the subject | `GET /v1/setup/owned-nodes` | CIRISServer | live, **loopback-only** — off-host it 403s (CSD-084 measured it on 0.5.190), so on a remote node the subject field is simply blank and the screen does not say why |
-| the conferrable vocabulary | `CONFERRABLE_DUTIES` | CIRISPersist `federation/admission.rs:6366` (`DELEGATED_DUTY_SCOPES`) | live — re-exported, not re-listed. The client's `ALL_DUTIES` (`DutyConferralViewModel.kt:55-57`) is a fourth hand-mirror of the same five, and a sixth scope upstream will not appear in this menu |
+| the conferrable vocabulary | `CONFERRABLE_DUTIES` | CIRISPersist `federation/admission.rs:6366` (`DELEGATED_DUTY_SCOPES`) | live — re-exported, not re-listed (`CIRISServer src/accord_duty.rs:96` is literally `= ciris_persist::federation::admission::DELEGATED_DUTY_SCOPES`, validated `:287-300`). **The prediction in this row has already come true: the list is SEVEN, and the client's menu offers FIVE.** `admission.rs:6366-6376` now holds `consent_revocation, moderate, takedown, review, slash, license, grant` — `license` and `grant` were added at persist v42.0.0 — while `ALL_DUTIES` (`DutyConferralViewModel.kt:55-57`) still lists five. The server accepts all seven. Persist's own doc comment at `admission.rs:6338-6345` records this exact failure happening once before: "a hand-picked mirror of another crate's vocabulary drifts the moment that vocabulary grows" |
 | **which community the duty is over** | **no field** — `conferral_envelope` carries `dimension` + `scope` + `subject_key_id` and nothing else (`src/accord_duty.rs`, the envelope builder) | CIRISServer / CIRISPersist | **missing** — see the CC delta below |
 
 ### The CC delta, stated plainly
@@ -221,9 +221,20 @@ during which a bound node may cut its edge.
 `consent_revocation` as one of five ticks, and CC 4.5.5's enforced-admission rule
 refuses "an issuance whose delegator does not itself hold the underlying
 authority" at admission, not merely unweighted. The accord family holds no
-consent authority over anyone's Contributions. Whether persist refuses the
-resulting grant is **unconfirmed** from this repo; either way the card renders a
-choice that CC does not permit the conferring authority to make.
+consent authority over anyone's Contributions.
+
+**Persist does NOT refuse the resulting grant — that question is answered, and
+the answer makes the objection sharper, not weaker.** `consent_revocation` is a
+first-class member of the delegated-duty ladder (`CIRISPersist
+src/federation/admission.rs:6245` defines it, `:6367` is its entry in
+`DELEGATED_DUTY_SCOPES`) and `:6332` documents what it grants: "proxy revocation
+authority (CEG §3.2.3 rule 3/4)". CIRISServer's validation admits it
+(`src/accord_duty.rs:293`) and the propose succeeds. The consent plane is walked
+by a DIFFERENT routine from the moderation one — `reachable_under_scope_with_reasons`,
+whose doc at `admission.rs:7323-7331` states it applies "neither `⊆`-parent
+attenuation [n]or the `sub_delegation` deputization gate". So nothing downstream
+stops this; the card renders a choice that CC does not permit the conferring
+authority to make, and the substrate carries it out.
 
 **3. `moderate` / `review` are community-scoped in CC and community-blind on the
 wire.** CC 4.5.4's named-moderator binding is `delegates_to(authority → K,

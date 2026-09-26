@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -139,8 +139,29 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live**, loopback-only |
 | register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **live** — but this screen does not call it; it tells the person to ask the node owner |
 | token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live and unused here** — the ceremony screen calls it, this one does not |
-| the written path + artifact names | **unconfirmed** — the response's shape beyond the key id is not established in the client | CIRISServer | blocks §2.2's first bullet |
-| the recorded custody class | **missing** | CIRISServer | blocks §2.2's second bullet |
+| the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
+| the recorded custody class | **on the wire here, and discarded by the client** | CIRISClient | §2.2's second bullet is ours, not upstream |
+
+**The fourth row said `unconfirmed` and its premise was false.** The response
+shape IS established in the client: the node returns
+`json!({ "key_id", "holder_record", "custody_attestation" })`
+(`src/accord_provision.rs:487-491`, returned `:506`, module doc `:23`) and
+`AccordProvisionResponse` models all three (`models/federation/Accord.kt:221-228`).
+What is genuinely absent is the USB path and the artifact filenames: the node has
+them and writes them only to `tracing::info!`
+(`src/accord_provision.rs:481-482`, `:503-504`). The precedent for the fix is one
+route over — `AdmitNodeResponse` carries `saved_to` (`Accord.kt:245-246`). **Ask:
+add `saved_to` / `artifacts[]` to `provision-holder`'s body.**
+
+**The fifth row was filed against the wrong repo.** The custody class arrives on
+this very response inside `custody_attestation`, minted with
+`CUSTODY_TIER_PORTABLE_2FA` (`src/accord_custody.rs:134-141`; constant at
+`ciris-verify-core accord_custody_attestation.rs:70`, envelope key `custody_tier`
+at `:235`). The client parses it as an opaque `JsonElement` it never inspects
+(`Accord.kt:227`) and `CIRISApiClient.kt:3877` only logs `custody != null`. So
+this screen can render the class today with no upstream change. What is missing
+upstream is the same fact on `GET /v1/accord-holders` — and that is CSD-067's
+row, not a second one.
 
 **`/v1/accord/yubikey-status` is the cheapest fix on this screen.**
 `AccordCeremonyViewModel` already calls it (`getYubiKeyStatus`); this flow asks

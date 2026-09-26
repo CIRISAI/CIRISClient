@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -117,6 +117,17 @@ error:     {tag: node_state_unreachable, renders: "No answer at all — transpor
 `NotOffered` / `Unreachable` / `Malformed`, each with its own tag. This is the
 only card in this area that satisfies CSD/3 §2.2 today, and it satisfies it
 better than the standard asks.
+
+**Three tags named above are NOT `testable*` literals on this screen.**
+`SystemScreen.kt` at v0.5.224 carries `node_state_headline`, `node_state_ingest`,
+`node_state_signals`, `node_state_trace_plane`, `node_state_absent_sources`,
+`node_state_unknown_list`, `btn_system_refresh`, `btn_system_back` and the
+runtime dialog pair — and nothing else. `node_state_loading`,
+`node_state_not_offered` and `node_state_unreachable` are written here without a
+`proposed:` prefix and do not exist, so the `loading` state and two of the four
+honest silences cannot be asserted. They must either be written `proposed:` or
+tagged; `testing/flows/csd-025-system.yaml` asserts the six that are real and
+says in a comment which three it is leaving out.
 
 ## 3. Contracts (who)
 

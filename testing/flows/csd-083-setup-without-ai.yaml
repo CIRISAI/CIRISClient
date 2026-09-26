@@ -1,0 +1,113 @@
+csd: CSD-083
+flow: csd_083_setup_without_ai
+title: First run without an assistant — the rail loses a dot, and it loses it on step 1
+description: >-
+  CSD-083 §4, driven. Choosing to run without an assistant removes the AI step,
+  and the ONE thing this flow exists to pin is that the rail changes WHILE the
+  person is standing on step 1 — the only place that transition is safe. A step
+  count that changed under someone on step 2 would renumber the step they are on.
+# Floor: opt_run_with_ai / opt_run_without_ai (ui/screens/SetupScreen.kt:2567, via
+# a variable), setup_step_indicators, step_indicator_$stepName, input_username,
+# input_password, input_password_confirm, input_fedid_label, age_band_$token,
+# trace_consent_$token, toggle_announce_ownership, btn_next, btn_back and
+# setup_ownership_claiming/_claimed/_error are `testable*` literals at v0.5.224.
+# NOT asserted: txt_setup_backend and setup_consent_empty are still `proposed:`,
+# so the flow cannot assert WHICH backend answered after the hand-off — which is
+# precisely the thing CIRISClient#43/#47/#48 all went wrong in. CSD-083 §5 says so.
+client: ">=0.5.224"
+
+steps:
+  - step_id: step_you_with_both_options
+    title: 'Step You offers both ways to run, and starts at three dots'
+    description: >-
+      Both options visible is the claim: running without an assistant is a
+      first-class choice on the first screen, not something found by declining
+      things later.
+    requires:
+      screen: Setup
+    expect:
+      state: populated
+      visible:
+        - setup_step_indicators
+        - opt_run_with_ai
+        - opt_run_without_ai
+        - input_username
+        - input_password
+        - input_password_confirm
+        - input_fedid_label
+        - age_band_adult
+      count: {of: "step_indicator_*", eq: 3}
+
+  - step_id: the_rail_loses_a_dot_here
+    title: Choosing without-AI drops the AI step while still on step 1
+    description: >-
+      3 then 2, asserted as a count on both sides of one click. This is the whole
+      flow. A screen that kept three dots and skipped the third step would leave a
+      person waiting for a step that never comes; a screen that dropped the dot on
+      step 2 would renumber the step under them.
+    do:
+      - click: opt_run_without_ai
+    expect:
+      screen: Setup
+      count: {of: "step_indicator_*", eq: 2}
+      visible: [opt_run_without_ai, setup_step_indicators]
+
+  - step_id: fill_the_account
+    title: The account fields and the age band take input
+    do:
+      - input: {input_username: "admin"}
+      - input: {input_password: "ciris_admin_password"}
+      - input: {input_password_confirm: "ciris_admin_password"}
+      - input: {input_fedid_label: "flow"}
+      - click: age_band_adult
+    expect:
+      screen: Setup
+      visible: [btn_next]
+      count: {of: "step_indicator_*", eq: 2}
+
+  - step_id: federation_is_now_the_last_step
+    title: 'Join the federation is the final step, and still offers both trace answers'
+    do:
+      - click: btn_next
+    expect:
+      screen: Setup
+      visible:
+        - trace_consent_yes
+        - trace_consent_no
+        - toggle_announce_ownership
+        - btn_next
+        - btn_back
+      count: {of: "step_indicator_*", eq: 2}
+
+  - step_id: decline_traces
+    title: Declining traces is an answer, not a skipped question
+    description: >-
+      CSD-082's flow drives `trace_consent_yes`; this one drives `trace_consent_no`.
+      Between the two, both arms of the consent are exercised, which is what
+      CC 3.3.1 means by a decision rather than a default.
+    do:
+      - click: trace_consent_no
+    expect:
+      visible: [trace_consent_no, btn_next]
+
+  - step_id: finish_runs_the_claim_once
+    title: Finish runs the claim, and the button is gone while it runs
+    optional_step: true
+    requires:
+      screen: Setup
+    do:
+      - click: btn_next
+    expect:
+      state: loading
+      visible: [setup_ownership_claiming]
+      absent: [btn_next]
+
+  - step_id: the_claim_settles
+    title: The claim settles as claimed, not as an error left on a success screen
+    optional_step: true
+    requires:
+      screen: Setup
+      visible: [setup_ownership_claimed]
+    expect:
+      visible: [setup_ownership_claimed]
+      absent: [setup_ownership_error, setup_ownership_claiming]

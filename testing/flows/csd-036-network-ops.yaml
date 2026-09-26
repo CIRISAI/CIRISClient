@@ -1,0 +1,87 @@
+csd: CSD-036
+flow: csd_036_network_ops
+title: This node's signer, its self-directed standings, and its reader policy
+description: >-
+  CSD-036 §4, driven. Three reads are live on the node
+  (GET /v1/federation/identity at src/federation_surface.rs:696; GET /v1/admin/self
+  plus six acts at src/admin_ops.rs:4288-4307; the reader tier at :4312, :4316,
+  :4320). One is WRONG-HOST: GET /v1/system/agent-mode is CIRISAgent's
+  (routes/system/agent_mode.py:78), so on a node build the mode, disk budget and
+  data dir have no source — and the view model stores that error and the screen
+  never collects it (NetworkViewModel.kt:80-81 vs NetworkOpsScreen.kt:48-51).
+# Floor: screen_network_ops and btn_netops_open_hub (ui/screens/NetworkOpsScreen.kt)
+# plus section_self_reader_ops, card_self_axis_$tag, chip_reader_standing,
+# progress_self_standing, input_self_delegation_id, input_self_reason,
+# btn_self_declare_$tag, btn_self_refresh, text_self_distinct_zeroes and
+# text_self_partition (ui/screens/SelfReaderOpsSection.kt) are all `testable*`
+# literals at v0.5.224.
+# NOT asserted: the six row_netops_* tags CSD-036 §2 lists as real are NOT
+# `testable*` literals on that screen — that over-claim is recorded in CSD-036 and
+# this flow does not inherit it. netops_loading/_empty/_error remain proposed.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_network_ops
+    title: The card composes, and carries the self/reader section
+    description: >-
+      Reached via My things > This node > Network ops. Both tags: the screen frame
+      alone would compose on a node that answered nothing, and
+      section_self_reader_ops is the part of this card that reads the NODE rather
+      than the agent.
+    requires:
+      screen: NetworkOps
+    expect:
+      visible: [screen_network_ops, section_self_reader_ops]
+
+  - step_id: the_three_standings
+    title: All three self-directed axes render, each as its own row
+    description: >-
+      Three tags and not one card check. GET /v1/admin/self returns 503 when any
+      axis is unreadable WITH that axis still in the body, so a card that
+      collapsed the three into one row would render a partial answer as a whole
+      one. The three are load-shed, accepting, and legal compulsion.
+    expect:
+      count: {of: "card_self_axis_*", eq: 3}
+      visible: [progress_self_standing]
+
+  - step_id: the_reader_standing
+    title: This node's reader policy is stated, not inferred
+    expect:
+      visible: [chip_reader_standing]
+
+  - step_id: an_act_asks_for_its_delegation_id
+    title: Declaring a standing requires a delegation id the person must type
+    description: >-
+      This step exists to make CIRISServer#676 visible in a run rather than only
+      in prose. Every act's body needs {delegation_id, reason} and BOTH are
+      mandatory server-side (SelfCommit, src/admin_ops.rs:3372-3384; an empty
+      reason is refused by name at :3462). No route returns that id —
+      GET /v1/auth/device/grants provably skips it
+      (src/auth/device_grant.rs:1192-1194, "Skip owner-bindings (infra:*)") — so
+      the client offers a free-text field and the operator must know the value.
+      The flow asserts the field is there and takes input; it never submits.
+    optional_step: true
+    requires:
+      screen: NetworkOps
+      visible: [input_self_delegation_id]
+    do:
+      - input: {input_self_delegation_id: "not-a-real-delegation"}
+      - input: {input_self_reason: "flow check, never submitted"}
+    expect:
+      screen: NetworkOps
+      visible: [input_self_delegation_id, input_self_reason]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refreshing the standings does not leave the screen
+    do:
+      - click: btn_self_refresh
+    expect:
+      screen: NetworkOps
+      visible: [screen_network_ops, section_self_reader_ops]
+
+  - step_id: the_hub_is_one_press_away
+    title: The network hub is reachable from here
+    do:
+      - click: btn_netops_open_hub
+    expect:
+      absent: [section_self_reader_ops]

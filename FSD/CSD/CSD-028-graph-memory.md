@@ -4,7 +4,7 @@
 **Flow**: none — this surface carries no test tag at all, which is why the stage is `envisioned`
 
 ```yaml csd:stage
-stage: envisioned
+stage: building
 owner: CIRISClient
 ```
 

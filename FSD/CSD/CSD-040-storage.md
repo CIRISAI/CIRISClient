@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -105,6 +105,15 @@ error:     {tag: "proposed:storage_error", renders: "the errorContainer card at 
 Three of four are `proposed:`, and unusually the *behaviour* is already correct:
 this screen distinguishes loading from error from populated. It is only
 undrivable, which is a smaller fix than the other cards in this area.
+
+**`screen_storage` is the ONLY `testable*` literal on this screen.**
+The eight `row_storage_*` tags named above do not exist at v0.5.224, so every
+value this card shows — total nodes, recent nodes, oldest, newest, the per-type
+and per-scope breakdowns, the data dir and the free disk — is undrivable. That is
+why no flow is written for CSD-040 in this pass: a flow could assert that the
+screen composed and nothing about what it says, which is the vacuous shape
+`flow_spec.py`'s header names. The eight rows must be written `proposed:` here
+and then tagged.
 
 ## 3. Contracts (who)
 

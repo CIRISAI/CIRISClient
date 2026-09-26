@@ -1,0 +1,81 @@
+csd: CSD-068
+flow: csd_068_provision_accord_holder
+title: Provision an accord holder, and refuse honestly with no token
+description: >-
+  CSD-068 §4, driven. Every tag on this screen is real, which is why CSD-068 is
+  the one card in the accord area whose flow can be written today. The flow
+  asserts the form, that a disabled submit does nothing (rather than flashing a
+  banner), and that a submit against a node with no FIPS token lands on
+  `provision_holder_error` and NOT on `provision_holder_success`.
+# Floor: all ten tags are `testable*` literals in
+# ui/screens/ProvisionAccordHolderScreen.kt at v0.5.224.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_form
+    title: The form asks for the four things, and claims nothing yet
+    description: >-
+      `absent:` on both banners is half the assertion: a screen that renders its
+      success banner before anything has been provisioned would pass a `visible:`
+      check on the form alone.
+    requires:
+      screen: ProvisionAccordHolder
+    expect:
+      visible:
+        - chk_provision_holder_fips
+        - input_provision_holder_key_id
+        - input_provision_holder_usb_path
+        - input_provision_holder_pin
+        - btn_provision_holder_usb_browse
+        - btn_provision_holder_submit
+      absent: [provision_holder_success, provision_holder_error]
+
+  - step_id: empty_submit_does_nothing
+    title: Submit with nothing filled in produces no banner at all
+    description: >-
+      The button is disabled, so the click is swallowed by design. The assertion
+      is that NEITHER banner appears — a disabled control that still fires its
+      handler is CIRISClient#70's shape, and #92 added a disabled-click probe for
+      exactly this class.
+    do:
+      - click: btn_provision_holder_submit
+    expect:
+      screen: ProvisionAccordHolder
+      absent: [provision_holder_success, provision_holder_error]
+
+  - step_id: fips_and_a_path
+    title: The FIPS acknowledgement and the USB path take input
+    description: >-
+      CC 4.2.2.1 keeps FIPS approval a CLAIM the operator makes, so the checkbox
+      stays even once the node can be asked whether a token is inserted
+      (CSD-068 §3 names `/v1/accord/yubikey-status` as the cheapest fix here).
+    do:
+      - click: chk_provision_holder_fips
+      - input: {input_provision_holder_usb_path: "/media/holder-a1"}
+      - input: {input_provision_holder_key_id: "wa-holder-a1"}
+    expect:
+      visible: [chk_provision_holder_fips, input_provision_holder_usb_path]
+      absent: [provision_holder_success, provision_holder_error]
+
+  - step_id: no_token_is_an_error_not_a_success
+    title: Submitting against a node with no token errors, and says which
+    description: >-
+      `POST /v1/accord/provision-holder` is loopback-only
+      (CIRISServer src/accord_provision.rs:3697, guard documented at :29-36). With
+      no FIPS token present the node refuses, and the screen must land on the
+      error banner. Asserting `absent: [provision_holder_success]` is what
+      separates "it refused" from "it reported a mint that never happened".
+    do:
+      - input: {input_provision_holder_pin: "000000"}
+      - click: btn_provision_holder_submit
+    expect:
+      state: error
+      visible: [provision_holder_error]
+      absent: [provision_holder_success]
+
+  - step_id: back_leaves_the_screen
+    title: Back returns to Everyone > Safety
+    do:
+      - click: btn_provision_holder_back
+    expect:
+      absent: [btn_provision_holder_submit]

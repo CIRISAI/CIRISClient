@@ -4,7 +4,7 @@
 **Flow**: none — this is the template other CSDs bind
 
 ```yaml csd:stage
-stage: envisioned
+stage: building
 owner: CIRISClient
 ```
 
@@ -89,7 +89,30 @@ error:     {tag: receipt_rule, renders: "a NotSent fact renders 'This node did n
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the envelope on every list route | per surface | CIRISServer | **unconfirmed** — CIRISServer#616 is the first ask (contacts) |
+| the envelope on every list route | per surface | CIRISServer | **live since 0.5.217** — CIRISServer#616 CLOSED 2026-09-25 |
+
+**The substrate has answered, which is what moves this to `building`.** The
+envelope is built once as `grant_receipt` (`CIRISServer src/peer.rs:1524-1560` —
+`subject_key_ids`, `attesting_key_id`, `cohort_scope`, `dimension`,
+`consent_prefixes`, plus `valid_until` / `row_expires_at`) and attached per row
+on five reads: `GET /v1/contacts` (`src/contacts_chat.rs:1704-1712`),
+`GET /v1/drive` and `GET /v1/files/{id}/meta` (`src/drive.rs:1521` `envelope_of`,
+called `:1844`, `:1965`), `GET /v1/families/{id}` (`src/family_api.rs:561-568`),
+`GET /v1/chat/{cid}/messages` (`src/contacts_chat.rs:2588-2596`) and the
+`/v1/memory/query` CEG projection (`src/memory_api.rs:663-671`).
+
+**`GET /v1/notes` is the one read that does NOT carry it** — `read_notes` in
+`src/drive.rs` never calls `envelope_of`. A note is a CEG item by the rule in §1,
+so a Notes card binding this template renders `Fact.NotSent` on every row until
+that read joins the others. That is a row to ask for, not a reason to hide the
+hamburger.
+
+**The open work is in THIS repo, not upstream.** `models/federation/Contact.kt:27-66`
+has no `grant` member — its own doc comment lists only four contact-only members —
+so `ui/screens/PeopleSupport.kt:66-83` still builds `attester`, `scope` and
+`dimensionValue` as `Fact.ByRule` and `rule` as `Fact.NotSent`: one wire fact of
+five, against a node that now sends all five. Adding the field and reading it is
+what takes this card, and CSD-005 with it, to `testable`.
 
 ## 4. Flow (how)
 

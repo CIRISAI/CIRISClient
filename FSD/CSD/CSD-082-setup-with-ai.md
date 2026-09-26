@@ -5,7 +5,7 @@
 **Flow**: partly written — `testing/gate/session_fixture.py` drives it today
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 

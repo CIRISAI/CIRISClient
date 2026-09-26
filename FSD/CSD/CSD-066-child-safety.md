@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -193,7 +193,17 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | match count for a group | **missing** — no `hard_case:watchlist_match` read | CIRISServer | blocks `txt_watchlist_match_count` |
 
 The two missing rows are one ask: **CC 4.5.7's "never silent" audit has no read
-route.** The attestations are emitted by the node and there is nothing that
+route — and the reason is narrower than "nothing serves them".** The two
+constants `HARD_CASE_WATCHLIST_ENABLED` (`CIRISServer src/safety/watchlist.rs:82`)
+and `HARD_CASE_WATCHLIST_MATCH` (`:84`) are declared and have **zero other
+references anywhere in `src/`**: `enable_watchlist` (`:177-242`) writes only a
+`watchlist_config` attestation and never calls persist's `record_hard_case`. They
+are not emitted, so there is nothing to serve. The READ door already exists
+(`list_hard_case_events`, used at `src/admin_ops.rs:3264` and `:3831`), so the ask
+is one emit call on the `admin_ops.rs:1242` pattern, not a new route. Separately,
+`on_publish` returns `SeamOutcome::DeferredNoMatcher` (`watchlist.rs:378-390`) — no
+matcher is installed on any build, so there are no matches to count in any case.
+The superseded claim was that the attestations are emitted and there is nothing that
 serves them back — the same shape as the capacity read before CIRISServer#580
 (CSD-004 §3), and with the same consequence: a client that can only render the
 config renders a mechanism with no history.

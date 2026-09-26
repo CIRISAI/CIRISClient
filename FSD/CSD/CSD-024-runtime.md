@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -112,13 +112,42 @@ here, with the aggravation that the flattering thing is a specific claim.
 |---|---|---|---|
 | pause | `POST /v1/system/runtime/pause` | CIRISAgent | live (`system/runtime.py:42`, `/runtime/{action}`) |
 | resume | `POST /v1/system/runtime/resume` | CIRISAgent | live, same route |
-| one step | `POST /v1/system/runtime/step` | CIRISAgent | live, same route |
-| state read-back | `POST /v1/system/runtime/status` | CIRISAgent | **unconfirmed** — `getRuntimeState` posts to the same `{action}` route with `action = "status"`; that a mutating POST route answers a read is not asserted anywhere |
-| the live step stream | `GET /v1/system/runtime/reasoning-stream` | CIRISAgent | live (route present); `streamConnected` is rendered but this client's `RuntimeViewModel` does not open it |
-| queue | `GET /v1/system/runtime/queue` | CIRISAgent | live; not called |
+| one step | `POST /v1/system/runtime/step` | CIRISAgent | live, **a DIFFERENT route** (`system_extensions.py:292`) — see below |
+| state read-back | `POST /v1/system/runtime/state` | CIRISAgent | **live, and contracted as a read** (`system/helpers.py:580-594`, "Get current state without changing it") |
+| the live step stream | `GET /v1/system/runtime/reasoning-stream` | CIRISAgent | live (`system_extensions.py:922`); opened by `InteractViewModel`, never by `RuntimeViewModel` — see below |
+| queue | `GET /v1/system/runtime/queue` | CIRISAgent | live (`system_extensions.py:39`); not called (`SystemExtensionsApi.kt:75` has zero callers) |
 
-`CIRISServer` serves **no** `/v1/system/runtime*`. Agent tree last commit
-2026-08-15.
+`CIRISServer` serves **no** `/v1/system/runtime*` — `git grep -n 'system/runtime'
+origin/main -- src/` returns zero at 0.5.217, and the node folds only
+`/v1/system/health` from a brain (`src/health.rs:576-591`). There is no general
+brain proxy.
+
+**Every agent row re-checked against `main`, not the 2026-08-15 tree.** The drift
+since that tree is additive only (`GET /runtime/delivery-receipt`,
+`POST /runtime/memory/release`, a `/v1` fall-through at `app.py:386-389`);
+`valid_actions` is unchanged, so no hedge here is load-bearing.
+
+**The state read-back row said `unconfirmed` and was wrong twice.** There is no
+`status` action — `valid_actions = ["pause","resume","state"]`
+(`system/helpers.py:455` on `main`), so `POST /v1/system/runtime/status` would
+400. And the client never posts it: `CIRISApiClient.kt:11338` logs "via 'state'
+action" and `:11344` sets `action = "state"`. `state` returns before any mutation
+(`runtime.py:78-80`) and its helper is a pure read. Nothing is unknown here, and
+no upstream ask is needed.
+
+**`step` is not "the same route".** `POST /v1/system/runtime/step` resolves to
+`system_extensions.py:292`, and it is reachable ONLY because
+`system_extensions.router` is registered before `system.router`
+(`api/app.py:360-361`). `step` is absent from `valid_actions`, so reversing that
+order turns this row into a 400 with nothing on either side to catch it.
+
+**`streamConnected` is rendered from a poll, not a stream.**
+`RuntimeViewModel.kt:313` sets it `true` on a successful poll (its own comment:
+"Simulated - we're successfully polling"), while the only opener of
+`reasoning-stream` is `ReasoningStreamClient.kt:77` from `InteractViewModel.kt:469`.
+The screen therefore says "live" when nothing is streamed — the inverse of what
+§2's `renders` text promises, and a `proposed:runtime_stream_state` tag must not
+be written against the current behaviour.
 
 ## 4. Flow (how)
 

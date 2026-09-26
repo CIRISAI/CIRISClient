@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -108,6 +108,17 @@ read. `OpsRow` publishes the value to the automation tree with the comment that
 default, and telling those apart is the whole point" — and the default defeats
 it one layer up.
 
+**The six `row_netops_*` tags named above are NOT `testable*` literals.**
+`NetworkOpsScreen.kt` at v0.5.224 carries exactly two: `screen_network_ops` and
+`btn_netops_open_hub`. Everything else this card can assert lives in
+`SelfReaderOpsSection.kt` (`section_self_reader_ops`, `card_self_axis_$tag`,
+`chip_reader_standing`, `progress_self_standing`, `input_self_delegation_id`,
+`btn_self_declare_$tag`, `text_self_partition`, `text_self_distinct_zeroes`).
+So the signer key, the mode, the disk budget and the data dir — the four values
+this card exists to show — are rendered and UNTAGGED. They must be written
+`proposed:` or tagged before any flow can assert them;
+`testing/flows/csd-036-network-ops.yaml` drives the self/reader half only.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -115,7 +126,7 @@ it one layer up.
 | signer key | `GET /v1/federation/identity` | CIRISServer | live — `src/federation_surface.rs:696` |
 | agent mode, SERVER-eligibility, disk budget, data dir | `GET /v1/system/agent-mode` | **CIRISAgent**, not the node | **wrong-host** — no such route in CIRISServer `src/*.rs` on `origin/main` (0.5.217); live on CIRISAgent `routes/system/agent_mode.py:78` (tree of 2026-08-15, may be stale) |
 | this node's own standings (tier S) | `GET /v1/admin/self`, `POST /v1/admin/self/{shed,resume-load,stop-accepting,resume-accepting,compelled,compulsion-lifted}` | CIRISServer | live — `src/admin_ops.rs:4288-4309` |
-| this node's reader policy (tier R) | `POST /v1/admin/reader/{fold,honour,…}` | CIRISServer | live — `src/admin_ops.rs:4312-4316` |
+| this node's reader policy (tier R) | `POST /v1/admin/reader/{fold,honour,…}` | CIRISServer | live — `src/admin_ops.rs:4312` (fold), `:4316` (honour), `:4320` (decline); the span is 4312-4320, not 4312-4316 |
 | an `config:agent_mode` record signed by the node | — | CIRISServer | **missing** — see §6 |
 
 ## 4. Flow (how)
