@@ -101,13 +101,19 @@ steps:
     title: On a node with no accord family the card refuses before any of that
     description: >-
       Optional because it needs a node that has never run a genesis ceremony,
-      which the standing fixture does not guarantee. It still asserts everything
-      it says when its precondition holds.
+      which the standing fixture does not guarantee.
+
+      NOT `state: empty`, deliberately. CSD-090's `states:` block maps `empty` to
+      `proposed:duty_source_absent`, and that is CORRECT: the screen has no such
+      tag and renders "this node knows no accord family yet" through
+      `duty_source_error` — so the one state that is not a failure is the one
+      that looks most like one. Asserting `state: empty` here is a LOAD ERROR
+      under PR #97's binder, and it should be: until the tag exists, this step
+      can only say which rows are gone, not that the screen is honestly empty.
     optional_step: true
     requires:
       screen: DutyConferral
     expect:
-      state: empty
       absent: [duty_source_name, duty_source_quorum]
 
   - step_id: back_to_accord
