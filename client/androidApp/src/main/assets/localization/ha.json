@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Yarda da Shiga Cikin CIRIS Mesh"
-    }
+    },
+    "grant_not_owner_authored": "Wannan node ya rubuta wancan yardan kafin ku sa hannu a kai, don haka ba naku ba ne domin ku janye shi a nan, kuma node ɗin ba zai janye yarda a madadinku ba. Har yanzu yana aiki.",
+    "delegate_may_not_withdraw": "Zaman wakilci ba zai iya janye yardar mai shi ba. Ana sa hannu kan janyewar da maɓallin mai shi na kansa.",
+    "author_signer_unavailable": "Janye yarda mai sa hannu ne na mutumin da ya bayar da ita, kuma wannan node ba zai iya amfani da wannan shaida a yanzu ba. Ba a janye komai ba.",
+    "withdraw_failed": "An kasa ajiye janyewar. Ba a janye komai ba.",
+    "delegation_denied": "Wakilcin wannan zama bai ba da izinin wannan aiki ba.",
+    "malformed_body": "Buƙatar ba ta ambaci izinin da za a janye ba.",
+    "store_unavailable": "Node ɗin ya kasa karanta bayanan yardarsa. Ba a janye komai ba — sake gwadawa da zarar node ɗin ya warke.",
+    "grant_not_live": "Wancan ba izinin yarda mai aiki ba ne a wannan node. Wataƙila an riga an janye shi."
   },
   "consent_about_desc": "Yin aiki tare da CIRIS yana nufin raba bayanan da tsarin zai iya koya daga gare su. Ku sarrafa menene ake raba da ta yaya ake amfani da shi.",
   "consent_about_title": "Game da Yarda",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Wannan kumburi ba ya bayar da rahoton transports nasa ba.",
     "audit_not_on_this_node": "Wannan kumburi ba ya riƙe littafin dubawar wakili ba. Ba a tace komai ba.",
     "consent_not_on_this_node": "Wannan kumburi ba ya riƙe bayanan amincewa ba. Wakili ne ke riƙe amincewa, kuma wannan kumburi yana gudana ba tare da wakili ba.",
-    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya."
+    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya.",
+    "manage_consent_revoke_unsupported": "Wannan node ba zai iya janye yarda tukuna ba (yana buƙatar ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Janyewa yana ambaton izini guda, kuma wannan node bai jera izinan haɗin sa tukuna ba, don haka yana aiki a kan izinin da aka kafa a nan cikin wannan zama.",
+    "manage_consent_revoke_confirm_title": "Janye wannan yardan?",
+    "manage_consent_revoke_fact_stops_value": "{from} zai daina yin kwafi zuwa {to}.",
+    "manage_consent_revoke_confirm": "Janye",
+    "manage_consent_withdrawn": "An janye. Node ɗin ya rubuta janyewarku ({id}).",
+    "consent_withdraw_fact_who": "Wanene",
+    "consent_withdraw_fact_stops": "Abin da ya tsaya",
+    "consent_withdraw_fact_signs": "Wanda ya sa hannu",
+    "consent_withdraw_signs_value": "Ku. Node ɗin yana sa hannu kan janyewar da maɓallinku, ba nasa ba.",
+    "consent_remaining_title": "Har yanzu yana aiki",
+    "consent_remaining_row": "Har yanzu yana aiki: wannan node ya rubuta shi kafin ku sa hannu, don haka ba za a iya janye shi a nan ba.",
+    "contacts_remove": "Cire",
+    "contacts_remove_confirm_title": "Cire {who} daga lambobin sadarwarku?",
+    "contacts_remove_fact_stops_value": "Yardarku ta raba musu bayanai. Saƙonninku da bayanan da aka raba za su daina yin kwafi zuwa gare su.",
+    "contacts_removed": "An cire {who}. Yardarku a kansu an janye ta.",
+    "contacts_remove_remaining_title": "{who} har yanzu lambar sadarwa ce",
+    "contacts_remove_remaining_body": "Kun janye izini {count}. Izinan da ke ƙasa har yanzu suna aiki.",
+    "contacts_remove_remaining_row": "Har yanzu yana aiki: wannan node ne ya rubuta shi kafin ku sa hannu kan lambobin sadarwarku, don haka ba za a iya janye shi a nan ba",
+    "contacts_remove_unsupported": "Wannan node ba zai iya cire lambobin sadarwa tukuna ba (yana buƙatar ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Node ɗin ya kasa karanta bayanan lambobinsa. Ba a canza komai ba — sake gwadawa da zarar node ɗin ya warke.",
     "unknown_fed_id": "Wannan ID na tarayya ba ya cikin jerin adireshin wannan node. Fara shigar da mabuɗin (peering) — alamar da aka sanar amma ba a shigar ba ba ta da tushen asali kuma ba za a iya ba ta yarda ba.",
     "unreachable": "An san su, amma babu wanda ya amsa. Na'urorinsu na iya kasancewa ba a kan layi ba; saƙonni za su kai musu lokacin da suka dawo.",
-    "unresolvable": "Wannan mai ganewa ba ya komawa ga wani abokin hulɗa ba."
+    "unresolvable": "Wannan mai ganewa ba ya komawa ga wani abokin hulɗa ba.",
+    "not_a_contact": "Ba lambar sadarwa ba ne a nan: babu izinin yarda mai aiki da ya ambace su."
   },
   "ceg": {
     "envelope": {

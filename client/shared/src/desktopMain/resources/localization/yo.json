@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Fọwọ́sí Ìkópa nínú CIRIS Mesh"
-    }
+    },
+    "grant_not_owner_authored": "Nóòdù yìí ni ó kọ ìyọ̀ǹda yẹn kí o tó fọwọ́sí i, nítorí náà kì í ṣe tìrẹ láti yọ kúrò níbí, nóòdù náà kò sì ní yọ ìyọ̀ǹda kúrò ní ipò rẹ. Ó ṣì ń ṣiṣẹ́.",
+    "delegate_may_not_withdraw": "Sáà ìfilélẹ̀-àṣẹ kò lè yọ ìyọ̀ǹda olóhun kúrò. A ń fi kọ́kọ́rọ́ olóhun fúnra rẹ̀ fọwọ́sí ìyọkúrò náà.",
+    "author_signer_unavailable": "Ẹnikẹ́ni tí ó fún ìyọ̀ǹda náà ni ó ń fọwọ́ sí ìyọkúrò rẹ̀, nóòdù yìí kò sì lè lo ìdánimọ̀ náà lọ́wọ́lọ́wọ́ báyìí. Kò sí ohun tí a yọ kúrò.",
+    "withdraw_failed": "A kò lè fi ìyọkúrò náà pamọ́. Kò sí ohun tí a yọ kúrò.",
+    "delegation_denied": "Ìfilélẹ̀-àṣẹ sáà yìí kò fún ìṣe yẹn ní àṣẹ.",
+    "malformed_body": "Ìbéèrè náà kò dárúkọ ìyọ̀ǹda kan láti yọ kúrò.",
+    "store_unavailable": "Nóòdù náà kò lè ka àwọn àkọsílẹ̀ ìyọ̀ǹda rẹ̀. Kò sí ohun tí a yọ kúrò. Gbìyànjú lẹ́ẹ̀kansi nígbà tí nóòdù bá ti wà ní ìlera.",
+    "grant_not_live": "Èyí kì í ṣe ìyọ̀ǹda tí ó ṣì ń ṣiṣẹ́ lórí nóòdù yìí. Ó lè jẹ́ pé a ti yọ ọ́ kúrò ná."
   },
   "consent_about_desc": "Kẹ́kọ̀ọ́ nípa bí ìfohùnsí ṣe ń ṣiṣẹ́ ní CIRIS",
   "consent_about_title": "Nípa Ìfohùnsí",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Nódù yìí kò ṣe ìròyìn àwọn ìrìnnà rẹ̀.",
     "audit_not_on_this_node": "Nódù yìí kò ní àkọsílẹ̀ àyẹ̀wò aṣojú. Kò sí ohun tí a yọ kúrò.",
     "consent_not_on_this_node": "Nódù yìí kò ní àwọn àkọsílẹ̀ ìyọ́nda. Aṣojú ni ó ń pa ìyọ́nda mọ́, nódù yìí sì ń ṣiṣẹ́ láìsí ọ̀kan.",
-    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà."
+    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà.",
+    "manage_consent_revoke_unsupported": "Nóòdù yìí kò tíì lè yọ ìyọ̀ǹda kúrò (nílò ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Yíyọkúrò ń dárúkọ ìyọ̀ǹda kan, nóòdù yìí kò sì tíì ṣe àkọsílẹ̀ àwọn ìyọ̀ǹda alábàáṣiṣẹ́pọ̀ rẹ̀, nítorí náà ó ń ṣiṣẹ́ lórí ìyọ̀ǹda tí a ṣètò níbí nínú sáà yìí.",
+    "manage_consent_revoke_confirm_title": "Yọ ìyọ̀ǹda yìí kúrò?",
+    "manage_consent_revoke_fact_stops_value": "{from} yóò dáwọ́ ẹ̀dà-kíkọ sí {to} dúró.",
+    "manage_consent_revoke_confirm": "Yọ kúrò",
+    "manage_consent_withdrawn": "A ti yọ kúrò. Nóòdù náà ti kọ ìyọkúrò rẹ sílẹ̀ ({id}).",
+    "consent_withdraw_fact_who": "Ta ni",
+    "consent_withdraw_fact_stops": "Ohun tí ó dáwọ́dúró",
+    "consent_withdraw_fact_signs": "Ẹni tí ń fọwọ́sí",
+    "consent_withdraw_signs_value": "Ìwọ. Nóòdù náà ń fi kọ́kọ́rọ́ rẹ fọwọ́sí ìyọkúrò náà, kì í fi tirẹ̀ rí.",
+    "consent_remaining_title": "Ó ṣì ń ṣiṣẹ́",
+    "consent_remaining_row": "Ó ṣì ń ṣiṣẹ́: nóòdù yìí ni ó kọ ọ́ kí o tó fọwọ́sí, nítorí náà kò ṣe é yọ kúrò níbí.",
+    "contacts_remove": "Yọ kúrò",
+    "contacts_remove_confirm_title": "Yọ {who} kúrò nínú àwọn olùbásọ̀rọ̀ rẹ?",
+    "contacts_remove_fact_stops_value": "Ìyọ̀ǹda rẹ láti pín pẹ̀lú wọn. Àwọn ìránṣẹ́ rẹ àti àwọn àkọsílẹ̀ tí a pín yóò dáwọ́ ẹ̀dà-kíkọ sí wọn dúró.",
+    "contacts_removed": "A ti yọ {who} kúrò. A ti yọ ìyọ̀ǹda rẹ sí wọn kúrò.",
+    "contacts_remove_remaining_title": "{who} ṣì jẹ́ olùbásọ̀rọ̀",
+    "contacts_remove_remaining_body": "O ti yọ ìyọ̀ǹda {count} kúrò. Àwọn ìyọ̀ǹda tí ó wà ní ìsàlẹ̀ ṣì ń ṣiṣẹ́.",
+    "contacts_remove_remaining_row": "Ó ṣì ń ṣiṣẹ́: nóòdù yìí ni ó kọ ọ́ kí o tó fọwọ́sí àwọn olùbásọ̀rọ̀ rẹ, nítorí náà kò ṣe é yọ kúrò níbí",
+    "contacts_remove_unsupported": "Nóòdù yìí kò tíì lè yọ àwọn olùbásọ̀rọ̀ kúrò (nílò ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Nóòdù náà kò lè ka àwọn àkọsílẹ̀ olùbásọ̀rọ̀ rẹ̀. Kò sí ohun tí ó yí padà — gbìyànjú lẹ́ẹ̀kansi nígbà tí nóòdù bá ti wà ní ìlera.",
     "unknown_fed_id": "ID ìṣọ̀kan yẹn kò sí nínú àkójọ nóòdù yìí. Kọ́kọ́ gba kọ́kọ́rọ́ náà wọlé (peering) — àmì-ìrántí tí a kéde ṣùgbọ́n tí a kò tíì gbà wọlé kò ní orísun kankan, a kò sì lè yọ̀ǹda fún un.",
     "unreachable": "A mọ̀ wọn, ṣùgbọ́n kò sí ìdáhùn kankan. Àwọn ẹ̀rọ wọn lè jẹ́ tí kò sórí ayélujára; àwọn ìránṣẹ́ yóò dé ọ̀dọ̀ wọn nígbà tí wọ́n bá padà.",
-    "unresolvable": "Àmì-ìdánimọ̀ yẹn kò yanjú sí olùbásọ̀rọ̀ kankan."
+    "unresolvable": "Àmì-ìdánimọ̀ yẹn kò yanjú sí olùbásọ̀rọ̀ kankan.",
+    "not_a_contact": "Wọn kì í ṣe olùbásọ̀rọ̀ níbí: kò sí ìyọ̀ǹda tí ó ṣì ń ṣiṣẹ́ tí ó dárúkọ wọn."
   },
   "ceg": {
     "envelope": {

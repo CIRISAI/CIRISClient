@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "CIRIS メッシュへの参加に同意する"
-    }
+    },
+    "grant_not_owner_authored": "このノードは、あなたが署名する前にその同意を記録しました。そのため、ここであなたがそれを取り消すことはできず、ノードもあなたに代わって同意を取り消すことはありません。この同意は現在も有効です。",
+    "delegate_may_not_withdraw": "委任されたセッションは、所有者の同意を取り消すことができません。取り消しは所有者自身の鍵で署名されます。",
+    "author_signer_unavailable": "同意の取り消しは、それを与えた本人によって署名されますが、このノードは現在そのアイデンティティを使用できません。何も取り消されませんでした。",
+    "withdraw_failed": "取り消しを保存できませんでした。何も取り消されませんでした。",
+    "delegation_denied": "このセッションの委任は、その操作を許可していません。",
+    "malformed_body": "リクエストは、取り消す対象の同意の付与を指定していませんでした。",
+    "store_unavailable": "ノードは同意レコードを読み取れませんでした。何も取り消されていません。ノードが正常になってから再試行してください。",
+    "grant_not_live": "それはこのノードにおいて有効な同意の付与ではありません。すでに取り消されている可能性があります。"
   },
   "consent_about_desc": "CIRISにおける同意の仕組みについて学ぶ",
   "consent_about_title": "同意について",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "このノードは自身のトランスポートを報告しません。",
     "audit_not_on_this_node": "このノードはエージェントの監査ログを保持していません。何もフィルタリングされていません。",
     "consent_not_on_this_node": "このノードは同意記録を保持していません。同意はエージェントによって保持されるものであり、このノードはエージェントなしで動作しています。",
-    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。"
+    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。",
+    "manage_consent_revoke_unsupported": "このノードはまだ同意を取り消すことができません（ciris-server 0.5.218 が必要です）。",
+    "manage_consent_revoke_needs_grant": "取り消しには対象となる同意の付与を1件指定する必要がありますが、このノードはまだピアリングの同意の付与を一覧表示できません。そのため、このセッション内で設定された同意の付与に対してのみ機能します。",
+    "manage_consent_revoke_confirm_title": "この同意を取り消しますか？",
+    "manage_consent_revoke_fact_stops_value": "{from} から {to} への複製が停止します。",
+    "manage_consent_revoke_confirm": "取り消す",
+    "manage_consent_withdrawn": "取り消しました。ノードはあなたの取り消しを記録しました（{id}）。",
+    "consent_withdraw_fact_who": "対象者",
+    "consent_withdraw_fact_stops": "停止する内容",
+    "consent_withdraw_fact_signs": "署名者",
+    "consent_withdraw_signs_value": "あなたです。ノードはあなたの鍵で取り消しに署名し、自身の鍵では署名しません。",
+    "consent_remaining_title": "有効なまま",
+    "consent_remaining_row": "有効なまま：このノードは、あなたが署名する前にこれを記録したため、ここでは取り消せません。",
+    "contacts_remove": "削除",
+    "contacts_remove_confirm_title": "{who} を連絡先から削除しますか？",
+    "contacts_remove_fact_stops_value": "あなたがその相手と共有するための同意です。あなたのメッセージや共有レコードは、その相手への複製が停止します。",
+    "contacts_removed": "{who} を削除しました。その相手への同意は取り消されました。",
+    "contacts_remove_remaining_title": "{who} は現在も連絡先です",
+    "contacts_remove_remaining_body": "{count} 件の同意の付与を取り消しました。以下の同意は現在も有効です。",
+    "contacts_remove_remaining_row": "有効なまま：あなたが連絡先に署名する前に、このノードによって記録されたため、ここでは取り消せません",
+    "contacts_remove_unsupported": "このノードはまだ連絡先を削除できません（ciris-server 0.5.218 が必要です）。"
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "ノードは連絡先レコードを読み取れませんでした。何も変更されていません。ノードが正常になってから再試行してください。",
     "unknown_fed_id": "そのフェデレーション ID はこのノードのディレクトリにありません。まず鍵を承認(ピアリング)してください。アナウンス済みでも未承認のブックマークには来歴がなく、同意の対象にできません。",
     "unreachable": "相手は既知ですが、応答がありませんでした。相手のデバイスがオフラインの可能性があります。メッセージは相手が戻った際に届きます。",
-    "unresolvable": "その識別子は連絡先として解決できません。"
+    "unresolvable": "その識別子は連絡先として解決できません。",
+    "not_a_contact": "相手はここでは連絡先として登録されていません。その相手を指定する有効な同意の付与がありません。"
   },
   "ceg": {
     "envelope": {

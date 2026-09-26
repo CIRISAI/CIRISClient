@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "ለCIRIS Mesh ተሳትፎ ፈቃድ ይስጡ"
-    }
+    },
+    "grant_not_owner_authored": "ይህ ኖድ ይህን ፈቃድ እርስዎ ከመፈረምዎ በፊት ጽፎታል፤ ስለዚህ እዚህ የማንሳት መብትዎ አይደለም፣ ኖዱም በእርስዎ ተክቶ ፈቃድን አያነሳም። አሁንም ሥራ ላይ ነው።",
+    "delegate_may_not_withdraw": "በውክልና የተሰጠ ክፍለ-ጊዜ የባለቤቱን ፈቃድ ማንሳት አይችልም። መነሳቱ በባለቤቱ ራሱ ቁልፍ ይፈረማል።",
+    "author_signer_unavailable": "ፈቃድ ማንሳት የሰጠው ሰው ይፈርማል፣ ይህ ኖድ ግን አሁን ያንን ማንነት መጠቀም አይችልም። ምንም አልተነሳም።",
+    "withdraw_failed": "መነሳቱ ሊከማች አልቻለም። ምንም አልተነሳም።",
+    "delegation_denied": "የዚህ ክፍለ-ጊዜ ውክልና ያንን ተግባር አይሰጥም።",
+    "malformed_body": "ጥያቄው የሚነሳ ስጦታ አልጠቀሰም።",
+    "store_unavailable": "ኖዱ የፈቃድ መዝገቦቹን ማንበብ አልቻለም። ምንም አልተነሳም። ኖዱ ጤናማ ሲሆን እንደገና ይሞክሩ።",
+    "grant_not_live": "ያ በዚህ ኖድ ላይ ሕያው የፈቃድ ስጦታ አይደለም። አስቀድሞ ተነስቶ ሊሆን ይችላል።"
   },
   "consent_about_desc": "ይህ የተፈቀደው ምን እንደሚያስችል ይወቁ",
   "consent_about_title": "ስለ ይህ ፈቃድ",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "ይህ ኖድ የመጓጓዣ መንገዶቹን አይገልጽም።",
     "audit_not_on_this_node": "ይህ ኖድ የወኪል ኦዲት መዝገብ አይይዝም። ምንም አልተጣራም።",
     "consent_not_on_this_node": "ይህ ኖድ የስምምነት መዝገቦችን አይይዝም። ስምምነት በወኪል ይያዛል፣ ይህ ኖድ ግን ወኪል ሳይኖረው ይሰራል።",
-    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።"
+    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።",
+    "manage_consent_revoke_unsupported": "ይህ ኖድ ፈቃድ ገና ማንሳት አይችልም (ciris-server 0.5.218 ይፈልጋል)።",
+    "manage_consent_revoke_needs_grant": "ማንሳት አንድ ስጦታ ይጠቅሳል፣ ይህ ኖድ ደግሞ ገና የአጋርነት ስጦታዎቹን አይዘረዝርም፤ ስለዚህ በዚህ ክፍለ-ጊዜ ውስጥ እዚህ የተዋቀረ ስጦታ ላይ ይሠራል።",
+    "manage_consent_revoke_confirm_title": "ይህን ፈቃድ ያንሱ?",
+    "manage_consent_revoke_fact_stops_value": "{from} ወደ {to} መገልበጡን ያቆማል።",
+    "manage_consent_revoke_confirm": "ያንሱ",
+    "manage_consent_withdrawn": "ተነስቷል። ኖዱ የእርስዎን መነሳት መዝግቧል ({id})።",
+    "consent_withdraw_fact_who": "ማን",
+    "consent_withdraw_fact_stops": "ምን ይቆማል",
+    "consent_withdraw_fact_signs": "ማን ይፈርማል",
+    "consent_withdraw_signs_value": "እርስዎ። ኖዱ መነሳቱን በእርስዎ ቁልፍ ይፈርማል፣ በራሱ ቁልፍ በፍጹም አይደለም።",
+    "consent_remaining_title": "አሁንም ሥራ ላይ ነው",
+    "consent_remaining_row": "አሁንም ሥራ ላይ ነው፦ ይህ ኖድ እርስዎ ከመፈረምዎ በፊት ጽፎታል፣ ስለዚህ እዚህ ሊነሳ አይችልም።",
+    "contacts_remove": "ያስወግዱ",
+    "contacts_remove_confirm_title": "{who}ን ከእውቂያዎችዎ ያስወግዱ?",
+    "contacts_remove_fact_stops_value": "ከእነሱ ጋር ለመጋራት የሰጡት ፈቃድ። መልዕክቶችዎ እና የተጋሩ መዝገቦችዎ ወደ እነሱ መገልበጥ ያቆማሉ።",
+    "contacts_removed": "{who} ተወግዷል። ለእነሱ የሰጡት ፈቃድ ተነስቷል።",
+    "contacts_remove_remaining_title": "{who} አሁንም እውቂያ ነው",
+    "contacts_remove_remaining_body": "{count} ስጦታ(ዎች) አንስተዋል። ከዚህ በታች ያሉት ስጦታዎች አሁንም ሥራ ላይ ናቸው።",
+    "contacts_remove_remaining_row": "አሁንም ሥራ ላይ ነው፦ እርስዎ እውቂያዎችዎን ከመፈረምዎ በፊት በዚህ ኖድ የተጻፈ ስለሆነ እዚህ ሊነሳ አይችልም",
+    "contacts_remove_unsupported": "ይህ ኖድ እውቂያዎችን ገና ማስወገድ አይችልም (ciris-server 0.5.218 ይፈልጋል)።"
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "ኖዱ የእውቂያ መዝገቦቹን ማንበብ አልቻለም። ምንም አልተለወጠም — ኖዱ ጤናማ ሲሆን እንደገና ይሞክሩ።",
     "unknown_fed_id": "ያ የፌዴሬሽን መለያ በዚህ ኖድ ማውጫ ውስጥ የለም። መጀመሪያ ቁልፉን ያስገቡ (peering) — የታወጀ-ግን-ያልገባ ምልክት ምንም ምንጭ የለውም እና ፈቃድ ሊሰጠው አይችልም።",
     "unreachable": "እነሱ ይታወቃሉ፣ ነገር ግን ምንም ምላሽ አልተሰጠም። መሣሪያዎቻቸው ከመስመር ውጭ ሊሆኑ ይችላሉ፤ ሲመለሱ መልዕክቶች ይደርሷቸዋል።",
-    "unresolvable": "ያ መለያ ወደ እውቂያ አይፈታም።"
+    "unresolvable": "ያ መለያ ወደ እውቂያ አይፈታም።",
+    "not_a_contact": "እነሱ እዚህ እውቂያ አይደሉም፦ ምንም ሕያው የፈቃድ ስጦታ አይጠቅሳቸውም።"
   },
   "ceg": {
     "envelope": {

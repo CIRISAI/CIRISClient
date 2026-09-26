@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "CIRIS Mesh Katılımına Rıza Göster"
-    }
+    },
+    "grant_not_owner_authored": "Bu düğüm o onayı siz imzalamadan önce yazdı, dolayısıyla burada geri çekmeniz sizin elinizde değil ve düğüm sizin adınıza onayı geri çekmeyecektir. Hâlâ etkin.",
+    "delegate_may_not_withdraw": "Yetki devri ile açılan bir oturum, sahibinin onayını geri çekemez. Geri çekme, sahibinin kendi anahtarıyla imzalanır.",
+    "author_signer_unavailable": "Onayı geri çekmek, onu veren kişi tarafından imzalanır ve bu düğüm şu anda o kimliği kullanamıyor. Hiçbir şey geri çekilmedi.",
+    "withdraw_failed": "Geri çekme kaydedilemedi. Hiçbir şey geri çekilmedi.",
+    "delegation_denied": "Bu oturumun yetki devri bu eylem için izin vermiyor.",
+    "malformed_body": "İstek, geri çekilecek bir izni belirtmedi.",
+    "store_unavailable": "Düğüm onay kayıtlarını okuyamadı. Hiçbir şey geri çekilmedi. Düğüm sağlıklı olduğunda tekrar deneyin.",
+    "grant_not_live": "Bu, bu düğümde geçerli bir onay izni değil. Zaten geri çekilmiş olabilir."
   },
   "consent_about_desc": "Bu akışın amacı ve nasıl yardımcı olduğu hakkında bilgi edinin",
   "consent_about_title": "Bu akış hakkında",
@@ -1266,6 +1274,9 @@
     "ceremony_state_proposed": "önerildi",
     "ceremony_state_signed": "imzalandı",
     "ceremony_state_not_yet": "henüz değil",
+    "contacts_remove_remaining_body": "{count} izni geri çektiniz. Aşağıdaki izinler hâlâ etkin.",
+    "contacts_remove_remaining_row": "Hâlâ etkin: kişilerinizi imzalamanızdan önce bu düğüm tarafından yazıldı, bu yüzden burada geri çekilemez",
+    "contacts_remove_unsupported": "Bu düğüm henüz kişileri kaldıramıyor (ciris-server 0.5.218 gerekiyor).",
     "receipt_this_node": "Bu düğüm — siz",
     "setup_finish_unclaimed": "Bu düğümü sahiplenmeden bitir",
     "identity_revoked_badge": "İptal edildi",
@@ -3082,7 +3093,24 @@
     "transport_not_on_this_node": "Bu düğüm taşıma yöntemlerini bildirmiyor.",
     "audit_not_on_this_node": "Bu düğüm bir ajan denetim günlüğü tutmuyor. Hiçbir şey filtrelenmedi.",
     "consent_not_on_this_node": "Bu düğüm onay kayıtları tutmuyor. Onay bir ajan tarafından tutulur ve bu düğüm bir ajan olmadan çalışır.",
-    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok."
+    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok.",
+    "manage_consent_revoke_unsupported": "Bu düğüm henüz onayı geri çekemiyor (ciris-server 0.5.218 gerekiyor).",
+    "manage_consent_revoke_needs_grant": "Geri çekme tek bir izni adlandırır ve bu düğüm henüz eşler arası izinlerini listelemiyor, bu yüzden bu oturumda burada kurulan bir izin üzerinde çalışır.",
+    "manage_consent_revoke_confirm_title": "Bu onay geri çekilsin mi?",
+    "manage_consent_revoke_fact_stops_value": "{from}, {to}'ya çoğaltılmayı durdurur.",
+    "manage_consent_revoke_confirm": "Geri çek",
+    "manage_consent_withdrawn": "Geri çekildi. Düğüm geri çekmenizi kaydetti ({id}).",
+    "consent_withdraw_fact_who": "Kim",
+    "consent_withdraw_fact_stops": "Ne duruyor",
+    "consent_withdraw_fact_signs": "Kim imzalıyor",
+    "consent_withdraw_signs_value": "Siz. Düğüm, geri çekmeyi kendi anahtarıyla değil, sizin anahtarınızla imzalar.",
+    "consent_remaining_title": "Hâlâ etkin",
+    "consent_remaining_row": "Hâlâ etkin: bu düğüm bunu siz imzalamadan önce yazdı, bu yüzden burada geri çekilemez.",
+    "contacts_remove": "Kaldır",
+    "contacts_remove_confirm_title": "{who} kişilerinizden kaldırılsın mı?",
+    "contacts_remove_fact_stops_value": "Onlarla paylaşım için verdiğiniz onay. Mesajlarınız ve paylaşılan kayıtlarınız onlara çoğaltılmayı durdurur.",
+    "contacts_removed": "{who} kaldırıldı. Onlara verdiğiniz onay geri çekildi.",
+    "contacts_remove_remaining_title": "{who} hâlâ bir kişi olarak kayıtlı"
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Düğüm kişi kayıtlarını okuyamadı. Hiçbir şey değiştirilmedi — düğüm sağlıklı olduğunda tekrar deneyin.",
     "unknown_fed_id": "Bu federasyon kimliği bu düğümün dizininde yok. Önce anahtarı kabul edin (eşleme) — duyurulmuş ama kabul edilmemiş bir yer imi hiçbir köken bilgisi taşımaz ve ona onay verilemez.",
     "unreachable": "Onlar tanınıyor, ancak hiçbir yanıt alınamadı. Cihazları çevrimdışı olabilir; geri döndüklerinde mesajlar onlara ulaşacaktır.",
-    "unresolvable": "Bu tanımlayıcı bir kişiye çözümlenmiyor."
+    "unresolvable": "Bu tanımlayıcı bir kişiye çözümlenmiyor.",
+    "not_a_contact": "Onlar burada bir kişi değil: onları adlandıran geçerli bir onay izni yok."
   },
   "ceg": {
     "envelope": {

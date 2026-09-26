@@ -37,6 +37,17 @@ object PeopleTags {
     /** The hamburger; `ItemRow` derives it from the receipt id, which is the key id. */
     fun receipt(keyId: String) = "btn_receipt_$keyId"
     fun receiptActChat(keyId: String) = "btn_receipt_act_chat_$keyId"
+    /** Remove a contact (CSD-005): opens the ConfirmSheet, never removes on its own. */
+    fun receiptActRemove(keyId: String) = "btn_receipt_act_remove_$keyId"
+
+    /** ConfirmSheet prefix: `btn_contacts_remove_confirm` / `btn_contacts_remove_cancel`. */
+    const val REMOVE_CONFIRM_PREFIX = "contacts_remove"
+    /** The grants still active after a removal — named, with why. Never "removed" while it shows. */
+    const val REMOVE_REMAINING = "contacts_remove_remaining"
+    const val REMOVE_DONE = "contacts_remove_done"
+    const val REMOVE_REFUSAL = "contacts_remove_refusal"
+    const val REMOVE_UNSUPPORTED = "contacts_remove_unsupported"
+    const val REMOVE_DISMISS = "btn_contacts_remove_dismiss"
 }
 
 /** How a trust state reads: a glyph and a tone. Never a colour. */
@@ -69,6 +80,9 @@ fun contactReceipt(
     openChatLabel: String,
     scopeNote: String,
     onOpenChat: () -> Unit,
+    /** Remove (withdraw consent); null leaves the act off, e.g. while a removal runs. */
+    removeLabel: String? = null,
+    onRemove: (() -> Unit)? = null,
 ): Receipt = Receipt(
     id = contact.keyId,
     subject = Fact.Wire(contact.keyId),
@@ -78,6 +92,11 @@ fun contactReceipt(
     dimensionValue = Fact.ByRule(CONTACT_GRANT_DIMENSION, CONTACT_GRANT_CC),
     rule = Fact.NotSent,
     holders = null,
-    acts = listOf(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onOpenChat)),
+    acts = buildList {
+        add(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onOpenChat))
+        if (removeLabel != null && onRemove != null) {
+            add(ReceiptAct(removeLabel, PeopleTags.receiptActRemove(contact.keyId), onRemove))
+        }
+    },
     scopeNote = scopeNote,
 )

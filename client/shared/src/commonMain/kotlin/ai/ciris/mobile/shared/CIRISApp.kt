@@ -1022,8 +1022,13 @@ fun CIRISApp(
         // answers on a different port.
         ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
+    // Removing a contact is a NODE route signed with the person's pen. On a
+    // with-AI install apiClient.baseUrl is the agent, which does not proxy it
+    // (CIRISAgent#1213), so the model is handed the node — the active one, read
+    // at call time, since a switch can move it while this model lives.
+    val contactsNodeUrl = androidx.compose.runtime.rememberUpdatedState(effectiveNodeUrl)
     val contactsViewModel: ContactsViewModel = viewModel {
-        ContactsViewModel(apiClient)
+        ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
@@ -4088,9 +4093,8 @@ fun CIRISApp(
                     // Trace-consent: the alternative view of the SAME CEG object
                     // the wizard writes. One-tap opt-in/out via the my-data PUT.
                     dataViewModel = dataManagementViewModel,
-                    // No node-side peering-revoke (withdraws) endpoint yet — flag
-                    // for upstream. Flip when CIRISServer ships it.
-                    revokeEndpointAvailable = false,
+                    // Revoke: whether the node mounts the route is asked of the
+                    // node at runtime (ConsentObjectsViewModel), not decided here.
                 )
             }
 

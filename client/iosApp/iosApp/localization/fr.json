@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Consentir à la participation au maillage CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Ce nœud a rédigé ce consentement avant que vous ne le signiez ; il ne vous appartient donc pas de le retirer ici, et le nœud ne retirera pas de consentement en votre nom. Il est toujours actif.",
+    "delegate_may_not_withdraw": "Une session déléguée ne peut pas retirer le consentement du propriétaire. Le retrait est signé avec la propre clé du propriétaire.",
+    "author_signer_unavailable": "Le retrait du consentement est signé par la personne qui l'a donné, et ce nœud ne peut pas utiliser cette identité pour le moment. Rien n'a été retiré.",
+    "store_unavailable": "Le nœud n'a pas pu lire ses enregistrements de consentement. Rien n'a été retiré. Réessayez une fois le nœud rétabli.",
+    "grant_not_live": "Ce n'est pas une autorisation de consentement active sur ce nœud. Elle a peut-être déjà été retirée.",
+    "withdraw_failed": "Le retrait n'a pas pu être enregistré. Rien n'a été retiré.",
+    "delegation_denied": "La délégation de cette session n'autorise pas cette action.",
+    "malformed_body": "La requête ne désignait aucune autorisation à retirer."
   },
   "consent_about_desc": "Découvrez comment CIRIS protège votre vie privée et gère vos données",
   "consent_about_title": "À propos du consentement",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Ce nœud ne rapporte pas ses transports.",
     "audit_not_on_this_node": "Ce nœud ne tient pas de journal d'audit d'agent. Rien n'a été filtré.",
     "consent_not_on_this_node": "Ce nœud ne détient pas d'enregistrements de consentement. Le consentement est conservé par un agent, et ce nœud fonctionne sans agent.",
-    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter."
+    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter.",
+    "manage_consent_revoke_unsupported": "Ce nœud ne peut pas encore retirer de consentement (nécessite ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "La révocation nomme une autorisation, et ce nœud ne répertorie pas encore ses autorisations d'appairage ; elle porte donc sur une autorisation configurée ici, dans cette session.",
+    "manage_consent_revoke_confirm_title": "Retirer ce consentement ?",
+    "manage_consent_revoke_fact_stops_value": "{from} cesse de se répliquer vers {to}.",
+    "manage_consent_revoke_confirm": "Retirer",
+    "manage_consent_withdrawn": "Retiré. Le nœud a enregistré votre retrait ({id}).",
+    "consent_withdraw_fact_who": "Qui",
+    "consent_withdraw_fact_stops": "Ce qui s'arrête",
+    "consent_withdraw_fact_signs": "Qui signe",
+    "consent_withdraw_signs_value": "Vous. Le nœud signe le retrait avec votre clé, jamais avec la sienne.",
+    "consent_remaining_title": "Toujours actif",
+    "consent_remaining_row": "Toujours actif : ce nœud l'a rédigé avant que vous ne signiez, il ne peut donc pas être retiré ici.",
+    "contacts_remove": "Supprimer",
+    "contacts_remove_confirm_title": "Supprimer {who} de vos contacts ?",
+    "contacts_remove_fact_stops_value": "Votre consentement à partager avec cette personne. Vos messages et enregistrements partagés cessent de se répliquer vers elle.",
+    "contacts_removed": "Supprimé : {who}. Votre consentement envers cette personne est retiré.",
+    "contacts_remove_remaining_title": "{who} est toujours un contact",
+    "contacts_remove_remaining_body": "Vous avez retiré {count} autorisation(s). Les autorisations ci-dessous sont toujours actives.",
+    "contacts_remove_remaining_row": "Toujours actif : rédigé par ce nœud avant que vous ne signiez vos contacts, il ne peut donc pas être retiré ici",
+    "contacts_remove_unsupported": "Ce nœud ne peut pas encore supprimer de contacts (nécessite ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Le nœud n’a pas pu lire ses enregistrements de contacts. Rien n’a été modifié — réessayez une fois le nœud rétabli.",
     "unknown_fed_id": "Cet identifiant de fédération n’est pas dans l’annuaire de ce nœud. Admettez d’abord la clé (appairage) — un signet annoncé mais non admis ne porte aucune provenance et ne peut pas faire l’objet d’un consentement.",
     "unreachable": "Ils sont connus, mais rien n'a répondu. Leurs appareils sont peut-être hors ligne ; les messages les atteindront à leur retour.",
-    "unresolvable": "Cet identifiant ne correspond à aucun contact."
+    "unresolvable": "Cet identifiant ne correspond à aucun contact.",
+    "not_a_contact": "Cette personne n'est pas un contact ici : aucune autorisation de consentement active ne la nomme."
   },
   "ceg": {
     "envelope": {
