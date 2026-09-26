@@ -13892,6 +13892,137 @@ class CIRISApiClient(
         }
     }
 
+    // ===== Data (CSD-039): erasure on the node, and the receipt that proves it =====
+    //
+    // Node-owned calls go to the NODE ([LOCAL_NODE_URL]), never [baseUrl]: on a
+    // with-AI install [baseUrl] is the agent, which does not proxy them
+    // (CIRISAgent#1213). The verification (receipt) routes are the agent's and go
+    // to [baseUrl]; the Data card shows them only when an agent is attached.
+    //
+    // Every non-2xx is raised as a [NodeRefusal] so the card can tell "this host
+    // has no such route" from "this host refused you" from "the call failed"
+    // ([ai.ciris.mobile.shared.models.ErasureFailure.of]) — three different facts.
+
+    /**
+     * **Erase one agent's traces on this node** — `POST {nodeUrl}/v1/federation/erase-agent-traces`
+     * (CIRISServer `src/federation_admin.rs` ~:477, mounted ~:907). Owner session +
+     * the `Peer` verb; `agent_id_hash` and `reason` both mandatory. TRACES ONLY: it
+     * reaches nothing else the node holds (CIRISPersist#914).
+     */
+    suspend fun eraseAgentTraces(
+        agentIdHash: String,
+        reason: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.TraceErasureResult {
+        val method = "eraseAgentTraces"
+        logInfo(method, "POST $nodeUrl/v1/federation/erase-agent-traces agent_id_hash=${agentIdHash.take(8)}…")
+        val client = federationHttpClient()
+        return try {
+            val body = buildJsonObject {
+                put("agent_id_hash", JsonPrimitive(agentIdHash.trim()))
+                put("reason", JsonPrimitive(reason.trim()))
+            }
+            val response = client.post("$nodeUrl/v1/federation/erase-agent-traces") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
+            val obj = ai.ciris.mobile.shared.models.decodeErasure(raw)
+                ?: throw RuntimeException("erase-agent-traces: unreadable body")
+            ai.ciris.mobile.shared.models.decodeErasure(
+                ai.ciris.mobile.shared.models.TraceErasureResult.serializer(), obj,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET {baseUrl}/v1/verification/keys/current` — CIRISAgent `routes/verification.py:432`. */
+    suspend fun getDeletionSigningKey(): ai.ciris.mobile.shared.models.DeletionSigningKey {
+        val method = "getDeletionSigningKey"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$baseUrl/v1/verification/keys/current")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
+            val data = ai.ciris.mobile.shared.models.standardData(raw)
+                ?: throw RuntimeException("keys/current: no data in the response")
+            ai.ciris.mobile.shared.models.decodeErasure(
+                ai.ciris.mobile.shared.models.DeletionSigningKey.serializer(), data,
+            )
+        } catch (e: Exception) {
+            logException(method, e)
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET {baseUrl}/v1/verification/keys/{key_id}.pub` — CIRISAgent
+     * `routes/verification.py:349`. Plain text: the raw 32-byte Ed25519 public key,
+     * base64. 404 when [keyId] is not the agent's CURRENT key.
+     */
+    suspend fun getDeletionPublicKey(keyId: String): String {
+        val method = "getDeletionPublicKey"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$baseUrl/v1/verification/keys/${keyId.trim()}.pub")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
+            raw.trim()
+        } catch (e: Exception) {
+            logException(method, e)
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * **Check a deletion receipt** — `POST {baseUrl}/v1/verification/deletion`
+     * (CIRISAgent `routes/verification.py:184`). HTTP 200 either way; `valid` is the
+     * answer. The proof is sent back as it was read: the agent re-canonicalizes it
+     * (RFC 8785), and any rewrite of a value would change what the signature covers.
+     */
+    suspend fun verifyDeletionProof(
+        proof: ai.ciris.mobile.shared.models.DeletionProof,
+    ): ai.ciris.mobile.shared.models.DeletionVerification {
+        val method = "verifyDeletionProof"
+        val client = federationHttpClient()
+        return try {
+            val body = buildJsonObject {
+                put(
+                    "deletion_proof",
+                    jsonConfig.encodeToJsonElement(ai.ciris.mobile.shared.models.DeletionProof.serializer(), proof),
+                )
+            }
+            val response = client.post("$baseUrl/v1/verification/deletion") {
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
+            val data = ai.ciris.mobile.shared.models.standardData(raw)
+                ?: throw RuntimeException("verification: no data in the response")
+            ai.ciris.mobile.shared.models.decodeErasure(
+                ai.ciris.mobile.shared.models.DeletionVerification.serializer(), data,
+            )
+        } catch (e: Exception) {
+            logException(method, e)
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+    // ===== end: Data (CSD-039) erasure and receipts =====
+
     override fun close() {
     logInfo("close", "Closing CIRISApiClient")
     }
