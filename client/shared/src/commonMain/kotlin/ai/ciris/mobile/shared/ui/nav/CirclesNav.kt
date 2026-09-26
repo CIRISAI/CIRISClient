@@ -140,6 +140,12 @@ object CirclesNav {
 
         // ── Record — one card, five homes ──
         Placement(NavSurface.Audit, Tab.RECORD, ALL),
+
+        // ── Households (CSD-101): the roster is a People fact, so it sits
+        // beside Contacts in Family › People. The household itself — how it
+        // decides and the acts that change it — is the Family hub in Rules
+        // (LayerFamily, CSD-100), not a second card there. ──
+        Placement(NavSurface.HouseholdMembers, Tab.PEOPLE, setOf(FAMILY)),
     )
 
     /**

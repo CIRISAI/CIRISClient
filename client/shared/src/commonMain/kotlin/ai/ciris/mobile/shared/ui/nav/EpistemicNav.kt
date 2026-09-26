@@ -350,6 +350,19 @@ sealed class NavSurface(
 
     /** Help — under My things, always reachable. */
     object Help : NavSurface("help", "Help", CIRISIcons.info, labelKey = "nav.surface.help")
+
+    // ── Households (CSD-101) ────────────────────────────────────────────────
+    /**
+     * Household members — who is in the household you are looking at, their
+     * roles, and adding someone from your contacts (`/v1/families/{id}/members`,
+     * CIRISServer 0.5.216). The household itself (how it decides, leave,
+     * dissolve, the change waiting on signatures) is the Family hub,
+     * [LayerFamily] (CSD-100). Live (no gate): the NODE serves it.
+     */
+    object HouseholdMembers : NavSurface(
+        id = "household-members", label = "Household", icon = CIRISIcons.home,
+        labelKey = "nav.surface.household_members",
+    )
 }
 
 /**

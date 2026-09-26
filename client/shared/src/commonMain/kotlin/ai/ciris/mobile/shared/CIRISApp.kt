@@ -1032,6 +1032,18 @@ fun CIRISApp(
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
     }
+    // Households (CSD-100 / CSD-101): one view model for the hub and the roster,
+    // so the household picked in one is the one shown in the other. NODE-owned:
+    // nodeBaseUrl, never the api base (CIRISAgent#1213). Owner-gated content,
+    // cleared with the session like the contacts above.
+    val householdsViewModel: ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel(
+            ai.ciris.mobile.shared.api.ClientHouseholds(apiClient, nodeBaseUrl),
+        )
+    }
+    LaunchedEffect(currentAccessToken) {
+        if (currentAccessToken == null) householdsViewModel.clearSessionState()
+    }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
     // surface that cannot answer. Fall back to the PREVIOUS default (Nodes) once,
@@ -4866,6 +4878,13 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onOpenDelegations = { currentScreen = Screen.Delegation },
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                // Households (CSD-100): the Family hub is the household.
+                familyContent = {
+                    ai.ciris.mobile.shared.ui.screens.HouseholdPanel(
+                        viewModel = householdsViewModel,
+                        onOpenMembers = { currentScreen = Screen.HouseholdMembers },
+                    )
+                },
             )
             Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY,
@@ -4880,6 +4899,11 @@ fun CIRISApp(
             )
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
+            // Households (CSD-101): the roster on Family › People.
+            Screen.HouseholdMembers -> ai.ciris.mobile.shared.ui.screens.HouseholdMembersScreen(
+                viewModel = householdsViewModel,
+                onOpenHousehold = { currentScreen = Screen.LayerFamily },
+            )
         }
                 } // close Box(modifier = contentModifier)
             } // close mainScreenContent lambda
@@ -5852,6 +5876,9 @@ internal sealed class Screen {
     // quorum OF. A Commons-group surface, not a settings one: nothing on it is
     // an owner privilege.
     object Commons : Screen()
+    // Households (CSD-101): the roster, on Family › People. The household
+    // itself is the Family hub (LayerFamily, CSD-100).
+    object HouseholdMembers : Screen()
 }
 
 /**
@@ -5988,6 +6015,8 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     //    be auto-pushed over the landing screen.
     Screen.AddFederationId -> null
     is Screen.CircleTab, is Screen.Instrument -> null
+    // Households (CSD-101)
+    Screen.HouseholdMembers -> ai.ciris.mobile.shared.ui.nav.NavSurface.HouseholdMembers
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {
@@ -6043,6 +6072,8 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities -> Screen.LayerGlobalCommunities
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons -> Screen.LayerGlobalCommons
     ai.ciris.mobile.shared.ui.nav.NavSurface.Commons -> Screen.Commons
+    // Households (CSD-101)
+    ai.ciris.mobile.shared.ui.nav.NavSurface.HouseholdMembers -> Screen.HouseholdMembers
 }
 
 /**
