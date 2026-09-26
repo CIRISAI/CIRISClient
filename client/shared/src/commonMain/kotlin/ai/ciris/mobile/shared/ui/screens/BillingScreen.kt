@@ -154,7 +154,8 @@ fun BillingScreen(
                             text = if (currentBalance >= 0) "$currentBalance credits" else localizedString("mobile.login_signin_provider").replace("{provider}", ""),
                             style = MaterialTheme.typography.headlineMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.testable("text_billing_balance")
                         )
                     }
                 }
@@ -190,7 +191,7 @@ fun BillingScreen(
                 if (products.isEmpty() && !isLoading) {
                     // Empty state
                     Card(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testable("text_billing_no_products")
                     ) {
                         Column(
                             modifier = Modifier
@@ -243,7 +244,7 @@ fun BillingScreen(
             // Loading overlay
             if (isLoading && products.isEmpty()) {
                 CircularProgressIndicator(
-                    modifier = Modifier.align(Alignment.Center)
+                    modifier = Modifier.align(Alignment.Center).testable("billing_loading")
                 )
             }
         }

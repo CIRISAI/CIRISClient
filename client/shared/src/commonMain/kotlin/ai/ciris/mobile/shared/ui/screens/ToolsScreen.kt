@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.ui.screens
 import ai.ciris.mobile.shared.api.ToolInfoData
 import ai.ciris.mobile.shared.api.ToolsMetadataData
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.ToolsScreenState
 import androidx.compose.animation.AnimatedVisibility
@@ -110,7 +111,8 @@ fun ToolsScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .testable("tools_list"),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -120,7 +122,8 @@ fun ToolsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(32.dp)
+                            .testable("tools_loading"),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -132,7 +135,7 @@ fun ToolsScreen(
             state.error?.let { error ->
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testable("tools_error", error),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.errorContainer
                         )
@@ -272,7 +275,7 @@ fun ToolsScreen(
             if (filteredTools.isEmpty() && !state.isLoading && state.error == null) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testable("tools_empty"),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )

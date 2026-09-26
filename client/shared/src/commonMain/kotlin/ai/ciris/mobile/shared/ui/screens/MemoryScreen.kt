@@ -230,7 +230,8 @@ fun MemoryScreen(
                     columns = GridCells.Fixed(1),
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 8.dp)
+                        .testable("memory_list"),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(8.dp)
@@ -254,7 +255,8 @@ fun MemoryScreen(
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 8.dp),
+                        .padding(horizontal = 8.dp)
+                        .testable("memory_list"),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                     contentPadding = PaddingValues(8.dp)
                 ) {
@@ -267,7 +269,7 @@ fun MemoryScreen(
                 }
             } else if (memoryState.isLoading) {
                 Box(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testable("memory_loading"),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()
@@ -491,7 +493,7 @@ private fun MemoryNodeCard(
         )
     ) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier.testable("memory_row_${node.id}").padding(12.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Header: type badge and scope

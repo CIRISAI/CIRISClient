@@ -164,7 +164,8 @@ fun WiseAuthorityScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
+                .padding(16.dp)
+                .testable("wa_deferrals_list"),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Alerts are off at the OS level, so the ONLY way the operator learns
@@ -229,7 +230,7 @@ fun WiseAuthorityScreen(
                     )
                     if (isLoading) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
+                            modifier = Modifier.size(20.dp).testable("wa_loading"),
                             strokeWidth = 2.dp
                         )
                     }
@@ -240,7 +241,7 @@ fun WiseAuthorityScreen(
             if (deferrals.isEmpty()) {
                 item {
                     Card(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testable("wa_deferrals_empty"),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
