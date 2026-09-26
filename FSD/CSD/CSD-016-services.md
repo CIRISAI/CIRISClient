@@ -125,8 +125,8 @@ this state.
 | priority, priority group, strategy, capabilities | **no route** | — | **missing**; the client supplies constants instead (`CIRISApiClient.kt:11092-11097`) |
 | handler-specific services | **no route** | — | **missing**; `handlers = emptyMap()` (`CIRISApiClient.kt:11103`) |
 | real circuit-breaker state | **no route** | CIRISAgent | **missing**; derived from `healthy` |
-| reset a circuit breaker | **no route** | CIRISAgent | **missing** — and `btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm` are wired to `resetCircuitBreakers`, whose whole body is a status message reading `"(API not yet implemented)"` (`ServicesViewModel.kt:265-271`) that the screen never renders |
-| diagnostics | **no route** | CIRISAgent | **missing**; `runDiagnostics` (`ServicesViewModel.kt:185`) re-counts the list already on screen, and since the breaker state is derived from `healthy`, its "open breakers" number is the unhealthy count restated |
+| reset a circuit breaker | **no route** | CIRISAgent | **missing**. The controls that pretended to do it (`btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm`, wired to a `resetCircuitBreakers` whose whole body was a status string reading `"(API not yet implemented)"`) were **removed in #95**; the card offers no reset until a route exists |
+| diagnostics | **no route** | CIRISAgent | **missing**. `runDiagnostics` re-counted the list already on screen, so its "open breakers" number was the unhealthy count restated; `btn_services_diagnose` was **removed in #95** |
 | the node's own substrate health | `GET /v1/system/health` | CIRISServer (`src/health.rs:589`) | live — **and never called by this screen** |
 
 **Wrong host, and this is the one to fix first.** The card is not `agentOnly`,
@@ -159,16 +159,12 @@ My things → This node → Services, on an agent.
 ```yaml
 expect:
   state: populated
-  visible: [btn_services_refresh, btn_services_diagnose, btn_reset_all]
+  visible: [btn_services_refresh]
+  absent: [btn_services_diagnose, btn_reset_all]
   count: {of: "proposed:services_row_*", min: 1}
 ```
 
-Run diagnostics: `btn_services_diagnose`.
-
-```yaml
-expect:
-  visible: [proposed:services_diagnostics]
-```
+No diagnostics and no breaker reset are offered: #95 removed both controls, since neither had a route (§3). They return only with one.
 
 Point the client at a bare node — a run-without-AI install — and open the card.
 
