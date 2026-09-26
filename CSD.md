@@ -271,6 +271,36 @@ finds the paragraph describing the defect. Typed blocks make "what executes" and
 * every `shows:` row is asserted in §4 or disclaimed in §5 — at `testable`;
 * every DSL predicate names declared tags and cannot be satisfied by an empty set.
 
+### 4.1 §3 routes are checked against the code
+
+A §3 route table is not trusted as written. `packaging/check_csd_routes.py`
+derives, from the code alone, every route a screen calls — `CIRISApp.kt`'s
+`when (currentScreen)` arm → the composables and view models it reaches →
+`CIRISApiClient` → verb, route template and host — and compares it with every
+`/v1/…` route cited in §3 of the CSDs whose `csd:surface` names that screen.
+
+* A route the screen calls and no CSD on that screen cites is **uncited**. The
+  gate fails on a NEW one (ratchet: `packaging/csd_routes_baseline.json`).
+* A route cited but not called is fine when the row's state says why —
+  `missing`, `blocked_by`, proposed, wrong-host, uncalled, or another CSD's card —
+  and is reported as an **unused citation** otherwise.
+* Two screens newly calling the same mutating route fail the gate: that is the
+  same card under two names, or one action with two doors, and a person decides
+  which.
+
+Do not hand-write the rows. Generate them, then add the owner's file:line and
+the state:
+
+```bash
+python3 packaging/check_csd_routes.py --print CSD-039   # §3 rows for CSD-039's screen
+python3 packaging/check_csd_routes.py --report          # the whole map, by namespace
+python3 packaging/check_csd_routes.py --baseline        # after paying debt down
+```
+
+The closure is a regex walk, not a compiler, and says so (`heuristic: true`): it
+does not see a view model's state read through a flow collected outside the
+screen's arm, or a lambda handed through navigation.
+
 ## 5. What v3 does not do, stated plainly
 
 * **The runner must learn the new predicates.** `flow_spec.py` today implements
