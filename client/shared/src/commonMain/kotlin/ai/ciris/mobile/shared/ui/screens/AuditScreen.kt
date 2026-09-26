@@ -138,7 +138,8 @@ fun AuditScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .testable("audit_error"),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -161,7 +162,7 @@ fun AuditScreen(
 
             // Entries list
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().testable("list_audit_entries"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -170,7 +171,8 @@ fun AuditScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(32.dp)
+                                .testable("spinner_audit"),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()

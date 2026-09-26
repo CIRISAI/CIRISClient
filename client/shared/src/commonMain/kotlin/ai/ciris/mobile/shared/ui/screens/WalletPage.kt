@@ -309,7 +309,7 @@ fun WalletPage(
 @Composable
 private fun LoadingWalletCard() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("wallet_loading"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
     ) {
         Box(
@@ -326,7 +326,7 @@ private fun LoadingWalletCard() {
 @Composable
 private fun WalletErrorCard(error: String, onRetry: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("wallet_error", error),
         colors = CardDefaults.cardColors(containerColor = SemanticColors.Default.surfaceError)
     ) {
         Column(

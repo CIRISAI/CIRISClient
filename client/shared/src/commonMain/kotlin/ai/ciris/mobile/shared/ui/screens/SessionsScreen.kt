@@ -252,7 +252,9 @@ private fun CurrentStateBanner(
                     text = currentState ?: NOT_READ,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = getCurrentStateColor(currentState ?: "")
+                    color = getCurrentStateColor(currentState ?: ""),
+                    // A state nobody read is its own observation (CSD-011).
+                    modifier = if (currentState == null) Modifier.testable("sessions_state_unknown") else Modifier
                 )
             }
         }

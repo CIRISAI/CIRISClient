@@ -120,7 +120,8 @@ fun SchedulerScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .testable("scheduler_list"),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -130,7 +131,8 @@ fun SchedulerScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(32.dp)
+                            .testable("scheduler_loading"),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()

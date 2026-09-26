@@ -130,7 +130,7 @@ fun SkillStudioScreen(
     // Main content based on state
     when (state) {
         is SkillStudioScreenState.Loading -> {
-            LoadingScreen(message = "Loading...")
+            LoadingScreen(message = "Loading...", tag = "skill_loading")
         }
 
         is SkillStudioScreenState.Editing -> {
@@ -219,6 +219,7 @@ private fun EditingScreen(
     onToggleCard: (String) -> Unit
 ) {
     Scaffold(
+        modifier = Modifier.testable("skill_editing"),
         topBar = {
             ScreenTopBar(
                 title = { Text("Skill Studio") },
@@ -524,9 +525,9 @@ private fun SecurityReviewScreen(
 }
 
 @Composable
-private fun LoadingScreen(message: String) {
+private fun LoadingScreen(message: String, tag: String? = null) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().then(if (tag != null) Modifier.testable(tag) else Modifier),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -543,7 +544,7 @@ private fun ErrorScreen(
     onBack: () -> Unit
 ) {
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().testable("skill_error", message),
         contentAlignment = Alignment.Center
     ) {
         Column(

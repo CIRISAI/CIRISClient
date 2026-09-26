@@ -254,7 +254,7 @@ private fun NodesListView(
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(6.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testable("nodes_error", msg),
                 ) {
                     Row(
                         modifier = Modifier.padding(10.dp),
@@ -302,28 +302,34 @@ private fun NodesListView(
                     text = localizedString("mobile.manage_nodes_empty"),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("nodes_empty"),
                 )
             } else {
-                profiles.forEach { profile ->
-                    NodeRow(
-                        profile = profile,
-                        isActive = profile.id == activeId,
-                        isSwitching = isSwitching,
-                        isEditing = editingId == profile.id,
-                        editName = editName,
-                        onEditNameChange = { editName = it },
-                        onStartEdit = {
-                            editingId = profile.id
-                            editName = profile.name
-                        },
-                        onCancelEdit = { editingId = null },
-                        onSaveEdit = {
-                            viewModel.renameProfile(profile.id, editName)
-                            editingId = null
-                        },
-                        onSwitch = { viewModel.switchTo(profile) },
-                        onRemove = { viewModel.removeProfile(profile.id) },
-                    )
+                Column(
+                    modifier = Modifier.fillMaxWidth().testable("nodes_list"),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    profiles.forEach { profile ->
+                        NodeRow(
+                            profile = profile,
+                            isActive = profile.id == activeId,
+                            isSwitching = isSwitching,
+                            isEditing = editingId == profile.id,
+                            editName = editName,
+                            onEditNameChange = { editName = it },
+                            onStartEdit = {
+                                editingId = profile.id
+                                editName = profile.name
+                            },
+                            onCancelEdit = { editingId = null },
+                            onSaveEdit = {
+                                viewModel.renameProfile(profile.id, editName)
+                                editingId = null
+                            },
+                            onSwitch = { viewModel.switchTo(profile) },
+                            onRemove = { viewModel.removeProfile(profile.id) },
+                        )
+                    }
                 }
             }
 

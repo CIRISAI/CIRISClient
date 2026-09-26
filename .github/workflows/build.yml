@@ -110,7 +110,8 @@ jobs:
         run: |
           python3 -m pip install --quiet pytest pyyaml
           python3 -m pytest testing/test_driver_rules.py testing/test_gate_vendoring.py \
-            testing/test_bringup.py testing/test_five_platform_workflow.py -q
+            testing/test_bringup.py testing/test_five_platform_workflow.py \
+            testing/test_csd_state_tags.py -q
 
       - name: A published version must offer a universal wheel
         # Only for versions already on the index — a PR's VERSION is normally

@@ -115,7 +115,8 @@ fun ServicesScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("services_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -125,7 +126,8 @@ fun ServicesScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(16.dp),
+                    .padding(16.dp)
+                    .testable("services_list"),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // A failed or absent read is said, and nothing below draws: the

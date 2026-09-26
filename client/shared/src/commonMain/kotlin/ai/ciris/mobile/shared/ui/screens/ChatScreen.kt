@@ -92,6 +92,8 @@ private fun String.utf8Size(): Int = encodeToByteArray().size
  *
  * Test tags:
  *  - ``chat_transcript``        — the LazyColumn
+ *  - ``chat_loading``           — the first read in flight, nothing to show yet
+ *  - ``chat_empty``             — the read answered, and the conversation has no messages
  *  - ``chat_msg_<attestationId>`` — one message row
  *  - ``input_chat_body``        — the composer
  *  - ``btn_chat_send``          — send
@@ -231,12 +233,12 @@ fun ChatScreen(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
                     loading && messages.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testable("chat_loading"),
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
 
                     transcriptLoaded && messages.isEmpty() -> Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testable("chat_empty"),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(

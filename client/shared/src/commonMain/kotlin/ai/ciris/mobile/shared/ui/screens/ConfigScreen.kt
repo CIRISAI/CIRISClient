@@ -136,7 +136,8 @@ fun ConfigScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("config_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -178,7 +179,7 @@ fun ConfigScreen(
 
                 // Configuration sections
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testable("config_sections"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {

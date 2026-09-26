@@ -113,6 +113,7 @@ fun VizSettingsScreen(
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
+                .testable("viz_settings_list")
                 .testableVerticalScroll()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
