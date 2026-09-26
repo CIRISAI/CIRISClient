@@ -301,6 +301,20 @@ kotlin {
 
                 // WorkManager for background task scheduling
                 implementation("androidx.work:work-runtime-ktx:2.9.0")
+
+                // QR scanning (platform/QrScanner.android.kt): CameraX for the
+                // preview and frames, zxing-core (Apache-2.0, pure Java) to
+                // decode them. Not ML Kit: its barcode model comes through
+                // Google Play Services, and this app runs without them.
+                // CameraX 1.4.2 is built against kotlin-stdlib 1.8.22, which
+                // this Kotlin 2.0.21 compiler reads (1.5.x moved to a newer
+                // stdlib). The AAR carries no POM, so a host shell must declare
+                // these too; without them the scanner reports "not in this
+                // build" rather than crashing (scanningLibrariesPresent()).
+                implementation("androidx.camera:camera-camera2:1.4.2")
+                implementation("androidx.camera:camera-lifecycle:1.4.2")
+                implementation("androidx.camera:camera-view:1.4.2")
+                implementation("com.google.zxing:core:3.5.4")
             }
         }
 
@@ -343,6 +357,9 @@ kotlin {
             dependencies {
                 implementation(kotlin("test"))
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+                // An INDEPENDENT QR decoder, test-only: QrEncoderTest decodes
+                // what platform/util/QrEncoder draws. Apache-2.0, pure Java.
+                implementation("com.google.zxing:core:3.5.4")
             }
         }
     }
