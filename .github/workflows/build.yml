@@ -207,6 +207,14 @@ jobs:
             python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
           done
 
+      - name: Every route a screen calls is cited by its CSD; no new duplicate mutations
+        # Cards were proposed for things that already existed under another
+        # name. Routes, not names, say whether two cards are one. Ratchet:
+        # packaging/csd_routes_baseline.json; --self-test plants a defect first.
+        run: |
+          python3 packaging/check_csd_routes.py --self-test
+          python3 packaging/check_csd_routes.py
+
 
   # ── The client itself. ONE build ────────────────────────────────────────────
   gradle:
