@@ -72,7 +72,7 @@ a string in the client's `commonMain` source.
 |---|---|---|
 | `pass` | every step held | green |
 | `refused` | the `client:` floor is above the client under test (`>=X`, `>X`, `unreleased`) | green — reported, not passed |
-| `cannot-start` | floor met, but the first step's `requires` never held | **red** |
+| `cannot-start` | floor met, but the flow never reached its first screen (no hop, a hop tag missing, or the first `requires` never held) | **red** |
 | `fail` | it started and a step broke | **red** |
 
 `cannot-start` is red on purpose. The floor is how a flow waits for a surface
@@ -129,10 +129,14 @@ bring-up per leg and one session.
 
 ## What this does not do yet
 
-- **No navigation.** A flow's first step names its screen and the runner waits
-  for it; it does not walk the sidebar there. Every flow today starts where
-  sign-in lands (`Contacts`). A flow for another surface needs `nav_map` to drive
-  the hop — the CSD names the surface, and the hop is derived, never written.
+- **Navigation is to the first screen only.** Before step one the runner walks
+  the hop `testing/gate/nav_map.py` derives for the flow's first
+  `requires: screen:` on this build (node or agent tree, from `/state`),
+  waiting for each tag before clicking it. A missing hop tag is `cannot-start`
+  naming the tag; a screen with no hop that is not flow-only is `cannot-start`
+  with "no nav hop for Screen.X"; a flow-only screen (pre-login, wizards,
+  leaves) is waited for, not walked to. Hops between later steps are the flow's
+  own `do:` clicks.
 - **Only what a bare node can show.** The matrix stands up one node with no
   contacts, no agent and no peers, so CSD-005's populated list and receipt sheet
   are not driven here.

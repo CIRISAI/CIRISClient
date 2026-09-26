@@ -16,8 +16,15 @@ FOUR VERDICTS PER FLOW, AND ONLY TWO OF THEM ARE GREEN.
     refused       the flow's `client:` floor is above the client under test. The
                   flow cannot start HERE, and says why; it is neither passed nor
                   failed, and it does not redden the leg
-    cannot-start  the floor is met, but the flow's first `requires` never held —
-                  the client never reached the screen the flow starts on
+    cannot-start  the floor is met, but the flow never reached its first screen:
+                  nav_map has no hop to it on this build, a hop tag was missing
+                  mid-walk, or the first `requires` still did not hold
+
+THE RUNNER WALKS TO THE FIRST SCREEN. Sign-in lands on Contacts; a flow for any
+other surface starts elsewhere. Before step one, the runner clicks the hop
+`nav_map` derives for the flow's first `requires: screen:` (circle, tab, row),
+waiting for each tag. The flow never encodes the hop (FSD/CSD_STANDARD.md §5).
+Flow-only screens (pre-login, wizards, leaves) have no hop and are waited for.
     fail          it started and a step broke
 
 `cannot-start` REDDENS THE LEG, deliberately, and differs from CIRISAgent's gate
@@ -109,16 +116,68 @@ async def _settle_on(helper, screen: str, timeout: float, poll: float = 1.0) -> 
     return cur
 
 
+async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: float = 20.0,
+                   arrive_timeout: float = 20.0) -> Optional[str]:
+    """Walk `chain` (nav_map's derived hop) to `screen`. None on arrival, else
+    the reason — naming the hop tag that was missing, because "could not reach
+    Screen.X" alone sends the reader to the wrong end of the chain.
+
+    Each tag is WAITED for before it is clicked: a circle's tabs compose after
+    the circle is chosen, and clicking before they exist is a race, not a test.
+    """
+    for i, tag in enumerate(chain, 1):
+        where = f"hop {i} of {len(chain)} ({' -> '.join(chain)})"
+        if not await helper.wait_for_element(tag, timeout=int(hop_timeout * 1000)):
+            return (f"navigation to Screen.{screen}: hop tag {tag!r} never appeared, {where}; "
+                    f"on {await helper.get_screen()!r}")
+        if not await helper.click(tag, timeout=int(hop_timeout * 1000)):
+            return f"navigation to Screen.{screen}: clicking hop tag {tag!r} failed, {where}"
+    got = await _settle_on(helper, screen, arrive_timeout)
+    if got != screen:
+        return (f"navigation to Screen.{screen}: walked {' -> '.join(chain)} and landed on "
+                f"{got!r}")
+    return None
+
+
+def nav_hops(has_agent: bool) -> tuple[dict, set]:
+    """(Screen -> hop, flow-only screens) for this build, from the client source."""
+    from testing.gate import nav_map, screen_atlas  # noqa: PLC0415
+    return nav_map.build(has_agent=has_agent), screen_atlas.flow_only()
+
+
 async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[Path] = None,
-                  client_version: Optional[str] = None, start_timeout: float = 30.0) -> FlowOutcome:
+                  client_version: Optional[str] = None, start_timeout: float = 30.0,
+                  hops: Optional[dict] = None, flow_only: frozenset | set = frozenset()) -> FlowOutcome:
+    """Run one flow. With `hops` (nav_map's Screen -> chain), the runner first
+    WALKS to the flow's starting screen; without, it only waits for it."""
     refusal = check_client_floor(spec.client_floor, client_version)
     if refusal:
         print(f"\n FLOW {spec.flow} ({spec.csd_id}) — REFUSED by its floor\n   {refusal}")
         return FlowOutcome(spec.flow, spec.csd_id, REFUSED, refusal)
 
     start = spec.steps[0].requires.screen
-    if start:
+    if start and hops is None:
         await _settle_on(helper, start, start_timeout)
+    elif start:
+        # A landing still composing is not a flow on the wrong screen: give the
+        # client a moment before deciding to walk anywhere.
+        cur = await _settle_on(helper, start, min(start_timeout, 5.0))
+        err = None
+        if cur != start:
+            if start in hops:
+                print(f"\n FLOW {spec.flow} — walking to Screen.{start}: {' -> '.join(hops[start])}")
+                err = await navigate(helper, start, hops[start],
+                                     hop_timeout=start_timeout, arrive_timeout=start_timeout)
+            elif start in flow_only:
+                # Pre-login, wizards, leaves: nothing in the shell leads there,
+                # so the flow must already be on it. Wait, then let `requires` judge.
+                await _settle_on(helper, start, start_timeout)
+            else:
+                err = (f"no nav hop for Screen.{start} on this build, and it is not a "
+                       f"flow-only screen (on {cur!r})")
+        if err:
+            print(f"\n FLOW {spec.flow} ({spec.csd_id}) — CANNOT START\n   {err}")
+            return FlowOutcome(spec.flow, spec.csd_id, CANNOT_START, err)
 
     runner = FlowRunner(helper, platform=platform, artifacts=artifacts)
     try:
@@ -171,7 +230,7 @@ def sign_in(drv, username: str, password: str) -> str:
 def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optional[Path] = None,
             client_version: Optional[str] = None, username: str = "qaadmin",
             password: str = "QaAdmin!2345", establish_session: bool = True,
-            helper: Any = None) -> List[FlowOutcome]:
+            helper: Any = None, navigate_to_start: bool = True) -> List[FlowOutcome]:
     """Run every flow in order against one live client. Signs in once, only if
     some flow will actually run."""
     from testing.gate.flow_helper import SyncFlowHelper  # noqa: PLC0415
@@ -182,9 +241,22 @@ def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optiona
         landed = sign_in(drv, username, password)
         print(f"  session: signed in, on {landed!r}")
 
+    hops, flow_only = None, frozenset()
+    if runnable and navigate_to_start:
+        # The build decides the tree: a node client has no agentOnly rows, so a
+        # hop derived for the agent build would click tags that are not there.
+        mode = ""
+        if drv is not None:
+            try:
+                mode = str(drv.state().get("clientMode", ""))
+            except Exception:  # noqa: BLE001 — unknown mode: the node tree, the subset
+                mode = ""
+        hops, flow_only = nav_hops(has_agent=mode.upper() == "AGENT")
+
     async def go() -> List[FlowOutcome]:
         return [await run_one(s, helper, platform=platform, artifacts=artifacts,
-                              client_version=client_version) for s in specs]
+                              client_version=client_version, hops=hops,
+                              flow_only=flow_only) for s in specs]
 
     outcomes = asyncio.run(go())
     print(f"\n flows: {summary(outcomes)}")

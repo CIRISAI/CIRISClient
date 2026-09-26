@@ -203,18 +203,47 @@ def test_every_flow_in_the_repo_loads_against_its_real_csd():
     assert all(s.csd is not None for s in specs)
 
 
-def _client_literals() -> set[str]:
+def _client_tag_strings() -> tuple[set[str], set[str]]:
+    """(whole tag literals, prefixes of interpolated tags) in commonMain.
+
+    `"age_band_$token"` builds `age_band_adult`, so a literal-only read calls a
+    real tag missing. A prefix counts only if it has two segments
+    (`age_band_`, not `btn_`): `"btn_$x"` would otherwise vouch for every
+    button a flow could ever name, which is no check at all.
+    """
     src = REPO / "client" / "shared" / "src" / "commonMain"
-    found: set[str] = set()
+    literals: set[str] = set()
+    prefixes: set[str] = set()
     for kt in src.rglob("*.kt"):
-        found.update(re.findall(r'"([a-z][a-z0-9_]+)"', kt.read_text(encoding="utf-8")))
-    return found
+        for body, end in re.findall(r'"([a-z][a-z0-9_]*)(["$])', kt.read_text(encoding="utf-8")):
+            if end == '"':
+                literals.add(body)
+            elif "_" in body.rstrip("_"):
+                prefixes.add(body)
+    return literals, prefixes
+
+
+def client_carries(tag: str, literals: set[str], prefixes: set[str]) -> bool:
+    return tag in literals or any(tag.startswith(p) for p in prefixes)
+
+
+@pytest.mark.parametrize("tag,carried", [
+    ("age_band_adult", True),        # "age_band_$token"      SetupScreen.kt
+    ("trace_consent_yes", True),     # "trace_consent_$token" SetupScreen.kt
+    ("radio_cohort_family", True),   # "radio_cohort_$value"  ClaimNodeScreen.kt
+    ("chk_duty_box_accept", True),   # "chk_duty_box_$verb"   DutyConferralScreen.kt
+    ("opt_run_with_ai", True),       # a whole literal still matches
+    ("contacts_no_such_tag", False),
+    ("btn_no_such_button", False),   # a one-segment prefix vouches for nothing
+])
+def test_the_client_tag_check_sees_interpolated_tags_and_nothing_else(tag, carried):
+    assert client_carries(tag, *_client_tag_strings()) is carried
 
 
 def test_every_tag_a_seeded_flow_names_exists_in_the_client():
     """A flow naming a tag the client does not carry fails as 'element not
     found' on every leg. Checked here, at the keyboard, rather than there."""
-    literals = _client_literals()
+    literals, prefixes = _client_tag_strings()
     missing = []
     for spec in run_flows.load_flows([FLOWS]):
         for step in spec.steps:
@@ -223,7 +252,8 @@ def test_every_tag_a_seeded_flow_names_exists_in_the_client():
                 tags += cond.visible + cond.absent + list(cond.text)
                 if cond.state:
                     tags.append(spec.csd.state_tags[cond.state])
-            missing += [f"{spec.flow}/{step.step_id}: {t}" for t in tags if t not in literals]
+            missing += [f"{spec.flow}/{step.step_id}: {t}" for t in tags
+                        if not client_carries(t, literals, prefixes)]
     assert not missing, f"tags no client source carries: {missing}"
 
 
@@ -246,6 +276,7 @@ class FakeHelper:
         self.screen = screen
         self.els = {t: _El(t, txt) for t, txt in tags.items()}
         self.calls: list[str] = []
+        self.leads: dict = {}
 
     async def get_elements(self):
         self.calls.append("tree")
@@ -267,7 +298,13 @@ class FakeHelper:
 
     async def click(self, tag, timeout=2000):
         self.calls.append(f"click {tag}")
-        return tag in self.els
+        if tag not in self.els:
+            return False
+        # A click can move the app: `leads` maps a tag to (screen, tags now shown).
+        if tag in self.leads:
+            self.screen, shown = self.leads[tag]
+            self.els = {t: _El(t, "") for t in shown}
+        return True
 
     async def input_text(self, tag, text):
         self.calls.append(f"input {tag}")
@@ -407,3 +444,76 @@ def test_flows_do_not_run_after_a_failed_smoke_walk(tmp_path):
     run_platform.flows(None, rep, [_spec(tmp_path)], SimpleNamespace(), None)
     assert rep.steps[-1].name == "flows" and not rep.steps[-1].ok
     assert "not run" in rep.steps[-1].detail
+
+
+# ── navigation: the runner walks to a flow's first screen ───────────────────
+
+HOPS = {"Thing": ["circle_x", "tab_y", "nav_thing"]}
+
+
+def _walkable(missing: str = "") -> FakeHelper:
+    """Lands on Contacts; circle_x -> tab_y -> nav_thing reaches Thing."""
+    h = FakeHelper("Contacts", {"circle_x": ""})
+    h.leads = {
+        "circle_x": ("CircleTab", ["circle_x", "tab_y"]),
+        "tab_y": ("CircleTab", ["circle_x", "tab_y", "nav_thing"]),
+        "nav_thing": ("Thing", ["thing_list"]),
+    }
+    if missing:
+        for screen, shown in h.leads.values():
+            if missing in shown:
+                shown.remove(missing)
+    return h
+
+
+def _nav_run(spec, helper, hops=HOPS, flow_only=frozenset()):
+    return asyncio.run(run_flows.run_one(spec, helper, client_version="0.5.224",
+                                         start_timeout=0, hops=hops, flow_only=flow_only))
+
+
+def test_the_runner_walks_the_derived_hop_to_the_first_screen(tmp_path):
+    h = _walkable()
+    out = _nav_run(_spec(tmp_path), h)
+    assert out.status == run_flows.PASS, out.detail
+    assert [c for c in h.calls if c.startswith("click")] == [
+        "click circle_x", "click tab_y", "click nav_thing"]
+
+
+def test_a_missing_hop_tag_is_cannot_start_and_names_the_tag(tmp_path):
+    out = _nav_run(_spec(tmp_path), _walkable(missing="tab_y"))
+    assert out.status == run_flows.CANNOT_START
+    assert "'tab_y'" in out.detail and "hop 2 of 3" in out.detail
+    assert "never appeared" in out.detail, "waited for, not blindly clicked"
+    assert not run_flows.leg_ok([out])
+
+
+def test_a_screen_with_no_hop_that_is_not_flow_only_cannot_start(tmp_path):
+    h = _walkable()
+    out = _nav_run(_spec(tmp_path), h, hops={})
+    assert out.status == run_flows.CANNOT_START
+    assert "no nav hop for Screen.Thing" in out.detail
+    assert not [c for c in h.calls if c.startswith("click")], "nothing to walk, nothing clicked"
+
+
+def test_a_flow_only_screen_is_waited_for_not_walked_to(tmp_path):
+    """No hop exists, and that is not a defect: the flow must already be there."""
+    h = FakeHelper("Thing", {"thing_list": ""})
+    out = _nav_run(_spec(tmp_path), h, hops={}, flow_only={"Thing"})
+    assert out.status == run_flows.PASS
+    elsewhere = FakeHelper("Contacts", {"thing_list": ""})
+    out = _nav_run(_spec(tmp_path), elsewhere, hops={}, flow_only={"Thing"})
+    assert out.status == run_flows.CANNOT_START and "Thing" in out.detail
+    assert "no nav hop" not in out.detail, "flow-only is not a missing hop"
+
+
+def test_already_on_the_first_screen_walks_nothing(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": ""})
+    assert _nav_run(_spec(tmp_path), h).status == run_flows.PASS
+    assert not [c for c in h.calls if c.startswith("click")]
+
+
+def test_the_real_nav_map_reaches_the_seeded_flows_first_screens():
+    hops, flow_only = run_flows.nav_hops(has_agent=False)
+    for spec in run_flows.load_flows([FLOWS]):
+        start = spec.steps[0].requires.screen
+        assert start in hops or start in flow_only, f"{spec.flow}: no way to Screen.{start}"
