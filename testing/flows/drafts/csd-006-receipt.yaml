@@ -1,0 +1,76 @@
+csd: CSD-006
+flow: csd_006_receipt
+title: The receipt opens over a CEG item and renders all five facts
+description: >-
+  CSD-006 is the template every other card's receipt binds, so this flow drives
+  it on the first surface that carries it (Contacts, CSD-005). The claim is that
+  the sheet renders FIVE rows every time — never four, never blank — because a
+  fact the node did not send is itself a fact about the node and renders as
+  "This node did not send this." rather than nothing.
+# Floor: sheet_receipt and the five receipt_* tags are `testable*` literals in
+# ui/primitives/ReceiptSheet.kt:49-155 at v0.5.224, and the hamburger is derived
+# by ItemRow from the receipt id (PeopleTags.receipt, PeopleSupport.kt:38).
+client: ">=0.5.224"
+
+steps:
+  - step_id: a_row_with_a_hamburger
+    title: A CEG row carries a hamburger; app chrome does not
+    description: >-
+      Entry precondition: a contact must exist for there to be a claim to open.
+      The flow cannot know its key id, so it asserts the class of tags rather than
+      one instance — which is also the honest shape, since the rule in CSD-006 §1
+      is about every row, not a particular one.
+    optional_step: true
+    requires:
+      screen: Contacts
+      visible: [contacts_list]
+    expect:
+      count: {of: "btn_receipt_*", min: 1}
+
+  - step_id: five_facts_every_time
+    title: The sheet renders all five envelope rows
+    description: >-
+      Five separate tags, not one `sheet_receipt` check. A sheet that composed its
+      frame and three rows answers a `visible: [sheet_receipt]` assertion
+      correctly, and "all five, always" is the entire contract this template
+      exists to state.
+    optional_step: true
+    requires:
+      visible: [sheet_receipt]
+    expect:
+      visible:
+        - sheet_receipt
+        - receipt_subject
+        - receipt_attester
+        - receipt_scope
+        - receipt_dimension
+        - receipt_rule
+
+  - step_id: the_dimension_is_the_bound_wire_string
+    title: The dimension row carries the wire dimension, not a friendly label
+    description: >-
+      `consent:replication:v1` for a contact. The plain label sits ABOVE the mono
+      string; the row asserted here is the protocol value, which is what makes the
+      receipt auditable rather than decorative.
+    optional_step: true
+    requires:
+      visible: [sheet_receipt]
+    expect:
+      matches: {receipt_dimension: "consent:replication"}
+
+  - step_id: the_rule_row_is_the_one_still_by_rule
+    title: 'Until Contact.kt reads `grant`, the rule row says the node did not send it'
+    description: >-
+      This step asserts the CURRENT, honest behaviour and is expected to CHANGE.
+      CIRISServer#616 closed and 0.5.217 sends all five facts on GET /v1/contacts
+      (grant_receipt, src/contacts_chat.rs:1704-1712), but
+      models/federation/Contact.kt:27-66 has no `grant` member, so
+      PeopleSupport.kt:66-83 still composes four of five from rules. When the
+      client reads the field, this assertion flips to a wire value and the flow
+      must be updated in the same commit — which is the point of asserting it at
+      all rather than leaving it unstated.
+    optional_step: true
+    requires:
+      visible: [sheet_receipt]
+    expect:
+      text: {receipt_rule: "did not send"}

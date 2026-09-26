@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -48,9 +48,9 @@ fields:
     tag: receipt_subject
   - ceg: x_private:attesting_key_id
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "Who sent it — This node (fixed by the rule, CC 3.3.7); the key itself is not on GET /v1/contacts"
+    type: string
+    example: "wa-self-88b1"
+    renders: "Who sent it — the granting key, now on the wire (GET /v1/contacts carries grant_receipt since 0.5.217). The sheet still says 'This node' by rule because the client discards the field; see §3."
     tag: receipt_attester
   - ceg: x_private:cohort_scope
     use: display-only
@@ -66,17 +66,25 @@ fields:
     tag: "proposed:contacts_row_trust"
 ```
 
-**The receipt renders all five facts every time.** `The rule it follows`
-(`consent:scope`) and the holder count are `NotSent`: `GET /v1/contacts` omits
-the grant's `attestation_prefixes` and carries no holder information. The row
-says "This node did not send this." in the error tone rather than leaving a
-blank — an absent fact is a fact about the node. CIRISServer#616 asks for the
-grant's envelope on the list route so those rows fill in without a client
-change.
+**The receipt renders all five facts every time.** It renders three of them
+`ByRule` and `The rule it follows` as `NotSent` — and that is now WRONG, because
+the node sends all five. The row says "This node did not send this." in the error
+tone rather than leaving a blank, which was the honest answer while the route was
+silent; against 0.5.217 it is the client contradicting the wire.
 
-`x_private:attesting_key_id` is `type: unconfirmed` deliberately: the identity
-is fixed (the granting node is this node) but the key is not carried, so the
-sheet says *This node* by rule and cannot show the key until the route does.
+**CIRISServer#616 CLOSED 2026-09-25 and shipped in 0.5.217.** `GET /v1/contacts`
+attaches `grant_receipt` per row (`CIRISServer src/contacts_chat.rs:1704-1712`,
+built at `src/peer.rs:1524-1560`) carrying `subject_key_ids`,
+`attesting_key_id`, `cohort_scope`, `dimension` and `consent_prefixes`. So
+`x_private:attesting_key_id` is `type: string` here, not `unconfirmed`: the
+substrate has answered.
+
+**What is left is this repo's.** `models/federation/Contact.kt:27-66` declares
+four contact-only members and no `grant`, so the wire field is decoded into
+nothing and `ui/screens/PeopleSupport.kt:66-83` still composes the sheet from
+rules. `wireFacts == 1` of 5 against a node that sends 5. Adding the field and
+reading it in `contactReceipt` is the whole change, and it is what takes this
+card to `testable`.
 
 ```yaml csd:states
 populated: {tag: contacts_list}
@@ -95,7 +103,8 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 |---|---|---|---|
 | contacts | `GET /v1/contacts` | CIRISServer | live since 0.5.185 |
 | add a contact | `POST /v1/contacts` | CIRISServer | live; returns `consent_prefixes` |
-| the grant's envelope on the list route | `GET /v1/contacts` — **unconfirmed**, asked in CIRISServer#616 | CIRISServer | blocks `building` for `receipt_attester`, `receipt_rule`, `receipt_holders` |
+| the grant's envelope on the list route | `GET /v1/contacts` → `grant_receipt` | CIRISServer | **live since 0.5.217** (#616 closed); `src/contacts_chat.rs:1704-1712` |
+| reading that envelope into the sheet | — | **CIRISClient** | **missing** — `Contact.kt:27-66` has no `grant` member, so `PeopleSupport.kt:66-83` renders 4 of 5 facts by rule; blocks `testable`, not `building` |
 
 ## 4. Flow (how)
 

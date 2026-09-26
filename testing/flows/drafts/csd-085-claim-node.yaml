@@ -1,0 +1,78 @@
+csd: CSD-085
+flow: csd_085_claim_node
+title: Claim a remote node, and refuse when this device has no signer
+description: >-
+  CSD-085 §4, driven, minus the two steps whose tags do not exist. The form is
+  four controls; with this device's own node down the screen says it has no signer
+  instead of offering a claim it cannot sign. The claim itself is
+  `POST {local}/v1/setup/claim-remote` (loopback-only, first-run-gated:
+  CIRISServer src/claim_remote.rs:393-397) then `POST {target}/v1/setup/root`,
+  which is structurally the ONE setup route reachable off-host
+  (src/auth/bootstrap.rs:1478-1487).
+# Floor: field_claim_node_code/_pin/_displayname, radio_cohort_$value,
+# card_claim_no_signer, btn_claim_node_submit/_another/_to_consent/_back are all
+# `testable*` literals in ui/screens/ClaimNodeScreen.kt at v0.5.224.
+# NOT asserted here: txt_claim_error, txt_claim_phase, txt_claim_role — still
+# `proposed:` in CSD-085 §2 and in no merged PR, so the error and the resulting
+# role cannot be asserted at all. CSD-085 §5 carries that.
+client: ">=0.5.224"
+
+steps:
+  - step_id: the_form_with_a_signer
+    title: With this device's node running, the four controls are offered
+    description: >-
+      `absent: [card_claim_no_signer]` is the half that matters: the form and the
+      no-signer card are mutually exclusive states, and a screen showing both
+      would invite a claim that cannot be signed.
+    requires:
+      screen: ClaimNode
+    expect:
+      state: populated
+      visible:
+        - field_claim_node_code
+        - field_claim_node_pin
+        - field_claim_node_displayname
+        - radio_cohort_self
+        - btn_claim_node_submit
+      absent: [card_claim_no_signer]
+
+  - step_id: the_three_fields_take_input
+    title: A NodeCode, a PIN and a display name are all enterable
+    do:
+      - input: {field_claim_node_code: "CIRIS-4A19-C2EF-0100"}
+      - input: {field_claim_node_pin: "000000"}
+      - input: {field_claim_node_displayname: "the shed node"}
+    expect:
+      screen: ClaimNode
+      visible: [btn_claim_node_submit]
+
+  - step_id: cohort_is_a_choice
+    title: The cohort radio is a real choice, not a label
+    do:
+      - click: radio_cohort_self
+    expect:
+      visible: [radio_cohort_self, btn_claim_node_submit]
+
+  - step_id: no_signer_no_claim
+    title: With this device's node down, the screen says it has no signer
+    description: >-
+      Optional: it needs the local node stopped, which no platform runner does
+      mid-flow (isLocalNodeUp probes GET :4243/health,
+      NodeSwitcherViewModel.kt:839). The assertion still stands on its own the
+      moment a fixture can produce it — `state: empty` AND the card, with the form
+      gone.
+    optional_step: true
+    requires:
+      screen: ClaimNode
+      visible: [card_claim_no_signer]
+    expect:
+      state: empty
+      visible: [card_claim_no_signer]
+      absent: [btn_claim_node_submit]
+
+  - step_id: back_leaves_the_screen
+    title: Back leaves the claim without submitting it
+    do:
+      - click: btn_claim_node_back
+    expect:
+      absent: [field_claim_node_code]

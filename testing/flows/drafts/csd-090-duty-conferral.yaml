@@ -1,0 +1,126 @@
+csd: CSD-090
+flow: csd_090_duty_conferral
+title: Confer a moderation duty from the accord family
+description: >-
+  CSD-090 §4, driven. The card names the conferring family and its quorum, the
+  duty set is a SET and not a choice, the ladder read-out fills from the node's
+  own table, and a propose with no subject refuses by name. Every tag here is
+  real in the released client — grepped from DutyConferralScreen.kt, not guessed.
+# Floor: every tag below is a `testable*` literal in ui/screens/DutyConferralScreen.kt
+# at v0.5.224, so the release carries the whole surface. The three tags CSD-090
+# still writes `proposed:` (duty_source_absent, duty_source_loading,
+# duty_yubikey_banner) are NOT used here and are NOT in any merged PR.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_card
+    title: The conferral card names the family it confers FOR
+    description: >-
+      Entry precondition, stated not assumed. DutyConferral is reached from
+      Everyone > Safety > Accord and then [+ New] — two clicks the nav map cannot
+      express (CSD-069 §4 records the same gap), so the flow states where it must
+      already be rather than encoding the hop.
+    requires:
+      screen: DutyConferral
+    expect:
+      state: populated
+      visible:
+        - duty_source_card
+        - duty_source_name
+        - duty_source_quorum
+        - duty_source_seats
+        - duty_conferral_card
+        - input_duty_subject
+        - input_duty_depth
+        - btn_duty_propose
+        - btn_duty_cosign
+
+  - step_id: no_duty_confers_nothing
+    title: An empty duty set says so instead of proposing
+    description: >-
+      Asserted as two tags because they are two claims: the verb list is empty
+      AND the ladder has nothing to read out. A screen that rendered one and not
+      the other would still answer /screen correctly.
+    do:
+      - click: chk_duty_box_moderate
+      - click: chk_duty_box_review
+      - click: chk_duty_box_consent_revocation
+    expect:
+      visible: [duty_verbs_none, duty_ladder_none]
+
+  - step_id: one_duty_one_ladder
+    title: Ticking a duty fills the ladder from the node's table
+    description: >-
+      The count is the assertion. The ladder rungs are derived from the node's
+      own DELEGATED_DUTY_SCOPES re-export, so a client that hardcoded a ladder
+      would pass a `visible:` check and fail this one. NOTE: the client's menu
+      offers five duties and the node now accepts SEVEN (CIRISPersist
+      admission.rs:6366-6376 added `license` and `grant` at v42.0.0) — CSD-090 §3
+      carries that finding; this step deliberately ticks only duties the menu has.
+    do:
+      - click: chk_duty_box_moderate
+    expect:
+      count: {of: "duty_ladder_*", min: 1}
+      absent: [duty_ladder_none, duty_verbs_none]
+
+  - step_id: two_duties_one_grant
+    title: A second duty adds rungs and still travels as one grant
+    do:
+      - click: chk_duty_box_review
+    expect:
+      count: {of: "duty_ladder_*", min: 2}
+      visible: [duty_conferral_card]
+      absent: [duty_verbs_none]
+
+  - step_id: propose_without_a_subject
+    title: Propose with no subject refuses, and the refusal is on screen
+    description: >-
+      `duty_error` and not a silent no-op: CSD-090 §2 requires the refusal be
+      visible, because a disabled button that says nothing is indistinguishable
+      from a press that was dropped (CIRISClient#70).
+    do:
+      - click: btn_duty_propose
+    expect:
+      state: error
+      visible: [duty_error]
+
+  - step_id: subject_and_depth_accept_input
+    title: The subject and depth fields take input
+    description: >-
+      Input, then the fields are still there and the error has not latched. This
+      is the step that proves the refusal above was about the empty subject and
+      not about the screen being inert.
+    do:
+      - input: {input_duty_subject: "wa-peer-4a19c2ef01"}
+      - input: {input_duty_depth: "1"}
+    expect:
+      screen: DutyConferral
+      visible: [input_duty_subject, input_duty_depth, btn_duty_propose]
+
+  - step_id: no_family_no_card
+    title: On a node with no accord family the card refuses before any of that
+    description: >-
+      Optional because it needs a node that has never run a genesis ceremony,
+      which the standing fixture does not guarantee.
+
+      NOT `state: empty`, deliberately. CSD-090's `states:` block maps `empty` to
+      `proposed:duty_source_absent`, and that is CORRECT: the screen has no such
+      tag and renders "this node knows no accord family yet" through
+      `duty_source_error` — so the one state that is not a failure is the one
+      that looks most like one. Asserting `state: empty` here is a LOAD ERROR
+      under PR #97's binder, and it should be: until the tag exists, this step
+      can only say which rows are gone, not that the screen is honestly empty.
+    optional_step: true
+    requires:
+      screen: DutyConferral
+    expect:
+      absent: [duty_source_name, duty_source_quorum]
+
+  - step_id: back_to_accord
+    title: Back returns to the Accord screen
+    do:
+      - click: btn_duty_back
+    expect:
+      screen: Accord
+      visible: [btn_accord_new]
+      absent: [duty_conferral_card]

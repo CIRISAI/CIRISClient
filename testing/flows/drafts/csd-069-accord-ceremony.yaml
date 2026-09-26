@@ -1,0 +1,86 @@
+csd: CSD-069
+flow: csd_069_accord_ceremony
+title: The genesis ceremony composes its six slots and reaches the provision phase
+description: >-
+  CSD-069 §4, driven, real tags only. All six routes this ceremony needs are live
+  and wired (CSD-069 §3 holds exactly). What the flow CANNOT say yet is which
+  slot is current, that a failed provision did not advance the sequence, or that
+  the phase is what it claims — all three need `txt_ceremony_phase` and
+  `txt_ceremony_error`, which are still proposed. §5 disclaims them.
+# Floor: btn_accord_ceremony_begin/_back, btn_ceremony_provision,
+# input_ceremony_holder_name/_key_id/_usb_path/_pin, row_ceremony_slot_$label,
+# accord_ceremony_success, accord_ceremony_genesis_json, remint_done_family and
+# remint_done_holders are all `testable*` literals at v0.5.224
+# (ui/screens/AccordCeremonyScreen.kt and AccordScreen.kt).
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_ceremony
+    title: The ceremony opens on its begin control
+    description: >-
+      AccordCeremony is reached from Accord's [+ New] on a node with no family.
+      The runner cannot walk that hop — there is no derived chain (CSD-069 §2) —
+      and FSD/CSD_STANDARD.md §5 forbids a flow encoding the clicks, so the entry
+      is a `requires:` instead. That is the concrete cost of the nav gap, stated
+      where it is checkable rather than discovered at 2am.
+    requires:
+      screen: AccordCeremony
+    expect:
+      visible: [btn_accord_ceremony_begin, btn_accord_ceremony_back]
+
+  - step_id: begin_reaches_provision
+    title: Begin opens the provision phase with all six slots on screen
+    description: >-
+      The count is the claim. CC 4.2's accord family is six holders; a ceremony
+      that composed its form and five slots would pass every `visible:` check
+      here and still be wrong.
+    do:
+      - click: btn_accord_ceremony_begin
+    expect:
+      screen: AccordCeremony
+      visible:
+        - input_ceremony_holder_name
+        - input_ceremony_key_id
+        - input_ceremony_usb_path
+        - input_ceremony_pin
+        - btn_ceremony_provision
+      count: {of: "row_ceremony_slot_*", eq: 6}
+
+  - step_id: the_slot_form_takes_input
+    title: A holder's name, key id, path and PIN are all enterable
+    do:
+      - input: {input_ceremony_holder_name: "A1"}
+      - input: {input_ceremony_key_id: "wa-holder-a1"}
+      - input: {input_ceremony_usb_path: "/media/holder-a1"}
+      - input: {input_ceremony_pin: "000000"}
+    expect:
+      screen: AccordCeremony
+      visible: [btn_ceremony_provision]
+      count: {of: "row_ceremony_slot_*", eq: 6}
+
+  - step_id: a_completed_ceremony
+    title: A finished ceremony shows the genesis and names the family it minted
+    description: >-
+      Optional, and honestly so: completing it needs six physical FIPS tokens
+      with PINs and touches, which no platform runner has. `accord_ceremony_success`
+      alone would not be enough — the genesis JSON and the family the ceremony
+      produced are what make the success checkable rather than asserted.
+    optional_step: true
+    requires:
+      screen: AccordCeremony
+      visible: [accord_ceremony_success]
+    expect:
+      state: populated
+      visible:
+        - accord_ceremony_success
+        - accord_ceremony_genesis_json
+        - remint_done_family
+        - remint_done_holders
+
+  - step_id: back_to_accord
+    title: Back returns to the Accord screen without minting anything
+    do:
+      - click: btn_accord_ceremony_back
+    expect:
+      screen: Accord
+      absent: [btn_accord_ceremony_begin]

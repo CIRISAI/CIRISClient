@@ -45,7 +45,7 @@ owner: CIRISClient       # who holds the pen at this stage
 |---|---|---|---|
 | `envisioned` | steward | §1 mission, §2 `ceg:` families touched | §1 falsifiable; every `ceg:` resolves in the registry |
 | `sketched` | client | §2 screens/tags/`shows:`/`states:`, §4 flow | tags may be `proposed:`; flow must parse; floor `unreleased` |
-| `building` | substrate | §3 contracts — routes, owners, payload shapes | no `unconfirmed` left in §3; `shows:` types match the route |
+| `building` | substrate | §3 contracts — routes, owners, payload shapes | no `unconfirmed` left in §3, except a field whose answer is "no" and that names it: `blocked_by: <Repo>#<n>`; `shows:` types match the route |
 | `testable` | client | floor flips off `unreleased`; flow runs on the matrix | every `shows:` row asserted in §4 or disclaimed in §5 |
 | `verified` | steward | §5 acceptance signed; the untested list accepted | flow green on its declared platforms; gallery has a shot per step |
 | `shipped` | — | the release that carries it | floor names a published version |
@@ -55,6 +55,21 @@ owner: CIRISClient       # who holds the pen at this stage
 document waiting on someone who has stopped. The checker tells them apart, so
 "not yet" and "stalled" stop looking identical — which is the failure this repo
 keeps finding under other names.
+
+**"Not yet", "stalled" and "the answer is no" are three states, not two.** A
+field no route serves stays `type: unconfirmed`. Once someone has asked and the
+substrate has declined, it names the issue that says so:
+
+```yaml
+  - ceg: "capacity:{factor}"
+    type: unconfirmed
+    blocked_by: CIRISServer#659      # or a list
+```
+
+The checker accepts that at `building` and still refuses it at `testable`,
+because a value no route serves cannot be asserted. A malformed reference fails,
+and so does a `blocked_by` left on a field that has since been confirmed: a
+blocker that outlives its gap is drift.
 
 **A stage never advances itself.** The pen-holder edits `stage:` deliberately,
 and the checker refuses an advance whose requirements are unmet, naming the
@@ -85,6 +100,29 @@ is what FSD/CSD_STANDARD.md §5 already assigns it.
 
 The checker resolves `surface:` through the same map, so a CSD naming a surface
 the sidebar cannot reach fails at load rather than at 2am against a timeout.
+
+**Known keys only.** `csd:surface` may carry `surface`, `screen`, `scopes`,
+`flow_only`, `entry` and `exit`. Any other key fails. An unread key is not
+harmless: `screen_class:` was briefly used for flow-only screens, and because
+the checker never read it, `screen` was empty and both checks were skipped. A CSD
+declaring the Nodes card as `Screen.Telemetry` passed that way, and so did the
+typo `screeen:`.
+
+**A screen no sidebar row reaches** (Startup, Login, Setup, a claim, a ceremony)
+says so, and the checker holds it to that:
+
+```yaml csd:surface
+surface: null
+screen: Startup                 # must be a member of `sealed class Screen`
+flow_only: true                 # fails if the sidebar CAN reach this screen
+entry: the router's initial screen, and after a reset  # required: how a person arrives
+```
+
+A card that is placed and reachable, but whose hop `nav_map` cannot express,
+is not `flow_only`: the checker rejects that, because the screen resolves. Such
+a card keeps its explanation in prose until the nav map can say it. (The first case was
+Account, a second route to `Screen.Settings`; the row was deleted in #93, and #92's
+`nav_map.build_surfaces()` keeps every surface's hop when two share a screen.)
 
 ## 2.1 Fields — `shows:` (the unified field spec)
 
