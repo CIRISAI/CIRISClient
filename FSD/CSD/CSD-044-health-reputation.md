@@ -57,12 +57,14 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED, in any circle. This is the family that would make the card mean something different in Neighbours than in Everyone — the standing of this subject within one cohort."
     tag: "proposed:standing_row_cohort"
+    blocked_by: CIRISLensCore#25
   - ceg: "manifold_conformity:{cohort}"
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "NOT RENDERED. Same family shape, same absence."
     tag: "proposed:conformity_row_cohort"
+    blocked_by: CIRISLensCore#25
   - ceg: capacity:composite
     use: display-only
     type: float
@@ -70,6 +72,7 @@ fields:
     example: 0.68
     renders: "the 36sp hero, or an em dash before the first fetch. CSD-004 owns this row's min_of relation; it is repeated here ONLY as the anchor for the pre-fetch defect below."
     tag: card_capacity_composite
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: x_private:score_provenance
     use: display-only
     type: "enum[local_and_fleet,fleet_only]"

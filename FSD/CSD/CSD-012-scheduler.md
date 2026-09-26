@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -53,6 +53,7 @@ fields:
     example: "unconfirmed"
     renders: "WHY IT RUNS — today a free-text `goal_description` the person types (mobile.scheduler_goal). CC 3.1.9.7 wants an approach bound to a Goal object; the route carries a sentence."
     tag: "proposed:scheduler_row_goal"
+    blocked_by: CIRISAgent#1208
   - ceg: x_private:schedule_cron
     use: emit
     type: string
@@ -90,6 +91,7 @@ fields:
     example: "unconfirmed"
     renders: "DID IT ACTUALLY RUN — not shown. `last_triggered_at` is on the wire; whether the commitment was kept is the CC 3.1.9.2 family and nothing emits it here."
     tag: "proposed:scheduler_row_fulfilment"
+    blocked_by: CIRISAgent#1208
 ```
 
 **`approach:{goal_id}` is bound to show what the shape would be, and it is

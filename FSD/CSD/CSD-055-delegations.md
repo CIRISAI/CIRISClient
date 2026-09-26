@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -65,6 +65,7 @@ fields:
     example: "unconfirmed"
     renders: "Who granted this before you — the chain above this grant, capped at 5 (CC 4.1.1). Not carried today."
     tag: "proposed:text_delegation_chain"
+    blocked_by: CIRISServer#663
   - ceg: x_private:user_code
     use: display-only
     type: string

@@ -4,7 +4,7 @@
 **Flow**: unwritten — §2.3 is the tag list it needs before it can be written
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -89,6 +89,7 @@ fields:
     example: 0.82
     renders: "Auto-promoting wa-mem-9b02 — highest moderation track record in this community (0.82)"
     tag: "proposed:row_named_moderator_candidate"
+    blocked_by: CIRISServer#665
   - ceg: x_private:moderation_attestation_id
     use: display-only
     type: string

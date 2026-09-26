@@ -74,6 +74,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. `SelfOccurrence.hardwareAttestation` is decoded and never drawn — the one field CC 4.5.12.3 names as where 'the security gradient lives'."
     tag: "proposed:identity_row_hardware"
+    blocked_by: CIRISConstitution#107
   - ceg: x_private:asserted_at
     use: display-only
     type: timestamp

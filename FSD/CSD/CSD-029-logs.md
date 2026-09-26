@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -79,6 +79,7 @@ fields:
     example: "unconfirmed"
     renders: "What this log is, constitutionally. NOT APPLICABLE TODAY and that is the honest answer: `/v1/telemetry/logs` returns operational log lines, not a CC 3.1.5 trace. The field is declared so the CSD states the distinction rather than implying a log is evidence."
     tag: "proposed:logs_provenance_note"
+    blocked_by: CIRISAgent#1210
 ```
 
 **The `trace_summary` row is a deliberate negative.** A person reading this

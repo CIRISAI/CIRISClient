@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -59,18 +59,21 @@ fields:
     example: "unconfirmed"
     renders: "the reasoning timeline: one row per pipeline step (thought_start ❓, snapshot_and_context ▶, dma_results ≈, conscience_result ◎, action_result ⚠)"
     tag: "proposed:interact_timeline_row"
+    blocked_by: [CIRISAgent#1210, CIRISConstitution#106]
   - ceg: dma:pdma:*
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "the ≈ row in the timeline — the four DMA verdicts on this turn"
     tag: "proposed:interact_timeline_dma"
+    blocked_by: CIRISAgent#1210
   - ceg: conscience:coherence
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "the ◎ row — a conscience faculty's verdict on the drafted action"
     tag: "proposed:interact_timeline_conscience"
+    blocked_by: CIRISAgent#1210
   - ceg: session:{kind}
     bind: {kind: claim}
     use: display-only
@@ -78,6 +81,7 @@ fields:
     example: "unconfirmed"
     renders: "WHICH OF MY DEVICES IS HANDLING THIS — not shown today. The node switcher names a node; it does not say this occurrence holds the exchange."
     tag: "proposed:interact_session_holder"
+    blocked_by: CIRISAgent#1210
   - ceg: x_private:cognitive_state
     use: display-only
     type: "enum[WORK,DREAM,PLAY,SOLITUDE,WAKEUP,SHUTDOWN]"

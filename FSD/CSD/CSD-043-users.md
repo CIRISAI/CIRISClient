@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -103,6 +103,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT ON THE WIRE AND NOT RENDERED. CC 2.1's `listed` flag is what makes a person enumerable; `UserSummary` has no such field, so this screen enumerates everyone with no opt-in to check."
     tag: "proposed:user_row_listed"
+    blocked_by: [CIRISAgent#1202, CIRISPersist#912]
 ```
 
 `partner_role:{role}` and `duty:{kind}` are bound here **as the nearest

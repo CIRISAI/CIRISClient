@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -87,12 +87,14 @@ fields:
     example: "unconfirmed"
     renders: "PRIORITY, STRATEGY, CAPABILITIES — rendered as NORMAL / FALLBACK / none for every service, from constants in the mapper, not from any route"
     tag: "proposed:services_row_config"
+    blocked_by: CIRISAgent#1208
   - ceg: system:*
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "THE NODE'S OWN SUBSTRATE HEALTH — the thing the card's own doc comment promises (EpistemicNav.kt:69, 'Services is a node-infra keeper'). Not read; the screen shows the brain's service registry instead."
     tag: "proposed:services_node_substrate"
+    blocked_by: CIRISServer#668
 ```
 
 **`config:{scope}` and `system:*` are both reserved and both `display-only`

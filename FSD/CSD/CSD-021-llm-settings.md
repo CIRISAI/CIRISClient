@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -84,6 +84,7 @@ fields:
     example: "unconfirmed"
     renders: "What this node is running, as an auditable record (CC 3.1.9: 'published as an auditable record rather than inferred from behaviour'). NOT EMITTED: no `config:llm` row exists, so the only answer to 'what is my agent thinking with' is this screen's own read-back."
     tag: "proposed:llm_config_receipt"
+    blocked_by: CIRISAgent#1209
 ```
 
 **`config:llm` is the field that should exist and does not.** Everything else

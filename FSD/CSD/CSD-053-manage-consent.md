@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -73,12 +73,14 @@ fields:
     example: "unconfirmed"
     renders: "Who it is for — the machine this human's grant names. Not carried to the client today."
     tag: "proposed:text_consent_for_key"
+    blocked_by: CIRISServer#657
   - ceg: x_private:attesting_key_id
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "Who granted it — since node 0.5.211 that is the OWNER's fed-ID, not the node. Not carried to the client today."
     tag: "proposed:text_consent_attester"
+    blocked_by: CIRISServer#657
   - ceg: x_private:trace_consent
     use: display-only
     type: bool

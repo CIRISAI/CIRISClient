@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -81,6 +81,7 @@ fields:
     example: "unconfirmed"
     renders: "WAS IT ACTUALLY DONE — not on this screen. CC 3.3.1 makes this the producer's attestation that revoked content was evicted; the wire carries a local status word instead."
     tag: "proposed:tickets_row_deletion_complete"
+    blocked_by: [CIRISAgent#1207, CIRISServer#671]
   - ceg: x_private:ticket_automated
     use: display-only
     type: bool

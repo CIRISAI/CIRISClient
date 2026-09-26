@@ -6,7 +6,7 @@
 **Does NOT cover**: `layer-global-commons` — see CSD-051 and §2.0.
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -85,18 +85,21 @@ fields:
     example: "unconfirmed"
     renders: "Who is here — one row per identity visible at this scope, friendly name where there is one, key_id otherwise. Today: a sentence describing those rows, and no rows."
     tag: "proposed:layer_row_identity"
+    blocked_by: CIRISServer#662
   - ceg: "trust:{job}:{version}"
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "Trusted / Not trusted, and by which conferral — trust:confers:v1 from a root this node accepted, or a direct grant"
     tag: "proposed:layer_row_trust"
+    blocked_by: CIRISServer#662
   - ceg: x_private:trust_policy
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "Trust policies — the standing rules that trust someone here without being asked each time"
     tag: "proposed:layer_row_policy"
+    blocked_by: CIRISConstitution#109
 ```
 
 **Two of these four have no family to be named by, and that is the finding.**

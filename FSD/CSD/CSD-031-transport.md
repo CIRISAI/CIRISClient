@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -103,6 +103,7 @@ fields:
     example: "unconfirmed"
     renders: "The transport identity is a SEPARATE keypair the federation key authorizes by signing the binding — CC 4.4.3.4.3 AV-17: 'the federation signing seed MUST NOT enter the transport layer.' NOT SENT: `GET /v1/federation/identity` returns the signer key id and the destination, not the boundary attestation."
     tag: "proposed:transport_key_boundary"
+    blocked_by: CIRISServer#670
 ```
 
 **`key_boundary:{scope}` is `unconfirmed` and it is the security-relevant

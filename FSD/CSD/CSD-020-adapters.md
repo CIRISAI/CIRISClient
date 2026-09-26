@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -72,12 +72,14 @@ fields:
     example: "unconfirmed"
     renders: "Under which grant — `agency:message_io` (CC 4.4.3.4.3). NOT SENT: no adapter route carries the `delegates_to` row this adapter runs under, so the sheet says 'This node did not send this.' rather than leaving a blank."
     tag: "proposed:adapters_receipt_scope"
+    blocked_by: CIRISAgent#1211
   - ceg: x_private:oauth_grant_scope
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "What you are about to hand over — the external OAuth scopes (e.g. Home Assistant `read`+`control`). NOT SENT: `startAdapterConfiguration` returns a step list, never the scope string in the authorize URL."
     tag: "proposed:wizard_oauth_scope"
+    blocked_by: CIRISAgent#1211
   - ceg: x_private:adapter_metrics
     use: display-only
     type: int
