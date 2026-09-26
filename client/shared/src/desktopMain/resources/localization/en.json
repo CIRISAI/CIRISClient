@@ -641,7 +641,7 @@
     "store_unavailable": "The node could not read its contact records. Nothing was changed — try again once the node is healthy.",
     "unknown_fed_id": "That federation ID is not in this node's directory. Admit the key first (peering) — an announced-but-unadmitted bookmark carries no provenance and cannot be consented to.",
     "unreachable": "They are known, but nothing answered. Their devices may be offline; messages will reach them when they return.",
-    "unresolvable": "That identifier does not resolve to a contact."
+    "unresolvable": "That isn't a person's code. Ask them for their contact code: People › Share my contact code."
   },
   "description": "Description",
   "discord": {
@@ -1452,8 +1452,8 @@
     "consent_switch_temporary": "Switching to TEMPORARY will set a 14-day auto-forget period. Continue?",
     "consent_users_helped": "Users Helped",
     "consent_view_only": "You can only view and manage your own consent settings.",
-    "contacts_add_field_label": "Federation ID (key_id)",
-    "contacts_add_hint": "Paste the full federation ID (key_id) of the person you want to reach.",
+    "contacts_add_field_label": "Contact code or federation ID",
+    "contacts_add_hint": "Paste or scan the person's contact code. A federation ID also works if this node already knows them.",
     "contacts_add_submit": "Add contact",
     "contacts_add_submit_busy": "Adding…",
     "contacts_add_title": "Add a Contact",
@@ -1463,7 +1463,7 @@
     "contacts_chat_not_started": "No messages yet",
     "contacts_chat_started": "Conversation open",
     "contacts_choose": "Choose",
-    "contacts_empty_body": "A contact is someone you have consented to exchange messages with. Add one by their federation ID to start a conversation.",
+    "contacts_empty_body": "A contact is someone you have consented to exchange messages with. Add one by their contact code to start a conversation.",
     "contacts_empty_title": "No contacts yet",
     "contacts_first_seen": "first seen · {when}",
     "contacts_no_match": "No contacts match “{query}”",
@@ -3138,7 +3138,29 @@
     "transport_not_on_this_node": "This node doesn't report its transports.",
     "audit_not_on_this_node": "This node doesn't keep an agent audit log. Nothing was filtered out.",
     "consent_not_on_this_node": "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one.",
-    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy."
+    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy.",
+    "contact_code_title": "Share my contact code",
+    "contact_code_qr_desc": "Your contact code as a QR",
+    "contact_code_copy": "Copy",
+    "contact_code_copied": "Copied",
+    "contact_code_included_none": "This code names none of your devices. People find you through the federation directory.",
+    "contact_code_included_one": "This code includes 1 device: {device}.",
+    "contact_code_included_many": "This code includes {count} devices: {devices}.",
+    "contact_code_without_transport": "Not in this code yet: {devices}. A device can go in once it has a network address here, after its node next starts.",
+    "contact_code_disclosure": "Anyone with this code can ask to add you, and can see which of your devices it names.",
+    "contact_code_nodes_all": "All my reachable devices",
+    "contact_code_nodes_list": "Choose devices",
+    "contact_code_nodes_none": "No devices",
+    "contact_code_private_note": "Only reachable devices can go in a code. Your other devices are private.",
+    "contact_code_list_reloaded": "Your list of reachable devices was reloaded. The code below is for the devices that are reachable now.",
+    "contact_code_unreachable": "No one can find you with this yet: none of your devices is reachable. Make this device reachable, or share a code that includes it.",
+    "contact_code_make_reachable": "Make this device reachable",
+    "contact_code_make_reachable_busy": "Making this device reachable…",
+    "contact_code_made_reachable": "This device is reachable now. Its network address is announced the next time its node starts.",
+    "contact_code_make_reachable_failed": "Could not make this device reachable.",
+    "contact_code_error": "Could not get your contact code.",
+    "contact_code_node_too_old": "This node can't make a contact code yet. It needs ciris-server 0.5.218 or newer.",
+    "contacts_add_already": "Already in your contacts."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Your devices are the owner's own surface. Sign in as the owner of this node.",
     "release_incomplete": "The release was signed, but the node still lists that node as yours: an ownership record it cannot see is still live. What it could withdraw stays withdrawn.",
     "release_self_requires_force": "That is the node you are talking to. Releasing it ends your ownership here, including this session.",
-    "store_unavailable": "The node could not read or write its identity store. Nothing was changed."
+    "store_unavailable": "The node could not read or write its identity store. Nothing was changed.",
+    "node_not_announced": "That device isn't reachable, so it can't go in a code.",
+    "contact_code_owner_key_absent": "This node does not hold your identity's key record, so it can't make your contact code.",
+    "contact_code_not_a_person": "Your identity is not registered as a person, and only a person can be added as a contact.",
+    "contact_code_key_not_derived": "Your identity's key id does not match its key, so everyone you shared a code with would refuse it.",
+    "contact_code_no_pqc_half": "Your identity has no post-quantum key half, so no one could add you from a code.",
+    "contact_code_unencodable": "Your contact code could not be made from the keys this node holds."
   }
 }

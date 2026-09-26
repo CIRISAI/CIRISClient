@@ -1023,7 +1023,9 @@ fun CIRISApp(
         ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
     val contactsViewModel: ContactsViewModel = viewModel {
-        ContactsViewModel(apiClient)
+        // nodeBaseUrl for the contact code and the add: with an agent in front,
+        // the api base is the agent, which does not serve them (CIRISAgent#1213).
+        ContactsViewModel(apiClient, nodeBaseUrl)
     }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not

@@ -433,6 +433,15 @@ class CIRISApiClient(
         }
 
         /**
+         * `GET /v1/self/contact-code` with its `nodes` query: null leaves it
+         * absent (every announced device); anything else goes through encoded.
+         */
+        fun contactCodeUrl(nodeUrl: String, nodes: String?): String {
+            val base = "${nodeUrl.trimEnd('/')}/v1/self/contact-code"
+            return if (nodes == null) base else "$base?nodes=${nodes.encodeURLParameter()}"
+        }
+
+        /**
          * Move the local node to an address we INFERRED — the run-without-AI
          * hand-off deciding the node is now the backend.
          *
@@ -1486,14 +1495,20 @@ class CIRISApiClient(
      * The refusal worth surfacing on its own is `contacts.unknown_fed_id`: the
      * key is not in this node's federation directory, and the remedy is to
      * ADMIT it first (peering), not to retype it.
+     *
+     * [keyId] may be a fed-ID or a contact code (the node reads either from
+     * `key_id`). [nodeUrl] defaults to [baseUrl] for existing callers; People
+     * passes the NODE's address, because on a with-AI install [baseUrl] is the
+     * agent, which does not serve the 0.5.218 contact surface (CIRISAgent#1213)
+     * — see [ai.ciris.mobile.shared.viewmodels.contactsNodeUrl].
      */
-    suspend fun addContact(keyId: String): AddContactResponse {
+    suspend fun addContact(keyId: String, nodeUrl: String = baseUrl): AddContactResponse {
         val method = "addContact"
-        logInfo(method, "POST $baseUrl/v1/contacts key_id=${keyId.take(16)}…")
+        logInfo(method, "POST $nodeUrl/v1/contacts key_id=${keyId.take(16)}…")
         val client = federationHttpClient()
         return try {
             val body = buildJsonObject { put("key_id", keyId) }
-            val response = client.post("$baseUrl/v1/contacts") {
+            val response = client.post("$nodeUrl/v1/contacts") {
                 authHeader()?.let { header("Authorization", it) }
                 contentType(ContentType.Application.Json)
                 setBody(body.toString())
@@ -1504,7 +1519,48 @@ class CIRISApiClient(
             logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
             decoded
         } catch (e: Exception) {
-            logException(method, e, "url=$baseUrl")
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * The person's own **contact code** — `GET {nodeUrl}/v1/self/contact-code?nodes=`
+     * (CIRISServer#673, 0.5.218; CSD-092). Owner session.
+     *
+     * [nodes]: null = every announced device, `"none"` = the fed-ID only, or a
+     * comma list of announced node key ids ([contactCodeUrl] builds the query).
+     * Throws [NodeRefusal]: `self.node_not_announced` (400) for a private or
+     * foreign device, and a bare 404 from a node older than 0.5.218.
+     */
+    suspend fun getContactCode(
+        nodes: String?,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.ContactCodeResponse {
+        val method = "getContactCode"
+        val url = contactCodeUrl(nodeUrl, nodes)
+        logInfo(method, "GET $url")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get(url) {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.ContactCodeResponse.serializer(),
+                raw,
+            )
+            logInfo(
+                method,
+                "format=${decoded.format} available=${decoded.availableNodes.size} " +
+                    "included=${decoded.includedNodes.size} without_transport=${decoded.nodesWithoutTransport.size}",
+            )
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
             throw e
         } finally {
             client.close()

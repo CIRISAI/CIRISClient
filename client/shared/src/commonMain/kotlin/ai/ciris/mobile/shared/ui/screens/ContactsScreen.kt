@@ -22,6 +22,7 @@ import ai.ciris.mobile.shared.ui.primitives.CirisTextField
 import ai.ciris.mobile.shared.ui.primitives.FieldRow
 import ai.ciris.mobile.shared.ui.primitives.ItemRow
 import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.QrScanAction
 import ai.ciris.mobile.shared.ui.primitives.Receipt
 import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
 import ai.ciris.mobile.shared.ui.primitives.RowFlag
@@ -29,6 +30,8 @@ import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.ui.theme.tone
+import ai.ciris.mobile.shared.viewmodels.AddContactOutcome
+import ai.ciris.mobile.shared.viewmodels.ContactCodeState
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.layout.Arrangement
@@ -44,6 +47,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -111,6 +116,14 @@ fun ContactsScreen(
     val justAdded by viewModel.justAdded.collectAsState()
     val routeUnsupported by viewModel.routeUnsupported.collectAsState()
     val chatIneligible by viewModel.chatIneligible.collectAsState()
+    val addOutcome by viewModel.addOutcome.collectAsState()
+    val contactCode by viewModel.contactCode.collectAsState()
+    val contactCodeNodes by viewModel.contactCodeNodes.collectAsState()
+    val contactCodeTicked by viewModel.contactCodeTicked.collectAsState()
+    val contactCodeRefusal by viewModel.contactCodeRefusal.collectAsState()
+    val makeReachable by viewModel.makeReachable.collectAsState()
+    val codeOpen = !pickerMode && contactCode != ContactCodeState.Closed
+    val toggleCode = { if (codeOpen) viewModel.closeContactCode() else viewModel.openContactCode() }
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -161,6 +174,14 @@ fun ContactsScreen(
                 },
                 actions = {
                     if (!pickerMode) {
+                        // Share my contact code (CSD-092): one card, reached from
+                        // every circle's People tab.
+                        IconButton(
+                            onClick = toggleCode,
+                            modifier = Modifier.testableWithHandler(PeopleTags.CODE_OPEN) { toggleCode() },
+                        ) {
+                            Glyph(GlyphName.SHARE_OUT, tint = if (codeOpen) t.brand else t.dim, contentDescription = localizedString("mobile.contact_code_title"))
+                        }
                         IconButton(
                             onClick = { addExpanded = !addExpanded },
                             modifier = Modifier.testableWithHandler(PeopleTags.ADD_OPEN) { addExpanded = !addExpanded },
@@ -180,6 +201,26 @@ fun ContactsScreen(
         },
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            // ── Share my contact code ─────────────────────────────────────────
+            // Open, it IS the body: a QR, the code and the picker do not fit
+            // above a list on a phone, and this is a task with an end.
+            if (codeOpen) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    ContactCodeCard(
+                        state = contactCode,
+                        nodesChoice = contactCodeNodes,
+                        ticked = contactCodeTicked,
+                        refusal = contactCodeRefusal,
+                        makeReachable = makeReachable,
+                        onChoose = viewModel::setContactCodeNodes,
+                        onToggleNode = viewModel::toggleContactCodeNode,
+                        onMakeReachable = viewModel::makeThisDeviceReachable,
+                        onClose = viewModel::closeContactCode,
+                    )
+                }
+                return@Column
+            }
+
             // ── Search ────────────────────────────────────────────────────────
             Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 CirisTextField(
@@ -209,6 +250,7 @@ fun ContactsScreen(
                     refusalReasonId = addRefusalReasonId,
                     refusalDetail = addError,
                     justAdded = justAdded,
+                    addOutcome = addOutcome,
                     onSubmit = { viewModel.addContact(addKeyId) },
                     onOpenChat = {
                         justAdded?.let { c ->
@@ -316,8 +358,11 @@ fun ContactsScreen(
 
 /**
  * The add-by-code flow, and the primary action when the contact list is empty.
- * (Scanning in person and showing your own code arrive with the contacts,
- * groups and rosters work — not stubbed here.)
+ * The field takes a person's contact code (CSD-092) or a fed-ID; scanning a
+ * code FILLS the field and does not submit, because adding someone writes a
+ * consent grant (CC 3.3.7) and the person should see what they scanned first.
+ * Paste stays on every platform: a device that cannot scan loses a shortcut,
+ * not the flow.
  *
  * Refusals are rendered from the node's typed `reason_id` — not from the English
  * sentence — because two of them have remedies that point in opposite
@@ -335,6 +380,7 @@ private fun AddContactCard(
     refusalReasonId: String?,
     refusalDetail: String?,
     justAdded: Contact?,
+    addOutcome: AddContactOutcome?,
     onSubmit: () -> Unit,
     onOpenChat: () -> Unit,
     onDismissAdded: () -> Unit,
@@ -367,6 +413,11 @@ private fun AddContactCard(
                 )
             },
         )
+        QrScanAction(
+            onScanned = { scanned -> onKeyIdChange(scanned.trim()) },
+            tag = PeopleTags.SCAN,
+            modifier = Modifier.padding(top = 6.dp),
+        )
 
         // ── The typed refusal ─────────────────────────────────────────────────
         if (refusalReasonId != null || refusalDetail != null) {
@@ -387,10 +438,16 @@ private fun AddContactCard(
         // ── Success ───────────────────────────────────────────────────────────
         justAdded?.let { added ->
             Spacer(Modifier.height(8.dp))
-            Text(
-                localizedString("mobile.contacts_added", "who", shortKey(added.keyId)),
-                style = type.body, color = t.ok,
-            )
+            if (addOutcome == AddContactOutcome.ALREADY) {
+                // The same person twice is a no-op on the node, not an error.
+                val already = localizedString("mobile.contacts_add_already")
+                Text(already, style = type.body, color = t.ok, modifier = Modifier.testable(PeopleTags.ADD_ALREADY, already))
+            } else {
+                Text(
+                    localizedString("mobile.contacts_added", "who", shortKey(added.keyId)),
+                    style = type.body, color = t.ok,
+                )
+            }
             Row {
                 CirisTextButton(localizedString("mobile.contacts_open_chat"), tag = PeopleTags.ADD_OPEN_CHAT, onClick = onOpenChat)
                 CirisTextButton(localizedString("common_close"), tag = PeopleTags.ADD_DISMISS, onClick = onDismissAdded)
