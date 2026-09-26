@@ -125,7 +125,7 @@ fun ContactsScreen(
 
     // The receipt sheet: one at a time, opened from a row's hamburger or long-press.
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
-    val thisNodeLabel = localizedString("mobile.receipt_this_node")
+    val attesterGloss = localizedString("mobile.receipt_contact_attester_person")
     val openChatLabel = localizedString("mobile.contacts_open_chat")
     val scopeNote = localizedString("mobile.receipt_contact_scope_note")
 
@@ -294,7 +294,7 @@ fun ContactsScreen(
                             contact = contact,
                             chatIneligible = contact.keyId in chatIneligible,
                             receipt = contactReceipt(
-                                contact, thisNodeLabel, openChatLabel, scopeNote,
+                                contact, attesterGloss, openChatLabel, scopeNote,
                                 onOpenChat = { receiptFor = null; onOpenChat(contact) },
                             ),
                             onOpenChat = { onOpenChat(contact) },
