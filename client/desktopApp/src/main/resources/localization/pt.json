@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Consentir a participação na malha CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Este nó escreveu esse consentimento antes de você assiná-lo, portanto não é seu para retirar aqui, e o nó não vai retirar o consentimento em seu nome. Ele ainda está ativo.",
+    "delegate_may_not_withdraw": "Uma sessão delegada não pode retirar o consentimento do titular. A retirada é assinada com a própria chave do titular.",
+    "author_signer_unavailable": "A retirada de consentimento é assinada pela pessoa que o deu, e este nó não pode usar essa identidade agora. Nada foi retirado.",
+    "withdraw_failed": "A retirada não pôde ser armazenada. Nada foi retirado.",
+    "delegation_denied": "A delegação desta sessão não concede essa ação.",
+    "malformed_body": "A solicitação não indicou uma concessão a ser retirada.",
+    "store_unavailable": "O nó não conseguiu ler seus registros de consentimento. Nada foi retirado. Tente novamente quando o nó estiver saudável.",
+    "grant_not_live": "Essa não é uma concessão de consentimento ativa neste nó. Pode já ter sido retirada."
   },
   "consent_about_desc": "Compartilhe dados agregados e anônimos para melhorar o CIRIS",
   "consent_about_title": "Sobre Compartilhamento de Consentimento",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Este nó não relata seus transportes.",
     "audit_not_on_this_node": "Este nó não mantém um registro de auditoria do agente. Nada foi filtrado.",
     "consent_not_on_this_node": "Este nó não guarda registros de consentimento. O consentimento é mantido por um agente, e este nó funciona sem um.",
-    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar."
+    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar.",
+    "manage_consent_revoke_unsupported": "Este nó ainda não pode retirar consentimento (requer ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Revogar identifica uma concessão específica, e este nó ainda não lista suas concessões de pareamento, então funciona apenas com uma concessão configurada aqui, nesta sessão.",
+    "manage_consent_revoke_confirm_title": "Retirar este consentimento?",
+    "manage_consent_revoke_fact_stops_value": "{from} deixa de ser replicado para {to}.",
+    "manage_consent_revoke_confirm": "Retirar",
+    "manage_consent_withdrawn": "Retirado. O nó registrou sua retirada ({id}).",
+    "consent_withdraw_fact_who": "Quem",
+    "consent_withdraw_fact_stops": "O que para",
+    "consent_withdraw_fact_signs": "Quem assina",
+    "consent_withdraw_signs_value": "Você. O nó assina a retirada com a sua chave, nunca com a própria.",
+    "consent_remaining_title": "Ainda ativo",
+    "consent_remaining_row": "Ainda ativo: este nó o escreveu antes de você assinar, portanto não pode ser retirado aqui.",
+    "contacts_remove": "Remover",
+    "contacts_remove_confirm_title": "Remover {who} dos seus contatos?",
+    "contacts_remove_fact_stops_value": "Seu consentimento para compartilhar com essa pessoa. Suas mensagens e registros compartilhados deixam de ser replicados para ela.",
+    "contacts_removed": "Contato removido: {who}. Seu consentimento para essa pessoa foi retirado.",
+    "contacts_remove_remaining_title": "{who} ainda é um contato",
+    "contacts_remove_remaining_body": "Você retirou {count} concessão(ões). As concessões abaixo ainda estão ativas.",
+    "contacts_remove_remaining_row": "Ainda ativo: escrito por este nó antes de você assinar seus contatos, portanto não pode ser retirado aqui",
+    "contacts_remove_unsupported": "Este nó ainda não pode remover contatos (requer ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "O nó não conseguiu ler os seus registos de contactos. Nada foi alterado — tente novamente quando o nó estiver saudável.",
     "unknown_fed_id": "Esse ID de federação não está no diretório deste nó. Admita primeiro a chave (peering) — um marcador anunciado mas não admitido não tem proveniência e não pode receber consentimento.",
     "unreachable": "Essa pessoa é conhecida, mas nada respondeu. Os dispositivos dela podem estar offline; as mensagens chegarão até ela quando ela voltar.",
-    "unresolvable": "Esse identificador não corresponde a nenhum contacto."
+    "unresolvable": "Esse identificador não corresponde a nenhum contacto.",
+    "not_a_contact": "Essa pessoa não é um contato aqui: nenhuma concessão de consentimento ativa a menciona."
   },
   "ceg": {
     "envelope": {

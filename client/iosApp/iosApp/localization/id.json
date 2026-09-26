@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Setujui Partisipasi dalam CIRIS Mesh"
-    }
+    },
+    "grant_not_owner_authored": "Node ini menulis persetujuan tersebut sebelum Anda menandatanganinya, sehingga itu bukan milik Anda untuk dicabut di sini, dan node tidak akan mencabut persetujuan atas nama Anda. Persetujuan itu masih aktif.",
+    "delegate_may_not_withdraw": "Sesi yang didelegasikan tidak dapat mencabut persetujuan pemilik. Pencabutan ditandatangani dengan kunci pemilik sendiri.",
+    "author_signer_unavailable": "Pencabutan persetujuan ditandatangani oleh orang yang memberikannya, dan node ini tidak dapat menggunakan identitas tersebut saat ini. Tidak ada yang dicabut.",
+    "withdraw_failed": "Pencabutan tidak dapat disimpan. Tidak ada yang dicabut.",
+    "delegation_denied": "Delegasi sesi ini tidak memberikan izin untuk tindakan tersebut.",
+    "malformed_body": "Permintaan ini tidak menyebutkan izin yang akan dicabut.",
+    "store_unavailable": "Node tidak dapat membaca catatan persetujuannya. Tidak ada yang dicabut. Coba lagi setelah node kembali sehat.",
+    "grant_not_live": "Itu bukan izin persetujuan yang masih aktif di node ini. Izin tersebut mungkin sudah dicabut."
   },
   "consent_about_desc": "Pelajari cara kerja persetujuan di CIRIS",
   "consent_about_title": "Tentang Persetujuan",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
     "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
     "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
-    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli.",
+    "manage_consent_revoke_unsupported": "Node ini belum dapat mencabut persetujuan (memerlukan ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Pencabutan menyebutkan satu izin, dan node ini belum mencantumkan izin peering-nya, sehingga ini berlaku pada izin yang dibuat di sesi ini.",
+    "manage_consent_revoke_confirm_title": "Cabut persetujuan ini?",
+    "manage_consent_revoke_fact_stops_value": "{from} berhenti direplikasi ke {to}.",
+    "manage_consent_revoke_confirm": "Cabut",
+    "manage_consent_withdrawn": "Dicabut. Node mencatat pencabutan Anda ({id}).",
+    "consent_withdraw_fact_who": "Siapa",
+    "consent_withdraw_fact_stops": "Apa yang berhenti",
+    "consent_withdraw_fact_signs": "Siapa yang menandatangani",
+    "consent_withdraw_signs_value": "Anda. Node menandatangani pencabutan dengan kunci Anda, bukan kunci node itu sendiri.",
+    "consent_remaining_title": "Masih aktif",
+    "consent_remaining_row": "Masih aktif: node ini menulisnya sebelum Anda menandatangani, sehingga tidak dapat dicabut di sini.",
+    "contacts_remove": "Hapus",
+    "contacts_remove_confirm_title": "Hapus {who} dari kontak Anda?",
+    "contacts_remove_fact_stops_value": "Persetujuan Anda untuk berbagi dengan mereka. Pesan dan catatan bersama Anda berhenti direplikasi ke mereka.",
+    "contacts_removed": "{who} telah dihapus. Persetujuan Anda kepada mereka telah dicabut.",
+    "contacts_remove_remaining_title": "{who} masih menjadi kontak",
+    "contacts_remove_remaining_body": "Anda telah mencabut {count} izin. Izin di bawah ini masih aktif.",
+    "contacts_remove_remaining_row": "Masih aktif: ditulis oleh node ini sebelum Anda menandatangani kontak Anda, sehingga tidak dapat dicabut di sini",
+    "contacts_remove_unsupported": "Node ini belum dapat menghapus kontak (memerlukan ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Node tidak dapat membaca catatan kontaknya. Tidak ada yang diubah — coba lagi setelah node kembali sehat.",
     "unknown_fed_id": "ID federasi itu tidak ada di direktori node ini. Terima kuncinya terlebih dahulu (peering) — penanda yang sudah diumumkan tetapi belum diterima tidak membawa provenans dan tidak dapat diberi persetujuan.",
     "unreachable": "Mereka dikenal, tetapi tidak ada yang merespons. Perangkat mereka mungkin sedang offline; pesan akan sampai kepada mereka setelah mereka kembali.",
-    "unresolvable": "Pengenal itu tidak dapat diresolusi menjadi kontak."
+    "unresolvable": "Pengenal itu tidak dapat diresolusi menjadi kontak.",
+    "not_a_contact": "Mereka bukan kontak di sini: tidak ada izin persetujuan aktif yang menyebut nama mereka."
   },
   "ceg": {
     "envelope": {

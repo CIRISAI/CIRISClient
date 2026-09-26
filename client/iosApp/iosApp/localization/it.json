@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Acconsenti alla partecipazione alla mesh CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Questo nodo ha scritto quel consenso prima che tu lo firmassi, quindi non è tuo da ritirare qui, e il nodo non ritirerà il consenso per tuo conto. È ancora attivo.",
+    "delegate_may_not_withdraw": "Una sessione delegata non può ritirare il consenso del titolare. Il ritiro viene firmato con la chiave del titolare stesso.",
+    "author_signer_unavailable": "Il ritiro del consenso viene firmato dalla persona che lo ha concesso, e questo nodo non può usare quell'identità in questo momento. Nulla è stato ritirato.",
+    "withdraw_failed": "Non è stato possibile memorizzare il ritiro. Nulla è stato ritirato.",
+    "delegation_denied": "La delega di questa sessione non concede quell'azione.",
+    "malformed_body": "La richiesta non ha indicato una concessione da ritirare.",
+    "store_unavailable": "Il nodo non è riuscito a leggere i propri record di consenso. Nulla è stato ritirato. Riprova quando il nodo sarà di nuovo funzionante.",
+    "grant_not_live": "Non si tratta di un consenso concesso attivo su questo nodo. Potrebbe essere già stato ritirato."
   },
   "consent_about_desc": "Autorizza l'accesso ai tuoi dati tra servizi e gestisci le relazioni di fiducia",
   "consent_about_title": "Informazioni sul Consenso",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Questo nodo non riporta i propri trasporti.",
     "audit_not_on_this_node": "Questo nodo non conserva un registro di controllo dell'agente. Nulla è stato filtrato.",
     "consent_not_on_this_node": "Questo nodo non conserva registrazioni di consenso. Il consenso è conservato da un agente, e questo nodo funziona senza uno.",
-    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare."
+    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare.",
+    "manage_consent_revoke_unsupported": "Questo nodo non può ancora ritirare il consenso (richiede ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "La revoca indica una singola concessione, e questo nodo non elenca ancora le proprie concessioni di peering, quindi opera su una concessione impostata qui in questa sessione.",
+    "manage_consent_revoke_confirm_title": "Ritirare questo consenso?",
+    "manage_consent_revoke_fact_stops_value": "{from} smette di replicarsi verso {to}.",
+    "manage_consent_revoke_confirm": "Ritira",
+    "manage_consent_withdrawn": "Ritirato. Il nodo ha registrato il tuo ritiro ({id}).",
+    "consent_withdraw_fact_who": "Chi",
+    "consent_withdraw_fact_stops": "Cosa si interrompe",
+    "consent_withdraw_fact_signs": "Chi firma",
+    "consent_withdraw_signs_value": "Tu. Il nodo firma il ritiro con la tua chiave, mai con la propria.",
+    "consent_remaining_title": "Ancora attivo",
+    "consent_remaining_row": "Ancora attivo: questo nodo lo ha scritto prima che tu firmassi, quindi non può essere ritirato qui.",
+    "contacts_remove": "Rimuovi",
+    "contacts_remove_confirm_title": "Rimuovere {who} dai tuoi contatti?",
+    "contacts_remove_fact_stops_value": "Il tuo consenso a condividere con questa persona. I tuoi messaggi e i record condivisi smettono di replicarsi verso questa persona.",
+    "contacts_removed": "Contatto rimosso: {who}. Il tuo consenso nei suoi confronti è stato ritirato.",
+    "contacts_remove_remaining_title": "{who} è ancora un contatto",
+    "contacts_remove_remaining_body": "Hai ritirato {count} concessione(i). Le concessioni elencate di seguito sono ancora attive.",
+    "contacts_remove_remaining_row": "Ancora attivo: scritto da questo nodo prima che tu firmassi i tuoi contatti, quindi non può essere ritirato qui",
+    "contacts_remove_unsupported": "Questo nodo non può ancora rimuovere contatti (richiede ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Il nodo non è riuscito a leggere i propri record dei contatti. Nulla è stato modificato — riprova quando il nodo sarà di nuovo funzionante.",
     "unknown_fed_id": "Questo ID di federazione non è nella directory di questo nodo. Ammetti prima la chiave (peering) — un segnalibro annunciato ma non ammesso non ha provenienza e non può ricevere consenso.",
     "unreachable": "Il contatto è noto, ma non è arrivata alcuna risposta. I suoi dispositivi potrebbero essere offline; i messaggi lo raggiungeranno quando tornerà online.",
-    "unresolvable": "Quell'identificatore non corrisponde a nessun contatto."
+    "unresolvable": "Quell'identificatore non corrisponde a nessun contatto.",
+    "not_a_contact": "Non è un contatto qui: nessun consenso concesso attivo lo nomina."
   },
   "ceg": {
     "envelope": {

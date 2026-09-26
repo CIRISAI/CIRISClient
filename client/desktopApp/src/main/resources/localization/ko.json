@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "CIRIS 메시 참여에 동의"
-    }
+    },
+    "grant_not_owner_authored": "이 노드는 사용자가 서명하기 전에 그 동의를 작성했으므로, 여기서 사용자가 철회할 수 있는 것이 아니며, 노드는 사용자를 대신하여 동의를 철회하지 않습니다. 이는 여전히 유효합니다.",
+    "delegate_may_not_withdraw": "위임된 세션은 소유자의 동의를 철회할 수 없습니다. 철회는 소유자 본인의 키로 서명됩니다.",
+    "author_signer_unavailable": "동의 철회는 동의를 부여한 본인이 서명하며, 이 노드는 지금 그 신원을 사용할 수 없습니다. 철회된 것은 없습니다.",
+    "withdraw_failed": "철회를 저장할 수 없었습니다. 철회된 것은 없습니다.",
+    "delegation_denied": "이 세션의 위임은 해당 작업을 허용하지 않습니다.",
+    "malformed_body": "요청이 철회할 허가를 지정하지 않았습니다.",
+    "store_unavailable": "노드가 동의 레코드를 읽지 못했습니다. 철회된 것은 없습니다. 노드가 정상화되면 다시 시도하세요.",
+    "grant_not_live": "이는 이 노드에서 유효한 동의 허가가 아닙니다. 이미 철회되었을 수 있습니다."
   },
   "consent_about_desc": "CIRIS의 동의 작동 방식에 대해 알아보기",
   "consent_about_title": "동의 정보",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "이 노드는 자신의 전송 계층을 보고하지 않습니다.",
     "audit_not_on_this_node": "이 노드는 에이전트 감사 로그를 보관하지 않습니다. 필터링되어 제외된 것은 없습니다.",
     "consent_not_on_this_node": "이 노드는 동의 기록을 보관하지 않습니다. 동의는 에이전트가 보관하며, 이 노드는 에이전트 없이 실행됩니다.",
-    "billing_not_on_this_node": "이 노드는 결제를 처리하지 않습니다. 여기에는 잔액도 없고 구매할 것도 없습니다."
+    "billing_not_on_this_node": "이 노드는 결제를 처리하지 않습니다. 여기에는 잔액도 없고 구매할 것도 없습니다.",
+    "manage_consent_revoke_unsupported": "이 노드는 아직 동의를 철회할 수 없습니다 (ciris-server 0.5.218 필요).",
+    "manage_consent_revoke_needs_grant": "철회는 하나의 허가를 지정하며, 이 노드는 아직 자신의 피어링 허가를 나열하지 않으므로, 이 세션에서 설정된 허가에 대해서만 작동합니다.",
+    "manage_consent_revoke_confirm_title": "이 동의를 철회하시겠습니까?",
+    "manage_consent_revoke_fact_stops_value": "{from}에서 {to}로의 복제가 중단됩니다.",
+    "manage_consent_revoke_confirm": "철회",
+    "manage_consent_withdrawn": "철회되었습니다. 노드가 사용자의 철회를 기록했습니다 ({id}).",
+    "consent_withdraw_fact_who": "대상",
+    "consent_withdraw_fact_stops": "중단되는 것",
+    "consent_withdraw_fact_signs": "서명자",
+    "consent_withdraw_signs_value": "사용자입니다. 노드는 철회문에 본인의 키로 서명하며, 결코 자체 키로 서명하지 않습니다.",
+    "consent_remaining_title": "여전히 유효함",
+    "consent_remaining_row": "여전히 유효함: 사용자가 서명하기 전에 이 노드가 작성했으므로, 여기서 철회할 수 없습니다.",
+    "contacts_remove": "제거",
+    "contacts_remove_confirm_title": "{who}님을 연락처에서 제거하시겠습니까?",
+    "contacts_remove_fact_stops_value": "상대방과 공유하기로 한 동의입니다. 사용자의 메시지와 공유 기록이 그들에게 더 이상 복제되지 않습니다.",
+    "contacts_removed": "{who}님을 제거했습니다. 그들에 대한 동의가 철회되었습니다.",
+    "contacts_remove_remaining_title": "{who}님은 여전히 연락처입니다",
+    "contacts_remove_remaining_body": "{count}개의 허가를 철회했습니다. 아래 허가는 여전히 유효합니다.",
+    "contacts_remove_remaining_row": "여전히 유효함: 사용자가 연락처에 서명하기 전에 이 노드가 작성했으므로, 여기서 철회할 수 없습니다",
+    "contacts_remove_unsupported": "이 노드는 아직 연락처를 제거할 수 없습니다 (ciris-server 0.5.218 필요)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "노드가 연락처 레코드를 읽지 못했습니다. 변경된 것은 없습니다 — 노드가 정상화되면 다시 시도하세요.",
     "unknown_fed_id": "해당 연합 ID가 이 노드의 디렉터리에 없습니다. 먼저 키를 승인(피어링)하세요 — 알려졌지만 아직 승인되지 않은 북마크는 출처 증명이 없어 동의 대상이 될 수 없습니다.",
     "unreachable": "상대방은 알려져 있지만 응답이 없었습니다. 상대방의 기기가 오프라인일 수 있으며, 다시 접속하면 메시지가 전달됩니다.",
-    "unresolvable": "그 식별자는 연락처로 해석되지 않습니다."
+    "unresolvable": "그 식별자는 연락처로 해석되지 않습니다.",
+    "not_a_contact": "상대방은 이곳의 연락처가 아닙니다: 그들을 지정하는 유효한 동의 허가가 없습니다."
   },
   "ceg": {
     "envelope": {

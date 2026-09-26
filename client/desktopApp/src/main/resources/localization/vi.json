@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Đồng ý tham gia Mạng lưới CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Nút này đã ghi sự đồng ý đó trước khi bạn ký, nên sự đồng ý đó không phải là của bạn để thu hồi ở đây, và nút sẽ không thu hồi sự đồng ý thay cho bạn. Sự đồng ý đó vẫn còn hiệu lực.",
+    "delegate_may_not_withdraw": "Một phiên ủy quyền không thể thu hồi sự đồng ý của chủ sở hữu. Việc thu hồi được ký bằng khóa của chính chủ sở hữu.",
+    "author_signer_unavailable": "Việc thu hồi sự đồng ý được ký bởi người đã đưa ra sự đồng ý đó, và nút này hiện không thể sử dụng danh tính đó. Không có gì bị thu hồi.",
+    "withdraw_failed": "Việc thu hồi không thể được lưu lại. Không có gì bị thu hồi.",
+    "delegation_denied": "Ủy quyền của phiên này không cấp quyền cho hành động đó.",
+    "malformed_body": "Yêu cầu không nêu tên quyền đồng ý cần thu hồi.",
+    "store_unavailable": "Nút không thể đọc các bản ghi đồng ý của nó. Không có gì bị thu hồi. Hãy thử lại khi nút hoạt động bình thường.",
+    "grant_not_live": "Đó không phải là một quyền đồng ý đang có hiệu lực trên nút này. Quyền này có thể đã bị thu hồi."
   },
   "consent_about_desc": "Tìm hiểu cách sự đồng ý hoạt động trong CIRIS",
   "consent_about_title": "Về Sự Đồng Ý",
@@ -1902,6 +1910,24 @@
     "manage_consent_replication_title": "Ghép nối nhân bản (consent:replication)",
     "manage_consent_resetup": "Chạy lại thiết lập",
     "manage_consent_revoke": "Thu hồi",
+    "manage_consent_revoke_confirm_title": "Thu hồi sự đồng ý này?",
+    "manage_consent_revoke_fact_stops_value": "{from} ngừng sao chép đến {to}.",
+    "manage_consent_revoke_confirm": "Thu hồi",
+    "manage_consent_withdrawn": "Đã thu hồi. Nút đã ghi lại việc thu hồi của bạn ({id}).",
+    "consent_withdraw_fact_who": "Ai",
+    "consent_withdraw_fact_stops": "Điều gì ngừng lại",
+    "consent_withdraw_fact_signs": "Ai ký",
+    "consent_withdraw_signs_value": "Bạn. Nút ký việc thu hồi bằng khóa của bạn, không bao giờ bằng khóa của chính nó.",
+    "consent_remaining_title": "Vẫn còn hiệu lực",
+    "consent_remaining_row": "Vẫn còn hiệu lực: nút này đã ghi lại trước khi bạn ký, nên không thể thu hồi ở đây.",
+    "contacts_remove": "Xóa",
+    "contacts_remove_confirm_title": "Xóa {who} khỏi danh sách liên hệ của bạn?",
+    "contacts_remove_fact_stops_value": "Sự đồng ý của bạn để chia sẻ với họ. Tin nhắn và các bản ghi đã chia sẻ của bạn sẽ ngừng sao chép đến họ.",
+    "contacts_removed": "Đã xóa {who}. Sự đồng ý của bạn với họ đã bị thu hồi.",
+    "contacts_remove_remaining_title": "{who} vẫn còn là liên hệ",
+    "contacts_remove_remaining_body": "Bạn đã thu hồi {count} quyền đồng ý. Các quyền dưới đây vẫn còn hiệu lực.",
+    "contacts_remove_remaining_row": "Vẫn còn hiệu lực: được nút này ghi lại trước khi bạn ký liên hệ của mình, nên không thể thu hồi ở đây",
+    "contacts_remove_unsupported": "Nút này chưa thể xóa liên hệ (cần ciris-server 0.5.218).",
     "manage_consent_revoke_todo": "Chưa thể thu hồi — nút chưa có endpoint rút consent:replication.",
     "manage_consent_setup": "Thiết lập ghép nối",
     "manage_consent_subtitle": "Xem và quản lý các đối tượng đồng ý mà thiết bị này giữ.",
@@ -3077,6 +3103,8 @@
     "audit_not_on_this_node": "Nút này không lưu nhật ký kiểm toán của tác nhân. Không có gì bị lọc bỏ.",
     "consent_not_on_this_node": "Nút này không lưu giữ bản ghi đồng thuận. Đồng thuận được lưu giữ bởi một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
     "billing_not_on_this_node": "Nút này không xử lý thanh toán. Ở đây không có số dư và không có gì để mua.",
+    "manage_consent_revoke_unsupported": "Nút này chưa thể thu hồi sự đồng ý (cần ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Thu hồi cần nêu tên một quyền, và nút này chưa liệt kê các quyền ghép nối của nó, nên nó hoạt động dựa trên quyền được thiết lập ở đây trong phiên này.",
     "telemetry_not_on_this_node": "Nút này không báo cáo dữ liệu đo từ xa của tác nhân.",
     "services_not_on_this_node": "Nút này không liệt kê các dịch vụ của tác nhân.",
     "state_not_on_this_node": "Nút này không cung cấp điều này. Nó thuộc về một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Nút không thể đọc các bản ghi liên hệ của nó. Không có gì bị thay đổi — hãy thử lại khi nút hoạt động bình thường.",
     "unknown_fed_id": "ID liên kết đó không có trong danh bạ của nút này. Hãy kết nạp khóa trước (peering) — một dấu trang đã được công bố nhưng chưa được kết nạp không mang nguồn gốc và không thể được chấp thuận.",
     "unreachable": "Họ đã được biết đến, nhưng không có phản hồi nào. Thiết bị của họ có thể đang ngoại tuyến; tin nhắn sẽ đến được họ khi họ trở lại.",
-    "unresolvable": "Định danh đó không phân giải được thành một liên hệ."
+    "unresolvable": "Định danh đó không phân giải được thành một liên hệ.",
+    "not_a_contact": "Họ không phải là liên hệ ở đây: không có quyền đồng ý nào đang có hiệu lực nêu tên họ."
   },
   "ceg": {
     "envelope": {

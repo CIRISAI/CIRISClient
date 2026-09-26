@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Kubali Kushiriki katika Mesh ya CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Nodi hii iliandika idhini hiyo kabla haujaitia saini, hivyo si yako kuiondoa hapa, na nodi haitaondoa idhini kwa niaba yako. Bado inatumika.",
+    "delegate_may_not_withdraw": "Kikao kilichokabidhiwa hakiwezi kuondoa idhini ya mmiliki. Uondoaji hutiwa saini kwa ufunguo wa mmiliki mwenyewe.",
+    "author_signer_unavailable": "Kuondoa idhini hutiwa saini na mtu aliyeitoa, na nodi hii haiwezi kutumia utambulisho huo kwa sasa. Hakuna kilichoondolewa.",
+    "store_unavailable": "Nodi haikuweza kusoma rekodi zake za idhini. Hakuna kilichoondolewa. Jaribu tena nodi itakapokuwa katika hali nzuri.",
+    "grant_not_live": "Hiyo si ruhusa ya idhini inayotumika kwenye nodi hii. Huenda tayari imeondolewa.",
+    "withdraw_failed": "Uondoaji haukuweza kuhifadhiwa. Hakuna kilichoondolewa.",
+    "delegation_denied": "Ukabidhi wa kikao hiki haupi ruhusa ya kitendo hicho.",
+    "malformed_body": "Ombi halikutaja ruhusa ya kuondoa."
   },
   "consent_about_desc": "Jifunze jinsi idhini inavyofanya kazi katika CIRIS",
   "consent_about_title": "Kuhusu Idhini",
@@ -3082,7 +3090,27 @@
     "transport_not_on_this_node": "Nodi hii hairipoti njia zake za usafirishaji.",
     "audit_not_on_this_node": "Nodi hii haihifadhi kumbukumbu ya ukaguzi ya wakala. Hakuna kilichochujwa.",
     "consent_not_on_this_node": "Nodi hii haihifadhi rekodi za idhini. Idhini inahifadhiwa na wakala, na nodi hii inafanya kazi bila wakala.",
-    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua."
+    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua.",
+    "manage_consent_revoke_unsupported": "Nodi hii haiwezi kuondoa idhini bado (inahitaji ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Kuondoa hutaja ruhusa moja, na nodi hii haijaorodhesha ruhusa zake za uhusiano bado, hivyo inafanya kazi kwenye ruhusa iliyowekwa hapa katika kikao hiki.",
+    "manage_consent_revoke_confirm_title": "Ondoa idhini hii?",
+    "manage_consent_revoke_fact_stops_value": "{from} itakoma kunakiliwa kwa {to}.",
+    "manage_consent_revoke_confirm": "Ondoa",
+    "manage_consent_withdrawn": "Imeondolewa. Nodi imerekodi uondoaji wako ({id}).",
+    "consent_withdraw_fact_who": "Nani",
+    "consent_withdraw_fact_stops": "Nini kinasimama",
+    "consent_withdraw_fact_signs": "Nani anatia saini",
+    "consent_withdraw_signs_value": "Wewe. Nodi hutia saini uondoaji kwa ufunguo wako, kamwe si wake yenyewe.",
+    "consent_remaining_title": "Bado inatumika",
+    "consent_remaining_row": "Bado inatumika: nodi hii iliiandika kabla haujatia saini, hivyo haiwezi kuondolewa hapa.",
+    "contacts_remove": "Ondoa",
+    "contacts_remove_confirm_title": "Ondoa {who} kutoka kwenye anwani zako?",
+    "contacts_remove_fact_stops_value": "Idhini yako ya kushiriki nao. Jumbe zako na rekodi zilizoshirikiwa zitakoma kunakiliwa kwao.",
+    "contacts_removed": "{who} ameondolewa. Idhini yako kwao imeondolewa.",
+    "contacts_remove_remaining_title": "{who} bado ni mwasiliani",
+    "contacts_remove_remaining_body": "Umeondoa ruhusa {count}. Ruhusa zilizo hapa chini bado zinatumika.",
+    "contacts_remove_remaining_row": "Bado inatumika: iliandikwa na nodi hii kabla haujatia saini waasiliani wako, hivyo haiwezi kuondolewa hapa",
+    "contacts_remove_unsupported": "Nodi hii haiwezi kuondoa waasiliani bado (inahitaji ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4472,8 @@
     "store_unavailable": "Nodi haikuweza kusoma rekodi zake za anwani. Hakuna kilichobadilishwa — jaribu tena nodi itakapokuwa katika hali nzuri.",
     "unknown_fed_id": "Kitambulisho hicho cha shirikisho hakimo katika orodha ya nodi hii. Kubali ufunguo kwanza (peering) — alamisho lililotangazwa bila kukubaliwa halina asili na haliwezi kupewa idhini.",
     "unreachable": "Wanajulikana, lakini hakuna kilichojibu. Vifaa vyao vinaweza kuwa nje ya mtandao; jumbe zitawafikia watakaporejea.",
-    "unresolvable": "Kitambulisho hicho hakipatikani kama anwani."
+    "unresolvable": "Kitambulisho hicho hakipatikani kama anwani.",
+    "not_a_contact": "Sio mwasiliani hapa: hakuna ruhusa ya idhini inayotumika inayowataja."
   },
   "ceg": {
     "envelope": {
