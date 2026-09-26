@@ -1012,6 +1012,13 @@ class AccordViewModel(
             // bundle must clear it, or the card would keep telling the operator
             // the seed is unrepairable after it stopped being so.
             blockedBy = res.blockedBy,
+            // The CURRENT response's facts, not sticky: each step answers for its
+            // own bundle, and only the completing step carries the last four.
+            fingerprint = res.fingerprint,
+            nodeTrustsRoot = res.nodeTrustsRoot,
+            trustEdgeError = res.trustEdgeError,
+            seedPath = res.seedPath,
+            seedSaveError = res.seedSaveError,
         )
     }
 

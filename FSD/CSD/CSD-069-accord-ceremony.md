@@ -82,8 +82,8 @@ fields:
     use: display-only
     type: string
     example: "humanity-accord"
-    renders: "the assembled family — its name, its fingerprint, its three holders"
-    tag: remint_done_family
+    renders: "the assembled family — its name and its three holders"
+    tag: "proposed:txt_ceremony_family"
   - ceg: "accord:holders"
     use: display-only
     type: "list[string]"
@@ -231,9 +231,15 @@ Done, against a completed ceremony:
 ```yaml
 expect:
   state: populated
-  visible: [accord_ceremony_success, accord_ceremony_genesis_json,
-            remint_done_family, remint_done_holders]
+  visible: [accord_ceremony_success, accord_ceremony_genesis_json]
 ```
+
+**`remint_done_family` / `remint_done_holders` were asserted here and are not on
+this screen.** They are tags of the Accord card's re-mint sheet
+(`AccordScreen.kt`, `RemintTrustRootSheet`), a different ceremony with a
+different artifact: this one entrenches the family, the re-mint mints the
+portable seed. The assertion moved to CSD-067 §4, where the tags live. This
+screen draws no tagged family line, so `accord:family` above is `proposed:`.
 
 ## 5. QA plan
 

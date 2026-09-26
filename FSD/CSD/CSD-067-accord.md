@@ -282,6 +282,36 @@ expect:
 *Cannot yet assert:* that a `lifecycle` invocation renders as its own kind
 (§2.2) — the tag does not exist and neither, confirmed, does the arm.
 
+The re-mint sheet (`[+ New]` → re-mint, `sheet_remint_trust_root`), after the
+second holder's cosign completes the seed and this node's acceptance of the new
+root was written (`node_trusts_root` non-empty):
+
+```yaml
+expect:
+  visible: [remint_done_title, remint_node_trusts_root, remint_done_family,
+            remint_done_holders, remint_done_serve_nodes, remint_seed_path]
+  absent:  [remint_minted_untrusted]
+```
+
+and exactly one of the fingerprint's two renderings: `remint_done_fingerprint`
+(with `remint_done_fingerprint_caption`, compare out of band — CC 3.2 T5) when
+the node sent one, `remint_done_fingerprint_absent` when it did not. The DSL has
+no "exactly one of" predicate, so the flow asserts the branch its fixture node
+takes. Never a blank line.
+
+When the seed completed but this node's acceptance was not written, the done
+title is withheld and the node's reason is shown:
+
+```yaml
+expect:
+  visible: [remint_minted_untrusted, remint_trust_edge_error]
+  absent:  [remint_done_title, remint_node_trusts_root]
+```
+
+*Cannot yet assert on a runner:* any of the three — each needs two FIPS
+YubiKeys touched in turn. The done-state decision is pinned instead by
+`RemintSeedResponseTest` (`remintOutcome`, `genesisSeedDisplay`).
+
 ## 5. QA plan
 
 **Platforms.** All five. The hop is derived and identical on each.

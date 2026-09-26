@@ -10,6 +10,8 @@ import ai.ciris.mobile.shared.models.federation.CanonicalWithdrawalDto
 import ai.ciris.mobile.shared.models.federation.CiKeyTargetInput
 import ai.ciris.mobile.shared.models.federation.PendingCoscrubDto
 import ai.ciris.mobile.shared.models.federation.genesisSeedDisplay
+import ai.ciris.mobile.shared.models.federation.RemintOutcome
+import ai.ciris.mobile.shared.models.federation.remintOutcome
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
@@ -1028,7 +1030,9 @@ private fun RemintTrustRootSheet(
     var bundleSaveDir by remember { mutableStateOf<String?>(null) }
 
     val complete = seed?.complete == true
-    val display = seed?.let { genesisSeedDisplay(it.bundle) }
+    val display = seed?.let { genesisSeedDisplay(it.bundle, it.fingerprint) }
+    // Minted is not trusted: "done" only when this node's acceptance was written.
+    val outcome = seed?.let { remintOutcome(it) }
 
     val reviewReady = selected != null
     val proposeReady = proposeHolder.isNotBlank() && proposeUsb.isNotBlank() &&
@@ -1134,18 +1138,74 @@ private fun RemintTrustRootSheet(
                 when {
                     // ── Done — the authorized, portable seed ──
                     complete -> {
-                        Text(
-                            localizedString("mobile.accord_remint_done_title"),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.testable("remint_done_title"),
-                        )
-                        Text(
-                            localizedString("mobile.accord_remint_done_desc"),
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        // "Done" is two facts, not one: the seed is minted AND this
+                        // node trusts it. The node writes its own acceptance after
+                        // minting, non-fatally (CIRISServer accord_provision.rs:2532),
+                        // so a complete ceremony can leave this node untrusting.
+                        when (outcome) {
+                            is RemintOutcome.MintedNotTrusted -> {
+                                Text(
+                                    localizedString("mobile.accord_remint_minted_untrusted_title"),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.testable("remint_minted_untrusted"),
+                                )
+                                Text(
+                                    localizedString("mobile.accord_remint_minted_untrusted_desc"),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                Text(
+                                    outcome.error
+                                        ?: localizedString("mobile.accord_remint_trust_edge_no_reason"),
+                                    fontSize = 11.sp,
+                                    fontFamily = FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.testable("remint_trust_edge_error"),
+                                )
+                            }
+                            else -> {
+                                Text(
+                                    localizedString("mobile.accord_remint_done_title"),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.testable("remint_done_title"),
+                                )
+                                (outcome as? RemintOutcome.Trusted)?.let { t ->
+                                    Text(
+                                        localizedString("mobile.accord_remint_node_trusts_root", "root", t.rootKeyId),
+                                        fontSize = 11.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.testable("remint_node_trusts_root"),
+                                    )
+                                }
+                                Text(
+                                    localizedString("mobile.accord_remint_done_desc"),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                        seed?.seedPath?.takeIf { it.isNotBlank() }?.let { path ->
+                            Text(
+                                localizedString("mobile.accord_remint_seed_saved_at", "path", path),
+                                fontSize = 11.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testable("remint_seed_path"),
+                            )
+                        }
+                        seed?.seedSaveError?.takeIf { it.isNotBlank() }?.let { why ->
+                            Text(
+                                localizedString("mobile.accord_remint_seed_save_error", "error", why),
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.testable("remint_seed_save_error"),
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         seed?.let { s ->
                             Text(
@@ -1193,7 +1253,18 @@ private fun RemintTrustRootSheet(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.testable("remint_done_serve_nodes"),
                             )
-                            // Only when the bundle actually carries one — never invented.
+                            // The node's fingerprint (CC 3.2 T5) — never invented, and
+                            // its absence is SAID, never a blank line: a person told
+                            // to compare a fingerprint must know when there is none.
+                            if (d.fingerprint == null) {
+                                Spacer(Modifier.height(6.dp))
+                                Text(
+                                    localizedString("mobile.accord_remint_done_fingerprint_absent"),
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.error,
+                                    modifier = Modifier.testable("remint_done_fingerprint_absent"),
+                                )
+                            }
                             d.fingerprint?.let { fp ->
                                 Spacer(Modifier.height(6.dp))
                                 Text(
