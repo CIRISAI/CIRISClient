@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -53,6 +53,7 @@ fields:
     example: "unconfirmed"
     renders: "Yorùbá — and, once the route carries it, whether THIS build's Yorùbá bundle is the signed one (CC 3.1.2, per-locale signed sub-manifest). NOT SENT today: the picker lists the 29 bundles the app shipped with and attests nothing about them."
     tag: dropdown_language
+    blocked_by: CIRISClient#102
   - ceg: x_private:display_currency
     use: read
     type: string
@@ -116,7 +117,7 @@ error:     {tag: "proposed:settings_error", renders: "`SettingsViewModel._errorM
 | the LLM config read-back | `GET /v1/setup/config` | CIRISAgent | live (`setup/config.py`) — client node-skips it (`CIRISApiClient.kt:7486`) |
 | language / currency / theme / viz | — | **device** | `SecureStorage`; no route, correctly |
 | self-attestation | `GET /v1/setup/verify-status` · `/attestation-status` | CIRISAgent | live (`setup/attestation.py`); the node's `/v1/system/verify-status` is a different route |
-| this build's locale manifest | — **unconfirmed** | CIRISVerify | blocks `building` for `dropdown_language` |
+| this build's locale manifest | — **nothing emits it** | **CIRISClient** | **missing, and ours.** CIRISVerify SHIPPED the verifier: `provenance:build_manifest:{target}:locale:{lang_code}` is live from v3.8.0 (CIRISVerify#37, CLOSED) — `ciris-verify-core/src/federation_provenance.rs:56`, constructor `:160`, longest-prefix dispatch `:432`; CIRISRegistry#28/#29 both CLOSED. What is absent is the PRODUCER: `grep -rl build_manifest` over this repo, excluding `FSD/CSD/`, returns zero files — no workflow, no packaging script, no pinned `ciris-verify`. We ship the 29 bundles (AGENTS.md: "`localization/` — the OTHER thing this repo owns"), so only we can sign them. **CIRISClient#102** |
 
 `CIRISServer` serves `/v1/setup/status`, `/root`, `/connect-node`,
 `/owned-nodes`, `/claim-remote`, `/consent-disclosure`, `/reset-device-auth` —

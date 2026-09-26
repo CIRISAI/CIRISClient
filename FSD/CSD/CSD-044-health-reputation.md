@@ -97,6 +97,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. CC 3.4.5: at federation tier a `capacity:*` row requires a live `consent:scope:analyze` grant; a subject who declined has an UNDEFINED composite that MUST NOT be emitted. The card has no rendering for 'not scored because not consented' — see §6."
     tag: "proposed:txt_capacity_unconsented"
+    blocked_by: CIRISAgent#1219
 ```
 
 **The pre-fetch state is flattering, and that is a constitutional problem, not a
@@ -125,7 +126,7 @@ error:     {tag: federation_capacity_local_only, renders: "CSD-004 owns this: /v
 | capacity rows with attesters | `GET /v1/my-data/capacity` | CIRISServer `src/system_data.rs:390` | live, unauthenticated |
 | `coherence_standing:{cohort}` for a named cohort | — | CIRISLensCore | **missing** — no route on either host |
 | `manifold_conformity:{cohort}` for a named cohort | — | CIRISLensCore | **missing** |
-| whether the subject granted `consent:scope:analyze` | — | CIRISAgent | **missing** — blocks `building` for `txt_capacity_unconsented` |
+| whether the subject granted `consent:scope:analyze` | — | CIRISAgent | **missing** — CC 3.4.5 refuses a `capacity:*` row without a live grant *at admission, before persistence*, and no route answers it per subject. **CIRISAgent#1219** |
 | the factors' range | — | CIRISLensCore | **missing** — CSD-004 §3 already carries this row |
 
 ## 4. Flow (how)

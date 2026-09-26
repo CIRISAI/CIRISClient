@@ -5,7 +5,7 @@
 **Reads with**: CSD-050 §2.0 — this surface is the negative test for `scopes:`.
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -58,6 +58,7 @@ fields:
     type: unconfirmed
     example: "unconfirmed"
     renders: "the node's transport mode, with a confirm dialog before it changes"
+    blocked_by: CIRISServer#668
     tag: card_network_mode
   - ceg: x_private:cohort_scope
     use: display-only
