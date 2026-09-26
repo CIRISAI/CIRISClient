@@ -40,7 +40,7 @@ screen: Accord
 ```
 
 `nav_map` derives `circle_global_commons -> tab_safety -> nav_epistemic_accord`
-— Everyone › Safety (`CirclesNav.kt:101`). The accord lives in exactly one
+— Everyone › Safety (`CirclesNav.kt:114`). The accord lives in exactly one
 place, with the trust root, the holder flow and the `accord:*` attestations,
 "because in an emergency a person should not have to know which of three tabs we
 filed it under" (`docs/FSD-ui-language.md:287`). That is the right placement and
@@ -207,8 +207,87 @@ literals in `src/accord.rs` and `src/accord_provision.rs`.
 | drill / announce | `POST /v1/accord/{drill,announce}` | `src/accord.rs:2609,2611` | **live** |
 | canonical servers + co-scrubs | `/v1/accord/canonical/*` | `src/accord_provision.rs:3707,3711,3717,3721,3753,3758,3762,3766,3776` + `canonical/address` at `src/accord.rs:2632` | **live** (the earlier `3704-3776` range was loose: `:3704` is `admit-node` and `:3770` is `yubikey-status`) |
 | confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648,649` | **live** — called from `DutyConferralViewModel.kt:335,375`, not from this screen's view model; `Screen.DutyConferral` maps to `NavSurface.Accord` (`CIRISApp.kt:5941`) and is reached from `[+ New]` (`CIRISApp.kt:4193`) |
-| a holder's hardware custody class | **missing** — `list_holders` builds `HolderSummary {key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}` (`src/accord.rs:664-668`) and `AccordHolderDto` (`models/federation/Accord.kt:53-60`) mirrors it exactly | CIRISServer | blocks `txt_holder_custody` |
+| a holder's hardware custody class | **missing on the roster** — `list_holders` builds `HolderSummary {key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}` (`src/accord.rs:664-668`) and `AccordHolderDto` (`models/federation/Accord.kt:53-60`) mirrors it exactly. **Served elsewhere for the charter's holders:** `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` (verdict passed through verbatim, `src/trust_root_api.rs:76-79`; shape CIRISPersist v48.0.0 `federation/trust_root.rs:372`, the pin at `Cargo.toml:138`), loopback-only | CIRISServer | blocks `txt_holder_custody` on the roster; **called** on this node's own machine and drawn per holder in the trust-root detail (`row_trust_root_holder_<root>_<holder>`, `TrustRootScreen.kt`); **remote reach** `blocked_by: CIRISServer#652` |
 | **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` | CIRISServer | **live — the route serves it, and that makes §2.2 a shipped defect** |
+| admit a node | `POST /v1/accord/admit-node` | `src/accord_provision.rs:3704` | **live**, loopback-only — called from `AccordViewModel.kt:402` (`[+ New]` → admit) |
+| bless the CI build keys | `POST /v1/accord/ci-key/{propose,cosign}` | `src/accord_provision.rs:3729,3733` | **live**, loopback-only — `AccordViewModel.kt:827,874` |
+| re-mint the root into a portable seed | `GET /v1/accord/genesis/remint-source`, `POST /v1/accord/genesis/{propose,cosign}` | `src/accord_provision.rs:3740,3744,3748` | **live**, loopback-only — `AccordViewModel.kt:958,1042,1088`; the `RemintTrustRootSheet` (`AccordScreen.kt:951`) |
+| the seed's fingerprint, and this node's own acceptance of the root it just minted | the propose/cosign response: `fingerprint`, `node_trusts_root`, `trust_edge_error`, `seed_path`, `seed_save_error` | `src/accord_provision.rs:2530-2600` | **live, and read** (`fix/remint-fingerprint`): `GenesisSeedResponse` models all five; `remint_done_fingerprint` / `remint_done_fingerprint_absent`, `remint_node_trusts_root` / `remint_minted_untrusted` + `remint_trust_edge_error`, `remint_seed_path`, `remint_seed_save_error` — §4 |
+| which roots this node accepts, and its genesis posture | `GET /v1/trust-root` | `src/trust_root_api.rs:415` | **live on this node's own machine, called** — `CIRISApiClient.getTrustRoots` (node URL), `TrustRootViewModel.refresh`, drawn by `TrustRootScreen` (the Accord card's detail, `btn_accord_open_trust_root`): `card_trust_posture` / `txt_trust_posture_state` / `txt_trust_posture_banner` (`trust_root_posture_unreadable` for `unreadable`, the error treatment), `card_trust_root_<root>` with `row_trust_root_{accepted,valid,quorum,drill,halt,bounded}_<root>`. **Remote reach** `blocked_by: CIRISServer#652` — the router is loopback-layered (`:422-424`); off the machine the screen renders `trust_root_loopback_only`, never an empty list |
+| adopt a portable seed on this node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live on this node's own machine, called** — `importTrustRoot`; `card_trust_root_import` (`input_trust_root_seed`, `btn_trust_root_seed_file`, `input_trust_root_allegiance_from`, `btn_trust_root_import_review`), ConfirmSheet `sheet_trust_root_import` (facts `trust_root_import_fact_{1,2,3}`, limit `trust_root_import_note`), results `txt_trust_root_import_installed` / `txt_trust_root_import_accepted` / `txt_trust_root_import_partial`, refusals `trust_root_import_error` by id. **Remote reach** `blocked_by: CIRISServer#652` (`trust_root_import_loopback_only`) |
+| un-trust a root (withdraw this node's acceptance) | `DELETE /v1/trust-root/{root_key_id}` | `src/trust_root_api.rs:418-419` | **live on this node's own machine, called** — `untrustRoot`; `btn_trust_root_untrust_<root>`, ConfirmSheet `sheet_trust_root_untrust` (facts `trust_root_untrust_fact_{1,2,3}`; the last root says `trace:*` stops), result `txt_trust_root_untrust_{withdrawn,records_retained,entrenched}`. **Remote reach** `blocked_by: CIRISServer#652` (`trust_root_untrust_loopback_only`) |
+| the family's supersede chain | `GET /v1/accord/family/history` | `src/accord.rs:2645` (handler `:2355`) | **live, called** — `getAccordFamilyHistory`, on the Accord card itself: `row_family_version_<n>`, `accord_family_history_{loading,empty,error,not_on_this_node}`. Not loopback-gated |
+| change a seat by supersede | `POST /v1/accord/family/change/envelope`, `/v1/accord/family/supersede` | `src/accord.rs:2637,2641` | **live and refuses by design** for the only family it serves: `humanity-accord` answers 409 at `:2306-2315` (CIRISPersist#648). A seat changes by re-mint + import, not here — so the card should not offer it |
+| open an invocation | `POST /v1/accord/invocation` | `src/accord.rs:2650` | **live, not called** — the client opens only through `/drill`, `/halt`, `/announce` and concurs through `/concur` (the §3 note below) |
+| relying-node recognizers | `POST /v1/accord/verify-invocation`, `POST /v1/accord/message` | `src/accord.rs:2603,2606` | **live, not a holder's action** — unauthenticated peer/relying-node doors where the holder signatures are the authority (`:731-737`, `:2076-2080`); no card should call them |
+| rebind a canonical's address | `POST /v1/accord/canonical/address` | `src/accord.rs:2632` | **live, not called** — the canonical row above cites it, but no `canonical/address` literal is in `CIRISApiClient.kt` |
+
+### 3.1 The accord and `/v1/trust-root` — one root, two views
+
+**The accord family IS the default trust root, and `/v1/trust-root` is this
+node's side of it.** `candidate_roots` always lists
+`HUMANITY_ACCORD_FAMILY_KEY_ID` first (`src/trust_root_api.rs:156-157`), which is
+`"humanity-accord"` (`ciris-verify-core v16.1.0 accord_genesis.rs:53`) — the same
+keyless FAMILY this card shows, whose seats A1/B1/C1 hold the kill switch. The
+server names this card the same way: *"A1/B1/C1 manage the canonical mesh from
+the Trust Root card"* (`src/accord.rs:2371-2373`), and `NavSurface.Accord`'s
+label is "Trust Root" (`EpistemicNav.kt:210`). There is no second, separate
+anchor. What differs is the question:
+
+* `/v1/accord/*` answers **what the root is** — its roster, quorum, invocations,
+  halt latch, canonical servers — and is where holders act.
+* `/v1/trust-root` answers **whether this node trusts it** — the node's own
+  `trust:accepts` edge (CC 3.2 T3, `part_3_the_namespace.md:645`), persist's
+  `trust_root_valid` verdict (charter quorum over the seated holders, charter
+  recovery, halt latch, per-holder hardware, drill freshness as a banded signal
+  per T4), the genesis `posture` (`entrenched` / `pre_genesis` / `divergent` /
+  `unreadable`, CIRISPersist v48.0.0 `genesis/posture.rs:255`) and its banner — plus
+  any other root this node has accepted by import.
+
+CC 3.2 makes the second view a MUST: *"A conformant consumer MUST be able to
+re-root: untrust the canonical group, pin a different … community instead or in
+addition, or run with none"* (`part_3_the_namespace.md:583`), and T3 makes the
+lever *one row*. `DELETE /v1/trust-root/{id}` is that row; `POST
+/v1/trust-root/import` is the "instead or in addition". The server's own
+refusal to supersede the family names the path the card lacks: *"run the
+ceremony again … and adopt the bundle it produces: … POST /v1/trust-root/import on
+each node"* (`src/accord.rs:2311-2313`). This card mints that bundle
+(`RemintTrustRootSheet`), and its trust-root detail now adopts one
+(`card_trust_root_import`). The node offers no preview of a seed before
+installing it (the CIRISServer#404 comment), so the import confirm says so
+(`trust_root_import_note`) instead of pretending to a fingerprint check.
+
+**Placement.** The trust-root detail is `Screen.TrustRoot`, reached only from
+`btn_accord_open_trust_root` on this card; `screenToSurface` maps it to
+`NavSurface.Accord`, so Everyone › Safety › Accord stays lit. It is not a nav
+row and not a new surface.
+
+**Two defects this document found, both fixed on `fix/remint-fingerprint`:**
+
+1. **The out-of-band fingerprint never renders.** CC 3.2 T5: *"out-of-band
+   fingerprint comparison at attach time is a first-class step"*. The server
+   returns `fingerprint` at the top level of the propose/cosign response
+   (`src/accord_provision.rs:2592`); `GenesisSeedResponse`
+   (`models/federation/Accord.kt:674`) does not model it, and
+   `genesisSeedDisplay` reads `fingerprint` from inside the bundle
+   (`Accord.kt:787`), where persist's `GenesisBundle` has no such field (v48.0.0
+   `genesis/bundle.rs:121-130`). So `remint_done_fingerprint`
+   (`AccordScreen.kt:1197-1213`) is always skipped by its own "only when the
+   bundle carries one" guard. The fix is client-side.
+2. **`node_trusts_root` / `trust_edge_error` are dropped.** On completion the
+   minting node writes its own acceptance of the new root (`:2532-2545`), and a
+   failure there is non-fatal and returned. The card says "done" either way.
+
+**Two facts a builder on `GET /v1/trust-root` must know.** `RootEntry.accepted`
+reads `user_accepts` from the verdict (`src/trust_root_api.rs:106-109`), a field
+`TrustRootVerdict` does not have — it is `edge_exists` (CIRISPersist v48.0.0
+`federation/trust_root.rs:553-561`) — so `accepted` is always `false` today.
+And `root_kind` serializes as `Family` / `Key` (the enum has no `rename_all`,
+`trust_root.rs:314`), not the lowercase the handler's doc comment promises
+(`:71-72`). The first is CIRISServer#681; until it lands the client reads
+`verdict.edge_exists` and ignores `accepted` (`trustRootView`, pinned by
+`TrustRootTest.acceptanceIsReadFromEdgeExistsNotTheBrokenAcceptedField`). The
+kind is compared case-insensitively.
 
 **The last row said `unconfirmed` and the answer inverts the finding.**
 `InvocationKind` is a FOUR-variant enum whose fourth is `LifecycleActive`,
@@ -311,6 +390,47 @@ expect:
 *Cannot yet assert on a runner:* any of the three — each needs two FIPS
 YubiKeys touched in turn. The done-state decision is pinned instead by
 `RemintSeedResponseTest` (`remintOutcome`, `genesisSeedDisplay`).
+
+On the card, the family's versions and the door to this node's trust root:
+
+```yaml
+expect:
+  visible: [btn_accord_open_trust_root]
+```
+
+Open `btn_accord_open_trust_root` → `Screen.TrustRoot`. On the node's own
+machine, against an entrenched node:
+
+```yaml
+expect:
+  visible: [screen_trust_root, card_trust_posture, txt_trust_posture_state,
+            card_trust_root_humanity_accord, row_trust_root_accepted_humanity_accord,
+            card_trust_root_import, input_trust_root_seed, btn_trust_root_import_review]
+  absent:  [trust_root_loopback_only, trust_root_error]
+```
+
+From any other device (a phone, a remote desktop) the same step renders the
+refusal, never an empty list (CIRISServer#652):
+
+```yaml
+expect:
+  visible: [trust_root_loopback_only]
+  absent:  [card_trust_posture, trust_root_empty]
+```
+
+Type `not json` into `input_trust_root_seed` and press `btn_trust_root_import_review`
+— refused locally, nothing sent, no confirm opened:
+
+```yaml
+expect:
+  visible: [trust_root_import_not_json]
+  absent:  [sheet_trust_root_import]
+```
+
+*Cannot yet assert on a runner:* the import and un-trust confirms end to end.
+Adopting needs a signed seed, and un-trusting the only root takes the node's
+`trace:*` plane down; both are pinned by `TrustRootTest` and
+`testing/flows/drafts/csd-067-trust-root.yaml` walks them against a scratch node.
 
 ## 5. QA plan
 

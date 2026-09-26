@@ -1121,6 +1121,30 @@ class AccordViewModel(
         }
     }
 
+    // ── The family's version chain — GET /v1/accord/family/history ────────────
+    // (CIRISServer src/accord.rs:2355). Not loopback-gated and not owner-gated: the
+    // supersede audit is readable from wherever the card is. A failed read is its
+    // own state, never an empty chain.
+
+    private val _familyHistory = MutableStateFlow<FamilyHistoryState>(FamilyHistoryState.Loading)
+    val familyHistory: StateFlow<FamilyHistoryState> = _familyHistory.asStateFlow()
+
+    fun loadFamilyHistory() {
+        _familyHistory.value = FamilyHistoryState.Loading
+        viewModelScope.launch {
+            _familyHistory.value = try {
+                FamilyHistoryState.Loaded(
+                    apiClient.getAccordFamilyHistory().versions
+                        .map { ai.ciris.mobile.shared.models.federation.familyVersionView(it) }
+                        .sortedByDescending { it.version },
+                )
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[loadFamilyHistory] ${e.message}")
+                FamilyHistoryState.Failed(ai.ciris.mobile.shared.models.federation.trustRootFailure(e))
+            }
+        }
+    }
+
     /** Surface a client-side error (e.g. a malformed pasted co-scrub partial). */
     fun showError(message: String) {
         _error.value = message

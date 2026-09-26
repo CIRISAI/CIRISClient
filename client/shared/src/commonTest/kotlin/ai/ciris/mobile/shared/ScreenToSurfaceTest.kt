@@ -54,6 +54,8 @@ class ScreenToSurfaceTest {
     fun theStatedConventionStillHolds() {
         assertEquals(NavSurface.Contacts, screenToSurface(Screen.UserChat("k1", "c1", "Ada")))
         assertEquals(NavSurface.Accord, screenToSurface(Screen.DutyConferral))
+        // The trust-root detail is a leaf of the Accord card, which stays lit.
+        assertEquals(NavSurface.Accord, screenToSurface(Screen.TrustRoot))
         assertEquals(NavSurface.Skills, screenToSurface(Screen.SkillImport))
     }
 }

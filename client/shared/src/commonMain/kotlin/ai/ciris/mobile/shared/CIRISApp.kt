@@ -1064,6 +1064,10 @@ fun CIRISApp(
     val accordViewModel: ai.ciris.mobile.shared.viewmodels.AccordViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.AccordViewModel(apiClient)
     }
+    // Trust root (card: Accord › this node's trust root) — CIRISServer#400.
+    val trustRootViewModel: ai.ciris.mobile.shared.viewmodels.TrustRootViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.TrustRootViewModel(apiClient)
+    }
     val provisionAccordHolderViewModel:
         ai.ciris.mobile.shared.viewmodels.ProvisionAccordHolderViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.ProvisionAccordHolderViewModel(apiClient)
@@ -4208,6 +4212,18 @@ fun CIRISApp(
                     // Found-a-new-accord CTA — shown only when no family exists yet.
                     onStartCeremony = { currentScreen = Screen.AccordCeremony },
                     onConferDuty = { currentScreen = Screen.DutyConferral },
+                    onOpenTrustRoot = { currentScreen = Screen.TrustRoot },
+                )
+            }
+
+            Screen.TrustRoot -> {
+                // Trust root (card: Accord): this node's side of the accord's root —
+                // posture, roots, adopt a seed, un-trust. Loopback-only on the node
+                // (CIRISServer#652); the screen says so off the node's machine.
+                TrustRootScreen(
+                    viewModel = trustRootViewModel,
+                    onBack = { currentScreen = Screen.Accord },
+                    nodeUrl = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL,
                 )
             }
 
@@ -5801,6 +5817,8 @@ internal sealed class Screen {
     // Accord (HUMANITY_ACCORD — constitutional 2/3 kill-switch + holder roster).
     object Accord : Screen()
     object DutyConferral : Screen()
+    // Trust root (card: Accord) — a detail of the Accord card, not a nav row.
+    object TrustRoot : Screen()
     // Provision Accord Holder (mint a portable-2FA accord-holder identity).
     object ProvisionAccordHolder : Screen()
     // Accord Genesis Ceremony (stand up a new mesh's 2-of-3 human kill-switch).
@@ -5957,6 +5975,8 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         Screen.DutyConferral -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
+        // Trust root (card: Accord): a detail of the Accord card keeps it lit.
+        Screen.TrustRoot -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
     Screen.ProvisionAccordHolder -> ai.ciris.mobile.shared.ui.nav.NavSurface.ProvisionAccordHolder
     Screen.AccordCeremony -> ai.ciris.mobile.shared.ui.nav.NavSurface.AccordCeremony
     Screen.Moderation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Moderation
