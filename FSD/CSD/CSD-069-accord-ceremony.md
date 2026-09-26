@@ -192,8 +192,14 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | the family envelope | `POST /v1/accord/genesis/envelope` | `src/accord.rs:2621` | **live** |
 | a primary's co-sign | `POST /v1/accord/family/cosign` | `src/accord_provision.rs:3701` | **live** |
 | assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **live** |
+| change the family after genesis — build the quorum envelope | `POST /v1/accord/family/change/envelope` | `src/accord.rs:2637` | live, **not called** — the genesis ceremony has a card; amending the family it produced does not |
+| replace the family | `POST /v1/accord/family/supersede` | `src/accord.rs:2641` | live, **not called** — same gap. (`GET /v1/accord/family/history`, `:2645`, is the read of these amendments and has no card either; that is a new-card question, not this one) |
 
-**Every route this ceremony needs is live.** The whole of this document's gap
+**Every route this ceremony needs is live.** The two rows under the genesis are
+the ceremony's second act — a family, once made, changed by the same quorum —
+and nothing in the client drives it. The route-coverage report also filed
+`admit-node` and `announce` here; both are called from the Accord screen and are
+cited in CSD-067 §3. The whole of this document's gap
 list is client-side: four states with one tag between them, no save affordance
 on the artifact, and a surface the checker cannot resolve.
 

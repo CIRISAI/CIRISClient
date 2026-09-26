@@ -134,6 +134,8 @@ an unread one, and the difference is the whole value of a self-report.
 | address, peers, capabilities | `GET /v1/federation/identity` | CIRISServer | live (`/v1/federation/identity`); read from `LOCAL_NODE_URL`, not `baseUrl` (`CIRISApiClient.kt:1230`) |
 | radio config write | `PUT /v1/config/{key}` ×7 | **both** | live; owner-gated |
 | radio config read-back | `GET /v1/config` | **both** | live |
+| the agent's own federation address (Edge `signer_key_id`, `available=false` when Edge is off) | `GET /v1/system/federation` | CIRISAgent (`routes/system/health.py:912`, OBSERVER) | live, **not called** — the brain's answer to the question the first row asks the node; on an agent build the two can differ and the card shows only the node's |
+| the edge event stream | `GET /v1/federation/events/{channel}` (SSE) | CIRISServer `src/federation_surface.rs:703` | live — called, **but from the network hub's tiles, not this card** (`FederationEventStream.kt:91`; cited in CSD-051). The route-coverage report placed it here |
 | the key-boundary attestation | `GET /v1/federation/identity` — **unconfirmed** | CIRISServer | blocks `building` for `transport_key_boundary` |
 
 Agent tree last commit 2026-08-15; this card's contract is the node's.

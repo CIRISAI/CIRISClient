@@ -89,8 +89,18 @@ surface whose empty state is unreachable is not the surface the tab asked for.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| federation identity / transport state | the NetworkScreen reads, via `NetworkViewModel` | CIRISServer | live — and node-infra, which is the point |
+| federation identity / transport state | `GET /v1/federation/identity` — `NetworkViewModel.kt:145, 154` via `CIRISApiClient.kt:1235`; agent mode via `GET /v1/system/agent-mode` (`NetworkViewModel.kt:74, 98`, see CSD-036) | CIRISServer `src/federation_surface.rs:696` | live — and node-infra, which is the point |
+| the edge's counters (Interfaces, Queue tiles) | `GET /v1/federation/metrics` | CIRISServer `src/federation_surface.rs:697` | **live** — `CIRISApiClient.getFederationMetrics` (`CIRISApiClient.kt:1645`), read by `NetworkInterfacesViewModel.kt:86` and `NetworkQueueViewModel.kt:56`. The route-coverage report placed this on Telemetry (CSD-030); nothing on Telemetry reads it |
+| the live event bus (Paths, Announces, Diagnostics tiles) | `GET /v1/federation/events/{channel}` (SSE) | CIRISServer `src/federation_surface.rs:703` | **live** — `FederationEventStream.kt:91`, opened by `NetworkPathsViewModel`, `NetworkAnnouncesViewModel`, `NetworkDiagnosticsViewModel` and `FederationStreamViewModel` |
+| fetch content from a peer (Content tile) | `POST /v1/federation/content/{content_id}` | CIRISServer `src/federation_surface.rs:699`, owner-gated | **live** — `CIRISApiClient.fetchFederationContent` (`CIRISApiClient.kt:1726`) from `NetworkContentViewModel.kt:138`. The "fetch" half of CIRISServer#651; the directory half is the filed gap. Also noted against the Files card (`PENDING-CSD-007.md`) |
+| **how big the widest circle is** — counts, never contents, with an `as_of` | `GET /v1/mesh/status` | CIRISServer `src/federation_admin.rs:919` (handler `:787`, CIRISServer#498) — **public**, served from cache | **live and never called.** It is the one read that is about the federation as a whole rather than about this node, and it deliberately enumerates nobody ("a public surface that enumerates peers is a reconnaissance surface", `:781-782`). When this card becomes `LayerHubScreen(GLOBAL_COMMONS)` (§5), this is the read its header can make without a scope filter that does not exist yet |
 | the rules binding this circle | none | CIRISConstitution + CIRISServer | **missing**, and unspecifiable: there is no `trust_policy` family (CSD-050 §2) and no scope-scoped rules route |
+
+Verified against CIRISServer `origin/main` 046e1b39 (0.5.217). On `integ/0.5.218`
+(97900cf5) `federation_surface.rs` moved +12 (`metrics :709`, `content :711`,
+`events :715`); `mesh/status` did not move. The four network rows are the
+hub's tiles, not the rules this card's name promises — they are recorded so the
+§5 move takes them with it rather than losing them.
 
 ## 4. Flow (how)
 
