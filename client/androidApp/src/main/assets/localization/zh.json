@@ -1376,6 +1376,20 @@
     "consent_switch_temporary": "切换到临时将设置 14 天自动遗忘期。继续？",
     "consent_users_helped": "帮助的用户",
     "consent_view_only": "您只能查看和管理自己的同意设置。",
+    "contact_code_disclosure": "任何持有此代码的人都可以请求添加您，并能看到该代码所指定的设备。",
+    "contact_code_nodes_all": "我的所有可联系设备",
+    "contact_code_nodes_list": "选择设备",
+    "contact_code_nodes_none": "没有设备",
+    "contact_code_private_note": "只有可联系的设备才能加入代码。您的其他设备为私密状态。",
+    "contact_code_list_reloaded": "您的可联系设备列表已重新加载。下方代码适用于当前可联系的设备。",
+    "contact_code_unreachable": "目前没有人能通过此代码找到您：您没有任何设备是可联系的。请使此设备可联系，或分享包含此设备的代码。",
+    "contact_code_make_reachable": "使此设备可联系",
+    "contact_code_make_reachable_busy": "正在使此设备可联系……",
+    "contact_code_made_reachable": "此设备现已可联系。其网络地址将在其节点下次启动时公告。",
+    "contact_code_make_reachable_failed": "无法使此设备可联系。",
+    "contact_code_error": "无法获取您的联系人代码。",
+    "contact_code_node_too_old": "此节点尚无法生成联系人代码，需要 ciris-server 0.5.218 或更新版本。",
+    "contacts_add_already": "已在您的联系人列表中。",
     "contacts_node_too_old_body_versioned": "此节点运行的是 {version}。联系人和聊天功能需要 ciris-server 0.5.185 或更新版本，因此暂时无法响应——其他功能均正常。",
     "receipt_title": "收据",
     "receipt_open": "查看收据",
@@ -3094,7 +3108,15 @@
     "transport_not_on_this_node": "本节点不报告其传输方式。",
     "audit_not_on_this_node": "本节点不保存智能体审计日志。没有任何内容被过滤掉。",
     "consent_not_on_this_node": "本节点不持有同意记录。同意由智能体保存，而本节点在没有智能体的情况下运行。",
-    "billing_not_on_this_node": "本节点不处理计费。这里没有余额，也没有可购买的内容。"
+    "billing_not_on_this_node": "本节点不处理计费。这里没有余额，也没有可购买的内容。",
+    "contact_code_title": "分享我的联系人代码",
+    "contact_code_qr_desc": "您的联系人代码二维码",
+    "contact_code_copy": "复制",
+    "contact_code_copied": "已复制",
+    "contact_code_included_none": "此代码未指定您的任何设备。他人可通过联邦目录找到您。",
+    "contact_code_included_one": "此代码包含 1 台设备：{device}。",
+    "contact_code_included_many": "此代码包含 {count} 台设备：{devices}。",
+    "contact_code_without_transport": "尚未加入此代码：{devices}。设备只有在此处拥有网络地址后才能加入，也就是其节点下次启动之后。"
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "您的设备是所有者本人的界面。请以此节点所有者的身份登录。",
     "release_incomplete": "释放操作已签名，但节点仍将该节点列为您所拥有：有一条它无法看到的所有权记录仍处于生效状态。它所能撤销的部分，仍保持已撤销状态。",
     "release_self_requires_force": "那就是您正在对话的节点。释放它将终止您在此处的所有权，包括本次会话。",
-    "store_unavailable": "节点无法读取或写入其身份存储。未做任何更改。"
+    "store_unavailable": "节点无法读取或写入其身份存储。未做任何更改。",
+    "node_not_announced": "该设备不可联系，因此无法加入代码。",
+    "contact_code_owner_key_absent": "此节点未持有您身份的密钥记录，因此无法生成您的联系人代码。",
+    "contact_code_not_a_person": "您的身份未注册为个人，而只有个人身份才能被添加为联系人。",
+    "contact_code_key_not_derived": "您身份的 key_id 与其密钥不匹配，因此所有与您分享过代码的人都会拒绝它。",
+    "contact_code_no_pqc_half": "您的身份没有后量子密钥部分，因此没有人能通过代码添加您。",
+    "contact_code_unencodable": "无法根据此节点持有的密钥生成您的联系人代码。"
   }
 }

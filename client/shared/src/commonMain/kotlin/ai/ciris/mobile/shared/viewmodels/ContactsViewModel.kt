@@ -1,7 +1,10 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ClientContactsApi
+import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -27,9 +30,19 @@ import kotlinx.coroutines.launch
  * direction. The contact set is persist's revocation-FOLDED consent peer set —
  * a withdrawn grant is already absent, which is why there is no "remove
  * contact" call here to pair with [addContact].
+ *
+ * It also drives the **Share my contact code** card (CSD-092): the person's
+ * own code from `GET /v1/self/contact-code`, the device picker, and the rule
+ * that a code reaching no one is not shown.
+ *
+ * @param nodeBaseUrl the NODE's own address. Adding a contact and the contact
+ *   code go there whenever an agent sits at the api base ([contactsNodeUrl]).
+ * @param api every node call this view model makes; a fake in tests.
  */
 class ContactsViewModel(
     apiClient: CIRISApiClient,
+    private val nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL,
+    private val api: ContactsApi = ClientContactsApi(apiClient),
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "ContactsVM"
@@ -132,6 +145,48 @@ class ContactsViewModel(
     private val _justAdded = MutableStateFlow<Contact?>(null)
     val justAdded: StateFlow<Contact?> = _justAdded.asStateFlow()
 
+    /**
+     * Whether [justAdded] was a new grant or the person was already a contact
+     * (`freshly_emitted: false`). Adding the same person twice is a no-op on
+     * the node, and it is said as one — never as an error.
+     */
+    private val _addOutcome = MutableStateFlow<AddContactOutcome?>(null)
+    val addOutcome: StateFlow<AddContactOutcome?> = _addOutcome.asStateFlow()
+
+    // ── Share my contact code (CSD-092) ──────────────────────────────────────
+
+    private val _contactCode = MutableStateFlow<ContactCodeState>(ContactCodeState.Closed)
+    val contactCode: StateFlow<ContactCodeState> = _contactCode.asStateFlow()
+
+    private val _contactCodeNodes = MutableStateFlow(ContactCodeNodes.ALL)
+    val contactCodeNodes: StateFlow<ContactCodeNodes> = _contactCodeNodes.asStateFlow()
+
+    /**
+     * The ticked devices for [ContactCodeNodes.LIST]. Every available device is
+     * ticked the first time the list arrives (the default is all of them); after
+     * that it only loses devices the node stops offering.
+     */
+    private val _contactCodeTicked = MutableStateFlow<Set<String>>(emptySet())
+    val contactCodeTicked: StateFlow<Set<String>> = _contactCodeTicked.asStateFlow()
+    private var tickedSeeded = false
+
+    /**
+     * `self.node_not_announced`, when the picker's list went stale (a device was
+     * made private after the card loaded). Kept beside a reloaded code, not in
+     * place of it: the card says what happened and shows what is true now.
+     */
+    private val _contactCodeRefusal = MutableStateFlow<NodeRefusal?>(null)
+    val contactCodeRefusal: StateFlow<NodeRefusal?> = _contactCodeRefusal.asStateFlow()
+
+    private val _makeReachable = MutableStateFlow<MakeReachableState>(MakeReachableState.Idle)
+    val makeReachable: StateFlow<MakeReachableState> = _makeReachable.asStateFlow()
+
+    /** Bumped per contact-code request, so a slow answer to an old choice is dropped. */
+    private var codeRequest = 0L
+
+    /** Where the add, the code and the announce go — see [contactsNodeUrl]. */
+    private fun nodeUrl(): String = contactsNodeUrl(apiClient.isNodeMode(), apiClient.baseUrl, nodeBaseUrl)
+
     init {
         load()
     }
@@ -154,7 +209,7 @@ class ContactsViewModel(
             if (epoch != sessionEpoch) return@launch
             _loading.value = true
             try {
-                val resp = apiClient.listContacts()
+                val resp = api.listContacts()
                 // THE gate that matters: the await above is where a logout
                 // interleaves. The clear emptied the flows once; publishing A's
                 // response now would repopulate them for the signed-out screen
@@ -198,7 +253,7 @@ class ContactsViewModel(
         val epoch = sessionEpoch
         viewModelScope.launch {
             runApi("listFederationPeers") {
-                apiClient.listFederationPeers()
+                api.listPeers()
             }?.let { resp ->
                 if (epoch != sessionEpoch) return@launch
                 _allPeers.value = sortedPeers(resp.peers)
@@ -219,8 +274,9 @@ class ContactsViewModel(
     }
 
     /**
-     * Add a contact by fedID. On success the list is refreshed and [justAdded]
-     * carries the new contact so the screen can offer to open the chat.
+     * Add a contact by contact code (pasted or scanned) or fedID. On success the
+     * list is refreshed and [justAdded] carries the contact so the screen can
+     * offer to open the chat; [addOutcome] says whether they were already one.
      *
      * Refusals land in [addRefusalReasonId] + [addError] rather than the shared
      * [error] channel, so a failed add does not blank the list the user is
@@ -234,8 +290,9 @@ class ContactsViewModel(
             _addBusy.value = true
             _addRefusalReasonId.value = null
             _addError.value = null
+            _addOutcome.value = null
             try {
-                val added = apiClient.addContact(trimmed)
+                val added = api.addContact(nodeUrl(), trimmed)
                 if (epoch != sessionEpoch) return@launch
                 PlatformLogger.i(
                     tag,
@@ -257,6 +314,7 @@ class ContactsViewModel(
                     _chatIneligible.value + added.keyId
                 }
                 refreshContacts()
+                _addOutcome.value = if (added.freshlyEmitted) AddContactOutcome.ADDED else AddContactOutcome.ALREADY
                 _justAdded.value = Contact(
                     keyId = added.keyId,
                     chatCommunityId = added.chatCommunityId,
@@ -283,6 +341,172 @@ class ContactsViewModel(
     /** Acknowledge the one-shot [justAdded] after the screen has acted on it. */
     fun consumeJustAdded() {
         _justAdded.value = null
+        _addOutcome.value = null
+    }
+
+    // ── Share my contact code ────────────────────────────────────────────────
+
+    /** Open the card and ask for the code, unless it is already open. */
+    fun openContactCode() {
+        if (_contactCode.value == ContactCodeState.Closed) loadContactCode()
+    }
+
+    fun closeContactCode() {
+        codeRequest += 1
+        _contactCode.value = ContactCodeState.Closed
+        _contactCodeRefusal.value = null
+        _makeReachable.value = MakeReachableState.Idle
+    }
+
+    /** Choose all / a list / no devices. Each choice is a new code, read back from the node. */
+    fun setContactCodeNodes(mode: ContactCodeNodes) {
+        _contactCodeNodes.value = mode
+        _contactCodeRefusal.value = null
+        loadContactCode()
+    }
+
+    /**
+     * Tick or untick one device, never past [CONTACT_CODE_MAX_NODES]. Touching a
+     * device IS choosing devices: from "all" or "none" the ticks start from what
+     * that choice meant, the choice becomes the list, and the code is re-read.
+     */
+    fun toggleContactCodeNode(nodeKeyId: String) {
+        val offered = (_contactCode.value as? ContactCodeState.Ready)
+            ?.code?.availableNodes?.map { it.nodeKeyId }.orEmpty()
+        val now = when (_contactCodeNodes.value) {
+            ContactCodeNodes.ALL -> offered.take(CONTACT_CODE_MAX_NODES).toSet()
+            ContactCodeNodes.NONE -> emptySet()
+            ContactCodeNodes.LIST -> _contactCodeTicked.value
+        }
+        _contactCodeTicked.value = when {
+            nodeKeyId in now -> now - nodeKeyId
+            now.size >= CONTACT_CODE_MAX_NODES -> return
+            else -> now + nodeKeyId
+        }
+        _contactCodeNodes.value = ContactCodeNodes.LIST
+        _contactCodeRefusal.value = null
+        loadContactCode()
+    }
+
+    /** Ask the node for the code the current picker choice describes. */
+    fun loadContactCode() {
+        val epoch = sessionEpoch
+        val request = ++codeRequest
+        val url = nodeUrl()
+        val mode = _contactCodeNodes.value
+        val query = contactCodeNodesQuery(mode, _contactCodeTicked.value)
+        _contactCode.value = ContactCodeState.Loading
+        viewModelScope.launch {
+            try {
+                val code = api.contactCode(url, query)
+                if (isCurrent(epoch, request)) publishContactCode(code)
+            } catch (e: NodeRefusal) {
+                if (!isCurrent(epoch, request)) return@launch
+                when {
+                    e.statusCode == 404 && e.reasonId == null -> {
+                        // The route is not mounted: a node older than 0.5.218.
+                        // A version fact, never an empty card.
+                        _contactCode.value = ContactCodeState.NodeTooOld
+                        PlatformLogger.i(tag, "[contactCode] node predates /v1/self/contact-code (bare 404)")
+                    }
+                    e.reasonId == NODE_NOT_ANNOUNCED -> recoverFromStalePicker(e, url, mode, epoch, request)
+                    else -> {
+                        _contactCode.value = ContactCodeState.Failed(e.reasonId, e.detail)
+                        PlatformLogger.w(
+                            tag,
+                            "[contactCode] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}",
+                        )
+                    }
+                }
+            } catch (e: Exception) {
+                if (!isCurrent(epoch, request)) return@launch
+                _contactCode.value = ContactCodeState.Failed(null, e.message ?: e::class.simpleName)
+                PlatformLogger.e(tag, "[contactCode] ${e.message}", e)
+            }
+        }
+    }
+
+    private fun isCurrent(epoch: Long, request: Long) = epoch == sessionEpoch && request == codeRequest
+
+    /**
+     * `self.node_not_announced`: a ticked device is no longer announced. The
+     * picker never offers a private device, so its list went stale. Re-read
+     * what may be offered, drop what went private, show the code for what is
+     * left, and keep the refusal on screen so the change is said.
+     */
+    private suspend fun recoverFromStalePicker(
+        refusal: NodeRefusal,
+        url: String,
+        mode: ContactCodeNodes,
+        epoch: Long,
+        request: Long,
+    ) {
+        PlatformLogger.w(tag, "[contactCode] ${refusal.reasonId}: a ticked device is not announced; reloading the list")
+        _contactCodeRefusal.value = refusal
+        try {
+            val fresh = api.contactCode(url, null)
+            if (!isCurrent(epoch, request)) return
+            val offered = fresh.availableNodes.map { it.nodeKeyId }.toSet()
+            _contactCodeTicked.value = _contactCodeTicked.value intersect offered
+            val code = if (mode == ContactCodeNodes.LIST) {
+                api.contactCode(url, contactCodeNodesQuery(mode, _contactCodeTicked.value))
+            } else {
+                fresh
+            }
+            if (!isCurrent(epoch, request)) return
+            publishContactCode(code)
+        } catch (e: Exception) {
+            if (!isCurrent(epoch, request)) return
+            val r = e as? NodeRefusal
+            _contactCode.value = ContactCodeState.Failed(r?.reasonId, r?.detail ?: e.message)
+        }
+    }
+
+    private fun publishContactCode(code: ContactCodeResponse) {
+        val offered = code.availableNodes.map { it.nodeKeyId }
+        _contactCodeTicked.value = if (!tickedSeeded && offered.isNotEmpty()) {
+            tickedSeeded = true
+            offered.take(CONTACT_CODE_MAX_NODES).toSet()
+        } else {
+            _contactCodeTicked.value intersect offered.toSet()
+        }
+        // THE HONESTY RULE (CSD-092 `empty`). No announced device means every
+        // code the node can mint names no device and resolves through a
+        // directory that does not list this person: it reaches no one. The
+        // node would mint it; the card does not hand it out.
+        _contactCode.value = if (offered.isEmpty()) {
+            ContactCodeState.Unreachable
+        } else {
+            ContactCodeState.Ready(code)
+        }
+        PlatformLogger.i(
+            tag,
+            "[contactCode] available=${offered.size} included=${code.includedNodes.size} shown=${offered.isNotEmpty()}",
+        )
+    }
+
+    /**
+     * Make THIS device reachable (`POST /v1/federation/announce`), the way out
+     * of [ContactCodeState.Unreachable]. The binding widens at once; the
+     * network announce follows at the node's next boot, and the card says both.
+     */
+    fun makeThisDeviceReachable() {
+        if (_makeReachable.value == MakeReachableState.Busy) return
+        val epoch = sessionEpoch
+        val url = nodeUrl()
+        _makeReachable.value = MakeReachableState.Busy
+        viewModelScope.launch {
+            try {
+                val done = api.announceThisDevice(url)
+                if (epoch != sessionEpoch) return@launch
+                _makeReachable.value = MakeReachableState.Done(done.announceTakesEffect)
+                loadContactCode()
+            } catch (e: Exception) {
+                if (epoch != sessionEpoch) return@launch
+                _makeReachable.value = MakeReachableState.Failed(e.message ?: e::class.simpleName)
+                PlatformLogger.e(tag, "[announce] ${e.message}", e)
+            }
+        }
     }
 
     /** Acknowledge an add refusal after the user sees it. */
@@ -325,6 +549,9 @@ class ContactsViewModel(
     }
 
     companion object {
+        /** A device named for a contact code is not announced (CC 2.6.8 constraint 2). */
+        const val NODE_NOT_ANNOUNCED = "self.node_not_announced"
+
         /**
          * Canonical peers first; within each group sort trusted > unknown >
          * untrusted > blocked, then most-recently-seen first.
@@ -381,5 +608,13 @@ class ContactsViewModel(
         _addRefusalReasonId.value = null
         _addError.value = null
         _justAdded.value = null
+        _addOutcome.value = null
+        codeRequest += 1
+        _contactCode.value = ContactCodeState.Closed
+        _contactCodeNodes.value = ContactCodeNodes.ALL
+        _contactCodeTicked.value = emptySet()
+        tickedSeeded = false
+        _contactCodeRefusal.value = null
+        _makeReachable.value = MakeReachableState.Idle
     }
 }

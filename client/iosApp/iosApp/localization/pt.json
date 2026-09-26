@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Este nó não relata seus transportes.",
     "audit_not_on_this_node": "Este nó não mantém um registro de auditoria do agente. Nada foi filtrado.",
     "consent_not_on_this_node": "Este nó não guarda registros de consentimento. O consentimento é mantido por um agente, e este nó funciona sem um.",
-    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar."
+    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar.",
+    "contact_code_title": "Compartilhar meu código de contato",
+    "contact_code_qr_desc": "Seu código de contato como QR",
+    "contact_code_copy": "Copiar",
+    "contact_code_copied": "Copiado",
+    "contact_code_included_none": "Este código não identifica nenhum dos seus dispositivos. As pessoas encontram você através do diretório da federação.",
+    "contact_code_included_one": "Este código inclui 1 dispositivo: {device}.",
+    "contact_code_included_many": "Este código inclui {count} dispositivos: {devices}.",
+    "contact_code_without_transport": "Ainda não estão neste código: {devices}. Um dispositivo pode entrar quando tiver um endereço de rede aqui, depois que o nó dele iniciar da próxima vez.",
+    "contact_code_disclosure": "Qualquer pessoa com este código pode pedir para adicionar você, e pode ver quais dos seus dispositivos ele identifica.",
+    "contact_code_nodes_all": "Todos os meus dispositivos acessíveis",
+    "contact_code_nodes_list": "Escolher dispositivos",
+    "contact_code_nodes_none": "Nenhum dispositivo",
+    "contact_code_private_note": "Somente dispositivos acessíveis podem entrar em um código. Seus outros dispositivos são privados.",
+    "contact_code_list_reloaded": "Sua lista de dispositivos acessíveis foi recarregada. O código abaixo é para os dispositivos que estão acessíveis agora.",
+    "contact_code_unreachable": "Ninguém pode encontrar você com isto ainda: nenhum dos seus dispositivos está acessível. Torne este dispositivo acessível, ou compartilhe um código que o inclua.",
+    "contact_code_make_reachable": "Tornar este dispositivo acessível",
+    "contact_code_make_reachable_busy": "Tornando este dispositivo acessível…",
+    "contact_code_made_reachable": "Este dispositivo está acessível agora. O endereço de rede dele é anunciado na próxima vez que o nó dele iniciar.",
+    "contact_code_make_reachable_failed": "Não foi possível tornar este dispositivo acessível.",
+    "contact_code_error": "Não foi possível obter seu código de contato.",
+    "contact_code_node_too_old": "Este nó ainda não consegue gerar um código de contato. Ele precisa do ciris-server 0.5.218 ou mais recente.",
+    "contacts_add_already": "Já está nos seus contatos."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Seus dispositivos são a superfície do próprio proprietário. Entre como o proprietário deste nó.",
     "release_incomplete": "A liberação foi assinada, mas o nó ainda lista aquele nó como seu: existe um registro de propriedade que ele não pode ver e que ainda está ativo. O que pôde ser retirado permanece retirado.",
     "release_self_requires_force": "Esse é o nó com quem você está falando. Liberá-lo encerra sua propriedade aqui, incluindo esta sessão.",
-    "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado."
+    "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado.",
+    "node_not_announced": "Esse dispositivo não está acessível, portanto não pode entrar em um código.",
+    "contact_code_owner_key_absent": "Este nó não possui o registro de chave da sua identidade, portanto não pode gerar seu código de contato.",
+    "contact_code_not_a_person": "Sua identidade não está registrada como pessoa, e somente uma pessoa pode ser adicionada como contato.",
+    "contact_code_key_not_derived": "O key_id da sua identidade não corresponde à chave dela, portanto todos com quem você compartilhou um código o recusariam.",
+    "contact_code_no_pqc_half": "Sua identidade não tem a metade pós-quântica da chave, portanto ninguém poderia adicionar você a partir de um código.",
+    "contact_code_unencodable": "Seu código de contato não pôde ser gerado a partir das chaves que este nó possui."
   }
 }

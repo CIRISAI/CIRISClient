@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
     "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
     "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
-    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli.",
+    "contact_code_title": "Bagikan kode kontak saya",
+    "contact_code_qr_desc": "Kode kontak Anda sebagai QR",
+    "contact_code_copy": "Salin",
+    "contact_code_copied": "Disalin",
+    "contact_code_included_none": "Kode ini tidak menyebutkan perangkat Anda mana pun. Orang lain menemukan Anda melalui direktori federasi.",
+    "contact_code_included_one": "Kode ini mencakup 1 perangkat: {device}.",
+    "contact_code_included_many": "Kode ini mencakup {count} perangkat: {devices}.",
+    "contact_code_without_transport": "Belum ada dalam kode ini: {devices}. Perangkat dapat dimasukkan setelah memiliki alamat jaringan di sini, setelah node-nya berikutnya dimulai.",
+    "contact_code_disclosure": "Siapa pun yang memiliki kode ini dapat meminta untuk menambahkan Anda, dan dapat melihat perangkat mana saja yang disebutkan di dalamnya.",
+    "contact_code_nodes_all": "Semua perangkat saya yang dapat dijangkau",
+    "contact_code_nodes_list": "Pilih perangkat",
+    "contact_code_nodes_none": "Tidak ada perangkat",
+    "contact_code_private_note": "Hanya perangkat yang dapat dijangkau yang dapat dimasukkan ke dalam kode. Perangkat Anda yang lain bersifat pribadi.",
+    "contact_code_list_reloaded": "Daftar perangkat yang dapat dijangkau telah dimuat ulang. Kode di bawah ini berlaku untuk perangkat yang dapat dijangkau sekarang.",
+    "contact_code_unreachable": "Belum ada yang dapat menemukan Anda dengan ini: tidak ada perangkat Anda yang dapat dijangkau. Jadikan perangkat ini dapat dijangkau, atau bagikan kode yang mencakupnya.",
+    "contact_code_make_reachable": "Jadikan perangkat ini dapat dijangkau",
+    "contact_code_make_reachable_busy": "Menjadikan perangkat ini dapat dijangkau…",
+    "contact_code_made_reachable": "Perangkat ini sekarang dapat dijangkau. Alamat jaringannya akan diumumkan pada saat node-nya berikutnya dimulai.",
+    "contact_code_make_reachable_failed": "Tidak dapat menjadikan perangkat ini dapat dijangkau.",
+    "contact_code_error": "Tidak dapat mengambil kode kontak Anda.",
+    "contact_code_node_too_old": "Node ini belum dapat membuat kode kontak. Node ini memerlukan ciris-server 0.5.218 atau yang lebih baru.",
+    "contacts_add_already": "Sudah ada dalam kontak Anda."
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "Perangkat Anda adalah ranah pemilik sendiri. Masuklah sebagai pemilik node ini.",
     "release_incomplete": "Pelepasan telah ditandatangani, tetapi node masih mencantumkannya sebagai milik Anda: ada catatan kepemilikan yang tidak dapat dilihatnya namun masih berlaku. Apa yang dapat dicabutnya tetap dicabut.",
     "release_self_requires_force": "Itu adalah node yang sedang Anda ajak bicara. Melepaskannya mengakhiri kepemilikan Anda di sini, termasuk sesi ini.",
-    "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah."
+    "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah.",
+    "node_not_announced": "Perangkat itu tidak dapat dijangkau, sehingga tidak dapat dimasukkan ke dalam kode.",
+    "contact_code_owner_key_absent": "Node ini tidak menyimpan catatan kunci identitas Anda, sehingga tidak dapat membuat kode kontak Anda.",
+    "contact_code_not_a_person": "Identitas Anda tidak terdaftar sebagai orang, dan hanya orang yang dapat ditambahkan sebagai kontak.",
+    "contact_code_key_not_derived": "ID kunci identitas Anda tidak cocok dengan kuncinya, sehingga siapa pun yang Anda bagikan kode kepadanya akan menolak kode tersebut.",
+    "contact_code_no_pqc_half": "Identitas Anda tidak memiliki separuh kunci pasca-kuantum, sehingga tidak ada yang dapat menambahkan Anda dari kode.",
+    "contact_code_unencodable": "Kode kontak Anda tidak dapat dibuat dari kunci-kunci yang dimiliki node ini."
   }
 }

@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "ይህ ኖድ የመጓጓዣ መንገዶቹን አይገልጽም።",
     "audit_not_on_this_node": "ይህ ኖድ የወኪል ኦዲት መዝገብ አይይዝም። ምንም አልተጣራም።",
     "consent_not_on_this_node": "ይህ ኖድ የስምምነት መዝገቦችን አይይዝም። ስምምነት በወኪል ይያዛል፣ ይህ ኖድ ግን ወኪል ሳይኖረው ይሰራል።",
-    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።"
+    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።",
+    "contact_code_title": "የእውቂያ ኮዴን አጋራ",
+    "contact_code_qr_desc": "የእውቂያ ኮድዎ እንደ QR",
+    "contact_code_copy": "ቅዳ",
+    "contact_code_copied": "ተቀድቷል",
+    "contact_code_included_none": "ይህ ኮድ ከመሣሪያዎችዎ ውስጥ አንዱንም አይጠቅስም። ሰዎች በፌዴሬሽን ማውጫ በኩል ያገኙዎታል።",
+    "contact_code_included_one": "ይህ ኮድ 1 መሣሪያ ያካትታል፦ {device}።",
+    "contact_code_included_many": "ይህ ኮድ {count} መሣሪያዎችን ያካትታል፦ {devices}።",
+    "contact_code_without_transport": "በዚህ ኮድ ውስጥ ገና የለም፦ {devices}። አንድ መሣሪያ እዚህ የመረብ አድራሻ ካገኘ በኋላ፣ ኖዱ በሚቀጥለው ጊዜ ሲጀምር ሊገባ ይችላል።",
+    "contact_code_disclosure": "ይህ ኮድ ያለው ማንኛውም ሰው እርስዎን ለመጨመር መጠየቅ ይችላል፣ እና ኮዱ የሚጠቅሳቸውን የእርስዎን መሣሪያዎች ማየት ይችላል።",
+    "contact_code_nodes_all": "ሁሉም ተደራሽ መሣሪያዎቼ",
+    "contact_code_nodes_list": "መሣሪያዎችን ምረጥ",
+    "contact_code_nodes_none": "ምንም መሣሪያ የለም",
+    "contact_code_private_note": "ተደራሽ መሣሪያዎች ብቻ በኮድ ውስጥ ሊገቡ ይችላሉ። ሌሎች መሣሪያዎችዎ የግል ናቸው።",
+    "contact_code_list_reloaded": "የተደራሽ መሣሪያዎችዎ ዝርዝር እንደገና ተጭኗል። ከዚህ በታች ያለው ኮድ አሁን ተደራሽ ለሆኑ መሣሪያዎች ነው።",
+    "contact_code_unreachable": "በዚህ እርስዎን ገና ማንም ማግኘት አይችልም፦ ከመሣሪያዎችዎ ውስጥ አንዱም ተደራሽ አይደለም። ይህን መሣሪያ ተደራሽ ያድርጉ፣ ወይም እሱን የሚያካትት ኮድ ያጋሩ።",
+    "contact_code_make_reachable": "ይህን መሣሪያ ተደራሽ አድርግ",
+    "contact_code_make_reachable_busy": "ይህን መሣሪያ ተደራሽ በማድረግ ላይ…",
+    "contact_code_made_reachable": "ይህ መሣሪያ አሁን ተደራሽ ነው። የመረብ አድራሻው ኖዱ በሚቀጥለው ጊዜ ሲጀምር ይታወቃል።",
+    "contact_code_make_reachable_failed": "ይህን መሣሪያ ተደራሽ ማድረግ አልተቻለም።",
+    "contact_code_error": "የእውቂያ ኮድዎን ማግኘት አልተቻለም።",
+    "contact_code_node_too_old": "ይህ ኖድ ገና የእውቂያ ኮድ ማዘጋጀት አይችልም። ciris-server 0.5.218 ወይም አዲስ ይፈልጋል።",
+    "contacts_add_already": "በእውቂያዎችዎ ውስጥ አስቀድሞ አለ።"
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "የመሣሪያዎችዎ የባለቤቱ ራሱ ገጽ ናቸው። የዚህ ኖድ ባለቤት ሆነው ይግቡ።",
     "release_incomplete": "መልቀቂያው ተፈርሟል፣ ነገር ግን ኖዱ ያንን ኖድ አሁንም የእርስዎ እንደሆነ ይዘረዝራል። ማየት የማይችለው የባለቤትነት መዝገብ አሁንም በሥራ ላይ ነው። ሊያስወግደው የቻለው ነገር እንደተወገደ ይቆያል።",
     "release_self_requires_force": "ያ የሚነጋገሩበት ኖድ ነው። ማልቀቁ የእርስዎን ባለቤትነት እዚህ ያበቃል፣ ይህን ክፍለ ጊዜ ጨምሮ።",
-    "store_unavailable": "ኖዱ የማንነት ማከማቻውን ማንበብ ወይም መጻፍ አልቻለም። ምንም አልተለወጠም።"
+    "store_unavailable": "ኖዱ የማንነት ማከማቻውን ማንበብ ወይም መጻፍ አልቻለም። ምንም አልተለወጠም።",
+    "node_not_announced": "ያ መሣሪያ ተደራሽ አይደለም፣ ስለዚህ በኮድ ውስጥ መግባት አይችልም።",
+    "contact_code_owner_key_absent": "ይህ ኖድ የማንነትዎን ቁልፍ መዝገብ አልያዘም፣ ስለዚህ የእውቂያ ኮድዎን ማዘጋጀት አይችልም።",
+    "contact_code_not_a_person": "የማንነትዎ እንደ ሰው አልተመዘገበም፣ እና እንደ እውቂያ መጨመር የሚችለው ሰው ብቻ ነው።",
+    "contact_code_key_not_derived": "የማንነትዎ key_id ከቁልፉ ጋር አይዛመድም፣ ስለዚህ ኮድ ያጋሩዋቸው ሁሉ ይክዱታል።",
+    "contact_code_no_pqc_half": "የማንነትዎ ድህረ-ኳንተም ቁልፍ ግማሽ የለውም፣ ስለዚህ ማንም ከኮድ እርስዎን ሊጨምር አይችልም።",
+    "contact_code_unencodable": "የእውቂያ ኮድዎ ይህ ኖድ ከያዛቸው ቁልፎች ሊዘጋጅ አልቻለም።"
   }
 }

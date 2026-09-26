@@ -3094,7 +3094,29 @@
     "transport_not_on_this_node": "このノードは自身のトランスポートを報告しません。",
     "audit_not_on_this_node": "このノードはエージェントの監査ログを保持していません。何もフィルタリングされていません。",
     "consent_not_on_this_node": "このノードは同意記録を保持していません。同意はエージェントによって保持されるものであり、このノードはエージェントなしで動作しています。",
-    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。"
+    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。",
+    "contact_code_title": "自分の連絡先コードを共有",
+    "contact_code_qr_desc": "あなたの連絡先コードを表すQRコード",
+    "contact_code_copy": "コピー",
+    "contact_code_copied": "コピーしました",
+    "contact_code_included_none": "このコードはあなたのデバイスを一つも指定していません。相手はフェデレーションディレクトリを通じてあなたを見つけます。",
+    "contact_code_included_one": "このコードには1台のデバイスが含まれています：{device}。",
+    "contact_code_included_many": "このコードには{count}台のデバイスが含まれています：{devices}。",
+    "contact_code_without_transport": "まだこのコードに含まれていません：{devices}。デバイスは、次回ノードが起動した後にここでネットワークアドレスを持つと、コードに含められるようになります。",
+    "contact_code_disclosure": "このコードを持つ人は誰でも、あなたを連絡先に追加するよう依頼でき、このコードが指定するデバイスを確認できます。",
+    "contact_code_nodes_all": "到達可能な自分のデバイスすべて",
+    "contact_code_nodes_list": "デバイスを選択",
+    "contact_code_nodes_none": "デバイスなし",
+    "contact_code_private_note": "コードに含められるのは到達可能なデバイスのみです。それ以外のデバイスは非公開です。",
+    "contact_code_list_reloaded": "到達可能なデバイスの一覧が再読み込みされました。以下のコードは、現在到達可能なデバイス用です。",
+    "contact_code_unreachable": "まだ誰もこれであなたを見つけることはできません：あなたのデバイスはどれも到達可能ではありません。このデバイスを到達可能にするか、このデバイスを含むコードを共有してください。",
+    "contact_code_make_reachable": "このデバイスを到達可能にする",
+    "contact_code_make_reachable_busy": "このデバイスを到達可能にしています…",
+    "contact_code_made_reachable": "このデバイスは現在到達可能です。次回ノードが起動する際に、ネットワークアドレスがアナウンスされます。",
+    "contact_code_make_reachable_failed": "このデバイスを到達可能にできませんでした。",
+    "contact_code_error": "連絡先コードを取得できませんでした。",
+    "contact_code_node_too_old": "このノードはまだ連絡先コードを作成できません。ciris-server 0.5.218以降が必要です。",
+    "contacts_add_already": "すでに連絡先に登録されています。"
   },
   "moderation": {
     "ladder": {
@@ -4537,6 +4559,12 @@
     "owner_session_required": "デバイス管理は所有者本人の操作範囲です。このノードの所有者としてサインインしてください。",
     "release_incomplete": "解放の署名は完了しましたが、ノードは依然としてそのノードをあなたの所有として記録しています：ノードから見えない場所に、まだ有効な所有権記録が残っています。ノード側で取り消せた部分については、取り消しが維持されます。",
     "release_self_requires_force": "それは、あなたが現在やり取りしているノードです。解放すると、このセッションを含め、ここでのあなたの所有権が終了します。",
-    "store_unavailable": "ノードはアイデンティティストアを読み書きできませんでした。変更は行われていません。"
+    "store_unavailable": "ノードはアイデンティティストアを読み書きできませんでした。変更は行われていません。",
+    "node_not_announced": "そのデバイスは到達可能ではないため、コードに含めることができません。",
+    "contact_code_owner_key_absent": "このノードはあなたのアイデンティティの鍵レコードを保持していないため、連絡先コードを作成できません。",
+    "contact_code_not_a_person": "あなたのアイデンティティは個人として登録されていないため、連絡先として追加できるのは個人のみです。",
+    "contact_code_key_not_derived": "あなたのアイデンティティのkey_idが鍵と一致していないため、コードを共有した相手全員がそれを拒否することになります。",
+    "contact_code_no_pqc_half": "あなたのアイデンティティにはポスト量子暗号鍵の片方が存在しないため、誰もコードからあなたを追加できません。",
+    "contact_code_unencodable": "このノードが保持している鍵からは、あなたの連絡先コードを作成できませんでした。"
   }
 }
