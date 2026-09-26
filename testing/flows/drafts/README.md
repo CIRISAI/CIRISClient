@@ -23,6 +23,39 @@ nothing to do with the client.
 `flow_spec.discover` globs `p.glob("*.yaml")` — **not** `rglob` — so this
 subdirectory is staged and never run. That is the whole mechanism.
 
+## One thing to fix in #97 before four of these can be promoted
+
+`testing/test_flows.py::test_every_tag_a_seeded_flow_names_exists_in_the_client`
+builds its set with
+
+```python
+re.findall(r'"([a-z][a-z0-9_]+)"', kt.read_text(...))
+```
+
+There is no `$` in that character class, so a tag the client builds by
+interpolation is invisible to it. Seven such tags are named by four flows here,
+and every one is real at run time:
+
+| tag named by a flow | how the client writes it | where |
+|---|---|---|
+| `age_band_adult` | `"age_band_$token"` | `SetupScreen.kt:2661` |
+| `trace_consent_yes` / `_no` | `"trace_consent_$token"` | `SetupScreen.kt:1095` |
+| `radio_cohort_self` | `"radio_cohort_$value"` | `ClaimNodeScreen.kt:383` |
+| `chk_duty_box_moderate` / `_review` / `_consent_revocation` | `"chk_duty_box_$verb"` | `DutyConferralScreen.kt:301` |
+
+Promoting `csd-082`, `csd-083`, `csd-085` or `csd-090` as written would turn that
+test red against a client that carries every tag. The fix belongs in the test,
+not in the flows: collect the literals that contain `$`, keep the part before the
+first `$` as a prefix, and accept a named tag that starts with one. `opt_run_with_ai`
+shows the distinction — it is written as a whole literal
+(`SetupScreen.kt:2567`) and is seen today.
+
+The same blind spot is worth knowing about generally: a plain string-literal grep
+cannot tell a test tag from a localization key either. `graph_simulating` and
+`graph_updated` look like tags and are `localizedString(...)` keys
+(`GraphMemoryScreen.kt:219`, `:539`), which is why CSD-028 correctly still marks
+them `proposed:`.
+
 ## Promoting one
 
 When the runner can walk a hop, a flow here is promoted by `git mv` and nothing
