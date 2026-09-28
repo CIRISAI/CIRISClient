@@ -357,6 +357,32 @@ sealed class NavSurface(
 
     /** Help — under My things, always reachable. */
     object Help : NavSurface("help", "Help", CIRISIcons.info, labelKey = "nav.surface.help")
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Communities and affiliations (CSD-102, CSD-103) — CIRISServer
+    // `/v1/communities`. One surface per tier because a surface does not know
+    // the circle it is opened in, and the tier IS the circle here.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /** Who is in each Neighbours room (`tier: community`), as the fold has it now. */
+    object CommunityRoster : NavSurface(
+        id = "community-roster", label = "Community members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.community_roster")
+
+    /** Who is in each Communities and Businesses room (`tier: affiliations`). */
+    object AffiliationsRoster : NavSurface(
+        id = "affiliations-roster", label = "Members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.affiliations_roster")
+
+    /** The Neighbours rooms you talk in — pair rooms and rooms of more than two. */
+    object CommunityChats : NavSurface(
+        id = "community-chats", label = "Rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.community_chats")
+
+    /** The Communities and Businesses rooms you talk in. */
+    object AffiliationsChats : NavSurface(
+        id = "affiliations-chats", label = "Rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.affiliations_chats")
 }
 
 /**
