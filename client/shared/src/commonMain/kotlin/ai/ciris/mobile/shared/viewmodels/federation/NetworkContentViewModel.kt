@@ -131,7 +131,10 @@ class NetworkContentViewModel(
             return
         }
         _contentIdError.value = null
-        _fetching.value = true
+        // A tap while a fetch is in flight is the same tap twice: the button
+        // disables itself, but its automation handler and any other caller do
+        // not, so the guard lives here — one POST per fetch, atomically.
+        if (!_fetching.compareAndSet(expect = false, update = true)) return
         // `launchApi` returns before the fetch runs, so the flag was cleared
         // immediately and the button never showed a fetch in flight. Clear it
         // when the fetch actually ends.

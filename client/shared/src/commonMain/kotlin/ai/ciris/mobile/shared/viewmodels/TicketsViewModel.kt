@@ -46,8 +46,13 @@ data class TicketsScreenState(
     fun showsEmpty(): Boolean = tickets.isEmpty() && !isLoading && !isRefreshing && error == null
 
     /** The row for [fresh] replaced by the re-read copy; other rows untouched. */
-    fun withTicket(fresh: TicketData): TicketsScreenState =
-        copy(tickets = tickets.map { if (it.ticketId == fresh.ticketId) fresh else it }, selectedTicket = fresh)
+    fun withTicket(fresh: TicketData): TicketsScreenState = copy(
+        tickets = tickets.map { if (it.ticketId == fresh.ticketId) fresh else it },
+        // Only the ticket that is STILL open takes the re-read: a slow answer
+        // for A landing after B was opened (or the detail closed) refreshes
+        // A's row and leaves the selection where the person put it.
+        selectedTicket = if (selectedTicket?.ticketId == fresh.ticketId) fresh else selectedTicket,
+    )
 }
 
 /**
@@ -160,7 +165,9 @@ class TicketsViewModel(
     /**
      * Select a ticket for detail view — and re-read it (`GET /v1/tickets/{id}`),
      * because the expanded detail used to be drawn from the list, which nothing
-     * refreshes after load (CSD-013). A failed re-read keeps the listed copy.
+     * refreshes after load (CSD-013). A failed re-read keeps the listed copy;
+     * a re-read that lands after another ticket was opened updates its row
+     * only ([TicketsScreenState.withTicket]).
      */
     fun selectTicket(ticket: TicketData?) {
         _state.update { it.copy(selectedTicket = ticket) }

@@ -19,6 +19,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.CIRISApiClientProtocol
+import ai.ciris.mobile.shared.api.DeviceAuthRefused
 import ai.ciris.mobile.shared.api.LocationResultData
 import ai.ciris.mobile.shared.models.safety.AgeBand
 
@@ -1698,8 +1699,13 @@ class SetupViewModel(
                 .map { it.id }
                 .toSet()
 
-            // Merge with existing enabled adapters (api is always in the set)
-            val newEnabled = _state.value.enabledAdapterIds + autoEnabled
+            // Reconcile with the list this load replaces: what it no longer
+            // offers (a service-only adapter after CIRIS Proxy -> BYOK, say)
+            // leaves the selection, or buildSetupRequest() would submit an
+            // adapter the wizard is not showing. What is still offered keeps
+            // the person's choice; api is always in the set.
+            val withdrawn = _state.value.availableAdapters.map { it.id }.toSet() - adapters.map { it.id }.toSet()
+            val newEnabled = (_state.value.enabledAdapterIds - withdrawn) + autoEnabled + "api"
 
             _state.value = _state.value.copy(
                 availableAdapters = adapters,
@@ -2261,7 +2267,8 @@ class SetupViewModel(
      * @param connectFunc Platform-specific HTTP call to POST /v1/setup/connect-node
      */
     suspend fun startNodeConnection(
-        connectFunc: suspend (nodeUrl: String) -> ConnectNodeResult
+        nowMs: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+        connectFunc: suspend (nodeUrl: String) -> ConnectNodeResult,
     ) {
         val nodeUrl = _state.value.deviceAuth.nodeUrl
         if (nodeUrl.isBlank()) return
@@ -2275,6 +2282,19 @@ class SetupViewModel(
 
         try {
             val result = connectFunc(nodeUrl)
+            // The wire layer refuses a body without these; a result built any
+            // other way is held to the same bar. WAITING with a blank code
+            // shows nothing and polls with `device_code=`.
+            val missing = listOfNotNull(
+                "verification_uri_complete".takeIf { result.verificationUriComplete.isBlank() },
+                "device_code".takeIf { result.deviceCode.isBlank() },
+                "user_code".takeIf { result.userCode.isBlank() },
+            )
+            if (missing.isNotEmpty()) {
+                throw DeviceAuthRefused(
+                    "the node's connect-node answer has no ${missing.joinToString(", ")} — a malformed answer, or an older node",
+                )
+            }
             _state.value = _state.value.copy(
                 deviceAuth = _state.value.deviceAuth.copy(
                     status = DeviceAuthStatus.WAITING,
@@ -2283,7 +2303,8 @@ class SetupViewModel(
                     userCode = result.userCode,
                     portalUrl = result.portalUrl,
                     expiresIn = result.expiresIn,
-                    interval = result.interval
+                    interval = result.interval,
+                    expiresAtMs = nowMs + result.expiresIn * 1000L,
                 )
             )
         } catch (e: Exception) {
@@ -2303,7 +2324,8 @@ class SetupViewModel(
      * @param pollFunc Platform-specific HTTP call to GET /v1/setup/connect-node/status
      */
     suspend fun pollNodeAuthStatus(
-        pollFunc: suspend (deviceCode: String, portalUrl: String) -> NodeAuthPollResult
+        nowMs: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+        pollFunc: suspend (deviceCode: String, portalUrl: String) -> NodeAuthPollResult,
     ) {
         PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== ENTRY ==========")
         val auth = _state.value.deviceAuth
@@ -2353,15 +2375,27 @@ class SetupViewModel(
                 }
             }
             PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== EXIT (success) ==========")
-        } catch (e: Exception) {
-            PlatformLogger.e(TAG, "[pollNodeAuthStatus] EXCEPTION: ${e.message}")
-            PlatformLogger.e(TAG, "[pollNodeAuthStatus] Exception type: ${e::class.simpleName}")
+        } catch (e: DeviceAuthRefused) {
+            // The node answered, and the answer ends the session.
+            PlatformLogger.e(TAG, "[pollNodeAuthStatus] refused: ${e.message}")
             _state.value = _state.value.copy(
-                deviceAuth = auth.copy(
-                    status = DeviceAuthStatus.ERROR,
-                    error = e.message ?: "Polling failed"
-                )
+                deviceAuth = auth.copy(status = DeviceAuthStatus.ERROR, error = e.message ?: "Polling failed")
             )
+        } catch (e: Exception) {
+            // A transport failure (timeout, reset, DNS) says nothing about the
+            // grant: the person may be approving it in the browser right now.
+            // Stay WAITING and let the next poll try, until the grant's own
+            // expiry — ERROR here used to be the outcome of one lost packet,
+            // and the only way on was to reset the session.
+            PlatformLogger.w(TAG, "[pollNodeAuthStatus] transport failure (${e::class.simpleName}): ${e.message}")
+            if (nowMs >= auth.expiresAtMs) {
+                _state.value = _state.value.copy(
+                    deviceAuth = auth.copy(
+                        status = DeviceAuthStatus.ERROR,
+                        error = "the code expired before the node could be reached: ${e.message ?: "Polling failed"}",
+                    )
+                )
+            }
             PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== EXIT (exception) ==========")
         }
     }

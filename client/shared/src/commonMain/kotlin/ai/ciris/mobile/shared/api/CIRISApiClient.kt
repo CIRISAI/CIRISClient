@@ -7679,9 +7679,9 @@ class CIRISApiClient(
             val root = runCatching { Json.parseToJsonElement(bodyText).jsonObject }.getOrNull()
             if (response.status != HttpStatusCode.OK) {
                 // The node refuses with {"error": …} (device_auth.rs:94); the agent with {"detail": …}.
-                throw Exception(DeviceAuthWire.refusalReason(root) ?: "Connect-node failed: HTTP ${response.status}")
+                throw DeviceAuthRefused(DeviceAuthWire.refusalReason(root) ?: "Connect-node failed: HTTP ${response.status}")
             }
-            DeviceAuthWire.parseConnect(root ?: throw Exception("Invalid response format"), nodeUrl)
+            DeviceAuthWire.parseConnect(root ?: throw DeviceAuthRefused("Invalid response format"), nodeUrl)
         } catch (e: Exception) {
             logException(method, e)
             throw e
@@ -7721,10 +7721,12 @@ class CIRISApiClient(
             val bodyText = response.bodyAsText()
             val root = runCatching { Json.parseToJsonElement(bodyText).jsonObject }.getOrNull()
             if (response.status != HttpStatusCode.OK) {
-                throw Exception(DeviceAuthWire.refusalReason(root) ?: "Poll failed: HTTP ${response.status}")
+                // The node answered: terminal. A transport failure below is
+                // not, and the waiting poll retries it (SetupViewModel).
+                throw DeviceAuthRefused(DeviceAuthWire.refusalReason(root) ?: "Poll failed: HTTP ${response.status}")
             }
             logInfo(method, "Response body (first 500 chars): ${bodyText.take(500)}")
-            val result = DeviceAuthWire.parsePoll(root ?: throw Exception("Invalid response format"))
+            val result = DeviceAuthWire.parsePoll(root ?: throw DeviceAuthRefused("Invalid response format"))
             logInfo(method, "Parsed response: status=${result.status}, template=${result.template}, error=${result.error}")
             logInfo(method, "========== POLL END (returning result) ==========")
             result

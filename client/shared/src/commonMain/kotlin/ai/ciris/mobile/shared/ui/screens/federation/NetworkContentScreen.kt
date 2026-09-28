@@ -375,10 +375,11 @@ private fun FetchStep(vm: NetworkContentViewModel, loading: Boolean) {
             )
         }
 
+        val canFetch = !fetching && vm.validateContentId(contentId)
         Button(
             onClick = { vm.fetch() },
-            enabled = !fetching && vm.validateContentId(contentId),
-            modifier = Modifier.fillMaxWidth().testableClickable("btn_content_fetch") { vm.fetch() },
+            enabled = canFetch,
+            modifier = Modifier.fillMaxWidth().testableClickable("btn_content_fetch", enabled = canFetch) { vm.fetch() },
         ) {
             if (fetching) {
                 CircularProgressIndicator(

@@ -297,6 +297,7 @@ class ConfigViewModel(
                 ConfigItem(
                     key = config.key,
                     displayValue = config.displayValue,
+                    editValue = config.editValue,
                     updatedAt = config.updatedAt ?: "Unknown",
                     updatedBy = config.updatedBy,
                     isSensitive = config.isSensitive
@@ -327,4 +328,6 @@ data class ConfigItemData(
     val isSensitive: Boolean,
     /** The value as read, with its JSON type — so an edit writes the same type back (CSD-023). */
     val rawValue: kotlinx.serialization.json.JsonElement? = null,
+    /** What the editor opens with: a list or a dict as JSON, so it can be written back as one. */
+    val editValue: String = displayValue,
 )

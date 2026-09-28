@@ -22,6 +22,14 @@ import kotlinx.serialization.json.jsonPrimitive
  * client required the agent's envelope and read `detail`, so against the node
  * every connect failed as "Invalid response format". Both shapes are read.
  */
+/**
+ * The node ANSWERED, and the answer ends the session: a refusal (`{"error": …}`
+ * on a non-2xx), or a 2xx body missing what the grant needs. Terminal, as
+ * opposed to a transport failure (timeout, connection reset), which the
+ * waiting poll retries until the grant's advertised expiry.
+ */
+class DeviceAuthRefused(message: String) : RuntimeException(message)
+
 object DeviceAuthWire {
 
     /** The node's bare body, or the agent's `data` envelope around it. */
@@ -39,10 +47,21 @@ object DeviceAuthWire {
         val portal = str(d, "portal_url")
             ?: if (enteredUrl.startsWith("http://") || enteredUrl.startsWith("https://"))
                 enteredUrl.trimEnd('/') else "https://${enteredUrl.trimEnd('/')}"
+        // Without these three there is no grant: nothing to show the person,
+        // nothing to poll with. Blank used to become WAITING with an empty
+        // code and a poll of `device_code=` — an older or malformed node,
+        // refused by name instead.
+        val required = listOf("verification_uri_complete", "device_code", "user_code")
+        val missing = required.filter { str(d, it).isNullOrBlank() }
+        if (missing.isNotEmpty()) {
+            throw DeviceAuthRefused(
+                "the node's connect-node answer has no ${missing.joinToString(", ")} — a malformed answer, or an older node",
+            )
+        }
         return ConnectNodeResult(
-            verificationUriComplete = str(d, "verification_uri_complete") ?: "",
-            deviceCode = str(d, "device_code") ?: "",
-            userCode = str(d, "user_code") ?: "",
+            verificationUriComplete = str(d, "verification_uri_complete")!!,
+            deviceCode = str(d, "device_code")!!,
+            userCode = str(d, "user_code")!!,
             portalUrl = portal,
             expiresIn = (d["expires_in"] as? JsonPrimitive)?.intOrNull ?: 900,
             interval = (d["interval"] as? JsonPrimitive)?.intOrNull ?: 5,

@@ -3505,18 +3505,25 @@ private fun OptionalFeaturesSection(
 ) {
     var attempt by remember { mutableStateOf(0) }
     LaunchedEffect(attempt) {
+        viewModel.loadAvailableTemplates { apiClient.getSetupTemplates() }
+        viewModel.loadToolDisclosure { apiClient.getSetupToolDisclosure() }
+    }
+    // The adapter list is FILTERED by the service mode (a service-only adapter
+    // is offered under CIRIS Proxy, not under BYOK), so it is keyed on the mode
+    // too: switching re-filters, and loadAvailableAdapters reconciles the
+    // selection against what the new list offers.
+    val useCirisProxy = state.useCirisProxy()
+    LaunchedEffect(attempt, useCirisProxy) {
         val platform = when (getPlatform()) {
             ai.ciris.mobile.shared.platform.Platform.ANDROID -> Platform.ANDROID
             ai.ciris.mobile.shared.platform.Platform.IOS -> Platform.IOS
             else -> Platform.DESKTOP
         }
-        viewModel.loadAvailableTemplates { apiClient.getSetupTemplates() }
         viewModel.loadAvailableAdapters {
             optionalFeatureAdapters(
-                filterAdaptersForPlatform(apiClient.getSetupAdapters(), platform, state.useCirisProxy())
+                filterAdaptersForPlatform(apiClient.getSetupAdapters(), platform, useCirisProxy)
             )
         }
-        viewModel.loadToolDisclosure { apiClient.getSetupToolDisclosure() }
     }
 
     Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp).testable("setup_optional_features")) {

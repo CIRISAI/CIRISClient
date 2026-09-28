@@ -4,6 +4,8 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 /**
  * The node's Portal device grant, as CIRISServer `src/auth/device_auth.rs`
@@ -30,6 +32,22 @@ class DeviceAuthWireTest {
     fun theAgentEnvelopeStillParses() {
         val r = DeviceAuthWire.parseConnect(obj("""{"data":{"device_code":"dc","user_code":"X","verification_uri_complete":"u"}}"""), "https://portal.ciris.ai")
         assertEquals("X", r.userCode)
+    }
+
+    /**
+     * A body with no device code / user code / verification URI is an older or
+     * malformed node, not a grant: WAITING with a blank code and a poll with an
+     * empty `device_code` is what it used to become.
+     */
+    @Test
+    fun aConnectBodyMissingTheCodesIsRefusedByName() {
+        val e = assertFailsWith<DeviceAuthRefused> {
+            DeviceAuthWire.parseConnect(obj("""{"portal_url":"https://portal.ciris.ai","expires_in":600}"""), "portal.ciris.ai")
+        }
+        assertTrue("device_code" in (e.message ?: ""), "names what is missing: ${e.message}")
+        assertFailsWith<DeviceAuthRefused>("blank is missing") {
+            DeviceAuthWire.parseConnect(obj("""{"verification_uri_complete":"u","device_code":"","user_code":"AB12"}"""), "portal.ciris.ai")
+        }
     }
 
     @Test

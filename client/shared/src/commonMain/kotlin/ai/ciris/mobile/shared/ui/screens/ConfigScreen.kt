@@ -416,7 +416,7 @@ private fun ConfigSectionCard(
                 section.items.forEach { item ->
                     ConfigItemRow(
                         item = item,
-                        onEdit = { onEditConfig(item.key, item.displayValue) },
+                        onEdit = { onEditConfig(item.key, item.editValue) },
                         onDelete = { onDeleteConfig(item.key) }
                     )
                 }
@@ -587,7 +587,9 @@ data class ConfigItem(
     val displayValue: String,
     val updatedAt: String,
     val updatedBy: String,
-    val isSensitive: Boolean = false
+    val isSensitive: Boolean = false,
+    /** What Edit opens with — a list or a dict as JSON (CSD-023). */
+    val editValue: String = displayValue,
 )
 
 data class ConfigCategory(

@@ -170,6 +170,8 @@ data class DeviceAuthState(
     val status: DeviceAuthStatus = DeviceAuthStatus.IDLE,
     val expiresIn: Int = 900,
     val interval: Int = 5,
+    /** When the grant's `expires_in` runs out (epoch ms): the waiting poll retries transport failures until then. */
+    val expiresAtMs: Long = 0L,
     // Provisioned data (set after user completes in Portal)
     val provisionedTemplate: String? = null,
     val provisionedAdapters: List<String> = emptyList(),

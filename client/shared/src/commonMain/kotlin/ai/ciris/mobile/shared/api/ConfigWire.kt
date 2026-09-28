@@ -57,6 +57,16 @@ fun configDisplay(value: JsonElement): String = when (value) {
     is JsonObject -> value.entries.joinToString(", ") { "${it.key}: ${configDisplay(it.value)}" }
 }
 
+/**
+ * What the text editor opens with: a primitive as it displays, a list or a
+ * dict as its JSON — the one form [configValueFor] can write back as the same
+ * type. (`a, b` reads well and cannot be parsed back into anything but a string.)
+ */
+fun configEditText(value: JsonElement): String = when (value) {
+    is JsonArray, is JsonObject -> value.toString()
+    else -> configDisplay(value)
+}
+
 private fun itemFrom(key: String, obj: JsonObject): ConfigItemData {
     val raw = unwrapConfigValue(obj["value"])
     return ConfigItemData(
@@ -66,6 +76,7 @@ private fun itemFrom(key: String, obj: JsonObject): ConfigItemData {
         updatedBy = obj.str("updated_by") ?: "",
         isSensitive = (obj["is_sensitive"] as? JsonPrimitive)?.booleanOrNull ?: false,
         rawValue = raw,
+        editValue = configEditText(raw),
     )
 }
 
@@ -104,10 +115,24 @@ fun parseConfigItemBody(key: String, raw: String): ConfigItemData {
  * What an edited text becomes on the wire: the JSON type the value HAD, when
  * the text still parses as that type; otherwise a string. A boolean key stays a
  * boolean and a number stays a number — the node does not coerce.
+ *
+ * A list or a dict is written back only as a list or a dict: the text must
+ * parse as JSON of that type (the form [configEditText] opened it in), or the
+ * edit is refused with the reason. Wrapping it as a string would replace the
+ * value with text that merely looks like it, which is what an unchanged save
+ * used to do.
  */
 fun configValueFor(text: String, previous: JsonElement?): JsonElement {
-    val prev = previous as? JsonPrimitive
     val t = text.trim()
+    if (previous is JsonArray || previous is JsonObject) {
+        val kind = if (previous is JsonArray) "list" else "object"
+        val parsed = runCatching { lenient.parseToJsonElement(t) }.getOrNull()
+        if (parsed != null && parsed::class == previous::class) return parsed
+        throw IllegalArgumentException(
+            "this value is a $kind; edit it as JSON (a $kind), not as text — not written",
+        )
+    }
+    val prev = previous as? JsonPrimitive
     if (prev != null && !prev.isString) {
         prev.booleanOrNull?.let { _ ->
             if (t.equals("true", true)) return JsonPrimitive(true)
