@@ -1,36 +1,6 @@
 package ai.ciris.mobile.shared.models.drive
 
 /**
- * The receiver's media policy: which sniffed formats are Tier A here, and
- * their caps. [RECOMMENDED] is CC 5.3.2.6's recommended table with the caps
- * in `FSD/MEDIA_EDGE.md` §3. The constitution makes the table
- * recommended, not normative, and a node may narrow it. When the node
- * publishes its own (`GET /v1/media/policy`, CIRISServer#643 /
- * CIRISEdge#638 item 5), that value replaces this one. The client must not
- * widen it.
- */
-data class MediaPolicy(
-    /** Tier A essences and the byte cap for each. */
-    val tierA: Map<String, Long>,
-) {
-    companion object {
-        private const val MB = 1_048_576L
-        val RECOMMENDED = MediaPolicy(
-            tierA = mapOf(
-                "text/plain" to 1 * MB,
-                "image/jpeg" to 16 * MB,
-                "image/png" to 16 * MB,
-                "image/gif" to 25 * MB,
-                "image/webp" to 10 * MB,
-                "video/mp4" to 100 * MB,
-                "audio/mp4" to 16 * MB,
-                "audio/mpeg" to 16 * MB,
-            ),
-        )
-    }
-}
-
-/**
  * Whether and how an opened file renders (CC 5.3.2.6 `render-tier`, rc5).
  *
  * The decision comes from the bytes and this client's policy, never from a
@@ -45,8 +15,9 @@ data class MediaPolicy(
  * has not built that pipeline yet (#614), so those formats are named as
  * waiting, not decoded here.
  *
- * Not done here: full-SHA verification (CC 5.3.2.5). Neither `/v1/drive` nor
- * `/v1/files/{id}` carries a digest yet (CIRISServer#641), so there is nothing to verify against.
+ * Full-SHA verification (CC 5.3.2.5) happens BEFORE this: [DigestCheck]
+ * compares the bytes to the `content_digest` the node states on the read
+ * (CIRISServer 0.5.217, #641), and bytes that fail it never reach [decide].
  */
 object RenderTier {
 
@@ -112,6 +83,15 @@ object RenderTier {
         val ext = fileName.substringAfterLast('.', "").lowercase()
         return ext !in DANGEROUS_EXTENSIONS
     }
+
+    /**
+     * The type to DECLARE to anything downstream — the platform's saver, a
+     * viewer, the sheet's own header. It is the sniffed essence, never the
+     * label the row carries (CC 5.3.2.6; `FSD/MEDIA_EDGE.md` §4): a label is a
+     * claim, and a claim that survived [decide] only did so by EQUALLING the
+     * bytes or by claiming nothing. Unknown bytes are `application/octet-stream`.
+     */
+    fun typeToDeclare(bytes: ByteArray): String = sniff(bytes)
 
     /** The media-type essence: lowercased, parameters dropped, common aliases folded. */
     fun essence(mediaType: String?): String? {

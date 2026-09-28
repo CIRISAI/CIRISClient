@@ -99,13 +99,15 @@ class CirclesNavTest {
     }
 
     /**
-     * WITH NO AGENT, JUST ME › CHATS IS EMPTY FOR A REASON, AND IT IS NOT
-     * "no conversations yet". There is nobody to converse with; saying
-     * otherwise tells a node owner to wait for something that is not coming.
+     * WITH NO AGENT, JUST ME › CHATS IS THE CHAT OF ONE. There is nobody to
+     * converse with, so the agent conversation is absent — but a note to self
+     * needs no agent (CSD-007), so the tab is never a "no conversations yet"
+     * that tells a node owner to wait for something that is not coming.
      */
     @Test
-    fun justMeChatsWithNoAgentSaysThereIsNoAgent() {
-        assertTrue(CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false).isEmpty())
+    fun justMeChatsWithNoAgentIsNotesAlone() {
+        assertEquals(listOf(NavSurface.Notes), CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false))
+        assertTrue(NavSurface.Interact in CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = true))
         assertEquals("nav.empty.chats_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.CHATS))
         assertEquals("nav.empty.chats", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.CHATS))
     }
@@ -224,8 +226,11 @@ class CirclesNavTest {
         for (c in listOf(CohortScope.AGENT, CohortScope.LOCAL_COMMUNITY, CohortScope.GLOBAL_COMMUNITIES)) {
             assertEquals(listOf(NavSurface.Files), CirclesNav.cards(c, Tab.FILES, hasAgent = false), "${c.id}: files is a node feature")
         }
-        assertTrue(CirclesNav.cards(CohortScope.FAMILY, Tab.FILES, hasAgent = true).isEmpty())
-        assertEquals("nav.empty.files_family", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES), "family says WHY it holds no files")
+        // Households form (CSD-100, CIRISServer 0.5.216), so a family file can
+        // exist: Family › Files is the drive card listing the picked household's
+        // room, not a sentence saying a family cannot be formed.
+        assertEquals(listOf(NavSurface.Files), CirclesNav.cards(CohortScope.FAMILY, Tab.FILES, hasAgent = false), "family holds the drive card")
+        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES), "no stale 'cannot be formed' sentence for family")
         assertNull(CirclesNav.tabOf(NavSurface.Memory), "the memory graph is an instrument, not a file")
         assertEquals("this-node", CirclesNav.instrumentOf(NavSurface.Memory)?.id)
     }

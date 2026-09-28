@@ -5,9 +5,11 @@ import ai.ciris.mobile.shared.ceg.Dim
 import ai.ciris.mobile.shared.ceg.shortKey
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.drive.ByteState
-import ai.ciris.mobile.shared.models.drive.RenderTier
+import ai.ciris.mobile.shared.models.drive.DigestCheck
 import ai.ciris.mobile.shared.models.drive.DriveEntry
-import ai.ciris.mobile.shared.models.drive.FileWrite
+import ai.ciris.mobile.shared.models.drive.PolicySource
+import ai.ciris.mobile.shared.models.drive.RenderTier
+import ai.ciris.mobile.shared.models.federation.FamilyDto
 import ai.ciris.mobile.shared.platform.FilePickerDialog
 import ai.ciris.mobile.shared.platform.saveFileCopy
 import ai.ciris.mobile.shared.platform.testable
@@ -23,12 +25,15 @@ import ai.ciris.mobile.shared.ui.primitives.Receipt
 import ai.ciris.mobile.shared.ui.primitives.ReceiptAct
 import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
 import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.screens.ReadFailureBlock
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.viewmodels.AddState
 import ai.ciris.mobile.shared.viewmodels.FilesCohort
 import ai.ciris.mobile.shared.viewmodels.FilesState
 import ai.ciris.mobile.shared.viewmodels.FilesViewModel
+import ai.ciris.mobile.shared.viewmodels.HouseholdsLoad
+import ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel
 import ai.ciris.mobile.shared.viewmodels.OpenState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,6 +75,17 @@ object FilesTags {
     const val SHEET = "sheet_file"
     const val SAVE_COPY = "btn_file_save_copy"
     const val CLOSE = "btn_file_close"
+
+    // Family: which household's room the tab lists, and the three honest zeroes.
+    const val HOUSEHOLD = "files_household"
+    const val NO_HOUSEHOLD = "files_no_household"
+    const val HOUSEHOLDS_PREFIX = "files_households"
+
+    // The opened file: the digest check (CC 5.3.2.5) and the policy in force.
+    const val UNREADABLE = "file_unreadable"
+    const val DIGEST_VERIFIED = "file_digest_verified"
+    const val DIGEST_NOT_SENT = "file_digest_not_sent"
+    const val POLICY_BUILTIN = "file_policy_builtin"
     fun row(attestationId: String) = "files_row_$attestationId"
     fun room(roomId: String) = "files_room_$roomId"
     fun pickRoom(roomId: String) = "btn_files_room_$roomId"
@@ -91,6 +107,7 @@ internal fun byteStateText(state: ByteState): String = when (state) {
     ByteState.HERE -> localizedString("mobile.files_bytes_here")
     ByteState.NOT_FETCHED -> localizedString("mobile.files_bytes_not_fetched")
     ByteState.NOT_GRANTED -> localizedString("mobile.files_bytes_not_granted")
+    ByteState.UNREADABLE -> localizedString("mobile.files_bytes_unreadable")
     ByteState.UNOPENED -> localizedString("mobile.files_bytes_unopened")
 }
 
@@ -126,19 +143,38 @@ internal fun fileReceipt(entry: DriveEntry, acts: List<ReceiptAct>): Receipt = R
  * FILES HOLDS FILES (B3). One circle's files from the drive plane, each row
  * honest about where its bytes are: here, on another device, or on no device
  * that this one holds a grant for.
+ *
+ * A FAMILY tab lists the room of the household picked in the Family hub's
+ * switcher ([households], one view model shared with CSD-100/101), so the
+ * household you chose there is the one whose files you see here. Three
+ * honest zeroes, kept apart: no household picked, a household with no files,
+ * and a household read that failed.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null) {
+fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null, households: HouseholdsViewModel? = null) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
     val open by viewModel.open.collectAsState()
     val add by viewModel.add.collectAsState()
+    val policy by viewModel.policy.collectAsState()
     var picking by remember { mutableStateOf(false) }
     var choosingRoomFor by remember { mutableStateOf<ai.ciris.mobile.shared.platform.PickedFile?>(null) }
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
 
-    LaunchedEffect(Unit) { viewModel.refresh() }
+    // Which household, for a family tab: the one the hub's switcher picked.
+    val family = viewModel.cohort == FilesCohort.FAMILY
+    val householdsLoad: HouseholdsLoad? = if (family) households?.load?.collectAsState()?.value else null
+    val selectedHouseholdId: String? = if (family) households?.selectedId?.collectAsState()?.value else null
+    val household: FamilyDto? = (householdsLoad as? HouseholdsLoad.Loaded)?.families?.let { fs ->
+        fs.firstOrNull { it.familyId == selectedHouseholdId } ?: fs.firstOrNull()
+    }
+    if (family) {
+        LaunchedEffect(Unit) { if (households?.load?.value is HouseholdsLoad.Loading) households.load() }
+        LaunchedEffect(household?.familyId) { viewModel.refresh(household?.familyId) }
+    } else {
+        LaunchedEffect(Unit) { viewModel.refresh() }
+    }
 
     FilePickerDialog(
         show = picking,
@@ -148,6 +184,7 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null) {
             val rooms = viewModel.rooms
             when {
                 viewModel.cohort == FilesCohort.SELF -> viewModel.addFile(picked)
+                viewModel.cohort == FilesCohort.FAMILY -> viewModel.addFile(picked, household?.familyId)
                 rooms.size == 1 -> viewModel.addFile(picked, rooms.single())
                 else -> choosingRoomFor = picked
             }
@@ -168,7 +205,11 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null) {
                     // A community file needs a room; with none there is
                     // nowhere to put it, and the button says so by being absent
                     // while the empty state explains why.
-                    val canAdd = viewModel.cohort == FilesCohort.SELF || viewModel.rooms.isNotEmpty()
+                    val canAdd = when (viewModel.cohort) {
+                        FilesCohort.SELF -> true
+                        FilesCohort.FAMILY -> household != null
+                        FilesCohort.COMMUNITY -> viewModel.rooms.isNotEmpty()
+                    }
                     if (canAdd) {
                         CirisTextButton(
                             label = localizedString("mobile.files_add"),
@@ -183,14 +224,45 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null) {
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             AddStatus(add, onDismiss = { viewModel.dismissAdd() })
+            if (household != null) {
+                Text(
+                    localizedString("mobile.files_household", "name", household.name.ifBlank { shortKey(household.familyId) }),
+                    style = CirisTheme.type.label, color = t.mute,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testable(FilesTags.HOUSEHOLD),
+                )
+            }
             Box(modifier = Modifier.fillMaxSize()) {
+                // A family tab's first question is the household read, and its
+                // failure is the households' failure, not "no files".
+                val householdsFailed = householdsLoad as? HouseholdsLoad.Failed
+                if (family && householdsFailed != null) {
+                    ReadFailureBlock(householdsFailed.failure, tagPrefix = FilesTags.HOUSEHOLDS_PREFIX)
+                    return@Box
+                }
+                if (family && householdsLoad is HouseholdsLoad.Loading) {
+                    StateBlock(ListState.Loading, tag = FilesTags.LOADING)
+                    return@Box
+                }
                 when (val s = state) {
                     FilesState.Loading -> StateBlock(ListState.Loading, tag = FilesTags.LOADING)
+                    FilesState.NoRoom -> StateBlock(
+                        ListState.Empty(
+                            localizedString(
+                                if ((householdsLoad as? HouseholdsLoad.Loaded)?.families.isNullOrEmpty()) "mobile.files_no_household_yet"
+                                else "mobile.files_no_household",
+                            ),
+                            glyph = GlyphName.HOME,
+                        ),
+                        tag = FilesTags.NO_HOUSEHOLD,
+                    )
                     FilesState.Empty -> StateBlock(
                         ListState.Empty(
                             localizedString(
-                                if (viewModel.cohort == FilesCohort.SELF) "mobile.files_empty_self"
-                                else "mobile.files_empty_community",
+                                when (viewModel.cohort) {
+                                    FilesCohort.SELF -> "mobile.files_empty_self"
+                                    FilesCohort.FAMILY -> "mobile.files_empty_family"
+                                    FilesCohort.COMMUNITY -> "mobile.files_empty_community"
+                                },
                             ),
                             glyph = GlyphName.FILE,
                         ),
@@ -273,7 +345,7 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null) {
         }
     }
 
-    if (open !is OpenState.Closed) FileSheet(open, onClose = { viewModel.closeFile() })
+    if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() })
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
 }
 
@@ -328,13 +400,36 @@ private fun renderDecisionText(d: RenderTier.Decision): String = when (d) {
     is RenderTier.Decision.Polyglot -> localizedString("mobile.files_render_polyglot", "format", d.format)
 }
 
+/** The digest check, in words: verified, or exactly why nothing was (CC 5.3.2.5). */
+@Composable
+private fun DigestLine(check: DigestCheck) {
+    val t = CirisTheme.tokens
+    when (check) {
+        is DigestCheck.Verified -> Text(
+            localizedString("mobile.files_digest_verified", "digest", check.digest.take(12) + "…"),
+            style = CirisTheme.type.label, color = t.mute, modifier = Modifier.testable(FilesTags.DIGEST_VERIFIED),
+        )
+        DigestCheck.NotSent -> Text(
+            localizedString("mobile.files_digest_not_sent"),
+            style = CirisTheme.type.label, color = t.dim, modifier = Modifier.testable(FilesTags.DIGEST_NOT_SENT),
+        )
+        is DigestCheck.UnknownAlgorithm -> Text(
+            localizedString("mobile.files_digest_unknown_alg", "alg", check.alg),
+            style = CirisTheme.type.label, color = t.dim, modifier = Modifier.testable(FilesTags.DIGEST_NOT_SENT),
+        )
+        is DigestCheck.Mismatch -> Unit // never reaches a sheet: the view model makes it Unreadable
+    }
+}
+
 /**
  * One file, opened. What shows is [RenderTier]'s decision over the bytes
- * (CC 5.3.2.6); a copy may be saved unless it is disguised or runs code.
+ * (CC 5.3.2.6) under the [policy] in force; a copy may be saved unless it is
+ * disguised or runs code. The type declared to anything downstream — the
+ * header, the saver — is the SNIFFED one, never the row's label.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileSheet(open: OpenState, onClose: () -> Unit) {
+private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit) {
     val t = CirisTheme.tokens
     var savedTo by remember(open) { mutableStateOf<String?>(null) }
     var saveFailed by remember(open) { mutableStateOf(false) }
@@ -358,14 +453,38 @@ private fun FileSheet(open: OpenState, onClose: () -> Unit) {
                         modifier = Modifier.testable("file_not_opened"),
                     )
                 }
+                is OpenState.Unreadable -> {
+                    // The bytes are not what the node said it sent. Not empty,
+                    // not "could not open": unreadable, in the error tone, and
+                    // neither shown nor saved.
+                    Text(open.entry.filename ?: localizedString("mobile.files_untitled"), style = CirisTheme.type.title, color = t.ink)
+                    StateBlock(
+                        ListState.Error(
+                            title = localizedString("mobile.files_unreadable_title"),
+                            body = localizedString("mobile.files_unreadable_body"),
+                            detail = "sha-256 ${open.expected.take(12)}… ≠ ${open.actual.take(12)}…",
+                        ),
+                        tag = FilesTags.UNREADABLE, inline = true,
+                    )
+                }
                 is OpenState.Opened -> {
                     val name = open.file.filename ?: open.entry.filename ?: localizedString("mobile.files_untitled")
-                    val media = open.file.mediaType ?: open.entry.mediaType ?: "application/octet-stream"
+                    val declared = open.file.mediaType ?: open.entry.mediaType ?: "application/octet-stream"
+                    // What the bytes ARE, said to everything downstream; the label is only ever compared against it.
+                    val sniffed = remember(open) { RenderTier.typeToDeclare(open.bytes) }
                     Text(name, style = CirisTheme.type.title, color = t.ink)
-                    Text("$media · ${humanBytes(open.bytes.size.toLong())}", style = CirisTheme.type.label, color = t.mute)
-                    // CC 5.3.2.6: the render tier comes from the sniffed bytes, never from `media`.
-                    val decision = remember(open) { RenderTier.decide(media, open.bytes) }
-                    val saveAllowed = remember(open) { RenderTier.saveAllowed(decision, name, open.bytes) }
+                    Text("$sniffed · ${humanBytes(open.bytes.size.toLong())}", style = CirisTheme.type.label, color = t.mute)
+                    DigestLine(open.digest)
+                    if (policy is PolicySource.BuiltIn) {
+                        Text(
+                            localizedString("mobile.files_policy_builtin"),
+                            style = CirisTheme.type.label, color = t.dim, modifier = Modifier.testable(FilesTags.POLICY_BUILTIN),
+                        )
+                    }
+                    // CC 5.3.2.6: the render tier comes from the sniffed bytes, never from the label,
+                    // under the node's own table narrowed by the recommended set.
+                    val decision = remember(open, policy) { RenderTier.decide(declared, open.bytes, policy.policy) }
+                    val saveAllowed = remember(open, policy) { RenderTier.saveAllowed(decision, name, open.bytes) }
                     when (decision) {
                         is RenderTier.Decision.Text -> Box(
                             modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
@@ -385,7 +504,7 @@ private fun FileSheet(open: OpenState, onClose: () -> Unit) {
                             label = localizedString("mobile.files_save_copy"),
                             tag = FilesTags.SAVE_COPY,
                             onClick = {
-                                val path = saveFileCopy(name, media, open.bytes)
+                                val path = saveFileCopy(name, sniffed, open.bytes)
                                 savedTo = path
                                 saveFailed = path == null
                             },

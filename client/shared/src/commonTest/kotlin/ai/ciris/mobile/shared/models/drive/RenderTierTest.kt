@@ -124,6 +124,26 @@ class RenderTierTest {
     }
 
     @Test
+    fun theTypeDeclaredDownstreamIsTheSniffedOneNeverTheLabel() {
+        // A label is a claim; what the saver and the header are told is what the bytes are.
+        assertEquals("image/png", RenderTier.typeToDeclare(png))
+        assertEquals("text/plain", RenderTier.typeToDeclare("just words".encodeToByteArray()))
+        assertEquals("application/octet-stream", RenderTier.typeToDeclare(byteArrayOf(0, 1, 2, 3)))
+    }
+
+    @Test
+    fun theNodesPolicyNarrowsAndNeverWidens() {
+        val node = MediaPolicy(tierA = mapOf("text/plain" to 1_000_000L, "image/png" to 32L * 1_048_576, "image/svg+xml" to 1L), inlineMaxBytes = 7, renditions = false)
+        val inForce = MediaPolicy.RECOMMENDED.narrowedBy(node)
+        assertEquals(1_000_000L, inForce.tierA["text/plain"], "the node's lower cap wins")
+        assertEquals(16L * 1_048_576, inForce.tierA["image/png"], "the node's higher cap does not widen this client")
+        assertEquals(null, inForce.tierA["image/svg+xml"], "a format outside the recommended set is not admitted by the node's say-so")
+        assertEquals(null, inForce.tierA["image/jpeg"], "a format the node did not list is gone")
+        assertEquals(7L, inForce.inlineMaxBytes)
+        assertEquals(false, inForce.renditions)
+    }
+
+    @Test
     fun textOverTheCapIsNotRendered() {
         val big = ByteArray(1_048_577) { 'a'.code.toByte() }
         assertEquals(Decision.DownloadOnly("text/plain"), RenderTier.decide("text/plain", big))

@@ -1030,17 +1030,23 @@ fun CIRISApp(
         // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
         ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
-    // B3: one Files view model per cohort — a self listing and a community
-    // listing are different questions, and one model answering both would
-    // show the last circle's files in the next.
+    // B3: one Files view model per cohort — a self, a family and a community
+    // listing are different questions, and one model answering all would
+    // show the last circle's files in the next. Every drive route is the
+    // NODE's (src/drive.rs), read at the active node like contacts, never
+    // the api base (CIRISAgent#1213).
+    val drive = remember(apiClient) { ai.ciris.mobile.shared.api.ClientDrive(apiClient) { contactsNodeUrl.value } }
     val selfFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-self") {
-        ai.ciris.mobile.shared.viewmodels.FilesViewModel(apiClient, ai.ciris.mobile.shared.viewmodels.FilesCohort.SELF)
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.SELF)
+    }
+    val familyFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-family") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.FAMILY)
     }
     val communityFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-community") {
-        ai.ciris.mobile.shared.viewmodels.FilesViewModel(apiClient, ai.ciris.mobile.shared.viewmodels.FilesCohort.COMMUNITY)
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.COMMUNITY)
     }
     val notesViewModel: ai.ciris.mobile.shared.viewmodels.NotesViewModel = viewModel {
-        ai.ciris.mobile.shared.viewmodels.NotesViewModel(apiClient)
+        ai.ciris.mobile.shared.viewmodels.NotesViewModel(drive)
     }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
@@ -4195,10 +4201,14 @@ fun CIRISApp(
                 )
             }
 
-            is Screen.Files -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
-                viewModel = if ((currentScreen as Screen.Files).cohort == "community") communityFilesViewModel else selfFilesViewModel,
-                nodeVersion = nodeVersion,
-            )
+            is Screen.Files -> when ((currentScreen as Screen.Files).cohort) {
+                // Family › Files lists the household picked in the Family hub's switcher (CSD-100): same view model.
+                "family" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                    viewModel = familyFilesViewModel, nodeVersion = nodeVersion, households = householdsViewModel,
+                )
+                "community" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = communityFilesViewModel, nodeVersion = nodeVersion)
+                else -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = selfFilesViewModel, nodeVersion = nodeVersion)
+            }
             Screen.Notes -> ai.ciris.mobile.shared.ui.screens.files.NotesScreen(
                 viewModel = notesViewModel,
                 nodeVersion = nodeVersion,
@@ -5060,9 +5070,16 @@ fun CIRISApp(
                 currentCircle = c
                 currentScreen = when {
                     // The same Files card lists a different cohort per circle:
-                    // your own files in Just me, community rooms elsewhere.
+                    // your own files in Just me, the picked household's in
+                    // Family, community rooms elsewhere.
                     cards.size == 1 && cards[0] == ai.ciris.mobile.shared.ui.nav.NavSurface.Files ->
-                        Screen.Files(if (c == ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT) "self" else "community")
+                        Screen.Files(
+                            when (c) {
+                                ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT -> "self"
+                                ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY -> "family"
+                                else -> "community"
+                            },
+                        )
                     cards.size == 1 -> surfaceToScreen(cards[0])
                     else -> Screen.CircleTab(c.id, t.id)
                 }

@@ -3706,7 +3706,6 @@
     },
     "empty": {
       "decisions_family": "Une famille décide en parlant. Il n'y a rien sur quoi voter ici.",
-      "files_family": "Les fichiers de famille arrivent dès qu'une famille peut être formée sur ce réseau.",
       "files": "Aucun fichier dans ce cercle pour l'instant. Ce que vous créez commence dans Juste moi et n'en sort que lorsque vous le décidez.",
       "chats": "Aucune conversation dans ce cercle pour l'instant.",
       "people": "Personne dans ce cercle pour l'instant.",

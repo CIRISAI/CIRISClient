@@ -3715,7 +3715,6 @@
       "files_agent": "Burada henüz bir şey yok. Her şey buradan başlar ve burada hiçbir şey ilan edilmez.",
       "decisions_agent": "Burada birlikte karar verecek kimse yok. Kararlar Aile'de başlar.",
       "decisions_family": "Bir aile konuşarak karar verir. Burada oylanacak bir şey yok.",
-      "files_family": "Bu ağda bir aile kurulabildiğinde aile dosyaları gelir.",
       "chats_agent": "Bu düğümde bir ajan yok, bu yüzden burada konuşacak kimse yok. Bir ajan kurun; onunla olan sohbetleriniz burada olacak."
     },
     "my_things": "Kendi şeylerim",

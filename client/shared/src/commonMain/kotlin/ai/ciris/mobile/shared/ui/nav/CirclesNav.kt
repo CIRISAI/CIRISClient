@@ -91,9 +91,11 @@ object CirclesNav {
         // else may sit in it: the memory graph moved to This node, the
         // environment snapshot and the commons to Decisions, the accord's
         // attestations to Safety. The one card here is the drive plane
-        // itself (B3), in the circles the drive has a cohort for. ──
+        // itself (B3), in the circles the drive has a cohort for: self,
+        // family (the household picked in the Family hub, CSD-100) and
+        // community. Everyone has no room of its own. ──
 
-        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
+        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, FAMILY, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
@@ -275,10 +277,6 @@ object CirclesNav {
         tab == Tab.DECISIONS && circle == AGENT -> "nav.empty.decisions_agent"
         tab == Tab.DECISIONS && circle == FAMILY -> "nav.empty.decisions_family"
         tab == Tab.FILES && circle == AGENT -> "nav.empty.files_agent"
-        // Nothing in production can form a household family yet
-        // (CIRISServer#627), so a family file cannot exist: say that, rather
-        // than an "empty" that implies there could be something here.
-        tab == Tab.FILES && circle == FAMILY -> "nav.empty.files_family"
         else -> "nav.empty." + tab.id
     }
 }
