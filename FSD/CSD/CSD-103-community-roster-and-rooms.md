@@ -151,6 +151,8 @@ CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL onl
 | value | route | handler | notes |
 |---|---|---|---|
 | rosters | `GET /v1/communities` | `list_communities` :1418 | every room's `members` is the fold (record ∪ widenings − revocations) — "the roster is the FOLD", module doc; a removed member is already gone |
+| one room, re-read after a change | `GET /v1/communities/{id}` | `read_community` :1497 | the shared view model re-reads the selected room after an add or remove applies (`loadDetail`); `community.not_found` for a room you are no longer in |
+| names, and who can be added | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the add control offers a chip per contact not already in the room, and each member row is titled by the contact's alias when this node has one. A member need not be a contact; the roster is the node's, the names are a courtesy |
 | add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752) |
 | remove | `DELETE /v1/communities/{id}/members/{key_id}` | `remove_member` :1556 | naming yourself is leaving (:1569); `community.last_founder` guards an orphaned room |
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |

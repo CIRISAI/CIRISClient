@@ -158,13 +158,14 @@ pins it.
 | my rooms | `GET /v1/communities` | `list_communities` :1418 | `{communities: [room], total, resume}`; a room is `room_json` :1351 — `community_id, name, kind: pair\|room, tier, cohort_scope, consensus_protocol, founded_at, member_count, my_role, members: [{key_id, role, joined_at}] (member_json :1106), roles: {role: [key_id]}` |
 | one room | `GET /v1/communities/{id}` | `read_community` :1497 | `room_json(detail = true)`: adds `moderators: [key_id]`, `widenings`, `revocations`; `community.not_found` 404 for a non-member (:238) |
 | found | `POST /v1/communities` `{name, members?, tier?, consensus_protocol?}` | `create_community` :1220 | 201 + `room_json`; `community.name_empty`, `.bad_tier`, `.bad_consensus_protocol` (a quorum's N must equal the founding roster, :1276), `.not_a_contact` |
-| role | `POST …/members/{key_id}/role` `{role}` | `change_role` :1584 | `applied()` :1114 `{community_id, op, applied, members}` or `community.quorum_pending` |
+| role | `POST /v1/communities/{id}/members/{key_id}/role` `{role}` | `change_role` :1584 | `applied()` :1114 `{community_id, op, applied, members}` or `community.quorum_pending` |
 | dissolve | `DELETE /v1/communities/{id}` | `dissolve_community` :1673 | the same two outcomes |
-| leave | `POST …/leave` | `leave_community` :1616 → `leave_room` :1632 | `{community_id, op: "leave", applied, key_id}`; `community.last_founder`, `.pair_room_fixed` |
+| leave | `POST /v1/communities/{id}/leave` | `leave_community` :1616 → `leave_room` :1632 | `{community_id, op: "leave", applied, key_id}`; `community.last_founder`, `.pair_room_fixed` |
 | held change | any governed write | `quorum_pending` :1180 | **409** `{error, reason_id: "community.quorum_pending", change_envelope, signing_bytes_base64, signatures, valid, required, eligible_signers, consensus_protocol}` |
-| envelope | `POST …/changes/envelope` `{op, key_id?, role?}` | `change_envelope` :1693 | the same body at 200. **Not called**: every direct write already returns it when held (below) |
-| cosign | `POST …/changes/cosign` `{change_envelope}` | `change_cosign` :1764 | `{community_id, op, signature}` — stateless |
-| assemble | `POST …/changes/assemble` `{change_envelope, signatures}` | `change_assemble` :1815 | `applied()`, or `quorum_pending` again with the count |
+| envelope | `POST /v1/communities/{id}/changes/envelope` `{op, key_id?, role?}` | `change_envelope` :1693 | the same body at 200. **Not called**: every direct write already returns it when held (below) |
+| cosign | `POST /v1/communities/{id}/changes/cosign` `{change_envelope}` | `change_cosign` :1764 | `{community_id, op, signature}` — stateless |
+| assemble | `POST /v1/communities/{id}/changes/assemble` `{change_envelope, signatures}` | `change_assemble` :1815 | `applied()`, or `quorum_pending` again with the count |
+| names, and who can be founded with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the founding card's member chips are the caller's contacts (a room member must be a contact whose grant covers `chat:`), and every key on the card is titled by the contact's alias when this node has one. Best effort: a failed contacts read hides nothing the node said about the room |
 
 Refusal bodies are `{error, reason_id}` (`src/auth/refusal.rs:52`), with
 `refuse_with` merging the extra members (:35). The client reads them into
