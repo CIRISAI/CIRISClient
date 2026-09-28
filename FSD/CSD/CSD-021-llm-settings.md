@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -84,6 +84,7 @@ fields:
     example: "unconfirmed"
     renders: "What this node is running, as an auditable record (CC 3.1.9: 'published as an auditable record rather than inferred from behaviour'). NOT EMITTED: no `config:llm` row exists, so the only answer to 'what is my agent thinking with' is this screen's own read-back."
     tag: "proposed:llm_config_receipt"
+    blocked_by: CIRISAgent#1209
 ```
 
 **`config:llm` is the field that should exist and does not.** Everything else
@@ -116,11 +117,15 @@ error:     {tag: "proposed:llm_error", renders: "`LLMSettingsViewModel._errorMes
 | hosted-services status | `GET /v1/system/llm/ciris-services/status` | CIRISAgent | live (`llm_routes.py:1065`) |
 | turn hosted off | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent | live (`llm_routes.py:973`) |
 | turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`llm_routes.py:1025`) — **not called by this client** |
-| list a provider's models | `POST /v1/setup/list-models` | CIRISAgent | live (`setup/llm_routes.py`) |
-| find a local server | `POST /v1/setup/discover-local-llm` | CIRISAgent | live (`setup/llm_routes.py`) |
+| list a provider's models | `POST /v1/setup/list-models` | CIRISAgent | live (`setup/llm_routes.py:222`) — `CIRISApiClient.listModels` (`CIRISApiClient.kt:6782`) |
+| find a local server | `POST /v1/setup/discover-local-llm` | CIRISAgent | live (`setup/llm_routes.py:237`) — `CIRISApiClient.kt:6913`, from `LLMSettingsViewModel.kt:543` and `LocalLlmDiscovery.kt:113` |
+| start the local server it found | `POST /v1/setup/start-local-server` | CIRISAgent (`setup/llm_routes.py:286`, setup-or-ADMIN) | **live** — `CIRISApiClient.startLocalLlmServer` (`CIRISApiClient.kt:7020`), from `LocalLlmDiscovery.kt:151`, which this screen mounts at `LLMSettingsScreen.kt:2055, 2168` (and Setup at `SetupScreen.kt:1540`) |
+| write the primary LLM to the agent's `.env` | `PUT /v1/setup/llm` | CIRISAgent (`setup/config.py:380`) | **live** — `CIRISApiClient.updateLlmConfig` (`CIRISApiClient.kt:7745`), called from `SettingsViewModel.saveSettings` (`SettingsViewModel.kt:681`). **Not** node-skipped, unlike the `GET /v1/setup/config` read-back (CSD-022): on a node build the write goes to a host that does not serve it |
+| the model capability catalogue | `GET /v1/setup/models`, `GET /v1/setup/models/{provider_id}` | CIRISAgent (`setup/llm_routes.py:93, 138`; setup-only) | live, **not called** — only generated stubs. `list-models` asks the provider live; this is the agent's own table of what each model can do, and the card never shows it |
 | `config:llm` as a record | — **unconfirmed** | CIRISAgent | blocks `building` for `llm_config_receipt` |
 
-Agent tree last commit **2026-08-15**; "live" is as of that tree. Nothing under
+Agent tree last commit **2026-08-15**; "live" is as of that tree. The five `/v1/setup/*`
+rows were re-verified against CIRISAgent `main` 29371660de (2026-09-26). Nothing under
 `/v1/system/llm` exists on `CIRISServer`, which is correct — this is the
 brain's configuration, not the node's.
 

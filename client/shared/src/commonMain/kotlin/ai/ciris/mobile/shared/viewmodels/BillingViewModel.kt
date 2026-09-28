@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.api.RouteNotOnThisHost
+import ai.ciris.mobile.shared.ui.screens.BALANCE_NOT_ON_THIS_NODE
 import ai.ciris.mobile.shared.PurchaseError
 import ai.ciris.mobile.shared.PurchaseResultType
 import ai.ciris.mobile.shared.api.CIRISApiClientProtocol
@@ -194,6 +196,13 @@ class BillingViewModel(
 
                     _isLoading.value = false
                     return@launch // Success — exit
+                } catch (e: RouteNotOnThisHost) {
+                    // A node without an agent has no billing. Not an error,
+                    // not a zero balance, and nothing to buy (CSD-056).
+                    logInfo(method, "No billing route on this node")
+                    onNoBillingHere()
+                    _isLoading.value = false
+                    return@launch
                 } catch (e: Exception) {
                     logException(method, e)
                     lastException = e
@@ -228,6 +237,13 @@ class BillingViewModel(
             handleBalanceError("Failed to load balance: ${lastException?.message}")
             _isLoading.value = false
         }
+    }
+
+    private fun onNoBillingHere() {
+        _currentBalance.value = BALANCE_NOT_ON_THIS_NODE
+        _products.value = emptyList()
+        _creditStatus.value = null
+        _errorMessage.value = null
     }
 
     /**
@@ -304,6 +320,8 @@ class BillingViewModel(
             }
             _creditStatus.value = creditStatus
             logDebug(method, "Silent balance update: ${_currentBalance.value}")
+        } catch (e: RouteNotOnThisHost) {
+            onNoBillingHere()
         } catch (e: Exception) {
             logWarn(method, "Silent balance load failed: ${e.message}")
 

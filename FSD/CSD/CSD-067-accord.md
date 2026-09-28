@@ -6,7 +6,7 @@ the Constitutional card as one document and can no longer, because they are two
 cards in one tab with two different jobs
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -40,7 +40,7 @@ screen: Accord
 ```
 
 `nav_map` derives `circle_global_commons -> tab_safety -> nav_epistemic_accord`
-— Everyone › Safety (`CirclesNav.kt:101`). The accord lives in exactly one
+— Everyone › Safety (`CirclesNav.kt:114`). The accord lives in exactly one
 place, with the trust root, the holder flow and the `accord:*` attestations,
 "because in an emergency a person should not have to know which of three tabs we
 filed it under" (`docs/FSD-ui-language.md:287`). That is the right placement and
@@ -204,18 +204,118 @@ literals in `src/accord.rs` and `src/accord_provision.rs`.
 | history (drills, announces) | `GET /v1/accord/events` | `src/accord.rs:2618` | **live** |
 | concur on an invocation | `POST /v1/accord/invocation/concur` | `src/accord.rs:2654` | **live** |
 | raise a halt | `POST /v1/accord/halt` | `src/accord.rs:2616` | **live** |
-| drill / announce | `POST /v1/accord/{drill,announce}` | `src/accord.rs:2609,2611` | **live** |
-| canonical servers + co-scrubs | `/v1/accord/canonical/*` | `src/accord_provision.rs:3704-3776` | **live** |
-| confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648` | **live** |
-| a holder's hardware custody class | **missing** — `AccordHolderDto` carries no custody field | CIRISServer | blocks `txt_holder_custody` |
-| **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` — **unconfirmed**: `invocation_kind` is documented as the closed set `{CONSTITUTIONAL, notify, drill}` (CC 4.2.1.3 keeps resumption in its own canonical-bytes domain), so it is not yet established that a resumption ever arrives on this route at all | CIRISServer | blocks the §2.2 fix from being *tested*, not from being *made* |
+| drill | `POST /v1/accord/drill` | `src/accord.rs:2609` | **live** — `initiateDrill` (`CIRISApiClient.kt:3793`) from `AccordViewModel.kt:240` |
+| announce | `POST /v1/accord/announce` | `src/accord.rs:2611` | **live** — `initiateAnnounce` (`CIRISApiClient.kt:3906`) from `AccordViewModel.kt:319` (`AccordScreen.kt:1654`). The route-coverage report filed this under CSD-069; it is this screen's call |
+| admit a node to the accord's directory | `POST /v1/accord/admit-node` | `src/accord_provision.rs:3704` | **live** — `admitNode` (`CIRISApiClient.kt:4048`) from `AccordViewModel.kt:402`, the mint sheet at `AccordScreen.kt:708`. Also filed under CSD-069 by the report |
+| open an invocation | `POST /v1/accord/invocation` | `src/accord.rs:2650` | live, **not called** — the screen concurs on invocations (row above) and never opens one; `lifecycle:active` rides this route (below) |
+| the canonical servers | `GET /v1/accord/canonical/servers` | `src/accord_provision.rs:3711` | **live** — `CIRISApiClient.kt:4088` (and `:5405`) |
+| add one | `POST /v1/accord/canonical/add` | `src/accord_provision.rs:3707` | **live** — `CIRISApiClient.kt:4155` |
+| co-scrub: propose · cosign · pending | `POST /v1/accord/canonical/propose` · `POST …/cosign` · `GET …/pending` | `src/accord_provision.rs:3717, 3721, 3753` | **live** — `CIRISApiClient.kt:4306, 4370, 4548` |
+| withdraw · list withdrawals · supersede | `POST /v1/accord/canonical/withdraw` · `GET …/withdrawals` · `POST …/supersede` | `src/accord_provision.rs:3758, 3766, 3762` | **live** — `CIRISApiClient.kt:4206, 4239, 4593` |
+| a canonical's address | `POST /v1/accord/canonical/address` | `src/accord.rs:2632` | live, **not called** |
+| (peer leg) receive a gossiped partial | `POST /v1/accord/canonical/gossip-partial` | `src/accord_provision.rs:3776` | live; the OPEN peer→peer counterpart of co-scrub, deliberately not loopback-gated — not a card act |
+| confer a moderation duty | `POST /v1/accord/duty/{propose,cosign}` | `src/accord_duty.rs:648,649` | **live** — called from `DutyConferralViewModel.kt:335,375`, not from this screen's view model; `Screen.DutyConferral` maps to `NavSurface.Accord` (`CIRISApp.kt:5941`) and is reached from `[+ New]` (`CIRISApp.kt:4193`) |
+| a holder's hardware custody class | **missing on the roster** — `list_holders` builds `HolderSummary {key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}` (`src/accord.rs:664-668`) and `AccordHolderDto` (`models/federation/Accord.kt:53-60`) mirrors it exactly. **Served elsewhere for the charter's holders:** `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` (verdict passed through verbatim, `src/trust_root_api.rs:76-79`; shape CIRISPersist v48.0.0 `federation/trust_root.rs:372`, the pin at `Cargo.toml:138`), loopback-only | CIRISServer | blocks `txt_holder_custody` on the roster; on this node's own machine the verdict carries it; **remote reach** `blocked_by: CIRISServer#652` |
+| **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` | CIRISServer | **live — the route serves it, and that makes §2.2 a shipped defect** |
+| admit a node | `POST /v1/accord/admit-node` | `src/accord_provision.rs:3704` | **live**, loopback-only — called from `AccordViewModel.kt:402` (`[+ New]` → admit) |
+| bless the CI build keys | `POST /v1/accord/ci-key/{propose,cosign}` | `src/accord_provision.rs:3729,3733` | **live**, loopback-only — `AccordViewModel.kt:827,874` |
+| re-mint the root into a portable seed | `GET /v1/accord/genesis/remint-source`, `POST /v1/accord/genesis/{propose,cosign}` | `src/accord_provision.rs:3740,3744,3748` | **live**, loopback-only — `AccordViewModel.kt:958,1042,1088`; the `RemintTrustRootSheet` (`AccordScreen.kt:951`) |
+| the seed's fingerprint, and this node's own acceptance of the root it just minted | the propose/cosign response: `fingerprint`, `node_trusts_root`, `trust_edge_error`, `seed_path`, `seed_save_error` | `src/accord_provision.rs:2530-2600` | **live, and dropped by the client** — see §3.1 |
+| which roots this node accepts, and its genesis posture | `GET /v1/trust-root` | `src/trust_root_api.rs:415` | **live on this node's own machine, and called by nothing in the client** (no `trust-root` literal in `CIRISApiClient.kt`); **remote reach** `blocked_by: CIRISServer#652` — the router is loopback-layered (`:422-424`) |
+| adopt a portable seed on this node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live on this node's own machine, not called**; **remote reach** `blocked_by: CIRISServer#652` |
+| un-trust a root (withdraw this node's acceptance) | `DELETE /v1/trust-root/{root_key_id}` | `src/trust_root_api.rs:418-419` | **live on this node's own machine, not called**; **remote reach** `blocked_by: CIRISServer#652` |
+| the family's supersede chain | `GET /v1/accord/family/history` | `src/accord.rs:2645` (handler `:2355`) | **live, not called** |
+| change a seat by supersede | `POST /v1/accord/family/change/envelope`, `/v1/accord/family/supersede` | `src/accord.rs:2637,2641` | **live and refuses by design** for the only family it serves: `humanity-accord` answers 409 at `:2306-2315` (CIRISPersist#648). A seat changes by re-mint + import, not here — so the card should not offer it |
+| open an invocation | `POST /v1/accord/invocation` | `src/accord.rs:2650` | **live, not called** — the client opens only through `/drill`, `/halt`, `/announce` and concurs through `/concur` (the §3 note below) |
+| relying-node recognizers | `POST /v1/accord/verify-invocation`, `POST /v1/accord/message` | `src/accord.rs:2603,2606` | **live, not a holder's action** — unauthenticated peer/relying-node doors where the holder signatures are the authority (`:731-737`, `:2076-2080`); no card should call them |
+| rebind a canonical's address | `POST /v1/accord/canonical/address` | `src/accord.rs:2632` | **live, not called** — the canonical row above cites it, but no `canonical/address` literal is in `CIRISApiClient.kt` |
 
-**The last row is why §2.2 is a defect and not a bug report.** If resumptions
-arrive on a different read, the client still needs the fourth treatment and
-needs to know where to get the row; if they arrive on `invocations`, the `else`
-branch is actively mislabelling them today. Either way the four-arm fix is
-required and the CSD cannot state which failure is live until CIRISServer
-answers. That is exactly what `unconfirmed` at `sketched` is for.
+### 3.1 The accord and `/v1/trust-root` — one root, two views
+
+**The accord family IS the default trust root, and `/v1/trust-root` is this
+node's side of it.** `candidate_roots` always lists
+`HUMANITY_ACCORD_FAMILY_KEY_ID` first (`src/trust_root_api.rs:156-157`), which is
+`"humanity-accord"` (`ciris-verify-core v16.1.0 accord_genesis.rs:53`) — the same
+keyless FAMILY this card shows, whose seats A1/B1/C1 hold the kill switch. The
+server names this card the same way: *"A1/B1/C1 manage the canonical mesh from
+the Trust Root card"* (`src/accord.rs:2371-2373`), and `NavSurface.Accord`'s
+label is "Trust Root" (`EpistemicNav.kt:210`). There is no second, separate
+anchor. What differs is the question:
+
+* `/v1/accord/*` answers **what the root is** — its roster, quorum, invocations,
+  halt latch, canonical servers — and is where holders act.
+* `/v1/trust-root` answers **whether this node trusts it** — the node's own
+  `trust:accepts` edge (CC 3.2 T3, `part_3_the_namespace.md:645`), persist's
+  `trust_root_valid` verdict (charter quorum over the seated holders, charter
+  recovery, halt latch, per-holder hardware, drill freshness as a banded signal
+  per T4), the genesis `posture` (`entrenched` / `pre_genesis` / `divergent` /
+  `unreadable`, CIRISPersist v48.0.0 `genesis/posture.rs:255`) and its banner — plus
+  any other root this node has accepted by import.
+
+CC 3.2 makes the second view a MUST: *"A conformant consumer MUST be able to
+re-root: untrust the canonical group, pin a different … community instead or in
+addition, or run with none"* (`part_3_the_namespace.md:583`), and T3 makes the
+lever *one row*. `DELETE /v1/trust-root/{id}` is that row; `POST
+/v1/trust-root/import` is the "instead or in addition". The server's own
+refusal to supersede the family names the path the card lacks: *"run the
+ceremony again … and adopt the bundle it produces: … POST /v1/trust-root/import on
+each node"* (`src/accord.rs:2311-2313`). This card mints that bundle
+(`RemintTrustRootSheet`) and offers no way to adopt it anywhere.
+
+**Two defects the client carries today, found reading the contract:**
+
+1. **The out-of-band fingerprint never renders.** CC 3.2 T5: *"out-of-band
+   fingerprint comparison at attach time is a first-class step"*. The server
+   returns `fingerprint` at the top level of the propose/cosign response
+   (`src/accord_provision.rs:2592`); `GenesisSeedResponse`
+   (`models/federation/Accord.kt:674`) does not model it, and
+   `genesisSeedDisplay` reads `fingerprint` from inside the bundle
+   (`Accord.kt:787`), where persist's `GenesisBundle` has no such field (v48.0.0
+   `genesis/bundle.rs:121-130`). So `remint_done_fingerprint`
+   (`AccordScreen.kt:1197-1213`) is always skipped by its own "only when the
+   bundle carries one" guard. The fix is client-side.
+2. **`node_trusts_root` / `trust_edge_error` are dropped.** On completion the
+   minting node writes its own acceptance of the new root (`:2532-2545`), and a
+   failure there is non-fatal and returned. The card says "done" either way.
+
+**Two facts a builder on `GET /v1/trust-root` must know.** `RootEntry.accepted`
+reads `user_accepts` from the verdict (`src/trust_root_api.rs:106-109`), a field
+`TrustRootVerdict` does not have — it is `edge_exists` (CIRISPersist v48.0.0
+`federation/trust_root.rs:553-561`) — so `accepted` is always `false` today.
+And `root_kind` serializes as `Family` / `Key` (the enum has no `rename_all`,
+`trust_root.rs:314`), not the lowercase the handler's doc comment promises
+(`:71-72`). Both are drafted as server issues rather than worked around.
+
+**The last row said `unconfirmed` and the answer inverts the finding.**
+`InvocationKind` is a FOUR-variant enum whose fourth is `LifecycleActive`,
+`#[serde(rename = "lifecycle:active")]` — `ciris-verify-core
+src/humanity_accord.rs:79-103` in the `v16.1.0` checkout pinned at
+`CIRISServer Cargo.toml:171` — and its own doc comment at `:97` says it "rides
+the same concurrence flow". Decisively: `create_invocation` → `open_invocation`
+(`src/accord.rs:1215-1229`, `:1385-1441`) applies **no kind filter**, unlike
+`/drill` (`:1269`), `/halt` (`:1350`) and `/announce` (`:1499`), each of which
+rejects a mismatched kind by name; the object is keyed into `pending` by
+`(invocation_kind, invocation_id)` (`:1418-1421`) and `list_invocations` echoes
+the kind verbatim (`:1763`). The closed set `{CONSTITUTIONAL, notify, drill}`
+this row previously cited is the CC 4.2.1.1 **canonical-bytes preimage domain**
+(`humanity_accord.rs:92-94`), not the route's payload — `lifecycle:active` signs
+a separate `LIFECYCLE_DOMAIN_PREFIX` (`:74`) and is still listed on the same read.
+
+So §2.2 is not a deferred question: the `else` branch **is** badging resumptions
+as `notify` today, on a route that can carry them. One caveat to carry into the
+fix: the primary production resumption path is offline — `build_release_request`'s
+`how_to_use` (`src/accord_release.rs:551-556`) and `main.rs:146-153` route it
+through a token file and `ciris-server accord release --token`, never HTTP — and
+the client calls only `/concur` (`CIRISApiClient.kt:3562`), never
+`POST /v1/accord/invocation`. A lifecycle row therefore reaches the list when a
+holder app opens one; the node never puts one there by itself. The flow must open
+one to assert the fourth arm, which is why §5 disclaims it rather than §4.
+
+**`hardware_custody` has three vocabularies, not two.** Beyond the registry's set
+and CC 4.2.2's table, the wire carries `custody_tier: "portable_2fa"`
+(`ciris-verify-core accord_custody_attestation.rs:70`, envelope key `:235`,
+`ALLOWED_CUSTODY_TIERS` at `:105` containing only that one value). The
+CIRISConstitution ask must name all three.
 
 ## 4. Flow (how)
 

@@ -1,11 +1,16 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ClientSelfDevices
+import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.api.SelfDevicesApi
 import ai.ciris.mobile.shared.models.federation.AddOccurrenceBody
 import ai.ciris.mobile.shared.models.federation.AddOccurrenceRequest
 import ai.ciris.mobile.shared.models.federation.MintedIdentity
+import ai.ciris.mobile.shared.models.federation.OwnedNodeDto
 import ai.ciris.mobile.shared.models.federation.SelfOccurrence
 import ai.ciris.mobile.shared.models.federation.SubjectBlindKey
+import ai.ciris.mobile.shared.models.federation.nodeReportsRevocation
 import ai.ciris.mobile.shared.models.federation.subjectBlindKeyFor
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
@@ -14,6 +19,30 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+
+/**
+ * Where a node RELEASE stands (`POST /v1/self/nodes/{node_key_id}/release`).
+ *
+ * Two confirms guard releasing the node you are talking to, and the second one
+ * is only reachable through the node's own refusal: [NeedsForce] is entered
+ * from `self.release_self_requires_force` and nowhere else, and `force_self` is
+ * sent only from [ConfirmingForce]. The app does not decide which node is
+ * "this one" — the node does, by refusing.
+ */
+sealed interface ReleaseState {
+    data object Idle : ReleaseState
+    /** The first confirm (three facts) is up for [node]. */
+    data class Confirming(val node: OwnedNodeDto) : ReleaseState
+    /** The node refused because [node] is the one answering; the screen explains and may offer force. */
+    data class NeedsForce(val node: OwnedNodeDto, val refusal: NodeRefusal) : ReleaseState
+    /** The SECOND confirm, for a forced release of the node you are talking to. */
+    data class ConfirmingForce(val node: OwnedNodeDto) : ReleaseState
+    data class Working(val node: OwnedNodeDto, val force: Boolean) : ReleaseState
+    /** Done. [releasedSelf]: the node released was the one answering, and this session ended with it. */
+    data class Released(val nodeKeyId: String, val releasedSelf: Boolean) : ReleaseState
+    /** The node refused by name (`self.not_your_node`, `self.release_incomplete`, …). */
+    data class Refused(val node: OwnedNodeDto, val refusal: NodeRefusal) : ReleaseState
+}
 
 /**
  * Drives the **Identity Management** screen — "manage my self + log in as myself
@@ -43,10 +72,17 @@ class IdentityManagementViewModel(
      * damaged portable ID lives (Codex, PR #4).
      */
     private val nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL,
+    /**
+     * Every read this screen makes on load, and the 0.5.216 device writes
+     * (label, release). A seam so tests drive a fake, never a live port.
+     */
+    private val devices: SelfDevicesApi = ClientSelfDevices(apiClient, nodeBaseUrl),
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "IdentityMgmtVM"
+        const val REASON_RELEASE_SELF_REQUIRES_FORCE = "self.release_self_requires_force"
+        const val REASON_RELEASE_INCOMPLETE = "self.release_incomplete"
     }
 
     /** The self fed-ID `key_id` whose roster we list / mutate (the node's bound owner). */
@@ -57,7 +93,11 @@ class IdentityManagementViewModel(
     private val _selfFedcode = MutableStateFlow<String?>(null)
     val selfFedcode: StateFlow<String?> = _selfFedcode.asStateFlow()
 
-    /** The device roster — the ACTIVE occurrences of the self. */
+    /**
+     * The device roster: the ACTIVE occurrences of the self, then (on a
+     * 0.5.216+ node) the revoked ones, each `revoked == true`. Revoked devices
+     * are shown as revoked — not hidden, and not active.
+     */
     private val _occurrences = MutableStateFlow<List<SelfOccurrence>>(emptyList())
     val occurrences: StateFlow<List<SelfOccurrence>> = _occurrences.asStateFlow()
 
@@ -77,6 +117,30 @@ class IdentityManagementViewModel(
      */
     private val _subjectBlind = MutableStateFlow<SubjectBlindKey?>(null)
     val subjectBlind: StateFlow<SubjectBlindKey?> = _subjectBlind.asStateFlow()
+
+    /** The nodes the bound owner owns (`/v1/setup/owned-nodes`), for release. */
+    private val _ownedNodes = MutableStateFlow<List<OwnedNodeDto>>(emptyList())
+    val ownedNodes: StateFlow<List<OwnedNodeDto>> = _ownedNodes.asStateFlow()
+
+    /**
+     * True when this node predates the 0.5.216 device routes: its roster rows
+     * carry no `revoked`, or a label / release answered a bare 404 (no
+     * `reason_id` — the route is not mounted). The screen then says the node
+     * cannot do this yet, instead of an empty list or a dead button.
+     */
+    private val _devicesUnsupported = MutableStateFlow(false)
+    val devicesUnsupported: StateFlow<Boolean> = _devicesUnsupported.asStateFlow()
+
+    /** The occurrence whose name is being edited, or null. */
+    private val _labelling = MutableStateFlow<String?>(null)
+    val labelling: StateFlow<String?> = _labelling.asStateFlow()
+
+    /** The node's refusal of the last label save, shown by its id. */
+    private val _labelRefusal = MutableStateFlow<NodeRefusal?>(null)
+    val labelRefusal: StateFlow<NodeRefusal?> = _labelRefusal.asStateFlow()
+
+    private val _release = MutableStateFlow<ReleaseState>(ReleaseState.Idle)
+    val release: StateFlow<ReleaseState> = _release.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -112,15 +176,12 @@ class IdentityManagementViewModel(
                 // roster we list/manage is the OWNER's occurrence roster, so the
                 // owner fed-ID is the correct identity_key_id. Fall back to the node
                 // self-key-record only when the node is still unclaimed (no owner).
+                val owner = refreshOwnedNodes()
                 val keyId = _identityKeyId.value
-                    ?: runCatching { apiClient.getOwnedNodes().owner }
-                        .onFailure { PlatformLogger.w(TAG, "[load] owned-nodes owner: ${it.message}") }
-                        .getOrNull()
-                        ?.takeIf { it.isNotBlank() }
-                    ?: runCatching { apiClient.getSelfKeyRecord() }
+                    ?: owner?.takeIf { it.isNotBlank() }
+                    ?: runCatching { devices.selfKeyId() }
                         .onFailure { PlatformLogger.w(TAG, "[load] self-key-record: ${it.message}") }
                         .getOrNull()
-                        ?.keyId
                 if (keyId == null) {
                     _error.value = "Couldn't resolve this device's identity. Sign in / mint a fed-ID first."
                     _occurrences.value = emptyList()
@@ -134,9 +195,24 @@ class IdentityManagementViewModel(
         }
     }
 
+    /** Reload the owner's nodes; returns the bound owner, or null when it could not be read. */
+    private suspend fun refreshOwnedNodes(): String? =
+        runCatching { devices.ownedNodes() }
+            .onSuccess { _ownedNodes.value = it.nodes }
+            .onFailure { PlatformLogger.w(TAG, "[ownedNodes] ${it.message}") }
+            .getOrNull()
+            ?.owner
+
     private suspend fun refreshRoster(keyId: String) {
-        runCatching { apiClient.getSelfOccurrences(keyId) }
-            .onSuccess { _occurrences.value = it.occurrences }
+        runCatching { devices.occurrences(keyId) }
+            .onSuccess {
+                _occurrences.value = it.occurrences
+                // Only a non-empty roster says anything about the node's
+                // version; an empty one leaves the last verdict standing.
+                nodeReportsRevocation(it.occurrences)?.let { reports ->
+                    _devicesUnsupported.value = !reports
+                }
+            }
             .onFailure { e ->
                 PlatformLogger.w(TAG, "[refreshRoster] ${e.message}")
                 _error.value = "Couldn't load the device roster: ${e.message}"
@@ -155,13 +231,16 @@ class IdentityManagementViewModel(
      * the user did not ask for is noise on the screen they came here for.
      */
     private suspend fun refreshSubjectBlind(keyId: String) {
+        // The ACTIVE roster only: a revoked device's key is no longer this
+        // person's identity, and a repair card about it would be about nothing
+        // they can use.
         val owned = buildSet {
             add(keyId)
-            _occurrences.value.forEach { add(it.occurrenceKeyId) }
+            _occurrences.value.filter { it.revoked != true }.forEach { add(it.occurrenceKeyId) }
         }
-        runCatching { apiClient.getNodeHealth(nodeBaseUrl) }
-            .onSuccess { health ->
-                val found = subjectBlindKeyFor(health.warnings, owned)
+        runCatching { devices.nodeWarnings() }
+            .onSuccess { warnings ->
+                val found = subjectBlindKeyFor(warnings, owned)
                 _subjectBlind.value = found
                 if (found != null) {
                     PlatformLogger.w(
@@ -174,7 +253,7 @@ class IdentityManagementViewModel(
                     // and this could not attribute it: silence here would look
                     // identical to a healthy roster, and the difference is a
                     // missing field in the node's warning, not a healthy key.
-                    health.warnings
+                    warnings
                         .filter { it.code == ai.ciris.mobile.shared.models.federation.WARNING_KEY_SUBJECT_BLIND }
                         .forEach {
                             PlatformLogger.w(
@@ -210,6 +289,7 @@ class IdentityManagementViewModel(
         viewModelScope.launch {
             try {
                 _error.value = null
+                refreshOwnedNodes()
                 refreshRoster(keyId)
             } finally {
                 _loading.value = false
@@ -402,6 +482,111 @@ class IdentityManagementViewModel(
                 }
             } finally {
                 _busy.value = false
+            }
+        }
+    }
+
+    // ─── Name a device (POST /v1/self/occurrence/label, 0.5.216) ────────────
+
+    /** Open the name editor for [occurrenceKeyId]. */
+    fun startLabel(occurrenceKeyId: String) {
+        _labelRefusal.value = null
+        _labelling.value = occurrenceKeyId
+    }
+
+    fun cancelLabel() {
+        _labelRefusal.value = null
+        _labelling.value = null
+    }
+
+    /**
+     * Save [label] as the name of the device being edited. The node trims it
+     * and holds the rule (1–64 characters, `self.label_empty`); its refusal is
+     * kept whole in [labelRefusal] so the screen names it.
+     */
+    fun saveLabel(label: String) {
+        val occurrence = _labelling.value ?: return
+        if (_busy.value) return
+        _busy.value = true
+        _labelRefusal.value = null
+        viewModelScope.launch {
+            try {
+                devices.labelOccurrence(occurrence, label)
+                _labelling.value = null
+                _identityKeyId.value?.let { refreshRoster(it) }
+            } catch (e: NodeRefusal) {
+                PlatformLogger.w(TAG, "[saveLabel] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                if (e.statusCode == 404 && e.reasonId == null) {
+                    // The route is not mounted — a version fact, not a failure.
+                    _devicesUnsupported.value = true
+                    _labelling.value = null
+                } else {
+                    _labelRefusal.value = e
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[saveLabel] ${e.message}")
+                _labelRefusal.value = NodeRefusal(null, e.message, 0)
+            } finally {
+                _busy.value = false
+            }
+        }
+    }
+
+    // ─── Release a node (POST /v1/self/nodes/{id}/release, 0.5.216) ─────────
+
+    /** Put up the first confirm for releasing [nodeKeyId]. */
+    fun askRelease(nodeKeyId: String) {
+        val node = _ownedNodes.value.firstOrNull { it.keyId == nodeKeyId } ?: OwnedNodeDto(nodeKeyId)
+        _release.value = ReleaseState.Confirming(node)
+    }
+
+    fun cancelRelease() {
+        _release.value = ReleaseState.Idle
+    }
+
+    /** The first confirm was accepted: release WITHOUT force. */
+    fun confirmRelease() {
+        val state = _release.value as? ReleaseState.Confirming ?: return
+        release(state.node, force = false)
+    }
+
+    /**
+     * The person read why the node refused and asked to go on: put up the
+     * SECOND confirm. Only reachable from [ReleaseState.NeedsForce].
+     */
+    fun askForceRelease() {
+        val state = _release.value as? ReleaseState.NeedsForce ?: return
+        _release.value = ReleaseState.ConfirmingForce(state.node)
+    }
+
+    /** The second confirm was accepted: the only path that sends `force_self: true`. */
+    fun confirmForceRelease() {
+        val state = _release.value as? ReleaseState.ConfirmingForce ?: return
+        release(state.node, force = true)
+    }
+
+    private fun release(node: OwnedNodeDto, force: Boolean) {
+        _release.value = ReleaseState.Working(node, force)
+        viewModelScope.launch {
+            try {
+                val result = devices.releaseNode(node.keyId, force)
+                _release.value = ReleaseState.Released(node.keyId, result.releasedSelf)
+                refreshOwnedNodes()
+            } catch (e: NodeRefusal) {
+                PlatformLogger.w(TAG, "[release] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                _release.value = when {
+                    e.statusCode == 404 && e.reasonId == null -> {
+                        _devicesUnsupported.value = true
+                        ReleaseState.Idle
+                    }
+                    e.reasonId == REASON_RELEASE_SELF_REQUIRES_FORCE && !force -> ReleaseState.NeedsForce(node, e)
+                    else -> ReleaseState.Refused(node, e)
+                }
+                // A release_incomplete was SIGNED: re-read what the node now lists.
+                if (e.reasonId == REASON_RELEASE_INCOMPLETE) refreshOwnedNodes()
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[release] ${e.message}")
+                _release.value = ReleaseState.Refused(node, NodeRefusal(null, e.message, 0))
             }
         }
     }

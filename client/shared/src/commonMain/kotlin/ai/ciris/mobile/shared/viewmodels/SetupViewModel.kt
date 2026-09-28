@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ai.ciris.mobile.shared.api.CIRISApiClient
@@ -2739,6 +2740,49 @@ class SetupViewModel(
     /** Release the guard [beginFinalStep] set, whatever the step's outcome. */
     fun endFinalStep() {
         _state.value = _state.value.copy(isSubmitting = false)
+    }
+
+    /**
+     * The NODE CLIENT's final step — self-claim, then advance to COMPLETE —
+     * under the same one-press guard as the agent's (CIRISClient#69).
+     *
+     * The screen used to call `claimLocalNodeOwnership` + `nextStep` straight
+     * from the click with no compare-and-set, and `claimLocalNodeOwnership` has
+     * no re-entry guard of its own: two presses in one frame (both reading the
+     * same composed `currentStep`) or a `/click btn_next` that ignored the
+     * disabled button each started a claim. So this checks the step against
+     * the ViewModel's own state, not the caller's snapshot, and holds
+     * [SetupFormState.isSubmitting] until the claim settles.
+     *
+     * Returns false, doing nothing, when this is not the final step any more
+     * or a final step is already running.
+     */
+    fun finishNodeClientSetup(
+        claimPinProvider: suspend () -> String?,
+        nodeCodeProvider: suspend () -> String? = { null },
+    ): Boolean {
+        val s = _state.value
+        if (!isFinalSetupStep(s.currentStep, hasAiStep(hasAgent, s.runWithoutAi))) return false
+        if (!s.canProceedFromCurrentStep()) return false
+        if (!beginFinalStep()) return false
+        claimLocalNodeOwnership(claimPinProvider = claimPinProvider, nodeCodeProvider = nodeCodeProvider)
+        nextStep()
+        if (!_state.value.ownershipClaim.inProgress) {
+            // Refused or skipped synchronously (minor band, no local node): the
+            // step is over, and COMPLETE says why.
+            endFinalStep()
+            return true
+        }
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(90_000) {
+                    _state.first { !it.ownershipClaim.inProgress }
+                }
+            } finally {
+                endFinalStep()
+            }
+        }
+        return true
     }
 
     /**

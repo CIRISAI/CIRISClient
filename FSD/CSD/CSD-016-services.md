@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -87,12 +87,14 @@ fields:
     example: "unconfirmed"
     renders: "PRIORITY, STRATEGY, CAPABILITIES — rendered as NORMAL / FALLBACK / none for every service, from constants in the mapper, not from any route"
     tag: "proposed:services_row_config"
+    blocked_by: CIRISAgent#1208
   - ceg: system:*
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
     renders: "THE NODE'S OWN SUBSTRATE HEALTH — the thing the card's own doc comment promises (EpistemicNav.kt:69, 'Services is a node-infra keeper'). Not read; the screen shows the brain's service registry instead."
     tag: "proposed:services_node_substrate"
+    blocked_by: CIRISServer#668
 ```
 
 **`config:{scope}` and `system:*` are both reserved and both `display-only`
@@ -122,11 +124,12 @@ this state.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the service list | `GET /v1/system/services` | CIRISAgent (`routes/system/services.py:77`) | live on the brain — `CIRISApiClient.kt:11071` |
-| priority, priority group, strategy, capabilities | **no route** | — | **missing**; the client supplies constants instead (`CIRISApiClient.kt:11092-11097`) |
+| priority, priority group, strategy | `GET /v1/system/services/selection-logic` — "priority groups, priorities, strategies, and circuit breaker behavior" | CIRISAgent (`routes/system_extensions.py:477`, OBSERVER) | **live and never called** — this row said "no route", and one exists on `main` (29371660de). The client still supplies constants (`CIRISApiClient.kt:11092-11097`). Whether the payload carries per-service values or only the policy is not verified here, which is why `config:{scope}` stays `unconfirmed` above; CIRISAgent#1208 is about `/services` itself and does not mention this route |
+| change a provider's priority / group / strategy | `PUT /v1/system/services/{provider_name}/priority` | CIRISAgent (`routes/system_extensions.py:388`, ADMIN) | live, **not called** |
 | handler-specific services | **no route** | — | **missing**; `handlers = emptyMap()` (`CIRISApiClient.kt:11103`) |
-| real circuit-breaker state | **no route** | CIRISAgent | **missing**; derived from `healthy` |
-| reset a circuit breaker | **no route** | CIRISAgent | **missing** — and `btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm` are wired to `resetCircuitBreakers`, whose whole body is a status message reading `"(API not yet implemented)"` (`ServicesViewModel.kt:265-271`) that the screen never renders |
-| diagnostics | **no route** | CIRISAgent | **missing**; `runDiagnostics` (`ServicesViewModel.kt:185`) re-counts the list already on screen, and since the breaker state is derived from `healthy`, its "open breakers" number is the unhealthy count restated |
+| real circuit-breaker state | `GET /v1/system/services/health` — "circuit breaker states, error rates, and recommendations" | CIRISAgent (`routes/system_extensions.py:352`, OBSERVER) | **live and never called** — this row said "no route". The chip is still derived from `healthy` |
+| reset a circuit breaker | `POST /v1/system/services/circuit-breakers/reset` (all, or one service type) | CIRISAgent (`routes/system_extensions.py:444`, ADMIN) | **live and never called** — this row said "no route". The controls that pretended to do it (`btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm`, wired to a `resetCircuitBreakers` whose whole body was a status string reading `"(API not yet implemented)"`) were **removed in #95**; the card offers no reset. The route exists, so that removal is now the gap rather than the fix |
+| diagnostics | **no route** | CIRISAgent | **missing**. `runDiagnostics` re-counted the list already on screen, so its "open breakers" number was the unhealthy count restated; `btn_services_diagnose` was **removed in #95** |
 | the node's own substrate health | `GET /v1/system/health` | CIRISServer (`src/health.rs:589`) | live — **and never called by this screen** |
 
 **Wrong host, and this is the one to fix first.** The card is not `agentOnly`,
@@ -159,16 +162,12 @@ My things → This node → Services, on an agent.
 ```yaml
 expect:
   state: populated
-  visible: [btn_services_refresh, btn_services_diagnose, btn_reset_all]
+  visible: [btn_services_refresh]
+  absent: [btn_services_diagnose, btn_reset_all]
   count: {of: "proposed:services_row_*", min: 1}
 ```
 
-Run diagnostics: `btn_services_diagnose`.
-
-```yaml
-expect:
-  visible: [proposed:services_diagnostics]
-```
+No diagnostics and no breaker reset are offered: #95 removed both controls, since neither had a route (§3). They return only with one.
 
 Point the client at a bare node — a run-without-AI install — and open the card.
 

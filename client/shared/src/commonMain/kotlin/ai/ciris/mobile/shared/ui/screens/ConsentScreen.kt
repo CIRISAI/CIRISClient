@@ -102,11 +102,12 @@ fun ConsentScreen(
             )
         }
     ) { paddingValues ->
-        if (isLoading && !consentData.hasConsent) {
+        if (isLoading && !consentData.hasConsent && consentData.readFailure == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("consent_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -119,19 +120,36 @@ fun ConsentScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // A read that failed, or that this node has no route for, is
+                // said ALONE. Nothing below may draw: "no consent record" is a
+                // claim about the person, and nobody asked (CSD-054).
+                consentData.readFailure?.let { failure ->
+                    item {
+                        ReadFailureBlock(
+                            failure = failure,
+                            tagPrefix = "consent",
+                            notOnThisNode = localizedString("mobile.consent_not_on_this_node"),
+                        )
+                    }
+                    return@LazyColumn
+                }
+
                 // Current status banner
                 item {
                     CurrentConsentBanner(
                         currentStream = consentData.currentStream,
                         expiresAt = consentData.expiresAt,
-                        partnershipPending = consentData.partnershipPending
+                        partnershipPending = consentData.partnershipPending,
+                        modifier = Modifier.testable("card_consent_status"),
                     )
                 }
 
                 // No consent notice
                 if (!consentData.hasConsent) {
                     item {
-                        NoConsentNotice()
+                        Box(modifier = Modifier.testable("consent_none")) {
+                            NoConsentNotice()
+                        }
                     }
                 }
 
@@ -661,6 +679,8 @@ private fun getStreamIcon(stream: String?): ImageVector {
 // Data classes
 
 data class ConsentScreenData(
+    /** Why the consent read produced no answer; null after a success (CSD-054). */
+    val readFailure: ReadFailure? = null,
     val hasConsent: Boolean = false,
     val currentStream: String? = null,
     val expiresAt: String? = null,

@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -118,6 +118,17 @@ error:     {tag: node_state_unreachable, renders: "No answer at all — transpor
 only card in this area that satisfies CSD/3 §2.2 today, and it satisfies it
 better than the standard asks.
 
+**Three tags named above are NOT `testable*` literals on this screen.**
+`SystemScreen.kt` at v0.5.224 carries `node_state_headline`, `node_state_ingest`,
+`node_state_signals`, `node_state_trace_plane`, `node_state_absent_sources`,
+`node_state_unknown_list`, `btn_system_refresh`, `btn_system_back` and the
+runtime dialog pair — and nothing else. `node_state_loading`,
+`node_state_not_offered` and `node_state_unreachable` are written here without a
+`proposed:` prefix and do not exist, so the `loading` state and two of the four
+honest silences cannot be asserted. They must either be written `proposed:` or
+tagged; `testing/flows/csd-025-system.yaml` asserts the six that are real and
+says in a comment which three it is leaving out.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -125,6 +136,9 @@ better than the standard asks.
 | the operator reading | `GET /v1/node/state` | CIRISServer | live (`src/operator_surface.rs`, #356 / #369 / #370) |
 | service health | `GET /v1/system/health` | **both** | live on CIRISServer (`/v1/system/health`) and CIRISAgent (`system/health.py`) |
 | processor status | `GET /v1/system/health` | CIRISAgent | live; the client reads the processor block off the same response |
+| every processor state and which is active | `GET /v1/system/processors` | CIRISAgent (`routes/system_extensions.py:581`, OBSERVER) | live, **not called** — the dedicated read for WAKEUP / WORK / DREAM / PLAY / SOLITUDE / SHUTDOWN; the card infers the same from the health envelope |
+| resource usage | `GET /v1/system/resources` | CIRISAgent (`routes/system/services.py:28`) | live, **not called** |
+| the agent's clock | `GET /v1/system/time` | CIRISAgent (`routes/system/health.py:979`) | live, **not called** |
 | queue / cognitive state | `GET /v1/system/health` | CIRISAgent | live; **absent on the node's response** |
 | environmental metrics | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py`) — **wrong-host on a node build** |
 | channels | `GET /v1/agent/channels` | CIRISAgent | live (`agent.py`) — **wrong-host on a node build** |

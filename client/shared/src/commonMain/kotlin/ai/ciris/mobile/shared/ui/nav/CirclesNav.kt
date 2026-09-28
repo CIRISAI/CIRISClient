@@ -8,13 +8,13 @@ import ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES
 import ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY
 
 /**
- * THE ONE NAV TREE — five circles, seven tabs, five instruments.
+ * THE ONE NAV TREE — five circles, seven tabs, six instruments.
  *
  * The locked spec settles the shape: the five circles are the top level
  * ([CohortScope], in order), every circle has the same seven tabs, and the
  * two things that are not a circle — who you are, and the way to stop — live
  * in the top bar. Every existing surface is placed here exactly once: in a
- * tab for some circles ([Placement]), or under one of the five instruments
+ * tab for some circles ([Placement]), or under one of the six instruments
  * behind My things ([Instrument]). A surface that is neither is a flow
  * (`FLOW_ONLY_SURFACES`). `CirclesNavTest` pins that nothing is orphaned and
  * nothing is placed twice.
@@ -28,7 +28,7 @@ import ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY
  *     circle_<scope id, - as _>      the five circles
  *     tab_<tab id>                   the seven tabs
  *     btn_my_things                  the avatar → the instruments
- *     nav_instrument_<id>            the five instruments
+ *     nav_instrument_<id>            the six instruments
  *     nav_epistemic_<surface id>     a surface, wherever it is listed
  */
 enum class Tab(val id: String, val labelKey: String, val glyph: GlyphName) {
@@ -52,17 +52,30 @@ data class Placement(
     val agentOnly: Boolean = false,
 )
 
-/** One of the five instruments behind My things. */
+/** One of the six instruments behind My things. */
 data class Instrument(
     val id: String,
     val labelKey: String,
     val glyph: GlyphName,
     val surfaces: List<NavSurface>,
     val agentOnly: Set<NavSurface> = emptySet(),
+    /**
+     * The WHOLE instrument is the agent build's only. Said once for the
+     * instrument rather than once per row, so a surface put under This agent
+     * is gated by where it was put — not by someone remembering to list it
+     * a second time.
+     */
+    val requiresAgent: Boolean = false,
 ) {
     val tag: String get() = "nav_instrument_" + id.replace('-', '_')
-    fun surfaces(hasAgent: Boolean): List<NavSurface> =
-        if (hasAgent) surfaces else surfaces.filter { it !in agentOnly }
+    fun surfaces(hasAgent: Boolean): List<NavSurface> = when {
+        hasAgent -> surfaces
+        requiresAgent -> emptyList()
+        else -> surfaces.filter { it !in agentOnly }
+    }
+    fun isAgentOnly(surface: NavSurface): Boolean = surface in surfaces && (requiresAgent || surface in agentOnly)
+    /** Nothing to offer on this build: the row itself must not be offered (a door onto a wall). */
+    fun isEmpty(hasAgent: Boolean): Boolean = surfaces(hasAgent).isEmpty()
 }
 
 object CirclesNav {
@@ -83,7 +96,7 @@ object CirclesNav {
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
-        // runs, not who you talk to; they live under This node. ──
+        // runs, not who you talk to; they live under This agent. ──
         Placement(NavSurface.Interact, Tab.CHATS, setOf(AGENT), agentOnly = true),
 
         // ── People — the constituent of every circle. Contacts IS the tab;
@@ -129,38 +142,63 @@ object CirclesNav {
         Placement(NavSurface.Audit, Tab.RECORD, ALL),
     )
 
+    /**
+     * THE BRAIN AND THE SUBSTRATE ARE TWO INSTRUMENTS (FSD/AGENTS_AND_NODE_TIER.md).
+     * CC 4.4.3.4.3 draws the line — `agency:*` is brain-only, `infra:*` is what
+     * a node may hold — and names this very case: cohabitation (`agent = node
+     * + brain`) is "two delegations, two scope classes, independently
+     * revocable". It is also the host line: every This-agent surface calls
+     * routes only the agent serves; every This-node surface calls routes the
+     * node serves, alone or with the agent. So "is this agent-only?" is
+     * answered once, for This agent, instead of once per row — and the rows
+     * that were answered wrongly (Adapters, Services, Runtime, Telemetry:
+     * offered to a bare node with a 404 behind each) and backwards (Memory:
+     * hidden, though the node serves `/v1/memory/stats|timeline|query`) stop
+     * being separate oversights.
+     */
     val instruments: List<Instrument> = listOf(
         Instrument(
             "devices-keys", "nav.instrument.devices_keys", GlyphName.DEVICES,
-            listOf(NavSurface.IdentityManagement, NavSurface.Account),
+            listOf(NavSurface.IdentityManagement, NavSurface.AgentSettings, NavSurface.ClientInterface),
+            // My Identity is where this device signs out, on every build
+            // (CIRISClient#51) — there is no "account" in CIRIS, only
+            // identities. Settings is this device's too — language, ground —
+            // and every build's. The interface tuning calls nothing,
+            // but all it tunes is the cell on Interact, which a bare node does
+            // not have: offered there it would be a control with no effect.
+            agentOnly = setOf(NavSurface.ClientInterface),
         ),
         Instrument(
             "everything-i-shared", "nav.instrument.everything_i_shared", GlyphName.AUDIT,
             listOf(NavSurface.Data, NavSurface.Storage),
         ),
         Instrument(
+            "this-agent", "nav.instrument.this_agent", GlyphName.AGENT,
+            listOf(
+                NavSurface.LLMSettings, NavSurface.Adapters, NavSurface.Services,
+                NavSurface.Telemetry, NavSurface.Runtime, NavSurface.Sessions,
+                NavSurface.Tickets, NavSurface.Scheduler, NavSurface.Tools, NavSurface.Skills,
+            ),
+            requiresAgent = true,
+        ),
+        Instrument(
             "this-node", "nav.instrument.this_node", GlyphName.TELEMETRY,
             listOf(
-                NavSurface.Nodes, NavSurface.AgentSettings, NavSurface.LLMSettings,
-                NavSurface.Adapters, NavSurface.NetworkOps, NavSurface.Services,
-                NavSurface.Telemetry, NavSurface.Logs, NavSurface.Transport, NavSurface.System,
-                NavSurface.Runtime, NavSurface.Config, NavSurface.GraphMemory, NavSurface.Memory,
-                NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler,
-                NavSurface.Tools, NavSurface.Skills, NavSurface.ClientInterface,
-            ),
-            // Settings is every build's — language, ground, sign out. The rest
-            // of what the brain runs on is the agent build's only.
-            agentOnly = setOf(
-                NavSurface.LLMSettings, NavSurface.Memory, NavSurface.Sessions, NavSurface.Tickets,
-                NavSurface.Scheduler, NavSurface.Tools, NavSurface.Skills, NavSurface.ClientInterface,
+                NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
+                NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
             ),
         ),
+        // Deferral needs a brain to defer; `/v1/wa/*` is the agent's alone.
         Instrument(
             "someone-i-trust", "nav.instrument.someone_i_trust", GlyphName.DEFER,
             listOf(NavSurface.WiseAuthority),
+            requiresAgent = true,
         ),
         Instrument("help", "nav.instrument.help", GlyphName.QUESTION, listOf(NavSurface.Help)),
     )
+
+    /** The instruments with something to offer on this build — what My things should list. */
+    fun instruments(hasAgent: Boolean): List<Instrument> = instruments.filterNot { it.isEmpty(hasAgent) }
 
     /** The cards in a tab, for a circle, on this build. Order is the placement order. */
     fun cards(circle: CohortScope, tab: Tab, hasAgent: Boolean): List<NavSurface> =
@@ -186,7 +224,7 @@ object CirclesNav {
     }
 
     fun isAgentOnly(surface: NavSurface): Boolean =
-        placementOf(surface)?.agentOnly == true || instruments.any { surface in it.agentOnly }
+        placementOf(surface)?.agentOnly == true || instruments.any { it.isAgentOnly(surface) }
 
     // ── Tags ────────────────────────────────────────────────────────────────
     fun slug(id: String): String = id.replace('-', '_')
@@ -208,8 +246,13 @@ object CirclesNav {
      * The honest sentence for a tab with nothing in it, in this circle. A
      * circle-specific line where the reason differs (Just me has nobody to
      * decide with; Family decides by talking), the tab's line otherwise.
+     *
+     * Just me › Chats is empty only on a build with no agent — with one,
+     * Interact is its card — so "no conversations yet" would give the wrong
+     * reason. The true one is that there is nobody here to talk to.
      */
     fun emptyKey(circle: CohortScope, tab: Tab): String = when {
+        tab == Tab.CHATS && circle == AGENT -> "nav.empty.chats_agent"
         tab == Tab.DECISIONS && circle == AGENT -> "nav.empty.decisions_agent"
         tab == Tab.DECISIONS && circle == FAMILY -> "nav.empty.decisions_family"
         tab == Tab.FILES && circle == AGENT -> "nav.empty.files_agent"

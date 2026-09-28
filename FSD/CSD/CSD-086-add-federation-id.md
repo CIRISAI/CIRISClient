@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -131,14 +131,29 @@ error:     {tag: "proposed:txt_fedid_error", renders: "the node's own refusal, i
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer (`src/identity.rs`) | live — owner-gated, on the current owner session |
-| re-root the node on it | `POST /v1/self/upgrade-owner` | CIRISServer (`src/claim_remote.rs`) | live — non-destructive, login preserved |
-| announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (`src/auth/ownership.rs`, `src/compose.rs`) | live — takes effect next boot |
-| trace opt-in | accord settings update | CIRISAgent | live; non-fatal |
+| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer (`src/identity.rs:1945`) | live — owner-gated, on the current owner session; called with `LOCAL_NODE_URL` (`NodeSwitcherViewModel.kt:556`) |
+| re-root the node on it | `POST /v1/self/upgrade-owner` | CIRISServer (`src/claim_remote.rs:1246`) | live — non-destructive, login preserved (`NodeSwitcherViewModel.kt:563`) |
+| announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (registered `src/claim_remote.rs:1251`; implemented in `src/auth/ownership.rs`, `src/compose.rs`) | live — takes effect next boot (`NodeSwitcherViewModel.kt:573`) |
+| trace opt-in | `PUT /v1/my-data/accord-settings` (`CIRISApiClient.kt:12903`) | **CIRISAgent** (`routes/my_data.py:754` on `main`) | live on an agent; **WRONG-HOST on a node-only install** — see below |
 
-**No upstream ask on this card.** Every route it needs exists and is on the
-right host. That is worth stating plainly, because it is the only card in this
-area of which it is true.
+**Three of four rows are on the right host. The fourth is not, and this card
+previously claimed otherwise.** Step 4 is issued against `baseUrl` while steps
+1-3 pin `CIRISApiClient.LOCAL_NODE_URL` (`:4243`). `PUT /v1/my-data/accord-settings`
+is CIRISAgent-only: `git grep 'my-data' origin/main -- src/` in CIRISServer
+returns only `/v1/my-data/capacity` and `/v1/my-data/lens-identifier`, and
+`accord-settings` is in neither. On a run-without-AI install — the class CSD-083
+exists to describe — there is no host for it at all. The failure is swallowed:
+step 4 is non-fatal (`NodeSwitcherViewModel.kt:591-592`), so it surfaces as the
+untagged soft notice §2 already flags, and a person who ticked *send traces* is
+told nothing.
+
+**The upstream ask.** CIRISServer: a node-side home for the trace opt-in, or
+CIRISAgent: nothing — the route is fine where it is; the defect is that this
+screen offers the toggle on an install that cannot honour it. The client fix is
+smaller than either: gate the toggle on `ClientMode`, or send it to the node once
+a node route exists. Either way the previous claim — "No upstream ask on this
+card. Every route it needs exists and is on the right host" — does not hold and
+has been removed.
 
 ## 4. Flow (how)
 

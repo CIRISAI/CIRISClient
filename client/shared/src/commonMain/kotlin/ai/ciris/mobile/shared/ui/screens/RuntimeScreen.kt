@@ -105,6 +105,19 @@ fun RuntimeScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // FIRST, above every value: a read that failed or has no host is
+            // said, and the values below read "—" rather than a default that
+            // looks like a healthy agent in WORK with an empty queue (CSD-024).
+            runtimeData.readFailure?.let { failure ->
+                item {
+                    ReadFailureBlock(
+                        failure = failure,
+                        tagPrefix = "runtime",
+                        notOnThisNode = localizedString("mobile.runtime_not_on_this_node"),
+                    )
+                }
+            }
+
             // Pipeline Control Card
             item {
                 PipelineControlCard(
@@ -303,8 +316,8 @@ private fun PipelineControlCard(
 
 @Composable
 private fun PipelineStatusCard(
-    cognitiveState: String,
-    queueDepth: Int,
+    cognitiveState: String?,
+    queueDepth: Int?,
     currentStepPoint: String?,
     lastStepTime: Long?,
     tokensUsed: Int?,
@@ -331,15 +344,17 @@ private fun PipelineStatusCard(
                 // Cognitive State
                 StatusMetric(
                     label = localizedString("system.system_cognitive_state"),
-                    value = cognitiveState,
-                    color = getCognitiveStateColor(cognitiveState)
+                    value = cognitiveState ?: NOT_READ,
+                    color = getCognitiveStateColor(cognitiveState),
+                    tag = "txt_runtime_cognitive_state",
                 )
 
                 // Queue Depth
                 StatusMetric(
                     label = localizedString("system.system_queue_depth"),
-                    value = queueDepth.toString(),
-                    color = MaterialTheme.colorScheme.onSurface
+                    value = queueDepth?.toString() ?: NOT_READ,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    tag = "txt_runtime_queue_depth",
                 )
             }
 
@@ -377,10 +392,11 @@ private fun StatusMetric(
     label: String,
     value: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    tag: String? = null,
 ) {
     Column(
-        modifier = modifier,
+        modifier = if (tag != null) modifier.testable(tag, value) else modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
@@ -769,9 +785,9 @@ private fun InstructionsCard(
 
 // Helper functions
 
-private fun getCognitiveStateColor(state: String): Color {
+private fun getCognitiveStateColor(state: String?): Color {
     val colors = SemanticColors.Default
-    return when (state.uppercase()) {
+    return when (state?.uppercase()) {
         "WORK" -> colors.success
         "PLAY" -> colors.info
         "SOLITUDE", "DREAM" -> colors.warning
@@ -804,8 +820,12 @@ private fun getStepDisplayName(step: String): String {
  */
 data class RuntimeData(
     val processorState: String = "unknown",
-    val cognitiveState: String = "WORK",
-    val queueDepth: Int = 0,
+    /** Null until read, and again after a failed read — never a default "WORK". */
+    val cognitiveState: String? = null,
+    /** Null until read, and again after a failed read — never a default 0. */
+    val queueDepth: Int? = null,
+    /** Why the last read produced no reading; null after a successful one. */
+    val readFailure: ReadFailure? = null,
     val currentStepPoint: String? = null,
     val lastStepTimeMs: Long? = null,
     val tokensUsed: Int? = null,

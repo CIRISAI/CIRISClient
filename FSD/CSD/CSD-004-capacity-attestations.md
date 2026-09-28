@@ -10,7 +10,7 @@
 > go upstream and be deleted here.
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -60,6 +60,7 @@ fields:
     example: 0.82
     renders: "Core identity — 0.82"
     tag: factor_row_c
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: capacity:integrity
     use: display-only
     type: float
@@ -67,6 +68,7 @@ fields:
     example: 0.91
     renders: "Integrity — 0.91"
     tag: factor_row_i_int
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: capacity:resilience
     use: display-only
     type: float
@@ -74,6 +76,7 @@ fields:
     example: 0.77
     renders: "Resilience — 0.77"
     tag: factor_row_r
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: capacity:incompleteness_awareness
     use: display-only
     type: float
@@ -81,6 +84,7 @@ fields:
     example: 0.68
     renders: "Incompleteness awareness — 0.68"
     tag: factor_row_i_inc
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: capacity:sustained_coherence
     use: display-only
     type: float
@@ -88,6 +92,7 @@ fields:
     example: 0.74
     renders: "Sustained coherence — 0.74"
     tag: factor_row_s
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: capacity:composite
     use: display-only
     type: float
@@ -101,6 +106,7 @@ fields:
         op: min_of
         of: [capacity:core_identity, capacity:integrity, capacity:resilience,
              capacity:incompleteness_awareness, capacity:sustained_coherence]
+    blocked_by: [CIRISServer#659, CIRISLensCore#25]
   - ceg: x_private:attesting_key_id
     use: display-only
     type: string

@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -59,6 +59,7 @@ fields:
     example: "unconfirmed"
     renders: "Who can see this — the CC 2.1 envelope's `cohort_scope`, plus `community_id` / `family_id` where set. NOT SENT: `/v1/memory/query` returns the graph node, not the envelope the bytes were filed under, so this screen cannot tell a self-scoped memory from a federated one. CC 2.3.3 makes these different axes and the screen has only the graph one."
     tag: "proposed:memory_receipt_scope"
+    blocked_by: CIRISServer#661
   - ceg: "holds_bytes:sha256:{prefix}"
     bind: {prefix: 4a19c2ef}
     use: display-only

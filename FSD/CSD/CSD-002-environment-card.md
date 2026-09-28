@@ -5,7 +5,7 @@
 **Flow**: tools/qa_runner/flows/environment_card.yaml — **stale**, see §4
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 

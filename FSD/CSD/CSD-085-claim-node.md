@@ -4,7 +4,7 @@
 **Flow**: unwritten — and today unwritable; see §5
 
 ```yaml csd:stage
-stage: envisioned
+stage: building
 owner: CIRISClient
 ```
 

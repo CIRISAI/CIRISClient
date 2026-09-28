@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -102,11 +102,26 @@ error:     {tag: "proposed:viz_settings_error", renders: "not reachable through 
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| every slider | — | **device** (`SecureStorage`, `viz_config_*`) | live, no route |
-| the thing being tuned | `GET /v1/memory/timeline?hours=…` | **both** | live; `LiveGraphBackground` reads it |
-| a failed persist | — **unconfirmed** | this repo | blocks `building` for `viz_settings_error` |
+| every slider | — | **device** (`SecureStorage`, `viz_config_*`) | live, no route (`CellVizConfigStore.kt:28`, load `:186-193`, save `:199-206`) |
+| the thing being tuned | `GET /v1/memory/timeline?hours=…` | **both** | live (node `src/memory_api.rs:1266`, agent `routes/memory.py:488`); the configured `hours` reaches it from `CellVisualization.kt:421-426`, **not** `LiveGraphBackground` |
+| a failed persist | — | **this repo** | **missing** — the value is never computed: `CellVizConfigStore.kt:204` discards `SecureStorage.save`'s `Result` ("fire-and-forget per key") and `SettingsViewModel.kt:966-979` catches only throws |
 
 No node or agent route backs this screen. That is the whole contract.
+
+**The third row said `unconfirmed`; it is confirmed missing, and it is ours.**
+`SecureStorage.save` returns `Result<Unit>` (`platform/SecureStorage.kt:43`).
+`CellVizConfigStore.save` drops it on the floor one line at a time, and the only
+caller logs a warning at `SettingsViewModel.kt:977` with no StateFlow behind it.
+Nothing reaches `VizSettingsScreen`, so there is no failed-persist state to tag —
+`proposed:viz_settings_error` names a state the screen cannot currently enter.
+There is nothing to ask upstream and no issue to cite: this is a CIRISClient gap
+and it belongs in this repo's backlog, not in `evidence/blocked_upstream.tsv`.
+
+**Correction to §2:** `viz_settings_memoryLoadWindowHours` is consumed at
+`CellVisualization.kt:426` (`hours = cfg.memoryLoadWindowHours`).
+`LiveGraphBackground.kt:303-304` hardcodes `hours = 24` and ignores the slider.
+Both are composed from `InteractScreen.kt:577` and `:601`, so a flow that moves
+the slider and asserts the background changed would assert nothing.
 
 ## 4. Flow (how)
 

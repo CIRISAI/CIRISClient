@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -136,14 +136,20 @@ element that exists in one and not the other.
 |---|---|---|---|
 | liveness + service map + `data.agent.{folded,reachable}` | `GET /v1/system/health` | CIRISServer (`src/health.rs`, 0.5.168+) | live |
 | `ClientMode` (NODE / AGENT / undetermined) | derived from the above, `models/ClientMode.kt` | CIRISClient | live |
+| the node's own health, never enriched | `GET /v1/health` | CIRISServer `src/health.rs:585` — deliberately node-only (`:573-575`) and the boot drift-witness for the contract hashes it serves (`:563-565`) | live, **not called, correctly**: it cannot answer the folded question, which is why `getNodeHealth` moved to `/v1/system/health` (`CIRISApiClient.kt:6098-6103`, CIRISServer#390). The comments that still say Startup probes `/v1/health` (`CIRISApp.kt:1215-1218`, `StartupViewModel.kt:41, 492`) are stale — the code calls `getNodeHealth` (`CIRISApp.kt:1236`) |
+| boot progress, as the agent reports it | `GET /v1/system/startup-status` | CIRISAgent `routes/system/health.py:947` | live, **not called** — Startup counts services from the backend's console lines (`[SERVICE n/m]`, `StartupViewModel.kt:180`), from `service_status.json` on iOS with `/v1/telemetry/unified` as its fallback (`PythonRuntime.ios.kt:230, 313-318`), and as one pseudo-service on a node (`PythonRuntime.desktop.kt:683-689`). Two comments say this route is polled (`StartupViewModel.kt:170`, `PythonRuntime.ios.kt:313`); it is not. It is the agent's own answer to "how far along am I" |
 | is setup still required | `GET /v1/setup/status` | **both**: CIRISAgent `routes/setup/status.py:45` and CIRISServer `src/auth/bootstrap.rs` | live on the agent; **loopback-only on the node** (`src/auth/loopback.rs:44`, 403 off-host) |
-| "the node answers, so setup is done" | node reachability probe on `:4243` | CIRISClient | live — `CIRISApp.kt:5051-5078` stops asking `:8080` after the run-without-AI hand-off (CIRISClient#48, still open) |
+| "the node answers, so setup is done" | node reachability probe on `:4243` | CIRISClient | live — `CIRISApp.kt:5051-5078` stops asking `:8080` after the run-without-AI hand-off (CIRISClient#48, **CLOSED**) |
 
 **Two upstream defects land on this screen.**
 `CIRIS_FORCE_FIRST_RUN` is re-read on every `/v1/setup/status` call, so
 `setup_required` never clears and Startup re-opens the wizard in a loop —
 **CIRISAgent#1195**, five rounds observed. And a client that did not launch the
-node guesses `<home>/claim_pin` because the status does not declare it —
+node guesses `<home>/claim_pin` because the AGENT's status does not declare it
+(the NODE does: `claim_pin_file` is a response field at
+`CIRISServer src/auth/bootstrap.rs:1352`, populated `:1418-1436`, and `:1426`
+says "the wizard reads claim_pin_file to locate the 0600 PIN file" — so #1196 is
+CIRISAgent-only, with zero `claim_pin` hits in `routes/setup/status.py` on `main`) —
 **CIRISAgent#1196**; it does not break Startup, but it is the reason the claim
 this screen hands off to silently skips.
 

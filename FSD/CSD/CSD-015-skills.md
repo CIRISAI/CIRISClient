@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -51,6 +51,7 @@ fields:
     example: "unconfirmed"
     renders: "WHERE IT CAME FROM AND WHO VOUCHED — the draft carries a sourceUrl string; no attestation, no attesting key, no signature"
     tag: "proposed:skill_provenance"
+    blocked_by: CIRISAgent#1203
   - ceg: x_private:security_safe_to_import
     use: display-only
     type: bool

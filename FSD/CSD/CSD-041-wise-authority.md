@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -75,6 +75,7 @@ fields:
     example: "unconfirmed"
     renders: "Last 24h — 3. THE NUMBER IS NOT A 24-HOUR WINDOW: CIRISAgent returns `deferrals_24h = pending_deferrals` (routes/wa.py:295). The card renders it under a label that is false."
     tag: "proposed:wa_status_24h"
+    blocked_by: CIRISAgent#1206
   - ceg: x_private:notifications_blocked
     use: display-only
     type: bool
@@ -94,6 +95,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. The one CC-registered WA artifact — the quorum finding a `wa_adjudication_ref` resolves to (CC 3.1.9.4, used as the CC 3.2 node-recovery gate) — has no route and no rendering."
     tag: "proposed:wa_adjudication_row"
+    blocked_by: CIRISServer#664
   - ceg: "hard_case:{kind}"
     bind: {kind: wa_window_expiry}
     use: display-only
@@ -101,6 +103,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. CC 4.3 rule 1 says a deferral 'MUST NOT be left indefinitely open because its addressee is gone: on window expiry it re-routes to the live quorum.' `timeout_at` is on the wire and the card never draws it."
     tag: "proposed:deferral_timeout"
+    blocked_by: CIRISServer#664
 ```
 
 ```yaml csd:states
@@ -122,11 +125,14 @@ and the screen draws the calm empty state.
 | pending deferrals | `GET /v1/wa/deferrals` | **CIRISAgent** — `routes/wa.py:130` | live on the brain; **absent from the node** |
 | send guidance | `POST /v1/wa/deferrals/{id}/resolve` | **CIRISAgent** — `routes/wa.py:156` | live on the brain; **absent from the node** |
 | WA status | `GET /v1/wa/status` | **CIRISAgent** — `routes/wa.py:245` | live, and two of its five numbers are fabricated (§6) |
-| proposals / ticket budget | `fetchProposals`, `fetchTicketBudget`, `grantBudget`, `updateTicketStatus` | CIRISAgent | live |
+| proposals awaiting a human | `GET /v1/tickets?status=…` (`fetchProposals`, `ApprovalsApi.kt:145` → generated `listAllTicketsV1TicketsGet`, `CIRISApiClient.kt:11671`) | CIRISAgent `routes/tickets.py:397` | live |
+| a ticket's budget, in one read | `GET /v1/tickets/{ticket_id}/budget` | CIRISAgent `routes/tickets.py:752` (OBSERVER) | **live** — `getTicketBudget` (`CIRISApiClient.kt:11903`, path from `BudgetApprovalSeam.kt:159`) via `ApprovalsApi.kt:167`, drawn by `PendingApprovalsCard` (`WiseAuthorityScreen.kt:194`). The route-coverage report filed these two under Tickets (CSD-013); the Tickets card calls neither — this card does |
+| grant it | `POST /v1/tickets/{ticket_id}/budget/grant` | CIRISAgent `routes/tickets.py:640` (AUTHORITY) | **live** — `grantTicketBudget` (`CIRISApiClient.kt:11821`, path `BudgetApprovalSeam.kt:156`) via `ApprovalsApi.kt:176`, from `WiseAuthorityViewModel.kt:627` |
+| close the proposal | `PATCH /v1/tickets/{ticket_id}` (`updateTicketStatus`, generated `updateExistingTicketV1TicketsTicketIdPatch`, `CIRISApiClient.kt:11773`) | CIRISAgent `routes/tickets.py:502` | live |
 | any WA surface at all | — | CIRISServer | **missing** — zero `/v1/wa` route literals in `src/*.rs` on 0.5.217; `src/compose.rs:5166` names the "WBD `route_deferral` / Wise-Authority surface" and marks it **SCAFFOLD** |
 | `wa_adjudication:{state}` findings | — | CIRISServer | **missing** — the family is registered to `node` / CIRISNodeCore and nothing serves it |
 
-CIRISAgent's tree is dated 2026-08-15 and may be stale; the `/v1/wa` rows should
+CIRISAgent's tree is dated 2026-08-15 and may be stale (the four `/v1/tickets` rows were read from `main` 29371660de); the `/v1/wa` rows should
 be re-read before this CSD advances.
 
 ## 4. Flow (how)

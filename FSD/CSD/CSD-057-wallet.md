@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -124,7 +124,7 @@ missing `error` state, and a person on a node sees an empty wallet rather than
 | check an address | `POST /v1/wallet/validate-address` | CIRISAgent (`:817`) | live |
 | catch a repeat send | `POST /v1/wallet/check-duplicate` | CIRISAgent (`:976`) | live |
 | anything on a node | none | CIRISServer | **wrong-host by placement.** `/v1/wallet/*` is agent-only; the card is not `agentOnly`, so it is offered in Communities › Rules on a node build. |
-| a nameable settlement record | — | **CIRISConstitution** | **missing.** The ask: add `settlement:*` (and `ledger:*`, CC 3.3.10.1) to `manifests/namespace_registry.json`, or state in the registry README that money is permanently unrenderable by conformant clients and this screen is out of grammar on purpose. Blocks `building` for `settlement_ref`. |
+| a nameable settlement record | — | **CIRISConstitution** | **missing, and the ask already has a number this card did not cite: CIRISConstitution#105 OPEN** — "The namespace generator harvests only CC 3.1.x — 17 families declared in CC 3.3.8–3.3.12 are in no vendored registry, including every `ledger:*`". Its table names `3.3.10 settlement → settlement:*` and `3.3.10.1 ledger → ledger:head:{unit}, ledger:checkpoint:{unit}, ledger:promotion`, cites `part_3_the_namespace.md:1369`, and names this repo's CSD blocker. Consumer re-file: CIRISPersist#753 OPEN. (CIRISConstitution#92, the `ledger:*` standard, is CLOSED — which is why #105 exists.) `settlement_ref` therefore stays `x_private:`, and that is a registry gap with an owner, not an unknown. |
 
 ## 4. Flow (how)
 

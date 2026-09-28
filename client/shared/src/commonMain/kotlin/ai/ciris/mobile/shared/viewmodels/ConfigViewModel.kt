@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ConfigItem
@@ -133,6 +134,9 @@ class ConfigViewModel(
             } catch (e: Exception) {
                 logError(method, "Failed to load configs: ${e::class.simpleName}: ${e.message}")
                 _error.value = "Failed to load configurations: ${e.message}"
+                // Carried in the data the screen already receives, and the
+                // stale list is dropped: the failure is the reading now.
+                _configData.value = ConfigScreenData(readFailure = ReadFailure.of(e))
             } finally {
                 _isLoading.value = false
             }

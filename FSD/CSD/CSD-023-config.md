@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -62,6 +62,7 @@ fields:
     example: "unconfirmed"
     renders: "Who can see this setting — 'Just you' for an admission or transport leaf, 'the peers that route to you' for a load leaf. NOT SENT: `GET /v1/config` returns key/value/updated_at/updated_by and no envelope, so the screen cannot tell a self-scoped secret from a federated one. CC 3.4.5.1 note 1 makes this a per-row fact and REQUIRES `admission` and `transport` to be emitted at `self`."
     tag: "proposed:row_config_scope"
+    blocked_by: CIRISServer#660
   - ceg: "mesh_config:{key}"
     bind: {key: baseline.moderation}
     use: display-only

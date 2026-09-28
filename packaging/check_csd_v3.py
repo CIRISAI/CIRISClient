@@ -54,6 +54,8 @@ USES = {"read", "display-only", "emit"}
 #: which failed two CSDs that were correct. A checker's own vocabulary drifting
 #: from the standard it enforces is the same defect class it exists to catch.
 TYPES = {"string", "int", "float", "bool", "timestamp", "unconfirmed", "enum", "list"}
+#: An upstream blocker reference: `<Repo>#<n>`, e.g. `CIRISServer#676`.
+BLOCKER = re.compile(r"^CIRIS[A-Za-z]+#[0-9]+$")
 VOCAB = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
 
 
@@ -162,10 +164,38 @@ def check(doc: Path, reg: dict) -> list[str]:
     reached = STAGES.index(stage)
     fields = (blocks.get("shows") or {}).get("fields", []) or []
 
+    def _is_unconfirmed(f: dict) -> bool:
+        return "unconfirmed" in str(f.get("type", "")) or "unconfirmed" in str(f.get("range", ""))
+
+    # `blocked_by:` separates "someone asked and the answer was no" from
+    # "someone asked and stopped". Without it both read as `unconfirmed`, and the
+    # more thoroughly a team chases its gaps to named upstream issues, the more
+    # its cards look abandoned. A blocker must be a real reference, and it must
+    # still describe a gap: one left on a field that has since been confirmed is
+    # stale, and stale is exactly the drift this checker exists to catch.
+    for f in fields:
+        if "blocked_by" not in f:
+            continue
+        refs = f["blocked_by"] if isinstance(f["blocked_by"], list) else [f["blocked_by"]]
+        bad = [r for r in refs if not BLOCKER.match(str(r).strip())]
+        if not refs or bad:
+            problems.append(
+                f"{f.get('ceg', '?')}: blocked_by must name an issue as <Repo>#<n> "
+                f"(e.g. CIRISServer#676); got {bad or refs!r}"
+            )
+        if not _is_unconfirmed(f):
+            problems.append(
+                f"{f.get('ceg', '?')}: blocked_by on a field that is no longer unconfirmed "
+                f"is stale: remove it, or the field is not confirmed after all"
+            )
+
     if reached >= STAGES.index("building"):
+        # A field the substrate has definitively declined, with the issue that
+        # says so, does not hold the card back from `building`. One nobody
+        # chased still does.
         unconfirmed = [
             f.get("ceg", "?") for f in fields
-            if "unconfirmed" in str(f.get("type", "")) or "unconfirmed" in str(f.get("range", ""))
+            if _is_unconfirmed(f) and not (reached == STAGES.index("building") and f.get("blocked_by"))
         ]
         if unconfirmed:
             problems.append(

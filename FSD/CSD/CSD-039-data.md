@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -89,6 +89,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. A deletion request returns no SLA and no completion, so the card can say 'requested' and never 'done'."
     tag: "proposed:data_row_deletion_sla"
+    blocked_by: CIRISAgent#1212
   - ceg: "consent:{kind}"
     bind: {kind: scope}
     use: display-only
@@ -96,6 +97,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT RENDERED. CC 3.3.1's scopes — retain / share / analyze / train / publish — are collapsed here into one on/off switch."
     tag: "proposed:data_row_consent_scope"
+    blocked_by: CIRISAgent#1212
 ```
 
 `consent:{kind}` is **reserved** (CC 3.4.5) and owned by CIRISAgent, so every row

@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -87,6 +87,7 @@ fields:
     example: "unconfirmed"
     renders: "WHAT IT WILL NEVER DO — not on this screen. CC 3.1.5.4's 22 categories have no route and no card anywhere in the client."
     tag: "proposed:tools_prohibited"
+    blocked_by: CIRISAgent#1208
 ```
 
 **`cost` reads 0.0 for a tool that did not state one.**

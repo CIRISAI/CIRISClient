@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.AuditContextApiData
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -130,7 +131,7 @@ class AuditViewModel(
                 "limit=${filter.limit}, offset=${filter.offset}")
 
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
+            _state.update { it.copy(isLoading = true, error = null, readFailure = null) }
 
             try {
                 val entries = apiClient.getAuditEntries(
@@ -197,7 +198,8 @@ class AuditViewModel(
                         totalEntries = entries.total,
                         hasMore = allEntries.size < entries.total,
                         isLoading = false,
-                        error = null
+                        error = null,
+                        readFailure = null,
                     )
                 }
             } catch (e: Exception) {
@@ -205,7 +207,8 @@ class AuditViewModel(
                 _state.update {
                     it.copy(
                         isLoading = false,
-                        error = "Failed to load audit entries: ${e.message}"
+                        error = "Failed to load audit entries: ${e.message}",
+                        readFailure = ReadFailure.of(e),
                     )
                 }
             }

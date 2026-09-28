@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.models.ExportDestinationCreate
 import ai.ciris.mobile.shared.models.ExportDestinationUpdate
 import ai.ciris.mobile.shared.models.TestResult
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.ServiceHealthItem
 import ai.ciris.mobile.shared.ui.screens.TelemetryData
 import androidx.lifecycle.ViewModel
@@ -220,14 +221,17 @@ class TelemetryViewModel(
             val telemetryData = TelemetryData(
                 healthyServices = data.services_online,
                 totalServices = data.services_total,
-                cognitiveState = data.cognitive_state.uppercase().ifEmpty { "WORK" },
+                cognitiveState = data.cognitive_state.uppercase().ifEmpty { null },
                 cpuPercent = data.cpu_percent.toInt(),
                 memoryMb = data.memory_mb.toInt(),
-                diskUsedMb = 0.0, // Not available in current API response - would need /system/resources endpoint
+                diskUsedMb = null, // Not carried by /v1/telemetry/overview: not drawn, never a 0
                 messagesProcessed24h = data.messages_processed_24h,
                 tasksCompleted24h = data.tasks_completed_24h,
                 errors24h = data.errors_24h,
-                serviceHealthItems = serviceHealthItems
+                serviceHealthItems = serviceHealthItems,
+                hasReading = true,
+                readFailure = null,
+                destinationsFailure = _telemetryData.value.destinationsFailure,
             )
 
             logInfo(method, "Telemetry updated: services=${telemetryData.healthyServices}/${telemetryData.totalServices}, " +
@@ -237,6 +241,12 @@ class TelemetryViewModel(
 
         } catch (e: Exception) {
             logError(method, "Failed to fetch telemetry: ${e::class.simpleName}: ${e.message}")
+            // No reading: drop the metrics rather than leave defaults (or the
+            // last success) standing as if they were current (CSD-030).
+            _telemetryData.value = TelemetryData(
+                readFailure = ReadFailure.of(e),
+                destinationsFailure = _telemetryData.value.destinationsFailure,
+            )
             throw e
         }
     }
@@ -341,10 +351,12 @@ class TelemetryViewModel(
             try {
                 val destinations = apiClient.getExportDestinations()
                 _exportDestinations.value = destinations
+                _telemetryData.value = _telemetryData.value.copy(destinationsFailure = null)
                 logInfo(method, "Loaded ${destinations.size} export destinations")
             } catch (e: Exception) {
                 logError(method, "Failed to load destinations: ${e.message}")
                 _destinationError.value = "Failed to load destinations: ${e.message}"
+                _telemetryData.value = _telemetryData.value.copy(destinationsFailure = ReadFailure.of(e))
             } finally {
                 _destinationsLoading.value = false
             }

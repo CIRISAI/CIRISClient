@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 

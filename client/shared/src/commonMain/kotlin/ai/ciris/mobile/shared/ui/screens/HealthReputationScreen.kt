@@ -91,11 +91,11 @@ fun HealthReputationScreen(
                 letterSpacing = 1.0.sp,
                 modifier = Modifier.padding(top = 8.dp),
             )
-            FactorRow("C", "Core identity", state.c, "Consistency — no contradictions, identity stable.")
-            FactorRow("I_int", "Integrity", state.iInt, "All traces signed and chain-verified.")
-            FactorRow("R", "Resilience", state.r, "No drift from baseline behavior.")
-            FactorRow("I_inc", "Incompleteness awareness", state.iInc, "Calibrated and defers when unsure.")
-            FactorRow("S", "Sustained coherence", state.s, "Ethical faculties passing; σ-maturity climbing with use.")
+            FactorRow("C", "Core identity", factorReading(state, state.c), "Consistency — no contradictions, identity stable.")
+            FactorRow("I_int", "Integrity", factorReading(state, state.iInt), "All traces signed and chain-verified.")
+            FactorRow("R", "Resilience", factorReading(state, state.r), "No drift from baseline behavior.")
+            FactorRow("I_inc", "Incompleteness awareness", factorReading(state, state.iInc), "Calibrated and defers when unsure.")
+            FactorRow("S", "Sustained coherence", factorReading(state, state.s), "Ethical faculties passing; σ-maturity climbing with use.")
 
             // The σ-maturity explainer (lifted from the old popup)
             CapacityMaturityNote(state)
@@ -204,7 +204,11 @@ private fun CompositeScoreHero(state: CellVizState) {
                     if (!state.isPreFetch && hasLocal) {
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Local: ${fmt(state.localScore!!)} · Fleet: ${fmt(state.compositeScore)}",
+                            // Fleet only from a federation read; after the local
+                            // fallback the composite IS the local score, and
+                            // printing it as "Fleet" would claim a read.
+                            text = "Local: ${fmt(state.localScore!!)} · Fleet: " +
+                                (if (state.federationDataPresent) fmt(state.compositeScore) else "—"),
                             color = CIRISColors.TextSecondary,
                             fontSize = 11.sp,
                             fontFamily = FontFamily.Monospace,
@@ -261,7 +265,8 @@ private fun CompositeScoreHero(state: CellVizState) {
 private fun FactorRow(
     symbol: String,
     title: String,
-    score: Float,
+    /** The formatted reading, or null when the factor was not read. */
+    score: String?,
     description: String,
 ) {
     Surface(
@@ -308,8 +313,9 @@ private fun FactorRow(
                 )
             }
             Text(
-                text = fmt(score),
-                color = CIRISColors.AccentCyan,
+                text = score ?: "—",
+                modifier = Modifier.testable("factor_value_${symbol.lowercase()}", score ?: "—"),
+                color = if (score != null) CIRISColors.AccentCyan else CIRISColors.TextDim,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,
@@ -439,6 +445,18 @@ private fun FederationAttestationsSection(state: CellVizState) {
         )
     }
 }
+
+/**
+ * One factor as drawn: its value only when the five factors were READ from the
+ * federation, otherwise null ("—").
+ *
+ * Before a fetch [CellVizState] holds DEFAULT (1.0 everywhere), and after a
+ * failed or local-only fetch the factors are still those defaults. The hero
+ * already drew "—" pre-fetch while five rows drew 1.00 under it — the screen
+ * asserted `min(1,1,1,1,1) = —` (CSD-044). A factor nobody measured is not 1.00.
+ */
+internal fun factorReading(state: CellVizState, score: Float): String? =
+    if (state.isPreFetch || !state.federationDataPresent) null else fmt(score)
 
 // Integer-math formatter — String.format is JVM-only in commonMain.
 private fun fmt(v: Float): String {

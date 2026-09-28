@@ -5,7 +5,7 @@
 **Flow**: unwritten — `session_fixture` drives the with-AI pass; this one has no fixture
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -124,21 +124,25 @@ error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_set
 | write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:951`) | live — and it is the LAST thing the agent does for this install |
 | self-claim ownership | `POST /v1/setup/claim-remote` → `POST /v1/setup/root` | CIRISServer (`src/claim_remote.rs`) | live |
 | everything after the hand-off | node routes on `:4243` | CIRISServer | live |
+| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure. Recorded because the with-AI branch does not read them either (CSD-082 §3: templates, adapters and tool-disclosure are wired and unreached, providers is a compiled-in list), so "this branch skips them" is currently indistinguishable from "nothing reads them" |
+| is a node there at all | `GET /v1/identity` (unauthenticated) | CIRISServer `src/compose.rs:3132` | live — the desktop runtime's readiness probe after the hand-off (`PythonRuntime.desktop.kt:673`), see CSD-084 |
 
 **`run_without_ai` must reach `setup/complete`, or the agent never learns.**
 CIRISClient#41 (closed) was exactly that: the flag was dropped between the YOU
 screen and the completion request and the agent always saw `false`.
 
-**The hand-off is where this pass breaks, and it breaks per platform.** Open:
-CIRISClient#43 (the client stays on `:8080` after the hand-off and never moves
-to `:4243`), #47 (a `waitForServices` timeout thrown on the main thread kills
-the app — Android FATAL EXCEPTION, iOS SIGABRT), #48 (`checkFirstRunStatus`
-still polls `:8080`, 61 attempts, then parks on "Backend unreachable" while the
-client's own reviver logs a healthy `:4243` — the code at `CIRISApp.kt:5066`
-now carries the fix, the issue is still open), #51 (a run-without-AI install has
-no logout affordance at all: no Agent group ⇒ no Settings ⇒ no `btn_logout`, so
-Login and factory reset are unreachable). Closed but worth the regression test:
-#66 (macOS stalled on "Restarting your node…" at Starting Services 0/22 — a
+**The hand-off is where this pass breaks, and it breaks per platform.** Only
+ONE of these is still open: **#51** — a run-without-AI install has no logout
+affordance at all (no Agent group ⇒ no Settings ⇒ no `btn_logout`, so Login and
+factory reset are unreachable). **#43, #47 and #48 are CLOSED** and were listed
+here as open: #43 (the client stayed on `:8080` after the hand-off and never
+moved to `:4243`), #47 (a `waitForServices` timeout thrown on the main thread
+killed the app — Android FATAL EXCEPTION, iOS SIGABRT), #48 (`checkFirstRunStatus`
+polled `:8080` 61 times, then parked on "Backend unreachable" while the client's
+own reviver logged a healthy `:4243`; the fix is at `CIRISApp.kt:5066`). All four
+remain the regression suite this pass owes, because four of them were found on a
+different platform from the one they were fixed on. Also closed and worth the
+same test: #66 (macOS stalled on "Restarting your node…" at Starting Services 0/22 — a
 node-only backend reports no services), #67 (Windows: session not saved, the
 watchdog revived a healthy node, the Login press was silently dropped while the
 header said Connected).
@@ -195,7 +199,7 @@ CIRISClient#48's settled answer.
 ## 5. QA plan
 
 **Platforms.** All five, and this pass is the one that must be run on all five
-rather than argued about: every one of #43, #47, #48, #66 and #67 is a
+rather than argued about: every one of #43, #47, #48, #51, #66 and #67 is a
 platform-specific failure of the same hand-off, and four of them were found on a
 different platform from the one they were fixed on.
 

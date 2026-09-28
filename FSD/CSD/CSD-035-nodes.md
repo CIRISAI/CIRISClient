@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -45,6 +45,7 @@ fields:
     example: "unconfirmed"
     renders: "Owned by you — derived from `owner` on GET /v1/setup/owned-nodes, NOT from an ownership:* row. The binding's attester, timestamp and the CC 3.2 cardinality are not carried, so the row cannot say WHEN or on WHOSE signature."
     tag: "proposed:row_node_owner"
+    blocked_by: CIRISServer#667
   - ceg: "health:liveness:{version}"
     bind: {version: v1}
     use: display-only

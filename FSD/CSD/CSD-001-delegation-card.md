@@ -9,7 +9,7 @@ in §6, because two of its claims were wrong and one has since been fixed in cod
 > filled in and must go upstream and be deleted here.
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -63,6 +63,7 @@ fields:
     example: "unconfirmed"
     renders: "INBOUND DELEGATIONS — and, under it, that the screen cannot see them. UNAVAILABLE, not empty."
     tag: txt_delegation_inbound_unavailable
+    blocked_by: CIRISServer#663
   - ceg: x_private:delegation_count
     use: display-only
     type: int

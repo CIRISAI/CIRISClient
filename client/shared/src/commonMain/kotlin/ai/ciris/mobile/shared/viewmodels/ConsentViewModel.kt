@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ConsentAuditEntryData
@@ -115,17 +116,13 @@ class ConsentViewModel(
             _error.value = null
 
             try {
-                // Load consent status
-                val statusResponse = try {
-                    apiClient.getConsentStatus()
-                } catch (e: Exception) {
-                    if (e.message?.contains("404") == true || e.message?.contains("not found", ignoreCase = true) == true) {
-                        logInfo(method, "No consent record found (404), normal for new users")
-                        null
-                    } else {
-                        throw e
-                    }
-                }
+                // Load consent status. No 404 swallow: the agent answers "no
+                // record" with 200 + has_consent=false (routes/consent.py), so a
+                // 404 means THIS HOST HAS NO CONSENT ROUTE (a node), not "a new
+                // user with no record". Treating it as the latter told a node
+                // owner they had never consented, about a question nobody could
+                // answer (CSD-054). It now fails the load and says which.
+                val statusResponse = apiClient.getConsentStatus()
 
                 // Load available streams
                 val streamsResponse = apiClient.getConsentStreams()
@@ -212,6 +209,7 @@ class ConsentViewModel(
             } catch (e: Exception) {
                 logError(method, "Failed to load consent data: ${e::class.simpleName}: ${e.message}")
                 _error.value = "Failed to load consent data: ${e.message}"
+                _consentData.value = ConsentScreenData(readFailure = ReadFailure.of(e))
             } finally {
                 _isLoading.value = false
             }

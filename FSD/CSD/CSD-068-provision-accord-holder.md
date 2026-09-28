@@ -4,7 +4,7 @@
 **Flow**: unwritten
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -37,7 +37,7 @@ screen: ProvisionAccordHolder
 
 `nav_map` derives `circle_global_commons -> tab_safety ->
 nav_epistemic_provision_accord_holder` — Everyone › Safety
-(`CirclesNav.kt:102`), beside the Accord card and the Constitutional card. It is
+(`CirclesNav.kt:115`), beside the Accord card and the Constitutional card. It is
 **also** reachable as a button from the Constitutional screen
 (`btn_open_provision_holder`, `ConstitutionalScreen.kt:302`), which is the entry
 a person actually takes: they are looking at a roster and want to join it.
@@ -139,8 +139,40 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live**, loopback-only |
 | register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **live** — but this screen does not call it; it tells the person to ask the node owner |
 | token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live and unused here** — the ceremony screen calls it, this one does not |
-| the written path + artifact names | **unconfirmed** — the response's shape beyond the key id is not established in the client | CIRISServer | blocks §2.2's first bullet |
-| the recorded custody class | **missing** | CIRISServer | blocks §2.2's second bullet |
+| the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
+| the recorded custody class | **on the wire here, and discarded by the client** | CIRISClient | §2.2's second bullet is ours, not upstream |
+| the node's own judgment of a SEATED holder's hardware | `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` | CIRISServer `src/trust_root_api.rs:415` (verdict passed through verbatim, `:76-79`); shape CIRISPersist v48.0.0 `federation/trust_root.rs:372` | **live on this node's own machine, not called** — and only for holders the root's charter counts, so it answers "did my seat's hardware pass" after seating, never "what did I just mint". **Remote reach** `blocked_by: CIRISServer#652` |
+
+**The fourth row said `unconfirmed` and its premise was false.** The response
+shape IS established in the client: the node returns
+`json!({ "key_id", "holder_record", "custody_attestation" })`
+(`src/accord_provision.rs:487-491`, returned `:506`, module doc `:23`) and
+`AccordProvisionResponse` models all three (`models/federation/Accord.kt:221-228`).
+What is genuinely absent is the USB path and the artifact filenames: the node has
+them and writes them only to `tracing::info!`
+(`src/accord_provision.rs:481-482`, `:503-504`). The precedent for the fix is one
+route over — `AdmitNodeResponse` carries `saved_to` (`Accord.kt:245-246`). **Ask:
+add `saved_to` / `artifacts[]` to `provision-holder`'s body.**
+
+**The fifth row was filed against the wrong repo.** The custody class arrives on
+this very response inside `custody_attestation`, minted with
+`CUSTODY_TIER_PORTABLE_2FA` (`src/accord_custody.rs:134-141`; constant at
+`ciris-verify-core accord_custody_attestation.rs:70`, envelope key `custody_tier`
+at `:235`). The client parses it as an opaque `JsonElement` it never inspects
+(`Accord.kt:227`) and `CIRISApiClient.kt:3877` only logs `custody != null`. So
+this screen can render the class today with no upstream change. What is missing
+upstream is the same fact on `GET /v1/accord-holders` — and that is CSD-067's
+row, not a second one.
+
+**Where this identity goes after it is minted** (CSD-067 §3.1): registered
+by the owner (`POST /v1/accord/holder`), seated by the genesis ceremony
+(CSD-069) or a re-mint, and only then counted by `trust_root_valid` — Layer A
+(the evidence parses and names an accepted class) and Layer B (the attestation chain walk
+against the vendor root this node pins, `yubico_root_der`) per holder. That verdict is what turns this
+flow's CC 4.2.2.1 *producer claim* into something the node checked, and it is
+the first place the person could see it. It is loopback-only like the rest of
+this flow, which here costs nothing: provisioning already needs the YubiKey on
+the node's own host.
 
 **`/v1/accord/yubikey-status` is the cheapest fix on this screen.**
 `AccordCeremonyViewModel` already calls it (`getYubiKeyStatus`); this flow asks

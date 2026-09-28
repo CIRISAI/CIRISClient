@@ -1,0 +1,129 @@
+csd: CSD-082
+flow: csd_082_setup_with_ai
+title: First run with an assistant — three steps, and the claim is not a guess
+description: >-
+  CSD-082 §4, driven. session_fixture.run_setup drives exactly this sequence. The
+  claim is the part that matters: `setup_ownership_claiming` is a real loading
+  state with `btn_next` gone, and it must SETTLE on `setup_ownership_claimed` —
+  a wizard that skipped the claim and reported success is CIRISClient#68/#69's
+  shape, fixed in #74 and pinned here.
+# Floor: setup_step_indicators, step_indicator_$stepName, input_username,
+# input_password, input_password_confirm, input_device_name, input_fedid_label,
+# age_band_$token, opt_run_with_ai, trace_consent_$token, toggle_announce_ownership,
+# toggle_trace_analyze, btn_consent_details, input_llm_provider, btn_test_connection,
+# txt_llm_state, txt_llm_verdict, btn_next, btn_back, setup_ownership_claiming/
+# _claimed/_error are all `testable*` literals in ui/screens/SetupScreen.kt at
+# v0.5.224 (opt_run_with_ai at :2567 via a variable, age_band/trace_consent/
+# step_indicator as `$token` templates).
+# NOT asserted: setup_consent_empty is still `proposed:` in CSD-082 §2.
+client: ">=0.5.224"
+
+steps:
+  - step_id: step_you
+    title: 'Step You: the account, the device and the age band, with three dots on the rail'
+    description: >-
+      The count is the assertion, not the dots' presence. With an assistant the
+      wizard is three steps; CSD-083 drives the two-step shape, and the ONLY
+      difference between the two flows at this point is this number.
+    requires:
+      screen: Setup
+    expect:
+      state: populated
+      visible:
+        - setup_step_indicators
+        - input_username
+        - input_password
+        - input_password_confirm
+        - input_device_name
+        - input_fedid_label
+        - age_band_adult
+        - opt_run_with_ai
+      count: {of: "step_indicator_*", eq: 3}
+
+  - step_id: fill_the_account
+    title: The account fields and the age band take input
+    do:
+      - input: {input_username: "admin"}
+      - input: {input_password: "ciris_admin_password"}
+      - input: {input_password_confirm: "ciris_admin_password"}
+      - input: {input_device_name: "flow-desktop"}
+      - input: {input_fedid_label: "flow"}
+      - click: age_band_adult
+    expect:
+      screen: Setup
+      visible: [btn_next, age_band_adult]
+
+  - step_id: step_federation
+    title: 'Step Join the federation: the trace question, the announce toggle, and a way back'
+    description: >-
+      btn_back is asserted with the rest. A wizard step that cannot be reversed is
+      a commitment, and CC's consent rules do not admit one taken because the
+      screen offered no alternative.
+    do:
+      - click: btn_next
+    expect:
+      screen: Setup
+      visible:
+        - trace_consent_yes
+        - trace_consent_no
+        - toggle_announce_ownership
+        - btn_consent_details
+        - btn_next
+        - btn_back
+
+  - step_id: answer_the_trace_question
+    title: The trace question is answered explicitly, either way
+    description: >-
+      Both tokens are on screen in the step above, so this is a CHOICE and not a
+      default the person walks past. The flow picks yes; CSD-083's flow picks no,
+      and between them both arms are driven.
+    do:
+      - click: trace_consent_yes
+    expect:
+      visible: [trace_consent_yes, btn_next]
+
+  - step_id: step_ai
+    title: 'Step AI: a provider is chosen and the connection can be tested'
+    description: >-
+      one_of on the verdict rather than a fixed value: the test's outcome depends
+      on whether the runner has a key, and asserting a particular result would
+      make this flow a network test. What is asserted is that the screen STATES an
+      outcome — a test button that leaves no verdict behind is indistinguishable
+      from one that did nothing.
+    do:
+      - click: btn_next
+    expect:
+      screen: Setup
+      visible: [input_llm_provider, btn_test_connection, txt_llm_state]
+
+  - step_id: the_claim_is_a_real_loading_state
+    title: Finishing runs the claim, and the button is gone while it does
+    description: >-
+      `absent: [btn_next]` is the half that catches CIRISClient#68: a Finish button
+      still live during the claim lets a second press run the final step twice.
+      #74 fixed it and FinalStepOnceTest pins it in Kotlin; this is the same claim
+      driven end to end.
+    optional_step: true
+    requires:
+      screen: Setup
+    do:
+      - click: btn_next
+    expect:
+      state: loading
+      visible: [setup_ownership_claiming]
+      absent: [btn_next]
+
+  - step_id: the_claim_settles
+    title: The claim settles as claimed, not as a skipped step reported green
+    description: >-
+      Optional because it needs a fresh unclaimed node. The assertion is
+      deliberately exclusive: `setup_ownership_claimed` AND NOT
+      `setup_ownership_error` — a claim that failed and left the wizard on its
+      success screen is exactly what #69 was.
+    optional_step: true
+    requires:
+      screen: Setup
+      visible: [setup_ownership_claimed]
+    expect:
+      visible: [setup_ownership_claimed]
+      absent: [setup_ownership_error, setup_ownership_claiming]

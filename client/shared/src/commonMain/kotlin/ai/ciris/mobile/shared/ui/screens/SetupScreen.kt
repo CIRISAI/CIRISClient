@@ -538,12 +538,17 @@ fun SetupScreen(
                         // self-claim. Then advance to COMPLETE, which renders the claim
                         // result (in-progress / owned / retry). Non-blocking — a
                         // missing PIN or failed claim surfaces in the UI, never traps.
+                        // One press, one claim (#69): the ViewModel checks the step
+                        // against its own state and holds isSubmitting until the
+                        // claim settles, so a second press is refused.
                         PlatformLogger.i(TAG, " Final step (node client) - self-claiming local node ownership")
-                        viewModel.claimLocalNodeOwnership(
-                            claimPinProvider = claimPinProvider,
-                            nodeCodeProvider = nodeCodeProvider,
-                        )
-                        viewModel.nextStep()
+                        if (!viewModel.finishNodeClientSetup(
+                                claimPinProvider = claimPinProvider,
+                                nodeCodeProvider = nodeCodeProvider,
+                            )
+                        ) {
+                            PlatformLogger.i(TAG, " Final step already ran or is running — ignoring the second press (#69)")
+                        }
                     } else if (isFinalStep) {
                         // AGENT BUILD: CLAIM THEN COMPLETE. The self-claim
                         // (POST /v1/setup/claim-remote) needs a LIVE :4243 bearer
@@ -1483,7 +1488,7 @@ private fun AiStep(
                                 viewModel.selectLocalOnDeviceProvider()
                                 providerExpanded = false
                             },
-                            modifier = Modifier.testableClickable("menu_provider_mobile_local") {
+                            modifier = Modifier.testableClickable("menu_provider_mobile_local", enabled = !isStub) {
                                 if (!isStub) {
                                     viewModel.selectLocalOnDeviceProvider()
                                     providerExpanded = false
@@ -2313,7 +2318,7 @@ private fun FederationIdentitySection(
                             // colliding `ciris-client-user` identity.
                             onClick = { viewModel.runFederationIdentitySetup() },
                             enabled = !fed.inProgress && !labelHasError,
-                            modifier = Modifier.testableClickable("btn_federation_identity") {
+                            modifier = Modifier.testableClickable("btn_federation_identity", enabled = !fed.inProgress && !labelHasError) {
                                 if (!labelHasError) viewModel.runFederationIdentitySetup()
                             }
                         ) {
@@ -2341,7 +2346,7 @@ private fun FederationIdentitySection(
                         TextButton(
                             onClick = { viewModel.toggleAssociateExisting() },
                             enabled = !fed.inProgress,
-                            modifier = Modifier.testableClickable("btn_federation_associate_existing") {
+                            modifier = Modifier.testableClickable("btn_federation_associate_existing", enabled = !fed.inProgress) {
                                 viewModel.toggleAssociateExisting()
                             }
                         ) {
@@ -2364,7 +2369,10 @@ private fun FederationIdentitySection(
                                 enabled = !fed.inProgress && fed.associateKeyId.isNotBlank(),
                                 modifier = Modifier
                                     .padding(top = 8.dp)
-                                    .testableClickable("btn_federation_associate_submit") {
+                                    .testableClickable(
+                                        "btn_federation_associate_submit",
+                                        enabled = !fed.inProgress && fed.associateKeyId.isNotBlank(),
+                                    ) {
                                         viewModel.associateExistingFederationId()
                                     }
                             ) {
@@ -2382,7 +2390,7 @@ private fun FederationIdentitySection(
                         TextButton(
                             onClick = { showImportPicker = true },
                             enabled = !fed.inProgress,
-                            modifier = Modifier.testableClickable("btn_federation_import_usb") {
+                            modifier = Modifier.testableClickable("btn_federation_import_usb", enabled = !fed.inProgress) {
                                 showImportPicker = true
                             }
                         ) {
@@ -2453,18 +2461,19 @@ private fun FederationIdentitySection(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row {
+                                    // Enabled ONLY on a folder the importer
+                                    // itself says it would accept — the button
+                                    // and the outcome come from one answer, and
+                                    // /click obeys the same one.
+                                    val canImport = !fed.inProgress &&
+                                        !fed.inspecting &&
+                                        (fed.inspection?.importable == true ||
+                                            fed.inspectUnavailable)
                                     TextButton(
-                                        // Enabled ONLY on a folder the importer
-                                        // itself says it would accept — the button
-                                        // and the outcome come from one answer.
-                                        enabled =
-                                            !fed.inProgress &&
-                                                !fed.inspecting &&
-                                                (fed.inspection?.importable == true ||
-                                                    fed.inspectUnavailable),
+                                        enabled = canImport,
                                         onClick = { viewModel.importPortableFromUsb(picked) },
                                         modifier =
-                                            Modifier.testableClickable("btn_keyset_import_confirm") {
+                                            Modifier.testableClickable("btn_keyset_import_confirm", enabled = canImport) {
                                                 viewModel.importPortableFromUsb(picked)
                                             },
                                     ) { Text(localizedString("mobile.keyset_import_confirm")) }
@@ -3390,7 +3399,7 @@ private fun NavigationButtons(
                 OutlinedButton(
                     onClick = onBack,
                     enabled = !isSubmitting,
-                    modifier = Modifier.weight(1f).testableClickable("btn_back") { onBack() },
+                    modifier = Modifier.weight(1f).testableClickable("btn_back", enabled = !isSubmitting) { onBack() },
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = SetupColors.TextSecondary
                     )
@@ -3407,7 +3416,7 @@ private fun NavigationButtons(
                     // Equal weights when Back is visible; full width when it is not.
                     modifier = Modifier
                         .weight(if (currentStep == SetupStep.YOU) 2f else 1f)
-                        .testableClickable("btn_next") { onNext() },
+                        .testableClickable("btn_next", enabled = canProceed && !isSubmitting) { onNext() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SetupColors.Primary,
                         contentColor = Color.White

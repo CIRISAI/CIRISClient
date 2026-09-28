@@ -58,13 +58,36 @@ INTERACTIVE = ("btn_", "chip_", "menu_", "input_", "quick_input_", "field_", "to
 TAG_ONLY = re.compile(r'\.testable\(\s*"([a-zA-Z0-9_]+)"')
 
 
+#: A text tag the file declares a sink for — `rememberInputSinks("a", "b")` or
+#: `rememberTextInputDriver("a", …)`. Such a field IS drivable though it
+#: carries `.testable("a")`: the sink, not the modifier, is what `/input` needs.
+DRIVER = re.compile(r'rememberTextInputDriver\(\s*"([a-zA-Z0-9_]+)"')
+TEXT_TAG = ("input_", "quick_input_", "field_")
+
+
+def sunk_tags(text: str) -> set[str]:
+    """Text tags this file declares a sink for."""
+    declared = {t.strip().strip('"') for m in DECLARED.findall(text) for t in m.split(",") if t.strip()}
+    return declared | set(DRIVER.findall(text))
+
+
 def offenders() -> dict[str, list[str]]:
-    """{relative path: [tags]} for interactive controls carrying tag-only."""
+    """{relative path: [tags]} for interactive controls carrying tag-only.
+
+    A text field counts only when its file declares no sink for it. Before this,
+    every `.testable("input_x")` counted, drivable or not, so the baseline mixed
+    `input_username` (sunk, drivable) with `input_server_url` (no sink, `/input`
+    refuses it) and could not tell anyone which fields a flow cannot fill — seven
+    of them sat in the debt looking exactly like the ones that worked.
+    """
     found: dict[str, list[str]] = {}
     for f in sorted(SRC.rglob("*.kt")):
+        text = f.read_text(encoding="utf-8")
+        sunk = sunk_tags(text)
         hits = [
-            tag for tag in TAG_ONLY.findall(f.read_text(encoding="utf-8"))
+            tag for tag in TAG_ONLY.findall(text)
             if tag.startswith(INTERACTIVE)
+            and not (tag.startswith(TEXT_TAG) and tag in sunk)
         ]
         if hits:
             found[str(f.relative_to(ROOT))] = sorted(set(hits))
@@ -255,8 +278,8 @@ def main() -> int:
                 print(f"      {t}")
         print("\n  Use .testableClickable(tag) { ... } for a control you own the click of,")
         print("  or .testableWithHandler(tag) { ... } when the component already handles")
-        print("  its own clicks (Button, DropdownMenuItem). For a text field, subscribe to")
-        print("  TestAutomation.textInputRequests and declare rememberInputSinks(tag, ...).")
+        print("  its own clicks (Button, DropdownMenuItem). For a text field, use CirisTextField,")
+        print("  or call rememberTextInputDriver(tag, value) { ... } beside the field.")
         return 1
 
     if total < base_total:

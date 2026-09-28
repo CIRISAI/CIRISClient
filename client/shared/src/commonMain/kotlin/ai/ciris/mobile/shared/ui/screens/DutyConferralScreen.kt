@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.ui.screens
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.components.HolderSignInputs
@@ -256,6 +257,9 @@ fun DutyConferralScreen(
                 Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
                     SectionHeader(CIRISIcons.shield, localizedString("duty.section_conferral"))
 
+                    rememberTextInputDriver("input_duty_subject", subjectKeyId, enabled = !inProgress) {
+                        viewModel.setSubjectKeyId(it)
+                    }
                     OutlinedTextField(
                         value = subjectKeyId,
                         onValueChange = { viewModel.setSubjectKeyId(it) },
@@ -263,7 +267,7 @@ fun DutyConferralScreen(
                         enabled = !inProgress,
                         label = { Text(localizedString("duty.subject_label")) },
                         placeholder = { Text(localizedString("duty.subject_placeholder")) },
-                        modifier = Modifier.fillMaxWidth().testable("input_duty_subject"),
+                        modifier = Modifier.fillMaxWidth().testable("input_duty_subject", subjectKeyId),
                     )
 
                     // ── DUTIES — a SET, not a choice ──────────────────────────
@@ -372,7 +376,7 @@ fun DutyConferralScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .menuAnchor()
-                                .testableClickable("input_duty_depth") { depthExpanded = !depthExpanded },
+                                .testableClickable("input_duty_depth", enabled = !inProgress) { depthExpanded = !depthExpanded },
                         )
                         ExposedDropdownMenu(
                             expanded = depthExpanded,
@@ -447,7 +451,7 @@ fun DutyConferralScreen(
                 Button(
                     onClick = { viewModel.propose() },
                     enabled = !inProgress,
-                    modifier = Modifier.testableClickable("btn_duty_propose") { viewModel.propose() },
+                    modifier = Modifier.testableClickable("btn_duty_propose", enabled = !inProgress) { viewModel.propose() },
                 ) {
                     Text(localizedString("duty.propose_button"))
                 }
@@ -455,7 +459,7 @@ fun DutyConferralScreen(
                 OutlinedButton(
                     onClick = { viewModel.cosign() },
                     enabled = !inProgress && partial != null,
-                    modifier = Modifier.testableClickable("btn_duty_cosign") { viewModel.cosign() },
+                    modifier = Modifier.testableClickable("btn_duty_cosign", enabled = !inProgress && partial != null) { viewModel.cosign() },
                 ) {
                     Text(localizedString("duty.cosign_button"))
                 }

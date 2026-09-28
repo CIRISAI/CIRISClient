@@ -4,7 +4,7 @@
 **Flow**: unwritten — the tags below are the contract the flow will drive
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -74,6 +74,7 @@ fields:
     example: "unconfirmed"
     renders: "NOT ON THIS SCREEN. The registry family this surface is named after is about which of the person's occurrences holds an exchange (CC 3.1.3.1); nothing here reads or writes it."
     tag: "proposed:sessions_occurrence_claim"
+    blocked_by: CIRISAgent#1210
 ```
 
 **The state vocabulary cannot be a CEG segment, and that is a fact about the

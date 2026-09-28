@@ -14,9 +14,7 @@
     "btn_show_source_url",
     "btn_skill_import_confirm",
     "btn_skill_import_done",
-    "btn_skill_preview",
-    "input_skill_md",
-    "input_skill_source_url"
+    "btn_skill_preview"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillStudioCards.kt": [
     "btn_add_env_var",
@@ -72,12 +70,6 @@
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AdaptersScreen.kt": [
     "btn_add_menu_cancel"
   ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AddFederationIdScreen.kt": [
-    "input_fed_label"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ChatScreen.kt": [
-    "input_chat_body"
-  ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ChildSafetyScreen.kt": [
     "btn_child_safety_back",
     "btn_watchlist_disable",
@@ -87,22 +79,11 @@
     "input_watchlist_id"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ClaimNodeScreen.kt": [
-    "btn_claim_node_back",
-    "field_claim_node_code",
-    "field_claim_node_displayname",
-    "field_claim_node_pin"
+    "btn_claim_node_back"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ConfigScreen.kt": [
     "input_config_edit_value",
     "input_config_search"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/DelegationsScreen.kt": [
-    "input_delegation_code",
-    "input_delegation_key_id",
-    "input_delegation_label"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/DutyConferralScreen.kt": [
-    "input_duty_subject"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/HealthReputationScreen.kt": [
     "btn_capacity_full_spec"
@@ -113,9 +94,6 @@
     "input_identity_associate_dir",
     "input_identity_device_code",
     "input_identity_portable_dir"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/InteractScreen.kt": [
-    "input_message"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LLMSettingsScreen.kt": [
     "btn_add_provider_submit",
@@ -132,9 +110,7 @@
     "switch_ciris_services"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LoginScreen.kt": [
-    "btn_login_back",
-    "input_password",
-    "input_username"
+    "btn_login_back"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LogsScreen.kt": [
     "input_logs_search"
@@ -216,23 +192,14 @@
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ServerConnectionScreen.kt": [
     "btn_connect_recent",
     "btn_remove_recent",
-    "btn_server_back",
-    "input_server_url"
+    "btn_server_back"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SettingsScreen.kt": [
     "switch_force_classic_viz",
     "switch_live_background"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SetupScreen.kt": [
-    "input_api_key",
-    "input_device_name",
-    "input_federation_associate_keyid",
-    "input_fedid_label",
-    "input_llm_base_url",
-    "input_llm_model_text",
-    "input_password",
-    "input_password_confirm",
-    "input_username"
+    "input_federation_associate_keyid"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SkillStudioScreen.kt": [
     "btn_cancel_import",
@@ -247,9 +214,6 @@
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/UsersScreen.kt": [
     "input_users_search"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/VerifyAgentScreen.kt": [
-    "input_verify_hash"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WalletPage.kt": [
     "btn_copy_address",

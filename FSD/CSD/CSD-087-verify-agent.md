@@ -5,7 +5,7 @@
 **Flow**: unwritten — the form is not drivable; see §5
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -116,10 +116,18 @@ the code states it three times over — `CapabilityState`, `LookupResult` and
 | value | endpoint | owner | state |
 |---|---|---|---|
 | what this node confers | `GET /v1/federation/conformance` → `capabilities: Option<Vec<String>>` | CIRISServer (`src/conformance.rs:488`) | live — and `null` vs `[]` is deliberately distinguished server-side, for exactly the reason the client distinguishes UNDETERMINED from ABSENT |
-| look a build up by hash | `GET /v1/registry/lookup` | CIRISServer | **missing** — no route literal in `src/*.rs`. CIRISServer#499 is the declaration; the route itself has no owner yet |
+| look a build up by hash | `GET /v1/registry/lookup` | CIRISServer | **missing, confirmed** — no route literal in `src/*.rs`; the string exists only as a capability TOKEN (`src/mesh_genesis.rs:200, 1815, 1826`, `"roles": ["registry:lookup"]`). **CIRISServer#669 OPEN** |
 
-**The one upstream ask.** **CIRISServer**: `GET /v1/registry/lookup`, and
-`registry:lookup` in the conformance capability list on the nodes that serve it.
+**The `null` vs `[]` distinction is not merely documented, it is pinned.**
+`src/conformance.rs:474-488` states it and
+`unknown_capabilities_are_null_not_an_empty_list` (`src/conformance.rs:969-978`)
+holds it, so the client's UNDETERMINED-vs-ABSENT split is safe to assert.
+
+**The one upstream ask, with the right number.** **CIRISServer#669** — "`registry:lookup`
+can be advertised on the conformance wire and cannot be served". **CIRISServer#499
+is CLOSED**: it was the declaration, and it shipped as the `capabilities` field in
+the row above. The previous text ("the route itself has no owner yet") was written
+before #669 existed.
 Until then every node on earth renders `card_verify_capability` and the form
 never appears — which is the designed behaviour, not a bug, and is why this CSD
 is `sketched` rather than blocked.
