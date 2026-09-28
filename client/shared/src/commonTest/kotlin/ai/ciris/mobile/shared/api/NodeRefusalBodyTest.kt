@@ -46,4 +46,21 @@ class NodeRefusalBodyTest {
         assertNull(r.detail)
         assertEquals(502, r.statusCode)
     }
+
+    @Test
+    fun theDrivePutsTheIdInErrorAndTheEnglishInDetail() {
+        // src/drive.rs refuse(): {"error": <id>, "detail": <english>}, the
+        // reverse of the auth surface. Read the other way, the id became the
+        // English and the English was thrown away.
+        val r = NodeRefusal.fromBody(409, """{"error":"drive.not_fetched","detail":"on another device"}""")
+        assertEquals("drive.not_fetched", r.reasonId)
+        assertEquals("on another device", r.detail)
+    }
+
+    @Test
+    fun aSentenceInErrorIsStillTheEnglish() {
+        val r = NodeRefusal.fromBody(401, """{"error":"that name belongs to two accounts","reason_id":"auth.login.ambiguous_name"}""")
+        assertEquals("auth.login.ambiguous_name", r.reasonId)
+        assertEquals("that name belongs to two accounts", r.detail)
+    }
 }

@@ -1,0 +1,87 @@
+csd: CSD-007
+flow: csd_007_files
+title: Files holds files, every opened file is what the node said it sent, and Family lists the picked household
+description: >-
+  CSD-007 §4, driven. Just me › Files lists the self room from GET /v1/drive
+  (CIRISServer src/drive.rs:1656); opening a row reads GET /v1/files/{id}
+  (:2052) and the sheet shows file_digest_verified only when the bytes hash to
+  the content_digest the node stated (:2088-2089). Family › Files lists the
+  room of the household picked in the Family hub (CSD-100). Every call goes to
+  the node URL.
+# Floor: every tag below is a string literal in ui/screens/files/FilesScreen.kt
+# (FilesTags); no release carries the 0.5.217 tags (file_digest_*, file_unreadable,
+# file_policy_builtin, files_household, files_no_household) yet.
+# NOT asserted: file_unreadable (needs a node that lies about its digest) and the
+# native picker (btn_files_add opens a platform dialog /act cannot drive).
+client: "unreleased"
+
+steps:
+  - step_id: just_me_files_lists
+    title: Just me › Files is the drive's self room, with a row per file
+    description: >-
+      Entry: circle_agent -> tab_files (derived by nav_map; the tab has one card,
+      so the shell shows it directly). A node without the route shows
+      files_node_too_old, in words; an empty room shows files_empty.
+    requires:
+      screen: Files
+    expect:
+      visible: [btn_files_refresh]
+      count: {of: "files_*", min: 1}
+
+  - step_id: a_file_opens_verified
+    title: Opening a file shows the sheet, and the digest line says verified
+    optional_step: true
+    requires:
+      screen: Files
+      count: {of: "files_row_*", min: 1}
+    do:
+      - click: "files_row_*"
+    expect:
+      visible: [sheet_file, file_digest_verified, btn_file_close]
+      absent: [file_unreadable]
+
+  - step_id: an_older_node_says_nothing_was_verified
+    title: On a node that sends no digest, the sheet says so rather than implying a check
+    optional_step: true
+    requires:
+      visible: [sheet_file, file_digest_not_sent]
+    expect:
+      visible: [file_digest_not_sent, file_policy_builtin]
+      absent: [file_digest_verified]
+
+  - step_id: the_receipt_is_honest_about_the_hash
+    title: The row's receipt says the listing carried no content hash
+    optional_step: true
+    requires:
+      screen: Files
+      count: {of: "btn_receipt_*", min: 1}
+    do:
+      - click: btn_file_close
+      - click: "btn_receipt_*"
+    expect:
+      visible: [sheet_receipt, receipt_attester, receipt_scope, receipt_dimension, btn_receipt_close]
+      text: {receipt_dimension: "did not send"}
+
+  - step_id: family_files_names_the_household
+    title: Family › Files lists the picked household's room, and says which
+    description: >-
+      Entry: circle_family -> tab_files. GET /v1/drive?cohort=family&room_id=<household>.
+      With no household there is nothing to ask: files_no_household, never files_empty.
+    optional_step: true
+    requires:
+      screen: Files
+      visible: [files_household]
+    expect:
+      visible: [files_household]
+      count: {of: "files_*", min: 2}
+      absent: [files_no_household]
+
+  - step_id: no_household_is_its_own_state
+    title: With no household picked, Family › Files says so instead of "no files"
+    optional_step: true
+    requires:
+      screen: Files
+      visible: [files_no_household]
+    expect:
+      visible: [files_no_household]
+      absent: [files_empty, files_list, btn_files_add]

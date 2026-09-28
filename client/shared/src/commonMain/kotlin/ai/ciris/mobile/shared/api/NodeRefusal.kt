@@ -35,6 +35,8 @@ class NodeRefusal(
          * exception (CIRISClient#70: the parse exception is what the person
          * used to see).
          */
+        private val ID_TOKEN = Regex("^[a-z0-9_]+(\\.[a-z0-9_]+)+$")
+
         fun fromBody(statusCode: Int, raw: String): NodeRefusal {
             val obj = try {
                 kotlinx.serialization.json.Json.parseToJsonElement(raw) as? kotlinx.serialization.json.JsonObject
@@ -45,9 +47,17 @@ class NodeRefusal(
                 (this?.get(key) as? kotlinx.serialization.json.JsonPrimitive)
                     ?.takeIf { it.isString }?.content
             val nested = obj?.get("detail") as? kotlinx.serialization.json.JsonObject
+            // The drive plane answers the other way round: the id in `error`
+            // and the English in `detail` (`{"error":"drive.not_fetched",
+            // "detail":"…"}`). An `error` that is a dotted token with no spaces
+            // is an id, not a sentence.
+            val errorField = obj.str("error")
+            val errorIsId = errorField != null && ID_TOKEN.matches(errorField)
             return NodeRefusal(
-                reasonId = obj.str("reason_id") ?: nested.str("reason_id") ?: nested.str("code"),
-                detail = obj.str("error") ?: nested.str("error") ?: nested.str("message") ?: obj.str("detail"),
+                reasonId = obj.str("reason_id") ?: nested.str("reason_id") ?: nested.str("code")
+                    ?: errorField.takeIf { errorIsId },
+                detail = (if (errorIsId) null else errorField) ?: nested.str("error") ?: nested.str("message")
+                    ?: obj.str("detail"),
                 statusCode = statusCode,
             )
         }

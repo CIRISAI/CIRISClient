@@ -90,14 +90,19 @@ object CirclesNav {
         // ── Files — FILES. The tab is named for what it holds, so nothing
         // else may sit in it: the memory graph moved to This node, the
         // environment snapshot and the commons to Decisions, the accord's
-        // attestations to Safety. Until the files spine exists (B3) every
-        // circle's Files tab says so, which is a fact about the data and not
-        // a gap in the build. ──
+        // attestations to Safety. The one card here is the drive plane
+        // itself (B3), in the circles the drive has a cohort for: self,
+        // family (the household picked in the Family hub, CSD-100) and
+        // community. Everyone has no room of its own. ──
+
+        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, FAMILY, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
         // runs, not who you talk to; they live under This agent. ──
         Placement(NavSurface.Interact, Tab.CHATS, setOf(AGENT), agentOnly = true),
+        // A note to self is the chat of one, and needs no agent: every build.
+        Placement(NavSurface.Notes, Tab.CHATS, setOf(AGENT)),
 
         // ── People — the constituent of every circle. Contacts IS the tab;
         // who may act for whom is a rule, so Delegations sits under Rules. ──
