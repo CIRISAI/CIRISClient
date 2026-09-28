@@ -122,19 +122,23 @@ class HonestStatesTest {
 
     // ── Telemetry (CSD-030) ──────────────────────────────────────────────────
 
+    /**
+     * The real client's half only: a served 404 on either telemetry read
+     * throws, and the throw reads as "not on this node". What the view model
+     * then PUBLISHES is asserted in `TelemetryHonestStateTest` (commonTest)
+     * against a fake, with no clock: this test used to drive the view model
+     * here and await both failures, and its two reads — completing on two
+     * threads and writing one value by read-copy-write — could lose one
+     * answer, so the wait ran out on CI (#98, #122).
+     */
     @Test
-    fun telemetry_a_failed_read_draws_no_metrics() = withServer(serving(fallback = 404 to "{}")) { client ->
-        val vm = TelemetryViewModel(client)
-        vm.refresh()
-        vm.loadExportDestinations()
-        awaitThat("telemetry read failure") {
-            vm.telemetryData.value.readFailure != null && vm.telemetryData.value.destinationsFailure != null
-        }
-        val data = vm.telemetryData.value
-        assertFalse(data.hasReading, "no reading, so the metric cards do not draw")
-        assertNull(data.cognitiveState, "never a default WORK")
-        assertIs<ReadFailure.NotOnThisNode>(data.readFailure)
-        assertIs<ReadFailure.NotOnThisNode>(data.destinationsFailure, "no destinations read is not 'none configured'")
+    fun telemetry_a_served_404_is_not_on_this_node() = withServer(serving(fallback = 404 to "{}")) { client ->
+        val overview = runCatching { client.getTelemetry() }.exceptionOrNull()
+            ?: fail("a served 404 on the overview must throw, not decode")
+        assertIs<ReadFailure.NotOnThisNode>(ReadFailure.of(overview))
+        val destinations = runCatching { client.getExportDestinations() }.exceptionOrNull()
+            ?: fail("a served 404 on the destinations must throw, not read as none configured")
+        assertIs<ReadFailure.NotOnThisNode>(ReadFailure.of(destinations))
     }
 
     // ── Services (CSD-016) ───────────────────────────────────────────────────
