@@ -129,6 +129,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         # answer for the same reason age_band_adult is: the unrestricted path.
         if "trace_consent_yes" in tags:
             drv.click("trace_consent_yes")
+            # The step advances only once the answer has reached the ViewModel
+            # (`SetupState.canProceedFromCurrentStep`: JOIN_FEDERATION ->
+            # traceConsentAnswered). A Next clicked in the same instant as the
+            # answer raced it on Windows; give the answer a beat to land.
+            time.sleep(1.5)
             tags = _tags(drv)
         nxt = "btn_wizard_complete" if "btn_wizard_complete" in tags else "btn_next"
         if nxt not in tags:
@@ -149,6 +154,14 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         before = (drv.screen(), _active_step(drv))
         drv.click(nxt)
         time.sleep(2.0)
+        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+            # One retry when the step's question is still on screen: the answer
+            # may not have landed before Next was clicked.
+            if "trace_consent_yes" in _tags(drv):
+                drv.click("trace_consent_yes")
+                time.sleep(2.0)
+                drv.click(nxt)
+                time.sleep(2.0)
         if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
             # Say what was on screen: a required field the fixture doesn't fill
             # (the with-AI wizard asks for more than the node one) shows up here.
