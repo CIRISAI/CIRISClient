@@ -22,6 +22,10 @@
     }
   },
   "adapters": {
+    "connector_remove_fact_what": "Điều gì thay đổi",
+    "connector_remove_what": "Nó sẽ bị xóa khỏi danh sách này và không thể khôi phục. Các công cụ SQL của tác nhân có thể vẫn giữ kết nối cho đến khi tác nhân khởi động lại; để cắt kết nối ngay, hãy đổi mật khẩu cơ sở dữ liệu.",
+    "connector_remove_fact_signs": "Ai ký",
+    "connector_remove_signs": "Không ai. Không có ủy quyền nào được ghi lại khi nó được trao đi, nên không có gì để rút lại (CIRISAgent#1211).",
     "navigation": {
       "error_end_not_found": "Không thể tìm thấy vị trí kết thúc: {location}",
       "error_invalid_coords": "Giá trị tọa độ không hợp lệ",
@@ -115,7 +119,30 @@
       "tool_alerts_desc": "Lấy cảnh báo thời tiết hoạt động cho một vị trí (cảnh báo, theo dõi, cảnh báo)",
       "tool_current_desc": "Lấy điều kiện thời tiết hiện tại cho một vị trí (nhiệt độ, gió, điều kiện)",
       "tool_forecast_desc": "Lấy dự báo thời tiết cho một vị trí (điều kiện sắp tới)"
-    }
+    },
+    "connectors_title": "Các cơ sở dữ liệu đã trao cho tác nhân của bạn",
+    "connectors_intro": "Các bộ điều hợp được đăng ký qua tuyến bộ điều hợp của tác nhân. Phần thiết lập riêng của bộ điều hợp SQL (Thêm bộ điều hợp) yêu cầu những thông tin tương tự; danh sách này chỉ hiển thị những gì đã được trao theo cách này kể từ lần khởi động gần nhất của tác nhân.",
+    "connectors_admin_only": "Chỉ quản trị viên của tác nhân này mới có thể xem các bộ điều hợp của nó.",
+    "connectors_not_on_this_node": "Nút này không có tác nhân, nên không có gì để kết nối cơ sở dữ liệu tới.",
+    "connectors_empty": "Chưa có cơ sở dữ liệu nào được trao cho tác nhân của bạn theo cách này kể từ lần khởi động gần nhất.",
+    "connector_standing": "Trạng thái",
+    "connector_standing_registered": "Đã được trao, chưa từng kiểm tra. Đó không phải là bằng chứng rằng tác nhân có thể sử dụng nó.",
+    "connector_standing_last_test_passed": "Tác nhân cho biết lần kiểm tra gần nhất đã thành công ({when}).",
+    "connector_standing_last_test_failed": "Lần kiểm tra gần nhất đã thất bại ({when}).",
+    "connector_standing_disabled": "Được đánh dấu là đã tắt. Các công cụ SQL của tác nhân không đọc dấu này, nên nó không ngăn được chúng.",
+    "connector_standing_unknown": "Tác nhân đã báo cáo một trạng thái mà ứng dụng này không biết.",
+    "connector_grant": "Những gì nó cho phép tác nhân của bạn làm",
+    "connector_grant_unknown": "Không rõ. Tác nhân này chỉ có thể đăng ký các bộ kết nối SQL.",
+    "connector_grant_gloss": "Những gì mọi bộ điều hợp SQL cho phép tác nhân làm, với tư cách người dùng mà bạn đã gán cho nó: tìm, xuất, xóa và ẩn danh các hàng dữ liệu của một người, và chạy các truy vấn chỉ đọc. Được đọc từ mã của tác nhân; không có tuyến nào cho biết bộ điều hợp này cấp quyền gì (CIRISAgent#1211).",
+    "connector_delegation": "Bản ghi ủy quyền",
+    "connector_delegation_none": "Không có. Việc trao thông tin xác thực này không ghi lại bản ghi ủy quyền hoặc đồng ý nào (CIRISAgent#1211).",
+    "connector_test": "Kiểm tra",
+    "connector_test_result": "Kiểm tra",
+    "connector_test_passed": "Đã chạy và trả lời trong {ms} ms ({when}).",
+    "connector_test_failed": "Thất bại: {message}",
+    "connector_test_not_run": "Chưa chạy. Tác nhân đã báo cáo thành công mà không chạm vào cơ sở dữ liệu: {message}",
+    "connector_remove_title": "Xóa {name}?",
+    "connector_remove_fact_who": "Bộ kết nối"
   },
   "admin": {
     "accept_writes": {
@@ -4526,5 +4553,33 @@
     "release_incomplete": "Việc giải phóng đã được ký, nhưng nút vẫn liệt kê nút đó là của bạn: một bản ghi quyền sở hữu mà nó không thể thấy vẫn còn hiệu lực. Những gì nó có thể rút lại thì vẫn được rút lại.",
     "release_self_requires_force": "Đó là nút bạn đang trò chuyện với. Giải phóng nút đó sẽ kết thúc quyền sở hữu của bạn ở đây, bao gồm cả phiên này.",
     "store_unavailable": "Nút không thể đọc hoặc ghi kho danh tính của mình. Không có gì bị thay đổi."
+  },
+  "partnership_queue": {
+    "title": "Hợp tác với tác nhân này",
+    "always_covers": "Luôn bao gồm",
+    "may_add": "Có thể bao gồm thêm",
+    "categories_none": "không có mục nào được nêu tên",
+    "ending": "Kết thúc nó",
+    "revocable_not_undoable": "Việc kết thúc một mối hợp tác có thể thực hiện vào bất kỳ lúc nào, nhưng đó không phải là hoàn tác: tác nhân cắt đứt danh tính của bạn ngay lập tức và để những gì nó đã học được phai nhạt dần trong 90 ngày.",
+    "not_on_this_node": "Nút này không có tác nhân, nên không ai có thể yêu cầu nó hợp tác.",
+    "who_decides_label": "Ai trả lời",
+    "who_decides": "Tác nhân của bạn tự trả lời từng yêu cầu. Phần chấp nhận của một mối hợp tác là quyền của tác nhân, nên thẻ này chỉ hiển thị các yêu cầu chứ không trả lời yêu cầu nào, và không ai ở đây trả lời thay cho tác nhân.",
+    "signed_by_label": "Được ký bởi",
+    "signed_by_nobody": "Không ai. Tác nhân lưu giữ các mối hợp tác dưới dạng bản ghi không được ký, được lưu theo id đăng nhập, không theo khóa của bất kỳ ai (CIRISServer#423).",
+    "waiting_title": "Đang chờ tác nhân của bạn",
+    "admin_only": "Chỉ quản trị viên của tác nhân này mới có thể xem ai đang chờ nó.",
+    "empty": "Không có ai đang chờ tác nhân của bạn trả lời.",
+    "memory_note": "Đây là những gì tác nhân còn ghi nhớ kể từ lần khởi động gần nhất. Một lần khởi động lại sẽ làm trống danh sách này.",
+    "metrics": "{pending} đang chờ · {accepted} đã chấp nhận · {declined} đã từ chối · {deferred} đã trì hoãn",
+    "waited_hours": "Đã chờ {n} giờ",
+    "waited_days": "Đã chờ {n} ngày",
+    "waiting_on_agent": "Đang chờ: tác nhân của bạn",
+    "reason_none": "Không có lý do được đưa ra",
+    "history_empty": "Không có câu trả lời trước đó cho người này kể từ lần khởi động gần nhất của tác nhân.",
+    "history_row": "{outcome} bởi {who} · {when}",
+    "outcome_approved": "Đã chấp nhận",
+    "outcome_rejected": "Đã từ chối",
+    "outcome_deferred": "Đã trì hoãn",
+    "outcome_expired": "Đã hết hạn"
   }
 }

@@ -22,6 +22,31 @@
     }
   },
   "adapters": {
+    "connectors_admin_only": "このエージェントの管理者のみが、そのコネクタを確認できます。",
+    "connectors_not_on_this_node": "このノードにはエージェントがいないため、データベースを接続する対象がありません。",
+    "connectors_empty": "エージェントが前回起動して以降、この方法でデータベースが引き渡されたことはありません。",
+    "connector_standing": "状態",
+    "connector_standing_registered": "引き渡されましたが、まだテストされていません。それは、エージェントがこれを使用できることの証明にはなりません。",
+    "connector_standing_last_test_passed": "エージェントによれば、前回のテストは成功したとのことです（{when}）。",
+    "connector_standing_last_test_failed": "前回のテストは失敗しました（{when}）。",
+    "connector_standing_disabled": "無効と記されています。エージェントの SQL ツールはこの印を読み取らないため、これによって動作が止まるわけではありません。",
+    "connector_standing_unknown": "エージェントは、このアプリが認識していない状態を報告しました。",
+    "connector_grant": "エージェントに許可する操作",
+    "connector_grant_unknown": "不明です。このエージェントは SQL コネクタを登録することしかできません。",
+    "connector_grant_gloss": "あなたが与えたユーザー権限として、SQL コネクタが一般にエージェントに許可する操作は次のとおりです：人物の行を検索・書き出し・削除・匿名化すること、および読み取り専用クエリを実行すること。これはエージェントのコードから読み取った内容であり、この接続が実際に何を許可しているかを示す経路はありません（CIRISAgent#1211）。",
+    "connector_delegation": "委任の記録",
+    "connector_delegation_none": "なし。この認証情報を引き渡した際、委任や同意の記録は作成されませんでした（CIRISAgent#1211）。",
+    "connector_test": "テスト",
+    "connector_test_result": "テスト",
+    "connector_test_passed": "実行され、{ms} ms で応答しました（{when}）。",
+    "connector_test_failed": "失敗：{message}",
+    "connector_test_not_run": "実行されませんでした。エージェントはデータベースに触れずに成功と報告しました：{message}",
+    "connector_remove_title": "{name} を削除しますか？",
+    "connector_remove_fact_who": "コネクタ",
+    "connector_remove_fact_what": "変更内容",
+    "connector_remove_what": "このリストから削除され、元に戻すことはできません。エージェントの SQL ツールは、エージェントが再起動するまで接続を保持し続ける可能性があります。今すぐ切断するには、データベースのパスワードを変更してください。",
+    "connector_remove_fact_signs": "署名者",
+    "connector_remove_signs": "誰もいません。引き渡し時に委任は記録されなかったため、撤回するものはありません（CIRISAgent#1211）。",
     "navigation": {
       "error_end_not_found": "終了場所が見つかりませんでした：{location}",
       "error_invalid_coords": "無効な座標値",
@@ -115,7 +140,9 @@
       "tool_alerts_desc": "場所のアクティブな気象警報を取得します（警告、監視、勧告）",
       "tool_current_desc": "場所の現在の気象条件を取得します（温度、風、状態）",
       "tool_forecast_desc": "場所の天気予報を取得します（今後の条件）"
-    }
+    },
+    "connectors_title": "エージェントに引き渡されたデータベース",
+    "connectors_intro": "エージェントのコネクタ経路を通じて登録されたコネクタです。SQL アダプター自体の設定（アダプターを追加）でも同じ詳細情報が求められますが、このリストにはエージェントが前回起動して以降にこの方法で引き渡された内容のみが表示されます。"
   },
   "admin": {
     "accept_writes": {
@@ -4526,5 +4553,33 @@
     "release_incomplete": "解放の署名は完了しましたが、ノードは依然としてそのノードをあなたの所有として記録しています：ノードから見えない場所に、まだ有効な所有権記録が残っています。ノード側で取り消せた部分については、取り消しが維持されます。",
     "release_self_requires_force": "それは、あなたが現在やり取りしているノードです。解放すると、このセッションを含め、ここでのあなたの所有権が終了します。",
     "store_unavailable": "ノードはアイデンティティストアを読み書きできませんでした。変更は行われていません。"
+  },
+  "partnership_queue": {
+    "outcome_approved": "承認",
+    "outcome_rejected": "拒否",
+    "outcome_deferred": "保留",
+    "outcome_expired": "期限切れ",
+    "title": "このエージェントとのパートナーシップ",
+    "always_covers": "常にカバーする",
+    "may_add": "追加でカバーする場合がある",
+    "categories_none": "指定なし",
+    "ending": "終了について",
+    "revocable_not_undoable": "パートナーシップの終了はいつでも行えますが、それは元に戻す操作ではありません：エージェントはただちにあなたのアイデンティティとの結びつきを切り離し、それまでに学習した内容は 90 日間かけて薄れていくようにします。",
+    "not_on_this_node": "このノードにはエージェントがいないため、パートナーシップを申し込める相手がいません。",
+    "who_decides_label": "回答者",
+    "who_decides": "エージェントは各リクエストに自ら回答します。パートナーシップにおける承諾の判断はエージェント自身が行うものであり、このカードはリクエストを表示するだけでどれにも回答しません。ここでエージェントに代わって回答する人はいません。",
+    "signed_by_label": "署名者",
+    "signed_by_nobody": "誰もいません。エージェントはパートナーシップを、誰の鍵にも基づかない未署名の記録として、サインイン ID の下に保管しています（CIRISServer#423）。",
+    "waiting_title": "エージェントの回答待ち",
+    "admin_only": "このエージェントの管理者のみが、誰が待機しているかを確認できます。",
+    "empty": "エージェントの回答を待っている人はいません。",
+    "memory_note": "これは、エージェントが前回起動して以降に記憶している内容です。再起動するとこのリストは空になります。",
+    "metrics": "{pending}件待機 ・ {accepted}件承認 ・ {declined}件拒否 ・ {deferred}件保留",
+    "waited_hours": "{n} 時間待機中",
+    "waited_days": "{n} 日間待機中",
+    "waiting_on_agent": "待機対象：あなたのエージェント",
+    "reason_none": "理由なし",
+    "history_empty": "エージェントが前回起動して以降、この人物への回答はありません。",
+    "history_row": "{outcome}（{who}による） · {when}"
   }
 }

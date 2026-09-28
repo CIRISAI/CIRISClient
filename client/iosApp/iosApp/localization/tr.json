@@ -22,6 +22,31 @@
     }
   },
   "adapters": {
+    "connectors_admin_only": "Bu ajanın bağlayıcılarını yalnızca yöneticileri görebilir.",
+    "connectors_not_on_this_node": "Bu düğümde bir ajan yok, dolayısıyla bir veritabanının bağlanacağı bir şey yok.",
+    "connectors_empty": "Ajanınız son başlatılmasından bu yana bu şekilde bir veritabanı devredilmedi.",
+    "connector_standing": "Durum",
+    "connector_standing_registered": "Devredildi, hiç test edilmedi. Bu, ajanın onu kullanabildiğinin kanıtı değildir.",
+    "connector_standing_last_test_passed": "Ajan, son testinin başarılı olduğunu söylüyor ({when}).",
+    "connector_standing_last_test_failed": "Son test başarısız oldu ({when}).",
+    "connector_standing_disabled": "Devre dışı olarak işaretlendi. Ajanınızın SQL araçları bu işareti okumaz, dolayısıyla onları durdurmaz.",
+    "connector_standing_unknown": "Ajan, bu uygulamanın bilmediği bir durum bildirdi.",
+    "connector_grant": "Ajanınıza verdiği izinler",
+    "connector_grant_unknown": "Bilinmiyor. Bu ajan yalnızca SQL bağlayıcıları kaydedebilir.",
+    "connector_grant_gloss": "Herhangi bir SQL bağlayıcısının, ona verdiğiniz kullanıcı olarak ajana yapmasına izin verdiği şeyler: bir kişinin satırlarını bulmak, dışa aktarmak, silmek ve anonimleştirmek, ayrıca salt okunur sorgular çalıştırmak. Bu, ajanın kodundan okunur; hiçbir rota bu bağlayıcının ne izni verdiğini belirtmez (CIRISAgent#1211).",
+    "connector_delegation": "Yetki devri kaydı",
+    "connector_delegation_none": "Yok. Bu kimlik bilgisinin devredilmesi herhangi bir yetki devri veya onay kaydı oluşturmadı (CIRISAgent#1211).",
+    "connector_test": "Test",
+    "connector_test_result": "Test",
+    "connector_test_passed": "Çalıştı ve {ms} ms içinde yanıt verdi ({when}).",
+    "connector_test_failed": "Başarısız: {message}",
+    "connector_test_not_run": "Çalışmadı. Ajan, veritabanına dokunmadan başarı bildirdi: {message}",
+    "connector_remove_title": "{name} kaldırılsın mı?",
+    "connector_remove_fact_who": "Bağlayıcı",
+    "connector_remove_fact_what": "Ne değişiyor",
+    "connector_remove_what": "Bu listeden çıkar ve geri getirilemez. Ajanınızın SQL araçları, ajan yeniden başlatılana kadar bağlantıyı tutabilir; onu şimdi kesmek için veritabanı parolasını değiştirin.",
+    "connector_remove_fact_signs": "Kim imzalıyor",
+    "connector_remove_signs": "Hiç kimse. Devredildiğinde herhangi bir yetki devri kaydedilmedi, dolayısıyla geri çekilecek bir şey yok (CIRISAgent#1211).",
     "navigation": {
       "error_end_not_found": "Bitiş konumu bulunamadı: {location}",
       "error_invalid_coords": "Geçersiz koordinat değerleri",
@@ -115,7 +140,9 @@
       "tool_alerts_desc": "Bir konum için etkin hava durumu uyarılarını alın (uyarılar, takipler, tavsiyeler)",
       "tool_current_desc": "Bir konum için mevcut hava durumu koşullarını alın (sıcaklık, rüzgar, koşullar)",
       "tool_forecast_desc": "Bir konum için hava durumu tahmini alın (yaklaşan koşullar)"
-    }
+    },
+    "connectors_title": "Ajanınıza devredilen veritabanları",
+    "connectors_intro": "Ajanın bağlayıcılar uç noktası üzerinden kaydedilen bağlayıcılar. SQL adaptörünün kendi kurulumu (Adaptör Ekle) aynı bilgileri ister; bu liste yalnızca ajanın son başlatılmasından bu yana bu şekilde devredilen bağlayıcıları gösterir."
   },
   "admin": {
     "accept_writes": {
@@ -4526,5 +4553,33 @@
     "release_incomplete": "Serbest bırakma imzalandı, ancak düğüm hâlâ o düğümü sizin olarak listeliyor: göremediği bir sahiplik kaydı hâlâ geçerli. Geri çekebildiği şey geri çekilmiş durumda kalır.",
     "release_self_requires_force": "Bu, konuştuğunuz düğüm. Onu serbest bırakmak buradaki sahipliğinizi, bu oturum dahil, sona erdirir.",
     "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi."
+  },
+  "partnership_queue": {
+    "admin_only": "Bu ajanı kimlerin beklediğini yalnızca yöneticileri görebilir.",
+    "empty": "Ajanınızdan yanıt bekleyen kimse yok.",
+    "memory_note": "Bu, ajanın son başlatılmasından bu yana hatırladığı şeydir. Yeniden başlatma bu listeyi boşaltır.",
+    "metrics": "{pending} beklemede · {accepted} kabul edildi · {declined} reddedildi · {deferred} ertelendi",
+    "outcome_approved": "Kabul edildi",
+    "outcome_rejected": "Reddedildi",
+    "outcome_deferred": "Ertelendi",
+    "outcome_expired": "Süresi doldu",
+    "waited_hours": "{n} saattir bekliyor",
+    "waited_days": "{n} gündür bekliyor",
+    "waiting_on_agent": "Beklenen: ajanınız",
+    "reason_none": "Neden belirtilmedi",
+    "history_empty": "Ajan son başlatılmasından bu yana bu kişi için önceki bir yanıt yok.",
+    "history_row": "{who} tarafından {outcome} · {when}",
+    "title": "Bu ajanla ortaklık kurma",
+    "always_covers": "Her zaman kapsar",
+    "may_add": "Ayrıca kapsayabilir",
+    "categories_none": "hiçbiri belirtilmedi",
+    "ending": "Sonlandırmak",
+    "revocable_not_undoable": "Bir ortaklığı sonlandırmak her zaman yapılabilir, ancak bu bir geri alma değildir: ajan kimliğinizi anında keser ve öğrendiklerinin 90 gün içinde solmasına izin verir.",
+    "not_on_this_node": "Bu düğümde bir ajan yok, dolayısıyla kimse ondan ortaklık isteyemez.",
+    "who_decides_label": "Kim yanıtlıyor",
+    "who_decides": "Ajanınız her isteği kendisi yanıtlar. Bir ortaklığın kabul yarısı ajanın vereceği bir şeydir; bu nedenle bu kart istekleri gösterir, hiçbirini yanıtlamaz ve burada kimse ajanın yerine yanıt vermez.",
+    "signed_by_label": "İmzalayan",
+    "signed_by_nobody": "Hiç kimse. Ajan, ortaklıkları imzasız kayıtlar olarak, kimsenin anahtarı altında değil bir oturum açma kimliği altında dosyalar (CIRISServer#423).",
+    "waiting_title": "Ajanınızdan yanıt bekleniyor"
   }
 }
