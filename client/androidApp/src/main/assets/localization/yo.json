@@ -3082,7 +3082,9 @@
     "transport_not_on_this_node": "Nódù yìí kò ṣe ìròyìn àwọn ìrìnnà rẹ̀.",
     "audit_not_on_this_node": "Nódù yìí kò ní àkọsílẹ̀ àyẹ̀wò aṣojú. Kò sí ohun tí a yọ kúrò.",
     "consent_not_on_this_node": "Nódù yìí kò ní àwọn àkọsílẹ̀ ìyọ́nda. Aṣojú ni ó ń pa ìyọ́nda mọ́, nódù yìí sì ń ṣiṣẹ́ láìsí ọ̀kan.",
-    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà."
+    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà.",
+    "manage_nodes_owned_not_on_this_node": "Nódù yìí kò lè ṣe àkọsílẹ̀ àwọn nódù tí ìwọ ni. Ó ti gbó jù láti dá ìbéèrè yẹn lóhùn.",
+    "manage_nodes_unverified": "A kò lè fi àkọsílẹ̀ yìí wé àwọn nódù tí ìwọ ni. Ó fi ẹ̀rọ yìí nìkan àti àwọn nódù tí o fi kún nínú ìgbà yìí hàn. Èyí kò túmọ̀ sí pé o kò ní ohunkóhun mìíràn."
   },
   "moderation": {
     "ladder": {
@@ -3237,7 +3239,8 @@
       "users": "Àwọn Olùmúlò",
       "wallet": "Àpò Owó",
       "wise_authority": "Aláṣẹ Ọlọ́gbọ́n",
-      "help": "Ìrànlọ́wọ́"
+      "help": "Ìrànlọ́wọ́",
+      "node_self": "Ipò Ara Ẹni"
     },
     "circle": {
       "agent": "Èmi nìkan",
@@ -3527,6 +3530,25 @@
         "sent": "Fíránṣẹ́",
         "session": "Àpapọ̀ ìpàdé yìí",
         "title": "Ìlọ́sí Ìṣẹ́"
+      },
+      "replication": {
+        "title": "Ìdàkọ",
+        "carriage": "Fífi àwọn àkọsílẹ̀ ránṣẹ́ sí àwọn ẹgbẹ́",
+        "receive": "Rírí àwọn àkọsílẹ̀ láti ọ̀dọ̀ àwọn ẹgbẹ́",
+        "served": "Àwọn àkọsílẹ̀ tí a pèsè",
+        "applied": "Àwọn àkọsílẹ̀ tí a ti fi sílò",
+        "note": "Iye àwọn ìránṣẹ́ tí ó wà lókè kàn àwọn ìránṣẹ́ app nìkan. Àdàkọ ń gbé àwọn àkọsílẹ̀ láì fọwọ́kàn wọn, nítorí náà 0 níbẹ̀ kò sọ ohunkóhun nípa bóyá àwọn àkọsílẹ̀ ń rìn. Àwọn ipò méjì tí ó wà níbí ni wọ́n ń sọ.",
+        "not_reported": "Nódù yìí kò tíì ròyìn nípa àdàkọ, nítorí náà kò sí ohun tí a lè fi hàn níbí. Èyí kì í ṣe bákan náà pẹ̀lú pé kò sí ohun tí ń lọ."
+      },
+      "standing": {
+        "unreadable": "A kò lè kà á",
+        "not_exercised": "Kò tíì gbìyànjú (a kò dánwò, kì í ṣe èyí tí ó mọ́)",
+        "idle": "Ìdákẹ́: kò sí ohun tí yóò pààrọ̀",
+        "moving": "Ń rìn",
+        "withholding": "Ń dá àwọn àkọsílẹ̀ kan dúró",
+        "converged": "Ó ti bára mu",
+        "applying": "Ń fi àwọn àkọsílẹ̀ tuntun sílò",
+        "refusing": "Ń kọ̀ àwọn àkọsílẹ̀ kan"
       }
     },
     "stats_strip": {
@@ -3677,7 +3699,12 @@
         "delegation_label": "Id ìfiṣẹ́lé olówó",
         "reason_hint": "A ń ṣàkọsílẹ̀ rẹ̀ gẹ́gẹ́ bí a ṣe kọ ọ́ gan-an, a kì í sì í túmọ̀ rẹ̀ láé. Ìṣe tí kò ní ìdí tí a ṣàkọsílẹ̀ kò ṣe é yà sọ́tọ̀ kúrò nínú ìṣe tí kò ní àṣẹ, lẹ́yìn tí ẹni tí ó ṣe é bá ti lọ.",
         "reason_label": "Ìdí (dandan)",
-        "working": "Ń ṣàkọsílẹ̀…"
+        "working": "Ń ṣàkọsílẹ̀…",
+        "review": "Àyẹ̀wò",
+        "delegation_supplied": "Tí a dárúkọ láti ọwọ́ nódù yìí",
+        "delegation_none": "Nódù yìí kò ní ìfilélẹ̀-àṣẹ kankan láti ọ̀dọ̀ olówó rẹ̀ tí ó lè ṣiṣẹ́ lábẹ́ rẹ̀, nítorí náà kò lè kọ ìṣe yìí sílẹ̀. Tún so nódù yìí pọ̀ mọ́ olówó rẹ̀ ná.",
+        "delegation_unreadable": "Nódù yìí kò lè ka àwọn ìfilélẹ̀-àṣẹ rẹ ní àkókò yìí, nítorí náà tẹ id náà sí i.",
+        "delegation_not_supplied": "Nódù yìí kò lè dárúkọ ìfilélẹ̀-àṣẹ rẹ (ó ti darúgbó ju 0.5.218), nítorí náà tẹ id delegates_to ti olówó fúnra rẹ̀ sí i. Ìfúnni ìsìn láti ọwọ́ ẹni-kẹta kò tó."
       },
       "event": "Ìṣẹ̀lẹ̀",
       "lift_disabled_hint": "A kò kéde ohunkóhun lórí ẹ̀ka yìí, nítorí náà kò sí ohun tí a lè gbé kúrò.",
@@ -3707,8 +3734,19 @@
       "unreachable_body": "Àwọn ipò mẹ́tẹ̀ẹ̀ta jẹ́ àìmọ̀ — èyí kì í ṣe 'kò sí ohun tí ó wà nínú iṣẹ́'. Àwọn ìṣe ìpele S jẹ́ ti àdúgbò nódù yìí, nítorí náà wọ́n yóò tún wà ní àrọ́wọ́tó lẹ́sẹ̀kẹsẹ̀ tí ó bá dáhùn.",
       "unreachable_title": "A kò lè dé ọ̀dọ̀ nódù yìí",
       "unreadable_axes_body": "Nódù náà dáhùn, ṣùgbọ́n kò lè ka àwọn ẹ̀ka tí a sàmì sí nísàlẹ̀. Kò mọ ipò tirẹ̀ lórí wọn — má ṣe kà á gẹ́gẹ́ bí èyí tí ó mọ́.",
-      "unreadable_axes_title": "A kò lè ka àwọn ipò kan"
-    }
+      "unreadable_axes_title": "A kò lè ka àwọn ipò kan",
+      "confirm": {
+        "what": "Ohun tí a kọ sílẹ̀",
+        "declared": "kéde",
+        "lifted": "yọ kúrò",
+        "not_named": "a kò dárúkọ àṣẹ",
+        "changes": "Ohun tí ó yí padà",
+        "changes_value": "Kò yí ohunkóhun tí nódù yìí ń ṣe padà. Àkọsílẹ̀ ni lórí nódù yìí, yóò sì máa wà nínú ìtàn lẹ́yìn tí a bá gbé e kúrò.",
+        "signs": "Ẹni tí ó fọwọ́sí",
+        "signs_value": "Ìwọ, gẹ́gẹ́ bí ẹni tí ó ni nódù yìí, lábẹ́ ìfilélẹ̀-àṣẹ {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Nódù yìí ń ṣiṣẹ́ láì ní aṣojú, ipò náà sì jẹ́ ti aṣojú láti ròyìn."
   },
   "operator": {
     "carriage": {
@@ -4290,6 +4328,9 @@
       "write_title": "Yí bọ́tìnì mesh kan",
       "write_ttl": "Yóò pé lẹ́yìn (wákàtí)",
       "write_value": "Iye"
+    },
+    "health_reputation": {
+      "not_per_circle": "Ìwọ̀n kan ṣoṣo fún aṣojú, èyí tí ó jẹ́ kan náà ní gbogbo àyíká. CIRIS kò tí ì lè díwọ̀n ipò nínú àyíká kan ṣoṣo."
     }
   },
   "system": {

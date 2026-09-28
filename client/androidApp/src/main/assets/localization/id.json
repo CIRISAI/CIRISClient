@@ -3082,7 +3082,9 @@
     "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
     "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
     "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
-    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli.",
+    "manage_nodes_owned_not_on_this_node": "Node ini tidak dapat mendaftar node yang Anda miliki. Node ini terlalu usang untuk menjawab pertanyaan itu.",
+    "manage_nodes_unverified": "Daftar ini tidak dapat diperiksa terhadap node yang Anda miliki. Daftar ini hanya menampilkan perangkat ini dan node mana pun yang Anda tambahkan dalam sesi ini. Itu tidak berarti Anda tidak memiliki apa pun selain itu."
   },
   "moderation": {
     "ladder": {
@@ -3237,7 +3239,8 @@
       "users": "Pengguna",
       "wallet": "Dompet",
       "wise_authority": "Otoritas Bijak",
-      "help": "Bantuan"
+      "help": "Bantuan",
+      "node_self": "Status Sendiri"
     },
     "circle": {
       "agent": "Hanya saya",
@@ -3527,6 +3530,25 @@
         "sent": "Terkirim",
         "session": "Total sesi ini",
         "title": "Throughput"
+      },
+      "replication": {
+        "title": "Replikasi",
+        "carriage": "Mengirim catatan ke peer",
+        "receive": "Menerima catatan dari peer",
+        "served": "Catatan dilayani",
+        "applied": "Catatan diterapkan",
+        "note": "Jumlah pesan di atas hanya mencakup pesan aplikasi. Replikasi memindahkan catatan tanpa mengubahnya, sehingga angka 0 di sana tidak mengatakan apa pun tentang apakah catatan sedang bergerak. Kedua status di sini yang menunjukkannya.",
+        "not_reported": "Node ini belum melaporkan replikasi, sehingga tidak ada yang dapat ditampilkan di sini. Itu tidak sama dengan tidak ada yang bergerak."
+      },
+      "standing": {
+        "unreadable": "Tidak dapat dibaca",
+        "not_exercised": "Belum pernah dicoba (belum diuji, tidak bersih)",
+        "idle": "Diam: tidak ada yang perlu dipertukarkan",
+        "moving": "Bergerak",
+        "withholding": "Menahan beberapa catatan",
+        "converged": "Sudah sinkron",
+        "applying": "Menerapkan catatan baru",
+        "refusing": "Menolak beberapa catatan"
       }
     },
     "stats_strip": {
@@ -3677,7 +3699,12 @@
         "delegation_label": "Id delegasi pemilik",
         "reason_hint": "Dicatat apa adanya dan tidak pernah ditafsirkan. Tindakan tanpa alasan yang tercatat tidak dapat dibedakan dari tindakan tanpa izin setelah pelakunya tiada.",
         "reason_label": "Alasan (wajib)",
-        "working": "Mencatat…"
+        "working": "Mencatat…",
+        "review": "Tinjau",
+        "delegation_supplied": "Disebutkan oleh node ini",
+        "delegation_none": "Node ini tidak memegang delegasi apa pun dari pemiliknya yang dapat digunakan untuk bertindak, sehingga tidak dapat mencatat tindakan ini. Ikat ulang node ini ke pemiliknya terlebih dahulu.",
+        "delegation_unreadable": "Node ini tidak dapat membaca delegasi Anda saat ini, sehingga ketikkan id-nya.",
+        "delegation_not_supplied": "Node ini tidak dapat menyebutkan delegasi Anda (versinya lebih lama dari 0.5.218), sehingga ketikkan id delegates_to milik pemilik itu sendiri. Pemberian hak penyajian dari pihak ketiga tidak mencukupi."
       },
       "event": "Peristiwa",
       "lift_disabled_hint": "Belum ada yang dinyatakan pada poros ini, sehingga tidak ada yang bisa ditarik.",
@@ -3707,8 +3734,19 @@
       "unreachable_body": "Ketiga status tidak diketahui — dan itu bukan berarti 'tidak ada yang berlaku'. Tindakan tier S bersifat lokal bagi node ini, sehingga semuanya tersedia kembali begitu node menjawab.",
       "unreachable_title": "Node ini tidak dapat dijangkau",
       "unreadable_axes_body": "Node menjawab, tetapi ia tidak dapat membaca poros-poros yang ditandai di bawah ini. Ia tidak mengetahui statusnya sendiri di sana — jangan membacanya sebagai bersih.",
-      "unreadable_axes_title": "Sebagian status tidak dapat dibaca"
-    }
+      "unreadable_axes_title": "Sebagian status tidak dapat dibaca",
+      "confirm": {
+        "what": "Apa yang dicatat",
+        "declared": "dinyatakan",
+        "lifted": "dicabut",
+        "not_named": "otoritas tidak disebutkan",
+        "changes": "Apa yang diubah",
+        "changes_value": "Tidak ada yang dilakukan node ini. Ini adalah catatan pada node ini, dan tetap berada dalam riwayat setelah dicabut.",
+        "signs": "Siapa yang menandatangani",
+        "signs_value": "Anda, sebagai pemilik node ini, di bawah delegasi {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Node ini berjalan tanpa agen, dan mode tersebut merupakan hal yang harus dilaporkan oleh agen."
   },
   "operator": {
     "carriage": {
@@ -4290,6 +4328,9 @@
       "write_title": "Ubah sebuah setelan mesh",
       "write_ttl": "Kedaluwarsa setelah (jam)",
       "write_value": "Nilai"
+    },
+    "health_reputation": {
+      "not_per_circle": "Satu skor untuk agen, sama di setiap lingkaran. CIRIS belum dapat mengukur status dalam satu lingkaran."
     }
   },
   "system": {

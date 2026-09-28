@@ -3082,7 +3082,9 @@
     "transport_not_on_this_node": "Este nó não relata seus transportes.",
     "audit_not_on_this_node": "Este nó não mantém um registro de auditoria do agente. Nada foi filtrado.",
     "consent_not_on_this_node": "Este nó não guarda registros de consentimento. O consentimento é mantido por um agente, e este nó funciona sem um.",
-    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar."
+    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar.",
+    "manage_nodes_owned_not_on_this_node": "Este nó não consegue listar os nós que você possui. Ele é muito antigo para responder a essa pergunta.",
+    "manage_nodes_unverified": "Não foi possível verificar esta lista em relação aos nós que você possui. Ela mostra apenas este dispositivo e qualquer nó que você tenha adicionado nesta sessão. Isso não significa que você não possua mais nada."
   },
   "moderation": {
     "ladder": {
@@ -3237,7 +3239,8 @@
       "users": "Usuários",
       "wallet": "Carteira",
       "wise_authority": "Autoridade Sábia",
-      "help": "Ajuda"
+      "help": "Ajuda",
+      "node_self": "Situação própria"
     },
     "circle": {
       "agent": "Só eu",
@@ -3527,6 +3530,25 @@
         "sent": "Enviados",
         "session": "Total desta sessão",
         "title": "Taxa de transferência"
+      },
+      "replication": {
+        "title": "Replicação",
+        "carriage": "Enviando registros para pares",
+        "receive": "Recebendo registros de pares",
+        "served": "Registros servidos",
+        "applied": "Registros aplicados",
+        "note": "As contagens de mensagens acima cobrem apenas mensagens do aplicativo. A replicação move registros sem tocá-los, portanto um 0 ali não diz nada sobre se os registros estão em movimento. As duas situações aqui dizem.",
+        "not_reported": "Este nó ainda não relata replicação, portanto não há nada para mostrar aqui. Isso não é o mesmo que nada estar em movimento."
+      },
+      "standing": {
+        "unreadable": "Não pôde ser lido",
+        "not_exercised": "Ainda não testado (não testado, não limpo)",
+        "idle": "Inativo: nada para trocar",
+        "moving": "Em movimento",
+        "withholding": "Retendo alguns registros",
+        "converged": "Atualizado",
+        "applying": "Aplicando novos registros",
+        "refusing": "Recusando alguns registros"
       }
     },
     "stats_strip": {
@@ -3677,7 +3699,12 @@
         "delegation_label": "Id de delegação do proprietário",
         "reason_hint": "Registrado literalmente e nunca interpretado. Um ato sem motivo registrado é indistinguível de um ato não autorizado depois que o ator se foi.",
         "reason_label": "Motivo (obrigatório)",
-        "working": "Registrando…"
+        "working": "Registrando…",
+        "review": "Revisar",
+        "delegation_supplied": "Nomeada por este nó",
+        "delegation_none": "Este nó não possui nenhuma delegação do proprietário sob a qual possa agir, portanto não pode registrar este ato. Vincule este nó novamente ao proprietário primeiro.",
+        "delegation_unreadable": "Este nó não conseguiu ler as suas delegações agora, portanto digite o id.",
+        "delegation_not_supplied": "Este nó não consegue nomear a sua delegação (ele é mais antigo que 0.5.218), portanto digite o id delegates_to do próprio proprietário. A concessão de serviço de um terceiro não serve."
       },
       "event": "Evento",
       "lift_disabled_hint": "Nada foi declarado neste eixo, portanto não há nada a levantar.",
@@ -3707,8 +3734,19 @@
       "unreachable_body": "As três situações são desconhecidas — o que não é 'nada em vigor'. Os atos da camada S são locais a este nó, portanto voltam a estar disponíveis no instante em que ele responder.",
       "unreachable_title": "Não foi possível alcançar este nó",
       "unreadable_axes_body": "O nó respondeu, mas não conseguiu ler os eixos marcados abaixo. Ele não sabe qual é a própria situação neles — não leia isso como uma situação limpa.",
-      "unreadable_axes_title": "Não foi possível ler algumas situações"
-    }
+      "unreadable_axes_title": "Não foi possível ler algumas situações",
+      "confirm": {
+        "what": "O que é registrado",
+        "declared": "declarado",
+        "lifted": "retirado",
+        "not_named": "autoridade não nomeada",
+        "changes": "O que isso muda",
+        "changes_value": "Não muda nada do que este nó faz. É um registro neste nó, e permanece no histórico depois de ser retirado.",
+        "signs": "Quem assina",
+        "signs_value": "Você, como proprietário deste nó, sob a delegação {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Este nó funciona sem um agente, e o modo é responsabilidade do agente informar."
   },
   "operator": {
     "carriage": {
@@ -4290,6 +4328,9 @@
       "write_title": "Ajustar um controle da malha",
       "write_ttl": "Expira após (horas)",
       "write_value": "Valor"
+    },
+    "health_reputation": {
+      "not_per_circle": "Uma única pontuação para o agente, a mesma em todos os círculos. CIRIS ainda não consegue medir a situação dentro de um único círculo."
     }
   },
   "system": {

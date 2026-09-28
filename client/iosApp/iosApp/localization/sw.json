@@ -3082,7 +3082,9 @@
     "transport_not_on_this_node": "Nodi hii hairipoti njia zake za usafirishaji.",
     "audit_not_on_this_node": "Nodi hii haihifadhi kumbukumbu ya ukaguzi ya wakala. Hakuna kilichochujwa.",
     "consent_not_on_this_node": "Nodi hii haihifadhi rekodi za idhini. Idhini inahifadhiwa na wakala, na nodi hii inafanya kazi bila wakala.",
-    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua."
+    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua.",
+    "manage_nodes_owned_not_on_this_node": "Nodi hii haiwezi kuorodhesha nodi unazomiliki. Ni ya zamani sana kujibu swali hilo.",
+    "manage_nodes_unverified": "Orodha hii haikuweza kuhakikiwa dhidi ya nodi unazomiliki. Inaonyesha kifaa hiki pekee na nodi yoyote uliyoiongeza katika kipindi hiki. Hilo halimaanishi kuwa hauna kingine chochote."
   },
   "moderation": {
     "ladder": {
@@ -3237,7 +3239,8 @@
       "users": "Watumiaji",
       "wallet": "Mkoba",
       "wise_authority": "Mshauri wa Kibinadamu",
-      "help": "Msaada"
+      "help": "Msaada",
+      "node_self": "Hali yangu"
     },
     "circle": {
       "agent": "Mimi tu",
@@ -3527,6 +3530,25 @@
         "sent": "Imetumwa",
         "session": "Jumla ya kikao hiki",
         "title": "Kiwango cha upitishaji"
+      },
+      "replication": {
+        "title": "Urudufishaji",
+        "carriage": "Kutuma rekodi kwa wenza",
+        "receive": "Kupokea rekodi kutoka kwa wenza",
+        "served": "Rekodi zilizohudumiwa",
+        "applied": "Rekodi zilizotekelezwa",
+        "note": "Idadi za jumbe zilizo hapo juu zinahusu jumbe za programu pekee. Urudufishaji unahamisha rekodi bila kuzigusa, hivyo sifuri hapo haisemi lolote kuhusu kama rekodi zinasogea. Hali mbili zilizo hapa zinasema.",
+        "not_reported": "Nodi hii haijaripoti urudufishaji bado, hivyo hakuna kitu cha kuonyesha hapa. Hilo si sawa na kutokuwepo kwa kinachosonga."
+      },
+      "standing": {
+        "unreadable": "Haikuweza kusomwa",
+        "not_exercised": "Bado haijajaribiwa (haijapimwa, si safi)",
+        "idle": "Tulivu: hakuna cha kubadilishana",
+        "moving": "Inasogea",
+        "withholding": "Inazuia baadhi ya rekodi",
+        "converged": "Imesasishwa",
+        "applying": "Inatekeleza rekodi mpya",
+        "refusing": "Inakataa baadhi ya rekodi"
       }
     },
     "stats_strip": {
@@ -3677,7 +3699,12 @@
         "delegation_label": "Kitambulisho cha ukabidhi wa mmiliki",
         "reason_hint": "Hurekodiwa neno kwa neno na kamwe haifasiriwi. Kitendo kisicho na sababu iliyorekodiwa hakitofautishiki na kitendo kisicho na idhini pale mtendaji anapokuwa ameondoka.",
         "reason_label": "Sababu (inahitajika)",
-        "working": "Inarekodi…"
+        "working": "Inarekodi…",
+        "review": "Kagua",
+        "delegation_supplied": "Imetajwa na nodi hii",
+        "delegation_none": "Nodi hii haina ukabidhi wowote kutoka kwa mmiliki wake ambao inaweza kutenda chini yake, hivyo haiwezi kurekodi tendo hili. Unganisha tena nodi hii na mmiliki wake kwanza.",
+        "delegation_unreadable": "Nodi hii haikuweza kusoma ukabidhi wako kwa sasa, hivyo andika kitambulisho.",
+        "delegation_not_supplied": "Nodi hii haiwezi kutaja ukabidhi wako (ni ya zamani zaidi ya 0.5.218), hivyo andika kitambulisho cha delegates_to cha mmiliki mwenyewe. Ruhusa ya kutoa huduma kutoka kwa mtu wa tatu haitoshi."
       },
       "event": "Tukio",
       "lift_disabled_hint": "Hakuna kilichotangazwa katika mhimili huu, hivyo hakuna cha kuondolewa.",
@@ -3707,8 +3734,19 @@
       "unreachable_body": "Hali zote tatu hazijulikani — jambo ambalo si 'hakuna kinachotumika'. Vitendo vya tabaka S ni vya kienyeji kwa nodi hii, hivyo vitapatikana tena mara tu itakapojibu.",
       "unreachable_title": "Nodi hii haikuweza kufikiwa",
       "unreadable_axes_body": "Nodi ilijibu, lakini haikuweza kusoma mihimili iliyotiwa alama hapa chini. Haijui hali yake yenyewe hapo — usisome hilo kama hali safi.",
-      "unreadable_axes_title": "Baadhi ya hali hazikuweza kusomwa"
-    }
+      "unreadable_axes_title": "Baadhi ya hali hazikuweza kusomwa",
+      "confirm": {
+        "what": "Kinachorekodiwa",
+        "declared": "Tangazwa",
+        "lifted": "Ondolewa",
+        "not_named": "mamlaka haijatajwa",
+        "changes": "Kinachobadilika",
+        "changes_value": "Hakuna jambo ambalo nodi hii inafanya. Ni rekodi kwenye nodi hii, na inabaki katika historia baada ya kuondolewa.",
+        "signs": "Nani anatia saini",
+        "signs_value": "Wewe, kama mmiliki wa nodi hii, chini ya ukabidhi {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Nodi hii inafanya kazi bila wakala, na hali hiyo ni jukumu la wakala kuiripoti."
   },
   "operator": {
     "carriage": {
@@ -4290,6 +4328,9 @@
       "write_title": "Geuza kitufe cha mesh",
       "write_ttl": "Inaisha baada ya (saa)",
       "write_value": "Thamani"
+    },
+    "health_reputation": {
+      "not_per_circle": "Alama moja kwa wakala, ile ile katika kila mzunguko. CIRIS haiwezi bado kupima hali ndani ya mzunguko mmoja."
     }
   },
   "system": {

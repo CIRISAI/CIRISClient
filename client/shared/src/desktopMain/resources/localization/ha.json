@@ -3082,7 +3082,9 @@
     "transport_not_on_this_node": "Wannan kumburi ba ya bayar da rahoton transports nasa ba.",
     "audit_not_on_this_node": "Wannan kumburi ba ya riƙe littafin dubawar wakili ba. Ba a tace komai ba.",
     "consent_not_on_this_node": "Wannan kumburi ba ya riƙe bayanan amincewa ba. Wakili ne ke riƙe amincewa, kuma wannan kumburi yana gudana ba tare da wakili ba.",
-    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya."
+    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya.",
+    "manage_nodes_owned_not_on_this_node": "Wannan kumburi ba zai iya lissafa kumburorin da kuke da su ba. Ya tsufa da yawa don amsa wannan tambaya.",
+    "manage_nodes_unverified": "Ba a iya duba wannan jerin da kumburorin da kuke da su ba. Yana nuna wannan na'ura kaɗai da kowane kumburi da kuka ƙara a wannan zaman. Hakan ba yana nufin ba ku da wasu kumburori dabam ba."
   },
   "moderation": {
     "ladder": {
@@ -3237,7 +3239,8 @@
       "users": "Masu amfani",
       "wallet": "Jakar kuɗi",
       "wise_authority": "Hukumar Hikima",
-      "help": "Taimako"
+      "help": "Taimako",
+      "node_self": "Matsayin Kansa"
     },
     "circle": {
       "agent": "Ni kaɗai",
@@ -3527,6 +3530,25 @@
         "sent": "An aika",
         "session": "Jimlar wannan zama",
         "title": "Yawan aiki"
+      },
+      "replication": {
+        "not_reported": "Wannan kumburi bai bayar da rahoton kwafi tukuna ba, don haka babu abin nuna a nan. Wannan ba daidai yake da babu abin da ke motsi ba.",
+        "title": "Kwafi",
+        "carriage": "Ana aika rikodi zuwa sauran kumburori",
+        "receive": "Ana karɓar rikodi daga sauran kumburori",
+        "served": "Rikodin da aka bayar",
+        "applied": "Rikodin da aka aiwatar",
+        "note": "Adadin saƙonnin da ke sama ya shafi saƙonnin manhaja ne kaɗai. Kwafi yana motsa rikodi ba tare da taɓa su ba, don haka 0 a wurin bai nuna komai game da ko rikodi suna motsi ba. Matsayi biyu da ke nan su ne ke nuna hakan."
+      },
+      "standing": {
+        "unreadable": "Ba a iya karanta ba",
+        "not_exercised": "Ba a gwada tukuna ba (ba a tabbatar ba, ba tsafta ba)",
+        "idle": "Kwance: babu abin musanya",
+        "moving": "Motsi",
+        "withholding": "Ana riƙe wasu rikodi",
+        "converged": "An sabunta",
+        "applying": "Ana aiwatar da sabbin rikodi",
+        "refusing": "Ana ƙin wasu rikodi"
       }
     },
     "stats_strip": {
@@ -3675,9 +3697,14 @@
         "confirm": "Rubuta",
         "delegation_hint": "ID ɗin delegates_to na mai shi da kansa. Aikin da kumburi ya yanke wa kansa na mai shi ne shi kaɗai: izinin bayarwa na wani ɓangare na uku ba zai isa ba.",
         "delegation_label": "ID na wakilcin mai shi",
+        "delegation_none": "Wannan kumburi ba shi da wakilci daga mai shi wanda zai iya yin aiki a ƙarƙashinsa, don haka ba zai iya rikodin wannan aikin ba. Ku sake haɗa wannan kumburi da mai shi tukuna.",
+        "delegation_unreadable": "Wannan kumburi bai iya karanta wakilcinku a yanzu ba, don haka ku rubuta ID ɗin.",
+        "delegation_not_supplied": "Wannan kumburi ba zai iya ambata wakilcinku ba (ya girmi 0.5.218), don haka ku rubuta ID ɗin delegates_to na mai shi da kansa. Izinin bayarwa na wani ɓangare na uku ba zai isa ba.",
         "reason_hint": "Ana rubuta shi kalma-da-kalma kuma ba a taɓa fassara shi ba. Aikin da ba shi da dalilin da aka rubuta ba shi da bambanci da aikin da ba shi da izini sa'ad da mai aikin ya tafi.",
         "reason_label": "Dalili (wajibi)",
-        "working": "Ana rubutawa…"
+        "working": "Ana rubutawa…",
+        "review": "Bita",
+        "delegation_supplied": "An ambace shi ta wannan kumburi"
       },
       "event": "Abin da ya faru",
       "lift_disabled_hint": "Ba a ayyana komai a kan wannan gindi ba, don haka babu abin da za a ɗage.",
@@ -3707,8 +3734,19 @@
       "unreachable_body": "Matsayin ukun ba a san su ba — wanda hakan ba yana nufin «babu abin da ke aiki» ba. Ayyukan mataki S na cikin gida ne ga wannan kumburi, don haka za a sake samun su nan take idan ya amsa.",
       "unreachable_title": "Ba a iya kaiwa ga wannan kumburi ba",
       "unreadable_axes_body": "Kumburin ya amsa, amma bai iya karanta gindayen da aka yi wa alama a ƙasa ba. Bai san matsayinsa na kansa a wurin ba — kada ka karanta hakan a matsayin «babu abin da ke aiki».",
-      "unreadable_axes_title": "Ba a iya karanta wasu matsayin ba"
-    }
+      "unreadable_axes_title": "Ba a iya karanta wasu matsayin ba",
+      "confirm": {
+        "what": "Abin da ake rikodi",
+        "declared": "An bayyana",
+        "lifted": "An ɗage",
+        "not_named": "ba a ambaci iko ba",
+        "changes": "Abin da yake canzawa",
+        "changes_value": "Babu abin da wannan kumburi yake yi. Rikodi ne a kan wannan kumburi, kuma yana zama a tarihi bayan an ɗage shi.",
+        "signs": "Wanda ke sa hannu",
+        "signs_value": "Ku, a matsayin mai wannan kumburi, ƙarƙashin wakilci {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Wannan kumburi yana gudana ba tare da wakili ba, kuma wakili ne ke da alhakin bayar da rahoton yanayin."
   },
   "operator": {
     "carriage": {
@@ -4290,6 +4328,9 @@
       "write_title": "Juya maɓallin saiti na mesh",
       "write_ttl": "Zai ƙare bayan (sa'o'i)",
       "write_value": "Ƙima"
+    },
+    "health_reputation": {
+      "not_per_circle": "Maki guda ne domin wakili, iri ɗaya a kowace da'ira. CIRIS baya iya auna matsayi a cikin da'ira guda tukuna ba."
     }
   },
   "system": {
