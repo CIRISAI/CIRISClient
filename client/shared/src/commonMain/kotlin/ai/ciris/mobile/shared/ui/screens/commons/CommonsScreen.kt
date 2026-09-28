@@ -27,6 +27,7 @@ import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.viewmodels.CommonsViewModel
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
@@ -135,8 +136,18 @@ fun CommonsScreen(
                 onRead = { viewModel.readStanding() },
             )
 
+            // A read that did not arrive (transport failure, unparseable body) is
+            // its own state, never the `unreadable` arm and never `quiet` (CSD-070).
             error?.let {
-                Text(text = it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testable("txt_commons_error", it),
+                )
+            }
+            if (loading) {
+                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().testable("spinner_commons_read"))
             }
             writeResult?.let { WriteResultCard(it) { viewModel.clearWriteResult() } }
 
@@ -204,6 +215,7 @@ private fun AsymmetryBanner(standing: CommonsStanding?) {
                         localizedString("surfaces.commons.raise_price_unread")
                     },
                     style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.testable("txt_commons_raise_price", threshold?.toString() ?: ""),
                 )
             }
         }
@@ -232,12 +244,17 @@ private fun AsymmetryBanner(standing: CommonsStanding?) {
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable(
+                        "txt_commons_lift_price",
+                        if (required != null && roster != null) "$required/$roster" else "",
+                    ),
                 )
                 if (floor != null) {
                     Text(
                         text = localizedString("surfaces.commons.floor", "floor", floor.toString()),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testable("txt_commons_floor", floor.toString()),
                     )
                 }
             }
@@ -285,24 +302,29 @@ private fun QueryCard(
                     )
                 }
             }
+            rememberTextInputDriver("input_commons_cohort_key", cohortKeyId, onValueChange = onCohortKeyId)
+            rememberTextInputDriver("input_commons_action", actionId, onValueChange = onActionId)
             OutlinedTextField(
                 value = cohortKeyId,
                 onValueChange = onCohortKeyId,
                 label = { Text(localizedString("surfaces.commons.cohort_key")) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().testable("input_commons_cohort_key"),
+                modifier = Modifier.fillMaxWidth().testable("input_commons_cohort_key", cohortKeyId),
             )
             OutlinedTextField(
                 value = actionId,
                 onValueChange = onActionId,
                 label = { Text(localizedString("surfaces.commons.action")) },
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth().testable("input_commons_action"),
+                modifier = Modifier.fillMaxWidth().testable("input_commons_action", actionId),
             )
             Button(
                 onClick = onRead,
                 enabled = !loading && cohortKeyId.isNotBlank() && actionId.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_commons_read") { onRead() },
+                modifier = Modifier.testableClickable(
+                    "btn_commons_read",
+                    enabled = !loading && cohortKeyId.isNotBlank() && actionId.isNotBlank(),
+                ) { onRead() },
             ) {
                 Text(localizedString("surfaces.commons.read"))
             }
@@ -317,6 +339,21 @@ private fun QueryCard(
 /** The four arms that carry NO counts. `quiet` is deliberately not among them. */
 private val ABSENCE_ARMS = setOf("unreadable", "action_unknown", "cohort_unknown", "not_governed")
 
+/** How one standing draws (CSD-070). Pure, so the eight-zeroes rule is testable. */
+internal enum class StandingBody { REFUSED, NO_COUNTS, QUIET, COUNTED }
+
+/**
+ * A refusal returns before anything else; an absence arm, or any arm that
+ * arrived without a fold, prints NO counts (a `0` there is a claim nobody
+ * made); `quiet` is the plane read and clear, which is not an absence.
+ */
+internal fun standingBody(s: CommonsStanding): StandingBody = when {
+    s.refused -> StandingBody.REFUSED
+    s.standing in ABSENCE_ARMS || s.fold == null -> StandingBody.NO_COUNTS
+    s.standing == "quiet" -> StandingBody.QUIET
+    else -> StandingBody.COUNTED
+}
+
 @Composable
 private fun standingColor(token: String): Color = when (token) {
     "reversed" -> SemanticColors.Default.error
@@ -329,11 +366,12 @@ private fun standingColor(token: String): Color = when (token) {
 
 @Composable
 private fun StandingCard(s: CommonsStanding) {
-    if (s.refused) {
+    val body = standingBody(s)
+    if (body == StandingBody.REFUSED) {
         Surface(
             color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.5f),
             shape = RoundedCornerShape(10.dp),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testable("txt_commons_refusal", s.refusal ?: "refused"),
         ) {
             Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
@@ -350,13 +388,17 @@ private fun StandingCard(s: CommonsStanding) {
         return
     }
 
-    val absent = s.standing in ABSENCE_ARMS || s.fold == null
+    val absent = body == StandingBody.NO_COUNTS
     val color = standingColor(s.standing)
 
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = color.copy(alpha = 0.18f), shape = RoundedCornerShape(4.dp)) {
+                Surface(
+                    color = color.copy(alpha = 0.18f),
+                    shape = RoundedCornerShape(4.dp),
+                    modifier = Modifier.testable("txt_commons_standing", s.standing),
+                ) {
                     Text(
                         text = s.standing.uppercase(),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
@@ -386,7 +428,7 @@ private fun StandingCard(s: CommonsStanding) {
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceVariant,
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testable("txt_commons_no_counts", s.standing),
                 ) {
                     Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
@@ -402,11 +444,11 @@ private fun StandingCard(s: CommonsStanding) {
                 }
             } else {
                 val f = s.fold!!
-                if (s.standing == "quiet") {
+                if (body == StandingBody.QUIET) {
                     Surface(
                         color = SemanticColors.Default.success.copy(alpha = 0.12f),
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().testable("txt_commons_quiet"),
                     ) {
                         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
@@ -422,7 +464,7 @@ private fun StandingCard(s: CommonsStanding) {
                         }
                     }
                 }
-                Line(localizedString("surfaces.commons.objectors"), f.distinctObjectors.toString())
+                Line(localizedString("surfaces.commons.objectors"), f.distinctObjectors.toString(), tag = "txt_commons_objectors")
                 Line(localizedString("surfaces.commons.required"), f.required.toString())
                 Line(localizedString("surfaces.commons.roster"), f.rosterSize.toString())
                 f.policy?.let { Line(localizedString("surfaces.commons.policy"), it, mono = true) }
@@ -458,6 +500,7 @@ private fun StandingCard(s: CommonsStanding) {
                     text = localizedString("surfaces.commons.escalation") + " · " + esc.standing.uppercase(),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
+                    modifier = Modifier.testable("txt_commons_escalation", esc.standing),
                 )
                 surfaceText(esc.standingMessage).takeIf { it.isNotBlank() }?.let {
                     Text(text = it, style = MaterialTheme.typography.bodySmall)
@@ -478,8 +521,11 @@ private fun StandingCard(s: CommonsStanding) {
 }
 
 @Composable
-private fun Line(label: String, value: String, mono: Boolean = false) {
-    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+private fun Line(label: String, value: String, mono: Boolean = false, tag: String? = null) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = if (tag != null) Modifier.testable(tag, value) else Modifier,
+    ) {
         Text(
             text = "$label:",
             style = MaterialTheme.typography.labelSmall,
@@ -519,6 +565,11 @@ private fun IdList(label: String, ids: List<String>) {
 @Composable
 private fun RaiseTheBrake(threshold: Int, busy: Boolean, onRaise: (String) -> Unit) {
     var grounds by remember { mutableStateOf("") }
+    rememberTextInputDriver("input_commons_objection_grounds", grounds) { grounds = it }
+    val raise = {
+        onRaise(grounds)
+        grounds = ""
+    }
     Card(
         modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -544,13 +595,13 @@ private fun RaiseTheBrake(threshold: Int, busy: Boolean, onRaise: (String) -> Un
                 modifier = Modifier.fillMaxWidth().testable("input_commons_objection_grounds"),
             )
             Button(
-                onClick = {
-                    onRaise(grounds)
-                    grounds = ""
-                },
+                onClick = raise,
                 enabled = !busy && grounds.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = SemanticColors.Default.warning),
-                modifier = Modifier.testableClickable("btn_commons_object") {},
+                // The automation click runs the SAME act as a tap; it used to be a no-op.
+                modifier = Modifier.testableClickable("btn_commons_object", enabled = !busy && grounds.isNotBlank()) {
+                    raise()
+                },
             ) {
                 Text(localizedString("surfaces.commons.raise_action"))
             }
@@ -598,6 +649,7 @@ private fun ObjectionCard(
     busy: Boolean,
 ) {
     var ballotGrounds by remember { mutableStateOf("") }
+    rememberTextInputDriver("input_commons_ballot_grounds", ballotGrounds) { ballotGrounds = it }
     var lifting by remember { mutableStateOf(false) }
     val payloadSha by viewModel.dismissalPayloadSha256.collectAsState()
     val draftObjection by viewModel.dismissalObjectionId.collectAsState()
@@ -648,6 +700,7 @@ private fun ObjectionCard(
                 Line(
                     localizedString("surfaces.commons.uphold") + " / " + localizedString("surfaces.commons.overrule"),
                     "${r.upholdBallots} / ${r.overruleBallots}",
+                    tag = "txt_commons_ballot_tally",
                 )
             }
 
@@ -668,14 +721,18 @@ private fun ObjectionCard(
                 OutlinedButton(
                     onClick = { viewModel.castBallot(objectionId, true, ballotGrounds) },
                     enabled = !busy && ballotGrounds.isNotBlank(),
-                    modifier = Modifier.testableClickable("btn_commons_uphold") {},
+                    modifier = Modifier.testableClickable("btn_commons_uphold", enabled = !busy && ballotGrounds.isNotBlank()) {
+                        viewModel.castBallot(objectionId, true, ballotGrounds)
+                    },
                 ) {
                     Text(localizedString("surfaces.commons.uphold"))
                 }
                 OutlinedButton(
                     onClick = { viewModel.castBallot(objectionId, false, ballotGrounds) },
                     enabled = !busy && ballotGrounds.isNotBlank(),
-                    modifier = Modifier.testableClickable("btn_commons_overrule") {},
+                    modifier = Modifier.testableClickable("btn_commons_overrule", enabled = !busy && ballotGrounds.isNotBlank()) {
+                        viewModel.castBallot(objectionId, false, ballotGrounds)
+                    },
                 ) {
                     Text(localizedString("surfaces.commons.overrule"))
                 }
@@ -730,6 +787,16 @@ private fun DismissalCeremony(
     var keyId by remember { mutableStateOf("") }
     var classical by remember { mutableStateOf("") }
     var pqc by remember { mutableStateOf("") }
+    rememberTextInputDriver("input_commons_dismiss_grounds", grounds) { grounds = it }
+    rememberTextInputDriver("input_commons_cosigner_key", keyId, enabled = payloadSha != null) { keyId = it }
+    rememberTextInputDriver("input_commons_cosigner_classical", classical, enabled = payloadSha != null) { classical = it }
+    rememberTextInputDriver("input_commons_cosigner_pqc", pqc, enabled = payloadSha != null) { pqc = it }
+    val addCosigner = {
+        onAddCosigner(keyId, classical, pqc)
+        keyId = ""
+        classical = ""
+        pqc = ""
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
@@ -754,12 +821,14 @@ private fun DismissalCeremony(
         OutlinedButton(
             onClick = { onDryRun(grounds) },
             enabled = !busy && grounds.isNotBlank(),
-            modifier = Modifier.testableClickable("btn_commons_dismiss_dry_run") {},
+            modifier = Modifier.testableClickable("btn_commons_dismiss_dry_run", enabled = !busy && grounds.isNotBlank()) {
+                onDryRun(grounds)
+            },
         ) {
             Text(localizedString("surfaces.commons.dry_run"))
         }
         payloadSha?.let {
-            Line("payload_sha256", it, mono = true)
+            Line("payload_sha256", it, mono = true, tag = "txt_commons_dry_run_hash")
         }
 
         // Step 2
@@ -795,14 +864,12 @@ private fun DismissalCeremony(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OutlinedButton(
-                onClick = {
-                    onAddCosigner(keyId, classical, pqc)
-                    keyId = ""
-                    classical = ""
-                    pqc = ""
-                },
+                onClick = addCosigner,
                 enabled = payloadSha != null && keyId.isNotBlank() && classical.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_commons_add_cosigner") {},
+                modifier = Modifier.testableClickable(
+                    "btn_commons_add_cosigner",
+                    enabled = payloadSha != null && keyId.isNotBlank() && classical.isNotBlank(),
+                ) { addCosigner() },
             ) {
                 Text(localizedString("surfaces.commons.add_cosigner"))
             }
@@ -813,7 +880,7 @@ private fun DismissalCeremony(
             if (cosigners > 0) {
                 TextButton(
                     onClick = { onRemoveCosigner(cosigners - 1) },
-                    modifier = Modifier.testableClickable("btn_commons_remove_cosigner") {},
+                    modifier = Modifier.testableClickable("btn_commons_remove_cosigner") { onRemoveCosigner(cosigners - 1) },
                 ) {
                     Text(localizedString("mobile.common_delete"))
                 }
@@ -831,7 +898,10 @@ private fun DismissalCeremony(
             Button(
                 onClick = { onSubmit(grounds) },
                 enabled = !busy && payloadSha != null && grounds.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_commons_dismiss_submit") {},
+                modifier = Modifier.testableClickable(
+                    "btn_commons_dismiss_submit",
+                    enabled = !busy && payloadSha != null && grounds.isNotBlank(),
+                ) { onSubmit(grounds) },
             ) {
                 Text(localizedString("surfaces.commons.dismiss_submit"))
             }

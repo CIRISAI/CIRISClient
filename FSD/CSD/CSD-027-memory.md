@@ -187,3 +187,32 @@ because the assertion that matters is that a family memory shows NO
 5. **Recommended placement: unchanged, and the Locked Spec's reasoning holds.**
    Memory is not a file. But it is the node's, not the agent's, and the
    `agentOnly` flag says otherwise.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate pair (Memory ↔ EnvironmentInfo CSD-002): two doors onto one READ,
+kept.** Both call `POST /v1/memory/query`. Memory is the operator's graph browser
+(any scope, any type, the node or the agent); EnvironmentInfo is Neighbours ›
+Decisions asking the same route for one scope (`environment`) and drawing it as
+the circle's have/want/need list, with add and delete. Same read, two audiences,
+two acts; neither can stand in for the other. The mutating routes (store, delete)
+are EnvironmentInfo's alone.
+
+**Checked, no change needed:** stats match field for field on both hosts; the
+query parameters are right; the 168 h cap matches the longest range.
+
+**Closed here:** the back arrow went to Interact (a bare node has none); now This node.
+
+**Still open**
+- `createdAt` is filled from `updated_at` although `attributes.created_at` is
+  parsed; `consent_stream` / `expires_at` (TEMPORARY vs PARTNERED) are dropped.
+  Client-side, next pass.
+- Node ids with `/` (`node/identity`) cannot be opened on a node: the node's
+  `{node_id}` is one segment. Node search is exact-match on `content`. Both
+  `blocked_by: CIRISServer#661` (memory reads) — or a new issue, draft in the
+  review report.
+- 403 vs 404 on a node read both render as "HTTP …".
+
+**Stage:** building → building.

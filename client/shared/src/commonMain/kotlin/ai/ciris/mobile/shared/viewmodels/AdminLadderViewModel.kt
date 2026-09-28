@@ -2,13 +2,17 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.AdminLadderCommitRequest
-import ai.ciris.mobile.shared.models.AdminLadderOp
 import ai.ciris.mobile.shared.models.AdminOpOutcome
 import ai.ciris.mobile.shared.models.AdminOpResponse
 import ai.ciris.mobile.shared.models.AdminPreviewOutcome
 import ai.ciris.mobile.shared.models.AdminPreviewResponse
 import ai.ciris.mobile.shared.models.AdminRefusal
 import ai.ciris.mobile.shared.models.AdminSelectionDto
+import ai.ciris.mobile.shared.models.CatalogueSource
+import ai.ciris.mobile.shared.models.LadderRung
+import ai.ciris.mobile.shared.models.selfreader.OwnerDelegationDto
+import ai.ciris.mobile.shared.models.selfreader.SelfStandingOutcome
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -57,6 +61,12 @@ data class AdminLadderState(
     // ── Attribution: MANDATORY, and not covered by the hash ──
     /** The `delegates_to` row the act is taken under. The node re-walks it. */
     val delegationId: String = "",
+    /**
+     * True while [delegationId] holds an id THIS app filled from the node's
+     * list rather than one the operator typed, so a rung change can swap it
+     * for one carrying the new rung's scope instead of carrying a wrong one.
+     */
+    val delegationPrefilled: Boolean = false,
     /** WHY. Recorded in the tombstone, never interpreted. */
     val reason: String = "",
 
@@ -72,7 +82,18 @@ data class AdminLadderState(
      */
     val revokedAfter: String = "",
 
-    val selectedOp: AdminLadderOp = AdminLadderOp.ANNOTATE,
+    /**
+     * The ladder as the node states it (`GET /v1/operations`), or the compiled
+     * fallback until and unless it answers. Never empty: the fallback is the
+     * starting value, and [catalogueSource] says which one this is.
+     */
+    val rungs: List<LadderRung> = LadderRung.fallback(),
+    val catalogueSource: CatalogueSource = CatalogueSource.NotLoaded,
+    val selectedOp: LadderRung = rungs.first(),
+
+    // ── The node's own delegation ids (GET /v1/admin/self, CIRISServer#676) ──
+    /** What the node returned for `owner_delegations`, and whether it could. */
+    val nodeDelegations: NodeDelegations = NodeDelegations.NotLoaded,
 
     // ── Preview ──
     val previewing: Boolean = false,
@@ -102,6 +123,16 @@ data class AdminLadderState(
             (!selectedOp.requiresCommunityId || communityId.isNotBlank()) &&
             !committing
 
+    /**
+     * The node's delegations that carry the scope [selectedOp] requires. The
+     * node re-checks it (`authority_scope_absent`); offering a row it will
+     * refuse is how an operator learns the ladder from refusals.
+     */
+    val usableDelegations: List<OwnerDelegationDto>
+        get() = (nodeDelegations as? NodeDelegations.Read)?.rows
+            ?.filter { selectedOp.scope != null && it.scope == selectedOp.scope }
+            .orEmpty()
+
     /** Distinct quorum ids the operator has typed, in submission order. */
     val quorumDelegationIds: List<String>
         get() = quorumDelegationIdsRaw
@@ -109,6 +140,20 @@ data class AdminLadderState(
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .distinct()
+}
+
+/**
+ * What `GET /v1/admin/self` said about the owner's delegation ids. Four facts,
+ * never one blank field: read (maybe none carrying this rung's scope), a node
+ * before 0.5.218 that returns no such field, a failed or refused read, and
+ * not asked yet.
+ */
+sealed class NodeDelegations {
+    data object NotLoaded : NodeDelegations()
+    data class Read(val rows: List<OwnerDelegationDto>) : NodeDelegations()
+    /** The body carried no `owner_delegations` (CIRISServer#676 is in 0.5.218). */
+    data object NotReturned : NodeDelegations()
+    data class Unreadable(val detail: String?) : NodeDelegations()
 }
 
 /**
@@ -150,7 +195,7 @@ class AdminLadderViewModel(
     // ── Attribution + per-op setters: the hash does NOT cover these ──
 
     fun setDelegationId(value: String) {
-        _state.value = _state.value.copy(delegationId = value)
+        _state.value = _state.value.copy(delegationId = value, delegationPrefilled = false)
     }
 
     fun setReason(value: String) {
@@ -179,15 +224,100 @@ class AdminLadderViewModel(
      * the ladder without re-previewing. The last op's result does not, because
      * "annotated 9 rows" must never sit under a heading that now says "descend".
      */
-    fun selectOp(op: AdminLadderOp) {
-        _state.value = _state.value.copy(
+    fun selectOp(op: LadderRung) {
+        val before = _state.value
+        _state.value = before.copy(
+            delegationId = if (before.delegationPrefilled) "" else before.delegationId,
+            delegationPrefilled = false,
             selectedOp = op,
             result = null,
             commitRefusal = null,
             commitError = null,
             descendAck = "",
             confirmOpen = false,
-        )
+        ).withNodeDelegationPrefill()
+    }
+
+    /**
+     * Read what the node offers: the ladder (`GET /v1/operations`) and the
+     * owner's delegation ids (`GET /v1/admin/self`). Called when the card opens.
+     * Either read failing leaves the compiled ladder / a typed id in place and
+     * says so; neither blanks the card.
+     */
+    fun load() {
+        viewModelScope.launch {
+            try {
+                val served = LadderRung.fromCatalogue(apiClient.getOperations().operations)
+                if (served.isEmpty()) {
+                    // A 200 with no graded rows is not a ladder; keep the one we have.
+                    _state.value = _state.value.copy(
+                        catalogueSource = CatalogueSource.Unreadable("the node served no graded operations"),
+                    )
+                } else {
+                    val current = _state.value.selectedOp
+                    val reselected = served.firstOrNull { it.op == current.op }
+                        ?: served.firstOrNull { it.route == current.route }
+                        ?: served.first()
+                    val before = _state.value
+                    _state.value = before.copy(
+                        rungs = served,
+                        selectedOp = reselected,
+                        catalogueSource = CatalogueSource.Node,
+                        // The served scope may differ from the compiled one.
+                        delegationId = if (before.delegationPrefilled) "" else before.delegationId,
+                        delegationPrefilled = false,
+                    ).withNodeDelegationPrefill()
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "operations catalogue unread: ${e.message}")
+                _state.value = _state.value.copy(
+                    catalogueSource = when (val f = ReadFailure.of(e)) {
+                        is ReadFailure.NotOnThisNode -> CatalogueSource.NotOnThisNode(f.detail)
+                        is ReadFailure.Failed -> CatalogueSource.Unreadable(f.detail)
+                    },
+                )
+            }
+            val delegations = try {
+                when (val outcome = apiClient.getSelfStanding()) {
+                    is SelfStandingOutcome.Read -> {
+                        val body = outcome.response
+                        when {
+                            body.ownerDelegations != null -> NodeDelegations.Read(body.ownerDelegations)
+                            body.ownerDelegationsError != null ->
+                                NodeDelegations.Unreadable(body.ownerDelegationsError)
+                            else -> NodeDelegations.NotReturned
+                        }
+                    }
+                    is SelfStandingOutcome.Refused -> NodeDelegations.Unreadable(
+                        outcome.refusal.refusal ?: "http ${outcome.httpStatus}",
+                    )
+                    is SelfStandingOutcome.Unreachable -> NodeDelegations.Unreadable(outcome.detail)
+                }
+            } catch (e: Exception) {
+                NodeDelegations.Unreadable(e.message)
+            }
+            _state.value = _state.value.copy(nodeDelegations = delegations).withNodeDelegationPrefill()
+        }
+    }
+
+    /** Pick one of the node's own delegation ids (a chip, not a paste). */
+    fun useNodeDelegation(delegationId: String) {
+        _state.value = _state.value.copy(delegationId = delegationId, delegationPrefilled = true)
+    }
+
+    /**
+     * Prefill the delegation id with the node's own, when exactly one row
+     * carries the rung's scope and the operator has typed nothing. Never
+     * overwrites a typed id, and never fills one the node would refuse.
+     */
+    private fun AdminLadderState.withNodeDelegationPrefill(): AdminLadderState {
+        if (delegationId.isNotBlank()) return this
+        val usable = usableDelegations
+        return if (usable.size == 1) {
+            copy(delegationId = usable.single().delegationId, delegationPrefilled = true)
+        } else {
+            this
+        }
     }
 
     fun openConfirm() {

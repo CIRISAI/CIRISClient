@@ -181,3 +181,25 @@ platform dialog.
 `GET /v1/scheduler/tasks`, or say in the response that the agent does not track
 one. Today `last_triggered_at` says when it started and nothing says what
 happened, so a person who scheduled something cannot find out whether it worked.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Closed here**
+- *Quarantine was invisible.* `tasks_dead_lettered` (`scheduler.py:80`) was
+  dropped; now the fourth tile, "Quarantined" (`scheduler_stat_dead_lettered`).
+- *A missing stats envelope became zeros.* Now a failed read ("—").
+- *Invalid JSON on an ordinary prompt.* The create body was hand-concatenated and
+  escaped only `"`; a newline or backslash gave a 422. Now serialized
+  (`schedulerCreateBody`).
+- *Active = Pending.* `activeCount` now comes from the list's `active_count`.
+- *Back arrow* went to Interact; now This agent.
+
+**Still open**
+- Dream tasks from the graph are listed but `cancel_task` does not know their ids
+  (404, shown as "Failed to cancel task"); the outcome of a fired task is not on
+  the wire. `blocked_by: CIRISAgent#1208`.
+- `cancelScheduledTask` still collapses a 403 into `false`.
+
+**Stage:** building → building.

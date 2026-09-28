@@ -139,6 +139,19 @@ class IdentityManagementViewModel(
     private val _labelRefusal = MutableStateFlow<NodeRefusal?>(null)
     val labelRefusal: StateFlow<NodeRefusal?> = _labelRefusal.asStateFlow()
 
+    /**
+     * Seal the associated device's key in this host's hardware (`device: "tpm"`).
+     * Off by default — software is the node's default. On a host without
+     * hardware-sealed storage the node refuses (0.5.218, CIRISServer#639) rather
+     * than quietly minting a software key, and [associateRefusal] carries that.
+     */
+    private val _sealInHardware = MutableStateFlow(false)
+    val sealInHardware: StateFlow<Boolean> = _sealInHardware.asStateFlow()
+
+    /** The node's refusal of the last associate, shown by its id. */
+    private val _associateRefusal = MutableStateFlow<NodeRefusal?>(null)
+    val associateRefusal: StateFlow<NodeRefusal?> = _associateRefusal.asStateFlow()
+
     private val _release = MutableStateFlow<ReleaseState>(ReleaseState.Idle)
     val release: StateFlow<ReleaseState> = _release.asStateFlow()
 
@@ -448,13 +461,22 @@ class IdentityManagementViewModel(
         }
     }
 
+    fun setSealInHardware(on: Boolean) {
+        _sealInHardware.value = on
+        _associateRefusal.value = null
+    }
+
     /**
-     * **Associate an existing fed-ID** as THIS device's active user identity. The
-     * directory path installs a portable software keyset from [sourceDir]; the
-     * YubiKey path ([yubikey] = true) is server-gated for now (501).
+     * **Associate an existing fed-ID** as THIS device's active user identity,
+     * from the portable software keyset in [sourceDir]. The device key it mints
+     * is sealed in hardware when [sealInHardware] is on, else software.
+     *
+     * [softwareCustody] is the explicit "use software instead" after the node
+     * refused `tpm` on a host that has none: it sends `device: "software"`, so
+     * the choice is the person's, stated, not a fallback the node made for them.
      */
-    fun associateFedId(sourceDir: String? = null, yubikey: Boolean = false) {
-        if (!yubikey && sourceDir.isNullOrBlank()) {
+    fun associateFedId(sourceDir: String?, softwareCustody: Boolean = false) {
+        if (sourceDir.isNullOrBlank()) {
             _error.value = "Choose the folder holding the portable keyset to associate."
             return
         }
@@ -462,24 +484,33 @@ class IdentityManagementViewModel(
         _busy.value = true
         _error.value = null
         _notice.value = null
+        _associateRefusal.value = null
+        val device = when {
+            softwareCustody -> "software"
+            _sealInHardware.value -> "tpm"
+            else -> null
+        }
+        if (softwareCustody) _sealInHardware.value = false
         viewModelScope.launch {
             try {
-                val result = apiClient.associateFedId(sourceDir = sourceDir, yubikey = yubikey)
+                val result = devices.associate(sourceDir, device)
                 _notice.value =
-                    "Associated this device as ${result.associatedKeyId?.take(20) ?: result.alias}…"
+                    "Associated this device as ${result.associatedKeyId?.take(20) ?: result.alias}…" +
+                        (result.deviceCustody?.let { " (key custody: $it)" } ?: "")
                 load()
+            } catch (e: NodeRefusal) {
+                PlatformLogger.w(TAG, "[associateFedId] ${e.reasonId} ${e.detail}")
+                if (e.reasonId != null) {
+                    _associateRefusal.value = e
+                } else {
+                    _error.value = when (e.statusCode) {
+                        401, 403 -> "Sign in as the owner first, then associate the fed-ID."
+                        else -> "Couldn't associate the fed-ID: ${e.message}"
+                    }
+                }
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[associateFedId] ${e.message}")
-                val msg = e.message.orEmpty()
-                _error.value = when {
-                    msg.contains("501") ->
-                        "YubiKey association isn't available yet — use a directory for now."
-                    msg.contains("401") || msg.contains("403") ->
-                        "Sign in as the owner first, then associate the fed-ID."
-                    msg.contains("no portable keyset") ->
-                        "No portable keyset found in that folder — pick the folder you wrote it to."
-                    else -> "Couldn't associate the fed-ID: ${e.message}"
-                }
+                _error.value = "Couldn't associate the fed-ID: ${e.message}"
             } finally {
                 _busy.value = false
             }

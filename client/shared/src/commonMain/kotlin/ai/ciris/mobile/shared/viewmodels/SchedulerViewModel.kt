@@ -39,6 +39,8 @@ data class SchedulerOverviewData(
     val completedTotal: Int? = null,
     val failedTotal: Int? = null,
     val uptimeSeconds: Double? = null,
+    /** Quarantined by the scheduler (`tasks_dead_lettered`); null = not read. */
+    val deadLettered: Int? = null,
     val hasNotificationPermission: Boolean = false,
     val hasCalendarPermission: Boolean = false
 )
@@ -163,9 +165,12 @@ class SchedulerViewModel(
                 // logDebug, so a 500 rendered as "No Scheduled Tasks" and the
                 // error card below could never be reached (CSD-012).
                 var tasks: List<ScheduledTaskData>? = null
+                var listActiveCount: Int? = null
                 var tasksFailure: ReadFailure? = null
                 try {
-                    tasks = apiClient.getScheduledTasks().tasks
+                    val list = apiClient.getScheduledTasks()
+                    tasks = list.tasks
+                    listActiveCount = list.activeCount
                 } catch (e: Exception) {
                     logError(method, "Scheduled tasks read failed: ${e.message}")
                     tasksFailure = ReadFailure.of(e)
@@ -173,12 +178,15 @@ class SchedulerViewModel(
 
                 val overview = SchedulerOverviewData(
                     cognitiveState = cognitiveState,
-                    activeCount = statsData?.tasksPending ?: tasks?.count { it.status == "PENDING" || it.status == "ACTIVE" },
+                    // The list's own `active_count`, not the stats' pending count
+                    // (they were the same number under two names, CSD-012).
+                    activeCount = listActiveCount ?: tasks?.count { it.status == "PENDING" || it.status == "ACTIVE" },
                     recurringCount = statsData?.recurringTasks ?: tasks?.count { it.isRecurring },
                     pendingCount = statsData?.tasksPending ?: tasks?.count { it.status == "PENDING" },
                     completedTotal = statsData?.tasksCompletedTotal,
                     failedTotal = statsData?.tasksFailedTotal,
                     uptimeSeconds = statsData?.schedulerUptimeSeconds,
+                    deadLettered = statsData?.tasksDeadLettered,
                 )
 
                 _state.update {

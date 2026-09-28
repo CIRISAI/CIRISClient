@@ -69,6 +69,7 @@ fun NetworkInterfacesScreen(
     val rows by vm.transportRows.collectAsState()
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
+    val readFailure by vm.readFailure.collectAsState()
 
     // 10s polling — disposed when the screen leaves composition.
     DisposableEffect(vm) {
@@ -110,8 +111,17 @@ fun NetworkInterfacesScreen(
                         CircularProgressIndicator()
                     }
                 }
+                // No snapshot was read: which failure, not "no transports"
+                // with a red line beneath it (CSD-048).
+                rows.isEmpty() && readFailure != null -> {
+                    ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                        failure = readFailure!!,
+                        tagPrefix = "federation_interfaces",
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
                 rows.isEmpty() -> {
-                    EmptyTransports(error = error)
+                    EmptyTransports(error = null)
                 }
                 else -> {
                     LazyColumn(
@@ -145,6 +155,7 @@ private fun EmptyTransports(error: String?) {
             text = localizedString("network.interfaces.empty"),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("empty_interfaces"),
         )
         if (error != null) {
             Spacer(Modifier.height(8.dp))

@@ -123,7 +123,8 @@ state above.
 | start a non-Play purchase | `POST /v1/api/billing/purchase/initiate` | CIRISAgent (`routes/billing.py:727`) | live, **not called** (stub `BillingApi.kt:167`) — the Portal/Stripe leg; nothing in `shared/` or `androidApp/` reaches it |
 | poll that purchase | `GET /v1/api/billing/purchase/status/{payment_id}` | CIRISAgent (`routes/billing.py:800`) | live, **not called** (stub `BillingApi.kt:94`) |
 | purchasable packages | **a compiled-in constant, not the store** | CIRISClient | live, and **two lists that never meet** — see below |
-| anything on a node | none | — | **wrong-host by placement.** The node serves no billing route. The card is not `agentOnly`, so on a node build it is offered in Communities › Rules and answers from a synthesised value. |
+| anything on a node | none | — | The node serves no billing route. `getCredits` now RAISES `RouteNotOnThisHost` on a node (`CIRISApiClient.kt:7776`) and the card renders `ReadFailureBlock` (`BillingScreen.kt:123-132`: `billing_not_on_this_node` / `billing_error`), never a synthesised balance |
+| a 503 from the credit service | `GET /v1/api/billing/credits` → 503 `billing_unavailable` (`routes/billing.py:615-623`) | CIRISAgent | **closed 2026-09-27:** the client classed 503 as an auth failure, walked the person through a token refresh and landed them on "session expired" for an outage that was never theirs (`BillingViewModel.kt:211-213, 330-332`); only a 401 is auth now (`isAuthFailure`, `BillingViewModelTest.loadBalance_503_isAnOutageNotAnExpiredSignIn`) |
 
 **The prices on screen are not the store's.** `BillingViewModel.DEFAULT_PRODUCTS`
 (`viewmodels/BillingViewModel.kt:47-66` — `credits_100` $9.99/99, `credits_250`
@@ -138,9 +139,29 @@ different object outside `shared/src`:
 never empty because it is never replaced. The `empty:` row in `csd:states` cannot
 be asserted by any flow until the two lists are joined, and §5 says so.
 
-No upstream ask. CC settles this one: billing is Portal+Stripe and off-wire by
-design, so there is nothing for CIRISServer to add and nothing for
-CIRISConstitution to register. The work is entirely in this repo.
+The `_products.value =` claim above is stale: `onNoBillingHere`
+(`BillingViewModel.kt:244`) now empties the list on a node, so the `empty:` row
+is reachable on exactly that host and nowhere else.
+
+**Still open on the client.** `-1` means three things — not loaded, failed, and
+BYOK/unlimited (`BillingViewModel.kt:185, 256`) — and all three render
+`login_signin_provider` with the provider stripped, a broken "Sign in with "
+(`BillingScreen.kt:154`); the actual error only appears in a transient
+snackbar. `purchase_options` (`billing.py:135`) is not in `CreditStatusData`
+(`CIRISApiClientProtocol.kt:275`); the displayed balance adds paid, free and
+daily-free together (`BillingViewModel.kt:189`); "credits" / "CIRIS Credits"
+are English literals (`BillingScreen.kt:154, 278`). `verifyGooglePlayPurchase`
+runs on a client pinned to `http://localhost:8080`
+(`androidApp/.../MainActivity.kt:268-277`), so a purchase is credited to the
+local agent whichever host the person is signed into.
+
+**One upstream ask after all (CIRISAgent, unfiled — drafted in the review
+report).** With no credit provider configured the agent answers
+`credits_remaining=999, free_uses_remaining=999, plan_name="unlimited"`
+(`billing.py:374-384`): a made-up balance the client can only defend against by
+string-matching "unlimited". A typed `mode: "unlimited"` with null counts is the
+ask. Billing itself stays Portal+Stripe and off-wire; nothing for CIRISServer or
+CIRISConstitution.
 
 ## 4. Flow (how)
 

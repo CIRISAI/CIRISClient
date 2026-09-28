@@ -112,7 +112,20 @@ has no `grant` member — its own doc comment lists only four contact-only membe
 so `ui/screens/PeopleSupport.kt:66-83` still builds `attester`, `scope` and
 `dimensionValue` as `Fact.ByRule` and `rule` as `Fact.NotSent`: one wire fact of
 five, against a node that now sends all five. Adding the field and reading it is
-what takes this card, and CSD-005 with it, to `testable`.
+what takes this card, and CSD-005 with it, to `testable`. Re-checked 2026-09-27
+on `integ/0.5.218`: `grant_receipt` is still built per row at
+`src/contacts_chat.rs:1754` and the client still does not read it. Not closed
+in the moderation review because Contacts/People is owned by an unmerged
+branch in that batch; it is the first thing the People review should take.
+
+**Where this template does NOT apply, and says so.** The Moderation card
+(CSD-065) files a `ModerationEvent` and gets back `{attestation_id, duty}`
+(`src/safety/moderation.rs:413`); the enforcement ladder's results are
+per-target outcomes with the node's own sentences, not signed rows. Neither
+carries the envelope, so neither has a hamburger: by §1's rule they are
+furniture until the node sends the five facts, and CSD-065 §3 names the
+envelope on the moderation response as the row to ask for rather than drawing
+a receipt of `ByRule` guesses.
 
 ## 4. Flow (how)
 

@@ -217,3 +217,31 @@ hint makes the same distinction and is the right model.
    `"Failed to save radio configuration: …"` (`TransportViewModel.kt:121`,
    `:126`) — every other string on this screen goes through
    `localizedString(...)` with an English `.ifEmpty { }` fallback.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate pair (Transport ↔ Config CSD-023): two doors onto one store, kept**
+— see CSD-023 §7 for the reasoning. Transport is the typed door onto seven node
+keys; Config is the untyped door onto the whole store.
+
+**Closed here**
+- *Wrong host.* The radio keys went to `$baseUrl`, i.e. to the AGENT on a
+  with-agent install, where nothing reads them. Now written to the node
+  (`TransportViewModel(nodeUrl = { LOCAL_NODE_URL })`).
+- *Wrong types.* `"true"` and `"868000000"` as strings; the node does not coerce,
+  so six of seven keys silently fell back to defaults. Now a boolean, a string and
+  five integers (`radioConfigValues`); a blank number is not written.
+- *Stopped after one key.* The first PUT against a node "failed" on the missing
+  envelope and aborted the loop. Fixed with CSD-023's parser.
+- *Never read back.* The form started from hard-coded defaults (868 MHz; the
+  node's default is 915) and Apply overwrote the saved values. Now
+  `loadRadioConfig` fills the form from the node.
+
+**Still open**
+- The "Current transports" card shows federation capabilities, not transports:
+  `GET /v1/federation/identity` does not name them. `blocked_by: CIRISServer#670`.
+- `peer_counts_standing` is dropped by the client model.
+
+**Stage:** building → building.

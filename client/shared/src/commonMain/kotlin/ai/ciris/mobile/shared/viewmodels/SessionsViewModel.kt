@@ -206,11 +206,16 @@ class SessionsViewModel(
                 logInfo(method, "Transition response: success=${response.success}, currentState=${response.currentState}, message=${response.message}")
 
                 if (response.success) {
-                    _previousState.value = response.previousState
-                    _currentState.value = CognitiveStateReading(state = response.currentState)
-                    val successMessage = LocalizationHelper.getString("mobile.sessions_transitioned", mapOf("state" to response.currentState))
+                    // The agent ACCEPTED a request; it did not report an arrival.
+                    // Its `current_state` is read straight after the request and
+                    // falls back to the target when unread (runtime.py:365 on
+                    // CIRISAgent main), so it is not written as the reading —
+                    // the next health read is (CSD-011).
+                    _previousState.value = response.previousState?.uppercase()
+                    val successMessage = LocalizationHelper.getString("mobile.sessions_transitioning", mapOf("state" to targetState.uppercase()))
                     _statusMessage.value = successMessage
-                    logInfo(method, "Successfully transitioned to ${response.currentState}")
+                    logInfo(method, "Transition to $targetState accepted; re-reading the state")
+                    refresh()
 
                     // Clear status message after delay
                     delay(3000)
@@ -227,10 +232,11 @@ class SessionsViewModel(
                 logError(method, "Transition failed: ${e::class.simpleName}: ${e.message}")
                 logError(method, "Stack trace: ${e.stackTraceToString().take(500)}")
 
-                val errorMsg = when {
-                    e.message?.contains("400") == true -> LocalizationHelper.getString("mobile.sessions_error_invalid_state")
-                    e.message?.contains("401") == true -> LocalizationHelper.getString("mobile.sessions_error_auth_required")
-                    e.message?.contains("503") == true -> LocalizationHelper.getString("mobile.sessions_error_not_supported")
+                val errorMsg = when (transitionStatus(e)) {
+                    400 -> LocalizationHelper.getString("mobile.sessions_error_invalid_state")
+                    401 -> LocalizationHelper.getString("mobile.sessions_error_auth_required")
+                    403 -> LocalizationHelper.getString("mobile.sessions_error_forbidden")
+                    503 -> LocalizationHelper.getString("mobile.sessions_error_not_supported")
                     else -> LocalizationHelper.getString("mobile.sessions_error_failed", mapOf("error" to (e.message ?: "Unknown error")))
                 }
                 _errorMessage.value = errorMsg
@@ -280,7 +286,10 @@ class SessionsViewModel(
      */
     fun canReturnToWork(): Boolean {
         val current = readState
-        val canReturn = current != null && current !in listOf("WORK", "WAKEUP", "SHUTDOWN", "UNKNOWN")
+        // SETUP and WAKEUP_ERROR are states the agent reports (helpers.py:66,
+        // health.py:853) and neither accepts WORK as a target.
+        val canReturn = current != null &&
+            current !in listOf("WORK", "WAKEUP", "SHUTDOWN", "UNKNOWN", "SETUP", "WAKEUP_ERROR")
         logDebug("canReturnToWork", "Current: $current, CanReturn: $canReturn")
         return canReturn
     }
@@ -291,6 +300,10 @@ class SessionsViewModel(
         stopPolling()
     }
 }
+
+/** The HTTP status a failed transition carried, if its message names one. */
+internal fun transitionStatus(e: Throwable): Int? =
+    Regex("""\bHTTP (\d{3})\b""").find(e.message ?: "")?.groupValues?.get(1)?.toIntOrNull()
 
 /**
  * Data class for state transition response

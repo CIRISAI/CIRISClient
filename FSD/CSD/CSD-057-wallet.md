@@ -119,19 +119,25 @@ missing `error` state, and a person on a node sees an empty wallet rather than
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| balance, limits, paymaster | `GET /v1/wallet/status` | **CIRISAgent** (`routes/wallet.py:570`) | live on the agent |
-| send | `POST /v1/wallet/transfer` | CIRISAgent (`:674`) | live |
-| check an address | `POST /v1/wallet/validate-address` | CIRISAgent (`:817`) | live |
-| catch a repeat send | `POST /v1/wallet/check-duplicate` | CIRISAgent (`:976`) | live |
-| anything on a node | none | CIRISServer | **wrong-host by placement.** `/v1/wallet/*` is agent-only; the card is not `agentOnly`, so it is offered in Communities › Rules on a node build. |
+| balance, limits, paymaster | `GET /v1/wallet/status` | **CIRISAgent** (`routes/wallet.py:570`) | live on the agent. **Invented defaults, still open:** the parse fills `session_remaining`/`session_limit` with "500.00" and `daily_remaining` with "1000.00" when absent (`CIRISApiClient.kt:~8716-8721`, `WalletPage.kt:63-71`), `network` with "base-sepolia" (the model says "base-mainnet", `:106` vs `:8779`) and `balance` with "0.00"; `hasWallet` and `isInitializing` are parsed and never rendered (`WalletPage.kt:231-301`) |
+| send | `POST /v1/wallet/transfer` (`AuthAdminDep`, `:678`) | CIRISAgent (`:674`) | live. **Closed 2026-09-27:** the send fired on the first tap with no confirmation; it is now behind `ConfirmSheet` (`sheet_wallet_send`, facts `wallet_send_fact_1..3`: who receives, what changes, who signs — the agent's wallet key, Identity = Wallet, CC 3.3.10), and the sheet opens only when every check has answered and passed (`walletSendGate`, `WalletSendGateTest`). A throw after the request left renders "status unknown — check the balance and history" rather than "failed", because the agent may already have broadcast. **Still open:** `transferUsdc` (`CIRISApiClient.kt:8807`) checks no HTTP status and sets no timeout, so a 403 or a 500 `{"detail":…}` parses as `success=false, error=null`. Upstream ask, unfiled (drafted in the review report): `TransferRequest` (`wallet.py:~151`) carries no client idempotency key, so a retry after a lost response sends twice |
+| check an address | `POST /v1/wallet/validate-address` | CIRISAgent (`:817`) | live — and now BLOCKING: an invalid address, a bad checksum or the zero address refuses the send (it used to show an icon and send anyway) |
+| catch a repeat send | `POST /v1/wallet/check-duplicate` | CIRISAgent (`:976`) | live — and now blocking; a check that has not answered blocks too. `checkDuplicateTransaction` used to answer "not a duplicate" when the call itself failed (`CIRISApiClient.kt:8956`); it raises now and the page leaves the result unanswered |
+| the history | `GET /v1/wallet/transactions` | CIRISAgent (`wallet.py:899`) | live, **not called** — the card hides the history card when it has nothing (`WalletPage.kt:287`), so `proposed:text_wallet_no_transactions` is never drawn |
+| paymaster | `GET /v1/wallet/paymaster/status`, `POST /v1/wallet/paymaster/configure` | CIRISAgent (`:1157`, `:1070` admin-only) | live, **not called** |
+| anything on a node | none | CIRISServer | **wrong-host by placement.** `/v1/wallet/*` is agent-only; the card is not `agentOnly`, so it is offered in Communities › Rules on a node build — and `getWalletStatus` answers `WalletStatusResponse()` there (`CIRISApiClient.kt:8674`): a real-looking "0.00 USDC", not "no wallet here". Should raise `RouteNotOnThisHost` and render `ReadFailureBlock` as Billing does |
 | a nameable settlement record | — | **CIRISConstitution** | **missing, and the ask already has a number this card did not cite: CIRISConstitution#105 OPEN** — "The namespace generator harvests only CC 3.1.x — 17 families declared in CC 3.3.8–3.3.12 are in no vendored registry, including every `ledger:*`". Its table names `3.3.10 settlement → settlement:*` and `3.3.10.1 ledger → ledger:head:{unit}, ledger:checkpoint:{unit}, ledger:promotion`, cites `part_3_the_namespace.md:1369`, and names this repo's CSD blocker. Consumer re-file: CIRISPersist#753 OPEN. (CIRISConstitution#92, the `ledger:*` standard, is CLOSED — which is why #105 exists.) `settlement_ref` therefore stays `x_private:`, and that is a registry gap with an owner, not an unknown. |
 
 ## 4. Flow (how)
 
 Unwritten. It could be written today for everything up to the send — the
 balance, the limits, the address copy and the address-validation error all run
-on real tags. **The send step must not be flowed against a live rail.** A flow
-that moves USDC to pass is not a test.
+on real tags — and now up to and including the ConfirmSheet: `btn_send_transfer`
+with a clean address and amount opens `sheet_wallet_send`, and
+`btn_wallet_send_cancel` closes it with nothing sent. **The confirm itself must
+not be flowed against a live rail.** A flow that moves USDC to pass is not a
+test. Loading and error on this page (`WalletPage.kt:310, :327`) are still
+untagged.
 
 ```yaml
 # candidate — read-only, stops before btn_send_transfer

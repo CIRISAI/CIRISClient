@@ -1,0 +1,43 @@
+csd: CSD-046
+flow: csd_046_network_trust_graph
+title: The peer set drawn in three tiers, with the Map folded in
+description: >-
+  CSD-046 §4, driven. GET /v1/federation/peers (CIRISServer
+  src/federation_peers.rs:1435) is the primary read; GET /v1/federation/identity
+  labels the centre and its failure no longer fails the graph. The Map tile and
+  Screen.NetworkMap were retired into this screen: they drew the same peer set in
+  the same three tiers.
+# Floor: screen_federation_trust_graph, canvas_trust_graph, empty_trust_graph,
+# btn_trust_graph_refresh (ui/screens/federation/NetworkTrustGraphScreen.kt);
+# federation_trust_graph_error / federation_trust_graph_not_on_this_node
+# (ReadFailureBlock).
+client: "unreleased"
+
+steps:
+  - step_id: on_trust_graph
+    title: The canvas composes
+    requires:
+      screen: NetworkTrustGraph
+    expect:
+      visible: [screen_federation_trust_graph, canvas_trust_graph, btn_trust_graph_refresh]
+
+  - step_id: the_map_tile_is_gone
+    title: The hub no longer offers a second door onto this peer set
+    description: >-
+      Pins the fold: a Map tile that opened this screen would be the same card
+      under two names, which is the duplication the route map flagged.
+    optional_step: true
+    requires:
+      screen: LayerGlobalCommons
+    expect:
+      absent: [tile_federation_map]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads without leaving the screen
+    requires:
+      screen: NetworkTrustGraph
+    do:
+      - click: btn_trust_graph_refresh
+    expect:
+      screen: NetworkTrustGraph
+      visible: [canvas_trust_graph]

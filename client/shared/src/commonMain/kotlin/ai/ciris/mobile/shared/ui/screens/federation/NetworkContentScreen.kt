@@ -143,10 +143,15 @@ private fun PeerPickerStep(vm: NetworkContentViewModel, loading: Boolean) {
     val peers by vm.peers.collectAsState()
     val search by vm.peerSearch.collectAsState()
     val error by vm.error.collectAsState()
+    val readFailure by vm.readFailure.collectAsState()
     val filtered = remember(peers, search) { vm.filteredPeers() }
+    val listUnread = peers.isEmpty() && readFailure != null
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Search box
+        ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver(
+            tag = "input_peer_search", value = search, onValueChange = { vm.setPeerSearch(it) },
+        )
         OutlinedTextField(
             value = search,
             onValueChange = { vm.setPeerSearch(it) },
@@ -155,10 +160,10 @@ private fun PeerPickerStep(vm: NetworkContentViewModel, loading: Boolean) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp)
-                .testable("input_peer_search"),
+                .testable("input_peer_search", search),
         )
 
-        error?.let { msg ->
+        error?.takeUnless { listUnread }?.let { msg ->
             ElevatedCard(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,6 +182,13 @@ private fun PeerPickerStep(vm: NetworkContentViewModel, loading: Boolean) {
         }
 
         when {
+            // Could not read the peer list: say which failure, never the
+            // "no peers" sentence (CSD-047).
+            listUnread && !loading -> ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                failure = readFailure!!,
+                tagPrefix = "federation_content_peers",
+                modifier = Modifier.padding(16.dp),
+            )
             peers.isEmpty() && loading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -193,6 +205,7 @@ private fun PeerPickerStep(vm: NetworkContentViewModel, loading: Boolean) {
                     Text(
                         text = localizedString("network.content.peer.empty"),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testable("empty_content_peers"),
                     )
                 }
             }
@@ -327,7 +340,11 @@ private fun FetchStep(vm: NetworkContentViewModel, loading: Boolean) {
             }
         }
 
-        // Content ID input
+        // Content ID input — tagged and drivable: it had neither, so no flow
+        // could type a content id (CSD-047).
+        ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver(
+            tag = "input_content_id", value = contentId, onValueChange = { vm.setContentId(it) },
+        )
         OutlinedTextField(
             value = contentId,
             onValueChange = { vm.setContentId(it) },
@@ -341,7 +358,7 @@ private fun FetchStep(vm: NetworkContentViewModel, loading: Boolean) {
             },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testable("input_content_id", contentId),
         )
 
         // Timeout slider
@@ -358,10 +375,11 @@ private fun FetchStep(vm: NetworkContentViewModel, loading: Boolean) {
             )
         }
 
+        val canFetch = !fetching && vm.validateContentId(contentId)
         Button(
             onClick = { vm.fetch() },
-            enabled = !fetching && vm.validateContentId(contentId),
-            modifier = Modifier.fillMaxWidth(),
+            enabled = canFetch,
+            modifier = Modifier.fillMaxWidth().testableClickable("btn_content_fetch", enabled = canFetch) { vm.fetch() },
         ) {
             if (fetching) {
                 CircularProgressIndicator(
@@ -391,7 +409,7 @@ private fun ErrorPanel(message: String) {
     ) {
         Text(
             text = message,
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(16.dp).testable("text_content_fetch_error", message),
             color = MaterialTheme.colorScheme.onErrorContainer,
         )
     }
@@ -401,7 +419,7 @@ private fun ErrorPanel(message: String) {
 @Composable
 private fun ResultPanel(res: FederationContentResponse) {
     val payloadPreview = remember(res.payloadBase64) { decodePreview(res.payloadBase64) }
-    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+    ElevatedCard(modifier = Modifier.fillMaxWidth().testable("card_content_result", res.contentId)) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = localizedString("network.content.result.title"),

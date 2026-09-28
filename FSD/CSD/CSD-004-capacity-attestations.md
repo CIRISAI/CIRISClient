@@ -297,3 +297,18 @@ first ask in §3.1 is.
 * **The min relationship, on the current client.** Expressible in CSD/3 §3 and
   implemented in this repo's vendored runner; not yet in CIRISAgent's, which is
   where the canonical flow runs.
+
+## Review, 2026-09-27 (identity group)
+
+* The route map reaches no route from `Screen.HealthReputation` and that is
+  correct for the screen, wrong for the card: the numbers come from
+  `InteractViewModel.refreshCapacity` → `getCapacity` → `GET $baseUrl/v1/my-data/capacity?scope=both`
+  (the AGENT's route, `routes/my_data.py:1297`), run on a 15-minute loop and
+  skipped in node mode, and read here through `cellVizState` collected outside the
+  arm. The checker cannot see a flow collected outside a screen's arm; this card's
+  routes are cited in §3 and the closure's blind spot is recorded, not papered over.
+* §3.1's `getCapacity` line moved (`CIRISApiClient.kt:12935`), and the `?: 0.0`
+  defaults it complained of are gone — an unrecognised payload now raises
+  (CIRISServer#659).
+* Never fetched: the NODE's own `/v1/my-data/capacity` (`system_data.rs:314/390`,
+  attester rows per subject). On a node build this card has no source.

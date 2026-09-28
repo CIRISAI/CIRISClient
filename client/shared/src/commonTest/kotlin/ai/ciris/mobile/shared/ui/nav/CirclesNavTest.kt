@@ -29,9 +29,9 @@ class CirclesNavTest {
         NavSurface.Contacts, NavSurface.Delegations, NavSurface.IdentityManagement, NavSurface.Accord,
         NavSurface.ProvisionAccordHolder, NavSurface.AccordCeremony, NavSurface.Moderation, NavSurface.ChildSafety,
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
-        NavSurface.Delegation, NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
+        NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
-        NavSurface.ClientInterface, NavSurface.Help,
+        NavSurface.ClientInterface, NavSurface.Help, NavSurface.NodeSelf,
         // Communities and affiliations (CSD-102, CSD-103)
         NavSurface.CommunityRoster, NavSurface.AffiliationsRoster,
         NavSurface.CommunityChats, NavSurface.AffiliationsChats,
@@ -149,6 +149,7 @@ class CirclesNavTest {
             setOf(
                 NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
                 NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
+                NavSurface.NodeSelf,
             ),
             node.surfaces.toSet(),
         )

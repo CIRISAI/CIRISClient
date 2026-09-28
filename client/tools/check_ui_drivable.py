@@ -59,9 +59,10 @@ TAG_ONLY = re.compile(r'\.testable\(\s*"([a-zA-Z0-9_]+)"')
 
 
 #: A text tag the file declares a sink for — `rememberInputSinks("a", "b")` or
-#: `rememberTextInputDriver("a", …)`. Such a field IS drivable though it
-#: carries `.testable("a")`: the sink, not the modifier, is what `/input` needs.
-DRIVER = re.compile(r'rememberTextInputDriver\(\s*"([a-zA-Z0-9_]+)"')
+#: `rememberTextInputDriver("a", …)` or `rememberTextInputDriver(tag = "a", …)`.
+#: Such a field IS drivable though it carries `.testable("a")`: the sink, not
+#: the modifier, is what `/input` needs.
+DRIVER = re.compile(r'rememberTextInputDriver\(\s*(?:tag\s*=\s*)?"([a-zA-Z0-9_]+)"')
 TEXT_TAG = ("input_", "quick_input_", "field_")
 
 

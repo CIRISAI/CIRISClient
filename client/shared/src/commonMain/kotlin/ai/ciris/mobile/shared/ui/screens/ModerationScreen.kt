@@ -1,19 +1,21 @@
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
-import ai.ciris.mobile.shared.models.AdminLadderOp
 import ai.ciris.mobile.shared.models.AdminMessage
 import ai.ciris.mobile.shared.models.AdminOpResponse
 import ai.ciris.mobile.shared.models.AdminOpTargetResult
 import ai.ciris.mobile.shared.models.AdminPreviewResponse
 import ai.ciris.mobile.shared.models.AdminRefusal
 import ai.ciris.mobile.shared.models.AdminStandingDto
+import ai.ciris.mobile.shared.models.CatalogueSource
+import ai.ciris.mobile.shared.models.LadderRung
 import ai.ciris.mobile.shared.models.safety.ModerationDuty
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.viewmodels.AdminLadderState
 import ai.ciris.mobile.shared.viewmodels.AdminLadderViewModel
+import ai.ciris.mobile.shared.viewmodels.NodeDelegations
 import ai.ciris.mobile.shared.viewmodels.SafetyViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -106,11 +108,22 @@ fun ModerationScreen(
     onBack: () -> Unit,
     /** Navigate to the delegation flow (Family → Delegation), if present. */
     onOpenDelegation: (() -> Unit)? = null,
+    /**
+     * A picker of the person's communities, drawn under the community field.
+     * It hands back a community key, which fills both the lookup here and the
+     * quarantine rung's `community_id`. Null (today) leaves the typed field as
+     * the only way in. This is the entry point the Communities card plugs into.
+     */
+    communityPicker: (@Composable (onPick: (String) -> Unit) -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsState()
     val ladder by ladderViewModel.state.collectAsState()
 
-    LaunchedEffect(Unit) { viewModel.probeIdentityAndStatus() }
+    LaunchedEffect(Unit) {
+        viewModel.probeIdentityAndStatus()
+        // The ladder as the node states it, and the owner's own delegation ids.
+        ladderViewModel.load()
+    }
 
     Scaffold(
         topBar = {
@@ -131,7 +144,8 @@ fun ModerationScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .padding(16.dp)
-                .testableVerticalScroll(),
+                .testableVerticalScroll()
+                .testable("screen_moderation"),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
@@ -155,42 +169,33 @@ fun ModerationScreen(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth().testable("input_moderation_community"),
                     )
+                    communityPicker?.let { picker ->
+                        Spacer(Modifier.height(6.dp))
+                        picker { key ->
+                            viewModel.setCommunityKeyId(key)
+                            ladderViewModel.setCommunityId(key)
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = { viewModel.loadNamedModerator() },
                         modifier = Modifier.testable("btn_load_named_moderator"),
                     ) {
                         if (state.namedModeratorLoading) {
-                            CircularProgressIndicator(Modifier.width(16.dp).height(16.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(
+                                Modifier.width(16.dp).height(16.dp).testable("spinner_named_moderator"),
+                                strokeWidth = 2.dp,
+                            )
                             Spacer(Modifier.width(8.dp))
                         }
                         Text(localizedString("mobile.moderation_check_moderator"))
                     }
 
-                    // Existence-invariant verdict.
-                    state.namedModeratorVerdict?.let { v ->
-                        Spacer(Modifier.height(10.dp))
-                        val (label, detail) = when (v.verdict) {
-                            "operate" -> localizedString("mobile.moderation_verdict_operate") to
-                                localizedString("mobile.moderation_verdict_operate_detail")
-                            "auto_promote" -> localizedString("mobile.moderation_verdict_autopromote") to
-                                localizedString("mobile.moderation_verdict_autopromote_detail",
-                                    "candidate", v.candidateKeyId ?: "?")
-                            "quiesce" -> localizedString("mobile.moderation_verdict_quiesce") to
-                                localizedString("mobile.moderation_verdict_quiesce_detail")
-                            else -> v.verdict to ""
-                        }
-                        Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp,
-                            color = MaterialTheme.colorScheme.onSurface)
-                        if (detail.isNotEmpty()) {
-                            Text(detail, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                        if (state.namedModeratorFailsSecure) {
-                            Text(localizedString("mobile.moderation_fails_secure"),
-                                fontSize = 12.sp, color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(top = 4.dp))
-                        }
-                    }
+                    // Existence-invariant verdict: four facts, four renderings.
+                    // Never-asked, could-not-ask and quiesce are three different
+                    // things on a fail-secure invariant, and a blank drew all three.
+                    Spacer(Modifier.height(10.dp))
+                    NamedModeratorVerdictBlock(state)
                 }
             }
 
@@ -260,7 +265,7 @@ fun ModerationScreen(
                     state.lastModerationAttestationId?.let {
                         Text(localizedString("mobile.moderation_filed_id", "id", it),
                             fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.padding(top = 6.dp))
+                            modifier = Modifier.padding(top = 6.dp).testable("txt_moderation_filed_id", it))
                     }
                 }
             }
@@ -289,10 +294,12 @@ fun ModerationScreen(
             }
 
             state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp)
+                Text(it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp,
+                    modifier = Modifier.testable("txt_moderation_error"))
             }
             state.message?.let {
-                Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp)
+                Text(it, color = MaterialTheme.colorScheme.primary, fontSize = 13.sp,
+                    modifier = Modifier.testable("txt_moderation_message"))
             }
         }
 
@@ -359,6 +366,10 @@ private fun EnforcementLadderCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
+            // Where the rungs below came from. A compiled ladder shown as if the
+            // node had served it is the drift GET /v1/operations exists to end.
+            LadderCatalogueSourceLine(state.catalogueSource)
+
             Spacer(Modifier.height(12.dp))
 
             // ── Which rung ──
@@ -374,31 +385,35 @@ private fun EnforcementLadderCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                AdminLadderOp.entries.forEach { candidate ->
+                state.rungs.forEach { candidate ->
                     FilterChip(
-                        selected = candidate == op,
+                        selected = candidate.op == op.op,
                         onClick = { viewModel.selectOp(candidate) },
                         label = {
                             Text(
-                                localizedString(candidate.labelMessageId),
+                                rungLabel(candidate),
                                 fontSize = 12.sp,
                             )
                         },
                         shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.testable("chip_ladder_${candidate.name.lowercase()}"),
+                        modifier = Modifier.testable("chip_ladder_${candidate.tagStem}"),
                     )
                 }
             }
 
             Spacer(Modifier.height(8.dp))
             Text(
-                localizedString(
-                    "moderation.ladder.tier_and_scope",
-                    mapOf("tier" to op.tier.toString(), "scope" to op.requiredScope),
-                ),
+                op.scope?.let {
+                    localizedString(
+                        "moderation.ladder.tier_and_scope",
+                        mapOf("tier" to op.tier.toString(), "scope" to it),
+                    )
+                } ?: localizedString("moderation.ladder.tier_no_scope", "tier", op.tier.toString()),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("txt_ladder_scope", op.scope ?: ""),
             )
+            ReachesSubstrateLine(op)
             if (op.irreversible) {
                 Text(
                     localizedString("moderation.ladder.irreversible_flag"),
@@ -518,6 +533,7 @@ private fun EnforcementLadderCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp, bottom = 6.dp),
             )
+            NodeDelegationPicker(state, viewModel)
             OutlinedTextField(
                 value = state.delegationId,
                 onValueChange = viewModel::setDelegationId,
@@ -565,7 +581,7 @@ private fun EnforcementLadderCard(
                     localizedString(
                         "moderation.ladder.quorum_hint",
                         "min",
-                        AdminLadderOp.DESCEND_QUORUM_MIN.toString(),
+                        op.quorum.toString(),
                     ),
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -696,6 +712,7 @@ private fun LadderPreviewSummary(preview: AdminPreviewResponse) {
             fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.testable("txt_ladder_preview_counts", preview.counts.rows.toString()),
         )
         Text(
             localizedString("moderation.ladder.selection_hash", "hash", preview.selectionHash),
@@ -810,7 +827,7 @@ private fun LadderConfirmSheet(
                 localizedString(
                     "moderation.ladder.confirm_op",
                     mapOf(
-                        "op" to localizedString(op.labelMessageId),
+                        "op" to rungLabel(op),
                         "tier" to op.tier.toString(),
                     ),
                 ),
@@ -841,10 +858,11 @@ private fun LadderConfirmSheet(
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.testable("txt_ladder_irreversible"),
                             )
                         }
                         Text(
-                            ladderBundleText(op.enforcementMessageId)
+                            op.local?.let { ladderBundleText(it.enforcementMessageId) }
                                 ?: localizedString("moderation.ladder.limits_unavailable"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onErrorContainer,
@@ -900,32 +918,35 @@ private fun LadderConfirmSheet(
             Spacer(Modifier.height(14.dp))
             LadderLimitBlock(
                 titleId = "moderation.ladder.reaches_title",
-                body = ladderBundleText(op.enforcementMessageId),
+                body = op.local?.let { ladderBundleText(it.enforcementMessageId) },
                 emphasis = false,
+                tag = "txt_ladder_reaches",
             )
-            op.notReachedMessageId?.let {
-                Spacer(Modifier.height(10.dp))
-                LadderLimitBlock(
-                    titleId = "moderation.ladder.not_reached_title",
-                    body = ladderBundleText(it),
-                    emphasis = false,
-                )
-            }
             Spacer(Modifier.height(10.dp))
-            if (op.irreversible) {
-                LadderLimitBlock(
-                    titleId = "moderation.ladder.undone_title",
-                    body = localizedString("moderation.ladder.undone_never"),
-                    emphasis = true,
-                )
-            } else {
-                LadderLimitBlock(
-                    titleId = "moderation.ladder.undone_title",
-                    body = op.reversalMessageId?.let { ladderBundleText(it) }
-                        ?: localizedString("moderation.ladder.undone_by_reversal_op"),
-                    emphasis = false,
-                )
-            }
+            // The not-reached block is ALWAYS on the sheet. Where the node states
+            // no separate limit for this rung, the block says that, rather than
+            // vanishing: a limit's absence is itself something to read before
+            // signing.
+            LadderLimitBlock(
+                titleId = "moderation.ladder.not_reached_title",
+                body = op.local?.notReachedMessageId?.let { ladderBundleText(it) }
+                    ?: if (op.local != null && op.local.notReachedMessageId == null) {
+                        localizedString("moderation.ladder.not_reached_unstated")
+                    } else {
+                        null
+                    },
+                emphasis = false,
+                tag = "txt_ladder_not_reached",
+            )
+            Spacer(Modifier.height(6.dp))
+            ReachesSubstrateLine(op)
+            Spacer(Modifier.height(10.dp))
+            LadderLimitBlock(
+                titleId = "moderation.ladder.undone_title",
+                body = undoneSentence(op, state.rungs),
+                emphasis = op.irreversible,
+                tag = "txt_ladder_undone",
+            )
 
             // ── Attribution, restated: this is what lands in the tombstone ──
             Spacer(Modifier.height(14.dp))
@@ -946,7 +967,7 @@ private fun LadderConfirmSheet(
                         "moderation.ladder.confirm_quorum",
                         mapOf(
                             "count" to (state.quorumDelegationIds.size + 1).toString(),
-                            "min" to AdminLadderOp.DESCEND_QUORUM_MIN.toString(),
+                            "min" to op.quorum.toString(),
                         ),
                     ),
                     fontSize = 12.sp,
@@ -1042,8 +1063,8 @@ private fun LadderConfirmSheet(
 
 /** One limit statement: a heading, and the sentence the node itself writes. */
 @Composable
-private fun LadderLimitBlock(titleId: String, body: String?, emphasis: Boolean) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+private fun LadderLimitBlock(titleId: String, body: String?, emphasis: Boolean, tag: String) {
+    Column(modifier = Modifier.fillMaxWidth().testable(tag)) {
         Text(
             localizedString(titleId),
             fontSize = 12.sp,
@@ -1064,7 +1085,9 @@ private fun LadderLimitBlock(titleId: String, body: String?, emphasis: Boolean) 
             } else {
                 MaterialTheme.colorScheme.onSurfaceVariant
             },
-            modifier = Modifier.padding(top = 2.dp),
+            modifier = Modifier.padding(top = 2.dp).let {
+                if (body == null) it.testable("txt_ladder_limits_unavailable") else it
+            },
         )
     }
 }
@@ -1297,6 +1320,215 @@ private fun LadderStandingLine(titleId: String, standing: AdminStandingDto) {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
     )
+}
+
+/** A rung's name: this app's label where it has one, the node's token where it does not. */
+@Composable
+private fun rungLabel(rung: LadderRung): String =
+    rung.local?.let { localizedString(it.labelMessageId) } ?: rung.op
+
+/**
+ * How the act is undone, from the served reversal pair (`reverses`) where the
+ * node stated it, and this app's own sentence where it has one.
+ */
+@Composable
+private fun undoneSentence(op: LadderRung, rungs: List<LadderRung>): String? {
+    fun labelOf(token: String): String? = rungs.firstOrNull { it.op == token }?.let { r ->
+        r.local?.labelMessageId
+    }
+    return when {
+        op.irreversible -> localizedString("moderation.ladder.undone_never")
+        op.local?.reversalMessageId != null -> ladderBundleText(op.local.reversalMessageId)
+        op.reverses != null -> localizedString(
+            "moderation.ladder.undone_by_op",
+            "op",
+            labelOf(op.reverses)?.let { localizedString(it) } ?: op.reverses,
+        )
+        op.reversedBy != null -> localizedString(
+            "moderation.ladder.undone_is_reversal",
+            "op",
+            labelOf(op.reversedBy)?.let { localizedString(it) } ?: op.reversedBy,
+        )
+        // The compiled fallback never carried the reversal pair.
+        op.reachesSubstrate == null -> localizedString("moderation.ladder.undone_by_reversal_op")
+        else -> localizedString("moderation.ladder.undone_no_inverse")
+    }
+}
+
+/**
+ * The catalogue's `reaches_substrate`: "we noted it" versus "the door is
+ * shut". Drawn only when the node stated it; the fallback has no such column.
+ */
+@Composable
+private fun ReachesSubstrateLine(op: LadderRung) {
+    val reaches = op.reachesSubstrate ?: return
+    Text(
+        localizedString(
+            if (reaches) "moderation.ladder.reaches_substrate_yes" else "moderation.ladder.reaches_substrate_no",
+        ),
+        fontSize = 12.sp,
+        fontWeight = if (reaches) FontWeight.Bold else FontWeight.Normal,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 2.dp).testable("txt_ladder_reaches_substrate", reaches.toString()),
+    )
+}
+
+/** Where the ladder came from, said only when it is NOT the node's own table. */
+@Composable
+private fun LadderCatalogueSourceLine(source: CatalogueSource) {
+    val text = when (source) {
+        is CatalogueSource.NotOnThisNode -> localizedString("moderation.ladder.catalogue_not_on_this_node")
+        is CatalogueSource.Unreadable -> localizedString(
+            "moderation.ladder.catalogue_unreadable",
+            "detail",
+            source.detail ?: "",
+        )
+        CatalogueSource.Node, CatalogueSource.NotLoaded -> return
+    }
+    Text(
+        text,
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(top = 8.dp).testable("txt_ladder_catalogue_fallback"),
+    )
+}
+
+/**
+ * **The node's own delegation ids** (`GET /v1/admin/self` → `owner_delegations`,
+ * CIRISServer#676). One chip per row carrying the scope this rung needs; when
+ * none does, the sentence says which scopes the node's rows DO carry, because
+ * an id the node would refuse (`authority_scope_absent`) is not offered.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NodeDelegationPicker(state: AdminLadderState, viewModel: AdminLadderViewModel) {
+    val op = state.selectedOp
+    when (val read = state.nodeDelegations) {
+        NodeDelegations.NotLoaded -> Unit
+        NodeDelegations.NotReturned -> Text(
+            localizedString("moderation.ladder.delegations_not_returned"),
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp).testable("txt_ladder_delegations_not_returned"),
+        )
+        is NodeDelegations.Unreadable -> Text(
+            localizedString("moderation.ladder.delegations_unreadable", "detail", read.detail ?: ""),
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(bottom = 6.dp).testable("txt_ladder_delegations_error"),
+        )
+        is NodeDelegations.Read -> {
+            val usable = state.usableDelegations
+            if (usable.isEmpty()) {
+                val carried = read.rows.map { it.scope }.filter { it.isNotBlank() }.distinct()
+                Text(
+                    if (read.rows.isEmpty()) {
+                        localizedString("moderation.ladder.delegations_none", "scope", op.scope ?: "")
+                    } else {
+                        localizedString(
+                            "moderation.ladder.delegations_wrong_scope",
+                            mapOf(
+                                "count" to read.rows.size.toString(),
+                                "carried" to carried.joinToString(", "),
+                                "scope" to (op.scope ?: ""),
+                            ),
+                        )
+                    },
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(bottom = 6.dp).testable("txt_ladder_delegations_none_usable"),
+                )
+            } else {
+                Text(
+                    localizedString("moderation.ladder.delegations_pick", "scope", op.scope ?: ""),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
+                ) {
+                    usable.forEachIndexed { i, row ->
+                        FilterChip(
+                            selected = state.delegationId.trim() == row.delegationId,
+                            onClick = { viewModel.useNodeDelegation(row.delegationId) },
+                            label = { Text(row.delegationId.take(16), fontSize = 11.sp) },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testable("chip_ladder_delegation_$i", row.delegationId),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The CC 4.5.4 verdict area. Four states, each its own tag: never asked,
+ * loading (blank, the button carries the spinner), could not ask (or the node
+ * has no such route), and the verdict itself with its closed set.
+ */
+@Composable
+private fun NamedModeratorVerdictBlock(state: ai.ciris.mobile.shared.viewmodels.SafetyState) {
+    val v = state.namedModeratorVerdict
+    val failure = state.namedModeratorFailure
+    when {
+        state.namedModeratorLoading -> Unit
+        failure is ai.ciris.mobile.shared.ui.screens.ReadFailure.NotOnThisNode -> Text(
+            localizedString("mobile.moderation_named_not_on_this_node"),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_named_moderator_not_on_this_node"),
+        )
+        failure != null -> Text(
+            localizedString("mobile.moderation_named_error", "detail", failure.detail ?: ""),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testable("txt_named_moderator_error"),
+        )
+        v == null -> Text(
+            localizedString("mobile.moderation_named_none"),
+            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_named_moderator_none"),
+        )
+        else -> {
+            val (label, detail) = when (v.verdict) {
+                "operate" -> localizedString("mobile.moderation_verdict_operate") to
+                    localizedString("mobile.moderation_verdict_operate_detail")
+                "auto_promote" -> localizedString("mobile.moderation_verdict_autopromote") to
+                    localizedString("mobile.moderation_verdict_autopromote_detail",
+                        "candidate", v.candidateKeyId ?: "?")
+                "quiesce" -> localizedString("mobile.moderation_verdict_quiesce") to
+                    localizedString("mobile.moderation_verdict_quiesce_detail")
+                // A verdict outside the closed set is not rendered as itself:
+                // the community is not cleared to operate until this app knows.
+                else -> localizedString("mobile.moderation_verdict_unknown", "verdict", v.verdict) to ""
+            }
+            Text(label, fontWeight = FontWeight.Bold, fontSize = 15.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.testable("txt_named_moderator_verdict", v.verdict))
+            if (detail.isNotEmpty()) {
+                Text(detail, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            v.candidateKeyId?.let { candidate ->
+                // Who, without why: the track record CC 4.5.4 rule 2 selects on
+                // is not in the verdict body yet, so none is claimed here.
+                Text(
+                    localizedString("mobile.moderation_candidate_row", "candidate", candidate),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 2.dp).testable("row_named_moderator_candidate", candidate),
+                )
+            }
+            if (state.namedModeratorFailsSecure) {
+                Text(localizedString("mobile.moderation_fails_secure"),
+                    fontSize = 12.sp, color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(top = 4.dp).testable("txt_named_moderator_fails_secure"))
+            }
+        }
+    }
 }
 
 @Composable

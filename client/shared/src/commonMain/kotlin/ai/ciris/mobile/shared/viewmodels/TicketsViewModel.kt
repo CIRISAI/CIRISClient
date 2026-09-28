@@ -41,7 +41,19 @@ data class TicketsScreenState(
     val showCreateDialog: Boolean = false,
     val selectedSopForCreate: String? = null,
     val createTicketSuccess: Boolean = false
-)
+) {
+    /** The list's empty state — never while loading, and never over an error (CSD/3 §2.2). */
+    fun showsEmpty(): Boolean = tickets.isEmpty() && !isLoading && !isRefreshing && error == null
+
+    /** The row for [fresh] replaced by the re-read copy; other rows untouched. */
+    fun withTicket(fresh: TicketData): TicketsScreenState = copy(
+        tickets = tickets.map { if (it.ticketId == fresh.ticketId) fresh else it },
+        // Only the ticket that is STILL open takes the re-read: a slow answer
+        // for A landing after B was opened (or the detail closed) refreshes
+        // A's row and leaves the selection where the person put it.
+        selectedTicket = if (selectedTicket?.ticketId == fresh.ticketId) fresh else selectedTicket,
+    )
+}
 
 /**
  * ViewModel for the Tickets screen.
@@ -74,6 +86,7 @@ class TicketsViewModel(
     private fun logDebug(method: String, message: String) = log("DEBUG", method, message)
     private fun logInfo(method: String, message: String) = log("INFO", method, message)
     private fun logError(method: String, message: String) = log("ERROR", method, message)
+    private fun logWarn(method: String, message: String) = log("WARN", method, message)
 
     // State
     private val _state = MutableStateFlow(TicketsScreenState())
@@ -150,10 +163,23 @@ class TicketsViewModel(
     }
 
     /**
-     * Select a ticket for detail view.
+     * Select a ticket for detail view — and re-read it (`GET /v1/tickets/{id}`),
+     * because the expanded detail used to be drawn from the list, which nothing
+     * refreshes after load (CSD-013). A failed re-read keeps the listed copy;
+     * a re-read that lands after another ticket was opened updates its row
+     * only ([TicketsScreenState.withTicket]).
      */
     fun selectTicket(ticket: TicketData?) {
         _state.update { it.copy(selectedTicket = ticket) }
+        if (ticket == null) return
+        viewModelScope.launch {
+            try {
+                val fresh = apiClient.getTicket(ticket.ticketId)
+                _state.update { it.withTicket(fresh) }
+            } catch (e: Exception) {
+                logWarn("selectTicket", "Re-read of ${ticket.ticketId} failed: ${e.message}")
+            }
+        }
     }
 
     /**

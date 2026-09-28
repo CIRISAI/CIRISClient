@@ -1,0 +1,83 @@
+csd: CSD-045
+flow: csd_045_node_self_standing
+title: This node's own three standings, and an act that confirms before it records
+description: >-
+  CSD-045 §4, driven. GET /v1/admin/self (CIRISServer src/admin_ops.rs:4288) and the
+  six tier S acts (:4289-4307), all against the NODE url. On a 0.5.218 node the
+  delegation the act is taken under is read from the same response
+  (owner_delegations, CIRISServer#676); on an older node the field is typed and
+  the card says why. The act goes dialog → review → ConfirmSheet with three facts.
+# Floor: screen_node_self, section_self_standing, card_self_directed,
+# progress_self_standing, card_self_axis_$tag, chip_self_standing_$tag,
+# btn_self_declare_$tag, btn_self_lift_$tag, btn_self_review, btn_self_cancel,
+# sheet_self_act, self_act_fact_1..3, btn_self_act_confirm, btn_self_act_cancel,
+# text_self_distinct_zeroes, text_self_partition, row_self_node_key
+# (ui/screens/NodeSelfStandingScreen.kt, ui/screens/SelfReaderOpsSection.kt,
+# ui/primitives/ConfirmSheet.kt). input_self_reason, input_self_compelled_by and
+# input_self_delegation_id are CirisTextField tags.
+client: "unreleased"
+
+steps:
+  - step_id: on_node_self
+    title: The card composes on its own surface
+    description: >-
+      Reached via My things > This node > Own standing. It used to be a section at
+      the bottom of Network; asserting the screen tag pins that it is a surface.
+    requires:
+      screen: NodeSelfStanding
+    expect:
+      visible: [screen_node_self, section_self_standing, card_self_directed]
+
+  - step_id: the_three_standings
+    title: All three axes render, each as its own card
+    description: >-
+      Three tags and not one card check. GET /v1/admin/self returns 503 when any
+      axis is unreadable WITH that axis still in the body, so a card that collapsed
+      the three into one row would render a partial answer as a whole one.
+    expect:
+      visible: [row_self_node_key]
+      count: {of: "card_self_axis_*", eq: 3}
+      one_of: {chip_self_standing_load_shed: ["Never declared", "In force", "Declared, then lifted", "Standing unknown — could not read"]}
+
+  - step_id: declaring_asks_for_a_reason_then_reviews
+    title: A declaration needs a reason, and reviews before it records
+    description: >-
+      The reason is required server-side (SelfCommit, admin_ops.rs:3372-3384;
+      admin.refusal.reason_absent). The flow types one, leaves compelled_by blank,
+      and stops at the ConfirmSheet: the three facts are asserted and the act is
+      never sent.
+    do:
+      - click: btn_self_declare_legal_compulsion
+      - input: {input_self_reason: "flow check, never recorded"}
+    expect:
+      visible: [input_self_reason, input_self_compelled_by, btn_self_review, btn_self_cancel]
+
+  - step_id: the_confirm_names_three_facts
+    title: The ConfirmSheet names what is recorded, what it changes and who signs
+    optional_step: true
+    description: >-
+      Optional because btn_self_review is enabled only once a delegation is known:
+      supplied by a 0.5.218 node, or typed on an older one. A matrix leg on an older
+      node types one first.
+    do:
+      - click: btn_self_review
+    expect:
+      visible: [sheet_self_act, self_act_fact_1, self_act_fact_2, self_act_fact_3, btn_self_act_confirm, btn_self_act_cancel]
+      matches: {self_act_fact_1: ".*authority not named.*"}
+
+  - step_id: cancel_leaves_the_standings_unchanged
+    title: Cancelling the confirm records nothing
+    optional_step: true
+    do:
+      - click: btn_self_act_cancel
+    expect:
+      screen: NodeSelfStanding
+      absent: [sheet_self_act, banner_self_act_recorded]
+
+  - step_id: refresh_stays_on_the_card
+    title: Re-reading the standings does not leave the screen
+    do:
+      - click: btn_self_refresh
+    expect:
+      screen: NodeSelfStanding
+      visible: [screen_node_self, card_self_directed]

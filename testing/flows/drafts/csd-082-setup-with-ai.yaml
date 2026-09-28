@@ -15,7 +15,10 @@ description: >-
 # _claimed/_error are all `testable*` literals in ui/screens/SetupScreen.kt at
 # v0.5.224 (opt_run_with_ai at :2567 via a variable, age_band/trace_consent/
 # step_indicator as `$token` templates).
-# NOT asserted: setup_consent_empty is still `proposed:` in CSD-082 §2.
+# NOT asserted: setup_consent_empty (real since the setup review) needs a node whose
+# disclosure has no replication grant, which no fixture provides.
+# setup_optional_features / btn_portal_connect_open are literals in SetupScreen.kt
+# since the setup review (unreleased), so the step that asserts them is optional.
 client: ">=0.5.224"
 
 steps:
@@ -95,6 +98,19 @@ steps:
     expect:
       screen: Setup
       visible: [input_llm_provider, btn_test_connection, txt_llm_state]
+
+  - step_id: step_ai_discloses_what_the_agent_can_do
+    title: 'Step AI: templates, optional features and the tools they grant, read from the agent'
+    description: >-
+      CSD-082 §3. The wizard reads /v1/setup/templates, /adapters and
+      /tool-disclosure; before the setup review nothing called them. Optional
+      because no released client carries it yet.
+    optional_step: true
+    requires:
+      screen: Setup
+      visible: [setup_optional_features]
+    expect:
+      visible: [setup_optional_features, btn_portal_connect_open]
 
   - step_id: the_claim_is_a_real_loading_state
     title: Finishing runs the claim, and the button is gone while it does

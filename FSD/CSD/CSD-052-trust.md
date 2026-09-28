@@ -168,3 +168,18 @@ circle is looking for. The word "Trust" should go with it or be given up: CSD-05
 shows that `LayerHubScreen` already has a section called Trust meaning
 `trust:{job}:{version}`, in the same tab, so today the Rules tab of every circle
 contains two different things called Trust and neither is the one about people.
+
+## Review, 2026-09-27 (identity group)
+
+* `GET /v1/system/verify-status` is served by the NODE (`health.rs:612`) and
+  proxied by the agent; `/v1/setup/verify-status` and `/v1/system/fabric` are
+  agent-only, so on a node build the fabric card quietly disappears.
+* **Unknown shown as failure.** The node never sends the dns/https/file fields;
+  they default to `false`, and TrustPage renders "✗ Timeout" and counts them as
+  failed (`TrustPage.kt:577, 698, 1703`). The node's own `checks{verify_loaded,
+  key_registered, audit_chain, hardware_backed}` and `role` are dropped.
+* **Errors swallowed.** `getVerifyStatus` catches everything and returns
+  `loaded=false`, so the page's error state never fires. Both open; they are the
+  next change on this card.
+* Node side: hardware type is hard-coded `SOFTWARE_ONLY` (0.5.218
+  `compose.rs:1235`), so `max_level` never exceeds 2.

@@ -101,8 +101,8 @@ fields:
     use: display-only
     type: "enum[claims_this_node,admitted_as_observer,refused]"
     example: "refused"
-    renders: "what an account this node has never seen would get if it signed in NOW, with the node's reason_id and remedy when it is `refused` — read from `GET /v1/auth/signin-state` `new_identity`, never inferred from the provider list and the owner hint"
-    tag: "proposed:txt_login_signin_outcome"
+    renders: "what an account this node has never seen would get if it signed in NOW — the node's reason_id (localized) or remedy when it is `refused`, one sentence each for `admitted_as_observer` and `claims_this_node`; nothing when the node does not say. Read from `GET /v1/auth/signin-state` `new_identity`, never inferred from the provider list and the owner hint"
+    tag: txt_login_signin_outcome
 ```
 
 **There is deliberately no federation sign-in option.** A fed-ID is an identity,
@@ -126,22 +126,46 @@ identical from outside.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| owner hint | `GET /v1/auth/owner-hint` | CIRISServer (`src/auth/session.rs`, `src/auth/oauth.rs`) | live |
-| sign in | `POST /v1/auth/login` | CIRISServer (`src/auth/session.rs`, `src/claim_remote.rs`); the agent serves its own | live |
+| owner hint | `GET /v1/auth/owner-hint` | CIRISServer (`src/auth/session.rs:1102`, route `:1149`) | live |
+| sign in | `POST /v1/auth/login` | CIRISServer (`src/auth/session.rs:820`, route `:1145`); CIRISAgent main proxies the whole auth surface to the node (`routes/auth_proxy.py`) | live — refusals `auth.login.{invalid_credentials, ambiguous_name, store_unavailable, account_inactive, no_password_set}`, all in en.json |
 | Google / Apple handoff | platform OAuth + the node's OAuth link routes (`src/auth/oauth.rs`, `src/auth/oauth_link.rs`) | CIRISServer | live — the concrete legs are the rows below |
 | which providers to offer (drives `txt_google_unavailable`) | `GET /v1/auth/oauth/providers` | CIRISServer `src/auth/oauth.rs:2932` (handler `:1598`) | **live** — `CIRISApiClient.getOAuthProviders` (`CIRISApiClient.kt:2126`), called once from `CIRISApp.kt:1839` |
 | configure a provider | `POST /v1/auth/oauth/providers` | CIRISServer `src/auth/oauth.rs:2933` | live, **not called** — operator configuration, not a sign-in act; no card owns it |
 | desktop: open the browser leg | `GET /v1/auth/oauth/{provider}/login?app_nonce=…` | CIRISServer `src/auth/oauth.rs:2936` (callback `:2940`) | **live** — the client builds the URL (`CIRISApiClient.kt:2106`) and hands it to the system browser; the callback is the provider's, never ours |
-| desktop: collect the session | `GET /v1/auth/oauth/handoff?app_nonce=…&allow_unbound=…` | CIRISServer `src/auth/oauth.rs:2981` (handler `:2505`) — **LOOPBACK-ONLY**, a layer not a comment (`:2982`) | **live** — `CIRISApiClient.pollOAuthHandoff` (`CIRISApiClient.kt:2080`), polled from `CIRISApp.kt:2131`; 204 = pending. The whole desktop login rests on this row |
+| desktop: collect the session | `GET /v1/auth/oauth/handoff?app_nonce=…&allow_unbound=…` | CIRISServer `src/auth/oauth.rs:2981` (handler `:2505`) — **LOOPBACK-ONLY**, a layer not a comment (`:2982`) | **live** — `CIRISApiClient.pollOAuthHandoff`, polled from the Login arm; 204 = pending. The whole desktop login rests on this row. **Fixed in this review:** the node parks a FAILED flow as a **200** `{status: "failed", reason_id, …}` and hands it over once; the client decoded every 2xx as a session, the decode threw, the throw read as "not yet", and the next poll got 410 `auth.oauth.flow_expired` — so the person saw "expired" instead of the real reason. `OAuthHandoffPoll.classify` branches on `status` (`OAuthHandoffPollTest`) |
 | Android: native Google token exchange | `POST /v1/auth/native/google` | CIRISServer `src/auth/oauth.rs:2963` | **live** — `AuthManager.android.kt:226` |
 | iOS: native Apple token exchange | `POST /v1/auth/native/apple` | CIRISServer `src/auth/oauth.rs:2964` | **live** — `AuthManager.ios.kt:138`, and `CIRISApiClient.appleAuth` (`CIRISApiClient.kt:6369`) via `:6421` |
-| **what signing in would do, right now** | `GET /v1/auth/signin-state` | CIRISServer `src/auth/oauth.rs:2972` (handler `:2326`, CIRISServer#439); unauthenticated | **live and never read.** It answers `claimed`, `managed`, `providers`, `session_delivery` (`loopback_handoff` \| `exchange_code`, per caller) and `new_identity.{outcome,reason_id,remedy}` from the same predicates `resolve_oauth_user` gates on. The screen instead infers the outcome from the provider list and the owner hint, and so cannot say "a new account would be refused here" until after someone is refused. The card SHOULD read it (`proposed:txt_login_signin_outcome` above) — a CIRISClient issue is drafted, not yet filed |
+| **what signing in would do, right now** | `GET /v1/auth/signin-state` | CIRISServer `src/auth/oauth.rs:2972` (handler `:2326`, CIRISServer#439); unauthenticated | **read** (CIRISClient#110) — `getSigninState` from the Login arm, rendered as `txt_login_signin_outcome`. It answers `claimed`, `managed`, `web_signin`, `callback_base`, `exchange_query_key`, `providers`, `session_delivery` (`loopback_handoff` \| `exchange_code`), `caller_is_loopback` and `new_identity.{outcome,reason_id,remedy}` from the same predicates `resolve_oauth_user` gates on; the card models the last five. A node without the route (404) or unreachable yields null, and the screen says nothing rather than guess. Upstream inconsistency to note: the `refused` remedy still says OAuth linking is impossible (#432) while `BROWSER_NEXT_STEP` says linking by email works again (#448) |
 | link an OAuth identity onto the owner's existing certificate | `POST /v1/self/oauth-link` | CIRISServer `src/auth/oauth_link.rs:49` (ROUTE), registered `:466` | live, **wired and unreached** — two client methods post it, `preprovisionOAuthEmail` (`CIRISApiClient.kt:913`) and `linkOAuthIdentity` (`:2291`), and neither has a caller. This is the remedy `signin-state` withholds ("a locally-claimed node cannot have an OAuth identity linked", #432): the node side now exists, the client side is unreached. The route-coverage report marked it CALLED |
-| sign in AS a federation identity | `POST /v1/self/login` | CIRISServer `src/auth/self_login.rs:221` | live, **wired and unreached** — `selfLogin` (`CIRISApiClient.kt:1945`) has no caller, which is consistent with "there is deliberately no federation sign-in option" (§2, CIRISClient#23); the method is dead code. Also marked CALLED in the report |
+| sign in AS a federation identity | `POST /v1/self/login` | CIRISServer `src/auth/self_login.rs:221` (handler `:84`) | live, **not called, and the client's shape is wrong** — the server takes an x-ciris hybrid-SIGNED body `{identity_key_id, app:{…}, agent:{…}, bilateral_pair_id, delegation_scope?}` and answers partnership/delegation ids (no access token); `selfLogin`'s `SelfLoginRequest` sends an unsigned `{identity_key_id, occurrences[], hardware_attestation}`. Consistent with "there is deliberately no federation sign-in option" (§2, CIRISClient#23): the method is dead and should be deleted with its model, not wired |
 | a web page redeems `?ciris_code=` | `POST /v1/auth/oauth/exchange` | CIRISServer `src/auth/oauth.rs:2969` | live, not a KMP leg — browser-only, deliberately not loopback-gated |
 | **post-login redirect: a contract the client must meet** | `GET /v1/auth/oauth/{provider}/login?redirect_uri=…&app_nonce=…` | CIRISServer | **behaviour change, built, unmerged** (0.5.218, CIRISServer#672, still open; not readable, since no branch or PR is pushed). The redirect is now **parsed**, and only a **same-origin path** (`/…`, not `//…` or `/\…`) or an **exact loopback host** (`localhost`, `127.0.0.1` or `[::1]`, any port, over `http`) is accepted. An absolute `https://` redirect, which `main` accepts for any host (`is_safe_redirect`, `src/auth/oauth.rs:1850-1864` @ `046e1b39`), is **refused**. The refusal id is `auth.oauth.unsafe_redirect` on `main` (`oauth.rs:1790-1799`, a browser refusal page); the brief says new ids land under `oauth.*`, so the 0.5.218 id is **unconfirmed** until CIRISClient#78. **The client complies today by omission:** the desktop browser flow sends only `app_nonce` (`CIRISApiClient.oauthBrowserLoginUrl`, `CIRISApiClient.kt:2102-2106`), so the node's default `/` applies; Android and iOS sign in natively and do not use this route; and the web build sends no `redirect_uri` (no match in `wasmJsMain`). **The rule for any future caller:** send a path, or `http://localhost:<port>/…` for a loopback listener. Never an `https://` URL, and never an app-scheme URL unless the server posts an allow-list for one |
-| is this a first run | `GET /v1/setup/status` | CIRISAgent `routes/setup/status.py:45`; CIRISServer `src/auth/bootstrap.rs` (**loopback-only**) | live, with CIRISAgent#1195 open |
+| is this a first run | `GET /v1/setup/status` | CIRISAgent `routes/setup/status.py:45`; CIRISServer `src/auth/bootstrap.rs` (**loopback-only**) | live, with CIRISAgent#1195 open — `checkFirstRunStatus` → `probeNodeOwnership` |
+| is this node owned | `GET /v1/setup/owned-nodes` | CIRISServer `src/auth/bootstrap.rs` (loopback-only) | live — `probeNodeOwnership` (`CIRISApp.kt`), the decisive half of the first-run check after a native sign-in: an owner binding means CLAIMED, skip the wizard |
+| is the agent ready / degraded | `GET /v1/system/health` | CIRISAgent (the agent's health; `getSystemHealth`, `getSystemStatus`), and the NODE's own (`getNodeHealth`) | live — after a sign-in on an agent build, the degraded-mode check and the WORK-state wait; on Reset, whether an attached node is still answering |
+| keep a session alive | `POST /v1/auth/refresh` | CIRISServer `src/auth/session.rs:1044`, node only (the agent proxies it) — needs an authentic, unrevoked `sess:` bearer; mints a new one (24 h admin, 30 d otherwise) | live, **not called by any source set.** `AuthManager.refreshToken` is a stub on every platform; `TokenManager` refreshes only the Google ID token and re-exchanges it through `/v1/auth/native/*`. So a password or desktop-browser session simply dies at 24 h and lands back here. A client gap, not a server one — draft CIRISClient issue in the review report |
 | reset the device | local wipe + node reset | CIRISClient | live (CIRISClient#55/#56/#61 closed) |
+
+**What Login does NOT own: the two hand-offs.** Signing in ends by handing the
+person to another card, and the arm used to do that inline — so the route map
+charged Login with the whole signed-in bootstrap: 23 routes (history, credits,
+audit, capacity, the reasoning stream, wallet, verify status, adapters, and the
+wizard's identity mint/associate/inspect). They are not Login's. The arm now
+calls two named hand-offs, `handOffToInteract(...)` (the chat poll, balance and
+adapter list the signed-in session starts) and `handOffToSetup(...)` (the
+sign-in's identity, handed to the wizard), and `packaging/check_csd_routes.py`
+charges what a `handOffTo<Screen>` reaches to `Screen.<Screen>`, whose CSD cites
+it (CSD-010, CSD-082/083). A hand-off naming no screen charges back to the
+caller, so the name moves a route and can never hide one (`--self-test`). Four of
+the 23 were not hand-offs at all but a checker bug: `LoginScreen.kt` and
+`SetupScreen.kt` each declare a file-private `FederationIdentitySection`, and the
+closure followed the wizard's. Login's own routes are the rows above.
+
+**0.5.218, checked.** The OAuth redirect change (CIRISServer#672: only a
+same-origin path or an exact loopback host; an absolute `https://` redirect is
+refused `auth.oauth.unsafe_redirect`) does not touch this card: no source set
+sends a `redirect_uri`, the browser leg is `…/login?app_nonce=…` and the node's
+default `/` applies. `OAuthRedirectContractTest` pins that.
 
 Routes verified against CIRISServer `origin/main` 046e1b39 (0.5.217). On
 `integ/0.5.218` (97900cf5) the OAuth set is unchanged and every line above moved
@@ -182,8 +206,9 @@ expect:
 personal node `GET /v1/auth/signin-state` already answers
 `new_identity.outcome: refused` with `auth.oauth.no_local_identity`; the step
 that belongs in front of this one is "land on Login, see
-`txt_login_signin_outcome` say a new account will be refused", and it waits on
-the card reading that route.
+`txt_login_signin_outcome` say a new account will be refused". The card reads
+the route now; the step is not in the flow yet because it needs an owned node
+with a provider configured.
 
 Arrive here straight from a completed wizard.
 
