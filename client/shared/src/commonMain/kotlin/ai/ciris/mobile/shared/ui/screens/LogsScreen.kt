@@ -191,7 +191,7 @@ fun LogsScreen(
             ) {
                 if (logsState.isLoading && logsState.logs.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testable("logs_loading"),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface)
@@ -216,7 +216,8 @@ fun LogsScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp),
+                            .padding(8.dp)
+                            .testable("logs_list"),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(logsState.logs) { log ->
@@ -570,7 +571,8 @@ private fun LogEntryRow(
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 10.sp
+                fontSize = 10.sp,
+                modifier = Modifier.testable("logs_row_ts_${log.rowKey}")
             )
 
             // Level badge
@@ -599,7 +601,7 @@ private fun LogEntryRow(
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 11.sp,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testable("logs_row_msg_${log.rowKey}"),
                 maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -698,6 +700,15 @@ data class LogEntryData(
     val metadata: String = "",
     val traceId: String? = null
 ) {
+    /**
+     * The row's address in test tags (`logs_row_ts_<key>`, `logs_row_msg_<key>`,
+     * CSD-029): the timestamp's digits to the second, `2026-09-25T09:31:29Z` →
+     * `20260925093129`. A flow knows the time of the line it is looking for;
+     * it cannot know [id].
+     */
+    val rowKey: String
+        get() = timestamp.filter { it.isDigit() }.take(14)
+
     val formattedTime: String
         get() = try {
             // Extract time from ISO format

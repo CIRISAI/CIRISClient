@@ -88,7 +88,10 @@ fun TransportScreen(
             ) {
                 val identity = state.identity
                 if (state.isLoading && identity == null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.testable("transport_loading"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(localizedString("transport.loading").ifEmpty { "Loading…" })

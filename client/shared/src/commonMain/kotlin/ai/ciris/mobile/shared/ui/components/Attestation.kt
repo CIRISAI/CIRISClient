@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.ui.components
 
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.models.federation.InvocationKind
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import androidx.compose.foundation.BorderStroke
@@ -176,10 +177,16 @@ fun attestationStyle(kind: AttKind, styleKey: String?, status: AttStatus): AttSt
         return AttStyle(cs.surfaceVariant, cs.onSurfaceVariant, cs.outlineVariant, false)
     }
     return when (kind) {
-        AttKind.Invocation -> when (styleKey?.uppercase()) {
-            "CONSTITUTIONAL" -> AttStyle(cs.errorContainer, cs.onErrorContainer, cs.error, true)
-            "DRILL" -> AttStyle(cs.surfaceVariant, cs.onSurfaceVariant, cs.outlineVariant, false)
-            else -> AttStyle(cs.secondaryContainer, cs.onSecondaryContainer, cs.secondary, false)
+        // Exhaustive over the four CC 4.2.1.2 kinds + UNKNOWN: no `else`, so a
+        // resumption can never inherit notify's colour by falling through.
+        AttKind.Invocation -> when (InvocationKind.fromWire(styleKey)) {
+            InvocationKind.CONSTITUTIONAL -> AttStyle(cs.errorContainer, cs.onErrorContainer, cs.error, true)
+            InvocationKind.DRILL -> AttStyle(cs.surfaceVariant, cs.onSurfaceVariant, cs.outlineVariant, false)
+            InvocationKind.NOTIFY -> AttStyle(cs.secondaryContainer, cs.onSecondaryContainer, cs.secondary, false)
+            // Reactivated: the halt's opposite — its own tertiary tone, never red, never notify's.
+            InvocationKind.LIFECYCLE_ACTIVE -> AttStyle(cs.tertiaryContainer, cs.onTertiaryContainer, cs.tertiary, false)
+            // Unknown kind: plain surface with the strong outline, so it reads as "unrecognised", not as a notice.
+            InvocationKind.UNKNOWN -> AttStyle(cs.surface, cs.onSurface, cs.outline, false)
         }
         AttKind.AccordFamily -> AttStyle(cs.primaryContainer, cs.onPrimaryContainer, cs.primary, false)
         AttKind.Canonical -> AttStyle(cs.surfaceVariant, cs.onSurfaceVariant, cs.primary, false)

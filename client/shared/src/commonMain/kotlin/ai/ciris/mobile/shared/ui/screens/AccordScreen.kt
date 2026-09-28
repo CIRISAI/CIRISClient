@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.models.federation.AccordInvocationDto
 import ai.ciris.mobile.shared.models.federation.CanonicalServerDto
 import ai.ciris.mobile.shared.models.federation.CanonicalWithdrawalDto
 import ai.ciris.mobile.shared.models.federation.CiKeyTargetInput
+import ai.ciris.mobile.shared.models.federation.InvocationKind
 import ai.ciris.mobile.shared.models.federation.PendingCoscrubDto
 import ai.ciris.mobile.shared.models.federation.genesisSeedDisplay
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
@@ -668,10 +669,19 @@ private fun eventAttestation(ev: AccordEventDto, isAnnounce: Boolean): Attestati
 )
 
 @Composable
-private fun invocationBadge(kind: String): String = when (kind.uppercase()) {
-    "CONSTITUTIONAL" -> localizedString("mobile.accord_kind_constitutional")
-    "DRILL" -> localizedString("mobile.accord_kind_drill")
-    else -> localizedString("mobile.accord_kind_notify")
+private fun invocationBadge(kind: String): String =
+    localizedString(invocationBadgeKey(InvocationKind.fromWire(kind)), "kind", kind)
+
+/**
+ * The badge key per kind — exhaustive, so a fifth kind is a compile error here
+ * rather than a silent `notify` (CC 4.2.1.2 forbids a resumption read as one).
+ */
+internal fun invocationBadgeKey(kind: InvocationKind): String = when (kind) {
+    InvocationKind.CONSTITUTIONAL -> "mobile.accord_kind_constitutional"
+    InvocationKind.NOTIFY -> "mobile.accord_kind_notify"
+    InvocationKind.DRILL -> "mobile.accord_kind_drill"
+    InvocationKind.LIFECYCLE_ACTIVE -> "mobile.accord_kind_reactivated"
+    InvocationKind.UNKNOWN -> "mobile.accord_kind_unknown"
 }
 
 // ── Sheets (each wraps an existing VM method) ─────────────────────────────────
