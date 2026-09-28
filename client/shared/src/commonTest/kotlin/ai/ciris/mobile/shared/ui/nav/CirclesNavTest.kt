@@ -31,11 +31,39 @@ class CirclesNavTest {
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
         NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
+        NavSurface.ClientInterface, NavSurface.Help,
+        // Households (CSD-101)
+        NavSurface.HouseholdMembers,
         NavSurface.ClientInterface, NavSurface.Help, NavSurface.NodeSelf,
         // Communities and affiliations (CSD-102, CSD-103)
         NavSurface.CommunityRoster, NavSurface.AffiliationsRoster,
         NavSurface.CommunityChats, NavSurface.AffiliationsChats,
     )
+
+    /**
+     * HOUSEHOLDS (CSD-100/101): the roster is a People fact and the household
+     * is the Family hub. Pinned so neither becomes a second card under another
+     * name: the roster is placed once, in Family › People beside Contacts, and
+     * Family › Rules gains nothing (the hub already IS the household).
+     */
+    @Test
+    fun theHouseholdRosterIsFamilyPeopleAndTheHouseholdIsTheFamilyHub() {
+        val p = CirclesNav.placementOf(NavSurface.HouseholdMembers)
+        assertNotNull(p)
+        assertEquals(Tab.PEOPLE, p.tab)
+        assertEquals(setOf(CohortScope.FAMILY), p.circles)
+        assertFalse(p.agentOnly, "the node serves /v1/families; a bare node must be offered it")
+        for (hasAgent in listOf(false, true)) {
+            assertEquals(
+                listOf(NavSurface.Contacts, NavSurface.HouseholdMembers),
+                CirclesNav.cards(CohortScope.FAMILY, Tab.PEOPLE, hasAgent),
+            )
+            assertEquals(NavSurface.LayerFamily, CirclesNav.cards(CohortScope.FAMILY, Tab.RULES, hasAgent).first())
+        }
+        for (c in CirclesNav.circles - CohortScope.FAMILY) {
+            assertFalse(NavSurface.HouseholdMembers in CirclesNav.cards(c, Tab.PEOPLE, true), "${c.id} has no household")
+        }
+    }
 
     @Test
     fun everySurfaceIsPlacedExactlyOnceOrIsAFlow() {
