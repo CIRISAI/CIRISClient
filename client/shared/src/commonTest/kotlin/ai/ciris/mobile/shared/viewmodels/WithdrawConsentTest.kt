@@ -29,6 +29,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -69,14 +70,27 @@ private class FakeWithdraw(
 private class FakePeering(
     var grant: suspend (nodeUrl: String, request: PeeringRequest) -> PeeringResponse =
         { _, _ -> PeeringResponse(grantAttestationId = "grant-new") },
+    /** When set, the owned-nodes read waits here first — a slow node, released by the test. */
+    var ownedGate: CompletableDeferred<Unit>? = null,
+    /** When set, every key-record read waits here first. */
+    var keyGate: CompletableDeferred<Unit>? = null,
 ) : PeeringApi {
     var ownedReads = 0
+    /** The node each peering POST went to, in order. */
+    val peerCalls = mutableListOf<String>()
     override suspend fun ownedNodes(): OwnedNodesDto {
         ownedReads += 1
+        ownedGate?.await()
         return OwnedNodesDto(owner = PERSON, nodes = listOf(OwnedNodeDto("node-a", isSelf = true), OwnedNodeDto("node-b")))
     }
-    override suspend fun selfKeyRecord(nodeUrl: String, token: String?): SignedKeyRecord = SignedKeyRecord(keyId = "key-of-$nodeUrl")
-    override suspend fun peer(nodeUrl: String, token: String?, request: PeeringRequest): PeeringResponse = grant(nodeUrl, request)
+    override suspend fun selfKeyRecord(nodeUrl: String, token: String?): SignedKeyRecord {
+        keyGate?.await()
+        return SignedKeyRecord(keyId = "key-of-$nodeUrl")
+    }
+    override suspend fun peer(nodeUrl: String, token: String?, request: PeeringRequest): PeeringResponse {
+        peerCalls += nodeUrl
+        return grant(nodeUrl, request)
+    }
 }
 
 /** The real client, pointed at a port nothing listens on, standing in for the AGENT. */
@@ -379,6 +393,62 @@ class WithdrawConsentTest {
         gate.complete(Unit)
         val s = vm.state.value
         assertEquals(ConsentObjectsState(), s, "a suspended set-up resumed after logout and wrote its grant into the next session")
+    }
+
+    @Test
+    fun aSetupSuspendedAtTheKeyRecordWritesNoGrantAfterLogout() {
+        // After a node switch node A's recorded token can still be valid, so a
+        // set-up that resumed from its key-record read after the owner left
+        // would create a grant for them (Codex, PR #116).
+        val gate = CompletableDeferred<Unit>()
+        val slow = FakePeering(keyGate = gate)
+        val vm = consentVm(FakeWithdraw(), granted = false, peering = slow)
+        vm.runBilateralPeering()
+        assertTrue(vm.state.value.isRunning)
+
+        vm.resetSession()
+        gate.complete(Unit) // the key records arrive after the logout
+        assertTrue(slow.peerCalls.isEmpty(), "a grant was POSTed to ${slow.peerCalls} for an owner who had logged out")
+        assertEquals(ConsentObjectsState(), vm.state.value)
+    }
+
+    @Test
+    fun aLoadSuspendedAcrossALogoutDoesNotBlockTheNextOwnersLoad() {
+        val gate = CompletableDeferred<Unit>()
+        val slow = FakePeering(ownedGate = gate)
+        val client = agentClient()
+        val vm = consentVm(FakeWithdraw(), client = client, initial = ConsentObjectsState(), peering = slow)
+        assertNull(vm.state.value.nodeA, "the first owner's load is still out")
+
+        vm.resetSession()
+        client.setAccessToken("tok-next")
+        vm.sessionStarted()
+        gate.complete(Unit)
+        assertEquals("tok-next", vm.state.value.nodeA?.sessionToken, "the next owner's pair never loaded: the stale job was taken for a live one")
+        assertEquals(2, slow.ownedReads, "the next owner's load was issued")
+    }
+
+    // ── Home Assistant add-on mode is a session (Codex, PR #116) ────────
+
+    @Test
+    fun homeAssistantAddOnModeIsASessionNotALogout() {
+        assertTrue(consentSessionAuthenticated(currentAccessToken = null, isHAAddonMode = true), "ingress supplies the session; the token stays null by design")
+        assertFalse(consentSessionAuthenticated(currentAccessToken = null, isHAAddonMode = false))
+        assertTrue(consentSessionAuthenticated(currentAccessToken = "tok", isHAAddonMode = false))
+
+        // The card as it stands under ingress: loaded, with no client token.
+        val vm = consentVm(FakeWithdraw())
+        val loaded = vm.state.value
+        assertNotNull(loaded.nodeA)
+        assertEquals(RevokeRoute.MOUNTED, loaded.revokeRoute)
+        val reads = ownedReads
+
+        vm.sessionChanged(authenticated = true)
+        assertEquals(loaded, vm.state.value, "an add-on session was read as a logout and reset the card right after its load")
+        assertEquals(reads, ownedReads, "and the load is not doubled either")
+
+        vm.sessionChanged(authenticated = false)
+        assertNull(vm.state.value.nodeA, "a real logout still resets")
     }
 
     // ── Node A's session survives the re-read (Codex, PR #116) ──────────

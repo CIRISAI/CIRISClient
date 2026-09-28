@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.models.federation.PeeringRequest
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,6 +97,20 @@ data class ConsentObjectsState(
 enum class RevokeRoute { UNKNOWN, MOUNTED, MISSING }
 
 /**
+ * Is there a session for the consent card to serve — the rule CIRISApp's
+ * token effect applies before it tells [ConsentObjectsViewModel.sessionChanged].
+ *
+ * A null token is NOT a logout in Home Assistant add-on mode: there,
+ * authentication is supplied by ingress headers and `currentAccessToken`
+ * deliberately stays null for the whole session, exactly as the approval
+ * watch and the fed-ID catch-up effects already treat it. Keying the reset
+ * on the token alone reset the card right after its load and never started
+ * it (Codex, PR #116).
+ */
+fun consentSessionAuthenticated(currentAccessToken: String?, isHAAddonMode: Boolean): Boolean =
+    currentAccessToken != null || isHAAddonMode
+
+/**
  * Drives the **consent-objects card** — the bilateral consent:replication setup
  * across the two connected fabric nodes.
  *
@@ -113,7 +128,12 @@ enum class RevokeRoute { UNKNOWN, MOUNTED, MISSING }
  * coroutine captures [sessionEpoch] at launch and publishes only while it still
  * matches: a revoke or set-up suspended across a logout must not resume and
  * write the previous owner's grant back over the reset (Codex, PR #116) — the
- * same gate [ContactsViewModel] keeps.
+ * same gate [ContactsViewModel] keeps. And because a mutating request is an
+ * ACT on the owner's behalf, not a read, the epoch is asked again immediately
+ * before every POST, and [resetSession] cancels the jobs outright: after a
+ * node switch node A's recorded token can still be valid, and a set-up that
+ * resumed from its key-record read would otherwise write a grant for an owner
+ * who had already left.
  */
 class ConsentObjectsViewModel(
     private val apiClient: CIRISApiClient,
@@ -136,16 +156,23 @@ class ConsentObjectsViewModel(
     /** Advanced by [resetSession]; a coroutine from an older epoch publishes nothing. */
     private var sessionEpoch = 0L
 
-    /** The load [sessionStarted] owns, so a session that begins twice loads once. */
+    /** The load [sessionStarted] owns, so a session that begins twice loads once. Cancelled by [resetSession]. */
     private var loadJob: Job? = null
+
+    /** The set-up and revoke in flight, if any — cancelled by [resetSession] before they can write. */
+    private var setupJob: Job? = null
+    private var revokeJob: Job? = null
 
     init {
         loadJob = viewModelScope.launch { loadNodes() }
     }
 
+    /** Is this still the session the request belongs to? Asked immediately before every mutating request. */
+    private fun live(epoch: Long): Boolean = epoch == sessionEpoch
+
     /** Apply [f] to the state — unless the session it belongs to has ended. */
     private fun publish(epoch: Long, f: (ConsentObjectsState) -> ConsentObjectsState): Boolean {
-        if (epoch != sessionEpoch) return false
+        if (!live(epoch)) return false
         _state.value = f(_state.value)
         return true
     }
@@ -170,11 +197,13 @@ class ConsentObjectsViewModel(
         val epoch = sessionEpoch
         val owned = try {
             peering.ownedNodes()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[loadNodes] owned-nodes unavailable (${e.message})")
             null
         }
-        if (epoch != sessionEpoch) return
+        if (!live(epoch)) return
         val kept = _state.value.nodeA?.takeIf { it.baseUrl == CIRISApiClient.LOCAL_NODE_URL }?.sessionToken
         val a = NodeProfile(
             id = NodeProfile.idFor(CIRISApiClient.LOCAL_NODE_URL),
@@ -200,6 +229,8 @@ class ConsentObjectsViewModel(
     private suspend fun probeRevokeRoute(nodeUrl: String, token: String?, epoch: Long) {
         val mounted = try {
             withdraw.revokeRouteMounted(nodeUrl, token)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[probeRevokeRoute] ${e.message}")
             null
@@ -209,7 +240,7 @@ class ConsentObjectsViewModel(
             false -> RevokeRoute.MISSING
             null -> return
         }
-        if (epoch != sessionEpoch) return
+        if (!live(epoch)) return
         PlatformLogger.i(TAG, "[probeRevokeRoute] $nodeUrl revoke route: $route")
         publish(epoch) { it.copy(revokeRoute = route) }
     }
@@ -237,8 +268,11 @@ class ConsentObjectsViewModel(
         }
         val epoch = sessionEpoch
         _state.value = s.withoutRevokeOutcome().copy(isRevoking = true, error = null)
-        viewModelScope.launch {
+        revokeJob = viewModelScope.launch {
             try {
+                // The withdrawal is an act on the owner's behalf: not for an
+                // owner who has left, whatever token node A still holds.
+                if (!live(epoch)) return@launch
                 // As node A's OWN session: the client's token is the active
                 // node's, which after a switch is not A (Codex, PR #115).
                 val resp = withdraw.revokeGrant(nodeA.baseUrl, grantId, nodeA.sessionToken)
@@ -261,6 +295,8 @@ class ConsentObjectsViewModel(
                         )
                     }
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: NodeRefusal) {
                 if (e.isRouteMissing()) {
                     PlatformLogger.i(TAG, "[revokeAToB] node predates the revoke route (bare 404)")
@@ -277,7 +313,7 @@ class ConsentObjectsViewModel(
             }
             // THE RE-READ of what can be read: the node pair and the route
             // answer. Not for a session that ended while the POST was out.
-            if (epoch == sessionEpoch) loadNodes()
+            if (live(epoch)) loadNodes()
         }
     }
 
@@ -290,20 +326,38 @@ class ConsentObjectsViewModel(
     }
 
     /**
+     * CIRISApp's token effect: [authenticated] is [consentSessionAuthenticated]
+     * of the token and the add-on mode. A session ends → [resetSession]; a
+     * session exists → [sessionStarted].
+     */
+    fun sessionChanged(authenticated: Boolean) {
+        if (authenticated) sessionStarted() else resetSession()
+    }
+
+    /**
      * The session ended — every way out: the three logout menus, a session
      * expiring under Interact, Billing's sign-in-again. CIRISApp calls this
-     * from the one effect that sees the token go null (Codex, PR #116).
+     * from the one effect that sees the session go (Codex, PR #116).
      *
      * This ViewModel is CIRISApp-scoped and outlives the session, so without
      * this the next signer-in inherits the previous owner's grant id, direction
      * rows, revoke outcome, route answer, node pair (the remote node's identity,
      * and with it `canRun`) and — through [NodeProfile.sessionToken] on node A —
      * their bearer token. Everything goes; the epoch advances so a request
-     * still out cannot write any of it back; [sessionStarted] reloads the pair
-     * for the next owner.
+     * still out cannot write any of it back; the load, set-up and revoke in
+     * flight are CANCELLED, so a set-up suspended at its key-record read cannot
+     * go on to POST a grant with the departed owner's token, and a load
+     * suspended across the reset is not mistaken by [sessionStarted] for the
+     * next owner's; [sessionStarted] reloads the pair for the next owner.
      */
     fun resetSession() {
         sessionEpoch += 1
+        loadJob?.cancel()
+        setupJob?.cancel()
+        revokeJob?.cancel()
+        loadJob = null
+        setupJob = null
+        revokeJob = null
         _state.value = ConsentObjectsState()
     }
 
@@ -344,12 +398,17 @@ class ConsentObjectsViewModel(
             bToA = GrantDirectionState.IN_PROGRESS,
         )
 
-        viewModelScope.launch {
+        setupJob = viewModelScope.launch {
             try {
                 // 1 + 2: fetch each node's self-key-record.
                 PlatformLogger.i(TAG, "[runBilateralPeering] fetching self-key-records A=${nodeA.baseUrl} B=${nodeB.baseUrl}")
                 val recordA = peering.selfKeyRecord(nodeA.baseUrl, nodeA.sessionToken)
                 val recordB = peering.selfKeyRecord(nodeB.baseUrl, nodeB.sessionToken)
+
+                // The owner may have left while the records were read. A grant
+                // is written for a person, and node A's token being still
+                // valid does not make it theirs to write.
+                if (!live(epoch)) return@launch
 
                 // 3: POST peering to A with peer = B. Keep the grant row id the
                 // node names: it is the only handle the revoke route takes.
@@ -363,6 +422,8 @@ class ConsentObjectsViewModel(
                             attestationPrefixes = aToBPrefixes,
                         ),
                     )
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     PlatformLogger.e(TAG, "[runBilateralPeering] A→B failed: ${e.message}", e)
                     null
@@ -378,7 +439,9 @@ class ConsentObjectsViewModel(
                     }
                 ) return@launch
 
-                // 4: POST peering to B with peer = A.
+                // 4: POST peering to B with peer = A — again only for a session
+                // that is still on.
+                if (!live(epoch)) return@launch
                 val bGranted = try {
                     val resp = peering.peer(
                         nodeB.baseUrl,
@@ -390,6 +453,8 @@ class ConsentObjectsViewModel(
                         ),
                     )
                     resp.isGranted
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     PlatformLogger.e(TAG, "[runBilateralPeering] B→A failed: ${e.message}", e)
                     false
@@ -403,6 +468,8 @@ class ConsentObjectsViewModel(
                         else "Partial: A→B=${aGranted}, B→A=${bGranted}",
                     )
                 }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 PlatformLogger.e(TAG, "[runBilateralPeering] failed before grants: ${e.message}", e)
                 publish(epoch) {
