@@ -125,6 +125,11 @@ class SettingsViewModel(
     private val _cellVizConfig = MutableStateFlow(CellVizConfig.DEFAULT)
     val cellVizConfig: StateFlow<CellVizConfig> = _cellVizConfig.asStateFlow()
 
+    // The last viz-config write that did NOT stick, or null. A slider that
+    // failed to persist otherwise looks saved until the next launch (CSD-026 §6.3).
+    private val _cellVizSaveError = MutableStateFlow<String?>(null)
+    val cellVizSaveError: StateFlow<String?> = _cellVizSaveError.asStateFlow()
+
     // Color theme setting (persisted) - Vapor (pink/cyan/plum) is default
     private val _colorTheme = MutableStateFlow(ColorTheme.DEFAULT)
     val colorTheme: StateFlow<ColorTheme> = _colorTheme.asStateFlow()
@@ -990,9 +995,16 @@ class SettingsViewModel(
 
         viewModelScope.launch {
             try {
-                CellVizConfigStore.save(secureStorage, sanitized)
-                logDebug(method, "Cell viz config persisted")
+                val failed = CellVizConfigStore.save(secureStorage, sanitized)
+                if (failed.isEmpty()) {
+                    _cellVizSaveError.value = null
+                    logDebug(method, "Cell viz config persisted")
+                } else {
+                    _cellVizSaveError.value = "${failed.size} of ${CellVizConfigStore.ALL_KEYS.size} settings"
+                    logWarn(method, "Cell viz config: ${failed.size} key(s) not persisted: $failed")
+                }
             } catch (e: Exception) {
+                _cellVizSaveError.value = e.message ?: "unknown error"
                 logWarn(method, "Failed to persist cell viz config: ${e.message}")
             }
         }

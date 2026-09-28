@@ -81,8 +81,8 @@ fields:
     use: display-only
     type: bool
     example: true
-    renders: "Kept on this device only — the honest sentence this screen does not print. `CellVizConfigStore` writes `viz_config_<field>` to SecureStorage, field by field, so a partial read falls back per field rather than corrupting the set."
-    tag: "proposed:viz_settings_locality_note"
+    renders: "'These settings are kept on this device only. Nothing here is sent anywhere or seen by anyone else.' — printed under the header since the setup review. `CellVizConfigStore` writes `viz_config_<field>` to SecureStorage, field by field, so a partial read falls back per field rather than corrupting the set."
+    tag: viz_settings_locality_note
 ```
 
 **Every field is `x_private:` and that is the finding, not an omission.** There
@@ -95,7 +95,7 @@ on a real memory read; it is a preference that changes what is fetched.
 populated: {tag: "proposed:viz_settings_list"}
 empty:     {tag: "proposed:viz_settings_empty", renders: "not reachable — `CellVizConfig` always has defaults. Declared rather than omitted: this surface has no empty, because a preference set is never absent."}
 loading:   {tag: "proposed:viz_settings_loading", renders: "not reachable — the config is read synchronously from a StateFlow already populated at app start"}
-error:     {tag: "proposed:viz_settings_error", renders: "not reachable through a read: `CellVizConfigStore` falls back per field on a parse failure by design. The honest error here is a WRITE failure — SecureStorage refusing — and it is not modelled at all. A slider that silently fails to persist is this screen's only lie."}
+error:     {tag: viz_settings_error, renders: "a WRITE failure — SecureStorage refused one or more `viz_config_*` keys: 'Some changes didn't save on this device (n of m settings)…'. Reads still fall back per field by design; the write is the one that can lie, and now it says so"}
 ```
 
 ## 3. Contracts (who)
@@ -104,11 +104,11 @@ error:     {tag: "proposed:viz_settings_error", renders: "not reachable through 
 |---|---|---|---|
 | every slider | — | **device** (`SecureStorage`, `viz_config_*`) | live, no route (`CellVizConfigStore.kt:28`, load `:186-193`, save `:199-206`) |
 | the thing being tuned | `GET /v1/memory/timeline?hours=…` | **both** | live (node `src/memory_api.rs:1266`, agent `routes/memory.py:488`); the configured `hours` reaches it from `CellVisualization.kt:421-426`, **not** `LiveGraphBackground` |
-| a failed persist | — | **this repo** | **missing** — the value is never computed: `CellVizConfigStore.kt:204` discards `SecureStorage.save`'s `Result` ("fire-and-forget per key") and `SettingsViewModel.kt:966-979` catches only throws |
+| a failed persist | — | **this repo** | **live since the setup review** — `CellVizConfigStore.save` returns the keys that did not persist (still best-effort per key), `SettingsViewModel.cellVizSaveError` carries it, and the screen renders `viz_settings_error`. `CellVizConfigWriteFailureTest` was red against the fire-and-forget save |
 
 No node or agent route backs this screen. That is the whole contract.
 
-**The third row said `unconfirmed`; it is confirmed missing, and it is ours.**
+**The third row said `unconfirmed`, was confirmed missing, and is now closed.** What it was:
 `SecureStorage.save` returns `Result<Unit>` (`platform/SecureStorage.kt:43`).
 `CellVizConfigStore.save` drops it on the floor one line at a time, and the only
 caller logs a warning at `SettingsViewModel.kt:977` with no StateFlow behind it.
@@ -169,17 +169,22 @@ pretend otherwise.
    has no "this device" instrument, so This node is the least-wrong shelf;
    recorded rather than proposed, because inventing a sixth instrument for one
    card is worse.
-2. **`agentOnly` is defensible and leaks.** `LiveGraphBackground` is composed
+2. **`agentOnly` is defensible and leaked; closed.** Settings now gates
+   `btn_viz_settings` on `hasAgent` (CSD-022 §6.1, `SettingsPlanesTest`).
+   `switch_live_background` sits in the device-preferences section and is
+   still rendered on a node build — a harmless, inert switch, reported. What
+   the note said: `LiveGraphBackground` is composed
    only from `InteractScreen` (`InteractScreen.kt:601`), which is agent-only,
    so on a node build there is nothing to tune and hiding the card is right.
    But `SettingsScreen` renders `btn_viz_settings` (line 387) and
    `switch_live_background` unconditionally, so a node-build owner is offered
    the entry and the toggle for a surface the rail hid and a renderer that
    never runs. Same defect as CSD-022 §6.1; one fix covers both.
-3. **No write-failure state.** A slider that does not persist looks identical
+3. **No write-failure state — closed (§3).** A slider that does not persist looks identical
    to one that does until the next launch. **Ask (this repo): have
    `CellVizConfigStore` surface a write failure and render it.**
-4. **Title is hardcoded English.** `VizSettingsScreen.kt:87` —
+4. **Title was hardcoded English — closed** (`mobile.viz_settings_title`). The
+   24 slider labels still are; they are the next pass, not this one. `VizSettingsScreen.kt:87` —
    `Text("Visualization")`, not `localizedString(...)`, in a repo that keeps
    29 bundles at parity by check. Small, and exactly the kind of thing that
    survives because nobody re-reads it.

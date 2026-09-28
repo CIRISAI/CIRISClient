@@ -441,7 +441,7 @@ fun CIRISApp(
     // ─── The ONE node-vs-agent gate ──────────────────────────────────────────
     // Universal client: the same app runs against either a bare ciris-server
     // NODE (no brain) or a full CIRIS AGENT. clientMode is the single source of
-    // truth — derived ONCE from the /v1/health capability probe (AGENT iff the
+    // truth — derived ONCE from the /v1/system/health capability probe (AGENT iff the
     // server reports a cognitive_state / a non-empty agent service map; else
     // NODE) and read everywhere that must branch (the 22 cognitive service
     // lights, "agent" wording, the WORK-state wait). null = not probed yet.
@@ -1235,13 +1235,13 @@ fun CIRISApp(
             platformLog(TAG, "[INFO] Startup READY, checking first-run status...")
 
             // ─── Derive the ONE node-vs-agent gate (server now reachable) ────
-            // Probe the NODE's /v1/health ONCE for its version (the mismatch
-            // banner) and its role. The node's own health is deliberately bare —
-            // `role: "fabric-node"`, `services: {}`, no cognitive_state — and
-            // /v1/health is a substrate prefix that is never proxied, so the
-            // AGENT enrichment can only come from the brain's /v1/system/health.
-            // Probe that second and let it upgrade the gate: AGENT iff either
-            // surface reports a cognitive_state / a non-empty service map.
+            // Probe the NODE ONCE for its version (the mismatch banner) and its
+            // role, via `getNodeHealth`, which reads `/v1/system/health` — NOT
+            // `/v1/health`: the node's own health is deliberately node-only and
+            // cannot answer the folded question (CIRISServer#390,
+            // CIRISApiClient.getNodeHealth). The brain's /v1/system/health is
+            // probed second and may upgrade the gate: AGENT iff either surface
+            // reports a cognitive_state / a non-empty service map.
             try {
                 // `val` since the fold retry moved off this path (CIRISClient#48):
                 // the only thing that used to reassign these was the inline retry
@@ -3023,11 +3023,13 @@ fun CIRISApp(
                     apiClient = apiClient,
                     secureStorage = secureStorage,
                     brainUnconfigured = brainUnconfigured,
+                    // CSD-022 §6.1: the agent's plane follows the probed mode.
+                    hasAgent = clientMode?.isAgent ?: false,
                     onSetUpAgent = {
                         platformLog(TAG, "[INFO] user chose to set up the agent from node mode → Screen.Setup")
                         currentScreen = Screen.Setup
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = homeTarget },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
                         // Cancel InteractViewModel polling before token revocation — see
@@ -4054,7 +4056,11 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.ServerConnection] Rendering server connection screen")
                 ServerConnectionScreen(
                     viewModel = serverConnectionViewModel,
-                    onBack = { currentScreen = Screen.Interact }
+                    // CSD-084: back returns to where a person can act. Without
+                    // a session that is Login (the chip that opened this);
+                    // with one it is home, which is Contacts on a node-only
+                    // install, never the agent's Interact.
+                    onBack = { currentScreen = if (currentAccessToken != null) homeTarget else Screen.Login }
                 )
             }
 

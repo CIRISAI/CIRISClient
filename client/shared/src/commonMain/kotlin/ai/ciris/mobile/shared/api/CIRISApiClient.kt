@@ -6828,7 +6828,9 @@ class CIRISApiClient(
                     required_binaries = adapter.requiredBinaries ?: emptyList(),
                     supported_platforms = adapter.supportedPlatforms ?: emptyList(),
                     requires_ciris_services = adapter.requiresCirisServices ?: false,
-                    enabled_by_default = adapter.enabledByDefault ?: false
+                    enabled_by_default = adapter.enabledByDefault ?: false,
+                    platform_available = adapter.platformAvailable ?: true,
+                    missing_binaries = adapter.missingBinaries ?: emptyList(),
                 )
             }
         } catch (e: Exception) {
@@ -6858,7 +6860,8 @@ class CIRISApiClient(
                 AgentTemplateInfo(
                     id = template.id,
                     name = template.name,
-                    description = template.description
+                    description = template.description,
+                    stewardship_tier = template.stewardshipTier,
                 )
             }
         } catch (e: Exception) {
@@ -7594,33 +7597,13 @@ class CIRISApiClient(
                 setBody(mapOf("node_url" to nodeUrl))
             }
 
+            val bodyText = response.bodyAsText()
+            val root = runCatching { Json.parseToJsonElement(bodyText).jsonObject }.getOrNull()
             if (response.status != HttpStatusCode.OK) {
-                // Try to extract detail from error response
-                val errorDetail = try {
-                    val errBody = response.body<JsonObject>()
-                    (errBody["detail"] as? JsonPrimitive)?.content
-                } catch (_: Exception) { null }
-                throw Exception(errorDetail ?: "Connect-node failed: HTTP ${response.status}")
+                // The node refuses with {"error": …} (device_auth.rs:94); the agent with {"detail": …}.
+                throw Exception(DeviceAuthWire.refusalReason(root) ?: "Connect-node failed: HTTP ${response.status}")
             }
-
-            val body = response.body<JsonObject>()
-            val data = body["data"] as? JsonObject
-                ?: throw Exception("Invalid response format")
-
-            // Portal URL: prefer from response (normalized by backend), fall back to input
-            val responsePortalUrl = (data["portal_url"] as? JsonPrimitive)?.content
-            val normalizedPortalUrl = responsePortalUrl
-                ?: if (nodeUrl.startsWith("http://") || nodeUrl.startsWith("https://"))
-                    nodeUrl.trimEnd('/') else "https://${nodeUrl.trimEnd('/')}"
-
-            ConnectNodeResult(
-                verificationUriComplete = (data["verification_uri_complete"] as? JsonPrimitive)?.content ?: "",
-                deviceCode = (data["device_code"] as? JsonPrimitive)?.content ?: "",
-                userCode = (data["user_code"] as? JsonPrimitive)?.content ?: "",
-                portalUrl = normalizedPortalUrl,
-                expiresIn = (data["expires_in"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 900,
-                interval = (data["interval"] as? JsonPrimitive)?.content?.toIntOrNull() ?: 5
-            )
+            DeviceAuthWire.parseConnect(root ?: throw Exception("Invalid response format"), nodeUrl)
         } catch (e: Exception) {
             logException(method, e)
             throw e
@@ -7657,33 +7640,14 @@ class CIRISApiClient(
             }
             logInfo(method, "HTTP response received: status=${response.status}")
 
-            if (response.status != HttpStatusCode.OK) {
-                logException(method, Exception("Poll failed: HTTP ${response.status}"))
-                throw Exception("Poll failed: HTTP ${response.status}")
-            }
-
             val bodyText = response.bodyAsText()
+            val root = runCatching { Json.parseToJsonElement(bodyText).jsonObject }.getOrNull()
+            if (response.status != HttpStatusCode.OK) {
+                throw Exception(DeviceAuthWire.refusalReason(root) ?: "Poll failed: HTTP ${response.status}")
+            }
             logInfo(method, "Response body (first 500 chars): ${bodyText.take(500)}")
-
-            val body = Json.parseToJsonElement(bodyText).jsonObject
-            val data = body["data"] as? JsonObject
-                ?: throw Exception("Invalid response format - no 'data' field")
-
-            val status = (data["status"] as? JsonPrimitive)?.content ?: "error"
-            val keyId = (data["key_id"] as? JsonPrimitive)?.content
-            val error = (data["error"] as? JsonPrimitive)?.content
-            logInfo(method, "Parsed response: status=$status, keyId=$keyId, error=$error")
-
-            val result = NodeAuthPollResult(
-                status = status,
-                template = (data["template"] as? JsonPrimitive)?.content,
-                adapters = null, // TODO: Parse adapters list from JSON array. MVP: null.
-                orgId = (data["org_id"] as? JsonPrimitive)?.content,
-                signingKeyB64 = (data["signing_key_b64"] as? JsonPrimitive)?.content,
-                keyId = keyId,
-                stewardshipTier = (data["stewardship_tier"] as? JsonPrimitive)?.content?.toIntOrNull(),
-                error = error
-            )
+            val result = DeviceAuthWire.parsePoll(root ?: throw Exception("Invalid response format"))
+            logInfo(method, "Parsed response: status=${result.status}, template=${result.template}, error=${result.error}")
             logInfo(method, "========== POLL END (returning result) ==========")
             result
         } catch (e: Exception) {
@@ -10861,6 +10825,68 @@ class CIRISApiClient(
                 val disabled = data?.get("disabled")?.jsonPrimitive?.boolean ?: true
                 val message = data?.get("message")?.jsonPrimitive?.contentOrNull
                     ?: "CIRIS services disabled"
+
+                ai.ciris.mobile.shared.models.SimpleResponse(
+                    success = disabled,
+                    message = message
+                )
+            } else {
+                logError(method, "Failed: ${response.status}")
+                ai.ciris.mobile.shared.models.SimpleResponse(
+                    success = false,
+                    message = "Failed to disable CIRIS services: ${response.status}"
+                )
+            }
+        } catch (e: Exception) {
+            logException(method, e, "disabling CIRIS services")
+            ai.ciris.mobile.shared.models.SimpleResponse(
+                success = false,
+                message = e.message ?: "Unknown error"
+            )
+        }
+    }
+
+    /**
+     * Re-enable CIRIS hosted services — `POST /v1/system/llm/ciris-services/enable`
+     * (CIRISAgent `routes/system/llm_routes.py:1081`, setup-or-ADMIN). Clears
+     * `CIRIS_SERVICES_DISABLED`; the providers register on the next restart.
+     * The client used to call only `disable` and send people to a factory
+     * reset to undo it (CSD-021 §6.4).
+     */
+    suspend fun enableCirisServices(): ai.ciris.mobile.shared.models.SimpleResponse {
+        val method = "enableCirisServices"
+        val url = "$baseUrl" + cirisServicesTogglePath(enable = true)
+        logInfo(method, "POST $url")
+
+        return try {
+            val client = HttpClient {
+                install(ContentNegotiation) {
+                    json(Json {
+                        ignoreUnknownKeys = true
+                        isLenient = true
+                    })
+                }
+                install(HttpTimeout) {
+                    requestTimeoutMillis = 10000
+                    connectTimeoutMillis = 5000
+                }
+            }
+
+            val response = client.post(url) {
+                contentType(ContentType.Application.Json)
+                accessToken?.let { bearerAuth(it) }
+            }
+
+            val responseBody = response.bodyAsText()
+            logInfo(method, "Response ${response.status}: $responseBody")
+
+            if (response.status.isSuccess()) {
+                // Parse response to get message
+                val jsonResponse = Json.parseToJsonElement(responseBody).jsonObject
+                val data = jsonResponse["data"]?.jsonObject
+                val disabled = data?.get("disabled")?.jsonPrimitive?.boolean ?: false
+                val message = data?.get("message")?.jsonPrimitive?.contentOrNull
+                    ?: "CIRIS services enabled"
 
                 ai.ciris.mobile.shared.models.SimpleResponse(
                     success = disabled,
