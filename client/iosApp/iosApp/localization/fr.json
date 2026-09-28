@@ -3196,7 +3196,9 @@
     "login_new_account_observer": "Un compte que ce nœud n'a jamais vu serait admis en tant qu'observateur, et non en tant que propriétaire.",
     "login_new_account_claims": "Ce nœud n'a pas encore de propriétaire : le premier compte à se connecter en devient le propriétaire.",
     "delegations_deny": "Refuser",
-    "delegations_inbound_title": "Délégué à vous"
+    "delegations_inbound_title": "Délégué à vous",
+    "manage_nodes_owned_not_on_this_node": "Ce nœud ne peut pas lister les nœuds que vous possédez. Il est trop ancien pour répondre à cette question.",
+    "manage_nodes_unverified": "Cette liste n'a pas pu être vérifiée par rapport aux nœuds que vous possédez. Elle n'affiche que cet appareil et tout nœud que vous avez ajouté au cours de cette session. Cela ne signifie pas que vous ne possédez rien d'autre."
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "Utilisateurs",
       "wallet": "Portefeuille",
       "wise_authority": "Wise Authority",
-      "help": "Aide"
+      "help": "Aide",
+      "node_self": "État propre"
     },
     "circle": {
       "agent": "Moi seul",
@@ -3672,6 +3675,25 @@
         "sent": "Envoyés",
         "session": "Total cette session",
         "title": "Débit"
+      },
+      "replication": {
+        "title": "Réplication",
+        "carriage": "Envoi des enregistrements aux pairs",
+        "receive": "Réception des enregistrements depuis les pairs",
+        "served": "Enregistrements servis",
+        "applied": "Enregistrements appliqués",
+        "note": "Les comptages de messages ci-dessus ne portent que sur les messages d'application. La réplication déplace les enregistrements sans y toucher, donc un 0 à cet endroit ne dit rien sur le fait que des enregistrements circulent. Les deux états ci-dessous, eux, le disent.",
+        "not_reported": "Ce nœud ne rapporte pas encore la réplication, il n'y a donc rien à afficher ici. Cela ne veut pas dire que rien ne circule."
+      },
+      "standing": {
+        "unreadable": "Impossible à lire",
+        "not_exercised": "Pas encore tenté (non testé, pas propre)",
+        "idle": "Inactif : rien à échanger",
+        "moving": "En mouvement",
+        "withholding": "Retient certains enregistrements",
+        "converged": "À jour",
+        "applying": "Application de nouveaux enregistrements",
+        "refusing": "Refuse certains enregistrements"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "Id de délégation du propriétaire",
         "reason_hint": "Consigné mot pour mot et jamais interprété. Un acte sans motif consigné est indiscernable d'un acte non autorisé une fois l'acteur parti.",
         "reason_label": "Motif (requis)",
-        "working": "Consignation…"
+        "working": "Consignation…",
+        "review": "Vérifier",
+        "delegation_supplied": "Nommée par ce nœud",
+        "delegation_none": "Ce nœud ne détient aucune délégation de son propriétaire sous laquelle il puisse agir : il ne peut donc pas enregistrer cet acte. Reliez d'abord ce nœud à son propriétaire.",
+        "delegation_unreadable": "Ce nœud n'a pas pu lire vos délégations à l'instant : saisissez donc l'id.",
+        "delegation_not_supplied": "Ce nœud ne peut pas nommer votre délégation (il est antérieur à la version 0.5.218) : saisissez donc l'id delegates_to du propriétaire lui-même. L'octroi de service d'un tiers ne convient pas."
       },
       "event": "Événement",
       "lift_disabled_hint": "Rien n'a été déclaré sur cet axe : il n'y a donc rien à lever.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "Les trois états sont inconnus — ce qui n'est pas « rien en vigueur ». Les actes du palier S sont locaux à ce nœud : ils redeviennent donc disponibles dès l'instant où il répond.",
       "unreachable_title": "Ce nœud n'a pas pu être joint",
       "unreadable_axes_body": "Le nœud a répondu, mais il n'a pas pu lire les axes signalés ci-dessous. Il ignore son propre état sur ces axes — ne lisez pas cela comme « rien en vigueur ».",
-      "unreadable_axes_title": "Certains états n'ont pas pu être lus"
-    }
+      "unreadable_axes_title": "Certains états n'ont pas pu être lus",
+      "confirm": {
+        "what": "Ce qui est enregistré",
+        "declared": "déclaré",
+        "lifted": "levé",
+        "not_named": "autorité non nommée",
+        "changes": "Ce qui change",
+        "changes_value": "Rien de ce que ce nœud fait. C'est un enregistrement sur ce nœud, qui reste dans l'historique même après avoir été levé.",
+        "signs": "Qui signe",
+        "signs_value": "Vous, en tant que propriétaire de ce nœud, sous délégation {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Ce nœud fonctionne sans agent, et c'est à l'agent qu'il revient de signaler le mode."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "Tourner un réglage du maillage",
       "write_ttl": "Expire après (heures)",
       "write_value": "Valeur"
+    },
+    "health_reputation": {
+      "not_per_circle": "Un seul score pour l'agent, identique dans chaque cercle. CIRIS ne peut pas encore mesurer la position au sein d'un seul cercle."
     }
   },
   "system": {

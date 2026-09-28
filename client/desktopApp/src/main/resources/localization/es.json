@@ -3196,7 +3196,9 @@
     "identity_associate_use_software": "Usa custodia por software en este dispositivo en su lugar",
     "login_new_account_refused": "Este nodo ya tiene un propietario: una cuenta que nunca ha visto sería rechazada aquí. Inicia sesión con la cuenta del propietario.",
     "login_new_account_observer": "Una cuenta que este nodo nunca ha visto sería admitida como observadora, no como propietaria.",
-    "login_new_account_claims": "Este nodo aún no tiene propietario: la primera cuenta que inicie sesión se convierte en su propietario."
+    "login_new_account_claims": "Este nodo aún no tiene propietario: la primera cuenta que inicie sesión se convierte en su propietario.",
+    "manage_nodes_owned_not_on_this_node": "Este nodo no puede listar los nodos que posees. Es demasiado antiguo para responder a esa pregunta.",
+    "manage_nodes_unverified": "Esta lista no se pudo verificar contra los nodos que posees. Muestra solo este dispositivo y cualquier nodo que hayas añadido en esta sesión. Eso no significa que no poseas nada más."
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "Usuarios",
       "wallet": "Billetera",
       "wise_authority": "Autoridad Sabia",
-      "help": "Ayuda"
+      "help": "Ayuda",
+      "node_self": "Situación propia"
     },
     "circle": {
       "agent": "Solo yo",
@@ -3672,6 +3675,25 @@
         "sent": "Enviado",
         "session": "Total esta sesión",
         "title": "Rendimiento"
+      },
+      "replication": {
+        "title": "Replicación",
+        "carriage": "Enviando registros a los pares",
+        "receive": "Recibiendo registros de los pares",
+        "served": "Registros servidos",
+        "applied": "Registros aplicados",
+        "note": "Los recuentos de mensajes de arriba cubren solo los mensajes de la aplicación. La replicación mueve registros sin tocarlos, así que un 0 ahí no dice nada sobre si los registros se están moviendo. Las dos situaciones aquí sí lo dicen.",
+        "not_reported": "Este nodo aún no informa sobre la replicación, así que no hay nada que mostrar aquí. Eso no es lo mismo que decir que nada se está moviendo."
+      },
+      "standing": {
+        "unreadable": "No se pudo leer",
+        "not_exercised": "Aún no probado (sin probar, no limpio)",
+        "idle": "Inactivo: nada que intercambiar",
+        "moving": "En movimiento",
+        "withholding": "Reteniendo algunos registros",
+        "converged": "Actualizado",
+        "applying": "Aplicando registros nuevos",
+        "refusing": "Rechazando algunos registros"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "Id de delegación del propietario",
         "reason_hint": "Se registra literalmente y nunca se interpreta. Un acto sin motivo registrado no se puede distinguir de uno no autorizado una vez que el actor ya no está.",
         "reason_label": "Motivo (obligatorio)",
-        "working": "Registrando…"
+        "working": "Registrando…",
+        "review": "Revisar",
+        "delegation_supplied": "Nombrada por este nodo",
+        "delegation_none": "Este nodo no tiene ninguna delegación de su propietario bajo la cual pueda actuar, así que no puede registrar este acto. Vuelve a vincular este nodo con su propietario primero.",
+        "delegation_unreadable": "Este nodo no pudo leer tus delegaciones en este momento, así que escribe el id.",
+        "delegation_not_supplied": "Este nodo no puede nombrar tu delegación (es anterior a 0.5.218), así que escribe el id delegates_to del propio propietario. La concesión de servicio de un tercero no sirve."
       },
       "event": "Evento",
       "lift_disabled_hint": "No se ha declarado nada en este eje, así que no hay nada que levantar.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "Las tres situaciones son desconocidas — lo que no es «nada en vigor». Los actos de nivel S son locales a este nodo, así que vuelven a estar disponibles en cuanto responda.",
       "unreachable_title": "No se pudo alcanzar este nodo",
       "unreadable_axes_body": "El nodo respondió, pero no pudo leer los ejes marcados abajo. No conoce su propia situación en ellos — no lo interpretes como despejado.",
-      "unreadable_axes_title": "No se pudieron leer algunas situaciones"
-    }
+      "unreadable_axes_title": "No se pudieron leer algunas situaciones",
+      "confirm": {
+        "what": "Qué se registra",
+        "declared": "declarado",
+        "lifted": "levantado",
+        "not_named": "autoridad no nombrada",
+        "changes": "Qué cambia",
+        "changes_value": "Nada de lo que hace este nodo. Es un registro en este nodo, y permanece en el historial después de ser levantado.",
+        "signs": "Quién firma",
+        "signs_value": "Tú, como propietario de este nodo, bajo la delegación {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Este nodo funciona sin agente, y le corresponde al agente reportar el modo."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "Girar un mando de la malla",
       "write_ttl": "Caduca al cabo de (horas)",
       "write_value": "Valor"
+    },
+    "health_reputation": {
+      "not_per_circle": "Una sola puntuación para el agente, la misma en todos los círculos. CIRIS aún no puede medir la situación dentro de un único círculo."
     }
   },
   "system": {

@@ -87,7 +87,7 @@ class NetworkPeersViewModel(
 
     fun refresh() {
         viewModelScope.launch {
-            runApi("listFederationPeers") {
+            runRead("listFederationPeers") {
                 apiClient.listFederationPeers(
                     canonicalOnly = if (_filter.value == PeerTrustFilter.CANONICAL) true else null,
                     trust = _filter.value.toTrustState(),

@@ -95,6 +95,7 @@ fun NetworkTrustGraphScreen(
     val peers by vm.peers.collectAsState()
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
+    val readFailure by vm.readFailure.collectAsState()
     val selectedPeerId by vm.selectedPeerId.collectAsState()
 
     LaunchedEffect(vm) { vm.load() }
@@ -150,7 +151,7 @@ fun NetworkTrustGraphScreen(
             // the test-automation tree stays stable across state transitions
             // — matches the rendering-eagerness pattern T-T2 used on the hub.
             Column(modifier = Modifier.fillMaxSize()) {
-                error?.let { msg -> InlineError(msg) }
+                error?.takeUnless { peers.isEmpty() && readFailure != null }?.let { msg -> InlineError(msg) }
                 TrustGraphCanvas(
                     peers = peers,
                     selectedPeerId = selectedPeerId,
@@ -177,8 +178,17 @@ fun NetworkTrustGraphScreen(
                         CircularProgressIndicator()
                     }
                 }
+                // The peer list could not be read: say which failure, never
+                // "no peers" with an error line under it (CSD-046).
+                peers.isEmpty() && readFailure != null -> {
+                    ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                        failure = readFailure!!,
+                        tagPrefix = "federation_trust_graph",
+                        modifier = Modifier.padding(32.dp),
+                    )
+                }
                 peers.isEmpty() -> {
-                    EmptyOrErrorState(error = error)
+                    EmptyOrErrorState(error = null)
                 }
                 else -> Unit
             }
@@ -199,6 +209,7 @@ private fun EmptyOrErrorState(error: String?) {
             text = localizedString("network.trust_graph.empty"),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("empty_trust_graph"),
         )
         if (error != null) {
             Spacer(Modifier.height(8.dp))

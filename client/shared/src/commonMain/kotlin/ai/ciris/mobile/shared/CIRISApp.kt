@@ -540,7 +540,6 @@ fun CIRISApp(
             // back to the Global Commons layer hub. Phase B (2026-05-31): retarget
             // from Screen.Network → Screen.LayerGlobalCommons.
             is Screen.NetworkIdentity,
-            is Screen.NetworkMap,
             is Screen.NetworkTrustGraph,
             is Screen.NetworkPeers,
             is Screen.NetworkInterfaces,
@@ -4804,6 +4803,10 @@ fun CIRISApp(
                     apiClient = apiClient,
                 )
             }
+            // CSD-045: This node › Own standing (tier S), node routes only.
+            Screen.NodeSelfStanding -> {
+                ai.ciris.mobile.shared.ui.screens.NodeSelfStandingScreen(apiClient = apiClient)
+            }
             Screen.Storage -> {
                 ai.ciris.mobile.shared.ui.screens.StorageScreen(
                     apiClient = apiClient,
@@ -4837,7 +4840,6 @@ fun CIRISApp(
                     onTileClick = { tile ->
                         currentScreen = when (tile) {
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.IDENTITY -> Screen.NetworkIdentity
-                            ai.ciris.mobile.shared.ui.screens.NetworkTile.MAP -> Screen.NetworkMap
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.TRUST_GRAPH -> Screen.NetworkTrustGraph
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.PEERS -> Screen.NetworkPeers
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.INTERFACES -> Screen.NetworkInterfaces
@@ -4856,10 +4858,8 @@ fun CIRISApp(
                 onNavigateBack = { currentScreen = Screen.LayerGlobalCommons },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
-            Screen.NetworkMap -> ai.ciris.mobile.shared.ui.screens.federation.NetworkMapScreen(
-                apiClient = apiClient,
-                onIssueClick = { url -> uriHandler.openUri(url) },
-            )
+            // CSD-046 retired Screen.NetworkMap into the Trust graph: both drew the
+            // same peer list in the same three tiers (canonical / trusted / the rest).
             Screen.NetworkTrustGraph -> ai.ciris.mobile.shared.ui.screens.federation.NetworkTrustGraphScreen(
                 apiClient = apiClient,
                 onPeerClick = { keyId -> currentScreen = Screen.NetworkPeerDetail(keyId) },
@@ -4987,7 +4987,7 @@ fun CIRISApp(
             // still applies first.
             val shellBack: Screen? = run {
                 val legacy: Screen? = when (currentScreen) {
-                    Screen.NetworkIdentity, Screen.NetworkMap, Screen.NetworkTrustGraph, Screen.NetworkPeers,
+                    Screen.NetworkIdentity, Screen.NetworkTrustGraph, Screen.NetworkPeers,
                     Screen.NetworkInterfaces, Screen.NetworkPaths, Screen.NetworkAnnounces, Screen.NetworkQueue,
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
@@ -5858,6 +5858,7 @@ internal sealed class Screen {
     object Users : Screen()
     object Trust : Screen()
     object NetworkOps : Screen()   // Manage — CIRISEdge local op-view
+    object NodeSelfStanding : Screen()   // CSD-045 — this node's own standing (tier S)
     object Storage : Screen()      // Manage — CIRISPersist graph/disk view
     object Wallet : Screen()
     object Tickets : Screen()
@@ -5930,7 +5931,6 @@ internal sealed class Screen {
     // (2.9.4→2.9.6). Reached via the 10-tile grid on NetworkScreen; not
     // sidebar-navigable.
     object NetworkIdentity : Screen()
-    object NetworkMap : Screen()
     object NetworkTrustGraph : Screen()
     object NetworkPeers : Screen()
     object NetworkInterfaces : Screen()
@@ -6040,7 +6040,6 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     // Federation sub-screens highlight LayerGlobalCommons in the sidebar
     // (the home of the federation hub).
     Screen.NetworkIdentity,
-    Screen.NetworkMap,
     Screen.NetworkTrustGraph,
     Screen.NetworkPeers,
     Screen.NetworkInterfaces,
@@ -6055,6 +6054,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Consent -> ai.ciris.mobile.shared.ui.nav.NavSurface.Consent
     Screen.Trust -> ai.ciris.mobile.shared.ui.nav.NavSurface.Trust
     Screen.NetworkOps -> ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps
+    Screen.NodeSelfStanding -> ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf // CSD-045
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
@@ -6124,6 +6124,7 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Consent -> Screen.Consent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Trust -> Screen.Trust
     ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps -> Screen.NetworkOps
+    ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf -> Screen.NodeSelfStanding // CSD-045
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts

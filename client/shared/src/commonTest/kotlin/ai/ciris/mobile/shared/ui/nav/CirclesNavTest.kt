@@ -31,7 +31,7 @@ class CirclesNavTest {
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
         NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
-        NavSurface.ClientInterface, NavSurface.Help,
+        NavSurface.ClientInterface, NavSurface.Help, NavSurface.NodeSelf,
     )
 
     @Test
@@ -146,6 +146,7 @@ class CirclesNavTest {
             setOf(
                 NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
                 NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
+                NavSurface.NodeSelf,
             ),
             node.surfaces.toSet(),
         )

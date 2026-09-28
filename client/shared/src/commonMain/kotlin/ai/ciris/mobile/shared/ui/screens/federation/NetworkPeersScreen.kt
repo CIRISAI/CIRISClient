@@ -76,6 +76,7 @@ fun NetworkPeersScreen(
     val showInfra by viewModel.showCirisInfrastructure.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val readFailure by viewModel.readFailure.collectAsState()
     val sheetOpen by viewModel.addPeerSheetOpen.collectAsState()
     val sheetInput by viewModel.addPeerInput.collectAsState()
     val sheetError by viewModel.addPeerError.collectAsState()
@@ -147,13 +148,23 @@ fun NetworkPeersScreen(
                 onShowInfraChange = viewModel::setShowCirisInfrastructure,
             )
 
-            if (error != null) {
+            // A failed LIST read with nothing to show is the read-failure
+            // block, never the dismissable banner over the empty state: once
+            // dismissed, that collapsed into "no peers yet" (CSD-033).
+            val listUnread = peers.isEmpty() && readFailure != null
+            if (error != null && !listUnread) {
                 Box(modifier = Modifier.padding(horizontal = 16.dp)) {
                     ErrorBanner(message = error!!, onDismiss = { viewModel.clearError() })
                 }
             }
 
-            if (loading && peers.isEmpty()) {
+            if (listUnread && !loading) {
+                ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                    failure = readFailure!!,
+                    tagPrefix = "federation_peers",
+                    modifier = Modifier.padding(16.dp),
+                )
+            } else if (loading && peers.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
@@ -413,6 +424,10 @@ private fun AddPeerSheet(
         )
         Spacer(Modifier.height(12.dp))
 
+        // The input sink: without it `/input` refuses the field (CIRISClient#30).
+        ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver(
+            tag = "input_add_peer_code", value = input, onValueChange = onInputChange,
+        )
         OutlinedTextField(
             value = input,
             onValueChange = onInputChange,
@@ -420,7 +435,7 @@ private fun AddPeerSheet(
             placeholder = { Text(localizedString("network.peers.add_peer_paste_placeholder")) },
             modifier = Modifier
                 .fillMaxWidth()
-                .testable("input_add_peer_code"),
+                .testable("input_add_peer_code", input),
             minLines = 3,
             maxLines = 5,
             singleLine = false,

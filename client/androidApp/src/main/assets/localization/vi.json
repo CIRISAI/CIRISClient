@@ -3116,6 +3116,8 @@
     "audit_not_on_this_node": "Nút này không lưu nhật ký kiểm toán của tác nhân. Không có gì bị lọc bỏ.",
     "consent_not_on_this_node": "Nút này không lưu giữ bản ghi đồng thuận. Đồng thuận được lưu giữ bởi một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
     "billing_not_on_this_node": "Nút này không xử lý thanh toán. Ở đây không có số dư và không có gì để mua.",
+    "manage_nodes_owned_not_on_this_node": "Nút này không thể liệt kê các nút mà bạn sở hữu. Nó quá cũ để trả lời câu hỏi đó.",
+    "manage_nodes_unverified": "Không thể kiểm tra danh sách này với các nút mà bạn sở hữu. Nó chỉ hiển thị thiết bị này và bất kỳ nút nào bạn đã thêm trong phiên này. Điều đó không có nghĩa là bạn không sở hữu gì khác.",
     "telemetry_not_on_this_node": "Nút này không báo cáo dữ liệu đo từ xa của tác nhân.",
     "services_not_on_this_node": "Nút này không liệt kê các dịch vụ của tác nhân.",
     "state_not_on_this_node": "Nút này không cung cấp điều này. Nó thuộc về một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
@@ -3351,7 +3353,8 @@
       "users": "Người Dùng",
       "wallet": "Ví",
       "wise_authority": "Cơ Quan Sáng Suốt",
-      "help": "Trợ giúp"
+      "help": "Trợ giúp",
+      "node_self": "Trạng Thái Riêng"
     },
     "circle": {
       "agent": "Chỉ mình tôi",
@@ -3672,6 +3675,25 @@
         "sent": "Đã gửi",
         "session": "Tổng phiên này",
         "title": "Thông lượng"
+      },
+      "replication": {
+        "title": "Sao chép",
+        "carriage": "Đang gửi bản ghi tới các đồng cấp",
+        "receive": "Đang nhận bản ghi từ các đồng cấp",
+        "served": "Bản ghi đã phục vụ",
+        "applied": "Bản ghi đã áp dụng",
+        "note": "Số lượng tin nhắn ở trên chỉ tính tin nhắn ứng dụng. Sao chép di chuyển bản ghi mà không tác động đến chúng, nên số 0 ở đó không nói lên điều gì về việc bản ghi có đang di chuyển hay không. Hai trạng thái ở đây thì có.",
+        "not_reported": "Nút này chưa báo cáo về sao chép, nên không có gì để hiển thị ở đây. Điều đó không đồng nghĩa với việc không có gì đang di chuyển."
+      },
+      "standing": {
+        "unreadable": "Không thể đọc được",
+        "not_exercised": "Chưa được thử (chưa kiểm nghiệm, không sạch)",
+        "idle": "Rảnh: không có gì để trao đổi",
+        "moving": "Đang di chuyển",
+        "withholding": "Đang giữ lại một số bản ghi",
+        "converged": "Đã cập nhật",
+        "applying": "Đang áp dụng bản ghi mới",
+        "refusing": "Đang từ chối một số bản ghi"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "Mã ủy quyền của chủ sở hữu",
         "reason_hint": "Được ghi lại nguyên văn và không bao giờ được diễn giải. Một hành vi không có lý do được ghi lại thì không thể phân biệt được với một hành vi không có thẩm quyền, một khi người thực hiện đã rời đi.",
         "reason_label": "Lý do (bắt buộc)",
-        "working": "Đang ghi lại…"
+        "working": "Đang ghi lại…",
+        "review": "Xem lại",
+        "delegation_supplied": "Được nêu tên bởi nút này",
+        "delegation_none": "Nút này không giữ ủy quyền nào từ chủ sở hữu mà nó có thể hành động theo, nên nó không thể ghi lại hành vi này. Hãy ràng buộc lại nút này với chủ sở hữu của nó trước.",
+        "delegation_unreadable": "Nút này không thể đọc các ủy quyền của bạn vào lúc này, nên hãy nhập mã.",
+        "delegation_not_supplied": "Nút này không thể nêu tên ủy quyền của bạn (nó cũ hơn phiên bản 0.5.218), nên hãy nhập mã delegates_to của chính chủ sở hữu. Quyền phục vụ do một bên thứ ba cấp thì không dùng được."
       },
       "event": "Sự kiện",
       "lift_disabled_hint": "Chưa có gì được tuyên bố trên trục này, nên không có gì để gỡ bỏ.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "Cả ba trạng thái đều chưa xác định — điều đó không phải là “không có gì đang có hiệu lực”. Các hành vi Tier S là cục bộ đối với nút này, nên chúng lại dùng được ngay khi nút trả lời.",
       "unreachable_title": "Không thể liên hệ được nút này",
       "unreadable_axes_body": "Nút đã trả lời, nhưng nó không đọc được các trục được đánh dấu bên dưới. Nó không biết trạng thái của chính mình ở đó — đừng hiểu điều đó thành “không có gì đang có hiệu lực”.",
-      "unreadable_axes_title": "Một số trạng thái không đọc được"
-    }
+      "unreadable_axes_title": "Một số trạng thái không đọc được",
+      "confirm": {
+        "what": "Điều được ghi lại",
+        "declared": "đã công bố",
+        "lifted": "đã dỡ bỏ",
+        "not_named": "thẩm quyền không được nêu tên",
+        "changes": "Điều nó thay đổi",
+        "changes_value": "Không có gì mà nút này làm. Đó là một bản ghi trên nút này, và nó vẫn còn trong lịch sử sau khi được dỡ bỏ.",
+        "signs": "Ai ký",
+        "signs_value": "Bạn, với vai trò chủ sở hữu của nút này, theo ủy quyền {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Nút này chạy không có tác nhân, và chế độ là điều tác nhân phải báo cáo."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "Vặn một núm điều chỉnh của lưới",
       "write_ttl": "Hết hạn sau (giờ)",
       "write_value": "Giá trị"
+    },
+    "health_reputation": {
+      "not_per_circle": "Một điểm số duy nhất cho tác nhân, giống nhau ở mọi vòng. CIRIS chưa thể đo trạng thái trong một vòng riêng lẻ."
     }
   },
   "system": {

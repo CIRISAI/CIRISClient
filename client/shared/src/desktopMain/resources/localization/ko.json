@@ -3196,7 +3196,9 @@
     "identity_associate_use_software": "대신 이 기기에서 소프트웨어 커스터디를 사용합니다",
     "login_new_account_refused": "이 노드에는 이미 소유자가 있습니다: 한 번도 본 적 없는 계정은 여기서 거부됩니다. 소유자 계정으로 로그인하세요.",
     "login_new_account_observer": "이 노드가 한 번도 본 적 없는 계정은 소유자가 아니라 관찰자로 들어오게 됩니다.",
-    "login_new_account_claims": "이 노드에는 아직 소유자가 없습니다: 처음으로 로그인하는 계정이 소유자가 됩니다."
+    "login_new_account_claims": "이 노드에는 아직 소유자가 없습니다: 처음으로 로그인하는 계정이 소유자가 됩니다.",
+    "manage_nodes_owned_not_on_this_node": "이 노드는 사용자가 소유한 노드 목록을 표시할 수 없습니다. 이 질문에 답하기에는 버전이 너무 오래되었습니다.",
+    "manage_nodes_unverified": "이 목록은 사용자가 소유한 노드와 대조하여 확인할 수 없었습니다. 이 기기와 이번 세션에서 추가한 노드만 표시됩니다. 그렇다고 해서 그 외에 소유한 것이 없다는 의미는 아닙니다."
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "사용자",
       "wallet": "지갑",
       "wise_authority": "담당자",
-      "help": "도움말"
+      "help": "도움말",
+      "node_self": "자신의 상태"
     },
     "circle": {
       "agent": "나만",
@@ -3672,6 +3675,25 @@
         "sent": "보냄",
         "session": "이 세션 합계",
         "title": "처리량"
+      },
+      "replication": {
+        "title": "복제",
+        "carriage": "피어에게 레코드 전송 중",
+        "receive": "피어로부터 레코드 수신 중",
+        "served": "제공된 레코드",
+        "applied": "적용된 레코드",
+        "note": "위의 메시지 수는 앱 메시지만을 다룹니다. 복제는 레코드를 건드리지 않고 이동시키므로, 그곳의 0은 레코드가 이동 중인지에 대해 아무것도 말해주지 않습니다. 여기의 두 상태가 그것을 말해줍니다.",
+        "not_reported": "이 노드는 아직 복제를 보고하지 않으므로 여기에 표시할 내용이 없습니다. 이는 아무것도 이동하지 않는다는 것과는 다릅니다."
+      },
+      "standing": {
+        "unreadable": "읽을 수 없음",
+        "not_exercised": "아직 시도되지 않음 (미검증, 정상 확인 안 됨)",
+        "idle": "유휴: 교환할 것 없음",
+        "moving": "이동 중",
+        "withholding": "일부 레코드 보류 중",
+        "converged": "최신 상태",
+        "applying": "새 레코드 적용 중",
+        "refusing": "일부 레코드 거부 중"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "소유자 위임 id",
         "reason_hint": "그대로 기록될 뿐 결코 해석되지 않습니다. 기록된 사유가 없는 행위는, 행위자가 사라진 뒤에는 무단 행위와 구별되지 않습니다.",
         "reason_label": "사유 (필수)",
-        "working": "기록 중…"
+        "working": "기록 중…",
+        "review": "검토",
+        "delegation_supplied": "이 노드가 지정함",
+        "delegation_none": "이 노드는 소유자로부터 행위할 수 있는 위임을 보유하고 있지 않으므로, 이 행위를 기록할 수 없습니다. 먼저 이 노드를 소유자에게 다시 바인딩하십시오.",
+        "delegation_unreadable": "이 노드는 지금 사용자의 위임을 읽을 수 없었으므로, id를 직접 입력하십시오.",
+        "delegation_not_supplied": "이 노드는 사용자의 위임을 지목할 수 없으므로(해당 위임이 0.5.218보다 이전 버전이기 때문입니다), 소유자 자신의 delegates_to id를 입력하십시오. 제3자의 서비스 권한 부여로는 대신할 수 없습니다."
       },
       "event": "이벤트",
       "lift_disabled_hint": "이 축에서는 선언된 것이 없으므로 해제할 것도 없습니다.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "세 가지 상태는 알 수 없는 상태입니다 — 이는 '적용 중인 것 없음'이 아닙니다. 계층 S의 행위는 이 노드에 로컬이므로, 노드가 답하는 순간 다시 사용할 수 있습니다.",
       "unreachable_title": "이 노드에 도달할 수 없었습니다",
       "unreadable_axes_body": "노드는 답했지만 아래에 표시된 축은 읽지 못했습니다. 그 축에서는 자신의 상태를 알지 못하는 것이며 — 이를 깨끗한 상태로 읽지 마십시오.",
-      "unreadable_axes_title": "일부 상태를 읽을 수 없었습니다"
-    }
+      "unreadable_axes_title": "일부 상태를 읽을 수 없었습니다",
+      "confirm": {
+        "signs": "서명자",
+        "signs_value": "이 노드의 소유자인 사용자, 위임 {delegation} 하에서",
+        "what": "기록되는 것",
+        "declared": "선언됨",
+        "lifted": "해제됨",
+        "not_named": "권한이 지정되지 않음",
+        "changes": "변경되는 것",
+        "changes_value": "이 노드가 하는 일은 없습니다. 이는 이 노드에 있는 기록이며, 해제된 후에도 이력에 남습니다."
+      }
+    },
+    "mode_not_on_this_node": "이 노드는 에이전트 없이 실행되며, 모드는 에이전트가 보고할 사항입니다."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "메시 설정 돌리기",
       "write_ttl": "만료까지 (시간)",
       "write_value": "값"
+    },
+    "health_reputation": {
+      "not_per_circle": "에이전트에 대해 하나의 점수만 있으며, 모든 서클에서 동일합니다. CIRIS는 아직 단일 서클 내의 상태를 측정할 수 없습니다."
     }
   },
   "system": {

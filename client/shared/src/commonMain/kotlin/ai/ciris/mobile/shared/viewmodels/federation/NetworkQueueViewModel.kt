@@ -42,27 +42,27 @@ class NetworkQueueViewModel(
 
     private var autoRefreshJob: Job? = null
 
-    val queueDepth: Long get() = _metrics.value?.getQueueDepth() ?: 0L
-    val envelopesSent: Long get() = _metrics.value?.getEnvelopesSent() ?: 0L
-    val envelopesReceived: Long get() = _metrics.value?.getEnvelopesReceived() ?: 0L
-    val sendFailures: Long get() = _metrics.value?.getSendFailures() ?: 0L
-    val verifyFailures: Long get() = _metrics.value?.getVerifyFailures() ?: 0L
-    val bytesIn: Long get() = _metrics.value?.getBytesIn() ?: 0L
-    val bytesOut: Long get() = _metrics.value?.getBytesOut() ?: 0L
+    // Null until a snapshot has been READ (CSD-049): a counter nobody read is
+    // not 0, and drawing it as 0 beside a failed read is a reading nobody took.
+    val queueDepth: Long? get() = _metrics.value?.getQueueDepth()
+    val envelopesSent: Long? get() = _metrics.value?.getEnvelopesSent()
+    val envelopesReceived: Long? get() = _metrics.value?.getEnvelopesReceived()
+    val sendFailures: Long? get() = _metrics.value?.getSendFailures()
+    val verifyFailures: Long? get() = _metrics.value?.getVerifyFailures()
+    val bytesIn: Long? get() = _metrics.value?.getBytesIn()
+    val bytesOut: Long? get() = _metrics.value?.getBytesOut()
 
     fun refreshNow() {
-        launchApi(
-            operation = "getFederationMetrics",
-            block = { apiClient.getFederationMetrics() },
-            onSuccess = { _metrics.value = it },
-        )
+        viewModelScope.launch {
+            runRead("getFederationMetrics") { apiClient.getFederationMetrics() }?.let { _metrics.value = it }
+        }
     }
 
     fun startAutoRefresh(intervalMs: Long = 5_000L) {
         autoRefreshJob?.cancel()
         autoRefreshJob = viewModelScope.launch {
             while (isActive) {
-                runApi("getFederationMetrics:auto") {
+                runRead("getFederationMetrics:auto") {
                     apiClient.getFederationMetrics()
                 }?.let { _metrics.value = it }
                 delay(intervalMs)

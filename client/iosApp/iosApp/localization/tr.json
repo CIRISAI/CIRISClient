@@ -3196,7 +3196,9 @@
     "login_new_account_observer": "Bu düğümün hiç görmediği bir hesap, sahibi olarak değil, gözlemci olarak içeri alınır.",
     "login_new_account_claims": "Bu düğümün henüz bir sahibi yok: oturum açan ilk hesap onun sahibi olur.",
     "delegations_deny": "Reddet",
-    "delegations_inbound_title": "Size devredilenler"
+    "delegations_inbound_title": "Size devredilenler",
+    "manage_nodes_owned_not_on_this_node": "Bu düğüm, sahip olduğunuz düğümleri listeleyemez. Bu soruyu yanıtlayamayacak kadar eski.",
+    "manage_nodes_unverified": "Bu liste, sahip olduğunuz düğümlere göre denetlenemedi. Yalnızca bu cihazı ve bu oturumda eklediğiniz düğümleri gösterir. Bu, başka hiçbir şeye sahip olmadığınız anlamına gelmez."
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "Kullanıcılar",
       "wallet": "Cüzdan",
       "wise_authority": "Bilge Otorite",
-      "help": "Yardım"
+      "help": "Yardım",
+      "node_self": "Kendi Durumu"
     },
     "circle": {
       "agent": "Sadece ben",
@@ -3672,6 +3675,25 @@
         "sent": "Gönderildi",
         "session": "Bu oturumun toplamı",
         "title": "Verim"
+      },
+      "replication": {
+        "title": "Çoğaltma",
+        "carriage": "Kayıtları eşlere gönderme",
+        "receive": "Kayıtları eşlerden alma",
+        "served": "Sunulan kayıtlar",
+        "applied": "Uygulanan kayıtlar",
+        "note": "Yukarıdaki mesaj sayıları yalnızca uygulama mesajlarını kapsar. Çoğaltma, kayıtları dokunmadan taşır; bu yüzden oradaki bir 0, kayıtların hareket edip etmediği hakkında hiçbir şey söylemez. Buradaki iki durum ise söyler.",
+        "not_reported": "Bu düğüm henüz çoğaltmayı raporlamıyor, bu yüzden burada gösterilecek bir şey yok. Bu, hiçbir şeyin hareket etmediği anlamına gelmez."
+      },
+      "standing": {
+        "unreadable": "Okunamadı",
+        "not_exercised": "Henüz denenmedi (test edilmemiş, temiz değil)",
+        "idle": "Boşta: değiştirilecek bir şey yok",
+        "moving": "Hareket ediyor",
+        "withholding": "Bazı kayıtları esirgiyor",
+        "converged": "Güncel",
+        "applying": "Yeni kayıtlar uygulanıyor",
+        "refusing": "Bazı kayıtları reddediyor"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "Sahibin yetki devri kimliği",
         "reason_hint": "Olduğu gibi kaydedilir ve asla yorumlanmaz. Kaydedilmiş bir gerekçesi olmayan bir edim, aktör ortadan kalktıktan sonra yetkisiz bir edimden ayırt edilemez.",
         "reason_label": "Gerekçe (zorunlu)",
-        "working": "Kaydediliyor…"
+        "working": "Kaydediliyor…",
+        "review": "Gözden geçir",
+        "delegation_supplied": "Bu düğüm tarafından adlandırıldı",
+        "delegation_none": "Bu düğüm, sahibinden aldığı ve altında işlem yapabileceği bir yetki devri tutmuyor; dolayısıyla bu edimi kaydedemez. Önce bu düğümü sahibine yeniden bağlayın.",
+        "delegation_unreadable": "Bu düğüm şu anda yetki devirlerinizi okuyamadı, bu yüzden kimliği yazın.",
+        "delegation_not_supplied": "Bu düğüm, yetki devrinizi adlandıramıyor (0.5.218'den daha eski), bu yüzden sahibin kendi delegates_to kimliğini yazın. Üçüncü bir tarafın sunum izni işe yaramaz."
       },
       "event": "Olay",
       "lift_disabled_hint": "Bu eksende hiçbir şey beyan edilmedi; dolayısıyla kaldırılacak bir şey yok.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "Üç durum da bilinmiyor — bu, 'yürürlükte bir şey yok' demek değildir. S kademesi edimleri bu düğüme yereldir; dolayısıyla düğüm yanıt verdiği anda yeniden kullanılabilir olurlar.",
       "unreachable_title": "Bu düğüme erişilemedi",
       "unreadable_axes_body": "Düğüm yanıt verdi, ancak aşağıda işaretlenen eksenleri okuyamadı. Oradaki kendi durumunu bilmiyor — bunu temiz diye okumayın.",
-      "unreadable_axes_title": "Bazı durumlar okunamadı"
-    }
+      "unreadable_axes_title": "Bazı durumlar okunamadı",
+      "confirm": {
+        "what": "Ne kaydedilir",
+        "declared": "beyan edildi",
+        "lifted": "kaldırıldı",
+        "not_named": "yetki belirtilmemiş",
+        "changes": "Neyi değiştirir",
+        "changes_value": "Bu düğümün yaptığı hiçbir şeyi değiştirmez. Bu düğümde bir kayıttır ve kaldırıldıktan sonra da geçmişte kalır.",
+        "signs": "Kim imzalar",
+        "signs_value": "Bu düğümün sahibi olarak siz, {delegation} yetki devri altında"
+      }
+    },
+    "mode_not_on_this_node": "Bu düğüm bir ajan olmadan çalışıyor ve modu bildirmek ajana aittir."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "Bir mesh ayar düğmesini çevir",
       "write_ttl": "Şu süre sonra sona erer (saat)",
       "write_value": "Değer"
+    },
+    "health_reputation": {
+      "not_per_circle": "Ajan için tek bir puan, her çevrede aynı. CIRIS henüz tek bir çevre içindeki durumu ölçemez."
     }
   },
   "system": {

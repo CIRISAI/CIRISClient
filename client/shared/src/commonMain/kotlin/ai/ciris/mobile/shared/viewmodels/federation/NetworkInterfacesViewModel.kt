@@ -57,9 +57,8 @@ enum class TransportStatus { ACTIVE, DEGRADED, IDLE, UNKNOWN }
  *
  * - Transport identifiers come from the union of ``transport_bytes_in``,
  *   ``transport_bytes_out`` and ``peer_reachability_ratio`` sub-keys.
- *   The reachability map uses ``"{peer_key_id}|{transport}"`` style keys
- *   (Rust-side convention) — we split on the last ``|`` so the transport
- *   identifier survives peer-key collisions.
+ *   The node keys reachability ``"{peer_key_id}:{medium}"``
+ *   (federation_surface.rs:222); see [collateTransports].
  * - Reachability ratio is averaged across all per-peer samples for that
  *   transport; peer count is the sample count.
  * - RSSI / SNR families are sub-keyed by transport identifier directly
@@ -81,14 +80,12 @@ class NetworkInterfacesViewModel(
 
     /** Fire a single fetch and project. Safe to call before/after auto-refresh. */
     fun refreshNow() {
-        launchApi(
-            operation = "getFederationMetrics",
-            block = { apiClient.getFederationMetrics() },
-            onSuccess = { snapshot ->
+        viewModelScope.launch {
+            runRead("getFederationMetrics") { apiClient.getFederationMetrics() }?.let { snapshot ->
                 _metrics.value = snapshot
                 _transportRows.value = collateTransports(snapshot)
-            },
-        )
+            }
+        }
     }
 
     /** Start polling every 10 s. Idempotent — a previous job is cancelled. */
@@ -96,7 +93,7 @@ class NetworkInterfacesViewModel(
         autoRefreshJob?.cancel()
         autoRefreshJob = viewModelScope.launch {
             while (isActive) {
-                runApi("getFederationMetrics:auto") {
+                runRead("getFederationMetrics:auto") {
                     apiClient.getFederationMetrics()
                 }?.let { snapshot ->
                     _metrics.value = snapshot
@@ -123,11 +120,9 @@ class NetworkInterfacesViewModel(
     /**
      * Collate per-transport rows. Visible for testing.
      *
-     * Reachability sub-keys are expected in ``"{peer_key_id}|{transport}"``
-     * form; we split on the last ``|`` so peer keys that themselves contain
-     * ``|`` (none in practice, but defensively) don't shadow the transport
-     * field. Sub-keys without a ``|`` are treated as transport identifiers
-     * directly so older Edge releases keep working.
+     * Reachability sub-keys arrive as ``"{peer_key_id}:{medium}"`` from the
+     * node (``"{peer}|{transport}"`` from the retired agent route); both
+     * collate to the medium ([transportOfReachKey]).
      */
     internal fun collateTransports(snapshot: FederationMetricsResponse): List<TransportRow> {
         val bytesIn = snapshot.transportBytesInTotal
@@ -135,12 +130,16 @@ class NetworkInterfacesViewModel(
         val reach = snapshot.peerReachabilityRatio
 
         // Build a transport → list-of-ratios index from the reachability map.
+        // The NODE keys it `"<peer_key>:<medium>"` (CIRISServer
+        // src/federation_surface.rs:222); the retired agent route used `|`.
+        // Reading only `|` made every peer:medium pair its own "transport"
+        // row (CSD-048). A key ending in a transport id we already know from
+        // the byte counters resolves to it, so a transport id that itself
+        // carries ':' survives; otherwise the medium is everything after the
+        // peer key's first ':'.
+        val knownTransports = bytesIn.keys + bytesOut.keys
         val reachByTransport: Map<String, List<Double>> = reach.entries
-            .groupBy { entry ->
-                val key = entry.key
-                val pipeIdx = key.lastIndexOf('|')
-                if (pipeIdx >= 0) key.substring(pipeIdx + 1) else key
-            }
+            .groupBy { entry -> transportOfReachKey(entry.key, knownTransports) }
             .mapValues { (_, entries) -> entries.map { it.value } }
 
         // toSortedSet() is JVM-only; commonMain uses sorted() + distinct().
@@ -161,6 +160,14 @@ class NetworkInterfacesViewModel(
                 snrDb = null,
             )
         }
+    }
+
+    private fun transportOfReachKey(key: String, known: Set<String>): String {
+        val pipeIdx = key.lastIndexOf('|')
+        if (pipeIdx >= 0) return key.substring(pipeIdx + 1)
+        known.firstOrNull { key.endsWith(":$it") }?.let { return it }
+        val colonIdx = key.indexOf(':')
+        return if (colonIdx >= 0) key.substring(colonIdx + 1) else key
     }
 
     /** Coarse activity bucket — used by the card-header status dot. */

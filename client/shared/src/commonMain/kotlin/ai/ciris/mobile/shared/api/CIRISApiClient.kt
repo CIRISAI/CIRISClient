@@ -1881,8 +1881,8 @@ class CIRISApiClient(
      */
     suspend fun getFederationMetrics(): FederationMetricsResponse {
         // Node-served since ciris-server 0.5.115 (CIRISServer#261) — PyO3
-        // metrics_snapshot key formats; inline_text_subscriber_count is served
-        // as verified_feed_subscriber_count (model updated to match).
+        // metrics_snapshot key formats; the verified-feed receiver count is
+        // served under the old `inline_text_subscriber_count` key (CSD-049).
         val method = "getFederationMetrics"
         logDebug(method, "GET $LOCAL_NODE_URL/v1/federation/metrics")
         val client = federationHttpClient()
@@ -2073,6 +2073,9 @@ class CIRISApiClient(
         aliasHint: String? = null,
     ): NodeCodeShareResponse {
         val method = "getMyNodeCode"
+        // The AGENT's route (CIRISAgent routes/system/peers.py); a bare node
+        // has no /v1/system/peers/* (CSD-032). Raise, never 404 into a banner.
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/system/peers/my-node-code")
         logDebug(method, "GET /v1/system/peers/my-node-code aliasHint=$aliasHint")
         val client = federationHttpClient()
         return try {
@@ -2107,6 +2110,8 @@ class CIRISApiClient(
      */
     suspend fun getFederationIdentityAggregate(): FederationIdentityResponse? {
         val method = "getFederationIdentityAggregate"
+        // Agent-only (routes/system/peers.py); the node serves no aggregate (CSD-032).
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/system/peers/federation-identity")
         logDebug(method, "GET /v1/system/peers/federation-identity")
         val client = federationHttpClient()
         return try {
@@ -2137,6 +2142,9 @@ class CIRISApiClient(
      */
     suspend fun addPeerFromNodeCode(code: String): NodeCodeAddResponse {
         val method = "addPeerFromNodeCode"
+        // Agent-only (routes/system/peers.py, SYSTEM_ADMIN); a bare node has no
+        // add-from-code, so say so instead of a raw 404 (CSD-033).
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/system/peers/add-from-code")
         logInfo(method, "POST /v1/system/peers/add-from-code code='${code.take(20)}...'")
         val client = federationHttpClient()
         return try {

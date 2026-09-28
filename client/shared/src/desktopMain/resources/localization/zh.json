@@ -3196,7 +3196,9 @@
     "identity_associate_use_software": "改用此设备上的软件托管",
     "login_new_account_refused": "此节点已有所有者：从未见过的账户在此将被拒绝。请使用所有者账户登录。",
     "login_new_account_observer": "此节点从未见过的账户将以观察者身份被允许进入，而非所有者。",
-    "login_new_account_claims": "此节点尚无所有者：首个登录的账户将成为其所有者。"
+    "login_new_account_claims": "此节点尚无所有者：首个登录的账户将成为其所有者。",
+    "manage_nodes_owned_not_on_this_node": "此节点无法列出您所拥有的节点。它的版本过旧，无法回答该问题。",
+    "manage_nodes_unverified": "此列表未能与您所拥有的节点进行核对。它仅显示此设备以及您在本次会话中添加的节点。这并不意味着您没有其他节点。"
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "用户",
       "wallet": "钱包",
       "wise_authority": "智慧权威",
-      "help": "帮助"
+      "help": "帮助",
+      "node_self": "自身状态"
     },
     "circle": {
       "agent": "仅我本人",
@@ -3672,6 +3675,25 @@
         "sent": "已发送",
         "session": "本会话总计",
         "title": "吞吐量"
+      },
+      "replication": {
+        "title": "复制",
+        "carriage": "向对等节点发送记录",
+        "receive": "从对等节点接收记录",
+        "served": "已提供的记录",
+        "applied": "已应用的记录",
+        "note": "上方的消息计数仅涵盖应用消息。复制在不改动记录的情况下移动记录，因此那里显示的 0 并不能说明记录是否在移动。此处的两项状态才能说明这一点。",
+        "not_reported": "本节点尚未报告复制情况，因此此处无内容可显示。这并不等同于没有数据在流动。"
+      },
+      "standing": {
+        "unreadable": "无法读取",
+        "not_exercised": "尚未尝试（未测试，不算“干净”）",
+        "idle": "空闲：无内容可交换",
+        "moving": "正在移动",
+        "withholding": "扣留部分记录",
+        "converged": "已同步",
+        "applying": "正在应用新记录",
+        "refusing": "拒绝部分记录"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "所有者委托 id",
         "reason_hint": "逐字记录，绝不作解读。一个没有记录理由的行为，在行为人离开之后就无法与未经授权的行为区分开来。",
         "reason_label": "理由（必填）",
-        "working": "正在记录…"
+        "working": "正在记录…",
+        "review": "审阅",
+        "delegation_supplied": "由本节点指名",
+        "delegation_none": "本节点没有可依据行事的、来自其所有者的委派，因此无法记录此行为。请先将本节点重新绑定到其所有者。",
+        "delegation_unreadable": "本节点刚才无法读取您的委派，请输入该 id。",
+        "delegation_not_supplied": "本节点无法指名您的委派（其版本早于 0.5.218），请输入所有者自己的 delegates_to id。第三方的服务授权不能作数。"
       },
       "event": "事件",
       "lift_disabled_hint": "这条轴上未曾声明过任何内容，因此没有可解除的对象。",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "三项状态均为未知——这不是“没有任何项处于生效中”。Tier S 的行为都是本节点本地的，因此只要它作出应答，这些行为就会立即重新可用。",
       "unreachable_title": "无法联系到本节点",
       "unreadable_axes_body": "该节点作出了应答，但它无法读取下方标出的那些轴。它并不知道自己在那些轴上的状态——请勿把这读作“无事”。",
-      "unreadable_axes_title": "部分状态无法读取"
-    }
+      "unreadable_axes_title": "部分状态无法读取",
+      "confirm": {
+        "what": "所记录的内容",
+        "declared": "已声明",
+        "lifted": "已解除",
+        "not_named": "未指名权限",
+        "changes": "它将改变什么",
+        "changes_value": "本节点不会做任何事。它只是本节点上的一条记录，即使在被解除之后也会保留在历史中。",
+        "signs": "由谁签署",
+        "signs_value": "您，作为本节点的所有者，依据委派 {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "本节点运行时没有智能体，而模式是由智能体负责报告的。"
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "拧动一个网格旋钮",
       "write_ttl": "多久之后过期（小时）",
       "write_value": "值"
+    },
+    "health_reputation": {
+      "not_per_circle": "智能体只有一个分数，在每个圈子中都相同。CIRIS 尚无法测量单个圈子内的状态。"
     }
   },
   "system": {

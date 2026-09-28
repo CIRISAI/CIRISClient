@@ -3196,7 +3196,9 @@
     "identity_associate_use_software": "Stattdessen Software-Verwahrung auf diesem Gerät verwenden",
     "login_new_account_refused": "Dieser Knoten hat bereits einen Eigentümer: Ein Konto, das er noch nie gesehen hat, würde hier abgelehnt. Melden Sie sich mit dem Konto des Eigentümers an.",
     "login_new_account_observer": "Ein Konto, das dieser Knoten noch nie gesehen hat, würde als Beobachter zugelassen, nicht als Eigentümer.",
-    "login_new_account_claims": "Dieser Knoten hat noch keinen Eigentümer: Das erste Konto, das sich anmeldet, wird dessen Eigentümer."
+    "login_new_account_claims": "Dieser Knoten hat noch keinen Eigentümer: Das erste Konto, das sich anmeldet, wird dessen Eigentümer.",
+    "manage_nodes_owned_not_on_this_node": "Dieser Knoten kann die Ihnen gehörenden Knoten nicht auflisten. Er ist zu alt, um diese Frage zu beantworten.",
+    "manage_nodes_unverified": "Diese Liste konnte nicht mit den Ihnen gehörenden Knoten abgeglichen werden. Sie zeigt nur dieses Gerät und alle Knoten, die Sie in dieser Sitzung hinzugefügt haben. Das bedeutet nicht, dass Sie nichts anderes besitzen."
   },
   "moderation": {
     "ladder": {
@@ -3351,7 +3353,8 @@
       "users": "Benutzer",
       "wallet": "Wallet",
       "wise_authority": "Menschlicher Berater",
-      "help": "Hilfe"
+      "help": "Hilfe",
+      "node_self": "Eigener Stand"
     },
     "circle": {
       "agent": "Nur ich",
@@ -3672,6 +3675,25 @@
         "sent": "Gesendet",
         "session": "Gesamt diese Sitzung",
         "title": "Durchsatz"
+      },
+      "replication": {
+        "title": "Replikation",
+        "carriage": "Sendet Datensätze an Peers",
+        "receive": "Empfängt Datensätze von Peers",
+        "served": "Ausgelieferte Datensätze",
+        "applied": "Angewendete Datensätze",
+        "note": "Die obigen Nachrichtenzähler erfassen nur App-Nachrichten. Die Replikation bewegt Datensätze, ohne sie zu verändern, daher sagt eine 0 dort nichts darüber aus, ob Datensätze sich bewegen. Die beiden Stände hier tun das.",
+        "not_reported": "Dieser Knoten meldet die Replikation noch nicht, daher gibt es hier nichts anzuzeigen. Das ist nicht gleichzusetzen mit „nichts bewegt sich“."
+      },
+      "standing": {
+        "unreadable": "Konnte nicht gelesen werden",
+        "not_exercised": "Noch nicht versucht (ungetestet, nicht sauber)",
+        "idle": "Untätig: nichts auszutauschen",
+        "moving": "In Bewegung",
+        "withholding": "Hält einige Datensätze zurück",
+        "converged": "Aktuell",
+        "applying": "Wendet neue Datensätze an",
+        "refusing": "Weist einige Datensätze ab"
       }
     },
     "stats_strip": {
@@ -3822,7 +3844,12 @@
         "delegation_label": "Delegations-ID des Eigentümers",
         "reason_hint": "Wird wortwörtlich erfasst und niemals ausgelegt. Eine Handlung ohne erfassten Grund ist, sobald der Handelnde fort ist, von einer unbefugten nicht zu unterscheiden.",
         "reason_label": "Grund (erforderlich)",
-        "working": "Wird erfasst…"
+        "working": "Wird erfasst…",
+        "review": "Überprüfen",
+        "delegation_supplied": "Von diesem Knoten benannt",
+        "delegation_none": "Dieser Knoten hält keine Delegation seines Eigentümers, unter der er handeln kann, und kann diese Handlung daher nicht aufzeichnen. Binden Sie diesen Knoten zunächst erneut an seinen Eigentümer.",
+        "delegation_unreadable": "Dieser Knoten konnte Ihre Delegationen gerade nicht lesen, geben Sie daher die ID ein.",
+        "delegation_not_supplied": "Dieser Knoten kann Ihre Delegation nicht benennen (er ist älter als 0.5.218), geben Sie daher die eigene delegates_to-ID des Eigentümers ein. Die Auslieferungsberechtigung eines Dritten genügt dafür nicht."
       },
       "event": "Ereignis",
       "lift_disabled_hint": "Auf dieser Achse wurde nichts erklärt, es gibt also nichts aufzuheben.",
@@ -3852,8 +3879,19 @@
       "unreachable_body": "Die drei Stände sind unbekannt — was nicht „nichts in Kraft“ heißt. Handlungen der Stufe S sind lokal zu diesem Knoten und stehen wieder zur Verfügung, sobald er antwortet.",
       "unreachable_title": "Dieser Knoten war nicht erreichbar",
       "unreadable_axes_body": "Der Knoten hat geantwortet, konnte die unten markierten Achsen aber nicht lesen. Er kennt seinen eigenen Stand dort nicht — lesen Sie das nicht als „nichts in Kraft“.",
-      "unreadable_axes_title": "Einige Stände konnten nicht gelesen werden"
-    }
+      "unreadable_axes_title": "Einige Stände konnten nicht gelesen werden",
+      "confirm": {
+        "what": "Was aufgezeichnet wird",
+        "declared": "erklärt",
+        "lifted": "aufgehoben",
+        "not_named": "Autorität nicht benannt",
+        "changes": "Was sich ändert",
+        "changes_value": "Nichts, was dieser Knoten tut. Es ist ein Datensatz auf diesem Knoten und bleibt in der Historie, nachdem er aufgehoben wurde.",
+        "signs": "Wer signiert",
+        "signs_value": "Sie, als Eigentümer dieses Knotens, unter Delegation {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "Dieser Knoten läuft ohne Agenten, und der Modus ist Sache des Agenten, ihn zu melden."
   },
   "operator": {
     "carriage": {
@@ -4435,6 +4473,9 @@
       "write_title": "Einen Mesh-Regler verstellen",
       "write_ttl": "Läuft ab nach (Stunden)",
       "write_value": "Wert"
+    },
+    "health_reputation": {
+      "not_per_circle": "Ein Wert für den Agenten, derselbe in jedem Kreis. CIRIS kann den Stand innerhalb eines einzelnen Kreises noch nicht messen."
     }
   },
   "system": {

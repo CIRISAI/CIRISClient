@@ -140,6 +140,14 @@ sealed class NavSurface(
         labelKey = "nav.surface.network_ops")
 
     /**
+     * Own standing (CSD-045) — tier S: what THIS node's owner has declared the
+     * node did to itself (shed load, stopped accepting, legal compulsion).
+     * Node routes (`/v1/admin/self*`), so every build.
+     */
+    object NodeSelf : NavSurface("node-self", "Own standing", CIRISIcons.shield,
+        labelKey = "nav.surface.node_self")
+
+    /**
      * Storage (CIRISPersist operator view) — the graph store + on-disk facts:
      * total nodes, nodes by type/scope, recent activity, storage location.
      * Live (no gate).

@@ -3299,7 +3299,9 @@
     "settings_location_needs_agent": "Where you are is stored by an AI agent, and this device runs a node without one, so it can't be set here yet.",
     "llm_settings_enable_ciris_services": "Turn CIRIS services back on",
     "llm_settings_disable_ciris_reversible": "You can turn CIRIS services back on here later; it takes effect after the agent restarts.",
-    "llm_settings_reenable_after_restart": "Turning this back on takes effect after the agent restarts"
+    "llm_settings_reenable_after_restart": "Turning this back on takes effect after the agent restarts",
+    "manage_nodes_owned_not_on_this_node": "This node cannot list the nodes you own. It is too old to answer that question.",
+    "manage_nodes_unverified": "This list could not be checked against the nodes you own. It shows only this device and any node you added in this session. That does not mean you own nothing else."
   },
   "moderation": {
     "ladder": {
@@ -3454,7 +3456,8 @@
       "users": "Users",
       "wallet": "Wallet",
       "wise_authority": "Wise Authority",
-      "help": "Help"
+      "help": "Help",
+      "node_self": "Own standing"
     },
     "circle": {
       "agent": "Just me",
@@ -3775,6 +3778,25 @@
         "sent": "Sent",
         "session": "Total this session",
         "title": "Throughput"
+      },
+      "replication": {
+        "title": "Replication",
+        "carriage": "Sending records to peers",
+        "receive": "Receiving records from peers",
+        "served": "Records served",
+        "applied": "Records applied",
+        "note": "The message counts above cover app messages only. Replication moves records without touching them, so a 0 there says nothing about whether records are moving. The two standings here do.",
+        "not_reported": "This node does not report replication yet, so there is nothing to show here. That is not the same as nothing moving."
+      },
+      "standing": {
+        "unreadable": "Could not be read",
+        "not_exercised": "Not tried yet (untested, not clean)",
+        "idle": "Idle: nothing to exchange",
+        "moving": "Moving",
+        "withholding": "Withholding some records",
+        "converged": "Up to date",
+        "applying": "Applying new records",
+        "refusing": "Refusing some records"
       }
     },
     "stats_strip": {
@@ -3925,7 +3947,12 @@
         "delegation_label": "Owner delegation id",
         "reason_hint": "Recorded verbatim and never interpreted. An act with no recorded reason is indistinguishable from an unauthorised one once the actor is gone.",
         "reason_label": "Reason (required)",
-        "working": "Recording…"
+        "working": "Recording…",
+        "review": "Review",
+        "delegation_supplied": "Named by this node",
+        "delegation_none": "This node holds no delegation from its owner that it can act under, so it cannot record this act. Re-bind this node to its owner first.",
+        "delegation_unreadable": "This node could not read your delegations just now, so type the id.",
+        "delegation_not_supplied": "This node can't name your delegation (it is older than 0.5.218), so type the owner's own delegates_to id. A third party's serve grant will not do."
       },
       "event": "Event",
       "lift_disabled_hint": "Nothing has been declared on this axis, so there is nothing to lift.",
@@ -3955,8 +3982,19 @@
       "unreachable_body": "The three standings are unknown — which is not 'nothing in force'. Tier S acts are local to this node, so they are available again the moment it answers.",
       "unreachable_title": "This node could not be reached",
       "unreadable_axes_body": "The node answered, but it could not read the axes marked below. It does not know its own standing there — do not read that as clear.",
-      "unreadable_axes_title": "Some standings could not be read"
-    }
+      "unreadable_axes_title": "Some standings could not be read",
+      "confirm": {
+        "what": "What is recorded",
+        "declared": "declared",
+        "lifted": "lifted",
+        "not_named": "authority not named",
+        "changes": "What it changes",
+        "changes_value": "Nothing this node does. It is a record on this node, and it stays in the history after it is lifted.",
+        "signs": "Who signs",
+        "signs_value": "You, as this node's owner, under delegation {delegation}"
+      }
+    },
+    "mode_not_on_this_node": "This node runs without an agent, and the mode is the agent's to report."
   },
   "operator": {
     "carriage": {
@@ -4538,6 +4576,9 @@
       "write_title": "Turn a mesh knob",
       "write_ttl": "Expires after (hours)",
       "write_value": "Value"
+    },
+    "health_reputation": {
+      "not_per_circle": "One score for the agent, the same in every circle. CIRIS cannot yet measure standing within a single circle."
     }
   },
   "system": {
