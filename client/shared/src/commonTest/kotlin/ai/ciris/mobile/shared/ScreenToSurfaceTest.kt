@@ -28,7 +28,7 @@ class ScreenToSurfaceTest {
     @Test
     fun nodeLeavesKeepNodesLit() {
         // Parent-surface convention: a leaf keeps its parent card lit
-        // (UserChat -> Contacts, DutyConferral -> Accord, SkillImport -> Skills).
+        // (UserChat -> Contacts, DutyConferral -> Accord; SkillImport folded into SkillStudio, CSD-015).
         assertEquals(NavSurface.Nodes, screenToSurface(Screen.ClaimNode))
         assertEquals(NavSurface.Nodes, screenToSurface(Screen.VerifyAgent))
     }
@@ -54,6 +54,6 @@ class ScreenToSurfaceTest {
     fun theStatedConventionStillHolds() {
         assertEquals(NavSurface.Contacts, screenToSurface(Screen.UserChat("k1", "c1", "Ada")))
         assertEquals(NavSurface.Accord, screenToSurface(Screen.DutyConferral))
-        assertEquals(NavSurface.Skills, screenToSurface(Screen.SkillImport))
+        assertEquals(NavSurface.Skills, screenToSurface(Screen.SkillStudio))
     }
 }

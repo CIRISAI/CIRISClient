@@ -224,3 +224,23 @@ confirm.**
    here". Recorded as an option, not a proposal: splitting one screen across
    two instruments is a cost, and the `consent:scope:*` receipt in (4) would
    surface the export in Everything I shared without moving the control.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Checked:** all six `/v1/telemetry/export/destinations*` routes exist on main and
+the field names match; `auth_value` comes back `***REDACTED***` and the edit form
+correctly does not prefill it.
+
+**Still open**
+- A 403 on the **test** call is returned as `TestResult(statusCode=403)` — the
+  same as the destination answering 403. Next pass.
+- An observer opening the screen gets "HTTP 403" as a plain error; every route is
+  ADMIN, including the list.
+- A telemetry export is a standing egress with no consent record:
+  `blocked_by: CIRISAgent#1204`.
+
+**Stage:** envisioned → envisioned. The screen exists and is wired, so
+"envisioned" undersells it, but the consent gap above is a CC MUST the card does
+not meet; promoting it would say otherwise.

@@ -1,7 +1,11 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.models.CatalogueSource
+import ai.ciris.mobile.shared.models.LadderRung
+import ai.ciris.mobile.shared.models.dutyMenu
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,13 +42,14 @@ class DutyConferralViewModel(
         private const val TAG = "DutyConferralVM"
 
         /**
-         * The duty verbs the node accepts — ALL FIVE the substrate defines.
+         * **Display order only, and the fallback on a node without
+         * `GET /v1/vocabulary`.** The menu's MEMBERS come from the node's
+         * `delegation_scope.moderation` ([dutyMenu], CIRISClient#108).
          *
-         * This list shipped with three. `takedown` and `consent_revocation` were
-         * absent, so the card could not confer them and the menu looked complete.
-         * The server holds the authoritative copy (imported from persist's own
-         * consts and gated by `duty_scopes_match_the_substrate.rs`); these are the
-         * display order, EMIT authorities first, then the one that takes away.
+         * This list shipped with three, then five, while persist grew to seven
+         * (`license` and `grant`, persist v42.0.0) and the menu kept looking
+         * complete: a hand-picked mirror drifts the moment its source grows.
+         * A served member missing here is offered after these, under its token.
          */
         const val DUTY_CONSENT_REVOCATION = "consent_revocation"
         const val DUTY_MODERATE = "moderate"
@@ -56,13 +61,44 @@ class DutyConferralViewModel(
             DUTY_CONSENT_REVOCATION, DUTY_MODERATE, DUTY_TAKEDOWN, DUTY_REVIEW, DUTY_SLASH,
         )
 
+        /**
+         * **What the ACCORD may not confer, whatever the node serves** (CC 4.2.1:
+         * "accord authority cannot reach the consent or licensure planes" and
+         * "accord keys cannot sign grants or licenses"). This card's conferring
+         * authority is the accord family, so these are shown, with that sentence,
+         * and never ticked. Persist and the server admit them (CSD-090 §3), which
+         * is why the client has to say it: nothing downstream will.
+         *
+         * `license` and `grant` are named here as constitutional carve-outs, not
+         * as vocabulary: they reach the menu from the node's read, like every
+         * other member.
+         */
+        val ACCORD_CANNOT_CONFER: Set<String> = setOf(DUTY_CONSENT_REVOCATION, "license", "grant")
+
         /** The global sub-delegation rail — a null depth is bounded by THIS. */
         const val GLOBAL_DEPTH_RAIL = 5
-
-        /** The node answered and there is no accord family — NOT a read failure. */
-        const val NO_ACCORD_FAMILY =
-            "this node knows no accord family yet, so there is no authority to confer from"
     }
+
+    // ── What the node offers (CIRISClient#108 / #109) ────────────────────────
+
+    /** The duties on the menu: the node's own set, in [ALL_DUTIES]' order. */
+    private val _dutyMenu = MutableStateFlow(ALL_DUTIES)
+    val dutyMenu: StateFlow<List<String>> = _dutyMenu.asStateFlow()
+
+    /** Where [dutyMenu] came from. Anything but [CatalogueSource.Node] is said on screen. */
+    private val _dutySource = MutableStateFlow<CatalogueSource>(CatalogueSource.NotLoaded)
+    val dutySource: StateFlow<CatalogueSource> = _dutySource.asStateFlow()
+
+    /**
+     * The enforcement ladder, as the node states it (`GET /v1/operations`), for
+     * the "what this unlocks" read-out: a duty unlocks the rungs whose served
+     * scope it is. The compiled fallback until the node answers.
+     */
+    private val _rungs = MutableStateFlow(LadderRung.fallback())
+    val rungs: StateFlow<List<LadderRung>> = _rungs.asStateFlow()
+
+    private val _ladderSource = MutableStateFlow<CatalogueSource>(CatalogueSource.NotLoaded)
+    val ladderSource: StateFlow<CatalogueSource> = _ladderSource.asStateFlow()
 
     // ── The conferral being composed ─────────────────────────────────────────
 
@@ -187,6 +223,14 @@ class DutyConferralViewModel(
     val sourceError: StateFlow<String?> = _sourceError.asStateFlow()
 
     /**
+     * The node answered and there is NO accord family: the EMPTY state, not
+     * the error one. Nothing can be conferred and nothing is broken, so it
+     * must not wear the error colour (CSD/3 §2.2, CSD-090 §2).
+     */
+    private val _sourceAbsent = MutableStateFlow(false)
+    val sourceAbsent: StateFlow<Boolean> = _sourceAbsent.asStateFlow()
+
+    /**
      * The inserted token's readiness (`GET /v1/accord/yubikey-status`). Shown as
      * the same banner the genesis ceremony uses, so an operator learns their
      * token is absent, not FIPS, or has an empty 9C slot BEFORE two people are in
@@ -225,8 +269,10 @@ class DutyConferralViewModel(
                         // but nothing is broken either — and conflating it with a
                         // transport error would send the operator debugging a
                         // network that is working fine.
-                        _sourceError.value = NO_ACCORD_FAMILY
+                        _sourceAbsent.value = true
+                        _sourceError.value = null
                     } else {
+                        _sourceAbsent.value = false
                         _sourceFamilyKeyId.value = fam.familyKeyId
                         _sourceFamilyName.value = fam.familyName
                         _sourceConsensus.value = fam.consensusProtocol
@@ -239,8 +285,10 @@ class DutyConferralViewModel(
                     // Distinct from "no seats": we could not ASK. The card renders
                     // this instead of an empty roster, which would read as "the
                     // accord has no holders" — a very different and false claim.
+                    _sourceAbsent.value = false
                     _sourceError.value = it.message ?: "could not read the conferring authority"
                 }
+            loadCatalogues()
             refreshYubiKeyStatus()
             runCatching { apiClient.getAccordHolders() }
                 .onSuccess { _holders.value = it.holders }
@@ -253,6 +301,48 @@ class DutyConferralViewModel(
         }
     }
 
+    /**
+     * The duty menu from `GET /v1/vocabulary` and the ladder from
+     * `GET /v1/operations`. A node without either keeps the compiled list AND
+     * says so; a failed read is never an empty menu.
+     */
+    internal suspend fun loadCatalogues() {
+        try {
+            val served = apiClient.getVocabulary().moderationScopes
+            if (served.isNullOrEmpty()) {
+                _dutySource.value = CatalogueSource.Unreadable("no delegation_scope.moderation in the vocabulary")
+            } else {
+                _dutyMenu.value = dutyMenu(served, ALL_DUTIES)
+                _dutySource.value = CatalogueSource.Node
+                // A ticked duty the node no longer serves cannot ride the grant.
+                _duties.value = _duties.value.filter { it in served }.toSet()
+            }
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[vocabulary] ${e.message}")
+            _dutySource.value = e.toCatalogueSource()
+        }
+        try {
+            val rungs = LadderRung.fromCatalogue(apiClient.getOperations().operations)
+            if (rungs.isEmpty()) {
+                _ladderSource.value = CatalogueSource.Unreadable("the node served no graded operations")
+            } else {
+                _rungs.value = rungs
+                _ladderSource.value = CatalogueSource.Node
+            }
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[operations] ${e.message}")
+            _ladderSource.value = e.toCatalogueSource()
+        }
+    }
+
+    private fun Exception.toCatalogueSource(): CatalogueSource = when (val f = ReadFailure.of(this)) {
+        is ReadFailure.NotOnThisNode -> CatalogueSource.NotOnThisNode(f.detail)
+        is ReadFailure.Failed -> CatalogueSource.Unreadable(f.detail)
+    }
+
+    /** Is [duty] one this card's conferring authority may grant (CC 4.2.1)? */
+    fun isConferrable(duty: String): Boolean = duty !in ACCORD_CANNOT_CONFER
+
     // ── Field setters (the card is a form; the VM owns its state) ────────────
 
     fun setSubjectKeyId(value: String) {
@@ -261,6 +351,8 @@ class DutyConferralViewModel(
 
     /** Tick or untick one duty. */
     fun toggleDuty(value: String) {
+        // Unticking is always allowed; ticking a duty the accord may not confer is not.
+        if (value !in _duties.value && !isConferrable(value)) return
         _duties.value = _duties.value.let { if (value in it) it - value else it + value }
     }
 
@@ -321,6 +413,10 @@ class DutyConferralViewModel(
         val usb = _usbPath.value.trim()
         if (subject.isEmpty()) {
             _error.value = "Enter the fed-ID (key_id) of the self you're conferring the duty on."
+            return
+        }
+        if (_duties.value.isEmpty()) {
+            _error.value = "Pick at least one duty. A grant with no scope confers nothing."
             return
         }
         if (holder.isEmpty() || usb.isEmpty()) {
@@ -402,6 +498,8 @@ class DutyConferralViewModel(
         // Keep the last good partial when a response omits it (adopted records
         // have nothing left to hand on).
         result.partial?.let { _partial.value = it }
+        // This holder's scrub is done; the next one is a different person.
+        clearPinBetweenHolders()
         _scrubCount.value = result.scrubCount
         _quorumNeeded.value = result.quorumNeeded
         _adopted.value = result.adopted

@@ -127,7 +127,6 @@ object CirclesNav {
         Placement(NavSurface.ManageConsent, Tab.RULES, ALL),
         Placement(NavSurface.Consent, Tab.RULES, ALL),
         Placement(NavSurface.Delegations, Tab.RULES, ALL),
-        Placement(NavSurface.Delegation, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.Billing, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.Wallet, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
 
@@ -201,6 +200,8 @@ object CirclesNav {
             listOf(
                 NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
                 NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
+                // CSD-045: this node's own standing, tier S, its own row.
+                NavSurface.NodeSelf,
             ),
         ),
         // Deferral needs a brain to defer; `/v1/wa/*` is the agent's alone.

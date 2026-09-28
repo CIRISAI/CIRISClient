@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.screens.graph.CellVizState
@@ -78,6 +79,19 @@ fun HealthReputationScreen(
         ) {
             // Title + category pill
             HealthHeader(state)
+
+            // CSD-044: CC 4.3 rule 2 says reputation is "relative and positional,
+            // never a single global score". This card is placed in three circles
+            // and shows the same agent-wide score in each, because no route serves
+            // a per-cohort standing yet (CIRISLensCore#25). Say so, rather than let
+            // the same number read as this circle's verdict.
+            Text(
+                text = localizedString("surfaces.health_reputation.not_per_circle"),
+                color = CIRISColors.TextSecondary,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
+                modifier = Modifier.testable("txt_capacity_not_per_circle"),
+            )
 
             // Composite score hero
             CompositeScoreHero(state)

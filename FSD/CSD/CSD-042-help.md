@@ -217,6 +217,17 @@ flow should re-assert.
   **CSD-087** the verify screen; **CSD-035** owns the Nodes card whose row is the
   one that should stay lit.
 
+* **Status 2026-09-27.** The `screenToSurface` ask above LANDED: the four
+  pre-login screens map to `null` and ClaimNode/VerifyAgent to `Nodes`
+  (`CIRISApp.kt:5978-5989`); `SkillImport` no longer exists (folded into
+  `SkillStudio`, CSD-015). What Help itself says is now the gap: `help_a_language`
+  claims "16 supported languages" when 29 bundles ship; `help_a_data_stored` says
+  data is stored "locally on your device", false once federated;
+  `help_a_delete_data` claims GDPR Art. 17 with no completion receipt (CSD-039).
+  Those three belong in the `limits` section asked for above, corrected. "Report
+  an issue" links to CIRISAgent's tracker (`HelpScreen.kt:150`) for what is a
+  client screen, and there is no root `screen_help` tag. Still no route, as
+  required.
 * **Placement.** Correct, and structurally so: an instrument of its own, reachable
   from the avatar on every screen, needing nothing. No circle would be right —
   Help is not about an audience.

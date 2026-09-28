@@ -14,6 +14,7 @@ import androidx.compose.material3.Icon
 import ai.ciris.mobile.shared.ui.components.SessionExpiredBanner
 import androidx.compose.ui.graphics.vector.ImageVector
 import ai.ciris.mobile.shared.models.MessageType
+import ai.ciris.mobile.shared.viewmodels.badgeState
 import ai.ciris.mobile.shared.viewmodels.AgentProcessingState
 import ai.ciris.mobile.shared.viewmodels.BubbleEmoji
 import ai.ciris.mobile.shared.viewmodels.CreditStatus
@@ -1297,10 +1298,12 @@ private fun WalletBadge(
         PlatformLogger.d("WalletBadge", "WalletStatus: isLoaded=${walletStatus.isLoaded}, hasWallet=${walletStatus.hasWallet}, balance=${walletStatus.balance}, provider=${walletStatus.provider}, isReceiveOnly=${walletStatus.isReceiveOnly}, isInitializing=${walletStatus.isInitializing}")
     }
 
-    val isInitializing = walletStatus.isInitializing
-    val hasBalance = walletStatus.balance != "0.00" && walletStatus.balance != "0"
+    val badgeState = walletStatus.badgeState()
+    val isInitializing = badgeState == ai.ciris.mobile.shared.viewmodels.WalletBadgeState.INITIALIZING
+    val hasBalance = badgeState == ai.ciris.mobile.shared.viewmodels.WalletBadgeState.FUNDED
     val badgeColor = when {
         isInitializing -> theme.trustLevel4               // Initializing - amber (waiting for CIRISVerify)
+        badgeState == ai.ciris.mobile.shared.viewmodels.WalletBadgeState.NOT_READ -> theme.trustLevel4  // Not read - amber, never green
         walletStatus.isReceiveOnly -> theme.trustLevel4   // Receive-only (hardware degraded) - amber
         hasBalance -> theme.trustLevel5                   // Has funds - green
         walletStatus.hasWallet -> theme.trustDefault      // Empty wallet - gray
@@ -1311,7 +1314,7 @@ private fun WalletBadge(
         onClick = onClick,
         shape = RoundedCornerShape(4.dp),
         color = badgeColor.copy(alpha = 0.15f),
-        modifier = modifier.testableClickable("btn_wallet_badge") { onClick() }
+        modifier = modifier.testableClickable("btn_wallet_badge", badgeState.name.lowercase()) { onClick() }
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
@@ -1333,6 +1336,7 @@ private fun WalletBadge(
             // Note: Receive-only status is shown via amber color, not text - always show balance
             val displayText = when {
                 isInitializing -> localizedString("mobile.interact_wallet_loading")
+                badgeState == ai.ciris.mobile.shared.viewmodels.WalletBadgeState.NOT_READ -> localizedString("mobile.interact_wallet_unread")
                 !walletStatus.hasWallet -> localizedString("mobile.interact_wallet_setup")
                 hasBalance -> {
                     // Convert USDC balance to selected currency

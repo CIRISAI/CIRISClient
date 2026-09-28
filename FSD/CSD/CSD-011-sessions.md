@@ -158,3 +158,23 @@ transition was accepted, not that the cognitive loop did anything with it. The
 
 **Upstream ask.** None. Every gap on this surface is CIRISClient's own: tag the
 banner, pass the error through, and stop seeding a state nobody read.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Closed here**
+- *Error mapping could never fire.* `transitionCognitiveState` never checked
+  `response.success`, so a 400/401/403/503 failed while decoding the error body as
+  a transition, and the view model's status branches were unreachable. Now the
+  status reaches the caller; 403 has its own sentence (`mobile.sessions_error_forbidden`).
+- *A request written as an arrival.* The agent reads `current_state` straight
+  after REQUESTING the transition and substitutes the target when unread
+  (`runtime.py:365`); the client wrote that raw, lower-case value as the reading.
+  Now "Transitioning to X…" and a fresh health read.
+- *"Return to work" offered from SETUP / WAKEUP_ERROR*, which the agent reports
+  and which do not accept WORK. Excluded.
+
+**Still open:** none upstream. The flow is unwritten.
+
+**Stage:** building → building.

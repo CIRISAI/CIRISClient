@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -16,7 +17,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.io.File
 import java.net.InetSocketAddress
-import java.util.Collections
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -40,7 +41,10 @@ class ContactCodeWireTest {
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
     private class Recorder(routes: Map<String, Pair<Int, String>>, fallback: Pair<Int, String>) {
-        val seen: MutableList<String> = Collections.synchronizedList(mutableListOf())
+        // Copy-on-write: the test thread iterates this while the server thread
+        // appends (theRecorderCanBeReadWhileItRecords). A synchronizedList
+        // locks each call, not an iteration.
+        val seen: MutableList<String> = CopyOnWriteArrayList()
         val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/") { exchange ->
                 val uri = exchange.requestURI
@@ -69,11 +73,46 @@ class ContactCodeWireTest {
         return ContactsViewModel(client, { nodeUrl }, api)
     }
 
+    /** Only a timeout is "timed out": an exception from [condition] is its own failure and is reported as such. */
     private suspend fun awaitThat(what: String, condition: () -> Boolean) {
         try {
             withTimeout(15_000) { while (!condition()) delay(20) }
-        } catch (e: Exception) {
+        } catch (e: TimeoutCancellationException) {
             fail("timed out waiting for: $what")
+        }
+    }
+
+    /**
+     * The recorder is READ while it RECORDS: `awaitThat { node.seen.any { … } }`
+     * iterates the list on the test thread while the server thread appends.
+     * A `Collections.synchronizedList` locks each call, not an iteration, so
+     * the iterator threw ConcurrentModificationException mid-`any`, the
+     * catch-all in `awaitThat` reported it as "timed out waiting for: the list
+     * code", and CI failed on a test that had asked nothing wrong of the code
+     * under test (PR #124, run 36432581707). Many readers against one writer
+     * is what a request log is for.
+     */
+    @Test
+    fun theRecorderCanBeReadWhileItRecords() {
+        val node = Recorder(emptyMap(), 200 to "{}")
+        try {
+            val writers = (1..4).map {
+                Thread {
+                    repeat(200) { java.net.URL("${node.url}/v1/ping").openStream().use { s -> s.readBytes() } }
+                }.apply { start() }
+            }
+            var reads = 0
+            while (writers.any { it.isAlive }) {
+                // Reading while the writers append must never throw.
+                node.seen.any { line -> line.isEmpty() }
+                node.seen.toList()
+                reads += 1
+            }
+            writers.forEach { it.join() }
+            assertEquals(800, node.seen.size)
+            assertTrue(reads > 0)
+        } finally {
+            node.server.stop(0)
         }
     }
 

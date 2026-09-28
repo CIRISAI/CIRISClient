@@ -12,6 +12,7 @@ import ai.ciris.mobile.shared.platform.util.DecodedNodeCode
 import ai.ciris.mobile.shared.platform.util.NodeCodeCodec
 import ai.ciris.mobile.shared.platform.util.NodeCodeException
 import ai.ciris.mobile.shared.platform.writeTextFile
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -117,6 +118,15 @@ class NodeSwitcherViewModel(
      */
     private val sessionProfiles = mutableListOf<NodeProfile>()
 
+    /**
+     * Whether the owned-nodes projection was READ (CSD-035 §2.2). A failed read
+     * still lists the local node so the loopback stays usable, and that fallback
+     * row must not be mistaken for "you own this one node and nothing else".
+     * Null while the first read is in flight.
+     */
+    private val _ownedNodesRead = MutableStateFlow<OwnedNodesRead?>(null)
+    val ownedNodesRead: StateFlow<OwnedNodesRead?> = _ownedNodesRead.asStateFlow()
+
     val activeProfile: NodeProfile?
         get() = _profiles.value.firstOrNull { it.id == _activeProfileId.value }
 
@@ -138,9 +148,10 @@ class NodeSwitcherViewModel(
      */
     suspend fun reload() {
         val owned = try {
-            apiClient.getOwnedNodes()
+            apiClient.getOwnedNodes().also { _ownedNodesRead.value = OwnedNodesRead.Read }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[reload] owned-nodes unavailable (${e.message}) — local node only")
+            _ownedNodesRead.value = OwnedNodesRead.Failed(ReadFailure.of(e))
             null
         }
 
@@ -906,3 +917,25 @@ data class ExportedNodeList(
     val version: Int = 1,
     val nodes: List<ExportedNode> = emptyList(),
 )
+
+/** CSD-035: did the owned-nodes projection answer? */
+sealed interface OwnedNodesRead {
+    data object Read : OwnedNodesRead
+    data class Failed(val failure: ReadFailure) : OwnedNodesRead
+}
+
+/** What the Nodes list draws above/instead of its rows. */
+enum class NodesListBody { LOADING, EMPTY, LIST, LIST_UNVERIFIED }
+
+/**
+ * CSD-035 §2.2, pure so it is testable without Compose. A failed projection
+ * read draws its rows as UNVERIFIED (the local fallback plus anything added
+ * this session) under an error block, never as a plain list: an unreachable
+ * local node and a node that owns nothing are different facts.
+ */
+fun nodesListBody(read: OwnedNodesRead?, profiles: List<NodeProfile>): NodesListBody = when {
+    read is OwnedNodesRead.Failed -> NodesListBody.LIST_UNVERIFIED
+    read == null && profiles.isEmpty() -> NodesListBody.LOADING
+    profiles.isEmpty() -> NodesListBody.EMPTY
+    else -> NodesListBody.LIST
+}

@@ -471,6 +471,13 @@ enum class AdminLadderOp(
     val acceptsRevokedAfter: Boolean = false,
     /** There is no un-descend. */
     val irreversible: Boolean = false,
+    /**
+     * The op token `GET /v1/operations` names this rung by: the join key between
+     * the served catalogue and this entry's labels and message ids
+     * ([LadderRung]). Not derivable from [name]: `UN_THROTTLE` is
+     * `throttle_release`, `DEADMIT` is `de_admission`.
+     */
+    val wireOp: String = "",
 ) {
     ANNOTATE(
         route = "/v1/admin/annotate",
@@ -478,6 +485,7 @@ enum class AdminLadderOp(
         requiredScope = LADDER_SCOPE_REVIEW,
         labelMessageId = "moderation.ladder.op.annotate",
         enforcementMessageId = "admin.enforcement.annotate",
+        wireOp = "annotate",
     ),
     THROTTLE(
         route = "/v1/admin/throttle",
@@ -485,6 +493,7 @@ enum class AdminLadderOp(
         requiredScope = LADDER_SCOPE_MODERATE,
         labelMessageId = "moderation.ladder.op.throttle",
         enforcementMessageId = "admin.enforcement.throttle",
+        wireOp = "throttle",
     ),
     UN_THROTTLE(
         route = "/v1/admin/un-throttle",
@@ -493,6 +502,7 @@ enum class AdminLadderOp(
         labelMessageId = "moderation.ladder.op.un_throttle",
         enforcementMessageId = "admin.enforcement.throttle",
         reversalMessageId = "admin.reversal.symmetric",
+        wireOp = "throttle_release",
     ),
     QUARANTINE(
         route = "/v1/admin/quarantine",
@@ -501,6 +511,7 @@ enum class AdminLadderOp(
         labelMessageId = "moderation.ladder.op.quarantine",
         enforcementMessageId = "admin.enforcement.quarantine",
         requiresCommunityId = true,
+        wireOp = "quarantine",
     ),
     UN_QUARANTINE(
         route = "/v1/admin/un-quarantine",
@@ -510,6 +521,7 @@ enum class AdminLadderOp(
         enforcementMessageId = "admin.enforcement.quarantine",
         reversalMessageId = "admin.reversal.substrate",
         requiresCommunityId = true,
+        wireOp = "quarantine_release",
     ),
     DESCEND(
         route = "/v1/admin/descend",
@@ -520,6 +532,7 @@ enum class AdminLadderOp(
         notReachedMessageId = "admin.descend.not_reached",
         requiresQuorum = true,
         irreversible = true,
+        wireOp = "descend",
     ),
     DEADMIT(
         route = "/v1/admin/deadmit",
@@ -528,6 +541,7 @@ enum class AdminLadderOp(
         labelMessageId = "moderation.ladder.op.deadmit",
         enforcementMessageId = "admin.enforcement.deadmit",
         acceptsRevokedAfter = true,
+        wireOp = "de_admission",
     ),
     RE_ADMIT(
         route = "/v1/admin/re-admit",
@@ -536,6 +550,7 @@ enum class AdminLadderOp(
         labelMessageId = "moderation.ladder.op.re_admit",
         enforcementMessageId = "admin.enforcement.re_admit",
         reversalMessageId = "admin.reversal.evidence_only",
+        wireOp = "re_admission",
     ),
     REFUSE_WRITES(
         route = "/v1/admin/refuse-writes",
@@ -545,6 +560,7 @@ enum class AdminLadderOp(
         enforcementMessageId = "admin.enforcement.refuse_writes",
         notReachedMessageId = "admin.refuse_writes.not_reached",
         reversalMessageId = "admin.refuse_writes.reversal",
+        wireOp = "refuse_writes",
     ),
     ACCEPT_WRITES(
         route = "/v1/admin/accept-writes",
@@ -553,6 +569,7 @@ enum class AdminLadderOp(
         labelMessageId = "moderation.ladder.op.accept_writes",
         enforcementMessageId = "admin.enforcement.accept_writes",
         notReachedMessageId = "admin.accept_writes.not_reached",
+        wireOp = "accept_writes",
     ),
     ;
 

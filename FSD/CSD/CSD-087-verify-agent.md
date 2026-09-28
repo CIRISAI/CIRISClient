@@ -195,3 +195,10 @@ in `VerifyAgentScreen.kt`. The fix is `CirisTextField`
 (`ui/primitives/Controls.kt:91`), which declares its own sink. Same defect as
 CSD-084 and CSD-085 — three flow-only screens, one missing line each, and the
 tool has all three in its baseline of 199.
+
+## Review, 2026-09-27 (identity group)
+
+§3 verified: `GET /v1/registry/lookup` has no route on CIRISServer main or
+`integ/0.5.218` (`registry:lookup` exists only as a token, `mesh_genesis.rs`),
+CIRISServer#669 is open, and the client is gated on the capability. Nothing to
+compare field by field until the route exists.

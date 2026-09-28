@@ -196,14 +196,25 @@ object CellVizConfigStore {
      * persisted surface. Best-effort per key — a single failure is logged
      * but does not roll back the rest.
      */
-    suspend fun save(storage: SecureStorage, config: CellVizConfig) {
+    suspend fun save(storage: SecureStorage, config: CellVizConfig): List<String> =
+        saveWith(config) { key, value -> storage.save(key, value) }
+
+    /**
+     * [save] against any writer. Best-effort per key, as before: one refused
+     * write does not abort the rest. Returns the keys that were NOT written,
+     * so the caller can say the setting did not stick (CSD-026 §6.3) instead of
+     * letting a failed persist look like a saved one until the next launch.
+     */
+    suspend fun saveWith(
+        config: CellVizConfig,
+        write: suspend (key: String, value: String) -> Result<Unit>,
+    ): List<String> {
         val sanitized = config.sanitized()
-        val map = toMap(sanitized)
-        for ((key, value) in map) {
-            // Fire-and-forget per-key. SecureStorage logs its own failures;
-            // we do not want a single flaky write to abort the rest.
-            storage.save(key, value)
+        val failed = mutableListOf<String>()
+        for ((key, value) in toMap(sanitized)) {
+            if (write(key, value).isFailure) failed += key
         }
+        return failed
     }
 
     /**

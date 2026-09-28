@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.api
 
+import ai.ciris.mobile.shared.models.federation.AssociateResponse
 import ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse
 import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
 import ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse
@@ -34,6 +35,9 @@ interface SelfDevicesApi {
 
     /** The NODE's health warnings (not the brain's — see [NodeHealth.warnings]). */
     suspend fun nodeWarnings(): List<SystemWarning>
+
+    /** `POST /v1/self/associate` from a portable keyset folder; [device] is `tpm`, `software` or null. */
+    suspend fun associate(sourceDir: String, device: String?): AssociateResponse
 }
 
 /** [SelfDevicesApi] over the real client: the LOCAL node, with the client's session. */
@@ -50,4 +54,6 @@ class ClientSelfDevices(
     override suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse =
         client.releaseNode(nodeKeyId, forceSelf)
     override suspend fun nodeWarnings(): List<SystemWarning> = client.getNodeHealth(nodeBaseUrl).warnings
+    override suspend fun associate(sourceDir: String, device: String?): AssociateResponse =
+        client.associateFedId(sourceDir = sourceDir, device = device, nodeUrl = nodeBaseUrl)
 }

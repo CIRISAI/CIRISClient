@@ -31,7 +31,7 @@ screen: Config
 
 `nav_map` derives `btn_my_things -> nav_instrument_this_node ->
 nav_epistemic_config`. Not `agentOnly`, and that is **correct**: `/v1/config`
-is served by both the node and the agent, so a bare node has real config to
+is served by the node, so a bare node has real config to
 show. `ConfigScreen`'s own header comment already states the two-plane rule.
 
 ```yaml csd:shows
@@ -191,3 +191,49 @@ fold (CC 3.1.9.2) needs two, which the gate does not stand up.
    drift this repo measures.
 5. **Whose setting is it?** The NODE's, attested by the owner. That is exactly
    what CC 3.4.5 says, and it is the right reading of the card.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate pair (Config ↔ Transport CSD-031): two doors onto one store, kept.**
+Both write `PUT /v1/config/{key}`. Config is the generic key/value editor of the
+backend the app is attached to (`$baseUrl`: the agent when one is attached, else
+the node). Transport is a TYPED form over exactly seven node keys
+(`net.radio.*`, read by the node's reconciler, `config_reconcile.rs:217-224`)
+and always writes them AT THE NODE (`LOCAL_NODE_URL`). On a bare node the two
+write the same store; Transport is the form that knows the types and the ranges,
+Config the escape hatch. Folding Transport into Config would lose the typing,
+which is the half that was broken.
+
+**Closed here**
+- *The node's shape.* CIRISServer answers `GET /v1/config` with a bare
+  `{key: ConfigEntry}` map and `PUT` with a bare entry (`config_api.rs:210,297`);
+  the generated client expected the agent's `{data: …}` envelope, so the list
+  threw "API returned null data" on every node and a successful PUT was reported
+  as a failure. Now `parseConfigListBody` / `parseConfigItemBody`
+  (`api/ConfigWire.kt`) read both.
+- *Values written as strings.* Every PUT sent `JsonPrimitive(String)`; the node
+  reads `snap.bool()` / `snap.i64()` without coercion. An edit now writes the
+  type the value had (`configValueFor`).
+- *Back arrow* went to Interact; now This node.
+
+**Still open**
+- No cohort envelope on `GET /v1/config`, and one PUT per key:
+  `blocked_by: CIRISServer#660`.
+- Error bodies differ (`{detail}` agent, `{error}` node); both are shown raw.
+- **Host rule (decided 2026-09-27): This node › Config always edits THE NODE's
+  config**, at the node URL, whatever the app is attached to. The agent's
+  `GraphConfigService` is a separate store: `ConfigNode`s in the agent's own
+  SQLite graph (`config_service/service.py`, `graph.search("type:config")`),
+  not CEG attestations, and the agent's `/v1/config` does not forward to the
+  node (`routes/config.py`). The node's store is Config-as-CEG
+  (`graph_config.rs`: signed `config:{key}:v1` rows at `cohort_scope: self`)
+  and only "mirrors" the agent's model in shape. So the agent's config is NOT a
+  subset of the node's today; the fold is CIRISAgent#840 (CEG-native agent).
+  Until then the agent's raw config has no card: its consumers (LLM, adapters,
+  interface) already have their own cards under This agent. `ConfigViewModel`
+  takes `nodeUrl` and `RuntimeGroupReviewTest.config_reads_writes_and_deletes_at_the_node_never_the_agent`
+  pins it.
+
+**Stage:** building → building.

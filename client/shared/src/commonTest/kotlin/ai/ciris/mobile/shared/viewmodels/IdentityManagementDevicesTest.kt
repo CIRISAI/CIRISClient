@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.api.SelfDevicesApi
 import ai.ciris.mobile.shared.api.SystemWarning
+import ai.ciris.mobile.shared.models.federation.AssociateResponse
 import ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse
 import ai.ciris.mobile.shared.models.federation.OwnedNodeDto
 import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
@@ -55,6 +56,15 @@ private class FakeDevices(
         return ReleaseNodeResponse(nodeKeyId, released = true, releasedSelf = nodeKeyId == THIS_NODE)
     }
     override suspend fun nodeWarnings(): List<SystemWarning> = emptyList()
+
+    /** What the node says to an associate asking for [device] custody (null = accept). */
+    var associateError: (device: String?) -> NodeRefusal? = { null }
+    val associations = mutableListOf<Pair<String, String?>>()
+    override suspend fun associate(sourceDir: String, device: String?): AssociateResponse {
+        associations += sourceDir to device
+        associateError(device)?.let { throw it }
+        return AssociateResponse(alias = "a", associatedKeyId = "k", deviceCustody = device ?: "software")
+    }
 }
 
 private fun row(id: String, revoked: Boolean? = false, label: String? = null) =
@@ -231,5 +241,39 @@ class IdentityManagementDevicesTest {
         vm.confirmRelease()
         assertTrue(vm.devicesUnsupported.value)
         assertEquals(ReleaseState.Idle, vm.release.value)
+    }
+
+    // ── 0.5.218: hardware custody is a requirement, and its refusal is the person's to answer ──
+
+    @Test
+    fun hardwareCustodyIsAskedForOnlyWhenChosen() {
+        val devices = FakeDevices()
+        val m = vm(devices)
+        m.associateFedId("/media/usb/keyset")
+        m.setSealInHardware(true)
+        m.associateFedId("/media/usb/keyset")
+        assertEquals(listOf("/media/usb/keyset" to null, "/media/usb/keyset" to "tpm"), devices.associations)
+    }
+
+    @Test
+    fun aHostWithoutATpmRefusesByNameAndSoftwareIsAnExplicitSecondChoice() {
+        val devices = FakeDevices()
+        devices.associateError = { d ->
+            if (d == "tpm") {
+                NodeRefusal("self.associate.hardware_custody_unavailable", "this host cannot seal a key in hardware", 409)
+            } else {
+                null
+            }
+        }
+        val m = vm(devices)
+        m.setSealInHardware(true)
+        m.associateFedId("/media/usb/keyset")
+        assertEquals("self.associate.hardware_custody_unavailable", m.associateRefusal.value?.reasonId)
+        assertNull(m.notice.value, "a refused associate must not read as done")
+        m.associateFedId("/media/usb/keyset", softwareCustody = true)
+        assertEquals("software", devices.associations.last().second, "the second try states software, not the default")
+        assertNull(m.associateRefusal.value)
+        assertFalse(m.sealInHardware.value)
+        assertTrue(m.notice.value!!.contains("software"))
     }
 }

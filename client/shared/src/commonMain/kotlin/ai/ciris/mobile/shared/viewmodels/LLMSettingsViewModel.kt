@@ -42,6 +42,16 @@ data class LlmAdapterItem(
  * - Transient status messages with auto-dismiss
  * - Lazy detail loading with caching
  */
+/** What a list read on this screen came back as. Error is never drawn as empty. */
+enum class LlmReadState { POPULATED, EMPTY, ERROR }
+
+/** CSD-021 §2: a failed read is ERROR even though it left the list empty. */
+fun llmReadState(isEmpty: Boolean, error: String?): LlmReadState = when {
+    error != null -> LlmReadState.ERROR
+    isEmpty -> LlmReadState.EMPTY
+    else -> LlmReadState.POPULATED
+}
+
 class LLMSettingsViewModel(
     private val apiClient: CIRISApiClient
 ) : ViewModel() {
@@ -80,6 +90,13 @@ class LLMSettingsViewModel(
     // LLM Providers with metrics and circuit breaker state
     private val _llmProviders = MutableStateFlow<List<LlmProviderStatus>>(emptyList())
     val llmProviders: StateFlow<List<LlmProviderStatus>> = _llmProviders.asStateFlow()
+
+    // Why the last adapter / provider read FAILED, or null when it answered.
+    // An empty list with a reason is not "none" (CSD-021 §2).
+    private val _llmAdaptersError = MutableStateFlow<String?>(null)
+    val llmAdaptersError: StateFlow<String?> = _llmAdaptersError.asStateFlow()
+    private val _llmProvidersError = MutableStateFlow<String?>(null)
+    val llmProvidersError: StateFlow<String?> = _llmProvidersError.asStateFlow()
 
     // Loading state
     private val _isLoading = MutableStateFlow(false)
@@ -156,6 +173,8 @@ class LLMSettingsViewModel(
 
                 // Load adapters that provide LLM services
                 // Filter by services_registered containing "LLM" (dynamic detection)
+                _llmAdaptersError.value = null
+                _llmProvidersError.value = null
                 val adapters = try {
                     val allAdapters = apiClient.listAdapters()
                     // Filter to adapters that have registered LLM service
@@ -176,6 +195,7 @@ class LLMSettingsViewModel(
                         }
                 } catch (e: Exception) {
                     logWarn(method, "Failed to fetch adapters: ${e.message}")
+                    _llmAdaptersError.value = e.message ?: "unknown error"
                     emptyList()
                 }
                 _llmAdapters.value = adapters
@@ -192,6 +212,7 @@ class LLMSettingsViewModel(
                     apiClient.getLlmProviders()
                 } catch (e: Exception) {
                     logWarn(method, "Failed to fetch LLM providers: ${e.message}")
+                    _llmProvidersError.value = e.message ?: "unknown error"
                     emptyList()
                 }
 
@@ -805,8 +826,35 @@ class LLMSettingsViewModel(
     /**
      * Show info about re-enabling CIRIS services (requires wizard).
      */
-    fun showCirisServicesReenableInfo() {
-        _errorMessage.value = "To re-enable CIRIS services, please re-run the setup wizard from Settings > Data Management > Reset Account"
+    /**
+     * Turn CIRIS hosted services back on (CSD-021 §6.4). Takes effect on the
+     * agent's next restart; until then the switch reads on and the message says
+     * when it will apply.
+     */
+    fun enableCirisServices() {
+        val method = "enableCirisServices"
+        if (_operationInProgress.value) {
+            logWarn(method, "Operation already in progress")
+            return
+        }
+        viewModelScope.launch {
+            _operationInProgress.value = true
+            try {
+                val result = apiClient.enableCirisServices()
+                if (result.success) {
+                    _cirisServicesEnabled.value = true
+                    showTransientMessage(result.message ?: "CIRIS services enabled — they return after a restart")
+                    loadStatus()
+                } else {
+                    _errorMessage.value = result.message ?: "Failed to enable CIRIS services"
+                }
+            } catch (e: Exception) {
+                logError(method, "Error enabling CIRIS services: ${e.message}")
+                _errorMessage.value = "Failed to enable CIRIS services: ${e.message}"
+            } finally {
+                _operationInProgress.value = false
+            }
+        }
     }
 
     // ========== Message Clearing ==========

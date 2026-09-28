@@ -96,13 +96,13 @@ fields:
     type: float
     example: 0.0184
     renders: "$0.018/h · 4.1 g CO₂/h · 12 Wh/h (mobile.telemetry_cost_hour / _co2_hour / _energy_hour) — AGENT-ONLY (§3)"
-    tag: "proposed:system_environmental"
+    tag: system_environmental
   - ceg: x_private:channels
     use: display-only
     type: "list[string]"
     example: ["discord:general"]
     renders: "Where it is listening — `GET /v1/agent/channels`. AGENT-ONLY (§3)."
-    tag: "proposed:system_channels"
+    tag: system_channels
 ```
 
 ```yaml csd:states
@@ -142,7 +142,7 @@ says in a comment which three it is leaving out.
 | queue / cognitive state | `GET /v1/system/health` | CIRISAgent | live; **absent on the node's response** |
 | environmental metrics | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py`) — **wrong-host on a node build** |
 | channels | `GET /v1/agent/channels` | CIRISAgent | live (`agent.py`) — **wrong-host on a node build** |
-| pause / resume | `POST /v1/system/runtime/{action}` | CIRISAgent | live — **wrong-host on a node build** |
+| pause / resume | `POST /v1/system/runtime/{action}` | CIRISAgent | **not called here any more** — folded into Runtime (CSD-024); this card links there (`btn_system_open_runtime`) |
 
 Agent tree last commit 2026-08-15.
 
@@ -222,3 +222,40 @@ default."
    which is correct: `use: display-only` throughout, no `emit`.
 5. **Recommended placement: unchanged.** This card is where a person goes when
    something feels wrong, and My things → This node is where they will look.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate resolved (System ↔ Runtime CSD-024).** Pause/resume removed from
+this card; one runtime control, Runtime's. The processor card is read-only
+(`system_processor`, the cognitive state or "—") with `btn_system_open_runtime`.
+
+**Closed here (§6.1 and §6.2)**
+- *The agent half on a bare node.* `SystemViewModel.setAgentAttached` (from the
+  probed `ClientMode`): without an agent, `/v1/telemetry/overview`,
+  `/v1/agent/channels` and the runtime routes are not asked at all, and the
+  screen says why (`system_agent_half_absent`). The §4 `absent:` line now holds.
+- *Defaults that read as health.* `cognitiveState` defaulted to `"WORK"`; the
+  telemetry mapper hard-codes `memory_percent = 0` ("0% utilized"); a failed
+  telemetry read drew zeros. Now: no state is "—", the percentage is not drawn,
+  and a failed agent read is `ReadFailureBlock` (`system_agent_error` /
+  `system_agent_not_on_this_node`).
+- *`getProcessorStatus` could never be right* (`isPaused = status == "paused"`,
+  a value health never carries; queue depth from a key the wire lacks). Removed;
+  Runtime owns processor state and queue depth.
+- *Channels:* a 403/500 became an empty list. Now `getChannelsOrThrow` and
+  `system_channels_error`; `system_channels` / `system_environmental` are real tags.
+- *Back arrow* went to Interact; now the placed parent.
+
+**Still open**
+- The services health grid never renders: `/v1/telemetry/overview` carries no
+  per-service map and the client passes `emptyMap()`. `blocked_by: CIRISAgent#1208`.
+- `getNodeOperatorState` still reads `$baseUrl`. On CIRISAgent main the agent
+  forwards `/v1/node/state` to its folded node (`app.py:392`, `node_proxy.py`),
+  so it works when a node is folded; with none, a 404 reads `NotOffered` ("older
+  node") when it means "no node here". Not changed: moving it to
+  `LOCAL_NODE_URL` would break remote-node profiles. Recorded, not closed.
+- `node_state_loading` / `_not_offered` / `_unreachable` remain as §2 says.
+
+**Stage:** building → building.

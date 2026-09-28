@@ -218,3 +218,32 @@ environment case in any corner.
 * **That an item is a `need:*` on the wire.** The screen writes a graph node in
   the `environment` scope; whether that projects to the open-call family is the
   substrate's business and is asserted nowhere.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate pair (EnvironmentInfo ↔ Memory CSD-027): two doors onto one read,
+kept** — see CSD-027 §7. This card is the scoped, circle-facing door and the only
+one that writes.
+
+**Closed here (§3's "wrong-host" rows)**
+- *Writes offered where they cannot succeed.* `btn_add_item` and each item's
+  delete (now `btn_delete_item_<id>`, drivable) are shown only with an agent
+  attached (`EnvironmentInfoScreenState.agentAttached`, from the probed
+  `ClientMode`); the node's memory API is read-only.
+- *Enrichment asked of a bare node.* Not asked without an agent.
+- *Error drawn as empty.* A failed items read became an empty list, "no items".
+  Now `environment_items_error` / `_not_on_this_node`.
+
+**Still open**
+- **A denied write looks created.** CIRISAgent answers `POST /v1/memory/store`
+  and `DELETE /v1/memory/{id}` with HTTP 200 and `{data:{status:"denied"}}` when
+  the write fails (`memory_service.py:84-87`); the client builds the item locally.
+  Needs the client to read `data.status` (next pass) and the agent to use a status
+  code: draft issue in the review report.
+- `communityShared` is hard-coded `false` (no wire field); `?refresh=true` re-runs
+  every enrichment tool per screen load.
+- The Postgres 503 path is still the generic catch.
+
+**Stage:** building → building.

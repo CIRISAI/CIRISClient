@@ -23,9 +23,21 @@ data class AnnounceOwnershipResponse(
     /** The cohort scope the ownership now advertises (e.g. `FEDERATION`). */
     @SerialName("cohort_scope")
     val cohortScope: String? = null,
-    /** The attestation id of the promoted owner-binding, when one was written. */
-    @SerialName("promoted_attestation_id")
+    /**
+     * The attestation id of the promoted owner-binding, when one was written.
+     * The node names it `promoted_owner_binding_attestation_id`
+     * (`src/claim_remote.rs`); this read `promoted_attestation_id` and was
+     * always null (CSD-086).
+     */
+    @SerialName("promoted_owner_binding_attestation_id")
     val promotedAttestationId: String? = null,
+    /**
+     * Whether the node is now findable in the federation directory — the
+     * announced bundle is complete. `false` means announced but not yet
+     * discoverable; absent on an older node.
+     */
+    @SerialName("federation_discoverable")
+    val federationDiscoverable: Boolean? = null,
     /** Always true on success — the node's identity announce is now enabled. */
     @SerialName("announce_ownership")
     val announceOwnership: Boolean = false,

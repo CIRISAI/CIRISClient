@@ -110,7 +110,7 @@ fields:
 
 ```yaml csd:states
 populated: {tag: setup_step_indicators, renders: "the rail with TWO dots and the current step's form"}
-empty:     {tag: "proposed:setup_consent_empty", renders: "same trap as CSD-082: no `replication` grant in the disclosure means no Yes/No question, and Finish stays disabled with nothing on screen saying why. Worse on this pass, because JOIN_FEDERATION is the FINAL step — there is no later screen to recover on"}
+empty:     {tag: setup_consent_empty, renders: "no `replication` grant in the disclosure: the step says there is nothing to answer and nothing will be sent, and Finish is live. This mattered most on this pass, where JOIN_FEDERATION is the FINAL step (closed in the setup review, CSD-082 §2)"}
 loading:   {tag: setup_ownership_claiming, renders: "'Claiming ownership of this node…', no advance control"}
 error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_setup_finish_unclaimed — finish unclaimed is a choice the person makes, never one the wizard makes for them"}
 ```
@@ -121,10 +121,10 @@ error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_set
 |---|---|---|---|
 | the hand-off flag | `CIRIS_RUN_WITHOUT_AI` in the home's `.env` | CIRISClient + CIRISAgent | live; the two readers accept **exactly** the same token set on purpose (`BackendEndpoint.kt:117`) |
 | which backend answers | `GET :4243/health` (node) vs `GET :8080/v1/system/health` (agent) | CIRISServer / CIRISAgent | live. `:4243/health` serves a constant `"status":"ok"` — refused while coming up, 200 once serving, no intermediate state (CIRISServer#548) |
-| write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:951`) | live — and it is the LAST thing the agent does for this install |
+| write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:1511` on `main`) | live — and it is the LAST thing the agent does for this install |
 | self-claim ownership | `POST /v1/setup/claim-remote` → `POST /v1/setup/root` | CIRISServer (`src/claim_remote.rs`) | live |
 | everything after the hand-off | node routes on `:4243` | CIRISServer | live |
-| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure. Recorded because the with-AI branch does not read them either (CSD-082 §3: templates, adapters and tool-disclosure are wired and unreached, providers is a compiled-in list), so "this branch skips them" is currently indistinguishable from "nothing reads them" |
+| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure, and the AI step that reads them does not exist here. Since the setup review the with-AI branch DOES read templates, adapters and tool-disclosure (CSD-082 §3), so "this branch skips them" is now distinguishable from "nothing reads them"; `providers` is still a compiled-in list |
 | is a node there at all | `GET /v1/identity` (unauthenticated) | CIRISServer `src/compose.rs:3132` | live — the desktop runtime's readiness probe after the hand-off (`PythonRuntime.desktop.kt:673`), see CSD-084 |
 
 **`run_without_ai` must reach `setup/complete`, or the agent never learns.**
@@ -146,6 +146,50 @@ same test: #66 (macOS stalled on "Restarting your node…" at Starting Services 
 node-only backend reports no services), #67 (Windows: session not saved, the
 watchdog revived a healthy node, the Login press was silently dropped while the
 header said Connected).
+
+### 3.1 Every route this screen calls (generated)
+
+**Why two CSDs for one screen.** CSD-082 and this card share `Screen.Setup` and
+therefore every row below. They are two passes, not two doors to one act: the
+answer on screen 1 decides which backend the install ends on (§1), and the
+defects of each pass are invisible on the other. The route rows are the code's
+and identical in both; the flows (`csd-082-*.yaml`, `csd-083-*.yaml`) differ.
+
+<!-- generated: python3 packaging/check_csd_routes.py --print CSD-083 (screen Setup; heuristic) -->
+| value | endpoint | owner | state |
+|---|---|---|---|
+| `authorFederationConsent` | `GET /v1/accord/canonical/servers` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1405` |
+| `getCredits` | `GET /v1/api/billing/credits` | CIRISAgent (front door) | called — `viewmodels/BillingViewModel.kt:174` |
+| `createDelegation` | `POST /v1/auth/device/delegate` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1004` |
+| `login`, `loginToNode` | `POST /v1/auth/login` | CIRISAgent (front door), CIRISServer | called — `CIRISApp.kt:2785, viewmodels/SetupViewModel.kt:1298` |
+| `nativeAuth` | `POST /v1/auth/native/apple` | CIRISAgent (front door) | called — `CIRISApp.kt:2732` |
+| `nativeAuth` | `POST /v1/auth/native/google` | CIRISAgent (front door) | called — `CIRISApp.kt:2732` |
+| `announceOwnership` | `POST /v1/federation/announce` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1367` |
+| `authorFederationConsent` | `POST /v1/federation/consent` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1405` |
+| `getNodeCode` | `GET /v1/federation/node-code` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1200` |
+| `isLocalNodeUp` | `GET /v1/identity` | CIRISServer | called — `viewmodels/SetupViewModel.kt:638` |
+| `setAgeSelf` | `POST /v1/self/age` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1342` |
+| `associateFedId` | `POST /v1/self/associate` | CIRISServer | called — `viewmodels/SetupViewModel.kt:777` |
+| `mintUserIdentity` | `POST /v1/self/identity` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1128, viewmodels/SetupViewModel.kt:719` |
+| `inspectKeysetFolder` | `POST /v1/self/identity/inspect` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1533` |
+| `getSetupAdapters` | `GET /v1/setup/adapters` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:3516` |
+| `claimRemote` | `POST /v1/setup/claim-remote` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1206` |
+| `completeSetup` | `POST /v1/setup/complete` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:412, ui/screens/SetupScreen.kt:427` |
+| `connectToNode` | `POST /v1/setup/connect-node` | CIRISServer | called — `ui/screens/SetupScreen.kt:3746` |
+| `pollNodeAuthStatus` | `GET /v1/setup/connect-node/status` | CIRISServer | called — `ui/screens/SetupScreen.kt:3708` |
+| `getConsentDisclosure` | `GET /v1/setup/consent-disclosure` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:867` |
+| `discoverLocalLlmServers` | `POST /v1/setup/discover-local-llm` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:113` |
+| `getOwnedNodes` | `GET /v1/setup/owned-nodes` | CIRISServer | called — `viewmodels/NodeSwitcherViewModel.kt:141` |
+| `resetDeviceAuthOnServer` | `POST /v1/setup/reset-device-auth` | CIRISServer | called — `ui/screens/SetupScreen.kt:3713` |
+| `startLocalLlmServer` | `POST /v1/setup/start-local-server` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:151` |
+| `getSetupTemplates` | `GET /v1/setup/templates` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:3513` |
+| `getSetupToolDisclosure` | `GET /v1/setup/tool-disclosure` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:3519` |
+| `listAdapters` | `GET /v1/system/adapters` | CIRISAgent (front door) | called — `viewmodels/AdaptersViewModel.kt:210` |
+| `getConfigurationSessionStatus` | `GET /v1/system/adapters/configure/{}` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:305, viewmodels/SetupViewModel.kt:2057` |
+| `completeAdapterConfiguration` | `POST /v1/system/adapters/configure/{}/complete` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:308, viewmodels/SetupViewModel.kt:2174` |
+| `executeConfigurationStep` | `POST /v1/system/adapters/configure/{}/step` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:302, viewmodels/SetupViewModel.kt:1906` |
+| `getLoadableAdapters` | `GET /v1/system/adapters/loadable` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:296` |
+| `startAdapterConfiguration` | `POST /v1/system/adapters/{}/configure/start` | CIRISAgent (front door) | called — `ui/screens/SetupScreen.kt:299, viewmodels/SetupViewModel.kt:1855` |
 
 ## 4. Flow (how)
 
@@ -209,15 +253,13 @@ two processes, one file, and no test drives both); the reviver/watchdog
 interaction; the node-client variant (`hasAgent = false`), which reaches the
 same two steps without ever asking the question and has no fixture.
 
-**The unguarded double-submit is on THIS pass's node-client sibling.**
-`SetupScreen.kt:542-546` — the `isFinalStep && !hasAgent` branch — calls
-`claimLocalNodeOwnership` and `nextStep()` with no `beginFinalStep()`
-compare-and-set, and `claimLocalNodeOwnership` has no re-entry guard
-(`SetupViewModel.kt:1067`). The guard added for CIRISClient#69 covers the agent
-branch only. Compounding it, `testableClickable` registers a handler that calls
-`onClick()` **directly**, and adds a `Modifier.clickable { onClick() }` with no
-`enabled` argument (`platform/TestAutomation.kt:237-252`) — so for `/click`,
-"disabled" is a colour and not a gate, and the added gesture node is live for a
-finger too. This is the client half of CIRISAgent#1193 on the one path that
-still has it. `btn_add_fedid_confirm` shows the fix: put the guard inside the
-lambda both callers share (CSD-086 §5).
+**The node-client double-submit this section reported is closed.** The
+`isFinalStep && !hasAgent` branch now calls `SetupViewModel.finishNodeClientSetup`,
+which checks the step and takes `beginFinalStep()` (CIRISClient#69), and
+`testableClickable` binds its automation handler with `enabled`
+(`platform/TestAutomation.kt:259-278`), so `/click` on a disabled Finish is
+refused. Verified in the setup review; `FinalStepOnceTest` pins it.
+
+**Announce on this pass.** The same per-device switch as CSD-082 §2, with the
+same under-18 rule: for a minor or undeclared band it is not offered
+(`txt_announce_not_offered`).

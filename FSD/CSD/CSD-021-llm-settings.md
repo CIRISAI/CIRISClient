@@ -97,9 +97,9 @@ is the right family and `llm` is a legitimate open-vocabulary scope
 
 ```yaml csd:states
 populated: {tag: "proposed:llm_providers_list"}
-empty:     {tag: "proposed:llm_providers_empty", renders: "LLMSettingsScreen.kt:851 — the no-providers branch; today it renders the add card rather than a sentence, which is the right move (one useful next action) but carries no tag"}
+empty:     {tag: llm_providers_empty, renders: "'No providers registered' — only when the read ANSWERED with none (`llmReadState`); the add card below stays the one useful next action"}
 loading:   {tag: "proposed:llm_loading", renders: "a progress affordance and no sentence"}
-error:     {tag: "proposed:llm_error", renders: "`LLMSettingsViewModel._errorMessage` exists and is surfaced as a snackbar, which disappears. A list that failed to load needs a persistent, distinguishable banner."}
+error:     {tag: llm_providers_error, renders: "a persistent sentence with the reason where the list would be (`llm_providers_error`, and `llm_adapters_error` for the adapter list). Before the setup review a failed `GET /v1/system/llm/providers` or `GET /v1/system/adapters` became an empty list and read exactly like 'none' (`LlmSettingsReadStateTest`, red against it). Action failures still use the transient snackbar"}
 ```
 
 ## 3. Contracts (who)
@@ -116,7 +116,7 @@ error:     {tag: "proposed:llm_error", renders: "`LLMSettingsViewModel._errorMes
 | breaker config | `PUT /v1/system/llm/providers/{name}/circuit-breaker/config` | CIRISAgent | live (`llm_routes.py:592`) |
 | hosted-services status | `GET /v1/system/llm/ciris-services/status` | CIRISAgent | live (`llm_routes.py:1065`) |
 | turn hosted off | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent | live (`llm_routes.py:973`) |
-| turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`llm_routes.py:1025`) — **not called by this client** |
+| turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`routes/system/llm_routes.py:1081` on `main`, setup-or-ADMIN) — **called** since the setup review: `enableCirisServices` from `switch_ciris_services` and `btn_enable_ciris_services`. Before, the client sent people to a factory reset to undo `disable` |
 | list a provider's models | `POST /v1/setup/list-models` | CIRISAgent | live (`setup/llm_routes.py:222`) — `CIRISApiClient.listModels` (`CIRISApiClient.kt:6782`) |
 | find a local server | `POST /v1/setup/discover-local-llm` | CIRISAgent | live (`setup/llm_routes.py:237`) — `CIRISApiClient.kt:6913`, from `LLMSettingsViewModel.kt:543` and `LocalLlmDiscovery.kt:113` |
 | start the local server it found | `POST /v1/setup/start-local-server` | CIRISAgent (`setup/llm_routes.py:286`, setup-or-ADMIN) | **live** — `CIRISApiClient.startLocalLlmServer` (`CIRISApiClient.kt:7020`), from `LocalLlmDiscovery.kt:151`, which this screen mounts at `LLMSettingsScreen.kt:2055, 2168` (and Setup at `SetupScreen.kt:1540`) |
@@ -128,6 +128,39 @@ Agent tree last commit **2026-08-15**; "live" is as of that tree. The five `/v1/
 rows were re-verified against CIRISAgent `main` 29371660de (2026-09-26). Nothing under
 `/v1/system/llm` exists on `CIRISServer`, which is correct — this is the
 brain's configuration, not the node's.
+
+### 3.1 Every route this screen calls (generated)
+
+<!-- generated: python3 packaging/check_csd_routes.py --print CSD-021 (screen LLMSettings; heuristic) -->
+| value | endpoint | owner | state |
+|---|---|---|---|
+| `getLlmConfig` | `GET /v1/setup/config` | CIRISAgent (front door) | called — `viewmodels/SettingsViewModel.kt:318` |
+| `discoverLocalLlmServers` | `POST /v1/setup/discover-local-llm` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:113` |
+| `listModels` | `POST /v1/setup/list-models` | CIRISAgent (front door) | called — `viewmodels/SettingsViewModel.kt:568` |
+| `startLocalLlmServer` | `POST /v1/setup/start-local-server` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:151` |
+| `listAdapters` | `GET /v1/system/adapters` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:179` |
+| `removeAdapter` | `DELETE /v1/system/adapters/{}` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:312` |
+| `reloadAdapter` | `PUT /v1/system/adapters/{}/reload` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:280` |
+| `disableCirisServices` | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:806` |
+| `getCirisServicesStatus`, `getLlmConfig` | `GET /v1/system/llm/ciris-services/status` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:166, viewmodels/SettingsViewModel.kt:318` |
+| `updateLlmDistributionStrategy` | `PUT /v1/system/llm/distribution` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:346` |
+| `getLlmProviders` | `GET /v1/system/llm/providers` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:212` |
+| `addLlmProvider` | `POST /v1/system/llm/providers` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:620, viewmodels/LLMSettingsViewModel.kt:694` |
+| `deleteLlmProvider` | `DELETE /v1/system/llm/providers/{}` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:530, viewmodels/LLMSettingsViewModel.kt:775` |
+| `resetLlmCircuitBreaker` | `POST /v1/system/llm/providers/{}/circuit-breaker/reset` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:380` |
+| `updateLlmProviderPriority` | `PUT /v1/system/llm/providers/{}/priority` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:461` |
+| `getLlmBusStatus` | `GET /v1/system/llm/status` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:205` |
+
+**This card and Adapters (CSD-020) are two doors to one act, on purpose.** Both
+call `DELETE /v1/system/adapters/{id}` and `PUT /v1/system/adapters/{id}/reload`
+(the route map's duplicate pair 8). Adapters manages every adapter; this card
+shows only the ones whose `services_registered` includes `LLM`
+(`LLMSettingsViewModel.loadStatus`), because a person fixing "what is my agent
+thinking with" should not have to find the brain's adapter among the
+communication ones. Same routes, same act, narrower list — so this card keeps
+its two controls and does not grow others (no configure, no add), and CSD-020
+stays the owner of adapter management. CSD-020 is off-limits in this batch; its
+side of this note is reported, not written.
 
 ## 4. Flow (how)
 
@@ -181,9 +214,10 @@ bus-status decode.
    person whose first-choice provider is failing sees a list that looks fine
    and answers that are quietly coming from somewhere else. This is the
    "silently routing around it" the mission forbids.
-4. **`enable` is unreachable.** The client calls `disable` and never `enable`
-   (`CIRISApiClient.kt:10470` vs the route at `llm_routes.py:1025`). Turning
-   CIRIS services off is a one-way door in the UI.
+4. **`enable` was unreachable; closed.** The client called `disable` and never
+   `enable`, and told people to factory-reset to undo it. `enableCirisServices`
+   now calls the route (`CirisServicesToggleTest`, red first); the copy says it
+   applies after the agent restarts, which is what the route does.
 5. **CC gap — ask (CIRISAgent).** Publish the running LLM configuration as a
    `config:llm` row under CC 3.1.9 / CC 3.4.5 (self-or-owner). Today "what is
    my agent thinking with" is answerable only by reading this screen, which is
