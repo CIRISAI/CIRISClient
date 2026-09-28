@@ -29,6 +29,31 @@ object PeopleTags {
     const val ERROR = "contacts_error"
     const val LOADING = "contacts_loading"
     const val EMPTY = "contacts_empty"
+    /** `freshly_emitted: false` — the person was already a contact (CSD-005). */
+    const val ADD_ALREADY = "contacts_add_already"
+    /** QrScanAction beside [ADD_KEY]; it fills the field and never submits (CSD-005). */
+    const val SCAN = "btn_scan_contact_code"
+
+    // ── Share my contact code (CSD-092; the tags are that CSD's contract) ──
+    const val CODE_OPEN = "btn_contact_code_open"
+    const val CODE_CARD = "card_contact_code"
+    const val CODE_TEXT = "text_contact_code"
+    const val CODE_QR = "qr_contact_code"
+    const val CODE_COPY = "btn_contact_code_copy"
+    const val CODE_NODES_ALL = "opt_contact_code_nodes_all"
+    const val CODE_NODES_LIST = "opt_contact_code_nodes_list"
+    const val CODE_NODES_NONE = "opt_contact_code_nodes_none"
+    const val CODE_PRIVATE_NOTE = "text_contact_code_private_note"
+    const val CODE_INCLUDED = "text_contact_code_included"
+    const val CODE_REFUSAL = "contact_code_refusal"
+    const val CODE_UNREACHABLE = "contact_code_unreachable"
+    const val CODE_MAKE_REACHABLE = "btn_contact_code_make_reachable"
+    const val CODE_LOADING = "contact_code_loading"
+    const val CODE_ERROR = "contact_code_error"
+    /** Not in CSD-092 (it names no close or status tag); needed to drive the card shut and read the announce. */
+    const val CODE_CLOSE = "btn_contact_code_close"
+    const val CODE_REACHABLE_STATUS = "text_contact_code_reachable_status"
+    fun codeNode(nodeKeyId: String) = "row_contact_code_node_$nodeKeyId"
 
     fun row(keyId: String) = "contacts_row_$keyId"
     fun chat(keyId: String) = "btn_contacts_chat_$keyId"
