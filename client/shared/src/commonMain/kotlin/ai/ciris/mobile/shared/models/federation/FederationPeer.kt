@@ -80,6 +80,32 @@ data class FederationPeerSASResponse(
     val digits: String,
     @SerialName("key_id")
     val keyId: String,
+    /**
+     * The owner's recorded comparison outcome (CSD-104) — `true` once they
+     * confirmed a match, `false` after a withdrawal or a mismatch, null when
+     * never recorded. The node has sent it since #261
+     * (`src/federation_peers.rs:930`); it was dropped here until CSD-104.
+     */
+    val verified: Boolean? = null,
+    /** RFC3339 of the `verified: true` write; cleared by a `false` write. */
+    @SerialName("verified_at")
+    val verifiedAt: String? = null,
+)
+
+/** Body for ``PUT /v1/federation/peers/{key_id}/sas`` (CSD-104). */
+@Serializable
+data class FederationPeerSASUpdateRequest(
+    val verified: Boolean,
+)
+
+/** ``PUT /v1/federation/peers/{key_id}/sas`` → `{data: {key_id, verified, verified_at}}`. */
+@Serializable
+data class FederationPeerSASUpdateResponse(
+    @SerialName("key_id")
+    val keyId: String,
+    val verified: Boolean? = null,
+    @SerialName("verified_at")
+    val verifiedAt: String? = null,
 )
 
 /**

@@ -79,7 +79,8 @@ fun ReceiptSheet(
             FactRow(Envelope.attestingKeyId, receipt.attester, "receipt_attester", keyish = true)
             ScopeRow(receipt.scope, receipt.scopeNote)
             FactRow(Envelope.dimension, receipt.dimensionValue, "receipt_dimension", keyish = false)
-            FactRow(Envelope.consentScope, receipt.rule, "receipt_rule", keyish = false, divider = false)
+            FactRow(Envelope.consentScope, receipt.rule, "receipt_rule", keyish = false, divider = receipt.forAgent != null)
+            receipt.forAgent?.let { FactRow(ForAgentMember, it, "receipt_for_agent", keyish = true, divider = false) }
 
             Spacer(Modifier.height(10.dp))
             FieldRow(
@@ -118,12 +119,22 @@ fun ReceiptSheet(
     }
 }
 
+/**
+ * `for_key_id` — the agent a consent grant is FOR. Not a CC 2.1 envelope
+ * member (so not in [Envelope.all]); the grant payload names it (CC 3.3.7).
+ */
+private val ForAgentMember = EnvelopeMember(
+    id = "forKeyId", wire = "for_key_id", ccSection = "3.3.7",
+    labelKey = "mobile.receipt_for_agent", glossKey = "mobile.receipt_for_agent",
+)
+
 @Composable
 private fun FactRow(member: EnvelopeMember, fact: Fact, tag: String, keyish: Boolean, divider: Boolean = true) {
     when (fact) {
         is Fact.Wire -> FieldRow(
             label = localizedString(member.labelKey), protocol = member.wire,
             value = if (keyish) shortKey(fact.value) else fact.value, mono = true, tag = tag, divider = divider,
+            gloss = fact.gloss,
         )
         is Fact.ByRule -> FieldRow(
             label = localizedString(member.labelKey), protocol = member.wire,
