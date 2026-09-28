@@ -120,12 +120,28 @@ Node-owned, at the node URL. CIRISServer `origin/main` @ `046e1b39`, `src/family
 | add | `POST /v1/families/{id}/members {key_id, role?}` → view + `dek_rewrap` | CIRISServer | **live** (`:858-921`); founder_only founder only; the target must be a registered identity (`check_addable`, `:925-947`); the node re-wraps existing DEKs to them and reports it |
 | remove | `DELETE /v1/families/{id}/members/{key_id}` → view + `removed` | CIRISServer | **live** (`:969-1004`); the last founder cannot be removed (`family.last_founder`) |
 | role | `POST /v1/families/{id}/members/{key_id}/role {role}` → view | CIRISServer | **live** (`:1091-1149`); a role is a short non-empty name (`family.bad_role`) |
-| quorum add / remove / role | `POST …/changes/envelope {action: add\|remove\|role, key_id, role?}` then cosign, assemble | CIRISServer | **live** (CSD-100 §3) |
-| who to add | `GET /v1/contacts` | CIRISServer | **live** (CSD-005); the only source. The v3 contact code (CSD-092) would let a person find someone first; it is unmerged, so this card picks from existing contacts |
+| quorum add / remove / role | `POST /v1/families/{id}/changes/envelope {action: add\|remove\|role, key_id, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); the proposal is then signed and applied from the hub (cosign / assemble, §3.2) |
+| the households, and which one is shown | `GET /v1/families?after=` → `{families, resume}` | CIRISServer | **live** (`:748-792`); the same read the hub makes, through the shared view model, so the switcher here is the switcher there |
+| who to add | `GET /v1/contacts` | CIRISServer | **live** (`src/contacts_chat.rs`); the only source. The v3 contact code (CSD-092) would let a person find someone first; it is unmerged, so this card picks from existing contacts |
 | who "you" are | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback |
 | refusals | `family.unknown_member_key`, `family.already_member`, `family.not_a_member`, `family.last_founder`, `family.readd_unsupported`, `family.bad_role`, `family.not_authorized`, `family.quorum_pending`, … | CIRISServer | **live**; each has an `en.json` key and renders by id (`household_refusal`) |
+| leave / dissolve, through the shared view model | `POST /v1/families/{id}/leave`, `DELETE /v1/families/{id}` | CIRISServer | **live**; reachable from this screen's arm because `HouseholdsViewModel.confirm()` dispatches every act and this screen hands it to the shared `ConfirmSheet`. No control here requests them: their door is the hub on Family › Rules (§3.1) |
 
-### 3.1 Stated limits
+### 3.1 One door per act, one view model for two screens
+
+The route gate sees six mutating routes on both this screen and the hub. They
+are not two doors: leave, dissolve, sign and apply have their controls on the
+hub; add, remove and role have theirs here (`btn_household_member_pick_*`,
+`btn_household_member_remove_*`, `btn_household_member_role_*`). Both screens
+share one `HouseholdsViewModel` so the household picked in one is the one
+shown in the other, and its `confirm()` dispatches every act, which the
+heuristic closure follows from either screen. Only
+`POST /v1/families/{id}/changes/envelope` is two doors by design (a quorum
+dissolve from the hub, a quorum roster change from here). Recorded as the
+decision in `packaging/csd_routes_baseline.json`; the household CSD's §3.1
+carries the full table and the follow-up.
+
+### 3.2 Stated limits
 
 1. **An added member or a new role reaches only this node.** The other
    members' nodes keep the roster they first received. CIRISPersist#910.

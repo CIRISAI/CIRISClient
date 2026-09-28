@@ -218,13 +218,42 @@ routes mounted at `:1624-1632`.
 | dissolve | `DELETE /v1/families/{id}` → `{family_id, dissolved}` | CIRISServer | **live** (`:1153-1183`); founder_only one call, quorum through the envelope |
 | leave | `POST /v1/families/{id}/leave` → `{family_id, left}` | CIRISServer | **live** (`:1008-1082`); any protocol; the last founder of a family with others is refused `family.last_founder` |
 | propose | `POST /v1/families/{id}/changes/envelope {action, key_id?, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); quorum only |
-| sign | `POST …/changes/cosign {change_envelope, signatures}` → `{signature, signatures, required_signatures, quorum_met}` | CIRISServer | **live** (`:1420-1473`) |
-| apply | `POST …/changes/assemble {change_envelope, signatures}` | CIRISServer | **live** (`:1492-1612`) |
+| sign | `POST /v1/families/{id}/changes/cosign {change_envelope, signatures}` → `{signature, signatures, required_signatures, quorum_met}` | CIRISServer | **live** (`:1420-1473`); this node's owner signs with their own pen |
+| apply | `POST /v1/families/{id}/changes/assemble {change_envelope, signatures}` | CIRISServer | **live** (`:1492-1612`); the node verifies the quorum, the client only counts |
+| who to name | `GET /v1/contacts` | CIRISServer (`src/contacts_chat.rs`) | **live**; the founding-member picker on the form card, and the names on the founders row and the ceremony's signer chips. Called through `listContacts`, which still builds its URL from `$baseUrl` (the agent on a with-AI install); the household routes themselves go to the node URL |
+| who "you" are | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback; so the ceremony can say whether you have signed and the founders row can say "You" |
+| add / remove / role, through the shared view model | `POST /v1/families/{id}/members`, `DELETE /v1/families/{id}/members/{key_id}`, `POST /v1/families/{id}/members/{key_id}/role` | CIRISServer | **live**; reachable from this screen's arm because `HouseholdsViewModel.confirm()` dispatches every act and the hub hands it to the shared `ConfirmSheet`. No control on the hub requests them: their door is the roster on Family › People (§3.1) |
 | refusals | `{error, reason_id, detail}`; 17 `family.*` ids | CIRISServer | **live**; every id has an `en.json` key under `family.*`, rendered by id through `NodeRefusal` |
 | a store for pending changes | none — the envelope is carried by hand | CIRISServer | **not a route.** Stated in §2.2 and on the card, not faked. Draft ask in the PR report |
 | rename | none | CIRISServer | **not a route.** A household keeps the name it was formed with; the card says so and offers no rename. Draft ask in the PR report |
 
-### 3.1 Stated limits (on the card, `household_limits`, and here)
+### 3.1 One door per act, one view model for two screens
+
+The route gate (`packaging/check_csd_routes.py`) sees six mutating routes on
+both `LayerFamily` and `HouseholdMembers`: dissolve, leave, envelope, add,
+remove, role. **They are not two doors.** Each act has exactly one control:
+
+| act | the one control | screen |
+|---|---|---|
+| form, leave, dissolve, sign, apply | `btn_household_create_submit`, `btn_household_leave`, `btn_household_dissolve`, `btn_household_change_sign`, `btn_household_change_apply` | the hub (this card) |
+| add, remove, make founder / member | `btn_household_member_pick_*`, `btn_household_member_remove_*`, `btn_household_member_role_*` | the roster (Family › People) |
+
+The gate sees both because the two screens share one `HouseholdsViewModel`
+(so the household picked in one is the one shown in the other), and its
+`confirm()` → `direct()` / `propose()` dispatches every act after the shared
+`ConfirmSheet`. The heuristic closure follows `viewModel::confirm` from each
+screen into the whole dispatcher, which is a fact about the closure, not about
+the UI. The one route that IS two doors by design is
+`POST /v1/families/{id}/changes/envelope`: a quorum dissolve is proposed from
+the hub, a quorum add / remove / role from the roster.
+
+Recorded as the decision in `packaging/csd_routes_baseline.json` (the six
+`:: HouseholdMembers, LayerFamily` rows). The follow-up that removes five of
+them is splitting `confirm()` into a household half and a roster half so the
+closure reflects the controls; it is a Kotlin change with a test run behind it,
+not a documentation one.
+
+### 3.2 Stated limits (on the card, `household_limits`, and here)
 
 These are the network's, not the card's, and the card says them rather than
 promising otherwise:
