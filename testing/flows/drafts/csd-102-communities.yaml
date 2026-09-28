@@ -1,0 +1,77 @@
+csd: CSD-102
+flow: csd_102_communities
+title: Found a community on the Neighbours hub, read its rule, and see who signs before leaving
+description: >-
+  CSD-102 §4, driven. The governance section sits on the circle's own Rules hub
+  (LayerLocalCommunity), not on a card beside it. A room of one needs no
+  contact, so everything here runs on one node: found it under the default rule,
+  read the rule and your role back from the node, and open the leave confirm to
+  see its three facts — then cancel, because leaving is the one act a flow
+  cannot take back.
+# Floor: no release carries this card yet. Every tag below is a literal in
+# CommunityTags (ui/screens/CommunitiesScreens.kt) except the confirm sheet's,
+# which ConfirmSheet builds by interpolation ("sheet_$tagPrefix",
+# "${tagPrefix}_fact_N", "btn_${tagPrefix}_cancel") — the #97 blind spot the
+# drafts README names; they are real at run time.
+client: "unreleased"
+
+steps:
+  - step_id: on_the_hub
+    title: The Neighbours Rules hub carries the communities section
+    description: >-
+      The node may have no rooms for this owner yet, so the list state is not
+      asserted here — only that the section composed and can found one.
+    requires:
+      screen: LayerLocalCommunity
+    expect:
+      visible: [section_communities, btn_community_create_open]
+
+  - step_id: found_one
+    title: Founding a room under the default rule opens it
+    do:
+      - click: btn_community_create_open
+      - input: {input_community_name: "Flow allotment"}
+      - click: opt_community_protocol_founder_only
+      - click: btn_community_create_submit
+    expect:
+      screen: LayerLocalCommunity
+      state: populated
+      visible: [communities_list, card_community_detail, txt_community_protocol, txt_community_my_role, txt_community_member_count]
+      absent: [communities_not_on_this_node, communities_error]
+
+  - step_id: the_rule_is_the_nodes
+    title: The rule on the card is the one the node recorded
+    expect:
+      text: {txt_community_protocol: "founder_only"}
+
+  - step_id: moderators_are_a_duty_not_a_role
+    title: The moderators list is separate from roles and leads to Moderation
+    expect:
+      visible: [btn_community_open_moderation, txt_community_appoint_unavailable]
+
+  - step_id: leave_names_who_signs
+    title: Leave is behind three facts, and cancelling changes nothing
+    do:
+      - click: btn_community_leave
+    expect:
+      visible: [sheet_community_leave, community_leave_fact_1, community_leave_fact_2, community_leave_fact_3, btn_community_leave_confirm]
+
+  - step_id: cancel_leaves_it_standing
+    title: Cancel returns to the room
+    do:
+      - click: btn_community_leave_cancel
+    expect:
+      visible: [card_community_detail]
+      absent: [sheet_community_leave]
+
+  - step_id: a_node_without_the_route
+    title: A node without /v1/communities says so and is not "you are in none"
+    description: >-
+      Optional: needs a node older than 0.5.216. The id-less 404 must render
+      communities_not_on_this_node and never the empty sentence.
+    optional_step: true
+    requires:
+      screen: LayerLocalCommunity
+      visible: [communities_not_on_this_node]
+    expect:
+      absent: [communities_empty, communities_list]

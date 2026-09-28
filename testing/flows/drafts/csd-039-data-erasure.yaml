@@ -1,0 +1,112 @@
+csd: CSD-039
+flow: csd_039_data_erasure
+title: Erasure on this node says what it reaches, confirms three facts, and reports what the node reported
+description: >-
+  CSD-039 §4, the erasure half. The node route is live
+  (CIRISServer src/federation_admin.rs ~:477, mounted ~:907) and owner-gated,
+  so this flow drives the form and the confirm and then CANCELS: the erasure
+  itself runs only in the optional step, against a throwaway node, because it
+  succeeds. What it asserts before any act is the part a person must read first —
+  what erasure reaches, what it does not, and that erasing the person themself
+  is not possible from this app (CIRISServer#677, CIRISPersist#914).
+# Floor: every tag here is a `testable*` literal (or a CirisTextField /
+# CirisButton / ConfirmSheet tag) in ui/screens/DataErasureSections.kt and
+# ui/primitives/ConfirmSheet.kt. No release carries the section yet.
+client: "unreleased"
+
+steps:
+  - step_id: the_limits_come_first
+    title: What erasure reaches, what it does not, and that it cannot erase you
+    description: >-
+      Three rows before any control. A card that offered "erase" without the
+      "does not reach" row would let a person believe their data was gone when
+      only traces were; that is the reading this card exists to prevent.
+    requires:
+      screen: DataManagement
+    do:
+      - scroll_to: data_erase_traces_section
+    expect:
+      screen: DataManagement
+      visible:
+        - data_erase_traces_section
+        - data_erase_reaches
+        - data_erase_does_not_reach
+        - data_erase_self_blocked
+        - input_erase_agent_id_hash
+        - input_erase_reason
+        - btn_erase_traces
+
+  - step_id: the_confirm_names_three_facts
+    title: The confirm says what is erased, what is not, and who authorises it
+    description: >-
+      Exactly three facts (ConfirmSheet refuses any other number). The flow then
+      cancels, so a green run of this step has erased nothing.
+    do:
+      - input: {input_erase_agent_id_hash: "a4f19c02deadbeef"}
+      - input: {input_erase_reason: "flow csd_039: confirm only, then cancel"}
+      - click: btn_erase_traces
+    expect:
+      visible:
+        - sheet_erase_traces
+        - erase_traces_fact_1
+        - erase_traces_fact_2
+        - erase_traces_fact_3
+        - btn_erase_traces_confirm
+        - btn_erase_traces_cancel
+      text: {erase_traces_fact_1: "a4f19c02deadbeef"}
+
+  - step_id: cancel_erases_nothing
+    title: Cancel closes the sheet and no result appears
+    do:
+      - click: btn_erase_traces_cancel
+    expect:
+      screen: DataManagement
+      absent: [sheet_erase_traces, data_erase_result_outcome, data_erase_working]
+
+  - step_id: the_result_is_the_nodes_report
+    title: On a throwaway node, the result is the node's counts, not a sentence
+    description: >-
+      Optional: it erases, so it runs only where the fixture says the node is
+      disposable. An id nothing was filed under is the safe case — the node
+      answers 200 with all-zero counts, which must render as "nothing to erase"
+      and never as "erased". The four count rows come from the body verbatim.
+    optional_step: true
+    requires:
+      screen: DataManagement
+      visible: [btn_erase_traces]
+    do:
+      - input: {input_erase_agent_id_hash: "0000000000000000"}
+      - input: {input_erase_reason: "flow csd_039: an id with no traces"}
+      - click: btn_erase_traces
+      - click: btn_erase_traces_confirm
+      - wait: data_erase_result_outcome
+    expect:
+      visible:
+        - data_erase_nothing
+        - data_erase_result_outcome
+        - data_erase_result_trace_events
+        - data_erase_result_llm_calls
+        - data_erase_result_detections
+        - data_erase_result_erased_at
+        - data_erase_result_receipt
+      number: {data_erase_result_trace_events: {eq: 0}}
+
+  - step_id: a_receipt_that_is_not_one_is_refused
+    title: With an agent attached, a pasted non-receipt is refused before any call
+    description: >-
+      Optional: the receipt section is the agent's (/v1/verification) and shows
+      only with an agent attached. The agent issues no receipts yet
+      (CIRISAgent#1207), so the only receipt a flow can paste is one it made up —
+      and the honest assertion for a made-up one is that it is refused as
+      unreadable, not "checked".
+    optional_step: true
+    requires:
+      screen: DataManagement
+      visible: [data_receipts_section]
+    do:
+      - scroll_to: data_receipts_section
+      - input: {input_deletion_proof: "{\"deletion_id\": \"del-7\"}"}
+      - click: btn_check_receipt
+    expect:
+      visible: [data_receipts_none_issued, data_receipt_unreadable]
+      absent: [data_receipt_verdict]
