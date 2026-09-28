@@ -1387,7 +1387,10 @@ class CIRISApiClient(
                 ))
             }
             if (!response.status.isSuccess()) {
-                throw RuntimeException("Federation peer trust update failed: ${response.status} for $keyId")
+                // CSD-104: a mismatch's first write is this one, and its refusal
+                // has a remedy (owner / directory / route) only if the status and
+                // body survive — a flattened message renders as a generic failure.
+                throw NodeRefusal.fromBody(response.status.value, response.bodyAsText())
             }
             decodeFederationEnvelope(response.bodyAsText(), LocalPeerState.serializer())
         } catch (e: Exception) {
