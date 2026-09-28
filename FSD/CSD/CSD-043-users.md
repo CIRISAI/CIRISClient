@@ -132,6 +132,8 @@ empty gets a plain card), so the fix here is tags, not behaviour.
 | one account's detail | `GET /v1/users/{user_id}` | CIRISAgent — `routes/users.py:660` | live on the brain |
 | change a role / deactivate | `PUT /v1/users/{id}`, `DELETE /v1/users/{id}`, `POST /v1/users/{id}/mint-wa` | CIRISAgent — `:679`, `:958`, `:797` | live and **not driven from this card** (read-only today) |
 | the nearest thing the node has | `GET /v1/auth/me`, `GET|POST /v1/auth/api-keys` | CIRISServer — `src/auth/session.rs:1147`, `src/auth/api_keys.rs:319` | live — self-service only, no roster |
+| revoke one API key | `DELETE /v1/auth/api-keys/{wa_id}` | CIRISServer `src/auth/api_keys.rs:323` (handler `revoke_api_key`, `:221`) | live, **not called** — only a generated stub (`deleteApiKeyV1AuthApiKeysKeyIdDelete`, `generated-api/.../AuthenticationApi.kt:134`). The card lists no keys, so it has nothing to revoke from; if it ever lists them, this is the row's action |
+| revoke a service token | `POST /v1/auth/service-token/revoke` — `{token (≥ 8 chars, hashed before storage), reason, revoked_by}` | CIRISServer `src/auth/api_keys.rs:327` (handler `:276`) | live, **not called and no stub** — an operator act with no surface anywhere in the client |
 | **an affiliation's roster** | — | — | **missing everywhere** — this is the card the placement asks for and no repo serves it |
 | `listed` opt-in per member | — | CIRISAgent | **missing** — blocks `building` for `user_row_listed` |
 

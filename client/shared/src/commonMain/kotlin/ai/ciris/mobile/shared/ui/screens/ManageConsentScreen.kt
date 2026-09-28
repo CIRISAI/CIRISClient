@@ -7,6 +7,12 @@ import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.viewmodels.ConsentObjectsViewModel
 import ai.ciris.mobile.shared.viewmodels.DataManagementViewModel
 import ai.ciris.mobile.shared.viewmodels.GrantDirectionState
+import ai.ciris.mobile.shared.viewmodels.RevokeRoute
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,11 +60,13 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  * ratified iff both grants present). This screen renders the current grant
  * state for the two selected nodes and lets the user (re)run the set-up.
  *
- * **Revoke** is intentionally a disabled/TODO affordance: the node-side
- * federation API exposes `self-key-record` + `peering` but **no peering-revoke
- * (`withdraws`) endpoint yet** — see the upstream flag. The app does no crypto,
- * so it cannot synthesise a withdrawal; it can only drive the node once an
- * endpoint exists.
+ * **Revoke** drives `POST /v1/federation/peering/revoke` on node A
+ * (CIRISServer#657, ciris-server 0.5.218) behind a ConfirmSheet. The node signs
+ * the `withdraws` with the PERSON's key; the app does no crypto. Whether node A
+ * has the route is asked of node A at runtime ([RevokeRoute]); an older node
+ * keeps the control disabled and says why. A grant the node wrote before the
+ * person re-signed it cannot be withdrawn and renders as still active
+ * (`consent_remaining_grants`) — never as done.
  *
  * For the **user-data** consent stream (`consent:state` — TEMPORARY / PARTNERED /
  * ANONYMOUS, GDPR), this screen points the user at the existing Consent surface
@@ -80,14 +88,10 @@ fun ManageConsentScreen(
      * = caller didn't wire it (card hidden); we never invent a second write path.
      */
     dataViewModel: DataManagementViewModel? = null,
-    /**
-     * Whether a node-side peering-revoke endpoint exists. False today; when the
-     * server ships `withdraws` for consent:replication, flip this and wire the
-     * revoke action.
-     */
-    revokeEndpointAvailable: Boolean = false,
 ) {
     val state by viewModel.state.collectAsState()
+    // The confirm is open. Withdrawing consent is an outward act: three facts, two buttons.
+    var confirmRevoke by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -204,22 +208,21 @@ fun ManageConsentScreen(
                                 }
                             }
 
-                            // Revoke — disabled until a node-side withdraws endpoint exists.
+                            // Revoke — withdraws node A's grant to B (CIRISServer#657).
+                            // Whether the node can is asked of the node, at runtime.
                             OutlinedButton(
-                                onClick = { /* TODO: wire when server ships withdraws */ },
-                                enabled = revokeEndpointAvailable && state.isRatified,
+                                onClick = { if (state.canRevoke) confirmRevoke = true },
+                                enabled = state.canRevoke,
                                 modifier = Modifier.testable("btn_consent_revoke_peering"),
                             ) {
-                                Text(localizedString("mobile.manage_consent_revoke"))
+                                if (state.isRevoking) {
+                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                } else {
+                                    Text(localizedString("mobile.manage_consent_revoke"))
+                                }
                             }
                         }
-                        if (!revokeEndpointAvailable) {
-                            Text(
-                                localizedString("mobile.manage_consent_revoke_todo"),
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
+                        RevokeStatus(state)
                     }
                 }
             }
@@ -254,6 +257,105 @@ fun ManageConsentScreen(
                 }
             }
         }
+    }
+
+    if (confirmRevoke) {
+        val from = state.nodeA?.name.orEmpty()
+        val to = state.nodeB?.name.orEmpty()
+        ConfirmSheet(
+            title = localizedString("mobile.manage_consent_revoke_confirm_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.consent_withdraw_fact_who"), "$from  →  $to"),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_stops"),
+                    localizedString(
+                        "mobile.manage_consent_revoke_fact_stops_value",
+                        mapOf("from" to from, "to" to to),
+                    ),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_signs"),
+                    localizedString("mobile.consent_withdraw_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.manage_consent_revoke_confirm"),
+            onConfirm = { confirmRevoke = false; viewModel.revokeAToB() },
+            onDismiss = { confirmRevoke = false },
+            destructive = true,
+            tagPrefix = "consent_revoke",
+        )
+    }
+}
+
+/**
+ * Why the revoke control is disabled, as a (bundle key, test tag), or null
+ * when it is not. Pure, so the one sentence an older node earns is tested
+ * without Compose. A missing route outranks everything: no grant id changes
+ * what a node without the route can do.
+ */
+internal fun revokeNote(state: ai.ciris.mobile.shared.viewmodels.ConsentObjectsState): Pair<String, String>? = when {
+    state.revokeRoute == RevokeRoute.MISSING ->
+        "mobile.manage_consent_revoke_unsupported" to "text_consent_revoke_unsupported"
+    state.aToBGrantId.isNullOrBlank() && state.remainingGrants.isEmpty() && state.withdrawnBy == null ->
+        "mobile.manage_consent_revoke_needs_grant" to "text_consent_revoke_needs_grant"
+    else -> null
+}
+
+/**
+ * What the revoke control can do and what it last did, in that order. Every
+ * line here is something the NODE said: the route is missing (a bare 404 or the
+ * probe), the grant is still active (node-authored, so not the person's to
+ * withdraw), the node refused, or the node signed the withdrawal.
+ */
+@Composable
+private fun RevokeStatus(state: ai.ciris.mobile.shared.viewmodels.ConsentObjectsState) {
+    revokeNote(state)?.let { (key, tag) ->
+        Text(
+            localizedString(key),
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable(tag),
+        )
+    }
+
+    // Still active: in the NORMAL tone, never struck through or greyed as if gone.
+    if (state.remainingGrants.isNotEmpty()) {
+        Column(
+            modifier = Modifier.fillMaxWidth().testable("consent_remaining_grants"),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(
+                localizedString("mobile.consent_remaining_title"),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            state.remainingGrants.forEach { grant ->
+                Text(
+                    localizedString("mobile.consent_remaining_row"),
+                    fontSize = 12.sp,
+                )
+                Text(grant, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+
+    if (state.revokeRefusalId != null || state.revokeRefusalDetail != null) {
+        Text(
+            state.revokeRefusalId?.let { localizedString(it) } ?: state.revokeRefusalDetail.orEmpty(),
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testable("consent_revoke_refusal"),
+        )
+    }
+
+    // The success line appears only with the node's `withdraws` id and nothing remaining.
+    if (state.withdrawnBy != null && state.remainingGrants.isEmpty()) {
+        Text(
+            localizedString("mobile.manage_consent_withdrawn", "id", state.withdrawnBy.take(16)),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.testable("text_consent_withdrawn"),
+        )
     }
 }
 

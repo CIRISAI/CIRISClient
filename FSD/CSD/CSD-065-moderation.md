@@ -230,8 +230,23 @@ literals in `src/`.
 |---|---|---|---|
 | file a ModerationEvent | `POST /v1/safety/moderation` | CIRISServer `src/safety/moderation.rs:492` | **live** |
 | named-moderator verdict | `GET /v1/safety/named-moderator/{community_key_id}` | CIRISServer `src/safety/named.rs:434` | **live** |
-| ladder preview | `POST /v1/admin/preview` | CIRISServer `src/admin_ops.rs:4263` | **live** |
-| the ten rungs | `POST /v1/admin/{annotate,throttle,un-throttle,quarantine,un-quarantine,descend,deadmit,re-admit,refuse-writes,accept-writes}` | CIRISServer `src/admin_ops.rs:4264-4287` | **live** |
+| ladder preview | `POST /v1/admin/preview` | CIRISServer `src/admin_ops.rs:4263` | **live** — `CIRISApiClient.adminPreview` (`CIRISApiClient.kt:1152`) |
+| tier 0 — annotate | `POST /v1/admin/annotate` | CIRISServer `src/admin_ops.rs:4264` | **live** — every rung below is posted by `adminLadderCommit` (`CIRISApiClient.kt:1202`, `POST {nodeUrl}{op.route}`) with the route taken from `AdminLadderOp` (`models/AdminLadder.kt:476`) |
+| tier 1 — throttle | `POST /v1/admin/throttle` | `src/admin_ops.rs:4265` | **live** — `AdminLadder.kt:483` |
+| tier 1 — release | `POST /v1/admin/un-throttle` | `src/admin_ops.rs:4266` | **live** — `AdminLadder.kt:490` |
+| tier 2 — quarantine | `POST /v1/admin/quarantine` | `src/admin_ops.rs:4268` | **live** — `AdminLadder.kt:498` |
+| tier 2 — release | `POST /v1/admin/un-quarantine` | `src/admin_ops.rs:4272` | **live** — `AdminLadder.kt:506` |
+| tier 3 — descend | `POST /v1/admin/descend` | `src/admin_ops.rs:4275` | **live** — `AdminLadder.kt:515`; quorum 2, no inverse |
+| tier 4 — de-admit | `POST /v1/admin/deadmit` | `src/admin_ops.rs:4276` | **live** — `AdminLadder.kt:525` |
+| tier 4 — re-admit | `POST /v1/admin/re-admit` | `src/admin_ops.rs:4277` | **live** — `AdminLadder.kt:533` |
+| tier 4 — refuse writes | `POST /v1/admin/refuse-writes` | `src/admin_ops.rs:4280` | **live** — `AdminLadder.kt:541` |
+| tier 4 — accept writes | `POST /v1/admin/accept-writes` | `src/admin_ops.rs:4284` | **live** — `AdminLadder.kt:550` |
+| **the ladder itself, as data** — op, route, tier, scope, quorum, inverse, `reaches_substrate` | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` (ROUTE), rows `:82-182`; ungated | **live and never read.** `AdminLadderOp` (`AdminLadder.kt:457-557`) re-derives every column by hand. Today the two agree row for row; nothing fails when they stop agreeing, and the catalogue's `reaches_substrate` ("we noted it" vs "the door is shut") has no client field at all. The card SHOULD render the ladder from this read — a CIRISClient issue is drafted, not yet filed |
+| the scopes a delegation may carry | `GET /v1/vocabulary` → `delegation_scope.moderation` | CIRISServer `src/vocabulary_surface.rs:50`; ungated | **live and never read.** The duty radio (`ModerationDuty`, `models/safety/SafetyModels.kt:135`) is the request enum of `moderation.rs::Duty` and is correct to be fixed; the ladder's `requiredScope` constants (`AdminLadder.kt:443-445`) are a picker vocabulary and should come from here. See CSD-090 for the picker this bites hardest |
+
+The admin rungs moved from 4264-4284 (0.5.217) to 4360-4380 on
+`integ/0.5.218` (97900cf5) with no change to the set; `/v1/operations` and
+`/v1/vocabulary` are byte-identical in both.
 | the candidate's track record | **missing** — the verdict body carries `candidate_key_id`, not `moderation_track_record` | CIRISServer | blocks `row_named_moderator_candidate` |
 | **anyone-may-propose** (CC 4.5.13) | `POST /v1/safety/reports` — **missing** | CIRISServer | the client calls it (`CIRISApiClient.kt:1778`); `src/safety/report.rs` is specified in CIRISServer `FSD/MODERATION_CHILD_SAFETY.md` §4.4 and does not exist. `git ls-tree origin/main src/safety/` has six files and no `report.rs` |
 

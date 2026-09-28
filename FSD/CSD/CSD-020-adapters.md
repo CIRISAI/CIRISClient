@@ -118,6 +118,12 @@ node-skipped, 404s, and surfaces as `wizardError`.
 | the adapter list | `GET /v1/system/adapters` | CIRISAgent | live (`routes/system/adapters.py`) — **node-skipped client-side, returns `[]`** |
 | one adapter's detail | `GET /v1/system/adapters/{adapter_id}` | CIRISAgent | live |
 | what may be added | `GET /v1/system/adapters/loadable` | CIRISAgent | live (`adapters.py:595`) — **not node-skipped; 404s on a bare node** |
+| every adapter module type | `GET /v1/system/adapters/types` | CIRISAgent (`adapters.py:237`) | live, **wired and unreached** — `getModuleTypes` (`CIRISApiClient.kt:8040`) has no caller |
+| the ones with a config wizard | `GET /v1/system/adapters/configurable` | CIRISAgent (`adapters.py:533`) | live, **wired and unreached** — `getConfigurableAdapters` (`CIRISApiClient.kt:8095`) has no caller; `loadable` (above) is what the card reads |
+| what survives a restart | `GET /v1/system/adapters/persisted` · `DELETE /v1/system/adapters/{adapter_type}/persisted` | CIRISAgent (`adapters.py:273, 315`) | live, **not called** — the card cannot say which loaded adapters will come back after a restart, or stop one from coming back |
+| discovered adapters with eligibility | `GET /v1/system/adapters/available` | CIRISAgent (`adapters.py:368`) | live, **not called** |
+| install a missing adapter's dependencies | `POST /v1/system/adapters/{adapter_name}/install` | CIRISAgent (`adapters.py:395`) | live, **not called** |
+| re-check eligibility after installing | `POST /v1/system/adapters/{adapter_name}/check-eligibility` | CIRISAgent (`adapters.py:487`) | live, **not called** — so an ineligible adapter has no path to becoming eligible from this card |
 | load one | `POST /v1/system/adapters/{adapter_type}` | CIRISAgent | live |
 | reload one | `PUT /v1/system/adapters/{adapter_id}/reload` | CIRISAgent | live |
 | remove one | `DELETE /v1/system/adapters/{adapter_id}` | CIRISAgent | live |
@@ -132,7 +138,8 @@ node-skipped, 404s, and surfaces as `wizardError`.
 
 Agent routes read from the `~/CIRISAgent` working tree, last commit
 **2026-08-15** — six weeks stale relative to this branch, so "live" here means
-"live as of that tree."
+"live as of that tree." The six catalogue / install rows were added in the
+citation pass from CIRISAgent `main` 29371660de (2026-09-26), `routes/system/adapters.py`.
 
 **Nothing under `/v1/system/adapters` exists on the node.** `CIRISServer`'s
 route literals (`git show origin/main -- 'src/*.rs'`) carry `/v1/system/data`,

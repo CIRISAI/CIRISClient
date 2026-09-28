@@ -224,7 +224,8 @@ fun SettingsScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("settings_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -240,6 +241,7 @@ fun SettingsScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .testable("settings_loaded")
                     .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
