@@ -136,8 +136,8 @@ element that exists in one and not the other.
 |---|---|---|---|
 | liveness + service map + `data.agent.{folded,reachable}` | `GET /v1/system/health` | CIRISServer (`src/health.rs`, 0.5.168+) | live |
 | `ClientMode` (NODE / AGENT / undetermined) | derived from the above, `models/ClientMode.kt` | CIRISClient | live |
-| the node's own health, never enriched | `GET /v1/health` | CIRISServer `src/health.rs:585` — deliberately node-only (`:573-575`) and the boot drift-witness for the contract hashes it serves (`:563-565`) | live, **not called, correctly**: it cannot answer the folded question, which is why `getNodeHealth` moved to `/v1/system/health` (`CIRISApiClient.kt:6098-6103`, CIRISServer#390). The comments that still say Startup probes `/v1/health` (`CIRISApp.kt:1215-1218`, `StartupViewModel.kt:41, 492`) are stale — the code calls `getNodeHealth` (`CIRISApp.kt:1236`) |
-| boot progress, as the agent reports it | `GET /v1/system/startup-status` | CIRISAgent `routes/system/health.py:947` | live, **not called** — Startup counts services from the backend's console lines (`[SERVICE n/m]`, `StartupViewModel.kt:180`), from `service_status.json` on iOS with `/v1/telemetry/unified` as its fallback (`PythonRuntime.ios.kt:230, 313-318`), and as one pseudo-service on a node (`PythonRuntime.desktop.kt:683-689`). Two comments say this route is polled (`StartupViewModel.kt:170`, `PythonRuntime.ios.kt:313`); it is not. It is the agent's own answer to "how far along am I" |
+| the node's own health, never enriched | `GET /v1/health` | CIRISServer `src/health.rs:585` — deliberately node-only (`:573-575`) and the boot drift-witness for the contract hashes it serves (`:563-565`) | live, **not called, correctly**: it cannot answer the folded question, which is why `getNodeHealth` moved to `/v1/system/health` (`CIRISApiClient.kt:6098-6103`, CIRISServer#390). The comments that said Startup probes `/v1/health` (`CIRISApp.kt`, the node-vs-agent gate; `StartupViewModel.kt`, `clientMode` and `setClientMode`) were corrected in the setup review to name `/v1/system/health` |
+| boot progress, as the agent reports it | `GET /v1/system/startup-status` | CIRISAgent `routes/system/health.py:947` | live, **not called** — Startup counts services from the backend's console lines (`[SERVICE n/m]`, `StartupViewModel.kt:180`), from `service_status.json` on iOS with `/v1/telemetry/unified` as its fallback (`PythonRuntime.ios.kt:230, 313-318`), and as one pseudo-service on a node (`PythonRuntime.desktop.kt:683-689`). `StartupViewModel.startFastAPIServer`'s KDoc said this route was polled; corrected in the setup review. `PythonRuntime.ios.kt:313` still says so — platform source, reported. It is the agent's own answer to "how far along am I" |
 | is setup still required | `GET /v1/setup/status` | **both**: CIRISAgent `routes/setup/status.py:45` and CIRISServer `src/auth/bootstrap.rs` | live on the agent; **loopback-only on the node** (`src/auth/loopback.rs:44`, 403 off-host) |
 | "the node answers, so setup is done" | node reachability probe on `:4243` | CIRISClient | live — `CIRISApp.kt:5051-5078` stops asking `:8080` after the run-without-AI hand-off (CIRISClient#48, **CLOSED**) |
 
@@ -152,6 +152,19 @@ says "the wizard reads claim_pin_file to locate the 0600 PIN file" — so #1196 
 CIRISAgent-only, with zero `claim_pin` hits in `routes/setup/status.py` on `main`) —
 **CIRISAgent#1196**; it does not break Startup, but it is the reason the claim
 this screen hands off to silently skips.
+
+**Why this card and CSD-084 overlap 100% on routes.** The route map pairs them
+because both cite `/v1/system/health` and `/v1/setup/status`. The probe is
+shared; the act is not. Startup asks the runtime this app just launched, once,
+with nothing for the person to choose; ServerConnection asks a URL the person
+chose and exists to change it. Folding them would put a URL field on the boot
+screen. CSD-084 §3.1 says the same from its side.
+
+**Why `check_csd_routes.py --print CSD-080` finds no route.** The checker
+follows calls from `Screen.Startup`'s composable, and Startup's reads run from
+`StartupViewModel`/`PythonRuntime` and from the `LaunchedEffect(phase)` in
+`CIRISApp.kt` — not from the screen. The rows above are cited from those call
+sites; the heuristic's miss is the checker's, not a missing call.
 
 ## 4. Flow (how)
 

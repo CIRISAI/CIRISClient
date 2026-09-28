@@ -707,6 +707,17 @@ data class SetupFormState(
     val traceConsentAnswered: Boolean = false,
 
     /**
+     * Did the node's consent disclosure carry a `replication` grant to ask about?
+     *
+     * The send-traces question renders from that grant, so a disclosure without
+     * one leaves nothing to answer — and [traceConsentAnswered] could never
+     * become true, stranding the wizard on screen 2 with a disabled Next and no
+     * visible cause (CSD-082 §2, the `empty` state). False means the substrate
+     * offered no trace grant: nothing is sent, and the step says so.
+     */
+    val traceQuestionOffered: Boolean = true,
+
+    /**
      * **Be scored** — CC#46 `analyze`. The peer may SCORE your traces, which is
      * what builds reputation. A SEPARATE grant on the opposite edge: granting
      * one does not grant the other. ON by default, but genuinely declinable —
@@ -739,6 +750,10 @@ data class SetupFormState(
     val selectedTemplateId: String = "default",
     val showAdvancedSettings: Boolean = false,
     val templatesLoading: Boolean = false,
+    // The template list could not be READ. Distinct from an empty list: an
+    // empty list is the agent saying "no templates", this is the client not
+    // knowing. The step says which, and the default template is used either way.
+    val templatesError: Boolean = false,
 
     // Adapter configuration
     // Available adapters from /v1/setup/adapters
@@ -747,6 +762,8 @@ data class SetupFormState(
     val enabledAdapterIds: Set<String> = setOf("api"),
     // Loading state for adapter list
     val adaptersLoading: Boolean = false,
+    // The optional-feature list could not be read (not "there are none").
+    val adaptersError: Boolean = false,
 
     // Tool disclosure (#941): exactly what each adapter choice grants the agent,
     // generated server-side from the live tool services. Disclosure only --
@@ -756,6 +773,9 @@ data class SetupFormState(
     @kotlinx.serialization.Transient
     val toolDisclosure: ToolDisclosureReport? = null,
     val toolDisclosureLoading: Boolean = false,
+    // The disclosure request FAILED, as opposed to not having run yet. Both leave
+    // [toolDisclosure] null; only this one may say "could not be listed".
+    val toolDisclosureError: Boolean = false,
     // Adapter ids (and always-on group ids) whose tool list is expanded
     val expandedToolDisclosureIds: Set<String> = emptySet(),
 
@@ -852,6 +872,19 @@ data class SetupFormState(
     }
 
     /**
+     * Will completion announce THIS device to the federation?
+     *
+     * Announce is per device (CIRISServer#655): only the devices a person
+     * announced are public, and they are exactly the devices people can reach
+     * them through. It is not offered to an under-18 or undeclared account —
+     * the constitution says minors are not discoverable by unconnected adults
+     * (CIRISConstitution#111), and the server's limit for them has not landed —
+     * so the switch is hidden for them and this reads false whatever the
+     * switch last held. The claim reads THIS, never [announceOwnership] alone.
+     */
+    fun announcesThisDevice(): Boolean = announceOwnership && !isMinorBand()
+
+    /**
      * Check if local user account fields should be shown.
      * Source: SetupViewModel.kt:133-135
      */
@@ -918,7 +951,7 @@ data class SetupFormState(
         // Announce, be-scored and location have stated defaults and declining
         // any of them is valid. SEND TRACES has no default: like the age band
         // it must be answered, and either answer proceeds.
-        SetupStep.JOIN_FEDERATION -> traceConsentAnswered
+        SetupStep.JOIN_FEDERATION -> traceConsentAnswered || !traceQuestionOffered
 
         SetupStep.AI -> hasUsableLlmChoice()
 
@@ -991,7 +1024,7 @@ data class SetupFormState(
             ageError ?: fedIdError ?: accountError ?: stewardshipError
         }
 
-        SetupStep.JOIN_FEDERATION -> if (traceConsentAnswered) {
+        SetupStep.JOIN_FEDERATION -> if (traceConsentAnswered || !traceQuestionOffered) {
             null
         } else {
             LocalizationHelper.getString("setup_validation_trace_consent_required")
@@ -1124,7 +1157,11 @@ data class SetupCompletionResult(
 data class AgentTemplateInfo(
     val id: String,
     val name: String,
-    val description: String
+    val description: String,
+    // Book VI stewardship tier, 1-5 (higher = more oversight). REQUIRED on the
+    // agent's AgentTemplate (routes/setup/models.py:44) and dropped by the
+    // mapping until the setup review; the picker shows it.
+    val stewardship_tier: Int? = null,
 )
 
 /**

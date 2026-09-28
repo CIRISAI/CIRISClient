@@ -28,6 +28,26 @@ enum class ConnectionStatus {
 }
 
 /**
+ * The localization key for [status]'s word. ERROR and DISCONNECTED are two
+ * facts, a refused connection and a deliberate disconnect, and must not read
+ * as one sentence (CSD-084 §2 `error`, CSD/3 §2.2).
+ */
+fun serverStatusKey(status: ConnectionStatus): String = when (status) {
+    ConnectionStatus.CONNECTED_LOCAL,
+    ConnectionStatus.CONNECTED_REMOTE -> "mobile.server_status_connected"
+    ConnectionStatus.CONNECTING -> "mobile.server_status_connecting"
+    ConnectionStatus.DISCONNECTED -> "mobile.server_status_disconnected"
+    ConnectionStatus.ERROR -> "mobile.server_status_error"
+}
+
+/**
+ * A per-row tag suffix for a recent connection, so N rows are N addressable
+ * elements rather than N copies of one tag (CSD-084 §2).
+ */
+fun recentConnectionTagSuffix(url: String): String =
+    url.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
+
+/**
  * ViewModel for Server Connection Manager screen.
  *
  * Manages:

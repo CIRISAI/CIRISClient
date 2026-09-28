@@ -414,8 +414,10 @@ class SetupViewModel(
     }
 
     /**
-     * Opt IN / OUT of announcing this owner to the federation (default OFF —
-     * private/self-scoped). When ON, a successful claim promotes ownership
+     * Opt IN / OUT of announcing THIS DEVICE to the federation (default ON — it
+     * is the floor for service; announce is per device, CIRISServer#655). Never
+     * offered to an under-18 or undeclared account: the claim reads
+     * [SetupFormState.announcesThisDevice]. When ON, a successful claim promotes ownership
      * self→FEDERATION + enables the node's identity announce, applied best-effort
      * post-claim (see [claimLocalNodeOwnership]); takes effect on next boot.
      */
@@ -1319,7 +1321,7 @@ class SetupViewModel(
                         // setup bearer, so firing them now is a guaranteed 401.
                         // Skip honestly with markers; surface the age gap for retry.
                         PlatformLogger.w(TAG, "[ORDER] set_age SKIPPED (no owner session; band=$band)")
-                        if (_state.value.announceOwnership) {
+                        if (_state.value.announcesThisDevice()) {
                             PlatformLogger.w(TAG, "[ORDER] announce SKIPPED (no owner session)")
                         }
                         if (!band.isNullOrBlank()) {
@@ -1359,7 +1361,7 @@ class SetupViewModel(
                     // claim already succeeded, so this is NON-FATAL — on failure we
                     // surface a soft notice and let the user retry later; it never
                     // blocks COMPLETE. Takes effect on the node's next boot.
-                    if (ownerLoginOk && _state.value.announceOwnership) {
+                    if (ownerLoginOk && _state.value.announcesThisDevice()) {
                         try {
                             PlatformLogger.i(TAG, "[ORDER] announce begin (session=$sessionKind)")
                             val ann = client.announceOwnership(localNodeUrl = CIRISApiClient.LOCAL_NODE_URL)
@@ -1579,6 +1581,17 @@ class SetupViewModel(
     }
 
     /**
+     * The node's consent disclosure carries no `replication` grant, so there is
+     * no send-traces question to ask. Nothing is sent — no grant exists to
+     * author — and screen 2 may be left; the step states why instead of
+     * holding a disabled Next with nothing on screen (CSD-082 §2 `empty`).
+     */
+    fun noteTraceQuestionAbsent() {
+        PlatformLogger.w(TAG, "[consent] disclosure carries no replication grant — no trace question, nothing sent")
+        _state.value = _state.value.copy(traceQuestionOffered = false, accordMetricsConsent = false)
+    }
+
+    /**
      * Set the CC#46 "be scored" grant — whether shipped traces may be ANALYZED.
      *
      * A SEPARATE consent from sending them, on the opposite edge. The substrate
@@ -1621,12 +1634,12 @@ class SetupViewModel(
 
     /**
      * Load available templates from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      */
     suspend fun loadAvailableTemplates(
         fetchFunc: suspend () -> List<AgentTemplateInfo>
     ) {
-        _state.value = _state.value.copy(templatesLoading = true)
+        _state.value = _state.value.copy(templatesLoading = true, templatesError = false)
         try {
             val templates = fetchFunc()
             _state.value = _state.value.copy(
@@ -1634,7 +1647,8 @@ class SetupViewModel(
                 templatesLoading = false
             )
         } catch (e: Exception) {
-            _state.value = _state.value.copy(templatesLoading = false)
+            PlatformLogger.w(TAG, "loadAvailableTemplates failed: ${e.message}")
+            _state.value = _state.value.copy(templatesLoading = false, templatesError = true)
         }
     }
 
@@ -1665,7 +1679,7 @@ class SetupViewModel(
 
     /**
      * Load available adapters from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      *
      * Adapters with enabled_by_default=true are automatically selected.
      * This includes ciris_hosted_tools when user has CIRIS AI services.
@@ -1673,7 +1687,7 @@ class SetupViewModel(
     suspend fun loadAvailableAdapters(
         fetchFunc: suspend () -> List<ai.ciris.mobile.shared.models.CommunicationAdapter>
     ) {
-        _state.value = _state.value.copy(adaptersLoading = true)
+        _state.value = _state.value.copy(adaptersLoading = true, adaptersError = false)
         try {
             val adapters = fetchFunc()
 
@@ -1693,7 +1707,8 @@ class SetupViewModel(
                 adaptersLoading = false
             )
         } catch (e: Exception) {
-            _state.value = _state.value.copy(adaptersLoading = false)
+            PlatformLogger.w(TAG, "loadAvailableAdapters failed: ${e.message}")
+            _state.value = _state.value.copy(adaptersLoading = false, adaptersError = true)
         }
     }
 
@@ -1706,7 +1721,7 @@ class SetupViewModel(
 
     /**
      * Load the generated tool disclosure from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      *
      * A failure leaves [SetupFormState.toolDisclosure] null, which the UI renders
      * as "could not be listed" -- never as "grants nothing".
@@ -1714,7 +1729,7 @@ class SetupViewModel(
     suspend fun loadToolDisclosure(
         fetchFunc: suspend () -> ai.ciris.mobile.shared.models.ToolDisclosureReport
     ) {
-        _state.value = _state.value.copy(toolDisclosureLoading = true)
+        _state.value = _state.value.copy(toolDisclosureLoading = true, toolDisclosureError = false)
         try {
             val disclosure = fetchFunc()
             _state.value = _state.value.copy(
@@ -1722,9 +1737,11 @@ class SetupViewModel(
                 toolDisclosureLoading = false
             )
         } catch (e: Exception) {
+            PlatformLogger.w(TAG, "loadToolDisclosure failed: ${e.message}")
             _state.value = _state.value.copy(
                 toolDisclosure = null,
-                toolDisclosureLoading = false
+                toolDisclosureLoading = false,
+                toolDisclosureError = true
             )
         }
     }

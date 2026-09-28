@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.screens.graph.CellVizConfig
@@ -80,11 +81,12 @@ fun VizSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     val config by viewModel.cellVizConfig.collectAsState()
+    val saveError by viewModel.cellVizSaveError.collectAsState()
 
     Scaffold(
         topBar = {
             ScreenTopBar(
-                title = { Text("Visualization") },
+                title = { Text(localizedString("mobile.viz_settings_title")) },
                 navigationIcon = {
                     // Suppressed on compact viewports — the global 3-state
                     // overlay button in CIRISApp handles back navigation
@@ -118,6 +120,23 @@ fun VizSettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             HeaderBlurb()
+
+            // A device preference, and the screen says so: nothing here leaves
+            // this device (CSD-026 §1, `viz_settings_locality_note`).
+            Text(
+                text = localizedString("mobile.viz_settings_locality_note"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("viz_settings_locality_note"),
+            )
+            saveError?.let { reason ->
+                Text(
+                    text = localizedString("mobile.viz_settings_save_error", mapOf("what" to reason)),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testable("viz_settings_error", reason),
+                )
+            }
 
             // ----- Rotation & rhythm ----------------------------------
             SectionCard(title = "Rotation & rhythm") {

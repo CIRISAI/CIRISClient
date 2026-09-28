@@ -189,11 +189,6 @@
     "input_self_delegation_id",
     "input_self_reason"
   ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ServerConnectionScreen.kt": [
-    "btn_connect_recent",
-    "btn_remove_recent",
-    "btn_server_back"
-  ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SettingsScreen.kt": [
     "switch_force_classic_viz",
     "switch_live_background"
