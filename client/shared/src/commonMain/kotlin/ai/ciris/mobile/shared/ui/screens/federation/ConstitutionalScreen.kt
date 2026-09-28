@@ -66,7 +66,7 @@ fun ConstitutionalScreen(
     Scaffold(
         topBar = {
             ScreenTopBar(
-                title = { Text(localizedString("commons.federation.constitutional.title").ifEmpty { "Constitutional Standing" }) },
+                title = { Text(localizedString("commons.federation.constitutional.title")) },
                 navigationIcon = {
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
@@ -158,9 +158,14 @@ fun ConstitutionalScreen(
                                 Surface(
                                     color = if (family != null) CIRISColors.SignetTeal.copy(alpha = 0.18f) else CirisTheme.tokens.sunken,
                                     shape = RoundedCornerShape(4.dp),
+                                    modifier = Modifier.testable("chip_constitutional_family"),
                                 ) {
                                     Text(
-                                        text = if (family != null) "LIVE" else "NOT CONFIGURED",
+                                        text = if (family != null) {
+                                            localizedString("mobile.constitutional_family_live")
+                                        } else {
+                                            localizedString("mobile.constitutional_family_not_configured")
+                                        },
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (family != null) CIRISColors.SignetTeal else CIRISColors.TextDim,
@@ -192,7 +197,7 @@ fun ConstitutionalScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            text = "HUMANITY_ACCORD KILL-SWITCH",
+                            text = localizedString("mobile.constitutional_killswitch_heading"),
                             color = CIRISColors.TextDim,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -204,16 +209,18 @@ fun ConstitutionalScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
+                                // The armed state — the reason this card exists — carries
+                                // its own tag, so the three arms are three assertions.
                                 Text(
-                                    text = if (haltStatus.record?.invocationId != null) {
-                                        "ACTIVE HALT — Node execution halted by invocation ${haltStatus.record.invocationId}"
-                                    } else {
-                                        "ACTIVE HALT — Node execution is halted"
-                                    },
+                                    text = haltStatus.record?.invocationId?.let { id ->
+                                        localizedString("mobile.constitutional_halt_active_invocation", "id", id)
+                                    } ?: localizedString("mobile.constitutional_halt_active"),
                                     color = CIRISColors.StatusWarn,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier
+                                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                                        .testable("txt_killswitch_halted"),
                                 )
                             }
                         } else if (haltStatus == null) {
@@ -230,19 +237,29 @@ fun ConstitutionalScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                Text(
-                                    text = if (isLoading) {
-                                        "Reading kill-switch status…"
-                                    } else {
-                                        "Kill-switch status UNKNOWN — the node did not answer. This is not a report that it is disarmed."
-                                    },
-                                    color = CIRISColors.TextDim,
-                                    fontSize = 12.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        .testable("txt_killswitch_unknown"),
-                                )
+                                // "Reading" and "unknown" are drawn apart AND tagged apart:
+                                // a flow must be able to tell a slow read from a failed one.
+                                if (isLoading) {
+                                    Text(
+                                        text = localizedString("mobile.constitutional_killswitch_loading"),
+                                        color = CIRISColors.TextDim,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .testable("txt_killswitch_loading"),
+                                    )
+                                } else {
+                                    Text(
+                                        text = localizedString("mobile.constitutional_killswitch_unknown"),
+                                        color = CIRISColors.TextDim,
+                                        fontSize = 12.sp,
+                                        fontFamily = FontFamily.Monospace,
+                                        modifier = Modifier
+                                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                                            .testable("txt_killswitch_unknown"),
+                                    )
+                                }
                             }
                         } else {
                             Surface(
@@ -251,7 +268,7 @@ fun ConstitutionalScreen(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
                                 Text(
-                                    text = "Killswitch disarmed — All systems nominal",
+                                    text = localizedString("mobile.constitutional_killswitch_disarmed"),
                                     color = CIRISColors.SignetTeal,
                                     fontSize = 12.sp,
                                     fontFamily = FontFamily.Monospace,
@@ -268,11 +285,12 @@ fun ConstitutionalScreen(
                             // threshold is a statement about the constitution
                             // that the constitution does not make.
                             text = if (holders.isNotEmpty()) {
-                                "A $holderThreshold-of-${holders.size} human kill-switch family: each holder carries a primary SEAT " +
-                                    "and a cold SPARE. FIPS YubiKey + ML-DSA hardware custody."
+                                localizedString(
+                                    "mobile.constitutional_family_desc_threshold",
+                                    mapOf("m" to holderThreshold.toString(), "n" to holders.size.toString()),
+                                )
                             } else {
-                                "A human kill-switch family: each holder carries a primary SEAT and a cold SPARE. " +
-                                    "FIPS YubiKey + ML-DSA hardware custody."
+                                localizedString("mobile.constitutional_family_desc")
                             },
                             color = CIRISColors.TextSecondary,
                             fontSize = 13.sp,
@@ -324,7 +342,7 @@ fun ConstitutionalScreen(
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Text(
-                            text = "RESERVED PREFIX AUTHORITY",
+                            text = localizedString("mobile.constitutional_reserved_heading"),
                             color = CIRISColors.TextDim,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
@@ -335,20 +353,27 @@ fun ConstitutionalScreen(
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
                         ) {
+                            // The threshold is the node's (`GET /v1/accord-holders`
+                            // `threshold`), printed only beside a real roster.
                             Text(
                                 text = if (holders.isNotEmpty()) {
-                                    "${holders.size} registered accord holder(s) (${holderThreshold}-of-${holders.size} threshold)"
+                                    localizedString(
+                                        "mobile.constitutional_holders_count",
+                                        mapOf("m" to holderThreshold.toString(), "n" to holders.size.toString()),
+                                    )
                                 } else {
-                                    "No registered accord holders"
+                                    localizedString("mobile.constitutional_holders_none")
                                 },
                                 color = CIRISColors.TextPrimary,
                                 fontSize = 12.sp,
                                 fontFamily = FontFamily.Monospace,
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .testable("txt_constitutional_threshold"),
                             )
                         }
                         Text(
-                            text = "Only certified accord_holder identities may emit accord:* namespace attestations. All attempts to forge constitutional claims are refused fail-closed by node verification.",
+                            text = localizedString("mobile.constitutional_reserved_desc"),
                             color = CIRISColors.TextSecondary,
                             fontSize = 13.sp,
                         )

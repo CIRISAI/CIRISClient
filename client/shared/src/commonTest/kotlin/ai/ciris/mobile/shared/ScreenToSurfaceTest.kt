@@ -59,6 +59,8 @@ class ScreenToSurfaceTest {
             screenToSurface(Screen.UserChat(null, "room-1", "Garden club", memberCount = 5, from = Screen.CommunityChats)),
         )
         assertEquals(NavSurface.Accord, screenToSurface(Screen.DutyConferral))
+        // The trust-root detail is a leaf of the Accord card, which stays lit.
+        assertEquals(NavSurface.Accord, screenToSurface(Screen.TrustRoot))
         assertEquals(NavSurface.Skills, screenToSurface(Screen.SkillStudio))
     }
 }
