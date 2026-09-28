@@ -10,12 +10,6 @@
     "input_budget_expiry",
     "input_budget_reason"
   ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillImportDialog.kt": [
-    "btn_show_source_url",
-    "btn_skill_import_confirm",
-    "btn_skill_import_done",
-    "btn_skill_preview"
-  ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/components/SkillStudioCards.kt": [
     "btn_add_env_var",
     "btn_add_tool",
@@ -181,18 +175,7 @@
     "input_provision_holder_usb_path"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SelfReaderOpsSection.kt": [
-    "chip_reader_standing",
-    "input_reader_delegation_id",
-    "input_reader_reason",
-    "input_reader_subject",
-    "input_self_compelled_by",
-    "input_self_delegation_id",
-    "input_self_reason"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ServerConnectionScreen.kt": [
-    "btn_connect_recent",
-    "btn_remove_recent",
-    "btn_server_back"
+    "chip_reader_standing"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SettingsScreen.kt": [
     "switch_force_classic_viz",
@@ -217,26 +200,12 @@
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WalletPage.kt": [
     "btn_copy_address",
-    "btn_send_transfer",
     "input_recipient_address",
     "input_transfer_amount",
     "input_transfer_memo"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WiseAuthorityScreen.kt": [
     "input_wisdom_guidance"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/commons/CommonsScreen.kt": [
-    "input_commons_action",
-    "input_commons_ballot_grounds",
-    "input_commons_cohort_key",
-    "input_commons_cosigner_classical",
-    "input_commons_cosigner_key",
-    "input_commons_cosigner_pqc",
-    "input_commons_dismiss_grounds",
-    "input_commons_objection_grounds"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkContentScreen.kt": [
-    "input_peer_search"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkDiagnosticsScreen.kt": [
     "input_diagnostics_search"
@@ -247,7 +216,6 @@
     "input_appearance_icon"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkPeersScreen.kt": [
-    "input_add_peer_code",
     "switch_show_infra"
   ]
 }

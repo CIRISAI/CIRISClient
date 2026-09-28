@@ -54,7 +54,36 @@ USES = {"read", "display-only", "emit"}
 #: which failed two CSDs that were correct. A checker's own vocabulary drifting
 #: from the standard it enforces is the same defect class it exists to catch.
 TYPES = {"string", "int", "float", "bool", "timestamp", "unconfirmed", "enum", "list"}
+#: An upstream blocker reference: `<Repo>#<n>`, e.g. `CIRISServer#676`.
+BLOCKER = re.compile(r"^CIRIS[A-Za-z]+#[0-9]+$")
 VOCAB = re.compile(r"^[a-z0-9][a-z0-9_.-]*$")
+
+
+#: The keys `csd:surface` may carry. `scopes:` is F8 (one CSD, several circles).
+SURFACE_KEYS = {"surface", "screen", "scopes", "flow_only", "entry", "exit"}
+
+SCREEN_MEMBER = re.compile(r"^\s+(?:data\s+)?(?:object|class)\s+(\w+)", re.M)
+
+
+def _screen_classes() -> set[str]:
+    """Every member of `sealed class Screen` in CIRISApp.kt, read by brace-matching
+    its body — a one-line regex missed multi-line declarations (`UserChat`)."""
+    app = (Path(__file__).resolve().parents[1] / "client/shared/src/commonMain/kotlin/"
+           "ai/ciris/mobile/shared/CIRISApp.kt")
+    if not app.exists():
+        return set()
+    src = app.read_text()
+    start = src.find("sealed class Screen")
+    open_at = src.find("{", start)
+    if start < 0 or open_at < 0:
+        return set()
+    depth, i = 0, open_at
+    while i < len(src):
+        depth += {"{": 1, "}": -1}.get(src[i], 0)
+        if depth == 0:
+            break
+        i += 1
+    return set(SCREEN_MEMBER.findall(src[open_at + 1:i]))
 
 
 def load_registry(path: Path) -> dict:
@@ -135,10 +164,38 @@ def check(doc: Path, reg: dict) -> list[str]:
     reached = STAGES.index(stage)
     fields = (blocks.get("shows") or {}).get("fields", []) or []
 
+    def _is_unconfirmed(f: dict) -> bool:
+        return "unconfirmed" in str(f.get("type", "")) or "unconfirmed" in str(f.get("range", ""))
+
+    # `blocked_by:` separates "someone asked and the answer was no" from
+    # "someone asked and stopped". Without it both read as `unconfirmed`, and the
+    # more thoroughly a team chases its gaps to named upstream issues, the more
+    # its cards look abandoned. A blocker must be a real reference, and it must
+    # still describe a gap: one left on a field that has since been confirmed is
+    # stale, and stale is exactly the drift this checker exists to catch.
+    for f in fields:
+        if "blocked_by" not in f:
+            continue
+        refs = f["blocked_by"] if isinstance(f["blocked_by"], list) else [f["blocked_by"]]
+        bad = [r for r in refs if not BLOCKER.match(str(r).strip())]
+        if not refs or bad:
+            problems.append(
+                f"{f.get('ceg', '?')}: blocked_by must name an issue as <Repo>#<n> "
+                f"(e.g. CIRISServer#676); got {bad or refs!r}"
+            )
+        if not _is_unconfirmed(f):
+            problems.append(
+                f"{f.get('ceg', '?')}: blocked_by on a field that is no longer unconfirmed "
+                f"is stale: remove it, or the field is not confirmed after all"
+            )
+
     if reached >= STAGES.index("building"):
+        # A field the substrate has definitively declined, with the issue that
+        # says so, does not hold the card back from `building`. One nobody
+        # chased still does.
         unconfirmed = [
             f.get("ceg", "?") for f in fields
-            if "unconfirmed" in str(f.get("type", "")) or "unconfirmed" in str(f.get("range", ""))
+            if _is_unconfirmed(f) and not (reached == STAGES.index("building") and f.get("blocked_by"))
         ]
         if unconfirmed:
             problems.append(
@@ -212,6 +269,27 @@ def check(doc: Path, reg: dict) -> list[str]:
     # 2am against a timeout, and the hop itself is never written down: it is
     # derived from the client's own tag rules (testing/gate/nav_map.py).
     surface = blocks.get("surface") or {}
+    # AN UNKNOWN KEY IS A FAILURE, NOT A NO-OP. `screen_class:` was briefly the
+    # convention for flow-only screens; it is not a key this checker reads, so it
+    # made `screen` None and skipped both checks below. A CSD claiming Nodes is
+    # Screen.Telemetry passed that way, and so did the typo `screeen:`.
+    unknown = sorted(set(surface) - SURFACE_KEYS)
+    if unknown:
+        problems.append(
+            f"surface: unknown key(s) {unknown} — known: {sorted(SURFACE_KEYS)}. "
+            f"An unread key silently disables the reachability check"
+        )
+    if surface.get("flow_only"):
+        # A screen no sidebar row reaches (Startup, Login, Setup, a claim, a
+        # ceremony): it must exist, must NOT be sidebar-reachable, and must say
+        # how a person arrives, since no hop can.
+        screen = surface.get("screen")
+        if not screen:
+            problems.append("surface: flow_only needs `screen:` — the Screen class the flow lands on")
+        elif screen not in _screen_classes():
+            problems.append(f"surface: Screen.{screen} is not declared in CIRISApp.kt")
+        if not str(surface.get("entry") or "").strip():
+            problems.append("surface: flow_only needs `entry:` — how a person reaches this screen")
     if surface:
         try:
             sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -222,7 +300,13 @@ def check(doc: Path, reg: dict) -> list[str]:
         else:
             screen = surface.get("screen")
             sid = surface.get("surface")
-            if screen and screen not in hops:
+            if surface.get("flow_only"):
+                if screen and screen in hops:
+                    problems.append(
+                        f"surface: Screen.{screen} is sidebar-reachable via {hops[screen][-1]!r}, "
+                        f"so it is not flow_only — name its surface instead"
+                    )
+            elif screen and screen not in hops:
                 problems.append(
                     f"surface: no sidebar route to Screen.{screen} — a flow starting "
                     f"there cannot be reached, so the CSD cannot be tested"

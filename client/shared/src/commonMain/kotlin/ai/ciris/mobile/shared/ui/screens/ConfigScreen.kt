@@ -136,7 +136,8 @@ fun ConfigScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("config_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -178,7 +179,7 @@ fun ConfigScreen(
 
                 // Configuration sections
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testable("config_sections"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -415,7 +416,7 @@ private fun ConfigSectionCard(
                 section.items.forEach { item ->
                     ConfigItemRow(
                         item = item,
-                        onEdit = { onEditConfig(item.key, item.displayValue) },
+                        onEdit = { onEditConfig(item.key, item.editValue) },
                         onDelete = { onDeleteConfig(item.key) }
                     )
                 }
@@ -586,7 +587,9 @@ data class ConfigItem(
     val displayValue: String,
     val updatedAt: String,
     val updatedBy: String,
-    val isSensitive: Boolean = false
+    val isSensitive: Boolean = false,
+    /** What Edit opens with — a list or a dict as JSON (CSD-023). */
+    val editValue: String = displayValue,
 )
 
 data class ConfigCategory(

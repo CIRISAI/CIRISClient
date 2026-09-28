@@ -120,7 +120,8 @@ fun SchedulerScreen(
         LazyColumn(
             modifier = modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                .testable("scheduler_list"),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
@@ -130,7 +131,8 @@ fun SchedulerScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(32.dp),
+                            .padding(32.dp)
+                            .testable("scheduler_loading"),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator()
@@ -338,6 +340,19 @@ private fun SchedulerStatsRow(overview: SchedulerOverviewData) {
             value = overview.completedTotal?.toString() ?: NOT_READ,
             color = semantic.success,
             modifier = Modifier.weight(1f)
+        )
+        // Quarantined tasks: the one number that says the scheduler is
+        // failing quietly (`tasks_dead_lettered`, CSD-012).
+        SchedulerStatCard(
+            icon = CIRISIcons.warning,
+            label = localizedString("mobile.scheduler_stat_dead_lettered"),
+            value = overview.deadLettered?.toString() ?: NOT_READ,
+            color = when {
+                overview.deadLettered == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                overview.deadLettered > 0 -> semantic.error
+                else -> semantic.success
+            },
+            modifier = Modifier.weight(1f).testable("scheduler_stat_dead_lettered", overview.deadLettered?.toString() ?: NOT_READ)
         )
     }
 }

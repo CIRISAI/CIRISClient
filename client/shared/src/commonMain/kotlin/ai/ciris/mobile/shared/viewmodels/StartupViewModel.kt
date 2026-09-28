@@ -38,7 +38,7 @@ class StartupViewModel(
     private val _totalServices = MutableStateFlow(22)
     val totalServices: StateFlow<Int> = _totalServices.asStateFlow()
 
-    // The ONE node-vs-agent gate (set once from the /v1/health probe). NODE has
+    // The ONE node-vs-agent gate (set once from the /v1/system/health probe). NODE has
     // no cognitive brain → no 22 service lights; AGENT keeps the 22-light grid.
     // null until probed (treated as agent so existing behavior is unchanged).
     private val _clientMode =
@@ -167,7 +167,9 @@ class StartupViewModel(
     /**
      * Step 2: Start FastAPI server
      * On desktop, this waits for the server to become healthy.
-     * While waiting, polls startup-status to drive service light animations.
+     * While waiting, parses the backend's `[SERVICE n/m]` console lines to drive
+     * the service lights. It does NOT poll `/v1/system/startup-status` (CSD-080 §3):
+     * that route is the agent's own boot report and nothing here reads it.
      */
     private suspend fun startFastAPIServer() {
         val ts = Clock.System.now().toEpochMilliseconds() - startTime
@@ -489,7 +491,7 @@ class StartupViewModel(
     }
 
     /**
-     * Set the node-vs-agent gate (derived once from the /v1/health probe).
+     * Set the node-vs-agent gate (derived once from the /v1/system/health probe).
      * In NODE mode there is no cognitive brain, so the 22 agent service lights
      * do not apply — zero the service count so the startup screen omits that
      * row. AGENT mode keeps the current 22-light behavior untouched.

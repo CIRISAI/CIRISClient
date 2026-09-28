@@ -46,6 +46,7 @@ import ai.ciris.mobile.shared.viewmodels.BillingViewModel
 import ai.ciris.mobile.shared.viewmodels.ConfigViewModel
 import ai.ciris.mobile.shared.viewmodels.ConsentViewModel
 import ai.ciris.mobile.shared.viewmodels.ConsentObjectsViewModel
+import ai.ciris.mobile.shared.viewmodels.consentSessionAuthenticated
 import ai.ciris.mobile.shared.viewmodels.NodeSwitcherViewModel
 import ai.ciris.mobile.shared.viewmodels.GraphMemoryViewModel
 import ai.ciris.mobile.shared.viewmodels.InteractViewModel
@@ -440,7 +441,7 @@ fun CIRISApp(
     // ─── The ONE node-vs-agent gate ──────────────────────────────────────────
     // Universal client: the same app runs against either a bare ciris-server
     // NODE (no brain) or a full CIRIS AGENT. clientMode is the single source of
-    // truth — derived ONCE from the /v1/health capability probe (AGENT iff the
+    // truth — derived ONCE from the /v1/system/health capability probe (AGENT iff the
     // server reports a cognitive_state / a non-empty agent service map; else
     // NODE) and read everywhere that must branch (the 22 cognitive service
     // lights, "agent" wording, the WORK-state wait). null = not probed yet.
@@ -539,7 +540,6 @@ fun CIRISApp(
             // back to the Global Commons layer hub. Phase B (2026-05-31): retarget
             // from Screen.Network → Screen.LayerGlobalCommons.
             is Screen.NetworkIdentity,
-            is Screen.NetworkMap,
             is Screen.NetworkTrustGraph,
             is Screen.NetworkPeers,
             is Screen.NetworkInterfaces,
@@ -550,8 +550,6 @@ fun CIRISApp(
             is Screen.NetworkContent -> Screen.LayerGlobalCommons
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
-
-            is Screen.Delegation -> Screen.LayerFamily
 
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
@@ -1022,8 +1020,15 @@ fun CIRISApp(
         // answers on a different port.
         ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
+    // Removing a contact is a NODE route signed with the person's pen. On a
+    // with-AI install apiClient.baseUrl is the agent, which does not proxy it
+    // (CIRISAgent#1213), so the model is handed the node — the active one, read
+    // at call time, since a switch can move it while this model lives.
+    val contactsNodeUrl = androidx.compose.runtime.rememberUpdatedState(effectiveNodeUrl)
     val contactsViewModel: ContactsViewModel = viewModel {
-        ContactsViewModel(apiClient)
+        // The node URL as a provider: the contact code, the add and the removal go
+        // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
+        ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
@@ -1031,6 +1036,39 @@ fun CIRISApp(
     // effect above, because this ViewModel is constructed later in composition.
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
+    }
+    // Communities and affiliations (CSD-102, CSD-103): one view model per tier,
+    // shared by that circle's Rules hub, People and Chats — a change its rule
+    // holds for signatures is started in one card and finished in another, and
+    // the node keeps nothing in between. Node-owned routes: the node's URL.
+    val communityViewModel: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel = viewModel(key = "communities-community") {
+        ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel(apiClient, "community") { nodeBaseUrl }
+    }
+    val affiliationsViewModel: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel = viewModel(key = "communities-affiliations") {
+        ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel(apiClient, "affiliations") { nodeBaseUrl }
+    }
+    LaunchedEffect(currentAccessToken) {
+        if (currentAccessToken == null) {
+            communityViewModel.clearSessionState()
+            affiliationsViewModel.clearSessionState()
+        }
+    }
+    // The consent model is reset HERE and nowhere else: every way out of a
+    // session — the three logout menus, InteractScreen.onSessionExpired,
+    // Billing's onSignInAgain — clears the token, and a reset wired to some of
+    // those callbacks misses the rest (Codex, PR #116). A session arriving
+    // loads the node pair for the new owner. isHAAddonMode is part of the
+    // CONDITION and the KEY, as for the approval watch above: under Home
+    // Assistant ingress the token stays null by design, and reading that as a
+    // logout reset the card right after its load and never started it.
+    LaunchedEffect(currentAccessToken, isHAAddonMode) {
+        consentObjectsViewModel.sessionChanged(consentSessionAuthenticated(currentAccessToken, isHAAddonMode))
+    }
+    // A node switch moves the node under the same app-scoped model: the list it
+    // shows is the OLD node's, and a Remove on it would DELETE at the new one
+    // (Codex, PR #115). Tell the model, which drops the list and re-reads.
+    LaunchedEffect(effectiveNodeUrl) {
+        contactsViewModel.nodeChanged()
     }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
@@ -1212,13 +1250,13 @@ fun CIRISApp(
             platformLog(TAG, "[INFO] Startup READY, checking first-run status...")
 
             // ─── Derive the ONE node-vs-agent gate (server now reachable) ────
-            // Probe the NODE's /v1/health ONCE for its version (the mismatch
-            // banner) and its role. The node's own health is deliberately bare —
-            // `role: "fabric-node"`, `services: {}`, no cognitive_state — and
-            // /v1/health is a substrate prefix that is never proxied, so the
-            // AGENT enrichment can only come from the brain's /v1/system/health.
-            // Probe that second and let it upgrade the gate: AGENT iff either
-            // surface reports a cognitive_state / a non-empty service map.
+            // Probe the NODE ONCE for its version (the mismatch banner) and its
+            // role, via `getNodeHealth`, which reads `/v1/system/health` — NOT
+            // `/v1/health`: the node's own health is deliberately node-only and
+            // cannot answer the folded question (CIRISServer#390,
+            // CIRISApiClient.getNodeHealth). The brain's /v1/system/health is
+            // probed second and may upgrade the gate: AGENT iff either surface
+            // reports a cognitive_state / a non-empty service map.
             try {
                 // `val` since the fold retry moved off this path (CIRISClient#48):
                 // the only thing that used to reassign these was the inline retry
@@ -1834,6 +1872,12 @@ fun CIRISApp(
                 // onto redirect_uri_mismatch. Native Apple sign-in (iOS) doesn't ride
                 // the node's browser-OAuth creds, so it stays live regardless.
                 var googleOAuthAvailable by remember { mutableStateOf(true) }
+                // What a never-seen account would get here, from the node's own
+                // predicate (GET /v1/auth/signin-state, CSD-081, CIRISClient#110).
+                var signinState by remember { mutableStateOf<ai.ciris.mobile.shared.models.SigninState?>(null) }
+                LaunchedEffect(Unit) {
+                    signinState = apiClient.getSigninState(nodeBaseUrl)
+                }
                 LaunchedEffect(Unit) {
                     val providerId = if (isIOS()) "apple" else "google"
                     runCatching { apiClient.getOAuthProviders(nodeBaseUrl) }
@@ -2005,9 +2049,7 @@ fun CIRISApp(
 
                                                     // Trigger data loading
                                                     PlatformLogger.i(TAG, " Triggering billingViewModel.loadBalance()...")
-                                                    billingViewModel.loadBalance()
-                                                    adaptersViewModel.fetchAdapters()
-                                                    interactViewModel.startPolling() // Start polling now that token is set
+                                                    handOffToInteract(interactViewModel, billingViewModel, adaptersViewModel)
 
                                                     isLoginLoading = false
                                                     loginStatusMessage = null
@@ -2061,7 +2103,8 @@ fun CIRISApp(
                                                 pendingUserId = result.userId
                                                 pendingProvider = result.provider
                                                 tokenManager.setCurrentProvider(result.provider)
-                                                setupViewModel.setGoogleAuthState(
+                                                handOffToSetup(
+                                                    setupViewModel,
                                                     isAuth = true,
                                                     idToken = result.idToken,
                                                     email = result.email,
@@ -2180,7 +2223,8 @@ fun CIRISApp(
                                     // federation-ID name from <provider>-<subject>, so
                                     // arriving with only a bearer would put the user
                                     // back to inventing a unique name by hand.
-                                    setupViewModel.setGoogleAuthState(
+                                    handOffToSetup(
+                                        setupViewModel,
                                         isAuth = true,
                                         // Forward the provider's ID token when the node
                                         // sends one (CIRISServer#434, ciris-server
@@ -2196,7 +2240,7 @@ fun CIRISApp(
                                     )
                                     currentScreen = Screen.Setup
                                 } else {
-                                    interactViewModel.startPolling()
+                                    handOffToInteract(interactViewModel, billing = null, adapters = null)
                                     currentScreen = homeTarget
                                 }
                             }
@@ -2207,7 +2251,8 @@ fun CIRISApp(
                         // First run - go to setup wizard for BYOK setup
                         platformLog(TAG, "[INFO][onLocalLogin] First run - going to setup for BYOK")
                         loginErrorMessage = null
-                        setupViewModel.setGoogleAuthState(
+                        handOffToSetup(
+                            setupViewModel,
                             isAuth = false,
                             idToken = null,
                             email = null,
@@ -2310,9 +2355,7 @@ fun CIRISApp(
                                 }
 
                                 // Trigger data loading
-                                billingViewModel.loadBalance()
-                                adaptersViewModel.fetchAdapters()
-                                interactViewModel.startPolling()
+                                handOffToInteract(interactViewModel, billingViewModel, adaptersViewModel)
 
                                 isLoginLoading = false
                                 loginStatusMessage = null
@@ -2542,6 +2585,7 @@ fun CIRISApp(
                     errorMessage = loginErrorMessage,
                     ownerHint = ownerHint,
                     observerBlocked = observerBlocked,
+                    newIdentityOutcome = signinState?.newIdentity,
                     // Start the local form EXPANDED only where there is no sign-in
                     // alternative. A null callback used to mean exactly that — but desktop
                     // now has the node's browser flow (#1028), and forcing the form there
@@ -2994,11 +3038,13 @@ fun CIRISApp(
                     apiClient = apiClient,
                     secureStorage = secureStorage,
                     brainUnconfigured = brainUnconfigured,
+                    // CSD-022 §6.1: the agent's plane follows the probed mode.
+                    hasAgent = clientMode?.isAgent ?: false,
                     onSetUpAgent = {
                         platformLog(TAG, "[INFO] user chose to set up the agent from node mode → Screen.Setup")
                         currentScreen = Screen.Setup
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = homeTarget },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
                         // Cancel InteractViewModel polling before token revocation — see
@@ -3370,8 +3416,11 @@ fun CIRISApp(
                         adaptersViewModel.refresh()
                     },
                     onImportSkill = {
+                        // CSD-015: the paste door lives on the Skills card now
+                        // (the former Screen.SkillImport folded into SkillStudio).
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Import skill requested")
-                        currentScreen = Screen.SkillImport
+                        skillImportViewModel.openImportDialog()
+                        currentScreen = Screen.SkillStudio
                     },
                     onSkillStudio = {
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Skill Studio requested")
@@ -3380,7 +3429,23 @@ fun CIRISApp(
                     onNavigateBack = {
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Navigating back to Interact")
                         currentScreen = Screen.Interact
-                    }
+                    },
+                    // Connectors (CSD-020 §7): database credentials handed to the SQL adapter.
+                    connectorsSection = {
+                        val connectorsVm: ai.ciris.mobile.shared.viewmodels.AdapterConnectorsViewModel = viewModel {
+                            ai.ciris.mobile.shared.viewmodels.AdapterConnectorsViewModel(
+                                ai.ciris.mobile.shared.viewmodels.connectorsBackendOf(apiClient),
+                            )
+                        }
+                        LaunchedEffect(Unit) { connectorsVm.load() }
+                        ai.ciris.mobile.shared.ui.screens.AdapterConnectorsSection(
+                            list = connectorsVm.list.collectAsState().value,
+                            tests = connectorsVm.tests.collectAsState().value,
+                            removeRefused = connectorsVm.removeRefused.collectAsState().value,
+                            onTest = { id -> connectorsVm.test(id) },
+                            onRemove = { id -> connectorsVm.remove(id) },
+                        )
+                    },
                 )
 
                 // Adapter wizard dialog - show when dialog is open OR when there's an error to display
@@ -3635,7 +3700,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Audit] Filter changed: $filter")
                         auditViewModel.updateFilter(filter)
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Audit, clientMode?.isAgent ?: false) ?: homeTarget }
                 )
             }
 
@@ -3679,7 +3744,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] Toggle auto-scroll")
                         logsViewModel.toggleAutoScroll()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Logs, clientMode?.isAgent ?: false) ?: homeTarget },
                     // Reflect the existing backend mode: in node mode the "Agent"
                     // log source is disabled/grayed in the source dropdown.
                     isNodeMode = !isAgentMode
@@ -3764,7 +3829,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Clear selection")
                         memoryViewModel.clearSelection()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Memory, clientMode?.isAgent ?: false) ?: homeTarget },
                     onSwitchToGraph = {
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Switching to graph view")
                         currentScreen = Screen.GraphMemory
@@ -3892,7 +3957,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Config] User triggered refresh")
                         configViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Config, clientMode?.isAgent ?: false) ?: homeTarget },
                     meshConfigViewModel = meshConfigViewModel,
                 )
             }
@@ -3943,7 +4008,12 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Consent] User triggered refresh")
                         consentViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = Screen.Interact },
+                    // The partnership queue (CSD-054 §7).
+                    partnershipQueue = consentViewModel.partnershipQueue.collectAsState().value,
+                    partnershipOptions = consentViewModel.partnershipOptions.collectAsState().value,
+                    partnershipHistories = consentViewModel.partnershipHistory.collectAsState().value,
+                    onTogglePartnershipHistory = { userId -> consentViewModel.togglePartnershipHistory(userId) },
                 )
             }
 
@@ -3954,9 +4024,19 @@ fun CIRISApp(
                 // The operator surface (GET /v1/node/state) — CIRISServer#369/#370.
                 val nodeStateReadout by systemViewModel.nodeState.collectAsState()
 
+                // The agent half is asked only when an agent is attached (CSD-025).
+                LaunchedEffect(clientMode) {
+                    val attached = clientMode?.isAgent == true
+                    if (systemViewModel.agentAttached != attached) {
+                        systemViewModel.setAgentAttached(attached)
+                        systemViewModel.refresh()
+                    }
+                }
+
                 // Start/stop polling based on screen visibility
                 DisposableEffect(Unit) {
                     PlatformLogger.i(TAG, "[Screen.System] Starting system polling")
+                    systemViewModel.setAgentAttached(clientMode?.isAgent == true)
                     systemViewModel.startPolling()
                     onDispose {
                         PlatformLogger.i(TAG, "[Screen.System] Stopping system polling")
@@ -3971,24 +4051,18 @@ fun CIRISApp(
                 }
 
                 PlatformLogger.d("CIRISApp", "[Screen.System] Rendering system screen: " +
-                        "health=${systemData.health}, isPaused=${systemData.isPaused}, isLoading=$isSystemLoading")
+                        "health=${systemData.health}, agent=${systemData.agentAttached}, isLoading=$isSystemLoading")
 
                 SystemScreen(
                     systemData = systemData,
                     isLoading = isSystemLoading,
-                    onPauseRuntime = {
-                        PlatformLogger.i("CIRISApp", "[Screen.System] Pause runtime")
-                        systemViewModel.pauseRuntime()
-                    },
-                    onResumeRuntime = {
-                        PlatformLogger.i("CIRISApp", "[Screen.System] Resume runtime")
-                        systemViewModel.resumeRuntime()
-                    },
+                    // CSD-024/025: one runtime control, and it is Runtime's.
+                    onOpenRuntime = { currentScreen = Screen.Runtime },
                     onRefresh = {
                         PlatformLogger.i("CIRISApp", "[Screen.System] User triggered refresh")
                         systemViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.System, clientMode?.isAgent ?: false) ?: homeTarget },
                     nodeState = nodeStateReadout
                 )
             }
@@ -3997,7 +4071,11 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.ServerConnection] Rendering server connection screen")
                 ServerConnectionScreen(
                     viewModel = serverConnectionViewModel,
-                    onBack = { currentScreen = Screen.Interact }
+                    // CSD-084: back returns to where a person can act. Without
+                    // a session that is Login (the chip that opened this);
+                    // with one it is home, which is Contacts on a node-only
+                    // install, never the agent's Interact.
+                    onBack = { currentScreen = if (currentAccessToken != null) homeTarget else Screen.Login }
                 )
             }
 
@@ -4088,9 +4166,8 @@ fun CIRISApp(
                     // Trace-consent: the alternative view of the SAME CEG object
                     // the wizard writes. One-tap opt-in/out via the my-data PUT.
                     dataViewModel = dataManagementViewModel,
-                    // No node-side peering-revoke (withdraws) endpoint yet — flag
-                    // for upstream. Flip when CIRISServer ships it.
-                    revokeEndpointAvailable = false,
+                    // Revoke: whether the node mounts the route is asked of the
+                    // node at runtime (ConsentObjectsViewModel), not decided here.
                 )
             }
 
@@ -4146,7 +4223,9 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.Delegations] Rendering delegations screen")
                 DelegationsScreen(
                     viewModel = delegationsViewModel,
-                    onBack = { currentScreen = Screen.Interact },
+                    // Placed under Rules in every circle: its placement answers
+                    // back. Interact is agent-only and not in a node's tree.
+                    onBack = { currentScreen = placedBackTarget(Screen.Delegations, clientMode?.isAgent ?: false) ?: homeTarget },
                     onOpenContacts = {
                         contactsPickerSourceScreen = Screen.Delegations
                         contactsViewModel.selectPeer(null) // clear any prior selection
@@ -4244,8 +4323,9 @@ fun CIRISApp(
                     // Tiers 0-4 of /v1/admin/* — the enforcement ladder.
                     ladderViewModel = adminLadderViewModel,
                     onBack = { currentScreen = Screen.Interact },
-                    // The delegate-moderate-duty flow lives on Family → Delegation.
-                    onOpenDelegation = { currentScreen = Screen.Delegation },
+                    // The delegate-moderate-duty flow lives on Rules › Delegations
+                    // (CSD-001's read view was folded into it, CSD-055).
+                    onOpenDelegation = { currentScreen = Screen.Delegations },
                 )
             }
 
@@ -4264,6 +4344,7 @@ fun CIRISApp(
                 val isRuntimeLoading by runtimeViewModel.isLoading.collectAsState()
                 val runtimeError by runtimeViewModel.error.collectAsState()
                 val isRuntimeAdmin by runtimeViewModel.isAdmin.collectAsState()
+                val runtimeAdminRefused by runtimeViewModel.adminRefused.collectAsState()
 
                 // Start/stop polling based on screen visibility
                 DisposableEffect(Unit) {
@@ -4288,6 +4369,7 @@ fun CIRISApp(
                     runtimeData = runtimeData,
                     isLoading = isRuntimeLoading,
                     isAdmin = isRuntimeAdmin,
+                    adminRefused = runtimeAdminRefused,
                     onPause = {
                         PlatformLogger.i("CIRISApp", "[Screen.Runtime] Pause runtime")
                         runtimeViewModel.pauseRuntime()
@@ -4304,7 +4386,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Runtime] User triggered refresh")
                         runtimeViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Runtime, clientMode?.isAgent ?: false) ?: homeTarget }
                 )
             }
 
@@ -4424,7 +4506,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] User triggered refresh")
                         schedulerViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Scheduler, clientMode?.isAgent ?: false) ?: homeTarget },
                     onShowCreateDialog = {
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] Show create dialog")
                         schedulerViewModel.showCreateTaskDialog()
@@ -4485,7 +4567,12 @@ fun CIRISApp(
 
                 LaunchedEffect(Unit) {
                     PlatformLogger.i(TAG, "[Screen.EnvironmentInfo] Loading environment info on screen entry")
+                    // Writes and enrichment are the agent's (CSD-002).
+                    environmentInfoViewModel.setAgentAttached(clientMode?.isAgent == true)
                     environmentInfoViewModel.startPolling()
+                }
+                LaunchedEffect(clientMode) {
+                    environmentInfoViewModel.setAgentAttached(clientMode?.isAgent == true)
                 }
 
                 EnvironmentInfoScreen(
@@ -4520,6 +4607,7 @@ fun CIRISApp(
             Screen.DataManagement -> {
                 DataManagementScreen(
                     viewModel = dataManagementViewModel,
+                    hasAgent = clientMode?.isAgent ?: false,
                     onNavigateBack = {
                         PlatformLogger.i(TAG, "[Screen.DataManagement] Navigating back to Interact")
                         currentScreen = Screen.Interact
@@ -4618,46 +4706,45 @@ fun CIRISApp(
                 )
             }
 
-            Screen.SkillImport -> {
-                // Collect SkillImportViewModel state
-                val importPhase by skillImportViewModel.importPhase.collectAsState()
-                val skillMdContent by skillImportViewModel.skillMdContent.collectAsState()
-                val sourceUrl by skillImportViewModel.sourceUrl.collectAsState()
-                val preview by skillImportViewModel.preview.collectAsState()
-                val importResult by skillImportViewModel.importResult.collectAsState()
-                val isSkillLoading by skillImportViewModel.isLoading.collectAsState()
-                val skillError by skillImportViewModel.error.collectAsState()
-
-                // Initialize dialog state when entering screen
-                LaunchedEffect(Unit) {
-                    PlatformLogger.i("CIRISApp", "[Screen.SkillImport] Opening skill import")
-                    skillImportViewModel.openImportDialog()
-                }
-
-                SkillImportDialog(
-                    phase = importPhase,
-                    skillMdContent = skillMdContent,
-                    sourceUrl = sourceUrl,
-                    preview = preview,
-                    importResult = importResult,
-                    isLoading = isSkillLoading,
-                    error = skillError,
-                    onContentChanged = { skillImportViewModel.updateSkillMdContent(it) },
-                    onSourceUrlChanged = { skillImportViewModel.updateSourceUrl(it) },
-                    onPreview = { skillImportViewModel.previewSkill() },
-                    onImport = { skillImportViewModel.importSkill() },
-                    onDismiss = {
-                        PlatformLogger.i("CIRISApp", "[Screen.SkillImport] Closing skill import")
-                        skillImportViewModel.closeImportDialog()
-                        currentScreen = Screen.Adapters
-                    }
-                )
-            }
-
             Screen.SkillStudio -> {
                 // Collect SkillStudioViewModel state
                 val skillStudioState by skillStudioViewModel.state.collectAsState()
                 val skillStudioDialogState by skillStudioViewModel.dialogState.collectAsState()
+                // CSD-015: the paste door and the held list (SkillImportViewModel).
+                val heldSkills by skillImportViewModel.importedSkills.collectAsState()
+                val pendingRemoval by skillImportViewModel.pendingRemoval.collectAsState()
+                val showPasteDoor by skillImportViewModel.showImportDialog.collectAsState()
+                val importPhase by skillImportViewModel.importPhase.collectAsState()
+                val skillMdContent by skillImportViewModel.skillMdContent.collectAsState()
+                val sourceUrl by skillImportViewModel.sourceUrl.collectAsState()
+                val skillPreview by skillImportViewModel.preview.collectAsState()
+                val importResult by skillImportViewModel.importResult.collectAsState()
+                val isSkillLoading by skillImportViewModel.isLoading.collectAsState()
+                val skillError by skillImportViewModel.error.collectAsState()
+                LaunchedEffect(Unit) { skillImportViewModel.fetchImportedSkills() }
+                if (showPasteDoor) {
+                    SkillImportDialog(
+                        phase = importPhase,
+                        skillMdContent = skillMdContent,
+                        sourceUrl = sourceUrl,
+                        preview = skillPreview,
+                        importResult = importResult,
+                        isLoading = isSkillLoading,
+                        error = skillError,
+                        onContentChanged = { skillImportViewModel.updateSkillMdContent(it) },
+                        onSourceUrlChanged = { skillImportViewModel.updateSourceUrl(it) },
+                        onPreview = { skillImportViewModel.previewSkill() },
+                        onImport = { skillImportViewModel.importSkill() },
+                        onDismiss = { skillImportViewModel.closeImportDialog() }
+                    )
+                }
+                pendingRemoval?.let { skill ->
+                    ai.ciris.mobile.shared.ui.screens.SkillRemovalSheet(
+                        skill = skill,
+                        onConfirm = { skillImportViewModel.confirmRemoval() },
+                        onDismiss = { skillImportViewModel.cancelRemoval() }
+                    )
+                }
 
                 // Initialize with new draft when entering screen
                 LaunchedEffect(Unit) {
@@ -4668,6 +4755,13 @@ fun CIRISApp(
                 SkillStudioScreen(
                     state = skillStudioState,
                     dialogState = skillStudioDialogState,
+                    heldSkills = {
+                        ai.ciris.mobile.shared.ui.screens.SkillsHeldSection(
+                            state = heldSkills,
+                            onPaste = { skillImportViewModel.openImportDialog() },
+                            onRemove = { skillImportViewModel.requestRemoval(it) }
+                        )
+                    },
                     onNavigateBack = {
                         PlatformLogger.i("CIRISApp", "[Screen.SkillStudio] Navigating back to Adapters")
                         currentScreen = Screen.Adapters
@@ -4726,21 +4820,13 @@ fun CIRISApp(
                     apiClient = apiClient,
                 )
             }
+            // CSD-045: This node › Own standing (tier S), node routes only.
+            Screen.NodeSelfStanding -> {
+                ai.ciris.mobile.shared.ui.screens.NodeSelfStandingScreen(apiClient = apiClient)
+            }
             Screen.Storage -> {
                 ai.ciris.mobile.shared.ui.screens.StorageScreen(
                     apiClient = apiClient,
-                )
-            }
-            Screen.Delegation -> {
-                val delegationsList by delegationsViewModel.delegations.collectAsState()
-                val isDelegationsLoading by delegationsViewModel.loading.collectAsState()
-                ai.ciris.mobile.shared.ui.screens.federation.DelegationScreen(
-                    delegations = delegationsList,
-                    isLoading = isDelegationsLoading,
-                    onRefresh = { delegationsViewModel.refresh() },
-                    onNavigateBack = { currentScreen = Screen.LayerFamily },
-                    onManageDeviceGrants = { currentScreen = Screen.Delegations },
-                    onIssueClick = { url -> uriHandler.openUri(url) },
                 )
             }
             Screen.Constitutional -> {
@@ -4771,7 +4857,6 @@ fun CIRISApp(
                     onTileClick = { tile ->
                         currentScreen = when (tile) {
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.IDENTITY -> Screen.NetworkIdentity
-                            ai.ciris.mobile.shared.ui.screens.NetworkTile.MAP -> Screen.NetworkMap
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.TRUST_GRAPH -> Screen.NetworkTrustGraph
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.PEERS -> Screen.NetworkPeers
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.INTERFACES -> Screen.NetworkInterfaces
@@ -4790,10 +4875,8 @@ fun CIRISApp(
                 onNavigateBack = { currentScreen = Screen.LayerGlobalCommons },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
-            Screen.NetworkMap -> ai.ciris.mobile.shared.ui.screens.federation.NetworkMapScreen(
-                apiClient = apiClient,
-                onIssueClick = { url -> uriHandler.openUri(url) },
-            )
+            // CSD-046 retired Screen.NetworkMap into the Trust graph: both drew the
+            // same peer list in the same three tiers (canonical / trusted / the rest).
             Screen.NetworkTrustGraph -> ai.ciris.mobile.shared.ui.screens.federation.NetworkTrustGraphScreen(
                 apiClient = apiClient,
                 onPeerClick = { keyId -> currentScreen = Screen.NetworkPeerDetail(keyId) },
@@ -4864,7 +4947,7 @@ fun CIRISApp(
             Screen.LayerFamily -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY,
                 hasAgent = clientMode?.isAgent ?: false,
-                onOpenDelegations = { currentScreen = Screen.Delegation },
+                onOpenDelegations = { currentScreen = Screen.Delegations },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
@@ -4872,11 +4955,29 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                communities = communityViewModel,
+                onOpenModeration = { currentScreen = Screen.Moderation },
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                communities = affiliationsViewModel,
+                onOpenModeration = { currentScreen = Screen.Moderation },
+            )
+            // ── Communities and affiliations (CSD-103): People and Chats ──
+            Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)
+            Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(affiliationsViewModel)
+            Screen.CommunityChats, Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
+                viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
+                // A pair room is the two-person chat CSD-091 already draws.
+                onOpenPairChat = { _, contact ->
+                    currentScreen = Screen.UserChat(
+                        contactKeyId = contact.keyId,
+                        communityId = contact.chatCommunityId,
+                        contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                    )
+                },
             )
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
@@ -4921,7 +5022,7 @@ fun CIRISApp(
             // still applies first.
             val shellBack: Screen? = run {
                 val legacy: Screen? = when (currentScreen) {
-                    Screen.NetworkIdentity, Screen.NetworkMap, Screen.NetworkTrustGraph, Screen.NetworkPeers,
+                    Screen.NetworkIdentity, Screen.NetworkTrustGraph, Screen.NetworkPeers,
                     Screen.NetworkInterfaces, Screen.NetworkPaths, Screen.NetworkAnnounces, Screen.NetworkQueue,
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
@@ -4931,7 +5032,6 @@ fun CIRISApp(
                     // and this map wins before the placement rule — so leaving
                     // them here sent the one back arrow to a tab the card is no
                     // longer in. Their placement answers it now.
-                    Screen.Delegation -> Screen.LayerFamily
                     Screen.GraphMemory -> Screen.Memory
                     Screen.SkillStudio -> Screen.Adapters
                     Screen.VizSettings -> Screen.Settings
@@ -5020,6 +5120,51 @@ fun CIRISApp(
             }
         } // close MaterialTheme
     } // CompositionLocalProvider
+}
+
+// ─── CSD-081: the two doors out of Login ─────────────────────────────────────
+//
+// Signing in ends by handing the person to another card: the wizard on a first
+// run, or the signed-in session's cards otherwise. What those cards then fetch
+// (history, credits, adapters, the identity probes the wizard runs) is theirs,
+// not Login's, and each card's CSD cites it. `packaging/check_csd_routes.py`
+// does not follow a `handOffTo<Screen>` call out of a screen's arm for that
+// reason: it charges what the call reaches to Screen.<Screen> instead, so the
+// name moves a route to its card and cannot hide one. CSD-081 §3 lists what
+// Login itself calls.
+
+/**
+ * Start the signed-in session: the chat poll Interact renders (history, the
+ * reasoning stream, capacity, credits) and, for the native and password
+ * sign-ins, the balance and adapter list its header shows. The desktop browser
+ * hand-off has only ever started the poll, and passes null for the other two.
+ */
+private fun handOffToInteract(
+    interact: InteractViewModel,
+    billing: BillingViewModel?,
+    adapters: AdaptersViewModel?,
+) {
+    billing?.loadBalance()
+    adapters?.fetchAdapters()
+    interact.startPolling()
+}
+
+/** Hand the sign-in's identity (or its absence) to the first-run wizard. */
+private fun handOffToSetup(
+    setup: SetupViewModel,
+    isAuth: Boolean,
+    idToken: String?,
+    email: String?,
+    userId: String?,
+    provider: String = "google",
+) {
+    setup.setGoogleAuthState(
+        isAuth = isAuth,
+        idToken = idToken,
+        email = email,
+        userId = userId,
+        provider = provider,
+    )
 }
 
 /**
@@ -5748,13 +5893,13 @@ internal sealed class Screen {
     object Users : Screen()
     object Trust : Screen()
     object NetworkOps : Screen()   // Manage — CIRISEdge local op-view
+    object NodeSelfStanding : Screen()   // CSD-045 — this node's own standing (tier S)
     object Storage : Screen()      // Manage — CIRISPersist graph/disk view
     object Wallet : Screen()
     object Tickets : Screen()
     object Scheduler : Screen()
     object Tools : Screen()
     object EnvironmentInfo : Screen()
-    object SkillImport : Screen()
     object SkillStudio : Screen()
     object DataManagement : Screen()
     object LLMSettings : Screen()
@@ -5815,14 +5960,12 @@ internal sealed class Screen {
     // HealthReputation ships with a real card (CellVizState-backed).
     // The other six are Coming Soon placeholders pinned to their substrate issue.
     object HealthReputation : Screen()
-    object Delegation : Screen()
     object Constitutional : Screen()
 
     // Network hub federation sub-screens — all ten live since T-E / T-E-D
     // (2.9.4→2.9.6). Reached via the 10-tile grid on NetworkScreen; not
     // sidebar-navigable.
     object NetworkIdentity : Screen()
-    object NetworkMap : Screen()
     object NetworkTrustGraph : Screen()
     object NetworkPeers : Screen()
     object NetworkInterfaces : Screen()
@@ -5852,6 +5995,13 @@ internal sealed class Screen {
     // quorum OF. A Commons-group surface, not a settings one: nothing on it is
     // an owner privilege.
     object Commons : Screen()
+    // Communities and affiliations (CSD-102, CSD-103): who is in each room
+    // (People) and the rooms you talk in (Chats), one per tier. The community
+    // itself renders on LayerLocalCommunity / LayerGlobalCommunities.
+    object CommunityRoster : Screen()
+    object AffiliationsRoster : Screen()
+    object CommunityChats : Screen()
+    object AffiliationsChats : Screen()
 }
 
 /**
@@ -5925,14 +6075,13 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.System -> ai.ciris.mobile.shared.ui.nav.NavSurface.System
     Screen.Runtime -> ai.ciris.mobile.shared.ui.nav.NavSurface.Runtime
     Screen.Config -> ai.ciris.mobile.shared.ui.nav.NavSurface.Config
-    Screen.SkillStudio, Screen.SkillImport -> ai.ciris.mobile.shared.ui.nav.NavSurface.Skills
+    Screen.SkillStudio -> ai.ciris.mobile.shared.ui.nav.NavSurface.Skills
     Screen.HealthReputation -> ai.ciris.mobile.shared.ui.nav.NavSurface.HealthReputation
     Screen.Users -> ai.ciris.mobile.shared.ui.nav.NavSurface.Users
     Screen.Adapters -> ai.ciris.mobile.shared.ui.nav.NavSurface.Adapters
     // Federation sub-screens highlight LayerGlobalCommons in the sidebar
     // (the home of the federation hub).
     Screen.NetworkIdentity,
-    Screen.NetworkMap,
     Screen.NetworkTrustGraph,
     Screen.NetworkPeers,
     Screen.NetworkInterfaces,
@@ -5947,6 +6096,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Consent -> ai.ciris.mobile.shared.ui.nav.NavSurface.Consent
     Screen.Trust -> ai.ciris.mobile.shared.ui.nav.NavSurface.Trust
     Screen.NetworkOps -> ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps
+    Screen.NodeSelfStanding -> ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf // CSD-045
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
@@ -5965,7 +6115,6 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Billing -> ai.ciris.mobile.shared.ui.nav.NavSurface.Billing
     Screen.Wallet -> ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet
     Screen.EnvironmentInfo -> ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph
-    Screen.Delegation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation
     Screen.Constitutional -> ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional
     Screen.VizSettings -> ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface
     // CEG 0.6 layer hubs (2.9.4 Phase A)
@@ -5975,6 +6124,11 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities
     Screen.LayerGlobalCommons -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
+    // Communities and affiliations (CSD-103)
+    Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster
+    Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster
+    Screen.CommunityChats -> ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityChats
+    Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsChats
     Screen.Help -> ai.ciris.mobile.shared.ui.nav.NavSurface.Help
     // Three kinds of screen with no nav row of their own, three answers — they
     // were one branch once and it sent five of them to Help (CSD-085 §2).
@@ -6017,6 +6171,7 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Consent -> Screen.Consent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Trust -> Screen.Trust
     ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps -> Screen.NetworkOps
+    ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf -> Screen.NodeSelfStanding // CSD-045
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts
@@ -6032,7 +6187,6 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Billing -> Screen.Billing
     ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet -> Screen.Wallet
     ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph -> Screen.EnvironmentInfo
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation -> Screen.Delegation
     ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional -> Screen.Constitutional
     ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface -> Screen.VizSettings
     ai.ciris.mobile.shared.ui.nav.NavSurface.Help -> Screen.Help
@@ -6043,6 +6197,11 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities -> Screen.LayerGlobalCommunities
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons -> Screen.LayerGlobalCommons
     ai.ciris.mobile.shared.ui.nav.NavSurface.Commons -> Screen.Commons
+    // Communities and affiliations (CSD-103)
+    ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster -> Screen.CommunityRoster
+    ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster -> Screen.AffiliationsRoster
+    ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityChats -> Screen.CommunityChats
+    ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsChats -> Screen.AffiliationsChats
 }
 
 /**

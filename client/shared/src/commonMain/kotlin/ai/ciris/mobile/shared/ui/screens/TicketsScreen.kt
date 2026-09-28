@@ -165,7 +165,8 @@ fun TicketsScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .testable("tickets_error", error),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -180,7 +181,7 @@ fun TicketsScreen(
 
             // Tickets list
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().testable("tickets_list"),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -189,18 +190,20 @@ fun TicketsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(32.dp)
+                                .testable("tickets_loading"),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator()
                         }
                     }
-                } else if (state.tickets.isEmpty()) {
+                } else if (state.showsEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(32.dp),
+                                .padding(32.dp)
+                                .testable("tickets_empty"),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
@@ -216,7 +219,9 @@ fun TicketsScreen(
                             ticket = ticket,
                             isExpanded = expandedTicketId == ticket.ticketId,
                             onToggleExpand = {
-                                expandedTicketId = if (expandedTicketId == ticket.ticketId) null else ticket.ticketId
+                                val opening = expandedTicketId != ticket.ticketId
+                                expandedTicketId = if (opening) ticket.ticketId else null
+                                onSelectTicket(if (opening) ticket else null)
                             }
                         )
                     }
@@ -228,7 +233,8 @@ fun TicketsScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(16.dp),
+                                .padding(16.dp)
+                                .testable("tickets_loading"),
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))

@@ -52,7 +52,13 @@ fun ConsentScreen(
     onRequestPartnership: () -> Unit,
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // The partnership queue (CSD-054 §7): requests waiting on this agent. Null
+    // hides the section (a caller that has not wired it).
+    partnershipQueue: ai.ciris.mobile.shared.models.PartnershipQueue? = null,
+    partnershipOptions: ai.ciris.mobile.shared.models.AgentRead<ai.ciris.mobile.shared.models.PartnershipOptionsDto>? = null,
+    partnershipHistories: Map<String, ai.ciris.mobile.shared.models.AgentRead<ai.ciris.mobile.shared.models.PartnershipHistoryDto>?> = emptyMap(),
+    onTogglePartnershipHistory: (String) -> Unit = {},
 ) {
     var showStreamConfirmDialog by remember { mutableStateOf<String?>(null) }
 
@@ -106,7 +112,8 @@ fun ConsentScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("consent_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -138,7 +145,8 @@ fun ConsentScreen(
                     CurrentConsentBanner(
                         currentStream = consentData.currentStream,
                         expiresAt = consentData.expiresAt,
-                        partnershipPending = consentData.partnershipPending
+                        partnershipPending = consentData.partnershipPending,
+                        modifier = Modifier.testable("card_consent_status"),
                     )
                 }
 
@@ -205,6 +213,19 @@ fun ConsentScreen(
 
                     item {
                         AuditTrailCard(entries = consentData.auditEntries)
+                    }
+                }
+
+                // The partnership queue (CSD-054 §7) — who is waiting on this
+                // agent's answer, and why nobody here gives it for the agent.
+                partnershipQueue?.let { queue ->
+                    item {
+                        ConsentPartnershipSection(
+                            options = partnershipOptions,
+                            queue = queue,
+                            histories = partnershipHistories,
+                            onToggleHistory = onTogglePartnershipHistory,
+                        )
                     }
                 }
 

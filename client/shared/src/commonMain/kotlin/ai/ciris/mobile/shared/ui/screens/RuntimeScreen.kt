@@ -52,7 +52,13 @@ fun RuntimeScreen(
     onSingleStep: () -> Unit,
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /**
+     * The agent answered 403: say "you may not drive this agent" — the admin
+     * card — instead of a failed read (CSD-024). Distinct from [isAdmin] being
+     * false before the first read has answered, when nothing is claimed.
+     */
+    adminRefused: Boolean = false,
 ) {
     Scaffold(
         topBar = {
@@ -157,8 +163,8 @@ fun RuntimeScreen(
                 )
             }
 
-            // Admin warning if not admin
-            if (!isAdmin) {
+            // Admin warning: only once the agent has said no (a 403), never on a guess.
+            if (adminRefused) {
                 item {
                     AdminWarningCard()
                 }
@@ -582,7 +588,7 @@ private fun AdminWarningCard(
 ) {
     val colors = SemanticColors.Default
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().testable("runtime_admin_required"),
         colors = CardDefaults.cardColors(
             containerColor = colors.warning.copy(alpha = 0.1f)
         )

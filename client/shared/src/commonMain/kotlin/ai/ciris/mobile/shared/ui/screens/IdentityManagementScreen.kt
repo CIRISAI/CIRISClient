@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.models.federation.repairUrl
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
+import ai.ciris.mobile.shared.ui.primitives.QrCode
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import ai.ciris.mobile.shared.platform.TestAutomation
@@ -16,9 +17,6 @@ import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.viewmodels.ReleaseState
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -57,8 +55,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -124,6 +120,8 @@ fun IdentityManagementScreen(
     val labelling by viewModel.labelling.collectAsState()
     val labelRefusal by viewModel.labelRefusal.collectAsState()
     val release by viewModel.release.collectAsState()
+    val sealInHardware by viewModel.sealInHardware.collectAsState()
+    val associateRefusal by viewModel.associateRefusal.collectAsState()
 
     var deviceCode by remember { mutableStateOf("") }
     // The name being typed for the device in [labelling]; reset when the editor moves.
@@ -579,15 +577,16 @@ fun IdentityManagementScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         Spacer(Modifier.height(8.dp))
-                        // QR of the fedcode for the primary to scan. The fedcode text
-                        // below it is the load-bearing data (paste fallback).
+                        // A real, scannable QR of the fedcode for the primary to scan.
+                        // The fedcode text below it stays the paste fallback.
                         Box(
                             modifier = Modifier.fillMaxWidth(),
                             contentAlignment = Alignment.Center,
                         ) {
-                            FedcodeQr(
+                            QrCode(
                                 value = minted.fedcode,
-                                modifier = Modifier.testable("identity_enroll_qr"),
+                                contentDescription = localizedString("mobile.identity_enroll_qr_desc"),
+                                tag = "identity_enroll_qr",
                             )
                         }
                         Spacer(Modifier.height(8.dp))
@@ -833,6 +832,47 @@ fun IdentityManagementScreen(
                         onDismiss = { showAssociatePicker = false },
                     )
                     Spacer(Modifier.height(8.dp))
+                    // Where this device's key lives. Software is the node's
+                    // default; hardware is asked for, and since 0.5.218 a host
+                    // without it REFUSES rather than handing back a software key
+                    // under a hardware label (CIRISServer#639).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            localizedString("mobile.identity_associate_seal_hardware"),
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        androidx.compose.material3.Switch(
+                            checked = sealInHardware,
+                            onCheckedChange = { viewModel.setSealInHardware(it) },
+                            enabled = !busy,
+                            modifier = Modifier.testableClickable("switch_identity_associate_hardware") {
+                                viewModel.setSealInHardware(!sealInHardware)
+                            },
+                        )
+                    }
+                    associateRefusal?.let { r ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            refusalText(r),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testable("txt_identity_associate_refusal"),
+                        )
+                        if (r.reasonId == "self.associate.hardware_custody_unavailable") {
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.associateFedId(associateDir, softwareCustody = true) },
+                                enabled = !busy && associateDir.isNotBlank(),
+                                modifier = Modifier.testableClickable("btn_identity_associate_software") {
+                                    viewModel.associateFedId(associateDir, softwareCustody = true)
+                                },
+                            ) {
+                                Text(localizedString("mobile.identity_associate_use_software"))
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Button(
                             onClick = { viewModel.associateFedId(sourceDir = associateDir) },
@@ -1077,62 +1117,6 @@ private fun deviceClassIcon(deviceClass: String) = when (deviceClass.lowercase()
 /** Truncate a long key_id in the middle for compact display. */
 private fun truncMid(s: String, head: Int = 12, tail: Int = 8): String =
     if (s.length <= head + tail + 1) s else "${s.take(head)}…${s.takeLast(tail)}"
-
-/**
- * A deterministic QR-style matrix rendered from [value] on a Canvas. This draws
- * scan-target finder patterns plus a data field hashed from the fedcode so the
- * card reads as a QR. NOTE: this is a visual stand-in — a real scannable QR needs
- * a QR-encoder library wired into commonMain (TODO). The fedcode text shown beside
- * it is the load-bearing data (paste fallback always works).
- */
-@Composable
-private fun FedcodeQr(value: String, modifier: Modifier = Modifier) {
-    val modules = 21 // QR v1 grid
-    Box(
-        modifier = modifier
-            .size(160.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(modifier = Modifier.size(144.dp)) {
-            val cell = size.width / modules
-            // A stable per-cell bit derived from the fedcode bytes.
-            fun dataBit(r: Int, c: Int): Boolean {
-                if (value.isEmpty()) return false
-                val idx = (r * modules + c)
-                val ch = value[idx % value.length].code
-                return ((ch ushr (idx % 7)) and 1) == 1
-            }
-            fun inFinder(r: Int, c: Int): Boolean {
-                val finders = listOf(0 to 0, 0 to (modules - 7), (modules - 7) to 0)
-                return finders.any { (fr, fc) -> r in fr..fr + 6 && c in fc..fc + 6 }
-            }
-            for (r in 0 until modules) {
-                for (c in 0 until modules) {
-                    val dark = if (inFinder(r, c)) {
-                        // Finder pattern: outer ring + center 3x3.
-                        val fr = if (r < 7) 0 else modules - 7
-                        val fc = if (c < 7) 0 else if (c >= modules - 7) modules - 7 else 0
-                        val lr = r - fr
-                        val lc = c - fc
-                        lr == 0 || lr == 6 || lc == 0 || lc == 6 || (lr in 2..4 && lc in 2..4)
-                    } else {
-                        dataBit(r, c)
-                    }
-                    if (dark) {
-                        drawRect(
-                            color = Color.Black,
-                            topLeft = androidx.compose.ui.geometry.Offset(c * cell, r * cell),
-                            size = androidx.compose.ui.geometry.Size(cell, cell),
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
 
 /**
  * THIS DEVICE — who it is signed in as, and the way to sign it out.

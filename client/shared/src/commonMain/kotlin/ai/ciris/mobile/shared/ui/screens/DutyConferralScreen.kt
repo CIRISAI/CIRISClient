@@ -1,6 +1,8 @@
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.models.CatalogueSource
+import ai.ciris.mobile.shared.models.LadderRung
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
@@ -9,6 +11,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.components.HolderSignInputs
 import ai.ciris.mobile.shared.ui.screens.YubiKeyStatusBanner
 import ai.ciris.mobile.shared.viewmodels.DutyConferralViewModel
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -100,6 +103,12 @@ fun DutyConferralScreen(
     val sourceEntrenched by viewModel.sourceEntrenched.collectAsState()
     val sourceSeats by viewModel.sourceSeats.collectAsState()
     val sourceError by viewModel.sourceError.collectAsState()
+    val sourceAbsent by viewModel.sourceAbsent.collectAsState()
+
+    // What the node offers: the duty set and the ladder (CIRISClient#108 / #109).
+    val dutyMenu by viewModel.dutyMenu.collectAsState()
+    val dutySource by viewModel.dutySource.collectAsState()
+    val rungs by viewModel.rungs.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -168,7 +177,9 @@ fun DutyConferralScreen(
             // Token readiness FIRST — the ceremony cannot start without it, and
             // finding out from a failed signature wastes both holders' time.
             Spacer(Modifier.height(12.dp))
-            YubiKeyStatusBanner(yubiKeyStatus) { viewModel.refreshYubiKeyStatus() }
+            Box(Modifier.fillMaxWidth().testable("duty_yubikey_banner")) {
+                YubiKeyStatusBanner(yubiKeyStatus) { viewModel.refreshYubiKeyStatus() }
+            }
 
             // ── WHO IS CONFERRING — the source of the authority ────────────────
             //
@@ -193,10 +204,19 @@ fun DutyConferralScreen(
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.testable("duty_source_error"),
                         )
+                        // The node answered: there is no accord family. EMPTY, not
+                        // error — nothing is broken, so it is not drawn as broken.
+                        sourceAbsent -> Text(
+                            localizedString("duty.source_absent"),
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("duty_source_absent"),
+                        )
                         sourceFamilyKeyId == null -> Text(
                             localizedString("duty.source_loading"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("duty_source_loading"),
                         )
                         else -> {
                             Text(
@@ -289,26 +309,37 @@ fun DutyConferralScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(4.dp))
-                    DutyConferralViewModel.ALL_DUTIES.forEach { verb ->
+                    // The members are the node's (`delegation_scope.moderation`);
+                    // a compiled list stands in only when it could not say, and
+                    // then the card says so.
+                    DutySourceLine(dutySource)
+                    dutyMenu.forEach { verb ->
+                        val conferrable = viewModel.isConferrable(verb)
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testableClickable("chk_duty_$verb") {
+                                .testableClickable("chk_duty_$verb", enabled = conferrable) {
                                     if (!inProgress) viewModel.toggleDuty(verb)
                                 },
                         ) {
                             Checkbox(
                                 checked = verb in duties,
                                 onCheckedChange = { if (!inProgress) viewModel.toggleDuty(verb) },
-                                enabled = !inProgress,
+                                enabled = !inProgress && conferrable,
                                 modifier = Modifier.testable("chk_duty_box_$verb"),
                             )
-                            Text(
-                                localizedString("duty.verb_$verb"),
-                                fontSize = 12.sp,
-                                modifier = Modifier.weight(1f),
-                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(dutyLabel(verb), fontSize = 12.sp)
+                                if (!conferrable) {
+                                    Text(
+                                        localizedString("duty.not_conferrable_by_accord"),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.testable("duty_not_conferrable_$verb"),
+                                    )
+                                }
+                            }
                         }
                     }
                     if (duties.isEmpty()) {
@@ -327,14 +358,14 @@ fun DutyConferralScreen(
                     // selection onto the enforcement ladder's own rungs, so the
                     // operator signs knowing which doors open — the difference
                     // between "grant slash" and "grant the authority to de-admit".
-                    val rungs = ladderRungsFor(duties)
+                    val tiers = LadderRung.tiersUnlockedBy(rungs, duties)
                     Spacer(Modifier.height(10.dp))
                     Text(
                         localizedString("duty.ladder_label"),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
-                    if (rungs.isEmpty()) {
+                    if (tiers.isEmpty()) {
                         Text(
                             localizedString("duty.ladder_none"),
                             fontSize = 12.sp,
@@ -342,11 +373,11 @@ fun DutyConferralScreen(
                             modifier = Modifier.testable("duty_ladder_none"),
                         )
                     } else {
-                        rungs.forEach { rungKey ->
+                        tiers.forEach { tier ->
                             Text(
-                                "• " + localizedString(rungKey),
+                                "• " + tierLine(tier, rungs),
                                 fontSize = 12.sp,
-                                modifier = Modifier.testable("duty_ladder_$rungKey"),
+                                modifier = Modifier.testable("duty_ladder_t$tier"),
                             )
                         }
                         Spacer(Modifier.height(2.dp))
@@ -539,39 +570,44 @@ fun DutyConferralScreen(
 }
 
 /**
- * **Which enforcement-ladder rungs a duty set unlocks** — the node's own table,
- * from `src/admin_ops.rs`:
- *
- * ```text
- * preview        read-only    (no duty required)
- * tier 0  annotate            scope: review
- * tier 1  throttle            scope: moderate    (+ un_throttle)
- * tier 2  quarantine          scope: moderate*   (+ un_quarantine)
- * tier 3  descend             scope: slash + QUORUM
- * tier 4  deadmit             scope: slash       (+ re_admit)
- * tier 4  refuse-writes       scope: slash       (+ accept_writes)
- * ```
- *
- * `*` tier 2 is the one documented disagreement: the FSD ladder says `moderate`,
- * persist's admission door says `slash`. The substrate wins, so tier 2 is listed
- * under `slash` here — showing it under `moderate` would promise a rung the gate
- * refuses, which is worse than not showing it.
- *
- * `consent_revocation` and `takedown` unlock NO ladder rung: they authorize
- * emitting (a revocation, a takedown notice), not enforcing. That is a real and
- * useful distinction for the operator to see at signing time, so those duties
- * contribute nothing here rather than being quietly folded in.
+ * A duty's sentence: this app's own where it ships one, and the wire token in
+ * a generic sentence where it does not. A member the node serves and this app
+ * has never heard of is still offered, never dropped (CIRISClient#108).
  */
-private fun ladderRungsFor(duties: Set<String>): List<String> {
-    val out = mutableListOf<String>()
-    if (DutyConferralViewModel.DUTY_REVIEW in duties) out += "duty.ladder_t0"
-    if (DutyConferralViewModel.DUTY_MODERATE in duties) out += "duty.ladder_t1"
-    if (DutyConferralViewModel.DUTY_SLASH in duties) {
-        out += "duty.ladder_t2"
-        out += "duty.ladder_t3"
-        out += "duty.ladder_t4"
+@Composable
+private fun dutyLabel(verb: String): String {
+    val key = "duty.verb_$verb"
+    val resolved = localizedString(key)
+    return if (resolved != key) resolved else localizedString("duty.verb_unknown", "duty", verb)
+}
+
+/**
+ * One tier of the "what this unlocks" read-out. The tier's bundle sentence
+ * where there is one; otherwise the node's own op tokens for that tier.
+ */
+@Composable
+private fun tierLine(tier: Int, rungs: List<LadderRung>): String {
+    val key = "duty.ladder_t$tier"
+    val resolved = localizedString(key)
+    if (resolved != key) return resolved
+    val ops = rungs.filter { it.tier == tier }.joinToString(" / ") { it.op }
+    return localizedString("duty.ladder_tier_generic", mapOf("tier" to tier.toString(), "ops" to ops))
+}
+
+/** Where the duty menu came from, said only when it is NOT the node's own set. */
+@Composable
+private fun DutySourceLine(source: CatalogueSource) {
+    val text = when (source) {
+        is CatalogueSource.NotOnThisNode -> localizedString("duty.vocabulary_not_on_this_node")
+        is CatalogueSource.Unreadable -> localizedString("duty.vocabulary_unreadable", "detail", source.detail ?: "")
+        CatalogueSource.Node, CatalogueSource.NotLoaded -> return
     }
-    return out
+    Text(
+        text,
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(vertical = 4.dp).testable("duty_vocabulary_fallback"),
+    )
 }
 
 /**

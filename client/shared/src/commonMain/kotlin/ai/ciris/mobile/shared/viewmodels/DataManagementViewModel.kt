@@ -92,6 +92,12 @@ class DataManagementViewModel(
     val isFactoryResetting: StateFlow<Boolean> = _isResetting
     val factoryResetSuccess: StateFlow<Boolean> = _resetSuccess
 
+    /**
+     * Erasing an agent's traces on this node, and checking the agent's deletion
+     * receipts (CSD-039 §3). Its own class so it tests without a live client.
+     */
+    val erasure = DataErasureController(ApiDataErasureBackend(apiClient), viewModelScope)
+
     init {
         logDebug("init", "DataManagementViewModel created")
     }

@@ -125,6 +125,9 @@ fun LoginScreen(
     // owner to create a second one.
     federationProbed: Boolean = false,
     onCreateFederationIdentity: () -> Unit = {},
+    // What an account this node has never seen would get if it signed in now,
+    // from GET /v1/auth/signin-state (CSD-081). Null = the node did not say.
+    newIdentityOutcome: ai.ciris.mobile.shared.models.NewIdentityOutcome? = null,
     modifier: Modifier = Modifier
 ) {
     var marketingOptIn by remember { mutableStateOf(false) }
@@ -390,6 +393,36 @@ fun LoginScreen(
                                 .padding(bottom = 12.dp)
                                 .testable("txt_owner_hint")
                         )
+                    }
+                    // Said BEFORE the attempt, from the node's own predicate
+                    // (signin-state), not inferred from the provider list and
+                    // the owner hint: "a new account would be refused here".
+                    if (errorMessage == null && !observerBlocked) {
+                        newIdentityOutcome?.let { o ->
+                            val line = when {
+                                o.isRefused -> o.reasonId
+                                    ?.let { id -> localizedString(id).takeIf { it != id } }
+                                    ?: o.remedy
+                                    ?: localizedString("mobile.login_new_account_refused")
+                                o.outcome == "admitted_as_observer" ->
+                                    localizedString("mobile.login_new_account_observer")
+                                o.outcome == "claims_this_node" ->
+                                    localizedString("mobile.login_new_account_claims")
+                                else -> null
+                            }
+                            line?.let {
+                                Text(
+                                    text = it,
+                                    color = LoginColors.White.copy(alpha = 0.85f),
+                                    fontSize = 13.sp,
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier
+                                        .width(280.dp)
+                                        .padding(bottom = 12.dp)
+                                        .testable("txt_login_signin_outcome")
+                                )
+                            }
+                        }
                     }
 
                     Button(

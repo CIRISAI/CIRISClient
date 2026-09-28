@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.viewmodels.llmReadState
+import ai.ciris.mobile.shared.viewmodels.LlmReadState
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.LocalInferenceCapability
@@ -113,6 +115,8 @@ fun LLMSettingsScreen(
 
     // LLM-capable adapters
     val llmAdapters by llmViewModel.llmAdapters.collectAsState()
+    val llmAdaptersError by llmViewModel.llmAdaptersError.collectAsState()
+    val llmProvidersError by llmViewModel.llmProvidersError.collectAsState()
 
     // Provider delete confirmation
     val providerPendingDelete by llmViewModel.providerPendingDelete.collectAsState()
@@ -262,7 +266,8 @@ fun LLMSettingsScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("llm_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -296,6 +301,7 @@ fun LLMSettingsScreen(
                 ) {
                     AdaptersContent(
                         adapters = llmAdapters,
+                        readError = llmAdaptersError,
                         llmViewModel = llmViewModel,
                         operationInProgress = operationInProgress
                     )
@@ -313,6 +319,7 @@ fun LLMSettingsScreen(
                     RegisteredProvidersContent(
                         isCirisProxy = isCirisProxy,
                         llmProviders = llmProviders,
+                        readError = llmProvidersError,
                         llmViewModel = llmViewModel,
                         apiClient = apiClient,
                         availableProviders = viewModel.availableProviders,
@@ -572,17 +579,27 @@ private fun StatusItem(
 @Composable
 private fun AdaptersContent(
     adapters: List<LlmAdapterItem>,
+    readError: String?,
     llmViewModel: LLMSettingsViewModel,
     operationInProgress: Boolean
 ) {
     val semantic = SemanticColors.Default
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        if (adapters.isEmpty()) {
+        val readState = llmReadState(adapters.isEmpty(), readError)
+        if (readState == LlmReadState.ERROR) {
+            Text(
+                text = localizedString("mobile.llm_settings_adapters_error", mapOf("reason" to (readError ?: ""))),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testable("llm_adapters_error", readError),
+            )
+        } else if (readState == LlmReadState.EMPTY) {
             Text(
                 text = "No LLM-capable adapters loaded",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.testable("llm_adapters_empty"),
             )
         } else {
             adapters.forEach { adapter ->
@@ -810,6 +827,7 @@ private fun CollapsibleSection(
 private fun RegisteredProvidersContent(
     isCirisProxy: Boolean,
     llmProviders: List<ai.ciris.mobile.shared.models.LlmProviderStatus>,
+    readError: String? = null,
     llmViewModel: LLMSettingsViewModel,
     apiClient: CIRISApiClient,
     availableProviders: List<Pair<String, String>>,
@@ -848,11 +866,20 @@ private fun RegisteredProvidersContent(
         }
 
         // Show all registered providers
-        if (llmProviders.isEmpty()) {
+        val readState = llmReadState(llmProviders.isEmpty(), readError)
+        if (readState == LlmReadState.ERROR) {
+            Text(
+                text = localizedString("mobile.llm_settings_providers_error", mapOf("reason" to (readError ?: ""))),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testable("llm_providers_error", readError),
+            )
+        } else if (readState == LlmReadState.EMPTY) {
             Text(
                 text = "No providers registered",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                modifier = Modifier.testable("llm_providers_empty"),
             )
         } else {
             Text(
@@ -861,98 +888,103 @@ private fun RegisteredProvidersContent(
                 fontWeight = FontWeight.Medium
             )
 
-            llmProviders.forEach { provider ->
-                val cb = provider.circuitBreaker
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (provider.healthy)
-                            MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+            Column(
+                modifier = Modifier.testable("llm_providers_list"),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                llmProviders.forEach { provider ->
+                    val cb = provider.circuitBreaker
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (provider.healthy)
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                            else
+                                semantic.surfaceError.copy(alpha = 0.3f)
+                        ),
+                        border = if (provider.healthy)
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                         else
-                            semantic.surfaceError.copy(alpha = 0.3f)
-                    ),
-                    border = if (provider.healthy)
-                        BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
-                    else
-                        BorderStroke(1.dp, semantic.error.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            BorderStroke(1.dp, semantic.error.copy(alpha = 0.3f))
                     ) {
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            // Health indicator
-                            Icon(
-                                imageVector = if (provider.healthy) CIRISIcons.checkCircle else CIRISMaterialIcons.Filled.Error,
-                                contentDescription = null,
-                                modifier = Modifier.size(16.dp),
-                                tint = if (provider.healthy) semantic.success else semantic.error
-                            )
-                            Column {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = provider.name,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    // Priority badge
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = when (provider.priority) {
-                                            ai.ciris.mobile.shared.models.ProviderPriority.CRITICAL -> semantic.surfaceError
-                                            ai.ciris.mobile.shared.models.ProviderPriority.HIGH -> MaterialTheme.colorScheme.primaryContainer
-                                            ai.ciris.mobile.shared.models.ProviderPriority.NORMAL -> MaterialTheme.colorScheme.secondaryContainer
-                                            ai.ciris.mobile.shared.models.ProviderPriority.LOW -> MaterialTheme.colorScheme.tertiaryContainer
-                                            ai.ciris.mobile.shared.models.ProviderPriority.FALLBACK -> MaterialTheme.colorScheme.surfaceVariant
-                                        }
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                // Health indicator
+                                Icon(
+                                    imageVector = if (provider.healthy) CIRISIcons.checkCircle else CIRISMaterialIcons.Filled.Error,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp),
+                                    tint = if (provider.healthy) semantic.success else semantic.error
+                                )
+                                Column {
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = provider.priorityLabel.uppercase(),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            text = provider.name,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        // Priority badge
+                                        Surface(
+                                            shape = RoundedCornerShape(4.dp),
+                                            color = when (provider.priority) {
+                                                ai.ciris.mobile.shared.models.ProviderPriority.CRITICAL -> semantic.surfaceError
+                                                ai.ciris.mobile.shared.models.ProviderPriority.HIGH -> MaterialTheme.colorScheme.primaryContainer
+                                                ai.ciris.mobile.shared.models.ProviderPriority.NORMAL -> MaterialTheme.colorScheme.secondaryContainer
+                                                ai.ciris.mobile.shared.models.ProviderPriority.LOW -> MaterialTheme.colorScheme.tertiaryContainer
+                                                ai.ciris.mobile.shared.models.ProviderPriority.FALLBACK -> MaterialTheme.colorScheme.surfaceVariant
+                                            }
+                                        ) {
+                                            Text(
+                                                text = provider.priorityLabel.uppercase(),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = provider.statusMessage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                    // Show metrics summary
+                                    val metrics = provider.metrics
+                                    if (metrics.totalRequests > 0) {
+                                        Text(
+                                            text = "${metrics.totalRequests} requests - ${metrics.averageLatencyMs.toInt()}ms avg",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                                         )
                                     }
                                 }
-                                Text(
-                                    text = provider.statusMessage,
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                )
-                                // Show metrics summary
-                                val metrics = provider.metrics
-                                if (metrics.totalRequests > 0) {
-                                    Text(
-                                        text = "${metrics.totalRequests} requests - ${metrics.averageLatencyMs.toInt()}ms avg",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                                    )
-                                }
                             }
-                        }
 
-                        // Delete button for all providers
-                        // System providers (ciris_primary, local_primary) show confirmation dialog
-                        IconButton(
-                            onClick = { llmViewModel.requestDeleteProvider(provider.name) },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                imageVector = CIRISIcons.delete,
-                                contentDescription = "Remove provider",
-                                tint = semantic.error,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            // Delete button for all providers
+                            // System providers (ciris_primary, local_primary) show confirmation dialog
+                            IconButton(
+                                onClick = { llmViewModel.requestDeleteProvider(provider.name) },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    imageVector = CIRISIcons.delete,
+                                    contentDescription = "Remove provider",
+                                    tint = semantic.error,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -965,7 +997,7 @@ private fun RegisteredProvidersContent(
             CirisServicesCard(
                 enabled = cirisServicesEnabled,
                 onDisable = { llmViewModel.disableCirisServices() },
-                onReenableInfo = { llmViewModel.showCirisServicesReenableInfo() }
+                onEnable = { llmViewModel.enableCirisServices() }
             )
         }
     }
@@ -978,7 +1010,7 @@ private fun RegisteredProvidersContent(
 private fun CirisServicesCard(
     enabled: Boolean,
     onDisable: () -> Unit,
-    onReenableInfo: () -> Unit
+    onEnable: () -> Unit
 ) {
     val semantic = SemanticColors.Default
 
@@ -1049,17 +1081,19 @@ private fun CirisServicesCard(
                     Text("Disable CIRIS Services")
                 }
             } else {
+                // The agent serves enable as well as disable; there is no
+                // reason to send anyone through a factory reset (CSD-021 §6.4).
                 OutlinedButton(
-                    onClick = onReenableInfo,
-                    modifier = Modifier.fillMaxWidth()
+                    onClick = onEnable,
+                    modifier = Modifier.fillMaxWidth().testableClickable("btn_enable_ciris_services") { onEnable() }
                 ) {
                     Icon(
-                        imageVector = CIRISIcons.info,
+                        imageVector = CIRISIcons.checkCircle,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("How to Re-enable")
+                    Text(localizedString("mobile.llm_settings_enable_ciris_services"))
                 }
             }
         }
@@ -2335,8 +2369,8 @@ private fun CirisServicesToggle(llmViewModel: LLMSettingsViewModel, isCirisProxy
                         if (!enabled) {
                             showDisableDialog = true
                         } else {
-                            // Re-enabling requires wizard - just show info
-                            llmViewModel.showCirisServicesReenableInfo()
+                            // The agent serves enable (CSD-021 §6.4); no wizard needed.
+                            llmViewModel.enableCirisServices()
                         }
                     },
                     modifier = Modifier.testable("switch_ciris_services")
@@ -2355,7 +2389,7 @@ private fun CirisServicesToggle(llmViewModel: LLMSettingsViewModel, isCirisProxy
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
-                        text = "Re-enabling requires re-running the setup wizard",
+                        text = localizedString("mobile.llm_settings_reenable_after_restart"),
                         style = MaterialTheme.typography.labelSmall,
                         color = semantic.warning
                     )
@@ -2382,7 +2416,7 @@ private fun CirisServicesToggle(llmViewModel: LLMSettingsViewModel, isCirisProxy
                     Text("This will switch you to BYOK (Bring Your Own Key) mode.")
                     Text("You'll need to provide your own API keys for OpenAI, Anthropic, or other providers.")
                     Text(
-                        text = "To re-enable CIRIS services later, you'll need to re-run the setup wizard.",
+                        text = localizedString("mobile.llm_settings_disable_ciris_reversible"),
                         fontWeight = FontWeight.Medium
                     )
                 }

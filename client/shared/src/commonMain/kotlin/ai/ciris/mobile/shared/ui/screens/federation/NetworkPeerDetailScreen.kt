@@ -4,7 +4,6 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.EdgePeerReachability
 import ai.ciris.mobile.shared.models.federation.EdgeReachabilityEntry
-import ai.ciris.mobile.shared.models.federation.FederationPeerSASResponse
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerAppearance
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
@@ -16,6 +15,24 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.viewmodels.NetworkPeerDetailViewModel
+import ai.ciris.mobile.shared.viewmodels.PeerDetailFailure
+import ai.ciris.mobile.shared.viewmodels.PeerWrite
+import ai.ciris.mobile.shared.viewmodels.SasOutcome
+import ai.ciris.mobile.shared.viewmodels.SasOutcomeResult
+import ai.ciris.mobile.shared.viewmodels.SasRead
+import ai.ciris.mobile.shared.viewmodels.SasWriteRefusal
+import ai.ciris.mobile.shared.viewmodels.sasDigitsGrouped
+import ai.ciris.mobile.shared.ui.glyphs.GlyphName
+import ai.ciris.mobile.shared.ui.primitives.CardShell
+import ai.ciris.mobile.shared.ui.primitives.CirisButton
+import ai.ciris.mobile.shared.ui.primitives.CirisTextButton
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
+import ai.ciris.mobile.shared.ui.primitives.FieldRow
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -48,11 +65,12 @@ import kotlinx.datetime.Clock
  *  - Header: trust glyph + alias + full 32-char hex key id with copy
  *  - Trust state segmented control (BLOCKED guarded by confirm dialog)
  *  - Reachability per medium (ratio bar + last-ok-relative timestamp)
- *  - SAS verification modal (5 words + 6 digits + cribsheet instructions)
+ *  - SAS verification ceremony (CSD-104): the code, the recorded outcome,
+ *    "they match" / "they don't match" / withdraw, each behind a ConfirmSheet
  *  - Appearance editor (collapsible — icon + fg/bg hex picker)
  *  - Notes (read-only render today)
  *
- * Backend endpoints: getFederationPeer, getFederationPeerSAS,
+ * Backend endpoints: getFederationPeer, getFederationPeerSAS, setFederationPeerSASVerified,
  * setFederationPeerTrust, setFederationPeerAppearance.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -70,13 +88,15 @@ fun NetworkPeerDetailScreen(
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
     val pendingTrust by viewModel.pendingTrust.collectAsState()
-    val sasModalOpen by viewModel.sasModalOpen.collectAsState()
-    val sas by viewModel.sas.collectAsState()
-    val sasLoading by viewModel.sasLoading.collectAsState()
+    val detailFailure by viewModel.detailFailure.collectAsState()
+    val sasRead by viewModel.sasRead.collectAsState()
+    val pendingOutcome by viewModel.pendingOutcome.collectAsState()
+    val writeInFlight by viewModel.writeInFlight.collectAsState()
+    val recordedMismatch by viewModel.recordedMismatch.collectAsState()
+    val lastOutcome by viewModel.lastOutcome.collectAsState()
     val appearanceExpanded by viewModel.appearanceExpanded.collectAsState()
     val appearanceDraft by viewModel.appearanceDraft.collectAsState()
     val appearanceSaving by viewModel.appearanceSaving.collectAsState()
-    val trustChangeInFlight by viewModel.trustChangeInFlight.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -107,11 +127,14 @@ fun NetworkPeerDetailScreen(
         )
     }
 
-    if (sasModalOpen) {
-        SASModal(
-            sas = sas,
-            loading = sasLoading,
-            onClose = { viewModel.hideSAS() },
+    // CSD-104: every recorded outcome goes behind a ConfirmSheet naming who,
+    // what changes, and who signs / who sees. Dismissing it writes nothing.
+    pendingOutcome?.let { outcome ->
+        SasOutcomeSheet(
+            outcome = outcome,
+            who = detail?.peer?.let { it.aliasOverride ?: it.keyId } ?: keyId,
+            onConfirm = { viewModel.confirmOutcome() },
+            onDismiss = { viewModel.cancelOutcome() },
         )
     }
 
@@ -161,10 +184,21 @@ fun NetworkPeerDetailScreen(
                 }
             } else if (current == null) {
                 Box(modifier = Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        text = localizedString("network.peer_detail.not_found"),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
+                    // CSD-104 §3a.5: a failed read is not "not found".
+                    when (val f = detailFailure) {
+                        is PeerDetailFailure.Failed -> StateBlock(
+                            state = ListState.Error(
+                                title = localizedString("mobile.state_read_failed"),
+                                body = localizedString("mobile.state_read_failed_body"),
+                                detail = f.detail,
+                            ),
+                            tag = "peer_detail_error",
+                        )
+                        else -> StateBlock(
+                            state = ListState.Empty(localizedString("network.peer_detail.not_in_directory"), glyph = GlyphName.INFO),
+                            tag = "peer_detail_not_found",
+                        )
+                    }
                 }
             } else {
                 LazyColumn(
@@ -179,14 +213,24 @@ fun NetworkPeerDetailScreen(
                     }
                     item { PeerHeader(peer = current.peer) }
                     item {
+                        SasVerifySection(
+                            read = sasRead,
+                            lastOutcome = lastOutcome,
+                            recordedMismatch = recordedMismatch,
+                            inFlight = writeInFlight,
+                            onOutcome = { viewModel.requestOutcome(it) },
+                        )
+                    }
+                    item {
                         TrustStateSection(
                             currentTrust = current.peer.trust,
-                            inFlight = trustChangeInFlight,
+                            // One flag for both groups: a manual trust change must not
+                            // race a mismatch's untrust on the same sideband row.
+                            inFlight = writeInFlight,
                             onTrustChange = { viewModel.requestTrust(it) },
                         )
                     }
                     item { ReachabilitySection(reachability = current.reachability) }
-                    item { SASSection(onShowSAS = { viewModel.showSAS() }) }
                     item {
                         AppearanceSection(
                             expanded = appearanceExpanded,
@@ -421,88 +465,198 @@ private fun formatLastOk(lastOkTs: Long): String {
 // ═══════════════════════════════════════════════════════════════════════════
 
 @Composable
-private fun SASSection(onShowSAS: () -> Unit) {
-    SectionCard(titleKey = "network.peer_detail.sas_title") {
-        FilledTonalButton(
-            onClick = onShowSAS,
-            modifier = Modifier.testableClickable("btn_show_sas") { onShowSAS() },
-        ) {
-            Text(localizedString("network.peer_detail.sas_show_button"))
+private fun SasVerifySection(
+    read: SasRead,
+    lastOutcome: SasOutcomeResult?,
+    recordedMismatch: Boolean,
+    inFlight: Boolean,
+    onOutcome: (SasOutcome) -> Unit,
+) {
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    // A recorded mismatch is shown ABOVE the code and stays until the screen is
+    // left or a later match supersedes it — a safety event, drawn in the error
+    // tone, never as a closed dialog, and never replaced by a refused write.
+    if (recordedMismatch) {
+        StateBlock(
+            state = ListState.Error(
+                title = localizedString("network.peer_detail.sas_mismatch_title"),
+                body = localizedString("network.peer_detail.sas_mismatch_body"),
+            ),
+            tag = "sas_result_mismatch",
+            inline = true,
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+    if (lastOutcome is SasOutcomeResult.Refused) {
+        StateBlock(
+            state = ListState.Error(
+                title = localizedString(
+                    when (lastOutcome.reason) {
+                        SasWriteRefusal.NOT_OWNER -> "network.peer_detail.sas_write_not_owner"
+                        SasWriteRefusal.NOT_IN_DIRECTORY -> "network.peer_detail.sas_not_in_directory"
+                        SasWriteRefusal.ROUTE_ABSENT -> "network.peer_detail.sas_not_on_this_node"
+                        SasWriteRefusal.FAILED -> "network.peer_detail.sas_write_failed"
+                    },
+                ),
+                // A mismatch whose untrust landed but whose record did not is
+                // still a mismatch: say what did change.
+                body = if (lastOutcome.applied.any { it is PeerWrite.Trust }) {
+                    localizedString("network.peer_detail.sas_write_partial")
+                } else null,
+                detail = lastOutcome.detail,
+            ),
+            tag = "sas_write_error",
+            inline = true,
+        )
+        Spacer(Modifier.height(12.dp))
+    }
+    CardShell(tag = "card_sas_verify", accent = t.brand) {
+        Text(localizedString("network.peer_detail.sas_ceremony_title"), style = type.title, color = t.ink)
+        Spacer(Modifier.height(8.dp))
+        when (read) {
+            SasRead.Loading -> StateBlock(ListState.Loading, tag = "sas_loading", inline = true)
+            SasRead.NotInDirectory -> StateBlock(
+                ListState.Empty(localizedString("network.peer_detail.sas_not_in_directory"), glyph = GlyphName.INFO),
+                tag = "sas_not_in_directory",
+                inline = true,
+            )
+            is SasRead.RouteAbsent -> StateBlock(
+                ListState.Empty(localizedString("network.peer_detail.sas_not_on_this_node"), glyph = GlyphName.INFO),
+                tag = "sas_not_on_this_node",
+                inline = true,
+            )
+            is SasRead.Failed -> StateBlock(
+                ListState.Error(
+                    title = localizedString("mobile.state_read_failed"),
+                    body = localizedString("mobile.state_read_failed_body"),
+                    detail = read.detail,
+                ),
+                tag = "sas_error",
+                inline = true,
+            )
+            is SasRead.Ready -> {
+                Text(localizedString("network.peer_detail.sas_ceremony_instructions"), style = type.body, color = t.dim)
+                Spacer(Modifier.height(10.dp))
+                FieldRow(
+                    label = localizedString("network.peer_detail.sas_words_label"),
+                    value = read.sas.words.joinToString(" · "),
+                    mono = true,
+                    tag = "text_sas_words",
+                )
+                FieldRow(
+                    label = localizedString("network.peer_detail.sas_digits_label"),
+                    value = sasDigitsGrouped(read.sas.digits),
+                    mono = true,
+                    tag = "text_sas_digits",
+                )
+                FieldRow(
+                    label = localizedString("network.peer_detail.sas_state_label"),
+                    value = if (read.verified) {
+                        localizedString(
+                            "network.peer_detail.sas_state_verified",
+                            mapOf("date" to (read.sas.verifiedAt?.take(10) ?: "—")),
+                        )
+                    } else {
+                        localizedString("network.peer_detail.sas_state_not_verified")
+                    },
+                    tone = if (read.verified) Tone.OK else Tone.INK,
+                    tag = "text_sas_state",
+                )
+                FieldRow(
+                    label = localizedString("network.peer_detail.sas_scope_label"),
+                    value = localizedString("network.peer_detail.sas_scope_value"),
+                    gloss = localizedString("network.peer_detail.sas_covers"),
+                    tag = "text_sas_scope",
+                    divider = false,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CirisButton(
+                        localizedString("network.peer_detail.sas_match"),
+                        tag = "btn_sas_match",
+                        enabled = !inFlight,
+                        onClick = { onOutcome(SasOutcome.MATCH) },
+                    )
+                    // Its own button, its own sheet, the danger fill: a mismatch
+                    // is a report, and must never read as "cancel".
+                    CirisButton(
+                        localizedString("network.peer_detail.sas_mismatch"),
+                        tag = "btn_sas_mismatch",
+                        enabled = !inFlight,
+                        danger = true,
+                        onClick = { onOutcome(SasOutcome.MISMATCH) },
+                    )
+                }
+                if (read.verified) {
+                    Spacer(Modifier.height(4.dp))
+                    CirisTextButton(
+                        localizedString("network.peer_detail.sas_withdraw"),
+                        tag = "btn_sas_withdraw",
+                        enabled = !inFlight,
+                        onClick = { onOutcome(SasOutcome.WITHDRAW) },
+                    )
+                }
+                if (inFlight) {
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+            }
         }
     }
 }
 
+/** The ConfirmSheet for one outcome: exactly three facts — who, what changes, who signs / who sees. */
 @Composable
-private fun SASModal(
-    sas: FederationPeerSASResponse?,
-    loading: Boolean,
-    onClose: () -> Unit,
+private fun SasOutcomeSheet(
+    outcome: SasOutcome,
+    who: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(localizedString("network.peer_detail.sas_modal_title")) },
-        text = {
-            Column(modifier = Modifier.testable("dialog_sas")) {
-                if (loading || sas == null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    Text(
-                        text = localizedString("network.peer_detail.sas_words_label"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    SelectionContainer {
-                        Text(
-                            text = sas.words.joinToString(" "),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = CIRISColors.AccentCyan,
-                            modifier = Modifier.testable("text_sas_words"),
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = localizedString("network.peer_detail.sas_digits_label"),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    SelectionContainer {
-                        Text(
-                            text = sas.digits,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold,
-                            color = CIRISColors.AccentCyan,
-                            modifier = Modifier.testable("text_sas_digits"),
-                        )
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(
-                        text = localizedString("network.peer_detail.sas_instructions"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onClose,
-                modifier = Modifier.testableClickable("btn_close_sas") { onClose() },
-            ) {
-                Text(localizedString("network.peer_detail.sas_close"))
-            }
-        },
+    // Literal keys, one row per outcome, so the localization checks can see every one.
+    val prefix: String
+    val titleKey: String
+    val changesKey: String
+    val buttonKey: String
+    when (outcome) {
+        SasOutcome.MATCH -> {
+            prefix = "sas_match"
+            titleKey = "network.peer_detail.sas_confirm_match_title"
+            changesKey = "network.peer_detail.sas_confirm_match_changes"
+            buttonKey = "network.peer_detail.sas_confirm_match_button"
+        }
+        SasOutcome.MISMATCH -> {
+            prefix = "sas_mismatch"
+            titleKey = "network.peer_detail.sas_confirm_mismatch_title"
+            changesKey = "network.peer_detail.sas_confirm_mismatch_changes"
+            buttonKey = "network.peer_detail.sas_confirm_mismatch_button"
+        }
+        SasOutcome.WITHDRAW -> {
+            prefix = "sas_withdraw"
+            titleKey = "network.peer_detail.sas_confirm_withdraw_title"
+            changesKey = "network.peer_detail.sas_confirm_withdraw_changes"
+            buttonKey = "network.peer_detail.sas_confirm_withdraw_button"
+        }
+    }
+    ConfirmSheet(
+        title = localizedString(titleKey),
+        facts = listOf(
+            ConfirmFact(localizedString("network.peer_detail.sas_fact_who"), who, mono = true),
+            ConfirmFact(
+                localizedString("network.peer_detail.sas_fact_changes"),
+                localizedString(changesKey),
+            ),
+            ConfirmFact(
+                localizedString("network.peer_detail.sas_fact_signs"),
+                localizedString("network.peer_detail.sas_fact_signs_value"),
+            ),
+        ),
+        confirmLabel = localizedString(buttonKey),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        destructive = outcome == SasOutcome.MISMATCH,
+        tagPrefix = prefix,
     )
 }
 

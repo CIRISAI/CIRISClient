@@ -127,7 +127,6 @@ object CirclesNav {
         Placement(NavSurface.ManageConsent, Tab.RULES, ALL),
         Placement(NavSurface.Consent, Tab.RULES, ALL),
         Placement(NavSurface.Delegations, Tab.RULES, ALL),
-        Placement(NavSurface.Delegation, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.Billing, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.Wallet, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
 
@@ -140,6 +139,16 @@ object CirclesNav {
 
         // ── Record — one card, five homes ──
         Placement(NavSurface.Audit, Tab.RECORD, ALL),
+
+        // ── Communities and affiliations (CSD-102, CSD-103). The community
+        // itself (its rule, roles, pending changes) is on the circle's own
+        // Rules hub, not a card beside it; who is in it is People, and the
+        // rooms you talk in are Chats. `tier: community` folds to Neighbours
+        // and `tier: affiliations` to Communities and Businesses (CohortScope). ──
+        Placement(NavSurface.CommunityRoster, Tab.PEOPLE, setOf(LOCAL_COMMUNITY)),
+        Placement(NavSurface.AffiliationsRoster, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
+        Placement(NavSurface.CommunityChats, Tab.CHATS, setOf(LOCAL_COMMUNITY)),
+        Placement(NavSurface.AffiliationsChats, Tab.CHATS, setOf(GLOBAL_COMMUNITIES)),
     )
 
     /**
@@ -186,6 +195,8 @@ object CirclesNav {
             listOf(
                 NavSurface.Nodes, NavSurface.Transport, NavSurface.NetworkOps, NavSurface.Config,
                 NavSurface.Logs, NavSurface.System, NavSurface.Memory, NavSurface.GraphMemory,
+                // CSD-045: this node's own standing, tier S, its own row.
+                NavSurface.NodeSelf,
             ),
         ),
         // Deferral needs a brain to defer; `/v1/wa/*` is the agent's alone.

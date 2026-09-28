@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Spacer
@@ -309,7 +310,7 @@ fun WalletPage(
 @Composable
 private fun LoadingWalletCard() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("wallet_loading"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
     ) {
         Box(
@@ -326,7 +327,7 @@ private fun LoadingWalletCard() {
 @Composable
 private fun WalletErrorCard(error: String, onRetry: () -> Unit) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("wallet_error", error),
         colors = CardDefaults.cardColors(containerColor = SemanticColors.Default.surfaceError)
     ) {
         Column(
@@ -988,7 +989,9 @@ private fun WalletTransferCard(
 
     // Duplicate check state
     var duplicateCheck by remember { mutableStateOf<ai.ciris.mobile.shared.api.DuplicateCheckResult?>(null) }
-    var showDuplicateWarning by remember { mutableStateOf(false) }
+    // The ConfirmSheet is open: every check answered and passed, the person
+    // has not yet confirmed. Nothing is sent before it closes with a yes.
+    var pendingSend by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -1168,73 +1171,74 @@ private fun WalletTransferCard(
             }
 
             // Pre-capture localized strings for use in onClick lambda
-            val errorEnterRecipient = localizedString("mobile.wallet_enter_recipient")
-            val errorInvalidFormat = localizedString("mobile.wallet_invalid_format")
-            val errorEnterAmount = localizedString("mobile.wallet_enter_amount")
-            val errorInvalidAmount = localizedString("mobile.wallet_invalid_amount")
             val errorTransferFailed = localizedString("mobile.wallet_transfer_failed")
+            val errorStatusUnknown = localizedString("mobile.wallet_transfer_unknown")
+            val gateText = WalletSendBlock.values().associateWith { localizedString(it.key) }
 
-            // Send button
-            Button(
-                onClick = {
-                    // Validate inputs
-                    if (recipientAddress.isBlank()) {
-                        transferError = errorEnterRecipient
-                        return@Button
-                    }
-                    if (!recipientAddress.startsWith("0x") || recipientAddress.length != 42) {
-                        transferError = errorInvalidFormat
-                        return@Button
-                    }
-                    // Block if address is zero address
-                    if (addressValidation?.isZeroAddress == true) {
-                        transferError = "Cannot send to zero address - funds would be burned"
-                        return@Button
-                    }
-                    if (amount.isBlank()) {
-                        transferError = errorEnterAmount
-                        return@Button
-                    }
-                    val amountValue = amount.toDoubleOrNull()
-                    if (amountValue == null || amountValue <= 0) {
-                        transferError = errorInvalidAmount
-                        return@Button
-                    }
+            // The send itself — only ever reached from the ConfirmSheet's yes.
+            val doSend: () -> Unit = {
+                isTransferring = true
+                transferError = null
+                transferSuccess = null
 
-                    // Execute transfer
-                    isTransferring = true
-                    transferError = null
-                    transferSuccess = null
+                coroutineScope.launch {
+                    try {
+                        val result = apiClient.transferUsdc(
+                            recipient = recipientAddress,
+                            amount = amount,
+                            memo = memo.ifBlank { null }
+                        )
 
-                    coroutineScope.launch {
-                        try {
-                            val result = apiClient.transferUsdc(
-                                recipient = recipientAddress,
-                                amount = amount,
-                                memo = memo.ifBlank { null }
-                            )
-
-                            if (result.success) {
-                                val txId = result.txHash ?: result.transactionId ?: ""
-                                transferSuccess = LocalizationHelper.getString("mobile.wallet_transfer_success", mapOf("tx" to txId))
-                                // Clear form
-                                recipientAddress = ""
-                                amount = ""
-                                memo = ""
-                                addressValidation = null
-                                duplicateCheck = null
-                                onTransferComplete()
-                            } else {
-                                transferError = result.error ?: errorTransferFailed
-                            }
-                        } catch (e: Exception) {
-                            transferError = e.message ?: errorTransferFailed
-                        } finally {
-                            isTransferring = false
+                        if (result.success) {
+                            val txId = result.txHash ?: result.transactionId ?: ""
+                            transferSuccess = LocalizationHelper.getString("mobile.wallet_transfer_success", mapOf("tx" to txId))
+                            // Clear form
+                            recipientAddress = ""
+                            amount = ""
+                            memo = ""
+                            addressValidation = null
+                            duplicateCheck = null
+                            onTransferComplete()
+                        } else {
+                            transferError = result.error ?: errorTransferFailed
                         }
+                    } catch (e: Exception) {
+                        // A throw AFTER the request left is not "failed": the
+                        // agent may have broadcast before the answer was lost,
+                        // and "failed" invites the double spend. Say unknown.
+                        transferError = errorStatusUnknown
+                    } finally {
+                        isTransferring = false
                     }
-                },
-                modifier = Modifier.fillMaxWidth().testable("btn_send_transfer"),
+                }
+            }
+
+            // Sharing outward always confirms: three facts, then the send.
+            if (pendingSend) {
+                ConfirmSheet(
+                    title = localizedString("mobile.wallet_confirm_title", mapOf("amount" to amount, "currency" to currency)),
+                    facts = walletSendFacts(recipientAddress, amount, currency),
+                    confirmLabel = localizedString("mobile.wallet_confirm_send"),
+                    onConfirm = { pendingSend = false; doSend() },
+                    onDismiss = { pendingSend = false },
+                    destructive = true,
+                    tagPrefix = "wallet_send",
+                )
+            }
+
+            // Send button: opens the sheet, or says which check has not passed.
+            val openConfirm: () -> Unit = {
+                val block = walletSendGate(recipientAddress, amount, addressValidation, isValidatingAddress, duplicateCheck)
+                if (block != null) {
+                    transferError = gateText[block]
+                } else {
+                    transferError = null
+                    pendingSend = true
+                }
+            }
+            Button(
+                onClick = openConfirm,
+                modifier = Modifier.fillMaxWidth().testableClickable("btn_send_transfer") { if (!isTransferring) openConfirm() },
                 enabled = !isTransferring && recipientAddress.isNotBlank() && amount.isNotBlank()
             ) {
                 if (isTransferring) {

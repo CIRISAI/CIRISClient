@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,6 +39,40 @@ abstract class BaseFederationViewModel(
 
     protected val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
+
+    /**
+     * Why the screen's PRIMARY read produced no reading, or null once it has
+     * read (CSD/3 §2.2). [error] is a dismissable banner string; this is not.
+     * A screen whose list or counters were never read renders this instead of
+     * its empty state or its zeroes, so a failed read can never be dismissed
+     * into looking like "nothing here" (CSD-033/046/047/048/049).
+     */
+    protected val _readFailure = MutableStateFlow<ReadFailure?>(null)
+    val readFailure: StateFlow<ReadFailure?> = _readFailure.asStateFlow()
+
+    /**
+     * [runApi] for the screen's primary read: on failure it also records
+     * WHICH failure ([ReadFailure.of]: absent route vs failed read); on
+     * success it clears it. Returns the result, or null on failure.
+     */
+    protected suspend fun <T : Any> runRead(
+        operation: String,
+        block: suspend () -> T,
+    ): T? = try {
+        _loading.value = true
+        _error.value = null
+        block().also { _readFailure.value = null }
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        val msg = e.message ?: e::class.simpleName ?: "unknown error"
+        _error.value = msg
+        _readFailure.value = ReadFailure.of(e)
+        PlatformLogger.e(tag, "[$operation] $msg", e)
+        null
+    } finally {
+        _loading.value = false
+    }
 
     /** Acknowledge a transient error after the user sees it. */
     fun clearError() {

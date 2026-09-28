@@ -207,10 +207,7 @@ class BillingViewModel(
                     logException(method, e)
                     lastException = e
 
-                    val errorMsg = e.message ?: ""
-                    val isAuthError = errorMsg.contains("401") ||
-                        errorMsg.contains("503") ||
-                        errorMsg.contains("Unauthorized", ignoreCase = true)
+                    val isAuthError = isAuthFailure(e)
 
                     if (isAuthError && attempt < maxAttempts) {
                         logWarn(method, "Auth error on attempt $attempt, triggering token refresh + retry")
@@ -237,6 +234,18 @@ class BillingViewModel(
             handleBalanceError("Failed to load balance: ${lastException?.message}")
             _isLoading.value = false
         }
+    }
+
+    /**
+     * Only a 401 is a stale credential. The agent's 503 is `billing_unavailable`
+     * (`routes/billing.py:615-623`): the credit service could not be reached
+     * and the balance is unchanged. Treating it as auth used to walk a person
+     * through a token refresh and land them on "session expired" for an outage
+     * that was never theirs (CSD-056).
+     */
+    private fun isAuthFailure(e: Exception): Boolean {
+        val msg = e.message ?: ""
+        return msg.contains("401") || msg.contains("Unauthorized", ignoreCase = true)
     }
 
     private fun onNoBillingHere() {
@@ -325,13 +334,7 @@ class BillingViewModel(
         } catch (e: Exception) {
             logWarn(method, "Silent balance load failed: ${e.message}")
 
-            // Check for auth errors (401/503) and trigger token refresh
-            val errorMessage = e.message ?: ""
-            val isAuthError = errorMessage.contains("401") ||
-                errorMessage.contains("503") ||
-                errorMessage.contains("Unauthorized", ignoreCase = true)
-
-            if (isAuthError) {
+            if (isAuthFailure(e)) {
                 logWarn(method, "Auth error in silent poll, triggering token refresh")
                 TokenManager.shared?.on401Error()
             }

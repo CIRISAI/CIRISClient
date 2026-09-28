@@ -70,7 +70,10 @@ fun AdaptersScreen(
     onSkillStudio: () -> Unit = {},
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // Connectors (CSD-020 §7): the database credentials handed to the SQL
+    // adapter through /v1/connectors, drawn under the adapter list.
+    connectorsSection: (@Composable () -> Unit)? = null,
 ) {
     var showRemoveDialog by remember { mutableStateOf<AdapterItem?>(null) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -151,6 +154,7 @@ fun AdaptersScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .testable("adapters_empty")
                 ) {
                     Column(
                         modifier = Modifier
@@ -172,13 +176,15 @@ fun AdaptersScreen(
                         )
                     }
                 }
+                connectorsSection?.invoke()
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testable("adapters_list"),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(adapters) { adapter ->
                         AdapterCard(
+                            modifier = Modifier.testable("adapters_row_${adapter.type.lowercase()}"),
                             adapter = adapter,
                             isExpanded = adapter.id in expandedAdapterIds,
                             details = adapterDetails[adapter.id],
@@ -189,6 +195,7 @@ fun AdaptersScreen(
                             onReauth = { onReauthAdapter(adapter.type.lowercase(), adapter.authStepId) }
                         )
                     }
+                    connectorsSection?.let { section -> item { section() } }
                 }
             }
 
@@ -196,7 +203,8 @@ fun AdaptersScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .testable("adapters_loading"),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()

@@ -191,7 +191,7 @@ fun LogsScreen(
             ) {
                 if (logsState.isLoading && logsState.logs.isEmpty()) {
                     Box(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testable("logs_loading"),
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.onSurface)
@@ -216,7 +216,8 @@ fun LogsScreen(
                         state = listState,
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(8.dp),
+                            .padding(8.dp)
+                            .testable("logs_list"),
                         verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         items(logsState.logs) { log ->
@@ -570,7 +571,8 @@ private fun LogEntryRow(
                 style = MaterialTheme.typography.labelSmall,
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                fontSize = 10.sp
+                fontSize = 10.sp,
+                modifier = Modifier.testable("logs_row_ts_${log.rowKey}")
             )
 
             // Level badge
@@ -599,7 +601,7 @@ private fun LogEntryRow(
                 fontFamily = FontFamily.Monospace,
                 color = MaterialTheme.colorScheme.onSurface,
                 fontSize = 11.sp,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).testable("logs_row_msg_${log.rowKey}"),
                 maxLines = if (isExpanded) Int.MAX_VALUE else 2,
                 overflow = TextOverflow.Ellipsis
             )
@@ -698,6 +700,26 @@ data class LogEntryData(
     val metadata: String = "",
     val traceId: String? = null
 ) {
+    /**
+     * The row's address in test tags (`logs_row_ts_<key>`, `logs_row_msg_<key>`,
+     * CSD-029): the timestamp's digits to the second, the fractional digits
+     * when the node sends them, and a short hash of [id] (or of [message] for
+     * a row with no id) — `2026-09-25T09:31:29.123Z` → `20260925093129_123_<hash>`,
+     * `2026-09-25T09:31:29Z` → `20260925093129_<hash>`. A flow knows the time
+     * of the line it is looking for and cannot know [id], so the 14-digit
+     * prefix is what it matches on (`logs_row_ts_20260925093129*`). The rest is
+     * what keeps two rows written in the same second — or the same millisecond
+     * — from registering under ONE tag (Codex, PR #115, #116): the hash is
+     * always there, never traded for the fraction.
+     */
+    val rowKey: String
+        get() {
+            val second = timestamp.filter { it.isDigit() }.take(14)
+            val fraction = timestamp.substringAfter('.', "").takeWhile { it.isDigit() }
+            val row = id.ifBlank { message }.hashCode().toUInt().toString(36)
+            return if (fraction.isEmpty()) "${second}_$row" else "${second}_${fraction}_$row"
+        }
+
     val formattedTime: String
         get() = try {
             // Extract time from ISO format

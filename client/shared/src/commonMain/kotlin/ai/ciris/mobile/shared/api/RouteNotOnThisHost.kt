@@ -24,3 +24,11 @@ class RouteNotOnThisHost(val route: String) :
  * absent fields as 0.00 (CSD-004).
  */
 class CapacityPayloadUnrecognised(message: String) : RuntimeException(message)
+
+/**
+ * The statuses that mean "this host never had `/v1/wa/deferrals`" and so read
+ * as an empty list. A 502 or 503 is NOT in it: that is a host that has the
+ * route with a WA service missing behind it, which is a failed read of a
+ * frozen agent, never "nothing waiting" (CSD-041; CC 4.3).
+ */
+val DEFERRALS_UNSERVED: Set<Int> = setOf(404, 405, 501)

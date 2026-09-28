@@ -23,7 +23,12 @@ import androidx.compose.runtime.Immutable
  * all five rows render every time.
  */
 sealed interface Fact {
-    data class Wire(val value: String) : Fact
+    /**
+     * Sent by the node. [gloss] says what the value IS when the plain label
+     * alone would mislead (a contact grant's attester is the person who
+     * consented, not the node that relays it).
+     */
+    data class Wire(val value: String, val gloss: String? = null) : Fact
     data class ByRule(val value: String, val ccRef: String) : Fact
     data object NotSent : Fact
 }
@@ -46,6 +51,12 @@ data class Receipt(
     /** The bound wire dimension, e.g. `consent:replication:v1`. */
     val dimensionValue: Fact,
     val rule: Fact,
+    /**
+     * Which of MY agents the claim is for (`for_key_id`). Not one of the five —
+     * most records have no such member, and for them this is null and the row
+     * is not drawn. When non-null it renders like any other fact.
+     */
+    val forAgent: Fact? = null,
     val holders: Int? = null,
     val notes: List<ReceiptNote> = emptyList(),
     val acts: List<ReceiptAct> = emptyList(),
