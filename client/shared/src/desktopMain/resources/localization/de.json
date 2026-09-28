@@ -1248,6 +1248,10 @@
     "adapter_remove_error": "Fehler beim Entfernen des Adapters: {error}",
     "adapter_remove_failed": "Adapter konnte nicht entfernt werden: {error}",
     "adapter_remove_title": "Adapter entfernen",
+    "adapter_remove_fact_adapter": "Adapter",
+    "adapter_remove_fact_what": "Was sich ändert",
+    "adapter_remove_fact_who": "Wer signiert",
+    "adapter_remove_who_signs": "Niemand signiert. Es ist Ihre Anfrage an Ihren Agenten, und es wird kein Delegationseintrag geschrieben oder entzogen (CIRISAgent#1211).",
     "adapter_removed_successfully": "Adapter erfolgreich entfernt",
     "adapter_removing": "Adapter wird entfernt...",
     "adapter_retry_scan": "Scan wiederholen",
@@ -3327,8 +3331,13 @@
     "community_role_body": "Eine Rolle ist das Wort der Mitgliederliste: Gründer, Mitglied oder Ihre eigene. Sie ist keine Pflicht. Moderieren ist eine Pflicht, die jemandem übertragen wird, und eine Rolle verleiht sie nicht.",
     "community_role_submit": "Rolle ändern",
     "community_moderators_none": "Kein ernannter Moderator ist verzeichnet.",
+    "community_moderators_unreadable": "Dieser Knoten konnte nicht lesen, wer hier die Moderationspflicht trägt. Das ist keine Meldung, dass niemand sie trägt.",
+    "community_moderators_not_sent": "Dieser Knoten hat nicht mitgeteilt, wer hier die Moderationspflicht trägt.",
     "community_appoint_unavailable": "Die Ernennung eines Moderators für diesen Raum ist hier nicht vorgesehen. Die Pflichtübertragung, die diese App kennt, ist die des Accords, nicht die eines Gründers.",
     "community_open_moderation": "Offene Moderation",
+    "community_moderation_pick": "Ihre Communities",
+    "community_moderation_pick_none": "Sie sind in keiner Community mit mehr als zwei Personen.",
+    "community_moderation_pick_unreadable": "Ihre Communities konnten nicht gelesen werden. Geben Sie stattdessen oben den Community-Schlüssel ein.",
     "community_affiliations_terms_unavailable": "Was dieses Gremium dazu erklärt hat, was es mit Ihren hier hinterlegten Angaben (Klassifizierung, Aufbewahrung, rechtmäßiger Zugriff) tun kann, wird noch nicht bereitgestellt (CIRISServer#649). Ein Beitritt zeigt es nicht, und diese App wird es nicht erraten.",
     "scheduler_stat_dead_lettered": "In Quarantäne",
     "sessions_error_forbidden": "Nur ein Administrator kann den kognitiven Zustand dieses Agenten ändern.",
@@ -3482,7 +3491,8 @@
     "data_receipt_records_verified": "Gelöschte Datensätze",
     "data_receipt_records_claimed": "Behauptete Datensätze (nicht verifiziert)",
     "data_receipt_signed_by": "Signiert von",
-    "data_receipt_checked_at": "Geprüft am"
+    "data_receipt_checked_at": "Geprüft am",
+    "adapter_remove_what": "Ihr Agent handelt ab sofort nicht mehr über {name}, und was es dem Agenten gegeben hat, geht mit. Wenn es so gespeichert war, dass es mit dem Agenten startet, kann es beim nächsten Neustart zurückkommen; diese Karte liest das nicht."
   },
   "moderation": {
     "ladder": {
@@ -3870,11 +3880,13 @@
       "confirm_change_button": "Edge neu starten",
       "confirm_change_title": "Neustart erforderlich",
       "insufficient_disk_error": "Nicht genug freier Speicher für SERVER-Modus. {available} frei, {required} benötigt.",
+      "open_settings": "Einstellungen öffnen",
       "proxy_default_marker": "(Standard)",
       "proxy_description": "Lokaler Agent mit Proxy-Föderationsoberfläche.",
       "proxy_label": "Proxy",
       "server_description": "Vollständiger Föderationsknoten.",
       "server_disk_gate": "Erfordert ≥256 GB freien Speicher · {available} frei von {required} benötigt",
+      "set_in_settings": "Der Netzwerkmodus Ihres Agenten (Client, Proxy oder Server) wird in den Einstellungen festgelegt, zusammen mit der übrigen Konfiguration Ihres Agenten.",
       "server_label": "Server",
       "subtitle": "Wie dieser Agent an der Föderation teilnimmt. Edge wird bei einer Änderung neu gestartet.",
       "title": "Agentenmodus"
@@ -4733,7 +4745,16 @@
       "uphold": "Aufrechterhalten",
       "window": "Fenster",
       "window_closed": "geschlossen",
-      "window_open": "offen"
+      "window_open": "offen",
+      "confirm_subject": "Handlung · Kohorte",
+      "confirm_what": "Was sich ändert",
+      "confirm_who_signs": "Wer signiert",
+      "confirm_raise_what": "Diese Handlung wird gebremst. Die Bremse bleibt, bis die Kohorte sie mit ihrem eigenen Schwellenwert aufhebt; Sie können sie nicht allein zurücknehmen.",
+      "confirm_ballot_uphold_what": "Ihre Stimme, den Einspruch {objection} aufrechtzuerhalten, wird mit Ihrer Begründung erfasst. Eine Stimme pro Teilnehmer, und sie wird nicht zurückgenommen.",
+      "confirm_ballot_overrule_what": "Ihre Stimme, den Einspruch {objection} zu überstimmen, wird mit Ihrer Begründung erfasst. Eine Stimme pro Teilnehmer, und sie wird nicht zurückgenommen.",
+      "confirm_dismiss_what": "Die durch Einspruch {objection} ausgelöste Bremse wird aufgehoben, wenn die Signaturen den Schwellenwert der Kohorte erreichen. Der Knoten zählt sie; reichen sie nicht aus, wird nichts aufgehoben.",
+      "confirm_signs_node": "Der Schlüssel dieses Knotens, in Ihrem Namen als dessen Eigentümer. Die signierte Zeile geht an jeden Peer.",
+      "confirm_signs_cosigners": "Der Schlüssel dieses Knotens, in Ihrem Namen als dessen Eigentümer, mit den {count} von Ihnen hinzugefügten Mitunterschriften."
     },
     "mesh_config": {
       "admitted": "Zugelassen",
