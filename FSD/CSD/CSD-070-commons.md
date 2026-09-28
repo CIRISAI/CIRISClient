@@ -58,7 +58,7 @@ fields:
     type: "enum[unreadable,action_unknown,cohort_unknown,not_governed,quiet,objected,stood,reversed]"
     example: "objected"
     renders: "OBJECTED — somebody raised a brake and the window is open"
-    tag: "proposed:txt_commons_standing"
+    tag: txt_commons_standing
     assert:
       one_of: {txt_commons_standing: [unreadable, action_unknown, cohort_unknown,
                                       not_governed, quiet, objected, stood, reversed]}
@@ -75,43 +75,43 @@ fields:
     type: int
     example: 3
     renders: "3 upholds · 1 overrule, of 5 respondents"
-    tag: "proposed:txt_commons_ballot_tally"
+    tag: txt_commons_ballot_tally
   - ceg: x_private:objection_threshold
     use: display-only
     type: int
     example: 1
     renders: "It costs ONE member to raise this. That number is named on every response."
-    tag: "proposed:txt_commons_raise_price"
+    tag: txt_commons_raise_price
   - ceg: x_private:escalation_respondent_floor
     use: display-only
     type: int
     example: 3
     renders: "and never fewer than 3 respondents — an absolute floor no policy string can lower"
-    tag: "proposed:txt_commons_floor"
+    tag: txt_commons_floor
   - ceg: x_private:dismissal_required
     use: display-only
     type: int
     example: 4
     renders: "Lifting it costs 4 of this cohort's 7 — the cohort's own number, often simply not known here"
-    tag: "proposed:txt_commons_lift_price"
+    tag: txt_commons_lift_price
   - ceg: x_private:dismissal_payload_sha256
     use: display-only
     type: string
     example: "c40a9f2c…"
     renders: "the dry run's canonical bytes — co-signers sign exactly this"
-    tag: "proposed:txt_commons_dry_run_hash"
+    tag: txt_commons_dry_run_hash
   - ceg: x_private:escalation_standing
     use: display-only
     type: "enum[not_adopted,nothing_to_escalate,awaiting,open]"
     example: "awaiting"
     renders: "Escalation · AWAITING — the appointed moderators have not answered yet"
-    tag: "proposed:txt_commons_escalation"
+    tag: txt_commons_escalation
   - ceg: x_private:commons_refusal
     use: display-only
     type: string
     example: "objection_roster_unresolved"
     renders: "the refusal token and the server's own sentence for it"
-    tag: "proposed:txt_commons_refusal"
+    tag: txt_commons_refusal
 ```
 
 **`objection:{state}` and `vote:{contribution_id}` are non-reserved**
@@ -131,24 +131,27 @@ price vocabulary, or state that it rides `objection:{state}`'s payload and is
 deliberately not a dimension.**
 
 ```yaml csd:states
-populated: {tag: "proposed:txt_commons_standing", renders: "the standing chip, its sentence, and — only on the five non-absence arms — the counts"}
-empty:     {tag: "proposed:txt_commons_quiet", renders: "Nobody objected. The plane was read and it is clear. (This is NOT an absence.)"}
-loading:   {tag: "proposed:spinner_commons_read", renders: "the Read button carries the progress affordance; no standing chip is drawn"}
-error:     {tag: "proposed:txt_commons_unreadable", renders: "The plane could not be read. No counts are printed, because none exist."}
+populated: {tag: txt_commons_standing, renders: "the standing chip (its value is the arm token), its sentence, and — only on the four counted arms — the counts"}
+empty:     {tag: txt_commons_quiet, renders: "Nobody objected. The plane was read and it is clear. (This is NOT an absence.)"}
+loading:   {tag: spinner_commons_read, renders: "a progress affordance under the form; no standing chip is drawn"}
+error:     {tag: txt_commons_no_counts, renders: "the no-counts block, whose value is the arm: unreadable / action_unknown / cohort_unknown / not_governed. No counts are printed, because none exist. A read that never arrived (transport failure) is txt_commons_error, and a refusal is txt_commons_refusal with the token"}
 ```
 
-**The model already draws this distinction and the screen already renders it.**
-`ABSENCE_ARMS` (`CommonsScreen.kt:318`) is the four-arm set; `absent` gates the
-counts (`:353`); `quiet` gets its own success-toned block (`:405`); the refusal
-path returns before any of it (`:332`). This is the most carefully built
-zero-discipline in the client.
+**The model draws this distinction and the screen renders it.** `standingBody()`
+(`CommonsScreen.kt`, pure, `CommonsStandingBodyTest`) decides REFUSED /
+NO_COUNTS / QUIET / COUNTED: a refusal returns first, the four absence arms and
+any arm without a fold print no counts, `quiet` is read-and-clear. This is the
+most carefully built zero-discipline in the client.
 
-**And none of it has a test tag.** All twenty tags on `CommonsScreen.kt` are
-inputs and buttons — the three write doors. The read this surface exists to
-render — eight arms, four of them count-free, one of them deliberately not an
-absence — is entirely unassertable. A regression that collapsed
-`unreadable` into `quiet` would pass every check this repo runs, and it is the
-exact regression the server's module doc says cost 71 hours on 2026-08-05.
+**And it now has tags.** The eight arms are assertable through
+`txt_commons_standing` (value = the arm), `txt_commons_no_counts`,
+`txt_commons_quiet`, `txt_commons_refusal`, `txt_commons_objectors`,
+`txt_commons_raise_price`, `txt_commons_lift_price`, `txt_commons_floor`,
+`txt_commons_dry_run_hash`, `txt_commons_ballot_tally` and
+`txt_commons_escalation`. Before this revision all twenty tags on the screen
+were inputs and buttons, and the write buttons' automation handlers were `{}`:
+a flow could click `btn_commons_object` and nothing happened. Every text field
+now has an input sink and every button's handler runs the same act as a tap.
 
 ### 2.1 The asymmetry is drawn and can be broken silently
 
@@ -188,9 +191,9 @@ constants in `src/commons_surface.rs:120-126`.
 | lift a brake (m-of-n) | `POST /v1/commons/dismissals` | `:1314` | **live** |
 
 **Every route is live and the client calls all four** (`CIRISApiClient.kt:3281,
-3318, 3357, 3398`). There is no substrate gap on this surface at all — which is
-why its `sketched` blocker is entirely the tag list, and why moving it to
-`building` is a client-side afternoon rather than an upstream ask.
+3318, 3357, 3398`). There is no substrate gap on this surface at all. The tag
+list, which was the whole blocker, is now real (§2); what keeps this at
+`building` is the floor (`unreleased`) and a flow that has not run on the matrix.
 
 **One wire behaviour the client must keep honouring.** `unreadable` (503),
 `action_unknown` (404) and `cohort_unknown` (404) arrive on **non-2xx statuses
@@ -207,22 +210,38 @@ Land on `Commons` (Everyone › Decisions, derived).
 
 ```yaml
 expect:
-  visible: [input_commons_cohort_key, input_commons_action, btn_commons_read]
+  visible: [input_commons_cohort_key, input_commons_action, btn_commons_read, txt_commons_raise_price]
 ```
-
-*Cannot yet assert:* the asymmetry banner, which is drawn before any control and
-is the first thing §1 claims.
 
 Type a cohort key and an action id; press `btn_commons_read`.
 
 ```yaml
+do:
+  - input: {input_commons_cohort_key: "cohort-key"}
+  - input: {input_commons_action: "act-8812ab4f"}
+  - click: btn_commons_read
 expect:
-  visible: [input_commons_objection_grounds, btn_commons_object]
+  visible: [txt_commons_standing, input_commons_objection_grounds, btn_commons_object]
+  one_of: {txt_commons_standing: [unreadable, action_unknown, cohort_unknown, not_governed, quiet, objected, stood, reversed]}
 ```
 
-*Cannot yet assert:* the standing, its arm, whether counts were printed, or
-whether they should have been. Eight arms, one assertion, and the assertion is
-"a text field appeared".
+On an `unreadable` answer (a 503 with a body):
+
+```yaml
+expect:
+  state: error
+  visible: [txt_commons_no_counts]
+  absent: [txt_commons_objectors, txt_commons_quiet]
+```
+
+On `quiet`:
+
+```yaml
+expect:
+  state: empty
+  visible: [txt_commons_quiet, txt_commons_objectors]
+  absent: [txt_commons_no_counts]
+```
 
 Open the lift disclosure and run the dry run:
 
@@ -232,8 +251,8 @@ expect:
             input_commons_cosigner_classical, btn_commons_add_cosigner]
 ```
 
-*Cannot yet assert:* the payload hash, or that submit stayed shut until the dry
-run produced it.
+After the dry run, `txt_commons_dry_run_hash` carries the payload hash the
+submit sends.
 
 ## 5. QA plan
 
@@ -253,6 +272,5 @@ run produced it.
   built to not re-implement — and a second answer that can disagree with the
   first is the defect class the server's module doc calls this repo's dominant
   one.
-* **Every state** — all four are `proposed:` (§2).
 * **Acceptances 1, 2 and 3**, entirely.
 * **The non-2xx-carries-a-body contract** (§3), on either side.

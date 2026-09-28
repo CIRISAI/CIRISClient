@@ -1,0 +1,37 @@
+csd: CSD-048
+flow: csd_048_network_interfaces
+title: One card per medium this node moves bytes over
+description: >-
+  CSD-048 §4, driven. GET /v1/federation/metrics (CIRISServer
+  src/federation_surface.rs:697) on the NODE url, polled every 10 s. Reachability
+  is keyed "{peer}:{medium}" (:222); the client split on "|" and drew one row per
+  peer. A failed read is the read-failure block, never "No transports".
+# Floor: screen_federation_interfaces, btn_federation_interfaces_refresh,
+# empty_interfaces, card_transport_${row.id}
+# (ui/screens/federation/NetworkInterfacesScreen.kt); federation_interfaces_error /
+# federation_interfaces_not_on_this_node (ReadFailureBlock).
+client: "unreleased"
+
+steps:
+  - step_id: on_interfaces
+    title: The card composes
+    requires:
+      screen: NetworkInterfaces
+    expect:
+      visible: [screen_federation_interfaces, btn_federation_interfaces_refresh]
+
+  - step_id: a_medium_per_card
+    title: A node carrying tcp traffic shows one tcp card, not one per peer
+    optional_step: true
+    expect:
+      state: populated
+      visible: [card_transport_tcp]
+      count: {of: "card_transport_*", min: 1}
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads without leaving the screen
+    do:
+      - click: btn_federation_interfaces_refresh
+    expect:
+      screen: NetworkInterfaces
+      visible: [screen_federation_interfaces]

@@ -14,6 +14,9 @@ import ai.ciris.mobile.shared.viewmodels.ConsentObjectsState
 import ai.ciris.mobile.shared.viewmodels.ConsentObjectsViewModel
 import ai.ciris.mobile.shared.viewmodels.DelegationsViewModel
 import ai.ciris.mobile.shared.viewmodels.NodeSwitcherViewModel
+import ai.ciris.mobile.shared.viewmodels.NodesListBody
+import ai.ciris.mobile.shared.viewmodels.OwnedNodesRead
+import ai.ciris.mobile.shared.viewmodels.nodesListBody
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -220,6 +223,7 @@ private fun NodesListView(
     val error by viewModel.error.collectAsState()
     val notice by viewModel.notice.collectAsState()
     val bootstrap by viewModel.bootstrap.collectAsState()
+    val ownedNodesRead by viewModel.ownedNodesRead.collectAsState()
 
     // USB node-list save/restore folder pickers (private/offline sneakernet).
     var showSaveUsbPicker by remember { mutableStateOf(false) }
@@ -297,13 +301,38 @@ private fun NodesListView(
         }
 
             // ── Node list ────────────────────────────────────────────────────
-            if (profiles.isEmpty()) {
+            // CSD-035 §2.2: loading, empty, a read list and an UNVERIFIED list
+            // (the owned-nodes read failed; the rows are the local fallback)
+            // are four different screens, never one.
+            val body = nodesListBody(ownedNodesRead, profiles)
+            if (body == NodesListBody.LOADING) {
+                CircularProgressIndicator(modifier = Modifier.size(24.dp).testable("nodes_loading"))
+            }
+            (ownedNodesRead as? OwnedNodesRead.Failed)?.let { failed ->
+                ReadFailureBlock(
+                    failure = failed.failure,
+                    tagPrefix = "nodes",
+                    notOnThisNode = localizedString("mobile.manage_nodes_owned_not_on_this_node"),
+                    inline = true,
+                )
+                Text(
+                    text = localizedString("mobile.manage_nodes_unverified"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("text_nodes_unverified"),
+                )
+            }
+            if (body == NodesListBody.EMPTY) {
                 Text(
                     text = localizedString("mobile.manage_nodes_empty"),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("nodes_empty"),
                 )
-            } else {
+            } else if (body != NodesListBody.LOADING) Column(
+                modifier = Modifier.fillMaxWidth().testable("nodes_list", body.name.lowercase()),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 profiles.forEach { profile ->
                     NodeRow(
                         profile = profile,

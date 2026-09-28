@@ -74,13 +74,15 @@ class NetworkTrustGraphViewModel(
 
     fun load() {
         viewModelScope.launch {
-            runApi("loadTrustGraph") {
-                val identityResp = apiClient.getFederationIdentity()
+            // The PEER LIST is the graph; the identity only labels its centre.
+            // An identity failure used to fail the whole graph, so a readable
+            // peer list was drawn as an error (CSD-046).
+            runRead("loadTrustGraph") {
                 val peerList = apiClient.listFederationPeers().peers
-                val enriched = fetchReachabilityCapped(peerList)
-                _identity.value = identityResp
-                _peers.value = enriched
+                _peers.value = fetchReachabilityCapped(peerList)
             }
+            runCatching { apiClient.getFederationIdentity() }
+                .onSuccess { _identity.value = it }
         }
     }
 

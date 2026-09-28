@@ -28,4 +28,21 @@ data class FederationIdentity(
      * Mirrors the fixed literal list the route exposes on Edge 1.0.
      */
     val capabilities: List<String> = emptyList(),
+    /**
+     * Whether the two counts above were MEASURED. CIRISServer
+     * `src/federation_surface.rs:124-150` degrades an unreadable peer store
+     * (`store_unavailable`) or an unresolvable self (`self_identity_unresolved`)
+     * to `0, 0` and says so here — "a zero that cannot say why it is zero is
+     * not evidence" (CIRISServer#372). Null on a node that predates it.
+     */
+    @SerialName("peer_counts_standing")
+    val peerCountsStanding: String? = null,
 )
+
+/**
+ * A peer count as it may be drawn: the number when the node measured it (or
+ * an older node that cannot say otherwise), null when the node said the zero
+ * is not a reading. The screen draws null as [ai.ciris.mobile.shared.ui.screens.NOT_READ].
+ */
+fun FederationIdentity.peerCountReading(count: Int): String? =
+    if (peerCountsStanding == null || peerCountsStanding == "measured") count.toString() else null

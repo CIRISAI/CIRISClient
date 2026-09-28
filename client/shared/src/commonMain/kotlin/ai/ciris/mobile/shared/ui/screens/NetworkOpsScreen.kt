@@ -27,15 +27,15 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
  * lives in the Commons → Global Commons hub, reached via the button below. This
  * is the operator-infra slice; the Commons hub is the social/federation view.
  *
- * It also hosts the two admin rungs that act on NOBODY else
- * ([SelfAndReaderOpsSection], `CIRISServer/src/admin_ops.rs`): **tier S**, this
- * node's own three standings, and **tier R**, this node's own reader policy over
- * other parties' judgements. They live here rather than on the runtime screen
- * because both are facts about THIS node's local ledger — the same subject as
- * the signer key and the agent mode above — while `RuntimeScreen` is the
- * agent's H3ERE pipeline debugger (pause / single-step / queue depth), a
- * different object entirely. The enforcement ladder that acts on OTHERS lives on
- * the moderation surface, deliberately not here.
+ * It also hosts **tier R** ([ReaderPolicySection], `CIRISServer/src/admin_ops.rs`):
+ * this node's own reader policy over other parties' judgements. It lives here
+ * rather than on the runtime screen because it is a fact about THIS node's
+ * local ledger — the same subject as the signer key and the agent mode above —
+ * while `RuntimeScreen` is the agent's H3ERE pipeline debugger (pause /
+ * single-step / queue depth), a different object entirely. **Tier S**, this
+ * node's own three standings, has its own surface (This node › Own standing,
+ * [NodeSelfStandingScreen], CSD-045). The enforcement ladder that acts on
+ * OTHERS lives on the moderation surface, deliberately not here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,7 +46,11 @@ fun NetworkOpsScreen(
     modifier: Modifier = Modifier,
 ) {
     val status by viewModel.status.collectAsState()
-    val mode by viewModel.mode.collectAsState()
+    // The mode as READ, never the selector's PROXY default (CSD-036 §6).
+    val modeRead by viewModel.modeRead.collectAsState()
+    val modeFailure by viewModel.modeFailure.collectAsState()
+    val identityFailure by viewModel.identityFailure.collectAsState()
+    val loading by viewModel.loading.collectAsState()
     val federationAddress by viewModel.federationAddress.collectAsState()
     val federationId by viewModel.federationId.collectAsState()
 
@@ -86,14 +90,34 @@ fun NetworkOpsScreen(
                 "row_netops_signer_key",
                 mono = true,
             )
+            identityFailure?.let { ReadFailureBlock(it, tagPrefix = "netops_identity", inline = true) }
         }
 
         FederationIdCard(federationId = federationId)
 
         OpsCard(title = "Agent mode", testTag = "card_netops_mode") {
-            OpsRow("Current", mode.wire.uppercase(), "row_netops_mode")
-            status?.let {
-                OpsRow("SERVER-eligible", if (it.serverEligible) "yes" else "no", "row_netops_server_eligible")
+            val failure = modeFailure
+            when {
+                modeRead != null -> {
+                    OpsRow("Current", netopsModeValue(modeRead), "row_netops_mode")
+                    status?.let {
+                        OpsRow("SERVER-eligible", if (it.serverEligible) "yes" else "no", "row_netops_server_eligible")
+                    }
+                }
+                // Not read is not a reading: no row, and the reason instead.
+                failure != null -> ReadFailureBlock(
+                    failure,
+                    tagPrefix = "netops",
+                    inline = true,
+                    notOnThisNode = localizedString("network_ops.mode_not_on_this_node").let {
+                        if (it.isBlank() || it == "network_ops.mode_not_on_this_node") {
+                            "This node runs without an agent, and the mode is the agent's to report."
+                        } else it
+                    },
+                )
+                else -> LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().testable("progress_netops_mode", if (loading) "loading" else "waiting"),
+                )
             }
         }
 
@@ -112,12 +136,16 @@ fun NetworkOpsScreen(
             Text(localizedString("network_ops.open_federation_hub").ifEmpty { "Open federation hub →" })
         }
 
-        // The two rungs that act on nobody else: this node's own standings
-        // (tier S) and this node's own reader policy (tier R).
-        SelfAndReaderOpsSection(apiClient = apiClient)
+        // Tier R, this node's own reader policy. Tier S (this node's own
+        // standings) has its own surface, This node › Own standing (CSD-045).
+        ReaderPolicySection(apiClient = apiClient)
     }
     }
 }
+
+/** The mode row's value: the mode as read, or [NOT_READ], never a default. Pure. */
+internal fun netopsModeValue(modeRead: ai.ciris.mobile.shared.models.AgentMode?): String =
+    modeRead?.wire?.uppercase() ?: NOT_READ
 
 @Composable
 private fun OpsCard(title: String, testTag: String, content: @Composable ColumnScope.() -> Unit) {

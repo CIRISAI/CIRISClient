@@ -191,7 +191,6 @@ fun NetworkScreen(
  */
 enum class NetworkTile(val route: String) {
     IDENTITY("federation/identity"),
-    MAP("federation/map"),
     TRUST_GRAPH("federation/trust_graph"),
     PEERS("federation/peers"),
     INTERFACES("federation/interfaces"),
@@ -477,10 +476,11 @@ private data class TileSpec(
 
 private val TILE_ROW_1 = listOf(
     TileSpec(NetworkTile.IDENTITY, "network.tiles.identity", CIRISIcons.identity),
-    TileSpec(NetworkTile.MAP, "network.tiles.map", CIRISIcons.snapshot),
+    // The Map tile was retired into the Trust graph (CSD-046): both drew the
+    // same peer list in the same three tiers.
+    TileSpec(NetworkTile.TRUST_GRAPH, "network.tiles.trust_graph", CIRISIcons.welcome),
 )
 private val TILE_ROW_2 = listOf(
-    TileSpec(NetworkTile.TRUST_GRAPH, "network.tiles.trust_graph", CIRISIcons.welcome),
     TileSpec(NetworkTile.PEERS, "network.tiles.peers", CIRISIcons.person),
 )
 private val TILE_ROW_3 = listOf(

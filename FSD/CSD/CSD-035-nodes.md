@@ -88,28 +88,30 @@ CC 3.2 makes the last of those a *refusal condition*, so the field cannot become
 `display-only`-with-a-type until the route carries it.
 
 ```yaml csd:states
-populated: {tag: "proposed:nodes_list"}
-empty:     {tag: "proposed:nodes_empty", renders: "mobile.manage_nodes_empty — the add-by-code and add-by-URL cards stay visible beneath it, because an empty node list has exactly two useful next moves"}
-loading:   {tag: "proposed:nodes_loading", renders: "the list frame with a progress affordance and NO empty sentence"}
-error:     {tag: "proposed:nodes_error", renders: "Could not read the owned-nodes projection from this node. — distinct from empty: an unreachable local node and a node that owns nothing must not draw the same screen"}
+populated: {tag: nodes_list, renders: "the rows; the tag's value is 'list' after a read, 'list_unverified' when the owned-nodes read failed and the rows are the local fallback"}
+empty:     {tag: nodes_empty, renders: "mobile.manage_nodes_empty — only after a read that returned nothing; the add-by-code and add-by-URL cards stay visible beneath it, because an empty node list has exactly two useful next moves"}
+loading:   {tag: nodes_loading, renders: "a progress affordance and NO empty sentence, while the first read is in flight and no profile is held"}
+error:     {tag: nodes_error, renders: "'Could not read' above the rows, plus text_nodes_unverified: 'This list could not be checked against the nodes you own … That does not mean you own nothing else.' nodes_not_on_this_node when the node is too old to serve the projection. Distinct from empty: an unreachable local node and a node that owns nothing do not draw the same screen"}
 ```
 
-Every one of those four is `proposed:`. The screen today renders the empty case
-through `localizedString("mobile.manage_nodes_empty")` (`ManageNodesScreen.kt:302`)
-with **no tag**, and has no list-level error banner at all — a failed
-`getOwnedNodes()` is logged and swallowed (`CIRISApp.kt:992-996`), so the person
-sees the empty sentence. That is the exact substitution CSD/3 §2.2 forbids, and
-it is recorded here rather than described as working.
+The four states were all `proposed:` and the error one did not exist: a failed
+`getOwnedNodes()` was logged and swallowed (`NodeSwitcherViewModel.reload`), and
+because the fallback still lists the local node, the person saw one row reading
+"This device" — which is also exactly what a person who owns only this node
+sees. `NodeSwitcherViewModel.ownedNodesRead` now records whether the projection
+answered, `nodesListBody()` (pure, `NodesListBodyTest`) decides which of the four
+bodies draws, and the list is tagged with which one it is.
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the node list + `owner` | `GET /v1/setup/owned-nodes` | CIRISServer | live — `src/auth/bootstrap.rs:1489`, **loopback-only** (`:1501-1503`) |
-| reachability | `GET /v1/system/health` | CIRISServer | live — `src/health.rs:589` |
-| add by code | `getNodeCode` → local pin, then `claimRemote` | CIRISServer | live |
-| claim this node | `POST /v1/setup/claim-remote` | CIRISServer | live |
-| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `src/identity.rs:1945`, loopback-only |
+| the node list + `owner` | `GET /v1/setup/owned-nodes` | CIRISServer | live — `src/auth/bootstrap.rs:1489`, **loopback-only** (`:1501-1503`); `getOwnedNodes` from `NodeSwitcherViewModel.reload` |
+| reachability | `GET /v1/system/health` | CIRISServer | live — `src/health.rs:589`; `getNodeHealth` from `NodeSwitcherViewModel` |
+| whether the added node is set up | `GET /v1/setup/status` | CIRISAgent (front door) / CIRISServer | live — `getSetupStatus` from `NodeSwitcherViewModel` when a node is added by URL |
+| add by code | `GET /v1/federation/node-code` (`src/federation_nodecode.rs:92`) → the identity pin | CIRISServer | live — `getNodeCode` from `NodeSwitcherViewModel` |
+| claim this node | `POST /v1/setup/claim-remote` | CIRISServer | live — **CSD-085's card** (`Screen.ClaimNode`), reached from here by `btn_manage_nodes_claim`; not called from this screen |
+| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `src/identity.rs:1945`, loopback-only; **CSD-086's card** (`Screen.AddFederationId`), reached from here by `btn_add_federation_id`; not called from this screen |
 | **release a node** | `POST /v1/self/nodes/{node_key_id}/release` | CIRISServer | **live and UNCALLED** — `src/self_devices.rs:469`. No Kotlin call site exists. |
 | the owner-binding's attester / timestamp / cardinality | — | CIRISServer | **missing** — blocks `building` for `row_node_owner` |
 
@@ -121,7 +123,8 @@ Sign in on a node; open My things › This node › Nodes; switch to the list vi
 expect:
   state: populated
   count: {of: "row_node_*", min: 1}
-  visible: ["proposed:nodes_list", btn_add_node_by_code, btn_add_node_by_url]
+  visible: [nodes_list, btn_add_node_by_code, btn_add_node_by_url]
+  text: {nodes_list: "list"}
 ```
 
 Add a node by URL: click `btn_add_node_by_url`, fill `field_add_node_name` and
@@ -137,8 +140,8 @@ On a client whose local node is down:
 ```yaml
 expect:
   state: error
-  visible: ["proposed:nodes_error"]
-  absent: ["proposed:nodes_empty"]
+  visible: [nodes_error, text_nodes_unverified]
+  absent: [nodes_empty]
 ```
 
 ## 5. QA plan

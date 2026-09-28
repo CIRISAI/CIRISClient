@@ -1,0 +1,64 @@
+csd: CSD-033
+flow: csd_033_network_peers
+title: The peers this node holds, and a paste field that can be typed into
+description: >-
+  CSD-033 §4, driven. GET /v1/federation/peers (CIRISServer
+  src/federation_peers.rs:1435) on the NODE url. Add-by-code is the AGENT's
+  POST /v1/system/peers/add-from-code (CIRISAgent routes/system/peers.py:250,
+  SYSTEM_ADMIN); on a bare node the sheet says the node can't, instead of a raw
+  404. A failed list read is the read-failure block, never "No peers yet".
+# Floor: screen_federation_peers, switch_show_infra, btn_add_peer, list_peers,
+# empty_peers, peer_row_${peer.keyId}, sheet_add_peer, dialog_add_peer,
+# input_add_peer_code, btn_add_peer_submit, btn_add_peer_cancel, btn_scan_qr,
+# text_add_peer_error, btn_federation_peers_refresh, btn_network_peers_back
+# (ui/screens/federation/NetworkPeersScreen.kt); federation_peers_error /
+# federation_peers_not_on_this_node (ReadFailureBlock).
+client: "unreleased"
+
+steps:
+  - step_id: on_peers
+    title: The peer list composes with its filter and its add door
+    requires:
+      screen: NetworkPeers
+    expect:
+      visible: [screen_federation_peers, switch_show_infra, btn_add_peer]
+
+  - step_id: the_list_or_its_honest_empty
+    title: A read list has rows; a read empty says so; a failed read says which failure
+    description: >-
+      Optional because the matrix decides which of the three the node is in. What
+      is never allowed is the fourth: the empty sentence over a read that failed.
+    optional_step: true
+    expect:
+      state: populated
+      visible: [list_peers]
+      count: {of: "peer_row_*", min: 1}
+
+  - step_id: the_paste_field_takes_input
+    title: The add-peer sheet's paste field is drivable
+    description: >-
+      The field had a tag and no input sink, so /input refused it (CIRISClient#30)
+      and no flow could add a peer. It is asserted by typing into it. The code is
+      not a real one, so the submit reports an error and nothing is added.
+    do:
+      - click: btn_add_peer
+      - input: {input_add_peer_code: "not-a-code"}
+      - click: btn_add_peer_submit
+    expect:
+      screen: NetworkPeers
+      visible: [sheet_add_peer, text_add_peer_error]
+
+  - step_id: cancel_closes_the_sheet
+    title: Cancel closes the sheet and leaves the list
+    do:
+      - click: btn_add_peer_cancel
+    expect:
+      screen: NetworkPeers
+      absent: [sheet_add_peer]
+
+  - step_id: back_returns_to_the_hub
+    title: Back lands on the hub that opened it
+    do:
+      - click: btn_network_peers_back
+    expect:
+      screen: LayerGlobalCommons

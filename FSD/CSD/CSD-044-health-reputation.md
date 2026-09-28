@@ -87,10 +87,10 @@ fields:
     tag: "proposed:txt_local_fleet"
   - ceg: x_private:circle_context
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "NOT RENDERED. The card does not name the circle it is being read in, and does not vary by it. In Everyone it says exactly what it says in Neighbours."
-    tag: "proposed:txt_circle_context"
+    type: string
+    example: "One score for the agent, the same in every circle. CIRIS cannot yet measure standing within a single circle."
+    renders: "a sentence under the header saying the number is NOT this circle's — the honest interim until a per-cohort standing exists. The card still does not vary by circle"
+    tag: txt_capacity_not_per_circle
   - ceg: x_private:consent_scope_analyze
     use: display-only
     type: unconfirmed
@@ -122,8 +122,8 @@ error:     {tag: federation_capacity_local_only, renders: "CSD-004 owns this: /v
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| five factors, composite, fragility, category | `GET /v1/my-data/capacity?scope=both` | CIRISAgent `routes/my_data.py:1220` | live on the brain (tree of 2026-08-15) |
-| capacity rows with attesters | `GET /v1/my-data/capacity` | CIRISServer `src/system_data.rs:390` | live, unauthenticated |
+| five factors, composite, fragility, category | `GET /v1/my-data/capacity?scope=both` | CIRISAgent `routes/my_data.py:1220` | live on the brain (tree of 2026-08-15) — **another CSD's card**: CSD-004 owns the read, and it is made by `InteractViewModel.cellVizState`, collected outside this screen's arm (`capacityForCard`), so the route walker sees no call from `Screen.HealthReputation` |
+| capacity rows with attesters | `GET /v1/my-data/capacity` | CIRISServer `src/system_data.rs:390` | live, unauthenticated — **another CSD's card** (CSD-004), same read |
 | `coherence_standing:{cohort}` for a named cohort | — | CIRISLensCore | **missing** — no route on either host |
 | `manifold_conformity:{cohort}` for a named cohort | — | CIRISLensCore | **missing** |
 | whether the subject granted `consent:scope:analyze` | — | CIRISAgent | **missing** — CC 3.4.5 refuses a `capacity:*` row without a live grant *at admission, before persistence*, and no route answers it per subject. **CIRISAgent#1219** |
@@ -145,14 +145,14 @@ Now switch to **Everyone** and open the same card.
 
 ```yaml
 expect:
-  visible: ["proposed:txt_circle_context"]
-  relation: {left: "coherence_standing:{cohort}", op: ne, right: "coherence_standing:{cohort}"}
+  visible: [txt_capacity_not_per_circle]
 ```
 
-That block is unsatisfiable as written and says so on purpose: there is no second
-value to compare, because the card has no cohort parameter at all. It is the
-shape the fix must make assertable — two circles, two standings — and it is the
-one assertion in this file that cannot be written honestly today.
+The card now says, in both circles, that the number is not the circle's. The
+assertion this CSD exists for — two circles, two standings,
+`relation: {left: "coherence_standing:{cohort}", op: ne, …}` — still cannot be
+written: there is no second value to compare, because the card has no cohort
+parameter at all (CIRISLensCore#25).
 
 Before the first fetch (airplane mode at launch):
 
@@ -183,9 +183,11 @@ sub-section, the `min_of` relation, the maturity note, the attester row. The
   CIRISServer):** serve `coherence_standing:{cohort}` and
   `manifold_conformity:{cohort}` for the cohort the client is standing in.
   **Ask (CIRISClient):** pass the current `CohortScope` into the screen and name
-  it on the card. Until then the honest interim is to place the card in **one**
-  circle, not three — a repeated identical card teaches the person that the
-  circles do not matter, which is the opposite of what the Locked Spec is for.
+  it on the card. **Done as an interim:** the card now carries
+  `txt_capacity_not_per_circle`, "One score for the agent, the same in every
+  circle", so a repeated identical card no longer teaches the person that the
+  circles do not matter. Placing it in one circle instead of three stays the
+  recommendation (a nav change, `CirclesNav.kt`, not made here).
 * **The pre-fetch factors are the most flattering possible reading.** Five rows
   at 1.00 under a composite of "—". **Ask (CIRISClient):** guard `FactorRow` on
   `isPreFetch` exactly as the hero is guarded, and render the empty state
