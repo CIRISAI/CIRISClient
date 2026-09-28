@@ -2,8 +2,13 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ConsentWithdrawApi
+import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.api.PeeringApi
+import ai.ciris.mobile.shared.models.federation.AddContactResponse
+import ai.ciris.mobile.shared.models.federation.AnnounceOwnershipResponse
+import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
+import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
 import ai.ciris.mobile.shared.models.NodeProfile
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
@@ -93,6 +98,26 @@ private class FakePeering(
     }
 }
 
+/**
+ * The People screen's node calls, for the tests here that only remove: the
+ * peer list is whatever the test says. Without this the model's init-time
+ * peer read went to the REAL client at a dead port, and its connection
+ * refusal landed on ktor's IO thread — before or after the assertion,
+ * depending on the machine (CI, #122/#123). Anything else is not asked here.
+ */
+private class FakeContactsApi(
+    var peers: suspend () -> FederationPeerListResponse = { FederationPeerListResponse() },
+) : ContactsApi {
+    override suspend fun listContacts(): ContactListResponse = ContactListResponse()
+    override suspend fun listPeers(): FederationPeerListResponse = peers()
+    override suspend fun addContact(nodeUrl: String, keyId: String): AddContactResponse =
+        throw UnsupportedOperationException("not asked in this test")
+    override suspend fun contactCode(nodeUrl: String, nodes: String?): ContactCodeResponse =
+        throw UnsupportedOperationException("not asked in this test")
+    override suspend fun announceThisDevice(nodeUrl: String): AnnounceOwnershipResponse =
+        throw UnsupportedOperationException("not asked in this test")
+}
+
 /** The real client, pointed at a port nothing listens on, standing in for the AGENT. */
 private fun agentClient() = CIRISApiClient(baseUrl = AGENT_URL)
 
@@ -107,6 +132,7 @@ class WithdrawConsentTest {
     private fun contactsVm(fake: FakeWithdraw) = ContactsViewModel(
         agentClient(),
         nodeUrl = { NODE_URL },
+        api = FakeContactsApi(),
         withdraw = fake,
         readContacts = { listReads += 1; ContactListResponse(listOf(Contact(PERSON)), 1) },
     )
@@ -181,6 +207,7 @@ class WithdrawConsentTest {
         val vm = ContactsViewModel(
             agentClient(),
             nodeUrl = { node },
+            api = FakeContactsApi(),
             withdraw = fake,
             readContacts = { reads += node; ContactListResponse(listOf(Contact("$PERSON@$node")), 1) },
         )
@@ -228,6 +255,7 @@ class WithdrawConsentTest {
         val vm = ContactsViewModel(
             agentClient(),
             nodeUrl = { node },
+            api = FakeContactsApi(),
             withdraw = FakeWithdraw(),
             readContacts = {
                 val from = node
@@ -248,6 +276,7 @@ class WithdrawConsentTest {
         val vm = ContactsViewModel(
             agentClient(),
             nodeUrl = { node },
+            api = FakeContactsApi(),
             withdraw = FakeWithdraw(),
             readContacts = {
                 node = OTHER_NODE_URL
@@ -257,6 +286,26 @@ class WithdrawConsentTest {
         assertFalse(vm.routeUnsupported.value, "node A's bare 404 was published as node B's")
         assertNull(vm.error.value)
         assertFalse(vm.contactsLoaded.value, "a read of another node does not count as this node having answered")
+    }
+
+    @Test
+    fun aLatePeersFailureFromTheNodeSwitchedAwayFromIsNotPublished() {
+        // The PEER read went to NODE_URL and fails after the switch. It used to
+        // go through runApi, whose catch writes `error` with no node guard, so
+        // node A's failure landed on node B's screen (#122, #123 saw it as a
+        // flake: the real client's refusal raced the assertion).
+        var node = NODE_URL
+        val vm = ContactsViewModel(
+            agentClient(),
+            nodeUrl = { node },
+            api = FakeContactsApi(peers = {
+                node = OTHER_NODE_URL
+                throw IllegalStateException("connection refused")
+            }),
+            withdraw = FakeWithdraw(),
+            readContacts = { ContactListResponse(listOf(Contact(PERSON)), 1) },
+        )
+        assertNull(vm.error.value, "node A's peer-read failure was published as node B's")
     }
 
     @Test

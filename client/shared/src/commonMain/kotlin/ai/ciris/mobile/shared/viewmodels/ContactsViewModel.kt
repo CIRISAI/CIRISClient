@@ -294,17 +294,32 @@ class ContactsViewModel(
         }
     }
 
-    /** Pull a fresh peer list from the node (picker mode). */
+    /**
+     * Pull a fresh peer list from the node (picker mode).
+     *
+     * Not through [runApi]: its catch publishes any failure into [error] with
+     * no session or node guard, so a peer read that failed late — after the
+     * node was switched away from — landed its error on the NEW node's screen
+     * (and, on CI, on a test's assertion: #122, #123). Every path here, success
+     * and failure and completion, asks [current] first, as the contact read does.
+     */
     fun refreshPeers() {
         val epoch = sessionEpoch
         val url = nodeUrl()
         viewModelScope.launch {
-            runApi("listFederationPeers") {
-                api.listPeers()
-            }?.let { resp ->
-                if (epoch != sessionEpoch || nodeUrl() != url) return@launch
+            _loading.value = true
+            _error.value = null
+            try {
+                val resp = api.listPeers()
+                if (!current(epoch, url)) return@launch
                 _allPeers.value = sortedPeers(resp.peers)
                 applySearch()
+            } catch (e: Exception) {
+                if (!current(epoch, url)) return@launch
+                _error.value = e.message ?: e::class.simpleName
+                PlatformLogger.e(tag, "[listFederationPeers] ${e.message}", e)
+            } finally {
+                if (current(epoch, url)) _loading.value = false
             }
         }
     }
