@@ -173,6 +173,11 @@ shape: name the host, name the version, say which component owns the thing.
 | audit trail | `GET /v1/consent/audit` | CIRISAgent (`:353`) | same; already `try`-guarded to empty |
 | partnership status | `GET /v1/consent/partnership/status` | CIRISAgent (`:419`) | same; already `try`-guarded to null |
 | the node's own consent surface | `POST /v1/auth/consent` — CEG-native, hybrid-signed, one endpoint with `granted: bool` for grant and withdraw | CIRISServer | live, **and not called by this screen**. Whether the node's single endpoint should back this card on a node build is the open design question; it is a different contract, not a drop-in. |
+| what partnering means (§7) | `GET /v1/partnership/options` | CIRISAgent (`routes/partnership.py:380`) | live; any signed-in user — `partnershipOptions`, called from `ConsentViewModel.loadPartnershipQueue` |
+| requests waiting on the agent (§7) | `GET /v1/partnership/pending` | CIRISAgent (`routes/partnership.py:434`) | live; **admin only** (`:447`) — a 403 renders `partnership_admin_only`, never the empty queue |
+| partnership totals (§7) | `GET /v1/partnership/metrics` | CIRISAgent (`routes/partnership.py:471`) | live; admin only — read only after `/pending` answered |
+| one person's earlier answers (§7) | `GET /v1/partnership/history/{user_id}` | CIRISAgent (`routes/partnership.py:498`) | live; admin only — read when a row is opened |
+| answer a request (§7) | `POST /v1/partnership/decide` | CIRISAgent (`routes/partnership.py:524`) | live, **deliberately not called** — the accepting half is the agent's (CC 3.3.1 `consent:partnership_accept`, producer-emitted), and the route admits the requester and any admin instead (`:583`; CIRISAgent#1221) |
 
 **`openapi.json` in CIRISServer lists `/v1/consent/*` and the node does not serve
 them.** Anyone checking this card against the node's spec file would conclude the

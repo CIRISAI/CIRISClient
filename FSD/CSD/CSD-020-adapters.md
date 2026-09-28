@@ -168,6 +168,11 @@ node-skipped, 404s, and surfaces as `wizardError`.
 | OAuth return (deep link) | `GET /v1/system/adapters/oauth/callback` | CIRISAgent | live; generic across providers, `state` carries `provider:session_id` (`adapter_config.py:569`) |
 | the scope the adapter runs under | — **unconfirmed** | CIRISAgent | blocks `building` for `adapters_receipt_scope` |
 | the OAuth scopes being granted | — **unconfirmed** | CIRISAgent | blocks `building` for `wizard_oauth_scope` |
+| connectors — the list (§7) | `GET /v1/connectors` | CIRISAgent (`routes/connectors.py:327`) | live; **admin only** (`:340`) — `listConnectors`, called from `AdapterConnectorsViewModel` |
+| connectors — test one (§7) | `POST /v1/connectors/{connector_id}/test` | CIRISAgent (`connectors.py:404`) | live; admin only — a failed test is HTTP 200 with `success: false`; a "skipped"/"(simulated)" success is drawn as **did not run** |
+| connectors — remove one (§7) | `DELETE /v1/connectors/{connector_id}` | CIRISAgent (`connectors.py:547`) | live; admin only; irreversible, behind the three-fact ConfirmSheet — removes the route's record only (`:582-584`) |
+| connectors — register (§7) | `POST /v1/connectors/sql` | CIRISAgent (`connectors.py:198`) | live, **not called** — the SQL adapter's wizard is the add door; a second form for the same credential is a duplicate |
+| connectors — update (§7) | `PATCH /v1/connectors/{connector_id}` | CIRISAgent (`connectors.py:480`) | live, **not called** — `enabled` is a flag nothing that uses the connection reads (`:517-520`) |
 
 Agent routes read from the `~/CIRISAgent` working tree, last commit
 **2026-08-15** — six weeks stale relative to this branch, so "live" here means
