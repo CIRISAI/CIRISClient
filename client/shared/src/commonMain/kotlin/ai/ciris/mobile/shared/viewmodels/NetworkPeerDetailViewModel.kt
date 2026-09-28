@@ -4,6 +4,8 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.federation.FederationPeerDetailResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerSASResponse
+import ai.ciris.mobile.shared.models.federation.FederationPeerSASUpdateResponse
+import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerAppearance
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -25,6 +27,8 @@ import kotlinx.coroutines.launch
 class NetworkPeerDetailViewModel(
     apiClient: CIRISApiClient,
     val keyId: String,
+    /** The five node calls this screen makes — a seam so the ceremony is testable without a node. */
+    private val peers: PeerSidebandApi = PeerSidebandApi.over(apiClient),
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "NetworkPeerDetailVM"
@@ -47,8 +51,16 @@ class NetworkPeerDetailViewModel(
     private val _pendingOutcome = MutableStateFlow<SasOutcome?>(null)
     val pendingOutcome: StateFlow<SasOutcome?> = _pendingOutcome.asStateFlow()
 
-    private val _outcomeInFlight = MutableStateFlow(false)
-    val outcomeInFlight: StateFlow<Boolean> = _outcomeInFlight.asStateFlow()
+    /**
+     * ONE flag for every sideband write — a SAS outcome or a manual trust
+     * change. They write the same row (`federation.peer_sideband.<key_id>`,
+     * a read-modify-write on the node), so a manual TRUSTED racing a
+     * mismatch's UNTRUSTED would let the later one win by accident. The screen
+     * disables both groups on it, and [requestOutcome] / [requestTrust] refuse
+     * while it is set.
+     */
+    private val _writeInFlight = MutableStateFlow(false)
+    val writeInFlight: StateFlow<Boolean> = _writeInFlight.asStateFlow()
 
     /**
      * The last recorded (or refused) outcome. A MISMATCH stays here until the
@@ -58,10 +70,11 @@ class NetworkPeerDetailViewModel(
     private val _lastOutcome = MutableStateFlow<SasOutcomeResult?>(null)
     val lastOutcome: StateFlow<SasOutcomeResult?> = _lastOutcome.asStateFlow()
 
-    // ─── Trust state ────────────────────────────────────────────────────────
+    /** The persistent danger warning: a mismatch was recorded on this visit. */
+    private val _recordedMismatch = MutableStateFlow(false)
+    val recordedMismatch: StateFlow<Boolean> = _recordedMismatch.asStateFlow()
 
-    private val _trustChangeInFlight = MutableStateFlow(false)
-    val trustChangeInFlight: StateFlow<Boolean> = _trustChangeInFlight.asStateFlow()
+    // ─── Trust state ────────────────────────────────────────────────────────
 
     private val _pendingTrust = MutableStateFlow<PeerTrustState?>(null)
     val pendingTrust: StateFlow<PeerTrustState?> = _pendingTrust.asStateFlow()
@@ -86,8 +99,10 @@ class NetworkPeerDetailViewModel(
     fun refresh() {
         viewModelScope.launch {
             _loading.value = true
+            // A retry starts clean: the error it shows is the one this read produces.
+            _error.value = null
             try {
-                val resp = apiClient.getFederationPeer(keyId)
+                val resp = peers.getFederationPeer(keyId)
                 _detail.value = resp
                 _detailFailure.value = null
                 _appearanceDraft.value = resp.peer.appearance ?: PeerAppearance()
@@ -114,7 +129,7 @@ class NetworkPeerDetailViewModel(
     private suspend fun loadSas() {
         if (_sasRead.value !is SasRead.Ready) _sasRead.value = SasRead.Loading
         _sasRead.value = try {
-            SasRead.Ready(apiClient.getFederationPeerSAS(keyId))
+            SasRead.Ready(peers.getFederationPeerSAS(keyId))
         } catch (e: Exception) {
             PlatformLogger.e(tag, "getFederationPeerSAS failed: ${e.message}", e)
             sasReadFailureOf(e)
@@ -128,6 +143,7 @@ class NetworkPeerDetailViewModel(
      * [setTrust].
      */
     fun requestTrust(target: PeerTrustState) {
+        if (_writeInFlight.value) return
         if (target == PeerTrustState.BLOCKED) {
             _pendingTrust.value = target
         } else {
@@ -146,11 +162,12 @@ class NetworkPeerDetailViewModel(
     }
 
     private fun setTrust(target: PeerTrustState) {
+        if (_writeInFlight.value) return
         viewModelScope.launch {
-            _trustChangeInFlight.value = true
+            _writeInFlight.value = true
             _error.value = null
             try {
-                val updated = apiClient.setFederationPeerTrust(keyId, target)
+                val updated = peers.setFederationPeerTrust(keyId, target)
                 PlatformLogger.i(tag, "trust set → ${target.wire} for $keyId")
                 // Patch the local detail with the updated peer state.
                 _detail.value = _detail.value?.copy(peer = updated)
@@ -159,7 +176,7 @@ class NetworkPeerDetailViewModel(
                 PlatformLogger.e(tag, "setFederationPeerTrust failed: $msg", e)
                 _error.value = msg
             } finally {
-                _trustChangeInFlight.value = false
+                _writeInFlight.value = false
             }
         }
     }
@@ -168,7 +185,7 @@ class NetworkPeerDetailViewModel(
 
     /** Open the ConfirmSheet for [outcome]. Nothing is written until [confirmOutcome]. */
     fun requestOutcome(outcome: SasOutcome) {
-        if (_outcomeInFlight.value) return
+        if (_writeInFlight.value) return
         _pendingOutcome.value = outcome
     }
 
@@ -180,22 +197,24 @@ class NetworkPeerDetailViewModel(
     fun confirmOutcome() {
         val outcome = _pendingOutcome.value ?: return
         _pendingOutcome.value = null
+        if (_writeInFlight.value) return
         viewModelScope.launch {
-            _outcomeInFlight.value = true
+            _writeInFlight.value = true
             try {
-                val result = recordSasOutcome(outcome) { write ->
+                val result = recordSasOutcome(outcome, currentTrust = _detail.value?.peer?.trust) { write ->
                     when (write) {
-                        is PeerWrite.Sas -> apiClient.setFederationPeerSASVerified(keyId, write.verified)
+                        is PeerWrite.Sas -> peers.setFederationPeerSASVerified(keyId, write.verified)
                         is PeerWrite.Trust -> {
-                            val updated = apiClient.setFederationPeerTrust(keyId, write.trust)
+                            val updated = peers.setFederationPeerTrust(keyId, write.trust)
                             _detail.value = _detail.value?.copy(peer = updated)
                         }
                     }
                 }
                 PlatformLogger.i(tag, "SAS outcome ${outcome.name} for $keyId → $result")
                 _lastOutcome.value = result
+                _recordedMismatch.value = mismatchWarningAfter(_recordedMismatch.value, result)
             } finally {
-                _outcomeInFlight.value = false
+                _writeInFlight.value = false
             }
             loadSas()
         }
@@ -214,7 +233,7 @@ class NetworkPeerDetailViewModel(
             _appearanceSaving.value = true
             _error.value = null
             try {
-                val updated = apiClient.setFederationPeerAppearance(keyId, _appearanceDraft.value)
+                val updated = peers.setFederationPeerAppearance(keyId, _appearanceDraft.value)
                 PlatformLogger.i(tag, "appearance saved for $keyId")
                 _detail.value = _detail.value?.copy(peer = updated)
                 _appearanceExpanded.value = false
@@ -292,16 +311,21 @@ sealed interface PeerWrite {
 }
 
 /**
- * What each outcome writes, in order.
+ * What each outcome writes, in order, given the peer's current standing.
  *
  * MISMATCH is not WITHDRAW. Both clear the verification, because the node
- * has no separate mismatch record (CSD-104 §3b issue A). A mismatch also
- * stops trusting the key, and it does that FIRST: if only one write lands,
- * the protective one should be the one that does.
+ * has no separate mismatch record (CIRISServer#684). A mismatch also stops
+ * trusting the key, and it does that FIRST: if only one write lands, the
+ * protective one should be the one that does. On a peer the owner has
+ * already BLOCKED there is no protective write to make — UNTRUSTED is the
+ * weaker state, and writing it would loosen a decision the owner made
+ * deliberately — so the mismatch clears the check and leaves the block alone.
  */
-fun SasOutcome.writes(): List<PeerWrite> = when (this) {
+fun SasOutcome.writes(currentTrust: PeerTrustState? = null): List<PeerWrite> = when (this) {
     SasOutcome.MATCH -> listOf(PeerWrite.Sas(verified = true))
-    SasOutcome.MISMATCH -> listOf(PeerWrite.Trust(PeerTrustState.UNTRUSTED), PeerWrite.Sas(verified = false))
+    SasOutcome.MISMATCH ->
+        if (currentTrust == PeerTrustState.BLOCKED) listOf(PeerWrite.Sas(verified = false))
+        else listOf(PeerWrite.Trust(PeerTrustState.UNTRUSTED), PeerWrite.Sas(verified = false))
     SasOutcome.WITHDRAW -> listOf(PeerWrite.Sas(verified = false))
 }
 
@@ -332,9 +356,13 @@ sealed interface SasOutcomeResult {
 }
 
 /** Apply an outcome's writes in order; the first refusal stops the run and is reported, never swallowed. */
-suspend fun recordSasOutcome(outcome: SasOutcome, apply: suspend (PeerWrite) -> Unit): SasOutcomeResult {
+suspend fun recordSasOutcome(
+    outcome: SasOutcome,
+    currentTrust: PeerTrustState? = null,
+    apply: suspend (PeerWrite) -> Unit,
+): SasOutcomeResult {
     val applied = mutableListOf<PeerWrite>()
-    for (w in outcome.writes()) {
+    for (w in outcome.writes(currentTrust)) {
         try {
             apply(w)
         } catch (e: Exception) {
@@ -349,3 +377,45 @@ suspend fun recordSasOutcome(outcome: SasOutcome, apply: suspend (PeerWrite) -> 
 /** "482915" → "482 915": a six-digit code read aloud in two halves. Anything else is shown as sent. */
 fun sasDigitsGrouped(digits: String): String =
     if (digits.length == 6 && digits.all { it.isDigit() }) digits.substring(0, 3) + " " + digits.substring(3) else digits
+
+/**
+ * The node calls the peer detail makes, as an interface. [CIRISApiClient] is
+ * concrete and builds its own HTTP client per call, so this is the seam the
+ * view-model tests fake — the same shape `ApprovalsApi` gives the WA screen.
+ */
+interface PeerSidebandApi {
+    suspend fun getFederationPeer(keyId: String): FederationPeerDetailResponse
+    suspend fun getFederationPeerSAS(keyId: String): FederationPeerSASResponse
+    suspend fun setFederationPeerSASVerified(keyId: String, verified: Boolean): FederationPeerSASUpdateResponse
+    suspend fun setFederationPeerTrust(keyId: String, trust: PeerTrustState): LocalPeerState
+    suspend fun setFederationPeerAppearance(keyId: String, appearance: PeerAppearance): LocalPeerState
+
+    companion object {
+        fun over(api: CIRISApiClient): PeerSidebandApi = object : PeerSidebandApi {
+            override suspend fun getFederationPeer(keyId: String) = api.getFederationPeer(keyId)
+            override suspend fun getFederationPeerSAS(keyId: String) = api.getFederationPeerSAS(keyId)
+            override suspend fun setFederationPeerSASVerified(keyId: String, verified: Boolean) =
+                api.setFederationPeerSASVerified(keyId, verified)
+            override suspend fun setFederationPeerTrust(keyId: String, trust: PeerTrustState) =
+                api.setFederationPeerTrust(keyId, trust)
+            override suspend fun setFederationPeerAppearance(keyId: String, appearance: PeerAppearance) =
+                api.setFederationPeerAppearance(keyId, appearance)
+        }
+    }
+}
+
+/**
+ * Whether the persistent mismatch warning stands after [result].
+ *
+ * A recorded mismatch is a safety event and is kept SEPARATELY from the last
+ * outcome: a later refused Match landed nothing corrective, so replacing the
+ * warning with that refusal would make the danger vanish on a failed write.
+ * Only a recorded MATCH supersedes it — the person compared again and the
+ * codes agreed. A withdrawal says nothing about the key, so it keeps it.
+ */
+fun mismatchWarningAfter(current: Boolean, result: SasOutcomeResult): Boolean = when {
+    result !is SasOutcomeResult.Recorded -> current
+    result.outcome == SasOutcome.MISMATCH -> true
+    result.outcome == SasOutcome.MATCH -> false
+    else -> current
+}

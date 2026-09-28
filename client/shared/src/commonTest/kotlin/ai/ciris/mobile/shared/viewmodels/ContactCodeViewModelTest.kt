@@ -11,6 +11,7 @@ import ai.ciris.mobile.shared.models.federation.ContactCodeNode
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -26,6 +27,7 @@ import kotlin.test.assertTrue
 
 private const val AGENT_URL = "http://agent.invalid:8080"
 private const val NODE_URL = "http://node.invalid:4243"
+private const val OTHER_NODE_URL = "http://other-node.invalid:4243"
 private const val PHONE = "node-phone"
 private const val LAPTOP = "node-laptop"
 
@@ -36,6 +38,8 @@ private class FakeContacts(
     var codeError: (nodes: String?) -> NodeRefusal? = { null },
     var addError: NodeRefusal? = null,
     var freshlyEmitted: Boolean = true,
+    /** When set, every code read waits here first — a slow node, released by the test. */
+    var codeGate: CompletableDeferred<Unit>? = null,
 ) : ContactsApi {
     val codeCalls = mutableListOf<Pair<String, String?>>()
     val addCalls = mutableListOf<Pair<String, String>>()
@@ -52,6 +56,7 @@ private class FakeContacts(
 
     override suspend fun contactCode(nodeUrl: String, nodes: String?): ContactCodeResponse {
         codeCalls += nodeUrl to nodes
+        codeGate?.await()
         codeError(nodes)?.let { throw it }
         val named = when (nodes) {
             null -> announced
@@ -86,6 +91,38 @@ class ContactCodeViewModelTest {
         // The app hands the VM a provider that follows the ACTIVE node (CIRISApp's
         // effectiveNodeUrl); here the same rule, from the client's mode.
         ContactsViewModel(client, { contactsNodeUrl(client.isNodeMode(), client.baseUrl, NODE_URL) }, api)
+
+    // ── A node switch closes the code (Codex, PR #116) ────────────────────
+
+    @Test
+    fun aNodeSwitchClosesTheOldNodesCode() {
+        val api = FakeContacts()
+        var node = NODE_URL
+        val vm = ContactsViewModel(agentFrontedClient(), { node }, api)
+        vm.openContactCode()
+        assertIs<ContactCodeState.Ready>(vm.contactCode.value)
+
+        node = OTHER_NODE_URL
+        vm.nodeChanged()
+        assertEquals(ContactCodeState.Closed, vm.contactCode.value, "node A's code stayed on screen, shareable as if it were B's")
+        assertTrue(vm.contactCodeTicked.value.isEmpty(), "A's device picks are not B's")
+    }
+
+    @Test
+    fun aCodeStillOutToTheOldNodeDoesNotLandOnTheNewNodesCard() {
+        val gate = CompletableDeferred<Unit>()
+        val api = FakeContacts(codeGate = gate)
+        var node = NODE_URL
+        val vm = ContactsViewModel(agentFrontedClient(), { node }, api)
+        vm.openContactCode()
+        assertEquals(ContactCodeState.Loading, vm.contactCode.value)
+
+        node = OTHER_NODE_URL
+        vm.nodeChanged()
+        gate.complete(Unit) // node A answers after the switch
+        assertEquals(ContactCodeState.Closed, vm.contactCode.value, "node A's code, answered late, was published over node B's card")
+        assertEquals(listOf(NODE_URL), api.codeCalls.map { it.first }, "no code was asked of B until the person reopens the card")
+    }
 
     // ── The picker ────────────────────────────────────────────────────────
 

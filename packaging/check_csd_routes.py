@@ -865,6 +865,9 @@ def calls(text: str):
             continue  # a declaration, not a call
         else:
             yield None, m.group(1), m.start(1)
+#: A member whose whole job is to forget state: calling it reaches none of the
+#: model's routes, so it does not pull the model's init-time reads onto the caller.
+RESET_MEMBER = re.compile(r"^(reset|clear|forget|dismiss)[A-Z_]?")
 FOLLOW_CLASS = re.compile(r"(ViewModel|Repository|Repo|Api|Store|Service|Seam|Manager|Source|Client|Controller|Stream)$")
 NOT_FOLLOWED = {"CIRISApiClient", "CIRISApiClientProtocol", "HttpClient"}
 
@@ -923,12 +926,17 @@ class Closure:
                     ):
                         hits.append(Hit(self.client_names[name], at))
                         continue
-                # 2. a member on a receiver whose type we can see
+                # 2. a member on a receiver whose type we can see. The class's
+                # init-time reads count too (touching the model is what starts
+                # them) — except through a reset/clear/forget/dismiss, which a
+                # logout arm calls on an APP-SCOPED model it did not construct
+                # and whose reads it never sees (RESET_MEMBER).
                 if recv and rtype and rtype not in NOT_FOLLOWED:
                     for cls in self._classes_for(rtype):
                         for mem in self.idx.members.get((cls.name, name), []):
                             work.append(self._enter(mem, cls))
-                        work += self._skel_items(cls)
+                        if not RESET_MEMBER.match(name):
+                            work += self._skel_items(cls)
                     continue
                 if recv is not None:
                     continue
