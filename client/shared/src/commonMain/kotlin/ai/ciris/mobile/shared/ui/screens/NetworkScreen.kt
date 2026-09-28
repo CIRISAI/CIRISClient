@@ -1,10 +1,8 @@
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
-import ai.ciris.mobile.shared.models.AgentMode
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
-import ai.ciris.mobile.shared.ui.components.AgentModeSelector
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.ui.components.FederationIdCard
@@ -40,8 +38,10 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
  * exposes:
  *   1. Identity card — federation signer_key_id with copy-to-clipboard + QR
  *      placeholder (Edge 1.0 ratchet/rotation lands in a sibling release).
- *   2. Mode selector card — Client / Proxy (default) / Server segmented control
- *      backed by [NetworkViewModel] talking to /v1/system/agent-mode.
+ *   2. A link to Settings for the agent's network mode, with an agent attached.
+ *      The mode itself (`PUT /v1/system/agent-mode`, CIRISAgent-only) is set in
+ *      Settings, its one door (CSD-022 §2.0.1, CSD-051 §3): this hub is on every
+ *      build and a bare node 404s that route, so it no longer reads or writes it.
  *   3. Live stats strip — 4 inline metrics (placeholders until Edge 1.0).
  *   4. 10 navigation tiles — Identity / Map / Trust Graph / Peers /
  *      Interfaces / Paths / Announces / Queue / Diagnostics / Content.
@@ -54,68 +54,31 @@ fun NetworkScreen(
     viewModel: NetworkViewModel,
     onTileClick: (NetworkTile) -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * An agent is attached. The Federation ID card reads the agent's persist
+     * aggregate (`GET /v1/system/peers/federation-identity`, CIRISAgent-only):
+     * on a bare node that read can only fail, and the card would say
+     * "Identity initializing…" for ever. So it is drawn only with an agent.
+     */
+    hasAgent: Boolean = false,
+    /**
+     * Opens Settings, where the agent's network mode is set. Drawn only with
+     * an agent: a bare node has no mode to set.
+     */
+    onOpenModeSettings: (() -> Unit)? = null,
 ) {
-    val status by viewModel.status.collectAsState()
-    val mode by viewModel.mode.collectAsState()
-    val loading by viewModel.loading.collectAsState()
-    val error by viewModel.error.collectAsState()
-    val restartPending by viewModel.restartPending.collectAsState()
-    val insufficientDisk by viewModel.insufficientDisk.collectAsState()
     val federationAddress by viewModel.federationAddress.collectAsState()
     val federationId by viewModel.federationId.collectAsState()
+    val identityFailure by viewModel.identityFailure.collectAsState()
 
     LaunchedEffect(Unit) {
-        viewModel.loadAgentMode()
         // Fetch the real federation identity (signer_key_id) from Edge. If Edge
         // is degraded/unavailable the address stays null and the card shows "—"
-        // — never a fabricated key.
+        // — never a fabricated key — and the failure is said under it.
         viewModel.loadFederationIdentity()
     }
 
-    // Pending-mode confirmation dialog state — apply mode change on confirm.
-    var pendingMode: AgentMode? by remember { mutableStateOf(null) }
-
-    pendingMode?.let { target ->
-        AlertDialog(
-            onDismissRequest = { pendingMode = null },
-            modifier = Modifier.testable("dialog_mode_confirm"),
-            // Also tag the title Text inside the dialog content with the same
-            // dialog_mode_confirm tag. Compose Multiplatform renders AlertDialog
-            // content inside a separate Popup/Window on desktop, and the
-            // TestAutomationServer's `/tree` walker doesn't reliably traverse
-            // outer Modifier tags down into popup composition trees. Mirroring
-            // the tag onto a Text element inside the popup content guarantees
-            // QA's `wait_for_element(DIALOG_MODE_CONFIRM)` resolves after the
-            // mode-button click trigger.
-            title = {
-                Text(
-                    text = localizedString("network.mode_card.confirm_change_title"),
-                    modifier = Modifier.testable("dialog_mode_confirm"),
-                )
-            },
-            text = { Text(localizedString("network.mode_card.confirm_change_body")) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.setMode(target)
-                        pendingMode = null
-                    },
-                    modifier = Modifier.testableClickable("btn_mode_confirm") {
-                        viewModel.setMode(target)
-                        pendingMode = null
-                    },
-                ) { Text(localizedString("network.mode_card.confirm_change_button")) }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingMode = null },
-                    modifier = Modifier.testableClickable("btn_mode_cancel") { pendingMode = null },
-                ) { Text(localizedString("network.mode_card.cancel_button")) }
-            },
-        )
-    }
-
-    // Bounded hub content (one identity card + mode card + stats strip + ~10
+    // Bounded hub content (identity cards + mode link + stats strip + ~10
     // tiles) — uses `Column.verticalScroll` instead of `LazyColumn` so every
     // section composes eagerly regardless of viewport width. T-T2 / T-T3
     // wrapped the rows in a single `LazyColumn item { … }` for desktop, but
@@ -144,40 +107,17 @@ fun NetworkScreen(
 
         // ── Federation ID (persist identity aggregate) — top-level, not
         //    buried in the Identity sub-screen ─────────────────────────────────
-        FederationIdCard(federationId = federationId)
+        if (hasAgent) FederationIdCard(federationId = federationId)
 
-        // ── Mode selector card ───────────────────────────────────────────────
-        ModeCard(
-            mode = mode,
-            status = status,
-            loading = loading,
-            onModeSelected = { target ->
-                if (target != mode) pendingMode = target
-            },
-        )
+        // Why the key reads "—": the node was asked and did not answer, or has
+        // no such route. Never a blank that reads as "no identity".
+        identityFailure?.let { ReadFailureBlock(it, tagPrefix = "network_identity", inline = true) }
+
+        // ── Network mode: set in Settings (CSD-051 §3) ───────────────────────
+        if (hasAgent) onOpenModeSettings?.let { ModeSettingsLink(onOpen = it) }
 
         // ── Live stats strip ─────────────────────────────────────────────────
         StatsStrip()
-
-        // ── Inline error banner ──────────────────────────────────────────────
-        if (insufficientDisk != null) {
-            ErrorBanner(
-                message = localizedString(
-                    "network.mode_card.insufficient_disk_error",
-                    mapOf(
-                        "available" to humanGiB(insufficientDisk!!.availableBytes),
-                        "required" to humanGiB(insufficientDisk!!.requiredBytes),
-                    ),
-                ),
-                onDismiss = { viewModel.clearInsufficientDisk() },
-            )
-        }
-        if (restartPending) {
-            RestartBanner(onDismiss = { viewModel.clearRestartPending() })
-        }
-        if (error != null) {
-            ErrorBanner(message = error!!, onDismiss = { viewModel.clearError() })
-        }
 
         // ── 10 navigation tiles in a 2-column grid ───────────────────────────
         tilesGrid(onTileClick)
@@ -311,17 +251,17 @@ private fun SelectionContainer(
 // Mode selector card
 // ═══════════════════════════════════════════════════════════════════════════
 
+/**
+ * The agent's network mode lives in Settings, with the rest of the agent's
+ * configuration — one door for `PUT /v1/system/agent-mode`. This card only
+ * says where, so a person who looked for it on the hub is not left guessing.
+ */
 @Composable
-private fun ModeCard(
-    mode: AgentMode,
-    status: ai.ciris.mobile.shared.models.AgentModeStatus?,
-    loading: Boolean,
-    onModeSelected: (AgentMode) -> Unit,
-) {
+private fun ModeSettingsLink(onOpen: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .testable("card_network_mode"),
+            .testable("card_network_mode_link"),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
@@ -335,19 +275,15 @@ private fun ModeCard(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                text = localizedString("network.mode_card.subtitle"),
+                text = localizedString("network.mode_card.set_in_settings"),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(12.dp))
-            AgentModeSelector(
-                mode = mode,
-                serverEligible = status?.serverEligible ?: false,
-                availableDiskBytes = status?.availableDiskBytes ?: 0L,
-                requiredDiskBytes = status?.serverMinimumDiskBytes ?: SERVER_DEFAULT_MIN,
-                loading = loading,
-                onModeChange = onModeSelected,
-            )
+            Spacer(Modifier.height(8.dp))
+            TextButton(
+                onClick = onOpen,
+                modifier = Modifier.testableClickable("btn_network_mode_open_settings") { onOpen() },
+            ) { Text(localizedString("network.mode_card.open_settings")) }
         }
     }
 }
@@ -411,57 +347,6 @@ private fun StatDivider() {
             .height(48.dp)
             .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)),
     )
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Inline banners — restart-required, errors, insufficient-disk
-// ═══════════════════════════════════════════════════════════════════════════
-
-@Composable
-private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onDismiss() }
-            .testable("banner_error"),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.errorContainer,
-        ),
-    ) {
-        Text(
-            text = message,
-            modifier = Modifier.padding(12.dp),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onErrorContainer,
-        )
-    }
-}
-
-@Composable
-private fun RestartBanner(onDismiss: () -> Unit) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onDismiss() }
-            .testable("banner_restart_pending"),
-        colors = CardDefaults.cardColors(
-            containerColor = CIRISColors.AccentCyan.copy(alpha = 0.15f),
-        ),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = localizedString("network.mode_card.confirm_change_title"),
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = localizedString("network.mode_card.confirm_change_body"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -575,18 +460,6 @@ private fun NavTile(
 // ═══════════════════════════════════════════════════════════════════════════
 // Helpers
 // ═══════════════════════════════════════════════════════════════════════════
-
-private const val SERVER_DEFAULT_MIN: Long = 256L * 1024 * 1024 * 1024
-
-private fun humanGiB(bytes: Long): String {
-    if (bytes <= 0) return "0 GB"
-    val gib = bytes / (1024.0 * 1024.0 * 1024.0)
-    return when {
-        gib >= 100 -> "${gib.toInt()} GB"
-        gib >= 10 -> "${(gib * 10).toInt() / 10.0} GB"
-        else -> "${(gib * 100).toInt() / 100.0} GB"
-    }
-}
 
 // MOCK_NETWORK_SNAPSHOT removed 2.9.6 — the identity card no longer seeds a
 // fabricated federation key. The real signer_key_id arrives via Edge 1.0; until

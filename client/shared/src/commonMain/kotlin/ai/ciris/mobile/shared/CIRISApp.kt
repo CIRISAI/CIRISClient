@@ -1083,6 +1083,9 @@ fun CIRISApp(
             affiliationsViewModel.clearSessionState()
         }
     }
+    // The room whose card opened Moderation (CSD-102 → CSD-065); Moderation's
+    // community picker hands it back once, so that room arrives filled in.
+    var moderationCommunity by remember { mutableStateOf<String?>(null) }
     // The consent model is reset HERE and nowhere else: every way out of a
     // session — the three logout menus, InteractScreen.onSessionExpired,
     // Billing's onSignInAgain — clears the token, and a reset wired to some of
@@ -3377,6 +3380,7 @@ fun CIRISApp(
                 val isAdaptersLoading by adaptersViewModel.isLoading.collectAsState()
                 val adaptersStatusMessage by adaptersViewModel.statusMessage.collectAsState()
                 val adaptersOperationInProgress by adaptersViewModel.operationInProgress.collectAsState()
+                val adaptersListFailure by adaptersViewModel.listFailure.collectAsState()
                 // Wizard state
                 val showWizardDialog by adaptersViewModel.showWizardDialog.collectAsState()
                 val loadableAdapters by adaptersViewModel.loadableAdapters.collectAsState()
@@ -3413,6 +3417,7 @@ fun CIRISApp(
 
                 AdaptersScreen(
                     adapters = adaptersList,
+                    listFailure = adaptersListFailure,
                     isConnected = isAdaptersConnected,
                     isLoading = isAdaptersLoading || adaptersOperationInProgress,
                     expandedAdapterIds = expandedAdapterIds,
@@ -4368,6 +4373,18 @@ fun CIRISApp(
                     // The delegate-moderate-duty flow lives on Rules › Delegations
                     // (CSD-001's read view was folded into it, CSD-055).
                     onOpenDelegation = { currentScreen = Screen.Delegations },
+                    // The person's rooms, from both tiers (CSD-102): a room's id is
+                    // the community key the lookup and the quarantine rung take.
+                    // Opened from a room's card, that room arrives picked.
+                    communityPicker = { onPick ->
+                        ai.ciris.mobile.shared.ui.screens.CommunityModerationPicker(
+                            tiers = listOf(communityViewModel, affiliationsViewModel),
+                            preselect = moderationCommunity,
+                            // Handed back once: Moderation opened later from the
+                            // nav arrives with nothing picked.
+                            onPick = { id -> onPick(id); moderationCommunity = null },
+                        )
+                    },
                 )
             }
 
@@ -4896,6 +4913,10 @@ fun CIRISApp(
             Screen.LayerGlobalCommons -> {
                 ai.ciris.mobile.shared.ui.screens.NetworkScreen(
                     viewModel = networkViewModel,
+                    // The agent's network mode is set in Settings, its one door
+                    // (CSD-051 §3); a bare node has no mode, so no link.
+                    hasAgent = clientMode?.isAgent == true,
+                    onOpenModeSettings = { currentScreen = Screen.Settings },
                     onTileClick = { tile ->
                         currentScreen = when (tile) {
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.IDENTITY -> Screen.NetworkIdentity
@@ -5005,14 +5026,14 @@ fun CIRISApp(
                 onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = communityViewModel,
-                onOpenModeration = { currentScreen = Screen.Moderation },
+                onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = affiliationsViewModel,
-                onOpenModeration = { currentScreen = Screen.Moderation },
+                onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
             )
             // ── Communities and affiliations (CSD-103): People and Chats ──
             Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)

@@ -29,6 +29,8 @@ import ai.ciris.mobile.shared.viewmodels.CommonsViewModel
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 
 /**
  * **The Commons** — persist's reverse-quorum plane, rendered
@@ -163,6 +165,7 @@ fun CommonsScreen(
                 RaiseTheBrake(
                     threshold = s.objectionThreshold,
                     busy = busy,
+                    subject = commonsSubject(actionId, cohortKeyId),
                     onRaise = { grounds -> viewModel.raiseObjection(grounds) },
                 )
                 ObjectionsBlock(standing = s, viewModel = viewModel, busy = busy)
@@ -563,12 +566,28 @@ private fun IdList(label: String, ids: List<String>) {
  * because there is nothing to reach: the threshold IS one.
  */
 @Composable
-private fun RaiseTheBrake(threshold: Int, busy: Boolean, onRaise: (String) -> Unit) {
+private fun RaiseTheBrake(threshold: Int, busy: Boolean, subject: String, onRaise: (String) -> Unit) {
     var grounds by remember { mutableStateOf("") }
     rememberTextInputDriver("input_commons_objection_grounds", grounds) { grounds = it }
-    val raise = {
-        onRaise(grounds)
-        grounds = ""
+    // A raised brake cannot be taken back by the one who raised it — only the
+    // cohort's own m-of-n lifts it — so the three facts come first.
+    var confirming by remember { mutableStateOf(false) }
+    val raise = { confirming = true }
+    if (confirming) {
+        CommonsConfirm(
+            tagPrefix = "commons_raise",
+            title = localizedString("surfaces.commons.raise_label"),
+            subject = subject,
+            what = localizedString("surfaces.commons.confirm_raise_what"),
+            who = localizedString("surfaces.commons.confirm_signs_node"),
+            confirmLabel = localizedString("surfaces.commons.raise_action"),
+            onConfirm = {
+                confirming = false
+                onRaise(grounds)
+                grounds = ""
+            },
+            onDismiss = { confirming = false },
+        )
     }
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -651,6 +670,13 @@ private fun ObjectionCard(
     var ballotGrounds by remember { mutableStateOf("") }
     rememberTextInputDriver("input_commons_ballot_grounds", ballotGrounds) { ballotGrounds = it }
     var lifting by remember { mutableStateOf(false) }
+    // One ballot per respondent, and it is not taken back: confirmed first.
+    var ballotUpholds by remember { mutableStateOf<Boolean?>(null) }
+    // The dismissal is the m-of-n act itself; its grounds wait here for the confirm.
+    var dismissGrounds by remember { mutableStateOf<String?>(null) }
+    val cohortKeyId by viewModel.cohortKeyId.collectAsState()
+    val actionId by viewModel.actionId.collectAsState()
+    val subject = commonsSubject(actionId, cohortKeyId)
     val payloadSha by viewModel.dismissalPayloadSha256.collectAsState()
     val draftObjection by viewModel.dismissalObjectionId.collectAsState()
     val cosigners by viewModel.cosigners.collectAsState()
@@ -719,19 +745,19 @@ private fun ObjectionCard(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
-                    onClick = { viewModel.castBallot(objectionId, true, ballotGrounds) },
+                    onClick = { ballotUpholds = true },
                     enabled = !busy && ballotGrounds.isNotBlank(),
                     modifier = Modifier.testableClickable("btn_commons_uphold", enabled = !busy && ballotGrounds.isNotBlank()) {
-                        viewModel.castBallot(objectionId, true, ballotGrounds)
+                        ballotUpholds = true
                     },
                 ) {
                     Text(localizedString("surfaces.commons.uphold"))
                 }
                 OutlinedButton(
-                    onClick = { viewModel.castBallot(objectionId, false, ballotGrounds) },
+                    onClick = { ballotUpholds = false },
                     enabled = !busy && ballotGrounds.isNotBlank(),
                     modifier = Modifier.testableClickable("btn_commons_overrule", enabled = !busy && ballotGrounds.isNotBlank()) {
-                        viewModel.castBallot(objectionId, false, ballotGrounds)
+                        ballotUpholds = false
                     },
                 ) {
                     Text(localizedString("surfaces.commons.overrule"))
@@ -756,13 +782,83 @@ private fun ObjectionCard(
                     onDryRun = { grounds -> viewModel.dismissDryRun(objectionId, grounds) },
                     onAddCosigner = viewModel::addCosigner,
                     onRemoveCosigner = viewModel::removeCosigner,
-                    onSubmit = { grounds -> viewModel.submitDismissal(objectionId, grounds) },
+                    onSubmit = { grounds -> dismissGrounds = grounds },
                     onAbandon = { viewModel.clearDismissalDraft() },
                 )
             }
         }
     }
+
+    ballotUpholds?.let { upholds ->
+        CommonsConfirm(
+            tagPrefix = "commons_ballot",
+            title = localizedString("surfaces.commons.ballot_title"),
+            subject = subject,
+            what = localizedString(
+                if (upholds) "surfaces.commons.confirm_ballot_uphold_what" else "surfaces.commons.confirm_ballot_overrule_what",
+                "objection", objectionId,
+            ),
+            who = localizedString("surfaces.commons.confirm_signs_node"),
+            confirmLabel = localizedString(if (upholds) "surfaces.commons.uphold" else "surfaces.commons.overrule"),
+            onConfirm = {
+                ballotUpholds = null
+                viewModel.castBallot(objectionId, upholds, ballotGrounds)
+            },
+            onDismiss = { ballotUpholds = null },
+        )
+    }
+    dismissGrounds?.let { grounds ->
+        CommonsConfirm(
+            tagPrefix = "commons_dismiss",
+            title = localizedString("surfaces.commons.dismiss_label"),
+            subject = subject,
+            what = localizedString("surfaces.commons.confirm_dismiss_what", "objection", objectionId),
+            who = localizedString("surfaces.commons.confirm_signs_cosigners", "count", cosigners.size.toString()),
+            confirmLabel = localizedString("surfaces.commons.dismiss_submit"),
+            onConfirm = {
+                dismissGrounds = null
+                viewModel.submitDismissal(objectionId, grounds)
+            },
+            onDismiss = { dismissGrounds = null },
+        )
+    }
 }
+
+/** "act-8812ab4f · in cohort-key" — the action a commons act is about, and whose. */
+private fun commonsSubject(actionId: String, cohortKeyId: String): String =
+    "${actionId.trim()} · ${cohortKeyId.trim()}"
+
+/**
+ * The three facts every commons write confirms (CSD-070 §2): which action in
+ * which cohort, what changes, and who signs. Every write here is signed by
+ * this node's key on its owner's behalf and replicates as a row; none is taken
+ * back by the one who made it.
+ */
+@Composable
+private fun CommonsConfirm(
+    tagPrefix: String,
+    title: String,
+    subject: String,
+    what: String,
+    who: String,
+    confirmLabel: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ConfirmSheet(
+        title = title,
+        facts = listOf(
+            ConfirmFact(localizedString("surfaces.commons.confirm_subject"), subject, mono = true),
+            ConfirmFact(localizedString("surfaces.commons.confirm_what"), what),
+            ConfirmFact(localizedString("surfaces.commons.confirm_who_signs"), who),
+        ),
+        confirmLabel = confirmLabel,
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        tagPrefix = tagPrefix,
+    )
+}
+
 
 /**
  * **Three steps, and the third is shut until the first has happened.**

@@ -8322,12 +8322,9 @@ class CIRISApiClient(
 
     override suspend fun listAdapters(): AdaptersListData {
         val method = "listAdapters"
-        // AGENT-only: GET /v1/system/adapters is 404 on a bare node.
-        if (nodeSkip(method)) return AdaptersListData(
-            adapters = emptyList(),
-            totalCount = 0,
-            runningCount = 0,
-        )
+        // AGENT-only: GET /v1/system/adapters is 404 on a bare node. Said as
+        // such — an empty list here read as "you have no adapters" (CSD-020 §2).
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/system/adapters")
         logInfo(method, "Listing adapters")
 
         return try {
