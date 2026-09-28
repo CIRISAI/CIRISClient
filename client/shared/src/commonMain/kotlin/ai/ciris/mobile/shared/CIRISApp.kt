@@ -558,8 +558,9 @@ fun CIRISApp(
                 src ?: homeTarget
             }
 
-            // A chat goes back to the contact list it was opened from
-            is Screen.UserChat -> Screen.Contacts
+            // A chat goes back to where it was opened from: the contact list, or
+            // a circle's Chats tab (CSD-091). Never hard-coded to Contacts.
+            is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
 
             // Everything the tree places answers for itself, so the button and
             // the shell's arrow cannot drift apart when a card moves.
@@ -1104,7 +1105,9 @@ fun CIRISApp(
     // attestations (rendered through the same AttestationCard as every other
     // CEG object).
     val userChatViewModel: ai.ciris.mobile.shared.viewmodels.UserChatViewModel = viewModel {
-        ai.ciris.mobile.shared.viewmodels.UserChatViewModel(apiClient)
+        // The chat routes are the NODE's (CSD-091), so the model follows the
+        // same active-node provider as People (CIRISAgent#1213).
+        ai.ciris.mobile.shared.viewmodels.UserChatViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
     // Delegate moderation duty — the co-scrubbed conferral of slash/moderate/review
     // onto another self, with the sub-delegation depth stated up front.
@@ -4203,6 +4206,7 @@ fun CIRISApp(
                             contactKeyId = contact.keyId,
                             communityId = contact.chatCommunityId,
                             contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                            from = Screen.Contacts,
                         )
                     },
                     onPeerPicked = if (contactsPickerSourceScreen != null) { peer ->
@@ -4225,7 +4229,9 @@ fun CIRISApp(
                     contactKeyId = route.contactKeyId,
                     communityId = route.communityId,
                     contactLabel = route.contactLabel,
-                    onBack = { currentScreen = Screen.Contacts },
+                    memberCount = route.memberCount,
+                    // Back to where the room was opened from (CSD-091).
+                    onBack = { currentScreen = route.from ?: Screen.Contacts },
                 )
             }
 
@@ -4987,17 +4993,35 @@ fun CIRISApp(
             // ── Communities and affiliations (CSD-103): People and Chats ──
             Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)
             Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(affiliationsViewModel)
-            Screen.CommunityChats, Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
-                viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
-                // A pair room is the two-person chat CSD-091 already draws.
-                onOpenPairChat = { _, contact ->
-                    currentScreen = Screen.UserChat(
-                        contactKeyId = contact.keyId,
-                        communityId = contact.chatCommunityId,
-                        contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
-                    )
-                },
-            )
+            Screen.CommunityChats, Screen.AffiliationsChats -> {
+                // Captured OUTSIDE the lambdas: back must return to the tab the
+                // room was opened from, read at open time, not at back time.
+                val chatsTab = currentScreen
+                ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
+                    viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
+                    // A pair room is the two-person chat CSD-091 already draws.
+                    onOpenPairChat = { _, contact ->
+                        currentScreen = Screen.UserChat(
+                            contactKeyId = contact.keyId,
+                            communityId = contact.chatCommunityId,
+                            contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                            from = chatsTab,
+                        )
+                    },
+                    // A room of more than two is entered BY ID (CSD-091): no
+                    // POST /v1/chat, which is pair-only; the transcript route
+                    // reads an N-member room (CIRISServer#594).
+                    onOpenRoom = { room ->
+                        currentScreen = Screen.UserChat(
+                            contactKeyId = null,
+                            communityId = room.communityId,
+                            contactLabel = room.name.ifBlank { room.communityId.take(12) + "…" },
+                            memberCount = room.memberCount,
+                            from = chatsTab,
+                        )
+                    },
+                )
+            }
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
             // Households (CSD-101): the roster on Family › People.
@@ -5050,7 +5074,7 @@ fun CIRISApp(
                     Screen.NetworkInterfaces, Screen.NetworkPaths, Screen.NetworkAnnounces, Screen.NetworkQueue,
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
-                    is Screen.UserChat -> Screen.Contacts
+                    is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
                     // EnvironmentInfo and Constitutional USED to hang off a
                     // layer hub; the spine placed them in Decisions and Safety,
                     // and this map wins before the placement rule — so leaving
@@ -5958,9 +5982,19 @@ internal sealed class Screen {
      * ViewModel always asks the node rather than acting on the client's guess.
      */
     data class UserChat(
-        val contactKeyId: String,
+        /** The other member of a PAIR room; null for a room of more than two, entered by id (CSD-091). */
+        val contactKeyId: String?,
         val communityId: String,
+        /** The other member's label, or the room's name. */
         val contactLabel: String,
+        /** A room row's `member_count`; the transcript carries no roster. Null for a pair. */
+        val memberCount: Int? = null,
+        /**
+         * Where the room was opened from — Contacts (the default) or a circle's
+         * Chats tab. Back returns THERE, and that surface stays lit while the
+         * room is open: a chat is a leaf of the surface it was opened from.
+         */
+        val from: Screen? = null,
     ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()
@@ -6127,9 +6161,10 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
-    // A chat keeps the Contacts card lit — it is a leaf of that surface, not a
-    // sidebar destination of its own.
-    is Screen.UserChat -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    // A chat keeps the surface it was opened from lit — Contacts, or a circle's
+    // Chats tab — it is a leaf of that surface, not a sidebar destination of
+    // its own.
+    is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord

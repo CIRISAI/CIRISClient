@@ -42,9 +42,6 @@
     "Constitutional": [
       "GET /v1/setup/owned-nodes"
     ],
-    "Contacts": [
-      "GET /v1/federation/peers"
-    ],
     "DataManagement": [
       "GET /v1/system/health",
       "POST /v1/system/adapters/{}",

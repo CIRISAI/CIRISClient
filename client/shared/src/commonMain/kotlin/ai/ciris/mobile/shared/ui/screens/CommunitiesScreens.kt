@@ -863,15 +863,18 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
 /**
  * Every room at this tier, pair rooms included: a pair room is `tier:
  * community` on the wire, so it folds to Neighbours with the substrate's
- * backing and not by a client guess. A pair room opens the chat (CSD-091). A
- * room of more than two is listed and does NOT open: the chat screen enters a
- * room only through a contact (`POST /v1/chat`, pair-only), and it says so
- * rather than opening an empty room.
+ * backing and not by a client guess. A pair room opens the chat through its
+ * contact (CSD-091); a room of more than two opens BY ID — `GET/POST
+ * /v1/chat/{id}/messages` serve N-member rooms (CIRISServer#594), and
+ * `POST /v1/chat` is never asked for one. A pair room whose contact this node
+ * no longer lists cannot be opened through a contact and says so.
  */
 @Composable
 fun CommunityChatsScreen(
     viewModel: CommunitiesViewModel,
     onOpenPairChat: (room: CommunityRoom, contact: Contact) -> Unit,
+    /** A room of more than two, entered by its id (CSD-091). */
+    onOpenRoom: (room: CommunityRoom) -> Unit,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -902,7 +905,7 @@ fun CommunityChatsScreen(
             for (room in rooms) {
                 val contact = CommunitiesViewModel.pairContact(room, contacts)
                 val flags = when {
-                    !room.isPair -> listOf(RowFlag(s("community_chat_room_unopenable"), tag = CommunityTags.chatUnopenable(room.communityId), tone = Tone.DIM))
+                    !room.isPair -> emptyList()
                     contact == null -> listOf(RowFlag(s("community_chat_not_a_contact"), tag = CommunityTags.chatNotAContact(room.communityId)))
                     else -> emptyList()
                 }
@@ -917,7 +920,11 @@ fun CommunityChatsScreen(
                     metaMono = false,
                     flags = flags,
                     tag = CommunityTags.chatRow(room.communityId),
-                    onClick = if (room.isPair && contact != null) ({ onOpenPairChat(room, contact) }) else null,
+                    onClick = when {
+                        !room.isPair -> ({ onOpenRoom(room) })
+                        contact != null -> ({ onOpenPairChat(room, contact) })
+                        else -> null
+                    },
                 )
             }
         }

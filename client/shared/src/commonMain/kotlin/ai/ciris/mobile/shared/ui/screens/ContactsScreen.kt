@@ -597,7 +597,7 @@ private fun ContactRow(
         title = contact.aliasOverride ?: shortKey(contact.keyId, head = 12, tail = 0),
         meta = shortKey(contact.keyId, head = 16, tail = 0),
         secondary = secondary,
-        chips = trustChips(contact.canonical, contact.trust),
+        chips = trustChips(contact.canonical, contact.trust, tag = PeopleTags.rowTrust(contact.keyId)),
         flags = flags,
         receipt = receipt,
         trailing = {
@@ -643,9 +643,11 @@ private fun PeerRow(peer: LocalPeerState, onPick: () -> Unit) {
 
 /** The canonical badge and the trust state as READING MATTER, not the wire token. */
 @Composable
-private fun trustChips(canonical: Boolean, trust: PeerTrustState): List<ChipSpec> = buildList {
+private fun trustChips(canonical: Boolean, trust: PeerTrustState, tag: String? = null): List<ChipSpec> = buildList {
     if (canonical) add(ChipSpec(localizedString("mobile.contacts_badge_canonical"), tone = Tone.BRAND))
-    add(ChipSpec(trustLabel(trust), tone = trust.reading().second))
+    // Tagged per row (`contacts_row_trust_<keyId>`, CSD-005) so the gate can
+    // read a contact's trust state without opening the receipt.
+    add(ChipSpec(trustLabel(trust), tag = tag, tone = trust.reading().second))
 }
 
 @Composable

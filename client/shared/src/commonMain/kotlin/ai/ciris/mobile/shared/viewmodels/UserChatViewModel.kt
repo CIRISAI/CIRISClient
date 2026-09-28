@@ -1,6 +1,8 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ChatApi
+import ai.ciris.mobile.shared.api.ClientChatApi
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
@@ -21,15 +23,37 @@ import kotlinx.coroutines.launch
  * and never re-sorts: `asserted_at` is a signed field, and a client that
  * re-ordered on a locally-parsed timestamp would disagree with the other member
  * about what was said when.
+ *
+ * Two ways in (CSD-091). A PAIR room is opened through `POST /v1/chat` with the
+ * contact's key ([enter]); a room of more than two is entered by its id
+ * ([enterRoom]) — `GET/POST /v1/chat/{id}/messages` serve N-member rooms
+ * (CIRISServer#594) and `POST /v1/chat` is pair-only by construction.
+ *
+ * @param nodeUrl where the NODE is right now. Every chat route is the node's
+ *   (`src/contacts_chat.rs`); on a with-AI install `baseUrl` is the agent
+ *   (CIRISAgent#1213). A provider, because the active node can be switched
+ *   while this app-scoped model lives.
+ * @param chat every chat call this view model makes; a fake in tests.
  */
 class UserChatViewModel(
     apiClient: CIRISApiClient,
+    private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
+    private val chat: ChatApi = ClientChatApi(apiClient),
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "UserChatVM"
 
     private val _community = MutableStateFlow<ChatCommunity?>(null)
     val community: StateFlow<ChatCommunity?> = _community.asStateFlow()
+
+    /**
+     * How many people are in the room, when the room row said so and the
+     * transcript cannot: `GET /v1/chat/{id}/messages` carries no roster, and an
+     * N-member room is never opened through `POST /v1/chat`, which is the only
+     * read that returns one. Null for a pair, whose count is the roster.
+     */
+    private val _memberCount = MutableStateFlow<Int?>(null)
+    val memberCount: StateFlow<Int?> = _memberCount.asStateFlow()
 
     private val _messages = MutableStateFlow<List<CegChatMessage>>(emptyList())
     val messages: StateFlow<List<CegChatMessage>> = _messages.asStateFlow()
@@ -82,11 +106,10 @@ class UserChatViewModel(
      * Confined to the main dispatcher by `viewModelScope`, so a plain `Long` is
      * sufficient — every read and write happens on one thread.
      *
-     * NOT PINNED BY A TEST: this ViewModel takes a concrete [CIRISApiClient]
-     * (not an interface, unlike the `ApprovalsApi` the WA tests fake), so the
-     * race cannot be driven without a refactor that is not worth doing for a
-     * guard this small. That is why the invariant is written HERE, at the thing
-     * it protects, rather than only in a test file.
+     * The chat calls go through [ChatApi], which a test can fake
+     * (`UserChatViewModelTest`); the race itself is still not driven there —
+     * the guard is small and the invariant is written HERE, at the thing it
+     * protects, rather than only in a test file.
      */
     private var entryEpoch: Long = 0L
 
@@ -130,16 +153,12 @@ class UserChatViewModel(
         // Both of these are SYNCHRONOUS and happen before any suspension point.
         val epoch = nextEpoch()
         entryJob?.cancel()
-        if (_community.value?.communityId != communityId) {
-            _community.value = null
-            _messages.value = emptyList()
-            _transcriptLoaded.value = false
-            // The draft belongs to the room it was written in, not to the screen.
-            _draft.value = ""
-        }
+        resetIfAnotherRoom(communityId)
+        // A pair's count is the roster POST /v1/chat returns, never a room's.
+        _memberCount.value = null
         entryJob = viewModelScope.launch {
             clearRefusal()
-            val opened = callTyped("startChat") { apiClient.startChat(contactKeyId) } ?: return@launch
+            val opened = callTyped("startChat") { chat.open(nodeUrl(), contactKeyId) } ?: return@launch
             if (epoch != entryEpoch) {
                 // A newer room was entered while this one was opening. Publishing
                 // now is the wrong-room send.
@@ -156,6 +175,43 @@ class UserChatViewModel(
                 "[enter] community=${opened.communityId.take(24)}… fresh=${opened.freshlyCreated}",
             )
             loadMessages(opened.communityId, epoch)
+        }
+    }
+
+    /**
+     * Enter a room of more than two BY ITS ID — no `POST /v1/chat`, which is
+     * pair-only (`start_chat`: "the two-member community for (owner, contact)")
+     * and would refuse or, worse, open a pair with whoever's key was passed.
+     * `GET /v1/chat/{id}/messages` reads an N-member room (CIRISServer#594):
+     * persist's admission is the membership gate, and a non-member is refused
+     * `chat.not_a_member`, which renders as a refusal and not as an empty room.
+     *
+     * [name] and [memberCount] come from the room row (`GET /v1/communities`):
+     * the transcript carries no roster, so the header is told what the list
+     * knew. The same epoch guard as [enter] applies — a late transcript for a
+     * room the person has since left is discarded, never painted.
+     */
+    fun enterRoom(communityId: String, name: String, memberCount: Int?) {
+        val epoch = nextEpoch()
+        entryJob?.cancel()
+        resetIfAnotherRoom(communityId)
+        _memberCount.value = memberCount
+        _community.value = ChatCommunity(communityId = communityId, communityName = name)
+        PlatformLogger.i(tag, "[enterRoom] community=${communityId.take(24)}… members=${memberCount ?: "?"}")
+        entryJob = viewModelScope.launch {
+            clearRefusal()
+            loadMessages(communityId, epoch)
+        }
+    }
+
+    /** SYNCHRONOUS, before any suspension point — see [enter]. */
+    private fun resetIfAnotherRoom(communityId: String) {
+        if (_community.value?.communityId != communityId) {
+            _community.value = null
+            _messages.value = emptyList()
+            _transcriptLoaded.value = false
+            // The draft belongs to the room it was written in, not to the screen.
+            _draft.value = ""
         }
     }
 
@@ -193,7 +249,7 @@ class UserChatViewModel(
             _sending.value = true
             clearRefusal()
             try {
-                val result = apiClient.sendChatMessage(id, text)
+                val result = chat.send(nodeUrl(), id, text)
                 if (epochAtSend == entryEpoch) {
                     _draft.value = ""
                 }
@@ -238,7 +294,7 @@ class UserChatViewModel(
     private suspend fun loadMessages(communityId: String, epoch: Long) {
         _loading.value = true
         try {
-            val transcript = apiClient.listChatMessages(communityId)
+            val transcript = chat.transcript(nodeUrl(), communityId)
             if (epoch != entryEpoch) {
                 PlatformLogger.i(
                     tag,

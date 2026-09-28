@@ -40,11 +40,12 @@ import kotlinx.coroutines.launch
  * own code from `GET /v1/self/contact-code`, the device picker, and the rule
  * that a code reaching no one is not shown.
  *
- * @param nodeUrl where the NODE is right now. Adding a contact, the contact
- *   code and removal are node routes; on a with-AI install `baseUrl` is the
- *   agent, which does not proxy them (CIRISAgent#1213). A provider, not a
- *   value, because the active node can be switched while this app-scoped
- *   model lives.
+ * @param nodeUrl where the NODE is right now. The contact list, adding a
+ *   contact, the contact code and removal are all node routes; on a with-AI
+ *   install `baseUrl` is the agent, which did not proxy them (CIRISAgent#1213),
+ *   and the route gate charges a `$baseUrl` read to the agent front door. A
+ *   provider, not a value, because the active node can be switched while this
+ *   app-scoped model lives.
  * @param api every contact/code call this view model makes; a fake in tests.
  * @param withdraw the removal call; a fake in tests.
  */
@@ -54,7 +55,7 @@ class ContactsViewModel(
     private val api: ContactsApi = ClientContactsApi(apiClient),
     private val withdraw: ConsentWithdrawApi = ClientConsentWithdraw(apiClient),
     /** The list read. [api]'s by default; a test's fake counts re-reads. */
-    private val readContacts: suspend () -> ContactListResponse = { api.listContacts() },
+    private val readContacts: suspend () -> ContactListResponse = { api.listContacts(nodeUrl()) },
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "ContactsVM"

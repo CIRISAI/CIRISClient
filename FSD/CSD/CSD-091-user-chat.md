@@ -1,10 +1,11 @@
 # CSD-091 — User chat (one room, two people, every message an attestation)
 
 **CSD**: CSD-091 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, leftovers
-**Flow**: unwritten — the tags below are the contract the flow will drive
+**Flow**: `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`)
+**Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -41,28 +42,36 @@ surface: null                     # NOT a NavSurface
 flow_only: true                   # no sidebar row reaches it
 screen: UserChat                  # `data class UserChat(...) : Screen()` — CIRISApp.kt:5773
 scopes: [agent, family, local_community, global_communities, global_commons]
-entry: Contacts' `onOpenChat` (CIRISApp.kt:4107) — People is a tab in every circle, so a room is opened from whichever circle the contact was read in
-exit: back to `Screen.Contacts` (CIRISApp.kt:564, 4133); `navSurfaceForScreen` keeps the Contacts card lit while the room is open (CIRISApp.kt:5937) — a chat is a leaf of that surface, not a destination beside it
+entry: "two doors. (1) Contacts' `onOpenChat` — People is on every circle, so a PAIR room is started from whichever circle the contact was read in. (2) A circle's Chats tab — `CommunityChatsScreen` (Neighbours) and its affiliations sibling (Communities and Businesses), CSD-103 — lists every room the node says you are in, pair rooms included; a pair row opens through its contact, a room of more than two opens BY ID"
+exit: "back to WHERE THE ROOM WAS OPENED FROM — `Screen.UserChat.from`, Contacts or the Chats tab (CIRISApp.kt — the back map, the arm's `onBack`, and the shell's legacy map all read it); `screenToSurface` keeps THAT surface lit while the room is open — a chat is a leaf of the surface it was opened from, not a destination beside it. Until this review all three sites hard-coded `Screen.Contacts`, so a room opened from Chats went back to People"
 ```
 
-**The placement is wrong, and the spec already says where it belongs.** The
-Locked Spec gives every circle a **Chats** tab. The entire nav declares two
-placements on it and both are Just me: `Interact` (`CirclesNav.kt:87`,
-`agentOnly`) and, on `origin/feat/b3-files`, `Notes` (`CirclesNav.kt:90`,
-`setOf(AGENT)`). So Chats is empty in Family, in Neighbours, in Communities and
-Businesses and in Everyone — while the conversation those tabs are named for is
-a leaf of People. CSD-007 makes the case without needing this card: "a chat is a
-group of two; a note to self is the group of one." The group of one is in Chats.
-The group of two is not.
+**Placement, resolved.** The Locked Spec gives every circle a **Chats** tab,
+and since PR #121 (CSD-103) Neighbours and Communities and Businesses have one
+that lists rooms: `NavSurface.CommunityChats` / `AffiliationsChats` on
+`Tab.CHATS` (`CirclesNav.kt`). A pair room is `tier: community` on the wire, so
+it folds to Neighbours with the substrate's backing and not by a client guess;
+Contacts keeps the "start one" move, because starting a pair room is
+`POST /v1/chat` with a contact's key and that key lives on the People row. Just
+me's Chats holds the agent conversation (`Interact`, `agentOnly`) and, on the
+files branch, Notes; Family and Everyone have no room listing yet, which is a
+fact about the wire (no family-tier room read; a pair room is never
+`federation`), not a gap in this card.
 
-**Recommended placement: a Chats card in the four non-self circles listing the
-person's open rooms, with Contacts keeping the "start one" move.** The
-constitutional caveat is worth stating rather than glossing: the room's
-`cohort_scope` is `community` whichever circle it is shown in — the wire carries
-no family/neighbour distinction for a pair room — so which circle a given
-conversation appears in is a client-side audience judgment with no substrate
-backing. Today that judgment is dodged by reaching every room through its
-contact, which is defensible and is not what the spec asked for.
+**A room of more than two opens by its id, and never through `POST /v1/chat`.**
+`start_chat` is "the two-member community for (owner, contact)" and refuses
+anything else; `GET /v1/chat/{id}/messages` and `POST /v1/chat/{id}/messages`
+serve an N-member room by id (CIRISServer#594: `list_room_messages`, and
+`send_message`'s roster branch — on `main` 0.5.217 at `src/contacts_chat.rs:3592`
+and `:2910`, on `integ/0.5.218` at `:4051` and `:3363`). Until this review the
+client could not use that: `UserChatViewModel.enter` always opened through
+`POST /v1/chat` with a contact key, so the Chats tab listed rooms of more than
+two as "can't open here". `enterRoom(communityId, name, memberCount)` now enters
+by id, and the Chats row opens it (`UserChatViewModelTest.aRoomOfMoreThanTwoIsEnteredByItsIdAndNeverThroughPostChat`).
+The header's member count comes from the room row (`GET /v1/communities`),
+because the transcript carries no roster and the only read that returns one is
+the pair-only open. Creating a room, adding to it and leaving it are CSD-102's
+routes, not this card's.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -109,8 +118,8 @@ fields:
     use: display-only
     type: "list[string]"
     example: ["moderate"]
-    renders: "the '(moderator)' badge beside the author. RESERVED — the client reads the duties the node resolved from the live `delegates_to` chain, which is the same edge CSD-090 confers. Moderation is a duty, not a role: a plain member holding a scoped delegation moderates, and a roster founder with no live chain does not"
-    tag: "proposed:chat_msg_duty_badge"
+    renders: "the '(moderator)' badge beside the author, its own tagged element. RESERVED — the client reads the duties the node resolved from the live `delegates_to` chain (`author_duties`), which is the same edge CSD-090 confers. Moderation is a duty, not a role: a plain member holding a scoped delegation moderates, and a roster founder with no live chain does not"
+    tag: "chat_msg_duty_badge_*"
   - ceg: x_private:message_status
     use: display-only
     type: "enum[live,superseded,withdrawn,recanted]"
@@ -133,8 +142,20 @@ fields:
     use: display-only
     type: int
     example: 9012
-    renders: "'9012 / 16384 bytes', appearing only past half the ceiling and turning error-coloured past it. Say the ceiling BEFORE the node refuses at it — the refusal is correct but arrives after the writing. The counter carries NO test tag (ChatScreen.kt:325-341)"
-    tag: "proposed:chat_length_counter"
+    renders: "'9012 / 16384 bytes', appearing only past half the ceiling and turning error-coloured past it. Say the ceiling BEFORE the node refuses at it — the refusal is correct but arrives after the writing"
+    tag: chat_length_counter
+  - ceg: x_private:unopened_reason
+    use: display-only
+    type: "enum[not_fetched,not_granted,evicted,seal_mismatch,malformed_row,not_text,substrate]"
+    example: "not_fetched"
+    renders: "a row whose body did not open is NOT a row that says nothing. The token — `contacts_chat.rs::UNOPENED_REASONS`, edge's `UnopenedReason::kind()` verbatim (0.5.218, CIRISServer#602) — picks a sentence from the bundle (`mobile.chat_unopened_<token>`: 'This message hasn't reached this device yet.', 'This message was sealed before this device could read here…', …); a token this client does not know lands on `mobile.chat_unopened_other` WITH its detail. On 0.5.217 the field was edge's Display text ('not_fetched: <sentence>'), and the client reads that shape too (the token before the colon, the sentence after). The client branches on the token and never shows it"
+    tag: "chat_msg_unopened_*"
+  - ceg: x_private:unopened_detail
+    use: display-only
+    type: string
+    example: "content is in the room's blob store and was not fetched by this read"
+    renders: "the substrate's own sentence, under the token's sentence, for a person or a log — never for branching"
+    tag: "chat_msg_unopened_*"
 ```
 
 **The object this whole surface moves has no family in the pinned registry.** A
@@ -148,9 +169,9 @@ licence to invent one.
 
 ```yaml csd:states
 populated: {tag: chat_transcript, renders: "the LazyColumn, oldest first, scrolled to the newest row — that is what a reader entering a conversation wants under their thumb"}
-empty:     {tag: "proposed:chat_empty", renders: "'No messages yet. What you send here is a signed attestation in this two-person community…' — rendered with NO tag (ChatScreen.kt:237-247), so an unstarted conversation and a transcript that failed to compose are the same observation to the gate"}
-loading:   {tag: "proposed:chat_loading", renders: "a bare CircularProgressIndicator, also UNTAGGED (ChatScreen.kt:232-235). It is correctly distinguished from empty in the code — `transcriptLoaded` tells 'empty' from 'not asked yet' — and indistinguishable from it to automation"}
-error:     {tag: chat_refusal, renders: "the node's typed `reason_id`, localized, in an error container above the transcript, with the node's English detail beneath it. `chat.not_a_contact`, `chat.not_a_member`, `chat.message_too_large` and `chat.empty_message` each name a different next move and would otherwise all be red text"}
+empty:     {tag: chat_empty, renders: "for a pair: 'No messages yet. What you send here is a signed attestation in this two-person community…'; for a room of more than two: '…to everyone on this room's roster — its members can read it, and nobody else.' Rendered ONLY when no refusal is up, so an unstarted conversation and a refused read are two observations"}
+loading:   {tag: chat_loading, renders: "a bare progress affordance; `transcriptLoaded` tells 'empty' from 'not asked yet'"}
+error:     {tag: chat_refusal, renders: "the node's typed `reason_id`, localized, in an error container above the transcript, with the node's English detail beneath it, and NO `chat_empty` under it. `chat.not_a_contact`, `chat.not_a_member`, `chat.message_too_large` and `chat.empty_message` each name a different next move and would otherwise all be red text"}
 ```
 
 **`error` swallows a state that is not an error.** Sending into a room whose
@@ -167,9 +188,11 @@ as a failure, once as a note.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| open / resolve the room | `POST /v1/chat` | CIRISServer (`src/contacts_chat.rs:3787`) | live — idempotent; returns BEFORE any write when the community exists, so for an open room this is a read, and it is the only read that answers with the authoritative roster the header needs |
-| the transcript | `GET /v1/chat/{community_id}/messages` | CIRISServer (`src/contacts_chat.rs:3789`) | live — oldest first, structural composers already folded into each row's `status` |
-| send | `POST /v1/chat/{community_id}/messages` | CIRISServer (`src/contacts_chat.rs:3789`) | live — a `chat:message:v1` `scores` attestation, `attestation_upsert_local` + `attestation_promote(community)` |
+| open / resolve a PAIR room | `POST /v1/chat` at the node URL | CIRISServer (`src/contacts_chat.rs:3787`) | live — idempotent; returns BEFORE any write when the community exists, so for an open room this is a read, and it is the only read that answers with the authoritative roster the header needs. **Pair-only**: `start_chat` builds "the two-member community for (owner, contact)"; a room of more than two is never asked of it |
+| enter a room of more than two | `GET /v1/chat/{community_id}/messages` BY ID, no open call | CIRISServer | live — `list_room_messages` (CIRISServer#594; `main` 0.5.217 `:3592`, `integ/0.5.218` `:4051`): persist's admission is the membership gate, and a non-member is refused `chat.not_a_member`. The client's `enterRoom` (this review). What CIRISServer#594 still lists as open — create/invite/revoke by chat routes, per-member reporting — is CSD-102's surface (`/v1/communities`), not a blocker here |
+| the transcript | `GET /v1/chat/{community_id}/messages` at the node URL | CIRISServer (`src/contacts_chat.rs:3789`) | live — oldest first, structural composers already folded into each row's `status`; for a room, `handshake` beside it, never as a refusal |
+| a row whose body did not open | `unopened_reason` (token) + `unopened_detail` on the transcript row | CIRISServer | **0.5.218** (CIRISServer#602): `UNOPENED_REASONS` at `src/contacts_chat.rs:3004-3012`, a test pins every edge arm lands in it. On 0.5.217 the same field carried edge's `Display` text; the client reads both (§2) |
+| send | `POST /v1/chat/{community_id}/messages` at the node URL | CIRISServer (`src/contacts_chat.rs:3789`) | live — a `chat:message:v1` `scores` attestation, `attestation_upsert_local` + `attestation_promote(community)`; for a room, sealed to the fold under the room's DEK with no pair handshake gating it (`:3363` on `integ/0.5.218`) |
 | the 16 KB ceiling | `MAX_MESSAGE_BYTES` (`src/contacts_chat.rs:146`) | CIRISServer | live — mirrored in the client at `ChatScreen.kt:72`, and it is a MIRROR: two constants, one number |
 | the contact grant | `GET` / `POST /v1/contacts` | CIRISServer (`src/contacts_chat.rs:3784`) | live — CSD-005 |
 | the room's handshake state | carried as a system entry with `message_id: chat.state.*` (`src/contacts_chat.rs:694-751`, `803-818`) | CIRISServer | live — and the client renders it correctly through `SystemNoteRow` + `chatEntryText`, whose fallback rules are id, then the server's English, never a blank line and never the raw key (CIRISClient#34) |
@@ -177,10 +200,15 @@ as a failure, once as a note.
 | edit / withdraw / recant a message | no route — it needs the author's own signature and the app holds no keys | CIRISServer | **missing by design**, and the UI says so per-op rather than hiding the verb |
 | a CEG family for `chat:message:v1` | not in the pinned registry | CIRISConstitution / CIRISRegistry | **missing** — every message field above is `x_private:` for want of it |
 
-**Wrong-host risk: none.** Every route here is the NODE's, on `:4243`. This
-surface does not exist on the agent and does not ask it anything — the contrast
-with CSD-010, which is entirely the agent's, is the cleanest example in the
-client of the two hosts staying apart (`CIRISApp.kt:338-347`).
+**Wrong-host risk: found and closed.** Every route here is the NODE's, on
+`:4243` — and until this review every one of them was called at `$baseUrl`
+(`startChat`, `listChatMessages`, `sendChatMessage`), which the route gate
+charged to the agent front door and which, on a with-AI install, asked the
+agent (CIRISAgent#1213). The sentence above used to read "none", written from
+the server side alone. The three calls now take the node URL from the same
+active-node provider People uses (`UserChatViewModel.nodeUrl`, `ChatApi`), and
+`UserChatViewModelTest` pins where each goes. This surface does not exist on
+the agent and does not ask it anything.
 
 **What CC fixes for free, and the client obeys.** persist refuses a
 community-scoped promotion unless `attested_key_id == attesting_key_id` and every
@@ -234,7 +262,33 @@ Try to send into a room you are not a member of:
 expect:
   state: error
   visible: [chat_refusal]
+  absent: [chat_empty]
 ```
+
+Open a room of more than two from Neighbours › Chats (CSD-103's
+`community_chat_row_*`): the transcript composes with no `POST /v1/chat`, the
+header counts the room's members, and back returns to Chats, not to People:
+
+```yaml
+expect:
+  screen: UserChat
+  visible: [chat_transcript, input_chat_body, btn_chat_send]
+```
+
+```yaml
+do:
+  - click: btn_chat_back
+expect:
+  screen: CommunityChats
+```
+
+A row whose body did not open says so in words (`chat_msg_unopened_<id>`
+carries the sentence), with the substrate's detail beneath, and the token never
+reaches the screen. The flow cannot make a node produce one on demand, so this
+is pinned at unit level instead
+(`ChatEntryPresentationTest.every_documented_unopened_token_names_its_own_sentence`,
+`…a_system_entry_that_did_not_open_falls_back_to_the_detail_never_the_token`),
+and §5 disclaims it for the matrix.
 
 ## 5. QA plan
 
@@ -244,13 +298,15 @@ not produce. A single-node suite can open a room, watch it sit in
 `awaiting_peer`, and assert that the note renders and the send is refused — which
 is most of what this card claims and none of what a conversation is.
 
-**`input_chat_body` cannot be typed into.** `client/tools/check_ui_drivable.py
---list` names it (with `input_duty_subject`, CSD-090) — an `OutlinedTextField`
-carrying `Modifier.testable("input_chat_body")` (`ChatScreen.kt:296`) with no
-`rememberInputSinks` in the file, so `/input` answers success and types nothing.
-The composer of the user-to-user chat is undrivable, which means **the gate
-cannot send a message on this screen at all**; the flow above is aspirational
-until `CirisTextField` (`ui/primitives/Controls.kt:95`) replaces it. One line.
+**`input_chat_body` is drivable.** The composer registers
+`rememberTextInputDriver("input_chat_body", …)` beside the `OutlinedTextField`
+(`ChatScreen.kt`), so `/input` types into the draft the ViewModel owns. An
+earlier revision of this section said the opposite; it was true before PR #95
+and is not now.
+
+**Not driven on the matrix: a locked row.** A row with `unopened_reason` needs
+the far side's content to be absent or sealed to another reader, which the
+single-node fixture cannot stage; its rendering is pinned at unit level (§4).
 
 **The two buttons, by contrast, get it exactly right.** `btn_chat_send` and
 `btn_chat_refresh` use `testableWithHandler` — which registers for automation

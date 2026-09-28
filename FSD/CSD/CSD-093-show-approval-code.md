@@ -63,8 +63,9 @@ fields:
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
-    renders: "one QR, drawn by QrCode(value, contentDescription, tag), carrying this node's code, its one-time claim PIN, and an address the other device can reach it at. The payload format is the client's to define and CSD-094's scanner must read the same one; it is unconfirmed until both cards agree it (§3)"
+    renders: "one QR, drawn by QrCode(value, contentDescription, tag), carrying this node's code, its one-time claim PIN, and an address the other device can reach it at. The payload format is the client's to define and CSD-094's scanner must read the same one — but WHAT ADDRESS goes in it is CIRISServer#678's design answer that is still pending: 0.5.218's claim-remote honours `target_url` over the node code's `transport_hint` and refuses to fall back to its own loopback for another device's code (`src/claim_remote.rs:484-499`), so the QR must carry a URL the approving node can reach, and whether a phone behind a carrier NAT can offer one, or the second-device path will ride the mesh instead, is not decided"
     tag: "proposed:qr_approval_code"
+    blocked_by: CIRISServer#678
   - ceg: x_private:node_code
     use: display-only
     type: string
@@ -100,9 +101,9 @@ error:     {tag: "proposed:approval_code_error", renders: "'Could not read this 
 | this node's code | `GET /v1/federation/node-code` (`client.getNodeCode`, `SetupViewModel.kt:1197`), or the code captured from the boot banner | CIRISServer | live |
 | the claim PIN | the node's own `<home>/claim_pin` file (0600), located by `claim_pin_file` in `GET /v1/setup/status` (`src/auth/bootstrap.rs:1418`) and read by `readLocalClaimPin()` (`CIRISApp.kt:2663`); the boot-banner capture is the fallback | CIRISServer (writes) · CIRISClient (reads a local file) | live; the same provider the self-claim uses |
 | "you've been approved" | `GET /v1/setup/status` → `is_first_run` flips to `false` once `/v1/setup/root` has accepted the claim (`bootstrap.rs:1413-1436`) | CIRISServer | live; the card polls it |
-| an address the other device can reach | the node code's `transport_hint`; `POST /v1/setup/claim-remote` falls back to the approving node's OWN loopback when there is none (`src/claim_remote.rs:237-248`) and accepts `target_url` to override (`:365-369`) | CIRISServer | **unconfirmed, and the flow cannot work without it.** A desktop or phone node's code carries no hint, so the QR must carry `target_url`. Whether 0.5.218 changes this is not stated in anything readable; ask on CIRISClient#78 |
-| the QR payload format (node code + PIN + address) | none: a client-side format that CSD-093 writes and CSD-094 reads | CIRISClient | **unconfirmed**; proposed as one URI carrying `node_code`, `claim_pin` and `target_url`. Must be pinned by a shared unit test in `commonTest` before either card is `building` |
-| the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **in build**: only the encoder exists, as an unreviewed WIP (`platform/util/QrEncoder.kt`, branch `wip/qr-encode-scan` @ `353a2ec`); the `QrCode` composable is not written yet |
+| an address the other device can reach | the node code's `transport_hint`, or `target_url` in the claim body; 0.5.218 makes `target_url` override the hint and REFUSES to fall back to the approving node's own loopback for a code that names another device (`src/claim_remote.rs:484-499` on `origin/integ/0.5.218`: "falling back for it would POST another device's claim to ourselves") | CIRISServer | **readable, and the flow still cannot work without an answer**: a desktop or phone node's code carries no hint, so the QR must carry `target_url`, and whether a phone behind a carrier NAT can be reached over HTTP at all — or the second-device path will ride the mesh — is the design answer pending on CIRISServer#678 (open). `blocked_by` on the payload field above |
+| the QR payload format (node code + PIN + address) | none: a client-side format that CSD-093 writes and CSD-094 reads | CIRISClient | **blocked** on the row above: the address member is the open half. Proposed as one URI carrying `node_code`, `claim_pin` and `target_url`; to be pinned by a shared unit test in `commonTest` before either card is `building` |
+| the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **live** (PR #99): `ui/primitives/QrCode.kt`, already drawing CSD-092's code |
 
 ### The PIN contract (asserted, not just intended)
 

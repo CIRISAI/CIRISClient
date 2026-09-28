@@ -108,7 +108,7 @@ private class FakePeering(
 private class FakeContactsApi(
     var peers: suspend () -> FederationPeerListResponse = { FederationPeerListResponse() },
 ) : ContactsApi {
-    override suspend fun listContacts(): ContactListResponse = ContactListResponse()
+    override suspend fun listContacts(nodeUrl: String): ContactListResponse = ContactListResponse()
     override suspend fun listPeers(): FederationPeerListResponse = peers()
     override suspend fun addContact(nodeUrl: String, keyId: String): AddContactResponse =
         throw UnsupportedOperationException("not asked in this test")
