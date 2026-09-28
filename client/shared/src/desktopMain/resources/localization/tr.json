@@ -1266,6 +1266,21 @@
     "ceremony_state_proposed": "önerildi",
     "ceremony_state_signed": "imzalandı",
     "ceremony_state_not_yet": "henüz değil",
+    "delegations_inbound_unavailable": "Bu uygulama, diğer kişilerin size devrettiği yetkileri henüz okuyamıyor — bu, hiç olmadığının bir bildirimi değildir.",
+    "delegations_list_error": "Yetki devirleriniz bu düğümden okunamadı, bu nedenle bu liste eksik: {error}",
+    "delegations_refresh": "Yenile",
+    "delegations_revoke_title": "Bu yetki devri iptal edilsin mi?",
+    "delegations_revoke_fact_who": "Kim",
+    "delegations_revoke_fact_effect": "Ne değişir",
+    "delegations_revoke_fact_signer": "Kim imzalar",
+    "delegations_revoke_effect": "Bundan sonra artık sizin adınıza hareket edemez. İptal işlemi kalıcıdır: ona yeniden yetki vermek için yeni bir yetki devri oluşturmanız gerekir.",
+    "delegations_revoke_signer": "Siz — bu düğümdeki kimlik anahtarınız geri çekme işlemini imzalar",
+    "delegations_signed_record": "İmzalı kayıt {id}",
+    "identity_associate_seal_hardware": "Bu cihazın anahtarını donanımında (TPM) mühürleyin",
+    "identity_associate_use_software": "Bunun yerine bu cihazda yazılım tabanlı saklamayı kullanın",
+    "login_new_account_refused": "Bu düğümün zaten bir sahibi var: hiç görmediği bir hesap burada reddedilir. Sahibin hesabıyla oturum açın.",
+    "login_new_account_observer": "Bu düğümün hiç görmediği bir hesap, sahibi olarak değil, gözlemci olarak içeri alınır.",
+    "login_new_account_claims": "Bu düğümün henüz bir sahibi yok: oturum açan ilk hesap onun sahibi olur.",
     "receipt_this_node": "Bu düğüm — siz",
     "setup_finish_unclaimed": "Bu düğümü sahiplenmeden bitir",
     "identity_revoked_badge": "İptal edildi",
@@ -3082,7 +3097,9 @@
     "transport_not_on_this_node": "Bu düğüm taşıma yöntemlerini bildirmiyor.",
     "audit_not_on_this_node": "Bu düğüm bir ajan denetim günlüğü tutmuyor. Hiçbir şey filtrelenmedi.",
     "consent_not_on_this_node": "Bu düğüm onay kayıtları tutmuyor. Onay bir ajan tarafından tutulur ve bu düğüm bir ajan olmadan çalışır.",
-    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok."
+    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok.",
+    "delegations_deny": "Reddet",
+    "delegations_inbound_title": "Size devredilenler"
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Cihazlarınız bu düğümün sahibinin kendi yüzeyidir. Bu düğümün sahibi olarak oturum açın.",
     "release_incomplete": "Serbest bırakma imzalandı, ancak düğüm hâlâ o düğümü sizin olarak listeliyor: göremediği bir sahiplik kaydı hâlâ geçerli. Geri çekebildiği şey geri çekilmiş durumda kalır.",
     "release_self_requires_force": "Bu, konuştuğunuz düğüm. Onu serbest bırakmak buradaki sahipliğinizi, bu oturum dahil, sona erdirir.",
-    "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi."
+    "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi.",
+    "associate": {
+      "hardware_custody_unavailable": "Bu cihazda bir anahtarı mühürleyebilecek donanım yok (TPM veya secure enclave yok), bu nedenle hiçbir şey kurulmadı. Bunun yerine yazılım tabanlı saklamayı kullanabilirsiniz: anahtar bu cihazda şifrelenmiş bir dosyada saklanır."
+    }
   }
 }

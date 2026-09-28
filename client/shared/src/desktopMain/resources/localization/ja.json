@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "このノードは自身のトランスポートを報告しません。",
     "audit_not_on_this_node": "このノードはエージェントの監査ログを保持していません。何もフィルタリングされていません。",
     "consent_not_on_this_node": "このノードは同意記録を保持していません。同意はエージェントによって保持されるものであり、このノードはエージェントなしで動作しています。",
-    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。"
+    "billing_not_on_this_node": "このノードは課金を扱いません。ここには残高もなく、購入できるものもありません。",
+    "delegations_deny": "拒否",
+    "delegations_inbound_title": "あなたへの委任",
+    "delegations_inbound_unavailable": "このアプリは、他の人があなたに委任した権限をまだ読み取ることができません — これは委任が存在しないという報告ではありません。",
+    "delegations_list_error": "このノードからあなたの委任情報を読み取れなかったため、このリストは完全ではありません: {error}",
+    "delegations_refresh": "更新",
+    "delegations_revoke_title": "この委任を取り消しますか？",
+    "delegations_revoke_fact_who": "対象",
+    "delegations_revoke_fact_effect": "変更内容",
+    "delegations_revoke_fact_signer": "署名者",
+    "delegations_revoke_effect": "以後、あなたに代わって行動することはできなくなります。取り消しは永続的です。再度権限を与えるには、新しい委任を発行してください。",
+    "delegations_revoke_signer": "あなた — このノード上のあなたの ID キーが取り消しに署名します",
+    "delegations_signed_record": "署名済み記録 {id}",
+    "identity_associate_seal_hardware": "このデバイスの鍵をハードウェア（TPM）に封印する",
+    "identity_associate_use_software": "代わりにこのデバイスでソフトウェアカストディを使用する",
+    "login_new_account_refused": "このノードには既に所有者がいます: このノードが一度も見たことのないアカウントはここでは拒否されます。所有者のアカウントでサインインしてください。",
+    "login_new_account_observer": "このノードが一度も見たことのないアカウントは、所有者としてではなく、オブザーバーとして受け入れられます。",
+    "login_new_account_claims": "このノードにはまだ所有者がいません: 最初にサインインしたアカウントがその所有者になります。"
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "デバイス管理は所有者本人の操作範囲です。このノードの所有者としてサインインしてください。",
     "release_incomplete": "解放の署名は完了しましたが、ノードは依然としてそのノードをあなたの所有として記録しています：ノードから見えない場所に、まだ有効な所有権記録が残っています。ノード側で取り消せた部分については、取り消しが維持されます。",
     "release_self_requires_force": "それは、あなたが現在やり取りしているノードです。解放すると、このセッションを含め、ここでのあなたの所有権が終了します。",
-    "store_unavailable": "ノードはアイデンティティストアを読み書きできませんでした。変更は行われていません。"
+    "store_unavailable": "ノードはアイデンティティストアを読み書きできませんでした。変更は行われていません。",
+    "associate": {
+      "hardware_custody_unavailable": "このデバイスには鍵を封印できるハードウェア（TPMやSecure Enclave）がないため、何も設定されませんでした。代わりにソフトウェアカストディを使用できます: 鍵はこのデバイス上の暗号化されたファイルに保存されます。"
+    }
   }
 }

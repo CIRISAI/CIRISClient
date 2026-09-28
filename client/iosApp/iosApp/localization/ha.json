@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Wannan kumburi ba ya bayar da rahoton transports nasa ba.",
     "audit_not_on_this_node": "Wannan kumburi ba ya riƙe littafin dubawar wakili ba. Ba a tace komai ba.",
     "consent_not_on_this_node": "Wannan kumburi ba ya riƙe bayanan amincewa ba. Wakili ne ke riƙe amincewa, kuma wannan kumburi yana gudana ba tare da wakili ba.",
-    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya."
+    "billing_not_on_this_node": "Wannan kumburi ba ya sarrafa biyan kuɗi. Babu ma'auni a nan kuma babu abin saya.",
+    "delegations_deny": "Ƙi",
+    "delegations_inbound_title": "Wakilcin da aka baiwa ku",
+    "delegations_inbound_unavailable": "Wannan manhaja har yanzu ba ta iya karanta ikon da wasu mutane suka wakilta muku ba — wannan ba rahoto ne cewa babu ko ɗaya ba.",
+    "delegations_list_error": "An kasa karanta wakilcinku daga wannan kumburi, don haka jerin nan bai cika ba: {error}",
+    "delegations_refresh": "Sabunta",
+    "delegations_revoke_title": "Ku soke wannan wakilci?",
+    "delegations_revoke_fact_who": "Wane ne",
+    "delegations_revoke_fact_effect": "Abin da zai canza",
+    "delegations_revoke_fact_signer": "Wanda zai sa hannu",
+    "delegations_revoke_effect": "Daga yanzu, ba za ta ƙara iya aiki a madadinku ba. Sokewa na dindindin ne: don ba ta iko kuma, sai ku bayar da sabon wakilci.",
+    "delegations_revoke_signer": "Ku — maɓallin shaidarku a kan wannan kumburi zai sa hannu kan janyewa",
+    "delegations_signed_record": "Rikodin da aka sa hannu {id}",
+    "identity_associate_seal_hardware": "Kulle maɓallin wannan na'ura a cikin kayan aikinta (TPM)",
+    "identity_associate_use_software": "Maimakon haka, yi amfani da kula ta software a wannan na'ura",
+    "login_new_account_refused": "Wannan kumburi yana da mai mallaka tuni: asusu da bai taɓa gani ba za a ƙi shi a nan. Ku shiga da asusun mai mallakar.",
+    "login_new_account_observer": "Asusu da wannan kumburi bai taɓa gani ba za a bari ya shiga a matsayin mai kallo, ba a matsayin mai mallaka ba.",
+    "login_new_account_claims": "Wannan kumburi ba shi da mai mallaka tukuna: asusun farko da ya shiga zai zama mai mallakarsa."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Na'urorinku fage ne na mai shi kansa. Ku shiga a matsayin mai wannan node.",
     "release_incomplete": "An sa hannu kan sakin, amma node ɗin har yanzu yana jera wancan node a matsayin naku: akwai rikodin mallaka da ba zai iya gani ba wanda har yanzu yana aiki. Abin da ya iya janyewa ya ci gaba da kasancewa an janye shi.",
     "release_self_requires_force": "Wancan ne node ɗin da kuke magana da shi. Sakinsa yana kawo ƙarshen mallakarku a nan, tare da wannan zama.",
-    "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba."
+    "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba.",
+    "associate": {
+      "hardware_custody_unavailable": "Wannan na'ura ba ta da kayan aiki da za su iya kulle maɓalli (babu TPM ko secure enclave), don haka ba a saita kome ba. Za ku iya amfani da kula ta software maimakon haka: za a adana maɓallin a cikin fayil mai ɓoye a wannan na'ura."
+    }
   }
 }

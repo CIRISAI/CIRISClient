@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "이 노드는 자신의 전송 계층을 보고하지 않습니다.",
     "audit_not_on_this_node": "이 노드는 에이전트 감사 로그를 보관하지 않습니다. 필터링되어 제외된 것은 없습니다.",
     "consent_not_on_this_node": "이 노드는 동의 기록을 보관하지 않습니다. 동의는 에이전트가 보관하며, 이 노드는 에이전트 없이 실행됩니다.",
-    "billing_not_on_this_node": "이 노드는 결제를 처리하지 않습니다. 여기에는 잔액도 없고 구매할 것도 없습니다."
+    "billing_not_on_this_node": "이 노드는 결제를 처리하지 않습니다. 여기에는 잔액도 없고 구매할 것도 없습니다.",
+    "delegations_deny": "거부",
+    "delegations_inbound_title": "내게 위임됨",
+    "delegations_inbound_unavailable": "이 앱은 다른 사람이 귀하께 위임한 권한을 아직 읽을 수 없습니다 — 위임된 권한이 없다는 뜻은 아닙니다.",
+    "delegations_list_error": "이 노드에서 귀하의 위임을 읽지 못해 이 목록이 완전하지 않습니다: {error}",
+    "delegations_refresh": "새로고침",
+    "delegations_revoke_title": "이 위임을 철회하시겠습니까?",
+    "delegations_revoke_fact_who": "누구",
+    "delegations_revoke_fact_effect": "변경 사항",
+    "delegations_revoke_fact_signer": "서명자",
+    "delegations_revoke_effect": "이제부터 이것은 더 이상 귀하를 대신하여 행동할 수 없습니다. 철회는 영구적입니다: 다시 권한을 부여하려면 새로운 위임을 발행해야 합니다.",
+    "delegations_revoke_signer": "귀하 — 이 노드의 신원 키가 철회에 서명합니다",
+    "delegations_signed_record": "서명된 기록 {id}",
+    "identity_associate_seal_hardware": "이 기기의 키를 하드웨어(TPM)에 봉인합니다",
+    "identity_associate_use_software": "대신 이 기기에서 소프트웨어 커스터디를 사용합니다",
+    "login_new_account_refused": "이 노드에는 이미 소유자가 있습니다: 한 번도 본 적 없는 계정은 여기서 거부됩니다. 소유자 계정으로 로그인하세요.",
+    "login_new_account_observer": "이 노드가 한 번도 본 적 없는 계정은 소유자가 아니라 관찰자로 들어오게 됩니다.",
+    "login_new_account_claims": "이 노드에는 아직 소유자가 없습니다: 처음으로 로그인하는 계정이 소유자가 됩니다."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "본인의 기기는 소유자 본인의 영역입니다. 이 노드의 소유자로 로그인하세요.",
     "release_incomplete": "해제는 서명되었지만, 노드는 여전히 그 노드를 본인 소유로 나열하고 있습니다: 노드가 볼 수 없는 소유권 기록이 여전히 유효한 상태입니다. 노드가 철회할 수 있었던 부분은 철회된 상태로 유지됩니다.",
     "release_self_requires_force": "그것은 본인이 대화 중인 노드입니다. 이를 해제하면 이 세션을 포함하여 이곳에서의 본인 소유권이 종료됩니다.",
-    "store_unavailable": "노드가 자체 신원 저장소를 읽거나 쓸 수 없었습니다. 변경된 사항은 없습니다."
+    "store_unavailable": "노드가 자체 신원 저장소를 읽거나 쓸 수 없었습니다. 변경된 사항은 없습니다.",
+    "associate": {
+      "hardware_custody_unavailable": "이 기기에는 키를 봉인할 수 있는 하드웨어(TPM 또는 Secure Enclave)가 없어 아무것도 설정되지 않았습니다. 대신 소프트웨어 커스터디를 사용할 수 있습니다: 키는 이 기기의 암호화된 파일에 보관됩니다."
+    }
   }
 }

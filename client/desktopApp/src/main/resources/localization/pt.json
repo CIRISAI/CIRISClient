@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Este nó não relata seus transportes.",
     "audit_not_on_this_node": "Este nó não mantém um registro de auditoria do agente. Nada foi filtrado.",
     "consent_not_on_this_node": "Este nó não guarda registros de consentimento. O consentimento é mantido por um agente, e este nó funciona sem um.",
-    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar."
+    "billing_not_on_this_node": "Este nó não lida com cobrança. Não há saldo aqui e nada para comprar.",
+    "delegations_deny": "Recusar",
+    "delegations_inbound_title": "Delegado a você",
+    "delegations_inbound_unavailable": "Este app ainda não consegue ler a autoridade que outras pessoas delegaram a você — isto não é um relatório de que não há nenhuma.",
+    "delegations_list_error": "Não foi possível ler suas delegações a partir deste nó, portanto esta lista está incompleta: {error}",
+    "delegations_refresh": "Atualizar",
+    "delegations_revoke_title": "Revogar esta delegação?",
+    "delegations_revoke_fact_who": "Quem",
+    "delegations_revoke_fact_effect": "O que muda",
+    "delegations_revoke_fact_signer": "Quem assina",
+    "delegations_revoke_effect": "Ele não poderá mais agir por você, a partir de agora. Uma revogação é permanente: para dar-lhe autoridade novamente, você emite uma nova delegação.",
+    "delegations_revoke_signer": "Você — sua chave de identidade neste nó assina a retirada",
+    "delegations_signed_record": "Registro assinado {id}",
+    "identity_associate_seal_hardware": "Selar a chave deste dispositivo em seu hardware (TPM)",
+    "identity_associate_use_software": "Usar custódia por software neste dispositivo em vez disso",
+    "login_new_account_refused": "Este nó já tem um proprietário: uma conta que ele nunca viu seria recusada aqui. Entre com a conta do proprietário.",
+    "login_new_account_observer": "Uma conta que este nó nunca viu seria admitida como observadora, não como proprietária.",
+    "login_new_account_claims": "Este nó ainda não tem proprietário: a primeira conta a entrar se torna sua proprietária."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Seus dispositivos são a superfície do próprio proprietário. Entre como o proprietário deste nó.",
     "release_incomplete": "A liberação foi assinada, mas o nó ainda lista aquele nó como seu: existe um registro de propriedade que ele não pode ver e que ainda está ativo. O que pôde ser retirado permanece retirado.",
     "release_self_requires_force": "Esse é o nó com quem você está falando. Liberá-lo encerra sua propriedade aqui, incluindo esta sessão.",
-    "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado."
+    "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado.",
+    "associate": {
+      "hardware_custody_unavailable": "Este dispositivo não tem hardware capaz de selar uma chave (sem TPM ou secure enclave), portanto nada foi configurado. Você pode usar custódia por software em vez disso: a chave é mantida em um arquivo criptografado neste dispositivo."
+    }
   }
 }

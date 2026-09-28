@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
     "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
     "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
-    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli.",
+    "delegations_deny": "Tolak",
+    "delegations_inbound_title": "Didelegasikan kepada Anda",
+    "delegations_inbound_unavailable": "Aplikasi ini belum dapat membaca otoritas yang telah didelegasikan orang lain kepada Anda — ini bukan laporan bahwa tidak ada.",
+    "delegations_list_error": "Tidak dapat membaca delegasi Anda dari node ini, sehingga daftar ini tidak lengkap: {error}",
+    "delegations_refresh": "Segarkan",
+    "delegations_revoke_title": "Cabut delegasi ini?",
+    "delegations_revoke_fact_who": "Siapa",
+    "delegations_revoke_fact_effect": "Apa yang berubah",
+    "delegations_revoke_fact_signer": "Siapa yang menandatangani",
+    "delegations_revoke_effect": "Mulai sekarang, ia tidak lagi dapat bertindak untuk Anda. Pencabutan bersifat permanen: untuk memberikannya otoritas lagi, Anda perlu menerbitkan delegasi baru.",
+    "delegations_revoke_signer": "Anda — kunci identitas Anda pada node ini menandatangani penarikan tersebut",
+    "delegations_signed_record": "Catatan bertanda tangan {id}",
+    "identity_associate_seal_hardware": "Segel kunci perangkat ini di perangkat kerasnya (TPM)",
+    "identity_associate_use_software": "Gunakan penyimpanan perangkat lunak di perangkat ini sebagai gantinya",
+    "login_new_account_refused": "Node ini sudah memiliki pemilik: akun yang belum pernah dilihat node ini akan ditolak di sini. Masuklah dengan akun pemilik.",
+    "login_new_account_observer": "Akun yang belum pernah dilihat node ini akan diizinkan masuk sebagai pengamat, bukan sebagai pemilik.",
+    "login_new_account_claims": "Node ini belum memiliki pemilik: akun pertama yang masuk akan menjadi pemiliknya."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Perangkat Anda adalah ranah pemilik sendiri. Masuklah sebagai pemilik node ini.",
     "release_incomplete": "Pelepasan telah ditandatangani, tetapi node masih mencantumkannya sebagai milik Anda: ada catatan kepemilikan yang tidak dapat dilihatnya namun masih berlaku. Apa yang dapat dicabutnya tetap dicabut.",
     "release_self_requires_force": "Itu adalah node yang sedang Anda ajak bicara. Melepaskannya mengakhiri kepemilikan Anda di sini, termasuk sesi ini.",
-    "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah."
+    "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah.",
+    "associate": {
+      "hardware_custody_unavailable": "Perangkat ini tidak memiliki perangkat keras yang dapat menyegel kunci (tidak ada TPM atau secure enclave), sehingga tidak ada yang disiapkan. Anda dapat menggunakan penyimpanan perangkat lunak sebagai gantinya: kunci disimpan dalam berkas terenkripsi di perangkat ini."
+    }
   }
 }

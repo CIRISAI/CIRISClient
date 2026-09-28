@@ -1481,6 +1481,21 @@
     "delegations_deny_label": "Actions refusées (prime toujours)",
     "delegations_empty": "Aucune délégation active. Autorisez-en une ci-dessus.",
     "delegations_goal_label": "Objectif (facultatif)",
+    "delegations_inbound_unavailable": "Cette application ne peut pas encore lire l'autorité que d'autres personnes vous ont déléguée — ceci ne signifie pas qu'il n'y en a aucune.",
+    "delegations_list_error": "Impossible de lire vos délégations depuis ce nœud ; cette liste est donc incomplète : {error}",
+    "delegations_refresh": "Actualiser",
+    "delegations_revoke_title": "Révoquer cette délégation ?",
+    "delegations_revoke_fact_who": "Qui",
+    "delegations_revoke_fact_effect": "Ce qui change",
+    "delegations_revoke_fact_signer": "Qui signe",
+    "delegations_revoke_effect": "Il ne pourra plus agir pour vous, à partir de maintenant. Une révocation est permanente : pour lui redonner autorité, vous devez émettre une nouvelle délégation.",
+    "delegations_revoke_signer": "Vous — votre clé d'identité sur ce nœud signe le retrait",
+    "delegations_signed_record": "Enregistrement signé {id}",
+    "identity_associate_seal_hardware": "Sceller la clé de cet appareil dans son matériel (TPM)",
+    "identity_associate_use_software": "Utiliser plutôt la garde logicielle sur cet appareil",
+    "login_new_account_refused": "Ce nœud a déjà un propriétaire : un compte qu'il n'a jamais vu serait refusé ici. Connectez-vous avec le compte du propriétaire.",
+    "login_new_account_observer": "Un compte que ce nœud n'a jamais vu serait admis en tant qu'observateur, et non en tant que propriétaire.",
+    "login_new_account_claims": "Ce nœud n'a pas encore de propriétaire : le premier compte à se connecter en devient le propriétaire.",
     "delegations_never_delegated": "Jamais délégué : déléguer, effacer, arrêt de l'accord — le nœud refuse toujours ces actions à un délégué.",
     "delegations_permits_actor": "Agent agissant",
     "delegations_permits_all_actions": "Toutes les actions",
@@ -3082,7 +3097,9 @@
     "transport_not_on_this_node": "Ce nœud ne rapporte pas ses transports.",
     "audit_not_on_this_node": "Ce nœud ne tient pas de journal d'audit d'agent. Rien n'a été filtré.",
     "consent_not_on_this_node": "Ce nœud ne détient pas d'enregistrements de consentement. Le consentement est conservé par un agent, et ce nœud fonctionne sans agent.",
-    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter."
+    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter.",
+    "delegations_deny": "Refuser",
+    "delegations_inbound_title": "Délégué à vous"
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Vos appareils relèvent de la surface propre du propriétaire. Connectez-vous en tant que propriétaire de ce nœud.",
     "release_incomplete": "La libération a été signée, mais le nœud continue de répertorier ce nœud comme vous appartenant : un enregistrement de propriété qu'il ne peut pas voir reste actif. Ce qu'il a pu retirer reste retiré.",
     "release_self_requires_force": "C'est le nœud auquel vous parlez. Le libérer mettrait fin à votre propriété ici, y compris cette session.",
-    "store_unavailable": "Le nœud n'a pas pu lire ni écrire dans son magasin d'identités. Rien n'a été modifié."
+    "store_unavailable": "Le nœud n'a pas pu lire ni écrire dans son magasin d'identités. Rien n'a été modifié.",
+    "associate": {
+      "hardware_custody_unavailable": "Cet appareil ne dispose d'aucun matériel capable de sceller une clé (pas de TPM ni d'enclave sécurisée), donc rien n'a été configuré. Vous pouvez utiliser la garde logicielle à la place : la clé est conservée dans un fichier chiffré sur cet appareil."
+    }
   }
 }

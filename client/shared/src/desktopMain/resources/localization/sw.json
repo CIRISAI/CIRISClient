@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Nodi hii hairipoti njia zake za usafirishaji.",
     "audit_not_on_this_node": "Nodi hii haihifadhi kumbukumbu ya ukaguzi ya wakala. Hakuna kilichochujwa.",
     "consent_not_on_this_node": "Nodi hii haihifadhi rekodi za idhini. Idhini inahifadhiwa na wakala, na nodi hii inafanya kazi bila wakala.",
-    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua."
+    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua.",
+    "delegations_deny": "Kataa",
+    "delegations_inbound_title": "Ukabidhi kwako",
+    "delegations_inbound_unavailable": "Programu hii bado haiwezi kusoma mamlaka ambayo watu wengine wamekukabidhi — hii si taarifa kwamba hakuna.",
+    "delegations_list_error": "Haikuweza kusoma ukabidhi wako kutoka kwa nodi hii, hivyo orodha hii haijakamilika: {error}",
+    "delegations_refresh": "Onyesha upya",
+    "delegations_revoke_title": "Ubatilishe ukabidhi huu?",
+    "delegations_revoke_fact_who": "Nani",
+    "delegations_revoke_fact_effect": "Nini kinabadilika",
+    "delegations_revoke_fact_signer": "Nani anasaini",
+    "delegations_revoke_effect": "Haiwezi tena kutenda kwa niaba yako, kuanzia sasa. Ubatilishaji ni wa kudumu: kuipatia mamlaka tena, unatoa ukabidhi mpya.",
+    "delegations_revoke_signer": "Wewe — funguo yako ya utambulisho kwenye nodi hii inatia saini uondoaji huu",
+    "delegations_signed_record": "Rekodi iliyotiwa saini {id}",
+    "identity_associate_seal_hardware": "Funga funguo ya kifaa hiki ndani ya maunzi yake (TPM)",
+    "identity_associate_use_software": "Tumia hifadhi ya programu kwenye kifaa hiki badala yake",
+    "login_new_account_refused": "Nodi hii tayari ina mmiliki: akaunti ambayo haijawahi kuiona ingekataliwa hapa. Ingia kwa akaunti ya mmiliki.",
+    "login_new_account_observer": "Akaunti ambayo nodi hii haijawahi kuiona ingeruhusiwa kuingia kama mtazamaji, si kama mmiliki.",
+    "login_new_account_claims": "Nodi hii bado haina mmiliki: akaunti ya kwanza kuingia inakuwa mmiliki wake."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Vifaa vyako ni uso wa mmiliki mwenyewe. Ingia kama mmiliki wa nodi hii.",
     "release_incomplete": "Uachiliaji ulitiwa saini, lakini nodi bado inaorodhesha nodi hiyo kama yako: rekodi ya umiliki ambayo haiwezi kuiona bado ipo hai. Kile ilichoweza kuondoa kinasalia kikiwa kimeondolewa.",
     "release_self_requires_force": "Hiyo ni nodi unayoizungumza nayo. Kuiachilia kunakomesha umiliki wako hapa, ikiwa ni pamoja na kikao hiki.",
-    "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa."
+    "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa.",
+    "associate": {
+      "hardware_custody_unavailable": "Kifaa hiki hakina maunzi yanayoweza kufunga funguo (hakuna TPM au secure enclave), hivyo hakuna kilichosanidiwa. Unaweza kutumia hifadhi ya programu badala yake: funguo huhifadhiwa katika faili iliyosimbwa kwenye kifaa hiki."
+    }
   }
 }

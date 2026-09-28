@@ -3077,6 +3077,23 @@
     "audit_not_on_this_node": "Nút này không lưu nhật ký kiểm toán của tác nhân. Không có gì bị lọc bỏ.",
     "consent_not_on_this_node": "Nút này không lưu giữ bản ghi đồng thuận. Đồng thuận được lưu giữ bởi một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
     "billing_not_on_this_node": "Nút này không xử lý thanh toán. Ở đây không có số dư và không có gì để mua.",
+    "delegations_deny": "Từ chối",
+    "delegations_inbound_title": "Được ủy quyền cho bạn",
+    "delegations_inbound_unavailable": "Ứng dụng này chưa thể đọc được thẩm quyền mà người khác đã ủy quyền cho bạn — đây không phải là báo cáo rằng không có thẩm quyền nào.",
+    "delegations_list_error": "Không thể đọc các ủy quyền của bạn từ nút này, nên danh sách này chưa đầy đủ: {error}",
+    "delegations_refresh": "Làm mới",
+    "delegations_revoke_title": "Thu hồi ủy quyền này?",
+    "delegations_revoke_fact_who": "Ai",
+    "delegations_revoke_fact_effect": "Điều gì thay đổi",
+    "delegations_revoke_fact_signer": "Ai ký",
+    "delegations_revoke_effect": "Từ giờ, nó không còn thể hành động thay cho bạn. Việc thu hồi là vĩnh viễn: để cấp lại thẩm quyền cho nó, bạn phải ban hành một ủy quyền mới.",
+    "delegations_revoke_signer": "Bạn — khóa danh tính của bạn trên nút này ký việc thu hồi",
+    "delegations_signed_record": "Bản ghi đã ký {id}",
+    "identity_associate_seal_hardware": "Niêm phong khóa của thiết bị này trong phần cứng của nó (TPM)",
+    "identity_associate_use_software": "Sử dụng lưu giữ bằng phần mềm trên thiết bị này thay thế",
+    "login_new_account_refused": "Nút này đã có chủ sở hữu: một tài khoản mà nút chưa từng thấy sẽ bị từ chối ở đây. Hãy đăng nhập bằng tài khoản của chủ sở hữu.",
+    "login_new_account_observer": "Một tài khoản mà nút này chưa từng thấy sẽ được cho phép vào với vai trò người quan sát, không phải chủ sở hữu.",
+    "login_new_account_claims": "Nút này chưa có chủ sở hữu: tài khoản đầu tiên đăng nhập sẽ trở thành chủ sở hữu của nó.",
     "telemetry_not_on_this_node": "Nút này không báo cáo dữ liệu đo từ xa của tác nhân.",
     "services_not_on_this_node": "Nút này không liệt kê các dịch vụ của tác nhân.",
     "state_not_on_this_node": "Nút này không cung cấp điều này. Nó thuộc về một tác nhân, và nút này hoạt động mà không có tác nhân nào.",
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Thiết bị của bạn là bề mặt riêng của chủ sở hữu. Hãy đăng nhập với tư cách chủ sở hữu của nút này.",
     "release_incomplete": "Việc giải phóng đã được ký, nhưng nút vẫn liệt kê nút đó là của bạn: một bản ghi quyền sở hữu mà nó không thể thấy vẫn còn hiệu lực. Những gì nó có thể rút lại thì vẫn được rút lại.",
     "release_self_requires_force": "Đó là nút bạn đang trò chuyện với. Giải phóng nút đó sẽ kết thúc quyền sở hữu của bạn ở đây, bao gồm cả phiên này.",
-    "store_unavailable": "Nút không thể đọc hoặc ghi kho danh tính của mình. Không có gì bị thay đổi."
+    "store_unavailable": "Nút không thể đọc hoặc ghi kho danh tính của mình. Không có gì bị thay đổi.",
+    "associate": {
+      "hardware_custody_unavailable": "Thiết bị này không có phần cứng nào có thể niêm phong khóa (không có TPM hoặc secure enclave), nên chưa có gì được thiết lập. Bạn có thể sử dụng lưu giữ bằng phần mềm thay thế: khóa được giữ trong một tệp đã mã hóa trên thiết bị này."
+    }
   }
 }

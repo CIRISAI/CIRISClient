@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Este nodo no reporta sus transportes.",
     "audit_not_on_this_node": "Este nodo no mantiene un registro de auditoría del agente. No se filtró nada.",
     "consent_not_on_this_node": "Este nodo no conserva registros de consentimiento. El consentimiento lo mantiene un agente, y este nodo funciona sin uno.",
-    "billing_not_on_this_node": "Este nodo no gestiona la facturación. Aquí no hay saldo ni nada que comprar."
+    "billing_not_on_this_node": "Este nodo no gestiona la facturación. Aquí no hay saldo ni nada que comprar.",
+    "delegations_deny": "Rechazar",
+    "delegations_inbound_title": "Delegado a ti",
+    "delegations_inbound_unavailable": "Esta app aún no puede leer la autoridad que otras personas te han delegado — esto no significa que no exista ninguna.",
+    "delegations_list_error": "No se pudieron leer tus delegaciones desde este nodo, así que esta lista no está completa: {error}",
+    "delegations_refresh": "Actualizar",
+    "delegations_revoke_title": "¿Revocar esta delegación?",
+    "delegations_revoke_fact_who": "Quién",
+    "delegations_revoke_fact_effect": "Qué cambia",
+    "delegations_revoke_fact_signer": "Quién firma",
+    "delegations_revoke_effect": "Ya no podrá actuar en tu nombre, a partir de ahora. Una revocación es permanente: para volver a otorgarle autoridad, debes emitir una nueva delegación.",
+    "delegations_revoke_signer": "Tú — tu clave de identidad en este nodo firma la retirada",
+    "delegations_signed_record": "Registro firmado {id}",
+    "identity_associate_seal_hardware": "Sella la clave de este dispositivo en su hardware (TPM)",
+    "identity_associate_use_software": "Usa custodia por software en este dispositivo en su lugar",
+    "login_new_account_refused": "Este nodo ya tiene un propietario: una cuenta que nunca ha visto sería rechazada aquí. Inicia sesión con la cuenta del propietario.",
+    "login_new_account_observer": "Una cuenta que este nodo nunca ha visto sería admitida como observadora, no como propietaria.",
+    "login_new_account_claims": "Este nodo aún no tiene propietario: la primera cuenta que inicie sesión se convierte en su propietario."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Tus dispositivos son la superficie propia del propietario. Inicia sesión como el propietario de este nodo.",
     "release_incomplete": "La liberación se firmó, pero el nodo todavía lista ese nodo como tuyo: un registro de propiedad que no puede ver sigue activo. Lo que pudo retirar permanece retirado.",
     "release_self_requires_force": "Ese es el nodo con el que estás hablando. Liberarlo termina tu propiedad aquí, incluida esta sesión.",
-    "store_unavailable": "El nodo no pudo leer ni escribir su almacén de identidades. No se cambió nada."
+    "store_unavailable": "El nodo no pudo leer ni escribir su almacén de identidades. No se cambió nada.",
+    "associate": {
+      "hardware_custody_unavailable": "Este dispositivo no tiene hardware que pueda sellar una clave (sin TPM ni enclave seguro), así que no se configuró nada. Puedes usar custodia por software en su lugar: la clave se guarda en un archivo cifrado en este dispositivo."
+    }
   }
 }

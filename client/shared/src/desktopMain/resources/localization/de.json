@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Dieser Knoten meldet seine Transporte nicht.",
     "audit_not_on_this_node": "Dieser Knoten führt kein Audit-Protokoll für den Agenten. Es wurde nichts herausgefiltert.",
     "consent_not_on_this_node": "Dieser Knoten führt keine Zustimmungsdatensätze. Zustimmung wird von einem Agenten verwaltet, und dieser Knoten läuft ohne einen solchen.",
-    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen."
+    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen.",
+    "delegations_deny": "Ablehnen",
+    "delegations_inbound_title": "An Sie delegiert",
+    "delegations_inbound_unavailable": "Diese App kann Befugnisse, die andere Personen an Sie delegiert haben, noch nicht lesen — das ist keine Meldung, dass keine vorhanden sind.",
+    "delegations_list_error": "Ihre Delegationen konnten von diesem Knoten nicht gelesen werden, daher ist diese Liste nicht vollständig: {error}",
+    "delegations_refresh": "Aktualisieren",
+    "delegations_revoke_title": "Diese Delegation widerrufen?",
+    "delegations_revoke_fact_who": "Wer",
+    "delegations_revoke_fact_effect": "Was sich ändert",
+    "delegations_revoke_fact_signer": "Wer signiert",
+    "delegations_revoke_effect": "Es kann ab sofort nicht mehr für Sie handeln. Ein Widerruf ist endgültig: Um ihm erneut Befugnis zu erteilen, stellen Sie eine neue Delegation aus.",
+    "delegations_revoke_signer": "Sie — Ihr Identitätsschlüssel auf diesem Knoten signiert den Widerruf",
+    "delegations_signed_record": "Signierter Datensatz {id}",
+    "identity_associate_seal_hardware": "Schlüssel dieses Geräts in seiner Hardware versiegeln (TPM)",
+    "identity_associate_use_software": "Stattdessen Software-Verwahrung auf diesem Gerät verwenden",
+    "login_new_account_refused": "Dieser Knoten hat bereits einen Eigentümer: Ein Konto, das er noch nie gesehen hat, würde hier abgelehnt. Melden Sie sich mit dem Konto des Eigentümers an.",
+    "login_new_account_observer": "Ein Konto, das dieser Knoten noch nie gesehen hat, würde als Beobachter zugelassen, nicht als Eigentümer.",
+    "login_new_account_claims": "Dieser Knoten hat noch keinen Eigentümer: Das erste Konto, das sich anmeldet, wird dessen Eigentümer."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Ihre Geräte sind die Oberfläche des Eigentümers selbst. Melden Sie sich als Eigentümer dieses Knotens an.",
     "release_incomplete": "Die Freigabe wurde signiert, aber der Knoten führt jenen Knoten weiterhin als Ihren: Ein Eigentumseintrag, den er nicht einsehen kann, ist weiterhin aktiv. Was er entziehen konnte, bleibt entzogen.",
     "release_self_requires_force": "Das ist der Knoten, mit dem Sie sprechen. Seine Freigabe beendet Ihr Eigentum hier, einschließlich dieser Sitzung.",
-    "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert."
+    "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert.",
+    "associate": {
+      "hardware_custody_unavailable": "Dieses Gerät verfügt über keine Hardware, die einen Schlüssel versiegeln kann (kein TPM oder Secure Enclave), daher wurde nichts eingerichtet. Sie können stattdessen Software-Verwahrung verwenden: Der Schlüssel wird in einer verschlüsselten Datei auf diesem Gerät gespeichert."
+    }
   }
 }

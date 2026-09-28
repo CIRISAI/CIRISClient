@@ -1481,6 +1481,22 @@
     "delegations_deny_label": "እርምጃዎችን ከልክል (ሁልጊዜ ያሸንፋል)",
     "delegations_empty": "ንቁ ውክልናዎች የሉም። ከላይ አንዱን ፍቀድ።",
     "delegations_goal_label": "ግብ (አማራጭ)",
+    "delegations_inbound_title": "ለእርስዎ የተሰጠ ውክልና",
+    "delegations_inbound_unavailable": "ይህ መተግበሪያ ሌሎች ሰዎች ለእርስዎ የሰጡትን ሥልጣን እስካሁን ማንበብ አይችልም — ይህ ምንም እንደሌለ የሚያሳይ ሪፖርት አይደለም።",
+    "delegations_list_error": "ውክልናዎችዎን ከዚህ ኖድ ማንበብ አልተቻለም፣ ስለዚህ ይህ ዝርዝር ሙሉ አይደለም፦ {error}",
+    "delegations_refresh": "አድስ",
+    "delegations_revoke_title": "ይህን ውክልና ይሰርዙ?",
+    "delegations_revoke_fact_who": "ማን",
+    "delegations_revoke_fact_effect": "የሚቀየረው",
+    "delegations_revoke_fact_signer": "የሚፈርመው",
+    "delegations_revoke_effect": "ከእንግዲህ ለእርስዎ መስራት አይችልም። ስረዛ ዘላቂ ነው፦ እንደገና ሥልጣን ለመስጠት አዲስ ውክልና ማውጣት አለብዎት።",
+    "delegations_revoke_signer": "እርስዎ — በዚህ ኖድ ላይ ያለው የማንነት ቁልፍዎ መውጣቱን ይፈርማል",
+    "delegations_signed_record": "የተፈረመ መዝገብ {id}",
+    "identity_associate_seal_hardware": "የዚህን መሣሪያ ቁልፍ በራሱ ሃርድዌር (TPM) ውስጥ ዝጉ",
+    "identity_associate_use_software": "በምትኩ በዚህ መሣሪያ ላይ የሶፍትዌር ጥበቃን ተጠቀሙ",
+    "login_new_account_refused": "ይህ ኖድ አስቀድሞ ባለቤት አለው፦ ኖዱ ፈጽሞ ያላየው መለያ እዚህ ይከለክላል። በባለቤቱ መለያ ይግቡ።",
+    "login_new_account_observer": "ይህ ኖድ ፈጽሞ ያላየው መለያ እንደ ተመልካች ብቻ ይገባል፣ እንደ ባለቤት አይደለም።",
+    "login_new_account_claims": "ይህ ኖድ እስካሁን ባለቤት የለውም፦ መጀመሪያ የሚገባው መለያ ባለቤቱ ይሆናል።",
     "delegations_never_delegated": "ፈጽሞ የማይወከሉ፦ መውከል፣ ማጥፋት፣ የስምምነት ማቆም — ኖዱ ለተወካይ እነዚህን ሁልጊዜ ይከለክላል።",
     "delegations_permits_actor": "ሰሪ ወኪል",
     "delegations_permits_all_actions": "ሁሉም እርምጃዎች",
@@ -3082,7 +3098,8 @@
     "transport_not_on_this_node": "ይህ ኖድ የመጓጓዣ መንገዶቹን አይገልጽም።",
     "audit_not_on_this_node": "ይህ ኖድ የወኪል ኦዲት መዝገብ አይይዝም። ምንም አልተጣራም።",
     "consent_not_on_this_node": "ይህ ኖድ የስምምነት መዝገቦችን አይይዝም። ስምምነት በወኪል ይያዛል፣ ይህ ኖድ ግን ወኪል ሳይኖረው ይሰራል።",
-    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።"
+    "billing_not_on_this_node": "ይህ ኖድ ክፍያን አያስተናግድም። እዚህ ምንም ቀሪ ሂሳብ የለም እና የሚገዛ ምንም ነገር የለም።",
+    "delegations_deny": "እምቢ"
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "የመሣሪያዎችዎ የባለቤቱ ራሱ ገጽ ናቸው። የዚህ ኖድ ባለቤት ሆነው ይግቡ።",
     "release_incomplete": "መልቀቂያው ተፈርሟል፣ ነገር ግን ኖዱ ያንን ኖድ አሁንም የእርስዎ እንደሆነ ይዘረዝራል። ማየት የማይችለው የባለቤትነት መዝገብ አሁንም በሥራ ላይ ነው። ሊያስወግደው የቻለው ነገር እንደተወገደ ይቆያል።",
     "release_self_requires_force": "ያ የሚነጋገሩበት ኖድ ነው። ማልቀቁ የእርስዎን ባለቤትነት እዚህ ያበቃል፣ ይህን ክፍለ ጊዜ ጨምሮ።",
-    "store_unavailable": "ኖዱ የማንነት ማከማቻውን ማንበብ ወይም መጻፍ አልቻለም። ምንም አልተለወጠም።"
+    "store_unavailable": "ኖዱ የማንነት ማከማቻውን ማንበብ ወይም መጻፍ አልቻለም። ምንም አልተለወጠም።",
+    "associate": {
+      "hardware_custody_unavailable": "ይህ መሣሪያ ቁልፍ የሚዘጋ ሃርድዌር የለውም (TPM ወይም secure enclave የለም)፣ ስለዚህ ምንም ነገር አልተዋቀረም። በምትኩ የሶፍትዌር ጥበቃ መጠቀም ይችላሉ፦ ቁልፉ በዚህ መሣሪያ ላይ ምስጠር በተደረገበት ፋይል ውስጥ ይቀመጣል።"
+    }
   }
 }

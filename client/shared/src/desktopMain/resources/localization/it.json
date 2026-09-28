@@ -3082,7 +3082,24 @@
     "transport_not_on_this_node": "Questo nodo non riporta i propri trasporti.",
     "audit_not_on_this_node": "Questo nodo non conserva un registro di controllo dell'agente. Nulla è stato filtrato.",
     "consent_not_on_this_node": "Questo nodo non conserva registrazioni di consenso. Il consenso è conservato da un agente, e questo nodo funziona senza uno.",
-    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare."
+    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare.",
+    "delegations_deny": "Rifiuta",
+    "delegations_inbound_title": "Deleghe a te",
+    "delegations_inbound_unavailable": "Questa app non può ancora leggere l'autorità che altre persone ti hanno delegato — questo non significa che non ce ne sia nessuna.",
+    "delegations_list_error": "Impossibile leggere le tue deleghe da questo nodo, quindi questo elenco non è completo: {error}",
+    "delegations_refresh": "Aggiorna",
+    "delegations_revoke_title": "Revocare questa delega?",
+    "delegations_revoke_fact_who": "Chi",
+    "delegations_revoke_fact_effect": "Cosa cambia",
+    "delegations_revoke_fact_signer": "Chi firma",
+    "delegations_revoke_effect": "Non potrà più agire per te, da questo momento in poi. Una revoca è permanente: per conferirgli nuovamente l'autorità, devi emettere una nuova delega.",
+    "delegations_revoke_signer": "Tu — la tua chiave di identità su questo nodo firma il ritiro",
+    "delegations_signed_record": "Registrazione firmata {id}",
+    "identity_associate_seal_hardware": "Sigilla la chiave di questo dispositivo nel suo hardware (TPM)",
+    "identity_associate_use_software": "Usa invece la custodia software su questo dispositivo",
+    "login_new_account_refused": "Questo nodo ha già un proprietario: un account che non ha mai visto verrebbe qui rifiutato. Accedi con l'account del proprietario.",
+    "login_new_account_observer": "Un account che questo nodo non ha mai visto verrebbe ammesso come osservatore, non come proprietario.",
+    "login_new_account_claims": "Questo nodo non ha ancora un proprietario: il primo account che accede ne diventa il proprietario."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "I tuoi dispositivi sono la superficie propria del proprietario. Accedi come proprietario di questo nodo.",
     "release_incomplete": "Il rilascio è stato firmato, ma il nodo elenca ancora quel nodo come tuo: una registrazione di proprietà che non può vedere è ancora attiva. Ciò che ha potuto revocare resta revocato.",
     "release_self_requires_force": "Quello è il nodo con cui stai parlando. Rilasciarlo pone fine alla tua proprietà qui, inclusa questa sessione.",
-    "store_unavailable": "Il nodo non è riuscito a leggere o scrivere il proprio archivio delle identità. Non è stata apportata alcuna modifica."
+    "store_unavailable": "Il nodo non è riuscito a leggere o scrivere il proprio archivio delle identità. Non è stata apportata alcuna modifica.",
+    "associate": {
+      "hardware_custody_unavailable": "Questo dispositivo non dispone di hardware in grado di sigillare una chiave (nessun TPM o secure enclave), quindi non è stato configurato nulla. Puoi usare invece la custodia software: la chiave viene conservata in un file cifrato su questo dispositivo."
+    }
   }
 }
