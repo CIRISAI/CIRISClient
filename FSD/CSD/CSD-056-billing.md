@@ -117,7 +117,11 @@ state above.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| balance, free uses, plan | `GET /v1/api/billing/credits` | **CIRISAgent** (`routes/billing.py:30, 580`) | live on the agent. The doubled `api` segment is real: the router's prefix is `/api/billing`, mounted at `/v1`. |
+| balance, free uses, plan | `GET /v1/api/billing/credits` | **CIRISAgent** (`routes/billing.py:30, 643` on `main` 29371660de; it was `:580` in the 2026-08-15 tree) | live on the agent — generated SDK `getCreditsV1ApiBillingCreditsGet` (`CIRISApiClient.kt:7780`). The doubled `api` segment is real: the router's prefix is `/api/billing`, mounted at `/v1`. |
+| redeem a Play purchase | `POST /v1/api/billing/google-play/verify` | CIRISAgent (`routes/billing.py:983`) | **live** — `CIRISApiClient.verifyGooglePlayPurchase` (`CIRISApiClient.kt:7824`, generated `verifyGooglePlayPurchaseV1ApiBillingGooglePlayVerifyPost`), called from `androidApp/.../MainActivity.kt:277` after `BillingManager` completes. The route-coverage report had this as generated-only; it is called |
+| the credit history | `GET /v1/api/billing/transactions?limit&offset` | CIRISAgent (`routes/billing.py:878`) | live, **not called** — a generated stub exists (`BillingApi.kt:130`) and nothing in `shared/` uses it. The card shows a balance and no account of how it got there |
+| start a non-Play purchase | `POST /v1/api/billing/purchase/initiate` | CIRISAgent (`routes/billing.py:727`) | live, **not called** (stub `BillingApi.kt:167`) — the Portal/Stripe leg; nothing in `shared/` or `androidApp/` reaches it |
+| poll that purchase | `GET /v1/api/billing/purchase/status/{payment_id}` | CIRISAgent (`routes/billing.py:800`) | live, **not called** (stub `BillingApi.kt:94`) |
 | purchasable packages | **a compiled-in constant, not the store** | CIRISClient | live, and **two lists that never meet** — see below |
 | anything on a node | none | — | **wrong-host by placement.** The node serves no billing route. The card is not `agentOnly`, so on a node build it is offered in Communities › Rules and answers from a synthesised value. |
 

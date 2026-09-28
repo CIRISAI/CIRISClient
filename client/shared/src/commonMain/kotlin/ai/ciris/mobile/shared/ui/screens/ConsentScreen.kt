@@ -112,7 +112,8 @@ fun ConsentScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("consent_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -144,7 +145,8 @@ fun ConsentScreen(
                     CurrentConsentBanner(
                         currentStream = consentData.currentStream,
                         expiresAt = consentData.expiresAt,
-                        partnershipPending = consentData.partnershipPending
+                        partnershipPending = consentData.partnershipPending,
+                        modifier = Modifier.testable("card_consent_status"),
                     )
                 }
 

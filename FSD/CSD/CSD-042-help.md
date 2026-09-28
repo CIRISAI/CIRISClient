@@ -93,6 +93,7 @@ one that breaks the promise the instrument makes.
 | GitHub issues | `btn_help_github` → `https://github.com/CIRISAI/CIRISAgent/issues` | external | live |
 | docs | `btn_help_docs` → an external URL | external | live |
 | the node's version | `GET /v1/system/health` | CIRISServer | live and **uncalled here** |
+| the node's own version, unenriched | `GET /v1/health` | CIRISServer `src/health.rs:585` (handler `server_health`) — node-only by design (`:573-575`: "a caller that wants the node's own answer must keep having somewhere to get it") | live and **uncalled anywhere in the client** — the client reads `/v1/system/health` (`CIRISApiClient.kt:6122`) and `:4243/health` (`BackendEndpoint.kt:72`). For a Help card that says "this is the node you are talking to", this is the route that cannot be answered by a folded brain. The route-coverage report said the client "falls back to" it; it does not — only comments name it (`CIRISApp.kt:1215-1218`, `StartupViewModel.kt:41, 492`) |
 
 ## 4. Flow (how)
 

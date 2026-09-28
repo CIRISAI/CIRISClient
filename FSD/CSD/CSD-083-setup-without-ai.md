@@ -124,6 +124,8 @@ error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_set
 | write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:951`) | live — and it is the LAST thing the agent does for this install |
 | self-claim ownership | `POST /v1/setup/claim-remote` → `POST /v1/setup/root` | CIRISServer (`src/claim_remote.rs`) | live |
 | everything after the hand-off | node routes on `:4243` | CIRISServer | live |
+| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure. Recorded because the with-AI branch does not read them either (CSD-082 §3: templates, adapters and tool-disclosure are wired and unreached, providers is a compiled-in list), so "this branch skips them" is currently indistinguishable from "nothing reads them" |
+| is a node there at all | `GET /v1/identity` (unauthenticated) | CIRISServer `src/compose.rs:3132` | live — the desktop runtime's readiness probe after the hand-off (`PythonRuntime.desktop.kt:673`), see CSD-084 |
 
 **`run_without_ai` must reach `setup/complete`, or the agent never learns.**
 CIRISClient#41 (closed) was exactly that: the flag was dropped between the YOU

@@ -154,6 +154,7 @@ fun AdaptersScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
+                        .testable("adapters_empty")
                 ) {
                     Column(
                         modifier = Modifier
@@ -178,11 +179,12 @@ fun AdaptersScreen(
                 connectorsSection?.invoke()
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testable("adapters_list"),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(adapters) { adapter ->
                         AdapterCard(
+                            modifier = Modifier.testable("adapters_row_${adapter.type.lowercase()}"),
                             adapter = adapter,
                             isExpanded = adapter.id in expandedAdapterIds,
                             details = adapterDetails[adapter.id],
@@ -201,7 +203,8 @@ fun AdaptersScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
+                        .weight(1f)
+                        .testable("adapters_loading"),
                     contentAlignment = Alignment.Center
                 ) {
                     CircularProgressIndicator()

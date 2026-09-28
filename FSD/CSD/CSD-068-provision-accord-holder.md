@@ -37,7 +37,7 @@ screen: ProvisionAccordHolder
 
 `nav_map` derives `circle_global_commons -> tab_safety ->
 nav_epistemic_provision_accord_holder` — Everyone › Safety
-(`CirclesNav.kt:102`), beside the Accord card and the Constitutional card. It is
+(`CirclesNav.kt:115`), beside the Accord card and the Constitutional card. It is
 **also** reachable as a button from the Constitutional screen
 (`btn_open_provision_holder`, `ConstitutionalScreen.kt:302`), which is the entry
 a person actually takes: they are looking at a roster and want to join it.
@@ -141,6 +141,7 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live and unused here** — the ceremony screen calls it, this one does not |
 | the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
 | the recorded custody class | **on the wire here, and discarded by the client** | CIRISClient | §2.2's second bullet is ours, not upstream |
+| the node's own judgment of a SEATED holder's hardware | `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` | CIRISServer `src/trust_root_api.rs:415` (verdict passed through verbatim, `:76-79`); shape CIRISPersist v48.0.0 `federation/trust_root.rs:372` | **live on this node's own machine, not called** — and only for holders the root's charter counts, so it answers "did my seat's hardware pass" after seating, never "what did I just mint". **Remote reach** `blocked_by: CIRISServer#652` |
 
 **The fourth row said `unconfirmed` and its premise was false.** The response
 shape IS established in the client: the node returns
@@ -162,6 +163,16 @@ at `:235`). The client parses it as an opaque `JsonElement` it never inspects
 this screen can render the class today with no upstream change. What is missing
 upstream is the same fact on `GET /v1/accord-holders` — and that is CSD-067's
 row, not a second one.
+
+**Where this identity goes after it is minted** (CSD-067 §3.1): registered
+by the owner (`POST /v1/accord/holder`), seated by the genesis ceremony
+(CSD-069) or a re-mint, and only then counted by `trust_root_valid` — Layer A
+(the evidence parses and names an accepted class) and Layer B (the attestation chain walk
+against the vendor root this node pins, `yubico_root_der`) per holder. That verdict is what turns this
+flow's CC 4.2.2.1 *producer claim* into something the node checked, and it is
+the first place the person could see it. It is loopback-only like the rest of
+this flow, which here costs nothing: provisioning already needs the YubiKey on
+the node's own host.
 
 **`/v1/accord/yubikey-status` is the cheapest fix on this screen.**
 `AccordCeremonyViewModel` already calls it (`getYubiKeyStatus`); this flow asks

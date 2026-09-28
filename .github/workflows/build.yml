@@ -110,7 +110,8 @@ jobs:
         run: |
           python3 -m pip install --quiet pytest pyyaml
           python3 -m pytest testing/test_driver_rules.py testing/test_gate_vendoring.py \
-            testing/test_bringup.py testing/test_five_platform_workflow.py -q
+            testing/test_bringup.py testing/test_five_platform_workflow.py \
+            testing/test_csd_state_tags.py -q
 
       - name: A published version must offer a universal wheel
         # Only for versions already on the index — a PR's VERSION is normally
@@ -206,6 +207,14 @@ jobs:
           for f in FSD/CSD/CSD-*.md; do
             python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
           done
+
+      - name: Every route a screen calls is cited by its CSD; no new duplicate mutations
+        # Cards were proposed for things that already existed under another
+        # name. Routes, not names, say whether two cards are one. Ratchet:
+        # packaging/csd_routes_baseline.json; --self-test plants a defect first.
+        run: |
+          python3 packaging/check_csd_routes.py --self-test
+          python3 packaging/check_csd_routes.py
 
 
   # ── The client itself. ONE build ────────────────────────────────────────────
