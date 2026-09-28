@@ -1,0 +1,56 @@
+csd: CSD-040
+flow: csd_040_storage
+title: Storage counts the graph store, labels its two estimates, and says when the disk facts did not answer
+description: >-
+  CSD-040 §4. The graph-store counters come from `GET /v1/memory/stats` (node
+  and agent both serve it); the "On disk" card from `GET /v1/system/agent-mode`,
+  which only the agent serves. The flow asserts the populated shape on a node
+  that holds something, and — on a build without an agent — that the disk card's
+  place carries the sentence rather than nothing. The empty and error states are
+  server-side fixtures (a fresh node; a Postgres-only node's 503) and are
+  written in the CSD, not driven here.
+# Floor: screen_storage, storage_loading, storage_error, card_storage_graph,
+# row_storage_* and card_storage_disk are `testable*` literals in
+# ui/screens/StorageScreen.kt; storage_empty, row_storage_dates_heuristic and
+# storage_disk_not_on_this_node / storage_disk_error landed 2026-09-28 and no
+# release carries them yet.
+client: "unreleased"
+
+steps:
+  - step_id: the_graph_store_is_counted
+    title: A node that holds something shows its counters, and the histogram
+    requires:
+      screen: Storage
+    do:
+      - wait: card_storage_graph
+    expect:
+      state: populated
+      visible: [screen_storage, card_storage_graph, row_storage_total_nodes, row_storage_recent_nodes]
+      number: {row_storage_total_nodes: {min: 1}}
+      count: {of: "row_storage_type_*", min: 1}
+      absent: [storage_empty, storage_error, storage_loading]
+
+  - step_id: the_dates_say_they_are_estimates
+    title: Oldest and newest are labelled approximate, with the reason under them
+    description: >-
+      The node computes both from the first 1,000 rows per scope, not a full
+      scan. A card that showed them as exact would be a heuristic presented as a
+      fact (AGENTS.md's rule for gates, applied to a screen).
+    requires:
+      visible: [row_storage_oldest]
+    expect:
+      visible: [row_storage_oldest, row_storage_newest, row_storage_dates_heuristic]
+
+  - step_id: the_disk_card_has_a_state_when_it_has_no_host
+    title: Without an agent, the disk facts' place says so instead of being empty
+    description: >-
+      Optional: it runs on a build without an agent, where /v1/system/agent-mode
+      has no host. On an agent build the disk card is present instead and this
+      step does not apply.
+    optional_step: true
+    requires:
+      screen: Storage
+      visible: [storage_disk_not_on_this_node]
+    expect:
+      visible: [storage_disk_not_on_this_node]
+      absent: [card_storage_disk, row_storage_data_dir]

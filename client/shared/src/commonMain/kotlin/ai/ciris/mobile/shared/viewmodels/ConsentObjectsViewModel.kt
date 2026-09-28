@@ -40,7 +40,9 @@ data class ConsentObjectsState(
     val bToA: GrantDirectionState = GrantDirectionState.IDLE,
     val isRunning: Boolean = false,
     val error: String? = null,
+    /** A bundle key (`mobile.manage_consent_msg_*`), resolved by the screen with [messageParams]. */
     val message: String? = null,
+    val messageParams: Map<String, String> = emptyMap(),
     /**
      * The A→B grant's `attestation_id`, as node A named it when it granted —
      * the id `POST /v1/federation/peering/revoke` takes. Null when this screen
@@ -76,6 +78,7 @@ data class ConsentObjectsState(
      */
     fun withoutRevokeOutcome(): ConsentObjectsState = copy(
         message = null,
+        messageParams = emptyMap(),
         remainingGrants = emptyList(),
         withdrawnBy = null,
         revokeRefusalId = null,
@@ -464,8 +467,8 @@ class ConsentObjectsViewModel(
                     it.copy(
                         bToA = if (bGranted) GrantDirectionState.GRANTED else GrantDirectionState.FAILED,
                         isRunning = false,
-                        message = if (ratified) "Bilateral consent:replication ratified"
-                        else "Partial: A→B=${aGranted}, B→A=${bGranted}",
+                        message = if (ratified) "mobile.manage_consent_msg_ratified" else "mobile.manage_consent_msg_partial",
+                        messageParams = mapOf("a" to aGranted.toString(), "b" to bGranted.toString()),
                     )
                 }
             } catch (e: CancellationException) {

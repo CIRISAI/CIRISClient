@@ -16,6 +16,7 @@
     "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
     "POST /v1/federation/consent :: DataManagement, Setup",
     "POST /v1/memory/query :: EnvironmentInfo, Memory",
+    "POST /v1/self/age :: ChildSafety, Setup",
     "POST /v1/self/associate :: IdentityManagement, Setup",
     "POST /v1/self/identity :: AddFederationId, IdentityManagement, Setup",
     "POST /v1/setup/claim-remote :: ClaimNode, Setup",
@@ -27,7 +28,6 @@
     "POST /v1/system/adapters/{} :: Adapters, DataManagement",
     "POST /v1/system/adapters/{}/configure/start :: Adapters, Setup",
     "PUT /v1/config/{} :: Config, Transport",
-    "PUT /v1/my-data/accord-settings :: AddFederationId, DataManagement, ManageConsent",
     "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings",
     "PUT /v1/system/agent-mode :: LayerGlobalCommons, Settings"
   ],
@@ -45,18 +45,9 @@
     "Contacts": [
       "GET /v1/federation/peers"
     ],
-    "DataManagement": [
-      "GET /v1/system/health",
-      "POST /v1/system/adapters/{}",
-      "POST /v1/system/local-shutdown",
-      "PUT /v1/my-data/accord-settings"
-    ],
     "Interact": [
       "GET /v1/federation/self-key-record",
       "GET /v1/safety/age-assurance/{}"
-    ],
-    "ManageConsent": [
-      "GET /v1/federation/peers"
     ]
   }
 }

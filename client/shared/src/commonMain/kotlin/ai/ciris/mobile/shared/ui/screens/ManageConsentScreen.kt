@@ -2,10 +2,10 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.viewmodels.ConsentObjectsViewModel
-import ai.ciris.mobile.shared.viewmodels.DataManagementViewModel
 import ai.ciris.mobile.shared.viewmodels.GrantDirectionState
 import ai.ciris.mobile.shared.viewmodels.RevokeRoute
 import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
@@ -23,9 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -35,12 +33,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,9 +47,9 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
- * Manage Consent — view + manage the consent objects this device holds.
+ * Manage Consent — replication between the owner's own nodes (CSD-053).
  *
- * Today the fabric exposes one consent object through a node-driven API: the
+ * The fabric exposes one consent object through a node-driven API: the
  * **bilateral `consent:replication`** peering between two nodes A↔B, driven by
  * [ConsentObjectsViewModel] (`POST /v1/federation/peering` in each direction —
  * ratified iff both grants present). This screen renders the current grant
@@ -68,11 +63,13 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  * person re-signed it cannot be withdrawn and renders as still active
  * (`consent_remaining_grants`) — never as done.
  *
- * For the **user-data** consent stream (`consent:state` — TEMPORARY / PARTNERED /
- * ANONYMOUS, GDPR), this screen points the user at the existing Consent surface
- * via [onOpenUserConsent] rather than duplicating it.
- *
- * @param onOpenUserConsent navigate to the existing user-data Consent screen.
+ * **Two consents this screen does NOT own, and points at instead.** The
+ * user-data consent stream (`consent:state` — TEMPORARY / PARTNERED /
+ * ANONYMOUS) lives on the Consent surface ([onOpenUserConsent], CSD-054). The
+ * reasoning-traces opt-in (`PUT /v1/my-data/accord-settings`) lives on the Data
+ * card ([onOpenDataSharing], CSD-039): it used to be written from here as well,
+ * one act with three doors, and this one closed — the switch here documented
+ * a `consent:community_trust:v1` leaf that does not exist (CC 3.3.1).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,14 +77,8 @@ fun ManageConsentScreen(
     viewModel: ConsentObjectsViewModel,
     onBack: () -> Unit,
     onOpenUserConsent: () -> Unit = {},
-    /**
-     * Trace-consent surface. The **same** `consent:community_trust:v1` CEG
-     * object the setup wizard writes, viewed post-config — one-tap opt-in/out
-     * drives [DataManagementViewModel.updateAccordConsent] (the my-data PUT that
-     * re-emits/withdraws the grant AND re-arms the running adapter's seal). Null
-     * = caller didn't wire it (card hidden); we never invent a second write path.
-     */
-    dataViewModel: DataManagementViewModel? = null,
+    /** Navigate to the Data card (CSD-039), which owns the reasoning-traces opt-in. */
+    onOpenDataSharing: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
     // The confirm is open. Withdrawing consent is an outward act: three facts, two buttons.
@@ -101,7 +92,7 @@ fun ManageConsentScreen(
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.testable("btn_manage_consent_back"),
+                            modifier = Modifier.testableClickable("btn_manage_consent_back") { onBack() },
                         ) {
                             Icon(
                                 imageVector = CIRISIcons.arrowBack,
@@ -128,15 +119,13 @@ fun ManageConsentScreen(
             )
 
             state.error?.let { msg ->
-                MessageBar(msg, isError = true) { viewModel.clearMessages() }
+                MessageBar(msg, isError = true, tag = "bar_consent_error") { viewModel.clearMessages() }
             }
-            state.message?.let { msg ->
-                MessageBar(msg, isError = false) { viewModel.clearMessages() }
+            state.message?.let { key ->
+                MessageBar(localizedString(key, state.messageParams), isError = false, tag = "bar_consent_message") {
+                    viewModel.clearMessages()
+                }
             }
-
-            // ── Send reasoning traces (consent:community_trust) ──────────────
-            // An alternative view of the SAME CEG object the wizard writes.
-            dataViewModel?.let { SendTracesCard(it) }
 
             // ── consent:replication peering ──────────────────────────────────
             Surface(
@@ -157,31 +146,42 @@ fun ManageConsentScreen(
                     )
 
                     if (state.nodeA == null || state.nodeB == null) {
+                        // The EMPTY state: fewer than two owned nodes, so there is
+                        // no pair to peer. An ordinary fact, in the ordinary tone —
+                        // it was drawn in the danger colour (CSD-053 §2).
                         Text(
                             localizedString("mobile.manage_consent_need_two_nodes"),
                             fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.error,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("text_consent_need_two_nodes"),
                         )
                     } else {
                         // Node pair + direction states.
                         DirectionRow(
                             label = "${state.nodeA?.name}  →  ${state.nodeB?.name}",
                             grant = state.aToB,
+                            tag = "row_consent_a_to_b",
                         )
                         DirectionRow(
                             label = "${state.nodeB?.name}  →  ${state.nodeA?.name}",
                             grant = state.bToA,
+                            tag = "row_consent_b_to_a",
                         )
 
+                        val ratifiedText = if (state.isRatified) {
+                            localizedString("mobile.manage_consent_ratified")
+                        } else {
+                            localizedString("mobile.manage_consent_not_ratified")
+                        }
                         Surface(
                             color = if (state.isRatified) MaterialTheme.colorScheme.tertiaryContainer
                             else MaterialTheme.colorScheme.surface,
                             shape = RoundedCornerShape(4.dp),
+                            // `txt_`, not `chip_`: it is a label, not a control (check_ui_drivable).
+                            modifier = Modifier.testable("txt_consent_ratified", ratifiedText),
                         ) {
                             Text(
-                                text = if (state.isRatified)
-                                    localizedString("mobile.manage_consent_ratified")
-                                else localizedString("mobile.manage_consent_not_ratified"),
+                                text = ratifiedText,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -189,14 +189,15 @@ fun ManageConsentScreen(
                         }
 
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            val onSetup = { if (state.canRun) viewModel.runBilateralPeering() }
                             Button(
-                                onClick = { viewModel.runBilateralPeering() },
+                                onClick = onSetup,
                                 enabled = state.canRun,
-                                modifier = Modifier.testable("btn_consent_setup_peering"),
+                                modifier = Modifier.testableClickable("btn_consent_setup_peering") { onSetup() },
                             ) {
                                 if (state.isRunning) {
                                     CircularProgressIndicator(
-                                        modifier = Modifier.size(16.dp),
+                                        modifier = Modifier.size(16.dp).testable("consent_peering_running"),
                                         strokeWidth = 2.dp,
                                     )
                                 } else {
@@ -210,13 +211,17 @@ fun ManageConsentScreen(
 
                             // Revoke — withdraws node A's grant to B (CIRISServer#657).
                             // Whether the node can is asked of the node, at runtime.
+                            val onRevoke = { if (state.canRevoke) confirmRevoke = true }
                             OutlinedButton(
-                                onClick = { if (state.canRevoke) confirmRevoke = true },
+                                onClick = onRevoke,
                                 enabled = state.canRevoke,
-                                modifier = Modifier.testable("btn_consent_revoke_peering"),
+                                modifier = Modifier.testableClickable("btn_consent_revoke_peering") { onRevoke() },
                             ) {
                                 if (state.isRevoking) {
-                                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp).testable("consent_revoking"),
+                                        strokeWidth = 2.dp,
+                                    )
                                 } else {
                                     Text(localizedString("mobile.manage_consent_revoke"))
                                 }
@@ -230,32 +235,22 @@ fun ManageConsentScreen(
             Spacer(Modifier.height(4.dp))
 
             // ── user-data consent pointer ────────────────────────────────────
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        localizedString("mobile.manage_consent_userdata_title"),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                    )
-                    Text(
-                        localizedString("mobile.manage_consent_userdata_desc"),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    OutlinedButton(
-                        onClick = onOpenUserConsent,
-                        modifier = Modifier.testable("btn_open_user_consent"),
-                    ) {
-                        Icon(CIRISIcons.lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(localizedString("mobile.manage_consent_open_userdata"))
-                    }
-                }
-            }
+            PointerCard(
+                title = localizedString("mobile.manage_consent_userdata_title"),
+                desc = localizedString("mobile.manage_consent_userdata_desc"),
+                button = localizedString("mobile.manage_consent_open_userdata"),
+                tag = "btn_open_user_consent",
+                onClick = onOpenUserConsent,
+            )
+
+            // ── reasoning-traces opt-in pointer (CSD-039 owns the write) ─────
+            PointerCard(
+                title = localizedString("mobile.announce_decision_trace_title"),
+                desc = localizedString("mobile.manage_consent_traces_elsewhere"),
+                button = localizedString("mobile.manage_consent_open_data"),
+                tag = "btn_open_data_sharing",
+                onClick = onOpenDataSharing,
+            )
         }
     }
 
@@ -359,120 +354,57 @@ private fun RevokeStatus(state: ai.ciris.mobile.shared.viewmodels.ConsentObjects
     }
 }
 
-/**
- * "Send reasoning traces" opt-in — the post-config, tappable view of the same
- * `consent:community_trust:v1` grant the setup wizard writes. Reads live state
- * from [DataManagementViewModel.accordSettings] (the my-data GET) and toggles
- * via [DataManagementViewModel.updateAccordConsent] (the my-data PUT — the ONE
- * write path; it re-emits/withdraws the CEG grant and re-arms the seal).
- */
+/** A card that names another card as the owner of a consent and opens it. */
 @Composable
-private fun SendTracesCard(dataViewModel: DataManagementViewModel) {
-    val accord by dataViewModel.accordSettings.collectAsState()
-    val communityPeer by dataViewModel.communityPeer.collectAsState()
-
-    // Populate accordSettings + community peer on entry (best-effort; the VM
-    // guards its own concurrency and degrades to a "federation pending" view).
-    LaunchedEffect(Unit) { dataViewModel.refresh() }
-
-    val armed = accord?.consentGiven == true
+private fun PointerCard(title: String, desc: String, button: String, tag: String, onClick: () -> Unit) {
     Surface(
-        color = if (armed) MaterialTheme.colorScheme.primaryContainer
-        else MaterialTheme.colorScheme.surfaceVariant,
+        color = MaterialTheme.colorScheme.surfaceVariant,
         shape = RoundedCornerShape(8.dp),
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        localizedString("mobile.announce_decision_trace_title"),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                    )
-                    Text(
-                        localizedString("mobile.manage_consent_traces_desc"),
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-                Switch(
-                    checked = armed,
-                    onCheckedChange = { dataViewModel.updateAccordConsent(it) },
-                    modifier = Modifier.testable("toggle_send_traces"),
-                )
-            }
-
-            // Status chip — armed vs. paused (reuses the Data & Privacy vocab).
-            Surface(
-                color = if (armed) MaterialTheme.colorScheme.tertiaryContainer
-                else MaterialTheme.colorScheme.surface,
-                shape = RoundedCornerShape(4.dp),
+            Text(title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            Text(desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(
+                onClick = onClick,
+                modifier = Modifier.testableClickable(tag) { onClick() },
             ) {
-                Text(
-                    text = if (armed) localizedString("mobile.data_community_consent_active")
-                    else localizedString("mobile.data_community_consent_paused"),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                )
+                Icon(CIRISIcons.lock, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(button)
             }
-
-            // Target (directed counterparty) — the canonical CIRIS community.
-            Text(
-                text = "${localizedString("mobile.data_community_label")}: " +
-                    (communityPeer?.aliasOverride
-                        ?: localizedString("mobile.data_community_canonical")),
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            // Detail level + events sent (only once accord settings resolve).
-            accord?.let { a ->
-                Text(
-                    text = "${localizedString("mobile.data_detail_level")}: ${a.traceLevel ?: "-"}  ·  " +
-                        "${localizedString("mobile.data_events_sent")}: ${a.eventsSent}",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } ?: Text(
-                localizedString("mobile.data_community_pending"),
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
     }
 }
 
 @Composable
-private fun DirectionRow(label: String, grant: GrantDirectionState) {
+private fun DirectionRow(label: String, grant: GrantDirectionState, tag: String) {
+    val (text, color) = when (grant) {
+        GrantDirectionState.GRANTED ->
+            localizedString("mobile.manage_consent_granted") to MaterialTheme.colorScheme.primary
+        GrantDirectionState.IN_PROGRESS ->
+            localizedString("mobile.manage_consent_in_progress") to MaterialTheme.colorScheme.onSurfaceVariant
+        GrantDirectionState.FAILED ->
+            localizedString("mobile.manage_consent_failed") to MaterialTheme.colorScheme.error
+        GrantDirectionState.IDLE ->
+            localizedString("mobile.manage_consent_idle") to MaterialTheme.colorScheme.onSurfaceVariant
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable(tag, text),
     ) {
         Text(label, fontSize = 12.sp, modifier = Modifier.weight(1f))
-        val (text, color) = when (grant) {
-            GrantDirectionState.GRANTED ->
-                localizedString("mobile.manage_consent_granted") to MaterialTheme.colorScheme.primary
-            GrantDirectionState.IN_PROGRESS ->
-                localizedString("mobile.manage_consent_in_progress") to MaterialTheme.colorScheme.onSurfaceVariant
-            GrantDirectionState.FAILED ->
-                localizedString("mobile.manage_consent_failed") to MaterialTheme.colorScheme.error
-            GrantDirectionState.IDLE ->
-                localizedString("mobile.manage_consent_idle") to MaterialTheme.colorScheme.onSurfaceVariant
-        }
         Text(text, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = color)
     }
 }
 
 @Composable
-private fun MessageBar(msg: String, isError: Boolean, onDismiss: () -> Unit) {
+private fun MessageBar(msg: String, isError: Boolean, tag: String, onDismiss: () -> Unit) {
     Surface(
         color = if (isError) MaterialTheme.colorScheme.errorContainer
         else MaterialTheme.colorScheme.tertiaryContainer,
         shape = RoundedCornerShape(6.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable(tag, msg),
     ) {
         Row(modifier = Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(

@@ -92,26 +92,26 @@ fields:
     type: string
     example: "a4f1…9c02"
     renders: "mobile.data_agent_hash_label — the pseudonymous id the traces were filed under"
-    tag: "proposed:data_row_lens_identifier"
+    tag: data_row_lens_identifier
   - ceg: x_private:events_sent
     use: display-only
     type: int
     example: 412
     renders: "Events sent — 412"
-    tag: "proposed:data_row_events_sent"
+    tag: data_row_events_sent
   - ceg: x_private:events_queued
     use: display-only
     type: int
     example: 0
-    renders: "Events queued — 0"
-    tag: "proposed:data_row_events_queued"
+    renders: "Events queued — 0 (drawn only when non-zero)"
+    tag: data_row_events_queued
   - ceg: "consent:{kind}"
     bind: {kind: deletion_sla}
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
-    renders: "NOT RENDERED. A deletion request returns no SLA and no completion, so the card can say 'requested' and never 'done'."
-    tag: "proposed:data_row_deletion_sla"
+    renders: "Deadline — 'None reported.' After a lens-deletion request the card draws the agent's answer as rows that stay (data_lens_deletion_requested: Requested — not done; CIRISLens accepted / did not; local consent revoked / still on) and this row says the SLA the agent does not return. REQUESTED is the most the card may say, and it never says done."
+    tag: data_row_deletion_sla
     blocked_by: CIRISAgent#1212
   - ceg: "consent:{kind}"
     bind: {kind: scope}
@@ -189,7 +189,7 @@ fields:
     use: display-only
     type: bool
     example: true
-    renders: "Signature — 'Checks: signed by this agent's key' | 'Does not check' | 'Cannot be checked here' (the proof names a key other than the agent's current one)"
+    renders: "Signature — 'Checks: signed by this agent's key' | 'Does not check' | 'Cannot be checked here' (the proof names a key other than the agent's current one: the agent verifies against its CURRENT key only and ignores the key id the receipt names, CIRISAgent#1220 — so a genuine receipt from before a rotation must not read as forged; data_receipt_key_not_current says why)"
     tag: data_receipt_verdict
   - ceg: x_private:deletion_proof_records
     use: display-only
@@ -222,10 +222,10 @@ above is `display-only`. The client never emits a consent row; it asks the node
 to, which is the same posture as the contacts and delegation cards.
 
 ```yaml csd:states
-populated: {tag: "proposed:data_loaded"}
-empty:     {tag: "proposed:data_empty", renders: "Nothing has been shared from this node. — for the accord block when `eventsSent == 0`; today the counters simply render 0, which reads as data"}
-loading:   {tag: "proposed:data_loading", renders: "mobile.data_loading beside a progress affordance (DataManagementScreen.kt:310-322) — untagged"}
-error:     {tag: "proposed:data_error", renders: "the read failed — a SNACKBAR today (:87-92), which is an error state with a timer on it"}
+populated: {tag: data_loaded, renders: "the sharing card, the erasure section, the receipt section (agent attached), reset and wipe"}
+empty:     {tag: "proposed:data_empty", renders: "Nothing has been shared from this node. — for the accord block when `eventsSent == 0`; today the counters render 0, which reads as data. On a build WITHOUT an agent the block is data_accord_not_on_this_node — 'Sharing settings live with an agent, and this node runs without one. Nothing has been shared from here.' — which is that build's true empty, and no Enable button is drawn over it"}
+loading:   {tag: data_loading, renders: "mobile.data_loading beside a progress affordance"}
+error:     {tag: data_error, renders: "the read or the act failed — a StateBlock at the top of the card that stays until the next refresh. It was a snackbar until 2026-09-28, an error state with a timer on it. An accord read that failed for a reason other than an absent route is data_accord_error in the sharing card's place"}
 ```
 
 ## 3. Contracts (who)
@@ -233,7 +233,9 @@ error:     {tag: "proposed:data_error", renders: "the read failed — a SNACKBAR
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the pseudonymous trace id | `GET /v1/my-data/lens-identifier` | **CIRISAgent** (`routes/my_data.py:379`) and CIRISServer (`src/system_data.rs:387`) | live on both |
-| accord sharing settings + counters | `GET /v1/my-data/accord-settings`, `PUT` the same | **CIRISAgent only** (`routes/my_data.py:610`, `:753` on main, re-read 2026-09-25) | **wrong-host** — no `accord-settings` route in CIRISServer `src/*.rs` on 0.5.217 |
+| accord sharing settings + counters | `GET /v1/my-data/accord-settings` | **CIRISAgent only** (`routes/my_data.py:610` on main, re-read 2026-09-25) | agent-only — no `accord-settings` route in CIRISServer `src/*.rs` on 0.5.217. Without an agent the card says so (`data_accord_not_on_this_node`) instead of drawing "Enable" over a read nobody got |
+| the sharing switch — **this card OWNS the write** | `PUT /v1/my-data/accord-settings` (`switch_consent` → `updateAccordConsent`) | **CIRISAgent only** (`routes/my_data.py:753`) | live. Until 2026-09-28 this PUT was issued from THREE screens — here, Manage Consent's traces switch (CSD-053) and Add Federation ID's step 4 (CSD-086) — and the route checker's duplicate-mutation ratchet listed all three. Folded to this card, which is the one that reads the setting back; the other two link here (`btn_open_data_sharing`, `txt_fedid_traces_elsewhere`). One act, one door |
+| load the accord adapter | `POST /v1/system/adapters/{}` (`btn_enable_accord` → `enableAccordMetrics`, `ciris_accord_metrics` with `consent_given`), then `authorFederationConsent` | CIRISAgent | live; drawn only with an agent attached and the adapter unloaded. Also called by Adapters (CSD-020) — the same adapter load under its general form; two doors by design, recorded in the baseline |
 | delete the traces already sent | `DELETE /v1/my-data/lens-traces` | **CIRISAgent only** (`routes/my_data.py:489` on main) | **wrong-host** — no such route in CIRISServer |
 | **erase one agent's traces on this node** | `POST /v1/federation/erase-agent-traces` `{agent_id_hash, reason}` (both mandatory) → `{erased, agent_id_hash, trace_events, trace_llm_calls, detection_events_tombstoned, erased_at, scope_note}` | CIRISServer (`src/federation_admin.rs` handler ~:477, body ~:533-548, mounted ~:907; `origin/main` 046e1b39, 0.5.217) | **live; now called** — `CIRISApiClient.eraseAgentTraces` to the NODE URL. Owner-binding + owner session + `CapabilityVerb::Peer`; 403/401 `{error}`. One persist transaction, idempotent. TRACES ONLY |
 | erase the person (right to be forgotten) | `POST /v1/auth/erasure` `{attesting_key_id}` → `{blobs_evicted, withdraws_emitted, withdraws_failed, incomplete}` | CIRISServer (`src/auth/erasure.rs:118`, response `:53-60`) | **unreachable from the product** — authorizes by `verify::verify_request`, a SUBJECT-SIGNED request; the client does no crypto. `blocked_by: CIRISServer#677` (owner-session path + a receipt) |
@@ -246,7 +248,8 @@ error:     {tag: "proposed:data_error", renders: "the read failed — a SNACKBAR
 | peers / peering state | `GET /v1/federation/peers` | CIRISServer | live — `src/federation_peers.rs` |
 | grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live. (`/v1/accord/canonical-servers`, the path this row first named, 404s — the client's own comment records it) |
 | erase the account | `POST /v1/system/data/reset-account` | CIRISServer | live — `src/system_data.rs:379`, owner + `CapabilityVerb::Wipe`, non-delegable |
-| erase the signing key | `POST /v1/system/data/wipe-signing-key` | CIRISServer | live — `src/system_data.rs:383`, same gate |
+| erase the signing key | `POST /v1/system/data/wipe-signing-key` | CIRISServer | live — `src/system_data.rs:383`, same gate. Both of these go to `baseUrl`, the front door: the node's route on a node-only install, the agent's on an agent build (the route checker attributes them to the agent for that reason) |
+| after a reset or a wipe: stop the runtime | `POST /v1/system/local-shutdown`, then `GET /v1/system/health` | CIRISAgent | live; **not this card's act** — reached through `onResetSetup` (CIRISApp's `Screen.DataManagement` arm): on desktop the app asks the runtime to shut down and polls its health before Startup relaunches it. Cited here because the route checker's closure follows the arm; the card itself never calls either |
 | **see what was shared** | — | — | **missing everywhere** — see §6 |
 | `consent:deletion_sla` / `consent:deletion_complete` | — | CIRISAgent | **missing** — blocks `building` for the two rows above |
 
@@ -271,15 +274,32 @@ expect:
   text: {community_consent_state: "revoked"}
 ```
 
-Ask for the traces already sent to be deleted: click `btn_delete_traces`, give a
-reason, click `btn_delete_traces_confirm`.
+Ask for the traces already sent to be deleted: type a reason into
+`input_delete_traces_reason`, click `btn_delete_traces`. Three facts, and the
+third names who signs — nobody:
 
 ```yaml
 expect:
-  visible: ["proposed:data_row_deletion_sla"]
+  visible: [sheet_delete_traces, delete_traces_fact_1, delete_traces_fact_2, delete_traces_fact_3]
+  text: {delete_traces_fact_3: "Nobody. The agent files the request under your session; it does not sign it as you (CIRISAgent#1212)."}
 ```
 
-That last block fails today and is the assertion the fix owes.
+Click `btn_delete_traces_confirm`. What comes back stays on the card, and reads
+REQUESTED — never done:
+
+```yaml
+expect:
+  visible: [data_lens_deletion_requested, data_lens_deletion_lens, data_lens_deletion_local, data_row_deletion_sla]
+  text: {data_lens_deletion_status: "Requested — not done", data_row_deletion_sla: "None reported. The agent returns no deletion deadline and no completion (CIRISAgent#1212), so this stays at requested."}
+```
+
+That last block used to fail; it passes now and says "none reported". The
+number in that row is the fix CIRISAgent#1212 owes.
+
+**Reset and wipe** each confirm with three facts (`sheet_reset` / `sheet_wipe_key`,
+`*_fact_1..3`), the third being *"Your owner session on this node. The node does
+this itself; nothing is signed as you, and it cannot be undone."* — and a flow
+cancels both (`btn_reset_cancel`, `btn_wipe_key_cancel`), because both succeed.
 
 **Erasure on this node** (every build; staged as
 `testing/flows/drafts/csd-039-data-erasure.yaml`). Scroll to
@@ -317,13 +337,13 @@ expect:
 ```
 
 On a **node-only**
-build, where `accord-settings` and `lens-traces` have no host:
+build, where `accord-settings` and `lens-traces` have no host, the sharing
+block says so — a fact about this build, not an error, and not "Enable":
 
 ```yaml
 expect:
-  state: error
-  visible: ["proposed:data_error"]
-  absent: [btn_delete_traces]
+  visible: [data_accord_not_on_this_node, data_erase_traces_section]
+  absent: [btn_delete_traces, btn_enable_accord, switch_consent, data_receipts_section]
 ```
 
 ## 5. QA plan
@@ -371,10 +391,21 @@ from this client.
   **Ask (CIRISAgent):** return `consent:deletion_sla:{days}` from
   `DELETE /v1/my-data/lens-traces` and expose `consent:deletion_complete` so the
   row can flip from "requested" to "done".
-* **Two of the three read routes are on the brain.** On a node-only build the
-  accord block and the trace-deletion button have no host at all, and the screen
-  does not say so — it renders a snackbar that vanishes. Same fix as Settings
-  (CSD-022): a tagged, persistent error.
+* **Two of the three read routes are on the brain — said now (2026-09-28).** On a
+  node-only build the accord block and the trace-deletion button have no host at
+  all; the screen used to render a snackbar that vanished. The sharing block now
+  says the agent is not here (`data_accord_not_on_this_node`) and draws no
+  control; a failed read that is not an absent route is `data_accord_error`; and
+  the card's own errors are a persistent, tagged block (`data_error`), the same
+  fix as Settings (CSD-022).
+* **Every irreversible act here confirms with three facts (2026-09-28).** Reset,
+  wipe and the lens-deletion request were `AlertDialog`s with a generic body;
+  each is a `ConfirmSheet` now (`sheet_reset`, `sheet_wipe_key`,
+  `sheet_delete_traces`), keeping its `btn_*_confirm` / `btn_*_cancel` tags. The
+  third fact is honest about the signer: the node's own acts are authorised by
+  the owner session and signed by nobody as the person; the lens request is
+  filed by the agent under the session (CIRISAgent#1212). The erasure confirm
+  already said so.
 * **CC guardrail this card must never cross.** CC 2.4.1.1 carves out that a
   subject-authority `withdraws` "MUST NOT withdraw a third-party `capacity:*` or
   `detection:*` row about itself; selective erasure of adverse evidence is
@@ -401,12 +432,15 @@ from this client.
 * **Receipts: the verifier exists, the signer has no caller.** The agent's
   `/v1/verification/*` verifies an Ed25519/JCS proof; `sign_deletion_proof` is
   called only by its test. So the card can check a receipt and cannot show one,
-  and says so (**CIRISAgent#1207**). Two server defects the card works around:
-  (1) verification uses the agent's CURRENT key and ignores the proof's
-  `public_key_id`, so every receipt signed before a key rotation reads invalid —
-  the card shows "cannot be checked here" instead of "does not check" when the
-  key ids differ; (2) `GET /v1/verification/public/{deletion_id}` looks nothing
-  up, so the card does not link it.
+  and says so (**CIRISAgent#1207**). Two server defects the card works around,
+  both filed as **CIRISAgent#1220**: (1) verification uses the agent's CURRENT
+  key and ignores the proof's `public_key_id`, so every receipt signed before a
+  key rotation reads invalid — the card shows "cannot be checked here" instead of
+  "does not check" when the key ids differ (`data_receipt_uncheckable`,
+  `data_receipt_key_not_current`; pinned by
+  `DataErasureControllerTest.aReceiptSignedByAnOlderKeyIsFlaggedNotCalledForged`);
+  (2) `GET /v1/verification/public/{deletion_id}` looks nothing up, so the card
+  does not link it.
 * **DSAR is still split across cards, and this one does not submit one.**
   `/v1/dsar` (`routes/dsar.py:378`) files a ticket and starts a 90-day decay; the
   requests land in Tickets (CSD-013), where "completed" is a status word and not
