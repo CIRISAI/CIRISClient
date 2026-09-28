@@ -1,0 +1,61 @@
+csd: CSD-032
+flow: csd_032_network_identity
+title: This node's federation identity, from the node itself
+description: >-
+  CSD-032 §4, driven. GET /v1/federation/identity (CIRISServer
+  src/federation_surface.rs:696) and GET /v1/federation/node-code
+  (src/federation_nodecode.rs:92), both on the NODE url. The Federation ID
+  aggregate is the AGENT's (/v1/system/peers/federation-identity); on a bare
+  node the card says so instead of sitting in "initializing".
+# Floor: screen_federation_identity, card_identity_header, text_signer_key_id,
+# row_identity_stats, text_peer_count_total, text_peer_count_canonical,
+# card_identity_capabilities, card_node_code, text_my_node_code,
+# btn_copy_my_node_code, btn_copy_signer_key, btn_federation_identity_refresh,
+# btn_network_identity_back (ui/screens/federation/NetworkIdentityScreen.kt);
+# federation_identity_error / federation_identity_not_on_this_node and
+# federation_id_card_not_on_this_node (ReadFailureBlock tag prefixes).
+client: "unreleased"
+
+steps:
+  - step_id: on_identity
+    title: The identity card composes with the node's signer key
+    description: >-
+      Reached via Everyone > Rules > Global Commons > the Identity tile. The
+      header and the node code are asserted together: both come from the node,
+      and a card that showed a code without the key it belongs to would be
+      handing out something it had not identified.
+    requires:
+      screen: NetworkIdentity
+    expect:
+      visible: [screen_federation_identity, card_identity_header, text_signer_key_id, card_node_code, text_my_node_code]
+
+  - step_id: the_counts_are_readings_or_dashes
+    title: The peer counts are drawn only when the node measured them
+    description: >-
+      peer_counts_standing (CIRISServer#372) names an unmeasured zero; the chip
+      draws an em dash for it. The flow asserts the row exists; the value is
+      matrix-dependent.
+    expect:
+      visible: [row_identity_stats, text_peer_count_total, text_peer_count_canonical]
+
+  - step_id: on_a_bare_node_the_aggregate_says_so
+    title: Without an agent the Federation ID card names its absence
+    optional_step: true
+    expect:
+      visible: [federation_id_card_not_on_this_node]
+      absent: [banner_federation_error]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads without leaving the screen
+    do:
+      - click: btn_federation_identity_refresh
+    expect:
+      screen: NetworkIdentity
+      visible: [screen_federation_identity]
+
+  - step_id: back_returns_to_the_hub
+    title: Back lands on the hub that opened it
+    do:
+      - click: btn_network_identity_back
+    expect:
+      screen: LayerGlobalCommons

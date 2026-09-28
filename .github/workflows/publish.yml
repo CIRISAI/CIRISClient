@@ -174,7 +174,12 @@ jobs:
         # ONE LIST, in packaging/gates.sh, runnable at a keyboard before the tag
         # exists. 0.5.204 and 0.5.205 built every wheel and published nothing
         # because this step was the first place the list ran.
-        run: bash packaging/gates.sh .emitters
+        # PyYAML: gates.sh runs check_csd_v3, which parses the CSDs' YAML blocks.
+        # build.yml installs it; this job did not, so v0.5.224's first tag
+        # failed here with "check_csd_v3 needs PyYAML" (run 36146043268).
+        run: |
+          python3 -m pip install --quiet pyyaml
+          bash packaging/gates.sh .emitters
 
       - name: The tag must name the version being published
         if: startsWith(github.ref, 'refs/tags/v')

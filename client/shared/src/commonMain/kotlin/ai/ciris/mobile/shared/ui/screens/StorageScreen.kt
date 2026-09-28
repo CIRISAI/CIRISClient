@@ -76,11 +76,14 @@ fun StorageScreen(
             )
 
             if (loading && stats == null) {
-                CircularProgressIndicator(modifier = Modifier.padding(8.dp))
+                CircularProgressIndicator(modifier = Modifier.padding(8.dp).testable("storage_loading"))
             }
 
             error?.let {
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer),
+                    modifier = Modifier.testable("storage_error", it),
+                ) {
                     Text(it, modifier = Modifier.padding(12.dp), color = MaterialTheme.colorScheme.onErrorContainer)
                 }
             }

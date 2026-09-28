@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ConfigItem
@@ -25,7 +26,14 @@ import kotlinx.serialization.json.jsonPrimitive
  * - Update and delete configuration values
  */
 class ConfigViewModel(
-    private val apiClient: CIRISApiClient
+    private val apiClient: CIRISApiClient,
+    /**
+     * This node › Config edits THE NODE's config, whatever the app is attached
+     * to. The agent's `GraphConfigService` is a separate store in the agent's
+     * own graph (CIRISAgent#840 is the fold), so `$baseUrl` would silently edit
+     * the wrong one on a with-AI install (CSD-023).
+     */
+    private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
 ) : ViewModel() {
 
     companion object {
@@ -77,6 +85,9 @@ class ConfigViewModel(
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
     private var dataLoadStarted = false
 
+    /** The last list read, kept for its typed values (an edit writes the same type back). */
+    private var lastRead: List<ConfigItemData> = emptyList()
+
     init {
         logInfo("init", "ConfigViewModel initialized (data load deferred until startPolling() called)")
         // NOTE: Don't auto-load here - wait for startPolling() to be called
@@ -119,7 +130,8 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                val response = apiClient.listConfigs()
+                val response = apiClient.listConfigs(host = nodeUrl())
+                lastRead = response.configs
                 logDebug(method, "API response received: ${response.configs.size} configs")
 
                 // Organize configs into sections
@@ -133,6 +145,9 @@ class ConfigViewModel(
             } catch (e: Exception) {
                 logError(method, "Failed to load configs: ${e::class.simpleName}: ${e.message}")
                 _error.value = "Failed to load configurations: ${e.message}"
+                // Carried in the data the screen already receives, and the
+                // stale list is dropped: the failure is the reading now.
+                _configData.value = ConfigScreenData(readFailure = ReadFailure.of(e))
             } finally {
                 _isLoading.value = false
             }
@@ -178,7 +193,15 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                apiClient.updateConfig(key, value, "Updated via mobile app")
+                // Keep the value's type: a boolean key stays a boolean (the node
+                // does not coerce "true"), a number stays a number (CSD-023).
+                val previous = lastRead.firstOrNull { it.key == key }?.rawValue
+                apiClient.updateConfig(
+                    key,
+                    ai.ciris.mobile.shared.api.configValueFor(value, previous),
+                    "Updated via mobile app",
+                    host = nodeUrl(),
+                )
                 logInfo(method, "Config updated successfully")
                 _successMessage.value = "Configuration \"$key\" updated"
                 loadConfigs() // Reload to show updated value
@@ -203,7 +226,7 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                apiClient.deleteConfig(key)
+                apiClient.deleteConfig(key, host = nodeUrl())
                 logInfo(method, "Config deleted successfully")
                 _successMessage.value = "Configuration \"$key\" deleted"
                 loadConfigs() // Reload to reflect deletion
@@ -274,6 +297,7 @@ class ConfigViewModel(
                 ConfigItem(
                     key = config.key,
                     displayValue = config.displayValue,
+                    editValue = config.editValue,
                     updatedAt = config.updatedAt ?: "Unknown",
                     updatedBy = config.updatedBy,
                     isSensitive = config.isSensitive
@@ -301,5 +325,9 @@ data class ConfigItemData(
     val displayValue: String,
     val updatedAt: String?,
     val updatedBy: String,
-    val isSensitive: Boolean
+    val isSensitive: Boolean,
+    /** The value as read, with its JSON type — so an edit writes the same type back (CSD-023). */
+    val rawValue: kotlinx.serialization.json.JsonElement? = null,
+    /** What the editor opens with: a list or a dict as JSON, so it can be written back as one. */
+    val editValue: String = displayValue,
 )

@@ -1,0 +1,83 @@
+csd: CSD-057
+flow: csd_057_wallet
+title: The wallet says it is experimental, names its limits, and warns before a send
+description: >-
+  CSD-057 §4, driven. Four agent routes are live and called
+  (CIRISAgent routes/wallet.py:570/674/817/976, unchanged on main). The card is
+  placed in Communities and Businesses > Rules with no `agentOnly`
+  (CirclesNav.kt:119), so on a node build it answers from a synthesised value —
+  which is why the experimental banner and the trust warning are asserted before
+  any number is.
+# Floor: card_wallet_experimental, card_wallet_balance, card_wallet_limits,
+# card_wallet_paymaster, card_wallet_address, card_spending_progress,
+# card_transaction_history, card_trust_warning, txt_wallet_address,
+# txt_paymaster_status, input_recipient_address, input_transfer_amount,
+# input_transfer_memo, btn_send_transfer, btn_copy_address and btn_wallet_back are
+# `testable*` literals in ui/screens/WalletPage.kt at v0.5.224.
+# NOT asserted: wallet_loading, wallet_unsupported and text_wallet_no_transactions
+# are still `proposed:` in CSD-057 §2, so the loading state, the node refusal and
+# the empty history cannot be asserted at all. CSD-057 §5 carries that.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_wallet
+    title: The card leads with the experimental notice, not with a balance
+    description: >-
+      `card_wallet_experimental` first and by itself is the assertion CSD-057 §1
+      turns on: money that may be lost must say so before it shows a number, and a
+      card that rendered the balance and dropped the banner would read as a
+      settled product.
+    requires:
+      screen: Wallet
+    expect:
+      visible: [card_wallet_experimental, card_wallet_balance]
+
+  - step_id: the_address_and_the_paymaster
+    title: The address and who pays the fees are both on screen
+    description: >-
+      txt_paymaster_status is the row that says whether a send costs the person
+      anything. A wallet that showed an address and not the paymaster invites a
+      transfer whose cost is unknown.
+    expect:
+      visible: [card_wallet_address, txt_wallet_address, txt_paymaster_status]
+
+  - step_id: limits_and_history
+    title: The spending limits and the transaction history each render
+    expect:
+      visible: [card_wallet_limits, card_spending_progress, card_transaction_history]
+
+  - step_id: a_send_is_warned_before_it_is_offered
+    title: The transfer form carries the trust warning
+    description: >-
+      Three inputs AND the warning, asserted together. This is the step that would
+      go red if the warning were ever moved behind a confirm dialog: CSD-057 §2
+      requires it beside the form, where it is read before the amount is typed
+      rather than after.
+    expect:
+      visible:
+        - card_wallet_transfer
+        - card_trust_warning
+        - input_recipient_address
+        - input_transfer_amount
+        - btn_send_transfer
+
+  - step_id: the_transfer_form_takes_input
+    title: A recipient, an amount and a memo are all enterable
+    description: >-
+      Input only — the flow never presses btn_send_transfer. A test that moves real
+      value is not a test, and CSD-057 §5 says the happy path is out of scope for
+      that reason rather than for a technical one.
+    do:
+      - input: {input_recipient_address: "0x0000000000000000000000000000000000000000"}
+      - input: {input_transfer_amount: "0"}
+      - input: {input_transfer_memo: "flow check, never sent"}
+    expect:
+      screen: Wallet
+      visible: [btn_send_transfer, card_trust_warning]
+
+  - step_id: back_leaves_the_card
+    title: Back returns to Communities and Businesses > Rules
+    do:
+      - click: btn_wallet_back
+    expect:
+      absent: [card_wallet_balance]

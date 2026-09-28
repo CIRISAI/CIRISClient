@@ -1,0 +1,84 @@
+csd: CSD-066
+flow: csd_066_child_safety
+title: A group's watchlist enables, and the two modes are a choice not a label
+description: >-
+  CSD-066 §4, driven. The three node routes are live
+  (CIRISServer src/safety/age.rs:549, src/safety/watchlist.rs:511 and :509) and
+  all three are called. What the flow asserts is the form and the two-mode choice;
+  what it cannot assert is who enabled an entry and when, because the node's
+  list_enables returns {group_key_id, enables[], honesty{}} and WatchlistEnable
+  (watchlist.rs:113-131) carries no attester and no timestamp.
+# Floor: btn_watchlist_enable/_disable/_refresh, input_watchlist_group,
+# input_watchlist_id, class_csam, class_other, mode_alert, mode_enforce and
+# btn_child_safety_back are `testable*` literals in ui/screens/ChildSafetyScreen.kt
+# at v0.5.224.
+client: ">=0.5.224"
+
+steps:
+  - step_id: on_the_card
+    title: The card asks for a group and an id, and offers both modes
+    description: >-
+      ChildSafety is placed in every circle's Safety tab and is the tab's only
+      card, so the chain ends on the tab. Both modes are asserted because
+      `mode_alert` and `mode_enforce` are materially different acts — one routes to
+      a moderator, one blocks — and a screen that rendered only the milder one
+      would make the stronger one unreachable without saying so.
+    requires:
+      screen: ChildSafety
+    expect:
+      visible:
+        - input_watchlist_group
+        - input_watchlist_id
+        - mode_alert
+        - mode_enforce
+        - btn_watchlist_enable
+        - btn_watchlist_refresh
+
+  - step_id: the_classes_are_both_offered
+    title: Both hard-case classes are selectable
+    description: >-
+      class_csam and class_other. CC's hard-case taxonomy is not one row, and a
+      card that offered only the named class would silently drop every other
+      protective enable.
+    expect:
+      visible: [class_csam, class_other]
+
+  - step_id: the_form_takes_a_group_and_an_id
+    title: A group key and a watchlist id are enterable
+    do:
+      - input: {input_watchlist_group: "wa-group-4a19c2ef01"}
+      - input: {input_watchlist_id: "wl-csam-eu-01"}
+      - click: class_csam
+      - click: mode_alert
+    expect:
+      screen: ChildSafety
+      visible: [btn_watchlist_enable]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads the group's enables without leaving
+    do:
+      - click: btn_watchlist_refresh
+    expect:
+      screen: ChildSafety
+      visible: [input_watchlist_group]
+
+  - step_id: an_enabled_entry_can_be_disabled
+    title: An enable is reversible from the same card
+    description: >-
+      Optional: it needs a group whose watchlist already has an entry, which the
+      fixture does not create. The assertion is that the disable control is on the
+      SAME card — a protective measure that can be turned on somewhere a person
+      cannot turn it off is not a choice.
+    optional_step: true
+    requires:
+      screen: ChildSafety
+      visible: [btn_watchlist_disable]
+    expect:
+      visible: [btn_watchlist_disable, btn_watchlist_enable]
+
+  - step_id: back_leaves_the_card
+    title: Back leaves the Safety tab's card
+    do:
+      - click: btn_child_safety_back
+    expect:
+      absent: [input_watchlist_group]

@@ -1,0 +1,47 @@
+csd: CSD-047
+flow: csd_047_network_content
+title: Fetch one piece of content from one peer by its digest
+description: >-
+  CSD-047 §4, driven. GET /v1/federation/peers to pick a peer, then
+  POST /v1/federation/content/{content_id} (CIRISServer src/federation_surface.rs:699,
+  owner session, 64-hex digest) on the NODE url. The digest field and the fetch
+  button had no tag and no input sink; they do now.
+# Floor: screen_federation_content, input_peer_search, empty_content_peers,
+# peer_pick_row_${peer.keyId}, input_content_id, btn_content_fetch,
+# text_content_fetch_error, card_content_result
+# (ui/screens/federation/NetworkContentScreen.kt); federation_content_peers_error /
+# federation_content_peers_not_on_this_node (ReadFailureBlock).
+client: "unreleased"
+
+steps:
+  - step_id: on_content
+    title: The pick step composes with a drivable search field
+    requires:
+      screen: NetworkContent
+    do:
+      - input: {input_peer_search: "zz-no-such-peer"}
+    expect:
+      visible: [screen_federation_content, input_peer_search]
+
+  - step_id: the_digest_step_after_a_pick
+    title: Picking a peer opens the digest step
+    description: >-
+      Optional because it needs at least one peer. The row tag carries the peer's
+      key id; the matrix supplies it.
+    optional_step: true
+    do:
+      - input: {input_peer_search: ""}
+    expect:
+      count: {of: "peer_pick_row_*", min: 1}
+
+  - step_id: a_bad_digest_keeps_fetch_shut
+    title: A digest that is not 64 hex characters cannot be fetched
+    description: >-
+      The node would refuse it (INVALID_CONTENT_ID, 400); the card refuses first.
+      Asserting the button is present and the field took input is what a flow
+      can do; the disabled state is the view model's validateContentId.
+    optional_step: true
+    do:
+      - input: {input_content_id: "not-a-digest"}
+    expect:
+      visible: [input_content_id, btn_content_fetch]

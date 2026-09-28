@@ -1238,6 +1238,39 @@
       },
       "notes": "SEND TRACES IS A QUESTION, NOT A SWITCH. Screen 2's replication consent was a switch defaulted ON; it is now Yes / No with no default, Next disabled until answered (the age band's shape), with the cost of declining -- no capacity score, no commons credits -- stated on the question. Be-scored and location appear once the answer is Yes. Unanswered reads as not-consented. New tags trace_consent_yes / trace_consent_no replace toggle_trace_opt_in ON SCREEN 2 (the YOU-step catch-up card keeps toggle_trace_opt_in); drivers must ANSWER rather than toggle a default off -- CIRISAgent's qa_runner changes with the pin. Two new catalogue keys (mobile.trace_consent_decline_note, setup_validation_trace_consent_required), 29 locales. No wire change: the request still carries the same booleans.",
       "published": null
+    },
+    {
+      "client_version": "0.5.224",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing new is read from the node that a floor node lacks: the redesign reads the same routes, and the hand-off follow (#73) probes /v1/system/health like the agent branch always did",
+      "node_max_tested": "0.5.216",
+      "agent_min_tested": "2.10.0",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify"
+      ],
+      "capabilities_note": "no capability change",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 4044
+      },
+      "notes": "THE LOCKED SPEC SHELL, AND THE FIXES CIRISAgent#1184 IS WAITING ON. (1) Run-without-AI hand-off (#73): after the agent hands off to the node on :4243, the client follows the node when the pinned agent goes quiet. This fixes #66 (macOS stalls on Startup 'Restarting your node...' at 0/22 services, the red leg on CIRISAgent#1184) and #67 (Windows loses the setup session and loops to Login). (2) Setup honesty (#74): the final step runs once per press (#69), a skipped claim is not reported as success and the fed-ID is minted before the PIN (#68; new tag btn_setup_finish_unclaimed, key mobile.setup_finish_unclaimed), a login refusal keeps the server's reason (#70). (3) The Locked Spec redesign, waves 0-1 and the spine (#62, #63, #64, #45): two grounds, sixteen tokens, nine primitives, five circles with seven tabs, My things, a pinned Stop, one top bar, one back, a rail that closes. EVERY EXISTING TEST TAG AND /screen NAME IS KEPT, but nav hops moved: Interact is circle_agent -> tab_chats -> nav_epistemic_interact, the accord cards are under circle_global_commons -> tab_safety, Memory is under This node. testing/gate/nav_map.py derives every hop; see CIRISAgent#1181. Contacts' visible title is now 'People'. (4) Test mode only: desktop /screenshot reads the window's own frame (#75, #60) and copies it before the native bitmap is freed (#79; the Windows JVM crashed on main's run 36127990873); iOS records uncaught Kotlin exceptions to Documents/ciris/logs/kotlin_crash.log (#76, for #50). (5) The missing-node startup error said 'pip install ciris-server==<client version>', a server release that does not exist since the version lines split; it now says 'pip install --upgrade ciris-server'. Tested: five-platform live QA on main against ciris-server v0.5.216 (Linux/Android and Windows pass on the #79 fix run 36140908172). No wire change.",
+      "published": null
     }
   ]
 }

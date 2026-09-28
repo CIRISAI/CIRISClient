@@ -1,0 +1,47 @@
+csd: CSD-049
+flow: csd_049_network_queue
+title: What this node has sent, received and is carrying, on both planes
+description: >-
+  CSD-049 §4, driven. GET /v1/federation/metrics (CIRISServer
+  src/federation_surface.rs:697) on the NODE url, polled every 5 s. The four
+  application-plane counters are drawn as "—" until a snapshot is read; the
+  replication plane (carriage_standing, receive_standing, the served/applied
+  totals) is its own card, with the node's own note that the counters above say
+  nothing about it.
+# Floor: screen_federation_queue, btn_federation_queue_refresh, text_queue_depth,
+# text_envelopes_sent, text_envelopes_received, text_send_failures,
+# text_verify_failures, card_queue_replication, text_replication_not_reported,
+# text_carriage_standing, text_receive_standing, text_replication_served,
+# text_replication_applied (ui/screens/federation/NetworkQueueScreen.kt);
+# federation_queue_error / federation_queue_not_on_this_node (ReadFailureBlock).
+client: "unreleased"
+
+steps:
+  - step_id: on_queue
+    title: The counters and the replication card compose
+    requires:
+      screen: NetworkQueue
+    expect:
+      visible: [screen_federation_queue, text_queue_depth, text_envelopes_sent, text_envelopes_received, card_queue_replication]
+
+  - step_id: a_read_counter_is_a_number
+    title: Once read, the queue depth is a number
+    optional_step: true
+    expect:
+      number: {text_queue_depth: {min: 0}}
+
+  - step_id: the_replication_plane_has_a_standing
+    title: A node that reports the plane shows its two standings by token
+    optional_step: true
+    expect:
+      visible: [text_carriage_standing, text_receive_standing]
+      one_of: {text_carriage_standing: [unreadable, not_exercised, idle, moving, withholding]}
+      one_of: {text_receive_standing: [unreadable, not_exercised, idle, converged, applying, refusing]}
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads without leaving the screen
+    do:
+      - click: btn_federation_queue_refresh
+    expect:
+      screen: NetworkQueue
+      visible: [screen_federation_queue]

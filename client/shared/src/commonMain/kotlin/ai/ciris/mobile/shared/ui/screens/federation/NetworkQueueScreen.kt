@@ -67,6 +67,7 @@ fun NetworkQueueScreen(
     val metrics by vm.metrics.collectAsState()
     val loading by vm.loading.collectAsState()
     val error by vm.error.collectAsState()
+    val readFailure by vm.readFailure.collectAsState()
 
     DisposableEffect(vm) {
         vm.refreshNow()
@@ -103,6 +104,20 @@ fun NetworkQueueScreen(
             }
             return@Scaffold
         }
+        // No snapshot was ever read: which failure, never a row of zeros
+        // (CSD-049). A later poll that fails keeps the last reading beneath
+        // the transient error card instead.
+        val unread = metrics == null && readFailure != null
+        if (unread) {
+            Box(modifier = Modifier.fillMaxSize().padding(padding).testable("screen_federation_queue")) {
+                ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                    failure = readFailure!!,
+                    tagPrefix = "federation_queue",
+                    modifier = Modifier.padding(16.dp),
+                )
+            }
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -136,20 +151,27 @@ fun NetworkQueueScreen(
             ) {
                 BigStatCard(
                     label = localizedString("network.queue.stats.depth"),
-                    value = vm.queueDepth.toString(),
+                    value = vm.queueDepth?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                     modifier = Modifier.weight(1f).testable("text_queue_depth"),
                 )
                 BigStatCard(
                     label = localizedString("network.queue.stats.sent"),
-                    value = vm.envelopesSent.toString(),
+                    value = vm.envelopesSent?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                     modifier = Modifier.weight(1f).testable("text_envelopes_sent"),
                 )
                 BigStatCard(
                     label = localizedString("network.queue.stats.received"),
-                    value = vm.envelopesReceived.toString(),
+                    value = vm.envelopesReceived?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                     modifier = Modifier.weight(1f).testable("text_envelopes_received"),
                 )
             }
+
+            // ── Section 1b: the replication plane (CSD-049) ─────────────────
+            // The counters above are the APPLICATION plane; replication moves
+            // records without touching them (the node's own plane_note), so a
+            // node carrying records can show 0 sent there. These say whether
+            // records are actually moving.
+            ReplicationPlaneCard(metrics)
 
             // ── Section 2: failures ─────────────────────────────────────────
             SectionLabel(localizedString("network.queue.failures.title"))
@@ -188,7 +210,7 @@ fun NetworkQueueScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = formatBytes(vm.bytesIn),
+                                text = vm.bytesIn?.let { formatBytes(it) } ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -202,7 +224,7 @@ fun NetworkQueueScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                             Text(
-                                text = formatBytes(vm.bytesOut),
+                                text = vm.bytesOut?.let { formatBytes(it) } ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                                 fontFamily = FontFamily.Monospace,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.SemiBold,
@@ -210,10 +232,77 @@ fun NetworkQueueScreen(
                         }
                     }
                     Spacer(Modifier.height(12.dp))
-                    SentReceivedBar(sent = vm.envelopesSent, received = vm.envelopesReceived)
+                    SentReceivedBar(sent = vm.envelopesSent ?: 0L, received = vm.envelopesReceived ?: 0L)
                 }
             }
         }
+    }
+}
+
+/** The replication plane's two standings and totals, or a line saying the node does not report them. */
+@Composable
+private fun ReplicationPlaneCard(m: ai.ciris.mobile.shared.models.federation.FederationMetricsResponse?) {
+    SectionLabel(localizedString("network.queue.replication.title"))
+    ElevatedCard(modifier = Modifier.fillMaxWidth().testable("card_queue_replication")) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (m == null || (m.carriageStanding == null && m.receiveStanding == null)) {
+                Text(
+                    text = localizedString("network.queue.replication.not_reported"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("text_replication_not_reported"),
+                )
+                return@Column
+            }
+            PlaneRow(
+                localizedString("network.queue.replication.carriage"),
+                standingLabel(m.carriageStanding),
+                "text_carriage_standing",
+                m.carriageStanding,
+            )
+            PlaneRow(
+                localizedString("network.queue.replication.receive"),
+                standingLabel(m.receiveStanding),
+                "text_receive_standing",
+                m.receiveStanding,
+            )
+            PlaneRow(
+                localizedString("network.queue.replication.served"),
+                m.replicationServed()?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
+                "text_replication_served",
+            )
+            PlaneRow(
+                localizedString("network.queue.replication.applied"),
+                m.replicationApplied()?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
+                "text_replication_applied",
+            )
+            Text(
+                text = localizedString("network.queue.replication.note"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** A standing token in words; an unknown token is shown as sent, never as a known one. */
+@Composable
+private fun standingLabel(token: String?): String {
+    if (token == null) return ai.ciris.mobile.shared.ui.screens.NOT_READ
+    val known = setOf(
+        "unreadable", "not_exercised", "idle", "moving", "withholding", "converged", "applying", "refusing",
+    )
+    return if (token in known) localizedString("network.queue.standing.$token") else token
+}
+
+@Composable
+private fun PlaneRow(label: String, value: String, tag: String, published: String? = null) {
+    Row(
+        modifier = Modifier.fillMaxWidth().testable(tag, published ?: value),
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -253,8 +342,8 @@ private fun BigStatCard(label: String, value: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun FailureCard(label: String, count: Long, modifier: Modifier = Modifier) {
-    val warn = count > 0L
+private fun FailureCard(label: String, count: Long?, modifier: Modifier = Modifier) {
+    val warn = (count ?: 0L) > 0L
     ElevatedCard(
         modifier = modifier,
         colors = CardDefaults.elevatedCardColors(
@@ -272,7 +361,7 @@ private fun FailureCard(label: String, count: Long, modifier: Modifier = Modifie
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = count.toString(),
+                text = count?.toString() ?: ai.ciris.mobile.shared.ui.screens.NOT_READ,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 fontFamily = FontFamily.Monospace,

@@ -17,7 +17,6 @@ import ai.ciris.mobile.shared.viewmodels.SettingsViewModel
 import ai.ciris.mobile.shared.viewmodels.VerifyStatusResponse
 import ai.ciris.mobile.shared.viewmodels.SUPPORTED_CURRENCIES
 import ai.ciris.mobile.shared.viewmodels.SUPPORTED_LANGUAGES
-import ai.ciris.mobile.shared.platform.getOAuthProviderName
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableWithHandler
@@ -95,6 +94,9 @@ fun SettingsScreen(
     // ONE way out: enter the setup wizard directly (CIRISAgent#1075).
     brainUnconfigured: Boolean = false,
     onSetUpAgent: () -> Unit = {},
+    // The probed ClientMode (CIRISServer#479: there is no build flavor). Gates
+    // the agent's plane so a node build is not offered doors the rail closed.
+    hasAgent: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     // Core state
@@ -225,7 +227,8 @@ fun SettingsScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("settings_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -241,6 +244,7 @@ fun SettingsScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .testable("settings_loaded")
                     .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -283,7 +287,12 @@ fun SettingsScreen(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
                 }
 
-                // Agent Mode section — mirror surface of Network hub mode card.
+                // THE AGENT'S PLANE (CSD-022 §2.0.1). Agent mode lives HERE: it
+                // is the agent's configuration (`PUT /v1/system/agent-mode`,
+                // CIRISAgent-only), so it belongs with the rest of the agent's
+                // plane and is absent on a node build. The Network hub's copy
+                // (LayerGlobalCommons, CSD-051) is the duplicate.
+                if (SettingsPlanes.showsAgentPlane(hasAgent)) {
                 AgentModeSection(apiClient = apiClient)
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
@@ -360,14 +369,27 @@ fun SettingsScreen(
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+                } // end of the agent's plane
 
                 // Preferences Section (Language & Currency)
                 PreferencesSection()
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // Location Section
-                LocationSection(viewModel = viewModel)
+                // Location Section: its three routes are CIRISAgent's
+                // (`/v1/setup/location*`); a node serves none of them, so a
+                // node build is told so instead of offered a search that
+                // cannot succeed. Ask: CIRISServer to serve the person's ground.
+                if (SettingsPlanes.showsGroundSearch(hasAgent)) {
+                    LocationSection(viewModel = viewModel)
+                } else {
+                    Text(
+                        text = localizedString("mobile.settings_location_needs_agent"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testable("txt_settings_location_needs_agent"),
+                    )
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
@@ -379,6 +401,9 @@ fun SettingsScreen(
                 // step 11). Kept as a simple navigation row rather than
                 // embedded sliders — the viz surface is large enough that
                 // inlining would bury the rest of the settings.
+                // Interface is agent-only (CirclesNav) — the renderer it tunes
+                // is composed only from Interact (CSD-026 §6.2).
+                if (SettingsPlanes.showsAgentPlane(hasAgent)) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Card(
                     modifier = Modifier
@@ -416,18 +441,26 @@ fun SettingsScreen(
                         )
                     }
                 }
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
-                // Account Section
+                // Sign-in section. Sign-out's home is My Identity (every build,
+                // CIRISClient#51); this copy stays only because CIRISAgent's gate
+                // falls back to the Settings row to find `btn_logout`
+                // (qa_runner/modules/web_ui/__main__.py). It goes once
+                // CIRISAgent#1181's gate routes to identity-management.
                 Text(
-                    text = localizedString("mobile.settings_account"),
+                    text = localizedString("mobile.settings_sign_in"),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary
                 )
 
-                // Explain that OAuth login IS the API key
-                val providerName = getOAuthProviderName()
+                // How this device signed in, as recorded by the login flow — not
+                // the platform's guess (a password sign-in is never "Google").
+                // "Your OAuth login IS the API key" only for an OAuth sign-in.
+                val signInMethod by viewModel.signInMethod.collectAsState()
+                val signInLine = ai.ciris.mobile.shared.models.settingsSignInLine(signInMethod)
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -444,7 +477,7 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = localizedString("mobile.settings_authentication_desc", "provider", providerName),
+                            text = localizedString(signInLine.key, signInLine.params),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
                         )
@@ -453,16 +486,12 @@ fun SettingsScreen(
 
                 Spacer(Modifier.height(4.dp))
 
-                // Logout button
+                // Logout button. onLogout() IS the logout (CIRISApp runs
+                // SettingsViewModel.logout inside it); calling viewModel.logout
+                // here as well revoked the token twice per click.
                 OutlinedButton(
-                    onClick = {
-                        viewModel.logout {
-                            onLogout()
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().testableClickable("btn_logout") {
-                        viewModel.logout { onLogout() }
-                    }
+                    onClick = onLogout,
+                    modifier = Modifier.fillMaxWidth().testableClickable("btn_logout") { onLogout() }
                 ) {
                     Text(localizedString("mobile.settings_logout"))
                 }
@@ -2248,6 +2277,18 @@ private fun PreferencesSection() {
             )
         }
     }
+}
+
+/**
+ * Which planes of Settings a build offers (CSD-022 §2.0.1). The person's
+ * device plane (language, theme, sign out) is every build's; the agent's plane
+ * (AI configuration, agent mode, the Interface entry) and the ground search,
+ * whose `/v1/setup/location*` routes only CIRISAgent serves, are the agent
+ * build's. `internal` so SettingsPlanesTest pins it.
+ */
+internal object SettingsPlanes {
+    fun showsAgentPlane(hasAgent: Boolean): Boolean = hasAgent
+    fun showsGroundSearch(hasAgent: Boolean): Boolean = hasAgent
 }
 
 /**

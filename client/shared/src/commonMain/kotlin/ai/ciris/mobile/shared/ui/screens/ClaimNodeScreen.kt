@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
@@ -160,6 +161,9 @@ fun ClaimNodeScreen(
             Spacer(Modifier.height(20.dp))
 
             // ── NodeCode field (paste / QR forms; dashed CIRIS-V1-… accepted) ──
+            // Each field drives through the same setter a keystroke uses, and
+            // refuses /input while a claim is in flight, as the keyboard does.
+            rememberTextInputDriver("field_claim_node_code", codeInput, enabled = !inFlight) { codeInput = it }
             OutlinedTextField(
                 value = codeInput,
                 onValueChange = { codeInput = it },
@@ -169,12 +173,13 @@ fun ClaimNodeScreen(
                 enabled = !inFlight,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testable("field_claim_node_code"),
+                    .testable("field_claim_node_code", codeInput),
             )
 
             Spacer(Modifier.height(12.dp))
 
             // ── Claim PIN field (one-time PIN from the node's console) ─────────
+            rememberTextInputDriver("field_claim_node_pin", pinInput, enabled = !inFlight) { pinInput = it }
             OutlinedTextField(
                 value = pinInput,
                 onValueChange = { pinInput = it },
@@ -184,12 +189,13 @@ fun ClaimNodeScreen(
                 enabled = !inFlight,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testable("field_claim_node_pin"),
+                    .testable("field_claim_node_pin", pinInput),
             )
 
             Spacer(Modifier.height(12.dp))
 
             // ── Display name bound to the founder's federation identity ────────
+            rememberTextInputDriver("field_claim_node_displayname", displayNameInput, enabled = !inFlight) { displayNameInput = it }
             OutlinedTextField(
                 value = displayNameInput,
                 onValueChange = { displayNameInput = it },
@@ -199,7 +205,7 @@ fun ClaimNodeScreen(
                 enabled = !inFlight,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testable("field_claim_node_displayname"),
+                    .testable("field_claim_node_displayname", displayNameInput),
             )
 
             Spacer(Modifier.height(16.dp))
@@ -217,6 +223,9 @@ fun ClaimNodeScreen(
             Spacer(Modifier.height(20.dp))
 
             // ── Claim button: connectByNodeCode → (PINNED) → claimAdmin ───────
+            // One predicate for the button and /click.
+            val canSubmit = !inFlight && !signerMissing &&
+                codeInput.isNotBlank() && pinInput.isNotBlank() && !claimed
             Button(
                 onClick = {
                     viewModel.clearBootstrap()
@@ -224,12 +233,11 @@ fun ClaimNodeScreen(
                     // resulting PINNED profile below and chain the claim then.
                     viewModel.connectByNodeCode(codeInput.trim())
                 },
-                enabled = !inFlight && !signerMissing &&
-                    codeInput.isNotBlank() && pinInput.isNotBlank() && !claimed,
+                enabled = canSubmit,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp)
-                    .testableClickable("btn_claim_node_submit") {
+                    .testableClickable("btn_claim_node_submit", enabled = canSubmit) {
                         viewModel.clearBootstrap()
                         viewModel.connectByNodeCode(codeInput.trim())
                     },

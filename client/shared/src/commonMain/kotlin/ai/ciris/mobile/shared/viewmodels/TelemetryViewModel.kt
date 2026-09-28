@@ -1,11 +1,14 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ClientTelemetryApi
+import ai.ciris.mobile.shared.api.TelemetryApi
 import ai.ciris.mobile.shared.models.ExportDestination
 import ai.ciris.mobile.shared.models.ExportDestinationCreate
 import ai.ciris.mobile.shared.models.ExportDestinationUpdate
 import ai.ciris.mobile.shared.models.TestResult
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.ServiceHealthItem
 import ai.ciris.mobile.shared.ui.screens.TelemetryData
 import androidx.lifecycle.ViewModel
@@ -15,6 +18,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
@@ -30,7 +34,9 @@ import kotlinx.coroutines.launch
  * - Auto-refresh with configurable interval
  */
 class TelemetryViewModel(
-    private val apiClient: CIRISApiClient
+    private val apiClient: CIRISApiClient,
+    /** The overview and destinations reads. The real client's by default; a fake in tests. */
+    private val reads: TelemetryApi = ClientTelemetryApi(apiClient),
 ) : ViewModel() {
 
     companion object {
@@ -198,7 +204,7 @@ class TelemetryViewModel(
         logDebug(method, "Fetching telemetry data from API")
 
         try {
-            val response = apiClient.getTelemetry()
+            val response = reads.overview()
             logDebug(method, "API response received")
 
             val data = response.data
@@ -216,27 +222,39 @@ class TelemetryViewModel(
             )
             logDebug(method, "Built ${serviceHealthItems.size} service health items")
 
-            // Map API response to TelemetryData model (UI model)
-            val telemetryData = TelemetryData(
-                healthyServices = data.services_online,
-                totalServices = data.services_total,
-                cognitiveState = data.cognitive_state.uppercase().ifEmpty { "WORK" },
-                cpuPercent = data.cpu_percent.toInt(),
-                memoryMb = data.memory_mb.toInt(),
-                diskUsedMb = 0.0, // Not available in current API response - would need /system/resources endpoint
-                messagesProcessed24h = data.messages_processed_24h,
-                tasksCompleted24h = data.tasks_completed_24h,
-                errors24h = data.errors_24h,
-                serviceHealthItems = serviceHealthItems
-            )
-
-            logInfo(method, "Telemetry updated: services=${telemetryData.healthyServices}/${telemetryData.totalServices}, " +
-                    "state=${telemetryData.cognitiveState}, cpu=${telemetryData.cpuPercent}%, memory=${telemetryData.memoryMb}MB")
-
-            _telemetryData.value = telemetryData
+            // Map API response to TelemetryData model (UI model). Through
+            // `update`, atomically: the destinations read runs CONCURRENTLY
+            // with this one and carries its own failure in the same value, so
+            // a read-copy-write here could publish over its answer and lose it
+            // — which is a card that never settles (CI, #98 / #122).
+            logInfo(method, "Telemetry updated: services=${data.services_online}/${data.services_total}, " +
+                    "state=${data.cognitive_state}, cpu=${data.cpu_percent}%, memory=${data.memory_mb}MB")
+            _telemetryData.update { current ->
+                TelemetryData(
+                    healthyServices = data.services_online,
+                    totalServices = data.services_total,
+                    cognitiveState = data.cognitive_state.uppercase().ifEmpty { null },
+                    cpuPercent = data.cpu_percent.toInt(),
+                    memoryMb = data.memory_mb.toInt(),
+                    diskUsedMb = null, // Not carried by /v1/telemetry/overview: not drawn, never a 0
+                    messagesProcessed24h = data.messages_processed_24h,
+                    tasksCompleted24h = data.tasks_completed_24h,
+                    errors24h = data.errors_24h,
+                    serviceHealthItems = serviceHealthItems,
+                    hasReading = true,
+                    readFailure = null,
+                    destinationsFailure = current.destinationsFailure,
+                )
+            }
 
         } catch (e: Exception) {
             logError(method, "Failed to fetch telemetry: ${e::class.simpleName}: ${e.message}")
+            // No reading: drop the metrics rather than leave defaults (or the
+            // last success) standing as if they were current (CSD-030).
+            val failure = ReadFailure.of(e)
+            _telemetryData.update { current ->
+                TelemetryData(readFailure = failure, destinationsFailure = current.destinationsFailure)
+            }
             throw e
         }
     }
@@ -339,12 +357,17 @@ class TelemetryViewModel(
             _destinationError.value = null
 
             try {
-                val destinations = apiClient.getExportDestinations()
+                val destinations = reads.exportDestinations()
                 _exportDestinations.value = destinations
+                // Atomic, like the overview's writes: the two reads race for
+                // the same value and neither may publish over the other's answer.
+                _telemetryData.update { it.copy(destinationsFailure = null) }
                 logInfo(method, "Loaded ${destinations.size} export destinations")
             } catch (e: Exception) {
                 logError(method, "Failed to load destinations: ${e.message}")
                 _destinationError.value = "Failed to load destinations: ${e.message}"
+                val failure = ReadFailure.of(e)
+                _telemetryData.update { it.copy(destinationsFailure = failure) }
             } finally {
                 _destinationsLoading.value = false
             }

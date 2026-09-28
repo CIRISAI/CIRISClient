@@ -22,6 +22,7 @@ import ai.ciris.mobile.shared.ui.primitives.CirisTextField
 import ai.ciris.mobile.shared.ui.primitives.FieldRow
 import ai.ciris.mobile.shared.ui.primitives.ItemRow
 import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.QrScanAction
 import ai.ciris.mobile.shared.ui.primitives.Receipt
 import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
 import ai.ciris.mobile.shared.ui.primitives.RowFlag
@@ -29,7 +30,12 @@ import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.ui.theme.tone
+import ai.ciris.mobile.shared.viewmodels.AddContactOutcome
+import ai.ciris.mobile.shared.viewmodels.ContactCodeState
+import ai.ciris.mobile.shared.viewmodels.ContactRemoval
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -44,6 +50,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -111,6 +119,14 @@ fun ContactsScreen(
     val justAdded by viewModel.justAdded.collectAsState()
     val routeUnsupported by viewModel.routeUnsupported.collectAsState()
     val chatIneligible by viewModel.chatIneligible.collectAsState()
+    val addOutcome by viewModel.addOutcome.collectAsState()
+    val contactCode by viewModel.contactCode.collectAsState()
+    val contactCodeNodes by viewModel.contactCodeNodes.collectAsState()
+    val contactCodeTicked by viewModel.contactCodeTicked.collectAsState()
+    val contactCodeRefusal by viewModel.contactCodeRefusal.collectAsState()
+    val makeReachable by viewModel.makeReachable.collectAsState()
+    val codeOpen = !pickerMode && contactCode != ContactCodeState.Closed
+    val toggleCode = { if (codeOpen) viewModel.closeContactCode() else viewModel.openContactCode() }
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -125,9 +141,15 @@ fun ContactsScreen(
 
     // The receipt sheet: one at a time, opened from a row's hamburger or long-press.
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
-    val thisNodeLabel = localizedString("mobile.receipt_this_node")
+    val attesterGloss = localizedString("mobile.receipt_contact_attester_person")
     val openChatLabel = localizedString("mobile.contacts_open_chat")
     val scopeNote = localizedString("mobile.receipt_contact_scope_note")
+
+    // Remove a contact (CSD-005, CIRISServer#657): receipt act → ConfirmSheet → DELETE.
+    val removing by viewModel.removing.collectAsState()
+    val removal by viewModel.removal.collectAsState()
+    var confirmRemove by remember { mutableStateOf<Contact?>(null) }
+    val removeLabel = localizedString("mobile.contacts_remove")
 
     Scaffold(
         containerColor = t.ground,
@@ -161,6 +183,14 @@ fun ContactsScreen(
                 },
                 actions = {
                     if (!pickerMode) {
+                        // Share my contact code (CSD-092): one card, reached from
+                        // every circle's People tab.
+                        IconButton(
+                            onClick = toggleCode,
+                            modifier = Modifier.testableWithHandler(PeopleTags.CODE_OPEN) { toggleCode() },
+                        ) {
+                            Glyph(GlyphName.SHARE_OUT, tint = if (codeOpen) t.brand else t.dim, contentDescription = localizedString("mobile.contact_code_title"))
+                        }
                         IconButton(
                             onClick = { addExpanded = !addExpanded },
                             modifier = Modifier.testableWithHandler(PeopleTags.ADD_OPEN) { addExpanded = !addExpanded },
@@ -180,6 +210,26 @@ fun ContactsScreen(
         },
     ) { paddingValues ->
         Column(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
+            // ── Share my contact code ─────────────────────────────────────────
+            // Open, it IS the body: a QR, the code and the picker do not fit
+            // above a list on a phone, and this is a task with an end.
+            if (codeOpen) {
+                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                    ContactCodeCard(
+                        state = contactCode,
+                        nodesChoice = contactCodeNodes,
+                        ticked = contactCodeTicked,
+                        refusal = contactCodeRefusal,
+                        makeReachable = makeReachable,
+                        onChoose = viewModel::setContactCodeNodes,
+                        onToggleNode = viewModel::toggleContactCodeNode,
+                        onMakeReachable = viewModel::makeThisDeviceReachable,
+                        onClose = viewModel::closeContactCode,
+                    )
+                }
+                return@Column
+            }
+
             // ── Search ────────────────────────────────────────────────────────
             Box(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 CirisTextField(
@@ -199,6 +249,9 @@ fun ContactsScreen(
                 )
             }
 
+            // ── What the last removal did ─────────────────────────────────────
+            removal?.let { r -> RemovalOutcome(r, onDismiss = viewModel::clearRemoval) }
+
             // ── Add someone ───────────────────────────────────────────────────
             if (showAddCard) {
                 AddContactCard(
@@ -209,6 +262,7 @@ fun ContactsScreen(
                     refusalReasonId = addRefusalReasonId,
                     refusalDetail = addError,
                     justAdded = justAdded,
+                    addOutcome = addOutcome,
                     onSubmit = { viewModel.addContact(addKeyId) },
                     onOpenChat = {
                         justAdded?.let { c ->
@@ -294,8 +348,10 @@ fun ContactsScreen(
                             contact = contact,
                             chatIneligible = contact.keyId in chatIneligible,
                             receipt = contactReceipt(
-                                contact, thisNodeLabel, openChatLabel, scopeNote,
+                                contact, attesterGloss, openChatLabel, scopeNote,
                                 onOpenChat = { receiptFor = null; onOpenChat(contact) },
+                                removeLabel = removeLabel.takeIf { removing == null },
+                                onRemove = { receiptFor = null; confirmRemove = contact },
                             ),
                             onOpenChat = { onOpenChat(contact) },
                             onOpenReceipt = { receiptFor = it },
@@ -308,6 +364,86 @@ fun ContactsScreen(
     }
 
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
+
+    confirmRemove?.let { c ->
+        val who = c.aliasOverride ?: shortKey(c.keyId, head = 12, tail = 0)
+        ConfirmSheet(
+            title = localizedString("mobile.contacts_remove_confirm_title", "who", who),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.consent_withdraw_fact_who"), c.keyId, mono = true),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_stops"),
+                    localizedString("mobile.contacts_remove_fact_stops_value"),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.consent_withdraw_fact_signs"),
+                    localizedString("mobile.consent_withdraw_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.contacts_remove"),
+            onConfirm = { confirmRemove = null; viewModel.removeContact(c.keyId) },
+            onDismiss = { confirmRemove = null },
+            destructive = true,
+            tagPrefix = PeopleTags.REMOVE_CONFIRM_PREFIX,
+        )
+    }
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Remove someone
+// ═════════════════════════════════════════════════════════════════════════════
+
+/**
+ * What a removal DID, as the node reported it ([ContactRemoval]).
+ *
+ * The still-active arm is the one this exists for: grants this node wrote
+ * before the person signed their contacts cannot be withdrawn by them, stay
+ * live, and are listed by id with that reason — in the ordinary tone, never
+ * struck through, and never under a "Removed" line.
+ */
+@Composable
+private fun RemovalOutcome(removal: ContactRemoval, onDismiss: () -> Unit) {
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    val who = shortKey(removal.keyId, head = 12, tail = 0)
+    val pad = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+    when (removal) {
+        is ContactRemoval.Removed -> Row(pad.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                localizedString("mobile.contacts_removed", "who", who),
+                style = type.body, color = t.ok,
+                modifier = Modifier.weight(1f).testable(PeopleTags.REMOVE_DONE),
+            )
+            CirisTextButton(localizedString("common_close"), tag = PeopleTags.REMOVE_DISMISS, onClick = onDismiss)
+        }
+        is ContactRemoval.StillActive -> CardShell(modifier = pad, tag = PeopleTags.REMOVE_REMAINING) {
+            Text(localizedString("mobile.contacts_remove_remaining_title", "who", who), style = type.title, color = t.ink)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                localizedString("mobile.contacts_remove_remaining_body", "count", removal.withdrawn.toString()),
+                style = type.body, color = t.dim,
+            )
+            removal.remainingGrants.forEach { grant ->
+                FieldRow(
+                    label = localizedString("mobile.contacts_remove_remaining_row"),
+                    value = grant,
+                    mono = true,
+                )
+            }
+            CirisTextButton(localizedString("common_close"), tag = PeopleTags.REMOVE_DISMISS, onClick = onDismiss)
+        }
+        is ContactRemoval.Refused -> StateBlock(
+            ListState.Error(
+                title = removal.reasonId?.let { localizedString(it) } ?: removal.detail.orEmpty(),
+                detail = removal.detail?.takeIf { it.isNotBlank() && removal.reasonId != null },
+            ),
+            tag = PeopleTags.REMOVE_REFUSAL, inline = true, modifier = pad,
+        )
+        is ContactRemoval.Unsupported -> StateBlock(
+            ListState.Error(title = localizedString("mobile.contacts_remove_unsupported")),
+            tag = PeopleTags.REMOVE_UNSUPPORTED, inline = true, modifier = pad,
+        )
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -316,8 +452,11 @@ fun ContactsScreen(
 
 /**
  * The add-by-code flow, and the primary action when the contact list is empty.
- * (Scanning in person and showing your own code arrive with the contacts,
- * groups and rosters work — not stubbed here.)
+ * The field takes a person's contact code (CSD-092) or a fed-ID; scanning a
+ * code FILLS the field and does not submit, because adding someone writes a
+ * consent grant (CC 3.3.7) and the person should see what they scanned first.
+ * Paste stays on every platform: a device that cannot scan loses a shortcut,
+ * not the flow.
  *
  * Refusals are rendered from the node's typed `reason_id` — not from the English
  * sentence — because two of them have remedies that point in opposite
@@ -335,6 +474,7 @@ private fun AddContactCard(
     refusalReasonId: String?,
     refusalDetail: String?,
     justAdded: Contact?,
+    addOutcome: AddContactOutcome?,
     onSubmit: () -> Unit,
     onOpenChat: () -> Unit,
     onDismissAdded: () -> Unit,
@@ -367,6 +507,11 @@ private fun AddContactCard(
                 )
             },
         )
+        QrScanAction(
+            onScanned = { scanned -> onKeyIdChange(scanned.trim()) },
+            tag = PeopleTags.SCAN,
+            modifier = Modifier.padding(top = 6.dp),
+        )
 
         // ── The typed refusal ─────────────────────────────────────────────────
         if (refusalReasonId != null || refusalDetail != null) {
@@ -387,10 +532,16 @@ private fun AddContactCard(
         // ── Success ───────────────────────────────────────────────────────────
         justAdded?.let { added ->
             Spacer(Modifier.height(8.dp))
-            Text(
-                localizedString("mobile.contacts_added", "who", shortKey(added.keyId)),
-                style = type.body, color = t.ok,
-            )
+            if (addOutcome == AddContactOutcome.ALREADY) {
+                // The same person twice is a no-op on the node, not an error.
+                val already = localizedString("mobile.contacts_add_already")
+                Text(already, style = type.body, color = t.ok, modifier = Modifier.testable(PeopleTags.ADD_ALREADY, already))
+            } else {
+                Text(
+                    localizedString("mobile.contacts_added", "who", shortKey(added.keyId)),
+                    style = type.body, color = t.ok,
+                )
+            }
             Row {
                 CirisTextButton(localizedString("mobile.contacts_open_chat"), tag = PeopleTags.ADD_OPEN_CHAT, onClick = onOpenChat)
                 CirisTextButton(localizedString("common_close"), tag = PeopleTags.ADD_DISMISS, onClick = onDismissAdded)

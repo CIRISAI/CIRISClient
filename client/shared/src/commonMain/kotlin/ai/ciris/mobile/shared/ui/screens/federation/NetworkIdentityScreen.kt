@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.FederationIdentity
 import ai.ciris.mobile.shared.models.federation.FederationIdentityResponse
 import ai.ciris.mobile.shared.models.federation.NodeCodeShareResponse
+import ai.ciris.mobile.shared.models.federation.peerCountReading
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.components.FederationIdCard
 import ai.ciris.mobile.shared.platform.testableClickable
@@ -55,7 +56,7 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  *  - Capabilities chip row.
  *  - "My Node Code" sub-card with copy + QR placeholder + share hint.
  *
- * Source-of-truth APIs: `getFederationIdentity()` and `getMyNodeCode()`.
+ * Source-of-truth APIs: `getFederationIdentity()` and `getNodeCode(LOCAL_NODE_URL)`.
  * Both endpoints land on Edge 1.0 — the screen renders gracefully while
  * waiting for either round-trip.
  */
@@ -74,6 +75,8 @@ fun NetworkIdentityScreen(
     val ownerKeyId by viewModel.ownerKeyId.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val error by viewModel.error.collectAsState()
+    val readFailure by viewModel.readFailure.collectAsState()
+    val federationIdNotServed by viewModel.federationIdNotServed.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -132,14 +135,35 @@ fun NetworkIdentityScreen(
                     .testable("screen_federation_identity"),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                if (error != null) {
+                val identityUnread = identity == null && readFailure != null
+                if (error != null && !identityUnread) {
                     ErrorBanner(message = error!!, onDismiss = { viewModel.clearError() })
                 }
-                IdentityHeaderCard(identity = identity, ownerKeyId = ownerKeyId)
-                StatsRow(identity = identity)
-                CapabilitiesCard(identity = identity)
+                if (identityUnread && !loading) {
+                    // The node did not answer for its identity: say which
+                    // failure, instead of a header, a stats row of dashes and
+                    // an empty capabilities card (CSD-032).
+                    ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                        failure = readFailure!!,
+                        tagPrefix = "federation_identity",
+                    )
+                } else {
+                    IdentityHeaderCard(identity = identity, ownerKeyId = ownerKeyId)
+                    StatsRow(identity = identity)
+                    CapabilitiesCard(identity = identity)
+                }
                 NodeCodeCard(nodeCode = nodeCode)
-                FederationIdCard(federationId = federationId)
+                if (federationIdNotServed) {
+                    // The aggregate is the AGENT's route; a bare node serves
+                    // none, so the card would sit in "initializing" forever.
+                    ai.ciris.mobile.shared.ui.screens.ReadFailureBlock(
+                        failure = ai.ciris.mobile.shared.ui.screens.ReadFailure.NotOnThisNode(),
+                        tagPrefix = "federation_id_card",
+                        inline = true,
+                    )
+                } else {
+                    FederationIdCard(federationId = federationId)
+                }
             }
             if (loading && identity == null) {
                 CircularProgressIndicator(
@@ -364,12 +388,16 @@ private fun StatsRow(identity: FederationIdentity?) {
         )
         StatChip(
             tag = "text_peer_count_total",
-            label = localizedString("network.identity_card.peers_total") + ": " + (identity?.peerCountTotal?.toString() ?: "—"),
+            // `peerCountReading`: a zero the node says it did not measure is
+            // drawn as not read, not as 0 (CIRISServer#372, CSD-032).
+            label = localizedString("network.identity_card.peers_total") + ": " +
+                (identity?.let { it.peerCountReading(it.peerCountTotal) } ?: ai.ciris.mobile.shared.ui.screens.NOT_READ),
             modifier = Modifier.weight(1f),
         )
         StatChip(
             tag = "text_peer_count_canonical",
-            label = localizedString("network.identity_card.peers_canonical") + ": " + (identity?.peerCountCanonical?.toString() ?: "—"),
+            label = localizedString("network.identity_card.peers_canonical") + ": " +
+                (identity?.let { it.peerCountReading(it.peerCountCanonical) } ?: ai.ciris.mobile.shared.ui.screens.NOT_READ),
             modifier = Modifier.weight(1f),
         )
     }

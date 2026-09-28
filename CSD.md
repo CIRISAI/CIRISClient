@@ -45,7 +45,7 @@ owner: CIRISClient       # who holds the pen at this stage
 |---|---|---|---|
 | `envisioned` | steward | §1 mission, §2 `ceg:` families touched | §1 falsifiable; every `ceg:` resolves in the registry |
 | `sketched` | client | §2 screens/tags/`shows:`/`states:`, §4 flow | tags may be `proposed:`; flow must parse; floor `unreleased` |
-| `building` | substrate | §3 contracts — routes, owners, payload shapes | no `unconfirmed` left in §3; `shows:` types match the route |
+| `building` | substrate | §3 contracts — routes, owners, payload shapes | no `unconfirmed` left in §3, except a field whose answer is "no" and that names it: `blocked_by: <Repo>#<n>`; `shows:` types match the route |
 | `testable` | client | floor flips off `unreleased`; flow runs on the matrix | every `shows:` row asserted in §4 or disclaimed in §5 |
 | `verified` | steward | §5 acceptance signed; the untested list accepted | flow green on its declared platforms; gallery has a shot per step |
 | `shipped` | — | the release that carries it | floor names a published version |
@@ -55,6 +55,21 @@ owner: CIRISClient       # who holds the pen at this stage
 document waiting on someone who has stopped. The checker tells them apart, so
 "not yet" and "stalled" stop looking identical — which is the failure this repo
 keeps finding under other names.
+
+**"Not yet", "stalled" and "the answer is no" are three states, not two.** A
+field no route serves stays `type: unconfirmed`. Once someone has asked and the
+substrate has declined, it names the issue that says so:
+
+```yaml
+  - ceg: "capacity:{factor}"
+    type: unconfirmed
+    blocked_by: CIRISServer#659      # or a list
+```
+
+The checker accepts that at `building` and still refuses it at `testable`,
+because a value no route serves cannot be asserted. A malformed reference fails,
+and so does a `blocked_by` left on a field that has since been confirmed: a
+blocker that outlives its gap is drift.
 
 **A stage never advances itself.** The pen-holder edits `stage:` deliberately,
 and the checker refuses an advance whose requirements are unmet, naming the
@@ -85,6 +100,29 @@ is what FSD/CSD_STANDARD.md §5 already assigns it.
 
 The checker resolves `surface:` through the same map, so a CSD naming a surface
 the sidebar cannot reach fails at load rather than at 2am against a timeout.
+
+**Known keys only.** `csd:surface` may carry `surface`, `screen`, `scopes`,
+`flow_only`, `entry` and `exit`. Any other key fails. An unread key is not
+harmless: `screen_class:` was briefly used for flow-only screens, and because
+the checker never read it, `screen` was empty and both checks were skipped. A CSD
+declaring the Nodes card as `Screen.Telemetry` passed that way, and so did the
+typo `screeen:`.
+
+**A screen no sidebar row reaches** (Startup, Login, Setup, a claim, a ceremony)
+says so, and the checker holds it to that:
+
+```yaml csd:surface
+surface: null
+screen: Startup                 # must be a member of `sealed class Screen`
+flow_only: true                 # fails if the sidebar CAN reach this screen
+entry: the router's initial screen, and after a reset  # required: how a person arrives
+```
+
+A card that is placed and reachable, but whose hop `nav_map` cannot express,
+is not `flow_only`: the checker rejects that, because the screen resolves. Such
+a card keeps its explanation in prose until the nav map can say it. (The first case was
+Account, a second route to `Screen.Settings`; the row was deleted in #93, and #92's
+`nav_map.build_surfaces()` keeps every surface's hop when two share a screen.)
 
 ## 2.1 Fields — `shows:` (the unified field spec)
 
@@ -232,6 +270,58 @@ finds the paragraph describing the defect. Typed blocks make "what executes" and
   component;
 * every `shows:` row is asserted in §4 or disclaimed in §5 — at `testable`;
 * every DSL predicate names declared tags and cannot be satisfied by an empty set.
+
+### 4.1 §3 routes are checked against the code
+
+A §3 route table is not trusted as written. `packaging/check_csd_routes.py`
+derives, from the code alone, every route a screen calls — `CIRISApp.kt`'s
+`when (currentScreen)` arm → the composables and view models it reaches →
+`CIRISApiClient` → verb, route template and host — and compares it with every
+`/v1/…` route cited in §3 of the CSDs whose `csd:surface` names that screen.
+
+* A route the screen calls and no CSD on that screen cites is **uncited**. The
+  gate fails on a NEW one (ratchet: `packaging/csd_routes_baseline.json`).
+* A route cited but not called is fine when the row's state says why —
+  `missing`, `blocked_by`, proposed, wrong-host, uncalled, or another CSD's card —
+  and is reported as an **unused citation** otherwise.
+* Two cards newly calling the same mutating route fail the gate: that is the
+  same card under two names, or one action with two doors, and a person decides
+  which.
+* **One composable, many Screens.** `Screen.LayerAgent`, `LayerFamily`,
+  `LayerLocalCommunity` and `LayerGlobalCommunities` all render `LayerHubScreen`
+  with a scope; `AffiliationsRoster` and `CommunityRoster` share one composable,
+  the two `*Chats` another. Screens whose `CIRISApp.kt` arm renders the same host
+  composable are **siblings**: ONE card for the duplicate rule (the same
+  `POST /v1/communities` from all four hubs is one door, not four), and a route
+  cited by a CSD naming any sibling counts as cited for every sibling. A CSD
+  still names one screen in `csd:surface`; it need not be repeated per sibling.
+* **Write the route in full.** A §3 row is matched on `/v1/…`; `POST …/leave`
+  with an ellipsis cites nothing. The verb is optional — a row without one
+  matches any verb, and a row with one matches a call whose verb the parser
+  could not read (`? /v1/…`).
+* **The baseline ratchets both ways.** A baseline entry that is no longer
+  uncited or duplicate fails the gate (`baseline is stale`) until `--baseline`
+  re-records it, so paid-down debt cannot quietly come back.
+* Touching a view model charges its init-time reads to the screen (that is what
+  starts them), except through a `reset*`/`clear*`/`forget*`/`dismiss*` member:
+  a logout arm calling `resetSession()` on an app-scoped model it did not build
+  reaches none of that model's routes.
+
+Do not hand-write the rows. Generate them, then add the owner's file:line and
+the state:
+
+```bash
+python3 packaging/check_csd_routes.py --print CSD-039   # §3 rows for CSD-039's screen
+python3 packaging/check_csd_routes.py --report          # the whole map, by namespace
+python3 packaging/check_csd_routes.py --baseline        # after paying debt down
+```
+
+The closure is a regex walk, not a compiler, and says so (`heuristic: true`): it
+follows typed receivers, bound references (`viewModel::confirm`), interfaces
+through their implementations including anonymous `object : Iface { … }`
+backends, and wrappers that take the verb and path as parameters; it does not
+see a view model's state read through a flow collected outside the screen's
+arm, or a lambda handed through navigation.
 
 ## 5. What v3 does not do, stated plainly
 

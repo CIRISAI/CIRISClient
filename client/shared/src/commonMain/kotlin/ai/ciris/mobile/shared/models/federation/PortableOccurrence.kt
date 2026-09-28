@@ -64,6 +64,15 @@ data class AssociateRequest(
     @SerialName("source_dir")
     val sourceDir: String? = null,
     val yubikey: Boolean = false,
+    /**
+     * Custody of the device key this enrolment mints: `tpm` (sealed to this
+     * host) or `software`; absent means the node's default, software. Since
+     * 0.5.218 a `tpm` request on a host with no hardware-sealed storage is
+     * REFUSED up front — `self.associate.hardware_custody_unavailable`, 409,
+     * nothing minted (CIRISServer#639) — where it used to answer 200 with a
+     * software key. The person then chooses software explicitly.
+     */
+    val device: String? = null,
 )
 
 /** Response of `POST /v1/self/associate`. */
@@ -81,4 +90,10 @@ data class AssociateResponse(
     /** The destination filenames installed. */
     @SerialName("files_installed")
     val filesInstalled: List<String> = emptyList(),
+    /**
+     * What this device now HOLDS: `tpm` (sealed to this host) or `software`
+     * (a seed file). Reports the seal, not the request (CIRISServer#621).
+     */
+    @SerialName("device_custody")
+    val deviceCustody: String? = null,
 )

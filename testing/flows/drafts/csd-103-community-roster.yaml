@@ -1,0 +1,50 @@
+csd: CSD-103
+flow: csd_103_community_roster
+title: Who is in each Neighbours room, and what the roster does not claim
+description: >-
+  CSD-103 §4, driven. The roster is the node's fold, as it is now; the card says
+  on every visit that a late member cannot read yet (CIRISPersist#907) and that
+  the group book is not served (CIRISServer#650). Run after csd-102, which
+  founds a room, so there is at least one section with its founder in it.
+# Floor: no release carries this card yet. Every tag below is a literal or a
+# prefix in CommunityTags (ui/screens/CommunitiesScreens.kt).
+client: "unreleased"
+
+steps:
+  - step_id: on_the_roster
+    title: Neighbours › People carries the roster and says what it is not
+    requires:
+      screen: CommunityRoster
+    expect:
+      visible: [screen_community_roster, txt_community_limit_widened_reads, txt_community_group_book_unavailable, btn_community_roster_refresh]
+      absent: [community_roster_not_on_this_node]
+
+  - step_id: a_room_and_its_members
+    title: A founded room shows as a section with its members as rows
+    description: >-
+      Optional: needs a room at this tier (csd-102 founds one). `min: 1` over
+      the row class because the flow cannot know a key id.
+    optional_step: true
+    requires:
+      screen: CommunityRoster
+    expect:
+      state: populated
+      count: {of: "row_community_member_*", min: 1}
+
+  - step_id: refresh_stays
+    title: Refresh re-reads the fold without leaving
+    do:
+      - click: btn_community_roster_refresh
+    expect:
+      screen: CommunityRoster
+      visible: [screen_community_roster]
+
+  - step_id: no_rooms_is_not_an_error
+    title: A tier with no rooms is the empty sentence, not an error
+    optional_step: true
+    requires:
+      screen: CommunityRoster
+      visible: [community_roster_empty]
+    expect:
+      state: empty
+      absent: [community_roster_error, community_roster_not_on_this_node]

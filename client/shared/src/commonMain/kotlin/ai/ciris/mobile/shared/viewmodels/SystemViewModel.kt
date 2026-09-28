@@ -6,6 +6,8 @@ import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.SystemChannelInfo
 import ai.ciris.mobile.shared.ui.screens.SystemScreenData
 import ai.ciris.mobile.shared.ui.screens.SystemServiceInfo
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import ai.ciris.mobile.shared.ui.screens.knownCognitiveState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -23,7 +25,7 @@ import kotlinx.coroutines.launch
  * Features:
  * - Load system health and resource usage
  * - Load environmental impact metrics
- * - Manage processor state (pause/resume)
+ * - The agent's processor state, read-only (control is Runtime's, CSD-024)
  * - Auto-refresh polling
  */
 class SystemViewModel(
@@ -99,18 +101,42 @@ class SystemViewModel(
     }
 
     /**
-     * Load all system data from API
+     * Is an agent attached? Set from the probed `ClientMode` by the caller.
+     *
+     * The agent half of this screen — resources, environmental cost, the
+     * processor's cognitive state and the channels — is read from routes only
+     * an agent serves (`/v1/telemetry/overview`, `/v1/agent/channels`). On a
+     * bare node those reads 404, and they used to land as zeros and a "WORK"
+     * that looked like a healthy idle agent (CSD-025 §6.1). Without an agent
+     * they are not asked at all, and the screen says why.
+     */
+    @kotlin.concurrent.Volatile
+    var agentAttached: Boolean = false
+        private set
+
+    fun setAgentAttached(attached: Boolean) {
+        if (attached == agentAttached) return
+        agentAttached = attached
+        _systemData.value = SystemScreenData(agentAttached = attached)
+    }
+
+    /**
+     * Load all system data from API.
+     *
+     * Pause and resume are NOT here any more: they were a second door onto
+     * `POST /v1/system/runtime/{action}`, with Runtime (CSD-024) the first.
+     * One runtime control, in This agent › Runtime; this screen links to it.
      */
     fun loadSystemData() {
         val method = "loadSystemData"
-        logInfo(method, "Loading system data")
+        logInfo(method, "Loading system data (agentAttached=$agentAttached)")
 
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
 
             try {
-                // Load system health
+                // Health is the node's as well as the agent's (a folded read).
                 val healthResponse = try {
                     apiClient.getSystemHealth()
                 } catch (e: Exception) {
@@ -118,15 +144,19 @@ class SystemViewModel(
                     null
                 }
 
-                // Load telemetry for more detailed info
-                val telemetryResponse = try {
-                    apiClient.getUnifiedTelemetry()
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to load telemetry: ${e.message}")
-                    null
+                if (!agentAttached) {
+                    _systemData.value = SystemScreenData(
+                        health = healthResponse?.status,
+                        agentAttached = false,
+                    )
+                    return@launch
                 }
 
-                // Load environmental metrics
+                // The agent half. A failed telemetry read is SAID, never drawn
+                // as zeros (CSD/3 §2.2).
+                val telemetry = runCatching { apiClient.getUnifiedTelemetry() }
+                telemetry.exceptionOrNull()?.let { logWarn(method, "Failed to load telemetry: ${it.message}") }
+
                 val environmentResponse = try {
                     apiClient.getEnvironmentalMetrics()
                 } catch (e: Exception) {
@@ -134,24 +164,11 @@ class SystemViewModel(
                     null
                 }
 
-                // Load processor status
-                val processorResponse = try {
-                    apiClient.getProcessorStatus()
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to load processor status: ${e.message}")
-                    null
-                }
+                // Channels: a failed read is a failure, not "no channels".
+                val channelsResult = runCatching { apiClient.getChannelsOrThrow() }
 
-                // Load channels
-                val channelsResponse = try {
-                    apiClient.getChannels()
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to load channels: ${e.message}")
-                    null
-                }
-
-                // Build service info from telemetry
-                val services = telemetryResponse?.services?.map { (name, info) ->
+                val t = telemetry.getOrNull()
+                val services = t?.services?.map { (name, info) ->
                     SystemServiceInfo(
                         name = name,
                         healthy = info.healthy,
@@ -161,8 +178,7 @@ class SystemViewModel(
                     )
                 } ?: emptyList()
 
-                // Build channel info
-                val channels = channelsResponse?.channels?.map { channel ->
+                val channels = channelsResult.getOrNull()?.channels?.map { channel ->
                     SystemChannelInfo(
                         channelId = channel.channelId,
                         displayName = channel.displayName,
@@ -174,22 +190,26 @@ class SystemViewModel(
                 } ?: emptyList()
 
                 _systemData.value = SystemScreenData(
-                    health = healthResponse?.status ?: telemetryResponse?.health,
-                    uptime = telemetryResponse?.uptime ?: "N/A",
-                    memoryMb = telemetryResponse?.memoryMb ?: 0,
-                    memoryPercent = telemetryResponse?.memoryPercent ?: 0,
-                    cpuPercent = telemetryResponse?.cpuPercent ?: 0,
-                    diskUsedMb = telemetryResponse?.diskUsedMb ?: 0.0,
+                    health = healthResponse?.status ?: t?.health,
+                    agentAttached = true,
+                    agentReadFailure = telemetry.exceptionOrNull()?.let { ReadFailure.of(it) },
+                    uptime = t?.uptime,
+                    memoryMb = t?.memoryMb ?: 0,
+                    // `/v1/telemetry/overview` carries no memory percentage; it is
+                    // not drawn rather than drawn as "0% utilized".
+                    memoryPercent = null,
+                    cpuPercent = t?.cpuPercent ?: 0,
+                    diskUsedMb = t?.diskUsedMb ?: 0.0,
                     carbonGrams = environmentResponse?.carbonGrams ?: 0.0,
                     energyKwh = environmentResponse?.energyKwh ?: 0.0,
                     costCents = environmentResponse?.costCents ?: 0.0,
                     tokensLastHour = environmentResponse?.tokensLastHour ?: 0,
                     tokens24h = environmentResponse?.tokens24h ?: 0,
-                    isPaused = processorResponse?.isPaused ?: false,
-                    cognitiveState = processorResponse?.cognitiveState ?: telemetryResponse?.cognitiveState ?: "WORK",
-                    queueDepth = processorResponse?.queueDepth ?: 0,
+                    cognitiveState = knownCognitiveState(healthResponse?.cognitiveState)
+                        ?: knownCognitiveState(t?.cognitiveState),
                     services = services,
-                    channels = channels
+                    channels = channels,
+                    channelsFailure = channelsResult.exceptionOrNull()?.let { ReadFailure.of(it) },
                 )
 
                 logInfo(method, "System data loaded: health=${_systemData.value.health}, " +
@@ -236,56 +256,6 @@ class SystemViewModel(
                 )
                 is NodeStateReadout.Malformed -> logWarn(method, "malformed: ${readout.detail}")
                 is NodeStateReadout.Loading -> Unit
-            }
-        }
-    }
-
-    /**
-     * Pause the runtime
-     */
-    fun pauseRuntime() {
-        val method = "pauseRuntime"
-        logInfo(method, "Pausing runtime")
-
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-
-            try {
-                apiClient.pauseRuntime()
-                logInfo(method, "Runtime paused successfully")
-                _successMessage.value = "Runtime paused"
-                loadSystemData() // Reload to show updated status
-            } catch (e: Exception) {
-                logError(method, "Failed to pause runtime: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Failed to pause runtime: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
-    }
-
-    /**
-     * Resume the runtime
-     */
-    fun resumeRuntime() {
-        val method = "resumeRuntime"
-        logInfo(method, "Resuming runtime")
-
-        viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
-
-            try {
-                apiClient.resumeRuntime()
-                logInfo(method, "Runtime resumed successfully")
-                _successMessage.value = "Runtime resumed"
-                loadSystemData() // Reload to show updated status
-            } catch (e: Exception) {
-                logError(method, "Failed to resume runtime: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Failed to resume runtime: ${e.message}"
-            } finally {
-                _isLoading.value = false
             }
         }
     }

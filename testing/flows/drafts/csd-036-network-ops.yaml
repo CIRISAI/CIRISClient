@@ -1,0 +1,66 @@
+csd: CSD-036
+flow: csd_036_network_ops
+title: This node's signer, its mode as read, and its reader policy
+description: >-
+  CSD-036 §4, driven. Two reads are live on the node (GET /v1/federation/identity at
+  src/federation_surface.rs:696; the reader tier at src/admin_ops.rs:4312-4320).
+  One is WRONG-HOST: GET /v1/system/agent-mode is CIRISAgent's
+  (routes/system/agent_mode.py:78), so on a node build the mode has no source —
+  and the card now says so (netops_not_on_this_node) instead of printing the
+  view model's PROXY default. Tier S moved to its own surface (CSD-045).
+# Floor: screen_network_ops, card_netops_identity, row_netops_signer_key,
+# card_netops_mode, row_netops_mode, progress_netops_mode, btn_netops_open_hub
+# (ui/screens/NetworkOpsScreen.kt); netops_error / netops_not_on_this_node and
+# netops_identity_error / netops_identity_not_on_this_node (ReadFailureBlock);
+# section_reader_ops, card_reader_policy, input_reader_subject, btn_reader_fold,
+# chip_reader_standing (ui/screens/SelfReaderOpsSection.kt).
+client: "unreleased"
+
+steps:
+  - step_id: on_network_ops
+    title: The card composes, and carries the reader section
+    description: >-
+      Reached via My things > This node > Network. Both tags: the screen frame alone
+      would compose on a node that answered nothing, and section_reader_ops is the
+      part of this card that reads the NODE rather than the agent.
+    requires:
+      screen: NetworkOps
+    expect:
+      visible: [screen_network_ops, card_netops_identity, row_netops_signer_key, card_netops_mode, section_reader_ops]
+
+  - step_id: the_mode_is_a_reading_or_a_reason
+    title: The mode row is a read value, or absent with the reason
+    description: >-
+      On a with-AI install the row carries CLIENT, PROXY or SERVER as READ. On a
+      node build the row is absent and netops_not_on_this_node says the mode is
+      the agent's to report. Neither branch is the Kotlin default; the tag's
+      value is published so a default and a reading cannot be confused.
+    optional_step: true
+    expect:
+      one_of: {row_netops_mode: [CLIENT, PROXY, SERVER]}
+
+  - step_id: on_a_node_build_the_mode_is_not_on_this_node
+    title: Without an agent the mode card says why it has no reading
+    optional_step: true
+    expect:
+      visible: [netops_not_on_this_node]
+      absent: [row_netops_mode]
+
+  - step_id: the_reader_takes_a_subject
+    title: The reader policy is read for a subject the owner types
+    description: >-
+      The field is a CirisTextField, so /input can type into it; the read is a
+      POST /v1/admin/reader/fold on the node url.
+    do:
+      - input: {input_reader_subject: "not-a-real-subject"}
+      - click: btn_reader_fold
+    expect:
+      screen: NetworkOps
+      visible: [card_reader_policy]
+
+  - step_id: the_hub_is_one_press_away
+    title: The network hub is reachable from here
+    do:
+      - click: btn_netops_open_hub
+    expect:
+      absent: [section_reader_ops]

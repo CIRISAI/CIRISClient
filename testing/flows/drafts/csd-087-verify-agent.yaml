@@ -1,0 +1,65 @@
+csd: CSD-087
+flow: csd_087_verify_agent
+title: A node that cannot serve a registry lookup says so instead of offering the form
+description: >-
+  CSD-087 §4, driven. The only state any node on earth can produce today is the
+  refusal, and that is the state this flow asserts: `card_verify_capability` is
+  shown and the hash form is ABSENT. `GET /v1/registry/lookup` has no route
+  literal in CIRISServer src/*.rs — the string exists only as the capability
+  token "registry:lookup" (src/mesh_genesis.rs:200). CIRISServer#669 is the ask.
+# Floor: txt_verify_title, card_verify_capability, card_verify_result,
+# input_verify_hash, btn_verify_submit and btn_verify_retry_probe are all
+# `testable*` literals in ui/screens/VerifyAgentScreen.kt at v0.5.224.
+client: ">=0.5.224"
+
+steps:
+  - step_id: capability_absent
+    title: Against any released node, the capability notice replaces the form
+    description: >-
+      The `absent:` half carries the claim. A screen that rendered the notice AND
+      the form would let a person type a hash into a control that can never
+      answer, which is the UNDETERMINED-vs-ABSENT distinction CSD-087 §2 is built
+      on and that the node pins server-side
+      (CIRISServer src/conformance.rs:969-978).
+    requires:
+      screen: VerifyAgent
+    expect:
+      state: error
+      visible: [txt_verify_title, card_verify_capability, btn_verify_retry_probe]
+      absent: [input_verify_hash, btn_verify_submit]
+
+  - step_id: retry_reruns_the_probe
+    title: Retrying the probe re-runs it and returns the same honest notice
+    description: >-
+      capabilityProbeAttempt++ (CIRISApp.kt:4008). Asserting we are still on
+      VerifyAgent afterwards separates "the probe re-ran" from "the press
+      navigated away or crashed to a fallback".
+    do:
+      - click: btn_verify_retry_probe
+    expect:
+      screen: VerifyAgent
+      visible: [card_verify_capability]
+      absent: [input_verify_hash]
+
+  - step_id: a_node_that_declares_the_capability
+    title: Where the capability IS declared, the form appears and the notice goes
+    description: >-
+      Optional and will stay optional until CIRISServer#669 ships: no node serves
+      `GET /v1/registry/lookup`, so this step's precondition cannot hold today. It
+      is written now so the day the route lands the assertion already exists
+      rather than being invented under time pressure.
+    optional_step: true
+    requires:
+      screen: VerifyAgent
+      absent: [card_verify_capability]
+    expect:
+      state: populated
+      visible: [input_verify_hash, btn_verify_submit]
+      absent: [card_verify_capability]
+
+  - step_id: back_leaves_the_screen
+    title: Back returns to manage nodes
+    do:
+      - click: btn_verify_back
+    expect:
+      absent: [txt_verify_title]

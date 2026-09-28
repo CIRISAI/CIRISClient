@@ -15,6 +15,8 @@ import ai.ciris.mobile.shared.models.Platform
 import ai.ciris.mobile.shared.models.SetupMode
 import ai.ciris.mobile.shared.models.safety.AgeBand
 import ai.ciris.mobile.shared.models.filterAdaptersForPlatform
+import ai.ciris.mobile.shared.models.optionalFeatureAdapters
+import androidx.compose.material3.RadioButton
 import ai.ciris.mobile.shared.models.forAdapter
 import ai.ciris.mobile.shared.ui.components.setup.AdapterToolDisclosure
 import ai.ciris.mobile.shared.ui.components.setup.ALWAYS_ON_DISCLOSURE_ID
@@ -37,7 +39,6 @@ import ai.ciris.mobile.shared.models.ConfigStepResultData
 import ai.ciris.mobile.shared.models.DiscoveredItemData
 import ai.ciris.mobile.shared.models.LoadableAdaptersData
 import ai.ciris.mobile.shared.ui.components.AdapterWizardDialog
-import ai.ciris.mobile.shared.ui.components.AnnounceDecisionCard
 import ai.ciris.mobile.shared.ui.components.LocalLlmServerDiscovery
 import ai.ciris.mobile.shared.ui.components.rememberLocalLlmDiscoveryState
 import ai.ciris.mobile.shared.viewmodels.DeviceAuthStatus
@@ -538,12 +539,17 @@ fun SetupScreen(
                         // self-claim. Then advance to COMPLETE, which renders the claim
                         // result (in-progress / owned / retry). Non-blocking — a
                         // missing PIN or failed claim surfaces in the UI, never traps.
+                        // One press, one claim (#69): the ViewModel checks the step
+                        // against its own state and holds isSubmitting until the
+                        // claim settles, so a second press is refused.
                         PlatformLogger.i(TAG, " Final step (node client) - self-claiming local node ownership")
-                        viewModel.claimLocalNodeOwnership(
-                            claimPinProvider = claimPinProvider,
-                            nodeCodeProvider = nodeCodeProvider,
-                        )
-                        viewModel.nextStep()
+                        if (!viewModel.finishNodeClientSetup(
+                                claimPinProvider = claimPinProvider,
+                                nodeCodeProvider = nodeCodeProvider,
+                            )
+                        ) {
+                            PlatformLogger.i(TAG, " Final step already ran or is running — ignoring the second press (#69)")
+                        }
                     } else if (isFinalStep) {
                         // AGENT BUILD: CLAIM THEN COMPLETE. The self-claim
                         // (POST /v1/setup/claim-remote) needs a LIVE :4243 bearer
@@ -853,10 +859,16 @@ private fun JoinFederationStep(
     var disclosure by remember { mutableStateOf<ConsentDisclosure?>(null) }
     var loadError by remember { mutableStateOf<String?>(null) }
     var expanded by remember { mutableStateOf(false) }
+    var loadAttempt by remember { mutableStateOf(0) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(loadAttempt) {
+        loadError = null
         try {
-            disclosure = apiClient.getConsentDisclosure()
+            val d = apiClient.getConsentDisclosure()
+            disclosure = d
+            // No replication grant → no question to answer. Say so, and let the
+            // step be left; without this Next stayed disabled with no cause shown.
+            if (d.grant("replication") == null) viewModel.noteTraceQuestionAbsent()
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "consent disclosure unavailable: ${e.message}")
             loadError = e.message ?: "unavailable"
@@ -889,11 +901,30 @@ private fun JoinFederationStep(
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 12.dp)
             )
-            Text(
-                text = loadError ?: l10nOr("mobile.status_loading", "Loading…"),
-                color = if (loadError != null) SetupColors.ErrorText else SetupColors.TextSecondary,
-                fontSize = 14.sp,
-            )
+            val err = loadError
+            if (err == null) {
+                Text(
+                    text = l10nOr("mobile.status_loading", "Loading…"),
+                    color = SetupColors.TextSecondary,
+                    fontSize = 14.sp,
+                    modifier = Modifier.testable("setup_consent_loading"),
+                )
+            } else {
+                // ERROR, never an empty page: the question cannot be asked
+                // without the substrate's words, so Next stays disabled and the
+                // step says why, with a way to ask again.
+                Text(
+                    text = localizedString("mobile.setup_consent_error", mapOf("reason" to err)),
+                    color = SetupColors.ErrorText,
+                    fontSize = 14.sp,
+                    modifier = Modifier.testable("setup_consent_error", err),
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                TextButton(
+                    onClick = { loadAttempt++ },
+                    modifier = Modifier.testableClickable("btn_setup_consent_retry") { loadAttempt++ },
+                ) { Text(localizedString("mobile.setup_consent_retry"), color = SetupColors.Primary) }
+            }
             return@Column
         }
 
@@ -920,12 +951,27 @@ private fun JoinFederationStep(
                     lineHeight = 19.sp,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                ConsentToggleRow(
-                    label = localizedString("mobile.announce_decision_toggle_label"),
-                    checked = state.announceOwnership,
-                    onCheckedChange = { viewModel.setAnnounceOwnership(it) },
-                    testTag = "toggle_announce_ownership",
-                )
+                if (state.isMinorBand()) {
+                    // Not offered to an under-18 or undeclared account: minors are
+                    // not discoverable by unconnected adults (CIRISConstitution#111)
+                    // and the server's limit for them has not landed (0.5.218).
+                    Text(
+                        text = localizedString("mobile.setup_announce_not_offered_minor"),
+                        color = SetupColors.InfoText,
+                        fontSize = 13.sp,
+                        lineHeight = 19.sp,
+                        modifier = Modifier.testable("txt_announce_not_offered"),
+                    )
+                } else {
+                    // Per device (CIRISServer#655): this switch announces THIS
+                    // device, the one people can reach you through.
+                    ConsentToggleRow(
+                        label = localizedString("mobile.announce_decision_toggle_label"),
+                        checked = state.announceOwnership,
+                        onCheckedChange = { viewModel.setAnnounceOwnership(it) },
+                        testTag = "toggle_announce_ownership",
+                    )
+                }
             }
         }
 
@@ -950,12 +996,23 @@ private fun JoinFederationStep(
         // the question, before the choice: no capacity score, no commons
         // credits. What follows — be scored, location — only applies to traces
         // that are sent, so it appears once the answer is Yes.
-        d.grant("replication")?.let { g ->
+        val replication = d.grant("replication")
+        if (replication != null) {
             TraceConsentQuestion(
-                grant = g,
+                grant = replication,
                 answered = state.traceConsentAnswered,
                 consented = state.accordMetricsConsent,
                 onAnswer = { viewModel.setAccordMetricsConsent(it) },
+            )
+        } else {
+            // CSD-082 §2 `empty`: the node offered no trace grant, so there is
+            // nothing to answer and nothing is sent. Said on screen, not implied.
+            Text(
+                text = localizedString("mobile.setup_consent_no_trace_grant"),
+                color = SetupColors.TextSecondary,
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                modifier = Modifier.padding(vertical = 8.dp).testable("setup_consent_empty"),
             )
         }
 
@@ -1483,7 +1540,7 @@ private fun AiStep(
                                 viewModel.selectLocalOnDeviceProvider()
                                 providerExpanded = false
                             },
-                            modifier = Modifier.testableClickable("menu_provider_mobile_local") {
+                            modifier = Modifier.testableClickable("menu_provider_mobile_local", enabled = !isStub) {
                                 if (!isStub) {
                                     viewModel.selectLocalOnDeviceProvider()
                                     providerExpanded = false
@@ -1991,6 +2048,11 @@ private fun AiStep(
                 }
             }
         }
+
+        // What the agent will be able to DO — templates, optional features, and
+        // the tools each one grants. Read from the agent's setup routes; nothing
+        // here was reached before the setup review (CSD-082 §3).
+        OptionalFeaturesSection(viewModel = viewModel, state = state, apiClient = apiClient)
     }
     VerticalScrollbar(
         scrollState = scrollState,
@@ -2288,32 +2350,17 @@ private fun FederationIdentitySection(
                         SecureWith2FACard(state = state, viewModel = viewModel)
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        // Federation opt-in — now a FIRST-CLASS decision: announcing
-                        // is upstream of everything the community touches (traces +
-                        // joining communities). Privacy-first, default OFF. The trace
-                        // opt-in (accordMetricsConsent) is GATED inside this card — it
-                        // can only be enabled once the user announces (un-announced
-                        // nodes never federate their traces). Turning announce OFF also
-                        // clears the trace opt-in so state stays consistent.
-                        AnnounceDecisionCard(
-                            announce = state.announceOwnership,
-                            onAnnounceChange = { on ->
-                                viewModel.setAnnounceOwnership(on)
-                                // A consequence, not an answer: screen 2 still asks.
-                                if (!on) viewModel.setAccordMetricsConsent(false, answered = false)
-                            },
-                            traceOptIn = state.accordMetricsConsent,
-                            onTraceOptInChange = { viewModel.setAccordMetricsConsent(it) },
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-
+                        // Announce is NOT asked here. Screen 2 (Join the federation)
+                        // asks it once, per device, from the substrate's own
+                        // disclosure; asking it on screen 1 too was the same
+                        // question twice with one answer (CSD-082 §1).
                         Button(
                             // Block minting until the name is valid: minting with a
                             // blank/generic name is exactly what produced the
                             // colliding `ciris-client-user` identity.
                             onClick = { viewModel.runFederationIdentitySetup() },
                             enabled = !fed.inProgress && !labelHasError,
-                            modifier = Modifier.testableClickable("btn_federation_identity") {
+                            modifier = Modifier.testableClickable("btn_federation_identity", enabled = !fed.inProgress && !labelHasError) {
                                 if (!labelHasError) viewModel.runFederationIdentitySetup()
                             }
                         ) {
@@ -2341,7 +2388,7 @@ private fun FederationIdentitySection(
                         TextButton(
                             onClick = { viewModel.toggleAssociateExisting() },
                             enabled = !fed.inProgress,
-                            modifier = Modifier.testableClickable("btn_federation_associate_existing") {
+                            modifier = Modifier.testableClickable("btn_federation_associate_existing", enabled = !fed.inProgress) {
                                 viewModel.toggleAssociateExisting()
                             }
                         ) {
@@ -2364,7 +2411,10 @@ private fun FederationIdentitySection(
                                 enabled = !fed.inProgress && fed.associateKeyId.isNotBlank(),
                                 modifier = Modifier
                                     .padding(top = 8.dp)
-                                    .testableClickable("btn_federation_associate_submit") {
+                                    .testableClickable(
+                                        "btn_federation_associate_submit",
+                                        enabled = !fed.inProgress && fed.associateKeyId.isNotBlank(),
+                                    ) {
                                         viewModel.associateExistingFederationId()
                                     }
                             ) {
@@ -2382,7 +2432,7 @@ private fun FederationIdentitySection(
                         TextButton(
                             onClick = { showImportPicker = true },
                             enabled = !fed.inProgress,
-                            modifier = Modifier.testableClickable("btn_federation_import_usb") {
+                            modifier = Modifier.testableClickable("btn_federation_import_usb", enabled = !fed.inProgress) {
                                 showImportPicker = true
                             }
                         ) {
@@ -2453,18 +2503,19 @@ private fun FederationIdentitySection(
                                 }
                                 Spacer(modifier = Modifier.height(6.dp))
                                 Row {
+                                    // Enabled ONLY on a folder the importer
+                                    // itself says it would accept — the button
+                                    // and the outcome come from one answer, and
+                                    // /click obeys the same one.
+                                    val canImport = !fed.inProgress &&
+                                        !fed.inspecting &&
+                                        (fed.inspection?.importable == true ||
+                                            fed.inspectUnavailable)
                                     TextButton(
-                                        // Enabled ONLY on a folder the importer
-                                        // itself says it would accept — the button
-                                        // and the outcome come from one answer.
-                                        enabled =
-                                            !fed.inProgress &&
-                                                !fed.inspecting &&
-                                                (fed.inspection?.importable == true ||
-                                                    fed.inspectUnavailable),
+                                        enabled = canImport,
                                         onClick = { viewModel.importPortableFromUsb(picked) },
                                         modifier =
-                                            Modifier.testableClickable("btn_keyset_import_confirm") {
+                                            Modifier.testableClickable("btn_keyset_import_confirm", enabled = canImport) {
                                                 viewModel.importPortableFromUsb(picked)
                                             },
                                     ) { Text(localizedString("mobile.keyset_import_confirm")) }
@@ -3390,7 +3441,7 @@ private fun NavigationButtons(
                 OutlinedButton(
                     onClick = onBack,
                     enabled = !isSubmitting,
-                    modifier = Modifier.weight(1f).testableClickable("btn_back") { onBack() },
+                    modifier = Modifier.weight(1f).testableClickable("btn_back", enabled = !isSubmitting) { onBack() },
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = SetupColors.TextSecondary
                     )
@@ -3407,7 +3458,7 @@ private fun NavigationButtons(
                     // Equal weights when Back is visible; full width when it is not.
                     modifier = Modifier
                         .weight(if (currentStep == SetupStep.YOU) 2f else 1f)
-                        .testableClickable("btn_next") { onNext() },
+                        .testableClickable("btn_next", enabled = canProceed && !isSubmitting) { onNext() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = SetupColors.Primary,
                         contentColor = Color.White
@@ -3429,6 +3480,344 @@ private fun NavigationButtons(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/**
+ * **Optional features** — on the AI step, because they configure the agent this
+ * step powers: which identity template it starts from, which optional
+ * adapters it runs, and — before any of them is accepted — what each one lets
+ * the agent do, including the tools no choice controls (CIRISAgent
+ * `routes/setup/providers.py`: `/templates`, `/adapters`, `/tool-disclosure`).
+ *
+ * Wide tool access is intended; this restricts nothing. It is the disclosure
+ * that makes accepting the enabled-by-default features an informed choice
+ * (CC 1.x "procedures for informed consent"), so a read that FAILED says so and
+ * is never drawn as an empty list.
+ */
+@Composable
+private fun OptionalFeaturesSection(
+    viewModel: SetupViewModel,
+    state: SetupFormState,
+    apiClient: CIRISApiClient,
+) {
+    var attempt by remember { mutableStateOf(0) }
+    LaunchedEffect(attempt) {
+        viewModel.loadAvailableTemplates { apiClient.getSetupTemplates() }
+        viewModel.loadToolDisclosure { apiClient.getSetupToolDisclosure() }
+    }
+    // The adapter list is FILTERED by the service mode (a service-only adapter
+    // is offered under CIRIS Proxy, not under BYOK), so it is keyed on the mode
+    // too: switching re-filters, and loadAvailableAdapters reconciles the
+    // selection against what the new list offers.
+    val useCirisProxy = state.useCirisProxy()
+    LaunchedEffect(attempt, useCirisProxy) {
+        val platform = when (getPlatform()) {
+            ai.ciris.mobile.shared.platform.Platform.ANDROID -> Platform.ANDROID
+            ai.ciris.mobile.shared.platform.Platform.IOS -> Platform.IOS
+            else -> Platform.DESKTOP
+        }
+        viewModel.loadAvailableAdapters {
+            optionalFeatureAdapters(
+                filterAdaptersForPlatform(apiClient.getSetupAdapters(), platform, useCirisProxy)
+            )
+        }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(top = 24.dp).testable("setup_optional_features")) {
+        PortalConnectSection(viewModel = viewModel, state = state, apiClient = apiClient)
+
+        // ── Template ────────────────────────────────────────────────────────
+        Text(
+            text = localizedString("mobile.setup_template_title"),
+            color = SetupColors.TextPrimary,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            text = localizedString("mobile.setup_template_desc"),
+            color = SetupColors.TextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+        )
+        when {
+            state.templatesLoading -> Text(
+                text = l10nOr("mobile.status_loading", "Loading…"),
+                color = SetupColors.TextSecondary,
+                fontSize = 13.sp,
+            )
+            state.templatesError -> Text(
+                text = localizedString("mobile.setup_templates_error"),
+                color = SetupColors.ErrorText,
+                fontSize = 13.sp,
+                modifier = Modifier.testable("setup_templates_error"),
+            )
+            state.availableTemplates.isEmpty() -> Text(
+                text = localizedString("mobile.setup_template_default"),
+                color = SetupColors.TextSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.testable("setup_templates_empty"),
+            )
+            else -> state.availableTemplates.forEach { t ->
+                val selected = t.id == state.selectedTemplateId
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testableClickable("opt_template_${t.id}") { viewModel.setSelectedTemplate(t.id) }
+                        .padding(vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = selected, onClick = { viewModel.setSelectedTemplate(t.id) })
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = t.name,
+                            color = SetupColors.TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                        )
+                        Text(text = t.description, color = SetupColors.TextSecondary, fontSize = 12.sp)
+                        t.stewardship_tier?.let { tier ->
+                            // Book VI stewardship tier, 1-5: higher means more oversight.
+                            Text(
+                                text = localizedString("mobile.setup_template_stewardship_tier", mapOf("tier" to tier.toString())),
+                                color = SetupColors.TextSecondary,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── Optional features (adapters), each with what it grants ─────────
+        Text(
+            text = localizedString("mobile.setup_adapters_title"),
+            color = SetupColors.TextPrimary,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(top = 20.dp),
+        )
+        Text(
+            text = localizedString("mobile.setup_adapters_desc"),
+            color = SetupColors.TextSecondary,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+        )
+        when {
+            state.adaptersLoading -> Text(
+                text = l10nOr("mobile.status_loading", "Loading…"),
+                color = SetupColors.TextSecondary,
+                fontSize = 13.sp,
+            )
+            state.adaptersError -> {
+                Text(
+                    text = localizedString("mobile.setup_adapters_error"),
+                    color = SetupColors.ErrorText,
+                    fontSize = 13.sp,
+                    modifier = Modifier.testable("setup_adapters_error"),
+                )
+                TextButton(
+                    onClick = { attempt++ },
+                    modifier = Modifier.testableClickable("btn_setup_features_retry") { attempt++ },
+                ) { Text(localizedString("mobile.setup_consent_retry"), color = SetupColors.Primary) }
+            }
+            state.availableAdapters.isEmpty() -> Text(
+                text = localizedString("mobile.setup_adapters_empty"),
+                color = SetupColors.TextSecondary,
+                fontSize = 13.sp,
+                modifier = Modifier.testable("setup_adapters_empty"),
+            )
+            else -> state.availableAdapters.forEach { adapter ->
+                val enabled = adapter.id in state.enabledAdapterIds
+                val onChange: (Boolean) -> Unit = { on ->
+                    // An adapter that needs configuring is enabled by finishing
+                    // its wizard, not by the switch alone.
+                    if (on && adapter.requires_config) viewModel.startAdapterWizard(adapter.id)
+                    else viewModel.toggleAdapter(adapter.id, on)
+                }
+                Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    ConsentToggleRow(
+                        label = adapter.name,
+                        checked = enabled,
+                        onCheckedChange = onChange,
+                        testTag = "toggle_adapter_${adapter.id}",
+                    )
+                    Text(text = adapter.description, color = SetupColors.TextSecondary, fontSize = 12.sp)
+                    if (adapter.missing_binaries.isNotEmpty()) {
+                        Text(
+                            text = localizedString(
+                                "mobile.setup_adapter_missing_binaries",
+                                mapOf("list" to adapter.missing_binaries.joinToString(", ")),
+                            ),
+                            color = SetupColors.ErrorText,
+                            fontSize = 12.sp,
+                        )
+                    }
+                    AdapterToolDisclosure(
+                        adapterId = adapter.id,
+                        disclosure = viewModel.toolDisclosureFor(adapter.id),
+                        expanded = adapter.id in state.expandedToolDisclosureIds,
+                        onToggle = { viewModel.toggleToolDisclosureExpanded(adapter.id) },
+                        loading = state.toolDisclosureLoading,
+                    )
+                }
+            }
+        }
+
+        // ── What no choice controls ─────────────────────────────────────────
+        Spacer(modifier = Modifier.height(12.dp))
+        if (state.toolDisclosureError) {
+            Text(
+                text = localizedString("mobile.setup_tool_disclosure_error"),
+                color = SetupColors.ErrorText,
+                fontSize = 13.sp,
+                modifier = Modifier.testable("setup_tool_disclosure_error"),
+            )
+        }
+        AlwaysOnToolDisclosure(
+            groups = viewModel.alwaysOnToolDisclosures(),
+            expanded = ALWAYS_ON_DISCLOSURE_ID in state.expandedToolDisclosureIds,
+            onToggle = { viewModel.toggleToolDisclosureExpanded(ALWAYS_ON_DISCLOSURE_ID) },
+        )
+    }
+}
+
+/**
+ * **Provisioned by an organisation?** The node's Portal device grant (RFC 8628
+ * shape): `POST /v1/setup/connect-node` on this device's node returns a code
+ * and a link, the person approves it in the Portal, and
+ * `GET /v1/setup/connect-node/status` returns the template, adapters and
+ * stewardship tier the organisation approved, which the completion request
+ * then carries (`SetupViewModel.buildSetupRequest`, `nodeFlowData`). Backing
+ * out calls `POST /v1/setup/reset-device-auth`, so the node's persisted
+ * session file does not outlive the choice. CIRISServer
+ * `src/auth/device_auth.rs:371-377`; the Portal host is allow-listed there, so
+ * any other host comes back refused by name and is shown verbatim.
+ *
+ * Optional and collapsed: most installs are not provisioned by anyone.
+ */
+@Composable
+private fun PortalConnectSection(
+    viewModel: SetupViewModel,
+    state: SetupFormState,
+    apiClient: CIRISApiClient,
+) {
+    val auth = state.deviceAuth
+    val scope = rememberCoroutineScope()
+    var open by remember { mutableStateOf(auth.status != DeviceAuthStatus.IDLE) }
+
+    // Poll while the Portal is waiting on the person, at the interval it asked for.
+    LaunchedEffect(auth.status, auth.deviceCode) {
+        while (viewModel.state.value.deviceAuth.status == DeviceAuthStatus.WAITING) {
+            delay(auth.interval.coerceAtLeast(2) * 1000L)
+            viewModel.pollNodeAuthStatus { code, portal -> apiClient.pollNodeAuthStatus(code, portal) }
+        }
+    }
+    val cancel: () -> Unit = {
+        viewModel.resetDeviceAuth()
+        scope.launch { apiClient.resetDeviceAuthOnServer() }
+    }
+
+    Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)) {
+        TextButton(
+            onClick = { open = !open },
+            modifier = Modifier.testableClickable("btn_portal_connect_open") { open = !open },
+        ) {
+            Text(
+                text = (if (open) "▾ " else "▸ ") + localizedString("mobile.setup_portal_title"),
+                color = SetupColors.Primary,
+                fontSize = 14.sp,
+            )
+        }
+        if (!open) return@Column
+        Text(
+            text = localizedString("mobile.setup_portal_desc"),
+            color = SetupColors.TextSecondary,
+            fontSize = 12.sp,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        when (auth.status) {
+            DeviceAuthStatus.IDLE, DeviceAuthStatus.CONNECTING -> {
+                // CirisTextField declares its own input sink; the tag is a val
+                // so check_ui_drivable.py does not read this named argument
+                // as a when-branch text dispatch.
+                val portalUrlTag = "input_portal_url"
+                ai.ciris.mobile.shared.ui.primitives.CirisTextField(
+                    tag = portalUrlTag,
+                    value = auth.nodeUrl,
+                    onValueChange = { viewModel.updateNodeUrl(it) },
+                    placeholder = "portal.ciris.ai",
+                    enabled = auth.status == DeviceAuthStatus.IDLE,
+                )
+                val canConnect = auth.status == DeviceAuthStatus.IDLE && auth.nodeUrl.isNotBlank()
+                val connect: () -> Unit = {
+                    if (canConnect) scope.launch {
+                        viewModel.startNodeConnection { url -> apiClient.connectToNode(url) }
+                    }
+                }
+                Button(
+                    onClick = connect,
+                    enabled = canConnect,
+                    modifier = Modifier.padding(top = 8.dp)
+                        .testableClickable("btn_portal_connect", enabled = canConnect) { connect() },
+                ) {
+                    Text(
+                        if (auth.status == DeviceAuthStatus.CONNECTING) l10nOr("mobile.status_loading", "Loading…")
+                        else localizedString("mobile.setup_portal_connect")
+                    )
+                }
+            }
+            DeviceAuthStatus.WAITING -> {
+                Text(
+                    text = localizedString("mobile.setup_portal_waiting", mapOf("code" to auth.userCode)),
+                    color = SetupColors.TextPrimary,
+                    fontSize = 14.sp,
+                    modifier = Modifier.testable("txt_portal_user_code", auth.userCode),
+                )
+                Row(modifier = Modifier.padding(top = 8.dp)) {
+                    Button(
+                        onClick = { openUrlInBrowser(auth.verificationUri) },
+                        modifier = Modifier.testableClickable("btn_portal_open_link") { openUrlInBrowser(auth.verificationUri) },
+                    ) { Text(localizedString("mobile.setup_portal_open_link")) }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    TextButton(
+                        onClick = cancel,
+                        modifier = Modifier.testableClickable("btn_portal_cancel") { cancel() },
+                    ) { Text(localizedString("mobile.setup_portal_cancel"), color = SetupColors.Primary) }
+                }
+            }
+            DeviceAuthStatus.COMPLETE -> {
+                Text(
+                    text = localizedString(
+                        "mobile.setup_portal_complete",
+                        mapOf(
+                            "template" to (auth.provisionedTemplate ?: "default"),
+                            "org" to (auth.orgId ?: "-"),
+                            "tier" to (auth.stewardshipTier?.toString() ?: "-"),
+                        ),
+                    ),
+                    color = SetupColors.TextPrimary,
+                    fontSize = 13.sp,
+                    modifier = Modifier.testable("setup_portal_complete", auth.provisionedTemplate ?: ""),
+                )
+                TextButton(
+                    onClick = cancel,
+                    modifier = Modifier.testableClickable("btn_portal_cancel") { cancel() },
+                ) { Text(localizedString("mobile.setup_portal_undo"), color = SetupColors.Primary) }
+            }
+            DeviceAuthStatus.ERROR -> {
+                Text(
+                    text = localizedString("mobile.setup_portal_error", mapOf("reason" to (auth.error ?: ""))),
+                    color = SetupColors.ErrorText,
+                    fontSize = 13.sp,
+                    modifier = Modifier.testable("setup_portal_error", auth.error ?: ""),
+                )
+                TextButton(
+                    onClick = cancel,
+                    modifier = Modifier.testableClickable("btn_portal_cancel") { cancel() },
+                ) { Text(localizedString("mobile.setup_portal_try_again"), color = SetupColors.Primary) }
             }
         }
     }

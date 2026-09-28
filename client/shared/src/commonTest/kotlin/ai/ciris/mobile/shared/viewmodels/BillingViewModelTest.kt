@@ -159,6 +159,25 @@ class BillingViewModelTest {
         )
     }
 
+    @Test
+    fun loadBalance_503_isAnOutageNotAnExpiredSignIn() = runTest {
+        // The agent's 503 is `billing_unavailable`: the credit service was
+        // unreachable, the balance is unchanged. It used to be classed as an
+        // auth error and, after the retry, shown as "session expired".
+        val apiClient = FakeCIRISApiClientForBilling(
+            getCreditsException = Exception("HTTP 503 Service Unavailable: billing_unavailable")
+        )
+        val viewModel = createViewModel(apiClient)
+
+        viewModel.loadBalance()
+        advanceTimeBy(5000)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.authExpired.value, "a 503 must not be read as a stale credential")
+        assertNotNull(viewModel.errorMessage.value)
+        assertTrue(viewModel.errorMessage.value!!.contains("503"))
+    }
+
     // --- Purchase flow tests ---
 
     @Test

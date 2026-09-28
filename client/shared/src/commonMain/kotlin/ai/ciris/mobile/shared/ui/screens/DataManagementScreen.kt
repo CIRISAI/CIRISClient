@@ -41,7 +41,9 @@ fun DataManagementScreen(
     viewModel: DataManagementViewModel,
     onNavigateBack: () -> Unit,
     onResetSetup: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** An agent is attached: the receipt section shows, and the trace id pre-fills (CSD-039 §2). */
+    hasAgent: Boolean = false,
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val lensIdentifier by viewModel.lensIdentifier.collectAsState()
@@ -311,7 +313,8 @@ fun DataManagementScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("data_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -327,6 +330,7 @@ fun DataManagementScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .testable("data_loaded")
                     .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -363,6 +367,20 @@ fun DataManagementScreen(
                     onConsentChanged = { consent -> viewModel.updateAccordConsent(consent) },
                     onEnableAdapter = { viewModel.enableAccordMetrics() }
                 )
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                // Erasure on this node, and the receipt that proves an erasure
+                // (CSD-039 §3). The node section shows on every build; the
+                // receipt routes are the agent's. A node-only build pre-fills
+                // nothing: the node's own id files no traces.
+                NodeTraceErasureSection(
+                    controller = viewModel.erasure,
+                    prefillAgentIdHash = if (hasAgent) lensIdentifier?.agentIdHash else null,
+                )
+                if (hasAgent) {
+                    DeletionReceiptSection(controller = viewModel.erasure)
+                }
 
                 HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
 

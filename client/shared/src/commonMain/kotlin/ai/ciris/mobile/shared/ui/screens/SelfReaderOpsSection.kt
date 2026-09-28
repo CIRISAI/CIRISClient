@@ -16,8 +16,14 @@ import ai.ciris.mobile.shared.models.selfreader.SelfAxis
 import ai.ciris.mobile.shared.models.selfreader.SelfAxisStandingDto
 import ai.ciris.mobile.shared.models.selfreader.SelfStanding
 import ai.ciris.mobile.shared.models.selfreader.SelfStandingOutcome
+import ai.ciris.mobile.shared.models.selfreader.OwnerAuthority
+import ai.ciris.mobile.shared.models.selfreader.delegationForAct
+import ai.ciris.mobile.shared.models.selfreader.ownerAuthority
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.ui.primitives.CirisTextField
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -32,10 +38,11 @@ import kotlinx.coroutines.launch
 
 /**
  * Tier S (self-directed) + tier R (per-reader) — `CIRISServer/src/admin_ops.rs`,
- * the two rungs that act on NOBODY else. Hosted by [NetworkOpsScreen], which is
- * already "this node, locally" — tier S is this node's own standing and tier R
- * is this node's own reader policy, so both belong beside the node's federation
- * identity rather than beside the agent's runtime pipeline.
+ * the two rungs that act on NOBODY else. Tier S, this node's own standing, is
+ * its own surface ([NodeSelfStandingScreen], This node › Own standing, CSD-045);
+ * tier R, this node's own reader policy, is hosted by [NetworkOpsScreen]
+ * (CSD-036). Both are facts about this node's local ledger, not the agent's
+ * runtime pipeline.
  *
  * The three things this file is built to render correctly:
  *
@@ -54,15 +61,30 @@ import kotlinx.coroutines.launch
  *    warning icon, never a failure toast.
  */
 @Composable
-fun SelfAndReaderOpsSection(
+fun SelfStandingSection(
+    apiClient: CIRISApiClient,
+    modifier: Modifier = Modifier,
+) {
+    // Tier S has its own surface, This node › Own standing (CSD-045): the
+    // warrant-canary act is not a row on the network card.
+    Column(
+        modifier = modifier.fillMaxWidth().testable("section_self_standing"),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        SelfDirectedCard(apiClient)
+    }
+}
+
+/** Tier R — this node's reader policy. Stays on This node › Network (CSD-036). */
+@Composable
+fun ReaderPolicySection(
     apiClient: CIRISApiClient,
     modifier: Modifier = Modifier,
 ) {
     Column(
-        modifier = modifier.fillMaxWidth().testable("section_self_reader_ops"),
+        modifier = modifier.fillMaxWidth().testable("section_reader_ops"),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        SelfDirectedCard(apiClient)
         ReaderPolicyCard(apiClient)
     }
 }
@@ -74,22 +96,31 @@ fun SelfAndReaderOpsSection(
 /** One pending tier S act, waiting on the operator's delegation + reason. */
 private data class SelfActPrompt(val axis: String, val declaring: Boolean)
 
+/** A filled-in tier S act, waiting on the ConfirmSheet. */
+private data class SelfActReview(
+    val prompt: SelfActPrompt,
+    val delegationId: String,
+    val reason: String,
+    val compelledBy: String?,
+)
+
 @Composable
 private fun SelfDirectedCard(apiClient: CIRISApiClient) {
     var outcome by remember { mutableStateOf<SelfStandingOutcome?>(null) }
     var loading by remember { mutableStateOf(true) }
     var prompt by remember { mutableStateOf<SelfActPrompt?>(null) }
+    var review by remember { mutableStateOf<SelfActReview?>(null) }
     var lastAct by remember { mutableStateOf<SelfActOutcome?>(null) }
     var working by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    suspend fun reload() {
+    suspend fun reloadStandings() {
         loading = true
         outcome = apiClient.getSelfStanding()
         loading = false
     }
 
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) { reloadStandings() }
 
     SelfROpsCard(testTag = "card_self_directed") {
         Row(
@@ -110,10 +141,10 @@ private fun SelfDirectedCard(apiClient: CIRISApiClient) {
                 )
             }
             TextButton(
-                onClick = { scope.launch { reload() } },
+                onClick = { scope.launch { reloadStandings() } },
                 enabled = !loading,
                 modifier = Modifier.testableClickable("btn_self_refresh") {
-                    scope.launch { reload() }
+                    scope.launch { reloadStandings() }
                 },
             ) { Text(uiText("network_ops.self.refresh", "Re-read standings")) }
         }
@@ -234,12 +265,71 @@ private fun SelfDirectedCard(apiClient: CIRISApiClient) {
         lastAct?.let { SelfActResult(it) }
     }
 
+    // No read yet is not "the node cannot say": wait for the read before the
+    // act is offered its authority, so a fallback field never flashes up.
+    val authority = outcome?.ownerAuthority() ?: OwnerAuthority.NotSupplied()
+
     prompt?.let { p ->
         SelfActDialog(
             prompt = p,
-            working = working,
+            authority = authority,
             onDismiss = { prompt = null },
-            onConfirm = { delegationId, reason, compelledBy ->
+            onReview = { delegationId, reason, compelledBy ->
+                prompt = null
+                review = SelfActReview(p, delegationId, reason, compelledBy)
+            },
+        )
+    }
+
+    // An act on this rung is a permanent, attributed record: a lift supersedes
+    // it and never erases it. So it confirms, with the three facts.
+    review?.let { r ->
+        val p = r.prompt
+        val (delegationId, reason, compelledBy) = Triple(r.delegationId, r.reason, r.compelledBy)
+        ConfirmSheet(
+            title = if (p.declaring) axisDeclareLabel(p.axis) else axisLiftLabel(p.axis),
+            facts = listOf(
+                ConfirmFact(
+                    uiText("network_ops.self.confirm.what", "What is recorded"),
+                    listOfNotNull(
+                        axisTitle(p.axis) + " · " + if (p.declaring) {
+                            uiText("network_ops.self.confirm.declared", "declared")
+                        } else {
+                            uiText("network_ops.self.confirm.lifted", "lifted")
+                        },
+                        reason,
+                        compelledBy?.takeIf { p.axis == SelfAxis.LEGAL_COMPULSION && p.declaring }?.let {
+                            it.trim().ifBlank { uiText("network_ops.self.confirm.not_named", "authority not named") }
+                        },
+                    ).joinToString("\n"),
+                ),
+                ConfirmFact(
+                    uiText("network_ops.self.confirm.changes", "What it changes"),
+                    uiText(
+                        "network_ops.self.confirm.changes_value",
+                        "Nothing this node does. It is a record on this node, and it stays in the " +
+                            "history after it is lifted.",
+                    ),
+                ),
+                ConfirmFact(
+                    uiText("network_ops.self.confirm.signs", "Who signs"),
+                    uiText(
+                        "network_ops.self.confirm.signs_value",
+                        mapOf("delegation" to delegationId),
+                        "You, as this node's owner, under delegation $delegationId",
+                    ),
+                    mono = true,
+                ),
+            ),
+            confirmLabel = if (working) {
+                uiText("network_ops.self.dialog.working", "Recording…")
+            } else {
+                uiText("network_ops.self.dialog.confirm", "Record")
+            },
+            onDismiss = { review = null },
+            tagPrefix = "self_act",
+            onConfirm = {
+                if (working) return@ConfirmSheet
                 working = true
                 scope.launch {
                     val result = when (p.axis to p.declaring) {
@@ -254,8 +344,8 @@ private fun SelfDirectedCard(apiClient: CIRISApiClient) {
                     }
                     lastAct = result
                     working = false
-                    prompt = null
-                    if (result is SelfActOutcome.Recorded) reload()
+                    review = null
+                    if (result is SelfActOutcome.Recorded) reloadStandings()
                 }
             },
         )
@@ -497,18 +587,26 @@ private fun SelfActResult(outcome: SelfActOutcome) {
     }
 }
 
-/** delegation + reason, and `compelled_by` on the compulsion declaration ONLY. */
+/**
+ * reason, and `compelled_by` on the compulsion declaration ONLY. The delegation
+ * the act is taken under comes from the node when it can name it
+ * (CIRISServer#676); the typed id survives only where it cannot.
+ */
 @Composable
 private fun SelfActDialog(
     prompt: SelfActPrompt,
-    working: Boolean,
+    authority: OwnerAuthority,
     onDismiss: () -> Unit,
-    onConfirm: (delegationId: String, reason: String, compelledBy: String?) -> Unit,
+    onReview: (delegationId: String, reason: String, compelledBy: String?) -> Unit,
 ) {
-    var delegationId by remember(prompt) { mutableStateOf("") }
+    var typedDelegation by remember(prompt) { mutableStateOf("") }
+    var picked by remember(prompt) { mutableStateOf(0) }
     var reason by remember(prompt) { mutableStateOf("") }
     var compelledBy by remember(prompt) { mutableStateOf("") }
     val carriesCompelledBy = prompt.axis == SelfAxis.LEGAL_COMPULSION && prompt.declaring
+    val delegationId = authority.delegationForAct(picked, typedDelegation)
+    val ready = delegationId != null && reason.isNotBlank()
+    val review = { if (delegationId != null && reason.isNotBlank()) onReview(delegationId, reason.trim(), compelledBy) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -524,29 +622,20 @@ private fun SelfActDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OutlinedTextField(
-                    value = delegationId,
-                    onValueChange = { delegationId = it },
-                    label = {
-                        Text(uiText("network_ops.self.dialog.delegation_label", "Owner delegation id"))
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testable("input_self_delegation_id"),
+                OwnerDelegationPicker(
+                    authority = authority,
+                    picked = picked,
+                    onPick = { picked = it },
+                    typed = typedDelegation,
+                    onTyped = { typedDelegation = it },
+                    tagPrefix = "self",
                 )
-                Text(
-                    uiText(
-                        "network_ops.self.dialog.delegation_hint",
-                        "The owner's own delegates_to id. A self-directed act is the owner's own: " +
-                            "a third party's serve grant will not do.",
-                    ),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                OutlinedTextField(
+                FieldLabel(uiText("network_ops.self.dialog.reason_label", "Reason (required)"))
+                CirisTextField(
+                    tag = "input_self_reason",
                     value = reason,
                     onValueChange = { reason = it },
-                    label = { Text(uiText("network_ops.self.dialog.reason_label", "Reason (required)")) },
-                    modifier = Modifier.fillMaxWidth().testable("input_self_reason"),
+                    singleLine = false,
                 )
                 Text(
                     uiText(
@@ -558,19 +647,11 @@ private fun SelfActDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (carriesCompelledBy) {
-                    OutlinedTextField(
+                    FieldLabel(uiText("network_ops.self.dialog.compelled_by_label", "Compelled by (optional)"))
+                    CirisTextField(
+                        tag = "input_self_compelled_by",
                         value = compelledBy,
                         onValueChange = { compelledBy = it },
-                        label = {
-                            Text(
-                                uiText(
-                                    "network_ops.self.dialog.compelled_by_label",
-                                    "Compelled by (optional)",
-                                ),
-                            )
-                        },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth().testable("input_self_compelled_by"),
                     )
                     Text(
                         uiText(
@@ -587,20 +668,10 @@ private fun SelfActDialog(
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(delegationId.trim(), reason.trim(), compelledBy) },
-                enabled = !working && delegationId.isNotBlank() && reason.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_self_confirm") {
-                    onConfirm(delegationId.trim(), reason.trim(), compelledBy)
-                },
-            ) {
-                Text(
-                    if (working) {
-                        uiText("network_ops.self.dialog.working", "Recording…")
-                    } else {
-                        uiText("network_ops.self.dialog.confirm", "Record")
-                    },
-                )
-            }
+                onClick = review,
+                enabled = ready,
+                modifier = Modifier.testableClickable("btn_self_review") { review() },
+            ) { Text(uiText("network_ops.self.dialog.review", "Review")) }
         },
         dismissButton = {
             TextButton(
@@ -609,6 +680,93 @@ private fun SelfActDialog(
             ) { Text(uiText("network_ops.self.dialog.cancel", "Cancel")) }
         },
     )
+}
+
+@Composable
+private fun FieldLabel(text: String) {
+    Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/**
+ * The delegation an act is taken under. Four renderings for four facts: the
+ * node named it (shown, never typed), named several (pick one), read none (the
+ * act cannot be taken, and typing would not help), or could not say (the typed
+ * id, with the reason it is being asked for).
+ */
+@Composable
+private fun OwnerDelegationPicker(
+    authority: OwnerAuthority,
+    picked: Int,
+    onPick: (Int) -> Unit,
+    typed: String,
+    onTyped: (String) -> Unit,
+    tagPrefix: String,
+) {
+    FieldLabel(uiText("network_ops.self.dialog.delegation_label", "Owner delegation id"))
+    when (authority) {
+        is OwnerAuthority.Supplied -> if (authority.delegations.size == 1) {
+            SelfROpsRow(
+                uiText("network_ops.self.dialog.delegation_supplied", "Named by this node"),
+                authority.delegations.first().delegationId,
+                "row_${tagPrefix}_owner_delegation",
+                mono = true,
+            )
+        } else {
+            authority.delegations.forEachIndexed { i, d ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                        .testableClickable("opt_${tagPrefix}_owner_delegation_$i") { onPick(i) },
+                ) {
+                    RadioButton(selected = i == picked, onClick = { onPick(i) })
+                    Column {
+                        Text(d.delegationId, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                        d.assertedAt?.let {
+                            Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+        }
+
+        OwnerAuthority.NoneHeld -> Text(
+            uiText(
+                "network_ops.self.dialog.delegation_none",
+                "This node holds no delegation from its owner that it can act under, so it " +
+                    "cannot record this act. Re-bind this node to its owner first.",
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testable("text_${tagPrefix}_no_owner_delegation"),
+        )
+
+        is OwnerAuthority.Unreadable, is OwnerAuthority.NotSupplied -> {
+            CirisTextField(
+                tag = "input_${tagPrefix}_delegation_id",
+                value = typed,
+                onValueChange = onTyped,
+                mono = true,
+            )
+            Text(
+                if (authority is OwnerAuthority.Unreadable) {
+                    uiText(
+                        "network_ops.self.dialog.delegation_unreadable",
+                        "This node could not read your delegations just now, so type the id.",
+                    )
+                } else {
+                    uiText(
+                        "network_ops.self.dialog.delegation_not_supplied",
+                        "This node can't name your delegation (it is older than 0.5.218), so " +
+                            "type the owner's own delegates_to id. A third party's serve grant " +
+                            "will not do.",
+                    )
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("text_${tagPrefix}_delegation_fallback"),
+            )
+        }
+    }
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -625,9 +783,15 @@ private fun ReaderPolicyCard(apiClient: CIRISApiClient) {
     var prompt by remember { mutableStateOf<ReaderPrompt?>(null) }
     var lastDecision by remember { mutableStateOf<ReaderDecisionOutcome?>(null) }
     var working by remember { mutableStateOf(false) }
+    var authority by remember { mutableStateOf<OwnerAuthority>(OwnerAuthority.NotSupplied()) }
     val scope = rememberCoroutineScope()
 
-    suspend fun reload(subjectKeyId: String) {
+    // A reader decision is taken under the same owner `infra:serve` delegation
+    // as tier S (`resolve_owner_authority`), and the node names it in the tier
+    // S read (CIRISServer#676).
+    LaunchedEffect(Unit) { authority = apiClient.getSelfStanding().ownerAuthority() }
+
+    suspend fun reloadFold(subjectKeyId: String) {
         if (subjectKeyId.isBlank()) return
         loading = true
         outcome = apiClient.readerFold(subjectKeyId)
@@ -659,18 +823,18 @@ private fun ReaderPolicyCard(apiClient: CIRISApiClient) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
 
-        OutlinedTextField(
+        FieldLabel(uiText("network_ops.reader.subject_label", "Subject key id"))
+        CirisTextField(
+            tag = "input_reader_subject",
             value = subject,
             onValueChange = { subject = it },
-            label = { Text(uiText("network_ops.reader.subject_label", "Subject key id")) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth().testable("input_reader_subject"),
+            mono = true,
         )
         Button(
-            onClick = { scope.launch { reload(subject.trim()) } },
+            onClick = { scope.launch { reloadFold(subject.trim()) } },
             enabled = !loading && subject.isNotBlank(),
             modifier = Modifier.testableClickable("btn_reader_fold") {
-                scope.launch { reload(subject.trim()) }
+                scope.launch { reloadFold(subject.trim()) }
             },
         ) {
             Text(
@@ -738,6 +902,7 @@ private fun ReaderPolicyCard(apiClient: CIRISApiClient) {
     prompt?.let { p ->
         ReaderDecisionDialog(
             prompt = p,
+            authority = authority,
             working = working,
             onDismiss = { prompt = null },
             onConfirm = { delegationId, reason ->
@@ -751,7 +916,7 @@ private fun ReaderPolicyCard(apiClient: CIRISApiClient) {
                     lastDecision = result
                     working = false
                     prompt = null
-                    if (result is ReaderDecisionOutcome.Recorded) reload(subject.trim())
+                    if (result is ReaderDecisionOutcome.Recorded) reloadFold(subject.trim())
                 }
             },
         )
@@ -1021,12 +1186,16 @@ private fun ReaderDecisionResult(outcome: ReaderDecisionOutcome) {
 @Composable
 private fun ReaderDecisionDialog(
     prompt: ReaderPrompt,
+    authority: OwnerAuthority,
     working: Boolean,
     onDismiss: () -> Unit,
     onConfirm: (delegationId: String, reason: String) -> Unit,
 ) {
-    var delegationId by remember(prompt) { mutableStateOf("") }
+    var typedDelegation by remember(prompt) { mutableStateOf("") }
+    var picked by remember(prompt) { mutableStateOf(0) }
     var reason by remember(prompt) { mutableStateOf("") }
+    val delegationId = authority.delegationForAct(picked, typedDelegation)
+    val confirm = { if (delegationId != null && reason.isNotBlank()) onConfirm(delegationId, reason.trim()) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1063,30 +1232,28 @@ private fun ReaderDecisionDialog(
                     style = MaterialTheme.typography.labelSmall,
                     fontFamily = FontFamily.Monospace,
                 )
-                OutlinedTextField(
-                    value = delegationId,
-                    onValueChange = { delegationId = it },
-                    label = {
-                        Text(uiText("network_ops.self.dialog.delegation_label", "Owner delegation id"))
-                    },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth().testable("input_reader_delegation_id"),
+                OwnerDelegationPicker(
+                    authority = authority,
+                    picked = picked,
+                    onPick = { picked = it },
+                    typed = typedDelegation,
+                    onTyped = { typedDelegation = it },
+                    tagPrefix = "reader",
                 )
-                OutlinedTextField(
+                FieldLabel(uiText("network_ops.self.dialog.reason_label", "Reason (required)"))
+                CirisTextField(
+                    tag = "input_reader_reason",
                     value = reason,
                     onValueChange = { reason = it },
-                    label = { Text(uiText("network_ops.self.dialog.reason_label", "Reason (required)")) },
-                    modifier = Modifier.fillMaxWidth().testable("input_reader_reason"),
+                    singleLine = false,
                 )
             }
         },
         confirmButton = {
             TextButton(
-                onClick = { onConfirm(delegationId.trim(), reason.trim()) },
-                enabled = !working && delegationId.isNotBlank() && reason.isNotBlank(),
-                modifier = Modifier.testableClickable("btn_reader_confirm") {
-                    onConfirm(delegationId.trim(), reason.trim())
-                },
+                onClick = confirm,
+                enabled = !working && delegationId != null && reason.isNotBlank(),
+                modifier = Modifier.testableClickable("btn_reader_confirm") { confirm() },
             ) {
                 Text(
                     if (working) {

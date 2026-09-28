@@ -1,0 +1,48 @@
+csd: CSD-101
+flow: csd_101_household_members
+title: The household's roster, on Family › People
+description: >-
+  CSD-101 §4, driven. Family › People holds Contacts and the household roster;
+  the roster is reached as its own row. A member is added from your contacts
+  only, because the node admits only a registered identity
+  (family.unknown_member_key, CIRISServer src/family_api.rs:925-947).
+# Floor: every tag below is a string literal in ui/screens/HouseholdsSupport.kt
+# (HouseholdTags), added with this card; no release carries them yet.
+# NOT asserted: adding a real member. It needs a second identity registered on
+# the node, which the fixture does not stand up.
+client: "unreleased"
+
+steps:
+  - step_id: on_the_roster
+    title: The roster names who is in the household you are looking at
+    description: >-
+      Entry: circle_family -> tab_people -> nav_epistemic_household_members
+      (derived by nav_map). Needs a household (CSD-100's flow forms one). A
+      household always holds at least its founder, so min 1.
+    requires:
+      screen: HouseholdMembers
+      visible: [household_members_list]
+    expect:
+      state: populated
+      visible: [households_switcher, household_members_list, household_limits]
+      count: {of: "household_member_*", min: 1}
+
+  - step_id: no_household_says_where_to_form_one
+    title: With no household, the roster points to the hub
+    optional_step: true
+    requires:
+      screen: HouseholdMembers
+      visible: [household_members_no_household]
+    expect:
+      state: empty
+      visible: [household_members_no_household, btn_household_members_go_rules]
+
+  - step_id: add_picks_from_contacts
+    title: Adding someone offers your contacts, or says there are none
+    optional_step: true
+    requires:
+      visible: [btn_household_member_add_open]
+    do:
+      - click: btn_household_member_add_open
+    expect:
+      visible: [card_household_member_add]

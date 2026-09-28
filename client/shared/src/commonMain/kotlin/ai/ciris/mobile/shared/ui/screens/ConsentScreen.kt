@@ -52,7 +52,13 @@ fun ConsentScreen(
     onRequestPartnership: () -> Unit,
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // The partnership queue (CSD-054 §7): requests waiting on this agent. Null
+    // hides the section (a caller that has not wired it).
+    partnershipQueue: ai.ciris.mobile.shared.models.PartnershipQueue? = null,
+    partnershipOptions: ai.ciris.mobile.shared.models.AgentRead<ai.ciris.mobile.shared.models.PartnershipOptionsDto>? = null,
+    partnershipHistories: Map<String, ai.ciris.mobile.shared.models.AgentRead<ai.ciris.mobile.shared.models.PartnershipHistoryDto>?> = emptyMap(),
+    onTogglePartnershipHistory: (String) -> Unit = {},
 ) {
     var showStreamConfirmDialog by remember { mutableStateOf<String?>(null) }
 
@@ -102,11 +108,12 @@ fun ConsentScreen(
             )
         }
     ) { paddingValues ->
-        if (isLoading && !consentData.hasConsent) {
+        if (isLoading && !consentData.hasConsent && consentData.readFailure == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("consent_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -119,19 +126,36 @@ fun ConsentScreen(
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // A read that failed, or that this node has no route for, is
+                // said ALONE. Nothing below may draw: "no consent record" is a
+                // claim about the person, and nobody asked (CSD-054).
+                consentData.readFailure?.let { failure ->
+                    item {
+                        ReadFailureBlock(
+                            failure = failure,
+                            tagPrefix = "consent",
+                            notOnThisNode = localizedString("mobile.consent_not_on_this_node"),
+                        )
+                    }
+                    return@LazyColumn
+                }
+
                 // Current status banner
                 item {
                     CurrentConsentBanner(
                         currentStream = consentData.currentStream,
                         expiresAt = consentData.expiresAt,
-                        partnershipPending = consentData.partnershipPending
+                        partnershipPending = consentData.partnershipPending,
+                        modifier = Modifier.testable("card_consent_status"),
                     )
                 }
 
                 // No consent notice
                 if (!consentData.hasConsent) {
                     item {
-                        NoConsentNotice()
+                        Box(modifier = Modifier.testable("consent_none")) {
+                            NoConsentNotice()
+                        }
                     }
                 }
 
@@ -189,6 +213,19 @@ fun ConsentScreen(
 
                     item {
                         AuditTrailCard(entries = consentData.auditEntries)
+                    }
+                }
+
+                // The partnership queue (CSD-054 §7) — who is waiting on this
+                // agent's answer, and why nobody here gives it for the agent.
+                partnershipQueue?.let { queue ->
+                    item {
+                        ConsentPartnershipSection(
+                            options = partnershipOptions,
+                            queue = queue,
+                            histories = partnershipHistories,
+                            onToggleHistory = onTogglePartnershipHistory,
+                        )
                     }
                 }
 
@@ -661,6 +698,8 @@ private fun getStreamIcon(stream: String?): ImageVector {
 // Data classes
 
 data class ConsentScreenData(
+    /** Why the consent read produced no answer; null after a success (CSD-054). */
+    val readFailure: ReadFailure? = null,
     val hasConsent: Boolean = false,
     val currentStream: String? = null,
     val expiresAt: String? = null,

@@ -22,6 +22,13 @@ data class DelegationDto(
      */
     @SerialName("expires_at")
     val expiresAt: Long? = null,
+    /**
+     * The signed `delegates_to` record this grant IS (`GrantSummary.attestation_id`,
+     * CIRISServer `src/auth/device_grant.rs`). The list is the graph: a revoke
+     * withdraws exactly this record, so the row names it.
+     */
+    @SerialName("attestation_id")
+    val attestationId: String? = null,
 )
 
 @Serializable

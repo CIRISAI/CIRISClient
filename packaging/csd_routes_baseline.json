@@ -1,0 +1,62 @@
+{
+  "_note": "Ratchet for packaging/check_csd_routes.py. Uncited routes per Screen and duplicate mutating routes, recorded; the gate fails only on NEW entries. Re-record with --baseline.",
+  "duplicate_mutations": [
+    "DELETE /v1/families/{} :: HouseholdMembers, LayerFamily",
+    "DELETE /v1/families/{}/members/{} :: HouseholdMembers, LayerFamily",
+    "DELETE /v1/system/adapters/{} :: Adapters, LLMSettings",
+    "POST /v1/accord/provision-holder :: AccordCeremony, ProvisionAccordHolder",
+    "POST /v1/auth/device/delegate :: Delegations, Setup",
+    "POST /v1/auth/login :: Login, Setup",
+    "POST /v1/auth/native/apple :: Login, Setup",
+    "POST /v1/auth/native/google :: Login, Setup",
+    "POST /v1/families/{}/changes/envelope :: HouseholdMembers, LayerFamily",
+    "POST /v1/families/{}/leave :: HouseholdMembers, LayerFamily",
+    "POST /v1/families/{}/members :: HouseholdMembers, LayerFamily",
+    "POST /v1/families/{}/members/{}/role :: HouseholdMembers, LayerFamily",
+    "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
+    "POST /v1/federation/consent :: DataManagement, Setup",
+    "POST /v1/memory/query :: EnvironmentInfo, Memory",
+    "POST /v1/self/associate :: IdentityManagement, Setup",
+    "POST /v1/self/identity :: AddFederationId, IdentityManagement, Setup",
+    "POST /v1/setup/claim-remote :: ClaimNode, Setup",
+    "POST /v1/setup/discover-local-llm :: LLMSettings, Setup",
+    "POST /v1/setup/list-models :: LLMSettings, Settings",
+    "POST /v1/setup/start-local-server :: LLMSettings, Setup",
+    "POST /v1/system/adapters/configure/{}/complete :: Adapters, Setup",
+    "POST /v1/system/adapters/configure/{}/step :: Adapters, Setup",
+    "POST /v1/system/adapters/{} :: Adapters, DataManagement",
+    "POST /v1/system/adapters/{}/configure/start :: Adapters, Setup",
+    "PUT /v1/config/{} :: Config, Transport",
+    "PUT /v1/my-data/accord-settings :: AddFederationId, DataManagement, ManageConsent",
+    "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings",
+    "PUT /v1/system/agent-mode :: LayerGlobalCommons, Settings"
+  ],
+  "uncited": {
+    "Accord": [
+      "GET /v1/accord/canonical/pending",
+      "GET /v1/accord/canonical/withdrawals",
+      "GET /v1/federation/peers/{}",
+      "GET /v1/setup/owned-nodes",
+      "POST /v1/accord/canonical/cosign"
+    ],
+    "Constitutional": [
+      "GET /v1/setup/owned-nodes"
+    ],
+    "Contacts": [
+      "GET /v1/federation/peers"
+    ],
+    "DataManagement": [
+      "GET /v1/system/health",
+      "POST /v1/system/adapters/{}",
+      "POST /v1/system/local-shutdown",
+      "PUT /v1/my-data/accord-settings"
+    ],
+    "Interact": [
+      "GET /v1/federation/self-key-record",
+      "GET /v1/safety/age-assurance/{}"
+    ],
+    "ManageConsent": [
+      "GET /v1/federation/peers"
+    ]
+  }
+}

@@ -151,7 +151,7 @@ fun UsersScreen(
             // Loading indicator
             if (state.isLoading) {
                 LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().testable("users_loading")
                 )
             }
 
@@ -160,7 +160,8 @@ fun UsersScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(16.dp)
+                        .testable("users_error", error),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.errorContainer
                     )
@@ -205,7 +206,8 @@ fun UsersScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(32.dp),
+                            .padding(32.dp)
+                            .testable("users_empty"),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
@@ -225,7 +227,7 @@ fun UsersScreen(
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize().testable("users_list"),
                         contentPadding = PaddingValues(16.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

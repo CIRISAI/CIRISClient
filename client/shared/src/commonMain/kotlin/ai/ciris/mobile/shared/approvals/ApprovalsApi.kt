@@ -74,6 +74,15 @@ interface ApprovalsApi {
      * actually starts the work; granting a budget does not.
      */
     suspend fun updateTicketStatus(ticketId: String, status: String, notes: String?): Boolean
+
+    /**
+     * The ticket's status NOW (`GET /v1/tickets/{ticket_id}`), read just before
+     * a transition. The list this card draws is up to one poll old and the
+     * agent's PATCH checks no from-status, so without this read a proposal that
+     * was cancelled or promoted elsewhere can be silently brought back. Throws
+     * when the read fails; the caller refuses rather than guesses (CSD-041).
+     */
+    suspend fun readTicketStatus(ticketId: String): String
 }
 
 /**
@@ -177,6 +186,9 @@ class CIRISApprovalsApi(private val client: CIRISApiClient) : ApprovalsApi {
 
     override suspend fun updateTicketStatus(ticketId: String, status: String, notes: String?): Boolean =
         client.updateTicketStatus(ticketId, status, notes)
+
+    override suspend fun readTicketStatus(ticketId: String): String =
+        client.getTicket(ticketId).status
 }
 
 /**

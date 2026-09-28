@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.ModerationAction
@@ -32,7 +33,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -50,9 +50,10 @@ import androidx.compose.ui.unit.sp
  * community (reverse-quorum) decides.
  *
  * NOTE: this is purely the PROPOSE affordance — anyone MAY raise it. The
- * authoritative duty-holder action lives elsewhere. Adult-only gating and
- * the minor-through-steward path are deliberately NOT enforced here; they
- * are a follow-up (being specced separately).
+ * authoritative duty-holder action lives elsewhere. A person the node records
+ * as a minor is refused before any request, with the steward path named
+ * ([ModerationViewModel]). A node without the route (every node today,
+ * CIRISServer#665) is said to be one, in words, never as a failed submit.
  *
  * @param targetId the content/contributor id the proposal names.
  * @param viewModel holds the submit state + performs the POST.
@@ -84,7 +85,7 @@ fun ModerationProposalSheet(
                 .testable("sheet_moderation_proposal"),
         ) {
             Text(
-                text = "Raise this with the community",
+                text = localizedString("moderation.proposal.title"),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -93,7 +94,7 @@ fun ModerationProposalSheet(
             // The load-bearing reverse-quorum framing — stated up front so the
             // user knows exactly what submitting does. (CC 0.5.1 §4.5.13.)
             Text(
-                text = "Anyone can raise this; the community has 48 hours; a moderator can act sooner.",
+                text = localizedString("moderation.proposal.framing"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp),
@@ -102,7 +103,7 @@ fun ModerationProposalSheet(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "What are you proposing?",
+                text = localizedString("moderation.proposal.action_label"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -116,19 +117,19 @@ fun ModerationProposalSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ModerationActionChip(
-                    label = "Report",
+                    label = localizedString("moderation.proposal.action_report"),
                     testTag = "btn_moderation_action_report",
                     selected = selectedAction == ModerationAction.REPORT,
                     onSelect = { selectedAction = ModerationAction.REPORT },
                 )
                 ModerationActionChip(
-                    label = "Request takedown",
+                    label = localizedString("moderation.proposal.action_takedown"),
                     testTag = "btn_moderation_action_takedown",
                     selected = selectedAction == ModerationAction.TAKEDOWN,
                     onSelect = { selectedAction = ModerationAction.TAKEDOWN },
                 )
                 ModerationActionChip(
-                    label = "Keep-or-remove?",
+                    label = localizedString("moderation.proposal.action_question"),
                     testTag = "btn_moderation_action_question",
                     selected = selectedAction == ModerationAction.QUESTION,
                     onSelect = { selectedAction = ModerationAction.QUESTION },
@@ -140,8 +141,8 @@ fun ModerationProposalSheet(
             OutlinedTextField(
                 value = reason,
                 onValueChange = { reason = it },
-                label = { Text("Reason (optional)") },
-                placeholder = { Text("Why are you raising this?") },
+                label = { Text(localizedString("moderation.proposal.reason_label")) },
+                placeholder = { Text(localizedString("moderation.proposal.reason_placeholder")) },
                 singleLine = false,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,23 +150,39 @@ fun ModerationProposalSheet(
                     .testable("input_moderation_reason"),
             )
 
-            // Error surface.
+            // Four outcomes, four tags: failed, no such route, refused as a
+            // minor, raised. None of them shares pixels with another.
             state.error?.let { err ->
                 Text(
-                    text = err,
+                    text = localizedString("moderation.proposal.error", "detail", err),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 8.dp).testable("txt_moderation_proposal_error"),
                 )
             }
-
-            // Success surface — restate the window so the outcome is clear.
+            if (state.notOnThisNode) {
+                Text(
+                    text = localizedString("moderation.proposal.not_on_this_node"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 8.dp).testable("txt_moderation_proposal_not_on_this_node"),
+                )
+            }
+            if (state.refusedAsMinor) {
+                Text(
+                    text = localizedString("moderation.proposal.refused_minor"),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 8.dp).testable("txt_moderation_proposal_refused_minor"),
+                )
+            }
             if (state.isDone) {
                 Text(
-                    text = "Raised. The 48-hour community window is open — a moderator or steward can act sooner.",
+                    text = localizedString("moderation.proposal.raised"),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 8.dp),
+                    modifier = Modifier.padding(top = 8.dp).testable("txt_moderation_proposal_raised"),
                 )
             }
 
@@ -180,11 +197,14 @@ fun ModerationProposalSheet(
                         onComplete = onDismiss,
                     )
                 },
-                enabled = !state.isSubmitting,
+                enabled = !state.isSubmitting && !state.notOnThisNode && !state.refusedAsMinor,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(46.dp)
-                    .testableClickable("btn_moderation_submit") {
+                    .testableClickable(
+                        "btn_moderation_submit",
+                        enabled = !state.isSubmitting && !state.notOnThisNode && !state.refusedAsMinor,
+                    ) {
                         viewModel.submit(
                             targetId = targetId,
                             action = selectedAction,
@@ -197,12 +217,14 @@ fun ModerationProposalSheet(
                     CircularProgressIndicator(
                         modifier = Modifier.size(16.dp),
                         strokeWidth = 2.dp,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                 }
                 Text(
-                    text = if (state.isSubmitting) "Opening window…" else "Submit — open 48-hour window",
+                    text = localizedString(
+                        if (state.isSubmitting) "moderation.proposal.submitting" else "moderation.proposal.submit",
+                    ),
                     fontSize = 14.sp,
                 )
             }

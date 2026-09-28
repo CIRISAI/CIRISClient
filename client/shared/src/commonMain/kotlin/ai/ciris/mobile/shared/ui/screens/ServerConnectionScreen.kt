@@ -2,9 +2,12 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.viewmodels.ConnectionStatus
 import ai.ciris.mobile.shared.viewmodels.ServerConnectionViewModel
+import ai.ciris.mobile.shared.viewmodels.recentConnectionTagSuffix
+import ai.ciris.mobile.shared.viewmodels.serverStatusKey
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Spacer
@@ -85,7 +88,7 @@ fun ServerConnectionScreen(
                     if (!LocalIsCompactWindow.current) {
                         IconButton(
                             onClick = onBack,
-                            modifier = Modifier.testable("btn_server_back")
+                            modifier = Modifier.testableClickable("btn_server_back") { onBack() }
                         ) {
                             Icon(
                                 imageVector = CIRISIcons.arrowBack,
@@ -137,7 +140,7 @@ fun ServerConnectionScreen(
                             Text(
                                 text = errorMessage ?: "",
                                 color = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.weight(1f)
+                                modifier = Modifier.weight(1f).testable("txt_server_error", errorMessage)
                             )
                             IconButton(onClick = { viewModel.clearError() }) {
                                 Icon(
@@ -234,10 +237,23 @@ fun ServerConnectionScreen(
 
                 items(recentConnections) { url ->
                     RecentConnectionItem(
+                        tagSuffix = recentConnectionTagSuffix(url),
                         url = url,
                         isCurrentUrl = url == currentUrl,
                         onConnect = { viewModel.connectToUrl(url) },
                         onRemove = { viewModel.removeRecentConnection(url) }
+                    )
+                }
+            }
+
+            if (recentConnections.isEmpty()) {
+                // Nothing to list is said, not implied by an absent section.
+                item {
+                    Text(
+                        text = localizedString("mobile.server_no_recent"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp).testable("txt_server_no_recent"),
                     )
                 }
             }
@@ -315,7 +331,8 @@ private fun ConnectionStatusCard(
                 Text(
                     text = getStatusText(connectionStatus),
                     color = getStatusColor(connectionStatus),
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.testable("txt_server_status", connectionStatus.name)
                 )
             }
 
@@ -333,7 +350,8 @@ private fun ConnectionStatusCard(
                 Text(
                     text = currentUrl,
                     fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_server_url", currentUrl)
                 )
             }
 
@@ -408,7 +426,7 @@ private fun LocalServerControlsCard(
                     enabled = !isLoading && isLocalServer,
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_restart_server") { onRestart() },
+                        .testableClickable("btn_restart_server", enabled = !isLoading && isLocalServer) { onRestart() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -423,13 +441,14 @@ private fun LocalServerControlsCard(
                 }
 
                 // Stop button
+                val canStop = !isLoading && isLocalServer &&
+                    connectionStatus != ConnectionStatus.DISCONNECTED
                 OutlinedButton(
                     onClick = onStop,
-                    enabled = !isLoading && isLocalServer &&
-                              connectionStatus != ConnectionStatus.DISCONNECTED,
+                    enabled = canStop,
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_stop_server") { onStop() }
+                        .testableClickable("btn_stop_server", enabled = canStop) { onStop() }
                 ) {
                     Icon(
                         imageVector = CIRISIcons.close,
@@ -487,13 +506,18 @@ private fun RemoteConnectionCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            // URL input field
+            // URL input field — drivable: /input types through onUrlChange.
+            rememberTextInputDriver("input_server_url", urlInput, onValueChange = onUrlChange)
+            // The field's input sink: /input on input_server_url had nothing
+            // listening, so no gate could type into the screen whose only job
+            // is taking a URL (CSD-084 §5, CIRISClient#30's defect class).
+            rememberTextInputDriver("input_server_url", urlInput, !isLoading, onUrlChange)
             OutlinedTextField(
                 value = urlInput,
                 onValueChange = onUrlChange,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testable("input_server_url"),
+                    .testable("input_server_url", urlInput),
                 label = { Text("Server URL") },
                 placeholder = { Text(localizedString("mobile.server_url_placeholder")) },
                 singleLine = true,
@@ -519,7 +543,7 @@ private fun RemoteConnectionCard(
                     enabled = !isLoading && urlInput.isNotBlank(),
                     modifier = Modifier
                         .weight(1f)
-                        .testableClickable("btn_connect") { onConnect() },
+                        .testableClickable("btn_connect", enabled = !isLoading && urlInput.isNotBlank()) { onConnect() },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.primary
                     )
@@ -540,7 +564,7 @@ private fun RemoteConnectionCard(
                         enabled = !isLoading,
                         modifier = Modifier
                             .weight(1f)
-                            .testableClickable("btn_disconnect") { onDisconnect() }
+                            .testableClickable("btn_disconnect", enabled = !isLoading) { onDisconnect() }
                     ) {
                         Icon(
                             imageVector = CIRISIcons.close,
@@ -561,13 +585,14 @@ private fun RemoteConnectionCard(
  */
 @Composable
 private fun RecentConnectionItem(
+    tagSuffix: String,
     url: String,
     isCurrentUrl: Boolean,
     onConnect: () -> Unit,
     onRemove: () -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("row_server_recent_$tagSuffix", url),
         colors = CardDefaults.cardColors(
             containerColor = if (isCurrentUrl)
                 MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
@@ -611,7 +636,7 @@ private fun RecentConnectionItem(
             } else {
                 IconButton(
                     onClick = onConnect,
-                    modifier = Modifier.testable("btn_connect_recent")
+                    modifier = Modifier.testableClickable("btn_connect_recent_$tagSuffix") { onConnect() }
                 ) {
                     Icon(
                         imageVector = CIRISIcons.play,
@@ -623,7 +648,7 @@ private fun RecentConnectionItem(
 
             IconButton(
                 onClick = onRemove,
-                modifier = Modifier.testable("btn_remove_recent")
+                modifier = Modifier.testableClickable("btn_remove_recent_$tagSuffix") { onRemove() }
             ) {
                 Icon(
                     imageVector = CIRISIcons.close,
@@ -653,12 +678,5 @@ private fun getStatusColor(status: ConnectionStatus): Color {
  * Get text for connection status.
  */
 @Composable
-private fun getStatusText(status: ConnectionStatus): String {
-    return when (status) {
-        ConnectionStatus.CONNECTED_LOCAL,
-        ConnectionStatus.CONNECTED_REMOTE -> localizedString("mobile.server_status_connected")
-        ConnectionStatus.CONNECTING -> localizedString("mobile.server_status_connecting")
-        ConnectionStatus.DISCONNECTED,
-        ConnectionStatus.ERROR -> localizedString("mobile.server_status_disconnected")
-    }
-}
+private fun getStatusText(status: ConnectionStatus): String =
+    localizedString(serverStatusKey(status))
