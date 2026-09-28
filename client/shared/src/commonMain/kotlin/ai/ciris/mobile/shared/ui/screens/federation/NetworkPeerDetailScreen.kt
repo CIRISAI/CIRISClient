@@ -91,12 +91,12 @@ fun NetworkPeerDetailScreen(
     val detailFailure by viewModel.detailFailure.collectAsState()
     val sasRead by viewModel.sasRead.collectAsState()
     val pendingOutcome by viewModel.pendingOutcome.collectAsState()
-    val outcomeInFlight by viewModel.outcomeInFlight.collectAsState()
+    val writeInFlight by viewModel.writeInFlight.collectAsState()
+    val recordedMismatch by viewModel.recordedMismatch.collectAsState()
     val lastOutcome by viewModel.lastOutcome.collectAsState()
     val appearanceExpanded by viewModel.appearanceExpanded.collectAsState()
     val appearanceDraft by viewModel.appearanceDraft.collectAsState()
     val appearanceSaving by viewModel.appearanceSaving.collectAsState()
-    val trustChangeInFlight by viewModel.trustChangeInFlight.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.load() }
 
@@ -216,14 +216,17 @@ fun NetworkPeerDetailScreen(
                         SasVerifySection(
                             read = sasRead,
                             lastOutcome = lastOutcome,
-                            inFlight = outcomeInFlight,
+                            recordedMismatch = recordedMismatch,
+                            inFlight = writeInFlight,
                             onOutcome = { viewModel.requestOutcome(it) },
                         )
                     }
                     item {
                         TrustStateSection(
                             currentTrust = current.peer.trust,
-                            inFlight = trustChangeInFlight,
+                            // One flag for both groups: a manual trust change must not
+                            // race a mismatch's untrust on the same sideband row.
+                            inFlight = writeInFlight,
                             onTrustChange = { viewModel.requestTrust(it) },
                         )
                     }
@@ -465,14 +468,16 @@ private fun formatLastOk(lastOkTs: Long): String {
 private fun SasVerifySection(
     read: SasRead,
     lastOutcome: SasOutcomeResult?,
+    recordedMismatch: Boolean,
     inFlight: Boolean,
     onOutcome: (SasOutcome) -> Unit,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     // A recorded mismatch is shown ABOVE the code and stays until the screen is
-    // left — a safety event, drawn in the error tone, never as a closed dialog.
-    if (lastOutcome is SasOutcomeResult.Recorded && lastOutcome.outcome == SasOutcome.MISMATCH) {
+    // left or a later match supersedes it — a safety event, drawn in the error
+    // tone, never as a closed dialog, and never replaced by a refused write.
+    if (recordedMismatch) {
         StateBlock(
             state = ListState.Error(
                 title = localizedString("network.peer_detail.sas_mismatch_title"),
