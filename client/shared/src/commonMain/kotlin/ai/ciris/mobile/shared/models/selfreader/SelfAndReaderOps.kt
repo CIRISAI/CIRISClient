@@ -131,6 +131,10 @@ data class SelfAxisStandingDto(
  * `src/admin_ops.rs:3470`). Only rows the act itself would accept are listed:
  * the server re-runs `resolve_authority` and drops a withdrawn or unreachable
  * grant, so an id here is one a tier S or tier R act can be taken under.
+ *
+ * On 0.5.218 every row carries `infra:serve` (the self-directed scope), which
+ * tiers S and R take; tiers 0–4 require the named row to carry
+ * `review`/`moderate`/`slash` itself, so a picker must match [scope] to the act.
  */
 @Serializable
 data class OwnerDelegationDto(

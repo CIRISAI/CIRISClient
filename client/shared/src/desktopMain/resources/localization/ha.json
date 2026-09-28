@@ -718,7 +718,15 @@
     "verb_takedown": "takedown — buga sanarwar cire abu a madadin wanda ya wakilta",
     "verbs_help": "Zaɓi kowane aiki da wannan bayarwa za ta ɗauka. Suna tafiya tare a matsayin saiti ɗaya a kan bayarwa ɗaya — ba ka buƙatar biki daban ga kowane aiki.",
     "verbs_label": "Ayyukan da za a bayar",
-    "verbs_none": "Ba a zaɓi wani aiki ba. Bayarwa marar iyakar aiki ba ta bayar da komai."
+    "verbs_none": "Ba a zaɓi wani aiki ba. Bayarwa marar iyakar aiki ba ta bayar da komai.",
+    "source_absent": "Wannan kumburi bai san wani iyalin yarjejeniya tukuna ba, don haka babu ikon da za a mika daga ciki. Babu abin da ya lalace; babu abin da za a iya mika har sai an samu wani.",
+    "not_conferrable_by_accord": "Yarjejeniya ba za ta iya mika wannan ba. Ikon yarjejeniya ba zai iya isa ga matakan yardar rai ko ba da lasisi ba (CC 4.2.1).",
+    "verb_unknown": "{duty}: nauyin da wannan kumburi ke yi wa hidima, wanda wannan manhaja ba ta da bayani a kansa tukuna",
+    "verb_license": "lasisi: fitar da lasisi a madadin wanda ya wakilta",
+    "verb_grant": "bayarwa: fitar da bayarwa a madadin wanda ya wakilta",
+    "ladder_tier_generic": "mataki {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Wannan kumburi ba ya wallafa ƙamus na nauyi-nauyinsa (babu /v1/vocabulary), don haka wannan jerin kwafin manhaja ne kaɗai kuma yana iya rasa wasu nauyoyin da kumburin yake karɓa.",
+    "vocabulary_unreadable": "Ba a iya karanta ƙamus na nauyin wannan kumburi ba ({detail}), don haka wannan jerin kwafin manhaja ne kaɗai kuma yana iya rasa wasu nauyoyin da kumburin yake karɓa."
   },
   "errors": {
     "adapter_not_available": "Manajan na'ura mai haɗawa ba ya samuwa",
@@ -3198,7 +3206,12 @@
     "login_new_account_observer": "Asusu da wannan kumburi bai taɓa gani ba za a bari ya shiga a matsayin mai kallo, ba a matsayin mai mallaka ba.",
     "login_new_account_claims": "Wannan kumburi ba shi da mai mallaka tukuna: asusun farko da ya shiga zai zama mai mallakarsa.",
     "manage_nodes_owned_not_on_this_node": "Wannan kumburi ba zai iya lissafa kumburorin da kuke da su ba. Ya tsufa da yawa don amsa wannan tambaya.",
-    "manage_nodes_unverified": "Ba a iya duba wannan jerin da kumburorin da kuke da su ba. Yana nuna wannan na'ura kaɗai da kowane kumburi da kuka ƙara a wannan zaman. Hakan ba yana nufin ba ku da wasu kumburori dabam ba."
+    "manage_nodes_unverified": "Ba a iya duba wannan jerin da kumburorin da kuke da su ba. Yana nuna wannan na'ura kaɗai da kowane kumburi da kuka ƙara a wannan zaman. Hakan ba yana nufin ba ku da wasu kumburori dabam ba.",
+    "moderation_named_none": "Ba a tambaya game da wata al'umma tukuna ba. Rubuta maɓallin al'umma sannan a danna Duba.",
+    "moderation_named_error": "Ba a iya tambayar wannan kumburi game da wannan al'umma ba ({detail}). Wannan BA rahoto ba ne na cewa tana da mai daidaitawa.",
+    "moderation_named_not_on_this_node": "Wannan kumburi ba zai iya faɗin wanda ke daidaita al'umma tukuna ba: bai da hanyar ambaton mai daidaitawa. Wannan BA rahoto ba ne na cewa al'ummar tana da mai daidaitawa.",
+    "moderation_verdict_unknown": "Kumburin ya amsa da hukunci wanda wannan manhaja ba ta sani ba ({verdict}). A ɗauki al'ummar a matsayin wadda ba a ba ta izinin yin aiki ba.",
+    "moderation_candidate_row": "Ɗan takara: {candidate}. Kumburin ya ambaci wanda, amma bai riga ya ambaci tarihin da ya zaɓe shi ba."
   },
   "moderation": {
     "ladder": {
@@ -3295,7 +3308,37 @@
       "unparsable_response": "Kumburin ya amsa da jiki da wannan manhaja ba ta iya karantawa ba.",
       "window_application": "Wannan kumburi ne ya aiwatar da tazarar lokaci, ba tambayar ba, don haka an aiwatar da iyakar shafi a kan saiti mafi faɗi kuma wannan zaɓi na iya dawowa da ƙasa da ake tsammani.",
       "window_substrate": "Tambayar substrate ce ta aiwatar da tazarar lokaci.",
-      "withdrew_row": "An janye {id}"
+      "withdrew_row": "An janye {id}",
+      "tier_no_scope": "Mataki {tier} · wannan kumburi bai ambaci iyakar wakilci don wannan mataki ba.",
+      "reaches_substrate_yes": "Wannan yana canza abin da substrate yake karɓa: an rufe ƙofar, ba kawai an lura da shi ba.",
+      "reaches_substrate_no": "Wannan yana canza abin da wannan kumburi ke rubutawa ne kawai: an lura da shi, amma abin da substrate yake karɓa bai canza ba.",
+      "catalogue_not_on_this_node": "Wannan kumburi ba ya wallafa tsanin ayyukansa (babu /v1/operations), don haka waɗannan matakai kwafin manhaja ne kaɗai. Kumburin ne har yanzu zai yanke mataki, iyaka da adadin da ake buƙata a lokacin da za ku tabbatar.",
+      "catalogue_unreadable": "Ba a iya karanta tsanin wannan kumburi ba ({detail}), don haka waɗannan matakai kwafin manhaja ne kaɗai. Kumburin ne har yanzu zai yanke mataki, iyaka da adadin da ake buƙata a lokacin da za ku tabbatar.",
+      "not_reached_unstated": "Wannan kumburi bai bayyana wata iyaka dabam don wannan mataki fiye da abin da ya kai, kamar yadda aka ambata a sama ba.",
+      "undone_by_op": "An warware shi ta {op}. Duka layuka biyu suna wanzuwa a matsayin tarihin da za a karanta.",
+      "undone_is_reversal": "Wannan mataki yana warware {op}. Duka layuka biyu suna wanzuwa a matsayin tarihin da za a karanta.",
+      "undone_no_inverse": "Kumburin bai ambaci wani aiki da ke warware wannan mataki ba.",
+      "delegations_not_returned": "Wannan kumburi baya mayar da lambobin wakilcinku tukuna (yana buƙatar 0.5.218), don haka manna lambar wakilcin da ke ɗauke da iyakar wannan mataki.",
+      "delegations_unreadable": "Ba a iya karanta lambobin wakilcinku daga wannan kumburi ba ({detail}). Manna lambar wakilcin da ke ɗauke da iyakar wannan mataki.",
+      "delegations_none": "Wannan kumburi ba ya riƙe wani wakilcin naku. Wannan mataki yana buƙatar wanda ke ɗauke da {scope}.",
+      "delegations_wrong_scope": "Wannan kumburi ya mayar da wakilci {count} naku, ɗauke da {carried}. Babu wanda ke ɗauke da {scope}, wanda wannan mataki ke buƙata, don haka ba a bayar da kowanne: kumburin zai ƙi shi. Manna lambar wakilcin da ke ɗauke da shi.",
+      "delegations_pick": "Wakilcinku a kan wannan kumburi da ke ɗauke da {scope}:"
+    },
+    "proposal": {
+      "title": "Gabatar da wannan ga al'umma",
+      "framing": "Kowa na iya gabatar da wannan; al'ummar tana da awa 48; mai daidaitawa na iya ɗaukar mataki da wuri.",
+      "action_label": "Me kuke gabatarwa?",
+      "action_report": "Rahoto",
+      "action_takedown": "Neman a cire",
+      "action_question": "Ajiye ko cire?",
+      "reason_label": "Dalili (na zaɓi)",
+      "reason_placeholder": "Me ya sa kuke gabatar da wannan?",
+      "submit": "Aikawa: buɗe tagar awa 48",
+      "submitting": "Ana buɗe tagar…",
+      "raised": "An gabatar da shi. Tagar al'umma ta awa 48 a buɗe take; mai daidaitawa ko mai kula na iya ɗaukar mataki da wuri.",
+      "error": "Ba a iya gabatar da wannan ba: {detail}. Ba a shigar da komai ba.",
+      "not_on_this_node": "Wannan kumburi ba zai iya karɓar shawarar al'umma tukuna ba: bai da hanyar /v1/safety/reports (yana buƙatar CIRISServer#665). Ba a shigar da komai ba. Idan kuna riƙe da nauyin daidaitawa, a shigar a ƙarƙashin Tsaro > Daidaitawa maimakon.",
+      "refused_minor": "Rikodin shekarunku a kan wannan kumburi ya nuna ƙarami, don haka a gabatar da wannan ta hannun mai kula da ku, ba kai tsaye ba. Ba a shigar da komai ba; a tambayi mai kula da ku ya gabatar da shi."
     }
   },
   "nav": {

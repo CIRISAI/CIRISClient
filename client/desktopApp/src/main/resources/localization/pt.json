@@ -718,7 +718,15 @@
     "verb_takedown": "takedown — publicar um aviso de remoção em nome do delegante",
     "verbs_help": "Escolha todos os deveres que esta concessão deve transportar. Viajam juntos como um só conjunto numa única concessão — não precisa de uma cerimónia separada por dever.",
     "verbs_label": "Deveres a conferir",
-    "verbs_none": "Nenhum dever selecionado. Uma concessão sem âmbito não confere nada."
+    "verbs_none": "Nenhum dever selecionado. Uma concessão sem âmbito não confere nada.",
+    "source_absent": "Este nó ainda não conhece nenhuma família de acordo, portanto não há autoridade a partir da qual conferir. Nada está quebrado; nada pode ser conferido até que uma exista.",
+    "not_conferrable_by_accord": "O acordo não pode conferir isto. A autoridade do acordo não pode alcançar os planos de consentimento ou licenciamento (CC 4.2.1).",
+    "verb_unknown": "{duty}: um dever que este nó cumpre e para o qual este aplicativo ainda não tem descrição",
+    "verb_license": "licença: emitir uma licença em nome do delegante",
+    "verb_grant": "concessão: emitir uma concessão em nome do delegante",
+    "ladder_tier_generic": "camada {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Este nó não publica seu vocabulário de deveres (sem /v1/vocabulary), portanto esta lista é a cópia própria deste aplicativo e pode estar sem deveres que o nó aceita.",
+    "vocabulary_unreadable": "Não foi possível ler o vocabulário de deveres deste nó ({detail}), portanto esta lista é a cópia própria deste aplicativo e pode estar sem deveres que o nó aceita."
   },
   "errors": {
     "adapter_not_available": "Gerenciador de adaptador não disponível",
@@ -3198,7 +3206,12 @@
     "login_new_account_observer": "Uma conta que este nó nunca viu seria admitida como observadora, não como proprietária.",
     "login_new_account_claims": "Este nó ainda não tem proprietário: a primeira conta a entrar se torna sua proprietária.",
     "manage_nodes_owned_not_on_this_node": "Este nó não consegue listar os nós que você possui. Ele é muito antigo para responder a essa pergunta.",
-    "manage_nodes_unverified": "Não foi possível verificar esta lista em relação aos nós que você possui. Ela mostra apenas este dispositivo e qualquer nó que você tenha adicionado nesta sessão. Isso não significa que você não possua mais nada."
+    "manage_nodes_unverified": "Não foi possível verificar esta lista em relação aos nós que você possui. Ela mostra apenas este dispositivo e qualquer nó que você tenha adicionado nesta sessão. Isso não significa que você não possua mais nada.",
+    "moderation_named_none": "Nenhuma comunidade consultada ainda. Digite uma chave de comunidade e pressione Verificar.",
+    "moderation_named_error": "Não foi possível perguntar a este nó sobre essa comunidade ({detail}). Isto NÃO é um relato de que ela tem um moderador.",
+    "moderation_named_not_on_this_node": "Este nó ainda não pode dizer quem modera uma comunidade: não possui uma rota de moderador nomeado. Isto NÃO é um relato de que a comunidade tem um moderador.",
+    "moderation_verdict_unknown": "O nó respondeu com um veredito que este aplicativo não conhece ({verdict}). Trate a comunidade como não autorizada a operar.",
+    "moderation_candidate_row": "Candidato: {candidate}. O nó indica quem, mas ainda não o histórico que o escolheu."
   },
   "moderation": {
     "ladder": {
@@ -3295,7 +3308,37 @@
       "unparsable_response": "O nó respondeu com um corpo que este aplicativo não conseguiu ler.",
       "window_application": "A janela temporal foi aplicada por este nó, e não pela consulta, portanto o limite de página foi aplicado a um conjunto mais amplo e esta seleção pode vir incompleta.",
       "window_substrate": "A janela temporal foi aplicada pela consulta ao substrato.",
-      "withdrew_row": "Retirou {id}"
+      "withdrew_row": "Retirou {id}",
+      "tier_no_scope": "Camada {tier} · este nó não indica escopo de delegação para este degrau.",
+      "reaches_substrate_yes": "Isto altera o que o substrato aceita: a porta é fechada, não apenas anotada.",
+      "reaches_substrate_no": "Isto altera apenas o que este nó registra: é anotado, e o que o substrato aceita permanece inalterado.",
+      "catalogue_not_on_this_node": "Este nó não publica sua escada (sem /v1/operations), portanto estes degraus são a cópia própria deste aplicativo. O nó ainda decide camada, escopo e quórum quando você confirma.",
+      "catalogue_unreadable": "Não foi possível ler a escada deste nó ({detail}), portanto estes degraus são a cópia própria deste aplicativo. O nó ainda decide camada, escopo e quórum quando você confirma.",
+      "not_reached_unstated": "Este nó não declara um limite separado para este degrau além do que ele alcança, acima.",
+      "undone_by_op": "Desfeito por {op}. Ambas as linhas permanecem como histórico legível.",
+      "undone_is_reversal": "Este degrau desfaz {op}. Ambas as linhas permanecem como histórico legível.",
+      "undone_no_inverse": "O nó não indica nenhuma operação que desfaça este degrau.",
+      "delegations_not_returned": "Este nó ainda não retorna os ids das suas delegações (precisa da versão 0.5.218), portanto cole o id de uma delegação que carregue o escopo deste degrau.",
+      "delegations_unreadable": "Não foi possível ler os ids das suas delegações deste nó ({detail}). Cole o id de uma delegação que carregue o escopo deste degrau.",
+      "delegations_none": "Este nó não detém nenhuma delegação sua. Este degrau precisa de uma que carregue {scope}.",
+      "delegations_wrong_scope": "Este nó retornou {count} delegação(ões) sua(s), carregando {carried}. Nenhuma carrega {scope}, que este degrau exige, portanto nenhuma é oferecida: o nó a recusaria. Cole o id de uma delegação que o faça.",
+      "delegations_pick": "Suas delegações neste nó que carregam {scope}:"
+    },
+    "proposal": {
+      "title": "Levar isto à comunidade",
+      "framing": "Qualquer pessoa pode abrir isto; a comunidade tem 48 horas; um moderador pode agir antes disso.",
+      "action_label": "O que você está propondo?",
+      "action_report": "Denunciar",
+      "action_takedown": "Solicitar remoção",
+      "action_question": "Manter ou remover?",
+      "reason_label": "Motivo (opcional)",
+      "reason_placeholder": "Por que você está abrindo isto?",
+      "submit": "Enviar: abrir a janela de 48 horas",
+      "submitting": "Abrindo a janela…",
+      "raised": "Aberto. A janela de 48 horas da comunidade está aberta; um moderador ou guardião pode agir antes disso.",
+      "error": "Não foi possível abrir isto: {detail}. Nada foi registrado.",
+      "not_on_this_node": "Este nó ainda não pode receber uma proposta da comunidade: não possui a rota /v1/safety/reports (precisa do CIRISServer#665). Nada foi registrado. Se você detém um dever de moderação, registre em Segurança > Moderação.",
+      "refused_minor": "Seu registro de idade neste nó indica menor de idade, portanto isto é aberto por meio do seu guardião, não diretamente. Nada foi registrado; peça ao seu guardião para abrir isto."
     }
   },
   "nav": {

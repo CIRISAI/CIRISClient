@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.models.safety.WatchlistEnable
 import ai.ciris.mobile.shared.models.safety.WatchlistHonesty
 import ai.ciris.mobile.shared.models.safety.WatchlistMode
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,6 +58,13 @@ data class SafetyState(
     /** Always true on the wire — surfaced verbatim (better no group than one
      *  with no moderator). */
     val namedModeratorFailsSecure: Boolean = true,
+    /**
+     * Why the last verdict read produced no verdict. Its own field, never the
+     * shared [error]: on a fail-secure invariant "we could not ask" and "this
+     * community has no moderator" are opposites, and a null verdict alone
+     * cannot tell them apart from "never asked" (CSD-065 §2).
+     */
+    val namedModeratorFailure: ReadFailure? = null,
 
     // ── Child-safety / watchlist card ──
     /** The group key_id the watchlist applies to (you must hold `moderate`). */
@@ -129,7 +137,15 @@ class SafetyViewModel(
     }
 
     // ── Moderation card setters ──
-    fun setCommunityKeyId(v: String) { _state.value = _state.value.copy(communityKeyId = v) }
+    /** A different community drops the last one's verdict: it answered about a key no longer on screen. */
+    fun setCommunityKeyId(v: String) {
+        val s = _state.value
+        _state.value = if (v.trim() == s.communityKeyId.trim()) {
+            s.copy(communityKeyId = v)
+        } else {
+            s.copy(communityKeyId = v, namedModeratorVerdict = null, namedModeratorFailure = null)
+        }
+    }
     fun setDuty(d: ModerationDuty) { _state.value = _state.value.copy(selectedDuty = d) }
     fun setAllegationType(v: String) { _state.value = _state.value.copy(allegationType = v) }
     fun setTargetKeyIdsRaw(v: String) { _state.value = _state.value.copy(targetKeyIdsRaw = v) }
@@ -188,7 +204,14 @@ class SafetyViewModel(
             _state.value = _state.value.copy(error = "Enter a community key_id first.")
             return
         }
-        _state.value = _state.value.copy(namedModeratorLoading = true, error = null)
+        // The previous community's verdict is dropped the moment a new one is
+        // asked about: a stale "Moderated" under a new key is a false clean.
+        _state.value = _state.value.copy(
+            namedModeratorLoading = true,
+            namedModeratorVerdict = null,
+            namedModeratorFailure = null,
+            error = null,
+        )
         viewModelScope.launch {
             try {
                 val resp = apiClient.getNamedModerator(community)
@@ -198,9 +221,10 @@ class SafetyViewModel(
                     namedModeratorFailsSecure = resp.failsSecure,
                 )
             } catch (e: Exception) {
+                PlatformLogger.w(TAG, "named-moderator read failed: ${e.message}")
                 _state.value = _state.value.copy(
                     namedModeratorLoading = false,
-                    error = "Couldn't load named moderator: ${e.message}",
+                    namedModeratorFailure = ReadFailure.of(e),
                 )
             }
         }

@@ -1192,13 +1192,15 @@ class CIRISApiClient(
     /**
      * Commit one rung of the ladder — `POST {nodeUrl}{op.route}`.
      *
-     * [op] carries the route, so a caller cannot send a tier-4 body down a
-     * tier-0 door. [request] must carry the selection that was PREVIEWED
-     * together with the hash that preview returned; passing the form's current
-     * selection instead is exactly what the hash exists to refuse.
+     * [op] carries the route, as the node's operations catalogue states it
+     * (`GET /v1/operations`), so a caller cannot send a tier-4 body down a
+     * tier-0 door and never builds a URL from an op name. [request] must carry
+     * the selection that was PREVIEWED together with the hash that preview
+     * returned; passing the form's current selection instead is exactly what
+     * the hash exists to refuse.
      */
     suspend fun adminLadderCommit(
-        op: AdminLadderOp,
+        op: ai.ciris.mobile.shared.models.LadderRung,
         request: AdminLadderCommitRequest,
         nodeUrl: String = LOCAL_NODE_URL,
         token: String? = accessToken,
@@ -1206,7 +1208,7 @@ class CIRISApiClient(
         val method = "adminLadderCommit"
         logInfo(
             method,
-            "POST $nodeUrl${op.route} tier=${op.tier} scope=${op.requiredScope} " +
+            "POST $nodeUrl${op.route} op=${op.op} tier=${op.tier} scope=${op.scope} " +
                 "hash=${request.selectionHash.take(12)}…",
         )
         val client = federationHttpClient()
@@ -1231,6 +1233,59 @@ class CIRISApiClient(
             }
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl, route=${op.route}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    // ── The node's catalogues (CSD-065 / CSD-090; CIRISClient#108, #109) ──
+    //
+    // Both routes are ungated and node-owned, so they go to the NODE URL and
+    // carry no token. A 404 raises [RouteNotOnThisHost] (an older node: the
+    // caller names its fallback); anything else that is not a 200 raises with
+    // the status, so a failed read is never an empty catalogue.
+
+    /** `GET {nodeUrl}/v1/vocabulary` — every enumerable wire vocabulary. */
+    suspend fun getVocabulary(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.NodeVocabulary {
+        val method = "getVocabulary"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/vocabulary")
+            val raw = response.bodyAsText()
+            if (response.status == HttpStatusCode.NotFound) throw RouteNotOnThisHost("/v1/vocabulary")
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("vocabulary read failed: ${response.status}")
+            }
+            ai.ciris.mobile.shared.models.NodeVocabulary(
+                jsonConfig.decodeFromString<Map<String, Map<String, List<String>>>>(raw),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET {nodeUrl}/v1/operations` — the graded-act ladder, as the node states it. */
+    suspend fun getOperations(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.OperationsCatalogue {
+        val method = "getOperations"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/operations")
+            val raw = response.bodyAsText()
+            if (response.status == HttpStatusCode.NotFound) throw RouteNotOnThisHost("/v1/operations")
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("operations read failed: ${response.status}")
+            }
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.OperationsCatalogue.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -1999,32 +2054,44 @@ class CIRISApiClient(
      * ``question`` (see [ai.ciris.mobile.shared.viewmodels.ModerationAction]).
      * [reason] is an optional free-form rationale.
      *
-     * Hits ``POST /v1/safety/reports`` — the FSD/MODERATION_CHILD_SAFETY.md
-     * §4.4 "report → surface → act" surface. **NOTE: this server route is
-     * NOT YET IMPLEMENTED** (there is no ``src/safety/report.rs`` today;
-     * only ``/v1/safety/moderation``, the gated duty-holder action). This
-     * client targets the FSD-specified path so the UI affordance ships
-     * ahead of the route; see the round report for the exact contract the
-     * server must honor. The body is tolerant of either a ``{"data": …}``
-     * envelope or a bare object on response.
+     * Hits ``POST {nodeUrl}/v1/safety/reports`` — the FSD/MODERATION_CHILD_SAFETY.md
+     * §4.4 "report → surface → act" surface, a NODE route (`src/safety/report.rs`),
+     * so it goes to the node URL like every other safety call, never
+     * to `$baseUrl` (on a with-AI install that is the agent, which does not
+     * proxy it).
+     *
+     * **The route exists on neither host** (CIRISServer#665: no
+     * `src/safety/report.rs`, no route literal). A 404 raises
+     * [RouteNotOnThisHost] so the sheet says "this node can't take a proposal
+     * yet" in words, instead of a status code dressed as a failure.
+     *
+     * [targetId] is the CONTENT the proposal names (a message or file id),
+     * sent as `target_id`. It is not a key, so it is never sent as
+     * `target_key_id`; the author's key, when the caller knows it, rides
+     * separately as [targetKeyId]. The body is tolerant of either a
+     * ``{"data": …}`` envelope or a bare object on response.
      */
     suspend fun proposeModeration(
         targetId: String,
         action: String,
         reason: String? = null,
+        targetKeyId: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
     ): ModerationProposalResult {
         val method = "proposeModeration"
-        logInfo(method, "POST /v1/safety/reports target=$targetId action=$action reason=${reason?.take(40)}")
+        logInfo(method, "POST $nodeUrl/v1/safety/reports target=$targetId action=$action reason=${reason?.take(40)}")
         val client = federationHttpClient()
         return try {
-            val response = client.post("$baseUrl/v1/safety/reports") {
+            val response = client.post("$nodeUrl/v1/safety/reports") {
                 authHeader()?.let { header("Authorization", it) }
                 contentType(ContentType.Application.Json)
                 setBody(jsonConfig.encodeToString(
                     JsonObject.serializer(),
                     buildJsonObject {
-                        // The CC 4.5.5 target — content/contributor the report names.
-                        put("target_key_id", targetId)
+                        // The content the proposal names (CC 4.5.13: "against the target").
+                        put("target_id", targetId)
+                        // The contributor, only when the caller actually knows their key.
+                        if (!targetKeyId.isNullOrBlank()) put("target_key_id", targetKeyId)
                         // report | takedown | question (the proposed action).
                         put("action", action)
                         // The open-labeling allegation token; rides `scores`.
@@ -2032,6 +2099,9 @@ class CIRISApiClient(
                         if (!reason.isNullOrBlank()) put("reason", reason)
                     },
                 ))
+            }
+            if (response.status == HttpStatusCode.NotFound) {
+                throw RouteNotOnThisHost("/v1/safety/reports")
             }
             if (!response.status.isSuccess()) {
                 throw RuntimeException("Moderation proposal failed: ${response.status}")

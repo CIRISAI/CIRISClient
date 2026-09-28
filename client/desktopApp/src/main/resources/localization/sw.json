@@ -718,7 +718,15 @@
     "verb_takedown": "takedown — chapisha notisi ya kuondoa maudhui kwa niaba ya mkabidhi",
     "verbs_help": "Chagua kila jukumu ambalo ruhusa hii inapaswa kubeba. Yanasafiri pamoja kama seti moja kwenye ruhusa moja — huhitaji sherehe tofauti kwa kila jukumu.",
     "verbs_label": "Majukumu ya kutoa",
-    "verbs_none": "Hakuna jukumu lililochaguliwa. Ruhusa isiyo na upeo haitoi chochote."
+    "verbs_none": "Hakuna jukumu lililochaguliwa. Ruhusa isiyo na upeo haitoi chochote.",
+    "source_absent": "Nodi hii haijui familia yoyote ya accord bado, hivyo hakuna mamlaka ya kukabidhi kutoka kwake. Hakuna kilichoharibika; hakuna kinachoweza kukabidhiwa hadi moja iwepo.",
+    "not_conferrable_by_accord": "Accord haiwezi kukabidhi hili. Mamlaka ya accord haiwezi kufikia nyanja za ridhaa au leseni (CC 4.2.1).",
+    "verb_unknown": "{duty}: wajibu ambao nodi hii inautekeleza ambao programu hii haina maelezo yake bado",
+    "verb_license": "license: toa leseni kwa niaba ya mkabidhi",
+    "verb_grant": "grant: toa ruhusa kwa niaba ya mkabidhi",
+    "ladder_tier_generic": "tabaka {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Nodi hii haichapishi msamiati wake wa wajibu (hakuna /v1/vocabulary), hivyo orodha hii ni nakala ya programu hii yenyewe na inaweza kukosa wajibu ambao nodi inakubali.",
+    "vocabulary_unreadable": "Haikuweza kusoma msamiati wa wajibu wa nodi hii ({detail}), hivyo orodha hii ni nakala ya programu hii yenyewe na inaweza kukosa wajibu ambao nodi inakubali."
   },
   "errors": {
     "adapter_not_available": "Meneja wa adapter haupatikani",
@@ -3198,7 +3206,12 @@
     "login_new_account_observer": "Akaunti ambayo nodi hii haijawahi kuiona ingeruhusiwa kuingia kama mtazamaji, si kama mmiliki.",
     "login_new_account_claims": "Nodi hii bado haina mmiliki: akaunti ya kwanza kuingia inakuwa mmiliki wake.",
     "manage_nodes_owned_not_on_this_node": "Nodi hii haiwezi kuorodhesha nodi unazomiliki. Ni ya zamani sana kujibu swali hilo.",
-    "manage_nodes_unverified": "Orodha hii haikuweza kuhakikiwa dhidi ya nodi unazomiliki. Inaonyesha kifaa hiki pekee na nodi yoyote uliyoiongeza katika kipindi hiki. Hilo halimaanishi kuwa hauna kingine chochote."
+    "manage_nodes_unverified": "Orodha hii haikuweza kuhakikiwa dhidi ya nodi unazomiliki. Inaonyesha kifaa hiki pekee na nodi yoyote uliyoiongeza katika kipindi hiki. Hilo halimaanishi kuwa hauna kingine chochote.",
+    "moderation_named_none": "Bado hakuna jamii iliyoulizwa. Andika ufunguo wa jamii na bonyeza Angalia.",
+    "moderation_named_error": "Haikuweza kuuliza nodi hii kuhusu jamii hiyo ({detail}). Hii SI taarifa kwamba ina msimamizi.",
+    "moderation_named_not_on_this_node": "Nodi hii haiwezi kusema bado ni nani anayesimamia jamii: haina njia ya msimamizi aliyetajwa. Hii SI taarifa kwamba jamii ina msimamizi.",
+    "moderation_verdict_unknown": "Nodi imejibu hukumu ambayo programu hii haiifahamu ({verdict}). Chukulia jamii kama haijaidhinishwa kufanya kazi.",
+    "moderation_candidate_row": "Mgombea: {candidate}. Nodi inataja ni nani, na bado haijataja rekodi ya utendaji iliyomchagua."
   },
   "moderation": {
     "ladder": {
@@ -3295,7 +3308,37 @@
       "unparsable_response": "Nodi ilijibu kwa mwili ambao programu hii haikuweza kuusoma.",
       "window_application": "Dirisha la muda lilitumiwa na nodi hii badala ya hoja, hivyo kikomo cha ukurasa kilitumika kwenye seti pana zaidi na uteuzi huu waweza kurudi ukiwa pungufu.",
       "window_substrate": "Dirisha la muda lilitekelezwa na hoja ya msingi.",
-      "withdrew_row": "Iliondoa {id}"
+      "withdrew_row": "Iliondoa {id}",
+      "reaches_substrate_no": "Hii inabadilisha tu kile ambacho nodi hii inarekodi: imebainishwa, na kile ambacho msingi unakubali hakibadiliki.",
+      "catalogue_not_on_this_node": "Nodi hii haichapishi ngazi yake (hakuna /v1/operations), hivyo hatua hizi ni nakala ya programu hii yenyewe. Nodi bado inaamua tabaka, wigo na idadi ya wajumbe wanaohitajika utakapowasilisha.",
+      "catalogue_unreadable": "Haikuweza kusoma ngazi ya nodi hii ({detail}), hivyo hatua hizi ni nakala ya programu hii yenyewe. Nodi bado inaamua tabaka, wigo na idadi ya wajumbe wanaohitajika utakapowasilisha.",
+      "not_reached_unstated": "Nodi hii haitaji kikomo kingine kwa hatua hii zaidi ya kile inachofikia, hapo juu.",
+      "undone_by_op": "Imebatilishwa na {op}. Safu zote mbili zinasalia kama historia inayosomeka.",
+      "undone_is_reversal": "Hatua hii inabatilisha {op}. Safu zote mbili zinasalia kama historia inayosomeka.",
+      "undone_no_inverse": "Nodi haitaji operesheni yoyote inayobatilisha hatua hii.",
+      "delegations_not_returned": "Nodi hii bado haijarudisha vitambulisho vya ukabidhi wako (inahitaji 0.5.218), hivyo bandika kitambulisho cha ukabidhi unaobeba wigo wa hatua hii.",
+      "delegations_unreadable": "Haikuweza kusoma vitambulisho vya ukabidhi wako kutoka nodi hii ({detail}). Bandika kitambulisho cha ukabidhi unaobeba wigo wa hatua hii.",
+      "delegations_none": "Nodi hii haishikilii ukabidhi wowote wako. Hatua hii inahitaji ukabidhi unaobeba {scope}.",
+      "delegations_wrong_scope": "Nodi hii imerudisha ukabidhi {count} wako, unaobeba {carried}. Hakuna unaobeba {scope}, ambao hatua hii inauhitaji, hivyo hakuna unaotolewa: nodi ingeukataa. Bandika kitambulisho cha ukabidhi unaobeba wigo huo.",
+      "delegations_pick": "Makabidhiano yako kwenye nodi hii yanayobeba {scope}:",
+      "tier_no_scope": "Tabaka {tier} · nodi hii haitaji wigo wa ukabidhi kwa hatua hii.",
+      "reaches_substrate_yes": "Hii inabadilisha kile ambacho msingi unakubali: mlango umefungwa, si kubainishwa tu."
+    },
+    "proposal": {
+      "title": "Leta hili kwa jamii",
+      "framing": "Mtu yeyote anaweza kuleta hili; jamii ina saa 48; msimamizi anaweza kutenda mapema zaidi.",
+      "action_label": "Unapendekeza nini?",
+      "action_report": "Ripoti",
+      "action_takedown": "Omba kuondolewa",
+      "action_question": "Kubaki au kuondolewa?",
+      "reason_label": "Sababu (hiari)",
+      "reason_placeholder": "Kwa nini unaleta hili?",
+      "submit": "Wasilisha: fungua dirisha la saa 48",
+      "submitting": "Inafungua dirisha…",
+      "raised": "Imeletwa. Dirisha la saa 48 la jamii limefunguliwa; msimamizi au mlezi anaweza kutenda mapema zaidi.",
+      "error": "Haikuweza kuleta hili: {detail}. Hakuna kilichowasilishwa.",
+      "not_on_this_node": "Nodi hii haiwezi kupokea pendekezo la jamii bado: haina njia ya /v1/safety/reports (inahitaji CIRISServer#665). Hakuna kilichowasilishwa. Ikiwa unashikilia wajibu wa usimamizi, wasilisha chini ya Usalama > Usimamizi badala yake.",
+      "refused_minor": "Rekodi yako ya umri kwenye nodi hii inaonyesha kuwa ni mtoto mdogo, hivyo hili linaletwa kupitia mlezi wako, si moja kwa moja. Hakuna kilichowasilishwa; muombe mlezi wako alilete."
     }
   },
   "nav": {

@@ -763,7 +763,15 @@
     "verb_takedown": "takedown — publish a takedown notice on the delegator's behalf",
     "verbs_help": "Pick every duty this grant should carry. They travel together as one set on one grant — you do not need a separate ceremony per duty.",
     "verbs_label": "Duties to confer",
-    "verbs_none": "No duty selected. A grant with no scope confers nothing."
+    "verbs_none": "No duty selected. A grant with no scope confers nothing.",
+    "source_absent": "This node knows no accord family yet, so there is no authority to confer from. Nothing is broken; nothing can be conferred until one exists.",
+    "not_conferrable_by_accord": "The accord cannot confer this. Accord authority cannot reach the consent or licensure planes (CC 4.2.1).",
+    "verb_unknown": "{duty}: a duty this node serves that this app has no description for yet",
+    "verb_license": "license: issue a licence on the delegator's behalf",
+    "verb_grant": "grant: issue a grant on the delegator's behalf",
+    "ladder_tier_generic": "tier {tier} · {ops}",
+    "vocabulary_not_on_this_node": "This node doesn't publish its duty vocabulary (no /v1/vocabulary), so this list is this app's own copy and may be missing duties the node accepts.",
+    "vocabulary_unreadable": "Could not read this node's duty vocabulary ({detail}), so this list is this app's own copy and may be missing duties the node accepts."
   },
   "errors": {
     "adapter_not_available": "Adapter manager not available",
@@ -3301,7 +3309,12 @@
     "llm_settings_disable_ciris_reversible": "You can turn CIRIS services back on here later; it takes effect after the agent restarts.",
     "llm_settings_reenable_after_restart": "Turning this back on takes effect after the agent restarts",
     "manage_nodes_owned_not_on_this_node": "This node cannot list the nodes you own. It is too old to answer that question.",
-    "manage_nodes_unverified": "This list could not be checked against the nodes you own. It shows only this device and any node you added in this session. That does not mean you own nothing else."
+    "manage_nodes_unverified": "This list could not be checked against the nodes you own. It shows only this device and any node you added in this session. That does not mean you own nothing else.",
+    "moderation_named_none": "No community asked about yet. Type a community key and press Check.",
+    "moderation_named_error": "Could not ask this node about that community ({detail}). This is NOT a report that it has a moderator.",
+    "moderation_named_not_on_this_node": "This node can't say who moderates a community yet: it has no named-moderator route. This is NOT a report that the community has a moderator.",
+    "moderation_verdict_unknown": "The node answered a verdict this app does not know ({verdict}). Treat the community as not cleared to operate.",
+    "moderation_candidate_row": "Candidate: {candidate}. The node names who was chosen, but not yet the track record that chose them."
   },
   "moderation": {
     "ladder": {
@@ -3398,7 +3411,37 @@
       "unparsable_response": "The node answered with a body this app could not read.",
       "window_application": "The time window was applied by this node rather than by the query, so the page bound was applied to a wider set and this selection can come back short.",
       "window_substrate": "The time window was enforced by the substrate query.",
-      "withdrew_row": "Withdrew {id}"
+      "withdrew_row": "Withdrew {id}",
+      "tier_no_scope": "Tier {tier} · this node names no delegation scope for this rung.",
+      "reaches_substrate_yes": "This changes what the substrate accepts: the door is shut, not just noted.",
+      "reaches_substrate_no": "This changes only what this node records: it is noted, and what the substrate accepts is unchanged.",
+      "catalogue_not_on_this_node": "This node doesn't publish its ladder (no /v1/operations), so these rungs are this app's own copy. The node still decides tier, scope and quorum when you commit.",
+      "catalogue_unreadable": "Could not read this node's ladder ({detail}), so these rungs are this app's own copy. The node still decides tier, scope and quorum when you commit.",
+      "not_reached_unstated": "This node states no separate limit for this rung beyond what it reaches, above.",
+      "undone_by_op": "Undone by {op}. Both rows survive as readable history.",
+      "undone_is_reversal": "This rung undoes {op}. Both rows survive as readable history.",
+      "undone_no_inverse": "The node names no operation that undoes this rung.",
+      "delegations_not_returned": "This node doesn't return your delegation ids yet (it needs 0.5.218), so paste the id of a delegation that carries this rung's scope.",
+      "delegations_unreadable": "Could not read your delegation ids from this node ({detail}). Paste the id of a delegation that carries this rung's scope.",
+      "delegations_none": "This node holds no delegation of yours. This rung needs one carrying {scope}.",
+      "delegations_wrong_scope": "This node returned {count} delegation(s) of yours, carrying {carried}. None carries {scope}, which this rung needs, so none is offered: the node would refuse it. Paste the id of a delegation that does.",
+      "delegations_pick": "Your delegations on this node that carry {scope}:"
+    },
+    "proposal": {
+      "title": "Raise this with the community",
+      "framing": "Anyone can raise this; the community has 48 hours; a moderator can act sooner.",
+      "action_label": "What are you proposing?",
+      "action_report": "Report",
+      "action_takedown": "Request takedown",
+      "action_question": "Keep-or-remove?",
+      "reason_label": "Reason (optional)",
+      "reason_placeholder": "Why are you raising this?",
+      "submit": "Submit: open the 48-hour window",
+      "submitting": "Opening the window…",
+      "raised": "Raised. The 48-hour community window is open; a moderator or steward can act sooner.",
+      "error": "Could not raise this: {detail}. Nothing was filed.",
+      "not_on_this_node": "This node can't take a community proposal yet: it has no /v1/safety/reports route (needs CIRISServer#665). Nothing was filed. If you hold a moderation duty, file under Safety > Moderation instead.",
+      "refused_minor": "Your age record on this node says minor, so this is raised through your steward, not directly. Nothing was filed; ask your steward to raise it."
     }
   },
   "nav": {

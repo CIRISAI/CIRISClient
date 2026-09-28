@@ -718,7 +718,15 @@
     "verb_takedown": "takedown——代表委托方发布撤下通知",
     "verbs_help": "选择此授权应包含的每一项职责。它们作为一组随同一份授权一起生效——无需为每项职责单独举行一次仪式。",
     "verbs_label": "要授予的职责",
-    "verbs_none": "未选择任何职责。没有范围的授权不会授予任何权限。"
+    "verbs_none": "未选择任何职责。没有范围的授权不会授予任何权限。",
+    "source_absent": "本节点尚不知晓任何协约家族，因此没有可供授予的权限来源。这并非故障；在家族存在之前，无法授予任何职责。",
+    "not_conferrable_by_accord": "协约无法授予此项。协约权限无法触及同意或许可平面（CC 4.2.1）。",
+    "verb_unknown": "{duty}：本节点履行的一项职责，本应用尚无相关说明",
+    "verb_license": "许可：代表委派方签发许可",
+    "verb_grant": "授予：代表委派方签发授予",
+    "ladder_tier_generic": "第 {tier} 层 · {ops}",
+    "vocabulary_not_on_this_node": "本节点未发布其职责词汇表（没有 /v1/vocabulary），因此此列表是本应用自带的副本，可能缺失该节点所接受的某些职责。",
+    "vocabulary_unreadable": "无法读取本节点的职责词汇表（{detail}），因此此列表是本应用自带的副本，可能缺失该节点所接受的某些职责。"
   },
   "errors": {
     "adapter_not_available": "适配器管理器不可用",
@@ -3198,7 +3206,12 @@
     "login_new_account_observer": "此节点从未见过的账户将以观察者身份被允许进入，而非所有者。",
     "login_new_account_claims": "此节点尚无所有者：首个登录的账户将成为其所有者。",
     "manage_nodes_owned_not_on_this_node": "此节点无法列出您所拥有的节点。它的版本过旧，无法回答该问题。",
-    "manage_nodes_unverified": "此列表未能与您所拥有的节点进行核对。它仅显示此设备以及您在本次会话中添加的节点。这并不意味着您没有其他节点。"
+    "manage_nodes_unverified": "此列表未能与您所拥有的节点进行核对。它仅显示此设备以及您在本次会话中添加的节点。这并不意味着您没有其他节点。",
+    "moderation_named_none": "尚未查询任何社区。请输入社区密钥并点击“检查”。",
+    "moderation_named_error": "无法向本节点询问该社区的情况（{detail}）。这并不表示该社区已有管理者。",
+    "moderation_named_not_on_this_node": "本节点尚无法说明谁在管理某个社区：它没有指定管理者的路由。这并不表示该社区已有管理者。",
+    "moderation_verdict_unknown": "节点返回了一个本应用未知的裁定结果（{verdict}）。请将该社区视为未获准运营。",
+    "moderation_candidate_row": "候选人：{candidate}。节点指明了是谁，但尚未说明选出此人的履历记录。"
   },
   "moderation": {
     "ladder": {
@@ -3295,7 +3308,37 @@
       "unparsable_response": "该节点作出了应答，但其正文本应用无法读取。",
       "window_application": "该时间窗口由本节点施加，而非由查询施加，因此分页上限作用在一个更大的集合上，这一选择可能返回不全。",
       "window_substrate": "该时间窗口由基底查询施加。",
-      "withdrew_row": "已撤回 {id}"
+      "withdrew_row": "已撤回 {id}",
+      "tier_no_scope": "第 {tier} 层 · 本节点未为此梯级指明委派范围。",
+      "reaches_substrate_yes": "此操作会改变基底所接受的内容：门被关闭了，而不仅仅是被记录。",
+      "reaches_substrate_no": "此操作仅改变本节点所记录的内容：它会被记录下来，而基底所接受的内容不受影响。",
+      "catalogue_not_on_this_node": "本节点未发布其阶梯（没有 /v1/operations），因此这些梯级是本应用自带的副本。提交时，仍由节点决定层级、范围与法定人数。",
+      "catalogue_unreadable": "无法读取本节点的阶梯（{detail}），因此这些梯级是本应用自带的副本。提交时，仍由节点决定层级、范围与法定人数。",
+      "not_reached_unstated": "对于此梯级，本节点除上方所述的触及范围外，未声明其他单独限制。",
+      "undone_by_op": "已被 {op} 撤销。两行记录都作为可读历史保留。",
+      "undone_is_reversal": "此梯级撤销了 {op}。两行记录都作为可读历史保留。",
+      "undone_no_inverse": "节点未指明任何可撤销此梯级的操作。",
+      "delegations_not_returned": "本节点尚不返回您的委派 ID（需要 0.5.218），请粘贴一份携带此梯级范围的委派 ID。",
+      "delegations_unreadable": "无法从本节点读取您的委派 ID（{detail}）。请粘贴一份携带此梯级范围的委派 ID。",
+      "delegations_none": "本节点未持有您的任何委派。此梯级需要一份携带 {scope} 的委派。",
+      "delegations_wrong_scope": "本节点返回了您的 {count} 份委派，携带 {carried}。其中没有一份携带此梯级所需的 {scope}，因此不予提供：节点会拒绝它。请粘贴一份携带该范围的委派 ID。",
+      "delegations_pick": "您在本节点上携带 {scope} 的委派："
+    },
+    "proposal": {
+      "title": "向社区提出此事",
+      "framing": "任何人都可以提出此事；社区有 48 小时的处理期；管理者可以更早采取行动。",
+      "action_label": "您要提议什么？",
+      "action_report": "举报",
+      "action_takedown": "请求下架",
+      "action_question": "保留还是移除？",
+      "reason_label": "理由（可选）",
+      "reason_placeholder": "您为什么要提出此事？",
+      "submit": "提交：开启 48 小时处理期",
+      "submitting": "正在开启处理期……",
+      "raised": "已提出。48 小时的社区处理期已开启；管理者或监护人可以更早采取行动。",
+      "error": "无法提出此事：{detail}。未提交任何内容。",
+      "not_on_this_node": "本节点尚不能接受社区提议：它没有 /v1/safety/reports 路由（需要 CIRISServer#665）。未提交任何内容。如果您持有管理职责，请改在“安全 > 管理”下提交。",
+      "refused_minor": "您在本节点上的年龄记录显示为未成年人，因此此事需通过您的监护人提出，而非直接提出。未提交任何内容；请让您的监护人代为提出。"
     }
   },
   "nav": {
