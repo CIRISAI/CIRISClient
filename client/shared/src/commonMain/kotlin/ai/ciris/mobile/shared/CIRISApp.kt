@@ -1028,6 +1028,8 @@ fun CIRISApp(
     // at call time, since a switch can move it while this model lives.
     val contactsNodeUrl = androidx.compose.runtime.rememberUpdatedState(effectiveNodeUrl)
     val contactsViewModel: ContactsViewModel = viewModel {
+        // The node URL as a provider: the contact code, the add and the removal go
+        // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
         ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
     // Same leak class as the approvals ViewModel (both are app-scoped and
