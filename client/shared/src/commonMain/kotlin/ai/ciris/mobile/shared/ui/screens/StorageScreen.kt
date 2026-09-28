@@ -6,6 +6,8 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.AgentModeStatus
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,11 +23,21 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
- * Storage — CIRISPersist operator view (Manage group, 2.9.6).
+ * Storage — CIRISPersist operator view (CSD-040).
  *
  * Surfaces the persist substrate's local facts: the graph store (total nodes,
  * by type/scope, recent activity) and the on-disk storage location. Read-only;
  * the agent surfaces what persist produces, it does not mutate it here.
+ *
+ * Four states, four renderings (CSD-040 §2): the counters; an empty graph said
+ * as "not holding anything yet" rather than as `Total nodes — 0`; a spinner;
+ * and the error card. The "On disk" card is the AGENT's (`/v1/system/agent-mode`,
+ * no node route): when that read fails the card says so in its place rather
+ * than disappearing, because a card that is missing and a card that was never
+ * asked for look identical (CSD-040 §6).
+ *
+ * `oldest` / `newest` are labelled approximate: the node computes them from
+ * the first 1000-row page per scope, not a full scan (`memory_api.rs`).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,6 +47,7 @@ fun StorageScreen(
 ) {
     var stats by remember { mutableStateOf<MemoryStatsApiData?>(null) }
     var mode by remember { mutableStateOf<AgentModeStatus?>(null) }
+    var diskFailure by remember { mutableStateOf<ReadFailure?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
 
@@ -48,7 +61,9 @@ fun StorageScreen(
         }
         try {
             mode = apiClient.getAgentMode()
+            diskFailure = null
         } catch (e: Exception) {
+            diskFailure = ReadFailure.of(e)
             PlatformLogger.d("StorageScreen", "getAgentMode failed: ${e.message}")
         }
         loading = false
@@ -89,11 +104,25 @@ fun StorageScreen(
             }
 
             stats?.let { s ->
-                StorageCard(title = "Graph store", testTag = "card_storage_graph") {
-                    StatRow("Total nodes", s.totalNodes.toString(), "row_storage_total_nodes")
-                    StatRow("New (24h)", s.recentNodes24h.toString(), "row_storage_recent_nodes")
-                    s.oldestNodeDate?.let { StatRow("Oldest", it, "row_storage_oldest") }
-                    s.newestNodeDate?.let { StatRow("Newest", it, "row_storage_newest") }
+                when (storageGraphState(s)) {
+                    // A number where there is nothing is a reading nobody took.
+                    StorageGraphState.EMPTY -> StateBlock(
+                        ListState.Empty(localizedString("mobile.storage_empty")),
+                        tag = "storage_empty",
+                        inline = true,
+                    )
+                    StorageGraphState.POPULATED -> StorageCard(title = "Graph store", testTag = "card_storage_graph") {
+                        StatRow("Total nodes", s.totalNodes.toString(), "row_storage_total_nodes")
+                        StatRow("New (24h)", s.recentNodes24h.toString(), "row_storage_recent_nodes")
+                        s.oldestNodeDate?.let { StatRow(localizedString("mobile.storage_oldest_approx"), it, "row_storage_oldest") }
+                        s.newestNodeDate?.let { StatRow(localizedString("mobile.storage_newest_approx"), it, "row_storage_newest") }
+                        Text(
+                            localizedString("mobile.storage_dates_heuristic"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("row_storage_dates_heuristic"),
+                        )
+                    }
                 }
 
                 if (s.nodesByType.isNotEmpty()) {
@@ -119,9 +148,30 @@ fun StorageScreen(
                     StatRow("Available", formatBytes(m.availableDiskBytes), "row_storage_available")
                 }
             }
+            // The disk facts are the agent's. A read that failed is said in its
+            // place — `storage_disk_not_on_this_node` on a host without the
+            // route, `storage_disk_error` otherwise — never a card that is
+            // simply not there.
+            if (mode == null && !loading) {
+                diskFailure?.let {
+                    ReadFailureBlock(
+                        failure = it,
+                        tagPrefix = "storage_disk",
+                        notOnThisNode = localizedString("mobile.storage_disk_not_on_this_node"),
+                        inline = true,
+                    )
+                }
+            }
         }
     }
 }
+
+/** Whether the graph-store card has anything to count. Pure, so the empty state is tested without Compose. */
+enum class StorageGraphState { POPULATED, EMPTY }
+
+fun storageGraphState(stats: MemoryStatsApiData): StorageGraphState =
+    if (stats.totalNodes <= 0 && stats.nodesByType.isEmpty() && stats.nodesByScope.isEmpty()) StorageGraphState.EMPTY
+    else StorageGraphState.POPULATED
 
 @Composable
 private fun StorageCard(title: String, testTag: String, content: @Composable ColumnScope.() -> Unit) {

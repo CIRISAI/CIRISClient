@@ -58,6 +58,16 @@ class DataManagementViewModel(
     private val _accordSettings = MutableStateFlow<AccordSettingsData?>(null)
     val accordSettings: StateFlow<AccordSettingsData?> = _accordSettings.asStateFlow()
 
+    /**
+     * Why the accord-settings read produced nothing, when it did (CSD-039 §2).
+     * `accord-settings` is the AGENT's route: a bare 404 is a host without it
+     * (a node running without an agent, or an agent whose accord adapter is
+     * not loaded), and the card must say which rather than draw "Enable" over
+     * a read nobody got. Null after a successful read.
+     */
+    private val _accordFailure = MutableStateFlow<ai.ciris.mobile.shared.ui.screens.ReadFailure?>(null)
+    val accordFailure: StateFlow<ai.ciris.mobile.shared.ui.screens.ReadFailure?> = _accordFailure.asStateFlow()
+
     // The canonical CIRIS community peer — the directed counterparty of the
     // traces-consent object. Null until the lens federates as a peer
     // (lenscore 1.0); the card renders a graceful "federation pending" state.
@@ -125,12 +135,15 @@ class DataManagementViewModel(
                     logDebug(method, "Fetching accord settings...")
                     val accordData = apiClient.getAccordSettings()
                     _accordSettings.value = accordData
+                    _accordFailure.value = null
                     logInfo(method, "Accord settings loaded: consent=${accordData.consentGiven}, " +
                             "level=${accordData.traceLevel}, eventsSent=${accordData.eventsSent}, " +
                             "agentIdHash=${accordData.agentIdHash.take(8)}...")
                 } catch (e: Exception) {
-                    // Accord adapter might not be loaded - this causes UI to show "Enable" button
+                    // The accord adapter may not be loaded (the "Enable" button), or
+                    // this host may not serve the route at all. Both are kept, typed.
                     _accordSettings.value = null
+                    _accordFailure.value = ai.ciris.mobile.shared.ui.screens.ReadFailure.of(e)
                     logWarn(method, "Accord settings not available (adapter not loaded?): ${e.message}")
                     logWarn(method, "Exception type: ${e::class.simpleName}, full: $e")
                 }

@@ -1178,6 +1178,14 @@ fun CIRISApp(
     val consentViewModel: ConsentViewModel = viewModel {
         ConsentViewModel(apiClient)
     }
+    // The person's own consent record (CSD-054) is app-scoped, and its screen
+    // shows the record it holds while it reloads: without this the next
+    // signer-in read the previous owner's stream for the whole reload. Same
+    // key and condition as the Manage Consent reset above (PR #116): under
+    // Home Assistant ingress the token stays null by design and is a session.
+    LaunchedEffect(currentAccessToken, isHAAddonMode) {
+        consentViewModel.sessionChanged(consentSessionAuthenticated(currentAccessToken, isHAAddonMode))
+    }
     val systemViewModel: SystemViewModel = viewModel {
         SystemViewModel(apiClient)
     }
@@ -4196,9 +4204,9 @@ fun CIRISApp(
                     viewModel = consentObjectsViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     onOpenUserConsent = { currentScreen = Screen.Consent },
-                    // Trace-consent: the alternative view of the SAME CEG object
-                    // the wizard writes. One-tap opt-in/out via the my-data PUT.
-                    dataViewModel = dataManagementViewModel,
+                    // The reasoning-traces opt-in is the Data card's (CSD-039):
+                    // one write path, one door. This screen only points at it.
+                    onOpenDataSharing = { currentScreen = Screen.DataManagement },
                     // Revoke: whether the node mounts the route is asked of the
                     // node at runtime (ConsentObjectsViewModel), not decided here.
                 )

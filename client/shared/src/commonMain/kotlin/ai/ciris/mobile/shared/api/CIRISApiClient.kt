@@ -6517,9 +6517,10 @@ class CIRISApiClient(
                 setBody(jsonConfig.encodeToString(WatchlistRequest.serializer(), request))
             }
             val raw = response.bodyAsText()
-            if (!response.status.isSuccess()) {
-                throw RuntimeException("set watchlist failed: ${response.status}: ${raw.take(200)}")
-            }
+            // A typed refusal, so the Safety card can tell the node's 401 (the
+            // route wants the moderate-holder's request signature, which this
+            // app does not produce — CSD-066 §3) from a 403 (not a holder).
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
             decodeFederationEnvelope(raw, WatchlistResponse.serializer())
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl")

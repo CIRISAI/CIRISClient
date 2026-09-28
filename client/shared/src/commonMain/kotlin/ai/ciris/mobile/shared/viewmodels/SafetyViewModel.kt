@@ -1,24 +1,133 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
 import ai.ciris.mobile.shared.models.safety.AgeAssurance
+import ai.ciris.mobile.shared.models.safety.AgeBand
 import ai.ciris.mobile.shared.models.safety.ExistenceVerdict
 import ai.ciris.mobile.shared.models.safety.ModerationDuty
 import ai.ciris.mobile.shared.models.safety.SafetyHonesty
+import ai.ciris.mobile.shared.models.safety.SafetyStatusResponse
 import ai.ciris.mobile.shared.models.safety.WatchlistClass
 import ai.ciris.mobile.shared.models.safety.WatchlistEnable
 import ai.ciris.mobile.shared.models.safety.WatchlistHonesty
+import ai.ciris.mobile.shared.models.safety.WatchlistListResponse
 import ai.ciris.mobile.shared.models.safety.WatchlistMode
+import ai.ciris.mobile.shared.models.safety.WatchlistResponse
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 private const val TAG = "SafetyViewModel"
+
+/**
+ * The node calls the Safety card makes (CSD-066 §3), as an interface so the
+ * view model is driven by a fake in `SafetyCardTest`. Every call goes to the
+ * LOCAL node (`CIRISApiClient.LOCAL_NODE_URL`); the app does no crypto.
+ */
+interface SafetyApi {
+    /** `GET /v1/setup/owned-nodes` — `owner` is the bound owner's fed-ID, the PERSON. */
+    suspend fun ownedNodes(): OwnedNodesDto
+
+    /** `GET /v1/federation/self-key-record` — the NODE's own signer key, not the person. */
+    suspend fun selfKeyId(): String
+
+    /** `GET /v1/safety/status/{key_id}`. */
+    suspend fun safetyStatus(keyId: String): SafetyStatusResponse
+
+    /** `GET /v1/safety/watchlist/{group_key_id}`. */
+    suspend fun watchlist(groupKeyId: String): WatchlistListResponse
+
+    /** `POST /v1/safety/watchlist` — hybrid-signed on the node; throws [NodeRefusal] on a non-2xx. */
+    suspend fun setWatchlist(
+        signerKeyId: String,
+        groupKeyId: String,
+        watchlistId: String,
+        watchlistClass: WatchlistClass,
+        enabled: Boolean,
+        mode: WatchlistMode,
+        routeToModerator: String?,
+    ): WatchlistResponse
+
+    /** `POST /v1/self/age {band}` — owner-session; the node signs as the owner's fed-ID. */
+    suspend fun setAgeSelf(band: AgeBand): String
+}
+
+/** [SafetyApi] over the real client. */
+class ClientSafetyApi(private val client: CIRISApiClient) : SafetyApi {
+    override suspend fun ownedNodes(): OwnedNodesDto = client.getOwnedNodes()
+    override suspend fun selfKeyId(): String = client.getSelfKeyRecord(CIRISApiClient.LOCAL_NODE_URL).keyId
+    override suspend fun safetyStatus(keyId: String): SafetyStatusResponse = client.getSafetyStatus(keyId)
+    override suspend fun watchlist(groupKeyId: String): WatchlistListResponse = client.getWatchlist(groupKeyId)
+    override suspend fun setWatchlist(
+        signerKeyId: String,
+        groupKeyId: String,
+        watchlistId: String,
+        watchlistClass: WatchlistClass,
+        enabled: Boolean,
+        mode: WatchlistMode,
+        routeToModerator: String?,
+    ): WatchlistResponse = client.setWatchlist(
+        signerKeyId = signerKeyId,
+        groupKeyId = groupKeyId,
+        watchlistId = watchlistId,
+        watchlistClass = watchlistClass,
+        enabled = enabled,
+        mode = mode,
+        routeToModerator = routeToModerator,
+    )
+    override suspend fun setAgeSelf(band: AgeBand): String =
+        client.setAgeSelf(if (band == AgeBand.MINOR) "minor" else "adult")
+}
+
+/**
+ * The last read of a group's enables. Four states, four renderings: an empty
+ * list, a failed read and a group never asked about must not look alike on a
+ * mechanism whose default is "off" (CSD-066 §2).
+ */
+sealed interface WatchlistRead {
+    data object NotAsked : WatchlistRead
+    data object Loading : WatchlistRead
+    data class Loaded(val enables: List<WatchlistEnable>, val honesty: WatchlistHonesty?) : WatchlistRead
+    data class Failed(val failure: ReadFailure) : WatchlistRead
+}
+
+/**
+ * Why the node did not take a watchlist enable/disable. [Unsigned] is the
+ * node asking for the moderate-holder's request signature (`x-ciris-key-id` +
+ * Ed25519/ML-DSA), which this app does not produce: not a wrong password, and
+ * not "not a holder" — that is [NotAHolder], the 403.
+ */
+sealed interface WatchlistWriteRefusal {
+    data object Unsigned : WatchlistWriteRefusal
+    data object NotAHolder : WatchlistWriteRefusal
+    data class Refused(val reasonId: String?, val detail: String?, val status: Int) : WatchlistWriteRefusal
+    data class Failed(val detail: String?) : WatchlistWriteRefusal
+
+    companion object {
+        fun of(e: Throwable): WatchlistWriteRefusal = when {
+            e is NodeRefusal && e.statusCode == 401 -> Unsigned
+            e is NodeRefusal && e.statusCode == 403 -> NotAHolder
+            e is NodeRefusal -> Refused(e.reasonId, e.detail, e.statusCode)
+            else -> Failed(e.message ?: e::class.simpleName)
+        }
+    }
+}
+
+/** Restating the owner's self-declared band from the Safety card (`POST /v1/self/age`). */
+sealed interface AgeRestate {
+    data object Idle : AgeRestate
+    data class Working(val band: AgeBand) : AgeRestate
+    data class Recorded(val band: AgeBand) : AgeRestate
+    data class Failed(val band: AgeBand, val detail: String?) : AgeRestate
+}
 
 /**
  * UI state for the holistic SAFETY surface (moderation + child-safety cards).
@@ -35,9 +144,22 @@ data class SafetyState(
     val identityProbed: Boolean = false,
 
     // ── Protective posture (GET /v1/safety/status/{key_id}) ──
+    /**
+     * WHOSE posture the card shows: the bound owner's fed-ID (the person),
+     * read from owned-nodes `owner`; only an unclaimed node falls back to its
+     * own signer key. Null until resolved. The read is gated to THIS key on
+     * the client — the node serves the status and age-assurance reads to any
+     * caller, and this card never asks about anyone else (CSD-066 §3).
+     */
+    val subjectKeyId: String? = null,
+    /** True when [subjectKeyId] is the owner's fed-ID; false when it is the node's key (unclaimed). */
+    val subjectIsOwner: Boolean = false,
     val ageAssurance: AgeAssurance? = null,
     val statusHonesty: SafetyHonesty? = null,
     val statusLoading: Boolean = false,
+    /** Why the posture could not be read — never rendered as "no band on record". */
+    val statusFailure: ReadFailure? = null,
+    val ageRestate: AgeRestate = AgeRestate.Idle,
 
     // ── Moderation card ──
     /** The community key_id the report / named-moderator lookup is scoped to. */
@@ -76,7 +198,11 @@ data class SafetyState(
     val watchlistLoading: Boolean = false,
     val watchlistEnables: List<WatchlistEnable> = emptyList(),
     val watchlistHonesty: WatchlistHonesty? = null,
+    /** The typed read: what the enables list, the empty line, the spinner and the failure render from. */
+    val watchlistRead: WatchlistRead = WatchlistRead.NotAsked,
     val watchlistMutating: Boolean = false,
+    /** The node's answer to the last enable/disable, when it did not take it. */
+    val watchlistWriteRefusal: WatchlistWriteRefusal? = null,
 
     // ── Shared ──
     val error: String? = null,
@@ -92,6 +218,8 @@ data class SafetyState(
  */
 class SafetyViewModel(
     private val apiClient: CIRISApiClient,
+    /** The Safety card's node calls. The real client's by default; a fake in tests. */
+    private val api: SafetyApi = ClientSafetyApi(apiClient),
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(SafetyState())
@@ -99,39 +227,96 @@ class SafetyViewModel(
 
     /**
      * Probe THIS device's local node for the caller's federation key_id, then
-     * load the protective posture (age assurance) for it. The identity is the
-     * `signer_key_id` for moderation/watchlist actions and the `key_id` for
-     * status. If the node holds no identity yet, the cards surface that honestly.
+     * load the protective posture (age assurance) for the PERSON. The node key
+     * is the `signer_key_id` for moderation/watchlist actions; the posture's
+     * subject is the bound owner's fed-ID (owned-nodes `owner`), the way
+     * IdentityManagement resolves it — a node's signer key has no age, and
+     * asking about it drew "unknown" for a person who had declared a band
+     * (CSD-066 §3). Only an unclaimed node falls back to its own key.
+     * If the node holds no identity yet, the cards surface that honestly.
      */
     fun probeIdentityAndStatus() {
         viewModelScope.launch {
             val keyId = try {
-                apiClient.getSelfKeyRecord(CIRISApiClient.LOCAL_NODE_URL).keyId
+                api.selfKeyId()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "probeIdentity: local node has no identity yet: ${e.message}")
                 null
             }
-            _state.value = _state.value.copy(selfKeyId = keyId, identityProbed = true)
-            if (keyId != null) loadStatus(keyId)
+            // The PERSON: the bound owner's fed-ID. A node's signer key has no
+            // age; only an unclaimed node (no owner) is asked about its own.
+            val owner = try {
+                api.ownedNodes().owner?.takeIf { it.isNotBlank() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "probeIdentity: owned-nodes unreadable (${e.message}); posture falls back to the node key")
+                null
+            }
+            val subject = owner ?: keyId
+            val subjectIsOwner = owner != null
+            _state.value = _state.value.copy(
+                selfKeyId = keyId,
+                identityProbed = true,
+                subjectKeyId = subject,
+                subjectIsOwner = subjectIsOwner,
+            )
+            if (subject != null) loadStatus(subject)
         }
     }
 
-    /** Load the aggregate protective posture (`GET /v1/safety/status/{key_id}`). */
+    /**
+     * Load the aggregate protective posture (`GET /v1/safety/status/{key_id}`)
+     * — for the resolved subject only. A failed read is its own state
+     * ([SafetyState.statusFailure]), never "no band on record".
+     */
     fun loadStatus(keyId: String) {
-        _state.value = _state.value.copy(statusLoading = true, error = null)
+        _state.value = _state.value.copy(statusLoading = true, statusFailure = null, error = null)
         viewModelScope.launch {
             try {
-                val resp = apiClient.getSafetyStatus(keyId)
+                val resp = api.safetyStatus(keyId)
                 _state.value = _state.value.copy(
                     statusLoading = false,
                     ageAssurance = resp.ageAssurance,
                     statusHonesty = resp.honesty,
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                PlatformLogger.w(TAG, "safety status read failed for $keyId: ${e.message}")
                 _state.value = _state.value.copy(
                     statusLoading = false,
-                    error = "Couldn't load safety status: ${e.message}",
+                    ageAssurance = null,
+                    statusFailure = ReadFailure.of(e),
                 )
+            }
+        }
+    }
+
+    /**
+     * **(Re)state the owner's self-declared age band** — `POST /v1/self/age`,
+     * the owner-session route the wizard uses. The node signs the attestation
+     * as the OWNER's fed-ID; the app holds no keys. The federation route
+     * (`POST /v1/safety/age-assurance`) wants a subject-signed request and is
+     * not used. After the node answers, the posture is re-read from the node:
+     * the card shows what the node recorded, not what was asked for.
+     */
+    fun restateAgeBand(band: AgeBand) {
+        val s = _state.value
+        if (s.ageRestate is AgeRestate.Working) return
+        _state.value = s.copy(ageRestate = AgeRestate.Working(band), error = null, message = null)
+        viewModelScope.launch {
+            try {
+                api.setAgeSelf(band)
+                _state.value = _state.value.copy(ageRestate = AgeRestate.Recorded(band))
+                _state.value.subjectKeyId?.let { loadStatus(it) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "restateAgeBand failed: ${e.message}")
+                _state.value = _state.value.copy(ageRestate = AgeRestate.Failed(band, e.message ?: e::class.simpleName))
             }
         }
     }
@@ -244,19 +429,31 @@ class SafetyViewModel(
             _state.value = _state.value.copy(error = "Enter a group key_id first.")
             return
         }
-        _state.value = _state.value.copy(watchlistLoading = true, error = null)
+        // A new read drops the last group's list: a stale "nothing watched"
+        // under a new key would be a false clean (the same rule as the
+        // named-moderator verdict).
+        _state.value = _state.value.copy(
+            watchlistLoading = true,
+            watchlistRead = WatchlistRead.Loading,
+            watchlistEnables = emptyList(),
+            error = null,
+        )
         viewModelScope.launch {
             try {
-                val resp = apiClient.getWatchlist(group)
+                val resp = api.watchlist(group)
                 _state.value = _state.value.copy(
                     watchlistLoading = false,
                     watchlistEnables = resp.enables,
                     watchlistHonesty = resp.honesty,
+                    watchlistRead = WatchlistRead.Loaded(resp.enables, resp.honesty),
                 )
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                PlatformLogger.w(TAG, "watchlist read failed for $group: ${e.message}")
                 _state.value = _state.value.copy(
                     watchlistLoading = false,
-                    error = "Couldn't load watchlist: ${e.message}",
+                    watchlistRead = WatchlistRead.Failed(ReadFailure.of(e)),
                 )
             }
         }
@@ -279,10 +476,10 @@ class SafetyViewModel(
             _state.value = s.copy(error = "Group and watchlist id are required.")
             return
         }
-        _state.value = s.copy(watchlistMutating = true, error = null, message = null)
+        _state.value = s.copy(watchlistMutating = true, watchlistWriteRefusal = null, error = null, message = null)
         viewModelScope.launch {
             try {
-                apiClient.setWatchlist(
+                api.setWatchlist(
                     signerKeyId = signer,
                     groupKeyId = s.watchlistGroupKeyId.trim(),
                     watchlistId = s.watchlistId.trim(),
@@ -295,11 +492,15 @@ class SafetyViewModel(
                     watchlistMutating = false,
                     message = if (enabled) "Watchlist enabled for this group." else "Watchlist disabled for this group.",
                 )
+                // What is on now is what the node lists, not what was asked for.
                 loadWatchlist()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                PlatformLogger.w(TAG, "watchlist write refused: ${e.message}")
                 _state.value = _state.value.copy(
                     watchlistMutating = false,
-                    error = "Couldn't update watchlist: ${e.message}",
+                    watchlistWriteRefusal = WatchlistWriteRefusal.of(e),
                 )
             }
         }

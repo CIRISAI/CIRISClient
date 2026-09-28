@@ -34,12 +34,43 @@ import kotlinx.coroutines.launch
  * - Poll for partnership status when pending
  */
 class ConsentViewModel(
-    private val apiClient: CIRISApiClient
+    private val apiClient: CIRISApiClient,
+    /** Where the card starts. Empty in the app; a test seeds a previous owner's record to forget. */
+    initialData: ConsentScreenData = ConsentScreenData(),
 ) : ViewModel() {
 
     companion object {
         private const val TAG = "ConsentViewModel"
         private const val PARTNERSHIP_POLL_INTERVAL_MS = 5000L
+    }
+
+    /**
+     * CIRISApp's token effect, the same one that resets Manage Consent
+     * (CSD-053, PR #116): [authenticated] is `consentSessionAuthenticated` of
+     * the token and the Home Assistant add-on mode. A session that ends
+     * forgets the record; nothing is loaded here on a session that begins —
+     * the screen loads when it is shown.
+     */
+    fun sessionChanged(authenticated: Boolean) {
+        if (!authenticated) resetSession()
+    }
+
+    /**
+     * The session ended — every way out. This model is CIRISApp-scoped and
+     * outlives the owner, and the screen's spinner shows only while it holds
+     * NO record, so without this the next signer-in read the previous owner's
+     * stream, expiry, audit trail and partnership queue for the whole reload
+     * (CSD-054 §2; the Manage Consent half of the same defect was PR #116).
+     */
+    fun resetSession() {
+        stopPartnershipPolling()
+        dataLoadStarted = false
+        _consentData.value = ConsentScreenData()
+        _error.value = null
+        _successMessage.value = null
+        _partnershipOptions.value = null
+        _partnershipQueue.value = PartnershipQueue.Loading
+        _partnershipHistory.value = emptyMap()
     }
 
     private fun log(level: String, method: String, message: String) {
@@ -59,7 +90,7 @@ class ConsentViewModel(
     private fun logError(method: String, message: String) = log("ERROR", method, message)
 
     // Consent data state
-    private val _consentData = MutableStateFlow(ConsentScreenData())
+    private val _consentData = MutableStateFlow(initialData)
     val consentData: StateFlow<ConsentScreenData> = _consentData.asStateFlow()
 
     // Loading state
