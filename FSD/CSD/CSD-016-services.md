@@ -124,10 +124,11 @@ this state.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the service list | `GET /v1/system/services` | CIRISAgent (`routes/system/services.py:77`) | live on the brain — `CIRISApiClient.kt:11071` |
-| priority, priority group, strategy, capabilities | **no route** | — | **missing**; the client supplies constants instead (`CIRISApiClient.kt:11092-11097`) |
+| priority, priority group, strategy | `GET /v1/system/services/selection-logic` — "priority groups, priorities, strategies, and circuit breaker behavior" | CIRISAgent (`routes/system_extensions.py:477`, OBSERVER) | **live and never called** — this row said "no route", and one exists on `main` (29371660de). The client still supplies constants (`CIRISApiClient.kt:11092-11097`). Whether the payload carries per-service values or only the policy is not verified here, which is why `config:{scope}` stays `unconfirmed` above; CIRISAgent#1208 is about `/services` itself and does not mention this route |
+| change a provider's priority / group / strategy | `PUT /v1/system/services/{provider_name}/priority` | CIRISAgent (`routes/system_extensions.py:388`, ADMIN) | live, **not called** |
 | handler-specific services | **no route** | — | **missing**; `handlers = emptyMap()` (`CIRISApiClient.kt:11103`) |
-| real circuit-breaker state | **no route** | CIRISAgent | **missing**; derived from `healthy` |
-| reset a circuit breaker | **no route** | CIRISAgent | **missing**. The controls that pretended to do it (`btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm`, wired to a `resetCircuitBreakers` whose whole body was a status string reading `"(API not yet implemented)"`) were **removed in #95**; the card offers no reset until a route exists |
+| real circuit-breaker state | `GET /v1/system/services/health` — "circuit breaker states, error rates, and recommendations" | CIRISAgent (`routes/system_extensions.py:352`, OBSERVER) | **live and never called** — this row said "no route". The chip is still derived from `healthy` |
+| reset a circuit breaker | `POST /v1/system/services/circuit-breakers/reset` (all, or one service type) | CIRISAgent (`routes/system_extensions.py:444`, ADMIN) | **live and never called** — this row said "no route". The controls that pretended to do it (`btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm`, wired to a `resetCircuitBreakers` whose whole body was a status string reading `"(API not yet implemented)"`) were **removed in #95**; the card offers no reset. The route exists, so that removal is now the gap rather than the fix |
 | diagnostics | **no route** | CIRISAgent | **missing**. `runDiagnostics` re-counted the list already on screen, so its "open breakers" number was the unhealthy count restated; `btn_services_diagnose` was **removed in #95** |
 | the node's own substrate health | `GET /v1/system/health` | CIRISServer (`src/health.rs:589`) | live — **and never called by this screen** |
 

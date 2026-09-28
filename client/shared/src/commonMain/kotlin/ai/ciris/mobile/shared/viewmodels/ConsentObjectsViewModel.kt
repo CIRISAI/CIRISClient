@@ -3,6 +3,11 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.models.federation.FederationConsentScopes
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ClientConsentWithdraw
+import ai.ciris.mobile.shared.api.ConsentWithdrawApi
+import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.api.isRouteMissing
+import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
 import ai.ciris.mobile.shared.models.NodeProfile
 import ai.ciris.mobile.shared.models.federation.PeeringRequest
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -33,12 +38,44 @@ data class ConsentObjectsState(
     val isRunning: Boolean = false,
     val error: String? = null,
     val message: String? = null,
+    /**
+     * The A→B grant's `attestation_id`, as node A named it when it granted —
+     * the id `POST /v1/federation/peering/revoke` takes. Null when this screen
+     * has not seen the grant: the node serves no read of its peering grants, so
+     * a grant made elsewhere cannot be named here.
+     */
+    val aToBGrantId: String? = null,
+    /** Does node A mount the revoke route? Decided at runtime, never by a build flag. */
+    val revokeRoute: RevokeRoute = RevokeRoute.UNKNOWN,
+    val isRevoking: Boolean = false,
+    /**
+     * Grants the node reported STILL ACTIVE after a withdraw: node-authored rows
+     * (written before the person re-signed them), which the person cannot
+     * withdraw. Non-empty means the withdraw did NOT happen for these.
+     */
+    val remainingGrants: List<String> = emptyList(),
+    /** The `withdraws` row the node signed as the person, after a complete revoke. */
+    val withdrawnBy: String? = null,
+    /** The node's typed refusal of the last revoke, if any. */
+    val revokeRefusalId: String? = null,
+    val revokeRefusalDetail: String? = null,
 ) {
     val isRatified: Boolean
         get() = aToB == GrantDirectionState.GRANTED && bToA == GrantDirectionState.GRANTED
     val canRun: Boolean
         get() = nodeA != null && nodeB != null && !isRunning
+    /**
+     * Revoke is live when there is a named grant to withdraw and the node has
+     * not shown it lacks the route. [RevokeRoute.UNKNOWN] stays live: the POST
+     * itself then decides, and a bare 404 flips it to [RevokeRoute.MISSING].
+     */
+    val canRevoke: Boolean
+        get() = nodeA != null && !aToBGrantId.isNullOrBlank() && revokeRoute != RevokeRoute.MISSING &&
+            !isRevoking && !isRunning
 }
+
+/** Whether node A mounts `POST /v1/federation/peering/revoke` (ciris-server 0.5.218+). */
+enum class RevokeRoute { UNKNOWN, MOUNTED, MISSING }
 
 /**
  * Drives the **consent-objects card** — the bilateral consent:replication setup
@@ -56,6 +93,11 @@ data class ConsentObjectsState(
  */
 class ConsentObjectsViewModel(
     private val apiClient: CIRISApiClient,
+    private val withdraw: ConsentWithdrawApi = ClientConsentWithdraw(apiClient),
+    /** The owned-nodes read. The real client's by default; a test's fake counts re-reads. */
+    private val readOwnedNodes: suspend () -> OwnedNodesDto = { apiClient.getOwnedNodes() },
+    /** Where the card starts. Empty in the app; a test seeds a granted A→B to revoke. */
+    initialState: ConsentObjectsState = ConsentObjectsState(),
 ) : ViewModel() {
 
     companion object {
@@ -64,7 +106,7 @@ class ConsentObjectsViewModel(
         val DEFAULT_B_TO_A_PREFIXES = FederationConsentScopes.FROM_PEER
     }
 
-    private val _state = MutableStateFlow(ConsentObjectsState())
+    private val _state = MutableStateFlow(initialState)
     val state: StateFlow<ConsentObjectsState> = _state.asStateFlow()
 
     init {
@@ -83,7 +125,7 @@ class ConsentObjectsViewModel(
      */
     suspend fun loadNodes() {
         val owned = try {
-            apiClient.getOwnedNodes()
+            readOwnedNodes()
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[loadNodes] owned-nodes unavailable (${e.message})")
             null
@@ -101,6 +143,94 @@ class ConsentObjectsViewModel(
             NodeProfile(id = on.keyId, name = on.keyId, baseUrl = "", pinnedKeyId = on.keyId, isOwned = true)
         }
         _state.value = _state.value.copy(nodeA = a, nodeB = b)
+        probeRevokeRoute(a.baseUrl)
+    }
+
+    /**
+     * Ask node A whether it mounts the revoke route. A "could not tell" never
+     * overwrites a definite answer — in particular not a MISSING the POST
+     * itself established.
+     */
+    private suspend fun probeRevokeRoute(nodeUrl: String) {
+        val mounted = try {
+            withdraw.revokeRouteMounted(nodeUrl)
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[probeRevokeRoute] ${e.message}")
+            null
+        }
+        val route = when (mounted) {
+            true -> RevokeRoute.MOUNTED
+            false -> RevokeRoute.MISSING
+            null -> return
+        }
+        PlatformLogger.i(TAG, "[probeRevokeRoute] $nodeUrl revoke route: $route")
+        _state.value = _state.value.copy(revokeRoute = route)
+    }
+
+    /**
+     * Withdraw node A's grant to B — `POST {A}/v1/federation/peering/revoke`,
+     * signed by the PERSON (the node wields the owner's pen; it never withdraws
+     * consent as itself).
+     *
+     * On any answer the screen RE-READS ([loadNodes] and the route probe) rather
+     * than flipping a row on the strength of the click. A direction leaves
+     * GRANTED only when the node says it withdrew that grant and signed the
+     * `withdraws`; a node-authored grant comes back in [ConsentObjectsState.remainingGrants]
+     * and its direction stays GRANTED, because it is.
+     */
+    fun revokeAToB() {
+        val s = _state.value
+        val nodeA = s.nodeA
+        val grantId = s.aToBGrantId
+        if (!s.canRevoke || nodeA == null || grantId.isNullOrBlank()) {
+            PlatformLogger.w(TAG, "[revokeAToB] nothing to revoke (grant=$grantId route=${s.revokeRoute} revoking=${s.isRevoking})")
+            return
+        }
+        _state.value = s.copy(
+            isRevoking = true,
+            error = null,
+            message = null,
+            remainingGrants = emptyList(),
+            withdrawnBy = null,
+            revokeRefusalId = null,
+            revokeRefusalDetail = null,
+        )
+        viewModelScope.launch {
+            try {
+                val resp = withdraw.revokeGrant(nodeA.baseUrl, grantId)
+                _state.value = if (resp.complete && resp.attestationId == grantId) {
+                    PlatformLogger.i(TAG, "[revokeAToB] withdrawn grant=${grantId.take(16)}… withdraws=${resp.withdraws?.take(16)}")
+                    _state.value.copy(
+                        revokeRoute = RevokeRoute.MOUNTED,
+                        aToB = GrantDirectionState.IDLE,
+                        aToBGrantId = null,
+                        withdrawnBy = resp.withdraws,
+                    )
+                } else {
+                    PlatformLogger.w(TAG, "[revokeAToB] NOT withdrawn — still active: ${resp.remainingGrants}")
+                    _state.value.copy(
+                        revokeRoute = RevokeRoute.MOUNTED,
+                        remainingGrants = resp.remainingGrants.ifEmpty { listOf(grantId) },
+                    )
+                }
+            } catch (e: NodeRefusal) {
+                _state.value = if (e.isRouteMissing()) {
+                    PlatformLogger.i(TAG, "[revokeAToB] node predates the revoke route (bare 404)")
+                    _state.value.copy(revokeRoute = RevokeRoute.MISSING)
+                } else {
+                    PlatformLogger.w(TAG, "[revokeAToB] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                    _state.value.copy(revokeRefusalId = e.reasonId, revokeRefusalDetail = e.detail)
+                }
+            } catch (e: Exception) {
+                PlatformLogger.e(TAG, "[revokeAToB] ${e.message}", e)
+                _state.value = _state.value.copy(revokeRefusalDetail = e.message ?: e::class.simpleName)
+            } finally {
+                _state.value = _state.value.copy(isRevoking = false)
+            }
+            // THE RE-READ. Whatever the node said, what the screen shows next
+            // comes from asking again, not from the click.
+            loadNodes()
+        }
     }
 
     fun setNodes(a: NodeProfile?, b: NodeProfile?) {
@@ -142,9 +272,10 @@ class ConsentObjectsViewModel(
                 val recordA = apiClient.getSelfKeyRecord(nodeA.baseUrl, nodeA.sessionToken)
                 val recordB = apiClient.getSelfKeyRecord(nodeB.baseUrl, nodeB.sessionToken)
 
-                // 3: POST peering to A with peer = B.
-                val aGranted = try {
-                    val resp = apiClient.postPeering(
+                // 3: POST peering to A with peer = B. Keep the grant row id the
+                // node names: it is the only handle the revoke route takes.
+                val aGrant = try {
+                    apiClient.postPeering(
                         request = PeeringRequest(
                             peerKeyId = recordB.keyId,
                             peerKeyRecord = recordB,
@@ -153,13 +284,14 @@ class ConsentObjectsViewModel(
                         nodeUrl = nodeA.baseUrl,
                         token = nodeA.sessionToken,
                     )
-                    resp.granted
                 } catch (e: Exception) {
                     PlatformLogger.e(TAG, "[runBilateralPeering] A→B failed: ${e.message}", e)
-                    false
+                    null
                 }
+                val aGranted = aGrant?.isGranted == true
                 _state.value = _state.value.copy(
                     aToB = if (aGranted) GrantDirectionState.GRANTED else GrantDirectionState.FAILED,
+                    aToBGrantId = aGrant?.grantRowId,
                 )
 
                 // 4: POST peering to B with peer = A.
@@ -173,7 +305,7 @@ class ConsentObjectsViewModel(
                         nodeUrl = nodeB.baseUrl,
                         token = nodeB.sessionToken,
                     )
-                    resp.granted
+                    resp.isGranted
                 } catch (e: Exception) {
                     PlatformLogger.e(TAG, "[runBilateralPeering] B→A failed: ${e.message}", e)
                     false

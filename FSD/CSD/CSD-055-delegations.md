@@ -121,10 +121,15 @@ so the three only need tags.
 | the device code itself | `POST /v1/auth/device/code` | CIRISServer | live (`:1350`) |
 | approve a code, with tighten-only constraints | `POST /v1/auth/device/approve` | CIRISServer | live (`:1353`) |
 | revoke | `POST /v1/auth/device/revoke` | CIRISServer | live (`:1357`) |
+| the agent redeems the offered PIN | `POST /v1/auth/device/claim` | CIRISServer (`:1352`, handler `:750`) — **PUBLIC**, the PIN is the secret; consumes the grant | live, and **correctly not called by this client**: the AGENT calls it. The card's part is to show it — `delegate`'s response carries `claim_url: "/v1/auth/device/claim"` (`:732`) and the card renders it with the PIN (`CreateDelegationResponse.claimUrl`, `models/federation/Delegation.kt:42`; drawn at `DelegationsScreen.kt:617`) |
+| **refuse a pending code** | `POST /v1/auth/device/deny` | CIRISServer (`:1354`, handler `:1024`) — owner-gated (`require_owner`, `:1029`) | **live and never called.** The approve path has a whole form (`DelegationsScreen.kt`, `approveDeviceCode` at `CIRISApiClient.kt:2748`); the deny path has no control, so an owner handed a code they do not want can only let it expire. A consent surface whose only answer is yes-or-wait is the gap |
+| the device's poll leg | `POST /v1/auth/device/token` | CIRISServer (`:1355`, handler `:1059`) | live; RFC 8628 polling by the requesting device, not an owner act — no card |
 | the chain above a grant | — | CIRISServer | **missing**. The ask: does `GET /v1/auth/device/grants` carry the parent `delegates_to` and the depth? CC 4.1.1 caps it at 5 and CC 4.5 makes revocation cascade, so an owner who cannot see the chain cannot see what a revoke does. Blocks `building` for `text_delegation_chain`. |
 
 All five routes are node-only and all five are live — the strongest contract
-table in this area. **The old claim that `/v1/self/delegations` serves this is
+table in this area. The three rows under them are the rest of
+`device_grant.rs:1349-1357` (identical on `integ/0.5.218`): `claim` and `token`
+are the other party's legs, and `deny` is the owner's missing "no". **The old claim that `/v1/self/delegations` serves this is
 wrong**: zero hits in CIRISServer `src/*.rs` and zero in CIRISAgent; the node's
 `/v1/self/*` routes are `nodes/{key_id}/release` and `occurrence/label`
 (`src/self_devices.rs:469, 473`). CSD-001 carried that row and is corrected in
