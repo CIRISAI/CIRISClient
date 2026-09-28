@@ -152,7 +152,25 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 f"on screen: {sorted(_tags(drv))}"
             )
         before = (drv.screen(), _active_step(drv))
-        drv.click(nxt)
+        # iOS's /tree omits `canClick` when it is false (defaults are not
+        # serialized), so `_wait_clickable` cannot see a disabled Next there.
+        # A disabled control answers the click with 404 "No click handler":
+        # treat that as "not yet", bounded, and name the step if it stays so.
+        clicked = False
+        for _ in range(15):
+            try:
+                drv.click(nxt)
+                clicked = True
+                break
+            except DriverError as e:
+                if "No click handler" not in str(e):
+                    raise
+                time.sleep(2.0)
+        if not clicked:
+            raise SessionUnavailable(
+                f"wizard step {before[1]!r}: {nxt} stayed disabled for 30s; "
+                f"on screen: {sorted(_tags(drv))}"
+            )
         time.sleep(2.0)
         if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
             # One retry when the step's question is still on screen: the answer
