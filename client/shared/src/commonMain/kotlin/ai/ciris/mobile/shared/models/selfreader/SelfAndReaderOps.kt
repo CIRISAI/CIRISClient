@@ -125,12 +125,35 @@ data class SelfAxisStandingDto(
     val standingValue: SelfStanding get() = SelfStanding.fromWire(standing)
 }
 
+/**
+ * One of the owner's usable delegations (`owner_serve_delegations`,
+ * CIRISServer#676, 0.5.218): the `delegation_id` an admin act is taken under,
+ * so the person picks the node's own id instead of pasting one they cannot see.
+ *
+ * On 0.5.218 every row carries `infra:serve` (the self-directed scope), which
+ * tiers S and R take; tiers 0–4 require the named row to carry
+ * `review`/`moderate`/`slash` itself, so a picker must match [scope] to the act.
+ */
+@Serializable
+data class OwnerDelegationDto(
+    @SerialName("delegation_id") val delegationId: String = "",
+    @SerialName("issuer_key_id") val issuerKeyId: String = "",
+    @SerialName("subject_key_id") val subjectKeyId: String = "",
+    val scope: String = "",
+    @SerialName("owner_binding") val ownerBinding: Boolean = false,
+    @SerialName("cohort_scope") val cohortScope: String? = null,
+    @SerialName("asserted_at") val assertedAt: String? = null,
+)
+
 /** `GET /v1/admin/self` — the three standings, side by side. */
 @Serializable
 data class SelfStandingResponse(
     @SerialName("source_locale") val sourceLocale: String = "en",
     val tier: String = "S",
     @SerialName("node_key_id") val nodeKeyId: String = "",
+    /** Null on a node before 0.5.218 (no such field) or when the read failed ([ownerDelegationsError]). */
+    @SerialName("owner_delegations") val ownerDelegations: List<OwnerDelegationDto>? = null,
+    @SerialName("owner_delegations_error") val ownerDelegationsError: String? = null,
     /** Keyed by axis token. */
     val standings: Map<String, SelfAxisStandingDto> = emptyMap(),
     val partition: AdminMessage? = null,

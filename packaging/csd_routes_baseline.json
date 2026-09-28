@@ -30,9 +30,12 @@
   ],
   "uncited": {
     "Accord": [
+      "GET /v1/accord/canonical/pending",
+      "GET /v1/accord/canonical/withdrawals",
       "GET /v1/accord/genesis/remint-source",
       "GET /v1/federation/peers/{}",
       "GET /v1/setup/owned-nodes",
+      "POST /v1/accord/canonical/cosign",
       "POST /v1/accord/ci-key/propose",
       "POST /v1/accord/genesis/cosign",
       "POST /v1/accord/genesis/propose"
@@ -70,8 +73,10 @@
     "Interact": [
       "GET /v1/api/billing/credits",
       "GET /v1/audit/entries",
+      "GET /v1/federation/self-key-record",
       "GET /v1/memory/timeline",
       "GET /v1/memory/{}",
+      "GET /v1/safety/age-assurance/{}",
       "GET /v1/setup/config",
       "GET /v1/setup/owned-nodes",
       "GET /v1/setup/status",
@@ -88,24 +93,17 @@
     ],
     "LLMSettings": [
       "DELETE /v1/system/adapters/{}",
-      "GET /v1/setup/config",
       "GET /v1/system/adapters",
-      "POST /v1/setup/start-local-server",
       "PUT /v1/system/adapters/{}/reload"
     ],
     "LayerGlobalCommons": [
-      "GET /v1/federation/identity",
-      "GET /v1/system/agent-mode",
       "GET /v1/system/peers/federation-identity",
       "PUT /v1/system/agent-mode"
     ],
     "Login": [
-      "? /v1/auth/oauth/{}/login",
       "GET /v1/agent/history",
       "GET /v1/api/billing/credits",
       "GET /v1/audit/entries",
-      "GET /v1/auth/oauth/handoff",
-      "GET /v1/auth/oauth/providers",
       "GET /v1/identity",
       "GET /v1/my-data/capacity",
       "GET /v1/setup/config",
@@ -118,8 +116,6 @@
       "GET /v1/system/verify-status",
       "GET /v1/wa/status",
       "GET /v1/wallet/status",
-      "POST /v1/auth/native/apple",
-      "POST /v1/auth/native/google",
       "POST /v1/self/associate",
       "POST /v1/self/identity",
       "POST /v1/self/identity/inspect"
@@ -131,10 +127,6 @@
     "ManageNodes": [
       "GET /v1/federation/node-code",
       "GET /v1/setup/status"
-    ],
-    "Moderation": [
-      "GET /v1/federation/self-key-record",
-      "GET /v1/safety/status/{}"
     ],
     "NetworkContent": [
       "GET /v1/federation/peers",
@@ -182,7 +174,6 @@
     "Setup": [
       "GET /v1/accord/canonical/servers",
       "GET /v1/api/billing/credits",
-      "GET /v1/identity",
       "GET /v1/setup/owned-nodes",
       "GET /v1/system/adapters",
       "GET /v1/system/adapters/configure/{}",
@@ -192,7 +183,6 @@
       "POST /v1/auth/native/google",
       "POST /v1/federation/announce",
       "POST /v1/federation/consent",
-      "POST /v1/self/identity/inspect",
       "POST /v1/setup/discover-local-llm",
       "POST /v1/setup/start-local-server",
       "POST /v1/system/adapters/configure/{}/complete",
@@ -203,10 +193,6 @@
       "GET /v1/system/adapters/imported-skills",
       "POST /v1/system/adapters/import-skill",
       "POST /v1/system/adapters/import-skill/preview"
-    ],
-    "WiseAuthority": [
-      "GET /v1/tickets",
-      "PATCH /v1/tickets/{}"
     ]
   }
 }
