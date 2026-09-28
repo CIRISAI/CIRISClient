@@ -1740,27 +1740,20 @@ def self_test() -> int:
 
         # 0. a hand-off cannot hide a route: it lands on the named screen, or,
         #    when no such screen exists, back on the caller
-        api = tmp / API_CLIENT
-        app = tmp / APP
-        api_text, app_text = api.read_text(), app.read_text()
-        i = api_text.index("\n    suspend fun ", api_text.index("class CIRISApiClient("))
-        api.write_text(api_text[:i] + "\n" + PLANT_FN + api_text[i:])
         for fn, charged in (("handOffToWallet", "Screen.Wallet"), ("handOffToZzNowhere", "Screen.Consent")):
-            arm = re.search(r"\n(\s+)Screen\.Consent -> \{\n", app_text)
-            assert arm, "no Screen.Consent arm to plant into"
+            d = fresh(f"handoff_{fn}")
+            _plant_api(d, PLANT_FN)
+            _plant_arm(d, "Consent", [f"{fn}(apiClient)"])
+            app = d / APP
             app.write_text(
-                app_text[:arm.end()] + f"{arm.group(1)}    {fn}(apiClient)\n" + app_text[arm.end():]
+                app.read_text()
                 + f"\nprivate fun {fn}(api: CIRISApiClient) {{\n"
                   f"    GlobalScope.launch {{ api.plantedSelfTestProbe() }}\n}}\n")
-            rc, out = run()
+            rc, out = run(d)
             blk = out.split(f"\n  {charged}\n", 1)
             if rc == 0 or len(blk) < 2 or "/v1/zz-self-test/planted" not in blk[1].split("\n\n")[0]:
-                print(out)
-                print(f"SELF-TEST FAIL: a route reached through {fn}() was not charged to {charged}")
-                return 1
+                return fail(out, f"a route reached through {fn}() was not charged to {charged}")
             print(f"  planted {fn}() from Screen.Consent: red on {charged}")
-        api.write_text(api_text)
-        app.write_text(app_text)
 
         # 1. a new API method, called from one screen's arm -> NEW uncited route
         d = fresh("uncited")

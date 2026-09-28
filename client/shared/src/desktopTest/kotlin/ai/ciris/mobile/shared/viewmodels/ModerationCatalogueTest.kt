@@ -299,7 +299,7 @@ class ModerationCatalogueTest {
         serving(
             mapOf(
                 "/v1/federation/self-key-record" to (200 to selfKey),
-                "/v1/safety/age-assurance/me-1" to (200 to """{"key_id":"me-1","assurance":{"band":"adult","level":"self"}}"""),
+                "/v1/safety/age-assurance/me-1" to (200 to """{"key_id":"me-1","assurance":{"band":"adult","level":"self_declared"}}"""),
             ),
             fallback = 404 to "{}",
         ),
@@ -318,7 +318,7 @@ class ModerationCatalogueTest {
         serving(
             mapOf(
                 "/v1/federation/self-key-record" to (200 to selfKey),
-                "/v1/safety/age-assurance/me-1" to (200 to """{"key_id":"me-1","assurance":{"band":"minor","level":"self"}}"""),
+                "/v1/safety/age-assurance/me-1" to (200 to """{"key_id":"me-1","assurance":{"band":"minor","level":"self_declared"}}"""),
                 "/v1/safety/reports" to (200 to """{"contribution_id":"c-1"}"""),
             ),
         ),
