@@ -138,9 +138,15 @@ class TestAutomationServer:
         if not raw.strip():
             return None
         try:
-            return json.loads(raw)
+            parsed = json.loads(raw)
         except json.JSONDecodeError:
             return raw
+        # A body that says it failed has failed, whatever the HTTP status: the
+        # iOS server answered a failed /input with 200 until 0.5.225, and the
+        # walk then "typed" into fields that took nothing.
+        if isinstance(parsed, dict) and parsed.get("success") is False:
+            raise DriverError(f"{method} {route} -> {parsed.get('error') or parsed}")
+        return parsed
 
     # ---- reads --------------------------------------------------------
 

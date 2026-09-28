@@ -206,3 +206,31 @@ def test_wait_for_ui_does_not_confuse_a_live_server_for_a_composed_app(server):
     assert drv.wait_for_ui(timeout=1.0) == 0, (
         "a reachable automation server was mistaken for a composed app"
     )
+
+
+def test_a_body_that_says_it_failed_raises_even_on_http_200():
+    """iOS answered a failed /input with 200 {"success": false}; the walk then
+    'typed' into fields that took nothing (CSD flows on the matrix, #97)."""
+    import http.server, threading, json as _json
+    from testing.driver import TestAutomationServer, DriverError
+
+    class H(http.server.BaseHTTPRequestHandler):
+        def do_POST(self):
+            n = int(self.headers.get("Content-Length", 0)); self.rfile.read(n)
+            body = _json.dumps({"success": False, "error": "no text sink is listening for input_x"}).encode()
+            self.send_response(200); self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body))); self.end_headers(); self.wfile.write(body)
+        def log_message(self, *a): pass
+
+    srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+    t = threading.Thread(target=srv.serve_forever, daemon=True); t.start()
+    try:
+        drv = TestAutomationServer(base_url=f"http://127.0.0.1:{srv.server_address[1]}")
+        try:
+            drv.input("input_x", "hello", verify=False)
+        except DriverError as e:
+            assert "no text sink" in str(e)
+        else:
+            raise AssertionError("a success:false body was accepted as typed")
+    finally:
+        srv.shutdown()
