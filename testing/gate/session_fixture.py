@@ -116,6 +116,16 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         # fields read empty and Next never enables: the first iOS run of this
         # fixture stopped at "wizard did not advance past 'you'".
         time.sleep(2.0)
+    # The fed-ID label: desktop mints/admits the identity itself, but a client
+    # that asks (iOS) keeps Next disabled until the label is valid
+    # (SetupState.canProceedFromCurrentStep: YOU -> fedIdOk; generic words
+    # like "me" are refused, so use the device name, which is specific).
+    if "input_fedid_label" in _tags(drv):
+        try:
+            drv.input("input_fedid_label", f"{device} gate identity")
+        except DriverError as e:
+            raise SessionUnavailable(f"wizard: input_fedid_label would not accept input ({e})") from e
+        time.sleep(2.0)
     drv.click("age_band_adult")
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
