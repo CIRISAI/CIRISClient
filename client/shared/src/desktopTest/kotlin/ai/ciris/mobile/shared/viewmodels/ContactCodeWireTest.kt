@@ -66,7 +66,7 @@ class ContactCodeWireTest {
         val api = object : ContactsApi by real {
             override suspend fun listPeers() = FederationPeerListResponse()
         }
-        return ContactsViewModel(client, nodeUrl, api)
+        return ContactsViewModel(client, { nodeUrl }, api)
     }
 
     private suspend fun awaitThat(what: String, condition: () -> Boolean) {

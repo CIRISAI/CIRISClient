@@ -1,0 +1,67 @@
+csd: CSD-081
+flow: csd_081_login
+title: Sign in on an owned node, and be told when you are not the owner
+description: >-
+  CSD-081 §4, driven. Login is the screen every other flow passes through, and
+  the one it must not pass through silently: an observer account is REFUSED by
+  name rather than landed in a smaller product, and a person arriving from a
+  finished wizard is told why they are being asked again.
+# Floor: all ten tags are `testable*` literals in ui/screens/LoginScreen.kt at
+# v0.5.224. `login_submitting` and `txt_login_no_owner` are still proposed in
+# CSD-081 §2 and are not used here.
+client: ">=0.5.224"
+
+steps:
+  - step_id: land_on_login
+    title: Login offers the local form and the server's standing
+    requires:
+      screen: Login
+    expect:
+      state: populated
+      visible: [btn_local_login, btn_server_status]
+
+  - step_id: reveal_the_form
+    title: The local form is behind one press, and carries a way back
+    description: >-
+      This is the sequence session_fixture.log_in drives
+      (testing/gate/session_fixture.py:130-141). Asserting `btn_login_back` too,
+      because a form with no way out of it is how CIRISClient#51 reads.
+    do:
+      - click: btn_local_login
+    expect:
+      visible: [input_username, input_password, btn_login_submit, btn_login_back]
+
+  - step_id: credentials_are_accepted_as_input
+    title: The two fields take text
+    do:
+      - input: {input_username: "admin"}
+      - input: {input_password: "ciris_admin_password"}
+    expect:
+      screen: Login
+      visible: [input_username, input_password, btn_login_submit]
+
+  - step_id: not_the_owner_is_a_refusal
+    title: An account that is not the owner is refused, with both ways forward
+    description: >-
+      Optional: it needs a second, non-owner account on the node, which the
+      standing fixture does not create. The assertion is the point — `state:
+      error` plus BOTH affordances, because a refusal with no next move is the
+      shape CSD-081 §1 exists to forbid.
+    optional_step: true
+    requires:
+      screen: Login
+    expect:
+      state: error
+      visible: [card_observer_blocked, btn_choose_different_account, btn_reset_setup]
+
+  - step_id: straight_from_the_wizard
+    title: Arriving from a completed wizard says so, and names the owner
+    description: >-
+      Optional because it requires the run to have just completed setup. This is
+      CIRISClient#48's settled answer rendered: the banner explains the re-login
+      instead of looking like a failure.
+    optional_step: true
+    requires:
+      screen: Login
+    expect:
+      visible: [banner_setup_complete_relogin, txt_owner_hint]

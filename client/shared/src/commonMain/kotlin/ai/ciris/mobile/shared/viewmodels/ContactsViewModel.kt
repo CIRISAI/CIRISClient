@@ -1,10 +1,15 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.ClientConsentWithdraw
 import ai.ciris.mobile.shared.api.ClientContactsApi
+import ai.ciris.mobile.shared.api.ConsentWithdrawApi
 import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.api.isRouteMissing
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
+import ai.ciris.mobile.shared.models.federation.ContactListResponse
+import ai.ciris.mobile.shared.models.federation.RemoveContactResponse
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -28,21 +33,28 @@ import kotlinx.coroutines.launch
  *
  * Contacts ⊂ peers, so the two lists are not interchangeable in either
  * direction. The contact set is persist's revocation-FOLDED consent peer set —
- * a withdrawn grant is already absent, which is why there is no "remove
- * contact" call here to pair with [addContact].
+ * a withdrawn grant is already absent, so after [removeContact] the list is
+ * RE-READ rather than edited: the node's fold is the answer, not our guess.
  *
  * It also drives the **Share my contact code** card (CSD-092): the person's
  * own code from `GET /v1/self/contact-code`, the device picker, and the rule
  * that a code reaching no one is not shown.
  *
- * @param nodeBaseUrl the NODE's own address. Adding a contact and the contact
- *   code go there whenever an agent sits at the api base ([contactsNodeUrl]).
- * @param api every node call this view model makes; a fake in tests.
+ * @param nodeUrl where the NODE is right now. Adding a contact, the contact
+ *   code and removal are node routes; on a with-AI install `baseUrl` is the
+ *   agent, which does not proxy them (CIRISAgent#1213). A provider, not a
+ *   value, because the active node can be switched while this app-scoped
+ *   model lives.
+ * @param api every contact/code call this view model makes; a fake in tests.
+ * @param withdraw the removal call; a fake in tests.
  */
 class ContactsViewModel(
     apiClient: CIRISApiClient,
-    private val nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL,
+    private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
     private val api: ContactsApi = ClientContactsApi(apiClient),
+    private val withdraw: ConsentWithdrawApi = ClientConsentWithdraw(apiClient),
+    /** The list read. [api]'s by default; a test's fake counts re-reads. */
+    private val readContacts: suspend () -> ContactListResponse = { api.listContacts() },
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "ContactsVM"
@@ -185,7 +197,6 @@ class ContactsViewModel(
     private var codeRequest = 0L
 
     /** Where the add, the code and the announce go — see [contactsNodeUrl]. */
-    private fun nodeUrl(): String = contactsNodeUrl(apiClient.isNodeMode(), apiClient.baseUrl, nodeBaseUrl)
 
     init {
         load()
@@ -209,7 +220,7 @@ class ContactsViewModel(
             if (epoch != sessionEpoch) return@launch
             _loading.value = true
             try {
-                val resp = api.listContacts()
+                val resp = readContacts()
                 // THE gate that matters: the await above is where a logout
                 // interleaves. The clear emptied the flows once; publishing A's
                 // response now would repopulate them for the signed-out screen
@@ -336,6 +347,65 @@ class ContactsViewModel(
                 if (epoch == sessionEpoch) _addBusy.value = false
             }
         }
+    }
+
+    // ── Remove a contact (CIRISServer#657) ───────────────────────────────────
+
+    /** The key being removed right now, or null. */
+    private val _removing = MutableStateFlow<String?>(null)
+    val removing: StateFlow<String?> = _removing.asStateFlow()
+
+    /** What the last removal actually did — see [ContactRemoval]. */
+    private val _removal = MutableStateFlow<ContactRemoval?>(null)
+    val removal: StateFlow<ContactRemoval?> = _removal.asStateFlow()
+
+    /**
+     * Withdraw the person's consent to [keyId] — `DELETE /v1/contacts/{key_id}`
+     * on the NODE, signed by the person.
+     *
+     * The outcome is what the node SAID ([contactRemovalOf]), and the list is
+     * re-read afterwards whatever it said, including the still-active arm: a
+     * partial withdrawal changed the grants, and only the node's fold knows how.
+     */
+    fun removeContact(keyId: String) {
+        val trimmed = keyId.trim()
+        if (trimmed.isEmpty() || _removing.value != null) return
+        val epoch = sessionEpoch
+        val url = nodeUrl()
+        viewModelScope.launch {
+            _removing.value = trimmed
+            _removal.value = null
+            try {
+                val resp = withdraw.removeContact(url, trimmed)
+                if (epoch != sessionEpoch) return@launch
+                _removal.value = contactRemovalOf(resp)
+                PlatformLogger.i(
+                    tag,
+                    "[removeContact] ${trimmed.take(16)}… withdrawn=${resp.withdrawn.size} " +
+                        "remaining=${resp.remainingGrants.size} contact=${resp.contact}",
+                )
+                refreshContacts()
+            } catch (e: NodeRefusal) {
+                if (epoch != sessionEpoch) return@launch
+                _removal.value = if (e.isRouteMissing()) {
+                    ContactRemoval.Unsupported(trimmed)
+                } else {
+                    ContactRemoval.Refused(trimmed, e.reasonId, e.detail)
+                }
+                PlatformLogger.w(tag, "[removeContact] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+            } catch (e: Exception) {
+                if (epoch != sessionEpoch) return@launch
+                _removal.value = ContactRemoval.Refused(trimmed, null, e.message ?: e::class.simpleName)
+                PlatformLogger.e(tag, "[removeContact] ${e.message}", e)
+            } finally {
+                if (epoch == sessionEpoch) _removing.value = null
+            }
+        }
+    }
+
+    /** Acknowledge a removal outcome. Dismissing the still-active block changes no grant. */
+    fun clearRemoval() {
+        _removal.value = null
     }
 
     /** Acknowledge the one-shot [justAdded] after the screen has acted on it. */
@@ -616,5 +686,43 @@ class ContactsViewModel(
         tickedSeeded = false
         _contactCodeRefusal.value = null
         _makeReachable.value = MakeReachableState.Idle
+        _removing.value = null
+        _removal.value = null
     }
 }
+
+/**
+ * What a removal DID — never what was asked for.
+ *
+ * CC 1.5 has a flip side: a UI must not claim a withdrawal that did not happen.
+ * Grants this node wrote before the person re-signed them are not the person's
+ * to withdraw, stay live, and come back as `remaining_grants`; while any stand
+ * the person is still a contact and the answer is [StillActive], never [Removed].
+ */
+sealed interface ContactRemoval {
+    val keyId: String
+
+    /** Every grant withdrawn, and the node no longer calls them a contact. */
+    data class Removed(override val keyId: String, val withdrawn: Int) : ContactRemoval
+
+    /** Some or none withdrawn; these grants are still active, because the node wrote them. */
+    data class StillActive(
+        override val keyId: String,
+        val withdrawn: Int,
+        val remainingGrants: List<String>,
+    ) : ContactRemoval
+
+    /** The node refused; nothing about the grants changed. */
+    data class Refused(override val keyId: String, val reasonId: String?, val detail: String?) : ContactRemoval
+
+    /** The node predates the route (bare 404): ciris-server older than 0.5.218. */
+    data class Unsupported(override val keyId: String) : ContactRemoval
+}
+
+/** The one reading of a removal response: `complete`, or it is not removed. */
+fun contactRemovalOf(resp: RemoveContactResponse): ContactRemoval =
+    if (resp.complete) {
+        ContactRemoval.Removed(resp.keyId, resp.withdrawn.size)
+    } else {
+        ContactRemoval.StillActive(resp.keyId, resp.withdrawn.size, resp.remainingGrants)
+    }

@@ -83,7 +83,9 @@ class ContactCodeViewModelTest {
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
     private fun vm(api: FakeContacts, client: CIRISApiClient = agentFrontedClient()) =
-        ContactsViewModel(client, NODE_URL, api)
+        // The app hands the VM a provider that follows the ACTIVE node (CIRISApp's
+        // effectiveNodeUrl); here the same rule, from the client's mode.
+        ContactsViewModel(client, { contactsNodeUrl(client.isNodeMode(), client.baseUrl, NODE_URL) }, api)
 
     // ── The picker ────────────────────────────────────────────────────────
 
