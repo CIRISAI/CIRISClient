@@ -1,0 +1,37 @@
+csd: CSD-008
+flow: csd_008_notes_to_self
+title: A note to self is written and read back in Just me › Chats, and never appears under Files
+description: >-
+  CSD-008 §4, driven. POST /v1/notes writes an unnamed text/plain row in the
+  self room (CIRISServer src/drive.rs:3020); GET /v1/notes reads it back with
+  the drive's byte-state words. Both calls go to the node URL.
+# Floor: every tag below is a string literal in ui/screens/files/NotesScreen.kt
+# (NotesTags); no release carries them yet.
+client: "unreleased"
+
+steps:
+  - step_id: notes_is_in_just_me_chats
+    title: Just me › Chats › Notes opens with the field, on every build
+    description: >-
+      Entry: circle_agent -> tab_chats -> nav_epistemic_notes. With no agent the
+      tab holds Notes alone; with one, Interact and Notes as rows.
+    requires:
+      screen: Notes
+    expect:
+      visible: [input_note, btn_note_save, btn_notes_refresh]
+      count: {of: "notes_*", min: 1}
+
+  - step_id: a_note_is_written_and_listed
+    title: Saving a note lists it, body and all
+    optional_step: true
+    requires:
+      screen: Notes
+      visible: [input_note]
+    do:
+      - input: {input_note: "Flow note"}
+      - click: btn_note_save
+    expect:
+      state: populated
+      visible: [notes_list]
+      count: {of: "notes_row_*", min: 1}
+      absent: [notes_write_error]

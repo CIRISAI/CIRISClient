@@ -231,21 +231,21 @@ The iOS reality:
 
 ## 8. State in this repo (kept current)
 
-As of 2026-09-25 (CIRISClient#77):
+As of 2026-09-28 (CIRISClient#77, the 0.5.217 pass):
 
 | brief | here | waiting on |
 |---|---|---|
-| §7.1 descriptor in CEG | done upstream: CC 3.3.13 (rc5), persist v45 `media` member | the drive routes returning it: **CIRISServer#641** |
+| §7.1 descriptor in CEG | done upstream: CC 3.3.13 (rc5), persist v45 `media` member. `content_digest` + `size` are on the open and on `/meta` (0.5.217, CIRISServer#641 closed); the LISTING carries none | a digest signed into the row, and the listing's descriptor: **CIRISEdge#638** |
 | §7.2 node media core, renditions | not started | **CIRISServer#614** |
-| §7.3 receiver policy table | **done**: `models/drive/RenderTier.kt`. Sniffs 2 KB (masked prefix + `ftyp` brand), requires sniffed == declared, refuses polyglots (ZIP EOCD in the last 64 KB, bytes after `IEND`/`FFD9`), renders `text/plain` only as valid UTF-8 with bidi controls shown visibly, refuses HTML/SVG/archives/executables, and blocks saving a copy of a mismatch, a polyglot, or anything that runs code. The table is `MediaPolicy.RECOMMENDED` (the §3 caps) | the node's own table: **CIRISServer#643** (`GET /v1/media/policy`), CIRISEdge#638 item 5 |
-| CC 5.3.2.5 full-SHA before render | **not done**: nothing to verify against | `content_digest` / `size` on the routes: **CIRISServer#641** |
+| §7.3 receiver policy table | **done**: `models/drive/RenderTier.kt`. Sniffs 2 KB (masked prefix + `ftyp` brand), requires sniffed == declared, refuses polyglots (ZIP EOCD in the last 64 KB, bytes after `IEND`/`FFD9`), renders `text/plain` only as valid UTF-8 with bidi controls shown visibly, refuses HTML/SVG/archives/executables, blocks saving a copy of a mismatch, a polyglot, or anything that runs code, and declares the SNIFFED type downstream, never the label. The table is the node's `GET /v1/media/policy` (0.5.217, CIRISServer#643) narrowed by `MediaPolicy.RECOMMENDED` (the §3 caps) — never widened; the built-in table stands only where the node has no route, and the sheet says so | an operator narrowing at the node: CIRISEdge#638 item 5 |
+| CC 5.3.2.5 full-SHA before render | **done**: `DigestCheck.of` hashes the opened bytes (`platform/util/Sha256.kt`) against the node's `content_digest`; a mismatch is **unreadable** (neither shown nor saved), no digest is said as "not verified" | the digest signed into the row: **CIRISEdge#638** |
 | thumbhash first | not done | `placeholder` on the routes: **CIRISServer#641** |
 | sniff at the node's write door | the client sniffs on receive regardless | **CIRISServer#642** (RFC 6838, sniff, RFC 6266 on `POST /v1/files`); CIRISEdge#638 item 1 at the adopt door |
 | §7.4 streaming picker, sender canonicalisation | not done: upload is inline base64, capped at 1 MiB (the node's inline cap) | streaming create: CIRISServer#615 §1; large files over the chunk DAG: CIRISEdge#633 |
 | §7.5 playback, capture | not started | renditions (#614) |
-| family files | the tab says why it is empty | **CIRISServer#627** |
+| family files | **done**: Family › Files lists the room of the household picked in the Family hub (CSD-100); three zeroes kept apart (no household, no files, households unreadable) | a change after forming reaching a peer: CIRISPersist#910 |
 | cross-node bytes | "on another device" is shown honestly | CIRISPersist#870, CIRISServer#604 |
 
-**One interim call.** CIRISServer#615 ("Requested", item 3) proposed that, before renditions exist, the client render Tier A originals it verified and sniffed itself. This repo follows §7's closing rule instead: **the client does not decode a stranger's image, audio or video bytes at all until the node produces a rendition.** Until then those files say they are waiting for the node, and a copy can still be saved. Two things support the stricter reading. The client also cannot verify the full SHA today (#641), so "verified" isn't available. And every in-process decoder on the client is exactly the C surface §1 is about.
+**One interim call.** CIRISServer#615 ("Requested", item 3) proposed that, before renditions exist, the client render Tier A originals it verified and sniffed itself. This repo follows §7's closing rule instead: **the client does not decode a stranger's image, audio or video bytes at all until the node produces a rendition.** Until then those files say they are waiting for the node, and a copy can still be saved. Two things support the stricter reading. The full SHA is verified now (0.5.217), but a verified original is still a stranger's bytes in an in-process decoder, which is exactly the C surface §1 is about. And the node says `renditions: false` in its own policy, so the sheet can say "this node can't do that yet" instead of waiting.
 
-A wire wart the client works around: `/v1/notes` says `open` where `/v1/drive` says `here` (**CIRISServer#644**).
+A wire wart the client still maps for older nodes: 0.5.215/216 `/v1/notes` said `open` where `/v1/drive` says `here`; 0.5.217 made it one word per fact (`drive::BYTE_STATES`, **CIRISServer#644** closed).
