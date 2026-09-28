@@ -32,16 +32,6 @@
     "PUT /v1/system/agent-mode :: LayerGlobalCommons, Settings"
   ],
   "uncited": {
-    "Accord": [
-      "GET /v1/accord/canonical/pending",
-      "GET /v1/accord/canonical/withdrawals",
-      "GET /v1/federation/peers/{}",
-      "GET /v1/setup/owned-nodes",
-      "POST /v1/accord/canonical/cosign"
-    ],
-    "Constitutional": [
-      "GET /v1/setup/owned-nodes"
-    ],
     "Contacts": [
       "GET /v1/federation/peers"
     ],

@@ -188,6 +188,10 @@ data class TrustRootView(
     val acceptedByThisNode: Boolean?,
     /** `trust_root_valid`'s gate; null when the root could not be evaluated. */
     val valid: Boolean?,
+    /** The root's own `trust:charter:v1` names itself (persist `root_self_declares`); null = not evaluated. */
+    val rootSelfDeclares: Boolean?,
+    /** That charter carries a pre-rotation recovery commitment — the T3 leg (`charter_has_recovery`). */
+    val charterHasRecovery: Boolean?,
     val quorum: CharterQuorumView?,
     val holders: List<HolderHardwareView>,
     val holdersAttested: Boolean?,
@@ -251,6 +255,8 @@ fun trustRootView(entry: TrustRootEntryDto): TrustRootView {
         // server passes through. No verdict (an unreadable root) = unknown, not "no".
         acceptedByThisNode = if (evaluationError != null) null else v.bool("edge_exists"),
         valid = if (evaluationError != null) null else v.bool("valid"),
+        rootSelfDeclares = if (evaluationError != null) null else v.bool("root_self_declares"),
+        charterHasRecovery = if (evaluationError != null) null else v.bool("charter_has_recovery"),
         quorum = quorum,
         holders = holders,
         holdersAttested = v.bool("holders_hardware_attested"),

@@ -10,6 +10,8 @@ import ai.ciris.mobile.shared.models.federation.CanonicalWithdrawalDto
 import ai.ciris.mobile.shared.models.federation.CiKeyTargetInput
 import ai.ciris.mobile.shared.models.federation.InvocationKind
 import ai.ciris.mobile.shared.models.federation.PendingCoscrubDto
+import ai.ciris.mobile.shared.models.federation.SupersedeDraft
+import ai.ciris.mobile.shared.models.federation.prepareSupersede
 import ai.ciris.mobile.shared.models.federation.genesisSeedDisplay
 import ai.ciris.mobile.shared.models.federation.RemintOutcome
 import ai.ciris.mobile.shared.models.federation.remintOutcome
@@ -33,6 +35,8 @@ import ai.ciris.mobile.shared.ui.components.HolderSignInputs
 import ai.ciris.mobile.shared.ui.components.NewAttestationAction
 import ai.ciris.mobile.shared.ui.components.NewAttestationMenu
 import ai.ciris.mobile.shared.ui.components.ViewerAuthority
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.viewmodels.AccordViewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -117,6 +121,8 @@ private sealed interface AccordSheet {
     /** Cosign a canonical co-scrub (CIRISServer#174); [entry] null → paste fallback. */
     data class CoscrubCosign(val entry: PendingCoscrubDto?) : AccordSheet
     data class Withdraw(val server: CanonicalServerDto) : AccordSheet
+    /** Rotate a canonical server to a successor record (`POST /v1/accord/canonical/supersede`, 2-of-3). */
+    data class Supersede(val server: CanonicalServerDto) : AccordSheet
     data class Details(val att: Attestation) : AccordSheet
 }
 
@@ -161,6 +167,11 @@ fun AccordScreen(
 
     val clipboard = LocalClipboardManager.current
     val exportScope = rememberCoroutineScope()
+    // Notices raised from callbacks (no composable scope there): the sentences are
+    // resolved here and their `{dir}` / `{key}` slots filled at the moment of use.
+    val coscrubSavedTpl = localizedString("mobile.accord_coscrub_saved")
+    val coscrubSaveFailedTpl = localizedString("mobile.accord_coscrub_save_failed")
+    val coscrubCopiedTpl = localizedString("mobile.accord_coscrub_copied")
     var sheet by remember { mutableStateOf<AccordSheet?>(null) }
     var newMenu by remember { mutableStateOf(false) }
     var saveDir by remember { mutableStateOf<String?>(null) }
@@ -182,7 +193,7 @@ fun AccordScreen(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_accord_back") { onBack() },
                     ) {
-                        Icon(CIRISIcons.arrowBack, contentDescription = "Back")
+                        Icon(CIRISIcons.arrowBack, contentDescription = localizedString("mobile.common_back"))
                     }
                 },
                 actions = {
@@ -313,8 +324,7 @@ fun AccordScreen(
                         exportScope.launch {
                             val ok = writeTextFile(dir, "canonical-coscrub-partial.json", json)
                             viewModel.setExternalNotice(
-                                if (ok) "Saved the co-scrub partial to $dir."
-                                else "Couldn't save to $dir (this platform may not support file writes).",
+                                (if (ok) coscrubSavedTpl else coscrubSaveFailedTpl).replace("{dir}", dir),
                                 error = !ok,
                             )
                         }
@@ -335,10 +345,13 @@ fun AccordScreen(
             SectionHeader(localizedString("mobile.accord_section_accord"), loading)
             val fam = family
             if (fam == null && !loading) {
+                // "No accord here" — its own tag, because on a kill switch it is the
+                // opposite fact from "could not read the accord" (`accord_error`).
                 Text(
                     localizedString("mobile.accord_family_empty"),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_accord_family_empty"),
                 )
             } else if (fam != null) {
                 val famAtt = familyAttestation(fam)
@@ -360,7 +373,7 @@ fun AccordScreen(
                     localizedString("mobile.accord_holders_empty"),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 6.dp),
+                    modifier = Modifier.padding(top = 6.dp).testable("txt_accord_holders_empty"),
                 )
             } else {
                 holders.forEach { h ->
@@ -434,7 +447,7 @@ fun AccordScreen(
                                 AttOp.Copy -> {
                                     clipboard.setText(AnnotatedString(viewModel.exportPartial(entry.partial)))
                                     viewModel.setExternalNotice(
-                                        "Copied the co-scrub partial for ${entry.targetKeyId} to the clipboard.",
+                                        coscrubCopiedTpl.replace("{key}", entry.targetKeyId),
                                     )
                                 }
                                 else -> handleOp(op, att) { sheet = it }
@@ -453,6 +466,7 @@ fun AccordScreen(
                     localizedString("mobile.accord_pending_empty"),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_accord_pending_empty"),
                 )
             } else {
                 invocations.forEach { inv ->
@@ -524,7 +538,7 @@ fun AccordScreen(
                 kindLabel = invocationBadge(inv.invocationKind),
                 signed = inv.validSigners.size,
                 threshold = inv.quorumThreshold,
-                binding = inv.invocationKind.uppercase() == "CONSTITUTIONAL",
+                binding = InvocationKind.fromWire(inv.invocationKind) == InvocationKind.CONSTITUTIONAL,
                 holders = holders,
                 busy = busy,
                 onSubmit = { holderKeyId, usbPath, pin, modulePath ->
@@ -563,6 +577,7 @@ fun AccordScreen(
                 onDismiss = { sheet = null },
             )
         }
+        is AccordSheet.Supersede -> SupersedeCanonicalSheet(viewModel, s.server, busy) { sheet = null }
         is AccordSheet.Details -> AttestationDetailsDialog(s.att) { sheet = null }
     }
 }
@@ -587,7 +602,12 @@ private fun handleOpCanonical(
     open: (AccordSheet) -> Unit,
 ) {
     when (op) {
-        AttOp.Supersede -> open(AccordSheet.AddCanonical(replace = server)) // replace = m-of-n co-scrub re-mint (same 2-of-3 family quorum as add)
+        // Supersede is the server's word for ROTATING a canonical server to a successor
+        // key (`POST /v1/accord/canonical/supersede`, 2-of-3, `src/accord_provision.rs:3585`):
+        // admit the successor's completed record, then tombstone this one as superseded
+        // by it. It is not a re-bless of the same key with a new address — that is
+        // `[+ New]` → Propose a canonical server, which defaults to the first canonical.
+        AttOp.Supersede -> open(AccordSheet.Supersede(server))
         AttOp.Withdraw -> open(AccordSheet.Withdraw(server))
         else -> handleOp(op, att, open)
     }
@@ -1749,6 +1769,126 @@ private fun AnnounceSheet(
     )
 }
 
+/**
+ * **Rotate a canonical server** — `POST /v1/accord/canonical/supersede`
+ * (CIRISServer#174, `src/accord_provision.rs:3585`). The structural canonical
+ * class: 2-of-3, authorised by a STORED accord proposal whose digest the person
+ * pastes (persist re-tallies its holder participations); the successor's
+ * completed canonical record — the output of a finished propose→cosign co-scrub —
+ * rides verbatim. Two steps: the form (record + digest, parsed locally, nothing
+ * sent), then a three-fact [ConfirmSheet]: which server, what changes, who signs.
+ */
+@Composable
+private fun SupersedeCanonicalSheet(
+    viewModel: AccordViewModel,
+    server: CanonicalServerDto,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+) {
+    var recordText by remember { mutableStateOf("") }
+    var digest by remember { mutableStateOf("") }
+    var notJson by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf<SupersedeDraft?>(null) }
+    val review = {
+        val parsed = prepareSupersede(recordText)
+        if (parsed == null) notJson = true else draft = parsed
+    }
+    val d = draft
+    if (d == null) {
+        val ready = recordText.isNotBlank() && digest.isNotBlank() && !busy
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(localizedString("mobile.accord_supersede_title", "key", server.keyId)) },
+            text = {
+                Column(modifier = Modifier.testable("dlg_supersede_canonical")) {
+                    Text(
+                        localizedString("mobile.accord_supersede_desc", "key", server.keyId),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = recordText,
+                        onValueChange = { recordText = it; notJson = false },
+                        singleLine = false,
+                        label = { Text(localizedString("mobile.accord_supersede_record_label")) },
+                        placeholder = { Text(localizedString("mobile.accord_supersede_record_hint")) },
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp).testable("input_supersede_record"),
+                    )
+                    if (notJson) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            localizedString("mobile.accord_supersede_not_json"),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testable("txt_supersede_not_json"),
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = digest,
+                        onValueChange = { digest = it },
+                        singleLine = true,
+                        label = { Text(localizedString("mobile.accord_canonical_proposal_digest_label")) },
+                        modifier = Modifier.fillMaxWidth().testable("input_supersede_digest"),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        localizedString("mobile.accord_canonical_destructive_note"),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = review,
+                    enabled = ready,
+                    modifier = Modifier.testableClickable("btn_supersede_review") { if (ready) review() },
+                ) { Text(localizedString("mobile.accord_supersede_review_btn")) }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.testableClickable("btn_supersede_cancel") { onDismiss() },
+                ) { Text(localizedString("mobile.accord_scrub_cancel")) }
+            },
+        )
+    } else {
+        val successor = d.successorKeyId
+        ConfirmSheet(
+            title = localizedString(
+                "mobile.accord_supersede_confirm_title",
+                mapOf("old" to server.keyId, "new" to (successor ?: "?")),
+            ),
+            facts = listOf(
+                ConfirmFact(
+                    localizedString("mobile.accord_supersede_fact_who"),
+                    successor?.let { localizedString("mobile.accord_supersede_who", mapOf("old" to server.keyId, "new" to it)) }
+                        ?: localizedString("mobile.accord_supersede_who_unnamed", "old", server.keyId),
+                    mono = true,
+                ),
+                ConfirmFact(
+                    localizedString("mobile.accord_supersede_fact_what"),
+                    localizedString("mobile.accord_supersede_what", "old", server.keyId),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.accord_supersede_fact_signs"),
+                    localizedString("mobile.accord_supersede_signs", "digest", digest.trim()),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.accord_supersede_confirm_btn"),
+            onConfirm = {
+                viewModel.supersedeCanonical(server.keyId, d.record, digest)
+                onDismiss()
+            },
+            onDismiss = { draft = null },
+            destructive = true,
+            tagPrefix = "supersede_canonical",
+        )
+    }
+}
+
 /** The owned-node picker + resolved indicator shared by admit / add-canonical. */
 @Composable
 private fun ColumnScope.TargetPicker(
@@ -1936,12 +2076,30 @@ private fun ColumnScope.HaltBanner(
 /** The one kind-specific slot for an invocation: its binding note. */
 @Composable
 private fun ColumnScope.InvocationBindingNote(inv: AccordInvocationDto) {
-    val text = when (inv.invocationKind.uppercase()) {
-        "CONSTITUTIONAL" -> localizedString("mobile.accord_binding_constitutional")
-        "DRILL" -> localizedString("mobile.accord_binding_drill")
-        else -> localizedString("mobile.accord_binding_notify")
-    }
-    Text(text, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val text = localizedString(
+        invocationBindingKey(InvocationKind.fromWire(inv.invocationKind)),
+        "kind",
+        inv.invocationKind,
+    )
+    Text(
+        text,
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testable("txt_invocation_binding_${inv.invocationId}"),
+    )
+}
+
+/**
+ * The binding sentence per kind — exhaustive like [invocationBadgeKey], so a
+ * resumption (the halt's opposite) or an unknown kind never inherits notify's
+ * sentence by falling through an `else` (CC 4.2.1.2).
+ */
+internal fun invocationBindingKey(kind: InvocationKind): String = when (kind) {
+    InvocationKind.CONSTITUTIONAL -> "mobile.accord_binding_constitutional"
+    InvocationKind.DRILL -> "mobile.accord_binding_drill"
+    InvocationKind.NOTIFY -> "mobile.accord_binding_notify"
+    InvocationKind.LIFECYCLE_ACTIVE -> "mobile.accord_binding_reactivated"
+    InvocationKind.UNKNOWN -> "mobile.accord_binding_unknown"
 }
 
 /** The inline slot for a pending canonical co-scrub: its scrubbers + roster note. */

@@ -1,8 +1,8 @@
-csd: CSD-067
-flow: csd_067_trust_root
+csd: CSD-105
+flow: csd_105_trust_root
 title: This node's trust root, from the Accord card
 description: >-
-  CSD-067 §4, the trust-root detail. On the node's own machine the card shows
+  CSD-105 §4, the trust-root detail (split from CSD-067 at the accord review). On the node's own machine the card shows
   the genesis state and the roots this node knows, refuses a non-JSON seed
   locally, and puts both re-root levers (adopt, un-trust) behind a three-fact
   confirm that this flow opens and CANCELS — it never adopts or withdraws
@@ -35,6 +35,7 @@ steps:
         - txt_trust_posture_state
         - card_trust_root_humanity_accord
         - row_trust_root_accepted_humanity_accord
+        - row_trust_root_charter_humanity_accord
         - card_trust_root_import
         - input_trust_root_seed
         - input_trust_root_allegiance_from

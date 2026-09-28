@@ -386,6 +386,25 @@ private fun RootCard(root: TrustRootView, onUntrust: () -> Unit) {
                 tag = "row_trust_root_valid_$s",
             )
         }
+        if (root.evaluationError == null) {
+            // The charter legs of T3 (CC 3.2): the root's self-charter, and the
+            // pre-rotation recovery commitment it must carry. persist reports both
+            // and `valid` folds them in; a person un-trusting on that verdict
+            // should see which leg failed, not only that one did.
+            val yes = localizedString("mobile.trust_root_yes")
+            val no = localizedString("mobile.trust_root_no")
+            val unknown = localizedString("mobile.trust_root_unknown")
+            val word = { b: Boolean? -> when (b) { true -> yes; false -> no; null -> unknown } }
+            FieldRow(
+                label = localizedString("mobile.trust_root_charter_label"),
+                value = localizedString(
+                    "mobile.trust_root_charter_value",
+                    mapOf("declares" to word(root.rootSelfDeclares), "recovery" to word(root.charterHasRecovery)),
+                ),
+                tone = if (root.rootSelfDeclares == false || root.charterHasRecovery == false) Tone.DANGER else Tone.INK,
+                tag = "row_trust_root_charter_$s",
+            )
+        }
         root.quorum?.let { q ->
             FieldRow(
                 label = localizedString("mobile.trust_root_quorum_label"),

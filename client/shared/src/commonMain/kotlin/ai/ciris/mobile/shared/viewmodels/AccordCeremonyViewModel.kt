@@ -387,6 +387,19 @@ class AccordCeremonyViewModel(
     /** The assembled genesis serialized as pretty JSON for the SAVE step. */
     fun genesisJson(): String = _genesis.value?.toString() ?: ""
 
+    /** The family the assembled genesis names (`family_key_id`), or null before DONE. */
+    fun genesisFamilyKeyId(): String? =
+        ai.ciris.mobile.shared.models.federation.firstStringField(_genesis.value, "family_key_id")
+
+    /** A notice raised by the screen (copy / save of the artifact), in the same banner. */
+    fun setExternalNotice(message: String, error: Boolean = false) {
+        if (error) {
+            _error.value = message
+        } else {
+            _notice.value = message
+        }
+    }
+
     fun clearMessages() {
         _error.value = null
         _notice.value = null

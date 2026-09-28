@@ -47,6 +47,9 @@ class TrustRootTest {
         val root = trustRootView(listing(entrenchedListing).roots.single())
         assertEquals(RootKindView.FAMILY, root.kind)
         assertEquals(true, root.valid)
+        // The two charter legs of CC 3.2 T3, previously decoded and dropped.
+        assertEquals(true, root.rootSelfDeclares)
+        assertEquals(true, root.charterHasRecovery)
         assertEquals(CharterQuorumView(2, 2, 3), root.quorum)
         assertEquals(DrillBand.GREEN, root.drillBand)
         assertEquals("2026-09-01T12:00:00Z", root.lastDrillAt)
