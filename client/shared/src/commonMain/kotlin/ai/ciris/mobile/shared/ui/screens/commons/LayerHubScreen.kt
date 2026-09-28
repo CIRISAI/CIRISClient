@@ -43,21 +43,22 @@ import ai.ciris.mobile.shared.ui.nav.CohortScope
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
 
 /**
- * Generic layer hub for the 5 UX-facing cohort scopes. Renders three
- * sections that repeat at every scale (Recursive Golden Rule fractal —
- * the same shape applies at Self, Family, Local Community, Global
- * Communities, Global Commons):
+ * The Rules hub of four circles (CSD-050): Just me, Family, Neighbours and
+ * Communities and Businesses. Everyone's Rules tab is NOT this screen — it
+ * renders the transport hub (CSD-051).
  *
- * - **Identities** — list of identities visible at this scope, with
- *   friendly names where available, key_id otherwise.
- * - **Trust** — for each identity, are we trusting them, and if so how
- *   (via a trust policy or direct trust).
- * - **Policies** — trust policies that govern automatic trust at this
- *   scope.
+ * What each circle's hub reads is that circle's own group, and only that:
  *
- * EDGE_PEERRESOLVER (CIRISEdge#22) has shipped; the cohort-aware views
- * are active. Local Community exposes the Environment & Resources surface
- * directly to allow sharing physical resources, tools, and inventory.
+ * - **Family** — the household (CSD-100, [familyContent]): `GET /v1/families`
+ *   and the acts that change it, at the node URL.
+ * - **Neighbours / Communities and Businesses** — the community section
+ *   (CSD-102, [communities]): `GET /v1/communities` at that tier and the acts
+ *   that change a room, at the node URL.
+ * - **Just me** — nothing. No route lists identities at a cohort scope
+ *   (CIRISServer#662) and no registry family names a trust policy
+ *   (CIRISConstitution#109), so its three sections are sentences describing
+ *   rows nobody asked for. They are drawn ONLY where the circle has no group
+ *   of its own to show; a hub with real rows never sits them under its data.
  */
 @Composable
 fun LayerHubScreen(
@@ -77,7 +78,7 @@ fun LayerHubScreen(
     // rules, roles and pending changes. Neighbours and Communities and
     // Businesses pass their tier's view model; every other circle passes null.
     communities: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel? = null,
-    onOpenModeration: (() -> Unit)? = null,
+    onOpenModeration: ((communityId: String) -> Unit)? = null,
 ) {
     val scrollState = rememberTestableScrollState()
     Box(
@@ -111,11 +112,15 @@ fun LayerHubScreen(
 
             // ── Communities and affiliations (CSD-102) — the community itself,
             // on the hub that already stands for this circle, not a card beside it.
+            // Like the household, it replaces the description-only sections: they
+            // describe rows this hub never fetched (CSD-050 §1), and under the
+            // real roster they read as a second, empty list.
             if (communities != null) {
                 ai.ciris.mobile.shared.ui.screens.CommunityGovernanceSection(
                     viewModel = communities,
                     onOpenModeration = onOpenModeration,
                 )
+                return@Column
             }
 
             LayerSection(

@@ -110,17 +110,33 @@ fun governanceOf(protocol: String, myRole: String?): Governance {
     return Governance.Ungovernable(protocol)
 }
 
-/** Something a person asks of a household. Every one but [Leave] is governed by the family's protocol. */
+/**
+ * Something a person asks of a household. Every one but [Leave] is governed by the family's protocol.
+ *
+ * Two kinds, one door each (CSD-100 §3.1): [OfHousehold] acts are asked on the
+ * hub (Family › Rules) and [OfMember] acts on the roster (Family › People), and
+ * each screen's confirm sends only its own kind — so no screen can reach a
+ * write it has no control for.
+ */
 sealed interface HouseholdAct {
     /** The envelope `action` a quorum family proposes this as; null for [Leave], which is never proposed. */
     val envelopeAction: String?
 
-    data class Add(val keyId: String, val label: String) : HouseholdAct { override val envelopeAction = "add" }
-    data class Remove(val keyId: String, val label: String) : HouseholdAct { override val envelopeAction = "remove" }
-    data class Role(val keyId: String, val label: String, val role: String) : HouseholdAct { override val envelopeAction = "role" }
-    data object Dissolve : HouseholdAct { override val envelopeAction = "dissolve" }
+    /** Leave, dissolve — the household itself. The hub's acts. */
+    sealed interface OfHousehold : HouseholdAct
+
+    /** Add, remove, change a role — one person in it. The roster's acts. */
+    sealed interface OfMember : HouseholdAct {
+        val keyId: String
+        val label: String
+    }
+
+    data class Add(override val keyId: String, override val label: String) : OfMember { override val envelopeAction = "add" }
+    data class Remove(override val keyId: String, override val label: String) : OfMember { override val envelopeAction = "remove" }
+    data class Role(override val keyId: String, override val label: String, val role: String) : OfMember { override val envelopeAction = "role" }
+    data object Dissolve : OfHousehold { override val envelopeAction = "dissolve" }
     /** Leaving is always your own act, never subject to quorum (FSD §1 rule 5). */
-    data object Leave : HouseholdAct { override val envelopeAction: String? = null }
+    data object Leave : OfHousehold { override val envelopeAction: String? = null }
 }
 
 /** Where an act goes: one call, a proposal others must sign, or nowhere (the screen says why). */

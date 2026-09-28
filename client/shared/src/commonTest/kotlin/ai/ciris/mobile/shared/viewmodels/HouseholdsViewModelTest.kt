@@ -142,7 +142,7 @@ class HouseholdsViewModelTest {
         vm.request(HouseholdAct.Remove(BO, "Bo"))
         assertNotNull(vm.confirming.value, "nothing is sent before the confirm")
         assertTrue(api.calls.isEmpty())
-        vm.confirm()
+        vm.confirmMemberAct()
         assertEquals(listOf("remove family:v1:a $BO"), api.calls)
         assertEquals(HouseholdNotice.REMOVED, vm.notice.value)
         assertNull(vm.pending.value)
@@ -156,7 +156,7 @@ class HouseholdsViewModelTest {
         ))))
         val vm = loaded(api)
         vm.request(HouseholdAct.Remove(CY, "Cy"))
-        vm.confirm()
+        vm.confirmMemberAct()
         assertEquals(listOf("propose family:v1:q remove $CY"), api.calls, "a single-call DELETE would be refused family.quorum_pending")
         val p = assertNotNull(vm.pending.value)
         assertEquals(2, p.required)
@@ -178,7 +178,7 @@ class HouseholdsViewModelTest {
         val api = FakeHouseholds(pages = listOf(FamilyListResponse(listOf(family("family:v1:a", myRole = "member")))))
         val vm = loaded(api)
         vm.request(HouseholdAct.Dissolve)
-        vm.confirm()
+        vm.confirmHouseholdAct()
         assertTrue(api.calls.isEmpty(), "the node would refuse family.not_authorized; nothing is offered or sent")
     }
 
@@ -190,8 +190,33 @@ class HouseholdsViewModelTest {
         ))))
         val vm = loaded(api)
         vm.request(HouseholdAct.Leave)
-        vm.confirm()
+        vm.confirmHouseholdAct()
         assertEquals(listOf("leave family:v1:q"), api.calls)
+    }
+
+    // ── One door per act (CSD-100 §3.1) ──────────────────────────────────
+
+    @Test
+    fun theRostersConfirmNeverSendsAHouseholdAct() {
+        val api = FakeHouseholds()
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Dissolve)
+        vm.confirmMemberAct()
+        assertTrue(api.calls.isEmpty(), "dissolve has no control on the roster, so the roster's confirm has no door to it")
+        assertEquals(HouseholdAct.Dissolve, vm.confirming.value, "the act is left waiting, not dropped")
+        vm.confirmHouseholdAct()
+        assertEquals(listOf("dissolve family:v1:a"), api.calls)
+    }
+
+    @Test
+    fun theHubsConfirmNeverSendsAMemberAct() {
+        val api = FakeHouseholds()
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Remove(BO, "Bo"))
+        vm.confirmHouseholdAct()
+        assertTrue(api.calls.isEmpty(), "removal has no control on the hub, so the hub's confirm has no door to it")
+        vm.confirmMemberAct()
+        assertEquals(listOf("remove family:v1:a $BO"), api.calls)
     }
 
     @Test
@@ -199,7 +224,7 @@ class HouseholdsViewModelTest {
         val api = FakeHouseholds(writeError = NodeRefusal("family.readd_unsupported", "removed", 409))
         val vm = loaded(api)
         vm.request(HouseholdAct.Add(CY, "Cy"))
-        vm.confirm()
+        vm.confirmMemberAct()
         assertEquals("family.readd_unsupported", vm.refusal.value?.reasonId)
         assertNull(vm.notice.value)
         assertFalse(vm.busy.value)

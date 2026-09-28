@@ -3571,7 +3571,17 @@
     "data_receipt_checked_at": "Geprüft am",
     "manage_consent_msg_ratified": "Bilaterale Replikation ratifiziert — beide Berechtigungen liegen vor.",
     "manage_consent_msg_partial": "Teilweise: dieses Gerät → Peer {a}, Peer → dieses Gerät {b}.",
-    "manage_consent_traces_elsewhere": "Ob die anonymen Denkspuren dieses Agenten an die CIRIS-Community gesendet werden, wird auf der Karte „Daten“ entschieden (Meine Dinge › Alles, was ich geteilt habe › Daten), wo die Einstellung zurückgelesen wird. Früher wurde sie auch von hier geschrieben; eine Handlung hat jetzt eine Tür."
+    "manage_consent_traces_elsewhere": "Ob die anonymen Denkspuren dieses Agenten an die CIRIS-Community gesendet werden, wird auf der Karte „Daten“ entschieden (Meine Dinge › Alles, was ich geteilt habe › Daten), wo die Einstellung zurückgelesen wird. Früher wurde sie auch von hier geschrieben; eine Handlung hat jetzt eine Tür.",
+    "adapter_remove_fact_adapter": "Adapter",
+    "adapter_remove_fact_what": "Was sich ändert",
+    "adapter_remove_fact_who": "Wer signiert",
+    "adapter_remove_who_signs": "Niemand signiert. Es ist Ihre Anfrage an Ihren Agenten, und es wird kein Delegationseintrag geschrieben oder entzogen (CIRISAgent#1211).",
+    "community_moderators_unreadable": "Dieser Knoten konnte nicht lesen, wer hier die Moderationspflicht trägt. Das ist keine Meldung, dass niemand sie trägt.",
+    "community_moderators_not_sent": "Dieser Knoten hat nicht mitgeteilt, wer hier die Moderationspflicht trägt.",
+    "community_moderation_pick": "Ihre Communities",
+    "community_moderation_pick_none": "Sie sind in keiner Community mit mehr als zwei Personen.",
+    "community_moderation_pick_unreadable": "Ihre Communities konnten nicht gelesen werden. Geben Sie stattdessen oben den Community-Schlüssel ein.",
+    "adapter_remove_what": "Ihr Agent handelt ab sofort nicht mehr über {name}, und was es dem Agenten gegeben hat, geht mit. Wenn es so gespeichert war, dass es mit dem Agenten startet, kann es beim nächsten Neustart zurückkommen; diese Karte liest das nicht."
   },
   "moderation": {
     "ladder": {
@@ -3966,7 +3976,9 @@
       "server_disk_gate": "Erfordert ≥256 GB freien Speicher · {available} frei von {required} benötigt",
       "server_label": "Server",
       "subtitle": "Wie dieser Agent an der Föderation teilnimmt. Edge wird bei einer Änderung neu gestartet.",
-      "title": "Agentenmodus"
+      "title": "Agentenmodus",
+      "open_settings": "Einstellungen öffnen",
+      "set_in_settings": "Der Netzwerkmodus Ihres Agenten (Client, Proxy oder Server) wird in den Einstellungen festgelegt, zusammen mit der übrigen Konfiguration Ihres Agenten."
     },
     "paths": {
       "empty": "Noch keine Pfadereignisse.",
@@ -4822,7 +4834,16 @@
       "uphold": "Aufrechterhalten",
       "window": "Fenster",
       "window_closed": "geschlossen",
-      "window_open": "offen"
+      "window_open": "offen",
+      "confirm_subject": "Handlung · Kohorte",
+      "confirm_what": "Was sich ändert",
+      "confirm_who_signs": "Wer signiert",
+      "confirm_raise_what": "Diese Handlung wird gebremst. Die Bremse bleibt, bis die Kohorte sie mit ihrem eigenen Schwellenwert aufhebt; Sie können sie nicht allein zurücknehmen.",
+      "confirm_ballot_uphold_what": "Ihre Stimme, den Einspruch {objection} aufrechtzuerhalten, wird mit Ihrer Begründung erfasst. Eine Stimme pro Teilnehmer, und sie wird nicht zurückgenommen.",
+      "confirm_ballot_overrule_what": "Ihre Stimme, den Einspruch {objection} zu überstimmen, wird mit Ihrer Begründung erfasst. Eine Stimme pro Teilnehmer, und sie wird nicht zurückgenommen.",
+      "confirm_dismiss_what": "Die durch Einspruch {objection} ausgelöste Bremse wird aufgehoben, wenn die Signaturen den Schwellenwert der Kohorte erreichen. Der Knoten zählt sie; reichen sie nicht aus, wird nichts aufgehoben.",
+      "confirm_signs_node": "Der Schlüssel dieses Knotens, in Ihrem Namen als dessen Eigentümer. Die signierte Zeile geht an jeden Peer.",
+      "confirm_signs_cosigners": "Der Schlüssel dieses Knotens, in Ihrem Namen als dessen Eigentümer, mit den {count} von Ihnen hinzugefügten Mitunterschriften."
     },
     "mesh_config": {
       "admitted": "Zugelassen",

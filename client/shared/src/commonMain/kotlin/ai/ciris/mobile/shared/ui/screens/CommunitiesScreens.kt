@@ -103,7 +103,13 @@ object CommunityTags {
     const val ROLE_SUBMIT = "btn_community_role_submit"
     fun moderatorRow(key: String) = "row_community_moderator_$key"
     const val MODERATORS_NONE = "txt_community_moderators_none"
+    const val MODERATORS_UNREADABLE = "txt_community_moderators_unreadable"
+    const val MODERATORS_NOT_SENT = "txt_community_moderators_not_sent"
     const val OPEN_MODERATION = "btn_community_open_moderation"
+    const val MODERATION_PICKER = "community_moderation_picker"
+    const val MODERATION_PICKER_NONE = "txt_community_moderation_pick_none"
+    const val MODERATION_PICKER_UNREADABLE = "txt_community_moderation_pick_unreadable"
+    fun moderationPick(id: String) = "chip_community_moderation_$id"
     const val APPOINT_UNAVAILABLE = "txt_community_appoint_unavailable"
     const val TERMS_UNAVAILABLE = "txt_affiliations_terms_unavailable"
     const val LEAVE = "btn_community_leave"
@@ -275,8 +281,12 @@ private fun AppliedLine(op: String?) {
 @Composable
 fun CommunityGovernanceSection(
     viewModel: CommunitiesViewModel,
-    /** Moderation (CSD-065) — where a room's duty-holders act, and where the named-moderator verdict is asked. */
-    onOpenModeration: (() -> Unit)? = null,
+    /**
+     * Moderation (CSD-065) — where a room's duty-holders act, and where the
+     * named-moderator verdict is asked. Handed the room's id, which Moderation's
+     * community picker preselects (its lookup and the quarantine rung's scope).
+     */
+    onOpenModeration: ((communityId: String) -> Unit)? = null,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -359,7 +369,7 @@ fun CommunityGovernanceSection(
                 onChangeRole = { key, role -> viewModel.changeRole(id, key, role) },
                 onLeave = { viewModel.leave(id) },
                 onDissolve = { viewModel.dissolve(id) },
-                onOpenModeration = onOpenModeration,
+                onOpenModeration = onOpenModeration?.let { open -> { open(id) } },
             )
             pending[id]?.let { p ->
                 PendingChangeCard(
@@ -398,6 +408,64 @@ fun CommunityGovernanceSection(
                 s(if (affiliations) "community_create_open_affiliations" else "community_create_open"),
                 tag = CommunityTags.CREATE_OPEN,
                 onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); createOpen = true },
+            )
+        }
+    }
+}
+
+/**
+ * **The community picker Moderation takes** (`ModerationScreen(communityPicker =
+ * …)`, CSD-065): one chip per room the person is in, at every tier they
+ * stand in, handing back the room's id — which is the `community_key_id` the
+ * named-moderator lookup and the quarantine rung are scoped by. Pair rooms are
+ * left out: a two-person chat has no moderation duty to look up.
+ *
+ * [preselect] is the room whose card opened Moderation; it is handed back once,
+ * so the person arrives with that room already filled in.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun CommunityModerationPicker(
+    tiers: List<CommunitiesViewModel>,
+    preselect: String?,
+    onPick: (communityId: String) -> Unit,
+) {
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    var picked by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(preselect) {
+        if (preselect != null) { picked = preselect; onPick(preselect) }
+    }
+    val reads = tiers.map { vm -> vm.rooms.collectAsState().value }
+    LaunchedEffect(Unit) {
+        tiers.forEachIndexed { i, vm -> if (reads[i] is CommunityListRead.NotAsked) vm.refresh() }
+    }
+    val rooms = tiers.indices.flatMap { i ->
+        (reads[i] as? CommunityListRead.Loaded)?.rooms.orEmpty().let { CommunitiesViewModel.roomsFor(it, tiers[i].tier, includePairs = false) }
+    }
+    Column(modifier = Modifier.fillMaxWidth().testable(CommunityTags.MODERATION_PICKER, rooms.size.toString())) {
+        Text(s("community_moderation_pick"), style = type.label, color = t.mute)
+        when {
+            rooms.isNotEmpty() -> FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (room in rooms) {
+                    Chip(ChipSpec(
+                        label = room.name.ifBlank { shortKey(room.communityId) },
+                        tag = CommunityTags.moderationPick(room.communityId),
+                        kind = ChipKind.CHOICE,
+                        selected = picked == room.communityId,
+                        onClick = { picked = room.communityId; onPick(room.communityId) },
+                    ))
+                }
+            }
+            // A read that failed is not "you are in none": the typed field above stays the way in.
+            reads.any { it is CommunityListRead.Failed } -> Text(
+                s("community_moderation_pick_unreadable"), style = type.body, color = t.dim,
+                modifier = Modifier.testable(CommunityTags.MODERATION_PICKER_UNREADABLE),
+            )
+            reads.any { it is CommunityListRead.Loading || it is CommunityListRead.NotAsked } -> Unit
+            else -> Text(
+                s("community_moderation_pick_none"), style = type.body, color = t.dim,
+                modifier = Modifier.testable(CommunityTags.MODERATION_PICKER_NONE),
             )
         }
     }
@@ -564,11 +632,19 @@ private fun CommunityDetailCard(
                 // ── Moderators: shown, and acted through CSD-065, never rebuilt here. ──
                 Spacer(Modifier.height(8.dp))
                 Text(s("community_detail_moderators"), style = type.label, color = t.mute)
-                val mods = room.moderators.orEmpty()
-                if (mods.isEmpty()) {
-                    Text(s("community_moderators_none"), style = type.body, color = t.dim, modifier = Modifier.testable(CommunityTags.MODERATORS_NONE))
-                } else {
-                    for (k in mods) {
+                // Unreadable and none are two facts (CIRISServer#688): the first is
+                // said in the danger tone, never as the "nobody" sentence.
+                when (val shown = moderatorsShown(room)) {
+                    ModeratorsShown.Unreadable -> Text(
+                        s("community_moderators_unreadable"), style = type.body, color = t.danger,
+                        modifier = Modifier.testable(CommunityTags.MODERATORS_UNREADABLE),
+                    )
+                    ModeratorsShown.NotSent -> Text(
+                        s("community_moderators_not_sent"), style = type.body, color = t.dim,
+                        modifier = Modifier.testable(CommunityTags.MODERATORS_NOT_SENT),
+                    )
+                    ModeratorsShown.None -> Text(s("community_moderators_none"), style = type.body, color = t.dim, modifier = Modifier.testable(CommunityTags.MODERATORS_NONE))
+                    is ModeratorsShown.Holders -> for (k in shown.keys) {
                         ItemRow(glyph = GlyphName.SAFETY, title = nameOf(k, contacts), meta = shortKey(k), tag = CommunityTags.moderatorRow(k))
                     }
                 }
@@ -608,6 +684,27 @@ private fun CommunityDetailCard(
             }
         }
         CirisTextButton(s("community_detail_close"), tag = CommunityTags.DETAIL_CLOSE, onClick = onClose)
+    }
+}
+
+/** What the moderators row says. Four facts, four renderings (CSD-102 §3.1). */
+sealed interface ModeratorsShown {
+    /** The node did not send the list (a list row, or a node that omits it). */
+    data object NotSent : ModeratorsShown
+    /** The node said it could not read the chain (`moderators_readable: false`, CIRISServer#688). */
+    data object Unreadable : ModeratorsShown
+    /** Read, and nobody is appointed. */
+    data object None : ModeratorsShown
+    data class Holders(val keys: List<String>) : ModeratorsShown
+}
+
+internal fun moderatorsShown(room: CommunityRoom): ModeratorsShown {
+    val mods = room.moderators
+    return when {
+        room.moderatorsReadable == false -> ModeratorsShown.Unreadable
+        mods == null -> ModeratorsShown.NotSent
+        mods.isEmpty() -> ModeratorsShown.None
+        else -> ModeratorsShown.Holders(mods)
     }
 }
 
