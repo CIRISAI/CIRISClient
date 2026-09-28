@@ -7,7 +7,7 @@
     "POST /v1/auth/login :: Login, Setup",
     "POST /v1/auth/native/apple :: Login, Setup",
     "POST /v1/auth/native/google :: Login, Setup",
-    "POST /v1/federation/announce :: AddFederationId, Setup",
+    "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
     "POST /v1/federation/consent :: DataManagement, Setup",
     "POST /v1/memory/query :: EnvironmentInfo, Memory",
     "POST /v1/self/associate :: IdentityManagement, Login, Setup",
@@ -50,7 +50,6 @@
       "GET /v1/setup/owned-nodes"
     ],
     "Contacts": [
-      "DELETE /v1/contacts/{}",
       "GET /v1/federation/peers"
     ],
     "DataManagement": [
@@ -115,9 +114,7 @@
       "POST /v1/self/identity/inspect"
     ],
     "ManageConsent": [
-      "GET /v1/federation/peering/revoke",
-      "GET /v1/federation/peers",
-      "POST /v1/federation/peering/revoke"
+      "GET /v1/federation/peers"
     ],
     "ManageNodes": [
       "GET /v1/federation/node-code",
@@ -145,12 +142,6 @@
     ],
     "NetworkOps": [
       "GET /v1/system/peers/federation-identity"
-    ],
-    "NetworkPeerDetail": [
-      "GET /v1/federation/peers/{}",
-      "GET /v1/federation/peers/{}/sas",
-      "PUT /v1/federation/peers/{}/appearance",
-      "PUT /v1/federation/peers/{}/trust"
     ],
     "NetworkPeers": [
       "GET /v1/federation/peers",

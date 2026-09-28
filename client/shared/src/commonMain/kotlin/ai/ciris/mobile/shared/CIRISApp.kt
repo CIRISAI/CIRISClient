@@ -46,6 +46,7 @@ import ai.ciris.mobile.shared.viewmodels.BillingViewModel
 import ai.ciris.mobile.shared.viewmodels.ConfigViewModel
 import ai.ciris.mobile.shared.viewmodels.ConsentViewModel
 import ai.ciris.mobile.shared.viewmodels.ConsentObjectsViewModel
+import ai.ciris.mobile.shared.viewmodels.consentSessionAuthenticated
 import ai.ciris.mobile.shared.viewmodels.NodeSwitcherViewModel
 import ai.ciris.mobile.shared.viewmodels.GraphMemoryViewModel
 import ai.ciris.mobile.shared.viewmodels.InteractViewModel
@@ -1038,6 +1039,23 @@ fun CIRISApp(
     // effect above, because this ViewModel is constructed later in composition.
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
+    }
+    // The consent model is reset HERE and nowhere else: every way out of a
+    // session — the three logout menus, InteractScreen.onSessionExpired,
+    // Billing's onSignInAgain — clears the token, and a reset wired to some of
+    // those callbacks misses the rest (Codex, PR #116). A session arriving
+    // loads the node pair for the new owner. isHAAddonMode is part of the
+    // CONDITION and the KEY, as for the approval watch above: under Home
+    // Assistant ingress the token stays null by design, and reading that as a
+    // logout reset the card right after its load and never started it.
+    LaunchedEffect(currentAccessToken, isHAAddonMode) {
+        consentObjectsViewModel.sessionChanged(consentSessionAuthenticated(currentAccessToken, isHAAddonMode))
+    }
+    // A node switch moves the node under the same app-scoped model: the list it
+    // shows is the OLD node's, and a Remove on it would DELETE at the new one
+    // (Codex, PR #115). Tell the model, which drops the list and re-reads.
+    LaunchedEffect(effectiveNodeUrl) {
+        contactsViewModel.nodeChanged()
     }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a

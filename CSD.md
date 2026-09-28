@@ -284,9 +284,28 @@ derives, from the code alone, every route a screen calls — `CIRISApp.kt`'s
 * A route cited but not called is fine when the row's state says why —
   `missing`, `blocked_by`, proposed, wrong-host, uncalled, or another CSD's card —
   and is reported as an **unused citation** otherwise.
-* Two screens newly calling the same mutating route fail the gate: that is the
+* Two cards newly calling the same mutating route fail the gate: that is the
   same card under two names, or one action with two doors, and a person decides
   which.
+* **One composable, many Screens.** `Screen.LayerAgent`, `LayerFamily`,
+  `LayerLocalCommunity` and `LayerGlobalCommunities` all render `LayerHubScreen`
+  with a scope; `AffiliationsRoster` and `CommunityRoster` share one composable,
+  the two `*Chats` another. Screens whose `CIRISApp.kt` arm renders the same host
+  composable are **siblings**: ONE card for the duplicate rule (the same
+  `POST /v1/communities` from all four hubs is one door, not four), and a route
+  cited by a CSD naming any sibling counts as cited for every sibling. A CSD
+  still names one screen in `csd:surface`; it need not be repeated per sibling.
+* **Write the route in full.** A §3 row is matched on `/v1/…`; `POST …/leave`
+  with an ellipsis cites nothing. The verb is optional — a row without one
+  matches any verb, and a row with one matches a call whose verb the parser
+  could not read (`? /v1/…`).
+* **The baseline ratchets both ways.** A baseline entry that is no longer
+  uncited or duplicate fails the gate (`baseline is stale`) until `--baseline`
+  re-records it, so paid-down debt cannot quietly come back.
+* Touching a view model charges its init-time reads to the screen (that is what
+  starts them), except through a `reset*`/`clear*`/`forget*`/`dismiss*` member:
+  a logout arm calling `resetSession()` on an app-scoped model it did not build
+  reaches none of that model's routes.
 
 Do not hand-write the rows. Generate them, then add the owner's file:line and
 the state:
@@ -298,8 +317,11 @@ python3 packaging/check_csd_routes.py --baseline        # after paying debt down
 ```
 
 The closure is a regex walk, not a compiler, and says so (`heuristic: true`): it
-does not see a view model's state read through a flow collected outside the
-screen's arm, or a lambda handed through navigation.
+follows typed receivers, bound references (`viewModel::confirm`), interfaces
+through their implementations including anonymous `object : Iface { … }`
+backends, and wrappers that take the verb and path as parameters; it does not
+see a view model's state read through a flow collected outside the screen's
+arm, or a lambda handed through navigation.
 
 ## 5. What v3 does not do, stated plainly
 

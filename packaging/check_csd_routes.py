@@ -29,10 +29,33 @@ actually calls, rather than written by hand and trusted.
 HEURISTIC, AND IT SAYS SO. Kotlin is read with `re` and a small tokenizer, never
 a build (AGENTS.md). The closure follows: composables called from the screen's
 arm (same file / same directory), view-model / repository members called on a
-receiver whose type the parse can see, class `init` + property initialisers of
-every class it enters, and bare calls to members of the same class. It does not
-follow lambdas passed through navigation, reflection, or a receiver whose type
-it cannot see. Every output carries `heuristic: true`.
+receiver whose type the parse can see — or handed on as a bound reference
+(`viewModel::confirm`) — interfaces through every class or anonymous
+`object : Iface { … }` that implements them, class `init` + property
+initialisers of every class it enters, and bare calls to members of the same
+class. It does not follow lambdas passed through navigation, reflection, or a
+receiver whose type it cannot see. Every output carries `heuristic: true`.
+
+ONE COMPOSABLE, MANY SCREENS. `Screen.LayerAgent/LayerFamily/LayerLocalCommunity/
+LayerGlobalCommunities` all render `LayerHubScreen` with a scope; the two rosters
+share one composable, the two chats another. Screens whose arm renders the same
+host composable are SIBLINGS: one card for the duplicate rule, and a route cited
+by a CSD naming any sibling is cited for all of them (CSD.md §4.1).
+
+ROUTES ARE ABSOLUTE AND CARRY THEIR VERB. A wrapper that takes the path and the
+verb as parameters (`familyCall(name, HttpMethod.Post, nodeUrl, path)`,
+`agentRead(name, HttpMethod.Get, path, …)`), a path builder with a `$tail`
+parameter (`familyPath(id, "/members")`) and a property holding the prefix
+(`private val base = "$nodeUrl/v1/families"` then `"$base/$id/members"`) all
+resolve to `POST /v1/families/{}/members`, not `? /members`. Where a verb still
+cannot be read the route is `? /…`, and a cite with a verb matches it (a cite
+without one matches any verb), so one route is never both uncited and an unused
+citation.
+
+THE BASELINE IS A RATCHET IN BOTH DIRECTIONS. A new uncited route or duplicate
+fails; so does a baseline entry that is no longer uncited or duplicate — debt
+paid down must be recorded (`--baseline`) at once, or the citation could be
+deleted again later and pass the set difference.
 
 A PARSER THAT FINDS NOTHING FAILS. Zero API methods, zero Screens, zero `when`
 arms or zero CSD routes is an error, not a green board.
@@ -268,9 +291,44 @@ def _stmt_end(skel: str, i: int, indent: int) -> int:
     return n
 
 
+def _class_sym(src: Src, start: int, after: int, name: str, indent: int) -> Sym:
+    """A class/object/interface Sym whose keyword ends at `after`: the header
+    runs to the first `{` at paren depth 0 (else the line end); supertypes
+    follow the `:` after the constructor's `)` or the name."""
+    s = src.skel
+    k, depth = after, 0
+    end = hdr = None
+    while k < len(s):
+        c = s[k]
+        if c == "(":
+            depth += 1
+        elif c == ")":
+            depth -= 1
+        elif depth == 0 and c == "{":
+            hdr = k
+            end = match_close(s, k) + 1
+            break
+        elif depth == 0 and c == "\n":
+            j = k + 1
+            while j < len(s) and s[j] in " \t":
+                j += 1
+            if s[j:j + 1] not in (":", ",", "{", ")") and not s.startswith("where", j):
+                hdr = end = k
+                break
+        k += 1
+    if end is None:
+        hdr = end = len(s)
+    header = s[after:hdr]
+    hp = header.find("(")
+    tail = header[match_close(header, hp, "(", ")") + 1:] if hp >= 0 and ":" not in header[:hp] else header
+    supers = re.findall(r"(?:^|[:,])\s*(?:[\w.]*\.)?([A-Z]\w*)", tail.split(":", 1)[1]) if ":" in tail else []
+    return Sym("class", name, src, start, end, indent, hdr, supers=supers)
+
+
 def declarations(src: Src) -> list[Sym]:
     s = src.skel
     out: list[Sym] = []
+    seen_kw: set[int] = set()
     for m in DECL.finditer(s):
         kind_kw, name = m.group(3), m.group(5)
         indent = len(m.group(1).expandtabs())
@@ -311,38 +369,24 @@ def declarations(src: Src) -> list[Sym]:
             out.append(Sym("fun", name, src, m.start(), end, indent, pe + 1))
         else:
             if kind_kw == "object" and not name:
-                name = "Companion"
+                # `companion object {` is the Companion; a nameless `object : Iface {`
+                # at the start of a line is an anonymous object (named below).
+                name = "Companion" if "companion" in m.group(2) else f"<object@{src.line(m.start())}>"
             if not name:
                 continue
-            # header: up to the first `{` at paren depth 0 on the header, else line end.
-            k, depth = after, 0
-            end = hdr = None
-            while k < len(s):
-                c = s[k]
-                if c == "(":
-                    depth += 1
-                elif c == ")":
-                    depth -= 1
-                elif depth == 0 and c == "{":
-                    hdr = k
-                    end = match_close(s, k) + 1
-                    break
-                elif depth == 0 and c == "\n":
-                    j = k + 1
-                    while j < len(s) and s[j] in " \t":
-                        j += 1
-                    if s[j:j + 1] not in (":", ",", "{", ")") and not s.startswith("where", j):
-                        hdr = end = k
-                        break
-                k += 1
-            if end is None:
-                hdr = end = len(s)
-            header = s[m.end():hdr]
-            # supertypes: after the constructor's `)` (or the name), a `:`.
-            hp = header.find("(")
-            tail = header[match_close(header, hp, "(", ")") + 1:] if hp >= 0 and ":" not in header[:hp] else header
-            supers = re.findall(r"(?:^|[:,])\s*(?:[\w.]*\.)?([A-Z]\w*)", tail.split(":", 1)[1]) if ":" in tail else []
-            out.append(Sym("class", name, src, m.start(), end, indent, hdr, supers=supers))
+            seen_kw.add(m.start(3))
+            out.append(_class_sym(src, m.start(), after, name, indent))
+    # Anonymous objects mid-line — `fun backendOf(api) = object : Backend {`,
+    # `remember { object : Foo {` — are the shape a view model's backend takes
+    # when it is an interface over the client (AdapterConnectorsViewModel's
+    # `connectorsBackendOf`). DECL is anchored at the start of a line and never
+    # sees them; without them the closure stops dead at `backend.list()`.
+    # Each gets a unique name so `members[(name, fun)]` is that object's
+    # member and no other's, and `implementors[Iface]` reaches it.
+    for m in re.finditer(r"(?<![\w.])object\s*(?=:)", s):
+        if m.start() in seen_kw:
+            continue
+        out.append(_class_sym(src, m.start(), m.end(), f"<object@{src.line(m.start())}>", 0))
     # parents: innermost enclosing class.
     classes = sorted((x for x in out if x.kind == "class"), key=lambda x: x.start)
     for sym in out:
@@ -466,21 +510,138 @@ def route_props(root: Path) -> list[str]:
     return sorted(set(out))
 
 
+BASE_DECL = re.compile(r"(?:val|var)\s+(\w+)\s*(?::\s*String\??)?\s*=\s*$")
+_CALL_NAME = re.compile(r"(?<![\w.])(\w+)\s*\(")
+
+
+def file_bases(src: Src, funs: list[Sym]) -> dict[str, tuple[str | None, str]]:
+    """Properties (not locals) holding a URL prefix, by name:
+    `private val base = "$nodeUrl/v1/families"` -> base: ("nodeUrl", "/v1/families");
+    `private val root = "/v1/families"`          -> root: (None, "/v1/families").
+    A literal `"$base/$id/members"` is then absolute — `? /members` was what the
+    gate reported for HouseholdsApi before this, and no CSD can cite that."""
+    out: dict[str, tuple[str | None, str]] = {}
+    for s, e, raw in src.strings:
+        if any(f.start <= s < f.end for f in funs):
+            continue
+        m = BASE_DECL.search(src.skel[max(0, s - 60):s])
+        if not m:
+            continue
+        um = URL_LIT.match(raw)
+        if um and um.group(3).startswith("/"):
+            out[m.group(1)] = (um.group(1) or um.group(2), um.group(3))
+        elif raw.startswith("/v1"):
+            out[m.group(1)] = (None, raw)
+    return out
+
+
+def absolute(base: str, rest: str, bases: dict[str, tuple[str | None, str]]) -> tuple[str | None, str]:
+    """(host var, rest) for a literal `$base<rest>`, with file bases expanded:
+    `$host/v1/x` as is; `$prefix/x` where prefix holds `$host/v1/...`;
+    `$host$prefix/x` where prefix holds `/v1/...`. The host var is None when
+    the literal never names one."""
+    if base in bases:
+        hostvar, path = bases[base]
+        return hostvar, path + rest
+    pm = re.match(r"\$\{?(\w+)\}?(.*)$", rest, re.S)
+    if pm and pm.group(1) in bases and bases[pm.group(1)][0] is None:
+        return base, bases[pm.group(1)][1] + pm.group(2)
+    return base, rest
+
+
+@dataclass
+class Helper:
+    """A wrapper that takes the path (and maybe the verb) as parameters:
+    `familyCall(method, verb: HttpMethod, nodeUrl, path)` doing
+    `client.request("$nodeUrl$path") { this.method = verb }`."""
+    verb: str
+    host: str
+    path_param: str
+    verb_param: str | None
+
+
+@dataclass
+class Builder:
+    """A path builder: `fun familyPath(id: String, tail: String = "") =
+    "/v1/families/${id}$tail"`. A call `familyPath(x, "/members")` is
+    `/v1/families/{}/members`; `familyPath(x)` is `/v1/families/{}`."""
+    hostvar: str | None
+    prefix: str
+    tail_param: str | None
+
+
+def _params(sym: Sym) -> dict[str, str]:
+    """name -> declared type (bare) for a fun's parameters."""
+    return {m.group(1): m.group(2).split(".")[-1]
+            for m in re.finditer(r"(\w+)\s*:\s*([\w.<>?]+)", sym.src.skel[sym.start:sym.header_end])}
+
+
+def _builder_calls(src: Src, builders: dict[str, Builder], p: int, pe: int) -> list[tuple[int, int, str | None, str]]:
+    """(start, end, host var, path) per path-builder call inside the parens (p, pe):
+    `familyPath(id, "/members")` -> `/v1/families/{}/members`, `familyPath(id)` -> the prefix."""
+    out = []
+    for bm in _CALL_NAME.finditer(src.skel, p + 1, pe):
+        bd = builders.get(bm.group(1))
+        if bd is None:
+            continue
+        q = bm.end() - 1
+        qe = match_close(src.skel, q, "(", ")")
+        tails = [raw for s, e, raw in src.strings if q < s < qe and raw.startswith("/")]
+        out.append((q, qe, bd.hostvar, bd.prefix + (tails[0] if tails and bd.tail_param else "")))
+    return out
+
+
+def _lambda_end(skel: str, pe: int, b: int) -> int:
+    """End of the trailing lambda after a call's `)` at `pe`, else pe + 1."""
+    j = pe + 1
+    while j < b and skel[j] in " \t\n":
+        j += 1
+    return match_close(skel, j) + 1 if skel[j:j + 1] == "{" else pe + 1
+
+
+def _verb_param(params: dict[str, str]) -> str | None:
+    """The parameter typed `HttpMethod`, if the wrapper takes its verb that way."""
+    return next((n for n, t in params.items() if t == "HttpMethod"), None)
+
+
 def parse_api(root: Path, gen: dict[str, set[tuple[str, str]]]) -> dict[str, ApiMethod]:
     """Every function under api/ that reaches a route. Keyed `Class.method`;
     CIRISApiClient's are also the bare-name call targets (`apiClient.foo(`)."""
     props = None
     methods: dict[str, ApiMethod] = {}
-    helpers: dict[str, tuple[str, str, str]] = {}  # name -> (verb, host, param)
+    helpers: dict[str, Helper] = {}
+    builders: dict[str, Builder] = {}
     syms: list[Sym] = []
+    bases_of: dict[str, dict[str, tuple[str | None, str]]] = {}
     for f in sorted((root / API_DIR).glob("*.kt")):
-        syms += [x for x in declarations(load(root, f)) if x.kind == "fun"]
+        src = load(root, f)
+        funs = [x for x in declarations(src) if x.kind == "fun"]
+        syms += funs
+        bases_of[src.rel] = file_bases(src, funs)
+
+    # path builders first: a fun whose only literal is a path and which sends nothing
+    for sym in syms:
+        src, bases = sym.src, bases_of[sym.src.rel]
+        lits = [(s, raw) for s, e, raw in src.strings if sym.header_end <= s < sym.end]
+        if len(lits) != 1 or HTTP_CALL.search(src.skel, sym.start, sym.end):
+            continue
+        raw = lits[0][1]
+        params = _params(sym)
+        tail = None
+        tm = re.search(r"\$\{?(\w+)\}?$", raw)
+        if tm and tm.group(1) in params and params[tm.group(1)].startswith("String"):
+            tail, raw = tm.group(1), raw[:tm.start()]
+        um = URL_LIT.match(raw)
+        hostvar, path = absolute(um.group(1) or um.group(2), um.group(3), bases) if um else (None, raw)
+        if path.startswith("/v1"):
+            builders[sym.name] = Builder(hostvar, path, tail)
 
     for sym in syms:
-        src = sym.src
+        src, bases = sym.src, bases_of[sym.src.rel]
         a, b = sym.start, sym.end
         cls = sym.parent.name if sym.parent else "<top>"
         am = ApiMethod(sym.name, cls, sym.where())
+        params = _params(sym)
         lits = _url_literals(src, a, b)
         # locals: val x = <expr containing url literal(s)>
         local_urls: dict[str, list[tuple[int, str, str]]] = {}
@@ -490,38 +651,41 @@ def parse_api(root: Path, gen: dict[str, set[tuple[str, str]]]) -> dict[str, Api
             got = [lt for lt in lits if vs <= lt[0] < ve]
             if got:
                 local_urls[vm.group(1)] = got
-        # base = a local holding a url: "$base?refresh=true" is that route again.
-        resolved: list[tuple[int, str, str]] = []
+        # base = a local holding a url: "$base?refresh=true" is that route again;
+        # else a property holding one (file_bases): "$base/$id/members" is absolute.
+        resolved: list[tuple[int, str | None, str]] = []
         for off, base, rest in lits:
             if base in local_urls:
                 for _, b2, r2 in local_urls[base]:
                     resolved.append((off, b2, r2 + (rest.split("?")[0] if rest.startswith("/") else "")))
             else:
-                resolved.append((off, base, rest))
+                resolved.append((off,) + absolute(base, rest, bases))
         used: set[int] = set()
 
-        def emit(verb: str, off: int, base: str, rest: str, at: int) -> None:
+        def emit(verb: str, off: int, base: str | None, rest: str, at: int) -> None:
             nonlocal props
             where = f"{src.rel}:{src.line(at)}"
+            host = host_of(base) if base else "?"
             if rest.startswith("/"):
-                am.routes.add(Route(verb, norm(rest), host_of(base), where))
+                am.routes.add(Route(verb, norm(rest), host, where))
             elif re.match(r"\$\{\s*\w+\.route\s*\}", rest):
                 if props is None:
                     props = route_props(root)
                 for r in props:
-                    am.routes.add(Route(verb, r, host_of(base), where))
+                    am.routes.add(Route(verb, r, host, where))
             else:
                 pm = re.match(r"\$\{?(\w+)\}?$", rest)
-                params = re.findall(r"(\w+)\s*:", src.skel[sym.start:sym.header_end])
                 if pm and pm.group(1) in params:
-                    helpers[sym.name] = (verb, host_of(base), pm.group(1))
+                    helpers[sym.name] = Helper(verb, host, pm.group(1), _verb_param(params))
 
         for cm in HTTP_CALL.finditer(src.skel, a, b):
             verb = VERB_OF.get(cm.group(1), "?")
             p = cm.end() - 1
             pe = match_close(src.skel, p, "(", ")")
             if cm.group(1) in ("request", "prepareRequest"):
-                hm = re.search(r"HttpMethod\.(\w+)", src.code[p:min(b, pe + 600)])
+                # the verb is in the call's args or its trailing lambda — not
+                # in the next function down the file
+                hm = re.search(r"HttpMethod\.(\w+)", src.code[p:_lambda_end(src.skel, pe, b)])
                 verb = hm.group(1).upper() if hm else "?"
             arg = src.code[p + 1:pe]
             hit = [x for x in resolved if p < x[0] < pe]
@@ -530,9 +694,15 @@ def parse_api(root: Path, gen: dict[str, set[tuple[str, str]]]) -> dict[str, Api
                 if idm and idm.group(1) in local_urls:
                     offs = {o for o, _, _ in local_urls[idm.group(1)]}
                     hit = [x for x in resolved if x[0] in offs]
+                elif idm and idm.group(1) in params and params[idm.group(1)].startswith("String"):
+                    # `client.request(url) { method = verb }`: the caller supplies the URL
+                    helpers[sym.name] = Helper(verb, "?", idm.group(1), _verb_param(params))
             for off, base, rest in hit:
                 used.add(off)
                 emit(verb, off, base, rest, cm.start())
+            for q, qe, hostvar, path in _builder_calls(src, builders, p, pe):
+                am.routes.add(Route(verb, norm(path), host_of(hostvar) if hostvar else "?",
+                                    f"{src.rel}:{src.line(cm.start())}"))
         # literals no call claimed (a local passed through a wrapper, a stream)
         verbs = {VERB_OF.get(m.group(1), "?") for m in HTTP_CALL.finditer(src.skel, a, b)}
         for off, base, rest in resolved:
@@ -546,17 +716,39 @@ def parse_api(root: Path, gen: dict[str, set[tuple[str, str]]]) -> dict[str, Api
         methods[f"{cls}.{sym.name}"] = am
         am._sym = sym  # type: ignore[attr-defined]
 
-    # helper wrappers: postSelfAct(path = "/v1/admin/self/shed", …)
+    # helper wrappers: postSelfAct(path = "/v1/admin/self/shed", …),
+    # familyCall("m", HttpMethod.Post, nodeUrl, familyPath(id, "/members"), body),
+    # agentRead("m", HttpMethod.Get, "/v1/partnership/options", …)
     for key, am in methods.items():
         sym = am._sym  # type: ignore[attr-defined]
-        src = sym.src
-        for h, (verb, host, param) in helpers.items():
+        src, bases = sym.src, bases_of[sym.src.rel]
+        for h, hd in helpers.items():
             for cm in re.finditer(rf"(?<![\w.]){h}\s*\(", src.skel[sym.start:sym.end]):
                 p = sym.start + cm.end() - 1
                 pe = match_close(src.skel, p, "(", ")")
+                verb = hd.verb
+                if verb == "?" and hd.verb_param:
+                    vm = re.search(r"HttpMethod\.(\w+)", src.code[p:pe])
+                    verb = vm.group(1).upper() if vm else "?"
+                nested = _builder_calls(src, builders, p, pe)
+                for q, qe, hostvar, path in nested:
+                    host = hd.host if hd.host != "?" else (host_of(hostvar) if hostvar else "?")
+                    am.routes.add(Route(verb, norm(path), host, f"{src.rel}:{src.line(q)}"))
                 for s, e, raw in src.strings:
-                    if p < s < pe and raw.startswith("/"):
-                        am.routes.add(Route(verb, norm(raw), host, f"{src.rel}:{src.line(s)}"))
+                    if not (p < s < pe) or any(q < s < qe for q, qe, _, _ in nested):
+                        continue
+                    hostvar, path = None, raw
+                    um = URL_LIT.match(raw)
+                    if um:
+                        hostvar, path = absolute(um.group(1) or um.group(2), um.group(3), bases)
+                    if not path.startswith("/"):
+                        continue
+                    host = hd.host if hd.host != "?" else (host_of(hostvar) if hostvar else "?")
+                    am.routes.add(Route(verb, norm(path), host, f"{src.rel}:{src.line(s)}"))
+    # a route read with its verb supersedes the same route read without one
+    for am in methods.values():
+        known = {r.route for r in am.routes if r.verb != "?"}
+        am.routes = {r for r in am.routes if r.verb != "?" or r.route not in known}
     # API method -> API method (bare or this.), same class
     by_cls: dict[str, set[str]] = defaultdict(set)
     for key, am in methods.items():
@@ -651,9 +843,16 @@ NAME_CALL = re.compile(r"\b(\w+)\s*\(")
 _RECV = re.compile(r"(\w+)\s*\??\.\s*$")
 
 
+BOUND_REF = re.compile(r"(\w+)::(\w+)\b")
+
+
 def calls(text: str):
     """(receiver, name, offset) per `name(` in text. receiver is None for a bare
-    call and "" for a dotted call whose receiver is an expression (`a().b(`)."""
+    call and "" for a dotted call whose receiver is an expression (`a().b(`).
+    A bound reference `viewModel::confirm` handed to a composable is that member
+    called, and is yielded as one (HouseholdsViewModel's confirm/cancelConfirm)."""
+    for m in BOUND_REF.finditer(text):
+        yield m.group(1), m.group(2), m.start(2)
     for m in NAME_CALL.finditer(text):
         head = text[max(0, m.start() - 80):m.start()].rstrip()
         if head.endswith("."):
@@ -666,6 +865,9 @@ def calls(text: str):
             continue  # a declaration, not a call
         else:
             yield None, m.group(1), m.start(1)
+#: A member whose whole job is to forget state: calling it reaches none of the
+#: model's routes, so it does not pull the model's init-time reads onto the caller.
+RESET_MEMBER = re.compile(r"^(reset|clear|forget|dismiss)[A-Z_]?")
 FOLLOW_CLASS = re.compile(r"(ViewModel|Repository|Repo|Api|Store|Service|Seam|Manager|Source|Client|Controller|Stream)$")
 NOT_FOLLOWED = {"CIRISApiClient", "CIRISApiClientProtocol", "HttpClient"}
 
@@ -724,12 +926,17 @@ class Closure:
                     ):
                         hits.append(Hit(self.client_names[name], at))
                         continue
-                # 2. a member on a receiver whose type we can see
+                # 2. a member on a receiver whose type we can see. The class's
+                # init-time reads count too (touching the model is what starts
+                # them) — except through a reset/clear/forget/dismiss, which a
+                # logout arm calls on an APP-SCOPED model it did not construct
+                # and whose reads it never sees (RESET_MEMBER).
                 if recv and rtype and rtype not in NOT_FOLLOWED:
                     for cls in self._classes_for(rtype):
                         for mem in self.idx.members.get((cls.name, name), []):
                             work.append(self._enter(mem, cls))
-                        work += self._skel_items(cls)
+                        if not RESET_MEMBER.match(name):
+                            work += self._skel_items(cls)
                     continue
                 if recv is not None:
                     continue
@@ -802,6 +1009,36 @@ def screen_arms(root: Path) -> tuple[dict[str, tuple[int, int]], Src]:
         if len(found) > len(best):
             best = found
     return best, src
+
+
+def arm_hosts(idx: Index, app: Src, arms: dict[str, tuple[int, int]]) -> dict[str, frozenset[str]]:
+    """Screen -> the composable(s) its arm renders: the declared `*Screen` /
+    `*Page` functions it calls bare, else every declared composable it calls.
+
+    One composable, many Screens: `Screen.LayerAgent/LayerFamily/
+    LayerLocalCommunity/LayerGlobalCommunities` all render `LayerHubScreen`
+    with a scope; `AffiliationsRoster` and `CommunityRoster` share
+    `CommunityRosterScreen`. Screens with the same host set are SIBLINGS —
+    one card for the duplicate rule, and a route cited by a CSD on any one of
+    them is cited for all (CSD.md §4.1)."""
+    out: dict[str, frozenset[str]] = {}
+    for sc, (a, b) in arms.items():
+        called: list[str] = []
+        for recv, name, off in calls(app.skel[a:b]):
+            if recv is None and name[:1].isupper() and name in idx.funs and name not in called:
+                called.append(name)
+        screens = [n for n in called if n.endswith(("Screen", "Page"))]
+        out[sc] = frozenset(screens or called)
+    return out
+
+
+def sibling_map(hosts: dict[str, frozenset[str]]) -> dict[str, list[str]]:
+    """Screen -> its siblings (other Screens whose arm renders the same host set)."""
+    groups: dict[frozenset[str], list[str]] = defaultdict(list)
+    for sc, h in hosts.items():
+        if h:
+            groups[h].append(sc)
+    return {sc: sorted(o for o in scs if o != sc) for scs in groups.values() if len(scs) > 1 for sc in scs}
 
 
 SCREEN_MEMBER = re.compile(r"^\s+(?:data\s+)?(?:object|class)\s+(\w+)", re.M)
@@ -982,13 +1219,16 @@ def build(root: Path) -> dict:
         errors.append("ZERO Screens reach an API method — the closure is broken, not the tree")
 
     # alignment per CSD; uncited is judged per SCREEN against every CSD on it
+    # or on a sibling (same host composable — arm_hosts)
+    hosts = arm_hosts(idx, app, arms)
+    siblings = sibling_map(hosts)
     by_screen: dict[str, list[Csd]] = defaultdict(list)
     for c in csds:
         if c.screen:
             by_screen[c.screen].append(c)
     uncited: dict[str, list[str]] = {}
     for sc, rs in screen_routes.items():
-        cites = [ci for c in by_screen.get(sc, []) for ci in c.cites]
+        cites = [ci for s in [sc, *siblings.get(sc, [])] for c in by_screen.get(s, []) for ci in c.cites]
         miss = sorted(k for k, e in rs.items() if not any(cite_matches(ci, e["verb"], e["route"]) for ci in cites))
         if miss:
             uncited[sc] = miss
@@ -1010,13 +1250,18 @@ def build(root: Path) -> dict:
             "unused_citation": unused,
             "cited_pending": unused_pending,
             "shared_screen_with": [o.id for o in by_screen.get(c.screen or "", []) if o.id != c.id],
+            "sibling_screens": siblings.get(c.screen or "", []),
         })
 
-    # duplication signals
+    # duplication signals — siblings (one composable, many Screens) are ONE card
+    def card_of(sc: str) -> str:
+        return "+".join(sorted(hosts.get(sc) or ())) or sc
+
     dup_mut = []
     for k, e in sorted(code_routes.items()):
-        if e["verb"] in MUTATING and len(e["screens"]) > 1:
-            dup_mut.append({"route": k, "screens": sorted(e["screens"]),
+        cards = sorted({card_of(sc) for sc in e["screens"]})
+        if e["verb"] in MUTATING and len(cards) > 1:
+            dup_mut.append({"route": k, "screens": sorted(e["screens"]), "cards": cards,
                             "hosts": sorted(e["hosts"]), "methods": sorted(e["methods"])})
     cite_sets = {c.id: {ci.route for ci in c.cites} for c in csds}
     dup_csd = []
@@ -1073,6 +1318,7 @@ def build(root: Path) -> dict:
             "csds": len(csds), "csd_citations": sum(len(c.cites) for c in csds),
         },
         "screens_without_arm": sorted(screens - set(arms)),
+        "siblings": siblings,
         "routes": code_routes,
         "screen_routes": screen_routes,
         "api": {k: {"where": v.where, "routes": sorted(r.key for r in v.routes),
@@ -1109,15 +1355,21 @@ def report(m: dict) -> str:
         L.append("")
 
     L.append("## 1. Duplication signals\n")
-    L.append("### 1a. Two Screens call the same mutating route\n")
+    L.append("### 1a. Two cards call the same mutating route\n")
+    L.append("(Screens whose arm renders the same composable — `LayerHubScreen` under four "
+             "`Screen.Layer*` — are one card; the `cards` column is by composable.)\n")
     if not m["duplicate_mutations"]:
         L.append("None.\n")
     else:
-        L.append("| route | host | screens | API method(s) |\n|---|---|---|---|")
+        L.append("| route | host | cards | screens | API method(s) |\n|---|---|---|---|---|")
         for d in m["duplicate_mutations"]:
-            L.append(f"| `{d['route']}` | {', '.join(d['hosts'])} | {', '.join(d['screens'])} | "
+            L.append(f"| `{d['route']}` | {', '.join(d['hosts'])} | {', '.join(d['cards'])} | "
+                     f"{', '.join(d['screens'])} | "
                      f"{', '.join('`' + x.split('.')[-1] + '`' for x in d['methods'])} |")
         L.append("")
+    if m["siblings"]:
+        L.append("Sibling Screens (one composable, many Screens; a citation on any one counts for all): "
+                 + "; ".join(f"**{sc}** ~ {', '.join(v)}" for sc, v in sorted(m["siblings"].items())) + "\n")
     L.append("### 1b. CSDs on different screens whose cited routes overlap ≥50%\n")
     L.append("(overlap = |shared| / min(|A|,|B|); only pairs sharing ≥2 routes, each citing ≥2)\n")
     if not m["duplicate_csds"]:
@@ -1147,7 +1399,7 @@ def report(m: dict) -> str:
     L.append("")
 
     L.append("## 2. Alignment per CSD\n")
-    L.append("**uncited** = the screen calls it, no CSD on that screen cites it. "
+    L.append("**uncited** = the screen calls it, no CSD on that screen (or on a sibling Screen) cites it. "
              "**unused-citation** = cited, the screen does not call it, and the row's state does not say "
              "why (missing / blocked / proposed / wrong-host / uncalled / another CSD's card). "
              "**acknowledged** = cited, not called, and the row says so. A `{}` segment on either side "
@@ -1248,6 +1500,13 @@ def gate(root: Path, m: dict) -> int:
     new_unc = {sc: sorted(set(v) - set(base["uncited"].get(sc, []))) for sc, v in now["uncited"].items()}
     new_unc = {k: v for k, v in new_unc.items() if v}
     new_dup = sorted(set(now["duplicate_mutations"]) - set(base["duplicate_mutations"]))
+    # the other direction: a baseline entry that is no longer uncited / duplicate
+    # is debt paid down, and the baseline must tighten NOW — otherwise the
+    # citation can be deleted again later and the set difference passes it.
+    stale_unc = {sc: sorted(set(v) - set(now["uncited"].get(sc, []))) for sc, v in base["uncited"].items()}
+    stale_unc = {k: v for k, v in stale_unc.items() if v}
+    stale_dup = sorted(set(base["duplicate_mutations"]) - set(now["duplicate_mutations"]))
+    n_stale = sum(len(v) for v in stale_unc.values()) + len(stale_dup)
     n_now = sum(len(v) for v in now["uncited"].values())
     n_base = sum(len(v) for v in base["uncited"].values())
     c = m["counts"]
@@ -1258,23 +1517,32 @@ def gate(root: Path, m: dict) -> int:
           f"(baseline {len(base['duplicate_mutations'])})")
     rc = 0
     if new_unc:
-        print("\n::error::a screen calls a route no CSD on that screen cites — add it to the CSD's §3 "
-              "(generate the rows: --print CSD-NNN), or write the CSD")
+        print("\n::error::a screen calls a route no CSD on that screen (or a sibling screen) cites — add it "
+              "to the CSD's §3 (generate the rows: --print CSD-NNN), or write the CSD")
         for sc, v in new_unc.items():
             print(f"\n  Screen.{sc}")
             for r in v:
                 print(f"      {r}")
         rc = 1
     if new_dup:
-        print("\n::error::two screens now call the same MUTATING route — the same card twice, or one "
+        print("\n::error::two cards now call the same MUTATING route — the same card twice, or one "
               "action with two doors; decide which, then re-record the baseline")
         for d in new_dup:
             print(f"      {d}")
         rc = 1
+    if n_stale:
+        print(f"\n::error::baseline is stale: {n_stale} entries fixed, re-record with --baseline")
+        for sc, v in stale_unc.items():
+            print(f"\n  Screen.{sc} (no longer uncited)")
+            for r in v:
+                print(f"      {r}")
+        if stale_dup:
+            print("\n  no longer a duplicate mutation")
+            for d in stale_dup:
+                print(f"      {d}")
+        rc = 1
     if rc == 0:
-        if n_now < n_base or len(now["duplicate_mutations"]) < len(base["duplicate_mutations"]):
-            print("\n  fewer than the baseline. Re-record it:\n    python3 packaging/check_csd_routes.py --baseline")
-        print("\n  no new uncited routes, no new duplicate mutations")
+        print("\n  no new uncited routes, no new duplicate mutations, baseline current")
     return rc
 
 
@@ -1289,70 +1557,227 @@ PLANT_FN = '''
 '''
 
 
+#: HouseholdsApi's shape: a wrapper taking verb + path, a path builder with a
+#: `$tail` parameter, and a property holding the URL prefix. The gate used to
+#: read these as `? /v1/zz-self-test` and `? /members`.
+PLANT_BUILT = '''
+    private val plantedBase = "$nodeUrl/v1/zz-self-test"
+
+    private fun plantedPath(id: String, tail: String = ""): String = "/v1/zz-self-test/${id}$tail"
+
+    private suspend fun plantedCall(verb: HttpMethod, path: String): String {
+        val client = federationHttpClient()
+        val response = client.request("$nodeUrl$path") { this.method = verb }
+        return response.bodyAsText()
+    }
+
+    suspend fun plantedSelfTestBuilt(id: String): String = plantedCall(HttpMethod.Post, plantedPath(id, "/members"))
+
+    suspend fun plantedSelfTestBased(id: String): String {
+        val client = federationHttpClient()
+        val response = client.delete("$plantedBase/$id/members")
+        return response.bodyAsText()
+    }
+'''
+
+#: AdapterConnectorsViewModel's shape: a view model over an interface whose
+#: only implementation is an anonymous `object : Backend { … }` returned by a
+#: top-level function. The closure used to stop dead at `backend.probe()`.
+PLANT_VM_FILE = '''package ai.ciris.mobile.shared.viewmodels
+
+import ai.ciris.mobile.shared.api.CIRISApiClient
+
+interface PlantedBackend {
+    suspend fun probe(): Boolean
+}
+
+fun plantedBackendOf(api: CIRISApiClient): PlantedBackend = object : PlantedBackend {
+    override suspend fun probe(): Boolean = api.plantedSelfTestProbe()
+}
+
+class PlantedSelfTestViewModel(private val backend: PlantedBackend) {
+    suspend fun load() {
+        backend.probe()
+    }
+}
+'''
+
+
+def _plant_api(root: Path, text: str) -> None:
+    api = root / API_CLIENT
+    t = api.read_text()
+    i = t.index("class CIRISApiClient(")
+    i = t.index("\n    suspend fun ", i)
+    api.write_text(t[:i] + "\n" + text + t[i:])
+
+
+def _plant_arm(root: Path, screen: str, lines: list[str]) -> None:
+    app = root / APP
+    t = app.read_text()
+    arm = re.search(rf"\n(\s+)Screen\.{screen} -> \{{\n", t)
+    assert arm, f"no Screen.{screen} arm to plant into"
+    body = "".join(f"{arm.group(1)}    {ln}\n" for ln in lines)
+    app.write_text(t[:arm.end()] + body + t[arm.end():])
+
+
+def _plant_composable(root: Path, rel: str, fn: str, lines: list[str]) -> None:
+    f = root / rel
+    t = f.read_text()
+    m = re.search(rf"\bfun {fn}\(", t)
+    assert m, f"no fun {fn} in {rel}"
+    pe = match_close(t, m.end() - 1, "(", ")")
+    ob = t.index("{", pe)
+    at = t.index("\n", ob) + 1
+    f.write_text(t[:at] + "".join(f"    {ln}\n" for ln in lines) + t[at:])
+
+
+def _cite_in_csd(root: Path, screen: str, route: str) -> str:
+    """Append a §3 row citing `route` to a CSD whose csd:surface names `screen`."""
+    for f in sorted((root / CSD_DIR).glob("CSD-*.md")):
+        t = f.read_text()
+        if not re.search(rf"^screen:\s*{screen}\s*$", t, re.M):
+            continue
+        sec = re.search(r"^## 3\..*?(?=^## |\Z)", t, re.M | re.S)
+        sep = re.search(r"^\|[-| :]+\|\s*$", sec.group(0), re.M)
+        assert sec and sep, f"{f.name} has no §3 table"
+        at = sec.start() + sep.end()
+        f.write_text(t[:at] + f"\n| planted | `{route}` | self-test | live |" + t[at:])
+        return f.name[:7]
+    raise AssertionError(f"no CSD names screen {screen}")
+
+
 def self_test() -> int:
     tmp = Path(tempfile.mkdtemp(prefix="csd-routes-"))
     try:
+        pristine = tmp / "pristine"
         for rel in (SHARED, GEN_DIR, CSD_DIR):
-            shutil.copytree(REPO / rel, tmp / rel)
-        (tmp / BASELINE).parent.mkdir(parents=True, exist_ok=True)
-        if (REPO / BASELINE).exists():
-            shutil.copy(REPO / BASELINE, tmp / BASELINE)
+            shutil.copytree(REPO / rel, pristine / rel)
+        (pristine / BASELINE).parent.mkdir(parents=True, exist_ok=True)
+        # the copy's own baseline: the self-test proves the machinery, and the
+        # gate run after it proves the repo's baseline is current
+        p = subprocess.run([sys.executable, __file__, "--root", str(pristine), "--baseline"],
+                           capture_output=True, text=True)
+        if p.returncode != 0:
+            print(p.stdout + p.stderr)
+            print("SELF-TEST FAIL: could not record a baseline for the pristine copy")
+            return 1
 
-        def run() -> tuple[int, str]:
-            p = subprocess.run([sys.executable, __file__, "--root", str(tmp)], capture_output=True, text=True)
+        def fresh(name: str) -> Path:
+            d = tmp / name
+            shutil.copytree(pristine, d)
+            return d
+
+        def run(root: Path) -> tuple[int, str]:
+            p = subprocess.run([sys.executable, __file__, "--root", str(root)], capture_output=True, text=True)
             out = p.stdout + p.stderr
             for line in out.splitlines():  # show the red, not a description of it
                 if line.startswith("::error::") or "zz-self-test" in line:
                     print(f"      | {line[:150]}")
             return p.returncode, out
 
-        rc, out = run()
-        if rc != 0:
+        def fail(out: str, why: str) -> int:
             print(out)
-            print("SELF-TEST FAIL: the unplanted copy is already red")
+            print(f"SELF-TEST FAIL: {why}")
             return 1
+
+        rc, out = run(pristine)
+        if rc != 0:
+            return fail(out, "the unplanted copy is already red")
         print("  clean copy: green")
 
         # 1. a new API method, called from one screen's arm -> NEW uncited route
-        api = tmp / API_CLIENT
-        t = api.read_text()
-        i = t.index("class CIRISApiClient(")
-        i = t.index("\n    suspend fun ", i)
-        api.write_text(t[:i] + "\n" + PLANT_FN + t[i:])
-        app = tmp / APP
-        t = app.read_text()
-        arm = re.search(r"\n(\s+)Screen\.Consent -> \{\n", t)
-        assert arm, "no Screen.Consent arm to plant into"
-        call = f"{arm.group(1)}    LaunchedEffect(Unit) {{ apiClient.plantedSelfTestProbe() }}\n"
-        app.write_text(t[:arm.end()] + call + t[arm.end():])
-        rc, out = run()
+        d = fresh("uncited")
+        _plant_api(d, PLANT_FN)
+        _plant_arm(d, "Consent", ["LaunchedEffect(Unit) { apiClient.plantedSelfTestProbe() }"])
+        rc, out = run(d)
         if rc == 0 or "/v1/zz-self-test/planted" not in out:
-            print(out)
-            print("SELF-TEST FAIL: a planted uncited route did not go red")
-            return 1
+            return fail(out, "a planted uncited route did not go red")
         print("  planted uncited POST /v1/zz-self-test/planted on Screen.Consent: red")
 
         # 2. the same mutating call from a second screen -> NEW duplicate mutation
-        t = app.read_text()
-        arm = re.search(r"\n(\s+)Screen\.Wallet -> \{\n", t)
-        assert arm, "no Screen.Wallet arm to plant into"
-        app.write_text(t[:arm.end()] + f"{arm.group(1)}    LaunchedEffect(Unit) {{ apiClient.plantedSelfTestProbe() }}\n"
-                       + t[arm.end():])
-        rc, out = run()
+        _plant_arm(d, "Wallet", ["LaunchedEffect(Unit) { apiClient.plantedSelfTestProbe() }"])
+        rc, out = run(d)
         if rc == 0 or "same MUTATING route" not in out or "Consent, Wallet" not in out:
-            print(out)
-            print("SELF-TEST FAIL: a planted duplicate mutation did not go red")
-            return 1
+            return fail(out, "a planted duplicate mutation did not go red")
         print("  planted the same POST on Screen.Wallet: red (duplicate mutation)")
 
-        # 3. a parser that finds nothing must fail loudly
-        for f in (tmp / CSD_DIR).glob("CSD-*.md"):
+        # 3. one composable, many Screens: the call inside LayerHubScreen reaches
+        #    every Screen.Layer* arm — siblings, ONE card: no duplicate; a citation
+        #    on any sibling's CSD covers them all; a third, unrelated screen is a duplicate
+        d = fresh("siblings")
+        _plant_api(d, PLANT_FN)
+        _plant_composable(d, str(PKG / "ui/screens/commons/LayerHubScreen.kt"), "LayerHubScreen", [
+            "val plantedApi: ai.ciris.mobile.shared.api.CIRISApiClient = ai.ciris.mobile.shared.api.CIRISApiClient()",
+            "LaunchedEffect(Unit) { plantedApi.plantedSelfTestProbe() }",
+        ])
+        rc, out = run(d)
+        hubs = sorted(sc for sc in screen_arms(d)[0] if sc.startswith("Layer") and sc != "LayerGlobalCommons")
+        if rc == 0 or not all(f"Screen.{sc}\n" in out for sc in hubs):
+            return fail(out, f"a route planted in LayerHubScreen did not go red on every sibling {hubs}")
+        if "same MUTATING route" in out:
+            return fail(out, "sibling Screens (one composable) were reported as a duplicate mutation")
+        print(f"  planted the POST inside LayerHubScreen: red on {', '.join(hubs)}, and NOT a duplicate")
+        csd = _cite_in_csd(d, hubs[0], "POST /v1/zz-self-test/planted")
+        rc, out = run(d)
+        if rc != 0:
+            return fail(out, f"a citation on {csd} ({hubs[0]}) did not cover its siblings")
+        print(f"  cited on {csd} ({hubs[0]}): green for all siblings")
+        _plant_arm(d, "Wallet", ["LaunchedEffect(Unit) { apiClient.plantedSelfTestProbe() }"])
+        rc, out = run(d)
+        if rc == 0 or "same MUTATING route" not in out or f"{', '.join(hubs)}, Wallet" not in out:
+            return fail(out, "the same POST from an unrelated screen (Wallet) was not a duplicate")
+        print("  planted the same POST on Screen.Wallet: red (duplicate across cards)")
+
+        # 4. verb + path through a wrapper, a path builder and a URL-prefix property
+        d = fresh("wrapper")
+        _plant_api(d, PLANT_BUILT)
+        _plant_arm(d, "Consent", ["LaunchedEffect(Unit) { apiClient.plantedSelfTestBuilt(\"x\"); "
+                                  "apiClient.plantedSelfTestBased(\"x\") }"])
+        rc, out = run(d)
+        want = ("POST /v1/zz-self-test/{}/members", "DELETE /v1/zz-self-test/{}/members")
+        bad = [ln.strip() for ln in out.splitlines()
+               if ("zz-self-test" in ln or ln.strip().endswith("/members")) and ln.strip() not in want]
+        if rc == 0 or not all(w in out for w in want) or bad:
+            return fail(out, f"wrapper/builder/base routes did not resolve to {want}; stray: {bad}")
+        print("  planted familyCall/familyPath/base-property shapes: red as POST and DELETE, absolute, no `?`")
+
+        # 5. a view model over an interface implemented by an anonymous object,
+        #    driven through a bound reference (`plantedVm::load`, as HouseholdConfirm
+        #    takes `viewModel::confirm`)
+        d = fresh("anon")
+        _plant_api(d, PLANT_FN)
+        (d / PKG / "viewmodels/PlantedSelfTestViewModel.kt").write_text(PLANT_VM_FILE)
+        _plant_arm(d, "Consent", [
+            "val plantedVm: ai.ciris.mobile.shared.viewmodels.PlantedSelfTestViewModel = viewModel { "
+            "ai.ciris.mobile.shared.viewmodels.PlantedSelfTestViewModel("
+            "ai.ciris.mobile.shared.viewmodels.plantedBackendOf(apiClient)) }",
+            "val plantedGo: suspend () -> Unit = plantedVm::load",
+            "LaunchedEffect(Unit) { plantedGo() }",
+        ])
+        rc, out = run(d)
+        if rc == 0 or "Screen.Consent\n" not in out or "/v1/zz-self-test/planted" not in out:
+            return fail(out, "a route behind `object : Backend { … }` reached by `vm::load` did not reach Screen.Consent")
+        print("  planted a backend as an anonymous object, called through `vm::load`: red on Screen.Consent")
+
+        # 6. a baseline entry that is no longer uncited / duplicate: the ratchet
+        #    must tighten, or deleting that citation later would pass
+        d = fresh("stale")
+        bl = json.loads((d / BASELINE).read_text())
+        bl["uncited"].setdefault("Consent", []).append("GET /v1/zz-self-test/never-called")
+        bl["duplicate_mutations"].append("POST /v1/zz-self-test/never-called :: Consent, Wallet")
+        (d / BASELINE).write_text(json.dumps(bl, indent=2, sort_keys=True) + "\n")
+        rc, out = run(d)
+        if rc == 0 or "baseline is stale: 2 entries fixed" not in out:
+            return fail(out, "a stale baseline entry did not go red")
+        print("  planted two stale baseline entries: red (re-record)")
+
+        # 7. a parser that finds nothing must fail loudly
+        d = fresh("zero")
+        for f in (d / CSD_DIR).glob("CSD-*.md"):
             f.write_text(re.sub(r"/v1", "/vX", f.read_text()))
-        rc, out = run()
+        rc, out = run(d)
         if rc == 0 or "ZERO /v1 routes" not in out:
-            print(out)
-            print("SELF-TEST FAIL: zero CSD routes did not fail loudly")
-            return 1
+            return fail(out, "zero CSD routes did not fail loudly")
         print("  zero CSD routes parsed: red (loud)")
         print("[OK] self-test: every planted defect went red")
         return 0
