@@ -192,6 +192,18 @@ sealed class NavSurface(
         labelKey = "nav.surface.contacts")
 
     /**
+     * Files (B3): a circle's files from the drive plane (CIRISServer 0.5.215).
+     * Placed in the Files tab of the circles the drive has a cohort for: Just
+     * me (`self`), and Neighbours / Communities and Businesses (`community`).
+     */
+    object Files : NavSurface("files", "Files", CIRISIcons.pkg,
+        labelKey = "nav.surface.files")
+
+    /** Notes to self: the self room's unnamed text rows, a chat of one. Just me › Chats. */
+    object Notes : NavSurface("notes", "Notes to self", CIRISIcons.edit,
+        labelKey = "nav.surface.notes")
+
+    /**
      * Delegations — who the owner has authorized to act on their behalf (active
      * device-authorization grants), plus approve-a-new / revoke. The
      * human-consent gate for an agent acting on-behalf-of. Live (no gate).
@@ -358,6 +370,18 @@ sealed class NavSurface(
     /** Help — under My things, always reachable. */
     object Help : NavSurface("help", "Help", CIRISIcons.info, labelKey = "nav.surface.help")
 
+    // ── Households (CSD-101) ────────────────────────────────────────────────
+    /**
+     * Household members — who is in the household you are looking at, their
+     * roles, and adding someone from your contacts (`/v1/families/{id}/members`,
+     * CIRISServer 0.5.216). The household itself (how it decides, leave,
+     * dissolve, the change waiting on signatures) is the Family hub,
+     * [LayerFamily] (CSD-100). Live (no gate): the NODE serves it.
+     */
+    object HouseholdMembers : NavSurface(
+        id = "household-members", label = "Household", icon = CIRISIcons.home,
+        labelKey = "nav.surface.household_members",
+    )
     // ═══════════════════════════════════════════════════════════════════════════
     // Communities and affiliations (CSD-102, CSD-103) — CIRISServer
     // `/v1/communities`. One surface per tier because a surface does not know

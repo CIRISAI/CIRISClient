@@ -66,6 +66,13 @@ fun LayerHubScreen(
     onOpenEnvironment: (() -> Unit)? = null,
     onOpenDelegations: (() -> Unit)? = null,
     onIssueClick: (String) -> Unit = {},
+    /**
+     * Households (CSD-100): the Family hub's own content — the household you
+     * are in, how it decides, and the acts that change it. When present it
+     * comes first and replaces the three description-only sections for the
+     * Family scope, which describe data this hub never fetched (CSD-050 §1).
+     */
+    familyContent: (@Composable () -> Unit)? = null,
     // Communities and affiliations (CSD-102): the circle's own rooms, their
     // rules, roles and pending changes. Neighbours and Communities and
     // Businesses pass their tier's view model; every other circle passes null.
@@ -87,6 +94,13 @@ fun LayerHubScreen(
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             LayerHeader(scope = scope, icon = scopeIcon(scope))
+
+            // ── Households (CSD-100): the Family hub IS the household ──
+            if (scope == CohortScope.FAMILY && familyContent != null) {
+                familyContent()
+                if (onOpenDelegations != null) FamilyDelegationsCard(onOpenDelegations = onOpenDelegations)
+                return@Column
+            }
 
             // ── Scope-specific feature cards ──
             if (scope == CohortScope.LOCAL_COMMUNITY && hasAgent && onOpenEnvironment != null) {

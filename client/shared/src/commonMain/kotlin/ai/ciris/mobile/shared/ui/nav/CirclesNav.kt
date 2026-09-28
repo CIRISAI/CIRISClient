@@ -90,14 +90,19 @@ object CirclesNav {
         // ── Files — FILES. The tab is named for what it holds, so nothing
         // else may sit in it: the memory graph moved to This node, the
         // environment snapshot and the commons to Decisions, the accord's
-        // attestations to Safety. Until the files spine exists (B3) every
-        // circle's Files tab says so, which is a fact about the data and not
-        // a gap in the build. ──
+        // attestations to Safety. The one card here is the drive plane
+        // itself (B3), in the circles the drive has a cohort for: self,
+        // family (the household picked in the Family hub, CSD-100) and
+        // community. Everyone has no room of its own. ──
+
+        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, FAMILY, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
         // runs, not who you talk to; they live under This agent. ──
         Placement(NavSurface.Interact, Tab.CHATS, setOf(AGENT), agentOnly = true),
+        // A note to self is the chat of one, and needs no agent: every build.
+        Placement(NavSurface.Notes, Tab.CHATS, setOf(AGENT)),
 
         // ── People — the constituent of every circle. Contacts IS the tab;
         // who may act for whom is a rule, so Delegations sits under Rules. ──
@@ -140,6 +145,11 @@ object CirclesNav {
         // ── Record — one card, five homes ──
         Placement(NavSurface.Audit, Tab.RECORD, ALL),
 
+        // ── Households (CSD-101): the roster is a People fact, so it sits
+        // beside Contacts in Family › People. The household itself — how it
+        // decides and the acts that change it — is the Family hub in Rules
+        // (LayerFamily, CSD-100), not a second card there. ──
+        Placement(NavSurface.HouseholdMembers, Tab.PEOPLE, setOf(FAMILY)),
         // ── Communities and affiliations (CSD-102, CSD-103). The community
         // itself (its rule, roles, pending changes) is on the circle's own
         // Rules hub, not a card beside it; who is in it is People, and the

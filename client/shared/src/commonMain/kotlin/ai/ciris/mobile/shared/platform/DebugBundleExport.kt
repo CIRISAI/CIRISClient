@@ -22,3 +22,14 @@ expect fun saveDebugBundle(fileName: String, content: String): String?
  * remaining route out.
  */
 expect fun copyToClipboard(text: String): Boolean
+
+/**
+ * Save a copy of a file's bytes somewhere the person can open it with their
+ * own apps, and return where, in words they can act on ("Downloads/report.pdf"),
+ * or null if it could not be written.
+ *
+ * The same locations as [saveDebugBundle], for the same reason: a place the
+ * person can find again. Used by Files for anything the app does not preview
+ * itself. Nothing here overwrites: an existing name gets a numbered sibling.
+ */
+expect fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String?

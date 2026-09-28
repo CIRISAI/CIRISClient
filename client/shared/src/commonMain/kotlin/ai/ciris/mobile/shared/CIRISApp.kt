@@ -1030,12 +1030,42 @@ fun CIRISApp(
         // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
         ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
+    // B3: one Files view model per cohort — a self, a family and a community
+    // listing are different questions, and one model answering all would
+    // show the last circle's files in the next. Every drive route is the
+    // NODE's (src/drive.rs), read at the active node like contacts, never
+    // the api base (CIRISAgent#1213).
+    val drive = remember(apiClient) { ai.ciris.mobile.shared.api.ClientDrive(apiClient) { contactsNodeUrl.value } }
+    val selfFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-self") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.SELF)
+    }
+    val familyFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-family") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.FAMILY)
+    }
+    val communityFilesViewModel: ai.ciris.mobile.shared.viewmodels.FilesViewModel = viewModel(key = "files-community") {
+        ai.ciris.mobile.shared.viewmodels.FilesViewModel(drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.COMMUNITY)
+    }
+    val notesViewModel: ai.ciris.mobile.shared.viewmodels.NotesViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.NotesViewModel(drive)
+    }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
     // survive into the next session. Declared here, not in the approval-watch
     // effect above, because this ViewModel is constructed later in composition.
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
+    }
+    // Households (CSD-100 / CSD-101): one view model for the hub and the roster,
+    // so the household picked in one is the one shown in the other. NODE-owned:
+    // nodeBaseUrl, never the api base (CIRISAgent#1213). Owner-gated content,
+    // cleared with the session like the contacts above.
+    val householdsViewModel: ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel(
+            ai.ciris.mobile.shared.api.ClientHouseholds(apiClient, nodeBaseUrl),
+        )
+    }
+    LaunchedEffect(currentAccessToken) {
+        if (currentAccessToken == null) householdsViewModel.clearSessionState()
     }
     // Communities and affiliations (CSD-102, CSD-103): one view model per tier,
     // shared by that circle's Rules hub, People and Chats — a change its rule
@@ -4171,6 +4201,18 @@ fun CIRISApp(
                 )
             }
 
+            is Screen.Files -> when ((currentScreen as Screen.Files).cohort) {
+                // Family › Files lists the household picked in the Family hub's switcher (CSD-100): same view model.
+                "family" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                    viewModel = familyFilesViewModel, nodeVersion = nodeVersion, households = householdsViewModel,
+                )
+                "community" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = communityFilesViewModel, nodeVersion = nodeVersion)
+                else -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = selfFilesViewModel, nodeVersion = nodeVersion)
+            }
+            Screen.Notes -> ai.ciris.mobile.shared.ui.screens.files.NotesScreen(
+                viewModel = notesViewModel,
+                nodeVersion = nodeVersion,
+            )
             Screen.Contacts -> {
                 // Contacts: the owner's consented peers, and the node client's
                 // HOME surface. Also reached from the Delegations picker flow
@@ -4949,6 +4991,13 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onOpenDelegations = { currentScreen = Screen.Delegations },
                 onIssueClick = { url -> uriHandler.openUri(url) },
+                // Households (CSD-100): the Family hub is the household.
+                familyContent = {
+                    ai.ciris.mobile.shared.ui.screens.HouseholdPanel(
+                        viewModel = householdsViewModel,
+                        onOpenMembers = { currentScreen = Screen.HouseholdMembers },
+                    )
+                },
             )
             Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.LOCAL_COMMUNITY,
@@ -4981,6 +5030,11 @@ fun CIRISApp(
             )
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
+            // Households (CSD-101): the roster on Family › People.
+            Screen.HouseholdMembers -> ai.ciris.mobile.shared.ui.screens.HouseholdMembersScreen(
+                viewModel = householdsViewModel,
+                onOpenHousehold = { currentScreen = Screen.LayerFamily },
+            )
         }
                 } // close Box(modifier = contentModifier)
             } // close mainScreenContent lambda
@@ -5014,7 +5068,21 @@ fun CIRISApp(
             fun openTab(c: ai.ciris.mobile.shared.ui.nav.CohortScope, t: ai.ciris.mobile.shared.ui.nav.Tab) {
                 val cards = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(c, t, hasAgentNow)
                 currentCircle = c
-                currentScreen = if (cards.size == 1) surfaceToScreen(cards[0]) else Screen.CircleTab(c.id, t.id)
+                currentScreen = when {
+                    // The same Files card lists a different cohort per circle:
+                    // your own files in Just me, the picked household's in
+                    // Family, community rooms elsewhere.
+                    cards.size == 1 && cards[0] == ai.ciris.mobile.shared.ui.nav.NavSurface.Files ->
+                        Screen.Files(
+                            when (c) {
+                                ai.ciris.mobile.shared.ui.nav.CohortScope.AGENT -> "self"
+                                ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY -> "family"
+                                else -> "community"
+                            },
+                        )
+                    cards.size == 1 -> surfaceToScreen(cards[0])
+                    else -> Screen.CircleTab(c.id, t.id)
+                }
             }
             // Back inside the shell: a card opened from a multi-card tab returns
             // to that tab; an instrument surface returns to its instrument; the
@@ -5924,6 +5992,9 @@ internal sealed class Screen {
     // client's HOME surface; also used as a picker (over the wider peer store)
     // when delegating to an existing fed-ID.
     object Contacts : Screen()
+    /** A circle's files. The cohort rides on the screen: the same card lists `self` in Just me and `community` elsewhere. */
+    data class Files(val cohort: String = "self") : Screen()
+    object Notes : Screen()
 
     /**
      * One two-member chat. Parameterised because the room is identified by the
@@ -5990,11 +6061,6 @@ internal sealed class Screen {
     object LayerFamily : Screen()
     object LayerLocalCommunity : Screen()
     object LayerGlobalCommunities : Screen()
-    object LayerGlobalCommons : Screen()
-    // CIRISServer #367 — the reverse-quorum plane the cohorts above are the
-    // quorum OF. A Commons-group surface, not a settings one: nothing on it is
-    // an owner privilege.
-    object Commons : Screen()
     // Communities and affiliations (CSD-102, CSD-103): who is in each room
     // (People) and the rooms you talk in (Chats), one per tier. The community
     // itself renders on LayerLocalCommunity / LayerGlobalCommunities.
@@ -6002,6 +6068,14 @@ internal sealed class Screen {
     object AffiliationsRoster : Screen()
     object CommunityChats : Screen()
     object AffiliationsChats : Screen()
+    object LayerGlobalCommons : Screen()
+    // CIRISServer #367 — the reverse-quorum plane the cohorts above are the
+    // quorum OF. A Commons-group surface, not a settings one: nothing on it is
+    // an owner privilege.
+    object Commons : Screen()
+    // Households (CSD-101): the roster, on Family › People. The household
+    // itself is the Family hub (LayerFamily, CSD-100).
+    object HouseholdMembers : Screen()
 }
 
 /**
@@ -6100,6 +6174,8 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.ManageNodes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes
     Screen.ManageConsent -> ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    is Screen.Files -> ai.ciris.mobile.shared.ui.nav.NavSurface.Files
+    Screen.Notes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Notes
     // A chat keeps the Contacts card lit — it is a leaf of that surface, not a
     // sidebar destination of its own.
     is Screen.UserChat -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
@@ -6142,6 +6218,8 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     //    be auto-pushed over the landing screen.
     Screen.AddFederationId -> null
     is Screen.CircleTab, is Screen.Instrument -> null
+    // Households (CSD-101)
+    Screen.HouseholdMembers -> ai.ciris.mobile.shared.ui.nav.NavSurface.HouseholdMembers
 }
 
 private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen = when (s) {
@@ -6175,6 +6253,8 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Files -> Screen.Files()
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Notes -> Screen.Notes
     ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations -> Screen.Delegations
     ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement -> Screen.IdentityManagement
     ai.ciris.mobile.shared.ui.nav.NavSurface.Accord -> Screen.Accord
@@ -6195,13 +6275,15 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerFamily -> Screen.LayerFamily
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerLocalCommunity -> Screen.LayerLocalCommunity
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities -> Screen.LayerGlobalCommunities
-    ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons -> Screen.LayerGlobalCommons
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Commons -> Screen.Commons
     // Communities and affiliations (CSD-103)
     ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster -> Screen.CommunityRoster
     ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster -> Screen.AffiliationsRoster
     ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityChats -> Screen.CommunityChats
     ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsChats -> Screen.AffiliationsChats
+    ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons -> Screen.LayerGlobalCommons
+    ai.ciris.mobile.shared.ui.nav.NavSurface.Commons -> Screen.Commons
+    // Households (CSD-101)
+    ai.ciris.mobile.shared.ui.nav.NavSurface.HouseholdMembers -> Screen.HouseholdMembers
 }
 
 /**

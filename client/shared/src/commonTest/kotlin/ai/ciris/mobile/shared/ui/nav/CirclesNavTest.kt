@@ -31,11 +31,39 @@ class CirclesNavTest {
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
         NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
+        NavSurface.ClientInterface, NavSurface.Help, NavSurface.Files, NavSurface.Notes,
+        // Households (CSD-101)
+        NavSurface.HouseholdMembers,
         NavSurface.ClientInterface, NavSurface.Help, NavSurface.NodeSelf,
         // Communities and affiliations (CSD-102, CSD-103)
         NavSurface.CommunityRoster, NavSurface.AffiliationsRoster,
         NavSurface.CommunityChats, NavSurface.AffiliationsChats,
     )
+
+    /**
+     * HOUSEHOLDS (CSD-100/101): the roster is a People fact and the household
+     * is the Family hub. Pinned so neither becomes a second card under another
+     * name: the roster is placed once, in Family › People beside Contacts, and
+     * Family › Rules gains nothing (the hub already IS the household).
+     */
+    @Test
+    fun theHouseholdRosterIsFamilyPeopleAndTheHouseholdIsTheFamilyHub() {
+        val p = CirclesNav.placementOf(NavSurface.HouseholdMembers)
+        assertNotNull(p)
+        assertEquals(Tab.PEOPLE, p.tab)
+        assertEquals(setOf(CohortScope.FAMILY), p.circles)
+        assertFalse(p.agentOnly, "the node serves /v1/families; a bare node must be offered it")
+        for (hasAgent in listOf(false, true)) {
+            assertEquals(
+                listOf(NavSurface.Contacts, NavSurface.HouseholdMembers),
+                CirclesNav.cards(CohortScope.FAMILY, Tab.PEOPLE, hasAgent),
+            )
+            assertEquals(NavSurface.LayerFamily, CirclesNav.cards(CohortScope.FAMILY, Tab.RULES, hasAgent).first())
+        }
+        for (c in CirclesNav.circles - CohortScope.FAMILY) {
+            assertFalse(NavSurface.HouseholdMembers in CirclesNav.cards(c, Tab.PEOPLE, true), "${c.id} has no household")
+        }
+    }
 
     @Test
     fun everySurfaceIsPlacedExactlyOnceOrIsAFlow() {
@@ -67,17 +95,19 @@ class CirclesNavTest {
         assertTrue(CirclesNav.cards(CohortScope.AGENT, Tab.DECISIONS, hasAgent = true).isEmpty(), "Just me has nobody to decide with")
         assertEquals("nav.empty.decisions_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.DECISIONS))
         assertEquals("nav.empty.decisions_family", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.DECISIONS))
-        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES))
+        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.GLOBAL_COMMONS, Tab.FILES))
     }
 
     /**
-     * WITH NO AGENT, JUST ME › CHATS IS EMPTY FOR A REASON, AND IT IS NOT
-     * "no conversations yet". There is nobody to converse with; saying
-     * otherwise tells a node owner to wait for something that is not coming.
+     * WITH NO AGENT, JUST ME › CHATS IS THE CHAT OF ONE. There is nobody to
+     * converse with, so the agent conversation is absent — but a note to self
+     * needs no agent (CSD-007), so the tab is never a "no conversations yet"
+     * that tells a node owner to wait for something that is not coming.
      */
     @Test
-    fun justMeChatsWithNoAgentSaysThereIsNoAgent() {
-        assertTrue(CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false).isEmpty())
+    fun justMeChatsWithNoAgentIsNotesAlone() {
+        assertEquals(listOf(NavSurface.Notes), CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = false))
+        assertTrue(NavSurface.Interact in CirclesNav.cards(CohortScope.AGENT, Tab.CHATS, hasAgent = true))
         assertEquals("nav.empty.chats_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.CHATS))
         assertEquals("nav.empty.chats", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.CHATS))
     }
@@ -189,12 +219,18 @@ class CirclesNavTest {
     @Test
     fun filesHoldsOnlyFiles() {
         for (c in CirclesNav.circles) for (hasAgent in listOf(false, true)) {
-            assertTrue(
-                CirclesNav.cards(c, Tab.FILES, hasAgent).isEmpty(),
-                "${c.id} › files (agent=$hasAgent): only files belong in Files — the spine is B3",
-            )
+            val cards = CirclesNav.cards(c, Tab.FILES, hasAgent)
+            assertTrue(cards.all { it == NavSurface.Files }, "${c.id} › files holds something that is not files: $cards")
         }
-        assertEquals("nav.empty.files_agent", CirclesNav.emptyKey(CohortScope.AGENT, Tab.FILES))
+        // The drive has a cohort for these circles (self, community) and none for the rest.
+        for (c in listOf(CohortScope.AGENT, CohortScope.LOCAL_COMMUNITY, CohortScope.GLOBAL_COMMUNITIES)) {
+            assertEquals(listOf(NavSurface.Files), CirclesNav.cards(c, Tab.FILES, hasAgent = false), "${c.id}: files is a node feature")
+        }
+        // Households form (CSD-100, CIRISServer 0.5.216), so a family file can
+        // exist: Family › Files is the drive card listing the picked household's
+        // room, not a sentence saying a family cannot be formed.
+        assertEquals(listOf(NavSurface.Files), CirclesNav.cards(CohortScope.FAMILY, Tab.FILES, hasAgent = false), "family holds the drive card")
+        assertEquals("nav.empty.files", CirclesNav.emptyKey(CohortScope.FAMILY, Tab.FILES), "no stale 'cannot be formed' sentence for family")
         assertNull(CirclesNav.tabOf(NavSurface.Memory), "the memory graph is an instrument, not a file")
         assertEquals("this-node", CirclesNav.instrumentOf(NavSurface.Memory)?.id)
     }
@@ -203,8 +239,8 @@ class CirclesNavTest {
     fun chatsHoldsOnlyConversations() {
         for (c in CirclesNav.circles) {
             val cards = CirclesNav.cards(c, Tab.CHATS, hasAgent = true)
-            // The agent conversation, and the rooms people talk in (CSD-103).
-            val conversations = setOf(NavSurface.Interact, NavSurface.CommunityChats, NavSurface.AffiliationsChats)
+            // The agent conversation, the notes, and the rooms people talk in (CSD-103).
+            val conversations = setOf(NavSurface.Interact, NavSurface.Notes, NavSurface.CommunityChats, NavSurface.AffiliationsChats)
             assertTrue(cards.all { it in conversations }, "${c.id} › chats holds something that is not a conversation: $cards")
         }
         // How the machine runs is not who you talk to.

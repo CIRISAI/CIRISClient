@@ -1,6 +1,9 @@
 package ai.ciris.mobile.shared.platform
 
+import kotlinx.cinterop.addressOf
+import kotlinx.cinterop.usePinned
 import platform.Foundation.NSDocumentDirectory
+import platform.Foundation.create
 import platform.Foundation.NSSearchPathForDirectoriesInDomains
 import platform.Foundation.NSString
 import platform.Foundation.NSUTF8StringEncoding
@@ -33,3 +36,20 @@ actual fun copyToClipboard(text: String): Boolean = runCatching {
     UIPasteboard.generalPasteboard.string = text
     true
 }.getOrDefault(false)
+
+@OptIn(kotlinx.cinterop.ExperimentalForeignApi::class, kotlinx.cinterop.BetaInteropApi::class)
+actual fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String? = runCatching {
+    val dirs = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, true)
+    val dir = dirs.firstOrNull() as? String ?: return null
+    val fm = platform.Foundation.NSFileManager.defaultManager
+    val dot = fileName.lastIndexOf('.').takeIf { it > 0 }
+    val stem = dot?.let { fileName.substring(0, it) } ?: fileName
+    val ext = dot?.let { fileName.substring(it) } ?: ""
+    var path = "$dir/$fileName"
+    var n = 2
+    while (fm.fileExistsAtPath(path)) { path = "$dir/$stem ($n)$ext"; n++ }
+    val data = bytes.usePinned { pinned ->
+        platform.Foundation.NSData.create(bytes = pinned.addressOf(0), length = bytes.size.toULong())
+    }
+    if (data.writeToFile(path, true)) path else null
+}.getOrNull()

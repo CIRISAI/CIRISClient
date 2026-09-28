@@ -1,5 +1,14 @@
 package ai.ciris.mobile.shared.api
 
+import ai.ciris.mobile.shared.models.drive.DriveListing
+import ai.ciris.mobile.shared.models.drive.FileWrite
+import ai.ciris.mobile.shared.models.drive.FileWritten
+import ai.ciris.mobile.shared.models.drive.MediaPolicy
+import ai.ciris.mobile.shared.models.drive.NoteListing
+import ai.ciris.mobile.shared.models.drive.NoteWrite
+import ai.ciris.mobile.shared.models.drive.OpenedFile
+import io.ktor.http.encodeURLParameter
+import io.ktor.http.encodeURLPathPart
 import ai.ciris.mobile.shared.models.federation.FederationConsentScopes
 
 import ai.ciris.mobile.shared.models.*
@@ -1591,6 +1600,156 @@ class CIRISApiClient(
             decoded
         } catch (e: Exception) {
             logException(method, e, "url=$baseUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // The drive plane (CIRISServer 0.5.215, src/drive.rs)
+    //
+    // One door writes a file at a cohort, one listing covers everything this
+    // person can reach, and notes are self-chat. Owner-session gated, bare JSON,
+    // and ALWAYS THE NODE: every route here is the node's (`src/drive.rs`), and
+    // an agent at the api base does not serve them (CIRISAgent#1213), so each
+    // call takes `nodeUrl` — the active node, like contacts — never `$baseUrl`.
+    // Refusals are `{error: <id>, detail}`, which NodeRefusal.fromBody reads as
+    // the id and the node's English. `ClientDrive` binds these to `DriveApi`.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** `GET /v1/drive`, optionally narrowed to a cohort (`self` | `family` | `community`) or a room. */
+    suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, nodeUrl: String): DriveListing {
+        val method = "readDrive"
+        val query = buildList {
+            cohort?.let { add("cohort=$it") }
+            roomId?.let { add("room_id=${it.encodeURLParameter()}") }
+            add("limit=$limit")
+        }.joinToString("&")
+        logInfo(method, "GET $nodeUrl/v1/drive?$query")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/drive?$query") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(DriveListing.serializer(), raw).also {
+                logInfo(method, "${it.entries.size} file(s) across ${it.rooms.size} room(s)")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET /v1/files/{id}`. A 409 `drive.not_fetched` (on another device) and a
+     * 403 `drive.not_granted` come back as [NodeRefusal]s with the id intact:
+     * they are true answers, not failures, and the UI says them in words.
+     */
+    suspend fun readFile(attestationId: String, roomId: String, nodeUrl: String): OpenedFile {
+        val method = "readFile"
+        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}?room_id=${roomId.encodeURLParameter()}"
+        logInfo(method, "GET $url")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get(url) { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(OpenedFile.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "attestation=$attestationId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `POST /v1/files`. The caller has already refused anything over the node's inline cap. */
+    suspend fun writeFile(write: FileWrite, nodeUrl: String): FileWritten {
+        val method = "writeFile"
+        logInfo(method, "POST $nodeUrl/v1/files cohort=${write.cohort} media=${write.mediaType} name=${write.filename ?: "(none)"}")
+        val client = federationHttpClient()
+        return try {
+            val response = client.post("$nodeUrl/v1/files") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(jsonConfig.encodeToString(FileWrite.serializer(), write))
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(FileWritten.serializer(), raw).also {
+                logInfo(method, "written ${it.attestationId} crossed=${it.crossed} addressed=${it.addressed} excluded=${it.excluded.size}")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "cohort=${write.cohort}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET /v1/notes`: notes to self, newest last. */
+    suspend fun readNotes(nodeUrl: String): NoteListing {
+        val method = "readNotes"
+        logInfo(method, "GET $nodeUrl/v1/notes")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/notes") { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(NoteListing.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `POST /v1/notes`. An empty body is refused by the node (`notes.empty`); callers don't send one. */
+    suspend fun writeNote(body: String, nodeUrl: String) {
+        val method = "writeNote"
+        logInfo(method, "POST $nodeUrl/v1/notes (${body.length} chars)")
+        val client = federationHttpClient()
+        try {
+            val response = client.post("$nodeUrl/v1/notes") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(jsonConfig.encodeToString(NoteWrite.serializer(), NoteWrite(body)))
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET /v1/media/policy` (0.5.217, CIRISServer#643): the node's render
+     * policy, public — no session. Parsed by [MediaPolicy.fromWire]; the caller
+     * narrows the compiled-in table by it. A 404 with no id is a node that
+     * predates the route and surfaces as a [NodeRefusal] the caller reads as such.
+     */
+    suspend fun readMediaPolicy(nodeUrl: String): MediaPolicy {
+        val method = "readMediaPolicy"
+        logInfo(method, "GET $nodeUrl/v1/media/policy")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/media/policy")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            MediaPolicy.fromWire(jsonConfig.parseToJsonElement(raw).jsonObject).also {
+                logInfo(method, "policy v${it.policyVersion} tier_a=${it.tierA.size} renditions=${it.renditions}")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -14172,6 +14331,146 @@ class CIRISApiClient(
             client.close()
         }
     }
+
+    // ─── HOUSEHOLDS (/v1/families) — CSD-100 / CSD-101 ──────────────────────
+    //
+    // The node's nine household routes (CIRISServer 0.5.216, src/family_api.rs:1624-1632).
+    // NODE-OWNED: every call takes the node URL, never $baseUrl (on a with-AI
+    // install that is the agent, which does not proxy them — CIRISAgent#1213).
+    // Every non-2xx throws NodeRefusal with the node's `family.*` id; a bare 404
+    // with no id is a node that predates the routes. Reached through
+    // [HouseholdsApi] / [ClientHouseholds], never directly from a screen.
+
+    /** One household call: send, refuse by id on a non-2xx, return the body. */
+    private suspend fun familyCall(
+        method: String,
+        verb: HttpMethod,
+        nodeUrl: String,
+        path: String,
+        body: JsonObject? = null,
+        query: Map<String, String> = emptyMap(),
+    ): String {
+        logInfo(method, "${verb.value} $nodeUrl$path")
+        val client = federationHttpClient()
+        return try {
+            val response = client.request("$nodeUrl$path") {
+                this.method = verb
+                url { query.forEach { (k, v) -> parameters.append(k, v) } }
+                authHeader()?.let { header("Authorization", it) }
+                if (body != null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(body.toString())
+                }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            raw
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    private fun familyPath(familyId: String, tail: String = ""): String =
+        "/v1/families/${familyId.encodeURLPathPart()}$tail"
+
+    private fun familySignatures(signatures: List<ai.ciris.mobile.shared.models.federation.FamilySignatureDto>): JsonElement =
+        jsonConfig.encodeToJsonElement(
+            kotlinx.serialization.builtins.ListSerializer(ai.ciris.mobile.shared.models.federation.FamilySignatureDto.serializer()),
+            signatures,
+        )
+
+    /** `GET /v1/families?after=` — one page; `resume` names the next. */
+    suspend fun listFamilies(after: String?, nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.FamilyListResponse {
+        val raw = familyCall("listFamilies", HttpMethod.Get, nodeUrl, "/v1/families", query = after?.let { mapOf("after" to it) } ?: emptyMap())
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FamilyListResponse.serializer(), raw)
+    }
+
+    /** `POST /v1/families` — the caller becomes the founder; `members` are further founding members. */
+    suspend fun createFamily(
+        name: String,
+        consensusProtocol: String?,
+        members: List<String>,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FamilyDto {
+        val body = buildJsonObject {
+            put("name", name)
+            consensusProtocol?.let { put("consensus_protocol", it) }
+            if (members.isNotEmpty()) put("members", JsonArray(members.map { JsonPrimitive(it) }))
+        }
+        val raw = familyCall("createFamily", HttpMethod.Post, nodeUrl, "/v1/families", body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FamilyDto.serializer(), raw)
+    }
+
+    /** `DELETE /v1/families/{id}`. */
+    suspend fun dissolveFamily(familyId: String, nodeUrl: String = LOCAL_NODE_URL) {
+        familyCall("dissolveFamily", HttpMethod.Delete, nodeUrl, familyPath(familyId))
+    }
+
+    /** `POST /v1/families/{id}/members` `{key_id, role?}`. */
+    suspend fun addFamilyMember(familyId: String, keyId: String, role: String?, nodeUrl: String = LOCAL_NODE_URL) {
+        val body = buildJsonObject { put("key_id", keyId); role?.let { put("role", it) } }
+        familyCall("addFamilyMember", HttpMethod.Post, nodeUrl, familyPath(familyId, "/members"), body)
+    }
+
+    /** `DELETE /v1/families/{id}/members/{key_id}`. */
+    suspend fun removeFamilyMember(familyId: String, keyId: String, nodeUrl: String = LOCAL_NODE_URL) {
+        familyCall("removeFamilyMember", HttpMethod.Delete, nodeUrl, familyPath(familyId, "/members/${keyId.encodeURLPathPart()}"))
+    }
+
+    /** `POST /v1/families/{id}/members/{key_id}/role` `{role}`. */
+    suspend fun changeFamilyRole(familyId: String, keyId: String, role: String, nodeUrl: String = LOCAL_NODE_URL) {
+        val body = buildJsonObject { put("role", role) }
+        familyCall("changeFamilyRole", HttpMethod.Post, nodeUrl, familyPath(familyId, "/members/${keyId.encodeURLPathPart()}/role"), body)
+    }
+
+    /** `POST /v1/families/{id}/leave`. */
+    suspend fun leaveFamily(familyId: String, nodeUrl: String = LOCAL_NODE_URL) {
+        familyCall("leaveFamily", HttpMethod.Post, nodeUrl, familyPath(familyId, "/leave"), buildJsonObject { })
+    }
+
+    /** `POST /v1/families/{id}/changes/envelope` `{action, key_id?, role?}`. */
+    suspend fun proposeFamilyChange(
+        familyId: String,
+        action: String,
+        keyId: String?,
+        role: String?,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FamilyChangeProposal {
+        val body = buildJsonObject {
+            put("action", action)
+            keyId?.let { put("key_id", it) }
+            role?.let { put("role", it) }
+        }
+        val raw = familyCall("proposeFamilyChange", HttpMethod.Post, nodeUrl, familyPath(familyId, "/changes/envelope"), body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FamilyChangeProposal.serializer(), raw)
+    }
+
+    /** `POST /v1/families/{id}/changes/cosign` `{change_envelope, signatures}`. */
+    suspend fun cosignFamilyChange(
+        familyId: String,
+        envelope: JsonObject,
+        signatures: List<ai.ciris.mobile.shared.models.federation.FamilySignatureDto>,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FamilyCosignResponse {
+        val body = buildJsonObject { put("change_envelope", envelope); put("signatures", familySignatures(signatures)) }
+        val raw = familyCall("cosignFamilyChange", HttpMethod.Post, nodeUrl, familyPath(familyId, "/changes/cosign"), body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FamilyCosignResponse.serializer(), raw)
+    }
+
+    /** `POST /v1/families/{id}/changes/assemble` `{change_envelope, signatures}`. */
+    suspend fun assembleFamilyChange(
+        familyId: String,
+        envelope: JsonObject,
+        signatures: List<ai.ciris.mobile.shared.models.federation.FamilySignatureDto>,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ) {
+        val body = buildJsonObject { put("change_envelope", envelope); put("signatures", familySignatures(signatures)) }
+        familyCall("assembleFamilyChange", HttpMethod.Post, nodeUrl, familyPath(familyId, "/changes/assemble"), body)
+    }
+    // ─── end HOUSEHOLDS ─────────────────────────────────────────────────────
 
     // ===== Data (CSD-039): erasure on the node, and the receipt that proves it =====
     //

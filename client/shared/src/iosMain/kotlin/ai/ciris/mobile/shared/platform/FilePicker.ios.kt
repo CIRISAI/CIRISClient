@@ -41,6 +41,10 @@ actual fun FilePickerDialog(
         val utTypes = mutableListOf<UTType>()
         for (mime in mimeTypes) {
             when {
+                // Any file (Files › Add). UTType has no MIME for the
+                // wildcard, so it resolved to nothing and the picker was
+                // dismissed before it ever appeared.
+                mime == "*/*" -> platform.UniformTypeIdentifiers.UTTypeItem?.let { utTypes.add(it) }
                 mime == "image/jpeg" -> UTTypeJPEG?.let { utTypes.add(it) }
                 mime == "image/png" -> UTTypePNG?.let { utTypes.add(it) }
                 mime.startsWith("image/") -> UTTypeImage?.let { utTypes.add(it) }

@@ -1,0 +1,85 @@
+csd: CSD-100
+flow: csd_100_household
+title: A household is formed, read, and dissolved from the Family hub
+description: >-
+  CSD-100 §4, driven. The household lives in the Family hub on Family › Rules
+  (LayerFamily): no second card. All nine routes are the node's
+  (CIRISServer src/family_api.rs:1624-1632) and every call goes to the node URL.
+  The flow forms a founder_only household, reads its rule card and receipt, and
+  dissolves it behind the three-fact confirm, so it leaves the node as it found it.
+# Floor: every tag below is a string literal in ui/screens/HouseholdsSupport.kt
+# (HouseholdTags) or LayerHubScreen.kt, added with this card; no release carries
+# them yet.
+# NOT asserted: the quorum ceremony (ceremony_household_change and its buttons).
+# It needs a quorum household whose record is on two nodes, and CIRISPersist#910
+# means a change made after forming does not reach the second node.
+client: "unreleased"
+
+steps:
+  - step_id: on_the_family_hub
+    title: Family › Rules opens on the hub, and the hub carries the household
+    description: >-
+      Entry: circle_family -> tab_rules -> nav_epistemic_layer_family (derived by
+      nav_map). The switcher or the empty state must be there: a hub that drew
+      only its frame would be the three description-only sections CSD-050 §1
+      found, under a new name.
+    requires:
+      screen: LayerFamily
+    expect:
+      visible: [layer_hub_family]
+
+  - step_id: no_household_lands_on_forming_one
+    title: With no household, the form card is the first thing on the hub
+    optional_step: true
+    requires:
+      screen: LayerFamily
+      visible: [households_empty]
+    expect:
+      state: empty
+      visible: [households_empty, card_household_create, input_household_name, btn_household_create_submit]
+
+  - step_id: form_one
+    title: Forming a founder_only household makes you its founder
+    description: >-
+      POST /v1/families {name}. No protocol is sent for the default, so the node
+      stores founder_only (family_api.rs:430-456).
+    optional_step: true
+    requires:
+      visible: [input_household_name, btn_household_create_submit]
+    do:
+      - input: {input_household_name: "Flow household"}
+      - click: btn_household_create_submit
+    expect:
+      state: populated
+      visible: [households_switcher, household_record, card_household, household_protocol, household_founders, household_my_role, household_member_count, household_limits, btn_household_leave, btn_household_dissolve]
+      text: {household_my_role: "Founder", household_protocol: "founder decides"}
+
+  - step_id: the_limits_are_said
+    title: What the network can't do yet is on the card
+    description: >-
+      CIRISPersist#910: a roster change after forming reaches only this node, and
+      a removed member can't be re-added. Said, never promised away.
+    requires:
+      visible: [card_household]
+    expect:
+      text: {household_limits: "can't be added back"}
+
+  - step_id: dissolve_confirms_three_facts
+    title: Dissolving asks which household, what changes, and who signs
+    optional_step: true
+    requires:
+      visible: [btn_household_dissolve]
+    do:
+      - click: btn_household_dissolve
+    expect:
+      visible: [sheet_confirm_household, confirm_household_fact_1, confirm_household_fact_2, confirm_household_fact_3, btn_confirm_household_confirm, btn_confirm_household_cancel]
+
+  - step_id: dissolved
+    title: Confirmed, the household is gone
+    optional_step: true
+    requires:
+      visible: [btn_confirm_household_confirm]
+    do:
+      - click: btn_confirm_household_confirm
+    expect:
+      visible: [household_notice]
