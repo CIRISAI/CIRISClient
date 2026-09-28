@@ -7,7 +7,7 @@
     "POST /v1/auth/login :: Login, Setup",
     "POST /v1/auth/native/apple :: Login, Setup",
     "POST /v1/auth/native/google :: Login, Setup",
-    "POST /v1/federation/announce :: AddFederationId, Setup",
+    "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
     "POST /v1/federation/consent :: DataManagement, Setup",
     "POST /v1/memory/query :: EnvironmentInfo, Memory",
     "POST /v1/self/associate :: IdentityManagement, Login, Setup",
