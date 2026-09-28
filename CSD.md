@@ -302,6 +302,10 @@ derives, from the code alone, every route a screen calls — `CIRISApp.kt`'s
 * **The baseline ratchets both ways.** A baseline entry that is no longer
   uncited or duplicate fails the gate (`baseline is stale`) until `--baseline`
   re-records it, so paid-down debt cannot quietly come back.
+* Touching a view model charges its init-time reads to the screen (that is what
+  starts them), except through a `reset*`/`clear*`/`forget*`/`dismiss*` member:
+  a logout arm calling `resetSession()` on an app-scoped model it did not build
+  reaches none of that model's routes.
 
 Do not hand-write the rows. Generate them, then add the owner's file:line and
 the state:

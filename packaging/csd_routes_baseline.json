@@ -120,7 +120,6 @@
       "POST /v1/self/identity/inspect"
     ],
     "ManageConsent": [
-      "GET /v1/federation/peering/revoke",
       "GET /v1/federation/peers"
     ],
     "ManageNodes": [
