@@ -3175,7 +3175,11 @@
     "contacts_remove_remaining_title": "{who} သည် ဆက်လက် contact တစ်ဦး ဖြစ်နေဆဲ",
     "contacts_remove_remaining_body": "သင်သည် ခွင့်ပြုချက် {count} ခုကို ရုပ်သိမ်းခဲ့သည်။ အောက်ပါ ခွင့်ပြုချက်များသည် ဆက်လက် သက်ရောက်ဆဲ ဖြစ်သည်။",
     "contacts_remove_remaining_row": "ဆက်လက် သက်ရောက်ဆဲ- သင့် contacts ကို လက်မှတ်ရေးထိုးမီ ဤ node က ရေးသားခဲ့သဖြင့် ဤနေရာတွင် ရုပ်သိမ်း၍ မရပါ",
-    "contacts_remove_unsupported": "ဤ node သည် contacts များကို ဖယ်ရှား၍ မရသေးပါ (ciris-server 0.5.218 လိုအပ်သည်)။"
+    "contacts_remove_unsupported": "ဤ node သည် contacts များကို ဖယ်ရှား၍ မရသေးပါ (ciris-server 0.5.218 လိုအပ်သည်)။",
+    "sessions_error_forbidden": "စီမံခန့်ခွဲသူသာလျှင် ဤအေးဂျင့်၏ cognitive အခြေအနေကို ပြောင်းလဲနိုင်သည်။",
+    "system_agent_half_absent": "ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသောကြောင့်၊ ဤနေရာတွင် ပြသရန် processor၊ အရင်းအမြစ် အသုံးပြုမှု၊ ပတ်ဝန်းကျင်ဆိုင်ရာ ကုန်ကျစရိတ် သို့မဟုတ် channel စာရင်း မရှိပါ။",
+    "system_open_runtime": "Runtime တွင် ခဏရပ်ပါ၊ အဆင့်လိုက်လုပ်ဆောင်ပါ သို့မဟုတ် ဆက်လုပ်ပါ",
+    "scheduler_stat_dead_lettered": "သီးသန့်ခွဲထား"
   },
   "moderation": {
     "ladder": {

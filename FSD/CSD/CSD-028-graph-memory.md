@@ -195,3 +195,17 @@ make the gate flaky for no assertion gained.
    act on than a list.
 5. **Recommended placement: unchanged.** Graph and Memory should sit next to
    each other under This node, and they do.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Checked:** `GET /v1/memory/timeline` on both hosts; the node's shape is reduced
+(`buckets` null, `consent_stream` / `expires_at` null) and the graph reads only
+nodes and edges, so nothing it draws depends on the dropped fields.
+
+**Still open:** `GET /v1/memory/{id}/edges` (served by both) is wired
+(`getNodeEdges`) and uncalled; ids with `/` fail on a node
+(`blocked_by: CIRISServer#661`).
+
+**Stage:** building → building.

@@ -198,3 +198,22 @@ must stop drawing those four columns; and add a breaker-reset route, or the
 client must remove the four controls that pretend to one.
 CIRISClient — wire `ServicesViewModel._error` into `ServicesScreen`, bind
 `mobile.services_unavailable` to it, and settle the host question above.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Checked:** `GET /v1/system/services` (OBSERVER) matches the model except
+`available`, `uptime_seconds`, `metrics` and `timestamp`, which are dropped.
+
+**Still open**
+- The agent answers **200 with an empty list** when runtime control is missing or
+  throws (`services.py:88-127`), so "none" and "failed" are indistinguishable from
+  the client. `blocked_by: CIRISAgent#1208`.
+- `GET /v1/system/services/health` (circuit breakers), `/selection-logic`,
+  `PUT /services/{p}/priority` and `POST /services/circuit-breakers/reset` exist
+  and are not called; the comment at `CIRISApiClient.kt` claiming priority and
+  breaker data are "not on the wire" is wrong — they are one route over. Building
+  them is the next pass for this card.
+
+**Stage:** building → building (no client change in this review).

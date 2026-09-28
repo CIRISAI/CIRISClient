@@ -6729,6 +6729,13 @@ class CIRISApiClient(
             val response = systemApi.transitionCognitiveStateV1SystemStateTransitionPost(request, authHeader())
             logDebug(method, "Response: status=${response.status}")
 
+            // A 400 / 401 / 403 / 503 must reach the caller AS its status: decoding
+            // the error body as a transition used to fail first, so the view
+            // model's status branches could never fire (CSD-011).
+            if (!response.success) {
+                throw RuntimeException("API error: HTTP ${response.status}")
+            }
+
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")
 
@@ -9339,38 +9346,34 @@ class CIRISApiClient(
 
     // ===== Config API =====
 
-    suspend fun listConfigs(prefix: String? = null): ConfigListData {
+    /**
+     * `GET /v1/config` — from the agent OR the node, whose shapes differ
+     * ([parseConfigListBody], CSD-023). [host] defaults to the attached
+     * backend; Transport reads the node's radio keys at the node.
+     */
+    suspend fun listConfigs(prefix: String? = null, host: String = baseUrl): ConfigListData {
         val method = "listConfigs"
-        logInfo(method, "Listing configs, prefix=$prefix")
-
+        logInfo(method, "Listing configs, prefix=$prefix, host=$host")
+        val client = HttpClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        }
         return try {
-            val response = configApi.listConfigsV1ConfigGet(prefix, authHeader())
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
+            val response = client.get("$host/v1/config") {
+                authHeader()?.let { header("Authorization", it) }
+                prefix?.let { parameter("prefix", it) }
             }
-
-            val body = response.body()
-            val data = body.`data` ?: throw RuntimeException("API returned null data")
+            if (!response.status.isSuccess()) {
+                logError(method, "API returned non-success status: ${response.status.value}")
+                throw RuntimeException("API error: HTTP ${response.status.value}")
+            }
+            val data = parseConfigListBody(response.bodyAsText())
             logInfo(method, "Configs: total=${data.total}")
-
-            ConfigListData(
-                configs = data.configs.map { config ->
-                    ConfigItemData(
-                        key = config.key,
-                        displayValue = config.`value`.toDisplayString(),
-                        updatedAt = config.updatedAt,
-                        updatedBy = config.updatedBy,
-                        isSensitive = config.isSensitive ?: false
-                    )
-                },
-                total = data.total
-            )
+            data
         } catch (e: Exception) {
             logException(method, e)
             throw e
+        } finally {
+            client.close()
         }
     }
 
@@ -9404,57 +9407,71 @@ class CIRISApiClient(
         }
     }
 
-    suspend fun updateConfig(key: String, value: String, reason: String? = null): ConfigItemData {
+    suspend fun updateConfig(key: String, value: String, reason: String? = null): ConfigItemData =
+        updateConfig(key, JsonPrimitive(value), reason)
+
+    /**
+     * `PUT /v1/config/{key}` with a TYPED value — the node reads booleans and
+     * integers without coercion — to the agent or the node, parsing either
+     * reply ([parseConfigItemBody], CSD-023 / CSD-031).
+     */
+    suspend fun updateConfig(
+        key: String,
+        value: JsonElement,
+        reason: String? = null,
+        host: String = baseUrl,
+    ): ConfigItemData {
         val method = "updateConfig"
-        logInfo(method, "Updating config: $key")
-
+        logInfo(method, "Updating config: $key at $host")
+        val client = HttpClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        }
         return try {
-            val request = SdkConfigUpdate(
-                `value` = JsonPrimitive(value),
-                reason = reason
-            )
-            val response = configApi.updateConfigV1ConfigKeyPut(key, request, authHeader())
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
+            val body = buildJsonObject {
+                put("value", value)
+                reason?.let { put("reason", JsonPrimitive(it)) }
             }
-
-            val body = response.body()
-            val data = body.`data` ?: throw RuntimeException("API returned null data")
-            logInfo(method, "Config updated: key=${data.key}")
-
-            ConfigItemData(
-                key = data.key,
-                displayValue = data.`value`.toDisplayString(),
-                updatedAt = data.updatedAt,
-                updatedBy = data.updatedBy,
-                isSensitive = data.isSensitive ?: false
-            )
+            val response = client.put("$host/v1/config/${key.encodeURLPathPart()}") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            if (!response.status.isSuccess()) {
+                logError(method, "API returned non-success status: ${response.status.value}")
+                throw RuntimeException("API error: HTTP ${response.status.value}")
+            }
+            val item = parseConfigItemBody(key, response.bodyAsText())
+            logInfo(method, "Config updated: key=${item.key}")
+            item
         } catch (e: Exception) {
             logException(method, e, "key=$key")
             throw e
+        } finally {
+            client.close()
         }
     }
 
-    suspend fun deleteConfig(key: String) {
+    /** `DELETE /v1/config/{key}` at [host] — the node by default for This node › Config (CSD-023). */
+    suspend fun deleteConfig(key: String, host: String = baseUrl) {
         val method = "deleteConfig"
-        logInfo(method, "Deleting config: $key")
-
+        logInfo(method, "Deleting config: $key at $host")
+        val client = HttpClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        }
         try {
-            val response = configApi.deleteConfigV1ConfigKeyDelete(key, authHeader())
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
+            val response = client.delete("$host/v1/config/${key.encodeURLPathPart()}") {
+                authHeader()?.let { header("Authorization", it) }
             }
-
+            if (!response.status.isSuccess()) {
+                logError(method, "API returned non-success status: ${response.status.value}")
+                throw RuntimeException("API error: HTTP ${response.status.value}")
+            }
             logInfo(method, "Config deleted: key=$key")
         } catch (e: Exception) {
             logException(method, e, "key=$key")
             throw e
+        } finally {
+            client.close()
         }
     }
 
@@ -10117,64 +10134,33 @@ class CIRISApiClient(
         }
     }
 
-    suspend fun getProcessorStatus(): ProcessorStatusData? {
-        val method = "getProcessorStatus"
-        logInfo(method, "Fetching processor status")
-
-        return try {
-            // Use the system health endpoint which includes processor info
-            val response = systemApi.getSystemHealthV1SystemHealthGet()
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
-            }
-
-            val body = response.body()
-            val data = body.`data` ?: throw RuntimeException("API returned null data")
-
-            // Extract queue depth from services if available
-            val queueDepth = data.services["processing"]?.get("queue_depth") ?: 0
-
-            ProcessorStatusData(
-                isPaused = data.status == "paused",
-                cognitiveState = data.cognitiveState ?: "UNKNOWN",
-                queueDepth = queueDepth
-            )
-        } catch (e: Exception) {
-            logException(method, e)
-            throw e
-        }
-    }
-
-    suspend fun getChannels(): ChannelsData? {
-        val method = "getChannels"
+    /**
+     * `GET /v1/agent/channels`. THROWS on a failed read: it used to turn a 403
+     * or a 500 into an empty list, which the System screen drew as "no
+     * channels" (CSD-025). [ReadFailure.of] classifies what it throws.
+     */
+    suspend fun getChannelsOrThrow(): ChannelsData {
+        val method = "getChannelsOrThrow"
         logInfo(method, "Fetching channels")
-
-        return try {
-            val authHeaderValue = accessToken?.let { "Bearer $it" }
-            val response = agentApi.getChannelsV1AgentChannelsGet(authHeaderValue)
-            val body = response.body()
-
-            val channels = body.data?.channels?.map { channel ->
-                ChannelInfoData(
-                    channelId = channel.channelId,
-                    displayName = channel.displayName ?: channel.channelId,
-                    channelType = channel.channelType,
-                    isActive = channel.isActive ?: true,
-                    messageCount = channel.messageCount ?: 0,
-                    lastActivity = channel.lastActivity?.toString()
-                )
-            } ?: emptyList()
-
-            logInfo(method, "Fetched ${channels.size} channels")
-            ChannelsData(channels = channels)
-        } catch (e: Exception) {
-            logWarn(method, "Failed to fetch channels: ${e.message}")
-            // Return empty data if endpoint fails (might not be available)
-            ChannelsData(channels = emptyList())
+        val authHeaderValue = accessToken?.let { "Bearer $it" }
+        val response = agentApi.getChannelsV1AgentChannelsGet(authHeaderValue)
+        if (!response.success) {
+            logWarn(method, "channels read failed: HTTP ${response.status}")
+            throw RuntimeException("API error: HTTP ${response.status}")
         }
+        val body = response.body()
+        val channels = body.data?.channels?.map { channel ->
+            ChannelInfoData(
+                channelId = channel.channelId,
+                displayName = channel.displayName ?: channel.channelId,
+                channelType = channel.channelType,
+                isActive = channel.isActive ?: true,
+                messageCount = channel.messageCount ?: 0,
+                lastActivity = channel.lastActivity?.toString()
+            )
+        } ?: throw RuntimeException("API returned null data")
+        logInfo(method, "Fetched ${channels.size} channels")
+        return ChannelsData(channels = channels)
     }
 
 
@@ -11742,7 +11728,10 @@ class CIRISApiClient(
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")
 
-            logInfo(method, "Runtime paused: processorState=${data.processorState}")
+            logInfo(method, "Runtime paused: processorState=${data.processorState}, success=${data.success}")
+            // A 200 that says `success: false` ("Not paused") is a refusal,
+            // not a done act — it used to be reported as "Runtime paused" (CSD-024).
+            if (!data.success) throw RuntimeActionDeclined(data.message)
 
             RuntimeControlResponse(
                 processorState = data.processorState,
@@ -11775,7 +11764,10 @@ class CIRISApiClient(
             val body = response.body()
             val data = body.`data` ?: throw RuntimeException("API returned null data")
 
-            logInfo(method, "Runtime resumed: processorState=${data.processorState}")
+            logInfo(method, "Runtime resumed: processorState=${data.processorState}, success=${data.success}")
+            // A 200 that says `success: false` ("Not paused") is a refusal,
+            // not a done act — it used to be reported as "Runtime resumed" (CSD-024).
+            if (!data.success) throw RuntimeActionDeclined(data.message)
 
             RuntimeControlResponse(
                 processorState = data.processorState,
@@ -11791,35 +11783,30 @@ class CIRISApiClient(
         val method = "singleStepProcessor"
         logInfo(method, "Executing single step")
 
+        // `POST /v1/system/runtime/step` (system_extensions.py:292, ADMIN) answers
+        // a SingleStepResponse; read it as one ([parseRuntimeStepBody]).
+        val client = HttpClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        }
         return try {
-            // Single step uses 'step' action
-            val request = ai.ciris.api.models.RuntimeAction(reason = "Mobile app single step")
-            val response = systemApi.controlRuntimeV1SystemRuntimeActionPost(
-                action = "step",
-                runtimeAction = request,
-                authorization = authHeader()
-            )
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
+            val response = client.post("$baseUrl/v1/system/runtime/step") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody("""{"reason":"Mobile app single step"}""")
             }
-
-            val body = response.body()
-            val data = body.`data` ?: throw RuntimeException("API returned null data")
-
-            logInfo(method, "Single step completed: currentStep=${data.currentStep}, message=${data.message}")
-
-            SingleStepResponse(
-                stepPoint = data.currentStep,
-                message = data.message,
-                processingTimeMs = null, // Not in API response
-                tokensUsed = null // Not in API response
-            )
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                logError(method, "API returned non-success status: ${response.status.value}")
+                throw RuntimeException("API error: HTTP ${response.status.value}")
+            }
+            val step = parseRuntimeStepBody(raw)
+            logInfo(method, "Single step completed: stepPoint=${step.stepPoint}, ms=${step.processingTimeMs}")
+            step
         } catch (e: Exception) {
             logException(method, e)
             throw e
+        } finally {
+            client.close()
         }
     }
 
@@ -12600,8 +12587,8 @@ class CIRISApiClient(
                     logInfo(method, "Stats: pending=${data.tasksPending}, completed=${data.tasksCompletedTotal}")
                     data
                 } else {
-                    logWarn(method, "No data in response, returning defaults")
-                    SchedulerStatsData(0, 0, 0, 0, 0, 0, 0.0)
+                    // No envelope is no reading — not a scheduler that did nothing.
+                    throw Exception("Scheduler stats: API returned null data")
                 }
             } else {
                 val errorBody = response.bodyAsText()
@@ -12639,19 +12626,7 @@ class CIRISApiClient(
                 }
             }
 
-            val requestBody = buildString {
-                append("{")
-                append("\"name\":\"${name.replace("\"", "\\\"")}\"")
-                append(",\"goal_description\":\"${goalDescription.replace("\"", "\\\"")}\"")
-                append(",\"trigger_prompt\":\"${triggerPrompt.replace("\"", "\\\"")}\"")
-                if (deferUntil != null) {
-                    append(",\"defer_until\":\"$deferUntil\"")
-                }
-                if (scheduleCron != null) {
-                    append(",\"schedule_cron\":\"$scheduleCron\"")
-                }
-                append("}")
-            }
+            val requestBody = schedulerCreateBody(name, goalDescription, triggerPrompt, deferUntil, scheduleCron)
 
             val response = client.post("$baseUrl/v1/scheduler/tasks") {
                 headers {
@@ -14328,7 +14303,14 @@ data class SchedulerStatsData(
     @SerialName("oneshot_tasks")
     val oneshotTasks: Int = 0,
     @SerialName("scheduler_uptime_seconds")
-    val schedulerUptimeSeconds: Double = 0.0
+    val schedulerUptimeSeconds: Double = 0.0,
+    /**
+     * Tasks the scheduler gave up on and quarantined (`scheduler.py:80` on
+     * CIRISAgent main). Null when the reading did not carry it — it was dropped
+     * outright, so a scheduler quietly dead-lettering tasks looked clean (CSD-012).
+     */
+    @SerialName("tasks_dead_lettered")
+    val tasksDeadLettered: Int? = null,
 )
 
 // ===== Play Integrity Data Models =====
@@ -14624,11 +14606,6 @@ data class EnvironmentalMetricsData(
     val tokens24h: Int
 )
 
-data class ProcessorStatusData(
-    val isPaused: Boolean,
-    val cognitiveState: String,
-    val queueDepth: Int
-)
 
 data class ChannelsData(
     val channels: List<ChannelInfoData>
