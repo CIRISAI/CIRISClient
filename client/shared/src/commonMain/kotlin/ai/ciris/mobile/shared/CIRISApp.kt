@@ -3405,7 +3405,23 @@ fun CIRISApp(
                     onNavigateBack = {
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Navigating back to Interact")
                         currentScreen = Screen.Interact
-                    }
+                    },
+                    // Connectors (CSD-020 §7): database credentials handed to the SQL adapter.
+                    connectorsSection = {
+                        val connectorsVm: ai.ciris.mobile.shared.viewmodels.AdapterConnectorsViewModel = viewModel {
+                            ai.ciris.mobile.shared.viewmodels.AdapterConnectorsViewModel(
+                                ai.ciris.mobile.shared.viewmodels.connectorsBackendOf(apiClient),
+                            )
+                        }
+                        LaunchedEffect(Unit) { connectorsVm.load() }
+                        ai.ciris.mobile.shared.ui.screens.AdapterConnectorsSection(
+                            list = connectorsVm.list.collectAsState().value,
+                            tests = connectorsVm.tests.collectAsState().value,
+                            removeRefused = connectorsVm.removeRefused.collectAsState().value,
+                            onTest = { id -> connectorsVm.test(id) },
+                            onRemove = { id -> connectorsVm.remove(id) },
+                        )
+                    },
                 )
 
                 // Adapter wizard dialog - show when dialog is open OR when there's an error to display
@@ -3968,7 +3984,12 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Consent] User triggered refresh")
                         consentViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = Screen.Interact },
+                    // The partnership queue (CSD-054 §7).
+                    partnershipQueue = consentViewModel.partnershipQueue.collectAsState().value,
+                    partnershipOptions = consentViewModel.partnershipOptions.collectAsState().value,
+                    partnershipHistories = consentViewModel.partnershipHistory.collectAsState().value,
+                    onTogglePartnershipHistory = { userId -> consentViewModel.togglePartnershipHistory(userId) },
                 )
             }
 
