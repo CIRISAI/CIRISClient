@@ -1,0 +1,71 @@
+csd: CSD-020
+flow: csd_020_adapter_connectors
+title: Databases handed to your agent, without the word "Connected"
+description: >-
+  CSD-020 §7, driven. The Adapters card's connectors section lists the database
+  credentials handed to the SQL adapter through /v1/connectors: what each lets
+  the agent do, that no delegation was recorded (CIRISAgent#1211), and a test
+  result as what actually ran. Remove is irreversible and confirms with three
+  facts.
+# Floor: every tag below is a `testable*` literal or an interpolation of one in
+# ui/screens/AdapterConnectorsSection.kt (ConnectorTags) or ConfirmSheet.kt.
+# No release carries the section yet.
+client: "unreleased"
+
+steps:
+  - step_id: on_adapters
+    title: The connectors section renders under the adapter list
+    description: >-
+      Reached via My things > This agent > Adapters, signed in as the agent's
+      owner (the connector routes are admin-only).
+    requires:
+      screen: Adapters
+    do:
+      - scroll_to: adapters_connectors
+    expect:
+      visible: [adapters_connectors]
+      absent: [adapters_connectors_admin_only, adapters_connectors_error]
+
+  - step_id: a_connector_says_what_it_grants
+    title: A connector names its grant and the missing delegation record
+    description: >-
+      Needs one connector registered beforehand (POST /v1/connectors/sql against
+      an agent with external_data_sql loaded). Without one the section is the
+      true empty and this step is skipped, loudly.
+    optional_step: true
+    requires:
+      visible: [adapters_connector_0]
+    expect:
+      visible: [adapters_connector_standing_0, adapters_connector_grant_0, adapters_connector_delegation_0]
+
+  - step_id: a_test_reports_what_ran
+    title: Test produces a result line
+    optional_step: true
+    requires:
+      visible: [btn_connector_test_0]
+    do:
+      - click: btn_connector_test_0
+        wait_ms: 1500
+    expect:
+      visible: [adapters_connector_test_result_0]
+
+  - step_id: remove_confirms_with_three_facts
+    title: Remove opens the three-fact confirm, and cancel leaves the row
+    optional_step: true
+    requires:
+      visible: [btn_connector_remove_0]
+    do:
+      - click: btn_connector_remove_0
+    expect:
+      visible: [sheet_connector_remove, connector_remove_fact_1, connector_remove_fact_2, connector_remove_fact_3]
+
+  - step_id: cancel_keeps_the_connector
+    title: Cancel removes nothing
+    optional_step: true
+    requires:
+      visible: [btn_connector_remove_cancel]
+    do:
+      - click: btn_connector_remove_cancel
+    expect:
+      visible: [adapters_connector_0]
+      absent: [sheet_connector_remove]

@@ -2,6 +2,11 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.models.AgentRead
+import ai.ciris.mobile.shared.models.PartnershipHistoryDto
+import ai.ciris.mobile.shared.models.PartnershipOptionsDto
+import ai.ciris.mobile.shared.models.PartnershipQueue
+import ai.ciris.mobile.shared.models.partnershipQueueOf
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ConsentAuditEntryData
 import ai.ciris.mobile.shared.ui.screens.ConsentImpactData
@@ -92,6 +97,7 @@ class ConsentViewModel(
         dataLoadStarted = true
         logInfo(method, "Starting consent data loading")
         loadConsentData()
+        loadPartnershipQueue()
     }
 
     /**
@@ -332,6 +338,7 @@ class ConsentViewModel(
      */
     fun refresh() {
         loadConsentData()
+        loadPartnershipQueue()
     }
 
     /**
@@ -346,6 +353,48 @@ class ConsentViewModel(
      */
     fun clearSuccess() {
         _successMessage.value = null
+    }
+
+    // ── The partnership queue (CSD-054 §7) ─────────────────────────────────
+    // Requests to partner with this agent that are waiting on its answer. Read
+    // only: the answer is the agent's (consent:partnership_accept is the
+    // producer's half, CC 3.3.1), so nothing here calls /v1/partnership/decide.
+
+    private val _partnershipOptions = MutableStateFlow<AgentRead<PartnershipOptionsDto>?>(null)
+    /** `GET /v1/partnership/options` — null until read. */
+    val partnershipOptions: StateFlow<AgentRead<PartnershipOptionsDto>?> = _partnershipOptions.asStateFlow()
+
+    private val _partnershipQueue = MutableStateFlow<PartnershipQueue>(PartnershipQueue.Loading)
+    val partnershipQueue: StateFlow<PartnershipQueue> = _partnershipQueue.asStateFlow()
+
+    private val _partnershipHistory = MutableStateFlow<Map<String, AgentRead<PartnershipHistoryDto>?>>(emptyMap())
+    /** Opened histories by user id; a null value is a read in flight. */
+    val partnershipHistory: StateFlow<Map<String, AgentRead<PartnershipHistoryDto>?>> = _partnershipHistory.asStateFlow()
+
+    fun loadPartnershipQueue() {
+        viewModelScope.launch {
+            _partnershipQueue.value = PartnershipQueue.Loading
+            _partnershipOptions.value = apiClient.partnershipOptions()
+            val pending = apiClient.partnershipPending()
+            val metrics = if (pending is AgentRead.Ok) apiClient.partnershipMetrics() else null
+            _partnershipQueue.value = partnershipQueueOf(pending, metrics)
+            logInfo("loadPartnershipQueue", "queue=${_partnershipQueue.value::class.simpleName}")
+        }
+    }
+
+    /** Open or close one person's history (`GET /v1/partnership/history/{user_id}`). */
+    fun togglePartnershipHistory(userId: String) {
+        if (userId in _partnershipHistory.value) {
+            _partnershipHistory.value = _partnershipHistory.value - userId
+            return
+        }
+        _partnershipHistory.value = _partnershipHistory.value + (userId to null)
+        viewModelScope.launch {
+            val read = apiClient.partnershipHistory(userId)
+            if (userId in _partnershipHistory.value) {
+                _partnershipHistory.value = _partnershipHistory.value + (userId to read)
+            }
+        }
     }
 
     override fun onCleared() {

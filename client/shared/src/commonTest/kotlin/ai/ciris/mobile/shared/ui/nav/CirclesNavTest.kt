@@ -34,6 +34,9 @@ class CirclesNavTest {
         NavSurface.ClientInterface, NavSurface.Help,
         // Households (CSD-101)
         NavSurface.HouseholdMembers,
+        // Communities and affiliations (CSD-102, CSD-103)
+        NavSurface.CommunityRoster, NavSurface.AffiliationsRoster,
+        NavSurface.CommunityChats, NavSurface.AffiliationsChats,
     )
 
     /**
@@ -226,7 +229,9 @@ class CirclesNavTest {
     fun chatsHoldsOnlyConversations() {
         for (c in CirclesNav.circles) {
             val cards = CirclesNav.cards(c, Tab.CHATS, hasAgent = true)
-            assertTrue(cards.all { it == NavSurface.Interact }, "${c.id} › chats holds something that is not a conversation: $cards")
+            // The agent conversation, and the rooms people talk in (CSD-103).
+            val conversations = setOf(NavSurface.Interact, NavSurface.CommunityChats, NavSurface.AffiliationsChats)
+            assertTrue(cards.all { it in conversations }, "${c.id} › chats holds something that is not a conversation: $cards")
         }
         // How the machine runs is not who you talk to.
         for (s in listOf(NavSurface.Sessions, NavSurface.Tickets, NavSurface.Scheduler)) {

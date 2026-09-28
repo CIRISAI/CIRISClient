@@ -73,6 +73,11 @@ fun LayerHubScreen(
      * Family scope, which describe data this hub never fetched (CSD-050 §1).
      */
     familyContent: (@Composable () -> Unit)? = null,
+    // Communities and affiliations (CSD-102): the circle's own rooms, their
+    // rules, roles and pending changes. Neighbours and Communities and
+    // Businesses pass their tier's view model; every other circle passes null.
+    communities: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel? = null,
+    onOpenModeration: (() -> Unit)? = null,
 ) {
     val scrollState = rememberTestableScrollState()
     Box(
@@ -102,6 +107,15 @@ fun LayerHubScreen(
                 LocalCommunityEnvironmentCard(onOpenEnvironment = onOpenEnvironment)
             } else if (scope == CohortScope.FAMILY && onOpenDelegations != null) {
                 FamilyDelegationsCard(onOpenDelegations = onOpenDelegations)
+            }
+
+            // ── Communities and affiliations (CSD-102) — the community itself,
+            // on the hub that already stands for this circle, not a card beside it.
+            if (communities != null) {
+                ai.ciris.mobile.shared.ui.screens.CommunityGovernanceSection(
+                    viewModel = communities,
+                    onOpenModeration = onOpenModeration,
+                )
             }
 
             LayerSection(
