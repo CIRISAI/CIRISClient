@@ -77,6 +77,27 @@ def _wait_clickable(drv: TestAutomationServer, tag: str, timeout: float = 20.0) 
     return False
 
 
+def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
+    """Run `act()` against `tag`, scrolling it into view first when the app
+    says it is composed but off screen. A phone's first-run wizard is taller
+    than the screen: on the iPhone the account fields sit below the age band
+    and the AI choice, and /input and /click refuse what the person could not
+    see (CIRISClient#33). Scroll down a step at a time, bounded; anything else
+    raises as before."""
+    for _ in range(tries):
+        try:
+            return act()
+        except DriverError as e:
+            if "off screen" not in str(e):
+                raise
+            try:
+                drv.scroll_to(tag, direction="down", amount=400)
+            except DriverError:
+                pass
+            time.sleep(0.8)
+    return act()
+
+
 def _field_report(drv: TestAutomationServer) -> str:
     """What each tagged element on screen holds: input values (passwords by
     length only), texts, and click/input capability — so a disabled Next
@@ -122,7 +143,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                        ("input_password_confirm", password),
                        ("input_device_name", device)):
         try:
-            drv.input(tag, value)
+            _reach(drv, tag, lambda t=tag, v=value: drv.input(t, v))
         except DriverError as e:
             raise SessionUnavailable(f"wizard: {tag} would not accept input ({e})") from e
         # iOS needs ~2 s between fields for the value to reach the ViewModel's
@@ -136,11 +157,12 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     # like "me" are refused, so use the device name, which is specific).
     if "input_fedid_label" in _tags(drv):
         try:
-            drv.input("input_fedid_label", f"{device} gate identity")
+            _reach(drv, "input_fedid_label",
+                   lambda: drv.input("input_fedid_label", f"{device} gate identity"))
         except DriverError as e:
             raise SessionUnavailable(f"wizard: input_fedid_label would not accept input ({e})") from e
         time.sleep(2.0)
-    drv.click("age_band_adult")
+    _reach(drv, "age_band_adult", lambda: drv.click("age_band_adult"))
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
     # must say so rather than spin.
@@ -152,7 +174,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         # answered (no default, like the age band above). Yes is the fixture's
         # answer for the same reason age_band_adult is: the unrestricted path.
         if "trace_consent_yes" in tags:
-            drv.click("trace_consent_yes")
+            _reach(drv, "trace_consent_yes", lambda: drv.click("trace_consent_yes"))
             # The step advances only once the answer has reached the ViewModel
             # (`SetupState.canProceedFromCurrentStep`: JOIN_FEDERATION ->
             # traceConsentAnswered). A Next clicked in the same instant as the
@@ -183,7 +205,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         clicked = False
         for _ in range(15):
             try:
-                drv.click(nxt)
+                _reach(drv, nxt, lambda: drv.click(nxt))
                 clicked = True
                 break
             except DriverError as e:
