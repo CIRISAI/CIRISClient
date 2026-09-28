@@ -77,7 +77,9 @@ fun SkillStudioScreen(
     onDismissDialog: () -> Unit,
     // Preview tabs
     onSetPreviewTab: (PreviewTab) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    // CSD-015: what the agent already carries + the paste door, above the editor.
+    heldSkills: @Composable () -> Unit = {},
 ) {
     // Handle dialogs
     when (dialogState) {
@@ -153,7 +155,8 @@ fun SkillStudioScreen(
                 onDeleteEnvVar = onDeleteEnvVar,
                 onAddBinary = onAddBinary,
                 onRemoveBinary = onRemoveBinary,
-                onToggleCard = onToggleCard
+                onToggleCard = onToggleCard,
+                heldSkills = heldSkills
             )
         }
 
@@ -216,7 +219,8 @@ private fun EditingScreen(
     onDeleteEnvVar: (Int) -> Unit,
     onAddBinary: (String) -> Unit,
     onRemoveBinary: (String) -> Unit,
-    onToggleCard: (String) -> Unit
+    onToggleCard: (String) -> Unit,
+    heldSkills: @Composable () -> Unit = {}
 ) {
     Scaffold(
         topBar = {
@@ -272,6 +276,11 @@ private fun EditingScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            // What this agent already carries, and the paste door (CSD-015)
+            item {
+                heldSkills()
+            }
+
             // Validation errors
             if (state.validationErrors.isNotEmpty()) {
                 item {
@@ -685,7 +694,7 @@ private fun SecurityPreviewPlaceholder() {
 }
 
 @Composable
-private fun SecuritySummaryCard(report: SecurityReport) {
+internal fun SecuritySummaryCard(report: SecurityReport) {
     val backgroundColor = if (report.safeToImport) {
         SemanticColors.Default.success.copy(alpha = 0.1f)
     } else {
@@ -728,7 +737,7 @@ private fun SecuritySummaryCard(report: SecurityReport) {
 }
 
 @Composable
-private fun SeverityCount(label: String, count: Int, color: androidx.compose.ui.graphics.Color) {
+internal fun SeverityCount(label: String, count: Int, color: androidx.compose.ui.graphics.Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = count.toString(),
@@ -745,7 +754,7 @@ private fun SeverityCount(label: String, count: Int, color: androidx.compose.ui.
 }
 
 @Composable
-private fun SecurityFindingCard(finding: SecurityFinding) {
+internal fun SecurityFindingCard(finding: SecurityFinding) {
     val (icon, color) = when (finding.severity.lowercase()) {
         "critical" -> CIRISMaterialIcons.Filled.Error to MaterialTheme.colorScheme.error
         "high" -> CIRISIcons.warning to SemanticColors.Default.warning

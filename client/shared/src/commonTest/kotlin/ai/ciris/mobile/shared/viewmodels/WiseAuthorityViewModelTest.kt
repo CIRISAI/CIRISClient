@@ -74,6 +74,8 @@ class WiseAuthorityViewModelTest {
         var proposalsThrow: Exception? = null,
         var budgetState: TicketBudgetState? = null,
         var budgetStateThrow: Exception? = null,
+        /** What `GET /v1/tickets/{id}` says NOW; absent means "as listed". */
+        var liveStatus: Map<String, String> = emptyMap(),
     ) : ApprovalsApi {
         val grantCalls = mutableListOf<GrantCall>()
         val statusUpdates = mutableListOf<Pair<String, String>>()
@@ -128,6 +130,11 @@ class WiseAuthorityViewModelTest {
             statusUpdates += ticketId to status
             return statusUpdateOk
         }
+
+        override suspend fun readTicketStatus(ticketId: String): String =
+            liveStatus[ticketId]
+                ?: proposals.firstOrNull { it.ticketId == ticketId }?.status
+                ?: throw IllegalStateException("no ticket $ticketId")
     }
 
     private class FakeSink(var permission: Boolean = true) : ApprovalNotificationSink {
@@ -514,6 +521,43 @@ class WiseAuthorityViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("t1" to "pending"), api.statusUpdates)
+    }
+
+    @Test
+    fun grantBudget_doesNotPromoteAProposalThatIsNoLongerBlocked() = runTest {
+        // Listed as blocked, but cancelled on the agent since the last poll.
+        // PATCH /v1/tickets/{id} checks no from-status, so the re-read here is
+        // the only guard against writing `cancelled` back to `pending`.
+        val api = FakeApprovalsApi(
+            proposals = listOf(proposalTicket("t1")),
+            liveStatus = mapOf("t1" to "cancelled"),
+        )
+        val (vm, _) = viewModel(api)
+        vm.refresh()
+        advanceUntilIdle()
+
+        vm.grantBudget("t1", "25.00", "USDC", "fee", 24, promote = true)
+        advanceUntilIdle()
+
+        assertTrue(api.statusUpdates.isEmpty(), "a stale proposal must not be promoted")
+        assertNotNull(vm.error.value)
+    }
+
+    @Test
+    fun deferProposal_refusesWhenTheProposalIsNoLongerBlocked() = runTest {
+        val api = FakeApprovalsApi(
+            proposals = listOf(proposalTicket("t1")),
+            liveStatus = mapOf("t1" to "pending"),
+        )
+        val (vm, _) = viewModel(api)
+        vm.refresh()
+        advanceUntilIdle()
+
+        vm.deferProposal("t1", "later")
+        advanceUntilIdle()
+
+        assertTrue(api.statusUpdates.isEmpty(), "a promoted proposal must not be written back to blocked")
+        assertNotNull(vm.error.value)
     }
 
     @Test

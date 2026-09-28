@@ -30,7 +30,9 @@ data class SecurityReport(
     @SerialName("high_count") val highCount: Int = 0,
     @SerialName("medium_count") val mediumCount: Int = 0,
     @SerialName("low_count") val lowCount: Int = 0,
-    @SerialName("safe_to_import") val safeToImport: Boolean = true,
+    // Fails CLOSED: a verdict nobody gave is not a pass (CSD-015; the agent's
+    // SecurityReportResponse defaults it False since CIRISAgent#1203).
+    @SerialName("safe_to_import") val safeToImport: Boolean = false,
     val summary: String = "",
     val findings: List<SecurityFinding> = emptyList()
 )
@@ -54,6 +56,14 @@ data class SkillPreviewData(
     @SerialName("instructions_preview") val instructionsPreview: String = "",
     val security: SecurityReport? = null
 )
+
+/**
+ * Whether the paste door may offer Import: only a scan that ran AND cleared the
+ * skill. No report is not a clear report. The agent enforces the same rule at
+ * `POST /import-skill` (400 on an unsafe scan); this keeps the button honest
+ * rather than letting the person discover it as an error.
+ */
+fun SkillPreviewData.importAllowed(): Boolean = security?.safeToImport == true
 
 /** Result of importing a skill. */
 @Serializable

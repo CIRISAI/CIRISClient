@@ -195,7 +195,7 @@ fun TicketsScreen(
                             CircularProgressIndicator()
                         }
                     }
-                } else if (state.tickets.isEmpty()) {
+                } else if (state.showsEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -216,7 +216,9 @@ fun TicketsScreen(
                             ticket = ticket,
                             isExpanded = expandedTicketId == ticket.ticketId,
                             onToggleExpand = {
-                                expandedTicketId = if (expandedTicketId == ticket.ticketId) null else ticket.ticketId
+                                val opening = expandedTicketId != ticket.ticketId
+                                expandedTicketId = if (opening) ticket.ticketId else null
+                                onSelectTicket(if (opening) ticket else null)
                             }
                         )
                     }

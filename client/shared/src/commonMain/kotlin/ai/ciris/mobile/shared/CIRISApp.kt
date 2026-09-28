@@ -3370,8 +3370,11 @@ fun CIRISApp(
                         adaptersViewModel.refresh()
                     },
                     onImportSkill = {
+                        // CSD-015: the paste door lives on the Skills card now
+                        // (the former Screen.SkillImport folded into SkillStudio).
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Import skill requested")
-                        currentScreen = Screen.SkillImport
+                        skillImportViewModel.openImportDialog()
+                        currentScreen = Screen.SkillStudio
                     },
                     onSkillStudio = {
                         PlatformLogger.i("CIRISApp", "[Screen.Adapters] Skill Studio requested")
@@ -4618,46 +4621,45 @@ fun CIRISApp(
                 )
             }
 
-            Screen.SkillImport -> {
-                // Collect SkillImportViewModel state
-                val importPhase by skillImportViewModel.importPhase.collectAsState()
-                val skillMdContent by skillImportViewModel.skillMdContent.collectAsState()
-                val sourceUrl by skillImportViewModel.sourceUrl.collectAsState()
-                val preview by skillImportViewModel.preview.collectAsState()
-                val importResult by skillImportViewModel.importResult.collectAsState()
-                val isSkillLoading by skillImportViewModel.isLoading.collectAsState()
-                val skillError by skillImportViewModel.error.collectAsState()
-
-                // Initialize dialog state when entering screen
-                LaunchedEffect(Unit) {
-                    PlatformLogger.i("CIRISApp", "[Screen.SkillImport] Opening skill import")
-                    skillImportViewModel.openImportDialog()
-                }
-
-                SkillImportDialog(
-                    phase = importPhase,
-                    skillMdContent = skillMdContent,
-                    sourceUrl = sourceUrl,
-                    preview = preview,
-                    importResult = importResult,
-                    isLoading = isSkillLoading,
-                    error = skillError,
-                    onContentChanged = { skillImportViewModel.updateSkillMdContent(it) },
-                    onSourceUrlChanged = { skillImportViewModel.updateSourceUrl(it) },
-                    onPreview = { skillImportViewModel.previewSkill() },
-                    onImport = { skillImportViewModel.importSkill() },
-                    onDismiss = {
-                        PlatformLogger.i("CIRISApp", "[Screen.SkillImport] Closing skill import")
-                        skillImportViewModel.closeImportDialog()
-                        currentScreen = Screen.Adapters
-                    }
-                )
-            }
-
             Screen.SkillStudio -> {
                 // Collect SkillStudioViewModel state
                 val skillStudioState by skillStudioViewModel.state.collectAsState()
                 val skillStudioDialogState by skillStudioViewModel.dialogState.collectAsState()
+                // CSD-015: the paste door and the held list (SkillImportViewModel).
+                val heldSkills by skillImportViewModel.importedSkills.collectAsState()
+                val pendingRemoval by skillImportViewModel.pendingRemoval.collectAsState()
+                val showPasteDoor by skillImportViewModel.showImportDialog.collectAsState()
+                val importPhase by skillImportViewModel.importPhase.collectAsState()
+                val skillMdContent by skillImportViewModel.skillMdContent.collectAsState()
+                val sourceUrl by skillImportViewModel.sourceUrl.collectAsState()
+                val skillPreview by skillImportViewModel.preview.collectAsState()
+                val importResult by skillImportViewModel.importResult.collectAsState()
+                val isSkillLoading by skillImportViewModel.isLoading.collectAsState()
+                val skillError by skillImportViewModel.error.collectAsState()
+                LaunchedEffect(Unit) { skillImportViewModel.fetchImportedSkills() }
+                if (showPasteDoor) {
+                    SkillImportDialog(
+                        phase = importPhase,
+                        skillMdContent = skillMdContent,
+                        sourceUrl = sourceUrl,
+                        preview = skillPreview,
+                        importResult = importResult,
+                        isLoading = isSkillLoading,
+                        error = skillError,
+                        onContentChanged = { skillImportViewModel.updateSkillMdContent(it) },
+                        onSourceUrlChanged = { skillImportViewModel.updateSourceUrl(it) },
+                        onPreview = { skillImportViewModel.previewSkill() },
+                        onImport = { skillImportViewModel.importSkill() },
+                        onDismiss = { skillImportViewModel.closeImportDialog() }
+                    )
+                }
+                pendingRemoval?.let { skill ->
+                    ai.ciris.mobile.shared.ui.screens.SkillRemovalSheet(
+                        skill = skill,
+                        onConfirm = { skillImportViewModel.confirmRemoval() },
+                        onDismiss = { skillImportViewModel.cancelRemoval() }
+                    )
+                }
 
                 // Initialize with new draft when entering screen
                 LaunchedEffect(Unit) {
@@ -4668,6 +4670,13 @@ fun CIRISApp(
                 SkillStudioScreen(
                     state = skillStudioState,
                     dialogState = skillStudioDialogState,
+                    heldSkills = {
+                        ai.ciris.mobile.shared.ui.screens.SkillsHeldSection(
+                            state = heldSkills,
+                            onPaste = { skillImportViewModel.openImportDialog() },
+                            onRemove = { skillImportViewModel.requestRemoval(it) }
+                        )
+                    },
                     onNavigateBack = {
                         PlatformLogger.i("CIRISApp", "[Screen.SkillStudio] Navigating back to Adapters")
                         currentScreen = Screen.Adapters
@@ -5754,7 +5763,6 @@ internal sealed class Screen {
     object Scheduler : Screen()
     object Tools : Screen()
     object EnvironmentInfo : Screen()
-    object SkillImport : Screen()
     object SkillStudio : Screen()
     object DataManagement : Screen()
     object LLMSettings : Screen()
@@ -5925,7 +5933,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.System -> ai.ciris.mobile.shared.ui.nav.NavSurface.System
     Screen.Runtime -> ai.ciris.mobile.shared.ui.nav.NavSurface.Runtime
     Screen.Config -> ai.ciris.mobile.shared.ui.nav.NavSurface.Config
-    Screen.SkillStudio, Screen.SkillImport -> ai.ciris.mobile.shared.ui.nav.NavSurface.Skills
+    Screen.SkillStudio -> ai.ciris.mobile.shared.ui.nav.NavSurface.Skills
     Screen.HealthReputation -> ai.ciris.mobile.shared.ui.nav.NavSurface.HealthReputation
     Screen.Users -> ai.ciris.mobile.shared.ui.nav.NavSurface.Users
     Screen.Adapters -> ai.ciris.mobile.shared.ui.nav.NavSurface.Adapters
