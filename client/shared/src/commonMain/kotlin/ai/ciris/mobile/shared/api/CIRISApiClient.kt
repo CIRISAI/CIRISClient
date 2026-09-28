@@ -14265,10 +14265,334 @@ class CIRISApiClient(
     }
     // ===== end: Data (CSD-039) erasure and receipts =====
 
+    // ─── Communities and affiliations (CSD-102, CSD-103) ─────────────────────
+    //
+    // CIRISServer `src/communities.rs` (0.5.216): N-member rooms at the
+    // `community` or `affiliations` tier, governed by each room's own
+    // `consensus_protocol`, read through the roster FOLD. NODE-OWNED, so every
+    // call goes to [nodeUrl] (the local node by default), never [baseUrl]: on a
+    // with-AI install [baseUrl] is the agent, which does not proxy these
+    // (CIRISAgent#1213). Refusals are thrown as [NodeRefusal] with the id
+    // intact; a bare 404 with no id is the route missing on this node.
+
+    /** `GET {nodeUrl}/v1/communities` — every room the caller is ACTIVE in, pair rooms included. */
+    suspend fun listCommunities(
+        nodeUrl: String = LOCAL_NODE_URL,
+        after: String? = null,
+    ): ai.ciris.mobile.shared.models.federation.CommunityRoomList {
+        val method = "listCommunities"
+        val url = "$nodeUrl/v1/communities" + (after?.let { "?after=${it.encodeURLParameter()}" } ?: "")
+        logInfo(method, "GET $url")
+        return communityCall(method, url) { client ->
+            client.get(url) { authHeader()?.let { header("Authorization", it) } }
+        }.let { raw ->
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityRoomList.serializer(), raw)
+        }
+    }
+
+    /** `GET {nodeUrl}/v1/communities/{id}` — record + effective roster + roles + appointed moderators. */
+    suspend fun getCommunity(
+        communityId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityRoom {
+        val method = "getCommunity"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}"
+        logInfo(method, "GET $url")
+        val raw = communityCall(method, url) { client ->
+            client.get(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityRoom.serializer(), raw)
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/communities` `{name, members, tier, consensus_protocol?}`
+     * — found a room; the caller is its founder, each initial member must be a
+     * contact whose grant covers `chat:`. A quorum room is founded with its whole
+     * roster, because a quorum's N is its roster size.
+     */
+    suspend fun createCommunity(
+        name: String,
+        tier: String,
+        members: List<String> = emptyList(),
+        consensusProtocol: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityRoom {
+        val method = "createCommunity"
+        val url = "$nodeUrl/v1/communities"
+        logInfo(method, "POST $url tier=$tier members=${members.size} protocol=${consensusProtocol ?: "(default)"}")
+        val body = buildJsonObject {
+            put("name", name)
+            put("tier", tier)
+            put("members", kotlinx.serialization.json.JsonArray(members.map { kotlinx.serialization.json.JsonPrimitive(it) }))
+            consensusProtocol?.let { put("consensus_protocol", it) }
+        }
+        val raw = communityCall(method, url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityRoom.serializer(), raw)
+    }
+
+    /** `POST {nodeUrl}/v1/communities/{id}/members` `{key_id, role?}` — widen the roster by one. */
+    suspend fun addCommunityMember(
+        communityId: String,
+        keyId: String,
+        role: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/members"
+        val body = buildJsonObject {
+            put("key_id", keyId)
+            role?.let { put("role", it) }
+        }
+        return communityChange("addCommunityMember", url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+    }
+
+    /** `DELETE {nodeUrl}/v1/communities/{id}/members/{key_id}` — remove a member (naming yourself is leaving). */
+    suspend fun removeCommunityMember(
+        communityId: String,
+        keyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/members/${keyId.encodeURLPathPart()}"
+        return communityChange("removeCommunityMember", url) { client ->
+            client.delete(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+    }
+
+    /** `POST {nodeUrl}/v1/communities/{id}/members/{key_id}/role` `{role}` — the roster's word, never a duty. */
+    suspend fun changeCommunityRole(
+        communityId: String,
+        keyId: String,
+        role: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/members/${keyId.encodeURLPathPart()}/role"
+        val body = buildJsonObject { put("role", role) }
+        return communityChange("changeCommunityRole", url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+    }
+
+    /** `POST {nodeUrl}/v1/communities/{id}/leave` — always your own act, never put to a quorum. */
+    suspend fun leaveCommunity(
+        communityId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeApplied {
+        val method = "leaveCommunity"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/leave"
+        logInfo(method, "POST $url")
+        val raw = communityCall(method, url) { client ->
+            client.post(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityChangeApplied.serializer(), raw)
+    }
+
+    /** `DELETE {nodeUrl}/v1/communities/{id}` — every active member revoked; nobody left who can change it. */
+    suspend fun dissolveCommunity(
+        communityId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}"
+        return communityChange("dissolveCommunity", url) { client ->
+            client.delete(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/communities/{id}/changes/cosign` `{change_envelope}` —
+     * this node's OWNER signs a change another member built, after the node
+     * checks it still describes the room. Stateless: it returns the signature.
+     */
+    suspend fun cosignCommunityChange(
+        communityId: String,
+        changeEnvelope: kotlinx.serialization.json.JsonObject,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityCosignature {
+        val method = "cosignCommunityChange"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/changes/cosign"
+        logInfo(method, "POST $url")
+        val body = buildJsonObject { put("change_envelope", changeEnvelope) }
+        val raw = communityCall(method, url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityCosignature.serializer(), raw)
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/communities/{id}/changes/assemble` `{change_envelope,
+     * signatures}` — count them against the room's rule and, when met, apply.
+     * Still short comes back as [CommunityChangeOutcome.Pending] with the count.
+     */
+    suspend fun assembleCommunityChange(
+        communityId: String,
+        changeEnvelope: kotlinx.serialization.json.JsonObject,
+        signatures: List<kotlinx.serialization.json.JsonElement>,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/changes/assemble"
+        val body = buildJsonObject {
+            put("change_envelope", changeEnvelope)
+            put("signatures", kotlinx.serialization.json.JsonArray(signatures))
+        }
+        return communityChange("assembleCommunityChange", url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+    }
+
+    /** One community round-trip: the body on 2xx, a typed [NodeRefusal] otherwise. */
+    private suspend fun communityCall(
+        method: String,
+        url: String,
+        send: suspend (io.ktor.client.HttpClient) -> io.ktor.client.statement.HttpResponse,
+    ): String {
+        val client = federationHttpClient()
+        return try {
+            val response = send(client)
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            raw
+        } catch (e: Exception) {
+            logException(method, e, "url=$url")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * A governed roster write. `community.quorum_pending` is NOT a failure: the
+     * node signed the caller's share and hands back the envelope to collect the
+     * rest on, so it is returned as [CommunityChangeOutcome.Pending] — reading it
+     * as a refusal would drop the only copy of the pending change.
+     */
+    private suspend fun communityChange(
+        method: String,
+        url: String,
+        send: suspend (io.ktor.client.HttpClient) -> io.ktor.client.statement.HttpResponse,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome {
+        logInfo(method, url)
+        val client = federationHttpClient()
+        return try {
+            val response = send(client)
+            val raw = response.bodyAsText()
+            communityChangeOutcome(response.status.value, raw)
+                ?: throw nodeRefusal(method, response.status, raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$url")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** Pure, so the pending-vs-refused split is testable without a socket. Null = a refusal. */
+    internal fun communityChangeOutcome(
+        status: Int,
+        raw: String,
+    ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome? = when {
+        status in 200..299 -> ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome.Applied(
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityChangeApplied.serializer(), raw),
+        )
+        NodeRefusal.fromBody(status, raw).reasonId == COMMUNITY_QUORUM_PENDING ->
+            ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome.Pending(
+                jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityPendingChange.serializer(), raw),
+            )
+        else -> null
+    }
+    // ─── end Communities and affiliations ────────────────────────────────────
+
+    // ── Partnership queue (CSD-054 §7) + connectors (CSD-020 §7) ────────────
+    // Agent-owned, admin-gated routes, so they go to $baseUrl and answer in
+    // three ways — read, "administrators only", failed — never collapsed to an
+    // empty list (AgentRead). On a bare node none of them exist; the call is
+    // not made and the card says so (RouteNotOnThisHost → NotOnThisNode).
+
+    suspend fun partnershipOptions(): AgentRead<PartnershipOptionsDto> =
+        agentRead("partnershipOptions", HttpMethod.Get, "/v1/partnership/options", PartnershipOptionsDto.serializer())
+
+    suspend fun partnershipPending(): AgentRead<PartnershipPendingDto> =
+        agentRead("partnershipPending", HttpMethod.Get, "/v1/partnership/pending", PartnershipPendingDto.serializer())
+
+    suspend fun partnershipMetrics(): AgentRead<PartnershipMetricsDto> =
+        agentRead("partnershipMetrics", HttpMethod.Get, "/v1/partnership/metrics", PartnershipMetricsDto.serializer())
+
+    suspend fun partnershipHistory(userId: String): AgentRead<PartnershipHistoryDto> =
+        agentRead(
+            "partnershipHistory", HttpMethod.Get,
+            "/v1/partnership/history/${userId.encodeURLPathPart()}", PartnershipHistoryDto.serializer(),
+        )
+
+    suspend fun listConnectors(): AgentRead<ConnectorListDto> =
+        agentRead("listConnectors", HttpMethod.Get, "/v1/connectors", ConnectorListDto.serializer())
+
+    /** `POST /v1/connectors/{id}/test`. A failed test is HTTP 200 with `success: false` in `data`. */
+    suspend fun testConnector(connectorId: String): AgentRead<ConnectorTestDto> =
+        agentRead(
+            "testConnector", HttpMethod.Post,
+            "/v1/connectors/${connectorId.encodeURLPathPart()}/test", ConnectorTestDto.serializer(),
+        )
+
+    /** `DELETE /v1/connectors/{id}` — removes the route's record only (`connectors.py:582-584`). */
+    suspend fun deleteConnector(connectorId: String): AgentRead<kotlinx.serialization.json.JsonObject> =
+        agentRead(
+            "deleteConnector", HttpMethod.Delete,
+            "/v1/connectors/${connectorId.encodeURLPathPart()}", kotlinx.serialization.json.JsonObject.serializer(),
+        )
+
+    private suspend fun <T> agentRead(
+        method: String,
+        verb: HttpMethod,
+        path: String,
+        serializer: kotlinx.serialization.KSerializer<T>,
+    ): AgentRead<T> {
+        if (nodeSkip(method)) {
+            return AgentRead.Failed(ai.ciris.mobile.shared.ui.screens.ReadFailure.of(RouteNotOnThisHost(path)))
+        }
+        logInfo(method, "${verb.value} $baseUrl$path")
+        val client = federationHttpClient()
+        return try {
+            val response = client.request("$baseUrl$path") {
+                this.method = verb
+                authHeader()?.let { header("Authorization", it) }
+            }
+            agentReadOf(response.status.value, response.bodyAsText(), serializer)
+        } catch (e: Exception) {
+            logException(method, e)
+            AgentRead.Failed(ai.ciris.mobile.shared.ui.screens.ReadFailure.of(e))
+        } finally {
+            client.close()
+        }
+    }
+
     override fun close() {
     logInfo("close", "Closing CIRISApiClient")
     }
 }
+
+/** The one refusal id a governed community write answers that is not a refusal. */
+const val COMMUNITY_QUORUM_PENDING = "community.quorum_pending"
 
 // ===== Scheduler Data Models =====
 
