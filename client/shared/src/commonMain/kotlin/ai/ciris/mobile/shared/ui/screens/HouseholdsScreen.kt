@@ -102,7 +102,7 @@ fun HouseholdPanel(
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
         when (val l = load) {
             HouseholdsLoad.Loading -> StateBlock(ListState.Loading, tag = HouseholdTags.LOADING, inline = true)
-            is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.FAILURE)
+            is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.ERROR, HouseholdTags.NOT_ON_THIS_NODE)
             is HouseholdsLoad.Loaded -> {
                 val family = l.families.firstOrNull { it.familyId == selectedId } ?: l.families.firstOrNull()
                 HouseholdSwitcher(
@@ -193,7 +193,7 @@ fun HouseholdMembersScreen(
     ) {
         when (val l = load) {
             HouseholdsLoad.Loading -> StateBlock(ListState.Loading, tag = HouseholdTags.MEMBERS_LOADING)
-            is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.MEMBERS_FAILURE)
+            is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.MEMBERS_ERROR, HouseholdTags.MEMBERS_NOT_ON_THIS_NODE)
             is HouseholdsLoad.Loaded -> {
                 val family = l.families.firstOrNull { it.familyId == selectedId } ?: l.families.firstOrNull()
                 if (family == null) {
@@ -298,16 +298,21 @@ private fun HouseholdSwitcher(
 }
 
 @Composable
-private fun HouseholdsFailure(l: HouseholdsLoad.Failed, prefix: String) {
+private fun HouseholdsFailure(l: HouseholdsLoad.Failed, errorTag: String, notOnThisNodeTag: String) {
     val refusal = l.refusal
-    if (refusal != null) {
-        StateBlock(
-            ListState.Error(title = localizedString("households.read_refused"), body = householdRefusalText(refusal)),
-            tag = "${prefix}_error",
-        )
+    // Two literal tags rather than ReadFailureBlock's `${prefix}_error`: the
+    // CSD declares them by name and the state-tag test greps for the literal.
+    val state = if (refusal != null) {
+        ListState.Error(title = localizedString("households.read_refused"), body = householdRefusalText(refusal))
     } else {
-        ReadFailureBlock(l.failure, tagPrefix = prefix, notOnThisNode = localizedString("households.not_on_this_node"))
+        l.failure.listState(
+            notOnThisNode = localizedString("households.not_on_this_node"),
+            failedTitle = localizedString("mobile.state_read_failed"),
+            failedBody = localizedString("mobile.state_read_failed_body"),
+        )
     }
+    val tag = if (refusal == null && l.failure is ReadFailure.NotOnThisNode) notOnThisNodeTag else errorTag
+    StateBlock(state, tag = tag)
 }
 
 @Composable

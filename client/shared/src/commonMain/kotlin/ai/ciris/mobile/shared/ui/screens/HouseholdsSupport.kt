@@ -27,8 +27,9 @@ object HouseholdTags {
     // ── CSD-100: the household (Family › Rules) ──
     const val LOADING = "households_loading"
     const val EMPTY = "households_empty"
-    /** [ReadFailureBlock] prefix: `households_error` / `households_not_on_this_node`. */
-    const val FAILURE = "households"
+    /** Literal, not a prefix: `test_csd_state_tags` greps for the tag the CSD declares. */
+    const val ERROR = "households_error"
+    const val NOT_ON_THIS_NODE = "households_not_on_this_node"
     const val CARD = "card_household"
     const val RECORD = "household_record"
     const val NAME = "household_name"
@@ -60,8 +61,8 @@ object HouseholdTags {
 
     // ── CSD-101: the roster (Family › People) ──
     const val MEMBERS_LOADING = "household_members_loading"
-    /** [ReadFailureBlock] prefix: `household_members_error` / `household_members_not_on_this_node`. */
-    const val MEMBERS_FAILURE = "household_members"
+    const val MEMBERS_ERROR = "household_members_error"
+    const val MEMBERS_NOT_ON_THIS_NODE = "household_members_not_on_this_node"
     const val MEMBERS_LIST = "household_members_list"
     const val MEMBERS_NO_HOUSEHOLD = "household_members_no_household"
     const val MEMBERS_GO_RULES = "btn_household_members_go_rules"
