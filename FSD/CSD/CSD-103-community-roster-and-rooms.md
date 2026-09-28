@@ -125,7 +125,7 @@ fields:
 ```
 
 ```yaml csd:states
-populated: {tag: "community_roster_section_*", renders: "one card per room at this tier, its members as rows, and 'Add someone'"}
+populated: {tag: community_roster_list, renders: "the column of per-room sections (`community_roster_section_*`, one card per room at this tier), each with its members as rows and 'Add someone'"}
 empty:     {tag: community_roster_empty, renders: "You are not in any room at this tier yet. Found one from this circle's Rules."}
 loading:   {tag: community_roster_loading, renders: "the loading block, never the empty sentence"}
 error:     {tag: community_roster_error, renders: "Could not read your communities. … This is not a report that you have none. — the node's reason id, localized"}

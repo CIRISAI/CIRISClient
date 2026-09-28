@@ -77,7 +77,8 @@ object CommunityTags {
     const val LIST = "communities_list"
     const val LOADING = "communities_loading"
     const val EMPTY = "communities_empty"
-    const val ERROR_PREFIX = "communities"            // communities_error / communities_not_on_this_node
+    const val ERROR = "communities_error"
+    const val NOT_ON_THIS_NODE = "communities_not_on_this_node"
     fun row(id: String) = "community_row_${slug(id)}"
     const val CREATE_OPEN = "btn_community_create_open"
     const val CREATE_CARD = "card_community_create"
@@ -93,7 +94,8 @@ object CommunityTags {
     const val DETAIL_COUNT = "txt_community_member_count"
     const val DETAIL_CLOSE = "btn_community_detail_close"
     const val DETAIL_LOADING = "community_detail_loading"
-    const val DETAIL_ERROR_PREFIX = "community_detail"  // community_detail_error / _not_on_this_node
+    const val DETAIL_ERROR = "community_detail_error"
+    const val DETAIL_NOT_ON_THIS_NODE = "community_detail_not_on_this_node"
     const val DETAIL_NOT_FOUND = "community_detail_not_found"
     fun roleRow(key: String) = "row_community_role_$key"
     fun roleEdit(key: String) = "btn_community_role_edit_$key"
@@ -128,7 +130,10 @@ object CommunityTags {
     const val ROSTER = "screen_community_roster"
     const val ROSTER_LOADING = "community_roster_loading"
     const val ROSTER_EMPTY = "community_roster_empty"
-    const val ROSTER_ERROR_PREFIX = "community_roster"
+    const val ROSTER_ERROR = "community_roster_error"
+    const val ROSTER_NOT_ON_THIS_NODE = "community_roster_not_on_this_node"
+    /** The populated state: the column of per-room sections, present only when there is at least one. */
+    const val ROSTER_LIST = "community_roster_list"
     const val ROSTER_REFRESH = "btn_community_roster_refresh"
     fun rosterSection(id: String) = "community_roster_section_${slug(id)}"
     fun member(id: String, key: String) = "row_community_member_${slug(id)}_$key"
@@ -146,7 +151,8 @@ object CommunityTags {
     const val CHATS_LIST = "community_chats_list"
     const val CHATS_LOADING = "community_chats_loading"
     const val CHATS_EMPTY = "community_chats_empty"
-    const val CHATS_ERROR_PREFIX = "community_chats"
+    const val CHATS_ERROR = "community_chats_error"
+    const val CHATS_NOT_ON_THIS_NODE = "community_chats_not_on_this_node"
     const val CHATS_REFRESH = "btn_community_chats_refresh"
     fun chatRow(id: String) = "community_chat_row_${slug(id)}"
     fun chatUnopenable(id: String) = "flag_community_chat_room_unopenable_${slug(id)}"
@@ -182,7 +188,8 @@ private fun roomsOrState(
     rooms: (List<CommunityRoom>) -> List<CommunityRoom>,
     loadingTag: String,
     emptyTag: String,
-    errorPrefix: String,
+    errorTag: String,
+    notOnThisNodeTag: String,
     emptyMessage: String,
 ): List<CommunityRoom>? = when (read) {
     CommunityListRead.NotAsked, CommunityListRead.Loading -> {
@@ -190,7 +197,7 @@ private fun roomsOrState(
         null
     }
     is CommunityListRead.Failed -> {
-        CommunityFailureBlock(read.failure, errorPrefix)
+        CommunityFailureBlock(read.failure, errorTag, notOnThisNodeTag)
         null
     }
     is CommunityListRead.Loaded -> {
@@ -202,13 +209,18 @@ private fun roomsOrState(
     }
 }
 
-/** `<prefix>_not_on_this_node` for a node without `/v1/communities`; `<prefix>_error` for a refused or failed read. */
+/**
+ * [notOnThisNodeTag] for a node without `/v1/communities`; [errorTag] for a refused
+ * or failed read. Both LITERAL at every call site: a tag built from a prefix is
+ * invisible to `testing/test_csd_state_tags.py`, so a CSD could declare it and
+ * nothing would notice when the screen stopped drawing it.
+ */
 @Composable
-private fun CommunityFailureBlock(failure: CommunityReadFailure, prefix: String) {
+private fun CommunityFailureBlock(failure: CommunityReadFailure, errorTag: String, notOnThisNodeTag: String) {
     when (failure) {
         CommunityReadFailure.NotOnThisNode -> StateBlock(
             ListState.Empty(s("community_not_on_this_node"), glyph = GlyphName.INFO),
-            tag = "${prefix}_not_on_this_node",
+            tag = notOnThisNodeTag,
             inline = true,
         )
         is CommunityReadFailure.Refused -> StateBlock(
@@ -217,7 +229,7 @@ private fun CommunityFailureBlock(failure: CommunityReadFailure, prefix: String)
                 body = s("community_read_failed_body"),
                 detail = failure.detail,
             ),
-            tag = "${prefix}_error",
+            tag = errorTag,
             inline = true,
         )
     }
@@ -308,7 +320,8 @@ fun CommunityGovernanceSection(
             rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false) },
             loadingTag = CommunityTags.LOADING,
             emptyTag = CommunityTags.EMPTY,
-            errorPrefix = CommunityTags.ERROR_PREFIX,
+            errorTag = CommunityTags.ERROR,
+            notOnThisNodeTag = CommunityTags.NOT_ON_THIS_NODE,
             emptyMessage = s(if (affiliations) "community_empty_affiliations" else "community_empty"),
         )
         if (rooms != null) {
@@ -495,7 +508,7 @@ private fun CommunityDetailCard(
                 ListState.Empty(s("community_detail_not_found"), glyph = GlyphName.INFO),
                 tag = CommunityTags.DETAIL_NOT_FOUND, inline = true,
             )
-            is CommunityDetailRead.Failed -> CommunityFailureBlock(read.failure, CommunityTags.DETAIL_ERROR_PREFIX)
+            is CommunityDetailRead.Failed -> CommunityFailureBlock(read.failure, CommunityTags.DETAIL_ERROR, CommunityTags.DETAIL_NOT_ON_THIS_NODE)
             is CommunityDetailRead.Loaded -> {
                 val room = read.room
                 Text(
@@ -752,10 +765,13 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
             rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false) },
             loadingTag = CommunityTags.ROSTER_LOADING,
             emptyTag = CommunityTags.ROSTER_EMPTY,
-            errorPrefix = CommunityTags.ROSTER_ERROR_PREFIX,
+            errorTag = CommunityTags.ROSTER_ERROR,
+            notOnThisNodeTag = CommunityTags.ROSTER_NOT_ON_THIS_NODE,
             emptyMessage = s("community_roster_empty"),
         ) ?: return@Column
 
+        // The populated state, as one literal tag over the per-room sections.
+        Column(Modifier.fillMaxWidth().testable(CommunityTags.ROSTER_LIST), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (room in rooms) {
             CardShell(tag = CommunityTags.rosterSection(room.communityId)) {
                 Text(room.name.ifBlank { shortKey(room.communityId) }, style = type.title, color = t.ink)
@@ -820,6 +836,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                 }
             }
         }
+        }
     }
 
     removing?.let { (room, m) ->
@@ -877,7 +894,8 @@ fun CommunityChatsScreen(
             rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = true) },
             loadingTag = CommunityTags.CHATS_LOADING,
             emptyTag = CommunityTags.CHATS_EMPTY,
-            errorPrefix = CommunityTags.CHATS_ERROR_PREFIX,
+            errorTag = CommunityTags.CHATS_ERROR,
+            notOnThisNodeTag = CommunityTags.CHATS_NOT_ON_THIS_NODE,
             emptyMessage = s("community_chats_empty"),
         ) ?: return@Column
         Column(Modifier.fillMaxWidth().testable(CommunityTags.CHATS_LIST), verticalArrangement = Arrangement.spacedBy(6.dp)) {
