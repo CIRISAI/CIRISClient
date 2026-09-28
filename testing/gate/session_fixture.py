@@ -77,6 +77,20 @@ def _wait_clickable(drv: TestAutomationServer, tag: str, timeout: float = 20.0) 
     return False
 
 
+def _field_report(drv: TestAutomationServer) -> str:
+    """What each tagged element on screen holds: input values (passwords by
+    length only), texts, and click/input capability — so a disabled Next
+    names the condition it is waiting on instead of just the tag list."""
+    parts = []
+    for e in drv.tree():
+        val = getattr(e, "input_value", None)
+        if val is not None and "password" in e.test_tag:
+            val = f"<{len(val)} chars>"
+        txt = (e.text or "")[:60]
+        parts.append(f"{e.test_tag}[v={val!r} t={txt!r} c={e.can_click} i={e.can_input}]")
+    return "; ".join(sorted(parts))
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -179,7 +193,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         if not clicked:
             raise SessionUnavailable(
                 f"wizard step {before[1]!r}: {nxt} stayed disabled for 30s; "
-                f"on screen: {sorted(_tags(drv))}"
+                f"fields: {_field_report(drv)}"
             )
         time.sleep(2.0)
         if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
