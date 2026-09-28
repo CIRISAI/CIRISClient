@@ -30,6 +30,13 @@ import kotlinx.coroutines.launch
  */
 class TransportViewModel(
     private val apiClient: CIRISApiClient,
+    /**
+     * Where the radio keys live: the NODE. `net.radio.*` is read by the node's
+     * config reconciler (`config_reconcile.rs:217-224`) and means nothing to an
+     * agent, so on a with-agent install writing them at `$baseUrl` stored them
+     * where nothing reads them (CSD-031). Overridable for tests.
+     */
+    private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
 ) : ViewModel() {
 
     companion object {
@@ -55,6 +62,7 @@ class TransportViewModel(
         if (dataLoadStarted) return
         dataLoadStarted = true
         loadTransports()
+        loadRadioConfig()
     }
 
     /** Allow a fresh load next time the screen becomes visible. */
@@ -62,7 +70,10 @@ class TransportViewModel(
         dataLoadStarted = false
     }
 
-    fun refresh() = loadTransports()
+    fun refresh() {
+        loadTransports()
+        loadRadioConfig()
+    }
 
     /** Fetch the node's current transports (federation identity aggregate). */
     fun loadTransports() {
@@ -84,6 +95,37 @@ class TransportViewModel(
         }
     }
 
+    /**
+     * Read the saved radio keys back from the node and fill the form with them.
+     * The form used to start from hard-coded defaults and never read back, so
+     * it could not show what was saved — Apply then overwrote it with those
+     * defaults (CSD-031). A failed read leaves the form as it is and is logged;
+     * the transports card already says whether the node answers.
+     */
+    fun loadRadioConfig() {
+        viewModelScope.launch {
+            try {
+                val saved = apiClient.listConfigs(prefix = "net.radio.", host = nodeUrl()).configs
+                    .associateBy { it.key }
+                fun text(k: String) = saved[k]?.displayValue?.takeIf { it != "(empty)" }
+                _state.update { st ->
+                    st.copy(
+                        radioEnabled = text(KEY_ENABLED)?.equals("true", ignoreCase = true) ?: st.radioEnabled,
+                        serialPort = text(KEY_SERIAL_PORT) ?: st.serialPort,
+                        frequencyHz = text(KEY_FREQUENCY_HZ) ?: st.frequencyHz,
+                        bandwidthHz = text(KEY_BANDWIDTH_HZ) ?: st.bandwidthHz,
+                        spreadingFactor = text(KEY_SPREADING_FACTOR) ?: st.spreadingFactor,
+                        codingRate = text(KEY_CODING_RATE) ?: st.codingRate,
+                        txPowerDbm = text(KEY_TX_POWER_DBM) ?: st.txPowerDbm,
+                        radioConfigRead = saved.isNotEmpty(),
+                    )
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "radio config read failed: ${e.message}")
+            }
+        }
+    }
+
     // ─── Radio form field updates ───────────────────────────────────────────────
 
     fun updateEnabled(value: Boolean) = _state.update { it.copy(radioEnabled = value) }
@@ -99,8 +141,8 @@ class TransportViewModel(
 
     /**
      * Persist the radio form as `net.radio.*` config via the owner-gated
-     * /v1/config write path. Each key is written as a string value (the backend
-     * config store coerces typed values). Activation happens on a desktop node
+     * /v1/config write path, at the node, each key with the JSON type the node
+     * reads. Activation happens on a desktop node
      * with the serial radio backend; on other nodes the values simply persist.
      */
     fun applyRadioConfig() {
@@ -109,13 +151,11 @@ class TransportViewModel(
             _state.update { it.copy(isSaving = true, error = null, successMessage = null) }
             try {
                 val reason = "Radio (LoRa/RNode) configured via Transport screen"
-                apiClient.updateConfig(KEY_ENABLED, s.radioEnabled.toString(), reason)
-                apiClient.updateConfig(KEY_SERIAL_PORT, s.serialPort.trim(), reason)
-                apiClient.updateConfig(KEY_FREQUENCY_HZ, s.frequencyHz.trim(), reason)
-                apiClient.updateConfig(KEY_BANDWIDTH_HZ, s.bandwidthHz.trim(), reason)
-                apiClient.updateConfig(KEY_SPREADING_FACTOR, s.spreadingFactor.trim(), reason)
-                apiClient.updateConfig(KEY_CODING_RATE, s.codingRate.trim(), reason)
-                apiClient.updateConfig(KEY_TX_POWER_DBM, s.txPowerDbm.trim(), reason)
+                // TYPED, at the NODE: the node reads `snap.bool()` / `snap.i64()`
+                // and does not coerce "true" or "868000000" (CSD-031).
+                for ((key, value) in radioConfigValues(s)) {
+                    apiClient.updateConfig(key, value, reason, host = nodeUrl())
+                }
                 PlatformLogger.i(TAG, "radio config applied (enabled=${s.radioEnabled}, port=${s.serialPort})")
                 _state.update {
                     it.copy(isSaving = false, successMessage = "Radio configuration saved")
@@ -146,6 +186,25 @@ class TransportViewModel(
  * "node degraded?" sentence, and not in `error`, which stays for the form's
  * writes (CSD-031).
  */
+/**
+ * The seven `net.radio.*` values as the node reads them: a boolean, a string
+ * and five integers. A numeric field left blank is not written (an empty string
+ * where the node wants an i64 was a silent fallback to its default).
+ */
+internal fun radioConfigValues(s: TransportScreenState): List<Pair<String, kotlinx.serialization.json.JsonElement>> {
+    val out = mutableListOf<Pair<String, kotlinx.serialization.json.JsonElement>>()
+    out += TransportViewModel.KEY_ENABLED to kotlinx.serialization.json.JsonPrimitive(s.radioEnabled)
+    out += TransportViewModel.KEY_SERIAL_PORT to kotlinx.serialization.json.JsonPrimitive(s.serialPort.trim())
+    listOf(
+        TransportViewModel.KEY_FREQUENCY_HZ to s.frequencyHz,
+        TransportViewModel.KEY_BANDWIDTH_HZ to s.bandwidthHz,
+        TransportViewModel.KEY_SPREADING_FACTOR to s.spreadingFactor,
+        TransportViewModel.KEY_CODING_RATE to s.codingRate,
+        TransportViewModel.KEY_TX_POWER_DBM to s.txPowerDbm,
+    ).forEach { (k, v) -> v.trim().toLongOrNull()?.let { out += k to kotlinx.serialization.json.JsonPrimitive(it) } }
+    return out
+}
+
 internal fun TransportScreenState.withLoadFailure(e: Throwable): TransportScreenState =
     copy(isLoading = false, loadFailure = ReadFailure.of(e))
 
@@ -166,4 +225,6 @@ data class TransportScreenState(
     val codingRate: String = "5",
     val txPowerDbm: String = "17",
     val isSaving: Boolean = false,
+    /** True once the form holds values read back from the node, not defaults. */
+    val radioConfigRead: Boolean = false,
 )

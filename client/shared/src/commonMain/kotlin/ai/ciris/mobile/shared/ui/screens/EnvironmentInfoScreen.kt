@@ -97,11 +97,15 @@ fun EnvironmentInfoScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onAddItem,
-                modifier = Modifier.testableClickable("btn_add_item") { onAddItem() }
-            ) {
-                Icon(CIRISIcons.add, contentDescription = localizedString("mobile.env_add_item"))
+            // Adding writes `POST /v1/memory/store`, which only an agent serves:
+            // not offered on a bare node rather than offered and refused (CSD-002).
+            if (state.agentAttached) {
+                FloatingActionButton(
+                    onClick = onAddItem,
+                    modifier = Modifier.testableClickable("btn_add_item") { onAddItem() }
+                ) {
+                    Icon(CIRISIcons.add, contentDescription = localizedString("mobile.env_add_item"))
+                }
             }
         }
     ) { paddingValues ->
@@ -181,8 +185,13 @@ fun EnvironmentInfoScreen(
                 }
             }
 
-            // Item cards
-            if (state.filteredItems.isEmpty() && !state.isLoading) {
+            // Item cards — a failed read is said, and not as "no items".
+            val itemsFailure = state.itemsFailure
+            if (itemsFailure != null) {
+                item {
+                    ReadFailureBlock(failure = itemsFailure, tagPrefix = "environment_items", inline = true)
+                }
+            } else if (state.filteredItems.isEmpty() && !state.isLoading) {
                 item {
                     Card(
                         colors = CardDefaults.cardColors(
@@ -210,7 +219,8 @@ fun EnvironmentInfoScreen(
                 items(state.filteredItems) { item ->
                     ItemCard(
                         item = item,
-                        onDelete = { onDeleteItem(item.id) }
+                        // Delete is the agent's (`DELETE /v1/memory/{id}`).
+                        onDelete = if (state.agentAttached) ({ onDeleteItem(item.id) }) else null
                     )
                 }
             }
@@ -312,7 +322,7 @@ private fun CategoryFilterChips(
 @Composable
 private fun ItemCard(
     item: EnvironmentGraphNodeData,
-    onDelete: () -> Unit
+    onDelete: (() -> Unit)?
 ) {
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -374,13 +384,18 @@ private fun ItemCard(
                         )
                     )
 
-                    // Delete button
-                    IconButton(onClick = { showDeleteConfirm = true }) {
-                        Icon(
-                            imageVector = CIRISIcons.delete,
-                            contentDescription = localizedString("mobile.env_delete"),
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
-                        )
+                    // Delete button — only where delete can succeed (an agent).
+                    if (onDelete != null) {
+                        IconButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.testableClickable("btn_delete_item_${item.id}") { showDeleteConfirm = true },
+                        ) {
+                            Icon(
+                                imageVector = CIRISIcons.delete,
+                                contentDescription = localizedString("mobile.env_delete"),
+                                tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
@@ -406,7 +421,7 @@ private fun ItemCard(
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
-                    onDelete()
+                    onDelete?.invoke()
                 }) {
                     Text(localizedString("mobile.env_delete"), color = MaterialTheme.colorScheme.error)
                 }

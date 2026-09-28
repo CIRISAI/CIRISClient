@@ -3635,7 +3635,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Audit] Filter changed: $filter")
                         auditViewModel.updateFilter(filter)
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Audit, clientMode?.isAgent ?: false) ?: homeTarget }
                 )
             }
 
@@ -3679,7 +3679,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] Toggle auto-scroll")
                         logsViewModel.toggleAutoScroll()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Logs, clientMode?.isAgent ?: false) ?: homeTarget },
                     // Reflect the existing backend mode: in node mode the "Agent"
                     // log source is disabled/grayed in the source dropdown.
                     isNodeMode = !isAgentMode
@@ -3764,7 +3764,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Clear selection")
                         memoryViewModel.clearSelection()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Memory, clientMode?.isAgent ?: false) ?: homeTarget },
                     onSwitchToGraph = {
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Switching to graph view")
                         currentScreen = Screen.GraphMemory
@@ -3892,7 +3892,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Config] User triggered refresh")
                         configViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Config, clientMode?.isAgent ?: false) ?: homeTarget },
                     meshConfigViewModel = meshConfigViewModel,
                 )
             }
@@ -3954,9 +3954,19 @@ fun CIRISApp(
                 // The operator surface (GET /v1/node/state) — CIRISServer#369/#370.
                 val nodeStateReadout by systemViewModel.nodeState.collectAsState()
 
+                // The agent half is asked only when an agent is attached (CSD-025).
+                LaunchedEffect(clientMode) {
+                    val attached = clientMode?.isAgent == true
+                    if (systemViewModel.agentAttached != attached) {
+                        systemViewModel.setAgentAttached(attached)
+                        systemViewModel.refresh()
+                    }
+                }
+
                 // Start/stop polling based on screen visibility
                 DisposableEffect(Unit) {
                     PlatformLogger.i(TAG, "[Screen.System] Starting system polling")
+                    systemViewModel.setAgentAttached(clientMode?.isAgent == true)
                     systemViewModel.startPolling()
                     onDispose {
                         PlatformLogger.i(TAG, "[Screen.System] Stopping system polling")
@@ -3971,24 +3981,18 @@ fun CIRISApp(
                 }
 
                 PlatformLogger.d("CIRISApp", "[Screen.System] Rendering system screen: " +
-                        "health=${systemData.health}, isPaused=${systemData.isPaused}, isLoading=$isSystemLoading")
+                        "health=${systemData.health}, agent=${systemData.agentAttached}, isLoading=$isSystemLoading")
 
                 SystemScreen(
                     systemData = systemData,
                     isLoading = isSystemLoading,
-                    onPauseRuntime = {
-                        PlatformLogger.i("CIRISApp", "[Screen.System] Pause runtime")
-                        systemViewModel.pauseRuntime()
-                    },
-                    onResumeRuntime = {
-                        PlatformLogger.i("CIRISApp", "[Screen.System] Resume runtime")
-                        systemViewModel.resumeRuntime()
-                    },
+                    // CSD-024/025: one runtime control, and it is Runtime's.
+                    onOpenRuntime = { currentScreen = Screen.Runtime },
                     onRefresh = {
                         PlatformLogger.i("CIRISApp", "[Screen.System] User triggered refresh")
                         systemViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.System, clientMode?.isAgent ?: false) ?: homeTarget },
                     nodeState = nodeStateReadout
                 )
             }
@@ -4264,6 +4268,7 @@ fun CIRISApp(
                 val isRuntimeLoading by runtimeViewModel.isLoading.collectAsState()
                 val runtimeError by runtimeViewModel.error.collectAsState()
                 val isRuntimeAdmin by runtimeViewModel.isAdmin.collectAsState()
+                val runtimeAdminRefused by runtimeViewModel.adminRefused.collectAsState()
 
                 // Start/stop polling based on screen visibility
                 DisposableEffect(Unit) {
@@ -4288,6 +4293,7 @@ fun CIRISApp(
                     runtimeData = runtimeData,
                     isLoading = isRuntimeLoading,
                     isAdmin = isRuntimeAdmin,
+                    adminRefused = runtimeAdminRefused,
                     onPause = {
                         PlatformLogger.i("CIRISApp", "[Screen.Runtime] Pause runtime")
                         runtimeViewModel.pauseRuntime()
@@ -4304,7 +4310,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Runtime] User triggered refresh")
                         runtimeViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Runtime, clientMode?.isAgent ?: false) ?: homeTarget }
                 )
             }
 
@@ -4424,7 +4430,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] User triggered refresh")
                         schedulerViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = Screen.Interact },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Scheduler, clientMode?.isAgent ?: false) ?: homeTarget },
                     onShowCreateDialog = {
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] Show create dialog")
                         schedulerViewModel.showCreateTaskDialog()
@@ -4485,7 +4491,12 @@ fun CIRISApp(
 
                 LaunchedEffect(Unit) {
                     PlatformLogger.i(TAG, "[Screen.EnvironmentInfo] Loading environment info on screen entry")
+                    // Writes and enrichment are the agent's (CSD-002).
+                    environmentInfoViewModel.setAgentAttached(clientMode?.isAgent == true)
                     environmentInfoViewModel.startPolling()
+                }
+                LaunchedEffect(clientMode) {
+                    environmentInfoViewModel.setAgentAttached(clientMode?.isAgent == true)
                 }
 
                 EnvironmentInfoScreen(

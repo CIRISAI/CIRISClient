@@ -260,3 +260,26 @@ either.
 * **Load-more pagination.** `hasMore` drives `btn_audit_load_more` and the
   offset paging behaviour differs between the agent's feed and anything a node
   might serve; nothing pins it.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Checked:** query names match; the node serves no `/v1/audit/*` and the client
+already raises `RouteNotOnThisHost` there, rendered as `audit_not_on_this_node`
+("…Nothing was filtered out"), so a bare node's Record tab is honest rather than
+an error. Record stays offered on every build by design
+(`CirclesNavTest.peopleSafetyRulesAndRecordAreNeverEmptyOnAnyBuild`).
+
+**Closed here:** the back arrow went to Interact; now the placed parent.
+
+**Still open**
+- The one list in five circles: `blocked_by: CIRISAgent#1205`.
+- Filters apply only to the graph source; SQLite and JSONL rows are merged in by
+  time alone (`audit.py:187-191, 262-266`), so a filtered view shows
+  non-matching rows and `total` is off. Draft issue in the review report.
+- `integrity_valid` / `integrity_warnings` (per-entry tamper evidence) are not in
+  the generated model; `GET /v1/audit/entries/{id}?verify=` is uncalled. The
+  per-entry verification is the feature this card most needs; next pass.
+
+**Stage:** building → building.

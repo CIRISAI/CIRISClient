@@ -185,3 +185,24 @@ performance question the gate does not ask.
    under-claims, but that a person over-reads it. `logs_provenance_note` is
    one sentence of prose that closes that gap: *"These are operating notes,
    not signed records."*
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Closed here**
+- *WARN returned nothing from an agent.* The agent emits and matches `WARNING`
+  (`telemetry_logs_reader.py:168`), the node `WARN` (`telemetry_logs.rs:136`),
+  and both match exactly. The WARN chip now asks for each spelling and merges
+  (`wireLevels`).
+- *Back arrow* went to Interact; now This node.
+
+**Still open**
+- `has_more` is always false on the agent (sliced before compared,
+  `telemetry.py:1450-1457`) and `total` is the page size: draft issue in the
+  review report.
+- `context.error_details` / `correlation_id` are dropped by the client — the
+  useful half of an ERROR row. Next pass.
+- No CRITICAL chip.
+
+**Stage:** building → building.

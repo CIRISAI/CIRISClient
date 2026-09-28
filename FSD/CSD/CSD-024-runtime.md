@@ -28,9 +28,12 @@ surface: runtime
 screen: Runtime
 ```
 
-`nav_map` derives `btn_my_things -> nav_instrument_this_node ->
-nav_epistemic_runtime`. **Not in `agentOnly` (`CirclesNav.kt:153`) and it must
-be** — see §6.
+`nav_map` derives `btn_my_things -> nav_instrument_this_agent ->
+nav_epistemic_runtime`. Runtime is under **This agent**, whose whole instrument
+is `requiresAgent` (`CirclesNav.kt`), so a bare node is never offered it (§6.1,
+closed). **It is the ONE runtime control**: System (CSD-025) used to carry a
+second pause/resume door onto the same `POST /v1/system/runtime/{action}`; that
+door is gone and System links here (`btn_system_open_runtime`), see §7.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -89,7 +92,7 @@ fields:
     type: bool
     example: false
     renders: "You cannot pause this agent — mobile.runtime_admin_required + mobile.runtime_admin_hint, rather than three buttons that do nothing"
-    tag: "proposed:runtime_admin_required"
+    tag: runtime_admin_required
 ```
 
 ```yaml csd:states
@@ -232,3 +235,44 @@ surface for one assertion.
    person is asked to trust what they saw here: a paused-and-stepped round
    should be able to produce its `trace:complete:v1`, and the screen should
    offer it. Recorded as an ask, not a defect.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate resolved (Runtime CSD-024 ↔ System CSD-025).** Both called `POST
+/v1/system/runtime/{action}`. Folded into Runtime: System's pause/resume, its
+confirm dialog and `SystemViewModel.pauseRuntime/resumeRuntime` are removed;
+System shows the cognitive state read-only with `btn_system_open_runtime` →
+`Screen.Runtime`. The retired tags (`btn_pause_runtime`, `btn_resume_runtime`,
+`btn_runtime_confirm`, `btn_runtime_cancel`) were driven by no flow or gate
+(grepped). `check_csd_routes.py`: duplicate mutating routes 26 → 25.
+
+**Closed here**
+- *Step read the wrong shape.* `POST /v1/system/runtime/step`
+  (`system_extensions.py:292`, ADMIN) answers a `SingleStepResponse`
+  (`step_point`, `processing_time_ms`, `tokens_used`); the client decoded it as
+  `RuntimeControlResponse` and read `current_step`, which that route never sends,
+  and nulled the time in code. So the pipeline card never showed where the agent
+  stood. Now `parseRuntimeStepBody` (`api/RuntimeWire.kt`); `runtime_step_point`
+  is real data.
+- *A declined act reported as done.* Pause/resume ignored `success`; a 200 with
+  `success:false` ("Not paused") read "Runtime resumed". Now `RuntimeActionDeclined`.
+- *Admin was assumed.* `_isAdmin` defaulted to `true` and `setAdminStatus` had no
+  callers, so an observer saw live Pause/Step buttons that 403. Every runtime
+  action including `state` is ADMIN on main, so the agent now answers it: false
+  until a state read succeeds; a 403 sets `adminRefused` and renders the admin
+  card (tag `runtime_admin_required`, now real), not a failed read.
+- *Back arrow went to Interact* (a bare node has none); it now goes where the tree
+  places the card.
+
+**Still open**
+- `streamConnected` is still a poll, not the reasoning stream (§3). Not changed:
+  the only subscriber is Interact's; opening a second stream here is a design
+  call, not a fix.
+- The state read on a mutating POST route, and `GET /runtime/queue` unused:
+  `blocked_by: CIRISAgent#1209`.
+- `trace:complete:v1` from a stepped round (§6.5) remains an ask.
+
+**Stage:** building → building (every contract confirmed; the flow is unwritten
+and `runtime_pipeline` / `runtime_idle` / `runtime_loading` are still `proposed:`).

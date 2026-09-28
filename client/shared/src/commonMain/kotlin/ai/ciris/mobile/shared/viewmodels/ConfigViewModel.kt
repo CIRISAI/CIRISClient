@@ -78,6 +78,9 @@ class ConfigViewModel(
     val successMessage: StateFlow<String?> = _successMessage.asStateFlow()
     private var dataLoadStarted = false
 
+    /** The last list read, kept for its typed values (an edit writes the same type back). */
+    private var lastRead: List<ConfigItemData> = emptyList()
+
     init {
         logInfo("init", "ConfigViewModel initialized (data load deferred until startPolling() called)")
         // NOTE: Don't auto-load here - wait for startPolling() to be called
@@ -121,6 +124,7 @@ class ConfigViewModel(
 
             try {
                 val response = apiClient.listConfigs()
+                lastRead = response.configs
                 logDebug(method, "API response received: ${response.configs.size} configs")
 
                 // Organize configs into sections
@@ -182,7 +186,14 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                apiClient.updateConfig(key, value, "Updated via mobile app")
+                // Keep the value's type: a boolean key stays a boolean (the node
+                // does not coerce "true"), a number stays a number (CSD-023).
+                val previous = lastRead.firstOrNull { it.key == key }?.rawValue
+                apiClient.updateConfig(
+                    key,
+                    ai.ciris.mobile.shared.api.configValueFor(value, previous),
+                    "Updated via mobile app",
+                )
                 logInfo(method, "Config updated successfully")
                 _successMessage.value = "Configuration \"$key\" updated"
                 loadConfigs() // Reload to show updated value
@@ -305,5 +316,7 @@ data class ConfigItemData(
     val displayValue: String,
     val updatedAt: String?,
     val updatedBy: String,
-    val isSensitive: Boolean
+    val isSensitive: Boolean,
+    /** The value as read, with its JSON type — so an edit writes the same type back (CSD-023). */
+    val rawValue: kotlinx.serialization.json.JsonElement? = null,
 )

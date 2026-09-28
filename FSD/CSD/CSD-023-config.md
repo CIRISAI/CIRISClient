@@ -191,3 +191,39 @@ fold (CC 3.1.9.2) needs two, which the gate does not stand up.
    drift this repo measures.
 5. **Whose setting is it?** The NODE's, attested by the owner. That is exactly
    what CC 3.4.5 says, and it is the right reading of the card.
+
+## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+
+Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+
+**Duplicate pair (Config ↔ Transport CSD-031): two doors onto one store, kept.**
+Both write `PUT /v1/config/{key}`. Config is the generic key/value editor of the
+backend the app is attached to (`$baseUrl`: the agent when one is attached, else
+the node). Transport is a TYPED form over exactly seven node keys
+(`net.radio.*`, read by the node's reconciler, `config_reconcile.rs:217-224`)
+and always writes them AT THE NODE (`LOCAL_NODE_URL`). On a bare node the two
+write the same store; Transport is the form that knows the types and the ranges,
+Config the escape hatch. Folding Transport into Config would lose the typing,
+which is the half that was broken.
+
+**Closed here**
+- *The node's shape.* CIRISServer answers `GET /v1/config` with a bare
+  `{key: ConfigEntry}` map and `PUT` with a bare entry (`config_api.rs:210,297`);
+  the generated client expected the agent's `{data: …}` envelope, so the list
+  threw "API returned null data" on every node and a successful PUT was reported
+  as a failure. Now `parseConfigListBody` / `parseConfigItemBody`
+  (`api/ConfigWire.kt`) read both.
+- *Values written as strings.* Every PUT sent `JsonPrimitive(String)`; the node
+  reads `snap.bool()` / `snap.i64()` without coercion. An edit now writes the
+  type the value had (`configValueFor`).
+- *Back arrow* went to Interact; now This node.
+
+**Still open**
+- No cohort envelope on `GET /v1/config`, and one PUT per key:
+  `blocked_by: CIRISServer#660`.
+- Error bodies differ (`{detail}` agent, `{error}` node); both are shown raw.
+- With an agent attached, This node › Config edits the AGENT's config, not the
+  node's. That is the host rule as written (`$baseUrl`), and it is worth a design
+  decision: the instrument is named for the node.
+
+**Stage:** building → building.

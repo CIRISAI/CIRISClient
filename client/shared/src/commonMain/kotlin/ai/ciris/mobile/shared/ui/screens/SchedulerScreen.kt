@@ -339,6 +339,19 @@ private fun SchedulerStatsRow(overview: SchedulerOverviewData) {
             color = semantic.success,
             modifier = Modifier.weight(1f)
         )
+        // Quarantined tasks: the one number that says the scheduler is
+        // failing quietly (`tasks_dead_lettered`, CSD-012).
+        SchedulerStatCard(
+            icon = CIRISIcons.warning,
+            label = localizedString("mobile.scheduler_stat_dead_lettered"),
+            value = overview.deadLettered?.toString() ?: NOT_READ,
+            color = when {
+                overview.deadLettered == null -> MaterialTheme.colorScheme.onSurfaceVariant
+                overview.deadLettered > 0 -> semantic.error
+                else -> semantic.success
+            },
+            modifier = Modifier.weight(1f).testable("scheduler_stat_dead_lettered", overview.deadLettered?.toString() ?: NOT_READ)
+        )
     }
 }
 
