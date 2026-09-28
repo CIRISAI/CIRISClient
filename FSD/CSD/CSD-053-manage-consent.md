@@ -31,6 +31,16 @@ What the screen renders after a revoke is what the node SAID, never what was
 asked for. That is CC 1.5's flip side, and it is the reason the still-active
 outcome (§2) exists at all.
 
+**0.5.218 builds the route (CIRISServer#657).** The maintainer's brief update
+(2026-09-25) reports `POST /v1/federation/peering/revoke` and
+`DELETE /v1/contacts/{key_id}` as built and tested, **always signed by the
+person, never the node**. So the disabled control can be enabled once the
+release ships. There is one limit, and the screen must carry it: grants the node
+wrote before the person re-signed them cannot be withdrawn and stay live. The
+route lists them as `remaining_grants`, and each must render as **still
+active**. A withdraw that leaves any of them standing is not reported as
+complete.
+
 ## 2. Surface (what)
 
 ```yaml csd:surface
@@ -189,6 +199,7 @@ the same tagging PR.
 | grant a direction | `POST /v1/federation/peering` → `grant_attestation_id` | CIRISServer | live (`src/federation_admin.rs`), node-only. The response carries no `granted` member; `PeeringResponse.isGranted` reads the id (#112). |
 | **withdraw a grant** | `POST /v1/federation/peering/revoke {attestation_id}` → `{attestation_id, withdraws, peer_key_ids, cohort_scope, remaining_grants}` | CIRISServer | **live** since ciris-server 0.5.218 (CIRISServer#657). Signed as the person. 409 `consent.grant_not_owner_authored {grants}` is the same fact with nothing withdrawn and is read as `remaining_grants`, not as an error. |
 | does node A mount the revoke route | `GET /v1/federation/peering/revoke` — the probe | CIRISClient | 405 = mounted, bare 404 = missing, anything else = not known (the POST decides). A GET, so it writes nothing. Asked, like the POST, **as node A's own session** — the client's token is the active node's, which after a switch is not A. |
+| un-contact a person | `DELETE /v1/contacts/{key_id}` | CIRISServer | live since 0.5.218 (#657; the client side is #112); the People side is CSD-005 |
 | the grant's envelope (attester, `for_key_id`, scope, dimension) | not requested by the client; `grant_receipt` exists node-side (`src/peer.rs:1525`) | CIRISServer + CIRISClient | **unconfirmed** — blocks `building` for `text_consent_attester` and `text_consent_for_key`. CIRISServer#616. |
 | a read of node A's peering grants | none | CIRISServer | **missing.** Revoke names a grant by id and the node lists none, so the control works only on a grant set up here in this session. |
 | the traces opt-in | `GET`/`PUT /v1/my-data/accord-settings` | **CIRISAgent** (`routes/my_data.py:580, 689`) | live on the agent — **wrong-host**: the node serves no `accord-settings` (its `/v1/my-data/*` is `lens-identifier` and `capacity` only, `src/system_data.rs:387,390`). The card is not marked `agentOnly`, so on a node build the switch reads a 404. |
