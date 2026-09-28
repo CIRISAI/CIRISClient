@@ -19,23 +19,31 @@ interface ConsentWithdrawApi {
     /** `DELETE {nodeUrl}/v1/contacts/{keyId}`. */
     suspend fun removeContact(nodeUrl: String, keyId: String): RemoveContactResponse
 
-    /** `POST {nodeUrl}/v1/federation/peering/revoke`. */
-    suspend fun revokeGrant(nodeUrl: String, attestationId: String): RevokeGrantResponse
+    /**
+     * `POST {nodeUrl}/v1/federation/peering/revoke`, as [token] — the session
+     * the node profile recorded for THAT node. The client's own session is the
+     * active node's, which after a switch is a different node (Codex, PR #115).
+     */
+    suspend fun revokeGrant(nodeUrl: String, attestationId: String, token: String?): RevokeGrantResponse
 
-    /** Is the revoke route mounted? `null` = could not tell. */
-    suspend fun revokeRouteMounted(nodeUrl: String): Boolean?
+    /** Is the revoke route mounted? `null` = could not tell. Asked as [token], like [revokeGrant]. */
+    suspend fun revokeRouteMounted(nodeUrl: String, token: String?): Boolean?
 }
 
-/** [ConsentWithdrawApi] over the real client, with the client's session. */
+/**
+ * [ConsentWithdrawApi] over the real client. A revoke goes out as the token
+ * the caller names; only a caller with NO recorded session falls back to the
+ * client's, which is what an unswitched install has anyway.
+ */
 class ClientConsentWithdraw(private val client: CIRISApiClient) : ConsentWithdrawApi {
     override suspend fun removeContact(nodeUrl: String, keyId: String): RemoveContactResponse =
         client.removeContact(keyId, nodeUrl)
 
-    override suspend fun revokeGrant(nodeUrl: String, attestationId: String): RevokeGrantResponse =
-        client.revokePeeringGrant(attestationId, nodeUrl)
+    override suspend fun revokeGrant(nodeUrl: String, attestationId: String, token: String?): RevokeGrantResponse =
+        client.revokePeeringGrant(attestationId, nodeUrl, token ?: client.getAccessToken())
 
-    override suspend fun revokeRouteMounted(nodeUrl: String): Boolean? =
-        client.isPeeringRevokeMounted(nodeUrl)
+    override suspend fun revokeRouteMounted(nodeUrl: String, token: String?): Boolean? =
+        client.isPeeringRevokeMounted(nodeUrl, token ?: client.getAccessToken())
 }
 
 /** A route the node does not mount answers 404 with no `reason_id`; every refusal it authors carries one. */

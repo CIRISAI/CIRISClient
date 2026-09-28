@@ -190,15 +190,19 @@ apart without reading copy:
 | state | tag | renders |
 |---|---|---|
 | route absent | `sas_not_on_this_node` | a 404 with no `error` id: "This node can't compare keys yet. It needs ciris-server 0.5.115 or newer." |
-| **mismatch recorded** | `sas_result_mismatch` | danger tone, above the card, until the screen is left: "The codes did not match. Don't share anything private with this key…" |
-| write refused | `sas_write_error` | the reason by remedy: not the owner (401/403), key not in the directory (404 `PEER_NOT_FOUND`), route absent (bare 404), failed. If a mismatch's untrust landed but its record did not, it says the untrust landed. |
+| **mismatch recorded** | `sas_result_mismatch` | danger tone, above the card, until the screen is left or a later **recorded match** supersedes it: "The codes did not match. Don't share anything private with this key…". It is kept apart from the last outcome (`recordedMismatch`), so a later *refused* answer, which landed nothing corrective, does not make it vanish; a withdrawal keeps it too, because withdrawing a check says nothing about the key. |
+| write refused | `sas_write_error` | the reason by remedy on EITHER step: not the owner (401/403), key not in the directory (404 `PEER_NOT_FOUND`), route absent (bare 404), failed. The trust step keeps its status and body as a `NodeRefusal` for this, like the SAS step. If a mismatch's untrust landed but its record did not, it says the untrust landed. |
+| write in flight | `btn_sas_*` and `seg_trust_state` disabled together | one flag for every sideband write. A manual trust change and a SAS outcome edit the same node row, so neither group is offered while the other's write is in flight, and the view model refuses a second write regardless of what the screen shows. |
 | peer not readable | `peer_detail_error` vs `peer_detail_not_found` | a failed peer read and a 404 no longer render the same "Peer not found" sentence |
 
 **A mismatch is not a cancel.** Each answer has its own button, tag,
 ConfirmSheet and result. `btn_sas_mismatch` uses the danger fill. Dismissing
 any sheet writes nothing. Confirming a mismatch first writes
 `trust: untrusted`, then `verified: false`. The protective write goes first so
-that, if only one lands, it is that one. The danger result then stays up.
+that, if only one lands, it is that one. **On a peer the owner has already
+BLOCKED there is no protective write**: `untrusted` is the weaker state, so a
+mismatch writes only `verified: false` and leaves the block alone. The danger
+result then stays up.
 
 ## 3. Contracts (who)
 
@@ -310,10 +314,18 @@ the fixture node. It shows `sas_result_mismatch`, and `text_sas_state` reads
 **Platforms.** All five. Every contract is a node route, so a bare node
 exercises the whole screen. The agent build adds nothing.
 
-**Tested in `commonTest` (`NetworkPeerDetailSasTest`, 14 tests)**:
+**Tested in `commonTest` (`NetworkPeerDetailSasTest`, 14 tests, and
+`NetworkPeerDetailFollowupsTest`, 8 tests over a faked `PeerSidebandApi`)**:
 * The outcome → writes table. Match writes `verified:true` only. Mismatch
-  writes `trust:untrusted` and then `verified:false`. Withdraw writes
-  `verified:false` only. Mismatch ≠ withdraw.
+  writes `trust:untrusted` and then `verified:false`, except on a BLOCKED peer,
+  where it writes `verified:false` alone. Withdraw writes `verified:false`
+  only. Mismatch ≠ withdraw.
+* The mismatch warning: set by a recorded mismatch, kept through a refused
+  answer and through a withdrawal, cleared only by a recorded match.
+* One write at a time: a manual trust change requested while a mismatch's
+  untrust is in flight is refused, and an answer cannot be opened while a
+  manual trust write is in flight.
+* A refresh clears the previous read's error before it starts.
 * The run: all writes landed means recorded. The first refusal stops it and is
   reported with what already landed. A refusal is never shown as recorded.
 * Read classification: 404 `PEER_SAS_UNAVAILABLE` → not in the directory;
@@ -325,7 +337,12 @@ exercises the whole screen. The agent build adds nothing.
 
 **Negative-tested**: with three planted defects (a mismatch that writes what a
 withdrawal writes, every 404 read as failed, and a refused write swallowed),
-5 of 14 went red.
+5 of 14 went red. The eight follow-up tests were run against the merged
+behaviour first: 7 of 8 red. The eighth (a refused trust step keeps its
+remedy) is green through the seam whatever the API client does, because the
+fake throws a typed refusal; the API client's own change (`setFederationPeerTrust`
+now throws `NodeRefusal`, not a flattened `RuntimeException`) has no unit
+harness, as the build carries no Ktor mock engine.
 
 **Not tested here.**
 * That two real nodes derive the same code. That property belongs to

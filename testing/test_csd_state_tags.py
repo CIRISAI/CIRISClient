@@ -32,9 +32,12 @@ a tag:
 
 WHERE THE CSDs COME FROM
 ------------------------
-`$CSD_REF` (default `origin/feat/csds-existing-cards`, where the cards are being
-written) read with `git show`; when that ref is not present — a shallow CI
-checkout — the CSDs committed under `FSD/CSD/`.
+The checked-out `FSD/CSD/` — the tree this test runs in, so an edit to a card
+is what gets held. Set `$CSD_REF` to grade another ref's cards instead (read
+with `git show`); a ref that is set and does not resolve is an error, not a
+fallback. It used to default to `origin/feat/csds-existing-cards`, and that
+branch outlived its merge (#90): a full clone kept grading the stale branch and
+a working-tree edit went unheld (Codex, PR #115).
 """
 
 from __future__ import annotations
@@ -49,7 +52,8 @@ import pytest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 SRC = ROOT / "client" / "shared" / "src"
 CSD_DIR = "FSD/CSD"
-CSD_REF = os.environ.get("CSD_REF", "origin/feat/csds-existing-cards")
+#: Set explicitly to grade a ref's cards instead of the working tree's. No default.
+CSD_REF = os.environ.get("CSD_REF") or None
 
 #: Real-named tags whose screens are being edited elsewhere. Each entry says
 #: why; an entry whose tag has appeared in the source fails the test, so the
@@ -79,15 +83,19 @@ def _git(*args: str) -> subprocess.CompletedProcess:
 
 
 def load_csds() -> dict[str, str]:
-    """name -> text, from `CSD_REF` when it resolves, else the working tree."""
-    if _git("rev-parse", "--verify", "--quiet", f"{CSD_REF}^{{commit}}").returncode == 0:
-        listing = _git("ls-tree", "--name-only", f"{CSD_REF}:{CSD_DIR}").stdout.split()
-        return {
-            name: _git("show", f"{CSD_REF}:{CSD_DIR}/{name}").stdout
-            for name in listing
-            if name.startswith("CSD-") and name.endswith(".md")
-        }
-    return {p.name: p.read_text() for p in sorted((ROOT / CSD_DIR).glob("CSD-*.md"))}
+    """name -> text, from the working tree; from `CSD_REF` only when it is set."""
+    if CSD_REF is None:
+        return {p.name: p.read_text() for p in sorted((ROOT / CSD_DIR).glob("CSD-*.md"))}
+    if _git("rev-parse", "--verify", "--quiet", f"{CSD_REF}^{{commit}}").returncode != 0:
+        raise RuntimeError(
+            f"CSD_REF={CSD_REF!r} does not resolve to a commit — unset it to grade the working tree"
+        )
+    listing = _git("ls-tree", "--name-only", f"{CSD_REF}:{CSD_DIR}").stdout.split()
+    return {
+        name: _git("show", f"{CSD_REF}:{CSD_DIR}/{name}").stdout
+        for name in listing
+        if name.startswith("CSD-") and name.endswith(".md")
+    }
 
 
 def real_state_tags(text: str) -> list[tuple[str, str]]:
@@ -225,7 +233,7 @@ CASES = [
 
 def test_the_csds_were_found():
     """An empty corpus would pass every case below by having none."""
-    assert CSDS, f"no CSDs under {CSD_REF}:{CSD_DIR} or ./{CSD_DIR}"
+    assert CSDS, f"no CSDs under {CSD_REF + ':' if CSD_REF else './'}{CSD_DIR}"
     assert CASES, "CSDs found but no real csd:states tags parsed — the parser is broken, not the corpus clean"
 
 

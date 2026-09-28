@@ -71,6 +71,20 @@ class ContactsViewModel(
      */
     private var sessionEpoch: Long = 0L
 
+    /**
+     * The node the DISPLAYED contact list came from, or null before any list
+     * has been published. A removal is bound to it: `DELETE /v1/contacts/{key}`
+     * names a row the person is looking at, and that row is a fact about the
+     * node that listed it. This model is app-scoped and the active node can be
+     * switched under it (Codex, PR #115), so [removeContact] compares the
+     * provider's answer NOW with the node that supplied the list, and a
+     * mismatch is a re-read, never a DELETE at the new node.
+     */
+    private var listNodeUrl: String? = null
+
+    /** The node the most recent list READ was issued to — de-duplicates [nodeChanged]. */
+    private var requestedNodeUrl: String? = null
+
     private val _allContacts = MutableStateFlow<List<Contact>>(emptyList())
 
     private val _contacts = MutableStateFlow<List<Contact>>(emptyList())
@@ -216,6 +230,14 @@ class ContactsViewModel(
     /** Pull a fresh contact list (browse mode). */
     fun refreshContacts() {
         val epoch = sessionEpoch
+        val url = nodeUrl()
+        requestedNodeUrl = url
+        if (listNodeUrl != null && listNodeUrl != url) {
+            // The list on screen is another node's. Drop it now rather than
+            // leave it up (and removable) until the new node answers.
+            PlatformLogger.i(tag, "[refreshContacts] node changed $listNodeUrl → $url; dropping the old list")
+            dropList()
+        }
         viewModelScope.launch {
             if (epoch != sessionEpoch) return@launch
             _loading.value = true
@@ -225,12 +247,22 @@ class ContactsViewModel(
                 // interleaves. The clear emptied the flows once; publishing A's
                 // response now would repopulate them for the signed-out screen
                 // or the next user.
-                if (epoch != sessionEpoch) return@launch
+                if (!current(epoch, url)) {
+                    // The node moved while this read was in flight: the answer
+                    // is about a node the screen no longer shows.
+                    PlatformLogger.i(tag, "[refreshContacts] node changed during the read; not publishing $url's list")
+                    return@launch
+                }
                 _routeUnsupported.value = false
                 _allContacts.value = sortedContacts(resp.contacts)
+                listNodeUrl = url
                 applySearch()
             } catch (e: NodeRefusal) {
-                if (epoch != sessionEpoch) return@launch
+                // A late refusal from the node switched away from is not a fact
+                // about the node on screen: publishing its bare 404 as
+                // routeUnsupported would send CIRISApp's landing fallback away
+                // from Contacts on a node that serves it (Codex, PR #116).
+                if (!current(epoch, url)) return@launch
                 if (e.statusCode == 404 && e.reasonId == null) {
                     // The route is not mounted — a version fact, not a failure.
                     _routeUnsupported.value = true
@@ -244,11 +276,14 @@ class ContactsViewModel(
                     )
                 }
             } catch (e: Exception) {
-                if (epoch != sessionEpoch) return@launch
+                if (!current(epoch, url)) return@launch
                 _error.value = e.message ?: e::class.simpleName
                 PlatformLogger.e(tag, "[listContacts] ${e.message}", e)
             } finally {
-                if (epoch == sessionEpoch) {
+                // The new node's own read (nodeChanged → refresh) owns these
+                // flags once the node has moved; this read's completion says
+                // nothing about it.
+                if (current(epoch, url)) {
                     _loading.value = false
                     // Loaded means "the question was asked", success or not — an
                     // empty list after a failed call must not render as "you have
@@ -262,15 +297,56 @@ class ContactsViewModel(
     /** Pull a fresh peer list from the node (picker mode). */
     fun refreshPeers() {
         val epoch = sessionEpoch
+        val url = nodeUrl()
         viewModelScope.launch {
             runApi("listFederationPeers") {
                 api.listPeers()
             }?.let { resp ->
-                if (epoch != sessionEpoch) return@launch
+                if (epoch != sessionEpoch || nodeUrl() != url) return@launch
                 _allPeers.value = sortedPeers(resp.peers)
                 applySearch()
             }
         }
+    }
+
+    /**
+     * The active node changed under this app-scoped model. Re-read from the
+     * node the provider names now; the list on screen is dropped first
+     * ([refreshContacts]). A no-op when the last read already went there, so
+     * the screen's first composition does not double the initial load.
+     */
+    fun nodeChanged() {
+        if (requestedNodeUrl == nodeUrl()) return
+        // The contact code is the OLD node's too: shown, it stays shareable as
+        // if it were the new node's, and a request still out to the old node
+        // would land on the new node's card (Codex, PR #116). Close it; the
+        // person reopens it and it loads from the node on screen.
+        dropContactCode()
+        refresh()
+    }
+
+    /** Is this coroutine's session still the session, and its node still the node? */
+    private fun current(epoch: Long, url: String): Boolean = epoch == sessionEpoch && nodeUrl() == url
+
+    /** Close the contact-code card and orphan every request it has out. */
+    private fun dropContactCode() {
+        codeRequest += 1
+        _contactCode.value = ContactCodeState.Closed
+        _contactCodeNodes.value = ContactCodeNodes.ALL
+        _contactCodeTicked.value = emptySet()
+        tickedSeeded = false
+        _contactCodeRefusal.value = null
+        _makeReachable.value = MakeReachableState.Idle
+    }
+
+    /** Forget the displayed contact list and everything derived from it. */
+    private fun dropList() {
+        listNodeUrl = null
+        _allContacts.value = emptyList()
+        _contacts.value = emptyList()
+        _contactsLoaded.value = false
+        _chatIneligible.value = emptySet()
+        _removal.value = null
     }
 
     /** Update the search query and refilter both lists locally. */
@@ -372,6 +448,17 @@ class ContactsViewModel(
         if (trimmed.isEmpty() || _removing.value != null) return
         val epoch = sessionEpoch
         val url = nodeUrl()
+        if (listNodeUrl != url) {
+            // The row the person tapped was listed by a different node than the
+            // one a DELETE would go to now. Sending it would withdraw consent on
+            // a node that never showed this contact. Re-read instead.
+            PlatformLogger.w(
+                tag,
+                "[removeContact] list came from ${listNodeUrl ?: "<none>"} but the node is now $url — re-reading, not removing",
+            )
+            refreshContacts()
+            return
+        }
         viewModelScope.launch {
             _removing.value = trimmed
             _removal.value = null
@@ -666,6 +753,8 @@ class ContactsViewModel(
      */
     fun clearSessionState() {
         sessionEpoch += 1
+        listNodeUrl = null
+        requestedNodeUrl = null
         _allContacts.value = emptyList()
         _contacts.value = emptyList()
         _contactsLoaded.value = false
@@ -679,13 +768,7 @@ class ContactsViewModel(
         _addError.value = null
         _justAdded.value = null
         _addOutcome.value = null
-        codeRequest += 1
-        _contactCode.value = ContactCodeState.Closed
-        _contactCodeNodes.value = ContactCodeNodes.ALL
-        _contactCodeTicked.value = emptySet()
-        tickedSeeded = false
-        _contactCodeRefusal.value = null
-        _makeReachable.value = MakeReachableState.Idle
+        dropContactCode()
         _removing.value = null
         _removal.value = null
     }
