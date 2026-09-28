@@ -116,6 +116,7 @@ here, with the aggravation that the flattering thing is a specific claim.
 | state read-back | `POST /v1/system/runtime/state` | CIRISAgent | **live, and contracted as a read** (`system/helpers.py:580-594`, "Get current state without changing it") |
 | the live step stream | `GET /v1/system/runtime/reasoning-stream` | CIRISAgent | live (`system_extensions.py:922`); opened by `InteractViewModel`, never by `RuntimeViewModel` — see below |
 | queue | `GET /v1/system/runtime/queue` | CIRISAgent | live (`system_extensions.py:39`); not called (`SystemExtensionsApi.kt:75` has zero callers) |
+| release memory | `POST /v1/system/runtime/memory/release` | CIRISAgent (`routes/system/runtime.py:204`) | live, **not called** — named below as additive drift and never given a row; a runtime control this card does not offer |
 
 `CIRISServer` serves **no** `/v1/system/runtime*` — `git grep -n 'system/runtime'
 origin/main -- src/` returns zero at 0.5.217, and the node folds only

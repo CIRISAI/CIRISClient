@@ -136,6 +136,9 @@ says in a comment which three it is leaving out.
 | the operator reading | `GET /v1/node/state` | CIRISServer | live (`src/operator_surface.rs`, #356 / #369 / #370) |
 | service health | `GET /v1/system/health` | **both** | live on CIRISServer (`/v1/system/health`) and CIRISAgent (`system/health.py`) |
 | processor status | `GET /v1/system/health` | CIRISAgent | live; the client reads the processor block off the same response |
+| every processor state and which is active | `GET /v1/system/processors` | CIRISAgent (`routes/system_extensions.py:581`, OBSERVER) | live, **not called** — the dedicated read for WAKEUP / WORK / DREAM / PLAY / SOLITUDE / SHUTDOWN; the card infers the same from the health envelope |
+| resource usage | `GET /v1/system/resources` | CIRISAgent (`routes/system/services.py:28`) | live, **not called** |
+| the agent's clock | `GET /v1/system/time` | CIRISAgent (`routes/system/health.py:979`) | live, **not called** |
 | queue / cognitive state | `GET /v1/system/health` | CIRISAgent | live; **absent on the node's response** |
 | environmental metrics | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py`) — **wrong-host on a node build** |
 | channels | `GET /v1/agent/channels` | CIRISAgent | live (`agent.py`) — **wrong-host on a node build** |

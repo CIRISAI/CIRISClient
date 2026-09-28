@@ -1105,7 +1105,10 @@ private fun ManagePane(
                 modifier = Modifier.weight(1f),
             )
             if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp).testable("delegations_loading"),
+                    strokeWidth = 2.dp,
+                )
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -1115,35 +1118,38 @@ private fun ManagePane(
                 localizedString("mobile.delegations_empty"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("text_delegations_empty"),
             )
         } else {
-            delegations.forEach { d ->
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .testable("row_delegation_${d.clientId}"),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+            Column(modifier = Modifier.fillMaxWidth().testable("delegations_list")) {
+                delegations.forEach { d ->
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .testable("row_delegation_${d.clientId}"),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(d.clientId, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                d.scope,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { onRevoke(d.clientId) },
-                            enabled = !busy,
-                            modifier = Modifier.testableClickable("btn_revoke_${d.clientId}") { onRevoke(d.clientId) },
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(localizedString("mobile.delegations_revoke"))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(d.clientId, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    d.scope,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { onRevoke(d.clientId) },
+                                enabled = !busy,
+                                modifier = Modifier.testableClickable("btn_revoke_${d.clientId}") { onRevoke(d.clientId) },
+                            ) {
+                                Text(localizedString("mobile.delegations_revoke"))
+                            }
                         }
                     }
                 }

@@ -86,7 +86,7 @@ fun GraphMemoryScreen(
                 cylinderLayout = cylinderLayout,
                 onNodeSelected = onNodeSelected,
                 onLayoutApplied = { /* Layout applied by CylinderCanvas */ },
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize().testable("graph_canvas"),
                 autoRotate = !state.isSimulationRunning,
                 groupByType = false
             )
@@ -98,7 +98,7 @@ fun GraphMemoryScreen(
                 onNodeDragStart = onNodeDragStart,
                 onNodeDrag = onNodeDrag,
                 onNodeDragEnd = onNodeDragEnd,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize().testable("graph_canvas")
             )
         }
 
@@ -272,7 +272,7 @@ fun GraphMemoryScreen(
         // Loading indicator
         if (state.isLoading) {
             CircularProgressIndicator(
-                modifier = Modifier.align(Alignment.Center),
+                modifier = Modifier.align(Alignment.Center).testable("graph_loading"),
                 color = MaterialTheme.colorScheme.primary
             )
         }

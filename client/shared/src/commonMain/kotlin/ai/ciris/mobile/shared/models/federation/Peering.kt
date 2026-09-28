@@ -72,4 +72,19 @@ data class PeeringResponse(
     /** True if the node reports the peer's reciprocal grant is already present. */
     val reciprocal: Boolean = false,
     val message: String? = null,
-)
+    /**
+     * The grant row's `attestation_id` — what the node actually sends
+     * (`src/federation_admin.rs` `PeeringResponse`), and the id
+     * `POST /v1/federation/peering/revoke` takes. The node sends no `granted`
+     * member at all, so [granted] alone read every successful peering as a
+     * failure; [isGranted] is the reading to use.
+     */
+    @SerialName("grant_attestation_id")
+    val grantAttestationId: String? = null,
+) {
+    /** The node wrote (or already held) its grant: it named the row. */
+    val isGranted: Boolean get() = granted || !grantAttestationId.isNullOrBlank()
+
+    /** The grant's id under either spelling. */
+    val grantRowId: String? get() = grantAttestationId?.takeIf { it.isNotBlank() } ?: grantId?.takeIf { it.isNotBlank() }
+}

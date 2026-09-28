@@ -194,6 +194,8 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **live** |
 | did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **live on this node's own machine, not called**; **remote reach** `blocked_by: CIRISServer#652` |
 | adopt the ceremony's output on another node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live, and it does NOT take this ceremony's artifact** — see below |
+| change the family after genesis — build the quorum envelope | `POST /v1/accord/family/change/envelope` | `src/accord.rs:2637` | live, **not called, and cannot succeed for this family**: it hardcodes `humanity-accord` (`:2151`) while supersede refuses that id — CIRISServer#682 |
+| replace the family | `POST /v1/accord/family/supersede` | `src/accord.rs:2641` | live, **not called**: always refuses `humanity-accord` by design (`:2306-2315`); its refusal names a route that does not exist — CIRISServer#682. The accord changes seats by re-running the ceremony and re-minting the seed (CSD-067 §3.1). `GET /v1/accord/family/history` (`:2645`) is read on the Accord card |
 
 **This ceremony's artifact is not the portable seed.** `genesis/assemble`
 returns and saves the founder-signed family genesis `SignedCegObject`
@@ -211,7 +213,10 @@ this ceremony's roster. So the done state should not tell anyone this JSON is
 what other nodes attach; it is the entrenched family, and attaching happens one
 step later (CSD-067 §3.1).
 
-**Every route this ceremony needs is live.** The whole of this document's gap
+**Every route this ceremony needs is live.** The two amendment rows cannot succeed for the accord family (CIRISServer#682);
+the accord's seats change by a new ceremony and a re-minted seed. The route-coverage report also filed
+`admit-node` and `announce` here; both are called from the Accord screen and are
+cited in CSD-067 §3. The whole of this document's gap
 list is client-side: four states with one tag between them, no save affordance
 on the artifact, and a surface the checker cannot resolve.
 
