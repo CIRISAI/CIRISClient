@@ -247,8 +247,7 @@ class ContactsViewModel(
                 // interleaves. The clear emptied the flows once; publishing A's
                 // response now would repopulate them for the signed-out screen
                 // or the next user.
-                if (epoch != sessionEpoch) return@launch
-                if (nodeUrl() != url) {
+                if (!current(epoch, url)) {
                     // The node moved while this read was in flight: the answer
                     // is about a node the screen no longer shows.
                     PlatformLogger.i(tag, "[refreshContacts] node changed during the read; not publishing $url's list")
@@ -259,7 +258,11 @@ class ContactsViewModel(
                 listNodeUrl = url
                 applySearch()
             } catch (e: NodeRefusal) {
-                if (epoch != sessionEpoch) return@launch
+                // A late refusal from the node switched away from is not a fact
+                // about the node on screen: publishing its bare 404 as
+                // routeUnsupported would send CIRISApp's landing fallback away
+                // from Contacts on a node that serves it (Codex, PR #116).
+                if (!current(epoch, url)) return@launch
                 if (e.statusCode == 404 && e.reasonId == null) {
                     // The route is not mounted — a version fact, not a failure.
                     _routeUnsupported.value = true
@@ -273,11 +276,14 @@ class ContactsViewModel(
                     )
                 }
             } catch (e: Exception) {
-                if (epoch != sessionEpoch) return@launch
+                if (!current(epoch, url)) return@launch
                 _error.value = e.message ?: e::class.simpleName
                 PlatformLogger.e(tag, "[listContacts] ${e.message}", e)
             } finally {
-                if (epoch == sessionEpoch) {
+                // The new node's own read (nodeChanged → refresh) owns these
+                // flags once the node has moved; this read's completion says
+                // nothing about it.
+                if (current(epoch, url)) {
                     _loading.value = false
                     // Loaded means "the question was asked", success or not — an
                     // empty list after a failed call must not render as "you have
@@ -311,7 +317,26 @@ class ContactsViewModel(
      */
     fun nodeChanged() {
         if (requestedNodeUrl == nodeUrl()) return
+        // The contact code is the OLD node's too: shown, it stays shareable as
+        // if it were the new node's, and a request still out to the old node
+        // would land on the new node's card (Codex, PR #116). Close it; the
+        // person reopens it and it loads from the node on screen.
+        dropContactCode()
         refresh()
+    }
+
+    /** Is this coroutine's session still the session, and its node still the node? */
+    private fun current(epoch: Long, url: String): Boolean = epoch == sessionEpoch && nodeUrl() == url
+
+    /** Close the contact-code card and orphan every request it has out. */
+    private fun dropContactCode() {
+        codeRequest += 1
+        _contactCode.value = ContactCodeState.Closed
+        _contactCodeNodes.value = ContactCodeNodes.ALL
+        _contactCodeTicked.value = emptySet()
+        tickedSeeded = false
+        _contactCodeRefusal.value = null
+        _makeReachable.value = MakeReachableState.Idle
     }
 
     /** Forget the displayed contact list and everything derived from it. */
@@ -743,13 +768,7 @@ class ContactsViewModel(
         _addError.value = null
         _justAdded.value = null
         _addOutcome.value = null
-        codeRequest += 1
-        _contactCode.value = ContactCodeState.Closed
-        _contactCodeNodes.value = ContactCodeNodes.ALL
-        _contactCodeTicked.value = emptySet()
-        tickedSeeded = false
-        _contactCodeRefusal.value = null
-        _makeReachable.value = MakeReachableState.Idle
+        dropContactCode()
         _removing.value = null
         _removal.value = null
     }

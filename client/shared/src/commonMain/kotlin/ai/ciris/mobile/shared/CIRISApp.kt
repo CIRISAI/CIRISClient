@@ -1036,8 +1036,18 @@ fun CIRISApp(
     // survive logout): the contact list is owner-gated content and must not
     // survive into the next session. Declared here, not in the approval-watch
     // effect above, because this ViewModel is constructed later in composition.
+    // The consent model is reset HERE and nowhere else: every way out of a
+    // session — the three logout menus, InteractScreen.onSessionExpired,
+    // Billing's onSignInAgain — clears the token, and a reset wired to some of
+    // those callbacks misses the rest (Codex, PR #116). A token arriving loads
+    // the node pair for the new owner.
     LaunchedEffect(currentAccessToken) {
-        if (currentAccessToken == null) contactsViewModel.clearSessionState()
+        if (currentAccessToken == null) {
+            contactsViewModel.clearSessionState()
+            consentObjectsViewModel.resetSession()
+        } else {
+            consentObjectsViewModel.sessionStarted()
+        }
     }
     // A node switch moves the node under the same app-scoped model: the list it
     // shows is the OLD node's, and a Remove on it would DELETE at the new one
@@ -2907,9 +2917,6 @@ fun CIRISApp(
                                     // against the about-to-be-revoked token, fires a 401, and
                                     // TokenManager.on401Error races the user's next Sign-In tap → bounce.
                                     interactViewModel.resetState()
-                                    // App-scoped like the contacts model: the grant id, the revoke
-                                    // outcome and node A's session token are this owner's, not the next.
-                                    consentObjectsViewModel.resetSession()
                                     settingsViewModel.logout {
                                         PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
                                         currentAccessToken = null
@@ -3020,7 +3027,6 @@ fun CIRISApp(
                         // Cancel InteractViewModel polling before token revocation — see
                         // matching guard in nav-bar onLogoutClick for rationale.
                         interactViewModel.resetState()
-                        consentObjectsViewModel.resetSession()
                         settingsViewModel.logout {
                             PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
                             currentAccessToken = null
@@ -4192,7 +4198,6 @@ fun CIRISApp(
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
                         interactViewModel.resetState()
-                        consentObjectsViewModel.resetSession()
                         settingsViewModel.logout {
                             currentAccessToken = null
                             currentScreen = Screen.Login

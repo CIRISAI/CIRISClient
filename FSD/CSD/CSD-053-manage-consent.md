@@ -138,8 +138,11 @@ And what the last revoke DID — every line here is something the **node** said:
 | **refused** | any other non-2xx that carries a `reason_id` | the refusal, localized by id — `consent_revoke_refusal` |
 | **route missing** | a bare 404 (no `reason_id`) on the POST | flips to the route-missing state above; nothing was withdrawn |
 
-Whatever the answer, the screen **re-reads** (`loadNodes` and the route
-probe) rather than flipping a row on the strength of the click. The outcome
+The row moves on the strength of the node's **answer to the POST** — not of
+the click, and not of a re-read: the node serves no read of its peering grants
+(§3), so there is nothing to re-read the row from. What the screen does re-read
+afterwards (`loadNodes` and the route probe) is the node pair and whether the
+route is mounted, which are readable. The outcome
 lines are cleared when a new set-up starts and again when its A→B grant is
 accepted — a fresh grant under "Withdrawn" would be reporting its
 predecessor's fate as its own — and the whole session (grant id, rows,
@@ -194,7 +197,7 @@ the same tagging PR.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the owned node pair | `GET /v1/federation/owned-nodes` (`getOwnedNodes()`) | CIRISServer | live; owned REMOTE nodes carry no reachable endpoint yet, so B's `baseUrl` is empty until mesh addressing lands |
+| the owned node pair | `GET /v1/setup/owned-nodes` (`getOwnedNodes()`, local node only) | CIRISServer | live; owned REMOTE nodes carry no reachable endpoint yet, so B's `baseUrl` is empty until mesh addressing lands |
 | each node's key record | `GET /v1/federation/self-key-record` | CIRISServer | live (`src/federation_admin.rs`), node-only |
 | grant a direction | `POST /v1/federation/peering` → `grant_attestation_id` | CIRISServer | live (`src/federation_admin.rs`), node-only. The response carries no `granted` member; `PeeringResponse.isGranted` reads the id (#112). |
 | **withdraw a grant** | `POST /v1/federation/peering/revoke {attestation_id}` → `{attestation_id, withdraws, peer_key_ids, cohort_scope, remaining_grants}` | CIRISServer | **live** since ciris-server 0.5.218 (CIRISServer#657). Signed as the person. 409 `consent.grant_not_owner_authored {grants}` is the same fact with nothing withdrawn and is read as `remaining_grants`, not as an error. |

@@ -702,21 +702,22 @@ data class LogEntryData(
 ) {
     /**
      * The row's address in test tags (`logs_row_ts_<key>`, `logs_row_msg_<key>`,
-     * CSD-029): the timestamp's digits to the second, then `_` and a
-     * disambiguator — `2026-09-25T09:31:29.123Z` → `20260925093129_123`. A flow
-     * knows the time of the line it is looking for and cannot know [id], so the
-     * 14-digit prefix is what it matches on (`logs_row_ts_20260925093129*`);
-     * the suffix is what keeps two rows written in the same second from
-     * registering under ONE tag (Codex, PR #115) — the fractional seconds when
-     * the node sends them, else a short hash of [id] (or of [message] for a
-     * row with no id).
+     * CSD-029): the timestamp's digits to the second, the fractional digits
+     * when the node sends them, and a short hash of [id] (or of [message] for
+     * a row with no id) — `2026-09-25T09:31:29.123Z` → `20260925093129_123_<hash>`,
+     * `2026-09-25T09:31:29Z` → `20260925093129_<hash>`. A flow knows the time
+     * of the line it is looking for and cannot know [id], so the 14-digit
+     * prefix is what it matches on (`logs_row_ts_20260925093129*`). The rest is
+     * what keeps two rows written in the same second — or the same millisecond
+     * — from registering under ONE tag (Codex, PR #115, #116): the hash is
+     * always there, never traded for the fraction.
      */
     val rowKey: String
         get() {
             val second = timestamp.filter { it.isDigit() }.take(14)
             val fraction = timestamp.substringAfter('.', "").takeWhile { it.isDigit() }
-            val suffix = fraction.ifEmpty { id.ifBlank { message }.hashCode().toUInt().toString(36) }
-            return "${second}_$suffix"
+            val row = id.ifBlank { message }.hashCode().toUInt().toString(36)
+            return if (fraction.isEmpty()) "${second}_$row" else "${second}_${fraction}_$row"
         }
 
     val formattedTime: String

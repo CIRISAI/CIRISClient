@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ConsentWithdrawApi
 import ai.ciris.mobile.shared.api.NodeRefusal
+import ai.ciris.mobile.shared.api.PeeringApi
 import ai.ciris.mobile.shared.models.NodeProfile
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
@@ -15,6 +16,7 @@ import ai.ciris.mobile.shared.models.federation.RevokeGrantResponse
 import ai.ciris.mobile.shared.models.federation.SignedKeyRecord
 import ai.ciris.mobile.shared.models.federation.WithdrawnGrant
 import ai.ciris.mobile.shared.ui.screens.revokeNote
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -39,7 +41,7 @@ private const val GRANT = "grant-a-to-b"
 /** A node that answers what it is told to, and records every call with the URL it went to. */
 private class FakeWithdraw(
     var remove: (keyId: String) -> RemoveContactResponse = { RemoveContactResponse(it, listOf(WithdrawnGrant("g1", "w1"))) },
-    var revoke: (id: String) -> RevokeGrantResponse = { RevokeGrantResponse(it, withdraws = "w-$it") },
+    var revoke: suspend (id: String) -> RevokeGrantResponse = { RevokeGrantResponse(it, withdraws = "w-$it") },
     var mounted: Boolean? = true,
 ) : ConsentWithdrawApi {
     val removeCalls = mutableListOf<Pair<String, String>>()
@@ -61,6 +63,20 @@ private class FakeWithdraw(
         probeTokens += token
         return mounted
     }
+}
+
+/** Two owned nodes, key records for any node asked, and a grant for any peering asked — unless told otherwise. */
+private class FakePeering(
+    var grant: suspend (nodeUrl: String, request: PeeringRequest) -> PeeringResponse =
+        { _, _ -> PeeringResponse(grantAttestationId = "grant-new") },
+) : PeeringApi {
+    var ownedReads = 0
+    override suspend fun ownedNodes(): OwnedNodesDto {
+        ownedReads += 1
+        return OwnedNodesDto(owner = PERSON, nodes = listOf(OwnedNodeDto("node-a", isSelf = true), OwnedNodeDto("node-b")))
+    }
+    override suspend fun selfKeyRecord(nodeUrl: String, token: String?): SignedKeyRecord = SignedKeyRecord(keyId = "key-of-$nodeUrl")
+    override suspend fun peer(nodeUrl: String, token: String?, request: PeeringRequest): PeeringResponse = grant(nodeUrl, request)
 }
 
 /** The real client, pointed at a port nothing listens on, standing in for the AGENT. */
@@ -209,6 +225,27 @@ class WithdrawConsentTest {
     }
 
     @Test
+    fun aLateFailureFromTheNodeSwitchedAwayFromIsNotPublished() {
+        // The read went to NODE_URL; the node is OTHER_NODE_URL by the time it
+        // fails with a bare 404. That 404 is A's age, not B's — published, it
+        // would flip routeUnsupported and CIRISApp's landing fallback away
+        // from Contacts on a node that serves it (Codex, PR #116).
+        var node = NODE_URL
+        val vm = ContactsViewModel(
+            agentClient(),
+            nodeUrl = { node },
+            withdraw = FakeWithdraw(),
+            readContacts = {
+                node = OTHER_NODE_URL
+                throw NodeRefusal(null, null, 404)
+            },
+        )
+        assertFalse(vm.routeUnsupported.value, "node A's bare 404 was published as node B's")
+        assertNull(vm.error.value)
+        assertFalse(vm.contactsLoaded.value, "a read of another node does not count as this node having answered")
+    }
+
+    @Test
     fun aBare404IsANodeTooOldNotARefusal() {
         val vm = contactsVm(FakeWithdraw(remove = { throw NodeRefusal(null, null, 404) }))
         vm.removeContact(PERSON)
@@ -226,7 +263,8 @@ class WithdrawConsentTest {
 
     // ── Manage Consent: revoke ────────────────────────────────────────────
 
-    private var ownedReads = 0
+    private val peering = FakePeering()
+    private val ownedReads: Int get() = peering.ownedReads
     private val nodeA = NodeProfile(
         id = NodeProfile.idFor(CIRISApiClient.LOCAL_NODE_URL),
         name = "This device",
@@ -243,13 +281,11 @@ class WithdrawConsentTest {
             aToB = if (granted) GrantDirectionState.GRANTED else GrantDirectionState.IDLE,
             aToBGrantId = if (granted) GRANT else null,
         ),
-        peer: suspend (PeeringRequest, String, String?) -> PeeringResponse = { _, _, _ -> PeeringResponse(grantAttestationId = "grant-new") },
+        peering: PeeringApi = this.peering,
     ) = ConsentObjectsViewModel(
         client,
         withdraw = fake,
-        readOwnedNodes = { ownedReads += 1; OwnedNodesDto(owner = PERSON, nodes = listOf(OwnedNodeDto("node-a", isSelf = true), OwnedNodeDto("node-b"))) },
-        readSelfKeyRecord = { nodeUrl, _ -> SignedKeyRecord(keyId = "key-of-$nodeUrl") },
-        postPeering = peer,
+        peering = peering,
         initialState = initial,
     )
 
@@ -286,8 +322,79 @@ class WithdrawConsentTest {
         assertNull(s.message)
         assertEquals(RevokeRoute.UNKNOWN, s.revokeRoute)
         assertFalse(s.canRevoke)
-        assertNull(s.nodeA?.sessionToken, "the previous owner's bearer token must not outlive their session")
-        assertEquals(CIRISApiClient.LOCAL_NODE_URL, s.nodeA?.baseUrl, "which nodes exist is not session state")
+        // The node pair goes too: B is the previous owner's remote node, and
+        // with it `canRun` (Codex, PR #116). The bearer token goes with A.
+        assertNull(s.nodeA, "node A carried the previous owner's bearer token")
+        assertNull(s.nodeB, "node B is the previous owner's remote node")
+        assertFalse(s.canRun)
+    }
+
+    @Test
+    fun theNextSessionLoadsItsOwnNodePairOnce() {
+        val client = agentClient().apply { setAccessToken("tok-owner-a") }
+        val vm = consentVm(FakeWithdraw(), client = client)
+        vm.resetSession()
+        val reads = ownedReads
+
+        // The next owner signs in: CIRISApp's token effect fires sessionStarted.
+        client.setAccessToken("tok-owner-b")
+        vm.sessionStarted()
+        val s = vm.state.value
+        assertEquals(reads + 1, ownedReads, "the pair is re-read for the new session")
+        assertEquals("tok-owner-b", s.nodeA?.sessionToken, "node A's session is the NEW owner's")
+        assertTrue(s.canRun, "the new owner's pair is usable")
+
+        // The effect firing again for the same session (a recomposition) loads nothing.
+        vm.sessionStarted()
+        assertEquals(reads + 1, ownedReads)
+    }
+
+    // ── A request still out at logout writes nothing back (Codex, PR #116) ──
+
+    @Test
+    fun aRevokeStillInFlightAtLogoutDoesNotRestoreTheOldOwnersState() {
+        val gate = CompletableDeferred<Unit>()
+        val fake = FakeWithdraw(revoke = { gate.await(); RevokeGrantResponse(it, withdraws = "w-$it") })
+        val vm = consentVm(fake)
+        vm.revokeAToB()
+        assertTrue(vm.state.value.isRevoking)
+
+        vm.resetSession()
+        val reads = ownedReads
+        gate.complete(Unit) // the node answers the previous owner's revoke after they left
+        val s = vm.state.value
+        assertEquals(ConsentObjectsState(), s, "a suspended revoke resumed after logout and wrote the old session back")
+        assertEquals(reads, ownedReads, "no re-read on behalf of a session that ended")
+    }
+
+    @Test
+    fun aSetupStillInFlightAtLogoutDoesNotRestoreTheOldOwnersState() {
+        val gate = CompletableDeferred<Unit>()
+        val slow = FakePeering(grant = { _, _ -> gate.await(); PeeringResponse(grantAttestationId = "grant-new") })
+        val vm = consentVm(FakeWithdraw(), granted = false, peering = slow)
+        vm.runBilateralPeering()
+        assertTrue(vm.state.value.isRunning)
+
+        vm.resetSession()
+        gate.complete(Unit)
+        val s = vm.state.value
+        assertEquals(ConsentObjectsState(), s, "a suspended set-up resumed after logout and wrote its grant into the next session")
+    }
+
+    // ── Node A's session survives the re-read (Codex, PR #116) ──────────
+
+    @Test
+    fun theReReadAfterARevokeKeepsNodeAsOwnSession() {
+        val client = agentClient().apply { setAccessToken("tok-A" ) }
+        val fake = FakeWithdraw()
+        val vm = consentVm(fake, client = client)
+
+        // Switched: the client now carries B's session. The revoke goes out as
+        // A (PR #115) — and the re-read that follows must not rebuild A with B's.
+        client.setAccessToken("tok-B")
+        vm.revokeAToB()
+        assertEquals("tok-A", vm.state.value.nodeA?.sessionToken, "loadNodes rebuilt node A with the ACTIVE node's token")
+        assertEquals(listOf<String?>("tok-A", "tok-A"), fake.probeTokens, "the probe after the re-read authenticated to A as B")
     }
 
     // ── A new set-up is a new grant (Codex, PR #115) ─────────────────────
@@ -296,7 +403,7 @@ class WithdrawConsentTest {
     fun aNewSetupForgetsTheLastRevokeOutcomeAtItsStart() {
         // No fake for the peering here: the assertion is about the state the
         // moment the run STARTS, before any node has answered.
-        val vm = consentVm(FakeWithdraw(), initial = afterARevoke, peer = { _, _, _ -> throw IllegalStateException("node down") })
+        val vm = consentVm(FakeWithdraw(), initial = afterARevoke, peering = FakePeering(grant = { _, _ -> throw IllegalStateException("node down") }))
         vm.runBilateralPeering()
         val s = vm.state.value
         assertNull(s.withdrawnBy, "\"Withdrawn\" from the last grant shown over the new set-up")

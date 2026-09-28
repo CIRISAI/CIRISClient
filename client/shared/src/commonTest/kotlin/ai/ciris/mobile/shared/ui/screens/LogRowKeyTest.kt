@@ -39,11 +39,23 @@ class LogRowKeyTest {
     }
 
     @Test
-    fun the_fraction_is_the_disambiguator_when_the_node_sends_one() {
-        assertEquals("20260925093129_123456", entry("2026-09-25T09:31:29.123456+00:00").rowKey)
-        assertEquals("20260925093129_000", entry("2026-09-25T09:31:29.000Z").rowKey)
+    fun the_fraction_is_kept_when_the_node_sends_one() {
+        assertTrue(entry("2026-09-25T09:31:29.123456+00:00").rowKey.startsWith("20260925093129_123456_"))
+        assertTrue(entry("2026-09-25T09:31:29.000Z").rowKey.startsWith("20260925093129_000_"))
         // The offset's digits are never part of the key.
-        assertEquals("20260925093129_5", entry("2026-09-25T09:31:29.5+02:00").rowKey)
+        assertEquals(entry("2026-09-25T09:31:29.5Z").rowKey, entry("2026-09-25T09:31:29.5+02:00").rowKey)
+        assertTrue(entry("2026-09-25T09:31:29.5+02:00").rowKey.startsWith("20260925093129_5_"))
+    }
+
+    // Two rows in one MILLISECOND — a burst from one service — shared a tag
+    // when the fraction stood in for the row (Codex, PR #116).
+
+    @Test
+    fun two_rows_with_the_same_fraction_have_different_keys() {
+        val a = entry("2026-09-25T09:31:29.123Z", id = "row-1", message = "first")
+        val b = entry("2026-09-25T09:31:29.123Z", id = "row-2", message = "second")
+        assertNotEquals(a.rowKey, b.rowKey)
+        assertTrue(a.rowKey.startsWith("20260925093129_123_") && b.rowKey.startsWith("20260925093129_123_"))
     }
 
     @Test
