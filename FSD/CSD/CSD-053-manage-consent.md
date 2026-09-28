@@ -1,7 +1,7 @@
-# CSD-053 — Manage Consent (a grant with no way back)
+# CSD-053 — Manage Consent (a grant, and the way back)
 
 **CSD**: CSD-053 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, Rules tab
-**Flow**: unwritten
+**Flow**: written for the revoke path (§4); the set-up path needs two reachable nodes
 
 ```yaml csd:stage
 stage: building
@@ -16,23 +16,20 @@ which other node, in both directions, and take that agreement back.** Serves
 one line: *"Autonomy is only real if it remains revocable — **consent that
 cannot be withdrawn is not consent**"* (CC 1.5).
 
-**The revoke button on this screen is permanently disabled.**
-`revokeEndpointAvailable` defaults to `false` (`ManageConsentScreen.kt:89`), its
-`onClick` is `/* TODO: wire when server ships withdraws */` (`:204`), and the
-node confirms the reason: there is no route that withdraws a peering grant.
-`POST /v1/federation/consent` is grant-only and idempotent, and the entire
-CIRISServer codebase has two DELETE routes, neither of them peering
-(`src/auth/api_keys.rs:324`, `src/trust_root_api.rs:419`). The screen is honest
-about it — it renders `mobile.manage_consent_revoke_todo` in the error colour
-under the dead button — and that honesty is why this is a `sketched` CSD with a
-concrete upstream ask rather than a defect report.
+**Revoke is live.** Until #112 the button was hard-disabled behind a
+compile-time flag (`revokeEndpointAvailable = false`) with a TODO for an
+endpoint the node did not have. ciris-server 0.5.218 shipped the route
+(CIRISServer#657) and the flag is gone: the control now drives
+`POST /v1/federation/peering/revoke` on node A, and **whether node A has the
+route is asked of node A at runtime**, never decided by a build. The primitive
+underneath is the one CC always said was there — a `withdraws` against one's
+own row (CC 2.4.1.1), and *"on revoke, the granting node MUST cease replicating
+the named prefixes to P"* (CC 3.3.7). The node signs the `withdraws` **as the
+person** (consent is by humans, CIRISPersist#857); the app does no crypto.
 
-CC says the primitive is already there: a `withdraws`/`recants` against one's
-own row is one of the five universal wire primitives, and every attester may
-emit one against a row it signed (CC 2.4.1.1). CC 3.3.7 makes the obligation
-explicit — *"on revoke, the granting node MUST cease replicating the named
-prefixes to P"*. So the gap is a missing HTTP route over an existing capability,
-which is the cheapest kind of gap and the worst kind to leave.
+What the screen renders after a revoke is what the node SAID, never what was
+asked for. That is CC 1.5's flip side, and it is the reason the still-active
+outcome (§2) exists at all.
 
 ## 2. Surface (what)
 
@@ -45,9 +42,9 @@ screen: ManageConsent
 and the same under all four other circles — `Placement(NavSurface.ManageConsent,
 Tab.RULES, ALL)`.
 
-**It should be in one place, not five.** The screen's subject is a pair of
-*saved node profiles*, `state.nodeA` and `state.nodeB` (`ManageConsentScreen.kt:154`),
-fed by `apiClient.getOwnedNodes()` (`ConsentObjectsViewModel.kt:86`). Standing in
+**It should be in one place, not five.** The screen's subject is a pair of the
+owner's own nodes, `state.nodeA` and `state.nodeB`, fed by
+`apiClient.getOwnedNodes()` (`ConsentObjectsViewModel.loadNodes`). Standing in
 Family or in Everyone changes nothing about it. Its natural home is **My things
 › Devices & keys**, beside `IdentityManagement`; see §5.
 
@@ -59,7 +56,7 @@ fields:
     use: display-only
     type: "enum[granted,in_progress,failed,idle]"
     example: "granted"
-    renders: "A → B  Granted  ·  B → A  Granted, one row per direction"
+    renders: "A → B  Granted  ·  B → A  Granted, one row per direction. A direction leaves Granted only when the node says it withdrew that grant."
     tag: "proposed:row_consent_direction"
   - ceg: x_private:is_ratified
     use: display-only
@@ -67,6 +64,18 @@ fields:
     example: true
     renders: "Ratified — both directions granted; otherwise Not ratified. Bilateral is the unit, one grant is not."
     tag: "proposed:chip_consent_ratified"
+  - ceg: x_private:remaining_grants
+    use: display-only
+    type: "list[string]"
+    example: ["att-7f3a…"]
+    renders: "Still active — the grant ids the node reported it did NOT withdraw (node-authored, so not the person's to withdraw), each with why, in the ordinary tone; never struck through and never under a Withdrawn line"
+    tag: consent_remaining_grants
+  - ceg: x_private:withdrawn_by
+    use: display-only
+    type: string
+    example: "att-9c21…"
+    renders: "Withdrawn. The node recorded your withdrawal ({id}) — the `withdraws` row the node signed as the person; shown only when nothing remains"
+    tag: text_consent_withdrawn
   - ceg: x_private:for_key_id
     use: display-only
     type: unconfirmed
@@ -93,8 +102,39 @@ fields:
 The family is **reserved** (CC 3.1.5, `accord-agent`/CIRISAgent), so
 `check_csd_v3.py` refuses `use: emit` here — and that refusal states the true
 architecture: `btn_consent_setup_peering` asks the node to author a grant
-(`POST /v1/federation/peering`, `CIRISApiClient.kt:2328`); the app holds no keys
-and mints nothing.
+(`POST /v1/federation/peering`), `btn_consent_revoke_peering` asks it to
+withdraw one, and the app holds no keys and mints nothing.
+
+### 2.1 The revoke control's states
+
+`btn_consent_revoke_peering` is enabled by `ConsentObjectsState.canRevoke`:
+node A is known, a grant is **named** (`aToBGrantId`), the route is not known
+to be missing, and nothing is running. Each way it is not enabled says why
+(`revokeNote`, pure and tested without Compose):
+
+| state | how the screen knows | renders (tag) |
+|---|---|---|
+| **route missing** | the GET probe answered a bare 404, or the POST did (`RevokeRoute.MISSING`) | "This node can't withdraw consent yet (needs ciris-server 0.5.218)." — `text_consent_revoke_unsupported`. Outranks everything: no grant id changes what a node without the route can do. |
+| **no named grant** | `aToBGrantId` null and no outcome to show | "Revoke names one grant, and this node doesn't list its peering grants yet, so it works on a grant set up here in this session." — `text_consent_revoke_needs_grant`. The node serves no read of its peering grants, so a grant made elsewhere cannot be named here. |
+| **live** | a grant this screen saw granted, route `MOUNTED` or `UNKNOWN` | the button, enabled. `UNKNOWN` stays live on purpose: the POST itself decides. |
+| **revoking** | `isRevoking` | the progress affordance inside the button |
+
+And what the last revoke DID — every line here is something the **node** said:
+
+| outcome | node's answer | renders (tag) |
+|---|---|---|
+| **withdrawn** | 2xx with `withdraws` set and `remaining_grants` empty, `attestation_id` matching | A → B leaves Granted; "Withdrawn. The node recorded your withdrawal ({id})" — `text_consent_withdrawn` |
+| **still active** | 409 `consent.grant_not_owner_authored` with `grants: [...]`, or 2xx with `remaining_grants` non-empty | A → B **stays Granted, because it is**; the ids under "Still active" — `consent_remaining_grants` |
+| **refused** | any other non-2xx that carries a `reason_id` | the refusal, localized by id — `consent_revoke_refusal` |
+| **route missing** | a bare 404 (no `reason_id`) on the POST | flips to the route-missing state above; nothing was withdrawn |
+
+Whatever the answer, the screen **re-reads** (`loadNodes` and the route
+probe) rather than flipping a row on the strength of the click. The outcome
+lines are cleared when a new set-up starts and again when its A→B grant is
+accepted — a fresh grant under "Withdrawn" would be reporting its
+predecessor's fate as its own — and the whole session (grant id, rows,
+outcome, route answer, node A's token) is forgotten on logout, because the
+ViewModel is app-scoped and outlives the owner.
 
 **`for_key_id` and the attester are the two facts this screen most needs and does
 not have.** Since 0.5.211 the node signs a replication grant as *the owner's
@@ -118,67 +158,102 @@ CSD-005 §3 files for `GET /v1/contacts`.
   — through `btn_open_user_consent` as a secondary card. A person reading the
   tab sees one word covering two things CC's own drafters kept apart.
 * The traces switch is documented in code as writing
-  `consent:community_trust:v1` (`ManageConsentScreen.kt:75`). **No such leaf
-  exists.** CC 3.3.1's catalogue is `state / stream / deletion_sla /
-  deletion_complete / decay / partnership_grant / partnership_accept / scope /
-  replication`, and `community_trust` is not among them; the registry has one
-  `consent:{kind}` row and no gloss for that kind. Per `client/ceg/README.md`, a
-  family with no registry row cannot be named and therefore cannot be rendered
-  (CC 3.1.7 R2). The switch drives a real endpoint (§3) and the endpoint is fine;
-  it is the dimension name in the comment that is unbacked, and a CSD is where
-  that gets caught before a `Dim.` constant is written against it.
+  `consent:community_trust:v1` (`ManageConsentScreen.kt`, the
+  `dataViewModel` parameter). **No such leaf exists.** CC 3.3.1's catalogue is
+  `state / stream / deletion_sla / deletion_complete / decay / partnership_grant
+  / partnership_accept / scope / replication`, and `community_trust` is not
+  among them; the registry has one `consent:{kind}` row and no gloss for that
+  kind. Per `client/ceg/README.md`, a family with no registry row cannot be
+  named and therefore cannot be rendered (CC 3.1.7 R2). The switch drives a real
+  endpoint (§3) and the endpoint is fine; it is the dimension name in the
+  comment that is unbacked, and a CSD is where that gets caught before a `Dim.`
+  constant is written against it.
 
 ```yaml csd:states
-populated: {tag: "proposed:row_consent_direction", renders: "both direction rows plus the ratified chip"}
-empty:     {tag: "proposed:text_consent_need_two_nodes", renders: "mobile.manage_consent_need_two_nodes — fewer than two saved nodes, so there is no pair to peer. The branch is real (ManageConsentScreen.kt:154) and untagged."}
-loading:   {tag: "proposed:consent_peering_running", renders: "the progress affordance inside btn_consent_setup_peering (state.isRunning, :183)"}
-error:     {tag: "proposed:bar_consent_error", renders: "the errorContainer MessageBar (:127) — distinct from the neutral tertiaryContainer message bar on the same line"}
+populated: {tag: "proposed:row_consent_direction", renders: "both direction rows, the ratified chip, and the revoke control in whichever of its §2.1 states applies"}
+empty:     {tag: "proposed:text_consent_need_two_nodes", renders: "mobile.manage_consent_need_two_nodes — fewer than two owned nodes, so there is no pair to peer. The branch is real and untagged."}
+loading:   {tag: "proposed:consent_peering_running", renders: "the progress affordance inside btn_consent_setup_peering (state.isRunning) or inside btn_consent_revoke_peering (state.isRevoking)"}
+error:     {tag: consent_revoke_refusal, renders: "the node's typed refusal of the last revoke, localized by reason_id, in the error colour; the set-up path's errorContainer MessageBar is still proposed:bar_consent_error"}
 ```
 
-`empty` and `error` are already visually distinct (`errorContainer` vs
-`tertiaryContainer`, `ManageConsentScreen.kt:349`), and `empty` is the *error*
-colour today (`:156` uses `colorScheme.error` for "need two nodes"), which is a
-third thing: a normal, unremarkable state drawn in the danger tone. Worth one
-line in the same tagging PR.
+`empty` is drawn in the *error* colour today (`colorScheme.error` for "need
+two nodes"): a normal, unremarkable state in the danger tone. Worth one line in
+the same tagging PR.
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the saved node pair | `getOwnedNodes()` — local profiles | CIRISClient | live |
-| each node's key record | `GET /v1/federation/self-key-record` | CIRISServer | live (`src/federation_admin.rs:900`), node-only |
-| grant a direction | `POST /v1/federation/peering` | CIRISServer | live (`src/federation_admin.rs:903`), node-only |
-| **withdraw a grant** | none | CIRISServer | **missing — the blocking ask.** Searched `federation_admin.rs`, `federation_peers.rs` and every `routing::delete` in the repo. CC 2.4.1.1 already gives the attester the primitive; what is absent is the route. |
+| the owned node pair | `GET /v1/federation/owned-nodes` (`getOwnedNodes()`) | CIRISServer | live; owned REMOTE nodes carry no reachable endpoint yet, so B's `baseUrl` is empty until mesh addressing lands |
+| each node's key record | `GET /v1/federation/self-key-record` | CIRISServer | live (`src/federation_admin.rs`), node-only |
+| grant a direction | `POST /v1/federation/peering` → `grant_attestation_id` | CIRISServer | live (`src/federation_admin.rs`), node-only. The response carries no `granted` member; `PeeringResponse.isGranted` reads the id (#112). |
+| **withdraw a grant** | `POST /v1/federation/peering/revoke {attestation_id}` → `{attestation_id, withdraws, peer_key_ids, cohort_scope, remaining_grants}` | CIRISServer | **live** since ciris-server 0.5.218 (CIRISServer#657). Signed as the person. 409 `consent.grant_not_owner_authored {grants}` is the same fact with nothing withdrawn and is read as `remaining_grants`, not as an error. |
+| does node A mount the revoke route | `GET /v1/federation/peering/revoke` — the probe | CIRISClient | 405 = mounted, bare 404 = missing, anything else = not known (the POST decides). A GET, so it writes nothing. Asked, like the POST, **as node A's own session** — the client's token is the active node's, which after a switch is not A. |
 | the grant's envelope (attester, `for_key_id`, scope, dimension) | not requested by the client; `grant_receipt` exists node-side (`src/peer.rs:1525`) | CIRISServer + CIRISClient | **unconfirmed** — blocks `building` for `text_consent_attester` and `text_consent_for_key`. CIRISServer#616. |
+| a read of node A's peering grants | none | CIRISServer | **missing.** Revoke names a grant by id and the node lists none, so the control works only on a grant set up here in this session. |
 | the traces opt-in | `GET`/`PUT /v1/my-data/accord-settings` | **CIRISAgent** (`routes/my_data.py:580, 689`) | live on the agent — **wrong-host**: the node serves no `accord-settings` (its `/v1/my-data/*` is `lens-identifier` and `capacity` only, `src/system_data.rs:387,390`). The card is not marked `agentOnly`, so on a node build the switch reads a 404. |
 
 ## 4. Flow (how)
 
-Unwritten. The four controls (`btn_consent_setup_peering`,
-`btn_consent_revoke_peering`, `btn_open_user_consent`, `toggle_send_traces`) and
-`btn_manage_consent_back` are real and drivable; every value is `proposed:`, so a
-flow today would assert that the buttons exist and not what they say.
+The controls (`btn_consent_setup_peering`, `btn_consent_revoke_peering`,
+`btn_open_user_consent`, `toggle_send_traces`, `btn_manage_consent_back`) and
+the outcome lines (§2.1) are real and drivable. The set-up path needs two
+reachable nodes and is not written here.
 
-The step this CSD is waiting on is the one that cannot be written:
+**Revoke, on a node without the route** (the packaged APK node lags one release):
 
 ```yaml
-# blocked on a withdraw route — DO NOT land until §3's missing row is filled
 expect:
   state: populated
+  visible: [text_consent_revoke_unsupported]
+  disabled: [btn_consent_revoke_peering]
+```
+
+**Revoke, on a node with the route, with a grant set up in this session.** Tap
+`btn_consent_revoke_peering`.
+
+```yaml
+expect:
+  visible: [sheet_consent_revoke, consent_revoke_fact_1, consent_revoke_fact_2, consent_revoke_fact_3]
+  text: {consent_revoke_fact_3: "You. The node signs the withdrawal with your key, never its own."}
+```
+
+Tap `btn_consent_revoke_confirm`. One of two lines, and only the node decides which:
+
+```yaml
+# the node withdrew and signed
+expect:
+  state: populated
+  visible: [text_consent_withdrawn]
+  absent: [consent_remaining_grants]
   text: {chip_consent_ratified: "Not ratified"}
 ```
+
+```yaml
+# the grant is node-authored: nothing withdrawn, and the row does not move
+expect:
+  state: populated
+  visible: [consent_remaining_grants]
+  absent: [text_consent_withdrawn]
+  text: {chip_consent_ratified: "Ratified — both grants present"}
+```
+
+`chip_consent_ratified` is still `proposed:`; the two `text:` lines land when
+it does.
 
 ## 5. QA plan
 
 **Platforms.** All five. The peering flow needs two reachable nodes, so it runs
-where a second profile can be saved — desktop by default.
+where a second profile can be saved — desktop by default. The revoke path's red
+half — the bare 404, the 409 with `grants`, a refusal with a `reason_id` — is
+driven through `ConsentWithdrawApi` by a fake in `WithdrawConsentTest`, and the
+node-too-old sentence is asserted there without Compose.
 
 **Not tested here.**
-* Revocation. There is no route, so there is no red path, and by this repo's own
-  rule a check whose red path has never run is half a check. The `expect:` block
-  above is written and deliberately not landed.
 * That a grant made on this screen is the grant the node signed. The client never
   reads the envelope back (§3).
+* A grant made anywhere but this session. There is no read of the node's
+  peering grants (§3), so there is nothing to name.
 
 **The recommendation, so it is on the record.** Move to **My things › Devices &
 keys**. The card's subject is a pair of the owner's own machines; CC 2.3.3 makes

@@ -1037,6 +1037,12 @@ fun CIRISApp(
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) contactsViewModel.clearSessionState()
     }
+    // A node switch moves the node under the same app-scoped model: the list it
+    // shows is the OLD node's, and a Remove on it would DELETE at the new one
+    // (Codex, PR #115). Tell the model, which drops the list and re-reads.
+    LaunchedEffect(effectiveNodeUrl) {
+        contactsViewModel.nodeChanged()
+    }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
     // surface that cannot answer. Fall back to the PREVIOUS default (Nodes) once,
@@ -2899,6 +2905,9 @@ fun CIRISApp(
                                     // against the about-to-be-revoked token, fires a 401, and
                                     // TokenManager.on401Error races the user's next Sign-In tap → bounce.
                                     interactViewModel.resetState()
+                                    // App-scoped like the contacts model: the grant id, the revoke
+                                    // outcome and node A's session token are this owner's, not the next.
+                                    consentObjectsViewModel.resetSession()
                                     settingsViewModel.logout {
                                         PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
                                         currentAccessToken = null
@@ -3009,6 +3018,7 @@ fun CIRISApp(
                         // Cancel InteractViewModel polling before token revocation — see
                         // matching guard in nav-bar onLogoutClick for rationale.
                         interactViewModel.resetState()
+                        consentObjectsViewModel.resetSession()
                         settingsViewModel.logout {
                             PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
                             currentAccessToken = null
@@ -4180,6 +4190,7 @@ fun CIRISApp(
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
                         interactViewModel.resetState()
+                        consentObjectsViewModel.resetSession()
                         settingsViewModel.logout {
                             currentAccessToken = null
                             currentScreen = Screen.Login

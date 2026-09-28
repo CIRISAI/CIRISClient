@@ -702,12 +702,22 @@ data class LogEntryData(
 ) {
     /**
      * The row's address in test tags (`logs_row_ts_<key>`, `logs_row_msg_<key>`,
-     * CSD-029): the timestamp's digits to the second, `2026-09-25T09:31:29Z` →
-     * `20260925093129`. A flow knows the time of the line it is looking for;
-     * it cannot know [id].
+     * CSD-029): the timestamp's digits to the second, then `_` and a
+     * disambiguator — `2026-09-25T09:31:29.123Z` → `20260925093129_123`. A flow
+     * knows the time of the line it is looking for and cannot know [id], so the
+     * 14-digit prefix is what it matches on (`logs_row_ts_20260925093129*`);
+     * the suffix is what keeps two rows written in the same second from
+     * registering under ONE tag (Codex, PR #115) — the fractional seconds when
+     * the node sends them, else a short hash of [id] (or of [message] for a
+     * row with no id).
      */
     val rowKey: String
-        get() = timestamp.filter { it.isDigit() }.take(14)
+        get() {
+            val second = timestamp.filter { it.isDigit() }.take(14)
+            val fraction = timestamp.substringAfter('.', "").takeWhile { it.isDigit() }
+            val suffix = fraction.ifEmpty { id.ifBlank { message }.hashCode().toUInt().toString(36) }
+            return "${second}_$suffix"
+        }
 
     val formattedTime: String
         get() = try {

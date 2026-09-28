@@ -1573,13 +1573,18 @@ class CIRISApiClient(
      * [RevokeGrantResponse.remainingGrants] set (see [removeContact]); every
      * other non-2xx throws [NodeRefusal].
      */
-    suspend fun revokePeeringGrant(attestationId: String, nodeUrl: String = LOCAL_NODE_URL): RevokeGrantResponse {
+    suspend fun revokePeeringGrant(
+        attestationId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        /** The session for [nodeUrl]. Defaults to this client's, which is the ACTIVE node's — not [nodeUrl]'s after a switch. */
+        token: String? = accessToken,
+    ): RevokeGrantResponse {
         val method = "revokePeeringGrant"
         logInfo(method, "POST $nodeUrl/v1/federation/peering/revoke grant=${attestationId.take(16)}…")
         val client = federationHttpClient()
         return try {
             val response = client.post("$nodeUrl/v1/federation/peering/revoke") {
-                authHeader()?.let { header("Authorization", it) }
+                token?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
                 setBody(buildJsonObject { put("attestation_id", attestationId) }.toString())
             }
@@ -1609,12 +1614,12 @@ class CIRISApiClient(
      * 200, a proxy's 502, no answer) is `null` — not known, so the control
      * stays live and the POST itself decides.
      */
-    suspend fun isPeeringRevokeMounted(nodeUrl: String = LOCAL_NODE_URL): Boolean? {
+    suspend fun isPeeringRevokeMounted(nodeUrl: String = LOCAL_NODE_URL, token: String? = accessToken): Boolean? {
         val method = "isPeeringRevokeMounted"
         val client = federationHttpClient()
         return try {
             val response = client.get("$nodeUrl/v1/federation/peering/revoke") {
-                authHeader()?.let { header("Authorization", it) }
+                token?.let { header("Authorization", "Bearer $it") }
             }
             val raw = response.bodyAsText()
             when {

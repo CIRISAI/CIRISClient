@@ -59,13 +59,13 @@ fields:
     type: timestamp
     example: "2026-09-25T09:31:29.000Z"
     renders: "09:31:29 — the row's time, monospaced"
-    tag: "proposed:logs_row_ts_20260925093129"
+    tag: "proposed:logs_row_ts_20260925093129_000"
   - ceg: x_private:log_message
     use: display-only
     type: string
     example: "peer wa-peer-4a19c2 admitted"
     renders: "the row's text"
-    tag: "proposed:logs_row_msg_20260925093129"
+    tag: "proposed:logs_row_msg_20260925093129_000"
   - ceg: x_private:log_auto_scroll
     use: read
     type: bool
