@@ -3179,7 +3179,24 @@
     "receipt_contact_attester_person": "Người đã chấp thuận — ký bằng danh tính của chính họ, không phải bởi nút này.",
     "receipt_for_agent": "Dành cho tác nhân nào của bạn",
     "manage_consent_revoke_unsupported": "Nút này chưa thể thu hồi sự đồng ý (cần ciris-server 0.5.218).",
-    "manage_consent_revoke_needs_grant": "Thu hồi cần nêu tên một quyền, và nút này chưa liệt kê các quyền ghép nối của nó, nên nó hoạt động dựa trên quyền được thiết lập ở đây trong phiên này."
+    "manage_consent_revoke_needs_grant": "Thu hồi cần nêu tên một quyền, và nút này chưa liệt kê các quyền ghép nối của nó, nên nó hoạt động dựa trên quyền được thiết lập ở đây trong phiên này.",
+    "delegations_deny": "Từ chối",
+    "delegations_inbound_title": "Được ủy quyền cho bạn",
+    "delegations_inbound_unavailable": "Ứng dụng này chưa thể đọc được thẩm quyền mà người khác đã ủy quyền cho bạn — đây không phải là báo cáo rằng không có thẩm quyền nào.",
+    "delegations_list_error": "Không thể đọc các ủy quyền của bạn từ nút này, nên danh sách này chưa đầy đủ: {error}",
+    "delegations_refresh": "Làm mới",
+    "delegations_revoke_title": "Thu hồi ủy quyền này?",
+    "delegations_revoke_fact_who": "Ai",
+    "delegations_revoke_fact_effect": "Điều gì thay đổi",
+    "delegations_revoke_fact_signer": "Ai ký",
+    "delegations_revoke_effect": "Từ giờ, nó không còn thể hành động thay cho bạn. Việc thu hồi là vĩnh viễn: để cấp lại thẩm quyền cho nó, bạn phải ban hành một ủy quyền mới.",
+    "delegations_revoke_signer": "Bạn — khóa danh tính của bạn trên nút này ký việc thu hồi",
+    "delegations_signed_record": "Bản ghi đã ký {id}",
+    "identity_associate_seal_hardware": "Niêm phong khóa của thiết bị này trong phần cứng của nó (TPM)",
+    "identity_associate_use_software": "Sử dụng lưu giữ bằng phần mềm trên thiết bị này thay thế",
+    "login_new_account_refused": "Nút này đã có chủ sở hữu: một tài khoản mà nút chưa từng thấy sẽ bị từ chối ở đây. Hãy đăng nhập bằng tài khoản của chủ sở hữu.",
+    "login_new_account_observer": "Một tài khoản mà nút này chưa từng thấy sẽ được cho phép vào với vai trò người quan sát, không phải chủ sở hữu.",
+    "login_new_account_claims": "Nút này chưa có chủ sở hữu: tài khoản đầu tiên đăng nhập sẽ trở thành chủ sở hữu của nó."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Danh tính của bạn không được đăng ký là một người, và chỉ một người mới có thể được thêm làm liên hệ.",
     "contact_code_key_not_derived": "ID khóa của danh tính bạn không khớp với khóa của nó, nên mọi người mà bạn đã chia sẻ mã với sẽ từ chối mã đó.",
     "contact_code_no_pqc_half": "Danh tính của bạn không có nửa khóa hậu lượng tử, nên không ai có thể thêm bạn từ một mã.",
-    "contact_code_unencodable": "Không thể tạo mã liên hệ của bạn từ các khóa mà nút này đang giữ."
+    "contact_code_unencodable": "Không thể tạo mã liên hệ của bạn từ các khóa mà nút này đang giữ.",
+    "associate": {
+      "hardware_custody_unavailable": "Thiết bị này không có phần cứng nào có thể niêm phong khóa (không có TPM hoặc secure enclave), nên chưa có gì được thiết lập. Bạn có thể sử dụng lưu giữ bằng phần mềm thay thế: khóa được giữ trong một tệp đã mã hóa trên thiết bị này."
+    }
   },
   "partnership_queue": {
     "title": "Hợp tác với tác nhân này",

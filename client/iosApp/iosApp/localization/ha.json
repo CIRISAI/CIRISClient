@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} har yanzu lambar sadarwa ce",
     "contacts_remove_remaining_body": "Kun janye izini {count}. Izinan da ke ƙasa har yanzu suna aiki.",
     "contacts_remove_remaining_row": "Har yanzu yana aiki: wannan node ne ya rubuta shi kafin ku sa hannu kan lambobin sadarwarku, don haka ba za a iya janye shi a nan ba",
-    "contacts_remove_unsupported": "Wannan node ba zai iya cire lambobin sadarwa tukuna ba (yana buƙatar ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Wannan node ba zai iya cire lambobin sadarwa tukuna ba (yana buƙatar ciris-server 0.5.218).",
+    "delegations_deny": "Ƙi",
+    "delegations_inbound_title": "Wakilcin da aka baiwa ku",
+    "delegations_inbound_unavailable": "Wannan manhaja har yanzu ba ta iya karanta ikon da wasu mutane suka wakilta muku ba — wannan ba rahoto ne cewa babu ko ɗaya ba.",
+    "delegations_list_error": "An kasa karanta wakilcinku daga wannan kumburi, don haka jerin nan bai cika ba: {error}",
+    "delegations_refresh": "Sabunta",
+    "delegations_revoke_title": "Ku soke wannan wakilci?",
+    "delegations_revoke_fact_who": "Wane ne",
+    "delegations_revoke_fact_effect": "Abin da zai canza",
+    "delegations_revoke_fact_signer": "Wanda zai sa hannu",
+    "delegations_revoke_effect": "Daga yanzu, ba za ta ƙara iya aiki a madadinku ba. Sokewa na dindindin ne: don ba ta iko kuma, sai ku bayar da sabon wakilci.",
+    "delegations_revoke_signer": "Ku — maɓallin shaidarku a kan wannan kumburi zai sa hannu kan janyewa",
+    "delegations_signed_record": "Rikodin da aka sa hannu {id}",
+    "identity_associate_seal_hardware": "Kulle maɓallin wannan na'ura a cikin kayan aikinta (TPM)",
+    "identity_associate_use_software": "Maimakon haka, yi amfani da kula ta software a wannan na'ura",
+    "login_new_account_refused": "Wannan kumburi yana da mai mallaka tuni: asusu da bai taɓa gani ba za a ƙi shi a nan. Ku shiga da asusun mai mallakar.",
+    "login_new_account_observer": "Asusu da wannan kumburi bai taɓa gani ba za a bari ya shiga a matsayin mai kallo, ba a matsayin mai mallaka ba.",
+    "login_new_account_claims": "Wannan kumburi ba shi da mai mallaka tukuna: asusun farko da ya shiga zai zama mai mallakarsa."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Ba a yi wa shaidarku rajista a matsayin mutum ba, kuma mutum ne kawai za a iya ƙara shi a matsayin abokin hulɗa.",
     "contact_code_key_not_derived": "key_id na shaidarku bai dace da maɓallinta ba, don haka duk wanda kuka raba lambar da shi zai ƙi ta.",
     "contact_code_no_pqc_half": "Shaidarku ba ta da rabin maɓallin post-quantum, don haka babu wanda zai iya ƙara ku daga lambar.",
-    "contact_code_unencodable": "Ba a iya yin lambar sadarwarku daga maɓallan da wannan node yake riƙe da su ba."
+    "contact_code_unencodable": "Ba a iya yin lambar sadarwarku daga maɓallan da wannan node yake riƙe da su ba.",
+    "associate": {
+      "hardware_custody_unavailable": "Wannan na'ura ba ta da kayan aiki da za su iya kulle maɓalli (babu TPM ko secure enclave), don haka ba a saita kome ba. Za ku iya amfani da kula ta software maimakon haka: za a adana maɓallin a cikin fayil mai ɓoye a wannan na'ura."
+    }
   },
   "partnership_queue": {
     "title": "Haɗin gwiwa da wannan wakili",

@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} masih menjadi kontak",
     "contacts_remove_remaining_body": "Anda telah mencabut {count} izin. Izin di bawah ini masih aktif.",
     "contacts_remove_remaining_row": "Masih aktif: ditulis oleh node ini sebelum Anda menandatangani kontak Anda, sehingga tidak dapat dicabut di sini",
-    "contacts_remove_unsupported": "Node ini belum dapat menghapus kontak (memerlukan ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Node ini belum dapat menghapus kontak (memerlukan ciris-server 0.5.218).",
+    "delegations_deny": "Tolak",
+    "delegations_inbound_title": "Didelegasikan kepada Anda",
+    "delegations_inbound_unavailable": "Aplikasi ini belum dapat membaca otoritas yang telah didelegasikan orang lain kepada Anda — ini bukan laporan bahwa tidak ada.",
+    "delegations_list_error": "Tidak dapat membaca delegasi Anda dari node ini, sehingga daftar ini tidak lengkap: {error}",
+    "delegations_refresh": "Segarkan",
+    "delegations_revoke_title": "Cabut delegasi ini?",
+    "delegations_revoke_fact_who": "Siapa",
+    "delegations_revoke_fact_effect": "Apa yang berubah",
+    "delegations_revoke_fact_signer": "Siapa yang menandatangani",
+    "delegations_revoke_effect": "Mulai sekarang, ia tidak lagi dapat bertindak untuk Anda. Pencabutan bersifat permanen: untuk memberikannya otoritas lagi, Anda perlu menerbitkan delegasi baru.",
+    "delegations_revoke_signer": "Anda — kunci identitas Anda pada node ini menandatangani penarikan tersebut",
+    "delegations_signed_record": "Catatan bertanda tangan {id}",
+    "identity_associate_seal_hardware": "Segel kunci perangkat ini di perangkat kerasnya (TPM)",
+    "identity_associate_use_software": "Gunakan penyimpanan perangkat lunak di perangkat ini sebagai gantinya",
+    "login_new_account_refused": "Node ini sudah memiliki pemilik: akun yang belum pernah dilihat node ini akan ditolak di sini. Masuklah dengan akun pemilik.",
+    "login_new_account_observer": "Akun yang belum pernah dilihat node ini akan diizinkan masuk sebagai pengamat, bukan sebagai pemilik.",
+    "login_new_account_claims": "Node ini belum memiliki pemilik: akun pertama yang masuk akan menjadi pemiliknya."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Identitas Anda tidak terdaftar sebagai orang, dan hanya orang yang dapat ditambahkan sebagai kontak.",
     "contact_code_key_not_derived": "ID kunci identitas Anda tidak cocok dengan kuncinya, sehingga siapa pun yang Anda bagikan kode kepadanya akan menolak kode tersebut.",
     "contact_code_no_pqc_half": "Identitas Anda tidak memiliki separuh kunci pasca-kuantum, sehingga tidak ada yang dapat menambahkan Anda dari kode.",
-    "contact_code_unencodable": "Kode kontak Anda tidak dapat dibuat dari kunci-kunci yang dimiliki node ini."
+    "contact_code_unencodable": "Kode kontak Anda tidak dapat dibuat dari kunci-kunci yang dimiliki node ini.",
+    "associate": {
+      "hardware_custody_unavailable": "Perangkat ini tidak memiliki perangkat keras yang dapat menyegel kunci (tidak ada TPM atau secure enclave), sehingga tidak ada yang disiapkan. Anda dapat menggunakan penyimpanan perangkat lunak sebagai gantinya: kunci disimpan dalam berkas terenkripsi di perangkat ini."
+    }
   },
   "partnership_queue": {
     "title": "Bermitra dengan agen ini",

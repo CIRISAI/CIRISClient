@@ -3224,7 +3224,24 @@
     "contacts_remove_remaining_title": "{who} is still a contact",
     "contacts_remove_remaining_body": "You withdrew {count} grant(s). The grants below are still active.",
     "contacts_remove_remaining_row": "Still active: written by this node before you signed your contacts, so it can't be withdrawn here",
-    "contacts_remove_unsupported": "This node can't remove contacts yet (needs ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "This node can't remove contacts yet (needs ciris-server 0.5.218).",
+    "delegations_deny": "Refuse",
+    "delegations_inbound_title": "Delegated to you",
+    "delegations_inbound_unavailable": "This app can't read authority other people have delegated to you yet — this is not a report that there is none.",
+    "delegations_list_error": "Couldn't read your delegations from this node, so this list is not complete: {error}",
+    "delegations_refresh": "Refresh",
+    "delegations_revoke_title": "Revoke this delegation?",
+    "delegations_revoke_fact_who": "Who",
+    "delegations_revoke_fact_effect": "What changes",
+    "delegations_revoke_fact_signer": "Who signs",
+    "delegations_revoke_effect": "It can no longer act for you, from now on. A revoke is permanent: to give it authority again you issue a new delegation.",
+    "delegations_revoke_signer": "You — your identity key on this node signs the withdrawal",
+    "delegations_signed_record": "Signed record {id}",
+    "identity_associate_seal_hardware": "Seal this device's key in its hardware (TPM)",
+    "identity_associate_use_software": "Use software custody on this device instead",
+    "login_new_account_refused": "This node already has an owner: an account it has never seen would be refused here. Sign in with the owner's account.",
+    "login_new_account_observer": "An account this node has never seen would be let in as an observer, not as the owner.",
+    "login_new_account_claims": "This node has no owner yet: the first account to sign in becomes its owner."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Your identity is not registered as a person, and only a person can be added as a contact.",
     "contact_code_key_not_derived": "Your identity's key id does not match its key, so everyone you shared a code with would refuse it.",
     "contact_code_no_pqc_half": "Your identity has no post-quantum key half, so no one could add you from a code.",
-    "contact_code_unencodable": "Your contact code could not be made from the keys this node holds."
+    "contact_code_unencodable": "Your contact code could not be made from the keys this node holds.",
+    "associate": {
+      "hardware_custody_unavailable": "This device has no hardware that can seal a key (no TPM or secure enclave), so nothing was set up. You can use software custody instead: the key is kept in an encrypted file on this device."
+    }
   },
   "partnership_queue": {
     "title": "Partnering with this agent",

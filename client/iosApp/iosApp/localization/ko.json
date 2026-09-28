@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who}님은 여전히 연락처입니다",
     "contacts_remove_remaining_body": "{count}개의 허가를 철회했습니다. 아래 허가는 여전히 유효합니다.",
     "contacts_remove_remaining_row": "여전히 유효함: 사용자가 연락처에 서명하기 전에 이 노드가 작성했으므로, 여기서 철회할 수 없습니다",
-    "contacts_remove_unsupported": "이 노드는 아직 연락처를 제거할 수 없습니다 (ciris-server 0.5.218 필요)."
+    "contacts_remove_unsupported": "이 노드는 아직 연락처를 제거할 수 없습니다 (ciris-server 0.5.218 필요).",
+    "delegations_deny": "거부",
+    "delegations_inbound_title": "내게 위임됨",
+    "delegations_inbound_unavailable": "이 앱은 다른 사람이 귀하께 위임한 권한을 아직 읽을 수 없습니다 — 위임된 권한이 없다는 뜻은 아닙니다.",
+    "delegations_list_error": "이 노드에서 귀하의 위임을 읽지 못해 이 목록이 완전하지 않습니다: {error}",
+    "delegations_refresh": "새로고침",
+    "delegations_revoke_title": "이 위임을 철회하시겠습니까?",
+    "delegations_revoke_fact_who": "누구",
+    "delegations_revoke_fact_effect": "변경 사항",
+    "delegations_revoke_fact_signer": "서명자",
+    "delegations_revoke_effect": "이제부터 이것은 더 이상 귀하를 대신하여 행동할 수 없습니다. 철회는 영구적입니다: 다시 권한을 부여하려면 새로운 위임을 발행해야 합니다.",
+    "delegations_revoke_signer": "귀하 — 이 노드의 신원 키가 철회에 서명합니다",
+    "delegations_signed_record": "서명된 기록 {id}",
+    "identity_associate_seal_hardware": "이 기기의 키를 하드웨어(TPM)에 봉인합니다",
+    "identity_associate_use_software": "대신 이 기기에서 소프트웨어 커스터디를 사용합니다",
+    "login_new_account_refused": "이 노드에는 이미 소유자가 있습니다: 한 번도 본 적 없는 계정은 여기서 거부됩니다. 소유자 계정으로 로그인하세요.",
+    "login_new_account_observer": "이 노드가 한 번도 본 적 없는 계정은 소유자가 아니라 관찰자로 들어오게 됩니다.",
+    "login_new_account_claims": "이 노드에는 아직 소유자가 없습니다: 처음으로 로그인하는 계정이 소유자가 됩니다."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "본인 신원은 사람으로 등록되어 있지 않으며, 사람만 연락처로 추가될 수 있습니다.",
     "contact_code_key_not_derived": "본인 신원의 key_id가 해당 키와 일치하지 않아, 코드를 공유받은 모든 사람이 이를 거부하게 됩니다.",
     "contact_code_no_pqc_half": "본인 신원에 포스트 퀀텀 키 절반이 없어, 아무도 코드로 사용자를 추가할 수 없습니다.",
-    "contact_code_unencodable": "이 노드가 보유한 키로는 연락처 코드를 만들 수 없었습니다."
+    "contact_code_unencodable": "이 노드가 보유한 키로는 연락처 코드를 만들 수 없었습니다.",
+    "associate": {
+      "hardware_custody_unavailable": "이 기기에는 키를 봉인할 수 있는 하드웨어(TPM 또는 Secure Enclave)가 없어 아무것도 설정되지 않았습니다. 대신 소프트웨어 커스터디를 사용할 수 있습니다: 키는 이 기기의 암호화된 파일에 보관됩니다."
+    }
   },
   "partnership_queue": {
     "title": "이 에이전트와의 파트너십",

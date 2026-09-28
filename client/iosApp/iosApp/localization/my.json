@@ -3179,7 +3179,24 @@
     "sessions_error_forbidden": "စီမံခန့်ခွဲသူသာလျှင် ဤအေးဂျင့်၏ cognitive အခြေအနေကို ပြောင်းလဲနိုင်သည်။",
     "system_agent_half_absent": "ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသောကြောင့်၊ ဤနေရာတွင် ပြသရန် processor၊ အရင်းအမြစ် အသုံးပြုမှု၊ ပတ်ဝန်းကျင်ဆိုင်ရာ ကုန်ကျစရိတ် သို့မဟုတ် channel စာရင်း မရှိပါ။",
     "system_open_runtime": "Runtime တွင် ခဏရပ်ပါ၊ အဆင့်လိုက်လုပ်ဆောင်ပါ သို့မဟုတ် ဆက်လုပ်ပါ",
-    "scheduler_stat_dead_lettered": "သီးသန့်ခွဲထား"
+    "scheduler_stat_dead_lettered": "သီးသန့်ခွဲထား",
+    "delegations_deny": "ငြင်းပယ်ပါ",
+    "delegations_inbound_title": "သင့်ထံ ကိုယ်စားလွှဲအပ်ထားသည်",
+    "delegations_inbound_unavailable": "ဤအက်ပ်သည် အခြားသူများ သင့်ထံ ကိုယ်စားလွှဲအပ်ထားသော အာဏာကို မဖတ်နိုင်သေးပါ — ဤသည် ဘာမျှ မရှိကြောင်း သတင်းပို့ချက် မဟုတ်ပါ။",
+    "delegations_list_error": "ဤ node မှ သင့်ကိုယ်စားလွှဲအပ်ခြင်းများကို မဖတ်နိုင်ခဲ့သဖြင့် ဤစာရင်းသည် ပြီးပြည့်စုံသည် မဟုတ်ပါ- {error}",
+    "delegations_refresh": "ပြန်လည်ရယူပါ",
+    "delegations_revoke_title": "ဤကိုယ်စားလွှဲအပ်ခြင်းကို ရုပ်သိမ်းမလား?",
+    "delegations_revoke_fact_who": "မည်သူ",
+    "delegations_revoke_fact_effect": "ပြောင်းလဲမည့်အရာ",
+    "delegations_revoke_fact_signer": "လက်မှတ်ရေးထိုးမည့်သူ",
+    "delegations_revoke_effect": "ယခုမှစ၍ ၎င်းသည် သင့်အတွက် လုပ်ဆောင်၍ မရတော့ပါ။ ရုပ်သိမ်းခြင်းသည် ထာဝရဖြစ်သည် — ၎င်းအား အာဏာ ထပ်မံ ပေးလိုပါက ကိုယ်စားလွှဲအပ်ခြင်း အသစ်တစ်ခု ထုတ်ပြန်ရမည်။",
+    "delegations_revoke_signer": "သင် — ဤ node ပေါ်ရှိ သင်၏ အထောက်အထား key က ရုပ်သိမ်းမှုကို လက်မှတ်ရေးထိုးသည်",
+    "delegations_signed_record": "လက်မှတ်ရေးထိုးထားသော မှတ်တမ်း {id}",
+    "identity_associate_seal_hardware": "ဤစက်၏ key ကို ၎င်း၏ hardware (TPM) တွင် ပိတ်သိမ်းပါ",
+    "identity_associate_use_software": "ဤစက်ပေါ်တွင် ထို့အစား software ထိန်းသိမ်းမှုကို အသုံးပြုပါ",
+    "login_new_account_refused": "ဤ node တွင် ပိုင်ရှင် ရှိပြီးဖြစ်သည်- ၎င်းက တစ်ခါမျှ မမြင်ဖူးသော အကောင့်တစ်ခုကို ဤနေရာတွင် ငြင်းပယ်မည်ဖြစ်သည်။ ပိုင်ရှင်၏ အကောင့်ဖြင့် ဝင်ရောက်ပါ။",
+    "login_new_account_observer": "ဤ node က တစ်ခါမျှ မမြင်ဖူးသော အကောင့်တစ်ခုအား ပိုင်ရှင်အဖြစ် မဟုတ်ဘဲ observer အဖြစ် ဝင်ခွင့်ပြုမည်ဖြစ်သည်။",
+    "login_new_account_claims": "ဤ node တွင် ပိုင်ရှင် မရှိသေးပါ- ဝင်ရောက်သည့် ပထမဆုံးအကောင့်သည် ၎င်း၏ ပိုင်ရှင် ဖြစ်လာမည်။"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "သင်၏ identity သည် လူတစ်ဦးအဖြစ် မှတ်ပုံတင်ထားခြင်း မရှိပါ၊ လူတစ်ဦးကိုသာ contact အဖြစ် ထည့်နိုင်သည်။",
     "contact_code_key_not_derived": "သင်၏ identity ၏ key id သည် ၎င်း၏ key နှင့် မကိုက်ညီပါ၊ ထို့ကြောင့် သင် ကုဒ်ကို မျှဝေခဲ့သူ အားလုံးသည် ၎င်းကို ငြင်းပယ်ကြလိမ့်မည်။",
     "contact_code_no_pqc_half": "သင်၏ identity တွင် post-quantum key half မရှိသောကြောင့်၊ မည်သူမျှ ကုဒ်မှတစ်ဆင့် သင့်ကို ထည့်၍ မရနိုင်ပါ။",
-    "contact_code_unencodable": "ဤ node ကိုင်ဆောင်ထားသော key များမှ သင်၏ contact ကုဒ်ကို ပြုလုပ်၍ မရပါ။"
+    "contact_code_unencodable": "ဤ node ကိုင်ဆောင်ထားသော key များမှ သင်၏ contact ကုဒ်ကို ပြုလုပ်၍ မရပါ။",
+    "associate": {
+      "hardware_custody_unavailable": "ဤစက်တွင် key ကို ပိတ်သိမ်းနိုင်သော hardware မရှိပါ (TPM သို့မဟုတ် secure enclave မရှိ)၊ ထို့ကြောင့် မည်သည့်အရာမျှ စနစ်ထည့်သွင်းမထားပါ။ ထို့အစား software ထိန်းသိမ်းမှုကို အသုံးပြုနိုင်သည်- key ကို ဤစက်ပေါ်ရှိ encrypted ဖိုင်တစ်ခုတွင် သိမ်းဆည်းထားမည်ဖြစ်သည်။"
+    }
   },
   "partnership_queue": {
     "outcome_approved": "လက်ခံပြီး",

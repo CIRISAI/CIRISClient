@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} لا يزال جهة اتصال",
     "contacts_remove_remaining_body": "سحبت {count} من إذونات الموافقة. الإذونات أدناه لا تزال سارية.",
     "contacts_remove_remaining_row": "لا يزال ساريًا: كتبته هذه العقدة قبل أن توقّع جهات اتصالك، فلا يمكن سحبه هنا",
-    "contacts_remove_unsupported": "هذه العقدة لا تستطيع إزالة جهات الاتصال بعد (تحتاج إلى ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "هذه العقدة لا تستطيع إزالة جهات الاتصال بعد (تحتاج إلى ciris-server 0.5.218).",
+    "delegations_deny": "رفض",
+    "delegations_inbound_title": "المفوَّض إليك",
+    "delegations_inbound_unavailable": "لا يستطيع هذا التطبيق حتى الآن قراءة الصلاحية التي فوّضها آخرون إليك — وهذا ليس تقريرًا بأنه لا توجد أي صلاحية.",
+    "delegations_list_error": "تعذّرت قراءة تفويضاتك من هذه العقدة، فهذه القائمة غير كاملة: {error}",
+    "delegations_refresh": "تحديث",
+    "delegations_revoke_title": "إبطال هذا التفويض؟",
+    "delegations_revoke_fact_who": "من",
+    "delegations_revoke_fact_effect": "ما يتغيّر",
+    "delegations_revoke_fact_signer": "من يوقّع",
+    "delegations_revoke_effect": "لن يعود بإمكانه التصرف بصفتك من الآن فصاعداً. الإبطال دائم: لمنحه الصلاحية مجدداً، عليك إصدار تفويض جديد.",
+    "delegations_revoke_signer": "أنت — مفتاح هويتك على هذه العقدة يوقّع على الإبطال",
+    "delegations_signed_record": "السجل الموقَّع {id}",
+    "identity_associate_seal_hardware": "اختم مفتاح هذا الجهاز داخل عتاده (TPM)",
+    "identity_associate_use_software": "استخدم الحفظ البرمجي على هذا الجهاز بدلاً من ذلك",
+    "login_new_account_refused": "لهذه العقدة مالك بالفعل: أي حساب لم تسبق لها رؤيته سيُرفض هنا. سجّل الدخول بحساب المالك.",
+    "login_new_account_observer": "أي حساب لم تسبق لهذه العقدة رؤيته سيُسمح له بالدخول كمراقب، لا كمالك.",
+    "login_new_account_claims": "لا يوجد مالك لهذه العقدة بعد: أول حساب يسجّل الدخول يصبح مالكها."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_owner_key_absent": "لا تحتفظ هذه العقدة بسجل مفتاح هويتك، لذا لا يمكنها إنشاء رمز التواصل الخاص بك.",
     "contact_code_not_a_person": "هويتك غير مسجَّلة كشخص، ولا يمكن إضافة إلا شخص كجهة اتصال.",
     "contact_code_key_not_derived": "لا يتطابق معرّف مفتاح هويتك مع مفتاحها، لذا سيرفضه كل من شاركت الرمز معه.",
-    "contact_code_no_pqc_half": "لا تملك هويتك نصف المفتاح ما بعد الكمومي، لذا لن يتمكن أحد من إضافتك عبر رمز."
+    "contact_code_no_pqc_half": "لا تملك هويتك نصف المفتاح ما بعد الكمومي، لذا لن يتمكن أحد من إضافتك عبر رمز.",
+    "associate": {
+      "hardware_custody_unavailable": "لا يملك هذا الجهاز عتاداً يمكنه ختم مفتاح (لا TPM ولا Secure Enclave)، فلم يُعدّ شيء. يمكنك استخدام الحفظ البرمجي بدلاً من ذلك: يُحفظ المفتاح في ملف مشفّر على هذا الجهاز."
+    }
   },
   "partnership_queue": {
     "title": "الشراكة مع هذا الوكيل",

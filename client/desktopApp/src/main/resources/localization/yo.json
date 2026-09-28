@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} ṣì jẹ́ olùbásọ̀rọ̀",
     "contacts_remove_remaining_body": "O ti yọ ìyọ̀ǹda {count} kúrò. Àwọn ìyọ̀ǹda tí ó wà ní ìsàlẹ̀ ṣì ń ṣiṣẹ́.",
     "contacts_remove_remaining_row": "Ó ṣì ń ṣiṣẹ́: nóòdù yìí ni ó kọ ọ́ kí o tó fọwọ́sí àwọn olùbásọ̀rọ̀ rẹ, nítorí náà kò ṣe é yọ kúrò níbí",
-    "contacts_remove_unsupported": "Nóòdù yìí kò tíì lè yọ àwọn olùbásọ̀rọ̀ kúrò (nílò ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Nóòdù yìí kò tíì lè yọ àwọn olùbásọ̀rọ̀ kúrò (nílò ciris-server 0.5.218).",
+    "delegations_deny": "Kọ̀",
+    "delegations_inbound_title": "Ìfilélẹ̀-àṣẹ sí ọ",
+    "delegations_inbound_unavailable": "Ohun èlò yìí kò tí ì lè ka àṣẹ tí àwọn ẹlòmíràn ti fi lé ọ lọ́wọ́ — èyí kì í ṣe ìjábọ̀ pé kò sí ọ̀kan.",
+    "delegations_list_error": "Kò lè ka àwọn ìfilélẹ̀-àṣẹ rẹ láti orí node yìí, nítorí náà àkójọ yìí kò pé: {error}",
+    "delegations_refresh": "Tún sọ di ọ̀tun",
+    "delegations_revoke_title": "Fagile ìfilélẹ̀-àṣẹ yìí?",
+    "delegations_revoke_fact_who": "Ẹni",
+    "delegations_revoke_fact_effect": "Ohun tí ó yí padà",
+    "delegations_revoke_fact_signer": "Ẹni tí ó fọwọ́sí",
+    "delegations_revoke_effect": "Kò lè ṣe fún ọ mọ́, láti ìsinsìnyí lọ. Ìfagilé jẹ́ pípẹ́: láti tún fún un ní àṣẹ, o gbọ́dọ̀ fi ìfilélẹ̀-àṣẹ tuntun lélẹ̀.",
+    "delegations_revoke_signer": "Ìwọ — kọ́kọ́rọ́ ìdánimọ̀ rẹ lórí node yìí ni yóò fọwọ́sí ìyọkúrò náà",
+    "delegations_signed_record": "Àkọsílẹ̀ tí a fọwọ́sí {id}",
+    "identity_associate_seal_hardware": "Di kọ́kọ́rọ́ ẹ̀rọ yìí mọ́ ohun-èlò rẹ̀ (TPM)",
+    "identity_associate_use_software": "Lo ìtọ́jú software lórí ẹ̀rọ yìí dípò",
+    "login_new_account_refused": "Node yìí ti ní olóhun tẹ́lẹ̀: a ó kọ àkàǹtì tí kò tí ì rí rí níbí. Wọlé pẹ̀lú àkàǹtì olóhun náà.",
+    "login_new_account_observer": "Àkàǹtì tí node yìí kò tí ì rí rí yóò gbà wọlé gẹ́gẹ́ bí olùwòran, kì í ṣe gẹ́gẹ́ bí olóhun.",
+    "login_new_account_claims": "Node yìí kò tíì ní olóhun: àkàǹtì àkọ́kọ́ tí ó bá wọlé yóò di olóhun rẹ̀."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "A kò forúkọ ìdánimọ̀ rẹ sílẹ̀ gẹ́gẹ́ bí ẹnìkan, ẹnìkan nìkan sì ni a lè fi kún gẹ́gẹ́ bí olùbásọ̀rọ̀.",
     "contact_code_key_not_derived": "key_id ìdánimọ̀ rẹ kò bá kọ́kọ́rọ́ rẹ̀ mu, nítorí náà gbogbo ẹni tí o bá ti pín kóòdù náà fún yóò máa kọ̀ ọ́.",
     "contact_code_no_pqc_half": "Ìdánimọ̀ rẹ kò ní ìdajì kọ́kọ́rọ́ lẹ́yìn-kùántọ̀mù, nítorí náà kò sí ẹnikẹ́ni tí ó lè fi ọ́ kún láti inú kóòdù kan.",
-    "contact_code_unencodable": "A kò lè ṣe kóòdù olùbásọ̀rọ̀ rẹ láti inú àwọn kọ́kọ́rọ́ tí nóòdù yìí dì mọ́."
+    "contact_code_unencodable": "A kò lè ṣe kóòdù olùbásọ̀rọ̀ rẹ láti inú àwọn kọ́kọ́rọ́ tí nóòdù yìí dì mọ́.",
+    "associate": {
+      "hardware_custody_unavailable": "Ẹ̀rọ yìí kò ní ohun-èlò tí ó lè dí kọ́kọ́rọ́ mọ́ (kò sí TPM tàbí secure enclave), nítorí náà a kò ṣètò ohunkóhun. O lè lo ìtọ́jú software dípò: kọ́kọ́rọ́ náà ni a ó pa mọ́ sínú fáìlì tí a kọ́ọ́dì sórí ẹ̀rọ yìí."
+    }
   },
   "partnership_queue": {
     "title": "Ṣíṣe àjọṣepọ̀ pẹ̀lú aṣojú yìí",

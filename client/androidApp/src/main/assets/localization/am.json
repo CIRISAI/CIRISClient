@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} አሁንም እውቂያ ነው",
     "contacts_remove_remaining_body": "{count} ስጦታ(ዎች) አንስተዋል። ከዚህ በታች ያሉት ስጦታዎች አሁንም ሥራ ላይ ናቸው።",
     "contacts_remove_remaining_row": "አሁንም ሥራ ላይ ነው፦ እርስዎ እውቂያዎችዎን ከመፈረምዎ በፊት በዚህ ኖድ የተጻፈ ስለሆነ እዚህ ሊነሳ አይችልም",
-    "contacts_remove_unsupported": "ይህ ኖድ እውቂያዎችን ገና ማስወገድ አይችልም (ciris-server 0.5.218 ይፈልጋል)።"
+    "contacts_remove_unsupported": "ይህ ኖድ እውቂያዎችን ገና ማስወገድ አይችልም (ciris-server 0.5.218 ይፈልጋል)።",
+    "delegations_inbound_title": "ለእርስዎ የተሰጠ ውክልና",
+    "delegations_inbound_unavailable": "ይህ መተግበሪያ ሌሎች ሰዎች ለእርስዎ የሰጡትን ሥልጣን እስካሁን ማንበብ አይችልም — ይህ ምንም እንደሌለ የሚያሳይ ሪፖርት አይደለም።",
+    "delegations_list_error": "ውክልናዎችዎን ከዚህ ኖድ ማንበብ አልተቻለም፣ ስለዚህ ይህ ዝርዝር ሙሉ አይደለም፦ {error}",
+    "delegations_refresh": "አድስ",
+    "delegations_revoke_title": "ይህን ውክልና ይሰርዙ?",
+    "delegations_revoke_fact_who": "ማን",
+    "delegations_revoke_fact_effect": "የሚቀየረው",
+    "delegations_revoke_fact_signer": "የሚፈርመው",
+    "delegations_revoke_effect": "ከእንግዲህ ለእርስዎ መስራት አይችልም። ስረዛ ዘላቂ ነው፦ እንደገና ሥልጣን ለመስጠት አዲስ ውክልና ማውጣት አለብዎት።",
+    "delegations_revoke_signer": "እርስዎ — በዚህ ኖድ ላይ ያለው የማንነት ቁልፍዎ መውጣቱን ይፈርማል",
+    "delegations_signed_record": "የተፈረመ መዝገብ {id}",
+    "identity_associate_seal_hardware": "የዚህን መሣሪያ ቁልፍ በራሱ ሃርድዌር (TPM) ውስጥ ዝጉ",
+    "identity_associate_use_software": "በምትኩ በዚህ መሣሪያ ላይ የሶፍትዌር ጥበቃን ተጠቀሙ",
+    "login_new_account_refused": "ይህ ኖድ አስቀድሞ ባለቤት አለው፦ ኖዱ ፈጽሞ ያላየው መለያ እዚህ ይከለክላል። በባለቤቱ መለያ ይግቡ።",
+    "login_new_account_observer": "ይህ ኖድ ፈጽሞ ያላየው መለያ እንደ ተመልካች ብቻ ይገባል፣ እንደ ባለቤት አይደለም።",
+    "login_new_account_claims": "ይህ ኖድ እስካሁን ባለቤት የለውም፦ መጀመሪያ የሚገባው መለያ ባለቤቱ ይሆናል።",
+    "delegations_deny": "እምቢ"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "የማንነትዎ እንደ ሰው አልተመዘገበም፣ እና እንደ እውቂያ መጨመር የሚችለው ሰው ብቻ ነው።",
     "contact_code_key_not_derived": "የማንነትዎ key_id ከቁልፉ ጋር አይዛመድም፣ ስለዚህ ኮድ ያጋሩዋቸው ሁሉ ይክዱታል።",
     "contact_code_no_pqc_half": "የማንነትዎ ድህረ-ኳንተም ቁልፍ ግማሽ የለውም፣ ስለዚህ ማንም ከኮድ እርስዎን ሊጨምር አይችልም።",
-    "contact_code_unencodable": "የእውቂያ ኮድዎ ይህ ኖድ ከያዛቸው ቁልፎች ሊዘጋጅ አልቻለም።"
+    "contact_code_unencodable": "የእውቂያ ኮድዎ ይህ ኖድ ከያዛቸው ቁልፎች ሊዘጋጅ አልቻለም።",
+    "associate": {
+      "hardware_custody_unavailable": "ይህ መሣሪያ ቁልፍ የሚዘጋ ሃርድዌር የለውም (TPM ወይም secure enclave የለም)፣ ስለዚህ ምንም ነገር አልተዋቀረም። በምትኩ የሶፍትዌር ጥበቃ መጠቀም ይችላሉ፦ ቁልፉ በዚህ መሣሪያ ላይ ምስጠር በተደረገበት ፋይል ውስጥ ይቀመጣል።"
+    }
   },
   "partnership_queue": {
     "title": "ከዚህ ወኪል ጋር መተባበር",

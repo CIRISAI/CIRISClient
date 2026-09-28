@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} est toujours un contact",
     "contacts_remove_remaining_body": "Vous avez retiré {count} autorisation(s). Les autorisations ci-dessous sont toujours actives.",
     "contacts_remove_remaining_row": "Toujours actif : rédigé par ce nœud avant que vous ne signiez vos contacts, il ne peut donc pas être retiré ici",
-    "contacts_remove_unsupported": "Ce nœud ne peut pas encore supprimer de contacts (nécessite ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Ce nœud ne peut pas encore supprimer de contacts (nécessite ciris-server 0.5.218).",
+    "delegations_inbound_unavailable": "Cette application ne peut pas encore lire l'autorité que d'autres personnes vous ont déléguée — ceci ne signifie pas qu'il n'y en a aucune.",
+    "delegations_list_error": "Impossible de lire vos délégations depuis ce nœud ; cette liste est donc incomplète : {error}",
+    "delegations_refresh": "Actualiser",
+    "delegations_revoke_title": "Révoquer cette délégation ?",
+    "delegations_revoke_fact_who": "Qui",
+    "delegations_revoke_fact_effect": "Ce qui change",
+    "delegations_revoke_fact_signer": "Qui signe",
+    "delegations_revoke_effect": "Il ne pourra plus agir pour vous, à partir de maintenant. Une révocation est permanente : pour lui redonner autorité, vous devez émettre une nouvelle délégation.",
+    "delegations_revoke_signer": "Vous — votre clé d'identité sur ce nœud signe le retrait",
+    "delegations_signed_record": "Enregistrement signé {id}",
+    "identity_associate_seal_hardware": "Sceller la clé de cet appareil dans son matériel (TPM)",
+    "identity_associate_use_software": "Utiliser plutôt la garde logicielle sur cet appareil",
+    "login_new_account_refused": "Ce nœud a déjà un propriétaire : un compte qu'il n'a jamais vu serait refusé ici. Connectez-vous avec le compte du propriétaire.",
+    "login_new_account_observer": "Un compte que ce nœud n'a jamais vu serait admis en tant qu'observateur, et non en tant que propriétaire.",
+    "login_new_account_claims": "Ce nœud n'a pas encore de propriétaire : le premier compte à se connecter en devient le propriétaire.",
+    "delegations_deny": "Refuser",
+    "delegations_inbound_title": "Délégué à vous"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Votre identité n'est pas enregistrée comme une personne, et seule une personne peut être ajoutée comme contact.",
     "contact_code_key_not_derived": "L'identifiant de clé de votre identité ne correspond pas à sa clé ; toute personne à qui vous avez partagé un code le refuserait donc.",
     "contact_code_no_pqc_half": "Votre identité n'a pas de moitié de clé post-quantique, donc personne ne pourrait vous ajouter à partir d'un code.",
-    "contact_code_unencodable": "Votre code de contact n'a pas pu être créé à partir des clés que détient ce nœud."
+    "contact_code_unencodable": "Votre code de contact n'a pas pu être créé à partir des clés que détient ce nœud.",
+    "associate": {
+      "hardware_custody_unavailable": "Cet appareil ne dispose d'aucun matériel capable de sceller une clé (pas de TPM ni d'enclave sécurisée), donc rien n'a été configuré. Vous pouvez utiliser la garde logicielle à la place : la clé est conservée dans un fichier chiffré sur cet appareil."
+    }
   },
   "partnership_queue": {
     "title": "Partenariat avec cet agent",

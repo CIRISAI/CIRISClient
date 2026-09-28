@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} は現在も連絡先です",
     "contacts_remove_remaining_body": "{count} 件の同意の付与を取り消しました。以下の同意は現在も有効です。",
     "contacts_remove_remaining_row": "有効なまま：あなたが連絡先に署名する前に、このノードによって記録されたため、ここでは取り消せません",
-    "contacts_remove_unsupported": "このノードはまだ連絡先を削除できません（ciris-server 0.5.218 が必要です）。"
+    "contacts_remove_unsupported": "このノードはまだ連絡先を削除できません（ciris-server 0.5.218 が必要です）。",
+    "delegations_deny": "拒否",
+    "delegations_inbound_title": "あなたへの委任",
+    "delegations_inbound_unavailable": "このアプリは、他の人があなたに委任した権限をまだ読み取ることができません — これは委任が存在しないという報告ではありません。",
+    "delegations_list_error": "このノードからあなたの委任情報を読み取れなかったため、このリストは完全ではありません: {error}",
+    "delegations_refresh": "更新",
+    "delegations_revoke_title": "この委任を取り消しますか？",
+    "delegations_revoke_fact_who": "対象",
+    "delegations_revoke_fact_effect": "変更内容",
+    "delegations_revoke_fact_signer": "署名者",
+    "delegations_revoke_effect": "以後、あなたに代わって行動することはできなくなります。取り消しは永続的です。再度権限を与えるには、新しい委任を発行してください。",
+    "delegations_revoke_signer": "あなた — このノード上のあなたの ID キーが取り消しに署名します",
+    "delegations_signed_record": "署名済み記録 {id}",
+    "identity_associate_seal_hardware": "このデバイスの鍵をハードウェア（TPM）に封印する",
+    "identity_associate_use_software": "代わりにこのデバイスでソフトウェアカストディを使用する",
+    "login_new_account_refused": "このノードには既に所有者がいます: このノードが一度も見たことのないアカウントはここでは拒否されます。所有者のアカウントでサインインしてください。",
+    "login_new_account_observer": "このノードが一度も見たことのないアカウントは、所有者としてではなく、オブザーバーとして受け入れられます。",
+    "login_new_account_claims": "このノードにはまだ所有者がいません: 最初にサインインしたアカウントがその所有者になります。"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "あなたのアイデンティティは個人として登録されていないため、連絡先として追加できるのは個人のみです。",
     "contact_code_key_not_derived": "あなたのアイデンティティのkey_idが鍵と一致していないため、コードを共有した相手全員がそれを拒否することになります。",
     "contact_code_no_pqc_half": "あなたのアイデンティティにはポスト量子暗号鍵の片方が存在しないため、誰もコードからあなたを追加できません。",
-    "contact_code_unencodable": "このノードが保持している鍵からは、あなたの連絡先コードを作成できませんでした。"
+    "contact_code_unencodable": "このノードが保持している鍵からは、あなたの連絡先コードを作成できませんでした。",
+    "associate": {
+      "hardware_custody_unavailable": "このデバイスには鍵を封印できるハードウェア（TPMやSecure Enclave）がないため、何も設定されませんでした。代わりにソフトウェアカストディを使用できます: 鍵はこのデバイス上の暗号化されたファイルに保存されます。"
+    }
   },
   "partnership_queue": {
     "outcome_approved": "承認",

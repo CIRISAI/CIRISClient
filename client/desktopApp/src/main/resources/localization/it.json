@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} è ancora un contatto",
     "contacts_remove_remaining_body": "Hai ritirato {count} concessione(i). Le concessioni elencate di seguito sono ancora attive.",
     "contacts_remove_remaining_row": "Ancora attivo: scritto da questo nodo prima che tu firmassi i tuoi contatti, quindi non può essere ritirato qui",
-    "contacts_remove_unsupported": "Questo nodo non può ancora rimuovere contatti (richiede ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Questo nodo non può ancora rimuovere contatti (richiede ciris-server 0.5.218).",
+    "delegations_deny": "Rifiuta",
+    "delegations_inbound_title": "Deleghe a te",
+    "delegations_inbound_unavailable": "Questa app non può ancora leggere l'autorità che altre persone ti hanno delegato — questo non significa che non ce ne sia nessuna.",
+    "delegations_list_error": "Impossibile leggere le tue deleghe da questo nodo, quindi questo elenco non è completo: {error}",
+    "delegations_refresh": "Aggiorna",
+    "delegations_revoke_title": "Revocare questa delega?",
+    "delegations_revoke_fact_who": "Chi",
+    "delegations_revoke_fact_effect": "Cosa cambia",
+    "delegations_revoke_fact_signer": "Chi firma",
+    "delegations_revoke_effect": "Non potrà più agire per te, da questo momento in poi. Una revoca è permanente: per conferirgli nuovamente l'autorità, devi emettere una nuova delega.",
+    "delegations_revoke_signer": "Tu — la tua chiave di identità su questo nodo firma il ritiro",
+    "delegations_signed_record": "Registrazione firmata {id}",
+    "identity_associate_seal_hardware": "Sigilla la chiave di questo dispositivo nel suo hardware (TPM)",
+    "identity_associate_use_software": "Usa invece la custodia software su questo dispositivo",
+    "login_new_account_refused": "Questo nodo ha già un proprietario: un account che non ha mai visto verrebbe qui rifiutato. Accedi con l'account del proprietario.",
+    "login_new_account_observer": "Un account che questo nodo non ha mai visto verrebbe ammesso come osservatore, non come proprietario.",
+    "login_new_account_claims": "Questo nodo non ha ancora un proprietario: il primo account che accede ne diventa il proprietario."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "La tua identità non è registrata come persona, e solo una persona può essere aggiunta come contatto.",
     "contact_code_key_not_derived": "Il key_id della tua identità non corrisponde alla sua chiave, quindi chiunque abbia ricevuto un codice da te lo rifiuterebbe.",
     "contact_code_no_pqc_half": "La tua identità non possiede la metà della chiave post-quantistica, quindi nessuno potrebbe aggiungerti tramite un codice.",
-    "contact_code_unencodable": "Non è stato possibile generare il tuo codice di contatto dalle chiavi possedute da questo nodo."
+    "contact_code_unencodable": "Non è stato possibile generare il tuo codice di contatto dalle chiavi possedute da questo nodo.",
+    "associate": {
+      "hardware_custody_unavailable": "Questo dispositivo non dispone di hardware in grado di sigillare una chiave (nessun TPM o secure enclave), quindi non è stato configurato nulla. Puoi usare invece la custodia software: la chiave viene conservata in un file cifrato su questo dispositivo."
+    }
   },
   "partnership_queue": {
     "title": "Partnership con questo agente",

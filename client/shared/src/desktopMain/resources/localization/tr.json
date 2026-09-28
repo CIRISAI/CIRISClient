@@ -3179,7 +3179,24 @@
     "contacts_remove_confirm_title": "{who} kişilerinizden kaldırılsın mı?",
     "contacts_remove_fact_stops_value": "Onlarla paylaşım için verdiğiniz onay. Mesajlarınız ve paylaşılan kayıtlarınız onlara çoğaltılmayı durdurur.",
     "contacts_removed": "{who} kaldırıldı. Onlara verdiğiniz onay geri çekildi.",
-    "contacts_remove_remaining_title": "{who} hâlâ bir kişi olarak kayıtlı"
+    "contacts_remove_remaining_title": "{who} hâlâ bir kişi olarak kayıtlı",
+    "delegations_inbound_unavailable": "Bu uygulama, diğer kişilerin size devrettiği yetkileri henüz okuyamıyor — bu, hiç olmadığının bir bildirimi değildir.",
+    "delegations_list_error": "Yetki devirleriniz bu düğümden okunamadı, bu nedenle bu liste eksik: {error}",
+    "delegations_refresh": "Yenile",
+    "delegations_revoke_title": "Bu yetki devri iptal edilsin mi?",
+    "delegations_revoke_fact_who": "Kim",
+    "delegations_revoke_fact_effect": "Ne değişir",
+    "delegations_revoke_fact_signer": "Kim imzalar",
+    "delegations_revoke_effect": "Bundan sonra artık sizin adınıza hareket edemez. İptal işlemi kalıcıdır: ona yeniden yetki vermek için yeni bir yetki devri oluşturmanız gerekir.",
+    "delegations_revoke_signer": "Siz — bu düğümdeki kimlik anahtarınız geri çekme işlemini imzalar",
+    "delegations_signed_record": "İmzalı kayıt {id}",
+    "identity_associate_seal_hardware": "Bu cihazın anahtarını donanımında (TPM) mühürleyin",
+    "identity_associate_use_software": "Bunun yerine bu cihazda yazılım tabanlı saklamayı kullanın",
+    "login_new_account_refused": "Bu düğümün zaten bir sahibi var: hiç görmediği bir hesap burada reddedilir. Sahibin hesabıyla oturum açın.",
+    "login_new_account_observer": "Bu düğümün hiç görmediği bir hesap, sahibi olarak değil, gözlemci olarak içeri alınır.",
+    "login_new_account_claims": "Bu düğümün henüz bir sahibi yok: oturum açan ilk hesap onun sahibi olur.",
+    "delegations_deny": "Reddet",
+    "delegations_inbound_title": "Size devredilenler"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Kimliğiniz bir kişi olarak kayıtlı değil ve yalnızca bir kişi, kişi listesine eklenebilir.",
     "contact_code_key_not_derived": "Kimliğinizin key_id'si anahtarıyla eşleşmiyor, bu nedenle kodu paylaştığınız herkes onu reddedecektir.",
     "contact_code_no_pqc_half": "Kimliğinizin kuantum sonrası anahtar yarısı yok, bu nedenle kimse sizi bir koddan ekleyemez.",
-    "contact_code_unencodable": "Kişi kodunuz, bu düğümün tuttuğu anahtarlardan oluşturulamadı."
+    "contact_code_unencodable": "Kişi kodunuz, bu düğümün tuttuğu anahtarlardan oluşturulamadı.",
+    "associate": {
+      "hardware_custody_unavailable": "Bu cihazda bir anahtarı mühürleyebilecek donanım yok (TPM veya secure enclave yok), bu nedenle hiçbir şey kurulmadı. Bunun yerine yazılım tabanlı saklamayı kullanabilirsiniz: anahtar bu cihazda şifrelenmiş bir dosyada saklanır."
+    }
   },
   "partnership_queue": {
     "admin_only": "Bu ajanı kimlerin beklediğini yalnızca yöneticileri görebilir.",

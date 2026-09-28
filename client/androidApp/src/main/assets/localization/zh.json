@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} 仍是您的联系人",
     "contacts_remove_remaining_body": "您已撤销 {count} 项授权。以下授权仍处于生效状态。",
     "contacts_remove_remaining_row": "仍处于生效状态：由此节点在您签名您的联系人之前写入，因此无法在此撤销",
-    "contacts_remove_unsupported": "此节点尚不支持移除联系人（需要 ciris-server 0.5.218）。"
+    "contacts_remove_unsupported": "此节点尚不支持移除联系人（需要 ciris-server 0.5.218）。",
+    "delegations_deny": "拒绝",
+    "delegations_inbound_title": "委派给您",
+    "delegations_inbound_unavailable": "此应用尚无法读取他人委派给您的权限——这并不表示没有任何委派。",
+    "delegations_list_error": "无法从此节点读取您的委派信息，因此此列表并不完整：{error}",
+    "delegations_refresh": "刷新",
+    "delegations_revoke_title": "吊销此委派？",
+    "delegations_revoke_fact_who": "谁",
+    "delegations_revoke_fact_effect": "变化内容",
+    "delegations_revoke_fact_signer": "谁签名",
+    "delegations_revoke_effect": "从现在起，它将无法再为您执行动作。吊销是永久性的：若要再次授予它权限，您需要签发一份新的委派。",
+    "delegations_revoke_signer": "您 — 您在此节点上的身份密钥将对撤销进行签名",
+    "delegations_signed_record": "已签名记录 {id}",
+    "identity_associate_seal_hardware": "将此设备的密钥封存在其硬件（TPM）中",
+    "identity_associate_use_software": "改用此设备上的软件托管",
+    "login_new_account_refused": "此节点已有所有者：从未见过的账户在此将被拒绝。请使用所有者账户登录。",
+    "login_new_account_observer": "此节点从未见过的账户将以观察者身份被允许进入，而非所有者。",
+    "login_new_account_claims": "此节点尚无所有者：首个登录的账户将成为其所有者。"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "您的身份未注册为个人，而只有个人身份才能被添加为联系人。",
     "contact_code_key_not_derived": "您身份的 key_id 与其密钥不匹配，因此所有与您分享过代码的人都会拒绝它。",
     "contact_code_no_pqc_half": "您的身份没有后量子密钥部分，因此没有人能通过代码添加您。",
-    "contact_code_unencodable": "无法根据此节点持有的密钥生成您的联系人代码。"
+    "contact_code_unencodable": "无法根据此节点持有的密钥生成您的联系人代码。",
+    "associate": {
+      "hardware_custody_unavailable": "此设备没有可用于封存密钥的硬件（无 TPM 或 Secure Enclave），因此未完成任何设置。您可以改用软件托管：密钥将保存在此设备上的加密文件中。"
+    }
   },
   "partnership_queue": {
     "title": "与此智能体建立合作关系",

@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} sigue siendo un contacto",
     "contacts_remove_remaining_body": "Retiraste {count} consentimiento(s) otorgado(s). Los que aparecen abajo siguen activos.",
     "contacts_remove_remaining_row": "Aún activo: escrito por este nodo antes de que firmaras tus contactos, así que no se puede retirar aquí",
-    "contacts_remove_unsupported": "Este nodo aún no puede eliminar contactos (necesita ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Este nodo aún no puede eliminar contactos (necesita ciris-server 0.5.218).",
+    "delegations_deny": "Rechazar",
+    "delegations_inbound_title": "Delegado a ti",
+    "delegations_inbound_unavailable": "Esta app aún no puede leer la autoridad que otras personas te han delegado — esto no significa que no exista ninguna.",
+    "delegations_list_error": "No se pudieron leer tus delegaciones desde este nodo, así que esta lista no está completa: {error}",
+    "delegations_refresh": "Actualizar",
+    "delegations_revoke_title": "¿Revocar esta delegación?",
+    "delegations_revoke_fact_who": "Quién",
+    "delegations_revoke_fact_effect": "Qué cambia",
+    "delegations_revoke_fact_signer": "Quién firma",
+    "delegations_revoke_effect": "Ya no podrá actuar en tu nombre, a partir de ahora. Una revocación es permanente: para volver a otorgarle autoridad, debes emitir una nueva delegación.",
+    "delegations_revoke_signer": "Tú — tu clave de identidad en este nodo firma la retirada",
+    "delegations_signed_record": "Registro firmado {id}",
+    "identity_associate_seal_hardware": "Sella la clave de este dispositivo en su hardware (TPM)",
+    "identity_associate_use_software": "Usa custodia por software en este dispositivo en su lugar",
+    "login_new_account_refused": "Este nodo ya tiene un propietario: una cuenta que nunca ha visto sería rechazada aquí. Inicia sesión con la cuenta del propietario.",
+    "login_new_account_observer": "Una cuenta que este nodo nunca ha visto sería admitida como observadora, no como propietaria.",
+    "login_new_account_claims": "Este nodo aún no tiene propietario: la primera cuenta que inicie sesión se convierte en su propietario."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Tu identidad no está registrada como persona, y solo una persona puede agregarse como contacto.",
     "contact_code_key_not_derived": "El key_id de tu identidad no coincide con su clave, así que todos con quienes compartiste un código lo rechazarían.",
     "contact_code_no_pqc_half": "Tu identidad no tiene la mitad de clave post-cuántica, así que nadie podría agregarte a partir de un código.",
-    "contact_code_unencodable": "No se pudo generar tu código de contacto a partir de las claves que tiene este nodo."
+    "contact_code_unencodable": "No se pudo generar tu código de contacto a partir de las claves que tiene este nodo.",
+    "associate": {
+      "hardware_custody_unavailable": "Este dispositivo no tiene hardware que pueda sellar una clave (sin TPM ni enclave seguro), así que no se configuró nada. Puedes usar custodia por software en su lugar: la clave se guarda en un archivo cifrado en este dispositivo."
+    }
   },
   "partnership_queue": {
     "title": "Asociarse con este agente",

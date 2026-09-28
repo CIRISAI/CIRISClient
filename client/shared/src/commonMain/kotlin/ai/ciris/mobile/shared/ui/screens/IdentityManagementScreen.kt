@@ -120,6 +120,8 @@ fun IdentityManagementScreen(
     val labelling by viewModel.labelling.collectAsState()
     val labelRefusal by viewModel.labelRefusal.collectAsState()
     val release by viewModel.release.collectAsState()
+    val sealInHardware by viewModel.sealInHardware.collectAsState()
+    val associateRefusal by viewModel.associateRefusal.collectAsState()
 
     var deviceCode by remember { mutableStateOf("") }
     // The name being typed for the device in [labelling]; reset when the editor moves.
@@ -829,6 +831,47 @@ fun IdentityManagementScreen(
                         },
                         onDismiss = { showAssociatePicker = false },
                     )
+                    Spacer(Modifier.height(8.dp))
+                    // Where this device's key lives. Software is the node's
+                    // default; hardware is asked for, and since 0.5.218 a host
+                    // without it REFUSES rather than handing back a software key
+                    // under a hardware label (CIRISServer#639).
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            localizedString("mobile.identity_associate_seal_hardware"),
+                            fontSize = 13.sp,
+                            modifier = Modifier.weight(1f),
+                        )
+                        androidx.compose.material3.Switch(
+                            checked = sealInHardware,
+                            onCheckedChange = { viewModel.setSealInHardware(it) },
+                            enabled = !busy,
+                            modifier = Modifier.testableClickable("switch_identity_associate_hardware") {
+                                viewModel.setSealInHardware(!sealInHardware)
+                            },
+                        )
+                    }
+                    associateRefusal?.let { r ->
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            refusalText(r),
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testable("txt_identity_associate_refusal"),
+                        )
+                        if (r.reasonId == "self.associate.hardware_custody_unavailable") {
+                            Spacer(Modifier.height(6.dp))
+                            OutlinedButton(
+                                onClick = { viewModel.associateFedId(associateDir, softwareCustody = true) },
+                                enabled = !busy && associateDir.isNotBlank(),
+                                modifier = Modifier.testableClickable("btn_identity_associate_software") {
+                                    viewModel.associateFedId(associateDir, softwareCustody = true)
+                                },
+                            ) {
+                                Text(localizedString("mobile.identity_associate_use_software"))
+                            }
+                        }
+                    }
                     Spacer(Modifier.height(8.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Button(

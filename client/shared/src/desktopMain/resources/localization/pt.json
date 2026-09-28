@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} ainda é um contato",
     "contacts_remove_remaining_body": "Você retirou {count} concessão(ões). As concessões abaixo ainda estão ativas.",
     "contacts_remove_remaining_row": "Ainda ativo: escrito por este nó antes de você assinar seus contatos, portanto não pode ser retirado aqui",
-    "contacts_remove_unsupported": "Este nó ainda não pode remover contatos (requer ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Este nó ainda não pode remover contatos (requer ciris-server 0.5.218).",
+    "delegations_deny": "Recusar",
+    "delegations_inbound_title": "Delegado a você",
+    "delegations_inbound_unavailable": "Este app ainda não consegue ler a autoridade que outras pessoas delegaram a você — isto não é um relatório de que não há nenhuma.",
+    "delegations_list_error": "Não foi possível ler suas delegações a partir deste nó, portanto esta lista está incompleta: {error}",
+    "delegations_refresh": "Atualizar",
+    "delegations_revoke_title": "Revogar esta delegação?",
+    "delegations_revoke_fact_who": "Quem",
+    "delegations_revoke_fact_effect": "O que muda",
+    "delegations_revoke_fact_signer": "Quem assina",
+    "delegations_revoke_effect": "Ele não poderá mais agir por você, a partir de agora. Uma revogação é permanente: para dar-lhe autoridade novamente, você emite uma nova delegação.",
+    "delegations_revoke_signer": "Você — sua chave de identidade neste nó assina a retirada",
+    "delegations_signed_record": "Registro assinado {id}",
+    "identity_associate_seal_hardware": "Selar a chave deste dispositivo em seu hardware (TPM)",
+    "identity_associate_use_software": "Usar custódia por software neste dispositivo em vez disso",
+    "login_new_account_refused": "Este nó já tem um proprietário: uma conta que ele nunca viu seria recusada aqui. Entre com a conta do proprietário.",
+    "login_new_account_observer": "Uma conta que este nó nunca viu seria admitida como observadora, não como proprietária.",
+    "login_new_account_claims": "Este nó ainda não tem proprietário: a primeira conta a entrar se torna sua proprietária."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Sua identidade não está registrada como pessoa, e somente uma pessoa pode ser adicionada como contato.",
     "contact_code_key_not_derived": "O key_id da sua identidade não corresponde à chave dela, portanto todos com quem você compartilhou um código o recusariam.",
     "contact_code_no_pqc_half": "Sua identidade não tem a metade pós-quântica da chave, portanto ninguém poderia adicionar você a partir de um código.",
-    "contact_code_unencodable": "Seu código de contato não pôde ser gerado a partir das chaves que este nó possui."
+    "contact_code_unencodable": "Seu código de contato não pôde ser gerado a partir das chaves que este nó possui.",
+    "associate": {
+      "hardware_custody_unavailable": "Este dispositivo não tem hardware capaz de selar uma chave (sem TPM ou secure enclave), portanto nada foi configurado. Você pode usar custódia por software em vez disso: a chave é mantida em um arquivo criptografado neste dispositivo."
+    }
   },
   "partnership_queue": {
     "title": "Parceria com este agente",

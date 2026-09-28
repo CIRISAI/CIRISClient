@@ -552,8 +552,6 @@ fun CIRISApp(
             // Peer detail (parameterised) goes back to the peer list, not the hub
             is Screen.NetworkPeerDetail -> Screen.NetworkPeers
 
-            is Screen.Delegation -> Screen.LayerFamily
-
             // Contacts goes back to the picker source (Delegations) or home
             is Screen.Contacts -> {
                 val src = contactsPickerSourceScreen
@@ -1859,6 +1857,12 @@ fun CIRISApp(
                 // onto redirect_uri_mismatch. Native Apple sign-in (iOS) doesn't ride
                 // the node's browser-OAuth creds, so it stays live regardless.
                 var googleOAuthAvailable by remember { mutableStateOf(true) }
+                // What a never-seen account would get here, from the node's own
+                // predicate (GET /v1/auth/signin-state, CSD-081, CIRISClient#110).
+                var signinState by remember { mutableStateOf<ai.ciris.mobile.shared.models.SigninState?>(null) }
+                LaunchedEffect(Unit) {
+                    signinState = apiClient.getSigninState(nodeBaseUrl)
+                }
                 LaunchedEffect(Unit) {
                     val providerId = if (isIOS()) "apple" else "google"
                     runCatching { apiClient.getOAuthProviders(nodeBaseUrl) }
@@ -2030,9 +2034,7 @@ fun CIRISApp(
 
                                                     // Trigger data loading
                                                     PlatformLogger.i(TAG, " Triggering billingViewModel.loadBalance()...")
-                                                    billingViewModel.loadBalance()
-                                                    adaptersViewModel.fetchAdapters()
-                                                    interactViewModel.startPolling() // Start polling now that token is set
+                                                    handOffToInteract(interactViewModel, billingViewModel, adaptersViewModel)
 
                                                     isLoginLoading = false
                                                     loginStatusMessage = null
@@ -2086,7 +2088,8 @@ fun CIRISApp(
                                                 pendingUserId = result.userId
                                                 pendingProvider = result.provider
                                                 tokenManager.setCurrentProvider(result.provider)
-                                                setupViewModel.setGoogleAuthState(
+                                                handOffToSetup(
+                                                    setupViewModel,
                                                     isAuth = true,
                                                     idToken = result.idToken,
                                                     email = result.email,
@@ -2205,7 +2208,8 @@ fun CIRISApp(
                                     // federation-ID name from <provider>-<subject>, so
                                     // arriving with only a bearer would put the user
                                     // back to inventing a unique name by hand.
-                                    setupViewModel.setGoogleAuthState(
+                                    handOffToSetup(
+                                        setupViewModel,
                                         isAuth = true,
                                         // Forward the provider's ID token when the node
                                         // sends one (CIRISServer#434, ciris-server
@@ -2221,7 +2225,7 @@ fun CIRISApp(
                                     )
                                     currentScreen = Screen.Setup
                                 } else {
-                                    interactViewModel.startPolling()
+                                    handOffToInteract(interactViewModel, billing = null, adapters = null)
                                     currentScreen = homeTarget
                                 }
                             }
@@ -2232,7 +2236,8 @@ fun CIRISApp(
                         // First run - go to setup wizard for BYOK setup
                         platformLog(TAG, "[INFO][onLocalLogin] First run - going to setup for BYOK")
                         loginErrorMessage = null
-                        setupViewModel.setGoogleAuthState(
+                        handOffToSetup(
+                            setupViewModel,
                             isAuth = false,
                             idToken = null,
                             email = null,
@@ -2335,9 +2340,7 @@ fun CIRISApp(
                                 }
 
                                 // Trigger data loading
-                                billingViewModel.loadBalance()
-                                adaptersViewModel.fetchAdapters()
-                                interactViewModel.startPolling()
+                                handOffToInteract(interactViewModel, billingViewModel, adaptersViewModel)
 
                                 isLoginLoading = false
                                 loginStatusMessage = null
@@ -2567,6 +2570,7 @@ fun CIRISApp(
                     errorMessage = loginErrorMessage,
                     ownerHint = ownerHint,
                     observerBlocked = observerBlocked,
+                    newIdentityOutcome = signinState?.newIdentity,
                     // Start the local form EXPANDED only where there is no sign-in
                     // alternative. A null callback used to mean exactly that — but desktop
                     // now has the node's browser flow (#1028), and forcing the form there
@@ -4195,7 +4199,9 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.Delegations] Rendering delegations screen")
                 DelegationsScreen(
                     viewModel = delegationsViewModel,
-                    onBack = { currentScreen = Screen.Interact },
+                    // Placed under Rules in every circle: its placement answers
+                    // back. Interact is agent-only and not in a node's tree.
+                    onBack = { currentScreen = placedBackTarget(Screen.Delegations, clientMode?.isAgent ?: false) ?: homeTarget },
                     onOpenContacts = {
                         contactsPickerSourceScreen = Screen.Delegations
                         contactsViewModel.selectPeer(null) // clear any prior selection
@@ -4293,8 +4299,9 @@ fun CIRISApp(
                     // Tiers 0-4 of /v1/admin/* — the enforcement ladder.
                     ladderViewModel = adminLadderViewModel,
                     onBack = { currentScreen = Screen.Interact },
-                    // The delegate-moderate-duty flow lives on Family → Delegation.
-                    onOpenDelegation = { currentScreen = Screen.Delegation },
+                    // The delegate-moderate-duty flow lives on Rules › Delegations
+                    // (CSD-001's read view was folded into it, CSD-055).
+                    onOpenDelegation = { currentScreen = Screen.Delegations },
                 )
             }
 
@@ -4787,18 +4794,6 @@ fun CIRISApp(
                     apiClient = apiClient,
                 )
             }
-            Screen.Delegation -> {
-                val delegationsList by delegationsViewModel.delegations.collectAsState()
-                val isDelegationsLoading by delegationsViewModel.loading.collectAsState()
-                ai.ciris.mobile.shared.ui.screens.federation.DelegationScreen(
-                    delegations = delegationsList,
-                    isLoading = isDelegationsLoading,
-                    onRefresh = { delegationsViewModel.refresh() },
-                    onNavigateBack = { currentScreen = Screen.LayerFamily },
-                    onManageDeviceGrants = { currentScreen = Screen.Delegations },
-                    onIssueClick = { url -> uriHandler.openUri(url) },
-                )
-            }
             Screen.Constitutional -> {
                 val accordFamily by accordViewModel.family.collectAsState()
                 val accordHolders by accordViewModel.holders.collectAsState()
@@ -4920,7 +4915,7 @@ fun CIRISApp(
             Screen.LayerFamily -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.FAMILY,
                 hasAgent = clientMode?.isAgent ?: false,
-                onOpenDelegations = { currentScreen = Screen.Delegation },
+                onOpenDelegations = { currentScreen = Screen.Delegations },
                 onIssueClick = { url -> uriHandler.openUri(url) },
             )
             Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
@@ -4987,7 +4982,6 @@ fun CIRISApp(
                     // and this map wins before the placement rule — so leaving
                     // them here sent the one back arrow to a tab the card is no
                     // longer in. Their placement answers it now.
-                    Screen.Delegation -> Screen.LayerFamily
                     Screen.GraphMemory -> Screen.Memory
                     Screen.SkillStudio -> Screen.Adapters
                     Screen.VizSettings -> Screen.Settings
@@ -5076,6 +5070,51 @@ fun CIRISApp(
             }
         } // close MaterialTheme
     } // CompositionLocalProvider
+}
+
+// ─── CSD-081: the two doors out of Login ─────────────────────────────────────
+//
+// Signing in ends by handing the person to another card: the wizard on a first
+// run, or the signed-in session's cards otherwise. What those cards then fetch
+// (history, credits, adapters, the identity probes the wizard runs) is theirs,
+// not Login's, and each card's CSD cites it. `packaging/check_csd_routes.py`
+// does not follow a `handOffTo<Screen>` call out of a screen's arm for that
+// reason: it charges what the call reaches to Screen.<Screen> instead, so the
+// name moves a route to its card and cannot hide one. CSD-081 §3 lists what
+// Login itself calls.
+
+/**
+ * Start the signed-in session: the chat poll Interact renders (history, the
+ * reasoning stream, capacity, credits) and, for the native and password
+ * sign-ins, the balance and adapter list its header shows. The desktop browser
+ * hand-off has only ever started the poll, and passes null for the other two.
+ */
+private fun handOffToInteract(
+    interact: InteractViewModel,
+    billing: BillingViewModel?,
+    adapters: AdaptersViewModel?,
+) {
+    billing?.loadBalance()
+    adapters?.fetchAdapters()
+    interact.startPolling()
+}
+
+/** Hand the sign-in's identity (or its absence) to the first-run wizard. */
+private fun handOffToSetup(
+    setup: SetupViewModel,
+    isAuth: Boolean,
+    idToken: String?,
+    email: String?,
+    userId: String?,
+    provider: String = "google",
+) {
+    setup.setGoogleAuthState(
+        isAuth = isAuth,
+        idToken = idToken,
+        email = email,
+        userId = userId,
+        provider = provider,
+    )
 }
 
 /**
@@ -5871,7 +5910,6 @@ internal sealed class Screen {
     // HealthReputation ships with a real card (CellVizState-backed).
     // The other six are Coming Soon placeholders pinned to their substrate issue.
     object HealthReputation : Screen()
-    object Delegation : Screen()
     object Constitutional : Screen()
 
     // Network hub federation sub-screens — all ten live since T-E / T-E-D
@@ -6021,7 +6059,6 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Billing -> ai.ciris.mobile.shared.ui.nav.NavSurface.Billing
     Screen.Wallet -> ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet
     Screen.EnvironmentInfo -> ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph
-    Screen.Delegation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation
     Screen.Constitutional -> ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional
     Screen.VizSettings -> ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface
     // CEG 0.6 layer hubs (2.9.4 Phase A)
@@ -6088,7 +6125,6 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.Billing -> Screen.Billing
     ai.ciris.mobile.shared.ui.nav.NavSurface.Wallet -> Screen.Wallet
     ai.ciris.mobile.shared.ui.nav.NavSurface.EnvironmentGraph -> Screen.EnvironmentInfo
-    ai.ciris.mobile.shared.ui.nav.NavSurface.Delegation -> Screen.Delegation
     ai.ciris.mobile.shared.ui.nav.NavSurface.Constitutional -> Screen.Constitutional
     ai.ciris.mobile.shared.ui.nav.NavSurface.ClientInterface -> Screen.VizSettings
     ai.ciris.mobile.shared.ui.nav.NavSurface.Help -> Screen.Help

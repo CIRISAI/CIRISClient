@@ -3179,7 +3179,24 @@
     "contacts_remove_remaining_title": "{who} ist weiterhin ein Kontakt",
     "contacts_remove_remaining_body": "Sie haben {count} Einwilligung(en) zurückgezogen. Die untenstehenden Einwilligungen sind weiterhin aktiv.",
     "contacts_remove_remaining_row": "Weiterhin aktiv: von diesem Knoten geschrieben, bevor Sie Ihre Kontakte signiert haben, daher kann sie hier nicht zurückgezogen werden",
-    "contacts_remove_unsupported": "Dieser Knoten kann noch keine Kontakte entfernen (benötigt ciris-server 0.5.218)."
+    "contacts_remove_unsupported": "Dieser Knoten kann noch keine Kontakte entfernen (benötigt ciris-server 0.5.218).",
+    "delegations_deny": "Ablehnen",
+    "delegations_inbound_title": "An Sie delegiert",
+    "delegations_inbound_unavailable": "Diese App kann Befugnisse, die andere Personen an Sie delegiert haben, noch nicht lesen — das ist keine Meldung, dass keine vorhanden sind.",
+    "delegations_list_error": "Ihre Delegationen konnten von diesem Knoten nicht gelesen werden, daher ist diese Liste nicht vollständig: {error}",
+    "delegations_refresh": "Aktualisieren",
+    "delegations_revoke_title": "Diese Delegation widerrufen?",
+    "delegations_revoke_fact_who": "Wer",
+    "delegations_revoke_fact_effect": "Was sich ändert",
+    "delegations_revoke_fact_signer": "Wer signiert",
+    "delegations_revoke_effect": "Es kann ab sofort nicht mehr für Sie handeln. Ein Widerruf ist endgültig: Um ihm erneut Befugnis zu erteilen, stellen Sie eine neue Delegation aus.",
+    "delegations_revoke_signer": "Sie — Ihr Identitätsschlüssel auf diesem Knoten signiert den Widerruf",
+    "delegations_signed_record": "Signierter Datensatz {id}",
+    "identity_associate_seal_hardware": "Schlüssel dieses Geräts in seiner Hardware versiegeln (TPM)",
+    "identity_associate_use_software": "Stattdessen Software-Verwahrung auf diesem Gerät verwenden",
+    "login_new_account_refused": "Dieser Knoten hat bereits einen Eigentümer: Ein Konto, das er noch nie gesehen hat, würde hier abgelehnt. Melden Sie sich mit dem Konto des Eigentümers an.",
+    "login_new_account_observer": "Ein Konto, das dieser Knoten noch nie gesehen hat, würde als Beobachter zugelassen, nicht als Eigentümer.",
+    "login_new_account_claims": "Dieser Knoten hat noch keinen Eigentümer: Das erste Konto, das sich anmeldet, wird dessen Eigentümer."
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "Ihre Identität ist nicht als Person registriert, und nur eine Person kann als Kontakt hinzugefügt werden.",
     "contact_code_key_not_derived": "Die Schlüssel-ID Ihrer Identität stimmt nicht mit ihrem Schlüssel überein, sodass jeder, mit dem Sie einen Code geteilt haben, ihn abweisen würde.",
     "contact_code_no_pqc_half": "Ihre Identität besitzt keine Post-Quanten-Schlüsselhälfte, sodass niemand Sie über einen Code hinzufügen könnte.",
-    "contact_code_unencodable": "Ihr Kontakt-Code konnte aus den Schlüsseln, die dieser Knoten besitzt, nicht erstellt werden."
+    "contact_code_unencodable": "Ihr Kontakt-Code konnte aus den Schlüsseln, die dieser Knoten besitzt, nicht erstellt werden.",
+    "associate": {
+      "hardware_custody_unavailable": "Dieses Gerät verfügt über keine Hardware, die einen Schlüssel versiegeln kann (kein TPM oder Secure Enclave), daher wurde nichts eingerichtet. Sie können stattdessen Software-Verwahrung verwenden: Der Schlüssel wird in einer verschlüsselten Datei auf diesem Gerät gespeichert."
+    }
   },
   "partnership_queue": {
     "revocable_not_undoable": "Eine Partnerschaft kann jederzeit beendet werden, das ist jedoch kein Rückgängigmachen: Der Agent trennt Ihre Identität sofort und lässt das, was er gelernt hat, über 90 Tage verblassen.",

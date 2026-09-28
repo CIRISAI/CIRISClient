@@ -72,4 +72,30 @@ sealed class OAuthHandoffPoll {
 
     /** The node reported a terminal failure for this flow. Stop and show it. */
     data class Failed(val reasonId: String?, val status: String?) : OAuthHandoffPoll()
+
+    companion object {
+        private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+        /**
+         * Read one hand-off answer. The node parks a FAILED flow as a 200 too —
+         * `{status: "failed", error, reason_id, provider}` (CIRISServer
+         * `src/auth/oauth.rs`, handoff handler) — and hands it over exactly once.
+         * Decoding every 2xx as a session threw on that body (no
+         * `access_token`), the throw read as "not yet", and the next poll got
+         * 410 `auth.oauth.flow_expired`: the person saw "expired" instead of the
+         * node's actual reason (`no_local_identity`, `exchange_failed`, ...).
+         * Anything else unreadable stays Pending, so a boot blip does not abort
+         * a live sign-in.
+         */
+        fun classify(statusCode: Int, body: String): OAuthHandoffPoll {
+            if (statusCode == 204) return Pending
+            val err = runCatching { json.decodeFromString(OAuthHandoffError.serializer(), body) }.getOrNull()
+            if (statusCode in 200..299) {
+                if (err?.status == "failed") return Failed(err.reasonId, err.status)
+                return runCatching { Ready(json.decodeFromString(OAuthHandoff.serializer(), body)) }
+                    .getOrDefault(Pending)
+            }
+            return if (err?.reasonId != null) Failed(err.reasonId, err.status) else Pending
+        }
+    }
 }

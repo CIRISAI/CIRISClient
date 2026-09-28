@@ -127,7 +127,6 @@ object CirclesNav {
         Placement(NavSurface.ManageConsent, Tab.RULES, ALL),
         Placement(NavSurface.Consent, Tab.RULES, ALL),
         Placement(NavSurface.Delegations, Tab.RULES, ALL),
-        Placement(NavSurface.Delegation, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.Billing, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.Wallet, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
 

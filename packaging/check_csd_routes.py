@@ -870,6 +870,16 @@ def calls(text: str):
 RESET_MEMBER = re.compile(r"^(reset|clear|forget|dismiss)[A-Z_]?")
 FOLLOW_CLASS = re.compile(r"(ViewModel|Repository|Repo|Api|Store|Service|Seam|Manager|Source|Client|Controller|Stream)$")
 NOT_FOLLOWED = {"CIRISApiClient", "CIRISApiClientProtocol", "HttpClient"}
+#: A bare call to a function named `handOffTo<Card>` hands the person to another
+#: card (Login -> the wizard, Login -> the signed-in session's cards, CSD-081).
+#: The closure does not follow it from the arm: what that card fetches is the
+#: card's, and its CSD cites it. `build` charges the hand-off's routes to
+#: Screen.<Card> when such a screen exists; otherwise a route no other screen
+#: reaches is charged back to the caller. Either way the name moves a route to
+#: the card that owns it and can never make one disappear.
+HANDOFF = re.compile(r"^handOffTo[A-Z]\w*$")
+#: The modifiers of a declaration (at its Sym.start) include `private`.
+FILE_PRIVATE = re.compile(r"[ \t]*(?:[@\w()]+\s+)*?private\b")
 
 
 @dataclass
@@ -893,6 +903,8 @@ class Closure:
         }
         self.colliding = {n for n in self.client_names if n in non_api_funs}
         self.api_by_sym: dict[tuple[str, int], str] = {am._sym.key: k for k, am in api.items()}  # type: ignore[attr-defined]
+        #: `handOffTo*` names met by the last `reach` (not followed; see HANDOFF)
+        self.handoffs: set[str] = set()
 
     def _types(self, src: Src, a: int, b: int, into: dict[str, str]) -> None:
         text = src.skel[a:b]
@@ -915,6 +927,9 @@ class Closure:
             self._types(s, a, b, ty)
             text = s.skel[a:b]
             for recv, name, off in calls(text):
+                if recv is None and HANDOFF.match(name):
+                    self.handoffs.add(name)
+                    continue
                 at = f"{s.rel}:{s.line(a + off)}"
                 rtype = ty.get(recv) if recv else None
                 if recv and rtype is None and recv.endswith("ViewModel"):
@@ -946,6 +961,12 @@ class Closure:
                         work.append(self._enter(mem, owner))
                 for fs in self.idx.funs.get(name, []):
                     if fs.parent is not None:
+                        continue
+                    # A top-level `private fun` is file-scoped: LoginScreen.kt and
+                    # SetupScreen.kt each declare a private FederationIdentitySection,
+                    # and following the wrong one charged the wizard's mint and
+                    # associate routes to Login.
+                    if fs.src.rel != s.rel and FILE_PRIVATE.match(fs.src.skel, fs.start):
                         continue
                     if fs.src.rel == s.rel or name[:1].isupper():
                         work.append(self._enter(fs, None))
@@ -1177,12 +1198,43 @@ def build(root: Path) -> dict:
     app_types.setdefault("apiClient", "CIRISApiClient")
 
     screen_hits: dict[str, list[Hit]] = {}  # filled below; checked after
+    screen_handoffs: dict[str, set[str]] = {}
     for sc in sorted(screens):
         if sc not in arms:
             screen_hits[sc] = []
             continue
         a, b = arms[sc]
+        clos.handoffs = set()
         screen_hits[sc] = clos.reach(app, a, b, app_types)
+        screen_handoffs[sc] = set(clos.handoffs)
+
+    # A hand-off's routes belong to the card it feeds — but only if some OTHER
+    # screen reaches them too. Anything reached solely through a hand-off is
+    # charged back to the screen that called it (HANDOFF).
+    handoff_hits: dict[str, list[Hit]] = {}
+    for name in sorted({n for v in screen_handoffs.values() for n in v}):
+        syms = [f for f in idx.funs.get(name, []) if f.parent is None]
+        if not syms:
+            errors.append(f"a screen arm calls {name}() and no top-level declaration of it parsed")
+        handoff_hits[name] = [h for f in syms for h in clos.reach(f.src, f.start, f.end, app_types)]
+    extra: dict[str, list[Hit]] = defaultdict(list)
+    for sc, names in screen_handoffs.items():
+        for name in sorted(names):
+            dest = name[len("handOffTo"):]
+            if dest in screens and dest != sc:
+                # `handOffTo<Screen>`: what it starts is that screen's to cite
+                have = {r.key for h in screen_hits.get(dest, []) for r in api[h.method].routes}
+                for h in handoff_hits.get(name, []):
+                    if any(r.key not in have for r in api[h.method].routes):
+                        extra[dest].append(Hit(h.method, f"{h.where} (via {name} from Screen.{sc})"))
+                continue
+            elsewhere = {r.key for o, hits in screen_hits.items() if o != sc
+                         for h in hits for r in api[h.method].routes}
+            for h in handoff_hits.get(name, []):
+                if any(r.key not in elsewhere for r in api[h.method].routes):
+                    extra[sc].append(Hit(h.method, f"{h.where} (via {name}, which no other screen reaches)"))
+    for sc, hs in extra.items():
+        screen_hits[sc] = screen_hits.get(sc, []) + hs
 
     # screen -> routes (with call sites)
     screen_routes: dict[str, dict[str, dict]] = {}
@@ -1327,6 +1379,7 @@ def build(root: Path) -> dict:
                   "cites": [{"verb": ci.verb, "route": ci.route, "state": ci.state, "line": ci.line}
                             for ci in c.cites]} for c in csds],
         "uncited": uncited,
+        "handoffs": {sc: sorted(v) for sc, v in screen_handoffs.items() if v},
         "alignment": alignment,
         "duplicate_mutations": dup_mut,
         "duplicate_csds": dup_csd,
@@ -1684,6 +1737,30 @@ def self_test() -> int:
         if rc != 0:
             return fail(out, "the unplanted copy is already red")
         print("  clean copy: green")
+
+        # 0. a hand-off cannot hide a route: it lands on the named screen, or,
+        #    when no such screen exists, back on the caller
+        api = tmp / API_CLIENT
+        app = tmp / APP
+        api_text, app_text = api.read_text(), app.read_text()
+        i = api_text.index("\n    suspend fun ", api_text.index("class CIRISApiClient("))
+        api.write_text(api_text[:i] + "\n" + PLANT_FN + api_text[i:])
+        for fn, charged in (("handOffToWallet", "Screen.Wallet"), ("handOffToZzNowhere", "Screen.Consent")):
+            arm = re.search(r"\n(\s+)Screen\.Consent -> \{\n", app_text)
+            assert arm, "no Screen.Consent arm to plant into"
+            app.write_text(
+                app_text[:arm.end()] + f"{arm.group(1)}    {fn}(apiClient)\n" + app_text[arm.end():]
+                + f"\nprivate fun {fn}(api: CIRISApiClient) {{\n"
+                  f"    GlobalScope.launch {{ api.plantedSelfTestProbe() }}\n}}\n")
+            rc, out = run()
+            blk = out.split(f"\n  {charged}\n", 1)
+            if rc == 0 or len(blk) < 2 or "/v1/zz-self-test/planted" not in blk[1].split("\n\n")[0]:
+                print(out)
+                print(f"SELF-TEST FAIL: a route reached through {fn}() was not charged to {charged}")
+                return 1
+            print(f"  planted {fn}() from Screen.Consent: red on {charged}")
+        api.write_text(api_text)
+        app.write_text(app_text)
 
         # 1. a new API method, called from one screen's arm -> NEW uncited route
         d = fresh("uncited")

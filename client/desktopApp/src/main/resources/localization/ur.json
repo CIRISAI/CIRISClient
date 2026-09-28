@@ -3179,7 +3179,24 @@
     "manage_consent_revoke_needs_grant": "منسوخی کسی ایک اجازت کا نام لیتی ہے، اور یہ نوڈ ابھی اپنی پیئرنگ اجازتوں کی فہرست نہیں دیتا، اس لیے یہ اس سیشن میں یہاں ترتیب دی گئی اجازت پر کام کرتا ہے۔",
     "manage_consent_revoke_confirm_title": "یہ رضامندی واپس لیں؟",
     "manage_consent_revoke_fact_stops_value": "{from} کا {to} تک نقل ہونا بند ہو جائے گا۔",
-    "manage_consent_revoke_confirm": "دستبردار ہوں"
+    "manage_consent_revoke_confirm": "دستبردار ہوں",
+    "delegations_deny": "مسترد کریں",
+    "delegations_inbound_title": "آپ کو تفویض کردہ",
+    "delegations_inbound_unavailable": "یہ ایپ ابھی تک وہ اختیار نہیں پڑھ سکتی جو دوسرے لوگوں نے آپ کو تفویض کیا ہے — یہ اس بات کی رپورٹ نہیں کہ کوئی موجود نہیں۔",
+    "delegations_list_error": "اس نوڈ سے آپ کی تفویضات نہیں پڑھی جا سکیں، اس لیے یہ فہرست مکمل نہیں: {error}",
+    "delegations_refresh": "تازہ کریں",
+    "delegations_revoke_title": "اس تفویض کو منسوخ کریں؟",
+    "delegations_revoke_fact_who": "کون",
+    "delegations_revoke_fact_effect": "کیا تبدیل ہوتا ہے",
+    "delegations_revoke_fact_signer": "کون دستخط کرتا ہے",
+    "delegations_revoke_effect": "اب سے یہ آپ کی طرف سے کارروائی نہیں کر سکتا۔ تنسیخ مستقل ہوتی ہے: اسے دوبارہ اختیار دینے کے لیے آپ نئی تفویض جاری کرتے ہیں۔",
+    "delegations_revoke_signer": "آپ — اس نوڈ پر آپ کی شناختی کلید واپسی پر دستخط کرتی ہے",
+    "delegations_signed_record": "دستخط شدہ ریکارڈ {id}",
+    "identity_associate_seal_hardware": "اس آلے کی کلید کو اس کے ہارڈویئر (TPM) میں مقفل کریں",
+    "identity_associate_use_software": "اس کے بجائے اس آلے پر سافٹ ویئر کسٹڈی استعمال کریں",
+    "login_new_account_refused": "اس نوڈ کا پہلے سے ایک مالک موجود ہے: وہ اکاؤنٹ جو اس نے کبھی نہیں دیکھا یہاں مسترد کیا جائے گا۔ مالک کے اکاؤنٹ سے سائن اِن کریں۔",
+    "login_new_account_observer": "وہ اکاؤنٹ جو اس نوڈ نے پہلے کبھی نہیں دیکھا اسے مبصر کے طور پر داخل ہونے دیا جائے گا، مالک کے طور پر نہیں۔",
+    "login_new_account_claims": "اس نوڈ کا ابھی کوئی مالک نہیں: سائن اِن کرنے والا پہلا اکاؤنٹ اس کا مالک بن جائے گا۔"
   },
   "moderation": {
     "ladder": {
@@ -4660,7 +4677,10 @@
     "contact_code_not_a_person": "آپ کی شناخت ایک شخص کے طور پر رجسٹرڈ نہیں ہے، اور صرف ایک شخص کو رابطے کے طور پر شامل کیا جا سکتا ہے۔",
     "contact_code_key_not_derived": "آپ کی شناخت کا key id اس کی کلید سے میل نہیں کھاتا، اس لیے جن سب کے ساتھ آپ نے کوڈ شیئر کیا وہ اسے مسترد کر دیں گے۔",
     "contact_code_no_pqc_half": "آپ کی شناخت میں پوسٹ-کوانٹم کلید کا نصف حصہ موجود نہیں، اس لیے کوئی بھی آپ کو کوڈ سے شامل نہیں کر سکے گا۔",
-    "contact_code_unencodable": "اس نوڈ کے پاس موجود کلیدوں سے آپ کا رابطہ کوڈ نہیں بنایا جا سکا۔"
+    "contact_code_unencodable": "اس نوڈ کے پاس موجود کلیدوں سے آپ کا رابطہ کوڈ نہیں بنایا جا سکا۔",
+    "associate": {
+      "hardware_custody_unavailable": "اس آلے میں کوئی ایسا ہارڈویئر نہیں ہے جو کلید کو مقفل کر سکے (نہ TPM اور نہ secure enclave)، اس لیے کچھ بھی ترتیب نہیں دیا گیا۔ آپ اس کے بجائے سافٹ ویئر کسٹڈی استعمال کر سکتے ہیں: کلید اس آلے پر ایک انکرپٹڈ فائل میں رکھی جاتی ہے۔"
+    }
   },
   "partnership_queue": {
     "title": "اس ایجنٹ کے ساتھ شراکت",
