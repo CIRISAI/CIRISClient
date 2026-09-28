@@ -220,3 +220,17 @@ page 2; the OAuth avatars, which are third-party fetches.
   self- and producer-queryable by default; a searchable list of every account's
   email is the disclosure `listed` is meant to gate. **Ask (CIRISClient):** move
   the email into the detail sheet at minimum, pending the `listed` work above.
+
+## Review, 2026-09-27 (identity group)
+
+* Shapes match: `GET /v1/users` (`routes/users.py:311-365`, a bare
+  `PaginatedResponse[UserSummary]`) and `GET /v1/users/{id}` (`:659`) decode field
+  for field through the generated SDK, on `baseUrl` (the agent — right host).
+* Not in §3 and not called: create (`POST ""`, `:367`), update (`PUT /{id}`),
+  password, oauth-link add/remove, `mint-wa`, deactivate (`DELETE /{id}`),
+  permissions (`PUT /{id}/permissions`), `request-permissions`,
+  `permission-requests`, `api-keys`, `wa/key-check`. The card is read-only by
+  construction; whether it should stay so is a product call, recorded here.
+* CC 2.1 `listed`: the list row still shows email (`UsersScreen.kt:445`), and a
+  failed load can show the error banner and the empty sentence together
+  (`:159`, `:203`) — error looking like empty. Open.

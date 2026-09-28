@@ -131,9 +131,10 @@ error:     {tag: "proposed:txt_fedid_error", renders: "the node's own refusal, i
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer (`src/identity.rs:1945`) | live — owner-gated, on the current owner session; called with `LOCAL_NODE_URL` (`NodeSwitcherViewModel.kt:556`) |
+| mint the owner's fed-ID | `POST /v1/self/identity` | CIRISServer (`src/identity.rs:1945`) | live — owner-gated, on the current owner session; called with `LOCAL_NODE_URL` (`NodeSwitcherViewModel.kt:556`). Unlike associate, the mint still degrades silently on 0.5.218: `platform-sealed` (the default) walks a ladder to software and answers 200; the only signal is `hardware_type`, which the card shows. No refusal to handle |
 | re-root the node on it | `POST /v1/self/upgrade-owner` | CIRISServer (`src/claim_remote.rs:1246`) | live — non-destructive, login preserved (`NodeSwitcherViewModel.kt:563`) |
-| announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (registered `src/claim_remote.rs:1251`; implemented in `src/auth/ownership.rs`, `src/compose.rs`) | live — takes effect next boot (`NodeSwitcherViewModel.kt:573`) |
+| announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (registered `src/claim_remote.rs:1251`; handler `src/claim_remote.rs:1077`) | live — takes effect next boot (`NodeSwitcherViewModel.kt:573`). The answer's `promoted_owner_binding_attestation_id` was read as `promoted_attestation_id` (always null) and `federation_discoverable` was dropped; both fixed (`AnnounceOwnershipWireTest`) |
+| is this node already owned, and by whom | `GET /v1/setup/owned-nodes` | CIRISServer `src/auth/bootstrap.rs` (loopback-only) | live — `NodeSwitcherViewModel.kt:141`, the owner the catch-up upgrades from |
 | trace opt-in | `PUT /v1/my-data/accord-settings` (`CIRISApiClient.kt:12903`) | **CIRISAgent** (`routes/my_data.py:754` on `main`) | live on an agent; **WRONG-HOST on a node-only install** — see below |
 
 **Three of four rows are on the right host. The fourth is not, and this card

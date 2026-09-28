@@ -291,10 +291,9 @@ sealed class NavSurface(
         id = "environment-graph", label = "Environment Graph", icon = CIRISIcons.snapshot,
         labelKey = "commons.federation.environment_graph.title",
     )
-    object Delegation : NavSurface(
-        id = "delegation", label = "Delegation", icon = CIRISIcons.send,
-        labelKey = "commons.federation.delegation.title",
-    )
+    // `Delegation` (Family › Rules) was CSD-001's read-only preamble to the same
+    // grant list: folded into [Delegations] (CSD-055), which is placed in Rules
+    // under every circle, Family included.
     object Constitutional : NavSurface(
         id = "constitutional", label = "Constitutional", icon = CIRISIcons.instructions,
         labelKey = "commons.federation.constitutional.title",

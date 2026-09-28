@@ -2079,20 +2079,32 @@ class CIRISApiClient(
             val response = client.get(
                 "$localNodeUrl/v1/auth/oauth/handoff?app_nonce=$appNonce&allow_unbound=$allowUnbound"
             )
-            when {
-                response.status.value == 204 -> OAuthHandoffPoll.Pending
-                response.status.isSuccess() ->
-                    OAuthHandoffPoll.Ready(jsonConfig.decodeFromString(OAuthHandoff.serializer(), response.bodyAsText()))
-                else -> {
-                    val err = runCatching {
-                        jsonConfig.decodeFromString(OAuthHandoffError.serializer(), response.bodyAsText())
-                    }.getOrNull()
-                    if (err?.reasonId != null) OAuthHandoffPoll.Failed(err.reasonId, err.status)
-                    else OAuthHandoffPoll.Pending
-                }
-            }
+            OAuthHandoffPoll.classify(
+                response.status.value,
+                if (response.status.value == 204) "" else response.bodyAsText(),
+            )
         } catch (_: Exception) {
             OAuthHandoffPoll.Pending
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET {node}/v1/auth/signin-state` — what signing in would do here, asked
+     * BEFORE anyone tries (CSD-081, CIRISClient#110). Unauthenticated. Null when
+     * the node cannot say (an older node without the route, or unreachable):
+     * the Login screen then says nothing rather than guessing.
+     */
+    suspend fun getSigninState(nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.SigninState? {
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/auth/signin-state")
+            if (!response.status.isSuccess()) return null
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.SigninState.serializer(), response.bodyAsText())
+        } catch (e: Exception) {
+            logDebug("getSigninState", "signin-state unavailable: ${e.message?.take(80)}")
+            null
         } finally {
             client.close()
         }
@@ -2622,7 +2634,7 @@ class CIRISApiClient(
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("list delegations failed: ${response.status}: ${raw.take(160)}")
+                throw NodeRefusal.fromBody(response.status.value, raw)
             }
             jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.DelegationsResponse.serializer(),
@@ -2656,13 +2668,7 @@ class CIRISApiClient(
         logInfo(method, "POST $nodeUrl/v1/auth/device/delegate mode=$mode label=$label")
         val client = federationHttpClient()
         return try {
-            val scopeJson = scope.joinToString(",", "[", "]") { "\"$it\"" }
-            val keyField = existingKeyId?.takeIf { it.isNotBlank() }
-                ?.let { ",\"existing_key_id\":\"${it.trim()}\"" } ?: ""
-            val constraintsField = constraints?.takeIf { !it.isUnconstrained() }
-                ?.let { ",\"constraints\":${encodeDelegationConstraints(it)}" } ?: ""
-            val body = "{\"mode\":\"${mode.trim()}\",\"label\":\"${label.trim()}\"" +
-                "$keyField,\"scope\":$scopeJson$constraintsField}"
+            val body = DelegationBodies.delegate(label, mode, existingKeyId, scope, constraints)
             val response = client.post("$nodeUrl/v1/auth/device/delegate") {
                 token?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
@@ -2673,7 +2679,7 @@ class CIRISApiClient(
                 // Full body — never truncate a server error (the createDelegation-500
                 // lesson: the load-bearing verify_hybrid_required / attesting_key_id
                 // detail lived past char 160). The node also logs it server-side.
-                throw RuntimeException("create delegation failed: ${response.status}: $raw")
+                throw NodeRefusal.fromBody(response.status.value, raw)
             }
             val parsed = jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.CreateDelegationResponse.serializer(),
@@ -2702,30 +2708,6 @@ class CIRISApiClient(
     }
 
     /**
-     * Hand-encode [DelegationConstraints] to compact JSON, matching this file's
-     * hand-built-body convention. The tri-state [actionsAllow] is preserved
-     * exactly: absent when `null`, `[]` when read-only, else the subset — so the
-     * node sees the owner's intent verbatim. [actionsDeny] is emitted only when
-     * non-empty; [goal] is JSON-string-escaped.
-     */
-    private fun encodeDelegationConstraints(
-        c: ai.ciris.mobile.shared.models.federation.DelegationConstraints,
-    ): String {
-        val parts = mutableListOf<String>()
-        c.actionsAllow?.let { list ->
-            parts += "\"actions_allow\":" + list.joinToString(",", "[", "]") { "\"$it\"" }
-        }
-        if (c.actionsDeny.isNotEmpty()) {
-            parts += "\"actions_deny\":" + c.actionsDeny.joinToString(",", "[", "]") { "\"$it\"" }
-        }
-        c.goal?.takeIf { it.isNotBlank() }?.let { goal ->
-            val escaped = goal.replace("\\", "\\\\").replace("\"", "\\\"")
-            parts += "\"goal\":\"$escaped\""
-        }
-        return "{" + parts.joinToString(",") + "}"
-    }
-
-    /**
      * Approve a pending device code — `POST {nodeUrl}/v1/auth/device/approve`.
      * The owner enters the `user_code` the agent showed them; approving mints the
      * delegated token. Owner-session-gated; this is the human-consent gate.
@@ -2743,16 +2725,14 @@ class CIRISApiClient(
         logInfo(method, "POST $nodeUrl/v1/auth/device/approve user_code=$userCode")
         val client = federationHttpClient()
         return try {
-            val constraintsField = constraints?.takeIf { !it.isUnconstrained() }
-                ?.let { ",\"constraints\":${encodeDelegationConstraints(it)}" } ?: ""
             val response = client.post("$nodeUrl/v1/auth/device/approve") {
                 token?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
-                setBody("{\"user_code\":\"${userCode.trim()}\"$constraintsField}")
+                setBody(DelegationBodies.userCode(userCode, constraints))
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("approve failed: ${response.status}: ${raw.take(160)}")
+                throw NodeRefusal.fromBody(response.status.value, raw)
             }
             raw
         } catch (e: Exception) {
@@ -2776,11 +2756,45 @@ class CIRISApiClient(
             val response = client.post("$nodeUrl/v1/auth/device/revoke") {
                 token?.let { header("Authorization", "Bearer $it") }
                 contentType(ContentType.Application.Json)
-                setBody("{\"client_id\":\"${clientId.trim()}\"}")
+                setBody(DelegationBodies.clientId(clientId))
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("revoke failed: ${response.status}: ${raw.take(160)}")
+                throw NodeRefusal.fromBody(response.status.value, raw)
+            }
+            raw
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Refuse a pending device code — `POST {nodeUrl}/v1/auth/device/deny
+     * {user_code}` (CSD-055). The owner's "no" to a code someone handed them:
+     * without it the only answers were approve or let it expire. Owner-gated;
+     * the node answers `{status: "denied", user_code}` and 404 for an unknown
+     * code. A non-2xx throws [NodeRefusal] with the node's own sentence.
+     */
+    suspend fun denyDeviceCode(
+        userCode: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): String {
+        val method = "denyDeviceCode"
+        logInfo(method, "POST $nodeUrl/v1/auth/device/deny user_code=$userCode")
+        val client = federationHttpClient()
+        return try {
+            val response = client.post("$nodeUrl/v1/auth/device/deny") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(DelegationBodies.userCode(userCode))
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw NodeRefusal.fromBody(response.status.value, raw)
             }
             raw
         } catch (e: Exception) {
@@ -3118,6 +3132,8 @@ class CIRISApiClient(
     suspend fun associateFedId(
         sourceDir: String? = null,
         yubikey: Boolean = false,
+        /** `tpm` | `software` | null (the node's default). See [AssociateRequest.device]. */
+        device: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
         token: String? = accessToken,
     ): ai.ciris.mobile.shared.models.federation.AssociateResponse {
@@ -3130,6 +3146,7 @@ class CIRISApiClient(
                 ai.ciris.mobile.shared.models.federation.AssociateRequest(
                     sourceDir = sourceDir?.takeIf { it.isNotBlank() },
                     yubikey = yubikey,
+                    device = device,
                 ),
             )
             val response = client.post("$nodeUrl/v1/self/associate") {
@@ -3139,7 +3156,8 @@ class CIRISApiClient(
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("associate fed-ID failed: ${response.status}: ${raw.take(200)}")
+                // By id, not flattened (0.5.218: `self.associate.hardware_custody_unavailable`).
+                throw NodeRefusal.fromBody(response.status.value, raw)
             }
             decodeFederationEnvelope(
                 raw,

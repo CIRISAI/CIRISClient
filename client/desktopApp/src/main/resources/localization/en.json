@@ -3126,7 +3126,24 @@
     "transport_not_on_this_node": "This node doesn't report its transports.",
     "audit_not_on_this_node": "This node doesn't keep an agent audit log. Nothing was filtered out.",
     "consent_not_on_this_node": "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one.",
-    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy."
+    "billing_not_on_this_node": "This node doesn't handle billing. There is no balance here and nothing to buy.",
+    "delegations_deny": "Refuse",
+    "delegations_inbound_title": "Delegated to you",
+    "delegations_inbound_unavailable": "This app can't read authority other people have delegated to you yet — this is not a report that there is none.",
+    "delegations_list_error": "Couldn't read your delegations from this node, so this list is not complete: {error}",
+    "delegations_refresh": "Refresh",
+    "delegations_revoke_title": "Revoke this delegation?",
+    "delegations_revoke_fact_who": "Who",
+    "delegations_revoke_fact_effect": "What changes",
+    "delegations_revoke_fact_signer": "Who signs",
+    "delegations_revoke_effect": "It can no longer act for you, from now on. A revoke is permanent: to give it authority again you issue a new delegation.",
+    "delegations_revoke_signer": "You — your identity key on this node signs the withdrawal",
+    "delegations_signed_record": "Signed record {id}",
+    "identity_associate_seal_hardware": "Seal this device's key in its hardware (TPM)",
+    "identity_associate_use_software": "Use software custody on this device instead",
+    "login_new_account_refused": "This node already has an owner: an account it has never seen would be refused here. Sign in with the owner's account.",
+    "login_new_account_observer": "An account this node has never seen would be let in as an observer, not as the owner.",
+    "login_new_account_claims": "This node has no owner yet: the first account to sign in becomes its owner."
   },
   "moderation": {
     "ladder": {
@@ -4525,6 +4542,9 @@
     "owner_session_required": "Your devices are the owner's own surface. Sign in as the owner of this node.",
     "release_incomplete": "The release was signed, but the node still lists that node as yours: an ownership record it cannot see is still live. What it could withdraw stays withdrawn.",
     "release_self_requires_force": "That is the node you are talking to. Releasing it ends your ownership here, including this session.",
-    "store_unavailable": "The node could not read or write its identity store. Nothing was changed."
+    "store_unavailable": "The node could not read or write its identity store. Nothing was changed.",
+    "associate": {
+      "hardware_custody_unavailable": "This device has no hardware that can seal a key (no TPM or secure enclave), so nothing was set up. You can use software custody instead: the key is kept in an encrypted file on this device."
+    }
   }
 }

@@ -96,6 +96,8 @@ fun DelegationsScreen(
     val error by viewModel.error.collectAsState()
     val notice by viewModel.notice.collectAsState()
     val lastCreated by viewModel.lastCreated.collectAsState()
+    val listError by viewModel.listError.collectAsState()
+    val pendingRevoke by viewModel.pendingRevoke.collectAsState()
     var userCode by remember { mutableStateOf("") }
     var delegateLabel by remember { mutableStateOf("") }
     // mode: "create" = mint a fresh agent fed-ID; "existing" = bind a known key_id.
@@ -361,16 +363,48 @@ fun DelegationsScreen(
                         approveAllow = emptySet()
                         approveDeny = emptySet()
                     },
+                    onDeny = {
+                        viewModel.deny(userCode)
+                        userCode = ""
+                    },
                 )
                 else -> ManagePane(
                     loading = loading,
                     busy = busy,
                     delegations = delegations,
-                    onRevoke = { viewModel.revoke(it) },
+                    listError = listError,
+                    onRefresh = { viewModel.refresh() },
+                    onRevoke = { viewModel.askRevoke(it) },
                 )
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+
+    // A revoke is permanent: the node signs a `withdraws` that never expires.
+    // Three facts — who, what changes, who signs — before it is sent (CSD-055).
+    pendingRevoke?.let { grant ->
+        ai.ciris.mobile.shared.ui.primitives.ConfirmSheet(
+            title = localizedString("mobile.delegations_revoke_title"),
+            facts = listOf(
+                ai.ciris.mobile.shared.ui.primitives.ConfirmFact(
+                    localizedString("mobile.delegations_revoke_fact_who"), grant.clientId, mono = true,
+                ),
+                ai.ciris.mobile.shared.ui.primitives.ConfirmFact(
+                    localizedString("mobile.delegations_revoke_fact_effect"),
+                    localizedString("mobile.delegations_revoke_effect"),
+                ),
+                ai.ciris.mobile.shared.ui.primitives.ConfirmFact(
+                    localizedString("mobile.delegations_revoke_fact_signer"),
+                    localizedString("mobile.delegations_revoke_signer"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.delegations_revoke"),
+            onConfirm = { viewModel.confirmRevoke() },
+            onDismiss = { viewModel.cancelRevoke() },
+            destructive = true,
+            tagPrefix = "revoke_delegation",
+        )
     }
 }
 
@@ -1031,6 +1065,7 @@ private fun IncomingPane(
     denyVerbs: Set<String>,
     onToggleDeny: (String) -> Unit,
     onApprove: () -> Unit,
+    onDeny: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
@@ -1085,18 +1120,34 @@ private fun IncomingPane(
             }
             Text(localizedString("mobile.delegations_approve"))
         }
+        Spacer(Modifier.height(6.dp))
+        // The owner's "no" (POST /v1/auth/device/deny). Without it a code you do
+        // not want could only be approved or left to expire.
+        OutlinedButton(
+            onClick = onDeny,
+            enabled = !busy && userCode.isNotBlank(),
+            modifier = Modifier.fillMaxWidth().testableClickable("btn_delegation_deny") { onDeny() },
+        ) {
+            Text(localizedString("mobile.delegations_deny"))
+        }
     }
 }
 
-/** MANAGE — the active delegations (CRUD: list + revoke). */
+/**
+ * MANAGE — what the owner has delegated (list + revoke), and the honest half
+ * they cannot see yet: authority delegated TO them. That second card came from
+ * CSD-001's read-only Delegation screen, folded in here.
+ */
 @Composable
 private fun ManagePane(
     loading: Boolean,
     busy: Boolean,
     delegations: List<ai.ciris.mobile.shared.models.federation.DelegationDto>,
-    onRevoke: (String) -> Unit,
+    listError: String?,
+    onRefresh: () -> Unit,
+    onRevoke: (ai.ciris.mobile.shared.models.federation.DelegationDto) -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
+    Column(modifier = Modifier.fillMaxWidth().testable("card_delegation_outbound")) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 localizedString("mobile.delegations_active_title"),
@@ -1105,49 +1156,113 @@ private fun ManagePane(
                 modifier = Modifier.weight(1f),
             )
             if (loading) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(
+                    modifier = Modifier.size(14.dp).testable("delegations_loading"),
+                    strokeWidth = 2.dp,
+                )
+            } else {
+                OutlinedButton(
+                    onClick = onRefresh,
+                    enabled = !busy,
+                    modifier = Modifier.testableClickable("btn_delegation_refresh") { onRefresh() },
+                ) {
+                    Text(localizedString("mobile.delegations_refresh"), fontSize = 12.sp)
+                }
             }
         }
         Spacer(Modifier.height(8.dp))
 
-        if (delegations.isEmpty() && !loading) {
-            Text(
+        when {
+            // A read that failed is said, never rendered as "no delegations".
+            listError != null && delegations.isEmpty() -> Text(
+                localizedString("mobile.delegations_list_error", "error", listError),
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.testable("delegations_list_error"),
+            )
+            delegations.isEmpty() && !loading -> Text(
                 localizedString("mobile.delegations_empty"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("text_delegations_empty"),
             )
-        } else {
-            delegations.forEach { d ->
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
-                        .testable("row_delegation_${d.clientId}"),
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+            else -> Column(modifier = Modifier.fillMaxWidth().testable("delegations_list")) {
+                if (listError != null) {
+                    // Stale rows under a failed refresh: keep them, and say so.
+                    Text(
+                        localizedString("mobile.delegations_list_error", "error", listError),
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.padding(bottom = 8.dp).testable("delegations_list_error"),
+                    )
+                }
+                delegations.forEach { d ->
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                            .testable("row_delegation_${d.clientId}"),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(d.clientId, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                            Text(
-                                d.scope,
-                                fontSize = 12.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                        OutlinedButton(
-                            onClick = { onRevoke(d.clientId) },
-                            enabled = !busy,
-                            modifier = Modifier.testableClickable("btn_revoke_${d.clientId}") { onRevoke(d.clientId) },
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(localizedString("mobile.delegations_revoke"))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(d.clientId, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                                Text(
+                                    d.scope,
+                                    fontSize = 12.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                                d.attestationId?.let { att ->
+                                    Text(
+                                        localizedString("mobile.delegations_signed_record", "id", att),
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.testable("text_delegation_record_${d.clientId}"),
+                                    )
+                                }
+                            }
+                            OutlinedButton(
+                                onClick = { onRevoke(d) },
+                                enabled = !busy,
+                                modifier = Modifier.testableClickable("btn_revoke_${d.clientId}") { onRevoke(d) },
+                            ) {
+                                Text(localizedString("mobile.delegations_revoke"))
+                            }
                         }
                     }
                 }
             }
+        }
+    }
+
+    // UNAVAILABLE, NOT EMPTY (CSD-001, folded). There is no route that lists the
+    // delegations where this owner is the DELEGATE (CIRISServer#663). The first
+    // version of this card reported the outbound grants as inbound authority;
+    // the fix for that said "no inbound delegations", the same unsupported claim
+    // with the sign flipped. The screen cannot see this, so it says so.
+    Spacer(Modifier.height(16.dp))
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = Modifier.fillMaxWidth().testable("card_delegation_inbound"),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+            Text(
+                localizedString("mobile.delegations_inbound_title"),
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                localizedString("mobile.delegations_inbound_unavailable"),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("txt_delegation_inbound_unavailable"),
+            )
         }
     }
 }

@@ -29,7 +29,7 @@ class CirclesNavTest {
         NavSurface.Contacts, NavSurface.Delegations, NavSurface.IdentityManagement, NavSurface.Accord,
         NavSurface.ProvisionAccordHolder, NavSurface.AccordCeremony, NavSurface.Moderation, NavSurface.ChildSafety,
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
-        NavSurface.Delegation, NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
+        NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
         NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
         NavSurface.ClientInterface, NavSurface.Help,
     )
