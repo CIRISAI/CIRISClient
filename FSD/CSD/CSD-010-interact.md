@@ -152,6 +152,35 @@ the same observation to the gate.
 | which occurrence holds this exchange | **no route** — `session:claim:v1` is CC 3.1.3.1, owned by CIRISPersist | CIRISPersist | **missing**; blocks `building` for `proposed:interact_session_holder` |
 | a signed trace for a turn | **no route** — `/v1/system/runtime/reasoning-stream` carries symbols, not envelopes | CIRISAgent | **missing**; blocks `building` for the three `trace`/`dma`/`conscience` rows |
 
+**Reads this screen makes for the instruments it hosts.** Interact is the
+shell's landing screen, so its `when` arm reaches the status bar, the cell
+visualisation and the post-login bootstrap. Each row below is a READ whose card
+is elsewhere; it is cited here because this screen calls it (route map,
+2026-09-27; agent handlers on `main` 29371660de under
+`ciris_engine/logic/adapters/api/routes/`, node handlers in CIRISServer `src/`).
+
+| value | endpoint | owner | state |
+|---|---|---|---|
+| credits in the status bar (`btn_credits`, CIRIS-proxy installs only); blocks sending when out — the card is CSD-056 | `GET /v1/api/billing/credits` | CIRISAgent `billing.py:643` | called — `InteractViewModel.kt:1196`. A failed read leaves the badge stale or hidden (`isLoaded` keeps its old value, `:1206`); it never shows 0 |
+| "recent task completions" when a gratitude mote is tapped — the card is CSD-071 | `GET /v1/audit/entries` | CIRISAgent `audit.py:781` | called — `InteractViewModel.kt:2516`. **Defect:** a failure renders "No recent task completions" (`:2520`) — error as empty |
+| memory motes / legacy cylinder nodes — the card is CSD-028 | `GET /v1/memory/timeline` | CIRISAgent `memory.py:488` | called — `graph/CellVisualization.kt:425`, `graph/LiveGraphBackground.kt:303`. No `nodeSkip` guard: a bare node 404s and the motes stay empty |
+| a tapped memory mote's type, scope, attributes — the card is CSD-027 | `GET /v1/memory/{id}` | CIRISAgent `memory.py:817` | called — `InteractViewModel.kt:2489`. `createdAt` is filled from `updatedAt` (`CIRISApiClient.kt:11059`) |
+| provider + "on the CIRIS proxy?" (decides the credits badge and send-blocking) — the card is CSD-021 | `GET /v1/setup/config` | CIRISAgent `setup/config.py:308` | called — `InteractViewModel.kt:1182` via `getLlmConfig` (`CIRISApiClient.kt:7627`). Not a fallback pair: this supplies provider and URL, the next row supplies the enabled flag; the real fallback is the local `.env` (`InteractViewModel.kt:1215`) |
+| CIRIS services enabled? — the card is CSD-021 | `GET /v1/system/llm/ciris-services/status` | CIRISAgent `system/llm_routes.py:1121` | called — `CIRISApiClient.kt:7643` (same `getLlmConfig`). **Defect:** any failure reads as "enabled" (`:10675-10682`) and the proxy test also matches any base URL containing `proxy` (`:7656`) — a BYOK person can be shown a credits badge and blocked |
+| the node list in the node-switcher pill (`btn_node_switcher`) — the card is CSD-035 | `GET /v1/setup/owned-nodes` | CIRISServer `auth/bootstrap.rs:1378` (route `:1489`) | called — `NodeSwitcherViewModel.kt:141`, on the NODE URL (correct host). `owner`, `nodes[].key_id`, `nodes[].is_self` match |
+| "is this brain still unconfigured?" before promoting a switched node to AGENT — the card is CSD-080 | `GET /v1/setup/status` | CIRISAgent `setup/status.py:45`; node `auth/bootstrap.rs:1488` | called — `NodeSwitcherViewModel.kt:355`. The node answers loopback only, so after switching to a remote node it defaults to "configured" |
+| none — dead branch | `GET /v1/setup/verify-status` | CIRISAgent `setup/attestation.py:292` | **never reached**: the branch at `CIRISApiClient.kt:7136-7138` runs only with a Play Integrity token and no caller passes one. Delete the branch; this row goes with it |
+| a tapped adapter port's status and counts — the card is CSD-020 | `GET /v1/system/adapters/{id}` | CIRISAgent `system/adapters.py:807` | called — `InteractViewModel.kt:2394`; a failure is `SelectionDetail.Error` (distinct) |
+| the adapter ports the cell visualisation draws, loaded by the post-login bootstrap — the card is CSD-020 | `GET /v1/system/adapters` | CIRISAgent `system/adapters.py` | called — `InteractViewModel.kt:693` (`listAdapters`); moved here from CSD-081 in the identity review |
+| the LLM bus arc's "n/m providers · req" — the card is CSD-021 | `GET /v1/system/llm/status` | CIRISAgent `system/llm_routes.py:327` | called — `InteractViewModel.kt:2415`; fields match `llm_schemas.py:124-139`; a failure falls back to the bare label |
+| provider rows when the LLM arc is tapped — the card is CSD-021 | `GET /v1/system/llm/providers` | CIRISAgent `system/llm_routes.py:399` | called — `InteractViewModel.kt:2416`; fields match `llm_schemas.py:109-114`. **Defect:** a failure shows an empty list |
+| the trust shield (`btn_trust_shield`) and the fast poll while attestation is pending — the card is CSD-052 | `GET /v1/system/verify-status` | CIRISServer `health.rs:612` (route `:683`); the agent relays (`auth_proxy.py:157`) | called — `InteractViewModel.kt:1151, 1234`. The node ignores `?refresh=true` |
+| a tapped non-LLM bus arc's health and counts — the card is CSD-030 | `GET /v1/telemetry/unified` | CIRISAgent `telemetry.py:1854` | called — `InteractViewModel.kt:2443`. **Defect:** any failure is swallowed into zero counts (`CIRISApiClient.kt:9994`) |
+| the pending-deferrals banner count (tap opens Wise Authority) — the card is CSD-041 | `GET /v1/wa/status` | CIRISAgent `wa.py:440` | called — `InteractViewModel.kt:1249`; `pending_deferrals` matches; a failure keeps the previous count |
+| the wallet badge (`btn_wallet_badge`) — the card is CSD-057 | `GET /v1/wallet/status` | CIRISAgent `wallet.py:570` | called — `InteractViewModel.kt:705`. **Closed 2026-09-27:** a failed read used to render "set up wallet" (`hasWallet=false`); it is now `WalletBadgeState.NOT_READ` ("wallet not read", amber, the badge's `testable` value names the state; `WalletBadgeStateTest`) |
+| the fleet-coherence cell signal (composite, fragility, category) — the card is CSD-004 | `GET /v1/my-data/capacity` | CIRISAgent `my_data.py` (`_compute_local_capacity`) | called — `InteractViewModel.kt:630` (`refreshCapacity`, agent-only, skipped in node mode); moved here from CSD-081 in the identity review |
+| report a message (`btn_moderation_*` → `sheet_moderation_proposal`) — the card is CSD-065 | `POST /v1/safety/reports` | **no handler on either host** | called — `ModerationViewModel.kt:96` → `CIRISApiClient.kt:1778`, and it fails every time: the agent forwards the unknown path to the node, which 404s. `blocked_by: CIRISServer#665`. Two more defects for CSD-065: the body puts a chat MESSAGE id into `target_key_id` (`InteractScreen.kt:1924` → `CIRISApiClient.kt:1784`), and the adult-only gate is not enforced (`ModerationViewModel.kt:55`) |
+
 **Wrong-host risk, stated once.** Every route above is the AGENT's. The client
 addresses the brain on `:8080` and the node on `:4243` and never conflates them
 (`CIRISApp.kt:338-347`). On a run-without-AI install `syncBackendFromEnv`

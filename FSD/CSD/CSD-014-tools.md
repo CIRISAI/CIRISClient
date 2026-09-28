@@ -113,7 +113,7 @@ the pattern the other six surfaces in this area should copy.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the tool list | `GET /v1/system/tools` | CIRISAgent (`routes/system/tools.py:119`, prefix `system/__init__.py:39`) | live — direct `client.get` at `CIRISApiClient.kt:9630`, parsed as raw JSON |
+| the tool list | `GET /v1/system/tools` | CIRISAgent (`routes/system/tools.py:119`, prefix `system/__init__.py:39`) | live — direct `client.get` at `CIRISApiClient.kt:9741`, parsed as raw JSON (`:9768-9770`). **Field defect:** the agent sends `parameters` as `{type, properties, required}` (`schemas/adapters/tools.py:27-32`) and the client flattens the top-level keys (`:9772`), so the card shows `type: "object"` and a raw `properties` blob instead of parameter names; the §2 example `["path","encoding"]` is what it should show. **Masking the client cannot see:** no registry → empty 200 (`tools.py:132-133`), a provider that throws is logged and skipped (`:83-84`), duplicate tool names merge their providers into one string (`:98-99`), and `cost` defaults to 0.0 server-side (`system_schemas.py:445`) — so the client-only cost fix is not enough; add to CIRISAgent#1208 |
 | the 22 prohibitions | **no route** — `prohibited:{category}`, CC 3.1.5.4 | CIRISAgent | **missing**; blocks `building` for `proposed:tools_prohibited` |
 | tool balance / purchase | `GET /v1/api/tools/balance`, `POST /v1/api/tools/purchase` | — | **wrong-host and dead**: `ToolsApi.kt` declares five `/v1/api/tools/*` routes; `CIRISApiClient` never constructs a `ToolsApi`, and neither `CIRISServer origin/main src/` nor `CIRISAgent routes/` contains that literal |
 
@@ -122,7 +122,10 @@ serves `/v1/system/health`, `/v1/system/data*` and `/v1/system/verify-status`
 and nothing else under `/v1/system` — so the surface being `agentOnly` is what
 keeps a run-without-AI install from 404ing here.
 
-**CIRISAgent working tree is dated 2026-08-15**, five weeks behind today.
+Handler lines re-read from `main` 29371660de on 2026-09-27. Still open on the
+client: the empty card is guarded on `!isLoading` but not `!isRefreshing`
+(`ToolsScreen.kt:272`), so the spinner and "No tools available" can show
+together, and the spinner sits above the rows rather than replacing them.
 
 ## 4. Flow (how)
 

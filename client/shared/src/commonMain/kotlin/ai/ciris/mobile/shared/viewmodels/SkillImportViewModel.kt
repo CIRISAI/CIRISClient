@@ -4,7 +4,9 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.ImportedSkillData
 import ai.ciris.mobile.shared.models.SkillImportResult
 import ai.ciris.mobile.shared.models.SkillPreviewData
+import ai.ciris.mobile.shared.models.importAllowed
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +15,19 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for OpenClaw skill import feature.
+ * What the agent already carries (`GET /v1/system/adapters/imported-skills`).
+ * Three arms so a failed read never renders as "no skills" (CSD/3 §2.2).
+ */
+sealed interface ImportedSkillsState {
+    data object Loading : ImportedSkillsState
+    data class Loaded(val skills: List<ImportedSkillData>) : ImportedSkillsState
+    data class Failed(val failure: ReadFailure) : ImportedSkillsState
+}
+
+/**
+ * ViewModel for OpenClaw skill import feature — the paste door and the held
+ * list of CSD-015 (Skills). Hosted by Screen.SkillStudio since the former
+ * Screen.SkillImport was folded into CSD-015.
  *
  * Manages three workflows:
  * 1. Browse/manage previously imported skills
@@ -25,8 +39,12 @@ class SkillImportViewModel(
 ) : ViewModel() {
 
     // ===== Imported Skills List =====
-    private val _importedSkills = MutableStateFlow<List<ImportedSkillData>>(emptyList())
-    val importedSkills: StateFlow<List<ImportedSkillData>> = _importedSkills.asStateFlow()
+    private val _importedSkills = MutableStateFlow<ImportedSkillsState>(ImportedSkillsState.Loading)
+    val importedSkills: StateFlow<ImportedSkillsState> = _importedSkills.asStateFlow()
+
+    /** The skill whose removal is awaiting the person's ConfirmSheet; null when none. */
+    private val _pendingRemoval = MutableStateFlow<ImportedSkillData?>(null)
+    val pendingRemoval: StateFlow<ImportedSkillData?> = _pendingRemoval.asStateFlow()
 
     // ===== Import Dialog State =====
     private val _showImportDialog = MutableStateFlow(false)
@@ -64,16 +82,14 @@ class SkillImportViewModel(
 
     fun fetchImportedSkills() {
         viewModelScope.launch {
-            _isLoading.value = true
-            _error.value = null
+            _importedSkills.value = ImportedSkillsState.Loading
             try {
-                _importedSkills.value = apiClient.listImportedSkills()
-                PlatformLogger.i("SkillImportVM", "Fetched ${_importedSkills.value.size} imported skills")
+                val skills = apiClient.listImportedSkills()
+                _importedSkills.value = ImportedSkillsState.Loaded(skills)
+                PlatformLogger.i("SkillImportVM", "Fetched ${skills.size} imported skills")
             } catch (e: Exception) {
                 PlatformLogger.e("SkillImportVM", "Failed to fetch imported skills: ${e.message}")
-                _error.value = "Failed to load imported skills: ${e.message}"
-            } finally {
-                _isLoading.value = false
+                _importedSkills.value = ImportedSkillsState.Failed(ReadFailure.of(e))
             }
         }
     }
@@ -132,6 +148,10 @@ class SkillImportViewModel(
     fun importSkill() {
         val content = _skillMdContent.value
         if (content.isBlank()) return
+        // Only a scan that ran and cleared the skill may import it (CSD-015).
+        // The agent refuses the same at POST /import-skill; this keeps the
+        // button from promising what the agent will refuse.
+        if (_preview.value?.importAllowed() != true) return
 
         viewModelScope.launch {
             _isLoading.value = true
@@ -159,20 +179,28 @@ class SkillImportViewModel(
         }
     }
 
-    fun deleteImportedSkill(moduleName: String) {
+    /** Ask to remove [skill]: opens the ConfirmSheet; nothing is sent yet. */
+    fun requestRemoval(skill: ImportedSkillData) {
+        _pendingRemoval.value = skill
+    }
+
+    fun cancelRemoval() {
+        _pendingRemoval.value = null
+    }
+
+    /** The person confirmed: `DELETE /v1/system/adapters/imported-skills/{module}`. */
+    fun confirmRemoval() {
+        val skill = _pendingRemoval.value ?: return
+        _pendingRemoval.value = null
         viewModelScope.launch {
             _isLoading.value = true
             _error.value = null
             try {
-                val success = apiClient.deleteImportedSkill(moduleName)
-                if (success) {
-                    _statusMessage.value = "Skill '$moduleName' removed"
-                    fetchImportedSkills()
-                } else {
-                    _error.value = "Failed to delete skill"
-                }
+                apiClient.deleteImportedSkill(skill.moduleName)
+                _statusMessage.value = skill.moduleName
+                fetchImportedSkills()
             } catch (e: Exception) {
-                _error.value = "Delete failed: ${e.message}"
+                _error.value = e.message ?: e::class.simpleName
             } finally {
                 _isLoading.value = false
             }

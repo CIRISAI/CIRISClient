@@ -106,20 +106,22 @@ Three of four are `proposed:`, and unusually the *behaviour* is already correct:
 this screen distinguishes loading from error from populated. It is only
 undrivable, which is a smaller fix than the other cards in this area.
 
-**`screen_storage` is the ONLY `testable*` literal on this screen.**
-The eight `row_storage_*` tags named above do not exist at v0.5.224, so every
-value this card shows — total nodes, recent nodes, oldest, newest, the per-type
-and per-scope breakdowns, the data dir and the free disk — is undrivable. That is
-why no flow is written for CSD-040 in this pass: a flow could assert that the
-screen composed and nothing about what it says, which is the vacuous shape
-`flow_spec.py`'s header names. The eight rows must be written `proposed:` here
-and then tagged.
+**Correction (2026-09-27): the eight `row_storage_*` tags, `card_storage_by_type`
+and `card_storage_by_scope` DO exist.** They are passed as the `tag` parameter
+of `StatRow` (`StorageScreen.kt:90-116`, `:139`), which is why a grep for
+`testable("…")` literals missed them. The earlier paragraph here said
+`screen_storage` was the only literal and that no flow could be written; both
+were wrong, and the flow can be written against those tags. Still untagged: the
+error card (`:82-86`), and there is no empty state — an empty graph renders
+"Total nodes — 0". A failed `getAgentMode` is swallowed (`:49-53`), so the disk
+card just disappears, and the agent-mode parse defaults `mode` to PROXY and
+`data_dir` to "" (`CIRISApiClient.kt:1028-1033`).
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| graph-store counters | `GET /v1/memory/stats` | CIRISServer | live — `src/memory_api.rs:1265`, **unauthenticated by design** (`compose.rs:1700-1702`); on a Postgres-only node the route is a 503 stub (`:1278`) |
+| graph-store counters | `GET /v1/memory/stats` | CIRISServer AND CIRISAgent | live on both — node `src/memory_api.rs:1265`, **unauthenticated by design** (`compose.rs:1700-1702`), a 503 stub on a Postgres-only node (`:1278`); agent `routes/memory.py:585` (observer, wrapped in `{"data":…}`), whose oldest/newest are a different approximation (`limit=1` timeline queries over the last year, `:602-615`) — the heuristic caveat below describes only the node's 1000-row version |
 | data dir + free disk | `GET /v1/system/agent-mode` | **CIRISAgent** (`routes/system/agent_mode.py:78`) | **wrong-host** — no such route in CIRISServer 0.5.217 |
 | the heuristic flag on the two dates | — | CIRISServer | **missing** — the route does not mark `oldest_node_date` / `newest_node_date` as approximate, so the client cannot either |
 

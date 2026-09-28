@@ -9211,6 +9211,9 @@ class CIRISApiClient(
 
             val jsonString = response.bodyAsText()
             client.close()
+            if (response.status.value !in 200..299) {
+                throw Exception("Duplicate check failed (${response.status.value}): $jsonString")
+            }
 
             val json = Json.parseToJsonElement(jsonString).jsonObject
 
@@ -9221,11 +9224,11 @@ class CIRISApiClient(
                 warning = json["warning"]?.jsonPrimitive?.contentOrNull
             )
         } catch (e: Exception) {
+            // A check that could not run is not "not a duplicate". It used to
+            // answer false here, and the send went through on that answer.
+            // The page leaves the result null and the gate refuses (CSD-057).
             logException(method, e)
-            DuplicateCheckResult(
-                isDuplicate = false,
-                warning = "Could not check for duplicates: ${e.message}"
-            )
+            throw e
         }
     }
 
@@ -9244,18 +9247,18 @@ class CIRISApiClient(
      * instead of noise. So the call stays, and the ABSENCE is what gets handled.
      *
      * WIDER THAN `ApprovalsApi.UNSUPPORTED_ENDPOINT_STATUSES` ({404, 405, 501}),
-     * and the two extra codes are the point rather than an oversight. That set
-     * classifies a ROUTER that never heard of `/v1/tickets`; this one classifies a
-     * node that HAS the route with nothing behind it — which is a 502, the status
-     * actually observed. 503 joins it because this returns an empty list and keeps
-     * polling, so a transient outage costs one empty poll and heals on the next
-     * tick.
+     * and it is exactly the router-level set. 502 and 503 USED to be in it, so a
+     * transient outage cost one empty poll; but the agent answers 503 precisely
+     * when its WA service is missing (`routes/wa.py:41`), and CC 4.3 says an
+     * absent Wise Authority freezes the agent. "Nothing waiting" is the worst
+     * possible rendering of that, so those two now surface as a failed read
+     * (CSD-041). [DEFERRALS_UNSERVED] is the tested seam.
      *
      * 401/403 are excluded for the same reason they are excluded there: an expired
      * token is a failure to READ the deferrals, not proof there are none. Anything
      * else — a 500 with a body, a transport failure — still surfaces.
      */
-    private val deferralsUnserved = setOf(404, 405, 501, 502, 503)
+    private val deferralsUnserved = DEFERRALS_UNSERVED
 
     /**
      * Latched so the unserved case is logged ONCE per transition rather than once
@@ -13778,18 +13781,8 @@ class CIRISApiClient(
             val json = Json { ignoreUnknownKeys = true }
             val obj = json.parseToJsonElement(responseText).jsonObject
 
-            ai.ciris.mobile.shared.models.SkillPreviewData(
-                name = obj["name"]?.jsonPrimitive?.content ?: "",
-                description = obj["description"]?.jsonPrimitive?.content ?: "",
-                version = obj["version"]?.jsonPrimitive?.content ?: "",
-                moduleName = obj["module_name"]?.jsonPrimitive?.content ?: "",
-                tools = obj["tools"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
-                requiredEnvVars = obj["required_env_vars"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
-                requiredBinaries = obj["required_binaries"]?.jsonArray?.map { it.jsonPrimitive.content } ?: emptyList(),
-                hasSupportingFiles = obj["has_supporting_files"]?.jsonPrimitive?.boolean ?: false,
-                sourceUrl = obj["source_url"]?.jsonPrimitive?.contentOrNull,
-                instructionsPreview = obj["instructions_preview"]?.jsonPrimitive?.content ?: ""
-            )
+            // One parse for the whole wire, `security` included (CSD-015).
+            SkillImportWire.preview(obj)
         } catch (e: Exception) {
             logException(method, e)
             throw e
@@ -13840,46 +13833,10 @@ class CIRISApiClient(
             val json = Json { ignoreUnknownKeys = true }
             val obj = json.parseToJsonElement(responseText).jsonObject
 
-            // Parse security report
-            val securityObj = obj["security"]?.jsonObject
-            val security = ai.ciris.mobile.shared.models.SecurityReport(
-                totalFindings = securityObj?.get("total_findings")?.jsonPrimitive?.intOrNull ?: 0,
-                criticalCount = securityObj?.get("critical_count")?.jsonPrimitive?.intOrNull ?: 0,
-                highCount = securityObj?.get("high_count")?.jsonPrimitive?.intOrNull ?: 0,
-                mediumCount = securityObj?.get("medium_count")?.jsonPrimitive?.intOrNull ?: 0,
-                lowCount = securityObj?.get("low_count")?.jsonPrimitive?.intOrNull ?: 0,
-                safeToImport = securityObj?.get("safe_to_import")?.jsonPrimitive?.boolean ?: true,
-                summary = securityObj?.get("summary")?.jsonPrimitive?.content ?: "",
-                findings = securityObj?.get("findings")?.jsonArray?.map { findingEl ->
-                    val finding = findingEl.jsonObject
-                    ai.ciris.mobile.shared.models.SecurityFinding(
-                        severity = finding["severity"]?.jsonPrimitive?.content ?: "info",
-                        category = finding["category"]?.jsonPrimitive?.content ?: "",
-                        title = finding["title"]?.jsonPrimitive?.content ?: "",
-                        description = finding["description"]?.jsonPrimitive?.content ?: "",
-                        evidence = finding["evidence"]?.jsonPrimitive?.contentOrNull,
-                        recommendation = finding["recommendation"]?.jsonPrimitive?.content ?: ""
-                    )
-                } ?: emptyList()
-            )
-
-            // Parse preview if present
-            val previewObj = obj["preview"]?.jsonObject
-            val preview = previewObj?.let {
-                ai.ciris.mobile.shared.models.SkillPreviewData(
-                    name = it["name"]?.jsonPrimitive?.content ?: "",
-                    description = it["description"]?.jsonPrimitive?.content ?: "",
-                    version = it["version"]?.jsonPrimitive?.content ?: "",
-                    moduleName = it["module_name"]?.jsonPrimitive?.content ?: "",
-                    tools = it["tools"]?.jsonArray?.map { t -> t.jsonPrimitive.content } ?: emptyList(),
-                    requiredEnvVars = it["required_env_vars"]?.jsonArray?.map { e -> e.jsonPrimitive.content } ?: emptyList(),
-                    requiredBinaries = it["required_binaries"]?.jsonArray?.map { b -> b.jsonPrimitive.content } ?: emptyList(),
-                    hasSupportingFiles = it["has_supporting_files"]?.jsonPrimitive?.boolean ?: false,
-                    sourceUrl = it["source_url"]?.jsonPrimitive?.contentOrNull,
-                    instructionsPreview = it["instructions_preview"]?.jsonPrimitive?.content ?: "",
-                    security = security
-                )
-            }
+            // Fails closed: a report with no verdict is not a pass (CSD-015).
+            val security = SkillImportWire.securityReport(obj["security"]?.jsonObject)
+                ?: ai.ciris.mobile.shared.models.SecurityReport()
+            val preview = obj["preview"]?.jsonObject?.let { SkillImportWire.preview(it, security) }
 
             ai.ciris.mobile.shared.models.SkillValidateResult(
                 valid = obj["valid"]?.jsonPrimitive?.boolean ?: false,
@@ -13936,22 +13893,7 @@ class CIRISApiClient(
             val json = Json { ignoreUnknownKeys = true }
             val obj = json.parseToJsonElement(responseText).jsonObject
 
-            // Parse preview sub-object if present
-            val previewObj = obj["preview"]?.jsonObject
-            val preview = previewObj?.let {
-                ai.ciris.mobile.shared.models.SkillPreviewData(
-                    name = it["name"]?.jsonPrimitive?.content ?: "",
-                    description = it["description"]?.jsonPrimitive?.content ?: "",
-                    version = it["version"]?.jsonPrimitive?.content ?: "",
-                    moduleName = it["module_name"]?.jsonPrimitive?.content ?: "",
-                    tools = it["tools"]?.jsonArray?.map { t -> t.jsonPrimitive.content } ?: emptyList(),
-                    requiredEnvVars = it["required_env_vars"]?.jsonArray?.map { t -> t.jsonPrimitive.content } ?: emptyList(),
-                    requiredBinaries = it["required_binaries"]?.jsonArray?.map { t -> t.jsonPrimitive.content } ?: emptyList(),
-                    hasSupportingFiles = it["has_supporting_files"]?.jsonPrimitive?.boolean ?: false,
-                    sourceUrl = it["source_url"]?.jsonPrimitive?.contentOrNull,
-                    instructionsPreview = it["instructions_preview"]?.jsonPrimitive?.content ?: ""
-                )
-            }
+            val preview = obj["preview"]?.jsonObject?.let { SkillImportWire.preview(it) }
 
             ai.ciris.mobile.shared.models.SkillImportResult(
                 success = obj["success"]?.jsonPrimitive?.boolean ?: false,
@@ -14000,17 +13942,7 @@ class CIRISApiClient(
 
             val json = Json { ignoreUnknownKeys = true }
             val obj = json.parseToJsonElement(responseText).jsonObject
-            val skills = obj["skills"]?.jsonArray?.map { skillJson ->
-                val s = skillJson.jsonObject
-                ai.ciris.mobile.shared.models.ImportedSkillData(
-                    moduleName = s["module_name"]?.jsonPrimitive?.content ?: "",
-                    originalSkillName = s["original_skill_name"]?.jsonPrimitive?.content ?: "",
-                    version = s["version"]?.jsonPrimitive?.content ?: "",
-                    description = s["description"]?.jsonPrimitive?.content ?: "",
-                    adapterPath = s["adapter_path"]?.jsonPrimitive?.content ?: "",
-                    sourceUrl = s["source_url"]?.jsonPrimitive?.contentOrNull
-                )
-            } ?: emptyList()
+            val skills = SkillImportWire.importedSkills(obj)
 
             logInfo(method, "Found ${skills.size} imported skills")
             skills
@@ -14041,11 +13973,19 @@ class CIRISApiClient(
             val response: HttpResponse = client.delete(url) {
                 auth?.let { headers { append("Authorization", it) } }
             }
+            // A refused removal RAISES with the agent's reason (404: not an
+            // imported skill; 500: rmtree failed). It used to return false and
+            // the screen could only say "failed" (CSD-015).
+            if (response.status.value !in 200..299) {
+                val errorBody = runCatching { response.body<String>() }.getOrDefault("")
+                client.close()
+                throw Exception("Remove failed (${response.status.value}): $errorBody")
+            }
             client.close()
-            response.status.value in 200..299
+            true
         } catch (e: Exception) {
             logException(method, e)
-            false
+            throw e
         }
     }
 

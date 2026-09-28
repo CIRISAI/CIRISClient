@@ -124,12 +124,13 @@ message in it.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the ticket list | `GET /v1/tickets` | CIRISAgent (`routes/tickets.py:385`, prefix `:37`) | live — but the client calls `"/v1/tickets/"` **with a trailing slash** (`TicketsApi.kt:210`) against a route registered as `@router.get("")`; it works only through FastAPI's `redirect_slashes` 307 |
-| one ticket | `GET /v1/tickets/{ticket_id}` | CIRISAgent (`routes/tickets.py:356`) | live |
-| create | `POST /v1/tickets` | CIRISAgent (`routes/tickets.py:264`) | live — same trailing-slash shape |
-| the SOP list | `GET /v1/tickets/sops` | CIRISAgent (`routes/tickets.py:189`) | live |
-| one SOP's metadata | `GET /v1/tickets/sops/{sop}` | CIRISAgent (`routes/tickets.py:218`) | live |
-| the stat tiles | **no route** — computed client-side over `limit=1000` | — | **missing**; ask below |
+| the ticket list | `GET /v1/tickets` | CIRISAgent (`routes/tickets.py:397` on `main` 29371660de, prefix `:37`) | live — but the client calls `"/v1/tickets/"` **with a trailing slash** (`TicketsApi.kt:210`) against a route registered as `@router.get("")`; it works only through FastAPI's `redirect_slashes` 307. `TicketResponse` (`:68-86`) → `TicketData`: the client drops `correlation_id` and `agent_occurrence_id` (`CIRISApiClient.kt:11689`) |
+| one ticket | `GET /v1/tickets/{ticket_id}` | CIRISAgent (`routes/tickets.py:368`) | live — `getTicket` (`CIRISApiClient.kt:11715`). **Closed 2026-09-27:** it was called by no screen; the expanded row was drawn from the list, which nothing refreshes after load. Opening a row now re-reads it (`TicketsViewModel.selectTicket` → `TicketsScreenState.withTicket`, `TicketsStateTest`) |
+| create | `POST /v1/tickets` | CIRISAgent (`routes/tickets.py:276`) | live — same trailing-slash shape; `createTicket` drops `metadata` from the response (`CIRISApiClient.kt:12035`) |
+| the SOP list | `GET /v1/tickets/sops` | CIRISAgent (`routes/tickets.py:201`) | live |
+| one SOP's metadata | `GET /v1/tickets/sops/{sop}` | CIRISAgent (`routes/tickets.py:230`) | live |
+| delete one | `DELETE /v1/tickets/{ticket_id}` | CIRISAgent (`routes/tickets.py:539`) | live, **not called** — a hard delete. CC 3.3.1 D1 makes this the absence-proof path, so the card should name it rather than leave it out |
+| the stat tiles | **no route** — computed client-side over `limit=1000` (`getTicketStats`, `CIRISApiClient.kt:12055`) | — | **missing**; `blocked_by: CIRISAgent#1207`. The client-side count also files `blocked` proposals only under the total |
 | proof the duty was discharged | **no route** — `consent:deletion_complete`, CC 3.3.1 | CIRISAgent as producer | **missing**; blocks `building` for `proposed:tickets_row_deletion_complete` |
 
 **Wrong circle, and the reason is legal rather than aesthetic.** A data-subject
@@ -143,8 +144,16 @@ ticket routes and drop `agentOnly`, or state plainly that a node without an
 agent accepts no requests. Leaving it as it is means the obligation is invisible
 on exactly the install that cannot automate it.
 
-**CIRISAgent working tree is dated 2026-08-15**, five weeks behind today; the
-trailing-slash observation is against that checkout.
+Handler lines re-read from `main` 29371660de on 2026-09-27; the trailing-slash
+observation still holds there.
+
+**States, closed 2026-09-27.** The error card and "No tickets found" both
+rendered, because the empty branch did not check `error`
+(`TicketsScreen.kt:198`); `TicketsScreenState.showsEmpty()` now refuses empty
+while loading, refreshing or errored (`TicketsStateTest`). Still open:
+`refresh()` (`TicketsViewModel.kt:118-138`) launches its fetches in separate
+coroutines, so its `catch` is dead and `isRefreshing` clears immediately; and
+`startPolling` loads once and never polls.
 
 ## 4. Flow (how)
 

@@ -4,6 +4,11 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.ImportedSkillData
 import ai.ciris.mobile.shared.models.SkillImportResult
 import ai.ciris.mobile.shared.models.SkillPreviewData
+import ai.ciris.mobile.shared.models.importAllowed
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.screens.SecurityFindingCard
+import ai.ciris.mobile.shared.ui.screens.SecuritySummaryCard
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
@@ -255,7 +260,7 @@ private fun PasteContent(
     if (!showSource) {
         TextButton(
             onClick = { showSource = true },
-            modifier = Modifier.testable("btn_show_source_url")
+            modifier = Modifier.testableClickable("btn_show_source_url") { showSource = true }
         ) {
             Text(localizedString("mobile.skill_import_source"))
         }
@@ -280,7 +285,7 @@ private fun PasteContent(
         enabled = content.isNotBlank() && !isLoading,
         modifier = Modifier
             .fillMaxWidth()
-            .testable("btn_skill_preview")
+            .testableClickable("btn_skill_analyze") { if (content.isNotBlank() && !isLoading) onPreview() }
     ) {
         if (isLoading) {
             CircularProgressIndicator(
@@ -425,6 +430,31 @@ private fun PreviewAsCards(
         }
     }
 
+    // The scan (CSD-015). It runs on the agent (`SkillSecurityScanner`), not
+    // on a verifier, and no attester is shown because none exists yet
+    // (CIRISAgent#1203). A preview with no report is NOT a clear report:
+    // it renders as an error and Import stays blocked.
+    val security = preview.security
+    if (security == null) {
+        StateBlock(
+            ListState.Error(
+                title = localizedString("mobile.skill_scan_missing"),
+                body = localizedString("mobile.skill_scan_missing_body"),
+            ),
+            tag = "skill_scan_missing",
+            inline = true,
+        )
+    } else {
+        Box(Modifier.testable("skill_security_verdict", if (security.safeToImport) "safe" else "blocked")) {
+            SecuritySummaryCard(report = security)
+        }
+        security.findings.forEachIndexed { i, finding ->
+            Box(Modifier.testable("skill_security_finding_$i", finding.title)) {
+                SecurityFindingCard(finding = finding)
+            }
+        }
+    }
+
     // Card 5: Safety (collapsed - auto-set for imports)
     WorkshopCard(
         title = localizedString("mobile.skill_card_behavior"),
@@ -455,12 +485,13 @@ private fun PreviewAsCards(
         ) {
             Text(localizedString("mobile.skill_import_edit_first"))
         }
+        val allowed = preview.importAllowed()
         Button(
             onClick = onImport,
-            enabled = !isLoading,
+            enabled = !isLoading && allowed,
             modifier = Modifier
                 .weight(1f)
-                .testable("btn_skill_import_confirm")
+                .testableClickable("btn_skill_import_confirm") { if (!isLoading && allowed) onImport() }
         ) {
             if (isLoading) {
                 CircularProgressIndicator(
@@ -470,6 +501,8 @@ private fun PreviewAsCards(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(localizedString("mobile.skill_building"))
+            } else if (!allowed) {
+                Text(localizedString("mobile.skill_import_blocked"))
             } else {
                 Text(localizedString("mobile.skill_import_approve"))
             }
@@ -541,7 +574,7 @@ private fun ResultContent(
         onClick = onDismiss,
         modifier = Modifier
             .fillMaxWidth()
-            .testable("btn_skill_import_done")
+            .testableClickable("btn_skill_import_done") { onDismiss() }
     ) {
         Text(localizedString("mobile.common_close"))
     }

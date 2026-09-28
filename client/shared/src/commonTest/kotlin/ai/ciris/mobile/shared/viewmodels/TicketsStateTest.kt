@@ -1,0 +1,39 @@
+package ai.ciris.mobile.shared.viewmodels
+
+import ai.ciris.mobile.shared.api.TicketData
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+
+/**
+ * CSD-013: the Tickets list's empty state never shows over an error or a
+ * spinner, and an opened ticket is the re-read copy, not the listed one.
+ */
+class TicketsStateTest {
+    private fun ticket(id: String, status: String) = TicketData(
+        ticketId = id, sop = "DSAR_DELETE", ticketType = "dsar", status = status, priority = 5,
+        email = "user@example.com", userIdentifier = null, submittedAt = "2026-09-27T00:00:00Z",
+        deadline = null, lastUpdated = "2026-09-27T00:00:00Z", completedAt = null, notes = null,
+        automated = false, metadata = emptyMap(),
+    )
+
+    @Test
+    fun emptyNeverShowsOverAnError() {
+        assertTrue(TicketsScreenState().showsEmpty())
+        assertFalse(TicketsScreenState(error = "Failed to refresh").showsEmpty(), "error and empty must not both render")
+        assertFalse(TicketsScreenState(isLoading = true).showsEmpty())
+        assertFalse(TicketsScreenState(isRefreshing = true).showsEmpty())
+        assertFalse(TicketsScreenState(tickets = listOf(ticket("t1", "pending"))).showsEmpty())
+    }
+
+    @Test
+    fun anOpenedTicketIsReplacedByItsReRead() {
+        val listed = TicketsScreenState(tickets = listOf(ticket("t1", "pending"), ticket("t2", "pending")))
+        val fresh = ticket("t1", "completed")
+        val after = listed.withTicket(fresh)
+        assertEquals("completed", after.tickets.first { it.ticketId == "t1" }.status)
+        assertEquals("pending", after.tickets.first { it.ticketId == "t2" }.status)
+        assertEquals(fresh, after.selectedTicket)
+    }
+}
