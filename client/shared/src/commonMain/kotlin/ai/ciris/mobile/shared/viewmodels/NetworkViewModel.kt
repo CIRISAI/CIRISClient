@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.models.AgentModeChangeResult
 import ai.ciris.mobile.shared.models.AgentModeStatus
 import ai.ciris.mobile.shared.models.federation.FederationIdentityResponse
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,8 +35,25 @@ class NetworkViewModel(
     private val _status = MutableStateFlow<AgentModeStatus?>(null)
     val status: StateFlow<AgentModeStatus?> = _status.asStateFlow()
 
+    /** The SELECTOR's mode on the hub and Settings, which need a value to
+     *  highlight. Never render it as a reading: see [modeRead]. */
     private val _mode = MutableStateFlow(AgentMode.PROXY)
     val mode: StateFlow<AgentMode> = _mode.asStateFlow()
+
+    /** The mode as READ from the host: null until a read answers, and null
+     *  again when one fails. The Network card (CSD-036) renders this, never
+     *  [mode], whose PROXY default is a fact about this class, not the node. */
+    private val _modeRead = MutableStateFlow<AgentMode?>(null)
+    val modeRead: StateFlow<AgentMode?> = _modeRead.asStateFlow()
+
+    /** Why the last agent-mode read produced no reading: the route is not on
+     *  this host (a node without an agent) or the read failed. */
+    private val _modeFailure = MutableStateFlow<ReadFailure?>(null)
+    val modeFailure: StateFlow<ReadFailure?> = _modeFailure.asStateFlow()
+
+    /** Why the signer-key read produced no reading. */
+    private val _identityFailure = MutableStateFlow<ReadFailure?>(null)
+    val identityFailure: StateFlow<ReadFailure?> = _identityFailure.asStateFlow()
 
     /** Edge federation address (the local agent's signer_key_id). Populated by
      *  [loadFederationIdentity] from GET /v1/federation/identity; null while Edge
@@ -72,15 +90,34 @@ class NetworkViewModel(
             _error.value = null
             try {
                 val s = apiClient.getAgentMode()
-                _status.value = s
-                _mode.value = s.mode
+                recordModeRead(s, null)
                 PlatformLogger.i(TAG, "loaded agent-mode: ${s.mode.wire}, server_eligible=${s.serverEligible}")
             } catch (e: Exception) {
+                recordModeRead(null, e)
                 _error.value = e.message ?: e::class.simpleName ?: "unknown error"
                 PlatformLogger.e(TAG, "loadAgentMode failed: ${e.message}", e)
             } finally {
                 _loading.value = false
             }
+        }
+    }
+
+    /**
+     * Record the outcome of one agent-mode read. A failure CLEARS the reading
+     * rather than leaving the last one (or the selector default) standing, and
+     * says why: a node without an agent has no such route, which is a fact
+     * about the node, not a failed read.
+     */
+    internal fun recordModeRead(status: AgentModeStatus?, failure: Throwable?) {
+        if (status != null) {
+            _status.value = status
+            _mode.value = status.mode
+            _modeRead.value = status.mode
+            _modeFailure.value = null
+        } else {
+            _status.value = null
+            _modeRead.value = null
+            _modeFailure.value = failure?.let { ReadFailure.of(it) } ?: ReadFailure.Failed(null)
         }
     }
 
@@ -97,8 +134,7 @@ class NetworkViewModel(
             try {
                 when (val result = apiClient.setAgentMode(target)) {
                     is AgentModeChangeResult.Success -> {
-                        _status.value = result.status
-                        _mode.value = result.status.mode
+                        recordModeRead(result.status, null)
                         _restartPending.value = result.requiresRestart
                         PlatformLogger.i(TAG, "set mode → ${target.wire}, restart=${result.requiresRestart}")
                     }
@@ -144,10 +180,13 @@ class NetworkViewModel(
             try {
                 val identity = apiClient.getFederationIdentity()
                 _federationAddress.value = identity.signerKeyId
+                _identityFailure.value = null
                 PlatformLogger.i(TAG, "federation identity: signer_key_id=${identity.signerKeyId.take(12)}…")
             } catch (e: Exception) {
-                // Edge unavailable / degraded — leave address null (card → "—").
+                // Edge unavailable / degraded — leave address null (card → "—")
+                // and say why, so "—" is never the whole story.
                 _federationAddress.value = null
+                _identityFailure.value = ReadFailure.of(e)
                 PlatformLogger.d(TAG, "federation identity unavailable (Edge degraded?): ${e.message}")
             }
             // persist's full identity aggregate (null on 503 — initializing)

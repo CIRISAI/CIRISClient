@@ -125,12 +125,43 @@ data class SelfAxisStandingDto(
     val standingValue: SelfStanding get() = SelfStanding.fromWire(standing)
 }
 
+/**
+ * One of the owner's own live `delegates_to` grants to this node carrying
+ * `infra:serve` — `owner_serve_delegations` (CIRISServer#676, 0.5.218,
+ * `src/admin_ops.rs:3470`). Only rows the act itself would accept are listed:
+ * the server re-runs `resolve_authority` and drops a withdrawn or unreachable
+ * grant, so an id here is one a tier S or tier R act can be taken under.
+ *
+ * On 0.5.218 every row carries `infra:serve` (the self-directed scope), which
+ * tiers S and R take; tiers 0–4 require the named row to carry
+ * `review`/`moderate`/`slash` itself, so a picker must match [scope] to the act.
+ */
+@Serializable
+data class OwnerDelegationDto(
+    @SerialName("delegation_id") val delegationId: String = "",
+    @SerialName("issuer_key_id") val issuerKeyId: String = "",
+    @SerialName("subject_key_id") val subjectKeyId: String = "",
+    val scope: String = "",
+    @SerialName("owner_binding") val ownerBinding: Boolean = false,
+    @SerialName("cohort_scope") val cohortScope: String? = null,
+    @SerialName("asserted_at") val assertedAt: String? = null,
+)
+
 /** `GET /v1/admin/self` — the three standings, side by side. */
 @Serializable
 data class SelfStandingResponse(
     @SerialName("source_locale") val sourceLocale: String = "en",
     val tier: String = "S",
     @SerialName("node_key_id") val nodeKeyId: String = "",
+    /**
+     * The owner's delegations this node can act under (CIRISServer#676). ABSENT
+     * (null with no [ownerDelegationsError]) on a node older than 0.5.218, which
+     * cannot say; null WITH an error when the node tried and failed; an empty
+     * list when the node read them and the owner holds none. Different facts —
+     * [ownerAuthority] keeps them apart.
+     */
+    @SerialName("owner_delegations") val ownerDelegations: List<OwnerDelegationDto>? = null,
+    @SerialName("owner_delegations_error") val ownerDelegationsError: String? = null,
     /** Keyed by axis token. */
     val standings: Map<String, SelfAxisStandingDto> = emptyMap(),
     val partition: AdminMessage? = null,
@@ -200,6 +231,65 @@ sealed class SelfStandingOutcome {
 
     /** The node itself could not be reached. Says nothing about any standing. */
     data class Unreachable(val detail: String) : SelfStandingOutcome()
+}
+
+/**
+ * Where the `delegation_id` of a tier S / tier R act comes from.
+ *
+ * Every act on those two rungs must name the owner's own `infra:serve`
+ * delegation (`SelfCommit.delegation_id`, `resolve_owner_authority`). Before
+ * CIRISServer#676 no route returned it and the person had to type an id they
+ * had no way to see. A 0.5.218 node names it in `GET /v1/admin/self`; the
+ * typed field survives ONLY where the node cannot supply it.
+ */
+sealed interface OwnerAuthority {
+    /** The node named at least one delegation the act can be taken under. */
+    data class Supplied(val delegations: List<OwnerDelegationDto>) : OwnerAuthority
+
+    /** The node read them and the owner holds none it would accept. Typing an
+     *  id cannot help: the server re-derives the same set. */
+    data object NoneHeld : OwnerAuthority
+
+    /** The node tried and could not read them. The typed id is the fallback. */
+    data class Unreadable(val detail: String) : OwnerAuthority
+
+    /** The node predates CIRISServer#676, or the read did not answer, so it
+     *  cannot say. The typed id is the fallback. */
+    data class NotSupplied(val detail: String? = null) : OwnerAuthority
+
+    /** Does the act need the person to type the id? */
+    val needsTypedId: Boolean get() = this is Unreadable || this is NotSupplied
+}
+
+/** The owner authority a `GET /v1/admin/self` body carries. Pure. */
+fun SelfStandingResponse.ownerAuthority(): OwnerAuthority {
+    val listed = ownerDelegations?.filter { it.delegationId.isNotBlank() }
+    val error = ownerDelegationsError
+    return when {
+        listed == null && !error.isNullOrBlank() -> OwnerAuthority.Unreadable(error)
+        listed == null -> OwnerAuthority.NotSupplied()
+        listed.isEmpty() -> OwnerAuthority.NoneHeld
+        else -> OwnerAuthority.Supplied(listed)
+    }
+}
+
+/** The owner authority a whole read produced. A refused or unreachable read
+ *  says nothing about the delegations, so it falls back to the typed id. */
+fun SelfStandingOutcome.ownerAuthority(): OwnerAuthority = when (this) {
+    is SelfStandingOutcome.Read -> response.ownerAuthority()
+    is SelfStandingOutcome.Refused -> OwnerAuthority.NotSupplied("HTTP $httpStatus")
+    is SelfStandingOutcome.Unreachable -> OwnerAuthority.NotSupplied(detail)
+}
+
+/**
+ * The id an act is sent under: the node-supplied one the person picked (the
+ * first by default), else what they typed. Null means the act cannot be sent.
+ */
+fun OwnerAuthority.delegationForAct(pickedIndex: Int, typed: String): String? = when (this) {
+    is OwnerAuthority.Supplied ->
+        (delegations.getOrNull(pickedIndex) ?: delegations.first()).delegationId
+    OwnerAuthority.NoneHeld -> null
+    is OwnerAuthority.Unreadable, is OwnerAuthority.NotSupplied -> typed.trim().ifBlank { null }
 }
 
 /** What one tier S act produced. */

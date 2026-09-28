@@ -115,38 +115,6 @@ sealed class NavSurface(
         id = "agent-settings", label = "Settings", icon = CIRISIcons.settings,
         labelKey = "nav.surface.agent_settings")
 
-    /**
-     * Settings, reachable WITHOUT a brain (CIRISClient#51).
-     *
-     * `Screen.Settings` carries `btn_logout`, and on a node install nothing
-     * reached it: [AgentSettings] lives in AGENT_GROUP, which is dropped when
-     * `hasAgent = false`, and the governance menu that also offers logout is in
-     * `CIRISTopBar`, which only the agent home renders. So a run-without-AI
-     * owner could not sign out on ANY platform — and because the device-reset
-     * affordance lives in the Login footer, could not factory-reset either.
-     *
-     * The desktops appeared to escape this until 0.5.215 only because a stale
-     * `clientMode=AGENT` was landing them on Interact by accident (#48).
-     *
-     * CHILDLESS ON PURPOSE. [AgentSettings]'s children — LLM, System, Runtime,
-     * Config, Skills — are agent configuration and have nothing to configure on
-     * a bare node. This surface is the account, not the agent.
-     *
-     * PRESENT IN BOTH MODES, and that is not incidental — `narrowingIsPurely-
-     * Subtractive` pins that the node nav is a SUBSET of the agent nav, so a
-     * surface that appears only when narrowed is a defect by this repo's own
-     * rule. The first cut of this fix added it on the node build alone and that
-     * test caught it. Labelled "Account" rather than "Settings" so the agent
-     * build, which also offers [AgentSettings], does not show two identically
-     * named rows routing to the same screen.
-     *
-     * Reuses `mobile.settings_account`, which is already "Account" in all 29
-     * bundles — a new key would need a value in each, kept at parity by a check.
-     */
-    object Account : NavSurface(
-        id = "account", label = "Account", icon = CIRISIcons.person,
-        labelKey = "mobile.settings_account")
-
     // ═══════════════════════════════════════════════════════════════════════════
     // Manage group — operator surfaces
     // ═══════════════════════════════════════════════════════════════════════════
@@ -170,6 +138,14 @@ sealed class NavSurface(
      */
     object NetworkOps : NavSurface("network-ops", "Network", CIRISIcons.bus,
         labelKey = "nav.surface.network_ops")
+
+    /**
+     * Own standing (CSD-045) — tier S: what THIS node's owner has declared the
+     * node did to itself (shed load, stopped accepting, legal compulsion).
+     * Node routes (`/v1/admin/self*`), so every build.
+     */
+    object NodeSelf : NavSurface("node-self", "Own standing", CIRISIcons.shield,
+        labelKey = "nav.surface.node_self")
 
     /**
      * Storage (CIRISPersist operator view) — the graph store + on-disk facts:
@@ -323,10 +299,9 @@ sealed class NavSurface(
         id = "environment-graph", label = "Environment Graph", icon = CIRISIcons.snapshot,
         labelKey = "commons.federation.environment_graph.title",
     )
-    object Delegation : NavSurface(
-        id = "delegation", label = "Delegation", icon = CIRISIcons.send,
-        labelKey = "commons.federation.delegation.title",
-    )
+    // `Delegation` (Family › Rules) was CSD-001's read-only preamble to the same
+    // grant list: folded into [Delegations] (CSD-055), which is placed in Rules
+    // under every circle, Family included.
     object Constitutional : NavSurface(
         id = "constitutional", label = "Constitutional", icon = CIRISIcons.instructions,
         labelKey = "commons.federation.constitutional.title",
@@ -382,6 +357,32 @@ sealed class NavSurface(
 
     /** Help — under My things, always reachable. */
     object Help : NavSurface("help", "Help", CIRISIcons.info, labelKey = "nav.surface.help")
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // Communities and affiliations (CSD-102, CSD-103) — CIRISServer
+    // `/v1/communities`. One surface per tier because a surface does not know
+    // the circle it is opened in, and the tier IS the circle here.
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    /** Who is in each Neighbours room (`tier: community`), as the fold has it now. */
+    object CommunityRoster : NavSurface(
+        id = "community-roster", label = "Community members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.community_roster")
+
+    /** Who is in each Communities and Businesses room (`tier: affiliations`). */
+    object AffiliationsRoster : NavSurface(
+        id = "affiliations-roster", label = "Members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.affiliations_roster")
+
+    /** The Neighbours rooms you talk in — pair rooms and rooms of more than two. */
+    object CommunityChats : NavSurface(
+        id = "community-chats", label = "Rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.community_chats")
+
+    /** The Communities and Businesses rooms you talk in. */
+    object AffiliationsChats : NavSurface(
+        id = "affiliations-chats", label = "Rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.affiliations_chats")
 }
 
 /**

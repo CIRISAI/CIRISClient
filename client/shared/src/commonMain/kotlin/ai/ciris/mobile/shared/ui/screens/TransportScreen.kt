@@ -88,18 +88,34 @@ fun TransportScreen(
             ) {
                 val identity = state.identity
                 if (state.isLoading && identity == null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.testable("transport_loading"),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.width(8.dp))
                         Text(localizedString("transport.loading").ifEmpty { "Loading…" })
                     }
                 } else if (identity == null) {
-                    Text(
-                        text = localizedString("transport.unavailable")
-                            .ifEmpty { "Transport facts unavailable (node degraded?)." },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    // Say which failure it was. One speculative sentence
+                    // ("node degraded?") used to cover a 404, a 500, a timeout
+                    // and a node with no identity alike (CSD-031).
+                    val failure = state.loadFailure
+                    if (failure != null) {
+                        ReadFailureBlock(
+                            failure = failure,
+                            tagPrefix = "transport",
+                            notOnThisNode = localizedString("mobile.transport_not_on_this_node"),
+                            inline = true,
+                        )
+                    } else {
+                        Text(
+                            text = localizedString("transport.unavailable")
+                                .ifEmpty { "Transport facts unavailable (node degraded?)." },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 } else {
                     TransportRow(
                         localizedString("transport.reticulum_address").ifEmpty { "Reticulum address" },
@@ -210,7 +226,12 @@ fun TransportScreen(
                 }
 
                 state.error?.let { err ->
-                    Text(err, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    Text(
+                        err,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.testable("transport_save_error", err),
+                    )
                 }
                 state.successMessage?.let { msg ->
                     Text(msg, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)

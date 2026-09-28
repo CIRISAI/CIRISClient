@@ -91,8 +91,24 @@ data class CommunicationAdapter(
     val required_binaries: List<String> = emptyList(), // Specific binary names if requires_binaries=true
     val supported_platforms: List<String> = emptyList(), // Empty = all, otherwise ["android", "ios", "desktop"]
     val requires_ciris_services: Boolean = false,     // Requires CIRIS AI services (Google sign-in)
-    val enabled_by_default: Boolean = false
+    val enabled_by_default: Boolean = false,
+    // The agent's own verdict for THIS host (`AdapterConfig.platform_available`,
+    // CIRISAgent routes/setup/models.py:67). Dropped by the mapping until the
+    // setup review; an adapter the agent says cannot run here is not offered.
+    val platform_available: Boolean = true,
+    // Required binaries the agent looked for and did not find (models.py:71-72).
+    val missing_binaries: List<String> = emptyList(),
 )
+
+/**
+ * The adapters the wizard OFFERS as optional features: everything the agent
+ * listed except `api` (always on, cannot be declined — the always-on tool
+ * disclosure covers what it grants) and anything the agent says cannot run on
+ * this host. Platform filtering by the client's own rules
+ * ([filterAdaptersForPlatform]) happens before this.
+ */
+fun optionalFeatureAdapters(adapters: List<CommunicationAdapter>): List<CommunicationAdapter> =
+    adapters.filter { it.id != "api" && it.platform_available }
 
 // ========== GET /v1/setup/tool-disclosure ==========
 //
@@ -389,7 +405,10 @@ data class NodeAuthPollResult(
     val signingKeyB64: String? = null,    // Base64 Ed25519 private key (one-time)
     val keyId: String? = null,            // Key ID from Registry
     val stewardshipTier: Int? = null,     // Stewardship tier from template
-    val error: String? = null             // Error message if status == "error"
+    val error: String? = null,            // Error message if status == "error"
+    // The licensed package the Portal approved (node device_auth.rs:245-246).
+    val packageDownloadUrl: String? = null,
+    val packageTemplateId: String? = null,
 )
 
 /**

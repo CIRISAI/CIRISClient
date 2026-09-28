@@ -136,7 +136,8 @@ fun ConfigScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("config_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -178,7 +179,7 @@ fun ConfigScreen(
 
                 // Configuration sections
                 LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testable("config_sections"),
                     contentPadding = PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -212,7 +213,18 @@ fun ConfigScreen(
                              section.items.any { it.key.contains(searchQuery, ignoreCase = true) })
                         }
 
-                    if (filteredSections.isEmpty()) {
+                    val readFailure = configData.readFailure
+                    if (readFailure != null) {
+                        // A failed read is said. It used to fall through to
+                        // "no configurations found", which reads as a search
+                        // miss (CSD-023, CSD/3 §2.2).
+                        item {
+                            ReadFailureBlock(
+                                failure = readFailure,
+                                tagPrefix = "config",
+                            )
+                        }
+                    } else if (filteredSections.isEmpty()) {
                         item {
                             Box(
                                 modifier = Modifier
@@ -221,6 +233,7 @@ fun ConfigScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
+                                    modifier = Modifier.testable("config_empty"),
                                     text = localizedString("mobile.config_no_found"),
                                     style = MaterialTheme.typography.bodyLarge,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -403,7 +416,7 @@ private fun ConfigSectionCard(
                 section.items.forEach { item ->
                     ConfigItemRow(
                         item = item,
-                        onEdit = { onEditConfig(item.key, item.displayValue) },
+                        onEdit = { onEditConfig(item.key, item.editValue) },
                         onDelete = { onDeleteConfig(item.key) }
                     )
                 }
@@ -558,7 +571,9 @@ private fun EditConfigDialog(
 
 data class ConfigScreenData(
     val sections: List<ConfigSection> = emptyList(),
-    val totalConfigs: Int = 0
+    val totalConfigs: Int = 0,
+    /** Why the last list read produced no list; null after a success (CSD-023). */
+    val readFailure: ReadFailure? = null,
 )
 
 data class ConfigSection(
@@ -572,7 +587,9 @@ data class ConfigItem(
     val displayValue: String,
     val updatedAt: String,
     val updatedBy: String,
-    val isSensitive: Boolean = false
+    val isSensitive: Boolean = false,
+    /** What Edit opens with — a list or a dict as JSON (CSD-023). */
+    val editValue: String = displayValue,
 )
 
 data class ConfigCategory(

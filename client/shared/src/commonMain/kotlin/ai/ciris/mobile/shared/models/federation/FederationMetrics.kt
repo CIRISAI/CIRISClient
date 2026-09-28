@@ -42,9 +42,39 @@ data class FederationMetricsResponse(
     val transportBytesOutTotal: Map<String, Long> = emptyMap(),
     @SerialName("peer_reachability_ratio")
     val peerReachabilityRatio: Map<String, Double> = emptyMap(),
-    @SerialName("verified_feed_subscriber_count")  // renamed server-side (CIRISServer#261/#920): was inline_text_subscriber_count
+    // The WIRE key is still `inline_text_subscriber_count`: the node serves the
+    // verified-feed receiver count UNDER that name (CIRISServer
+    // src/federation_surface.rs:317). The client read
+    // `verified_feed_subscriber_count`, a key no node sends, so it was always 0.
+    @SerialName("inline_text_subscriber_count")
     val verifiedFeedSubscriberCount: Long = 0L,
+    // ── The REPLICATION plane (CIRISServer#377, CIRISEdge#434/#457) ─────────
+    // The four counters above are the APPLICATION plane only; anti-entropy
+    // replication (the plane that carries trace:*) increments none of them, so
+    // their zeros "say nothing about carriage" (the node's own `plane_note`,
+    // federation_surface.rs:332). These are the fields that do. All nullable:
+    // a node that predates them has not said, which is not zero.
+    @SerialName("replication_envelopes_served_total")
+    val replicationEnvelopesServedTotal: Map<String, Long>? = null,
+    @SerialName("replication_applied_total")
+    val replicationAppliedTotal: Map<String, Long>? = null,
+    /** `unreadable|not_exercised|idle|moving|withholding` (operator_surface.rs:391-421). */
+    @SerialName("carriage_standing")
+    val carriageStanding: String? = null,
+    /** `unreadable|not_exercised|idle|converged|applying|refusing` (operator_surface.rs:486-525). */
+    @SerialName("receive_standing")
+    val receiveStanding: String? = null,
+    @SerialName("receive_decided_total")
+    val receiveDecidedTotal: Long? = null,
+    @SerialName("plane_note")
+    val planeNote: String? = null,
 ) {
+
+    /** Rows served to peers by replication, or null when the node did not say. */
+    fun replicationServed(): Long? = replicationEnvelopesServedTotal?.values?.sum()
+
+    /** Rows applied from peers by replication, or null when the node did not say. */
+    fun replicationApplied(): Long? = replicationAppliedTotal?.values?.sum()
 
     /** Total envelopes sent across all envelope kinds. */
     fun getEnvelopesSent(): Long = envelopesSentTotal.values.sum()

@@ -7,6 +7,8 @@ import ai.ciris.mobile.shared.viewmodels.BaseFederationViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 
 /**
  * 2-step UX state for the content-fetch flow.
@@ -71,11 +73,9 @@ class NetworkContentViewModel(
     // ─── Public actions ──────────────────────────────────────────────────────
 
     fun loadPeers() {
-        launchApi(
-            operation = "listFederationPeers",
-            block = { apiClient.listFederationPeers() },
-            onSuccess = { _peers.value = it.peers },
-        )
+        viewModelScope.launch {
+            runRead("listFederationPeers") { apiClient.listFederationPeers() }?.let { _peers.value = it.peers }
+        }
     }
 
     fun setPeerSearch(q: String) {
@@ -131,19 +131,26 @@ class NetworkContentViewModel(
             return
         }
         _contentIdError.value = null
-        _fetching.value = true
-        launchApi(
-            operation = "fetchFederationContent",
-            block = {
-                apiClient.fetchFederationContent(
-                    contentId = cid,
-                    peerKeyId = peer.keyId,
-                    timeoutMs = _timeoutMs.value,
-                )
-            },
-            onSuccess = { _result.value = it },
-        )
-        _fetching.value = false
+        // A tap while a fetch is in flight is the same tap twice: the button
+        // disables itself, but its automation handler and any other caller do
+        // not, so the guard lives here — one POST per fetch, atomically.
+        if (!_fetching.compareAndSet(expect = false, update = true)) return
+        // `launchApi` returns before the fetch runs, so the flag was cleared
+        // immediately and the button never showed a fetch in flight. Clear it
+        // when the fetch actually ends.
+        viewModelScope.launch {
+            try {
+                runApi("fetchFederationContent") {
+                    apiClient.fetchFederationContent(
+                        contentId = cid,
+                        peerKeyId = peer.keyId,
+                        timeoutMs = _timeoutMs.value,
+                    )
+                }?.let { _result.value = it }
+            } finally {
+                _fetching.value = false
+            }
+        }
     }
 
     // ─── Helpers ─────────────────────────────────────────────────────────────

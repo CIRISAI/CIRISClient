@@ -95,6 +95,7 @@ the report so a worklist is never mistaken for a verdict.
 | `dimension-table` (`client/tools/gen_dimension_table.py --check`) | normative | A family the UI renders that the registry does not know admits under an authority nobody chose (CC 3.1.7 R2); generating the table from the pinned registry is what makes that a build failure instead of a review note |
 | `glyph-table` (`client/tools/gen_glyphs.py --check`) | code | Seventy-one glyphs drawn once, from the design's path data; a hand-edited copy is the drift the generator exists to prevent |
 | `csd-registry` (`packaging/check_csd_v3.py`) | normative | A CSD that names a family the pinned registry lacks is a contract about vocabulary nobody ratified |
+| `csd-routes` (`packaging/check_csd_routes.py`) | normative | A route a screen calls that no CSD on that screen cites is a contract nobody wrote down, and two screens mutating the same route are one card twice or one act with two doors — a decision either way, not a drift. The closure from `CIRISApp.kt` through composables and view models to `CIRISApiClient` is heuristic and says so; a `reset*`/`clear*`/`forget*`/`dismiss*` call on an app-scoped model the caller did not construct reaches none of that model's routes and charges none of its init-time reads to the caller, so a logout arm is not billed for the revoke probe. A baseline that can only fall |
 
 ## 4. Dependencies & gating
 

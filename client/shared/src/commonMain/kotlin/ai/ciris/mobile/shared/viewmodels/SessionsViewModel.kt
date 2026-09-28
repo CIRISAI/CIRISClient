@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.screens.CognitiveStateReading
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.localization.LocalizationHelper
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -49,8 +51,21 @@ class SessionsViewModel(
     private fun logError(method: String, message: String) = log("ERROR", method, message)
 
     // Current cognitive state
-    private val _currentState = MutableStateFlow("WORK")
-    val currentState: StateFlow<String> = _currentState.asStateFlow()
+    // Unread until a read succeeds. Never seeded "WORK" (CSD-011).
+    private val _currentState = MutableStateFlow(CognitiveStateReading())
+    val currentState: StateFlow<CognitiveStateReading> = _currentState.asStateFlow()
+
+    /** The last state actually read, or null. */
+    private val readState: String? get() = _currentState.value.state
+
+    private fun recordRead(state: String?) {
+        if (readState != state && readState != null) _previousState.value = readState
+        _currentState.value = CognitiveStateReading(state = state)
+    }
+
+    private fun recordFailure(e: Exception) {
+        _currentState.value = CognitiveStateReading(state = null, failure = ReadFailure.of(e))
+    }
 
     // Previous cognitive state (after transitions)
     private val _previousState = MutableStateFlow<String?>(null)
@@ -95,20 +110,20 @@ class SessionsViewModel(
             try {
                 logDebug(method, "Calling apiClient.getSystemStatus()")
                 val status = apiClient.getSystemStatus()
-                val cognitiveState = (status.cognitive_state ?: "UNKNOWN").uppercase()
+                val cognitiveState = status.cognitive_state?.uppercase()
 
                 logInfo(method, "Got cognitive state: $cognitiveState (status: ${status.status})")
 
-                if (_currentState.value != cognitiveState) {
-                    logInfo(method, "State changed: ${_currentState.value} -> $cognitiveState")
-                    _previousState.value = _currentState.value
+                if (readState != cognitiveState) {
+                    logInfo(method, "State changed: $readState -> $cognitiveState")
                 }
-                _currentState.value = cognitiveState
+                recordRead(cognitiveState)
 
             } catch (e: Exception) {
                 logError(method, "Failed to fetch cognitive state: ${e::class.simpleName}: ${e.message}")
                 logError(method, "Stack trace: ${e.stackTraceToString().take(500)}")
                 _errorMessage.value = LocalizationHelper.getString("mobile.sessions_error_fetch_failed", mapOf("error" to (e.message ?: "Unknown error")))
+                recordFailure(e)
             } finally {
                 _isLoading.value = false
             }
@@ -135,12 +150,11 @@ class SessionsViewModel(
                 pollCount++
                 try {
                     val status = apiClient.getSystemStatus()
-                    val cognitiveState = (status.cognitive_state ?: "UNKNOWN").uppercase()
+                    val cognitiveState = status.cognitive_state?.uppercase()
 
-                    if (_currentState.value != cognitiveState) {
-                        logInfo(method, "Poll #$pollCount: State changed ${_currentState.value} -> $cognitiveState")
-                        _previousState.value = _currentState.value
-                        _currentState.value = cognitiveState
+                    if (readState != cognitiveState || _currentState.value.failure != null) {
+                        logInfo(method, "Poll #$pollCount: State changed $readState -> $cognitiveState")
+                        recordRead(cognitiveState)
                     } else if (pollCount % 10 == 0) {
                         logDebug(method, "Poll #$pollCount: State unchanged ($cognitiveState)")
                     }
@@ -148,6 +162,8 @@ class SessionsViewModel(
                     if (pollCount % 10 == 0) {
                         logWarn(method, "Poll #$pollCount failed: ${e.message}")
                     }
+                    // A failed poll is not the last state still holding.
+                    recordFailure(e)
                 }
             }
         }
@@ -170,7 +186,7 @@ class SessionsViewModel(
      */
     fun initiateSession(targetState: String) {
         val method = "initiateSession"
-        logInfo(method, "Initiating session transition: ${_currentState.value} -> $targetState")
+        logInfo(method, "Initiating session transition: $readState -> $targetState")
 
         if (_isTransitioning.value) {
             logWarn(method, "Transition already in progress, ignoring")
@@ -190,11 +206,16 @@ class SessionsViewModel(
                 logInfo(method, "Transition response: success=${response.success}, currentState=${response.currentState}, message=${response.message}")
 
                 if (response.success) {
-                    _previousState.value = response.previousState
-                    _currentState.value = response.currentState
-                    val successMessage = LocalizationHelper.getString("mobile.sessions_transitioned", mapOf("state" to response.currentState))
+                    // The agent ACCEPTED a request; it did not report an arrival.
+                    // Its `current_state` is read straight after the request and
+                    // falls back to the target when unread (runtime.py:365 on
+                    // CIRISAgent main), so it is not written as the reading —
+                    // the next health read is (CSD-011).
+                    _previousState.value = response.previousState?.uppercase()
+                    val successMessage = LocalizationHelper.getString("mobile.sessions_transitioning", mapOf("state" to targetState.uppercase()))
                     _statusMessage.value = successMessage
-                    logInfo(method, "Successfully transitioned to ${response.currentState}")
+                    logInfo(method, "Transition to $targetState accepted; re-reading the state")
+                    refresh()
 
                     // Clear status message after delay
                     delay(3000)
@@ -211,10 +232,11 @@ class SessionsViewModel(
                 logError(method, "Transition failed: ${e::class.simpleName}: ${e.message}")
                 logError(method, "Stack trace: ${e.stackTraceToString().take(500)}")
 
-                val errorMsg = when {
-                    e.message?.contains("400") == true -> LocalizationHelper.getString("mobile.sessions_error_invalid_state")
-                    e.message?.contains("401") == true -> LocalizationHelper.getString("mobile.sessions_error_auth_required")
-                    e.message?.contains("503") == true -> LocalizationHelper.getString("mobile.sessions_error_not_supported")
+                val errorMsg = when (transitionStatus(e)) {
+                    400 -> LocalizationHelper.getString("mobile.sessions_error_invalid_state")
+                    401 -> LocalizationHelper.getString("mobile.sessions_error_auth_required")
+                    403 -> LocalizationHelper.getString("mobile.sessions_error_forbidden")
+                    503 -> LocalizationHelper.getString("mobile.sessions_error_not_supported")
                     else -> LocalizationHelper.getString("mobile.sessions_error_failed", mapOf("error" to (e.message ?: "Unknown error")))
                 }
                 _errorMessage.value = errorMsg
@@ -245,7 +267,7 @@ class SessionsViewModel(
      * Check if a specific state is currently active
      */
     fun isStateActive(state: String): Boolean {
-        return _currentState.value.equals(state, ignoreCase = true)
+        return readState.equals(state, ignoreCase = true)
     }
 
     /**
@@ -253,8 +275,8 @@ class SessionsViewModel(
      * Can only initiate sessions from WORK state
      */
     fun canInitiateSession(targetState: String): Boolean {
-        val canInitiate = _currentState.value == "WORK" && targetState != "WORK"
-        logDebug("canInitiateSession", "Target: $targetState, Current: ${_currentState.value}, CanInitiate: $canInitiate")
+        val canInitiate = readState == "WORK" && targetState != "WORK"
+        logDebug("canInitiateSession", "Target: $targetState, Current: $readState, CanInitiate: $canInitiate")
         return canInitiate
     }
 
@@ -263,8 +285,11 @@ class SessionsViewModel(
      * Available when not in WORK, WAKEUP, or SHUTDOWN states
      */
     fun canReturnToWork(): Boolean {
-        val current = _currentState.value
-        val canReturn = current !in listOf("WORK", "WAKEUP", "SHUTDOWN", "UNKNOWN")
+        val current = readState
+        // SETUP and WAKEUP_ERROR are states the agent reports (helpers.py:66,
+        // health.py:853) and neither accepts WORK as a target.
+        val canReturn = current != null &&
+            current !in listOf("WORK", "WAKEUP", "SHUTDOWN", "UNKNOWN", "SETUP", "WAKEUP_ERROR")
         logDebug("canReturnToWork", "Current: $current, CanReturn: $canReturn")
         return canReturn
     }
@@ -275,6 +300,10 @@ class SessionsViewModel(
         stopPolling()
     }
 }
+
+/** The HTTP status a failed transition carried, if its message names one. */
+internal fun transitionStatus(e: Throwable): Int? =
+    Regex("""\bHTTP (\d{3})\b""").find(e.message ?: "")?.groupValues?.get(1)?.toIntOrNull()
 
 /**
  * Data class for state transition response

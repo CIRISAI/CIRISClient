@@ -160,11 +160,17 @@ class LogsViewModel(
             }
 
             try {
-                val result = apiClient.getSystemLogs(
-                    level = filter.level,
-                    service = filter.service,
-                    limit = filter.limit
-                )
+                // The agent spells it WARNING, the node WARN, and both match
+                // levels exactly: asking for one spelling returned nothing from
+                // the other host (CSD-029). Ask for each spelling and merge.
+                val result = wireLevels(filter.level)
+                    .map { lvl -> apiClient.getSystemLogs(level = lvl, service = filter.service, limit = filter.limit) }
+                    .let { parts ->
+                        if (parts.size == 1) parts.single()
+                        else parts.first().copy(
+                            logs = parts.flatMap { it.logs }.sortedByDescending { it.timestamp }.take(filter.limit)
+                        )
+                    }
 
                 logInfo(method, "Fetched ${result.logs.size} logs")
 
@@ -242,4 +248,13 @@ class LogsViewModel(
         stopPolling()
         super.onCleared()
     }
+}
+
+/**
+ * The level spellings to ask for. WARN is two: CIRISAgent emits `WARNING`
+ * (`telemetry_logs_reader.py:168`), CIRISServer `WARN` (`telemetry_logs.rs:136`).
+ */
+internal fun wireLevels(level: String?): List<String?> = when (level?.uppercase()) {
+    "WARN", "WARNING" -> listOf("WARNING", "WARN")
+    else -> listOf(level)
 }

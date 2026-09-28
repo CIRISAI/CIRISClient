@@ -2,7 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
-import ai.ciris.mobile.shared.ui.screens.ServiceDiagnostics
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.ServiceProvider
 import ai.ciris.mobile.shared.ui.screens.ServicesData
 import androidx.lifecycle.ViewModel
@@ -180,107 +180,31 @@ class ServicesViewModel(
     }
 
     /**
-     * Run service diagnostics
+     * Kept for its caller; there is no diagnostics route.
+     *
+     * This used to re-count the list already on screen and present the count
+     * as a diagnosis — its "open breakers" number was the unhealthy count
+     * restated, and the breaker state itself was derived from `healthy`
+     * (CSD-016). The screen no longer offers it. It now does the one honest
+     * thing a "check again" can do: read again.
      */
     fun runDiagnostics() {
-        val method = "runDiagnostics"
-        logInfo(method, "Running service diagnostics")
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            try {
-                // For now, diagnose based on current services data
-                // TODO: Add dedicated diagnostics API endpoint if available
-                val currentData = _servicesData.value
-
-                val issues = mutableListOf<String>()
-                val recommendations = mutableListOf<String>()
-
-                // Check for unhealthy services
-                if (currentData.unhealthyServices > 0) {
-                    issues.add("${currentData.unhealthyServices} services are unhealthy")
-                    recommendations.add("Check service logs for error details")
-                }
-
-                // Count open circuit breakers
-                var openBreakers = 0
-                currentData.globalServices.values.flatten().forEach { provider ->
-                    if (provider.circuitBreakerState.lowercase() != "closed") {
-                        openBreakers++
-                    }
-                }
-                currentData.handlerServices.values.forEach { serviceTypes ->
-                    serviceTypes.values.flatten().forEach { provider ->
-                        if (provider.circuitBreakerState.lowercase() != "closed") {
-                            openBreakers++
-                        }
-                    }
-                }
-
-                if (openBreakers > 0) {
-                    issues.add("$openBreakers circuit breakers are open")
-                    recommendations.add("Consider resetting circuit breakers to restore connectivity")
-                }
-
-                // Calculate totals
-                val globalCount = currentData.globalServices.values.sumOf { it.size }
-                val handlerCount = currentData.handlerServices.values.sumOf { serviceTypes ->
-                    serviceTypes.values.sumOf { it.size }
-                }
-
-                val diagnostics = ServiceDiagnostics(
-                    overallHealth = if (issues.isEmpty()) "healthy" else "degraded",
-                    issuesFound = issues.size,
-                    globalServices = globalCount,
-                    handlerServices = handlerCount,
-                    issues = issues,
-                    recommendations = recommendations
-                )
-
-                _servicesData.value = currentData.copy(diagnostics = diagnostics)
-                _statusMessage.value = "Diagnostics complete: ${issues.size} issues found"
-                logInfo(method, "Diagnostics complete: ${issues.size} issues, ${recommendations.size} recommendations")
-
-            } catch (e: Exception) {
-                logError(method, "Diagnostics failed: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Diagnostics failed: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        logInfo("runDiagnostics", "No diagnostics route — re-reading instead")
+        refresh()
     }
 
     /**
-     * Reset circuit breakers
+     * Kept for its caller; there is no circuit-breaker reset route.
+     *
+     * This used to set a status reading "Circuit breakers ... reset (API not yet
+     * implemented)" and report success. It resets nothing, so it says so: the
+     * refusal goes to [error], and nothing claims a reset happened. The screen
+     * no longer offers the control (CSD-016).
      */
     fun resetCircuitBreakers(serviceType: String?) {
         val method = "resetCircuitBreakers"
-        logInfo(method, "Resetting circuit breakers: serviceType=$serviceType")
-
-        viewModelScope.launch {
-            _isLoading.value = true
-
-            try {
-                // TODO: Add dedicated circuit breaker reset API endpoint when available
-                // For now, just refresh services and show status
-                _statusMessage.value = if (serviceType != null) {
-                    "Circuit breakers for $serviceType reset (API not yet implemented)"
-                } else {
-                    "All circuit breakers reset (API not yet implemented)"
-                }
-
-                // Refresh services after reset
-                fetchServicesInternal()
-                logInfo(method, "Circuit breakers reset successfully")
-
-            } catch (e: Exception) {
-                logError(method, "Circuit breaker reset failed: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Reset failed: ${e.message}"
-            } finally {
-                _isLoading.value = false
-            }
-        }
+        logWarn(method, "No circuit-breaker reset route; nothing was reset (serviceType=$serviceType)")
+        _error.value = "Circuit breakers cannot be reset from here: no reset route exists"
     }
 
     /**
@@ -298,14 +222,7 @@ class ServicesViewModel(
             val globalServices = mutableMapOf<String, List<ServiceProvider>>()
             response.globalServices.forEach { (serviceType, providers) ->
                 globalServices[serviceType] = providers.map { provider ->
-                    ServiceProvider(
-                        name = provider.name,
-                        priority = provider.priority,
-                        priorityGroup = provider.priorityGroup,
-                        strategy = provider.strategy,
-                        circuitBreakerState = provider.circuitBreakerState,
-                        capabilities = provider.capabilities
-                    )
+                    provider.toServiceProvider()
                 }
             }
 
@@ -315,50 +232,26 @@ class ServicesViewModel(
                 val handlerMap = mutableMapOf<String, List<ServiceProvider>>()
                 serviceTypes.forEach { (serviceType, providers) ->
                     handlerMap[serviceType] = providers.map { provider ->
-                        ServiceProvider(
-                            name = provider.name,
-                            priority = provider.priority,
-                            priorityGroup = provider.priorityGroup,
-                            strategy = provider.strategy,
-                            circuitBreakerState = provider.circuitBreakerState,
-                            capabilities = provider.capabilities
-                        )
+                        provider.toServiceProvider()
                     }
                 }
                 handlerServices[handler] = handlerMap
             }
 
-            // Calculate health stats
-            var healthyCount = 0
-            var unhealthyCount = 0
+            // Count from the one health fact the wire carries (`healthy`). A
+            // provider whose health was not reported counts as neither.
+            val allProviders = globalServices.values.flatten() +
+                handlerServices.values.flatMap { it.values.flatten() }
+            val healthyCount = allProviders.count { it.healthy == true }
+            val unhealthyCount = allProviders.count { it.healthy == false }
 
-            globalServices.values.flatten().forEach { provider ->
-                if (provider.circuitBreakerState.lowercase() == "closed") {
-                    healthyCount++
-                } else {
-                    unhealthyCount++
-                }
-            }
-
-            handlerServices.values.forEach { serviceTypes ->
-                serviceTypes.values.flatten().forEach { provider ->
-                    if (provider.circuitBreakerState.lowercase() == "closed") {
-                        healthyCount++
-                    } else {
-                        unhealthyCount++
-                    }
-                }
-            }
-
-            val totalServices = healthyCount + unhealthyCount
+            val totalServices = allProviders.size
             val overallHealth = when {
-                unhealthyCount == 0 -> "healthy"
+                totalServices == 0 -> "unknown"
+                unhealthyCount == 0 && healthyCount == totalServices -> "healthy"
                 unhealthyCount < totalServices / 2 -> "degraded"
                 else -> "critical"
             }
-
-            // Preserve diagnostics if present
-            val currentDiagnostics = _servicesData.value.diagnostics
 
             val servicesData = ServicesData(
                 overallHealth = overallHealth,
@@ -367,7 +260,7 @@ class ServicesViewModel(
                 unhealthyServices = unhealthyCount,
                 globalServices = globalServices,
                 handlerServices = handlerServices,
-                diagnostics = currentDiagnostics
+                hasReading = true,
             )
 
             logInfo(method, "Services updated: total=$totalServices, healthy=$healthyCount, unhealthy=$unhealthyCount")
@@ -375,6 +268,9 @@ class ServicesViewModel(
 
         } catch (e: Exception) {
             logError(method, "Failed to fetch services: ${e::class.simpleName}: ${e.message}")
+            // No reading: say why, and drop the list rather than let "No
+            // Services Found" (or the last success) stand for a failed read.
+            _servicesData.value = ServicesData(readFailure = ReadFailure.of(e))
             throw e
         }
     }
@@ -392,6 +288,16 @@ class ServicesViewModel(
     fun clearError() {
         _error.value = null
     }
+
+    private fun ai.ciris.mobile.shared.api.ServiceProviderData.toServiceProvider() = ServiceProvider(
+        name = name,
+        priority = priority,
+        priorityGroup = priorityGroup,
+        strategy = strategy,
+        circuitBreakerState = circuitBreakerState,
+        capabilities = capabilities,
+        healthy = healthy,
+    )
 
     override fun onCleared() {
         logInfo("onCleared", "ViewModel cleared, cancelling polling job")

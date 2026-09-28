@@ -50,7 +50,12 @@ enum class AgeBand {
  */
 @Serializable
 enum class AssuranceLevel {
-    @SerialName("self")
+    // The node serializes `AssuranceLevel` snake_case: `SelfDeclared` is
+    // "self_declared" on the wire. This read "self", so any recorded
+    // self-declared age failed to decode and the Safety card fell to "unknown"
+    // (CSD-066). `self` is only the token in the `age_assurance:{level}`
+    // DIMENSION, which is a different string.
+    @SerialName("self_declared")
     SELF_DECLARED,
 
     @SerialName("provider")

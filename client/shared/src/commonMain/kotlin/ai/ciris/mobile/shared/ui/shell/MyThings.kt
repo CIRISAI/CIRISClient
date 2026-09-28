@@ -77,7 +77,7 @@ fun MyThingsSheet(
                 Text(version, style = type.signed, color = t.mute, modifier = Modifier.testable("shell_version", version))
             }
             Spacer(Modifier.height(4.dp))
-            for (i in CirclesNav.instruments) {
+            for (i in CirclesNav.instruments(hasAgent)) {
                 InstrumentRow(
                     label = localizedString(i.labelKey),
                     glyph = i.glyph,

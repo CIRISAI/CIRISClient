@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.api.EnrichmentCacheStatsData
 import ai.ciris.mobile.shared.api.EnvironmentGraphNodeData
 import ai.ciris.mobile.shared.api.LocationInfoData
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,16 @@ data class EnvironmentInfoScreenState(
     val isRefreshing: Boolean = false,
     val isCreating: Boolean = false,
     val error: String? = null,
-    val showAddDialog: Boolean = false
+    val showAddDialog: Boolean = false,
+    /**
+     * Is an agent attached? Adding and deleting items (`POST /v1/memory/store`,
+     * `DELETE /v1/memory/{id}`) and the enrichment read are the AGENT's; the
+     * node's memory API is read-only (`memory_api.rs:1265-1271`). Without an
+     * agent those controls are not offered and that read is not made (CSD-002).
+     */
+    val agentAttached: Boolean = false,
+    /** The items read failed — said, never drawn as "no items" (CSD-002, CSD/3 §2.2). */
+    val itemsFailure: ReadFailure? = null,
 ) {
     val filteredItems: List<EnvironmentGraphNodeData>
         get() = if (selectedCategory == null) items
@@ -105,6 +115,13 @@ class EnvironmentInfoViewModel(
      */
     fun setCategory(category: String?) {
         _state.update { it.copy(selectedCategory = category) }
+    }
+
+    /** Set from the probed `ClientMode`; a change re-reads. */
+    fun setAgentAttached(attached: Boolean) {
+        if (_state.value.agentAttached == attached) return
+        _state.update { it.copy(agentAttached = attached, showAddDialog = it.showAddDialog && attached) }
+        if (dataLoadStarted) loadAll()
     }
 
     /**
@@ -192,16 +209,22 @@ class EnvironmentInfoViewModel(
                     _state.update { it.copy(isLoading = true, error = null) }
                 }
 
-                // Load items from memory API
+                // Load items from memory API. A failure is KEPT: it used to
+                // become an empty list, drawn as "no items" (CSD-002).
+                var itemsFailure: ReadFailure? = null
                 val items = try {
                     apiClient.queryEnvironmentItems()
                 } catch (e: Exception) {
                     logError(method, "Failed to load items: ${e.message}")
+                    itemsFailure = ReadFailure.of(e)
                     emptyList()
                 }
 
-                // Load context enrichment
-                val (enrichment, stats) = try {
+                // Load context enrichment — the agent's adapters; a bare node
+                // has none and is not asked (CSD-002).
+                val (enrichment, stats) = if (!_state.value.agentAttached) {
+                    Pair(emptyMap<String, Any>(), null)
+                } else try {
                     val response = apiClient.getContextEnrichment()
                     Pair(response.entries, response.stats)
                 } catch (e: Exception) {
@@ -214,6 +237,7 @@ class EnvironmentInfoViewModel(
                 _state.update {
                     it.copy(
                         items = items,
+                        itemsFailure = itemsFailure,
                         contextEnrichment = enrichment,
                         cacheStats = stats,
                         isLoading = false,

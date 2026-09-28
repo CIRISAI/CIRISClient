@@ -1,0 +1,55 @@
+csd: CSD-054
+flow: csd_054_partnership_queue
+title: The requests waiting on your agent, and whose answer each one is
+description: >-
+  CSD-054 §7, driven. The Consent card's partnership section shows what
+  partnering means, who answers (the agent: CC 3.3.1 gives the accepting half
+  to the producer), and the queue of requests waiting on it — as a list, as a
+  true empty, or, for a non-administrator, as "only administrators can see
+  this". It never offers an answer, so the flow asserts that none is drawn.
+# Floor: every tag below is a `testable*` literal or an interpolation of one in
+# ui/screens/ConsentPartnershipSection.kt (PartnershipTags) or ConsentScreen.kt.
+# No release carries the section yet.
+client: "unreleased"
+
+steps:
+  - step_id: on_consent
+    title: The partnership section renders on the Consent card
+    description: >-
+      Reached via Just me > Rules > Consent on an agent build, signed in as the
+      agent's owner. The options block and the who-answers row come first: every
+      row below is read against them.
+    requires:
+      screen: Consent
+    do:
+      - scroll_to: partnership_section
+    expect:
+      visible: [partnership_options, partnership_who_decides, partnership_unsigned]
+
+  - step_id: the_queue_has_a_state
+    title: The queue is a list or the true empty, never neither
+    description: >-
+      As the owner the admin-only routes answer, so the queue is read. Which of
+      the two it is depends on whether anyone has asked this agent to partner;
+      what it may not be is blank.
+    do:
+      - scroll_to: partnership_who_decides
+    expect:
+      absent: [partnership_admin_only, partnership_error]
+
+  - step_id: nobody_answers_for_the_agent
+    title: No accept, decline or defer is drawn
+    description: >-
+      The card calls /v1/partnership/decide for nobody (CSD-054 §7). If a button
+      ever appears here, someone has built the bypass the agent's own route
+      forbids.
+    expect:
+      absent: [btn_partnership_accept_0, btn_partnership_reject_0, btn_partnership_defer_0]
+
+  - step_id: refresh_stays_on_the_card
+    title: Refresh re-reads both halves without leaving the card
+    do:
+      - click: btn_consent_refresh
+    expect:
+      screen: Consent
+      visible: [partnership_section]

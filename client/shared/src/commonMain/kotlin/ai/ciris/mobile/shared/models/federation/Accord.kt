@@ -70,11 +70,45 @@ data class AccordHoldersResponse(
 )
 
 /**
+ * The kind of an accord invocation, as ``invocation_kind`` carries it. CC
+ * 4.2.1.2 requires a consumer to show the FOUR kinds distinctly, and names the
+ * pairing it forbids: a `lifecycle:active` resumption drawn as a `notify`.
+ *
+ * `lifecycle:active` signs its own canonical-bytes domain (CC 4.2.1.3) but is
+ * listed on the same ``GET /v1/accord/invocations`` read — ciris-verify-core's
+ * `InvocationKind::LifecycleActive`, echoed verbatim by `list_invocations`.
+ *
+ * [UNKNOWN] is explicit: a kind this client does not know is shown as unknown,
+ * never folded into one it does. A fall-through to `notify` is how a
+ * resumption came to be badged as a notice.
+ */
+enum class InvocationKind {
+    CONSTITUTIONAL,
+    NOTIFY,
+    DRILL,
+    /** `lifecycle:active` — the resumption from a constitutional halt (CC 4.2.1.3). */
+    LIFECYCLE_ACTIVE,
+    UNKNOWN;
+
+    companion object {
+        /** Case-insensitive on the three invoke kinds (the wire spells CONSTITUTIONAL upper, the others lower). */
+        fun fromWire(kind: String?): InvocationKind = when (kind?.trim()?.lowercase()) {
+            "constitutional" -> CONSTITUTIONAL
+            "notify" -> NOTIFY
+            "drill" -> DRILL
+            "lifecycle:active" -> LIFECYCLE_ACTIVE
+            else -> UNKNOWN
+        }
+    }
+}
+
+/**
  * One pending (or settled) accord invocation. The [invocationKind] drives a
- * MANDATED distinct visual treatment per CC 4.2.1:
- *   - ``CONSTITUTIONAL`` — strong / emergency (the kill-switch)
- *   - ``notify``         — neutral informational
- *   - ``drill``          — muted / test
+ * MANDATED distinct visual treatment per CC 4.2.1.2 — see [InvocationKind]:
+ *   - ``CONSTITUTIONAL``   — strong / emergency (the kill-switch)
+ *   - ``notify``           — neutral informational
+ *   - ``drill``            — muted / test
+ *   - ``lifecycle:active`` — reactivated: resumed from a constitutional halt
  *
  * ``GET /v1/accord/invocations``.
  */

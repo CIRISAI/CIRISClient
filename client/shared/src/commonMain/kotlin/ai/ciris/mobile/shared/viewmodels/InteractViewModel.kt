@@ -155,8 +155,22 @@ data class WalletStatus(
     val network: String = "base-sepolia",
     val address: String? = null,
     val isReceiveOnly: Boolean = false,  // True if hardware trust degraded
-    val isInitializing: Boolean = false  // True while wallet provider is starting up
+    val isInitializing: Boolean = false,  // True while wallet provider is starting up
+    val readFailed: Boolean = false,  // `GET /v1/wallet/status` threw: nothing here is a reading (CSD-010/057)
 )
+
+/** What the status-bar wallet badge is showing. Pure, so the distinction is testable. */
+enum class WalletBadgeState { INITIALIZING, NOT_READ, NO_WALLET, FUNDED, EMPTY }
+
+fun WalletStatus.badgeState(): WalletBadgeState = when {
+    isInitializing -> WalletBadgeState.INITIALIZING
+    // Before "no wallet": a read that failed says nothing about whether a
+    // wallet exists, and "set up wallet" to a person who has one is a lie.
+    readFailed -> WalletBadgeState.NOT_READ
+    !hasWallet -> WalletBadgeState.NO_WALLET
+    balance != "0.00" && balance != "0" -> WalletBadgeState.FUNDED
+    else -> WalletBadgeState.EMPTY
+}
 
 class InteractViewModel(
     private val apiClient: CIRISApiClient
@@ -719,7 +733,9 @@ class InteractViewModel(
                 )
             } catch (e: Exception) {
                 logWarn(method, "Failed to fetch wallet status: ${e.message}")
-                _walletStatus.value = WalletStatus(isLoaded = true, hasWallet = false)
+                // Not `hasWallet = false`: that told a person with a wallet to
+                // create one. The badge renders NOT_READ instead (CSD-010).
+                _walletStatus.value = _walletStatus.value.copy(isLoaded = true, readFailed = true)
             }
         }
     }

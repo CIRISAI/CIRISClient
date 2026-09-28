@@ -336,7 +336,7 @@ private fun FabricVersionsCard(fabric: ai.ciris.mobile.shared.models.FabricVersi
 @Composable
 private fun LoadingCard() {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("trust_loading"),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
     ) {
         Column(
@@ -451,7 +451,10 @@ private fun TrustSummaryCard(
                     else -> "Issues Detected - Verification incomplete"
                 },
                 fontSize = 14.sp,
-                color = textColor.copy(alpha = 0.8f)
+                color = textColor.copy(alpha = 0.8f),
+                // The not-attempted verdict is its own state (CSD-052), so it
+                // carries its own tag; the other verdicts share this line.
+                modifier = if (notAttempted) Modifier.testable("text_trust_not_attempted") else Modifier
             )
 
             // Version badges (Agent + CIRISVerify)
@@ -1149,7 +1152,10 @@ private fun TierCardsSection(
 ) {
     var expandedTier by remember { mutableStateOf<Int?>(null) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(
+        modifier = Modifier.testable("trust_tiers"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         // L1: Binary & Self-Verification
         // Check if keystore is software-only (no hardware encryption)
         // Key is hardware-backed if: hardware_backed=true AND key_storage_mode is HW/SE/Keychain

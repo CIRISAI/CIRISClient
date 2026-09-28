@@ -1,0 +1,227 @@
+# CSD-021 — LLM (what the agent thinks with)
+
+**CSD**: CSD-021 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, "This node"
+**Flow**: unwritten — the tags below are the contract the flow will drive
+
+```yaml csd:stage
+stage: building
+owner: CIRISClient
+```
+
+## 1. Mission (why)
+
+**A person can see which models their agent reasons with, in what order, whose
+key is paying, and turn the hosted option off — and the screen says plainly
+when a provider is broken rather than silently routing around it.**
+
+This is the most consequential setting in the app: it names the weights that
+produce every `trace:complete:v1` the agent will ever emit. CC 3.1.5 makes a
+trace "an agent's own reasoning trace carried envelope-native", and CC 3.4.5
+makes it pro-self — only the agent may emit one about itself. The identity of
+the model that produced that reasoning is therefore part of the agent's own
+record, and nothing in the CEG registry names it. See §6.
+
+## 2. Surface (what)
+
+```yaml csd:surface
+surface: llm-settings
+screen: LLMSettings
+```
+
+`nav_map` derives `btn_my_things -> nav_instrument_this_node ->
+nav_epistemic_llm_settings`. Correctly `agentOnly` (`CirclesNav.kt:154`) — a
+bare node has no brain to give a model to.
+
+```yaml csd:shows
+registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+fields:
+  - ceg: x_private:llm_provider_name
+    use: read
+    type: string
+    example: "openai"
+    renders: "OpenAI — the provider row (`GET /v1/system/llm/providers`)"
+    tag: input_llm_provider
+  - ceg: x_private:llm_model_id
+    use: read
+    type: string
+    example: "gpt-4o-mini"
+    renders: "gpt-4o-mini — the model this provider will be asked for"
+    tag: input_llm_model
+  - ceg: x_private:llm_base_url
+    use: read
+    type: string
+    example: "http://192.168.1.40:11434/v1"
+    renders: "Where it runs — a discovered local server, or the vendor default"
+    tag: input_base_url
+  - ceg: x_private:llm_api_key
+    use: read
+    type: string
+    example: "sk-…redacted"
+    renders: "Your key — masked; the app posts it to the node and does not keep it"
+    tag: input_api_key
+  - ceg: x_private:llm_provider_priority
+    use: read
+    type: int
+    example: 1
+    renders: "1st choice / 2nd choice — the order the bus tries providers in (`PUT /v1/system/llm/providers/{name}/priority`)"
+    tag: "proposed:priority_openai"
+  - ceg: x_private:llm_circuit_breaker_state
+    use: display-only
+    type: "enum[closed,open,half_open]"
+    example: "open"
+    renders: "Not being used right now — this provider failed and the bus stopped trying it. Today the bus status is fetched (`getLlmBusStatus`) but no row renders the breaker state."
+    tag: "proposed:llm_breaker_openai"
+  - ceg: x_private:ciris_services_enabled
+    use: read
+    type: bool
+    example: true
+    renders: "Use CIRIS's hosted models — a switch; turning it off is confirmed, because it is the only provider a person who has added none is using"
+    tag: switch_ciris_services
+  - ceg: "config:{scope}"
+    bind: {scope: llm}
+    use: display-only
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "What this node is running, as an auditable record (CC 3.1.9: 'published as an auditable record rather than inferred from behaviour'). NOT EMITTED: no `config:llm` row exists, so the only answer to 'what is my agent thinking with' is this screen's own read-back."
+    tag: "proposed:llm_config_receipt"
+    blocked_by: CIRISAgent#1209
+```
+
+**`config:llm` is the field that should exist and does not.** Everything else
+here is `x_private:` because the CEG registry has exactly one model-named
+family — `judge_model:verdict:{model_id}` (CC 3.1.9.4), which is the benchmark
+judge's verdict and not the agent's own reasoning substrate. `config:{scope}`
+is the right family and `llm` is a legitimate open-vocabulary scope
+(CC 3.1.9 canonical scopes are `admission`, `replication`, `moderation`,
+`transport`, `load`; the vocabulary is open per CC 4.5.1.1).
+
+```yaml csd:states
+populated: {tag: "proposed:llm_providers_list"}
+empty:     {tag: llm_providers_empty, renders: "'No providers registered' — only when the read ANSWERED with none (`llmReadState`); the add card below stays the one useful next action"}
+loading:   {tag: "proposed:llm_loading", renders: "a progress affordance and no sentence"}
+error:     {tag: llm_providers_error, renders: "a persistent sentence with the reason where the list would be (`llm_providers_error`, and `llm_adapters_error` for the adapter list). Before the setup review a failed `GET /v1/system/llm/providers` or `GET /v1/system/adapters` became an empty list and read exactly like 'none' (`LlmSettingsReadStateTest`, red against it). Action failures still use the transient snackbar"}
+```
+
+## 3. Contracts (who)
+
+| value | endpoint | owner | state |
+|---|---|---|---|
+| bus status | `GET /v1/system/llm/status` | CIRISAgent | live (`system/llm_routes.py:327`) |
+| providers | `GET /v1/system/llm/providers` | CIRISAgent | live (`llm_routes.py:399`) |
+| add one | `POST /v1/system/llm/providers` | CIRISAgent | live (`llm_routes.py:809`) |
+| remove one | `DELETE /v1/system/llm/providers/{name}` | CIRISAgent | live (`llm_routes.py:745`) |
+| reorder | `PUT /v1/system/llm/providers/{name}/priority` | CIRISAgent | live (`llm_routes.py:665`) |
+| distribution strategy | `PUT /v1/system/llm/distribution` | CIRISAgent | live (`llm_routes.py:483`) |
+| reset a breaker | `POST /v1/system/llm/providers/{name}/circuit-breaker/reset` | CIRISAgent | live (`llm_routes.py:527`) |
+| breaker config | `PUT /v1/system/llm/providers/{name}/circuit-breaker/config` | CIRISAgent | live (`llm_routes.py:592`) |
+| hosted-services status | `GET /v1/system/llm/ciris-services/status` | CIRISAgent | live (`llm_routes.py:1065`) |
+| turn hosted off | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent | live (`llm_routes.py:973`) |
+| turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`routes/system/llm_routes.py:1081` on `main`, setup-or-ADMIN) — **called** since the setup review: `enableCirisServices` from `switch_ciris_services` and `btn_enable_ciris_services`. Before, the client sent people to a factory reset to undo `disable` |
+| list a provider's models | `POST /v1/setup/list-models` | CIRISAgent | live (`setup/llm_routes.py:222`) — `CIRISApiClient.listModels` (`CIRISApiClient.kt:6782`) |
+| find a local server | `POST /v1/setup/discover-local-llm` | CIRISAgent | live (`setup/llm_routes.py:237`) — `CIRISApiClient.kt:6913`, from `LLMSettingsViewModel.kt:543` and `LocalLlmDiscovery.kt:113` |
+| start the local server it found | `POST /v1/setup/start-local-server` | CIRISAgent (`setup/llm_routes.py:286`, setup-or-ADMIN) | **live** — `CIRISApiClient.startLocalLlmServer` (`CIRISApiClient.kt:7020`), from `LocalLlmDiscovery.kt:151`, which this screen mounts at `LLMSettingsScreen.kt:2055, 2168` (and Setup at `SetupScreen.kt:1540`) |
+| write the primary LLM to the agent's `.env` | `PUT /v1/setup/llm` | CIRISAgent (`setup/config.py:380`) | **live** — `CIRISApiClient.updateLlmConfig` (`CIRISApiClient.kt:7745`), called from `SettingsViewModel.saveSettings` (`SettingsViewModel.kt:681`). **Not** node-skipped, unlike the `GET /v1/setup/config` read-back (CSD-022): on a node build the write goes to a host that does not serve it |
+| the model capability catalogue | `GET /v1/setup/models`, `GET /v1/setup/models/{provider_id}` | CIRISAgent (`setup/llm_routes.py:93, 138`; setup-only) | live, **not called** — only generated stubs. `list-models` asks the provider live; this is the agent's own table of what each model can do, and the card never shows it |
+| `config:llm` as a record | — **unconfirmed** | CIRISAgent | blocks `building` for `llm_config_receipt` |
+
+Agent tree last commit **2026-08-15**; "live" is as of that tree. The five `/v1/setup/*`
+rows were re-verified against CIRISAgent `main` 29371660de (2026-09-26). Nothing under
+`/v1/system/llm` exists on `CIRISServer`, which is correct — this is the
+brain's configuration, not the node's.
+
+### 3.1 Every route this screen calls (generated)
+
+<!-- generated: python3 packaging/check_csd_routes.py --print CSD-021 (screen LLMSettings; heuristic) -->
+| value | endpoint | owner | state |
+|---|---|---|---|
+| `getLlmConfig` | `GET /v1/setup/config` | CIRISAgent (front door) | called — `viewmodels/SettingsViewModel.kt:318` |
+| `discoverLocalLlmServers` | `POST /v1/setup/discover-local-llm` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:113` |
+| `listModels` | `POST /v1/setup/list-models` | CIRISAgent (front door) | called — `viewmodels/SettingsViewModel.kt:568` |
+| `startLocalLlmServer` | `POST /v1/setup/start-local-server` | CIRISAgent (front door) | called — `ui/components/LocalLlmDiscovery.kt:151` |
+| `listAdapters` | `GET /v1/system/adapters` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:179` |
+| `removeAdapter` | `DELETE /v1/system/adapters/{}` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:312` |
+| `reloadAdapter` | `PUT /v1/system/adapters/{}/reload` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:280` |
+| `disableCirisServices` | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:806` |
+| `getCirisServicesStatus`, `getLlmConfig` | `GET /v1/system/llm/ciris-services/status` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:166, viewmodels/SettingsViewModel.kt:318` |
+| `updateLlmDistributionStrategy` | `PUT /v1/system/llm/distribution` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:346` |
+| `getLlmProviders` | `GET /v1/system/llm/providers` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:212` |
+| `addLlmProvider` | `POST /v1/system/llm/providers` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:620, viewmodels/LLMSettingsViewModel.kt:694` |
+| `deleteLlmProvider` | `DELETE /v1/system/llm/providers/{}` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:530, viewmodels/LLMSettingsViewModel.kt:775` |
+| `resetLlmCircuitBreaker` | `POST /v1/system/llm/providers/{}/circuit-breaker/reset` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:380` |
+| `updateLlmProviderPriority` | `PUT /v1/system/llm/providers/{}/priority` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:461` |
+| `getLlmBusStatus` | `GET /v1/system/llm/status` | CIRISAgent (front door) | called — `viewmodels/LLMSettingsViewModel.kt:205` |
+
+**This card and Adapters (CSD-020) are two doors to one act, on purpose.** Both
+call `DELETE /v1/system/adapters/{id}` and `PUT /v1/system/adapters/{id}/reload`
+(the route map's duplicate pair 8). Adapters manages every adapter; this card
+shows only the ones whose `services_registered` includes `LLM`
+(`LLMSettingsViewModel.loadStatus`), because a person fixing "what is my agent
+thinking with" should not have to find the brain's adapter among the
+communication ones. Same routes, same act, narrower list — so this card keeps
+its two controls and does not grow others (no configure, no add), and CSD-020
+stays the owner of adapter management. CSD-020 is off-limits in this batch; its
+side of this note is reported, not written.
+
+## 4. Flow (how)
+
+Open My things → This node → LLM.
+
+```yaml
+expect:
+  state: populated
+  visible: [card_ciris_services, switch_ciris_services]
+```
+
+Add a provider: `card_add_provider` → type, key, fetch models, submit.
+
+```yaml
+expect:
+  visible: [input_add_provider_type, input_add_provider_api_key, btn_fetch_models]
+```
+
+```yaml
+expect:
+  visible: [input_add_provider_model, btn_add_provider_submit]
+```
+
+Turn hosted services off: `switch_ciris_services` → the confirm.
+
+```yaml
+expect:
+  visible: [btn_confirm_disable_ciris, btn_cancel_disable_ciris]
+```
+
+## 5. QA plan
+
+**Platforms.** All five. `discoverLocalLlmServers` uses mDNS and a 12-second
+probe; it is driven only on desktop, where a stub server can be stood up.
+
+**Not tested here.** A real provider key (CI has none); `btn_fetch_models` is
+driven against a stub. The circuit breaker cannot be opened on demand without
+a failing provider, so `llm_breaker_*` is asserted only in a unit test over the
+bus-status decode.
+
+## 6. Card vs API vs CC — the delta
+
+1. **Placement is right.** `agentOnly`, under This node, is exactly where a
+   brain's substrate belongs. No change.
+2. **Whose setting is it?** The AGENT's — but paid for by the PERSON. The key
+   in `input_api_key` is the person's, and the screen says nothing about where
+   it goes or whether it is stored. `AdapterConfigData` at least documents
+   "sanitized — no secrets"; this screen has no equivalent note.
+3. **The breaker is invisible.** `getLlmBusStatus` is called and the per-
+   provider circuit-breaker state is in the response, but no row shows it. A
+   person whose first-choice provider is failing sees a list that looks fine
+   and answers that are quietly coming from somewhere else. This is the
+   "silently routing around it" the mission forbids.
+4. **`enable` was unreachable; closed.** The client called `disable` and never
+   `enable`, and told people to factory-reset to undo it. `enableCirisServices`
+   now calls the route (`CirisServicesToggleTest`, red first); the copy says it
+   applies after the agent restarts, which is what the route does.
+5. **CC gap — ask (CIRISAgent).** Publish the running LLM configuration as a
+   `config:llm` row under CC 3.1.9 / CC 3.4.5 (self-or-owner). Today "what is
+   my agent thinking with" is answerable only by reading this screen, which is
+   the definition of inferring configuration from behaviour rather than from a
+   record — the thing CC 3.1.9 exists to replace. Emit it at `cohort_scope:
+   self` by the CC 3.4.5.1 smallest-scope default; the provider name and model
+   id are not secrets but the base URL of a home LAN server is.

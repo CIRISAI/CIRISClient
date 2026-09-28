@@ -14,10 +14,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.CIRISApiClientProtocol
+import ai.ciris.mobile.shared.api.DeviceAuthRefused
 import ai.ciris.mobile.shared.api.LocationResultData
 import ai.ciris.mobile.shared.models.safety.AgeBand
 
@@ -413,8 +415,10 @@ class SetupViewModel(
     }
 
     /**
-     * Opt IN / OUT of announcing this owner to the federation (default OFF —
-     * private/self-scoped). When ON, a successful claim promotes ownership
+     * Opt IN / OUT of announcing THIS DEVICE to the federation (default ON — it
+     * is the floor for service; announce is per device, CIRISServer#655). Never
+     * offered to an under-18 or undeclared account: the claim reads
+     * [SetupFormState.announcesThisDevice]. When ON, a successful claim promotes ownership
      * self→FEDERATION + enables the node's identity announce, applied best-effort
      * post-claim (see [claimLocalNodeOwnership]); takes effect on next boot.
      */
@@ -1318,7 +1322,7 @@ class SetupViewModel(
                         // setup bearer, so firing them now is a guaranteed 401.
                         // Skip honestly with markers; surface the age gap for retry.
                         PlatformLogger.w(TAG, "[ORDER] set_age SKIPPED (no owner session; band=$band)")
-                        if (_state.value.announceOwnership) {
+                        if (_state.value.announcesThisDevice()) {
                             PlatformLogger.w(TAG, "[ORDER] announce SKIPPED (no owner session)")
                         }
                         if (!band.isNullOrBlank()) {
@@ -1358,7 +1362,7 @@ class SetupViewModel(
                     // claim already succeeded, so this is NON-FATAL — on failure we
                     // surface a soft notice and let the user retry later; it never
                     // blocks COMPLETE. Takes effect on the node's next boot.
-                    if (ownerLoginOk && _state.value.announceOwnership) {
+                    if (ownerLoginOk && _state.value.announcesThisDevice()) {
                         try {
                             PlatformLogger.i(TAG, "[ORDER] announce begin (session=$sessionKind)")
                             val ann = client.announceOwnership(localNodeUrl = CIRISApiClient.LOCAL_NODE_URL)
@@ -1578,6 +1582,17 @@ class SetupViewModel(
     }
 
     /**
+     * The node's consent disclosure carries no `replication` grant, so there is
+     * no send-traces question to ask. Nothing is sent — no grant exists to
+     * author — and screen 2 may be left; the step states why instead of
+     * holding a disabled Next with nothing on screen (CSD-082 §2 `empty`).
+     */
+    fun noteTraceQuestionAbsent() {
+        PlatformLogger.w(TAG, "[consent] disclosure carries no replication grant — no trace question, nothing sent")
+        _state.value = _state.value.copy(traceQuestionOffered = false, accordMetricsConsent = false)
+    }
+
+    /**
      * Set the CC#46 "be scored" grant — whether shipped traces may be ANALYZED.
      *
      * A SEPARATE consent from sending them, on the opposite edge. The substrate
@@ -1620,12 +1635,12 @@ class SetupViewModel(
 
     /**
      * Load available templates from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      */
     suspend fun loadAvailableTemplates(
         fetchFunc: suspend () -> List<AgentTemplateInfo>
     ) {
-        _state.value = _state.value.copy(templatesLoading = true)
+        _state.value = _state.value.copy(templatesLoading = true, templatesError = false)
         try {
             val templates = fetchFunc()
             _state.value = _state.value.copy(
@@ -1633,7 +1648,8 @@ class SetupViewModel(
                 templatesLoading = false
             )
         } catch (e: Exception) {
-            _state.value = _state.value.copy(templatesLoading = false)
+            PlatformLogger.w(TAG, "loadAvailableTemplates failed: ${e.message}")
+            _state.value = _state.value.copy(templatesLoading = false, templatesError = true)
         }
     }
 
@@ -1664,7 +1680,7 @@ class SetupViewModel(
 
     /**
      * Load available adapters from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      *
      * Adapters with enabled_by_default=true are automatically selected.
      * This includes ciris_hosted_tools when user has CIRIS AI services.
@@ -1672,7 +1688,7 @@ class SetupViewModel(
     suspend fun loadAvailableAdapters(
         fetchFunc: suspend () -> List<ai.ciris.mobile.shared.models.CommunicationAdapter>
     ) {
-        _state.value = _state.value.copy(adaptersLoading = true)
+        _state.value = _state.value.copy(adaptersLoading = true, adaptersError = false)
         try {
             val adapters = fetchFunc()
 
@@ -1683,8 +1699,13 @@ class SetupViewModel(
                 .map { it.id }
                 .toSet()
 
-            // Merge with existing enabled adapters (api is always in the set)
-            val newEnabled = _state.value.enabledAdapterIds + autoEnabled
+            // Reconcile with the list this load replaces: what it no longer
+            // offers (a service-only adapter after CIRIS Proxy -> BYOK, say)
+            // leaves the selection, or buildSetupRequest() would submit an
+            // adapter the wizard is not showing. What is still offered keeps
+            // the person's choice; api is always in the set.
+            val withdrawn = _state.value.availableAdapters.map { it.id }.toSet() - adapters.map { it.id }.toSet()
+            val newEnabled = (_state.value.enabledAdapterIds - withdrawn) + autoEnabled + "api"
 
             _state.value = _state.value.copy(
                 availableAdapters = adapters,
@@ -1692,7 +1713,8 @@ class SetupViewModel(
                 adaptersLoading = false
             )
         } catch (e: Exception) {
-            _state.value = _state.value.copy(adaptersLoading = false)
+            PlatformLogger.w(TAG, "loadAvailableAdapters failed: ${e.message}")
+            _state.value = _state.value.copy(adaptersLoading = false, adaptersError = true)
         }
     }
 
@@ -1705,7 +1727,7 @@ class SetupViewModel(
 
     /**
      * Load the generated tool disclosure from the setup API.
-     * Call this when entering the OPTIONAL_FEATURES step.
+     * Called when the AI step composes (SetupScreen.OptionalFeaturesSection) — there is no separate optional-features step any more.
      *
      * A failure leaves [SetupFormState.toolDisclosure] null, which the UI renders
      * as "could not be listed" -- never as "grants nothing".
@@ -1713,7 +1735,7 @@ class SetupViewModel(
     suspend fun loadToolDisclosure(
         fetchFunc: suspend () -> ai.ciris.mobile.shared.models.ToolDisclosureReport
     ) {
-        _state.value = _state.value.copy(toolDisclosureLoading = true)
+        _state.value = _state.value.copy(toolDisclosureLoading = true, toolDisclosureError = false)
         try {
             val disclosure = fetchFunc()
             _state.value = _state.value.copy(
@@ -1721,9 +1743,11 @@ class SetupViewModel(
                 toolDisclosureLoading = false
             )
         } catch (e: Exception) {
+            PlatformLogger.w(TAG, "loadToolDisclosure failed: ${e.message}")
             _state.value = _state.value.copy(
                 toolDisclosure = null,
-                toolDisclosureLoading = false
+                toolDisclosureLoading = false,
+                toolDisclosureError = true
             )
         }
     }
@@ -2243,7 +2267,8 @@ class SetupViewModel(
      * @param connectFunc Platform-specific HTTP call to POST /v1/setup/connect-node
      */
     suspend fun startNodeConnection(
-        connectFunc: suspend (nodeUrl: String) -> ConnectNodeResult
+        nowMs: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+        connectFunc: suspend (nodeUrl: String) -> ConnectNodeResult,
     ) {
         val nodeUrl = _state.value.deviceAuth.nodeUrl
         if (nodeUrl.isBlank()) return
@@ -2257,6 +2282,19 @@ class SetupViewModel(
 
         try {
             val result = connectFunc(nodeUrl)
+            // The wire layer refuses a body without these; a result built any
+            // other way is held to the same bar. WAITING with a blank code
+            // shows nothing and polls with `device_code=`.
+            val missing = listOfNotNull(
+                "verification_uri_complete".takeIf { result.verificationUriComplete.isBlank() },
+                "device_code".takeIf { result.deviceCode.isBlank() },
+                "user_code".takeIf { result.userCode.isBlank() },
+            )
+            if (missing.isNotEmpty()) {
+                throw DeviceAuthRefused(
+                    "the node's connect-node answer has no ${missing.joinToString(", ")} — a malformed answer, or an older node",
+                )
+            }
             _state.value = _state.value.copy(
                 deviceAuth = _state.value.deviceAuth.copy(
                     status = DeviceAuthStatus.WAITING,
@@ -2265,7 +2303,8 @@ class SetupViewModel(
                     userCode = result.userCode,
                     portalUrl = result.portalUrl,
                     expiresIn = result.expiresIn,
-                    interval = result.interval
+                    interval = result.interval,
+                    expiresAtMs = nowMs + result.expiresIn * 1000L,
                 )
             )
         } catch (e: Exception) {
@@ -2285,7 +2324,8 @@ class SetupViewModel(
      * @param pollFunc Platform-specific HTTP call to GET /v1/setup/connect-node/status
      */
     suspend fun pollNodeAuthStatus(
-        pollFunc: suspend (deviceCode: String, portalUrl: String) -> NodeAuthPollResult
+        nowMs: Long = kotlinx.datetime.Clock.System.now().toEpochMilliseconds(),
+        pollFunc: suspend (deviceCode: String, portalUrl: String) -> NodeAuthPollResult,
     ) {
         PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== ENTRY ==========")
         val auth = _state.value.deviceAuth
@@ -2335,15 +2375,27 @@ class SetupViewModel(
                 }
             }
             PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== EXIT (success) ==========")
-        } catch (e: Exception) {
-            PlatformLogger.e(TAG, "[pollNodeAuthStatus] EXCEPTION: ${e.message}")
-            PlatformLogger.e(TAG, "[pollNodeAuthStatus] Exception type: ${e::class.simpleName}")
+        } catch (e: DeviceAuthRefused) {
+            // The node answered, and the answer ends the session.
+            PlatformLogger.e(TAG, "[pollNodeAuthStatus] refused: ${e.message}")
             _state.value = _state.value.copy(
-                deviceAuth = auth.copy(
-                    status = DeviceAuthStatus.ERROR,
-                    error = e.message ?: "Polling failed"
-                )
+                deviceAuth = auth.copy(status = DeviceAuthStatus.ERROR, error = e.message ?: "Polling failed")
             )
+        } catch (e: Exception) {
+            // A transport failure (timeout, reset, DNS) says nothing about the
+            // grant: the person may be approving it in the browser right now.
+            // Stay WAITING and let the next poll try, until the grant's own
+            // expiry — ERROR here used to be the outcome of one lost packet,
+            // and the only way on was to reset the session.
+            PlatformLogger.w(TAG, "[pollNodeAuthStatus] transport failure (${e::class.simpleName}): ${e.message}")
+            if (nowMs >= auth.expiresAtMs) {
+                _state.value = _state.value.copy(
+                    deviceAuth = auth.copy(
+                        status = DeviceAuthStatus.ERROR,
+                        error = "the code expired before the node could be reached: ${e.message ?: "Polling failed"}",
+                    )
+                )
+            }
             PlatformLogger.i(TAG, "[pollNodeAuthStatus] ========== EXIT (exception) ==========")
         }
     }
@@ -2739,6 +2791,49 @@ class SetupViewModel(
     /** Release the guard [beginFinalStep] set, whatever the step's outcome. */
     fun endFinalStep() {
         _state.value = _state.value.copy(isSubmitting = false)
+    }
+
+    /**
+     * The NODE CLIENT's final step — self-claim, then advance to COMPLETE —
+     * under the same one-press guard as the agent's (CIRISClient#69).
+     *
+     * The screen used to call `claimLocalNodeOwnership` + `nextStep` straight
+     * from the click with no compare-and-set, and `claimLocalNodeOwnership` has
+     * no re-entry guard of its own: two presses in one frame (both reading the
+     * same composed `currentStep`) or a `/click btn_next` that ignored the
+     * disabled button each started a claim. So this checks the step against
+     * the ViewModel's own state, not the caller's snapshot, and holds
+     * [SetupFormState.isSubmitting] until the claim settles.
+     *
+     * Returns false, doing nothing, when this is not the final step any more
+     * or a final step is already running.
+     */
+    fun finishNodeClientSetup(
+        claimPinProvider: suspend () -> String?,
+        nodeCodeProvider: suspend () -> String? = { null },
+    ): Boolean {
+        val s = _state.value
+        if (!isFinalSetupStep(s.currentStep, hasAiStep(hasAgent, s.runWithoutAi))) return false
+        if (!s.canProceedFromCurrentStep()) return false
+        if (!beginFinalStep()) return false
+        claimLocalNodeOwnership(claimPinProvider = claimPinProvider, nodeCodeProvider = nodeCodeProvider)
+        nextStep()
+        if (!_state.value.ownershipClaim.inProgress) {
+            // Refused or skipped synchronously (minor band, no local node): the
+            // step is over, and COMPLETE says why.
+            endFinalStep()
+            return true
+        }
+        viewModelScope.launch {
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(90_000) {
+                    _state.first { !it.ownershipClaim.inProgress }
+                }
+            } finally {
+                endFinalStep()
+            }
+        }
+        return true
     }
 
     /**

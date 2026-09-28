@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.RuntimeData
 import ai.ciris.mobile.shared.ui.screens.StepResult
 import ai.ciris.mobile.shared.ui.screens.TrackedTask
@@ -33,6 +34,7 @@ class RuntimeViewModel(
     companion object {
         private const val TAG = "RuntimeViewModel"
         private const val POLL_INTERVAL_MS = 2000L // 2 seconds
+        private val FORBIDDEN = Regex("""\b403\b""")
     }
 
     private fun log(level: String, method: String, message: String) {
@@ -67,9 +69,37 @@ class RuntimeViewModel(
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
 
-    // Admin check (default to true, can be updated by auth system)
-    private val _isAdmin = MutableStateFlow(true)
+    /**
+     * May this session drive the runtime? Answered BY THE AGENT, not assumed.
+     *
+     * It defaulted to `true` and nothing ever set it (`setAdminStatus` had no
+     * callers), so an observer saw live Pause / Step buttons that 403 (CSD-024).
+     * Every runtime action — the `state` read included — is ADMIN on CIRISAgent
+     * main, so a successful state read is the proof, and a 403 is the refusal.
+     * False until the first read answers: no control is offered on a guess.
+     */
+    private val _isAdmin = MutableStateFlow(false)
     val isAdmin: StateFlow<Boolean> = _isAdmin.asStateFlow()
+
+    /** The agent answered 403: this person may not drive the runtime. Rendered as the admin card, not an error. */
+    private val _adminRefused = MutableStateFlow(false)
+    val adminRefused: StateFlow<Boolean> = _adminRefused.asStateFlow()
+
+    private fun isForbidden(e: Throwable): Boolean = FORBIDDEN.containsMatchIn(e.message ?: "")
+
+    /** A 403 on any runtime call: record the refusal; the values it would have read are not drawn. */
+    private fun noteRefusal(e: Throwable): Boolean {
+        if (!isForbidden(e)) return false
+        _isAdmin.value = false
+        _adminRefused.value = true
+        _runtimeData.value = _runtimeData.value.copy(
+            streamConnected = false,
+            cognitiveState = null,
+            queueDepth = null,
+            readFailure = null,
+        )
+        return true
+    }
 
     // Polling job
     private var pollingJob: Job? = null
@@ -189,6 +219,7 @@ class RuntimeViewModel(
 
             } catch (e: Exception) {
                 logError(method, "Pause failed: ${e::class.simpleName}: ${e.message}")
+                noteRefusal(e)
                 _error.value = "Pause failed: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -224,6 +255,7 @@ class RuntimeViewModel(
 
             } catch (e: Exception) {
                 logError(method, "Resume failed: ${e::class.simpleName}: ${e.message}")
+                noteRefusal(e)
                 _error.value = "Resume failed: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -274,6 +306,7 @@ class RuntimeViewModel(
 
             } catch (e: Exception) {
                 logError(method, "Single step failed: ${e::class.simpleName}: ${e.message}")
+                noteRefusal(e)
                 _error.value = "Step failed: ${e.message}"
             } finally {
                 _isLoading.value = false
@@ -321,8 +354,13 @@ class RuntimeViewModel(
                         lastUpdated = task.lastUpdated
                     )
                 },
-                lastStepResult = _runtimeData.value.lastStepResult // Preserve from single-step
+                lastStepResult = _runtimeData.value.lastStepResult, // Preserve from single-step
+                readFailure = null,
             )
+
+            // The state read is ADMIN on the agent: answering it is the proof.
+            _isAdmin.value = true
+            _adminRefused.value = false
 
             logInfo(method, "Runtime updated: state=${runtimeData.processorState}, " +
                     "cognitive=${runtimeData.cognitiveState}, queue=${runtimeData.queueDepth}")
@@ -331,8 +369,17 @@ class RuntimeViewModel(
 
         } catch (e: Exception) {
             logError(method, "Failed to fetch runtime state: ${e::class.simpleName}: ${e.message}")
-            // Update stream connected status on error
-            _runtimeData.value = _runtimeData.value.copy(streamConnected = false)
+            if (noteRefusal(e)) throw e
+            // Say the read failed, and drop the values it would have refreshed:
+            // a failed read must not leave a confident "WORK · queue 0" on
+            // screen, whether that came from a default or from the last
+            // success (CSD-024, CSD/3 §2.2).
+            _runtimeData.value = _runtimeData.value.copy(
+                streamConnected = false,
+                cognitiveState = null,
+                queueDepth = null,
+                readFailure = ReadFailure.of(e),
+            )
             throw e
         }
     }

@@ -1,6 +1,8 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.models.safety.AgeBand
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -31,5 +33,46 @@ class FinalStepOnceTest {
         vm.endFinalStep()
         assertFalse(vm.state.value.isSubmitting)
         assertTrue(vm.beginFinalStep())
+    }
+
+    // ── The node client's final step had no guard at all ──────────────────
+    //
+    // `isFinalStep && !hasAgent` called claimLocalNodeOwnership + nextStep
+    // straight from the click. Two presses in one frame both read the same
+    // composed step and each started a claim.
+
+    private fun nodeClientAtFinalStep(): SetupViewModel {
+        val vm = SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = false)
+        vm.setAgeRange(AgeBand.ADULT)
+        vm.setUsername("qaadmin")
+        vm.setUserPassword("hunter2hunter2")
+        vm.setUserPasswordConfirm("hunter2hunter2")
+        vm.setFederationLabel("qaadmin")
+        vm.setAccordMetricsConsent(true)
+        vm.nextStep()
+        assertEquals(SetupStep.JOIN_FEDERATION, vm.state.value.currentStep, "fixture must reach the node's final step")
+        return vm
+    }
+
+    @Test
+    fun theNodeClientFinalStepRunsOncePerPress() {
+        val vm = nodeClientAtFinalStep()
+        var pinAsks = 0
+        assertTrue(vm.finishNodeClientSetup(claimPinProvider = { pinAsks++; null }), "the first press must run")
+        assertEquals(SetupStep.COMPLETE, vm.state.value.currentStep)
+        // The second press of a double click: the screen still shows the final
+        // step, the ViewModel does not.
+        assertFalse(vm.finishNodeClientSetup(claimPinProvider = { pinAsks++; null }),
+            "a second press after the step advanced started a second claim")
+        assertEquals(SetupStep.COMPLETE, vm.state.value.currentStep)
+    }
+
+    @Test
+    fun theNodeClientFinalStepIsRefusedWhileAFinalStepRuns() {
+        val vm = nodeClientAtFinalStep()
+        assertTrue(vm.beginFinalStep())
+        assertFalse(vm.finishNodeClientSetup(claimPinProvider = { null }),
+            "a press while a final step is in flight must be refused")
+        assertEquals(SetupStep.JOIN_FEDERATION, vm.state.value.currentStep, "a refused press must not advance")
     }
 }

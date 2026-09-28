@@ -39,6 +39,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
+import ai.ciris.mobile.shared.ui.glyphs.GlyphName
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
 
 /**
  * System management and control screen
@@ -49,7 +52,10 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  * - Resource usage (CPU, Memory, Disk)
  * - Environmental impact metrics
  * - Services health grid
- * - Processor management (pause/resume)
+ * - The agent's processor state, READ-ONLY, with a way to Runtime. Pause and
+ *   resume used to be here too — a second door onto
+ *   `POST /v1/system/runtime/{action}` (CSD-024 / CSD-025 dedup). Runtime owns
+ *   that act; this screen says the state and links there.
  * - Active channels display
  * - **The operator surface (`GET /v1/node/state`)** — CIRISServer#356/#369/#370
  *
@@ -64,8 +70,7 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 fun SystemScreen(
     systemData: SystemScreenData,
     isLoading: Boolean,
-    onPauseRuntime: () -> Unit,
-    onResumeRuntime: () -> Unit,
+    onOpenRuntime: () -> Unit,
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
     modifier: Modifier = Modifier,
@@ -76,8 +81,6 @@ fun SystemScreen(
      */
     nodeState: NodeStateReadout = NodeStateReadout.Loading
 ) {
-    var showConfirmDialog by remember { mutableStateOf<String?>(null) }
-
     Scaffold(
         topBar = {
             ScreenTopBar(
@@ -153,7 +156,8 @@ fun SystemScreen(
                     }
                 }
             } else {
-                // System Overview
+                // System Overview — the health is the node's too; uptime and
+                // CPU are the agent's, so a bare node shows "—", not "N/A".
                 item {
                     SystemOverviewCard(
                         health = systemData.health,
@@ -163,6 +167,33 @@ fun SystemScreen(
                     )
                 }
 
+                if (!systemData.agentAttached) {
+                    // No agent: the agent half is not drawn, and the screen
+                    // says why instead of drawing zeros (CSD-025 §6.1).
+                    item {
+                        StateBlock(
+                            state = ListState.Empty(
+                                localizedString("mobile.system_agent_half_absent"),
+                                glyph = GlyphName.INFO,
+                            ),
+                            tag = "system_agent_half_absent",
+                        )
+                    }
+                }
+            }
+
+            val agentFailure = systemData.agentReadFailure
+            if (systemData.agentAttached && agentFailure != null) {
+                item {
+                    ReadFailureBlock(
+                        failure = agentFailure,
+                        tagPrefix = "system_agent",
+                        notOnThisNode = localizedString("mobile.state_not_on_this_node"),
+                    )
+                }
+            }
+
+            if (systemData.agentAttached && agentFailure == null && !(isLoading && systemData.health == null)) {
                 // Resource Usage
                 item {
                     Text(
@@ -196,11 +227,12 @@ fun SystemScreen(
                         energyKwh = systemData.energyKwh,
                         costCents = systemData.costCents,
                         tokensLastHour = systemData.tokensLastHour,
-                        tokens24h = systemData.tokens24h
+                        tokens24h = systemData.tokens24h,
+                        modifier = Modifier.testable("system_environmental"),
                     )
                 }
 
-                // Main Processor
+                // Main Processor — read-only; the controls are Runtime's.
                 item {
                     Text(
                         text = localizedString("mobile.system_processor"),
@@ -210,12 +242,9 @@ fun SystemScreen(
                 }
 
                 item {
-                    ProcessorControlCard(
-                        isPaused = systemData.isPaused,
+                    ProcessorReadCard(
                         cognitiveState = systemData.cognitiveState,
-                        queueDepth = systemData.queueDepth,
-                        onPause = { showConfirmDialog = "pause" },
-                        onResume = { showConfirmDialog = "resume" }
+                        onOpenRuntime = onOpenRuntime,
                     )
                 }
 
@@ -234,7 +263,16 @@ fun SystemScreen(
                     }
                 }
 
-                // Active Channels
+                // Active Channels — a failed read is said, not drawn as "none".
+                systemData.channelsFailure?.let { failure ->
+                    item {
+                        ReadFailureBlock(
+                            failure = failure,
+                            tagPrefix = "system_channels",
+                            inline = true,
+                        )
+                    }
+                }
                 if (systemData.channels.isNotEmpty()) {
                     item {
                         Text(
@@ -245,53 +283,15 @@ fun SystemScreen(
                     }
 
                     items(systemData.channels) { channel ->
-                        ChannelCard(channel = channel)
+                        ChannelCard(channel = channel, modifier = Modifier.testable("system_channels"))
                     }
                 }
+            }
 
-                item {
-                    Spacer(modifier = Modifier.height(16.dp))
-                }
+            item {
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
-    }
-
-    // Confirmation dialogs
-    showConfirmDialog?.let { action ->
-        AlertDialog(
-            onDismissRequest = { showConfirmDialog = null },
-            title = { Text(if (action == "pause") localizedString("mobile.runtime_pause") else localizedString("mobile.runtime_resume")) },
-            text = {
-                Text(
-                    if (action == "pause")
-                        localizedString("mobile.system_pause_confirm")
-                    else
-                        localizedString("mobile.system_resume_confirm")
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (action == "pause") onPauseRuntime() else onResumeRuntime()
-                        showConfirmDialog = null
-                    },
-                    modifier = Modifier.testableClickable("btn_runtime_confirm") {
-                        if (action == "pause") onPauseRuntime() else onResumeRuntime()
-                        showConfirmDialog = null
-                    }
-                ) {
-                    Text(localizedString("mobile.common_confirm"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showConfirmDialog = null },
-                    modifier = Modifier.testableClickable("btn_runtime_cancel") { showConfirmDialog = null }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
-        )
     }
 }
 
@@ -350,7 +350,7 @@ private fun SystemOverviewCard(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = uptime ?: "N/A",
+                    text = uptime ?: NOT_READ,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
@@ -368,7 +368,7 @@ private fun SystemOverviewCard(
 private fun ResourceUsageCard(
     cpuPercent: Int,
     memoryMb: Int,
-    memoryPercent: Int,
+    memoryPercent: Int?,
     diskUsedMb: Double,
     modifier: Modifier = Modifier
 ) {
@@ -391,9 +391,9 @@ private fun ResourceUsageCard(
             ResourceBar(
                 label = localizedString("mobile.telemetry_memory_usage"),
                 value = "$memoryMb MB",
-                progress = memoryPercent / 100f,
-                color = getUsageColor(memoryPercent),
-                subtitle = "$memoryPercent% utilized"
+                progress = (memoryPercent ?: 0) / 100f,
+                color = getUsageColor(memoryPercent ?: 0),
+                subtitle = memoryPercent?.let { "$it% utilized" }
             )
 
             // Disk
@@ -600,90 +600,45 @@ private fun TokenMetric(
 }
 
 @Composable
-private fun ProcessorControlCard(
-    isPaused: Boolean,
-    cognitiveState: String,
-    queueDepth: Int,
-    onPause: () -> Unit,
-    onResume: () -> Unit,
+private fun ProcessorReadCard(
+    cognitiveState: String?,
+    onOpenRuntime: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
+    Card(modifier = modifier.fillMaxWidth().testable("system_processor", cognitiveState ?: NOT_READ)) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Row(
+            // Cognitive state — "—" when the reading did not carry one, never
+            // a defaulted "WORK" (CSD-011 / CSD-025).
+            Column(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Status
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    val statusColor = if (isPaused) SemanticColors.Default.warning else SemanticColors.Default.success
-                    Surface(
-                        color = statusColor.copy(alpha = 0.2f),
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(
-                            text = if (isPaused) localizedString("mobile.runtime_paused") else localizedString("mobile.runtime_running"),
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = statusColor
-                        )
-                    }
-                    Text(
-                        text = localizedString("mobile.system_processor_status"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Cognitive state
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = cognitiveState,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = getCognitiveStateColor(cognitiveState)
-                    )
-                    Text(
-                        text = localizedString("mobile.system_cognitive_state"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                // Queue depth
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = queueDepth.toString(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = localizedString("mobile.system_queue_depth"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = cognitiveState ?: NOT_READ,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = getCognitiveStateColor(cognitiveState ?: "")
+                )
+                Text(
+                    text = localizedString("mobile.system_cognitive_state"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
-            // Control button
-            Button(
-                onClick = if (isPaused) onResume else onPause,
+            // The one runtime control lives in This agent › Runtime.
+            OutlinedButton(
+                onClick = onOpenRuntime,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable(if (isPaused) "btn_resume_runtime" else "btn_pause_runtime") {
-                        if (isPaused) onResume() else onPause()
-                    },
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isPaused) SemanticColors.Default.success else SemanticColors.Default.warning
-                )
+                    .testableClickable("btn_system_open_runtime") { onOpenRuntime() },
             ) {
-                Text(if (isPaused) localizedString("mobile.runtime_resume") else localizedString("mobile.runtime_pause"))
+                Text(localizedString("mobile.system_open_runtime"))
             }
 
             // Info note
@@ -1731,9 +1686,19 @@ private fun getCognitiveStateColor(state: String): Color {
 
 data class SystemScreenData(
     val health: String? = null,
+    /**
+     * Is an agent attached? False on a bare node, and then the agent half —
+     * resources, environmental cost, processor, channels — is not drawn at all
+     * (CSD-025 §6.1). Defaults to false: nothing agent-shaped is claimed before
+     * the caller says there is an agent.
+     */
+    val agentAttached: Boolean = false,
+    /** The agent half's telemetry read failed: said, and no zero drawn. */
+    val agentReadFailure: ReadFailure? = null,
     val uptime: String? = null,
     val memoryMb: Int = 0,
-    val memoryPercent: Int = 0,
+    /** Null: `/v1/telemetry/overview` carries no memory percentage. */
+    val memoryPercent: Int? = null,
     val cpuPercent: Int = 0,
     val diskUsedMb: Double = 0.0,
     val carbonGrams: Double = 0.0,
@@ -1741,12 +1706,21 @@ data class SystemScreenData(
     val costCents: Double = 0.0,
     val tokensLastHour: Int = 0,
     val tokens24h: Int = 0,
-    val isPaused: Boolean = false,
-    val cognitiveState: String = "WORK",
-    val queueDepth: Int = 0,
+    /** Null when no reading carried one — never a defaulted "WORK". */
+    val cognitiveState: String? = null,
     val services: List<SystemServiceInfo> = emptyList(),
-    val channels: List<SystemChannelInfo> = emptyList()
+    val channels: List<SystemChannelInfo> = emptyList(),
+    /** The channels read failed — distinct from "no channels". */
+    val channelsFailure: ReadFailure? = null,
 )
+
+/**
+ * A cognitive state as read, or null. The client's health mapper writes
+ * "UNKNOWN" when the wire carried none; that is not a state, it is an absent
+ * reading, and it draws as "—".
+ */
+fun knownCognitiveState(raw: String?): String? =
+    raw?.trim()?.takeIf { it.isNotEmpty() && !it.equals("UNKNOWN", ignoreCase = true) }?.uppercase()
 
 data class SystemServiceInfo(
     val name: String,

@@ -658,7 +658,7 @@ class WiseAuthorityViewModel(
                         // committed grant as failed and invite a retry of a money
                         // authorization the server already holds.
                         val promoted = try {
-                            api.updateTicketStatus(
+                            stillWaiting(approvalId) && api.updateTicketStatus(
                                 approvalId,
                                 BudgetApprovalSeam.PROMOTED_STATUS,
                                 null,
@@ -782,6 +782,11 @@ class WiseAuthorityViewModel(
             _isResolving.value = true
             _error.value = null
             try {
+                if (!stillWaiting(approvalId)) {
+                    _error.value = "That proposal is no longer waiting — nothing changed"
+                    fetchDataInternal()
+                    return@launch
+                }
                 val ok = api.updateTicketStatus(approvalId, status, note)
                 if (ok) {
                     _successMessage.value = successText
@@ -799,6 +804,20 @@ class WiseAuthorityViewModel(
                 _isResolving.value = false
             }
         }
+    }
+
+    /**
+     * Re-read the proposal before writing to it. The list is up to one poll
+     * old and `PATCH /v1/tickets/{id}` checks no from-status (see CSD-041 §3),
+     * so this read is the only thing that stops a cancelled or already-promoted
+     * proposal from being written back to `pending`. A failed read is a refusal,
+     * not a pass: the write goes ahead only on a confirmed `blocked`.
+     */
+    private suspend fun stillWaiting(approvalId: String): Boolean {
+        val now = api.readTicketStatus(approvalId)
+        val waiting = now.equals(BudgetApprovalSeam.PROPOSAL_STATUS, ignoreCase = true)
+        if (!waiting) logWarn("stillWaiting", "$approvalId is '$now', not ${BudgetApprovalSeam.PROPOSAL_STATUS}; refusing the write")
+        return waiting
     }
 
     private fun describe(error: BudgetGrantError?): String = when (error) {

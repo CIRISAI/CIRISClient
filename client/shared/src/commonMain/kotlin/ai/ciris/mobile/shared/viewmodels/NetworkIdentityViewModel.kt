@@ -58,6 +58,10 @@ class NetworkIdentityViewModel(
      * the primary "your fed-ID" and falls back to the node key when null (the
      * node is still unclaimed / pre-claim).
      */
+    /** True when this host has no aggregate route (a bare node, CSD-032). */
+    private val _federationIdNotServed = MutableStateFlow(false)
+    val federationIdNotServed: StateFlow<Boolean> = _federationIdNotServed.asStateFlow()
+
     private val _ownerKeyId = MutableStateFlow<String?>(null)
     val ownerKeyId: StateFlow<String?> = _ownerKeyId.asStateFlow()
 
@@ -78,15 +82,24 @@ class NetworkIdentityViewModel(
             _error.value = null
             try {
                 runCatching { apiClient.getFederationIdentity() }
-                    .onSuccess { _identity.value = it }
+                    .onSuccess {
+                        _identity.value = it
+                        _readFailure.value = null
+                    }
                     .onFailure { e ->
                         PlatformLogger.e(tag, "getFederationIdentity failed: ${e.message}", e)
                         _error.value = e.message ?: "identity fetch failed"
+                        _readFailure.value = ai.ciris.mobile.shared.ui.screens.ReadFailure.of(e)
                     }
-                runCatching { apiClient.getMyNodeCode() }
+                // THIS NODE's own code — `GET {node}/v1/federation/node-code`
+                // (CIRISServer src/federation_nodecode.rs:92), the same key as
+                // the signer key above. It was the agent's
+                // `/v1/system/peers/my-node-code`, which carries the AGENT's
+                // key on a with-AI install and 404s on a bare node (CSD-032).
+                runCatching { apiClient.getNodeCode(CIRISApiClient.LOCAL_NODE_URL) }
                     .onSuccess { _nodeCode.value = it }
                     .onFailure { e ->
-                        PlatformLogger.e(tag, "getMyNodeCode failed: ${e.message}", e)
+                        PlatformLogger.e(tag, "getNodeCode failed: ${e.message}", e)
                         // Only overwrite error if identity didn't already report one
                         if (_error.value == null) {
                             _error.value = e.message ?: "node code fetch failed"
@@ -97,8 +110,12 @@ class NetworkIdentityViewModel(
                 // never raise the error banner — the Federation ID card
                 // simply stays in its "initializing" state.
                 runCatching { apiClient.getFederationIdentityAggregate() }
-                    .onSuccess { _federationId.value = it }
+                    .onSuccess {
+                        _federationId.value = it
+                        _federationIdNotServed.value = false
+                    }
                     .onFailure { e ->
+                        _federationIdNotServed.value = e is ai.ciris.mobile.shared.api.RouteNotOnThisHost
                         PlatformLogger.e(tag, "getFederationIdentityAggregate failed: ${e.message}", e)
                     }
                 // Best-effort: the bound owner's fed-ID key_id (the human). Null
