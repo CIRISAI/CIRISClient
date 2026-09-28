@@ -26,7 +26,14 @@ import kotlinx.serialization.json.jsonPrimitive
  * - Update and delete configuration values
  */
 class ConfigViewModel(
-    private val apiClient: CIRISApiClient
+    private val apiClient: CIRISApiClient,
+    /**
+     * This node › Config edits THE NODE's config, whatever the app is attached
+     * to. The agent's `GraphConfigService` is a separate store in the agent's
+     * own graph (CIRISAgent#840 is the fold), so `$baseUrl` would silently edit
+     * the wrong one on a with-AI install (CSD-023).
+     */
+    private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
 ) : ViewModel() {
 
     companion object {
@@ -123,7 +130,7 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                val response = apiClient.listConfigs()
+                val response = apiClient.listConfigs(host = nodeUrl())
                 lastRead = response.configs
                 logDebug(method, "API response received: ${response.configs.size} configs")
 
@@ -193,6 +200,7 @@ class ConfigViewModel(
                     key,
                     ai.ciris.mobile.shared.api.configValueFor(value, previous),
                     "Updated via mobile app",
+                    host = nodeUrl(),
                 )
                 logInfo(method, "Config updated successfully")
                 _successMessage.value = "Configuration \"$key\" updated"
@@ -218,7 +226,7 @@ class ConfigViewModel(
             _error.value = null
 
             try {
-                apiClient.deleteConfig(key)
+                apiClient.deleteConfig(key, host = nodeUrl())
                 logInfo(method, "Config deleted successfully")
                 _successMessage.value = "Configuration \"$key\" deleted"
                 loadConfigs() // Reload to reflect deletion

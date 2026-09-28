@@ -31,7 +31,7 @@ screen: Config
 
 `nav_map` derives `btn_my_things -> nav_instrument_this_node ->
 nav_epistemic_config`. Not `agentOnly`, and that is **correct**: `/v1/config`
-is served by both the node and the agent, so a bare node has real config to
+is served by the node, so a bare node has real config to
 show. `ConfigScreen`'s own header comment already states the two-plane rule.
 
 ```yaml csd:shows
@@ -222,8 +222,18 @@ which is the half that was broken.
 - No cohort envelope on `GET /v1/config`, and one PUT per key:
   `blocked_by: CIRISServer#660`.
 - Error bodies differ (`{detail}` agent, `{error}` node); both are shown raw.
-- With an agent attached, This node › Config edits the AGENT's config, not the
-  node's. That is the host rule as written (`$baseUrl`), and it is worth a design
-  decision: the instrument is named for the node.
+- **Host rule (decided 2026-09-27): This node › Config always edits THE NODE's
+  config**, at the node URL, whatever the app is attached to. The agent's
+  `GraphConfigService` is a separate store: `ConfigNode`s in the agent's own
+  SQLite graph (`config_service/service.py`, `graph.search("type:config")`),
+  not CEG attestations, and the agent's `/v1/config` does not forward to the
+  node (`routes/config.py`). The node's store is Config-as-CEG
+  (`graph_config.rs`: signed `config:{key}:v1` rows at `cohort_scope: self`)
+  and only "mirrors" the agent's model in shape. So the agent's config is NOT a
+  subset of the node's today; the fold is CIRISAgent#840 (CEG-native agent).
+  Until then the agent's raw config has no card: its consumers (LLM, adapters,
+  interface) already have their own cards under This agent. `ConfigViewModel`
+  takes `nodeUrl` and `RuntimeGroupReviewTest.config_reads_writes_and_deletes_at_the_node_never_the_agent`
+  pins it.
 
 **Stage:** building → building.

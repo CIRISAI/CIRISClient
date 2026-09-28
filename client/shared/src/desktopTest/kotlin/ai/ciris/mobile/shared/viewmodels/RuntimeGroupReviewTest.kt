@@ -262,6 +262,31 @@ class RuntimeGroupReviewTest {
         }
     }
 
+    @Test
+    fun config_reads_writes_and_deletes_at_the_node_never_the_agent() {
+        val node = Stub(mapOf("GET /v1/config" to (200 to nodeConfigMap)), fallback = 200 to """{"key":"k","value":null}""")
+        val agent = Stub(emptyMap(), fallback = 500 to "{}")
+        try {
+            runBlocking {
+                val vm = ConfigViewModel(agent.client(), nodeUrl = { node.url })
+                vm.loadConfigs()
+                awaitThat("read") { vm.configData.value != null || vm.error.value != null }
+                assertNull(vm.error.value)
+                vm.updateConfig("net.radio.enabled", "false")
+                awaitThat("saved") { vm.successMessage.value != null || vm.error.value != null }
+                assertNull(vm.error.value)
+                vm.deleteConfig("net.radio.frequency_hz")
+                awaitThat("deleted") { synchronized(node.seen) { node.seen.any { it.method == "DELETE" } } || vm.error.value != null }
+                assertNull(vm.error.value)
+                val methods = synchronized(node.seen) { node.seen.map { it.method }.toSet() }
+                assertEquals(setOf("GET", "PUT", "DELETE"), methods, "the node saw the read, the write and the delete")
+                assertTrue(agent.seen.isEmpty(), "This node › Config reached the agent: ${agent.paths()}")
+            }
+        } finally {
+            node.server.stop(0); agent.server.stop(0)
+        }
+    }
+
     // ── Environment (CSD-002) ────────────────────────────────────────────────
 
     @Test

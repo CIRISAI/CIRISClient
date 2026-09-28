@@ -9209,23 +9209,27 @@ class CIRISApiClient(
         }
     }
 
-    suspend fun deleteConfig(key: String) {
+    /** `DELETE /v1/config/{key}` at [host] — the node by default for This node › Config (CSD-023). */
+    suspend fun deleteConfig(key: String, host: String = baseUrl) {
         val method = "deleteConfig"
-        logInfo(method, "Deleting config: $key")
-
+        logInfo(method, "Deleting config: $key at $host")
+        val client = HttpClient {
+            install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
+        }
         try {
-            val response = configApi.deleteConfigV1ConfigKeyDelete(key, authHeader())
-            logDebug(method, "Response: status=${response.status}")
-
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                throw RuntimeException("API error: HTTP ${response.status}")
+            val response = client.delete("$host/v1/config/${key.encodeURLPathPart()}") {
+                authHeader()?.let { header("Authorization", it) }
             }
-
+            if (!response.status.isSuccess()) {
+                logError(method, "API returned non-success status: ${response.status.value}")
+                throw RuntimeException("API error: HTTP ${response.status.value}")
+            }
             logInfo(method, "Config deleted: key=$key")
         } catch (e: Exception) {
             logException(method, e, "key=$key")
             throw e
+        } finally {
+            client.close()
         }
     }
 
