@@ -169,7 +169,8 @@ fun TelemetryScreen(
                 ServicesOverviewCard(
                     healthyServices = telemetryData.healthyServices,
                     totalServices = telemetryData.totalServices,
-                    cognitiveState = telemetryData.cognitiveState
+                    cognitiveState = telemetryData.cognitiveState,
+                    modifier = Modifier.testable("telemetry_overview")
                 )
             }
 

@@ -311,7 +311,8 @@ fun DataManagementScreen(
             Box(
                 modifier = modifier
                     .fillMaxSize()
-                    .padding(paddingValues),
+                    .padding(paddingValues)
+                    .testable("data_loading"),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -327,6 +328,7 @@ fun DataManagementScreen(
                 modifier = modifier
                     .fillMaxSize()
                     .padding(paddingValues)
+                    .testable("data_loaded")
                     .testableVerticalScroll()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

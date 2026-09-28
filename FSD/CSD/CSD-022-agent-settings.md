@@ -111,9 +111,10 @@ error:     {tag: "proposed:settings_error", renders: "`SettingsViewModel._errorM
 | value | endpoint | owner | state |
 |---|---|---|---|
 | sign out | `POST /v1/auth/logout` | **both** | live on CIRISServer (`/v1/auth/logout`) and CIRISAgent (`auth.py`) |
-| search a place | `GET /v1/setup/location-search` | CIRISAgent | live (`setup/location.py`) — **wrong-host on a node build** |
-| set your ground | `POST /v1/setup/location` | CIRISAgent | live (`setup/location.py`) — **wrong-host on a node build** |
-| read your ground | `GET /v1/setup/location` | CIRISAgent | live (`setup/location.py`) — **wrong-host on a node build** |
+| search a place | `GET /v1/setup/location-search` | CIRISAgent | live (`setup/location.py:216`) — `CIRISApiClient.searchLocations` (`CIRISApiClient.kt:13285`) from `SettingsViewModel.kt:1086` — **wrong-host on a node build** |
+| set your ground | `POST /v1/setup/location` | CIRISAgent | live (`setup/location.py:407`) — `updateUserLocation` (`CIRISApiClient.kt:13407`) from `SettingsViewModel.kt:1111` — **wrong-host on a node build** |
+| read your ground | `GET /v1/setup/location` | CIRISAgent | live (`setup/location.py:444`) — `getCurrentLocation` (`CIRISApiClient.kt:13463`) from `SettingsViewModel.kt:1143` — **wrong-host on a node build** |
+| the country list | `GET /v1/setup/countries` | CIRISAgent (`setup/location.py:237`) | live, **wired and unreached** — `getCountries` (`CIRISApiClient.kt:13341`) implements `CIRISApiClientProtocol.getCountries` (`CIRISApiClientProtocol.kt:171`) and nothing calls it. The route-coverage report marked it CALLED; the place picker is search-only |
 | the LLM config read-back | `GET /v1/setup/config` | CIRISAgent | live (`setup/config.py`) — client node-skips it (`CIRISApiClient.kt:7486`) |
 | language / currency / theme / viz | — | **device** | `SecureStorage`; no route, correctly |
 | self-attestation | `GET /v1/setup/verify-status` · `/attestation-status` | CIRISAgent | live (`setup/attestation.py`); the node's `/v1/system/verify-status` is a different route |

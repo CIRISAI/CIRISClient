@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "同意参与 CIRIS 网格"
-    }
+    },
+    "grant_not_owner_authored": "此节点在您签名之前就已写入该同意，因此您无法在此撤销它，节点也不会代您撤销该同意。它仍处于生效状态。",
+    "delegate_may_not_withdraw": "委派会话无法撤销所有者的同意。撤销操作需以所有者本人的密钥签名。",
+    "author_signer_unavailable": "撤回同意的操作需由给出该同意的人本人签名，而此节点当前无法使用该身份。未撤回任何内容。",
+    "withdraw_failed": "撤销操作无法被存储。未撤销任何内容。",
+    "delegation_denied": "此会话的委派未授予该操作的权限。",
+    "malformed_body": "该请求未指明要撤销的授权。",
+    "store_unavailable": "节点无法读取其同意记录。未撤销任何内容。请在节点恢复正常后重试。",
+    "grant_not_live": "这不是此节点上有效的同意授权。它可能已被撤销。"
   },
   "consent_about_desc": "了解如何在不同信任级别之间切换以及对您的数据意味着什么",
   "consent_about_title": "关于同意流",
@@ -1063,6 +1071,8 @@
     "accord_kind_constitutional": "宪法级",
     "accord_kind_drill": "演练",
     "accord_kind_notify": "通知",
+    "accord_kind_reactivated": "已重新激活 — 已从停机中恢复",
+    "accord_kind_unknown": "未知类型（{kind}）",
     "accord_new": "新建",
     "accord_new_add_canonical": "提议规范服务器",
     "accord_new_admit_node": "接纳节点",
@@ -1402,6 +1412,8 @@
     "ceremony_state_signed": "已签署",
     "ceremony_state_not_yet": "尚未",
     "receipt_this_node": "本节点 — 您",
+    "receipt_contact_attester_person": "同意的本人 — 以其自身身份签名，而非由本节点签名。",
+    "receipt_for_agent": "此项针对您的哪个智能体",
     "setup_finish_unclaimed": "不认领此节点并完成",
     "identity_revoked_badge": "已撤销",
     "identity_devices_node_too_old": "此节点尚不能为设备命名、显示已撤销的设备，或释放节点。这需要 ciris-server 0.5.216 或更高版本。",
@@ -1696,6 +1708,18 @@
     "identity_enroll_desc": "在新设备上铸造本地联邦 ID，然后将其联邦码出示给您的主设备进行注册。",
     "identity_enroll_show": "将此出示给您的主设备（扫描二维码或粘贴联邦码）：",
     "identity_enroll_title": "在另一台设备上以自己的身份登录",
+    "identity_enroll_qr_desc": "此设备联邦码的二维码，供您的主设备扫描",
+    "qr_too_long": "此代码过长，无法生成二维码，请改为复制文本。",
+    "qr_scan_button": "扫描二维码",
+    "qr_scan_cancel": "停止扫描",
+    "qr_scan_hint": "将摄像头对准二维码。",
+    "qr_scan_asking": "正在等待摄像头权限。",
+    "qr_scan_denied": "此应用的摄像头访问权限已关闭。请在设备设置中开启，或改为粘贴代码。",
+    "qr_scan_failed": "摄像头未能启动，请改为粘贴代码。",
+    "qr_scan_retry": "重试",
+    "qr_scan_unavailable_platform": "此设备不支持扫描，请改为粘贴代码。",
+    "qr_scan_unavailable_no_camera": "此设备没有可用于扫描二维码的摄像头，请改为粘贴代码。",
+    "qr_scan_unavailable_build": "此版本的应用无法扫描二维码，请改为粘贴代码。",
     "identity_has_encryption": "加密",
     "identity_portable_button": "创建便携实例",
     "identity_portable_danger": "软件密钥组本质上并不安全。",
@@ -3082,7 +3106,27 @@
     "transport_not_on_this_node": "本节点不报告其传输方式。",
     "audit_not_on_this_node": "本节点不保存智能体审计日志。没有任何内容被过滤掉。",
     "consent_not_on_this_node": "本节点不持有同意记录。同意由智能体保存，而本节点在没有智能体的情况下运行。",
-    "billing_not_on_this_node": "本节点不处理计费。这里没有余额，也没有可购买的内容。"
+    "billing_not_on_this_node": "本节点不处理计费。这里没有余额，也没有可购买的内容。",
+    "manage_consent_revoke_unsupported": "此节点尚不支持撤销同意（需要 ciris-server 0.5.218）。",
+    "manage_consent_revoke_needs_grant": "“撤销”操作需指明一项授权，而此节点尚未列出其对等授权，因此该操作仅对在本会话中于此处设置的授权生效。",
+    "manage_consent_revoke_confirm_title": "要撤销此同意吗？",
+    "manage_consent_revoke_fact_stops_value": "{from} 将停止向 {to} 复制。",
+    "manage_consent_revoke_confirm": "撤销",
+    "manage_consent_withdrawn": "已撤销。节点已记录您的撤销操作（{id}）。",
+    "consent_withdraw_fact_who": "谁",
+    "consent_withdraw_fact_stops": "停止的内容",
+    "consent_withdraw_fact_signs": "签名人",
+    "consent_withdraw_signs_value": "您。节点使用您的密钥对撤销进行签名，绝不会使用它自己的密钥。",
+    "consent_remaining_title": "仍处于生效状态",
+    "consent_remaining_row": "仍处于生效状态：此节点在您签名之前就已写入，因此无法在此撤销。",
+    "contacts_remove": "移除",
+    "contacts_remove_confirm_title": "要将 {who} 从您的联系人中移除吗？",
+    "contacts_remove_fact_stops_value": "您与对方共享的同意。您的消息和共享记录将停止向对方复制。",
+    "contacts_removed": "已移除 {who}。您对对方的同意已撤销。",
+    "contacts_remove_remaining_title": "{who} 仍是您的联系人",
+    "contacts_remove_remaining_body": "您已撤销 {count} 项授权。以下授权仍处于生效状态。",
+    "contacts_remove_remaining_row": "仍处于生效状态：由此节点在您签名您的联系人之前写入，因此无法在此撤销",
+    "contacts_remove_unsupported": "此节点尚不支持移除联系人（需要 ciris-server 0.5.218）。"
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4488,8 @@
     "store_unavailable": "节点无法读取其联系人记录。未做任何更改——请在节点恢复正常后重试。",
     "unknown_fed_id": "该联邦 ID 不在此节点的目录中。请先准入该密钥（对等接入）——仅公告而未准入的书签不携带任何来源信息，无法对其授予同意。",
     "unreachable": "对方是已知的，但没有收到任何回应。对方的设备可能处于离线状态；待对方设备恢复后，消息将会送达。",
-    "unresolvable": "该标识符无法解析为联系人。"
+    "unresolvable": "该标识符无法解析为联系人。",
+    "not_a_contact": "对方在此并非联系人：没有任何有效的同意授权指名对方。"
   },
   "ceg": {
     "envelope": {

@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Kubali Kushiriki katika Mesh ya CIRIS"
-    }
+    },
+    "grant_not_owner_authored": "Nodi hii iliandika idhini hiyo kabla haujaitia saini, hivyo si yako kuiondoa hapa, na nodi haitaondoa idhini kwa niaba yako. Bado inatumika.",
+    "delegate_may_not_withdraw": "Kikao kilichokabidhiwa hakiwezi kuondoa idhini ya mmiliki. Uondoaji hutiwa saini kwa ufunguo wa mmiliki mwenyewe.",
+    "author_signer_unavailable": "Kuondoa idhini hutiwa saini na mtu aliyeitoa, na nodi hii haiwezi kutumia utambulisho huo kwa sasa. Hakuna kilichoondolewa.",
+    "store_unavailable": "Nodi haikuweza kusoma rekodi zake za idhini. Hakuna kilichoondolewa. Jaribu tena nodi itakapokuwa katika hali nzuri.",
+    "grant_not_live": "Hiyo si ruhusa ya idhini inayotumika kwenye nodi hii. Huenda tayari imeondolewa.",
+    "withdraw_failed": "Uondoaji haukuweza kuhifadhiwa. Hakuna kilichoondolewa.",
+    "delegation_denied": "Ukabidhi wa kikao hiki haupi ruhusa ya kitendo hicho.",
+    "malformed_body": "Ombi halikutaja ruhusa ya kuondoa."
   },
   "consent_about_desc": "Jifunze jinsi idhini inavyofanya kazi katika CIRIS",
   "consent_about_title": "Kuhusu Idhini",
@@ -1063,6 +1071,8 @@
     "accord_kind_constitutional": "KIKATIBA",
     "accord_kind_drill": "ZOEZI",
     "accord_kind_notify": "ARIFA",
+    "accord_kind_reactivated": "IMEAMILISHWA TENA — IMEENDELEA BAADA YA KUSIMAMA",
+    "accord_kind_unknown": "AINA ISIYOJULIKANA ({kind})",
     "accord_new": "Mpya",
     "accord_new_add_canonical": "Pendekeza seva kuu",
     "accord_new_admit_node": "Kubali nodi",
@@ -1642,6 +1652,18 @@
     "identity_enroll_desc": "Kwenye kifaa KIPYA, chapa fed-ID ya ndani. Kisha onyesha fedcode yake kwa kifaa chako kikuu ili kukisajili.",
     "identity_enroll_show": "Onyesha hii kwa kifaa chako kikuu (changanua QR au bandika fedcode):",
     "identity_enroll_title": "Ingia kama wewe mwenyewe kwenye kifaa kingine",
+    "identity_enroll_qr_desc": "Msimbo wa QR wa fedcode ya kifaa hiki, kwa kifaa chako kikuu kuuchanganua",
+    "qr_too_long": "Msimbo huu ni mrefu sana kuonyeshwa kama msimbo wa QR. Nakili maandishi badala yake.",
+    "qr_scan_button": "Changanua msimbo",
+    "qr_scan_cancel": "Sitisha kuchanganua",
+    "qr_scan_hint": "Elekeza kamera kwenye msimbo.",
+    "qr_scan_asking": "Inasubiri ruhusa ya kamera.",
+    "qr_scan_denied": "Ufikiaji wa kamera umezimwa kwa programu hii. Uwashe katika mipangilio ya kifaa chako, au bandika msimbo badala yake.",
+    "qr_scan_failed": "Kamera haikuanza. Bandika msimbo badala yake.",
+    "qr_scan_retry": "Jaribu tena",
+    "qr_scan_unavailable_platform": "Kuchanganua hakupatikani kwenye kifaa hiki; bandika msimbo badala yake.",
+    "qr_scan_unavailable_no_camera": "Kifaa hiki hakina kamera ya kuchanganua nayo; bandika msimbo badala yake.",
+    "qr_scan_unavailable_build": "Toleo hili la programu haliwezi kuchanganua misimbo; bandika msimbo badala yake.",
     "identity_has_encryption": "usimbaji fiche",
     "identity_portable_button": "Unda tukio linalohamishika",
     "identity_portable_danger": "Seti ya funguo ya programu si salama kimsingi.",
@@ -2958,6 +2980,8 @@
     "ceremony_state_signed": "imetiwa saini",
     "ceremony_state_not_yet": "bado",
     "receipt_this_node": "Nodi hii — wewe",
+    "receipt_contact_attester_person": "Mtu aliyekubali — alitia saini kwa utambulisho wake mwenyewe, si na nodi hii.",
+    "receipt_for_agent": "Ni wakala wako yupi anayehusika",
     "setup_finish_unclaimed": "Maliza bila kudai nodi hii",
     "identity_revoked_badge": "Imebatilishwa",
     "identity_devices_node_too_old": "Nodi hii haiwezi kutaja majina ya vifaa, kuonyesha vilivyobatilishwa, au kuachilia nodi bado. Hilo linahitaji ciris-server 0.5.216 au toleo jipya zaidi.",
@@ -3082,7 +3106,27 @@
     "transport_not_on_this_node": "Nodi hii hairipoti njia zake za usafirishaji.",
     "audit_not_on_this_node": "Nodi hii haihifadhi kumbukumbu ya ukaguzi ya wakala. Hakuna kilichochujwa.",
     "consent_not_on_this_node": "Nodi hii haihifadhi rekodi za idhini. Idhini inahifadhiwa na wakala, na nodi hii inafanya kazi bila wakala.",
-    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua."
+    "billing_not_on_this_node": "Nodi hii haishughulikii malipo. Hakuna salio hapa na hakuna chochote cha kununua.",
+    "manage_consent_revoke_unsupported": "Nodi hii haiwezi kuondoa idhini bado (inahitaji ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Kuondoa hutaja ruhusa moja, na nodi hii haijaorodhesha ruhusa zake za uhusiano bado, hivyo inafanya kazi kwenye ruhusa iliyowekwa hapa katika kikao hiki.",
+    "manage_consent_revoke_confirm_title": "Ondoa idhini hii?",
+    "manage_consent_revoke_fact_stops_value": "{from} itakoma kunakiliwa kwa {to}.",
+    "manage_consent_revoke_confirm": "Ondoa",
+    "manage_consent_withdrawn": "Imeondolewa. Nodi imerekodi uondoaji wako ({id}).",
+    "consent_withdraw_fact_who": "Nani",
+    "consent_withdraw_fact_stops": "Nini kinasimama",
+    "consent_withdraw_fact_signs": "Nani anatia saini",
+    "consent_withdraw_signs_value": "Wewe. Nodi hutia saini uondoaji kwa ufunguo wako, kamwe si wake yenyewe.",
+    "consent_remaining_title": "Bado inatumika",
+    "consent_remaining_row": "Bado inatumika: nodi hii iliiandika kabla haujatia saini, hivyo haiwezi kuondolewa hapa.",
+    "contacts_remove": "Ondoa",
+    "contacts_remove_confirm_title": "Ondoa {who} kutoka kwenye anwani zako?",
+    "contacts_remove_fact_stops_value": "Idhini yako ya kushiriki nao. Jumbe zako na rekodi zilizoshirikiwa zitakoma kunakiliwa kwao.",
+    "contacts_removed": "{who} ameondolewa. Idhini yako kwao imeondolewa.",
+    "contacts_remove_remaining_title": "{who} bado ni mwasiliani",
+    "contacts_remove_remaining_body": "Umeondoa ruhusa {count}. Ruhusa zilizo hapa chini bado zinatumika.",
+    "contacts_remove_remaining_row": "Bado inatumika: iliandikwa na nodi hii kabla haujatia saini waasiliani wako, hivyo haiwezi kuondolewa hapa",
+    "contacts_remove_unsupported": "Nodi hii haiwezi kuondoa waasiliani bado (inahitaji ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4488,8 @@
     "store_unavailable": "Nodi haikuweza kusoma rekodi zake za anwani. Hakuna kilichobadilishwa — jaribu tena nodi itakapokuwa katika hali nzuri.",
     "unknown_fed_id": "Kitambulisho hicho cha shirikisho hakimo katika orodha ya nodi hii. Kubali ufunguo kwanza (peering) — alamisho lililotangazwa bila kukubaliwa halina asili na haliwezi kupewa idhini.",
     "unreachable": "Wanajulikana, lakini hakuna kilichojibu. Vifaa vyao vinaweza kuwa nje ya mtandao; jumbe zitawafikia watakaporejea.",
-    "unresolvable": "Kitambulisho hicho hakipatikani kama anwani."
+    "unresolvable": "Kitambulisho hicho hakipatikani kama anwani.",
+    "not_a_contact": "Sio mwasiliani hapa: hakuna ruhusa ya idhini inayotumika inayowataja."
   },
   "ceg": {
     "envelope": {

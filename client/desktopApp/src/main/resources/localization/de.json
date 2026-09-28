@@ -569,7 +569,15 @@
     },
     "mesh_participation": {
       "action": "Der Teilnahme am CIRIS Mesh zustimmen"
-    }
+    },
+    "grant_not_owner_authored": "Dieser Knoten hat diese Einwilligung geschrieben, bevor Sie sie signiert haben, sodass sie hier nicht Ihre zum Zurückziehen ist, und der Knoten wird die Einwilligung nicht in Ihrem Namen zurückziehen. Sie ist weiterhin aktiv.",
+    "delegate_may_not_withdraw": "Eine delegierte Sitzung kann die Einwilligung des Inhabers nicht zurückziehen. Die Zurückziehung wird mit dem eigenen Schlüssel des Inhabers signiert.",
+    "author_signer_unavailable": "Das Zurückziehen einer Einwilligung wird von der Person signiert, die sie gegeben hat, und dieser Knoten kann diese Identität derzeit nicht verwenden. Es wurde nichts zurückgezogen.",
+    "withdraw_failed": "Die Zurückziehung konnte nicht gespeichert werden. Es wurde nichts zurückgezogen.",
+    "delegation_denied": "Die Delegation dieser Sitzung gewährt diese Aktion nicht.",
+    "malformed_body": "Die Anfrage nannte keine Einwilligung, die zurückgezogen werden soll.",
+    "store_unavailable": "Der Knoten konnte seine Einwilligungsdatensätze nicht lesen. Es wurde nichts zurückgezogen. Versuchen Sie es erneut, sobald der Knoten wieder funktionsfähig ist.",
+    "grant_not_live": "Das ist auf diesem Knoten keine aktive Einwilligung. Sie wurde möglicherweise bereits zurückgezogen."
   },
   "consent_about_desc": "Sehen Sie, wie CIRIS Zustimmung, Datenschutz und gemeinsame Nutzung verwaltet",
   "consent_about_title": "Über Zustimmung",
@@ -1063,6 +1071,8 @@
     "accord_kind_constitutional": "KONSTITUTIONELL",
     "accord_kind_drill": "ÜBUNG",
     "accord_kind_notify": "BENACHRICHTIGUNG",
+    "accord_kind_reactivated": "REAKTIVIERT — NACH HALT FORTGESETZT",
+    "accord_kind_unknown": "UNBEKANNTE ART ({kind})",
     "accord_new": "Neu",
     "accord_new_add_canonical": "Kanonischen Server vorschlagen",
     "accord_new_admit_node": "Knoten aufnehmen",
@@ -1642,6 +1652,18 @@
     "identity_enroll_desc": "Prägen Sie auf dem NEUEN Gerät eine lokale Fed-ID. Zeigen Sie dann dessen Fedcode Ihrem primären Gerät, um es zu registrieren.",
     "identity_enroll_show": "Zeigen Sie dies Ihrem primären Gerät (QR-Code scannen oder Fedcode einfügen):",
     "identity_enroll_title": "Auf einem anderen Gerät als Sie selbst anmelden",
+    "identity_enroll_qr_desc": "QR-Code des Fedcodes dieses Geräts, zum Scannen mit Ihrem primären Gerät",
+    "qr_too_long": "Dieser Code ist zu lang, um als QR-Code angezeigt zu werden. Kopieren Sie stattdessen den Text.",
+    "qr_scan_button": "Code scannen",
+    "qr_scan_cancel": "Scannen beenden",
+    "qr_scan_hint": "Richten Sie die Kamera auf den Code.",
+    "qr_scan_asking": "Warte auf Kamerazugriff.",
+    "qr_scan_denied": "Der Kamerazugriff ist für diese App deaktiviert. Aktivieren Sie ihn in den Geräteeinstellungen, oder fügen Sie den Code stattdessen ein.",
+    "qr_scan_failed": "Die Kamera konnte nicht gestartet werden. Fügen Sie den Code stattdessen ein.",
+    "qr_scan_retry": "Erneut versuchen",
+    "qr_scan_unavailable_platform": "Scannen ist auf diesem Gerät nicht verfügbar; fügen Sie den Code stattdessen ein.",
+    "qr_scan_unavailable_no_camera": "Dieses Gerät verfügt über keine Kamera zum Scannen; fügen Sie den Code stattdessen ein.",
+    "qr_scan_unavailable_build": "Diese Version der App kann keine Codes scannen; fügen Sie den Code stattdessen ein.",
     "identity_has_encryption": "Verschlüsselung",
     "identity_portable_button": "Portable Instanz erstellen",
     "identity_portable_danger": "Ein Software-Schlüsselset ist von Natur aus unsicher.",
@@ -2993,6 +3015,8 @@
     "ceremony_state_signed": "signiert",
     "ceremony_state_not_yet": "noch nicht",
     "receipt_this_node": "Dieser Knoten — Sie",
+    "receipt_contact_attester_person": "Die Person, die zugestimmt hat — signiert mit ihrer eigenen Identität, nicht von diesem Knoten.",
+    "receipt_for_agent": "Für welchen Ihrer Agenten es bestimmt ist",
     "setup_finish_unclaimed": "Abschließen, ohne diesen Knoten zu übernehmen",
     "identity_revoked_badge": "Widerrufen",
     "identity_devices_node_too_old": "Dieser Knoten kann Geräte noch nicht benennen, widerrufene Geräte noch nicht anzeigen und Knoten noch nicht freigeben. Dafür ist ciris-server 0.5.216 oder höher erforderlich.",
@@ -3082,7 +3106,27 @@
     "transport_not_on_this_node": "Dieser Knoten meldet seine Transporte nicht.",
     "audit_not_on_this_node": "Dieser Knoten führt kein Audit-Protokoll für den Agenten. Es wurde nichts herausgefiltert.",
     "consent_not_on_this_node": "Dieser Knoten führt keine Zustimmungsdatensätze. Zustimmung wird von einem Agenten verwaltet, und dieser Knoten läuft ohne einen solchen.",
-    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen."
+    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen.",
+    "manage_consent_revoke_unsupported": "Dieser Knoten kann Einwilligungen noch nicht zurückziehen (benötigt ciris-server 0.5.218).",
+    "manage_consent_revoke_needs_grant": "Zurückziehen bezieht sich auf eine bestimmte Einwilligung, und dieser Knoten listet seine Peering-Einwilligungen noch nicht auf, daher funktioniert es nur für eine Einwilligung, die hier in dieser Sitzung eingerichtet wurde.",
+    "manage_consent_revoke_confirm_title": "Diese Einwilligung zurückziehen?",
+    "manage_consent_revoke_fact_stops_value": "{from} repliziert nicht mehr zu {to}.",
+    "manage_consent_revoke_confirm": "Zurückziehen",
+    "manage_consent_withdrawn": "Zurückgezogen. Der Knoten hat Ihre Zurückziehung erfasst ({id}).",
+    "consent_withdraw_fact_who": "Wer",
+    "consent_withdraw_fact_stops": "Was stoppt",
+    "consent_withdraw_fact_signs": "Wer signiert",
+    "consent_withdraw_signs_value": "Sie. Der Knoten signiert die Zurückziehung mit Ihrem Schlüssel, niemals mit seinem eigenen.",
+    "consent_remaining_title": "Weiterhin aktiv",
+    "consent_remaining_row": "Weiterhin aktiv: Dieser Knoten hat sie geschrieben, bevor Sie signiert haben, daher kann sie hier nicht zurückgezogen werden.",
+    "contacts_remove": "Entfernen",
+    "contacts_remove_confirm_title": "{who} aus Ihren Kontakten entfernen?",
+    "contacts_remove_fact_stops_value": "Ihre Einwilligung zum Teilen mit dieser Person. Ihre Nachrichten und geteilten Datensätze werden nicht mehr zu ihr repliziert.",
+    "contacts_removed": "{who} entfernt. Ihre Einwilligung gegenüber dieser Person wurde zurückgezogen.",
+    "contacts_remove_remaining_title": "{who} ist weiterhin ein Kontakt",
+    "contacts_remove_remaining_body": "Sie haben {count} Einwilligung(en) zurückgezogen. Die untenstehenden Einwilligungen sind weiterhin aktiv.",
+    "contacts_remove_remaining_row": "Weiterhin aktiv: von diesem Knoten geschrieben, bevor Sie Ihre Kontakte signiert haben, daher kann sie hier nicht zurückgezogen werden",
+    "contacts_remove_unsupported": "Dieser Knoten kann noch keine Kontakte entfernen (benötigt ciris-server 0.5.218)."
   },
   "moderation": {
     "ladder": {
@@ -4444,7 +4488,8 @@
     "store_unavailable": "Der Knoten konnte seine Kontaktdatensätze nicht lesen. Es wurde nichts geändert — versuchen Sie es erneut, sobald der Knoten wieder funktionsfähig ist.",
     "unknown_fed_id": "Diese Föderations-ID ist nicht im Verzeichnis dieses Knotens. Lassen Sie den Schlüssel zuerst zu (Peering) — ein angekündigtes, aber nicht zugelassenes Lesezeichen trägt keine Provenienz und kann keine Einwilligung erhalten.",
     "unreachable": "Diese Person ist bekannt, aber es kam keine Antwort. Ihre Geräte sind möglicherweise offline; Nachrichten erreichen sie, sobald sie wieder online sind.",
-    "unresolvable": "Diese Kennung lässt sich keinem Kontakt zuordnen."
+    "unresolvable": "Diese Kennung lässt sich keinem Kontakt zuordnen.",
+    "not_a_contact": "Diese Person ist hier kein Kontakt: Keine aktive Einwilligung nennt sie."
   },
   "ceg": {
     "envelope": {
