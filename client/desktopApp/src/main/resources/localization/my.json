@@ -2186,6 +2186,7 @@
     "sessions_error_fetch_failed": "Failed to fetch state: {error}",
     "sessions_error_invalid_state": "တောင်းဆိုထားသော အခြေအနေ မမှန်ကန်ပါ",
     "sessions_error_not_supported": "အခြေအနေ ကူးပြောင်းမှု မပံ့ပိုးပါ",
+    "sessions_error_forbidden": "စီမံခန့်ခွဲသူသာလျှင် ဤအေးဂျင့်၏ cognitive အခြေအနေကို ပြောင်းလဲနိုင်သည်။",
     "sessions_experimental": "စမ်းသပ်မှု လုပ်ဆောင်ချက်",
     "sessions_initiate": "စတင်",
     "sessions_play_desc": "ဖန်တီးမှု ရှာဖွေမှု နှင့် စမ်းသပ်ခြင်း",
@@ -2699,6 +2700,8 @@
     "system_pause_confirm": "Runtime ကို ခဏရပ်တန့်ရန် သေချာပါသလား? ၎င်းသည် မက်ဆေ့ချ် အားလုံးကို ယာယီရပ်တန့်မည်။",
     "system_processor": "အဓိက Processor",
     "system_processor_note": "CIRIS စနစ်တွင် သိမြင်မှုအခြေအနေများ တဆင့်စီ ဖြတ်သန်းသော အဓိက processor တစ်ခုရှိသည်။ ရပ်တန့်ခြင်းသည် processor တစ်ခုလုံးကို သက်ရောက်သည်။",
+    "system_agent_half_absent": "ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသောကြောင့်၊ ဤနေရာတွင် ပြသရန် processor၊ အရင်းအမြစ် အသုံးပြုမှု၊ ပတ်ဝန်းကျင်ဆိုင်ရာ ကုန်ကျစရိတ် သို့မဟုတ် channel စာရင်း မရှိပါ။",
+    "system_open_runtime": "Runtime တွင် ခဏရပ်ပါ၊ အဆင့်လိုက်လုပ်ဆောင်ပါ သို့မဟုတ် ဆက်လုပ်ပါ",
     "system_processor_status": "Processor အခြေအနေ",
     "system_queue_depth": "တန်းစီ အနက်",
     "system_resource": "အရင်းအမြစ် အသုံးပြုမှု",
@@ -3082,7 +3085,8 @@
     "transport_not_on_this_node": "ဤ node သည် ၎င်း၏ transport များကို တင်ပြမထားပါ။",
     "audit_not_on_this_node": "ဤ node သည် အေးဂျင့် audit log ကို မထိန်းသိမ်းပါ။ မည်သည့်အရာကိုမျှ စစ်ထုတ်ထားခြင်း မရှိပါ။",
     "consent_not_on_this_node": "ဤ node သည် consent မှတ်တမ်းများကို မကိုင်ဆောင်ပါ။ Consent ကို အေးဂျင့်တစ်ခုက ထိန်းသိမ်းသည်၊ ဤ node သည် အေးဂျင့်မပါဘဲ လည်ပတ်နေသည်။",
-    "billing_not_on_this_node": "ဤ node သည် ငွေတောင်းခံမှုကို မကိုင်တွယ်ပါ။ ဤနေရာတွင် လက်ကျန်ငွေ မရှိသကဲ့သို့ ဝယ်ယူစရာလည်း မရှိပါ။"
+    "billing_not_on_this_node": "ဤ node သည် ငွေတောင်းခံမှုကို မကိုင်တွယ်ပါ။ ဤနေရာတွင် လက်ကျန်ငွေ မရှိသကဲ့သို့ ဝယ်ယူစရာလည်း မရှိပါ။",
+    "scheduler_stat_dead_lettered": "သီးသန့်ခွဲထား"
   },
   "moderation": {
     "ladder": {
