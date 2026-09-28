@@ -84,14 +84,16 @@ def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
     and the AI choice, and /input and /click refuse what the person could not
     see (CIRISClient#33). Scroll down a step at a time, bounded; anything else
     raises as before."""
-    for _ in range(tries):
+    # Down first (the wizard fills top to bottom), then back up past the
+    # start: an element the earlier steps scrolled past sits ABOVE the fold.
+    for direction in ["down"] * (tries // 2) + ["up"] * tries:
         try:
             return act()
         except DriverError as e:
             if "off screen" not in str(e):
                 raise
             try:
-                drv.scroll_to(tag, direction="down", amount=400)
+                drv.scroll_to(tag, direction=direction, amount=400)
             except DriverError:
                 pass
             time.sleep(0.8)
