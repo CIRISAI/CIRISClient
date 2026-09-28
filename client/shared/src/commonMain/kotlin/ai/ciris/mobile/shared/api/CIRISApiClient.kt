@@ -1056,16 +1056,20 @@ class CIRISApiClient(
     //
     // Served NATIVELY by the local ciris-server node (:4243) — the Python
     // duplicate routes on the agent (:8080) were deleted in the 2.9.7 DRY
-    // purge. The node currently exposes: announce, node-code, peering, peers,
-    // peers/{key_id}, self-key-record, conformance, adopt-scrubbed.
+    // purge. The node exposes: announce, node-code, peering, peers,
+    // peers/{key_id}, self-key-record, conformance, adopt-scrubbed — and,
+    // since ciris-server 0.5.115 (CIRISServer#261), the seven the purge
+    // deleted from the agent: peers/{key_id}/sas (GET + PUT),
+    // peers/{key_id}/trust, peers/{key_id}/appearance
+    // (src/federation_peers.rs router), identity, metrics,
+    // content/{content_id} and events/{channel} (src/federation_surface.rs
+    // router). Every method below calls the node; none is disabled.
     //
-    // SEVEN capabilities have NO node route yet (CIRISServer ask filed):
-    //   identity, peers/{key_id}/sas, peers/{key_id}/trust,
-    //   peers/{key_id}/appearance, metrics, content/{content_id},
-    //   events/{channel} (SSE).
-    // Their client methods below are DISABLED (throw immediately) until
-    // CIRISServer exposes them on :4243; every call-site already handles the
-    // thrown error as a degraded/"unknown" UI state.
+    // What is still missing is narrower than a route (CSD-104 §3b):
+    // appearance cannot set a display name (`alias_override` is always null),
+    // there is no distinct SAS-mismatch record, and the peer list carries no
+    // verification state (CIRISServer#684); the SAS for a person is derived
+    // over node × person, not person × person (CIRISServer#683).
 
     /**
      * Short-lived Ktor client for one direct-HTTP request. Mirrors the
@@ -1345,7 +1349,10 @@ class CIRISApiClient(
                 authHeader()?.let { header("Authorization", it) }
             }
             if (!response.status.isSuccess()) {
-                throw RuntimeException("Federation peer SAS fetch failed: ${response.status} for $keyId")
+                // CSD-104: keep the node's `error` id — a 404 `PEER_SAS_UNAVAILABLE`
+                // (key not in the directory) and a bare 404 (no route) have
+                // opposite meanings, and a flattened message loses which.
+                throw NodeRefusal.fromBody(response.status.value, response.bodyAsText())
             }
             decodeFederationEnvelope(response.bodyAsText(), FederationPeerSASResponse.serializer())
         } catch (e: Exception) {
@@ -1423,6 +1430,50 @@ class CIRISApiClient(
             client.close()
         }
     }
+
+    // ── CSD-104 · Verify someone's key (the peer detail's SAS ceremony) ────
+    /**
+     * Record the outcome of the out-of-band SAS comparison.
+     *
+     * Hits ``PUT /v1/federation/peers/{keyId}/sas`` `{"verified": bool}` on the
+     * LOCAL NODE (CIRISServer `src/federation_peers.rs:784-823`). Owner session
+     * on an owner-bound node; the row is a `config:*` sideband authored at
+     * `cohort_scope: self`, so nobody but this node sees it. `false` clears
+     * `verified_at` — it is what both a withdrawal and a mismatch write
+     * (CSD-104 §3b, issue A). A refusal is thrown as a [NodeRefusal] so the
+     * 403 (not the owner) and the 404 (`PEER_NOT_FOUND`) stay distinguishable.
+     */
+    suspend fun setFederationPeerSASVerified(
+        keyId: String,
+        verified: Boolean,
+    ): ai.ciris.mobile.shared.models.federation.FederationPeerSASUpdateResponse {
+        val method = "setFederationPeerSASVerified"
+        logInfo(method, "PUT $LOCAL_NODE_URL/v1/federation/peers/$keyId/sas → verified=$verified")
+        val client = federationHttpClient()
+        return try {
+            val response = client.put("$LOCAL_NODE_URL/v1/federation/peers/$keyId/sas") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(jsonConfig.encodeToString(
+                    ai.ciris.mobile.shared.models.federation.FederationPeerSASUpdateRequest.serializer(),
+                    ai.ciris.mobile.shared.models.federation.FederationPeerSASUpdateRequest(verified = verified),
+                ))
+            }
+            if (!response.status.isSuccess()) {
+                throw NodeRefusal.fromBody(response.status.value, response.bodyAsText())
+            }
+            decodeFederationEnvelope(
+                response.bodyAsText(),
+                ai.ciris.mobile.shared.models.federation.FederationPeerSASUpdateResponse.serializer(),
+            )
+        } catch (e: Exception) {
+            logException(method, e, "keyId=$keyId, verified=$verified")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+    // ── end CSD-104 ────────────────────────────────────────────────────────
 
     // ═══════════════════════════════════════════════════════════════════════
     // Contacts + user-to-user chat (src/contacts_chat.rs)
@@ -1822,12 +1873,8 @@ class CIRISApiClient(
      * verify failures, queue depths, transport bytes, and peer
      * reachability ratios.
      *
-     * DISABLED: agent-side ``GET /v1/federation/metrics`` was deleted
-     * (2.9.7 DRY purge — Edge's ``metrics_snapshot`` owns the capability)
-     * and the node (:4243) does not expose it yet. TODO(CIRISServer ask:
-     * expose federation metrics on the node) — repoint to
-     * [LOCAL_NODE_URL] when it lands. The Interfaces/Queue pollers treat
-     * the throw as their existing degraded state.
+     * Served by the node (:4243), not the agent: the agent's copy was
+     * deleted in the 2.9.7 DRY purge (Edge's ``metrics_snapshot`` owns it).
      */
     suspend fun getFederationMetrics(): FederationMetricsResponse {
         // Node-served since ciris-server 0.5.115 (CIRISServer#261) — PyO3
@@ -1899,12 +1946,9 @@ class CIRISApiClient(
      * ``[1, 300_000]`` ms; defaults to 5_000 ms here so the typical
      * user-driven case doesn't block the UI for 30s on miss.
      *
-     * DISABLED: agent-side ``POST /v1/federation/content/{contentId}``
-     * was deleted (2.9.7 DRY purge — Edge's ``fetch_content`` owns the
-     * capability, SHA-256 integrity enforced Rust-side) and the node
-     * (:4243) does not expose it yet. TODO(CIRISServer ask: expose
-     * federation content fetch on the node) — repoint to
-     * [LOCAL_NODE_URL] when it lands.
+     * Served by the node (:4243), not the agent: the agent's copy was
+     * deleted in the 2.9.7 DRY purge (Edge's ``fetch_content`` owns it,
+     * with SHA-256 integrity enforced Rust-side).
      */
     suspend fun fetchFederationContent(
         contentId: String,
