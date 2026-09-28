@@ -53,6 +53,11 @@ class ScreenToSurfaceTest {
     @Test
     fun theStatedConventionStillHolds() {
         assertEquals(NavSurface.Contacts, screenToSurface(Screen.UserChat("k1", "c1", "Ada")))
+        // A room opened from a circle's Chats tab keeps THAT tab lit (CSD-091).
+        assertEquals(
+            NavSurface.CommunityChats,
+            screenToSurface(Screen.UserChat(null, "room-1", "Garden club", memberCount = 5, from = Screen.CommunityChats)),
+        )
         assertEquals(NavSurface.Accord, screenToSurface(Screen.DutyConferral))
         assertEquals(NavSurface.Skills, screenToSurface(Screen.SkillStudio))
     }

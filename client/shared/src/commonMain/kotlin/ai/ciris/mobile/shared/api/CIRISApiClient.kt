@@ -1,5 +1,14 @@
 package ai.ciris.mobile.shared.api
 
+import ai.ciris.mobile.shared.models.drive.DriveListing
+import ai.ciris.mobile.shared.models.drive.FileWrite
+import ai.ciris.mobile.shared.models.drive.FileWritten
+import ai.ciris.mobile.shared.models.drive.MediaPolicy
+import ai.ciris.mobile.shared.models.drive.NoteListing
+import ai.ciris.mobile.shared.models.drive.NoteWrite
+import ai.ciris.mobile.shared.models.drive.OpenedFile
+import io.ktor.http.encodeURLParameter
+import io.ktor.http.encodeURLPathPart
 import ai.ciris.mobile.shared.models.federation.FederationConsentScopes
 
 import ai.ciris.mobile.shared.models.*
@@ -1594,6 +1603,156 @@ class CIRISApiClient(
             val decoded = jsonConfig.decodeFromString(ContactListResponse.serializer(), raw)
             logInfo(method, "${decoded.contacts.size} contact(s) of ${decoded.total}")
             decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // The drive plane (CIRISServer 0.5.215, src/drive.rs)
+    //
+    // One door writes a file at a cohort, one listing covers everything this
+    // person can reach, and notes are self-chat. Owner-session gated, bare JSON,
+    // and ALWAYS THE NODE: every route here is the node's (`src/drive.rs`), and
+    // an agent at the api base does not serve them (CIRISAgent#1213), so each
+    // call takes `nodeUrl` — the active node, like contacts — never `$baseUrl`.
+    // Refusals are `{error: <id>, detail}`, which NodeRefusal.fromBody reads as
+    // the id and the node's English. `ClientDrive` binds these to `DriveApi`.
+    // ═══════════════════════════════════════════════════════════════════════
+
+    /** `GET /v1/drive`, optionally narrowed to a cohort (`self` | `family` | `community`) or a room. */
+    suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, nodeUrl: String): DriveListing {
+        val method = "readDrive"
+        val query = buildList {
+            cohort?.let { add("cohort=$it") }
+            roomId?.let { add("room_id=${it.encodeURLParameter()}") }
+            add("limit=$limit")
+        }.joinToString("&")
+        logInfo(method, "GET $nodeUrl/v1/drive?$query")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/drive?$query") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(DriveListing.serializer(), raw).also {
+                logInfo(method, "${it.entries.size} file(s) across ${it.rooms.size} room(s)")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET /v1/files/{id}`. A 409 `drive.not_fetched` (on another device) and a
+     * 403 `drive.not_granted` come back as [NodeRefusal]s with the id intact:
+     * they are true answers, not failures, and the UI says them in words.
+     */
+    suspend fun readFile(attestationId: String, roomId: String, nodeUrl: String): OpenedFile {
+        val method = "readFile"
+        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}?room_id=${roomId.encodeURLParameter()}"
+        logInfo(method, "GET $url")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get(url) { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(OpenedFile.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "attestation=$attestationId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `POST /v1/files`. The caller has already refused anything over the node's inline cap. */
+    suspend fun writeFile(write: FileWrite, nodeUrl: String): FileWritten {
+        val method = "writeFile"
+        logInfo(method, "POST $nodeUrl/v1/files cohort=${write.cohort} media=${write.mediaType} name=${write.filename ?: "(none)"}")
+        val client = federationHttpClient()
+        return try {
+            val response = client.post("$nodeUrl/v1/files") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(jsonConfig.encodeToString(FileWrite.serializer(), write))
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(FileWritten.serializer(), raw).also {
+                logInfo(method, "written ${it.attestationId} crossed=${it.crossed} addressed=${it.addressed} excluded=${it.excluded.size}")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "cohort=${write.cohort}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET /v1/notes`: notes to self, newest last. */
+    suspend fun readNotes(nodeUrl: String): NoteListing {
+        val method = "readNotes"
+        logInfo(method, "GET $nodeUrl/v1/notes")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/notes") { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(NoteListing.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `POST /v1/notes`. An empty body is refused by the node (`notes.empty`); callers don't send one. */
+    suspend fun writeNote(body: String, nodeUrl: String) {
+        val method = "writeNote"
+        logInfo(method, "POST $nodeUrl/v1/notes (${body.length} chars)")
+        val client = federationHttpClient()
+        try {
+            val response = client.post("$nodeUrl/v1/notes") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(jsonConfig.encodeToString(NoteWrite.serializer(), NoteWrite(body)))
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET /v1/media/policy` (0.5.217, CIRISServer#643): the node's render
+     * policy, public — no session. Parsed by [MediaPolicy.fromWire]; the caller
+     * narrows the compiled-in table by it. A 404 with no id is a node that
+     * predates the route and surfaces as a [NodeRefusal] the caller reads as such.
+     */
+    suspend fun readMediaPolicy(nodeUrl: String): MediaPolicy {
+        val method = "readMediaPolicy"
+        logInfo(method, "GET $nodeUrl/v1/media/policy")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/media/policy")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            MediaPolicy.fromWire(jsonConfig.parseToJsonElement(raw).jsonObject).also {
+                logInfo(method, "policy v${it.policyVersion} tier_a=${it.tierA.size} renditions=${it.renditions}")
+            }
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
             throw e

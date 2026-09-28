@@ -54,7 +54,7 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
 
   | PR | what | state |
   |---|---|---|
-  | #77 | B3 Files: Files holds files, Notes to self in Just me › Chats | **conflicting**; checks green on its own base; needs the 0.5.217 pass below, and `FSD/CSD/PENDING-CSD-007.md` holds the §3 rows to apply when it lands |
+  | #77 | B3 Files: Files holds files, Notes to self in Just me › Chats | merged with main and the 0.5.217 pass applied (digest check, node policy, node URL, Family › Files on the picked household; `PENDING-CSD-007.md` folded into CSD-007 §3 and deleted; CSD-008 for Notes) |
   | #97 | CSD flows run on the five-platform matrix; `state:` now asserts something | mergeable; the localization + vendoring check is red; this is the path from `building` to `testable` (28 draft flows under `testing/flows/drafts/`) |
   | #122 | households in the Family hub, members on Family › People (CSD-100/101) | mergeable, checks green; asks for edits to CSD-050, 005 and 007 |
 
@@ -158,7 +158,7 @@ red hexagon = owed upstream.
 | S2 | moderation CSD | **building** (CSD-065, with G1's tag table); reviewed in batch 1 | #90, #124 |
 | S3–S7 | card CSDs | **72 on main**: 64 building, 7 sketched, 1 envisioned; §3 generated from code by the route gate; citations verified by call site | #90, #107, #111, #124 |
 | B1, B2 | People, receipt sheet | **done** | #62 |
-| B3 | Files | in review, conflicting, needs the 0.5.217 pass; §3 rows waiting in `PENDING-CSD-007.md` | #77 |
+| B3 | Files | in review: merged with main, the 0.5.217 pass applied; CSD-007 and CSD-008 at `building` | #77 |
 | B4 | Just me | partial: erase traces and deletion receipts on Data, Revoke on Manage Consent, partnership decisions on Consent; notes to self wait on #77; the circle closes after review batch 2 | #123, #112, #120 |
 | B5 | Family | in review: the household in the Family hub, members on Family › People | #122 |
 | B6 | Neighbours | partial: affiliations on the hub, rooms in Chats (CSD-110), key verification on the peer detail; Safety still has nothing a non-duty-holder may do | #121, #117 |
@@ -233,8 +233,8 @@ Server 0.5.217 changed what #77 should do, and it has been conflicting since #90
 5. ~~Route drive and notes calls to the node URL~~ — CIRISAgent#1213 is closed; the client routes
    node-owned calls to the node URL regardless (the way #123 does).
 6. Bundle the 0.5.216 and 0.5.217 message ids (#78; #65 is already in #77).
-7. Apply the rows in `FSD/CSD/PENDING-CSD-007.md` to CSD-007 §3 and delete that file in the same
-   commit; take #122's note that Family › Files can list once households exist.
+7. ~~Apply the rows in `FSD/CSD/PENDING-CSD-007.md` to CSD-007 §3 and delete that file in the same
+   commit; take #122's note that Family › Files can list once households exist.~~ — done on #77.
 
 ## Deferred on purpose
 
