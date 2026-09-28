@@ -64,6 +64,19 @@ def _tags(drv: TestAutomationServer) -> set[str]:
     return {e.test_tag for e in drv.tree()}
 
 
+def _wait_clickable(drv: TestAutomationServer, tag: str, timeout: float = 20.0) -> bool:
+    """True once `tag` reports can_click (or the server does not report it at all)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        for e in drv.tree():
+            if e.test_tag == tag:
+                if e.can_click is None or e.can_click:
+                    return True
+                break
+        time.sleep(1.0)
+    return False
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -122,6 +135,16 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             raise SessionUnavailable(
                 f"wizard step {_active_step(drv)!r} offers no advance control; "
                 f"on screen: {sorted(tags)}"
+            )
+        # A disabled advance control is present but has no click handler (a
+        # `testableClickable(enabled = false)`), and clicking it is a 404 that
+        # says nothing about WHY. On iOS the fields reach the ViewModel a beat
+        # after they are typed, so Next enables late: wait for it, bounded, and
+        # if it never enables say which step and what was on screen.
+        if not _wait_clickable(drv, nxt, timeout=20.0):
+            raise SessionUnavailable(
+                f"wizard step {_active_step(drv)!r}: {nxt} never became clickable; "
+                f"on screen: {sorted(_tags(drv))}"
             )
         before = (drv.screen(), _active_step(drv))
         drv.click(nxt)
