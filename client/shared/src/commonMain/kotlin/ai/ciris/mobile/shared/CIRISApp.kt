@@ -4581,6 +4581,7 @@ fun CIRISApp(
             Screen.DataManagement -> {
                 DataManagementScreen(
                     viewModel = dataManagementViewModel,
+                    hasAgent = clientMode?.isAgent ?: false,
                     onNavigateBack = {
                         PlatformLogger.i(TAG, "[Screen.DataManagement] Navigating back to Interact")
                         currentScreen = Screen.Interact
