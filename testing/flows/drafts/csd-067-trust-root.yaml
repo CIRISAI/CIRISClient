@@ -1,0 +1,108 @@
+csd: CSD-067
+flow: csd_067_trust_root
+title: This node's trust root, from the Accord card
+description: >-
+  CSD-067 §4, the trust-root detail. On the node's own machine the card shows
+  the genesis state and the roots this node knows, refuses a non-JSON seed
+  locally, and puts both re-root levers (adopt, un-trust) behind a three-fact
+  confirm that this flow opens and CANCELS — it never adopts or withdraws
+  anything, because un-trusting the only root takes the node's trace:* plane
+  down. Off the node's machine the same screen must render the loopback refusal
+  (CIRISServer#652), which is the second leg's whole assertion.
+# Floor: no release carries TrustRootScreen.kt yet (feat/trust-root-posture).
+# Interpolated tags: `card_trust_root_humanity_accord`,
+# `row_trust_root_accepted_humanity_accord` and `btn_trust_root_untrust_humanity_accord`
+# are written `"card_trust_root_$s"` etc. (TrustRootScreen.kt), so the
+# literal-grep test in testing/test_flows.py cannot see them — the blind spot
+# drafts/README.md records for four other flows. `humanity-accord` becomes
+# `humanity_accord` via trustTagSlug.
+client: "unreleased"
+
+steps:
+  - step_id: on_the_node
+    title: The detail reads the node's own trust root
+    description: >-
+      Entry precondition, stated not assumed: Everyone > Safety > Accord, then
+      btn_accord_open_trust_root. Desktop, on the node's own machine (loopback).
+      humanity-accord is always the first root the node lists
+      (trust_root_api.rs:156-157).
+    requires:
+      screen: TrustRoot
+    expect:
+      visible:
+        - screen_trust_root
+        - card_trust_posture
+        - txt_trust_posture_state
+        - card_trust_root_humanity_accord
+        - row_trust_root_accepted_humanity_accord
+        - card_trust_root_import
+        - input_trust_root_seed
+        - input_trust_root_allegiance_from
+        - btn_trust_root_seed_file
+        - btn_trust_root_import_review
+      absent:
+        - trust_root_loopback_only
+        - trust_root_error
+        - trust_root_not_on_this_node
+
+  - step_id: not_json_is_refused_here
+    title: A seed that is not JSON never reaches the node
+    do:
+      - input: {input_trust_root_seed: "not a seed"}
+      - click: btn_trust_root_import_review
+    expect:
+      visible: [trust_root_import_not_json]
+      absent: [sheet_trust_root_import]
+
+  - step_id: adopt_confirms_three_facts
+    title: Adopting names the node, the root it will trust, and who signs — then is cancelled
+    description: >-
+      A seed-shaped object whose charter names mesh-test. The confirm must name
+      that root (fact 2) and state the limit that no fingerprint preview exists
+      yet (CIRISServer#404). Cancelled: nothing is sent.
+    do:
+      - input:
+          input_trust_root_seed: >-
+            {"family_key_id":"mesh-test","attestations":[{"attestation":{"attestation_type":"delegates_to","attestation_id":"genesis-charter","attested_key_id":"mesh-test"}}]}
+      - click: btn_trust_root_import_review
+    expect:
+      visible:
+        - sheet_trust_root_import
+        - trust_root_import_fact_1
+        - trust_root_import_fact_2
+        - trust_root_import_fact_3
+        - trust_root_import_note
+      text:
+        trust_root_import_fact_2: "mesh-test"
+
+  - step_id: adopt_cancelled
+    title: Cancelling sends nothing
+    do:
+      - click: btn_trust_root_import_cancel
+    expect:
+      absent: [sheet_trust_root_import, trust_root_import_sending, txt_trust_root_import_installed]
+
+  - step_id: untrust_confirms_what_stops
+    title: Un-trusting the only root says trace:* stops — then is cancelled
+    description: >-
+      On a node whose only accepted root is the accord, fact 2 is the LAST_ROOT
+      sentence. Cancelled: the acceptance edge is never withdrawn.
+    do:
+      - click: btn_trust_root_untrust_humanity_accord
+    expect:
+      visible:
+        - sheet_trust_root_untrust
+        - trust_root_untrust_fact_1
+        - trust_root_untrust_fact_2
+        - trust_root_untrust_fact_3
+      text:
+        trust_root_untrust_fact_1: "humanity-accord"
+        trust_root_untrust_fact_2: "trace:*"
+
+  - step_id: untrust_cancelled
+    title: Cancelling withdraws nothing
+    do:
+      - click: btn_trust_root_untrust_cancel
+    expect:
+      visible: [card_trust_root_humanity_accord]
+      absent: [sheet_trust_root_untrust, card_trust_root_untrust_result]

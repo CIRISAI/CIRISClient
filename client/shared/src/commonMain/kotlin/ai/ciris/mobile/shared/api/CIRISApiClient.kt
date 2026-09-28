@@ -5525,6 +5525,130 @@ class CIRISApiClient(
         }
     }
 
+    // ─── THIS NODE'S TRUST ROOT (card: Accord › trust root) — CIRISServer#400 ──
+    //
+    // `src/trust_root_api.rs`. All three are LOOPBACK-ONLY (`:422-424`,
+    // CIRISServer#652): a caller off the node's machine gets a bare 403 with no
+    // `reason_id`. Every non-2xx raises a typed [NodeRefusal] so the screen can tell
+    // "not on this machine" from "this node predates the route" from a typed
+    // refusal (`trustRootFailure`); none of them returns an empty listing.
+    // Node-owned: always the NODE url, never `$baseUrl` (CIRISAgent#1213).
+
+    /** `GET {nodeUrl}/v1/trust-root` — which roots this node accepts, and its genesis posture. */
+    suspend fun getTrustRoots(
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootListingDto {
+        val method = "getTrustRoots"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/trust-root") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootListingDto.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/trust-root/import` — install AND accept a portable seed.
+     * [bundle] rides verbatim; [allegianceFrom] is the source node's read-API base
+     * URL, optional (`trust_root_api.rs:207-212`).
+     */
+    suspend fun importTrustRoot(
+        bundle: kotlinx.serialization.json.JsonElement,
+        allegianceFrom: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootImportResult {
+        val method = "importTrustRoot"
+        logInfo(method, "POST $nodeUrl/v1/trust-root/import allegiance_from=${allegianceFrom ?: "(none)"}")
+        val client = federationHttpClient()
+        return try {
+            val bodyJson = buildJsonObject {
+                put("bundle", bundle)
+                allegianceFrom?.trim()?.takeIf { it.isNotEmpty() }?.let { put("allegiance_from", JsonPrimitive(it)) }
+            }
+            val response = client.post("$nodeUrl/v1/trust-root/import") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyJson.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootImportResult.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `DELETE {nodeUrl}/v1/trust-root/{root_key_id}` — withdraw this node's acceptance (records are kept). */
+    suspend fun untrustRoot(
+        rootKeyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootUntrustResult {
+        val method = "untrustRoot"
+        logInfo(method, "DELETE $nodeUrl/v1/trust-root/$rootKeyId")
+        val client = federationHttpClient()
+        return try {
+            val response = client.delete("$nodeUrl/v1/trust-root/${rootKeyId.encodeURLPathPart()}") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootUntrustResult.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET {nodeUrl}/v1/accord/family/history` — the accord family's version chain (`src/accord.rs:2355`). */
+    suspend fun getAccordFamilyHistory(
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.FamilyHistoryResponse {
+        val method = "getAccordFamilyHistory"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/accord/family/history") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.FamilyHistoryResponse.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     // ─── Tier S (self-directed) + tier R (per-reader) — CIRISServer#345 ───────
     //
     // `src/admin_ops.rs`, the two rungs that act on NOBODY else: tier S is this

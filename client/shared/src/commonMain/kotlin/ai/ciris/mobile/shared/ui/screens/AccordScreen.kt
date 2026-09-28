@@ -139,6 +139,8 @@ fun AccordScreen(
      * holder-custody inputs (key_id + USB ML-DSA + PKCS#11) as the co-scrub flows.
      */
     onConferDuty: () -> Unit = {},
+    /** Open this node's trust root (`TrustRootScreen`) — the node's side of this root. */
+    onOpenTrustRoot: () -> Unit = {},
 ) {
     val family by viewModel.family.collectAsState()
     val holders by viewModel.holders.collectAsState()
@@ -366,6 +368,14 @@ fun AccordScreen(
                     AttestationCard(att = att, viewer = viewer, onOp = { op -> handleOp(op, att) { sheet = it } })
                 }
             }
+
+            // ── §1b This node's trust in the root + the family's versions ─────
+            //    The accord family IS the default trust root; whether THIS node
+            //    trusts it (and the re-root levers) is the detail behind this row.
+            AccordTrustRootEntry(onOpen = onOpenTrustRoot)
+            val familyHistory by viewModel.familyHistory.collectAsState()
+            LaunchedEffect(Unit) { viewModel.loadFamilyHistory() }
+            AccordFamilyHistorySection(familyHistory)
 
             // ── §2 Canonical servers ─────────────────────────────────────────
             SectionHeader(localizedString("mobile.accord_section_canonical"), false)
