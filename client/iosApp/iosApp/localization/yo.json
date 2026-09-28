@@ -652,6 +652,9 @@
     "ladder_t2": "ipele 2 · yà sọ́tọ̀ / mú ìyàsọ́tọ̀ kúrò",
     "ladder_t3": "ipele 3 · sọ̀kalẹ̀ (ó tún nílò QUORUM)",
     "ladder_t4": "ipele 4 · fagilé ìgbàwọlé / gbà wọlé padà, kọ ìkọ̀wé / gba ìkọ̀wé",
+    "ladder_tier_generic": "ìpele {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Nódù yìí kò tẹ ìtumọ̀-ọ̀rọ̀ ojúṣe rẹ̀ jáde (kò sí /v1/vocabulary), nítorí náà àkọsílẹ̀ yìí jẹ́ ẹ̀dà tí app yìí fúnra rẹ̀ ní, ó sì lè jẹ́ pé àwọn ojúṣe tí nódù náà gbà kò sí nínú rẹ̀.",
+    "vocabulary_unreadable": "A kò lè ka ìtumọ̀-ọ̀rọ̀ ojúṣe nódù yìí ({detail}), nítorí náà àkọsílẹ̀ yìí jẹ́ ẹ̀dà tí app yìí fúnra rẹ̀ ní, ó sì lè jẹ́ pé àwọn ojúṣe tí nódù náà gbà kò sí nínú rẹ̀.",
     "not_started": "Kò sí ohun tí a dábàá síbẹ̀. Kún ìfilélọ́wọ́ náà kí o sì dábàá ìfọwọ́sí àkọ́kọ́.",
     "pending_hint": "A kò tíì fi lé e lọ́wọ́ — fi apá kan tí ó ti wà lé olùdìmú tó kàn lọ́wọ́ kí ó bá fọwọ́ sí i.",
     "propose_button": "Dábàá",
@@ -683,7 +686,12 @@
     "verb_takedown": "takedown — tẹ ìkéde ìmúkúrò jáde ní ipò ẹni tí ó fi àṣẹ ránṣẹ́",
     "verbs_help": "Yan gbogbo ojúṣe tí ìfúnni yìí gbọ́dọ̀ gbé. Wọ́n ń rìn pọ̀ gẹ́gẹ́ bí àkójọ kan lórí ìfúnni kan — o kò nílò ayẹyẹ ọ̀tọ̀ fún ojúṣe kọ̀ọ̀kan.",
     "verbs_label": "Àwọn ojúṣe láti fifúnni",
-    "verbs_none": "Kò sí ojúṣe tí a yàn. Ìfúnni tí kò ní àyíká kò fi ohunkóhun fúnni."
+    "verbs_none": "Kò sí ojúṣe tí a yàn. Ìfúnni tí kò ní àyíká kò fi ohunkóhun fúnni.",
+    "source_absent": "Nódù yìí kò tí ì mọ Ìdílé accord kankan, nítorí náà kò sí àṣẹ kan láti fi lé ẹlòmíràn lọ́wọ́. Kò sí ohun tí ó bà jẹ́; kò sí ohun tí a lè fi lé ẹnikẹ́ni lọ́wọ́ títí ọ̀kan yóò fi wà.",
+    "not_conferrable_by_accord": "Accord náà kò lè fi èyí lé ẹnikẹ́ni lọ́wọ́. Àṣẹ accord kò lè dé àwọn pẹpẹ ìyọ́nda tàbí ìwé-àṣẹ (CC 4.2.1).",
+    "verb_unknown": "{duty}: ojúṣe tí nódù yìí ń ṣe tí app yìí kò tí ì ní àpèjúwe fún",
+    "verb_license": "ìwé-àṣẹ: gbé ìwé-àṣẹ kan jáde lórúkọ ẹni tí ó fi ojúṣe lé e lọ́wọ́",
+    "verb_grant": "ìyọ̀nda: gbé ìyọ̀nda kan jáde lórúkọ ẹni tí ó fi ojúṣe lé e lọ́wọ́"
   },
   "errors": {
     "adapter_not_available": "Olùṣàkóso atúnṣe kò sí",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Nódù yìí kò ṣe ìròyìn àwọn ìrìnnà rẹ̀.",
     "audit_not_on_this_node": "Nódù yìí kò ní àkọsílẹ̀ àyẹ̀wò aṣojú. Kò sí ohun tí a yọ kúrò.",
     "consent_not_on_this_node": "Nódù yìí kò ní àwọn àkọsílẹ̀ ìyọ́nda. Aṣojú ni ó ń pa ìyọ́nda mọ́, nódù yìí sì ń ṣiṣẹ́ láìsí ọ̀kan.",
-    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà."
+    "billing_not_on_this_node": "Nódù yìí kò ń ṣàkóso owó-ìsanwó. Kò sí ìwọ̀ntúnwọ̀nsì níbí, kò sì sí ohunkóhun láti rà.",
+    "moderation_named_none": "Kò sí àdúgbò tí a ti bí nípa rẹ̀ síbẹ̀. Tẹ kọ́kọ́rọ́ àdúgbò kan sí ìsàlẹ̀ kí o sì tẹ Ṣàyẹ̀wò.",
+    "moderation_named_error": "A kò lè bi nódù yìí nípa àdúgbò yẹn ({detail}). Èyí KÌ Í ṣe ìjábọ̀ pé ó ní alábòójútó.",
+    "moderation_named_not_on_this_node": "Nódù yìí kò lè sọ ẹni tí ń ṣe àmójútó àwùjọ kan síbẹ̀: kò ní ọ̀nà fún wíwá olùmójútó tí a dárúkọ. Èyí KÌ Í ṣe ìjábọ̀ pé àwùjọ náà ní olùmójútó.",
+    "moderation_verdict_unknown": "Nódù náà dáhùn pẹ̀lú ìdájọ́ tí app yìí kò mọ̀ ({verdict}). Ṣe bí àdúgbò náà kò tí ì gba àṣẹ láti ṣiṣẹ́.",
+    "moderation_candidate_row": "Olùdíje: {candidate}. Nódù náà sọ ẹni tí a yàn, ṣùgbọ́n kò tíì fi àkọsílẹ̀ iṣẹ́ tí ó yàn wọ́n hàn."
   },
   "moderation": {
     "ladder": {
@@ -3179,7 +3192,37 @@
       "unparsable_response": "Nódù náà dáhùn pẹ̀lú ara-ìhìn tí app yìí kò lè kà.",
       "window_application": "Nódù yìí ni ó lo fèrèsé àkókò náà, kì í ṣe ìbéèrè náà, nítorí náà a lo ààlà ojú-ìwé sí àkójọ tí ó gbòòrò sí i, ìyànfẹ́ yìí sì lè padà wá ní àìtó.",
       "window_substrate": "Ìbéèrè ìpìlẹ̀ náà ni ó fi fèrèsé àkókò náà lélẹ̀.",
-      "withdrew_row": "A fa {id} sẹ́yìn"
+      "withdrew_row": "A fa {id} sẹ́yìn",
+      "tier_no_scope": "Ìpele {tier} · nódù yìí kò dárúkọ àgbègbè ìfilélẹ̀-àṣẹ kan fún ẹsẹ̀ àkàbà yìí.",
+      "reaches_substrate_yes": "Èyí yí ohun tí ìpìlẹ̀ náà gbà padà: a ti ti ẹnu-ọ̀nà náà, kì í ṣe pé a kàn ṣàkọsílẹ̀ rẹ̀ nìkan.",
+      "reaches_substrate_no": "Èyí kàn yí ohun tí nódù yìí ń kọ sílẹ̀ padà nìkan: a ti ṣàkọsílẹ̀ rẹ̀, ṣùgbọ́n ohun tí ìpìlẹ̀ náà gbà kò yí padà.",
+      "catalogue_not_on_this_node": "Nódù yìí kò tẹ àkàbà rẹ̀ jáde (kò sí /v1/operations), nítorí náà àwọn ẹsẹ̀ àkàbà yìí jẹ́ ẹ̀dà tí app yìí fúnra rẹ̀ ní. Nódù náà ni yóò ṣì pinnu ìpele, àgbègbè àti kóórọ̀m nígbà tí o bá fi lélẹ̀.",
+      "catalogue_unreadable": "A kò lè ka àkàbà nódù yìí ({detail}), nítorí náà àwọn ẹsẹ̀ àkàbà yìí jẹ́ ẹ̀dà tí app yìí fúnra rẹ̀ ní. Nódù náà ni yóò ṣì pinnu ìpele, àgbègbè àti kóórọ̀m nígbà tí o bá fi lélẹ̀.",
+      "not_reached_unstated": "Nódù yìí kò sọ ààlà ọ̀tọ̀ kan fún ẹsẹ̀ àkàbà yìí ju ohun tí a ti sọ pé ó lè dé lókè lọ.",
+      "undone_by_op": "{op} ló yí i padà. Àwọn ìlà méjèèjì wà láàyè gẹ́gẹ́ bí ìtàn tí a lè kà.",
+      "undone_is_reversal": "Ẹsẹ̀ àkàbà yìí yí {op} padà. Àwọn ìlà méjèèjì wà láàyè gẹ́gẹ́ bí ìtàn tí a lè kà.",
+      "undone_no_inverse": "Nódù náà kò dárúkọ iṣẹ́ kan tí ó yí ẹsẹ̀ àkàbà yìí padà.",
+      "delegations_not_returned": "Nódù yìí kò dá àwọn ID ìfilélẹ̀-àṣẹ rẹ padà síbẹ̀ (ó nílò 0.5.218), nítorí náà lẹ̀ ID ìfilélẹ̀-àṣẹ tí ó ní àgbègbè ẹsẹ̀ àkàbà yìí nínú sí ibí.",
+      "delegations_unreadable": "A kò lè ka àwọn ID ìfilélẹ̀-àṣẹ rẹ láti ọ̀dọ̀ nódù yìí ({detail}). Lẹ̀ ID ìfilélẹ̀-àṣẹ tí ó ní àgbègbè ẹsẹ̀ àkàbà yìí nínú sí ibí.",
+      "delegations_none": "Nódù yìí kò ní ìfilélẹ̀-àṣẹ rẹ kankan. Ẹsẹ̀ àkàbà yìí nílò ọ̀kan tí ó ní {scope} nínú.",
+      "delegations_wrong_scope": "Nódù yìí dá {count} ìfilélẹ̀-àṣẹ rẹ padà, tí ó ní {carried} nínú. Kò sí ọ̀kan tí ó ní {scope} nínú, tí ẹsẹ̀ àkàbà yìí nílò, nítorí náà a kò fi èyíkéyìí hàn: nódù náà yóò kọ̀ ọ́. Lẹ̀ ID ìfilélẹ̀-àṣẹ tí ó ní i sí ibí.",
+      "delegations_pick": "Àwọn ìfilélẹ̀-àṣẹ rẹ lórí nódù yìí tí ó ní {scope} nínú:"
+    },
+    "proposal": {
+      "refused_minor": "Àkọsílẹ̀ ọjọ́ orí rẹ lórí nódù yìí sọ pé ọmọdé ni ọ, nítorí náà a gbé èyí sókè nípasẹ̀ olùtọ́jú rẹ, kì í ṣe tààrà. Kò sí ohun tí a fi lélẹ̀; bèèrè lọ́wọ́ olùtọ́jú rẹ láti gbé e sókè.",
+      "title": "Gbé èyí sókè pẹ̀lú àdúgbò",
+      "framing": "Ẹnikẹ́ni lè gbé èyí sókè; wákàtí 48 ni àdúgbò náà ní; alábòójútó lè ṣe ìṣe kí àkókò yẹn tó pé.",
+      "action_label": "Kí ni o ń dábàá?",
+      "action_report": "Ìjábọ̀",
+      "action_takedown": "Bèèrè fún yíyọ kúrò",
+      "action_question": "Fi-sílẹ̀-tàbí-yọ-kúrò?",
+      "reason_label": "Ìdí (kò pọn dandan)",
+      "reason_placeholder": "Kí ló dé tí o fi ń gbé èyí sókè?",
+      "submit": "Fi lélẹ̀: ṣí fèrèsé wákàtí 48",
+      "submitting": "Ń ṣí fèrèsé náà…",
+      "raised": "A ti gbé sókè. Fèrèsé wákàtí 48 ti àdúgbò náà ti ṣí; alábòójútó tàbí olùtọ́jú lè ṣe ìṣe kí àkókò yẹn tó pé.",
+      "error": "A kò lè gbé èyí sókè: {detail}. Kò sí ohun tí a fi lélẹ̀.",
+      "not_on_this_node": "Nódù yìí kò tíì lè gba dábàá àwùjọ kan: kò ní ọ̀nà /v1/safety/reports (nílò CIRISServer#665). Kò sí ohun tí a fi lélẹ̀. Bí o bá ní ojúṣe àmójútó, fi lélẹ̀ lábẹ́ Ààbò > Àmójútó dípò rẹ̀."
     }
   },
   "nav": {

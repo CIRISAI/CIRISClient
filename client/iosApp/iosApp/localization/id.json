@@ -652,6 +652,9 @@
     "ladder_t2": "tingkat 2 · karantina / lepas karantina",
     "ladder_t3": "tingkat 3 · turunkan (juga memerlukan KUORUM)",
     "ladder_t4": "tingkat 4 · cabut penerimaan / terima kembali, tolak-tulis / terima-tulis",
+    "ladder_tier_generic": "tier {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Node ini tidak mempublikasikan kosakata tugasnya (tidak ada /v1/vocabulary), sehingga daftar ini adalah salinan milik aplikasi ini sendiri dan mungkin belum mencakup tugas yang diterima node.",
+    "vocabulary_unreadable": "Kosakata tugas node ini tidak dapat dibaca ({detail}), sehingga daftar ini adalah salinan milik aplikasi ini sendiri dan mungkin belum mencakup tugas yang diterima node.",
     "not_started": "Belum ada yang diusulkan. Isi pemberian tugas dan usulkan tanda tangan pertama.",
     "pending_hint": "Belum diberikan — serahkan berkas parsialnya kepada pemegang berikutnya untuk ikut ditandatangani.",
     "propose_button": "Usulkan",
@@ -681,9 +684,14 @@
     "verb_review": "Tinjau",
     "verb_slash": "Slash",
     "verb_takedown": "takedown — terbitkan pemberitahuan penghapusan atas nama pemberi delegasi",
+    "verb_unknown": "{duty}: tugas yang dijalankan node ini namun belum memiliki deskripsi dari aplikasi ini",
+    "verb_license": "license: menerbitkan lisensi atas nama pemberi delegasi",
+    "verb_grant": "grant: menerbitkan hibah atas nama pemberi delegasi",
     "verbs_help": "Pilih setiap tugas yang harus dibawa oleh pemberian ini. Semuanya berjalan bersama sebagai satu kumpulan pada satu pemberian — Anda tidak perlu upacara terpisah untuk tiap tugas.",
     "verbs_label": "Tugas yang akan diberikan",
-    "verbs_none": "Tidak ada tugas yang dipilih. Pemberian tanpa cakupan tidak memberikan apa pun."
+    "verbs_none": "Tidak ada tugas yang dipilih. Pemberian tanpa cakupan tidak memberikan apa pun.",
+    "source_absent": "Node ini belum mengenal keluarga accord mana pun, sehingga tidak ada kewenangan yang dapat dijadikan dasar pemberian. Tidak ada yang rusak; tidak ada yang dapat diberikan sampai ada keluarga accord.",
+    "not_conferrable_by_accord": "Accord tidak dapat memberikan hal ini. Kewenangan accord tidak dapat menjangkau ranah persetujuan atau lisensi (CC 4.2.1)."
   },
   "errors": {
     "adapter_not_available": "Manajer adaptor tidak tersedia",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Node ini tidak melaporkan transportnya.",
     "audit_not_on_this_node": "Node ini tidak menyimpan log audit agen. Tidak ada yang disaring.",
     "consent_not_on_this_node": "Node ini tidak menyimpan catatan persetujuan. Persetujuan disimpan oleh agen, dan node ini berjalan tanpa agen.",
-    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli."
+    "billing_not_on_this_node": "Node ini tidak menangani penagihan. Tidak ada saldo di sini dan tidak ada yang bisa dibeli.",
+    "moderation_named_none": "Belum ada komunitas yang ditanyakan. Ketik kunci komunitas dan tekan Periksa.",
+    "moderation_named_error": "Tidak dapat menanyakan komunitas tersebut kepada node ini ({detail}). Ini BUKAN laporan bahwa komunitas tersebut memiliki moderator.",
+    "moderation_named_not_on_this_node": "Node ini belum dapat menyebutkan siapa yang memoderasi komunitas: node ini tidak memiliki rute moderator-bernama. Ini BUKAN laporan bahwa komunitas tersebut memiliki moderator.",
+    "moderation_verdict_unknown": "Node ini memberikan jawaban putusan yang tidak dikenali aplikasi ini ({verdict}). Anggap komunitas tersebut belum diizinkan untuk beroperasi.",
+    "moderation_candidate_row": "Kandidat: {candidate}. Node menyebutkan siapa yang terpilih, tetapi belum menyebutkan rekam jejak yang membuat mereka terpilih."
   },
   "moderation": {
     "ladder": {
@@ -3179,7 +3192,37 @@
       "unparsable_response": "Node menjawab dengan isi yang tidak dapat dibaca aplikasi ini.",
       "window_application": "Jendela waktu diterapkan oleh node ini, bukan oleh kueri, sehingga batas halaman diterapkan pada himpunan yang lebih luas dan seleksi ini dapat kembali dengan hasil yang kurang dari semestinya.",
       "window_substrate": "Jendela waktu ditegakkan oleh kueri substrat.",
-      "withdrew_row": "Menarik {id}"
+      "withdrew_row": "Menarik {id}",
+      "tier_no_scope": "Tier {tier} · node ini tidak menyebutkan cakupan delegasi untuk anak tangga ini.",
+      "reaches_substrate_yes": "Ini mengubah apa yang diterima substrat: pintu ditutup, bukan hanya dicatat.",
+      "reaches_substrate_no": "Ini hanya mengubah apa yang dicatat node ini: hal ini dicatat, dan apa yang diterima substrat tidak berubah.",
+      "catalogue_not_on_this_node": "Node ini tidak mempublikasikan tangganya (tidak ada /v1/operations), sehingga anak tangga ini adalah salinan milik aplikasi ini sendiri. Node tetap menentukan tier, cakupan, dan kuorum saat Anda melakukan commit.",
+      "catalogue_unreadable": "Tangga node ini tidak dapat dibaca ({detail}), sehingga anak tangga ini adalah salinan milik aplikasi ini sendiri. Node tetap menentukan tier, cakupan, dan kuorum saat Anda melakukan commit.",
+      "not_reached_unstated": "Node ini tidak menyatakan batas terpisah untuk anak tangga ini di luar jangkauan yang disebutkan di atas.",
+      "undone_by_op": "Dibatalkan oleh {op}. Kedua baris tetap ada sebagai riwayat yang dapat dibaca.",
+      "undone_is_reversal": "Anak tangga ini membatalkan {op}. Kedua baris tetap ada sebagai riwayat yang dapat dibaca.",
+      "undone_no_inverse": "Node ini tidak menyebutkan operasi apa pun yang membatalkan anak tangga ini.",
+      "delegations_not_returned": "Node ini belum mengembalikan id delegasi Anda (memerlukan 0.5.218), sehingga tempelkan id delegasi yang membawa cakupan anak tangga ini.",
+      "delegations_unreadable": "Id delegasi Anda tidak dapat dibaca dari node ini ({detail}). Tempelkan id delegasi yang membawa cakupan anak tangga ini.",
+      "delegations_none": "Node ini tidak memegang delegasi apa pun milik Anda. Anak tangga ini memerlukan delegasi yang membawa {scope}.",
+      "delegations_wrong_scope": "Node ini mengembalikan {count} delegasi Anda, membawa {carried}. Tidak satu pun membawa {scope} yang dibutuhkan anak tangga ini, sehingga tidak ada yang ditawarkan: node akan menolaknya. Tempelkan id delegasi yang membawanya.",
+      "delegations_pick": "Delegasi Anda pada node ini yang membawa {scope}:"
+    },
+    "proposal": {
+      "title": "Ajukan ini kepada komunitas",
+      "framing": "Siapa pun dapat mengajukan ini; komunitas memiliki waktu 48 jam; moderator dapat bertindak lebih cepat.",
+      "action_label": "Apa yang Anda usulkan?",
+      "action_report": "Laporkan",
+      "action_takedown": "Ajukan penghapusan",
+      "action_question": "Pertahankan atau hapus?",
+      "reason_label": "Alasan (opsional)",
+      "reason_placeholder": "Mengapa Anda mengajukan ini?",
+      "submit": "Kirim: buka jendela waktu 48 jam",
+      "submitting": "Membuka jendela waktu…",
+      "raised": "Diajukan. Jendela waktu 48 jam komunitas telah dibuka; moderator atau steward dapat bertindak lebih cepat.",
+      "error": "Tidak dapat mengajukan ini: {detail}. Tidak ada yang diarsipkan.",
+      "not_on_this_node": "Node ini belum dapat menerima usulan komunitas: node ini tidak memiliki rute /v1/safety/reports (memerlukan CIRISServer#665). Tidak ada yang diarsipkan. Jika Anda memegang tugas moderasi, ajukan melalui Safety > Moderation sebagai gantinya.",
+      "refused_minor": "Catatan usia Anda pada node ini menyatakan Anda masih di bawah umur, sehingga hal ini diajukan melalui steward Anda, bukan secara langsung. Tidak ada yang diarsipkan; mintalah steward Anda untuk mengajukannya."
     }
   },
   "nav": {

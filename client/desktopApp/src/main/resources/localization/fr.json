@@ -683,7 +683,15 @@
     "verb_takedown": "takedown — publier un avis de retrait au nom du délégant",
     "verbs_help": "Sélectionnez chaque devoir que cet octroi doit porter. Ils voyagent ensemble, en un seul ensemble sur un seul octroi — inutile de faire une cérémonie distincte par devoir.",
     "verbs_label": "Devoirs à conférer",
-    "verbs_none": "Aucun devoir sélectionné. Un octroi sans portée ne confère rien."
+    "verbs_none": "Aucun devoir sélectionné. Un octroi sans portée ne confère rien.",
+    "source_absent": "Ce nœud ne connaît encore aucune famille d'accord ; il n'existe donc aucune autorité à partir de laquelle conférer. Rien n'est cassé ; rien ne peut être conféré jusqu'à ce qu'une famille existe.",
+    "not_conferrable_by_accord": "L'accord ne peut pas conférer ceci. L'autorité de l'accord ne peut pas atteindre les plans du consentement ou de la licence (CC 4.2.1).",
+    "verb_unknown": "{duty} : un devoir que ce nœud assure et pour lequel cette application n'a pas encore de description",
+    "verb_license": "license : délivrer une licence pour le compte du délégant",
+    "verb_grant": "grant : délivrer une attribution pour le compte du délégant",
+    "ladder_tier_generic": "palier {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Ce nœud ne publie pas son vocabulaire des devoirs (pas de /v1/vocabulary) ; cette liste est donc la copie propre à cette application et peut ne pas inclure des devoirs que le nœud accepte.",
+    "vocabulary_unreadable": "Impossible de lire le vocabulaire des devoirs de ce nœud ({detail}) ; cette liste est donc la copie propre à cette application et peut ne pas inclure des devoirs que le nœud accepte."
   },
   "errors": {
     "adapter_not_available": "Gestionnaire d'adaptateur non disponible",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Ce nœud ne rapporte pas ses transports.",
     "audit_not_on_this_node": "Ce nœud ne tient pas de journal d'audit d'agent. Rien n'a été filtré.",
     "consent_not_on_this_node": "Ce nœud ne détient pas d'enregistrements de consentement. Le consentement est conservé par un agent, et ce nœud fonctionne sans agent.",
-    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter."
+    "billing_not_on_this_node": "Ce nœud ne gère pas la facturation. Il n'y a aucun solde ici, ni rien à acheter.",
+    "moderation_named_none": "Aucune communauté interrogée pour l'instant. Saisissez une clé de communauté et appuyez sur Vérifier.",
+    "moderation_named_error": "Impossible d'interroger ce nœud à propos de cette communauté ({detail}). Ceci n'indique PAS qu'elle a un modérateur.",
+    "moderation_named_not_on_this_node": "Ce nœud ne peut pas encore indiquer qui modère une communauté : il n'a pas de route de modérateur nommé. Ceci n'indique PAS que la communauté a un modérateur.",
+    "moderation_verdict_unknown": "Le nœud a répondu avec un verdict que cette application ne connaît pas ({verdict}). Considérez que la communauté n'est pas autorisée à opérer.",
+    "moderation_candidate_row": "Candidat : {candidate}. Le nœud indique qui, mais pas encore le bilan qui l'a désigné."
   },
   "moderation": {
     "ladder": {
@@ -3179,7 +3192,37 @@
       "unparsable_response": "Le nœud a répondu avec un corps que cette application n'a pas pu lire.",
       "window_application": "La fenêtre temporelle a été appliquée par ce nœud plutôt que par la requête : la borne de page a donc porté sur un ensemble plus large, et cette sélection peut revenir incomplète.",
       "window_substrate": "La fenêtre temporelle a été appliquée par la requête du substrat.",
-      "withdrew_row": "Retrait de {id}"
+      "withdrew_row": "Retrait de {id}",
+      "tier_no_scope": "Palier {tier} · ce nœud ne nomme aucune portée de délégation pour cet échelon.",
+      "reaches_substrate_yes": "Ceci change ce que le substrat accepte : la porte est fermée, pas simplement notée.",
+      "reaches_substrate_no": "Ceci ne change que ce que ce nœud consigne : c'est noté, mais ce que le substrat accepte reste inchangé.",
+      "catalogue_not_on_this_node": "Ce nœud ne publie pas son échelle (pas de /v1/operations) ; ces échelons sont donc la copie propre à cette application. Le nœud continue de décider du palier, de la portée et du quorum au moment de la validation.",
+      "catalogue_unreadable": "Impossible de lire l'échelle de ce nœud ({detail}) ; ces échelons sont donc la copie propre à cette application. Le nœud continue de décider du palier, de la portée et du quorum au moment de la validation.",
+      "not_reached_unstated": "Ce nœud n'énonce aucune limite distincte pour cet échelon au-delà de ce qu'il atteint, ci-dessus.",
+      "undone_by_op": "Annulé par {op}. Les deux lignes subsistent comme historique lisible.",
+      "undone_is_reversal": "Cet échelon annule {op}. Les deux lignes subsistent comme historique lisible.",
+      "undone_no_inverse": "Le nœud ne nomme aucune opération qui annule cet échelon.",
+      "delegations_not_returned": "Ce nœud ne renvoie pas encore vos identifiants de délégation (il lui faut 0.5.218) ; collez donc l'identifiant d'une délégation qui porte la portée de cet échelon.",
+      "delegations_unreadable": "Impossible de lire vos identifiants de délégation depuis ce nœud ({detail}). Collez l'identifiant d'une délégation qui porte la portée de cet échelon.",
+      "delegations_none": "Ce nœud ne détient aucune délégation de votre part. Cet échelon en exige une portant {scope}.",
+      "delegations_wrong_scope": "Ce nœud a renvoyé {count} délégation(s) de votre part, portant {carried}. Aucune ne porte {scope}, qu'exige cet échelon ; aucune n'est donc proposée : le nœud la refuserait. Collez l'identifiant d'une délégation qui la porte.",
+      "delegations_pick": "Vos délégations sur ce nœud qui portent {scope} :"
+    },
+    "proposal": {
+      "title": "Soulever ceci auprès de la communauté",
+      "framing": "Tout le monde peut soulever ceci ; la communauté dispose de 48 heures ; un modérateur peut agir plus tôt.",
+      "action_label": "Que proposez-vous ?",
+      "action_report": "Signaler",
+      "action_takedown": "Demander le retrait",
+      "action_question": "Conserver ou supprimer ?",
+      "reason_label": "Motif (facultatif)",
+      "reason_placeholder": "Pourquoi soulevez-vous ceci ?",
+      "submit": "Soumettre : ouvrir la fenêtre de 48 heures",
+      "submitting": "Ouverture de la fenêtre…",
+      "raised": "Soulevé. La fenêtre communautaire de 48 heures est ouverte ; un modérateur ou un tuteur peut agir plus tôt.",
+      "error": "Impossible de soulever ceci : {detail}. Rien n'a été déposé.",
+      "not_on_this_node": "Ce nœud ne peut pas encore recevoir de proposition communautaire : il n'a pas de route /v1/safety/reports (nécessite CIRISServer#665). Rien n'a été déposé. Si vous détenez un devoir de modération, déposez plutôt sous Sécurité > Modération.",
+      "refused_minor": "Votre enregistrement d'âge sur ce nœud indique que vous êtes mineur ; ceci est donc soulevé par l'intermédiaire de votre tuteur, et non directement. Rien n'a été déposé ; demandez à votre tuteur de le soulever."
     }
   },
   "nav": {

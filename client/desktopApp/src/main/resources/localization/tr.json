@@ -652,6 +652,9 @@
     "ladder_t2": "kademe 2 · karantinaya al / karantinadan çıkar",
     "ladder_t3": "kademe 3 · indir (ayrıca bir YETERSAYI gerektirir)",
     "ladder_t4": "kademe 4 · kabulü kaldır / yeniden kabul et, yazmaları reddet / yazmaları kabul et",
+    "ladder_tier_generic": "kademe {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Bu düğüm görev sözlüğünü yayınlamıyor (/v1/vocabulary yok); dolayısıyla bu liste, bu uygulamanın kendi kopyasıdır ve düğümün kabul ettiği görevlerden bazılarını içermiyor olabilir.",
+    "vocabulary_unreadable": "Bu düğümün görev sözlüğü okunamadı ({detail}); dolayısıyla bu liste, bu uygulamanın kendi kopyasıdır ve düğümün kabul ettiği görevlerden bazılarını içermiyor olabilir.",
     "not_started": "Henüz bir öneri yok. Devir bilgilerini doldurun ve ilk imzayı önerin.",
     "pending_hint": "Henüz devredilmedi — kısmi imzayı birlikte imzalaması için sonraki sahibe iletin.",
     "propose_button": "Öner",
@@ -681,9 +684,14 @@
     "verb_review": "İncele",
     "verb_slash": "Sil",
     "verb_takedown": "takedown — yetkiyi devredenin adına kaldırma bildirimi yayımla",
+    "verb_unknown": "{duty}: bu düğümün yerine getirdiği ancak bu uygulamanın henüz açıklamasının bulunmadığı bir görev",
+    "verb_license": "lisans: devreden adına bir lisans düzenle",
+    "verb_grant": "grant: devreden adına bir grant düzenle",
     "verbs_help": "Bu yetkinin taşıması gereken her görevi seçin. Hepsi tek bir yetki üzerinde tek bir küme olarak birlikte yol alır — her görev için ayrı bir tören gerekmez.",
     "verbs_label": "Verilecek görevler",
-    "verbs_none": "Hiçbir görev seçilmedi. Kapsamı olmayan bir yetki hiçbir şey vermez."
+    "verbs_none": "Hiçbir görev seçilmedi. Kapsamı olmayan bir yetki hiçbir şey vermez.",
+    "source_absent": "Bu düğüm henüz hiçbir anlaşma ailesi bilmiyor; dolayısıyla devredilecek bir yetki yok. Hiçbir şey bozuk değil; biri var olana dek hiçbir şey devredilemez.",
+    "not_conferrable_by_accord": "Anlaşma bunu devredemez. Anlaşma yetkisi, rıza veya lisans düzlemlerine erişemez (CC 4.2.1)."
   },
   "errors": {
     "adapter_not_available": "Adaptör yöneticisi kullanılamıyor",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Bu düğüm taşıma yöntemlerini bildirmiyor.",
     "audit_not_on_this_node": "Bu düğüm bir ajan denetim günlüğü tutmuyor. Hiçbir şey filtrelenmedi.",
     "consent_not_on_this_node": "Bu düğüm onay kayıtları tutmuyor. Onay bir ajan tarafından tutulur ve bu düğüm bir ajan olmadan çalışır.",
-    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok."
+    "billing_not_on_this_node": "Bu düğüm faturalandırma işlemi yapmıyor. Burada bir bakiye yok ve satın alınacak hiçbir şey yok.",
+    "moderation_named_none": "Henüz hakkında sorulmuş bir topluluk yok. Bir topluluk anahtarı yazın ve Kontrol Et'e basın.",
+    "moderation_named_error": "Bu düğüme o topluluk hakkında sorulamadı ({detail}). Bu, topluluğun bir moderatörü olduğuna dair bir bildirim DEĞİLDİR.",
+    "moderation_named_not_on_this_node": "Bu düğüm henüz bir topluluğu kimin modere ettiğini söyleyemiyor: adlandırılmış moderatör rotası yok. Bu, topluluğun bir moderatörü olduğuna dair bir bildirim DEĞİLDİR.",
+    "moderation_verdict_unknown": "Düğüm, bu uygulamanın bilmediği bir karar döndürdü ({verdict}). Topluluğu faaliyet göstermeye onaylanmamış kabul edin.",
+    "moderation_candidate_row": "Aday: {candidate}. Düğüm kimin seçildiğini belirtir, ancak henüz onları seçen sicili belirtmez."
   },
   "moderation": {
     "ladder": {
@@ -3179,7 +3192,37 @@
       "unparsable_response": "Düğüm, bu uygulamanın okuyamadığı bir gövdeyle yanıt verdi.",
       "window_application": "Zaman penceresini sorgu değil, bu düğüm uyguladı; dolayısıyla sayfa sınırı daha geniş bir kümeye uygulandı ve bu seçim eksik dönebilir.",
       "window_substrate": "Zaman penceresi alt katman sorgusuyla uygulandı.",
-      "withdrew_row": "{id} geri çekildi"
+      "withdrew_row": "{id} geri çekildi",
+      "tier_no_scope": "Kademe {tier} · bu düğüm, bu basamak için bir yetki devri kapsamı belirtmiyor.",
+      "reaches_substrate_yes": "Bu, alt katmanın kabul ettiğini değiştirir: kapı kapanır, sadece not edilmez.",
+      "reaches_substrate_no": "Bu, yalnızca bu düğümün kaydettiğini değiştirir: not edilir, ancak alt katmanın kabul ettiği değişmez.",
+      "catalogue_not_on_this_node": "Bu düğüm merdivenini yayınlamıyor (/v1/operations yok); dolayısıyla bu basamaklar bu uygulamanın kendi kopyasıdır. Onaylarken kademeyi, kapsamı ve yeter sayıyı yine de düğüm belirler.",
+      "catalogue_unreadable": "Bu düğümün merdiveni okunamadı ({detail}); dolayısıyla bu basamaklar bu uygulamanın kendi kopyasıdır. Onaylarken kademeyi, kapsamı ve yeter sayıyı yine de düğüm belirler.",
+      "not_reached_unstated": "Bu düğüm, yukarıda belirtilenin ötesinde bu basamak için ayrı bir sınır belirtmiyor.",
+      "undone_by_op": "{op} tarafından geri alındı. Her iki satır da okunabilir geçmiş olarak kalır.",
+      "undone_is_reversal": "Bu basamak {op}'i geri alır. Her iki satır da okunabilir geçmiş olarak kalır.",
+      "undone_no_inverse": "Düğüm, bu basamağı geri alan bir işlem belirtmiyor.",
+      "delegations_not_returned": "Bu düğüm henüz yetki devri kimliklerinizi döndürmüyor (0.5.218 sürümüne ihtiyacı var); bu basamağın kapsamını taşıyan bir yetki devrinin kimliğini yapıştırın.",
+      "delegations_unreadable": "Yetki devri kimlikleriniz bu düğümden okunamadı ({detail}). Bu basamağın kapsamını taşıyan bir yetki devrinin kimliğini yapıştırın.",
+      "delegations_none": "Bu düğüm sizin hiçbir yetki devrinizi tutmuyor. Bu basamak, {scope} kapsamını taşıyan bir yetki devri gerektiriyor.",
+      "delegations_wrong_scope": "Bu düğüm, {carried} kapsamını taşıyan {count} yetki devrinizi döndürdü. Bu basamağın gerektirdiği {scope} kapsamını hiçbiri taşımıyor; dolayısıyla hiçbiri sunulmuyor: düğüm bunu reddederdi. Bu kapsamı taşıyan bir yetki devrinin kimliğini yapıştırın.",
+      "delegations_pick": "Bu düğümde {scope} kapsamını taşıyan yetki devirleriniz:"
+    },
+    "proposal": {
+      "title": "Bunu toplulukla gündeme getir",
+      "framing": "Bunu herkes açabilir; topluluğun 48 saati var; bir moderatör daha önce işlem yapabilir.",
+      "action_label": "Ne öneriyorsunuz?",
+      "action_report": "Bildir",
+      "action_takedown": "Kaldırma talep et",
+      "action_question": "Tut mu, kaldır mı?",
+      "reason_label": "Gerekçe (isteğe bağlı)",
+      "reason_placeholder": "Bunu neden açıyorsunuz?",
+      "submit": "Gönder: 48 saatlik pencereyi aç",
+      "submitting": "Pencere açılıyor…",
+      "raised": "Açıldı. 48 saatlik topluluk penceresi açık; bir moderatör veya vekil daha önce işlem yapabilir.",
+      "error": "Bu konu açılamadı: {detail}. Hiçbir şey kaydedilmedi.",
+      "not_on_this_node": "Bu düğüm henüz bir topluluk önerisi alamıyor: /v1/safety/reports rotası yok (CIRISServer#665 gerekiyor). Hiçbir şey kaydedilmedi. Bir moderasyon göreviniz varsa, bunun yerine Güvenlik > Moderasyon altında kaydedin.",
+      "refused_minor": "Bu düğümdeki yaş kaydınız reşit olmadığınızı gösteriyor; dolayısıyla bu, doğrudan değil vekiliniz aracılığıyla açılır. Hiçbir şey kaydedilmedi; bunu açması için vekilinize başvurun."
     }
   },
   "nav": {

@@ -683,7 +683,15 @@
     "verb_takedown": "takedown — eine Entfernungsaufforderung im Namen des Vollmachtgebers veröffentlichen",
     "verbs_help": "Wählen Sie jede Pflicht, die diese Vollmacht umfassen soll. Sie gelten gemeinsam als ein Satz in einer Vollmacht — Sie benötigen keine eigene Zeremonie pro Pflicht.",
     "verbs_label": "Zu verleihende Pflichten",
-    "verbs_none": "Keine Pflicht ausgewählt. Eine Vollmacht ohne Geltungsbereich verleiht nichts."
+    "verbs_none": "Keine Pflicht ausgewählt. Eine Vollmacht ohne Geltungsbereich verleiht nichts.",
+    "source_absent": "Dieser Knoten kennt noch keine Accord-Familie, es gibt daher keine Autorität, von der übertragen werden könnte. Nichts ist defekt; es kann nichts übertragen werden, bis eine existiert.",
+    "not_conferrable_by_accord": "Accord kann dies nicht übertragen. Die Accord-Autorität kann die Ebenen der Einwilligung oder der Lizenzierung nicht erreichen (CC 4.2.1).",
+    "verb_unknown": "{duty}: eine Pflicht, die dieser Knoten erfüllt, für die diese App noch keine Beschreibung hat",
+    "verb_license": "Lizenzieren: eine Lizenz im Namen des Delegierenden ausstellen",
+    "verb_grant": "Erteilen: eine Bewilligung im Namen des Delegierenden ausstellen",
+    "ladder_tier_generic": "Stufe {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Dieser Knoten veröffentlicht sein Pflichtenvokabular nicht (kein /v1/vocabulary), diese Liste ist daher die eigene Kopie dieser App und könnte Pflichten fehlen, die der Knoten akzeptiert.",
+    "vocabulary_unreadable": "Das Pflichtenvokabular dieses Knotens konnte nicht gelesen werden ({detail}), diese Liste ist daher die eigene Kopie dieser App und könnte Pflichten fehlen, die der Knoten akzeptiert."
   },
   "errors": {
     "adapter_not_available": "Adapter-Manager nicht verfügbar",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Dieser Knoten meldet seine Transporte nicht.",
     "audit_not_on_this_node": "Dieser Knoten führt kein Audit-Protokoll für den Agenten. Es wurde nichts herausgefiltert.",
     "consent_not_on_this_node": "Dieser Knoten führt keine Zustimmungsdatensätze. Zustimmung wird von einem Agenten verwaltet, und dieser Knoten läuft ohne einen solchen.",
-    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen."
+    "billing_not_on_this_node": "Dieser Knoten verarbeitet keine Abrechnung. Es gibt hier keinen Saldo und nichts zu kaufen.",
+    "moderation_named_none": "Noch keine Community abgefragt. Geben Sie einen Community-Schlüssel ein und drücken Sie auf Prüfen.",
+    "moderation_named_error": "Dieser Knoten konnte zu dieser Community nicht befragt werden ({detail}). Das ist KEINE Meldung, dass sie einen Moderator hat.",
+    "moderation_named_not_on_this_node": "Dieser Knoten kann noch nicht sagen, wer eine Community moderiert: Er verfügt über keine Route für benannte Moderatoren. Das ist KEINE Meldung, dass die Community einen Moderator hat.",
+    "moderation_verdict_unknown": "Der Knoten hat mit einem Urteil geantwortet, das dieser App nicht bekannt ist ({verdict}). Behandeln Sie die Community als nicht zum Betrieb zugelassen.",
+    "moderation_candidate_row": "Kandidat: {candidate}. Der Knoten nennt, wer es ist – noch nicht die Bilanz, die zu dieser Auswahl führte."
   },
   "moderation": {
     "ladder": {
@@ -3173,13 +3186,43 @@
       "standing_unreadable": "nicht lesbar — das heißt NICHT „zugelassen“",
       "tier_and_scope": "Stufe {tier} · erfordert den Delegationsbereich {scope}, der aus dem eigenen geprüften Zustand dieses Knotens neu abgeleitet und nicht der Anfrage entnommen wird.",
       "transport_error": "Der Knoten war nicht erreichbar: {detail}",
+      "undone_by_op": "Durch {op} rückgängig gemacht. Beide Zeilen bleiben als lesbare Historie erhalten.",
+      "undone_is_reversal": "Diese Sprosse macht {op} rückgängig. Beide Zeilen bleiben als lesbare Historie erhalten.",
+      "undone_no_inverse": "Der Knoten nennt keine Operation, die diese Sprosse rückgängig macht.",
+      "delegations_not_returned": "Dieser Knoten gibt Ihre Delegations-IDs noch nicht zurück (er benötigt 0.5.218); fügen Sie daher die ID einer Delegation ein, die den Bereich dieser Sprosse trägt.",
+      "delegations_unreadable": "Ihre Delegations-IDs konnten nicht von diesem Knoten gelesen werden ({detail}). Fügen Sie die ID einer Delegation ein, die den Bereich dieser Sprosse trägt.",
+      "delegations_none": "Dieser Knoten hält keine Delegation von Ihnen. Diese Sprosse benötigt eine, die {scope} trägt.",
+      "delegations_wrong_scope": "Dieser Knoten hat {count} Delegation(en) von Ihnen zurückgegeben, die {carried} tragen. Keine trägt {scope}, was diese Sprosse benötigt, daher wird keine angeboten: Der Knoten würde sie abweisen. Fügen Sie die ID einer Delegation ein, die dies tut.",
+      "delegations_pick": "Ihre Delegationen auf diesem Knoten, die {scope} tragen:",
       "undone_by_reversal_op": "Für diese Sprosse gibt es einen Umkehrvorgang auf der Stufenleiter. Beide Zeilen bleiben als lesbare Historie bestehen: „getan und danach rückgängig gemacht“ ist nicht derselbe Sachverhalt wie „nie getan“.",
       "undone_never": "Es wird nicht rückgängig gemacht. Der Abstieg endet nie bei null — die Unschärfe und der Grabstein bleiben bestehen —, aber was abgeworfen wurde, kommt nicht zurück.",
       "undone_title": "Wie dies rückgängig gemacht wird",
       "unparsable_response": "Der Knoten hat mit einem Text geantwortet, den diese App nicht lesen konnte.",
       "window_application": "Das Zeitfenster wurde von diesem Knoten angewendet und nicht von der Abfrage; die Seitengrenze wurde daher auf eine größere Menge angewendet, und diese Auswahl kann zu klein zurückkommen.",
       "window_substrate": "Das Zeitfenster wurde von der Substratabfrage durchgesetzt.",
-      "withdrew_row": "{id} zurückgezogen"
+      "withdrew_row": "{id} zurückgezogen",
+      "tier_no_scope": "Stufe {tier} · dieser Knoten nennt keinen Delegationsbereich für diese Sprosse.",
+      "reaches_substrate_yes": "Dies ändert, was das Substrat akzeptiert: Die Tür wird geschlossen, nicht nur vermerkt.",
+      "reaches_substrate_no": "Dies ändert nur, was dieser Knoten erfasst: Es wird vermerkt, doch was das Substrat akzeptiert, bleibt unverändert.",
+      "catalogue_not_on_this_node": "Dieser Knoten veröffentlicht seine Leiter nicht (kein /v1/operations), diese Sprossen sind daher die eigene Kopie dieser App. Der Knoten entscheidet weiterhin über Stufe, Bereich und Quorum, wenn Sie bestätigen.",
+      "catalogue_unreadable": "Die Leiter dieses Knotens konnte nicht gelesen werden ({detail}), diese Sprossen sind daher die eigene Kopie dieser App. Der Knoten entscheidet weiterhin über Stufe, Bereich und Quorum, wenn Sie bestätigen.",
+      "not_reached_unstated": "Dieser Knoten nennt für diese Sprosse keine gesonderte Grenze, die über das hinausgeht, was er weiter oben erreicht."
+    },
+    "proposal": {
+      "refused_minor": "Ihr Altersdatensatz auf diesem Knoten weist Sie als minderjährig aus, daher wird dies über Ihren Steward vorgebracht, nicht direkt. Es wurde nichts eingereicht; bitten Sie Ihren Steward, es vorzubringen.",
+      "title": "Dies bei der Community vorbringen",
+      "framing": "Jeder kann dies vorbringen; die Community hat 48 Stunden Zeit; ein Moderator kann früher eingreifen.",
+      "action_label": "Was schlagen Sie vor?",
+      "action_report": "Melden",
+      "action_takedown": "Entfernung beantragen",
+      "action_question": "Behalten oder entfernen?",
+      "reason_label": "Grund (optional)",
+      "reason_placeholder": "Warum bringen Sie dies vor?",
+      "submit": "Einreichen: das 48-Stunden-Fenster öffnen",
+      "submitting": "Fenster wird geöffnet…",
+      "raised": "Vorgebracht. Das 48-Stunden-Fenster der Community ist geöffnet; ein Moderator oder Steward kann früher eingreifen.",
+      "error": "Konnte dies nicht vorbringen: {detail}. Es wurde nichts eingereicht.",
+      "not_on_this_node": "Dieser Knoten kann noch keinen Community-Vorschlag entgegennehmen: Er verfügt über keine /v1/safety/reports-Route (benötigt CIRISServer#665). Es wurde nichts eingereicht. Wenn Sie eine Moderationspflicht haben, reichen Sie es stattdessen unter Sicherheit > Moderation ein."
     }
   },
   "nav": {

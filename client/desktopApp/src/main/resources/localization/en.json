@@ -3139,7 +3139,7 @@
     "moderation_named_error": "Could not ask this node about that community ({detail}). This is NOT a report that it has a moderator.",
     "moderation_named_not_on_this_node": "This node can't say who moderates a community yet: it has no named-moderator route. This is NOT a report that the community has a moderator.",
     "moderation_verdict_unknown": "The node answered a verdict this app does not know ({verdict}). Treat the community as not cleared to operate.",
-    "moderation_candidate_row": "Candidate: {candidate}. The node names who, and not yet the track record that chose them."
+    "moderation_candidate_row": "Candidate: {candidate}. The node names who was chosen, but not yet the track record that chose them."
   },
   "moderation": {
     "ladder": {

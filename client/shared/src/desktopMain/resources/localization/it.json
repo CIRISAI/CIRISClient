@@ -683,7 +683,15 @@
     "verb_takedown": "takedown — pubblicare un avviso di rimozione per conto del delegante",
     "verbs_help": "Seleziona tutti i doveri che questa concessione deve portare con sé. Viaggiano insieme come un unico insieme su un'unica concessione: non serve una cerimonia separata per ogni dovere.",
     "verbs_label": "Doveri da conferire",
-    "verbs_none": "Nessun dovere selezionato. Una concessione senza ambito non conferisce nulla."
+    "verbs_none": "Nessun dovere selezionato. Una concessione senza ambito non conferisce nulla.",
+    "source_absent": "Questo nodo non conosce ancora alcuna famiglia dell'accord, quindi non c'è alcuna autorità da cui conferire. Niente è rotto; nulla può essere conferito finché non ne esiste una.",
+    "not_conferrable_by_accord": "L'accord non può conferire questo. L'autorità dell'accord non può raggiungere i piani del consenso o della licenza (CC 4.2.1).",
+    "verb_unknown": "{duty}: un incarico che questo nodo svolge e per il quale questa app non ha ancora una descrizione",
+    "verb_license": "licenza: rilasciare una licenza per conto del delegante",
+    "verb_grant": "concessione: rilasciare una concessione per conto del delegante",
+    "ladder_tier_generic": "tier {tier} · {ops}",
+    "vocabulary_not_on_this_node": "Questo nodo non pubblica il proprio vocabolario degli incarichi (nessun /v1/vocabulary), quindi questo elenco è una copia propria di questa app e potrebbe non includere incarichi che il nodo accetta.",
+    "vocabulary_unreadable": "Non è stato possibile leggere il vocabolario degli incarichi di questo nodo ({detail}), quindi questo elenco è una copia propria di questa app e potrebbe non includere incarichi che il nodo accetta."
   },
   "errors": {
     "adapter_not_available": "Gestore adattatore non disponibile",
@@ -3082,7 +3090,12 @@
     "transport_not_on_this_node": "Questo nodo non riporta i propri trasporti.",
     "audit_not_on_this_node": "Questo nodo non conserva un registro di controllo dell'agente. Nulla è stato filtrato.",
     "consent_not_on_this_node": "Questo nodo non conserva registrazioni di consenso. Il consenso è conservato da un agente, e questo nodo funziona senza uno.",
-    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare."
+    "billing_not_on_this_node": "Questo nodo non gestisce la fatturazione. Qui non c'è alcun saldo e nulla da acquistare.",
+    "moderation_named_none": "Nessuna comunità interrogata finora. Digita una chiave di comunità e premi Verifica.",
+    "moderation_named_error": "Non è stato possibile interrogare questo nodo su quella comunità ({detail}). Questo NON è un rapporto sul fatto che abbia un moderatore.",
+    "moderation_named_not_on_this_node": "Questo nodo non può ancora dire chi modera una comunità: non dispone di una rotta per il moderatore nominato. Questo NON è un rapporto sul fatto che la comunità abbia un moderatore.",
+    "moderation_verdict_unknown": "Il nodo ha risposto con un verdetto che questa app non conosce ({verdict}). Considera la comunità come non autorizzata a operare.",
+    "moderation_candidate_row": "Candidato: {candidate}. Il nodo indica chi, non ancora la storia che ha portato alla sua scelta."
   },
   "moderation": {
     "ladder": {
@@ -3179,7 +3192,37 @@
       "unparsable_response": "Il nodo ha risposto con un corpo che questa app non è riuscita a leggere.",
       "window_application": "La finestra temporale è stata applicata da questo nodo anziché dalla query, quindi il limite di pagina è stato applicato a un insieme più ampio e questa selezione può risultare incompleta.",
       "window_substrate": "La finestra temporale è stata applicata dalla query del substrato.",
-      "withdrew_row": "Ritirata {id}"
+      "withdrew_row": "Ritirata {id}",
+      "tier_no_scope": "Tier {tier} · questo nodo non indica alcun ambito di delega per questo gradino.",
+      "reaches_substrate_yes": "Questo modifica ciò che il substrato accetta: la porta viene chiusa, non solo annotata.",
+      "reaches_substrate_no": "Questo modifica solo ciò che questo nodo registra: viene annotato, e ciò che il substrato accetta resta invariato.",
+      "catalogue_not_on_this_node": "Questo nodo non pubblica la propria scala (nessun /v1/operations), quindi questi gradini sono una copia propria di questa app. Il nodo decide comunque tier, ambito e quorum quando confermi.",
+      "catalogue_unreadable": "Non è stato possibile leggere la scala di questo nodo ({detail}), quindi questi gradini sono una copia propria di questa app. Il nodo decide comunque tier, ambito e quorum quando confermi.",
+      "not_reached_unstated": "Questo nodo non indica un limite separato per questo gradino, al di là di quanto raggiunge, sopra.",
+      "undone_by_op": "Annullato da {op}. Entrambe le righe restano leggibili come storico.",
+      "undone_is_reversal": "Questo gradino annulla {op}. Entrambe le righe restano leggibili come storico.",
+      "undone_no_inverse": "Il nodo non indica alcuna operazione che annulli questo gradino.",
+      "delegations_not_returned": "Questo nodo non restituisce ancora gli id delle tue deleghe (richiede 0.5.218), quindi incolla l'id di una delega che porti l'ambito di questo gradino.",
+      "delegations_unreadable": "Non è stato possibile leggere gli id delle tue deleghe da questo nodo ({detail}). Incolla l'id di una delega che porti l'ambito di questo gradino.",
+      "delegations_none": "Questo nodo non detiene alcuna tua delega. Questo gradino richiede una delega che porti {scope}.",
+      "delegations_wrong_scope": "Questo nodo ha restituito {count} tue deleghe, che portano {carried}. Nessuna porta {scope}, richiesto da questo gradino, quindi nessuna viene proposta: il nodo la rifiuterebbe. Incolla l'id di una delega che lo porti.",
+      "delegations_pick": "Le tue deleghe su questo nodo che portano {scope}:"
+    },
+    "proposal": {
+      "title": "Sollevare la questione con la comunità",
+      "framing": "Chiunque può sollevare la questione; la comunità ha 48 ore; un moderatore può agire prima.",
+      "action_label": "Cosa stai proponendo?",
+      "action_report": "Segnala",
+      "action_takedown": "Richiedi la rimozione",
+      "action_question": "Mantenere o rimuovere?",
+      "reason_label": "Motivo (opzionale)",
+      "reason_placeholder": "Perché stai sollevando questa questione?",
+      "submit": "Invia: apri la finestra di 48 ore",
+      "submitting": "Apertura della finestra…",
+      "raised": "Sollevata. La finestra di 48 ore della comunità è aperta; un moderatore o un tutore può agire prima.",
+      "error": "Non è stato possibile sollevare la questione: {detail}. Non è stato depositato nulla.",
+      "not_on_this_node": "Questo nodo non può ancora accettare una proposta della comunità: non dispone di una rotta /v1/safety/reports (richiede CIRISServer#665). Non è stato depositato nulla. Se detieni un incarico di moderazione, deposita invece sotto Sicurezza > Moderazione.",
+      "refused_minor": "La tua registrazione dell'età su questo nodo indica minorenne, quindi questa viene sollevata tramite il tuo tutore, non direttamente. Non è stato depositato nulla; chiedi al tuo tutore di sollevarla."
     }
   },
   "nav": {
