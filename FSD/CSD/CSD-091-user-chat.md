@@ -203,12 +203,14 @@ as a failure, once as a note.
 **Wrong-host risk: found and closed.** Every route here is the NODE's, on
 `:4243` — and until this review every one of them was called at `$baseUrl`
 (`startChat`, `listChatMessages`, `sendChatMessage`), which the route gate
-charged to the agent front door and which, on a with-AI install, asked the
-agent (CIRISAgent#1213). The sentence above used to read "none", written from
+charged to the agent front door and which, on a with-AI install, asked an
+agent that before 2.12.1 did not forward them (CIRISAgent#1213, closed by
+#1215; reach through the agent works from agent 2.12.1). The sentence above used to read "none", written from
 the server side alone. The three calls now take the node URL from the same
 active-node provider People uses (`UserChatViewModel.nodeUrl`, `ChatApi`), and
-`UserChatViewModelTest` pins where each goes. This surface does not exist on
-the agent and does not ask it anything.
+`UserChatViewModelTest` pins where each goes. This surface is not served by
+the agent's brain and the client does not ask the agent for it: the direct node
+URL works on every agent version.
 
 **What CC fixes for free, and the client obeys.** persist refuses a
 community-scoped promotion unless `attested_key_id == attesting_key_id` and every
