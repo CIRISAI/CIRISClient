@@ -69,9 +69,10 @@ Check first, in this order:
    `FlowSpec.load` refuses the key — see below);
 2. its CSD's §5 declares the platforms it should be green on;
 3. the CSD's `stage:` follows `CSD.md` §1, and is edited by hand, never inferred:
-   - `testable` needs the flow's `client:` floor to name a released version (not
-     `unreleased`) **and** the flow to run on the matrix;
-   - `verified` needs that run green on every platform the CSD's §5 declares.
+   - `testable` needs the flow's `client:` floor to be no longer `unreleased`
+     (any `>=X` / `>X` form) **and** the flow to run on the matrix;
+   - `verified` needs that run green on every platform the CSD's §5 declares;
+   - `shipped` is the stage whose floor names a published version.
 
    A green run is evidence for the edit, never the edit itself. A card whose spec
    is complete and whose flow is written, but which has not met that bar, stays

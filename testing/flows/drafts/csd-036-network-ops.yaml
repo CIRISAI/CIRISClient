@@ -36,12 +36,16 @@ steps:
       the agent's to report. Neither branch is the Kotlin default; the tag's
       value is published so a default and a reading cannot be confused.
     optional_step: true
+    requires:
+      visible: [row_netops_mode]
     expect:
       one_of: {row_netops_mode: [CLIENT, PROXY, SERVER]}
 
   - step_id: on_a_node_build_the_mode_is_not_on_this_node
     title: Without an agent the mode card says why it has no reading
     optional_step: true
+    requires:
+      visible: [netops_not_on_this_node]
     expect:
       visible: [netops_not_on_this_node]
       absent: [row_netops_mode]

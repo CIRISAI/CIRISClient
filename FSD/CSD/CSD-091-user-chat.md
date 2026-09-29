@@ -294,7 +294,7 @@ and §5 disclaims it for the matrix.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-091-user-chat.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+**Flow not complete.** `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`) cannot go green on an ordinary matrix run as written: `a_room_with_history` is gated only on `chat_transcript`, which also renders for a room holding nothing but a system note (the single-node `awaiting_peer` room, `ChatScreen.kt`) and for a refusal over an empty room; `SystemNoteRow` carries no tag, so `count: chat_msg_* min 1` fails on the ordinary run and nothing on screen can gate it. It is complete when system notes are tagged or a two-node fixture seeds a message. Until then this card is not ready to promote.
 
 **Platforms.** All five for the transcript and the refusals; **two nodes** for
 anything that involves the other side, which `testing/gate/node_fixture.py` does

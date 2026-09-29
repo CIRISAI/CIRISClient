@@ -130,34 +130,45 @@ missing `error` state, and a person on a node sees an empty wallet rather than
 
 ## 4. Flow (how)
 
-Unwritten. It could be written today for everything up to the send — the
-balance, the limits, the address copy and the address-validation error all run
-on real tags — and now up to and including the ConfirmSheet: `btn_send_transfer`
-with a clean address and amount opens `sheet_wallet_send`, and
-`btn_wallet_send_cancel` closes it with nothing sent. **The confirm itself must
-not be flowed against a live rail.** A flow that moves USDC to pass is not a
-test. Loading and error on this page (`WalletPage.kt:310, :327`) are still
-untagged.
+Written: `testing/flows/drafts/csd-057-wallet.yaml` (floor `>=0.5.224`),
+read-only, and it stops before the send. In order:
 
-```yaml
-# candidate — read-only, stops before btn_send_transfer
-expect:
-  state: populated
-  visible: [card_wallet_balance, card_spending_progress, card_wallet_experimental, txt_wallet_address]
-```
+1. **On the wallet** — `card_wallet_experimental` and `card_wallet_balance`,
+   the banner asserted with the first number, never after it.
+2. **Fees and limits** — `card_wallet_paymaster`, `txt_paymaster_status`,
+   `card_wallet_limits`; `WalletPage.kt` renders all three whenever a status is
+   on screen.
+3. **The address** (optional on the wallet having one, `WalletPage.kt:260`) —
+   `txt_wallet_address` and `btn_copy_address`.
+4. **The form** (optional on `card_wallet_transfer`, which renders only for a
+   wallet with an address that is not receive-only, `:270`) — the three inputs
+   and `btn_send_transfer`.
+5. **The form takes input** (optional on the same) — a zero address, `0` and a
+   memo are typed; `btn_send_transfer` is never pressed.
+6. **Back** — `btn_wallet_back` leaves the card.
 
-`card_wallet_experimental` is in that list deliberately: the screen already
-renders an amber experimental warning, and a flow that asserts the balance while
-letting the warning quietly disappear would be testing the wrong half.
+**The confirm itself must not be flowed against a live rail.** A flow that
+moves USDC to pass is not a test. Opening `sheet_wallet_send` and cancelling
+with `btn_wallet_send_cancel` is safe, but it needs an address that passes the
+validation and duplicate checks against a live agent, so it is not in the draft.
+
+`card_wallet_experimental` leads deliberately: the screen renders an amber
+experimental warning, and a flow that asserts the balance while letting the
+warning quietly disappear would be testing the wrong half.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-057-wallet.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-057-wallet.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** All five, agent build. Plus a node build for the
 `wallet_unsupported` state in §2 once it exists.
 
 **Not tested here.**
+* `card_spending_progress`, `card_transaction_history` and `card_trust_warning`.
+  `WalletPage.kt` renders them only when the status carries spending limits
+  (`:265`), recent transactions (`:293`) or degraded hardware trust (`:298`);
+  the defaults are null, empty and false, and no fixture seeds a wallet in any
+  of those states. They are asserted once one does.
 * Sending. It moves real value on Base; the duplicate check and the address
   validation are the parts a flow can exercise safely.
 * Whether the balance is right. That is the chain's claim, relayed by the agent.

@@ -153,7 +153,7 @@ On a Postgres-only node, where `/v1/memory/stats` is a 503 stub:
 ```yaml
 expect:
   state: error
-  visible: ["proposed:storage_error"]
+  visible: [storage_error]
   absent: [card_storage_graph]
 ```
 
@@ -179,7 +179,7 @@ itself; the fix landed (2026-09-28) and the block now asserts the sentence.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-040-storage.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-040-storage.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** All five. The Postgres-only variant is a server-side fixture, not
 a client platform, and belongs in CIRISServer's matrix; this flow only needs the

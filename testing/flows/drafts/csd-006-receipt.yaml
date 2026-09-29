@@ -13,6 +13,10 @@ description: >-
 # row reads the wire (Contact.grant) since PR #101; 0.5.225 is the client whose
 # grant-less receipt no longer guesses the scope.
 client: ">=0.5.225"
+# INCOMPLETE: no step clicks a concrete `btn_receipt_<keyId>` -- `click:` takes a
+# literal tag and no fixture seeds a contact with a known key id -- so every
+# step gated on `sheet_receipt` skips. CSD-006 §5 says so; this flow is not
+# evidence for the five facts until it opens a receipt.
 
 steps:
   - step_id: a_row_with_a_hamburger

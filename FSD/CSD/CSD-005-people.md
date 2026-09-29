@@ -219,7 +219,7 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.

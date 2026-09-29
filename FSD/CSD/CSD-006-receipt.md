@@ -143,7 +143,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-006-receipt.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+**Flow not complete.** `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) never opens a receipt: the hamburger's tag is `btn_receipt_<keyId>`, a flow `click:` takes one literal tag, and no fixture seeds a contact whose key id the flow could name. Every fact step is therefore gated on `sheet_receipt` and always skips. It is complete when a seeded contact (or a runner that can click the first match of `btn_receipt_*`) lets it open a concrete receipt; until then this card is not ready to promote.
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

@@ -305,7 +305,7 @@ screen draws no tagged family line, so `accord:family` above is `proposed:`.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop in practice. Six FIPS YubiKeys and six USB volumes, each
 re-inserted, are not a thing any platform runner has; the screen composes on all
@@ -326,9 +326,11 @@ five and the ceremony runs on one.
   the person then kept the file is theirs.
 
 **Stage.** Every tag is real and §3 has no `unconfirmed`, so `check_csd_v3.py`
-would admit `testable`; the card stays at `building` for the same reason as
-CSD-068 — no release carries the phase line, the intro sentences or the
-copy/save yet, and the draft flow's floor is `unreleased`.
+would admit `testable`. The draft flow's floor is already off `unreleased`
+(`client: ">=0.5.224"`): it drives only tags that v0.5.224 carries, and leaves
+the later phase line, intro sentences, family line and copy/save unasserted.
+As for CSD-068, the one remaining condition is that the flow runs on the
+matrix (#97); the card stays at `building` until it does.
 * **The hop.** Unlike every other CSD in this area, the runner cannot walk to
   this screen, so "the entry exists" is asserted by the parent's CSD-067 flow
   and by nothing here.

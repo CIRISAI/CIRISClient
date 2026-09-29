@@ -340,7 +340,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-090-duty-conferral.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-090-duty-conferral.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop only, and not end to end. The ceremony needs two accord
 holders' YubiKeys, two humans and two PIV PINs; `testing/gate/node_fixture.py`

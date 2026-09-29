@@ -167,7 +167,7 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-101-household-members.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-101-household-members.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** All five.
 
