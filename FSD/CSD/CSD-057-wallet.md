@@ -145,7 +145,10 @@ read-only, and it stops before the send. In order:
    and `btn_send_transfer`.
 5. **The form takes input** (optional on the same) — a zero address, `0` and a
    memo are typed; `btn_send_transfer` is never pressed.
-6. **Back** — `btn_wallet_back` leaves the card.
+6. **Back** — the shell's `btn_nav_back` leaves the card (the card sits in a
+   seven-card tab, so the shell draws the arrow). `btn_wallet_back` is the
+   page's own arrow, drawn only when the page runs outside the shell in a
+   wide window; it is not what a person under the shell presses.
 
 **The confirm itself must not be flowed against a live rail.** A flow that
 moves USDC to pass is not a test. Opening `sheet_wallet_send` and cancelling

@@ -75,7 +75,10 @@ steps:
 
   - step_id: back_leaves_the_screen
     title: Back returns to Everyone > Safety
+    description: >-
+      The shell's back (`btn_nav_back`); the page's own `btn_provision_holder_back`
+      is drawn only outside the shell (csd-057-wallet.yaml says the same).
     do:
-      - click: btn_provision_holder_back
+      - click: btn_nav_back
     expect:
       absent: [btn_provision_holder_submit]
