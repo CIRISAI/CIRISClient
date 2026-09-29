@@ -871,7 +871,7 @@ jobs:
           path: collected
       - name: Build the gallery
         run: |
-          python3 testing/gate/build_qa_gallery.py --shots collected --out gallery.html || \
+          python3 testing/gate/build_qa_gallery.py collected --out gallery.html --summary "$GITHUB_STEP_SUMMARY" || \
             echo "::warning::gallery build failed; the raw artifacts are still attached"
       - uses: actions/upload-artifact@v4
         with:

@@ -216,12 +216,18 @@ def _summary(tiles: List[Tile]) -> str:
     return "\n".join(lines) + "\n"
 
 
-def main() -> int:
+def parser() -> argparse.ArgumentParser:
+    """The CLI, as a function so the workflow test can parse the step's argv:
+    run 36588619656's gallery job died on `unrecognized arguments: --shots`."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("root", type=Path, help="Directory the artifacts were downloaded into")
     ap.add_argument("--out", type=Path, required=True, help="Where to write index.html")
     ap.add_argument("--summary", type=Path, default=None, help="Append a table here (GITHUB_STEP_SUMMARY)")
-    args = ap.parse_args()
+    return ap
+
+
+def main() -> int:
+    args = parser().parse_args()
 
     if not args.root.exists():
         print(f"gallery: {args.root} does not exist", file=sys.stderr)

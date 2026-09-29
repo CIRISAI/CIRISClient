@@ -210,6 +210,19 @@ def test_the_gallery_is_built_for_red_runs_too(wf):
         assert leg in gallery["needs"], f"the gallery ignores {leg}"
 
 
+def test_the_gallery_step_calls_the_script_as_written(wf):
+    """Run 36588619656: `build_qa_gallery.py: error: unrecognized arguments:
+    --shots` — the script takes the artifacts directory positionally, and the
+    step passed it as a flag, so the gallery never built on any run."""
+    body = "\n".join(str(s.get("run", "")) for s in wf["jobs"]["gallery"]["steps"])
+    call = re.search(r"build_qa_gallery\.py\s+([^\n|]*)", body)
+    assert call, "no build_qa_gallery.py call in the gallery job"
+    argv = call.group(1).replace("\\", " ").split()
+    from testing.gate import build_qa_gallery
+    ns = build_qa_gallery.parser().parse_args(argv)
+    assert str(ns.root) == "collected" and str(ns.out) == "gallery.html"
+
+
 def test_the_gate_is_not_wired_to_every_push(wf):
     # It boots an emulator and a simulator. On every push it would be switched
     # off within a week, and a gate that is switched off protects nothing.
