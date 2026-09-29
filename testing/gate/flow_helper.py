@@ -42,6 +42,12 @@ from typing import List, Optional
 
 from testing.driver import DriverError, TestAutomationServer
 
+#: How many 300px steps to try in each direction before saying a target stays
+#: off screen. The wizard's `_reach` (session_fixture) uses the same budget.
+_SCROLL_STEPS = 24
+#: The answers `/scroll` gives when there is nowhere further to go.
+_SCROLL_END = ("already at the", "NO overflow", "can scroll")
+
 
 @dataclass
 class _Element:
@@ -65,6 +71,48 @@ class SyncFlowHelper:
 
     def __init__(self, drv: TestAutomationServer) -> None:
         self._drv = drv
+        #: Why the last click / input was refused, verbatim from the driver.
+        #: The runner used to report "did not succeed" and nothing else; on
+        #: csd_047 the reason was "composed but off screen", which names both
+        #: the cause and the remedy.
+        self.last_error = ""
+
+    # ---- reaching ---------------------------------------------------------
+
+    def _step(self, tag: str, direction: str) -> Optional[str]:
+        """One `/scroll`; the app's reason when it did not move, else None."""
+        try:
+            r = self._drv.scroll_to(tag, direction=direction, amount=300)
+        except AttributeError:
+            return "this driver has no /scroll"
+        except DriverError as e:
+            return str(e)[-160:]
+        return (r or {}).get("error") if isinstance(r, dict) else None
+
+    def _reach(self, tag: str, act) -> bool:
+        """Run `act()`, scrolling `tag` into view when the app refuses it as
+        composed but off screen (CIRISClient#33): down until the bottom, then
+        up until the top, bounded. Any other refusal is final and kept."""
+        notes: list = []
+        for direction in ("down", "up"):
+            for _ in range(_SCROLL_STEPS):
+                try:
+                    act()
+                    return True
+                except DriverError as e:
+                    if "off screen" not in str(e):
+                        self.last_error = str(e)
+                        return False
+                msg = self._step(tag, direction)
+                notes.append(f"{direction}: {msg or 'moved'}")
+                if msg and any(word in msg for word in _SCROLL_END):
+                    break
+        try:
+            act()
+            return True
+        except DriverError as e:
+            self.last_error = f"{e} | scrolls: {'; '.join(dict.fromkeys(notes))}"
+            return False
 
     # ---- reads --------------------------------------------------------------
 
@@ -115,27 +163,25 @@ class SyncFlowHelper:
     # ---- actions ------------------------------------------------------------
 
     async def click(self, tag: str, timeout: int = 2000) -> bool:
-        try:
-            self._drv.click(tag)
-            return True
-        except DriverError:
-            return False
+        return self._reach(tag, lambda: self._drv.click(tag))
 
     async def input_text(self, tag: str, text: str) -> bool:
-        try:
-            self._drv.input(tag, text)
-            return True
-        except DriverError:
-            return False
+        return self._reach(tag, lambda: self._drv.input(tag, text))
 
     async def scroll_into_view(self, tag: str) -> bool:
-        try:
-            self._drv.scroll_to(tag)
-            return True
-        except (DriverError, AttributeError):
-            # A client without /scroll is not a failed scroll: the runner will
-            # re-ask `is_element_visible` and report honestly either way.
-            return False
+        """Bring `tag` on screen: step down until it has size, then up, bounded.
+        An element below the fold is composed with a clipped, zero-size
+        `boundsInWindow`, so "visible" here is what the scroll changes. A client
+        without /scroll is not a failed scroll: the runner re-asks
+        `is_element_visible` and reports honestly either way."""
+        for direction in ("down", "up"):
+            for _ in range(_SCROLL_STEPS):
+                if await self.is_element_visible(tag):
+                    return True
+                msg = self._step(tag, direction)
+                if msg and ("no /scroll" in msg or any(word in msg for word in _SCROLL_END)):
+                    break
+        return await self.is_element_visible(tag)
 
     async def wait_for_element(self, tag: str, timeout: int = 2000) -> bool:
         try:

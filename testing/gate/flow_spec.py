@@ -752,14 +752,23 @@ class FlowRunner:
               "lte": left <= right, "gt": left > right, "gte": left >= right}[op]
         return None if ok else f"{label}: {left} {op} {right} is false"
 
+    def _why(self) -> str:
+        """LOCAL DELTA: the driver's own reason for a refusal, when the helper
+        kept one (`last_error`) — "did not succeed" alone sent csd_047's reader
+        to the wrong place."""
+        why = getattr(self.helper, "last_error", "")
+        return f" ({why})" if why else ""
+
     async def _do(self, action: Action) -> Optional[str]:
+        if hasattr(self.helper, "last_error"):
+            self.helper.last_error = ""
         try:
             if action.kind == "click":
                 ok = await self.helper.click(action.target, timeout=action.wait_ms * 4)
-                return None if ok else f"click {action.target!r} did not succeed"
+                return None if ok else f"click {action.target!r} did not succeed{self._why()}"
             if action.kind == "input":
                 ok = await self.helper.input_text(action.target, action.value or "")
-                return None if ok else f"input into {action.target!r} did not succeed"
+                return None if ok else f"input into {action.target!r} did not succeed{self._why()}"
             if action.kind == "scroll_to":
                 ok = await self.helper.scroll_into_view(action.target)
                 return None if ok else f"could not bring {action.target!r} on screen"
