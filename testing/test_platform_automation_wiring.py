@@ -287,3 +287,60 @@ def test_a_button_a_flow_clicks_disables_its_click_handler_with_itself():
         "`/click` presses what the person cannot (CIRISClient#69): "
         + ", ".join(f"{t} at {where}" for t, where in sorted(offenders.items()))
     )
+
+
+# ── A node that ANSWERS is not a node that is OWNED (Android leg) ────────────
+#
+# Run 36600766576: the Android leg's node was fresh (the desktop leg's seeded
+# node had been stopped, as the workflow intends), the client's
+# `checkFirstRunStatus` took its NODE-only branch, and that branch returned
+# "setup complete" the moment the node answered `/health` — the #48 shortcut,
+# written for the run-without-AI hand-off, where the node HAD been claimed.
+# Login rendered with isFirstRun=false, "Local login" opened a password form
+# for an owner that did not exist, and the session fixture called it "did not
+# reach Setup". Desktop never saw it because its ActiveBackend was still the
+# agent pin at that point, so it took the /v1/setup/status path and got FRESH.
+#
+# Pinned at the source: the NODE-only branch must ask the node whether it has
+# an owner (`probeNodeOwnership` / `nodeHasOwner`) before it may answer false.
+
+CIRISAPP = SHARED / "commonMain" / "kotlin" / "ai" / "ciris" / "mobile" / "shared" / "CIRISApp.kt"
+
+
+def _block(src: str, open_brace: int) -> str:
+    depth = 0
+    for i in range(open_brace, len(src)):
+        if src[i] == "{":
+            depth += 1
+        elif src[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return src[open_brace:i + 1]
+    return src[open_brace:]
+
+
+def _node_only_branch_of_first_run_check() -> str:
+    src = CIRISAPP.read_text(encoding="utf-8")
+    start = src.index("private suspend fun checkFirstRunStatus(")
+    body = _block(src, src.index("{", src.index(")", start)))
+    # The function opens with `val nodeUrl = if (ActiveBackend.endpoint == …)`,
+    # which is the same test on a different question; the branch wanted is the
+    # one that decides on the node answering.
+    blocks = [_block(body, m.end() - 1)
+              for m in re.finditer(r"if \(ActiveBackend\.endpoint == NODE_ONLY_ENDPOINT\) \{", body)]
+    deciding = [b for b in blocks if "isNodeReachable(" in b]
+    assert deciding, "checkFirstRunStatus has no NODE-only branch that decides on the node answering (did it move?)"
+    return deciding[0]
+
+
+def test_the_node_only_first_run_check_asks_the_node_whether_it_is_owned():
+    branch = _node_only_branch_of_first_run_check()
+    asks = re.search(r"probeNodeOwnership\(|nodeHasOwner\(", branch)
+    first_false = re.search(r"return false", branch)
+    assert asks, "the NODE-only branch never asks whether the node has an owner: a fresh node is called configured"
+    assert first_false and asks.start() < first_false.start(), (
+        "the NODE-only branch answers 'configured' before asking whether the node has an owner"
+    )
+    assert re.search(r"NodeOwnership\.FRESH[^\n]*\n[^\n]*\n?[^\n]*return true|FRESH.*?return true", branch, re.S), (
+        "a FRESH node must be a first run (return true) on the NODE-only branch"
+    )

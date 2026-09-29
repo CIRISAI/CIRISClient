@@ -116,3 +116,75 @@ def test_a_step_that_truly_stalls_is_still_reported_by_name(monkeypatch):
         sf.run_setup(w, "qaadmin", "QaAdmin!2345")
     assert "'you'" in str(e.value)
     assert clock.t < 300, "bounded: a stalled wizard is reported in minutes, not hours"
+
+
+class _OwnedLogin:
+    """A client that has judged the node OWNED: `btn_local_login` reveals the
+    login FORM (LoginScreen: `if (isFirstRun) onLocalLogin() else
+    showLoginForm`), never the wizard, and no `txt_owner_hint` composes
+    (the node serves no owner hint). The Android leg's shape, run
+    36600766576."""
+
+    def __init__(self):
+        self.form = False
+        self.clicks: list[str] = []
+        self.inputs: dict[str, str] = {}
+
+    def screen(self):
+        return "Login"
+
+    def tree(self):
+        if self.form:
+            return [_el(t) for t in ("input_username", "input_password", "btn_login_submit")]
+        return [_el("btn_local_login")]
+
+    def click(self, tag):
+        self.clicks.append(tag)
+        if tag == "btn_local_login":
+            self.form = True
+
+    def input(self, tag, text):
+        self.inputs[tag] = text
+
+    def state(self):
+        return {"screen": "Login", "clientMode": "NODE", "nodeUrl": "http://127.0.0.1:4243"}
+
+
+def test_the_login_form_is_the_clients_verdict_that_the_node_is_owned(monkeypatch):
+    """No wizard and no owner hint, but a password form: the client holds the
+    node to be owned. That is not "did not reach Setup"; it is "sign in"."""
+    monkeypatch.setattr(sf, "time", _Clock())
+    w = _OwnedLogin()
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")  # must not raise
+    assert w.clicks == ["btn_local_login"]
+    assert w.form, "the form the client offered is what the fixture judged by"
+
+
+def test_a_client_that_shows_neither_wizard_nor_form_is_still_reported(monkeypatch):
+    monkeypatch.setattr(sf, "time", _Clock())
+    w = _OwnedLogin()
+    w.click = lambda tag: w.clicks.append(tag)  # the click lands nowhere
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert "neither Setup" in str(e.value) and "login form" in str(e.value)
+
+
+def test_a_refused_sign_in_says_which_side_was_wrong(monkeypatch):
+    """The Android leg's actual state: the node has NO owner (its own
+    /v1/setup/status says setup_required=true) and the client offered a
+    password form anyway. The fixture names the client's first-run check,
+    not its credentials."""
+    monkeypatch.setattr(sf, "time", _Clock())
+    monkeypatch.setattr(sf, "_node_setup_required", lambda url: True)
+    w = _OwnedLogin()
+    w.form = True
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.log_in(w, "qaadmin", "QaAdmin!2345", timeout=10)
+    msg = str(e.value)
+    assert "setup_required=true" in msg and "first-run check is wrong" in msg, msg
+    assert "127.0.0.1:4243" in msg
+
+    monkeypatch.setattr(sf, "_node_setup_required", lambda url: False)
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.log_in(w, "qaadmin", "QaAdmin!2345", timeout=10)
+    assert "has an owner, and these are not its credentials" in str(e.value)
