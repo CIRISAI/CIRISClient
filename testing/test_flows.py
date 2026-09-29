@@ -517,3 +517,29 @@ def test_the_real_nav_map_reaches_the_seeded_flows_first_screens():
     for spec in run_flows.load_flows([FLOWS]):
         start = spec.steps[0].requires.screen
         assert start in hops or start in flow_only, f"{spec.flow}: no way to Screen.{start}"
+
+
+def test_navigate_opens_the_single_card_when_a_compact_tab_lists_it():
+    """Phones list a one-card tab before opening it (iOS, #97); the runner
+    opens the only row instead of reporting 'landed on CircleTab'."""
+    import asyncio
+    from testing.gate import run_flows
+
+    class E:
+        def __init__(self, t): self.test_tag = t
+
+    class H:
+        def __init__(self): self.screen = "Login"; self.clicked = []
+        async def wait_for_element(self, tag, timeout=0): return True
+        async def click(self, tag, timeout=0):
+            self.clicked.append(tag)
+            self.screen = {"tab_people": "CircleTab", "nav_epistemic_contacts": "Contacts"}.get(tag, self.screen)
+            return True
+        async def get_screen(self): return self.screen
+        async def get_elements(self): return [E("nav_epistemic_contacts"), E("tab_people")]
+
+    h = H()
+    got = asyncio.run(run_flows.navigate(h, "Contacts", ["circle_agent", "tab_people"],
+                                         hop_timeout=0.1, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.clicked[-1] == "nav_epistemic_contacts"
