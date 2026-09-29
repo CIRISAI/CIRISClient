@@ -1585,12 +1585,17 @@ class CIRISApiClient(
      * revocation-FOLDED consent peer set, so a withdrawn grant is already gone
      * and "un-contacting" needs no second call.
      */
-    suspend fun listContacts(): ContactListResponse {
+    suspend fun listContacts(nodeUrl: String = LOCAL_NODE_URL): ContactListResponse {
+        // THE NODE URL, NOT baseUrl (CSD-005). `/v1/contacts` is the node's;
+        // read at `$baseUrl` it was charged to the agent front door by the
+        // route gate and, on a with-AI install, asked of the agent
+        // (CIRISAgent#1213). The caller names the node, as the add, the code
+        // and the removal already do.
         val method = "listContacts"
-        logInfo(method, "GET $baseUrl/v1/contacts")
+        logInfo(method, "GET $nodeUrl/v1/contacts")
         val client = federationHttpClient()
         return try {
-            val response = client.get("$baseUrl/v1/contacts") {
+            val response = client.get("$nodeUrl/v1/contacts") {
                 authHeader()?.let { header("Authorization", it) }
             }
             val raw = response.bodyAsText()
@@ -1599,7 +1604,7 @@ class CIRISApiClient(
             logInfo(method, "${decoded.contacts.size} contact(s) of ${decoded.total}")
             decoded
         } catch (e: Exception) {
-            logException(method, e, "url=$baseUrl")
+            logException(method, e, "url=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -1985,13 +1990,15 @@ class CIRISApiClient(
      * whose messages cannot replicate to the other member is one nothing ever
      * leaves, so [addContact] is the prerequisite, not a nicety.
      */
-    suspend fun startChat(keyId: String): ChatCommunity {
+    suspend fun startChat(keyId: String, nodeUrl: String = LOCAL_NODE_URL): ChatCommunity {
+        // The chat routes are the NODE's (`src/contacts_chat.rs`, CSD-091):
+        // the caller names the node, never `baseUrl` (CIRISAgent#1213).
         val method = "startChat"
-        logInfo(method, "POST $baseUrl/v1/chat key_id=${keyId.take(16)}…")
+        logInfo(method, "POST $nodeUrl/v1/chat key_id=${keyId.take(16)}…")
         val client = federationHttpClient()
         return try {
             val body = buildJsonObject { put("key_id", keyId) }
-            val response = client.post("$baseUrl/v1/chat") {
+            val response = client.post("$nodeUrl/v1/chat") {
                 authHeader()?.let { header("Authorization", it) }
                 contentType(ContentType.Application.Json)
                 setBody(body.toString())
@@ -2002,7 +2009,7 @@ class CIRISApiClient(
             logInfo(method, "community=${decoded.communityId.take(24)}… members=${decoded.memberKeyIds.size} fresh=${decoded.freshlyCreated}")
             decoded
         } catch (e: Exception) {
-            logException(method, e, "url=$baseUrl")
+            logException(method, e, "url=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -2019,12 +2026,14 @@ class CIRISApiClient(
      * between a non-member and the content, and owning the node is NOT
      * membership in the cohort.
      */
-    suspend fun listChatMessages(communityId: String): ChatTranscript {
+    suspend fun listChatMessages(communityId: String, nodeUrl: String = LOCAL_NODE_URL): ChatTranscript {
+        // A pair room OR an N-member room (CIRISServer#594): the route reads
+        // either by id, so this is also how a room of more than two is entered.
         val method = "listChatMessages"
-        logInfo(method, "GET $baseUrl/v1/chat/$communityId/messages")
+        logInfo(method, "GET $nodeUrl/v1/chat/$communityId/messages")
         val client = federationHttpClient()
         return try {
-            val response = client.get("$baseUrl/v1/chat/$communityId/messages") {
+            val response = client.get("$nodeUrl/v1/chat/$communityId/messages") {
                 authHeader()?.let { header("Authorization", it) }
             }
             val raw = response.bodyAsText()
@@ -2033,7 +2042,7 @@ class CIRISApiClient(
             logInfo(method, "${decoded.messages.size} message(s) of ${decoded.total}")
             decoded
         } catch (e: Exception) {
-            logException(method, e, "url=$baseUrl")
+            logException(method, e, "url=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -2055,16 +2064,17 @@ class CIRISApiClient(
         communityId: String,
         body: String,
         contentType: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
     ): SendChatMessageResult {
         val method = "sendChatMessage"
-        logInfo(method, "POST $baseUrl/v1/chat/$communityId/messages bytes=${body.length}")
+        logInfo(method, "POST $nodeUrl/v1/chat/$communityId/messages bytes=${body.length}")
         val client = federationHttpClient()
         return try {
             val payload = buildJsonObject {
                 put("body", body)
                 contentType?.let { put("content_type", it) }
             }
-            val response = client.post("$baseUrl/v1/chat/$communityId/messages") {
+            val response = client.post("$nodeUrl/v1/chat/$communityId/messages") {
                 authHeader()?.let { header("Authorization", it) }
                 contentType(ContentType.Application.Json)
                 setBody(payload.toString())
@@ -2078,7 +2088,7 @@ class CIRISApiClient(
             )
             decoded
         } catch (e: Exception) {
-            logException(method, e, "url=$baseUrl")
+            logException(method, e, "url=$nodeUrl")
             throw e
         } finally {
             client.close()
@@ -5449,19 +5459,23 @@ class CIRISApiClient(
     ): ai.ciris.mobile.shared.models.federation.YubiKeyStatus {
         val method = "getYubiKeyStatus"
         val client = federationHttpClient()
+        // A probe that did not answer THROWS: it is not "no token detected".
+        // A 404 is a node without the probe route (RouteNotOnThisHost); every
+        // other failure is a failed read the banner says with its reason.
         return try {
             val response = client.get("$nodeUrl/v1/accord/yubikey-status")
+            if (response.status == HttpStatusCode.NotFound) throw RouteNotOnThisHost("/v1/accord/yubikey-status")
             val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("HTTP ${response.status.value}: ${raw.take(200)}")
+            }
             jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.YubiKeyStatus.serializer(),
                 raw,
             )
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl")
-            ai.ciris.mobile.shared.models.federation.YubiKeyStatus(
-                detected = false,
-                hint = "couldn't reach the node's YubiKey probe: ${e.message}",
-            )
+            throw e
         } finally {
             client.close()
         }
@@ -5674,6 +5688,130 @@ class CIRISApiClient(
             }
             jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.GenesisAssembleResponse.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    // ─── THIS NODE'S TRUST ROOT (card: Accord › trust root) — CIRISServer#400 ──
+    //
+    // `src/trust_root_api.rs`. All three are LOOPBACK-ONLY (`:422-424`,
+    // CIRISServer#652): a caller off the node's machine gets a bare 403 with no
+    // `reason_id`. Every non-2xx raises a typed [NodeRefusal] so the screen can tell
+    // "not on this machine" from "this node predates the route" from a typed
+    // refusal (`trustRootFailure`); none of them returns an empty listing.
+    // Node-owned: always the NODE url, never `$baseUrl` (CIRISAgent#1213).
+
+    /** `GET {nodeUrl}/v1/trust-root` — which roots this node accepts, and its genesis posture. */
+    suspend fun getTrustRoots(
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootListingDto {
+        val method = "getTrustRoots"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/trust-root") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootListingDto.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/trust-root/import` — install AND accept a portable seed.
+     * [bundle] rides verbatim; [allegianceFrom] is the source node's read-API base
+     * URL, optional (`trust_root_api.rs:207-212`).
+     */
+    suspend fun importTrustRoot(
+        bundle: kotlinx.serialization.json.JsonElement,
+        allegianceFrom: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootImportResult {
+        val method = "importTrustRoot"
+        logInfo(method, "POST $nodeUrl/v1/trust-root/import allegiance_from=${allegianceFrom ?: "(none)"}")
+        val client = federationHttpClient()
+        return try {
+            val bodyJson = buildJsonObject {
+                put("bundle", bundle)
+                allegianceFrom?.trim()?.takeIf { it.isNotEmpty() }?.let { put("allegiance_from", JsonPrimitive(it)) }
+            }
+            val response = client.post("$nodeUrl/v1/trust-root/import") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(bodyJson.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootImportResult.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `DELETE {nodeUrl}/v1/trust-root/{root_key_id}` — withdraw this node's acceptance (records are kept). */
+    suspend fun untrustRoot(
+        rootKeyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootUntrustResult {
+        val method = "untrustRoot"
+        logInfo(method, "DELETE $nodeUrl/v1/trust-root/$rootKeyId")
+        val client = federationHttpClient()
+        return try {
+            val response = client.delete("$nodeUrl/v1/trust-root/${rootKeyId.encodeURLPathPart()}") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootUntrustResult.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `GET {nodeUrl}/v1/accord/family/history` — the accord family's version chain (`src/accord.rs:2355`). */
+    suspend fun getAccordFamilyHistory(
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): ai.ciris.mobile.shared.models.federation.FamilyHistoryResponse {
+        val method = "getAccordFamilyHistory"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/accord/family/history") {
+                token?.let { header("Authorization", "Bearer $it") }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.FamilyHistoryResponse.serializer(),
                 raw,
             )
         } catch (e: Exception) {
@@ -6507,9 +6645,10 @@ class CIRISApiClient(
                 setBody(jsonConfig.encodeToString(WatchlistRequest.serializer(), request))
             }
             val raw = response.bodyAsText()
-            if (!response.status.isSuccess()) {
-                throw RuntimeException("set watchlist failed: ${response.status}: ${raw.take(200)}")
-            }
+            // A typed refusal, so the Safety card can tell the node's 401 (the
+            // route wants the moderate-holder's request signature, which this
+            // app does not produce — CSD-066 §3) from a 403 (not a holder).
+            if (!response.status.isSuccess()) throw NodeRefusal.fromBody(response.status.value, raw)
             decodeFederationEnvelope(raw, WatchlistResponse.serializer())
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl")
@@ -8322,12 +8461,9 @@ class CIRISApiClient(
 
     override suspend fun listAdapters(): AdaptersListData {
         val method = "listAdapters"
-        // AGENT-only: GET /v1/system/adapters is 404 on a bare node.
-        if (nodeSkip(method)) return AdaptersListData(
-            adapters = emptyList(),
-            totalCount = 0,
-            runningCount = 0,
-        )
+        // AGENT-only: GET /v1/system/adapters is 404 on a bare node. Said as
+        // such — an empty list here read as "you have no adapters" (CSD-020 §2).
+        if (nodeSkip(method)) throw RouteNotOnThisHost("/v1/system/adapters")
         logInfo(method, "Listing adapters")
 
         return try {

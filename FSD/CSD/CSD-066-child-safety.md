@@ -1,7 +1,9 @@
 # CSD-066 — Child Safety (the protective posture, and the opt-in that must never be silent)
 
 **CSD**: CSD-066 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-066-child-safety.yaml` (the form and the two modes, floor
+`>=0.5.224`) and `csd-066-child-safety-states.yaml` (the posture subject, the four watchlist
+states, the confirms and the typed refusal — `client: unreleased`)
 
 ```yaml csd:stage
 stage: building
@@ -46,14 +48,14 @@ fields:
     type: "enum[adult,minor]"
     example: "adult"
     renders: "Adult posture — content gates are off for this identity"
-    tag: "proposed:txt_posture_band"
+    tag: txt_posture_band
   - ceg: "age_self_declared:{band}:{version}"
     bind: {band: adult, version: v1}
     use: display-only
     type: bool
     example: true
     renders: "Self-declared and unfalsifiable. A misdeclaration routes to adjudication, never to slashing."
-    tag: "proposed:txt_posture_self_unfalsifiable"
+    tag: txt_posture_self_unfalsifiable
   - ceg: "watchlist:{id}"
     bind: {id: iwf-2026q3}
     use: emit
@@ -84,8 +86,8 @@ fields:
     use: display-only
     type: "list[string]"
     example: ["iwf-2026q3 (CSAM, ALERT_ONLY)"]
-    renders: "Currently on for this group — one line per enable"
-    tag: "proposed:list_watchlist_enables"
+    renders: "Currently on for this group — one line per enable (row_watchlist_enable_{i}), and under them the line that the node serves no attester or timestamp (txt_watchlist_audit_missing)"
+    tag: list_watchlist_enables
   - ceg: "hard_case:{kind}"
     bind: {kind: watchlist_enabled}
     use: display-only
@@ -115,19 +117,37 @@ carries it — it rides the watchlist config. Naming it `x_private:` says so
 rather than borrowing a prefix that means something else.
 
 ```yaml csd:states
-populated: {tag: "proposed:list_watchlist_enables", renders: "the enables for this group, each with its class, mode and who turned it on"}
-empty:     {tag: "proposed:txt_watchlist_none", renders: "Nothing is watched in this group. Default is off, and it stays off until someone turns it on."}
-loading:   {tag: "proposed:spinner_watchlist", renders: "the frame with a progress affordance; the honesty banner stays up"}
-error:     {tag: "proposed:txt_watchlist_error", renders: "Could not read this group's watchlists. This is NOT a report that nothing is watched."}
+populated: {tag: list_watchlist_enables, renders: "the enables for this group, each with its class and mode; who turned it on is NOT served (§3), and the card says so under the list"}
+empty:     {tag: txt_watchlist_none, renders: "Nothing is watched in this group. Default is off, and it stays off until a moderator turns it on. — only when the node answered with an empty list"}
+loading:   {tag: spinner_watchlist, renders: "the frame with a progress affordance; the honesty banner stays up, and the previous group's list is dropped"}
+error:     {tag: watchlist_error, renders: "ReadFailureBlock (tagPrefix watchlist; watchlist_not_on_this_node for an absent route) and txt_watchlist_error_note: This is not a report that nothing is watched — the read did not answer."}
 ```
 
-**All four are `proposed:` and three of them do not exist as pixels either.**
-`ChildSafetyScreen.kt:252` renders the enables list only
-`if (state.watchlistEnables.isNotEmpty())` — so an empty list, a failed read and
-a group that was never asked about all render as *nothing at all*, below a
-banner that says detection is off by default. A person reading that page cannot
-tell "off" from "we could not ask", and on this particular mechanism the wrong
-one of those is a serious thing to believe.
+**All four exist (2026-09-28), plus a fifth.** The screen used to render the
+enables list only `if (state.watchlistEnables.isNotEmpty())` — so an empty list,
+a failed read and a group that was never asked about all rendered as *nothing at
+all*, below a banner that says detection is off by default. The read is now a
+typed `WatchlistRead` (NotAsked / Loading / Loaded / Failed) and each renders
+its own tag; the never-asked state is `txt_watchlist_not_asked`. A new read
+clears the last group's list first, so a stale "nothing watched" cannot sit
+under a new key. `SafetyCardTest` pins all of it.
+
+**Whose posture (2026-09-28).** The posture is the PERSON's: the subject is the
+bound owner's fed-ID from `GET /v1/setup/owned-nodes` `owner`, and only an
+unclaimed node falls back to its own signer key — said on the card
+(`txt_posture_subject`, "your federation ID" vs "this node's own key"). A failed
+posture read is `posture_error` / `posture_not_on_this_node`, never
+"unknown". The status and age-assurance reads are served by the node to any
+caller; the card asks about its resolved subject only and offers no key field.
+
+**Every write confirms with three facts.** Enable and disable open a
+`ConfirmSheet` (`sheet_watchlist_enable` / `sheet_watchlist_disable`): the group,
+what changes (disable says the node records it as a withdrawal — never silent),
+and who signs (the moderate-holder, which this app cannot yet be — see §3).
+The disable sheet is in the destructive tone. A write the node refuses is typed:
+`watchlist_write_unsigned` for the 401 (the node wants the holder's request
+signature; not a wrong password), `watchlist_write_not_holder` for a 403,
+`watchlist_write_refused` for any other refusal with its `reason_id`.
 
 ### 2.1 The one state that is drawn honestly
 
@@ -187,11 +207,11 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | value | endpoint | owner | state |
 |---|---|---|---|
 | protective posture | `GET /v1/safety/status/{key_id}` | CIRISServer `src/safety/age.rs:549` (handler `:523`) | **live** — and until this review it could not decode a recorded self-declaration: the node serializes `AssuranceLevel` snake_case, so the wire is `"self_declared"`, and the client enum read `"self"`. Any subject with a recorded band failed to decode and the card fell to "unknown". Fixed (`AgeAssuranceWireTest`) |
-| whose posture | `GET /v1/federation/self-key-record` | CIRISServer `src/federation_admin.rs:900` | live — **the wrong subject.** `SafetyViewModel` asks the posture of the NODE's signer key, not the person's fed-ID (the mistake `IdentityManagementViewModel` warns against and fixes by reading `GET /v1/setup/owned-nodes` `owner` first). So the posture is almost always "unknown" whatever the person declared. Next change on this card: read the owner key first, as IdentityManagement does |
+| whose posture | `GET /v1/setup/owned-nodes` (`owner`), then `GET /v1/federation/self-key-record` | CIRISServer `src/setup.rs`, `src/federation_admin.rs:900` | live — **fixed 2026-09-28.** The subject is the owner's fed-ID, as IdentityManagement resolves it; the node's signer key is only the fallback for an unclaimed node and stays the `signer_key_id` for watchlist writes. It used to ask about the node's key, so the posture read "unknown" whatever the person declared (`SafetyCardTest.thePostureIsTheOwnersNotTheNodes`, red before the fix) |
 | a key's recorded age band | `GET /v1/safety/age-assurance/{key_id}` | CIRISServer `src/safety/age.rs:545` (the write, `POST /v1/safety/age-assurance`, is `:543`) | live, **wired and unreached** — `CIRISApiClient.getAgeAssurance` (`CIRISApiClient.kt:5816`) has no caller. The posture row above is what the card draws; the band it is derived from is never shown. The route-coverage report marked this CALLED |
 | a group's enables | `GET /v1/safety/watchlist/{group_key_id}` | CIRISServer `src/safety/watchlist.rs:511` | **live** |
-| enable / disable | `POST /v1/safety/watchlist` | CIRISServer `src/safety/watchlist.rs:509` (handler `:410`) | live on the node and **unreachable from this client**: the route requires a hybrid request signature from the person holding the `moderate` duty; the client sends only a Bearer and `signer_key_id` is the node's key. Every enable answers 401. Enabling CSAM in enforce mode also has no ConfirmSheet. blocked_by: a signing path in the client (the same gap as CSD-037's add/revoke device; draft issue in the review report) |
-| state my own age band | `POST /v1/self/age {band}` | CIRISServer `src/claim_remote.rs:972` (route `:1249`), owner session + `SetAge` | live — called only by the wizard at claim (`SetupViewModel`); `setAgeRange`'s doc promises the band "can be (re)stated from the Safety surface" and no screen does. `POST /v1/safety/age-assurance` (the self-SIGNED route, `age.rs:451`) has the same signature requirement as above, so `setAgeAssurance` could not work if it were wired |
+| enable / disable | `POST /v1/safety/watchlist` | CIRISServer `src/safety/watchlist.rs:509` (handler `:410`) | live on the node and **unreachable from this client**: the route requires a hybrid request signature from the person holding the `moderate` duty; the client sends only a Bearer and `signer_key_id` is the node's key. Every enable answers 401 — now rendered as that fact (`watchlist_write_unsigned`), not a generic error, behind a three-fact ConfirmSheet. blocked_by: a signing path in the client (the same gap as CSD-037's add/revoke device; draft issue in the review report) |
+| state my own age band | `POST /v1/self/age {band}` | CIRISServer `src/claim_remote.rs:972` (route `:1249`), owner session + `SetAge` | live — called by the wizard at claim and, since 2026-09-28, by this card (`btn_age_state_adult` / `btn_age_state_minor` → a three-fact confirm → `restateAgeBand`; the posture is re-read from the node after). Offered only when the subject is the owner (`txt_age_state_needs_owner` otherwise). **Two doors on one write, by design:** the wizard states the band at claim (CSD-082/083) and this card restates it afterwards — the same act at two moments, the second promised by `setAgeRange`'s own doc; recorded in the route checker's duplicate-mutation baseline as a decision, not drift. `POST /v1/safety/age-assurance` (the self-SIGNED route, `age.rs:451`) has the same signature requirement as above, so `setAgeAssurance` could not work if it were wired |
 | who enabled it, and when | **missing** — `WatchlistListResponse` carries `enables[]` + `honesty{}` and no attester or timestamp | CIRISServer | blocks `row_watchlist_enablement_audit` |
 | match count for a group | **missing** — no `hard_case:watchlist_match` read | CIRISServer | blocks `txt_watchlist_match_count` |
 
@@ -225,13 +245,35 @@ expect:
             btn_watchlist_enable, btn_watchlist_disable, btn_watchlist_refresh]
 ```
 
-*Cannot yet assert:* the honesty banner is on screen, the posture band, or the
-self-declared caveat — the three things §1 calls the feature.
+The honesty banner, whose posture, and the band (staged as
+`testing/flows/drafts/csd-066-child-safety-states.yaml`, `client: unreleased`):
 
-Type a group key; press `btn_watchlist_refresh`.
+```yaml
+expect:
+  visible: [banner_child_safety_honesty, txt_posture_subject, txt_posture_band, txt_watchlist_not_asked]
+```
 
-*Cannot yet assert:* anything. Populated, empty, loading and error are one
-rendering.
+Type a group key; press `btn_watchlist_refresh`. The not-asked line goes, and
+exactly one of `list_watchlist_enables`, `txt_watchlist_none`, `watchlist_error`
+or `watchlist_not_on_this_node` takes its place — never nothing (the flow
+grammar has no any-of over tags, so the flow asserts the absence and the unit
+test asserts which):
+
+```yaml
+expect:
+  absent: [txt_watchlist_not_asked, spinner_watchlist]
+```
+
+Press `btn_watchlist_enable`: the confirm, three facts; cancel it.
+
+```yaml
+expect:
+  visible: [sheet_watchlist_enable, watchlist_enable_fact_1, watchlist_enable_fact_2, watchlist_enable_fact_3]
+```
+
+Confirming sends the POST, and against the current node the answer is
+`watchlist_write_unsigned` — asserted in `SafetyCardTest`, not driven (a flow
+that confirms would try to turn on a watchlist).
 
 ## 5. QA plan
 
@@ -251,4 +293,6 @@ rendering.
   substrate. The card states it; the card cannot prove it, and no test here
   should be read as proof.
 * Acceptance 3, entirely — there is no route to read the record (§3).
-* All four states (§2).
+* The four watchlist states and the typed refusals are unit-tested
+  (`SafetyCardTest`, a fake `SafetyApi`); the staged flow drives the frame, the
+  not-asked state and the confirm, and cancels.

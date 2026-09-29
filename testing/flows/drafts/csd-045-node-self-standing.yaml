@@ -52,13 +52,40 @@ steps:
     expect:
       visible: [input_self_reason, input_self_compelled_by, btn_self_review, btn_self_cancel]
 
+  - step_id: an_older_node_takes_a_typed_delegation
+    title: Where the node does not supply the owner's delegation, one is typed
+    description: >-
+      OwnerDelegationPicker renders input_self_delegation_id when the authority
+      is NotSupplied or Unreadable (SelfReaderOpsSection.kt, `tagPrefix = "self"`).
+      Skipped on a node that supplies it.
+    optional_step: true
+    requires:
+      visible: [input_self_delegation_id]
+    do:
+      - input: {input_self_delegation_id: "flow-check-delegation"}
+    expect:
+      visible: [btn_self_review]
+
+  - step_id: several_delegations_pick_the_first
+    title: Where the node supplies several delegations, the first is picked
+    optional_step: true
+    requires:
+      visible: [opt_self_owner_delegation_0]
+    do:
+      - click: opt_self_owner_delegation_0
+    expect:
+      visible: [btn_self_review]
+
   - step_id: the_confirm_names_three_facts
     title: The ConfirmSheet names what is recorded, what it changes and who signs
     optional_step: true
+    requires:
+      visible: [btn_self_review]
+      absent: [text_self_no_owner_delegation]
     description: >-
       Optional because btn_self_review is enabled only once a delegation is known:
-      supplied by a 0.5.218 node, or typed on an older one. A matrix leg on an older
-      node types one first.
+      supplied by a 0.5.218 node, or typed / picked by the two steps above. It is
+      skipped on a node whose owner holds none (text_self_no_owner_delegation).
     do:
       - click: btn_self_review
     expect:
@@ -68,6 +95,8 @@ steps:
   - step_id: cancel_leaves_the_standings_unchanged
     title: Cancelling the confirm records nothing
     optional_step: true
+    requires:
+      visible: [sheet_self_act]
     do:
       - click: btn_self_act_cancel
     expect:

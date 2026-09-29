@@ -61,7 +61,7 @@ fields:
     type: "enum[live,not_configured]"
     example: "live"
     renders: "the LIVE / NOT CONFIGURED chip beside the title"
-    tag: "proposed:chip_constitutional_family"
+    tag: chip_constitutional_family
   - ceg: "accord:holders"
     use: display-only
     type: int
@@ -72,8 +72,8 @@ fields:
     use: display-only
     type: int
     example: 2
-    renders: "the m of the m-of-n — the LIVE threshold when the node stated one, never a printed 2-of-3"
-    tag: "proposed:txt_constitutional_threshold"
+    renders: "'3 registered accord holder(s) (2-of-3 threshold)' — the m of the m-of-n as GET /v1/accord-holders states it, printed only beside a real roster, never a fixed 2-of-3"
+    tag: txt_constitutional_threshold
 ```
 
 **The `enum` has three values, not two.** The previous cut wrote
@@ -102,49 +102,44 @@ was a promise about a value nothing drew.
 
 ```yaml csd:states
 populated: {tag: screen_constitutional, renders: "the overview card, the kill-switch card and the holder-authority card"}
-empty:     {tag: "proposed:chip_constitutional_family", renders: "NOT CONFIGURED — no Accord is provisioned on this node."}
-loading:   {tag: "proposed:txt_killswitch_loading", renders: "Reading kill-switch status… — a sentence, and NOT the unknown one"}
+empty:     {tag: chip_constitutional_family, renders: "NOT CONFIGURED — no Accord is provisioned on this node."}
+loading:   {tag: txt_killswitch_loading, renders: "Reading kill-switch status… — a sentence, and NOT the unknown one, on its own tag"}
 error:     {tag: txt_killswitch_unknown, renders: "Kill-switch status UNKNOWN — the node did not answer. This is not a report that it is disarmed."}
 ```
 
-`error` is mandatory here in the strongest sense and, unusually, it is the state
-that is **done**: `txt_killswitch_unknown` is real, carries the sentence
-verbatim, and cannot be reached by a successful read. `one_of` on the killswitch
-exists so a third value cannot be drawn as either of the other two.
+`error` is mandatory here in the strongest sense and, unusually, it was the
+first state that was **done**: `txt_killswitch_unknown` is real, carries the
+sentence verbatim, and cannot be reached by a successful read. `one_of` on the
+killswitch exists so a third value cannot be drawn as either of the other two.
 
-`loading` is the gap: `isLoading` picks between two strings inside the **same**
-`Text` and the tag is on that Text (`:232-240`), so "reading" and "unknown"
-share `txt_killswitch_unknown` and a flow cannot tell a slow read from a failed
-one. The distinction is drawn in the copy and erased in the harness.
+`loading` was the gap — `isLoading` picked between two strings inside the same
+`Text` under one tag, so a flow could not tell a slow read from a failed one.
+The tag now follows the branch (`txt_killswitch_loading` / `txt_killswitch_unknown`,
+accord review); the distinction drawn in the copy is drawn in the harness too.
 
-### 2.1 The state that matters most has no tag at all
+### 2.1 The state that matters most has its tag
 
-`haltStatus?.halted == true` renders an `ACTIVE HALT` banner
-(`ConstitutionalScreen.kt:198-217`) in `StatusWarn` with the invocation id.
-**It carries no test tag.** `txt_killswitch_disarmed` and
-`txt_killswitch_unknown` both have one; the armed state — the reason §1 calls
-this CSD not optional — does not.
+`haltStatus?.halted == true` renders an `ACTIVE HALT` banner in `StatusWarn`
+with the invocation id. It carried no test tag while `txt_killswitch_disarmed`
+and `txt_killswitch_unknown` both did — the armed state, the reason §1 calls
+this CSD not optional, was the one a flow could not assert. **`txt_killswitch_halted`**
+is on that Text now (accord review), so the `one_of` above is enforceable
+across all three arms, and the same fact is assertable on both cards in the
+tab (`accord_halt_banner`, CSD-067 §2.1).
 
-The sibling Accord card does tag its banner (`accord_halt_banner`, CSD-067
-§2.1). So the same fact is assertable on one card in the tab and not on the
-other, and it is the more prominent card that is missing it.
+### 2.2 English on a 29-locale safety surface — closed
 
-**The tag this card needs: `txt_killswitch_halted`** on that Surface, so the
-`one_of` above becomes enforceable across all three arms rather than two.
-
-### 2.2 Four English strings on a 29-locale safety surface
-
-`"HUMANITY_ACCORD KILL-SWITCH"` (`:195`), `"ACTIVE HALT — Node execution halted
-by invocation …"` (`:209`), `"Killswitch disarmed — All systems nominal"`
-(`:254`), `"Kill-switch status UNKNOWN — the node did not answer…"` (`:237`),
-`"RESERVED PREFIX AUTHORITY"` (`:327`) and the holder-count line (`:340`) are
-string literals, not `localizedString` keys. The title and description are
-localized; the three sentences that carry the safety meaning are not.
-
-Per `AGENTS.md` (Working in `localization/`) the fix is a `localize.py` run over
-the new `en.json` keys, not hand-translation — but the keys have to exist first,
-and on this surface the untranslated strings are precisely the ones a
-non-English holder most needs to read.
+`"HUMANITY_ACCORD KILL-SWITCH"`, both `ACTIVE HALT` sentences, `"Reading
+kill-switch status…"`, the UNKNOWN sentence, `"Killswitch disarmed — All
+systems nominal"`, the two family sentences, `"RESERVED PREFIX AUTHORITY"`,
+the two holder-count lines, the reserved-prefix paragraph and the `LIVE` /
+`NOT CONFIGURED` chip were string literals. They are fourteen
+`mobile.constitutional_*` keys now (English only, in `en.json` and its three
+mirrors); per `AGENTS.md` (Working in `localization/`) the other 28 locales
+come from a `localize.py` run, not by hand. The `"Constitutional Standing"`
+fallback on the title went with them — `localizedString` already falls back
+through English to the key (CIRISClient#34), so a second fallback in the screen
+was a second source.
 
 ### 2.3 What moved to CSD-067
 
@@ -172,7 +167,9 @@ in `src/`.
 | this node's holder record | ~~`/v1/accord/holder`~~ | `src/accord.rs:2600` | **wrong verb.** `/v1/accord/holder` is **POST** `register_holder`. There is no GET, so "this node's holder record" has no read and the row was describing a write |
 | provision-holder entry | `POST /v1/accord/provision-holder` | `src/accord_provision.rs:3697` | **live** (CSD-068) |
 | ceremony entry | ~~`/v1/accord/provision`~~ → `POST /v1/accord/genesis/{envelope,assemble}` + `/v1/accord/family/cosign` | `src/accord.rs:2621,2625`, `src/accord_provision.rs:3701` | **no such route as `/v1/accord/provision`.** The ceremony is three endpoints, not one (CSD-069) |
-| trust root | `GET /v1/trust-root` | `src/trust_root_api.rs:415` | **live and not called by this screen** — see §2's note on why the field was removed |
+| trust root | `GET /v1/trust-root` | `src/trust_root_api.rs:415` | **live and not called by this screen** — see §2's note on why the field was removed; it is CSD-105's, reached from the Accord card |
+| the owner's nodes | `GET /v1/setup/owned-nodes` | CIRISServer, loopback-only | **called, not drawn** — this screen shares `AccordViewModel` with the Accord card (`CIRISApp.kt`, the `Screen.Constitutional` arm collects its flows and calls its `refresh()`), and `refresh()` reads owned-nodes for the Accord card's target pickers. The checker charges every init-time read of a touched view model to the screen (CSD.md §4.1), which is why this row and the next exist |
+| the rest of the accord read | `GET /v1/accord/invocations` · `GET /v1/accord/events` · `GET /v1/accord/canonical/servers` · `GET /v1/accord/canonical/withdrawals` · `GET /v1/accord/canonical/pending` | CIRISServer (`src/accord.rs:2618,2658`, `src/accord_provision.rs:3711,3753,3766`) | **called by the shared `refresh()`, drawn on the Accord card (CSD-067 §3), not here.** This screen reads three of the flows it fills — family, holders + threshold, halt status. The cost is one screen's refresh fetching eight routes for a card that shows three; the alternative, a second view model for the same three reads, is the drift CSD-003's own history warns about |
 
 **The correction is the lesson.** The old §3 ended "**These are confirmed** —
 unlike CSD-001/002/004, this CSD's §3 is answered, so its blocker to `building`
@@ -211,8 +208,16 @@ Against a node that answers "not halted":
 
 ```yaml
 expect:
-  visible: [txt_killswitch_disarmed]
-  absent:  [txt_killswitch_unknown]
+  visible: [txt_killswitch_disarmed, chip_constitutional_family, txt_constitutional_threshold]
+  absent:  [txt_killswitch_unknown, txt_killswitch_halted, txt_killswitch_loading]
+```
+
+Against a node with a latched halt:
+
+```yaml
+expect:
+  visible: [txt_killswitch_halted]
+  absent:  [txt_killswitch_disarmed, txt_killswitch_unknown]
 ```
 
 The two entry points:
@@ -222,8 +227,8 @@ expect:
   visible: [btn_open_accord_ceremony, btn_open_provision_holder]
 ```
 
-*Cannot yet assert:* the armed state (§2.1), the LIVE / NOT CONFIGURED chip, or
-that "reading" is not "unknown" (§2).
+*Cannot yet assert on a runner:* the loading sentence — the read is faster than
+a step; the tag exists (`txt_killswitch_loading`) for a throttled fixture.
 
 ## 5. QA plan
 
@@ -236,12 +241,13 @@ that "reading" is not "unknown" (§2).
 3. Both entry points open their ceremonies rather than merely existing.
 
 **Not tested here.**
-* **Acceptance 1's first arm** — the halt banner has no tag (§2.1), so the two
-  states a flow can assert are the two that mean "nothing is happening".
+* **Acceptance 1 against a real latch** — the tag exists (§2.1) and the flow
+  asserts it against a fixture; a latched production node is not a fixture
+  anyone should make.
 * **Acceptance 2.** `holderThreshold` defaults to `2` in the composable's
-  signature (`ConstitutionalScreen.kt:51`) and the roster line only prints a
-  threshold when `holders.isNotEmpty()`; nothing asserts which of those a given
-  render used.
+  signature and the roster line only prints a threshold when
+  `holders.isNotEmpty()`; `txt_constitutional_threshold` makes the printed
+  value assertable, and nothing asserts which source a given render used.
 * **Acceptance 3.** The buttons are tagged; what they open is asserted in
   CSD-068 and CSD-069, not here.
 * **That the reserved-prefix sentence is true.** "All attempts to forge

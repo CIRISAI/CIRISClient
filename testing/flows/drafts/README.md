@@ -64,27 +64,53 @@ and `testing/gate/nav_map.py` derives the chain (`CSD.md` §2.0).
 
 Check first, in this order:
 
-1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it;
+1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it
+   (that module and the `csd:` binder arrive with #97; on `main` today
+   `FlowSpec.load` refuses the key — see below);
 2. its CSD's §5 declares the platforms it should be green on;
-3. the CSD's `stage:` moves to `testable` only after a green run — a green run is
-   evidence for that edit, never the edit itself.
+3. the CSD's `stage:` follows `CSD.md` §1, and is edited by hand, never inferred:
+   - `testable` needs the flow's `client:` floor to be no longer `unreleased`
+     (any `>=X` / `>X` form) **and** the flow to run on the matrix;
+   - `verified` needs that run green on every platform the CSD's §5 declares;
+   - `shipped` is the stage whose floor names a published version.
+
+   A green run is evidence for the edit, never the edit itself. A card whose spec
+   is complete and whose flow is written, but which has not met that bar, stays
+   at `building` and says so in one line at the top of its §5, so the promotion
+   is a mechanical flip once it does.
+
+## Status on `main` (2026-09-28): none of the six nav-only flows promotes yet
+
+Tried for `csd-025`, `csd-036`, `csd-057`, `csd-066`, `csd-068` and `csd-087`.
+None moved, for one reason common to all six and one extra for `csd-036`:
+
+- **They do not load with the loader on `main`.** `testing/gate/run_flows.py`
+  does not exist on `main`, and `FlowSpec.load` in `testing/gate/flow_spec.py`
+  refuses the `csd:` key every draft carries (`unknown key(s) ['csd']; allowed:
+  ['client', 'description', 'flow', 'steps', 'title']`). The binder that reads
+  `csd:` — and the runner that walks a hop — are in #97, still open. With `csd:`
+  removed each of the six parses, so the key is the only thing refused; removing
+  it would unbind the flow from its CSD, which is the wrong fix. They promote
+  when #97 lands.
+- **`csd-036` is still floored `client: "unreleased"`**, so it would be refused
+  on every leg even once it loads.
 
 ## What is here
 
 | file | CSD | screen it needs | beyond nav, what else it waits on |
 |---|---|---|---|
 | `csd-006-receipt.yaml` | CSD-006 | Contacts + a contact | a second node to be a contact of; the matrix stands up one |
-| `csd-025-system.yaml` | CSD-025 | System | nothing |
-| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | nothing |
-| `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing |
-| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | nothing |
-| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder | nothing |
+| `csd-025-system.yaml` | CSD-025 | System | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | **not promoted**: `csd:` key refused on `main` (#97), and floored `unreleased` |
+| `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-069-accord-ceremony.yaml` | CSD-069 | AccordCeremony | its last step needs six FIPS tokens; it is `optional_step` |
 | `csd-081-login.yaml` | CSD-081 | Login | the observer step needs a second, non-owner account |
 | `csd-082-setup-with-ai.yaml` | CSD-082 | Setup | a node with no owner — the fixture claims one during sign-in |
 | `csd-083-setup-without-ai.yaml` | CSD-083 | Setup | same |
 | `csd-085-claim-node.yaml` | CSD-085 | ClaimNode | the no-signer step needs the local node stopped mid-flow |
-| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce |
+| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce. **Not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-090-duty-conferral.yaml` | CSD-090 | DutyConferral | a node that knows an accord family |
 | `csd-091-user-chat.yaml` | CSD-091 | UserChat | a peered contact to have a room with |
 

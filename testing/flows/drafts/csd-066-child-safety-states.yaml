@@ -1,0 +1,51 @@
+csd: CSD-066
+flow: csd_066_child_safety_states
+title: The Safety card says whose posture it is, never renders a watchlist read as nothing, and confirms before it writes
+description: >-
+  CSD-066 §2 and §4. The posture's subject is the person (the owner's fed-ID),
+  said on the card; a group never asked about has its own line; a refresh
+  replaces that line with one of the four read states; and Enable opens a
+  three-fact confirm that this flow cancels — confirming would ask the node to
+  turn a watchlist on, and the current node answers 401 (the holder's request
+  signature, which the app does not produce), which SafetyCardTest asserts.
+# Floor: banner_child_safety_honesty, txt_posture_subject, txt_posture_band,
+# txt_watchlist_not_asked, spinner_watchlist and the watchlist_enable sheet tags
+# landed 2026-09-28 in ui/screens/ChildSafetyScreen.kt; no release carries them.
+client: "unreleased"
+
+steps:
+  - step_id: whose_posture_and_the_banner
+    title: The honesty banner is up, and the posture names whose it is
+    requires:
+      screen: ChildSafety
+    do:
+      - wait: txt_posture_subject
+    expect:
+      visible: [banner_child_safety_honesty, txt_posture_subject, txt_posture_band, txt_watchlist_not_asked]
+      absent: [posture_error]
+
+  - step_id: a_refresh_is_never_nothing
+    title: Asking about a group replaces the not-asked line with a read state
+    do:
+      - input: {input_watchlist_group: "flow-csd-066-no-such-group"}
+      - click: btn_watchlist_refresh
+      - wait_ms: 1500
+    expect:
+      absent: [txt_watchlist_not_asked, spinner_watchlist]
+
+  - step_id: enable_confirms_three_facts
+    title: Enable opens the three-fact confirm, naming the group and the signer
+    do:
+      - input: {input_watchlist_id: "flow-csd-066-list"}
+      - click: btn_watchlist_enable
+    expect:
+      visible: [sheet_watchlist_enable, watchlist_enable_fact_1, watchlist_enable_fact_2, watchlist_enable_fact_3, btn_watchlist_enable_confirm, btn_watchlist_enable_cancel]
+      text: {watchlist_enable_fact_1: "flow-csd-066-no-such-group"}
+
+  - step_id: enable_cancelled
+    title: Cancel sends nothing
+    do:
+      - click: btn_watchlist_enable_cancel
+    expect:
+      screen: ChildSafety
+      absent: [sheet_watchlist_enable, watchlist_write_unsigned]

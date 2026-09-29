@@ -125,21 +125,20 @@ Node-owned, at the node URL. CIRISServer `origin/main` @ `046e1b39`, `src/family
 | who to add | `GET /v1/contacts` | CIRISServer | **live** (`src/contacts_chat.rs`); the only source. The v3 contact code (CSD-092) would let a person find someone first; it is unmerged, so this card picks from existing contacts |
 | who "you" are | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback |
 | refusals | `family.unknown_member_key`, `family.already_member`, `family.not_a_member`, `family.last_founder`, `family.readd_unsupported`, `family.bad_role`, `family.not_authorized`, `family.quorum_pending`, … | CIRISServer | **live**; each has an `en.json` key and renders by id (`household_refusal`) |
-| leave / dissolve, through the shared view model | `POST /v1/families/{id}/leave`, `DELETE /v1/families/{id}` | CIRISServer | **live**; reachable from this screen's arm because `HouseholdsViewModel.confirm()` dispatches every act and this screen hands it to the shared `ConfirmSheet`. No control here requests them: their door is the hub on Family › Rules (§3.1) |
+| leave / dissolve | `POST /v1/families/{id}/leave`, `DELETE /v1/families/{id}` | CIRISServer | **live, not called by this card** — the hub's acts (CSD-100). This screen's confirm is `confirmMemberAct()`, which sends only add, remove and role (§3.1) |
 
 ### 3.1 One door per act, one view model for two screens
 
-The route gate sees six mutating routes on both this screen and the hub. They
-are not two doors: leave, dissolve, sign and apply have their controls on the
-hub; add, remove and role have theirs here (`btn_household_member_pick_*`,
-`btn_household_member_remove_*`, `btn_household_member_role_*`). Both screens
-share one `HouseholdsViewModel` so the household picked in one is the one
-shown in the other, and its `confirm()` dispatches every act, which the
-heuristic closure follows from either screen. Only
-`POST /v1/families/{id}/changes/envelope` is two doors by design (a quorum
-dissolve from the hub, a quorum roster change from here). Recorded as the
-decision in `packaging/csd_routes_baseline.json`; the household CSD's §3.1
-carries the full table and the follow-up.
+Add, remove and role have their controls here (`btn_household_member_pick_*`,
+`btn_household_member_remove_*`, `btn_household_member_role_*`) and are sent by
+`HouseholdsViewModel.confirmMemberAct()`; leave, dissolve, sign and apply have
+theirs on the hub and are sent by `confirmHouseholdAct()` (CSD-100 §3.1). Both
+screens share one view model so the household picked in one is the one shown
+in the other. Before the review one `confirm()` dispatched every act, and the
+route gate saw the hub's writes on this screen; the split closed that, and the
+five rows left the baseline. Only `POST /v1/families/{id}/changes/envelope` is
+two doors by design (a quorum roster change from here, a quorum dissolve from
+the hub) and stays recorded as that decision.
 
 ### 3.2 Stated limits
 
@@ -168,10 +167,13 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-101-household-members.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+
 **Platforms.** All five.
 
 **Tested (desktopTest).** The routing rule and the founder / member / quorum
-cases (`HouseholdsSupportTest`, `HouseholdsViewModelTest`), and the placement:
+cases (`HouseholdsSupportTest`, `HouseholdsViewModelTest`), that this screen's
+confirm never sends a hub act (`theRostersConfirmNeverSendsAHouseholdAct`), and the placement:
 the roster is in Family › People beside Contacts and in no other circle, and
 Family › Rules gains no second household card (`CirclesNavTest`).
 

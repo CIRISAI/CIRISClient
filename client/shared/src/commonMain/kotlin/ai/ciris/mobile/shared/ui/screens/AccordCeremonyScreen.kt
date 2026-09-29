@@ -33,9 +33,21 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import ai.ciris.mobile.shared.models.federation.YubiKeyProbe
 import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
+import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
+import ai.ciris.mobile.shared.platform.DirectoryPickerPurpose
+import ai.ciris.mobile.shared.platform.writeTextFile
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -83,7 +95,7 @@ fun AccordCeremonyScreen(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_accord_ceremony_back") { onBack() },
                     ) {
-                        Icon(CIRISIcons.arrowBack, contentDescription = "Back")
+                        Icon(CIRISIcons.arrowBack, contentDescription = localizedString("mobile.common_back"))
                     }
                 },
             )
@@ -97,6 +109,23 @@ fun AccordCeremonyScreen(
                 .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
+
+            // Which of the four phases the trio is in — one line, one tag, so a
+            // failed step and an unreached step can be told apart by where we are.
+            Text(
+                localizedString(
+                    when (phase) {
+                        AccordCeremonyViewModel.Phase.INTRO -> "mobile.accord_ceremony_phase_intro"
+                        AccordCeremonyViewModel.Phase.PROVISION -> "mobile.accord_ceremony_phase_provision"
+                        AccordCeremonyViewModel.Phase.COSIGN -> "mobile.accord_ceremony_phase_cosign"
+                        AccordCeremonyViewModel.Phase.DONE -> "mobile.accord_ceremony_phase_done"
+                    },
+                ),
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("txt_ceremony_phase"),
+            )
 
             notice?.let { msg ->
                 MessageCard(msg, MaterialTheme.colorScheme.secondaryContainer,
@@ -139,6 +168,7 @@ private fun IntroPhase(viewModel: AccordCeremonyViewModel, busy: Boolean) {
         localizedString("mobile.accord_ceremony_intro_headline"),
         fontSize = 18.sp,
         fontWeight = FontWeight.Bold,
+        modifier = Modifier.testable("txt_ceremony_intro"),
     )
     Spacer(Modifier.height(12.dp))
     Surface(
@@ -167,6 +197,23 @@ private fun IntroPhase(viewModel: AccordCeremonyViewModel, busy: Boolean) {
         fontSize = 12.sp,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    // What the person is deciding, said before they decide it (CC 4.2.3): the
+    // family is entrenched, and a quorum two of three can reach from one address
+    // is a correlated-failure surface the holder set itself must diversify.
+    Spacer(Modifier.height(8.dp))
+    Text(
+        localizedString("mobile.accord_ceremony_intro_entrenched"),
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testable("txt_ceremony_entrenched"),
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(
+        localizedString("mobile.accord_ceremony_intro_diversity"),
+        fontSize = 12.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testable("txt_ceremony_diversity"),
     )
     Spacer(Modifier.height(20.dp))
     Button(
@@ -300,7 +347,7 @@ private fun ProvisionPhase(viewModel: AccordCeremonyViewModel, busy: Boolean, er
         modifier = Modifier.fillMaxWidth().testableClickable("btn_ceremony_provision") { viewModel.provisionCurrent() },
     ) {
         if (busy) {
-            CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+            CircularProgressIndicator(modifier = Modifier.size(14.dp).testable("spinner_ceremony_step"), strokeWidth = 2.dp)
             Spacer(Modifier.width(8.dp))
             Text(localizedString("mobile.accord_ceremony_provisioning"))
         } else {
@@ -389,7 +436,7 @@ private fun CosignPhase(viewModel: AccordCeremonyViewModel, busy: Boolean, error
             modifier = Modifier.fillMaxWidth().testableClickable("btn_ceremony_cosign") { viewModel.cosignCurrent() },
         ) {
             if (busy) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(14.dp).testable("spinner_ceremony_step"), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
                 Text(localizedString("mobile.accord_ceremony_cosigning"))
             } else {
@@ -420,7 +467,7 @@ private fun CosignPhase(viewModel: AccordCeremonyViewModel, busy: Boolean, error
             modifier = Modifier.fillMaxWidth().testableClickable("btn_ceremony_assemble") { viewModel.assemble() },
         ) {
             if (busy) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                CircularProgressIndicator(modifier = Modifier.size(14.dp).testable("spinner_ceremony_step"), strokeWidth = 2.dp)
                 Spacer(Modifier.width(8.dp))
             } else {
                 Icon(CIRISIcons.shield, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -435,6 +482,14 @@ private fun CosignPhase(viewModel: AccordCeremonyViewModel, busy: Boolean, error
 
 @Composable
 private fun DonePhase(viewModel: AccordCeremonyViewModel) {
+    val clipboard = LocalClipboardManager.current
+    val scope = rememberCoroutineScope()
+    var pickDir by remember { mutableStateOf(false) }
+    val genesisJson = viewModel.genesisJson()
+    // Resolved here (composable scope); the callbacks below fill `{dir}`.
+    val copiedMsg = localizedString("mobile.accord_ceremony_genesis_copied")
+    val savedTpl = localizedString("mobile.accord_ceremony_genesis_saved")
+    val saveFailedTpl = localizedString("mobile.accord_ceremony_genesis_save_failed")
     Spacer(Modifier.height(12.dp))
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -457,6 +512,19 @@ private fun DonePhase(viewModel: AccordCeremonyViewModel) {
                     color = MaterialTheme.colorScheme.onPrimaryContainer,
                 )
             }
+            Spacer(Modifier.height(6.dp))
+            // The assembled family, named from the genesis the node returned.
+            Text(
+                localizedString(
+                    "mobile.accord_ceremony_family_line",
+                    "family",
+                    viewModel.genesisFamilyKeyId() ?: "—",
+                ),
+                fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.testable("txt_ceremony_family"),
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 localizedString("mobile.accord_ceremony_save_genesis"),
@@ -480,18 +548,59 @@ private fun DonePhase(viewModel: AccordCeremonyViewModel) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Text(
-            viewModel.genesisJson(),
+            genesisJson,
             fontSize = 10.sp,
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(10.dp).testable("accord_ceremony_genesis_json"),
         )
     }
+    // Keeping the artifact is the cold start; the screen offers the two ways to
+    // keep it rather than telling the person to select mono text by hand.
+    Spacer(Modifier.height(8.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        val copy = {
+            clipboard.setText(AnnotatedString(genesisJson))
+            viewModel.setExternalNotice(copiedMsg)
+        }
+        OutlinedButton(
+            onClick = copy,
+            modifier = Modifier.testableClickable("btn_ceremony_genesis_copy") { copy() },
+        ) { Text(localizedString("mobile.accord_ceremony_genesis_copy")) }
+        OutlinedButton(
+            onClick = { pickDir = true },
+            modifier = Modifier.testableClickable("btn_ceremony_genesis_save") { pickDir = true },
+        ) { Text(localizedString("mobile.accord_ceremony_genesis_save")) }
+    }
+    DirectoryPickerDialog(
+        show = pickDir,
+        purpose = DirectoryPickerPurpose.SaveFile,
+        onDirectoryPicked = { dir ->
+            pickDir = false
+            scope.launch {
+                val ok = writeTextFile(dir, "humanity_accord_genesis.json", genesisJson)
+                viewModel.setExternalNotice(
+                    (if (ok) savedTpl else saveFailedTpl).replace("{dir}", dir),
+                    error = !ok,
+                )
+            }
+        },
+        onDismiss = { pickDir = false },
+    )
     Spacer(Modifier.height(8.dp))
     Text(
         localizedString("mobile.accord_ceremony_save_note"),
         fontSize = 11.sp,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    // This JSON is the entrenched family, not the seed other nodes adopt
+    // (CSD-069 §3): the seed is minted by the re-mint on the Accord card.
+    Spacer(Modifier.height(6.dp))
+    Text(
+        localizedString("mobile.accord_ceremony_done_not_seed"),
+        fontSize = 11.sp,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.testable("txt_ceremony_not_seed"),
     )
 }
 
@@ -550,15 +659,17 @@ private fun SlotRow(label: String, holderName: String, primary: Boolean, done: B
  * [AccordCeremonyViewModel.yubiKeyStatus] (GET /v1/accord/yubikey-status).
  */
 @Composable
-internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) {
+internal fun YubiKeyStatusBanner(probe: YubiKeyProbe, onRefresh: () -> Unit) {
+    val status = (probe as? YubiKeyProbe.Loaded)?.status
+    val failure = (probe as? YubiKeyProbe.Failed)?.failure
     val detected = status?.detected == true
     val ready = status?.ready == true
     val bg = when {
         ready -> MaterialTheme.colorScheme.primaryContainer
-        detected -> MaterialTheme.colorScheme.errorContainer
+        detected || failure is ReadFailure.Failed -> MaterialTheme.colorScheme.errorContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
-    Surface(shape = RoundedCornerShape(10.dp), color = bg, modifier = Modifier.fillMaxWidth()) {
+    Surface(shape = RoundedCornerShape(10.dp), color = bg, modifier = Modifier.fillMaxWidth().testable("yubikey_status_banner")) {
         Column(Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -569,6 +680,8 @@ internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) 
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = when {
+                        failure is ReadFailure.NotOnThisNode -> localizedString("mobile.yubikey_probe_not_on_this_node")
+                        failure != null -> localizedString("mobile.yubikey_probe_failed")
                         status == null -> "CHECKING YUBIKEY…"
                         !detected -> "NO YUBIKEY DETECTED"
                         else -> buildString {
@@ -590,9 +703,30 @@ internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) 
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testable(
+                        "yubikey_status_state",
+                        when (probe) {
+                            YubiKeyProbe.Loading -> "loading"
+                            is YubiKeyProbe.Loaded -> "loaded"
+                            is YubiKeyProbe.Failed ->
+                                if (failure is ReadFailure.NotOnThisNode) "not_on_this_node" else "failed"
+                        },
+                    ),
                 )
-                TextButton(onClick = onRefresh) { Text("Re-check") }
+                TextButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.testableClickable("btn_yubikey_recheck") { onRefresh() },
+                ) { Text("Re-check") }
+            }
+            // The probe's failure, with its reason — never a spinner that never ends.
+            failure?.detail?.takeIf { it.isNotBlank() }?.let { reason ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    localizedString("mobile.yubikey_probe_reason", "detail", reason),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_yubikey_probe_reason", reason),
+                )
             }
             status?.takeIf { it.detected }?.let { s ->
                 Spacer(Modifier.height(4.dp))

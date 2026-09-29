@@ -1,11 +1,12 @@
 # CSD-092 — Share my contact code (a card on People)
 
-**CSD**: CSD-092 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.218 client brief (CIRISServer#673, built on the server's contact-flow branch; not yet pushed)
+**CSD**: CSD-092 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.218 client brief (CIRISServer#673; the route is readable on `origin/integ/0.5.218`, `src/self_devices.rs:562-847`)
 **Pairs with**: CSD-005 (People: the other half, where a code is pasted or scanned in)
-**Flow**: unwritten. The tags below are the contract the card agents build to
+**Flow**: `testing/flows/drafts/csd-092-share-contact-code.yaml` (floor `unreleased` — the route ships with ciris-server 0.5.218)
+**Card**: built, PR #113 — `ContactsScreen.kt` (the card), `ContactCodeState.kt` + `ContactsViewModel` (the states), `ContactCodeResponse` (the wire), `ContactCodeViewModelTest` / `ContactCodeWireTest`
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -67,49 +68,49 @@ registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea83
 fields:
   - ceg: x_private:contact_code
     use: display-only
-    type: unconfirmed
+    type: string
     example: "CIRIS-V3-AB12-CD34-…"
-    renders: "the person's v3 code in mono, grouped in fours (the CC 2.6.8 display form), with Copy beside it. The route returns it as a string and as a QR payload (the same code); the two JSON keys are not named in anything readable yet (CIRISClient#78)"
-    tag: "proposed:text_contact_code"
+    renders: "the person's v3 code in mono, grouped in fours (the CC 2.6.8 display form), with Copy beside it. The route returns it as `code` (grouped, shown as text) and `qr_payload` (ungrouped, the same code; `src/self_devices.rs:816-833`), with `format: fedcode-v3`"
+    tag: text_contact_code
   - ceg: x_private:contact_code_qr
     use: display-only
     type: string
     example: "CIRIS-V3-AB12CD34…"
-    renders: "a real, scannable QR of the UNGROUPED form (CC 2.6.8: 'the QR form is ungrouped'), drawn by the QrCode primitive: QrCode(value, contentDescription, tag). contentDescription reads 'Your contact code as a QR'"
-    tag: "proposed:qr_contact_code"
+    renders: "a real, scannable QR of the UNGROUPED form (`qr_payload`; CC 2.6.8: 'the QR form is ungrouped'), drawn by the QrCode primitive (`ui/primitives/QrCode.kt`, PR #99). contentDescription reads 'Your contact code as a QR'"
+    tag: qr_contact_code
   - ceg: x_private:contact_code_nodes_param
     use: emit
     type: "enum[all,list,none]"
     example: "all"
-    renders: "three choices: 'All my reachable devices' (default: `nodes` absent), 'Choose devices' (`nodes` = the ticked list), 'No devices' (`nodes=none`). Tagged `proposed:opt_contact_code_nodes_all`, `proposed:opt_contact_code_nodes_list` and `proposed:opt_contact_code_nodes_none`"
-    tag: "proposed:opt_contact_code_nodes_all"
+    renders: "three choices: 'All my reachable devices' (default: `nodes` absent = every announced node), 'Choose devices' (`nodes` = the ticked comma list), 'No devices' (`nodes=none`) — `src/self_devices.rs:695-731`. Tagged `opt_contact_code_nodes_all`, `opt_contact_code_nodes_list` and `opt_contact_code_nodes_none`"
+    tag: opt_contact_code_nodes_all
     assert:
-      one_of: {"proposed:opt_contact_code_nodes_all": [all, list, none]}
+      one_of: {opt_contact_code_nodes_all: [all, list, none]}
   - ceg: x_private:available_nodes
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "one row per device in `available_nodes`: its label if any, else its node key id middle-truncated, and a tick box. `available_nodes` holds ONLY announced devices (maintainer, CIRISServer#673, 2026-09-25), so every row here is reachable. Items are `{node_key_id, label?}` per the brief; type stays unconfirmed until the shape is readable"
-    tag: "proposed:row_contact_code_node_{nodeKeyId}"
+    type: "list[string]"
+    example: ["node-phone"]
+    renders: "one row per device in `available_nodes` (`{node_key_id, label?, announced, has_transport?, this_node}`): its label if any, else its node key id middle-truncated, and a tick box. `available_nodes` holds ONLY announced devices (`announced_nodes_of`, `:691`), so every row here is reachable"
+    tag: "row_contact_code_node_*"
   - ceg: "ownership:{relation}:{target_kind}:{version}"
     bind: {relation: responsible_party, target_kind: node, version: v1}
     use: display-only
     type: string
     example: "federation"
     renders: "under the picker, one line: 'Only reachable devices can go in a code. Your other devices are private.' Private devices are not listed here at all; 'reachable' means that device's owner-binding was widened to federation by POST /v1/federation/announce (per device, #655), which is what CC 2.6.8 constraint 2 requires"
-    tag: "proposed:text_contact_code_private_note"
+    tag: text_contact_code_private_note
   - ceg: x_private:included_nodes
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "under the QR: 'This code includes 2 devices: Phone, Laptop.' It is read back from the node, not echoed from the picker, so the sentence says what the code actually carries"
-    tag: "proposed:text_contact_code_included"
+    type: "list[string]"
+    example: ["node-phone", "node-laptop"]
+    renders: "under the QR: 'This code includes 2 devices: Phone, Laptop.' Read back from the node's `included_nodes` (`{key_id, transport_pubkey_ed25519_base64}`), not echoed from the picker, so the sentence says what the code actually carries; `nodes_without_transport` names a chosen, announced device whose transport key is not bound here yet (after its next boot), and `reachable_without_directory` is whether a stranger can reach you from this code alone"
+    tag: text_contact_code_included
   - ceg: x_private:refusal_reason_id
     use: display-only
-    type: "enum[self.node_not_announced]"
+    type: "enum[self.node_not_announced,self.contact_code_owner_key_absent,self.contact_code_not_a_person,self.contact_code_key_not_derived,self.contact_code_no_pqc_half,self.contact_code_unencodable]"
     example: "self.node_not_announced"
-    renders: "'That device isn't reachable, so it can't go in a code.' The picker never offers a private device, so this arrives only when the list went stale (a device was made private after the card loaded): the card reloads `available_nodes` and says so"
-    tag: "proposed:contact_code_refusal"
+    renders: "by id, from the bundle (`en.json` `self.*`, PR #113). `node_not_announced` (400): 'That device isn't reachable, so it can't go in a code.' — the picker never offers a private device, so this arrives only when the list went stale, and the card reloads `available_nodes`. The other five (`:629-678`, `:821`) are facts about THIS identity — no owner key, not a person, key not derived, no ML-DSA-65 half, unencodable (409) — and render in `contact_code_error`"
+    tag: contact_code_refusal
 ```
 
 **What the card says about sharing.** One line under the QR: "Anyone with this
@@ -118,10 +119,10 @@ second half is CC 2.1's point about rosters ("never globally enumerable") made
 concrete. The person is making a disclosure, and it is theirs to make.
 
 ```yaml csd:states
-populated: {tag: "proposed:card_contact_code", renders: "the QR, the code, Copy, the device picker and the included sentence"}
-empty:     {tag: "proposed:contact_code_unreachable", renders: "No one can find you with this yet: none of your devices is reachable. Make this device reachable, or share a code that includes it. With `proposed:btn_contact_code_make_reachable`. NO QR is drawn in this state: a code that resolves to nobody is not shown as if it worked"}
-loading:   {tag: "proposed:contact_code_loading", renders: "the card frame with a progress affordance and no sentence, and no QR placeholder"}
-error:     {tag: "proposed:contact_code_error", renders: "'Could not get your contact code.' with the node's reason by id; and for a node older than 0.5.218 (404, no id): 'This node can't make a contact code yet. It needs ciris-server 0.5.218 or newer.'"}
+populated: {tag: card_contact_code, renders: "the QR, the code, Copy, the device picker and the included sentence; `btn_contact_code_close` shuts it"}
+empty:     {tag: contact_code_unreachable, renders: "No one can find you with this yet: none of your devices is reachable. Make this device reachable, or share a code that includes it. With `btn_contact_code_make_reachable`, and `text_contact_code_reachable_status` reporting the announce ('takes effect at the next boot'). NO QR is drawn in this state: a code that resolves to nobody is not shown as if it worked"}
+loading:   {tag: contact_code_loading, renders: "the card frame with a progress affordance and no sentence, and no QR placeholder"}
+error:     {tag: contact_code_error, renders: "'Could not get your contact code.' with the node's reason by id; and for a node older than 0.5.218 (404, no id): 'This node can't make a contact code yet. It needs ciris-server 0.5.218 or newer.'"}
 ```
 
 **`empty` is a decision, not a missing case.** When `available_nodes` is empty
@@ -136,44 +137,44 @@ private one, so the button here is the announce act and not the picker.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the contact code | `GET /v1/self/contact-code?nodes=` (owner session): `nodes` absent = every announced device, a comma list = exactly those, `none` = the fed-ID only (resolved through the public directory) | CIRISServer | **built, unmerged.** Route, query and semantics are stated by the maintainer on CIRISServer#673 (comment 2026-09-25 22:48) and the brief's "built, tested" update ("a code from one node, pasted on a separate node, resolves to its owner directly"). **Not readable:** no branch or PR carrying it is pushed, `main` @ `046e1b39` has no `contact-code` literal, and #673 is still open. Released only with 0.5.218, which waits on the persist/edge/verify triple |
-| `nodes` encoding | comma list (brief, #673) | CIRISServer | stated; not readable in source |
-| `available_nodes`, `included_nodes` | same route; `available_nodes` = the announced devices the person may include, `{node_key_id, label?}` | CIRISServer | **names stated** by the maintainer (#673); item shape from the brief, not readable. The code string's and QR payload's own keys are **unconfirmed** |
-| refusal for a private or foreign device | `self.node_not_announced` (400) | CIRISServer | "planned id" in the brief; one of the 15 new refusal ids queued on CIRISClient#78. Needs an `en.json` key when the list lands |
-| make this device reachable | `POST /v1/federation/announce` | CIRISServer | **live**: `src/claim_remote.rs:1250`, owner-gated, loopback-only, idempotent. It promotes this node's owner-binding `self → federation` at once; the Reticulum identity announce follows on the **next boot** (`announce_self_handler` doc, `:1054-1076`). The card must say both halves |
-| 16-device cap | CC 2.6.8 constraint 3: `node_count ≤ 16`, payload ≤ 1024 bytes | CIRISServer (encoder) | **unconfirmed** whether the route refuses or truncates past 16. The picker caps selection at 16 either way |
-| the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **in build**: only the encoder exists, as an unreviewed WIP (`platform/util/QrEncoder.kt`, branch `wip/qr-encode-scan` @ `353a2ec`); the `QrCode` composable is not written yet, and the signature is the one its owner published. Replaces `FedcodeQr` for this use |
-| copy to clipboard | platform clipboard | CIRISClient | live pattern (Copy exists elsewhere in the client) |
+| the contact code | `GET {nodeUrl}/v1/self/contact-code?nodes=` (owner session, at the NODE URL — `contactsNodeUrl`, which works on every agent version; reach through the agent works from agent 2.12.1, CIRISAgent#1213 closed by #1215): `nodes` absent = every announced device, a comma list = exactly those, `none` = the fed-ID only (resolved through the public directory) | CIRISServer | **built, unreleased** (0.5.218; CIRISServer#673 still open). Readable on `origin/integ/0.5.218`: `src/self_devices.rs:611` `contact_code`, routed at `:869`. Ships with 0.5.218 |
+| `nodes` encoding | comma list, trimmed, sorted, deduped; an empty list after trimming is a 400 (`:697-712`) | CIRISServer | readable |
+| the response | `key_id`, `code`, `qr_payload`, `format` (`fedcode-v3`), `ml_dsa_65_pubkey_sha256`, `available_nodes[{node_key_id,label?,announced,has_transport?,this_node}]`, `included_nodes[{key_id,transport_pubkey_ed25519_base64}]`, `nodes_without_transport[]`, `reachable_without_directory` (`:829-846`) | CIRISServer | readable; decoded 1:1 by `ContactCodeResponse` (`ContactCodeWireTest`) |
+| refusal for a private or foreign device | `self.node_not_announced` (400, detail names the refused ids) | CIRISServer | readable (`:716-728`); bundle key present (PR #113) |
+| refusals about this identity | `self.contact_code_owner_key_absent`, `self.contact_code_not_a_person`, `self.contact_code_key_not_derived`, `self.contact_code_no_pqc_half` (400s), `self.contact_code_unencodable` (409) | CIRISServer | readable (`:629-678`, `:821`); bundle keys present |
+| make this device reachable | `POST /v1/federation/announce` | CIRISServer | **live**: `src/claim_remote.rs:1250`, owner-gated, loopback-only, idempotent. It promotes this node's owner-binding `self → federation` at once; the Reticulum identity announce follows on the **next boot** (`announce_self_handler` doc, `:1054-1076`). The card says both halves (`text_contact_code_reachable_status`) |
+| 16-device cap | CC 2.6.8 constraint 3: `node_count ≤ 16`, payload ≤ 1024 bytes | CIRISServer (encoder) | the route neither truncates nor refuses a count: it hands the chosen set to `fedcode::encode`, which fails past the payload bound and surfaces as `self.contact_code_unencodable` (409). The picker caps selection at 16 on this side, so the 409 is unreachable from the card |
+| the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **live** (PR #99): `ui/primitives/QrCode.kt`, drawn from `qr_payload` |
+| copy to clipboard | platform clipboard | CIRISClient | live |
 
 ## 4. Flow (how)
 
 Sign in on a node with one announced device (this one); open People, then
-`proposed:btn_contact_code_open`.
+`btn_contact_code_open`.
 
 ```yaml
 expect:
   state: populated
-  visible: ["proposed:card_contact_code", "proposed:qr_contact_code", "proposed:text_contact_code", "proposed:btn_contact_code_copy", "proposed:text_contact_code_included"]
-  matches: {"proposed:text_contact_code": "^CIRIS-V3-[A-Z2-7-]+$"}
-  count: {of: "proposed:row_contact_code_node_*", min: 1}
+  visible: [card_contact_code, qr_contact_code, text_contact_code, btn_contact_code_copy, text_contact_code_included]
+  matches: {text_contact_code: "^CIRIS-V3-[A-Z2-7-]+$"}
+  count: {of: "row_contact_code_node_*", min: 1}
 ```
 
-Click `proposed:btn_contact_code_copy`, paste it into `input_contacts_add_key`
-on a second person's node, submit (CSD-005). The second node lists the first
-person as a contact.
+Click `btn_contact_code_copy`, paste it into `input_contacts_add_key` on a
+second person's node, submit (CSD-005). The second node lists the first person
+as a contact.
 
-Choose `proposed:opt_contact_code_nodes_none`, then back to
-`proposed:opt_contact_code_nodes_all`: the code changes and changes back, and
-`proposed:text_contact_code_included` follows it.
+Choose `opt_contact_code_nodes_none`, then back to `opt_contact_code_nodes_all`:
+the code changes and changes back, and `text_contact_code_included` follows it.
 
 On a node where no device is announced:
 
 ```yaml
 expect:
   state: empty
-  visible: ["proposed:contact_code_unreachable", "proposed:btn_contact_code_make_reachable"]
-  absent: ["proposed:qr_contact_code"]
-  text: {"proposed:contact_code_unreachable": "none of your devices is reachable"}
+  visible: [contact_code_unreachable, btn_contact_code_make_reachable]
+  absent: [qr_contact_code]
+  text: {contact_code_unreachable: "none of your devices is reachable"}
 ```
 
 Make a listed device private from another session, then tick it here: the
@@ -182,11 +183,23 @@ the picker never lists a private device):
 
 ```yaml
 expect:
-  visible: ["proposed:contact_code_refusal"]
-  text: {"proposed:contact_code_refusal": "isn't reachable"}
+  visible: [contact_code_refusal]
+  text: {contact_code_refusal: "isn't reachable"}
+```
+
+On a node older than 0.5.218 (the released line, until 0.5.218 ships):
+
+```yaml
+expect:
+  state: error
+  visible: [contact_code_error]
+  absent: [qr_contact_code]
+  text: {contact_code_error: "0.5.218 or newer"}
 ```
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-092-share-contact-code.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** All five for the card. The copy → paste → contact round trip
 needs two nodes and runs on desktop.
@@ -204,14 +217,17 @@ CIRISServer ladder concern). The next-boot half of the announce.
 
 ## 6. Delta — card vs API vs CC
 
-* **Card vs API.** The route is built and not yet readable: no 0.5.218 code is
-  pushed to CIRISServer, so the response keys that the maintainer has not
-  named stay `unconfirmed` and the stage is `sketched`. `building` waits on the
-  merge and the key list on CIRISClient#78.
+* **Card vs API.** The route is readable on `origin/integ/0.5.218`
+  (`src/self_devices.rs:562-847`) and every response key is decoded 1:1, which
+  is what moves this to `building`. It is not `testable` until 0.5.218 is
+  released: the flow's floor is `unreleased` because the matrix runs the
+  released line, where this route is a bare 404 and the card shows
+  `contact_code_error` — asserted above as the one state that CAN run today.
 * **API vs CC.** CC 2.6.8 constraint 2 is the ground for
-  `self.node_not_announced`, and the brief's default (all announced devices)
-  keeps within it. Constraint 3 (≤ 16 nodes, ≤ 1024 bytes) is not yet stated by
-  the route; the client caps selection at 16 regardless.
+  `self.node_not_announced`, and the default (all announced devices) keeps
+  within it. Constraint 3 (≤ 16 nodes, ≤ 1024 bytes) is enforced by the encoder,
+  not the route: past the bound the node answers `self.contact_code_unencodable`
+  (409), and the client's 16-device cap keeps the card from ever reaching it.
 * **CC → card.** The disclosure line under the QR is not decoration. A code that
   names devices is a partial roster in someone else's hands, and CC 2.1 makes
   roster visibility "a one-way disclosure the member chooses".

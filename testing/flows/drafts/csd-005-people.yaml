@@ -1,0 +1,128 @@
+csd: CSD-005
+flow: csd_005_people
+title: People lists who you consented to, adds by code, and opens the receipt on any row
+description: >-
+  CSD-005 §4, driven. Every route is the NODE's: the list, the add, the code
+  card and the removal all go to the active node's URL, never the agent's base
+  URL (CIRISAgent#1213) — the list read was the last one to move there, and
+  ContactCodeViewModelTest pins it. The flow drives the list, the search, the
+  add card, the receipt with its five facts, and the trust chip on every row.
+# Floor: contacts_list, input_contacts_search, card_contacts_add,
+# input_contacts_add_key, btn_contacts_add_submit, btn_contacts_add_open,
+# contacts_add_refusal, contacts_add_already, contacts_empty, contacts_loading,
+# contacts_error, contacts_unsupported, contacts_row_*, contacts_row_trust_*,
+# btn_receipt_*, btn_scan_contact_code and btn_contact_code_open are literals in
+# ui/screens/PeopleSupport.kt (PeopleTags) at 0.5.225; sheet_receipt and the
+# five receipt_* tags are in ui/primitives/ReceiptSheet.kt.
+# NOT asserted: the removal end to end and a code pasted from another node,
+# which need ciris-server 0.5.218 (unreleased); the camera half of the scan.
+client: ">=0.5.225"
+
+steps:
+  - step_id: on_people
+    title: People composes a list and a search field
+    description: >-
+      Entry: `circle_agent -> tab_people` on Just me, where Contacts is the
+      whole tab; on Family, Neighbours and Communities and Businesses the tab is
+      a list and the chain ends on `nav_epistemic_contacts` (CSD-005 §2).
+    requires:
+      screen: Contacts
+    expect:
+      visible: [contacts_list, input_contacts_search]
+
+  - step_id: a_row_carries_its_trust_and_its_hamburger
+    title: Every contact row shows a trust chip and a hamburger
+    description: >-
+      Optional: it needs at least one contact, which the client fixture does not
+      author. Both counts over the row class, because the flow cannot know a key
+      id. A row without a hamburger would be furniture (CSD-006 §1); a row
+      without a trust chip would hide the one x_private:trust_state fact the
+      list carries.
+    optional_step: true
+    requires:
+      screen: Contacts
+      visible: [contacts_list]
+    expect:
+      state: populated
+      count: {of: "contacts_row_*", min: 1}
+
+  - step_id: every_row_has_a_trust_chip
+    title: Every contact row shows its trust state as a chip
+    optional_step: true
+    requires:
+      visible: [contacts_list]
+    expect:
+      count: {of: "contacts_row_trust_*", min: 1}
+
+  - step_id: every_row_has_a_hamburger
+    title: Every contact row carries a hamburger, because it is a claim
+    optional_step: true
+    requires:
+      visible: [contacts_list]
+    expect:
+      count: {of: "btn_receipt_*", min: 1}
+
+  - step_id: the_receipt_renders_five_facts
+    title: The receipt opens with all five facts, the rule row off the wire
+    description: >-
+      Optional (needs a contact). Five tags, not one sheet check (CSD-006 §5).
+      On a 0.5.217+ node the rule row is the grant's consent_prefixes, so it
+      contains "chat:"; on an older node it reads "did not send", and so do the
+      attester and the scope — the sheet says what the node did not send rather
+      than guessing.
+    optional_step: true
+    requires:
+      visible: [sheet_receipt]
+    expect:
+      visible: [sheet_receipt, receipt_subject, receipt_attester, receipt_scope, receipt_dimension, receipt_rule, btn_receipt_close]
+      matches: {receipt_dimension: "consent:replication", receipt_rule: "chat:"}
+
+  - step_id: search_that_matches_nothing_is_empty_not_error
+    title: A search no contact matches renders the empty state
+    do:
+      - input: {input_contacts_search: "zz-no-such-contact-zz"}
+    expect:
+      screen: Contacts
+      visible: [contacts_empty]
+      absent: [contacts_error]
+
+  - step_id: clearing_the_search_restores_the_list
+    title: Clearing the search brings the list back
+    do:
+      - input: {input_contacts_search: ""}
+    expect:
+      screen: Contacts
+      visible: [contacts_list]
+      absent: [contacts_empty]
+
+  - step_id: the_add_card_opens_with_paste_and_scan
+    title: Add a contact takes a pasted code, and offers a scan that never submits
+    do:
+      - click: btn_contacts_add_open
+    expect:
+      visible: [card_contacts_add, input_contacts_add_key, btn_contacts_add_submit, btn_scan_contact_code]
+
+  - step_id: a_node_code_is_refused_by_name
+    title: Pasting a node code is refused as "not a person's code"
+    description: >-
+      Optional: the refusal is the node's (`contacts.unresolvable`, 400) and the
+      fixture may predate it. A node cannot consent, so the add is refused by
+      id and the copy points at the contact code (CSD-092).
+    optional_step: true
+    do:
+      - input: {input_contacts_add_key: "CIRIS-V1-AAAA-BBBB-CCCC-DDDD"}
+      - click: btn_contacts_add_submit
+    expect:
+      visible: [contacts_add_refusal]
+      absent: [contacts_add_already]
+
+  - step_id: the_code_card_is_reachable_from_the_header
+    title: Share my contact code opens from the People header
+    description: >-
+      CSD-092's card. On the released line the route is a bare 404 and the card
+      shows its version fact; either way the card frame is what this step
+      asserts, and CSD-092's own flow asserts its states.
+    do:
+      - click: btn_contact_code_open
+    expect:
+      screen: Contacts

@@ -54,8 +54,9 @@ fields:
     use: read
     type: unconfirmed
     example: "unconfirmed"
-    renders: "nothing by itself: the scanned or pasted approval code, decoded into the node code, PIN and address that CSD-093 put in it. The format is shared with CSD-093 and unconfirmed until one commonTest pins both sides"
+    renders: "nothing by itself: the scanned or pasted approval code, decoded into the node code, PIN and address that CSD-093 put in it. The format is shared with CSD-093; its address member waits on CIRISServer#678's design answer (HTTP to the target, or the mesh — CSD-093 §3), and one commonTest pins both sides once it is given"
     tag: "proposed:input_approval_code"
+    blocked_by: CIRISServer#678
   - ceg: x_private:claim_pin
     use: emit
     type: string
@@ -85,9 +86,9 @@ fields:
     tag: "proposed:text_approve_device_done"
   - ceg: x_private:refusal_reason_id
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "the reason in words: 'That code is damaged' (400, bad node code); 'That PIN doesn't match. Check it on the other device' (the target's refusal); 'Couldn't reach that device. Are both on the same network?' (502, or 400 with no address). claim-remote returns prose, not ids, today, so the client maps these by status"
+    type: "enum[claim.bad_request,claim.no_identity,claim.signer_unavailable,claim.node_code_invalid,claim.cohort_invalid,claim.binding_unsigned,claim.no_route,claim.password_not_forwarded,claim.target_unreachable,claim.target_refused]"
+    example: "claim.target_unreachable"
+    renders: "the reason by id (0.5.218, `src/claim_remote.rs:624-700`): 'That code is damaged' (`node_code_invalid`); 'Couldn't reach that device. Are both on the same network?' (`target_unreachable`, 502; `no_route`, 400 — a code with no hint and no `target_url`); and for `target_refused` the TARGET's own `reason_id` is carried beside it as `target_reason_id` (`:665-668`), which is how 'That PIN doesn't match. Check it on the other device' is told apart from any other refusal the new device makes. On `main` (0.5.217) the same failures are prose, and the client maps them by status until 0.5.218 ships. Bundle keys for the ten ids are not in `en.json` yet (CIRISClient#78)"
     tag: "proposed:approve_device_refusal"
 ```
 
@@ -112,14 +113,14 @@ is taken from the maintainer's brief and is not readable source.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | approve | `POST /v1/setup/claim-remote {node_code, claim_pin, cohort_scope, target_url?}` on this device's own node | CIRISServer | **live**: `src/claim_remote.rs:1241-1244`, handler `:386-519`. Owner-gated once owned (`SYSTEM_ADMIN`, `require_verb(ClaimRemote)`), loopback-only via the setup-route guard. The client already has `client.claimRemote(...)` (`SetupViewModel.kt:1203`) |
-| the response | `{wa_id, identity_key_id, cohort_scope, role, owner_binding_attestation_id, …, local_directory_updated}`: the target's `SetupRootResponse` (`src/auth/bootstrap.rs:708-733`) plus a local flag (`claim_remote.rs:819-834`) | CIRISServer | live. **It also carries the new node's freshly minted owner session** (CIRISServer#393, `bootstrap.rs:721-733`). This client must not keep, store or log it: it belongs to the other device |
-| refusals | `400` bad node code / cohort / no address, `502` unreachable, the target's status for a bad PIN, all as `{"error": "claim-remote failed: …"}` prose (`claim_remote.rs:504-517`) | CIRISServer | live, **without reason ids**. **Ask (CIRISServer):** named ids for these, like every other route in 0.5.216+ |
-| reaching the new device | the node code's `transport_hint`, else `target_url`; with neither, the approving node falls back to its OWN loopback (`claim_remote.rs:237-248`) | CIRISServer | **unconfirmed** for desktop/phone targets, which publish no hint (CSD-093 §6). The card passes `target_url` from the approval code |
-| the new device in the roster | the roster is `GET /v1/self/occurrences` (CSD-037). On `main`, claim-remote writes an owner-binding and a bootstrap peer, **not** an `identity_occurrence` (`claim_remote.rs:704-720`); the new node shows up in `GET /v1/setup/owned-nodes` | CIRISServer | **unconfirmed**: which list shows an approved device after 0.5.218. #678 is "still building" per the brief's update. Until it is answered, the flow asserts the confirmation, not a roster row |
-| link now, not at restart | claim-remote only adds the target to `net.bootstrap_peers` (next boot) | CIRISServer | **not built**: #678, still building |
-| old private files open on the new device | re-wrap of the self key for the new node at claim time | CIRISServer #678 · CIRISPersist#916 | **not built**; a stated limit |
-| make the new device reachable, from here | a per-device announce on the approving side | CIRISServer #678 | **not built**. The new device cannot announce itself: the person's key is here |
-| scanning | `QrScanAction` | CIRISClient | **in build**: not written yet. Branch `wip/qr-encode-scan` @ `353a2ec` has only the encoder (`QrEncoder.kt`, unreviewed WIP) |
+| the response | `{wa_id, identity_key_id, cohort_scope, role, owner_binding_attestation_id, …, local_directory_updated}`: the target's `SetupRootResponse` (`src/auth/bootstrap.rs:708-733`) plus a local flag (`claim_remote.rs:819-834`) | CIRISServer | live. On `main` **it also carries the new node's freshly minted owner session** (CIRISServer#393). **0.5.218 drops it** on the way through (`without_session`, `src/claim_remote.rs:605-613` on `origin/integ/0.5.218`: `access_token`, `token_type`, `expires_in`, `user_id` removed) — the §6 ask, answered. This client must still not keep, store or log it while it talks to a 0.5.217 node |
+| refusals | `main`: `400` bad node code / cohort / no address, `502` unreachable, the target's status for a bad PIN, all as `{"error": "claim-remote failed: …"}` prose (`claim_remote.rs:504-517`). **0.5.218**: one named id per way a claim can fail — `claim.bad_request`, `claim.no_identity`, `claim.signer_unavailable`, `claim.node_code_invalid`, `claim.cohort_invalid`, `claim.binding_unsigned`, `claim.no_route`, `claim.password_not_forwarded`, `claim.target_unreachable`, `claim.target_refused` with the target's `reason_id` beside it (`:438-519`, `:624-700`) | CIRISServer | the ask for ids is **answered on `integ/0.5.218`**, unreleased. `en.json` keys for the ten: CIRISClient#78 |
+| reaching the new device | `target_url` in the claim body overrides the node code's `transport_hint`; with neither, 0.5.218 falls back to the approving node's own loopback ONLY when the code names that node itself, and refuses `claim.no_route` for another device's code (`:484-519`) | CIRISServer | readable, and **the open design question remains** (#678): a desktop or phone target publishes no hint and may not be reachable over HTTP, so the approval code must carry an address the approving node can use, or the path must ride the mesh. `blocked_by` on `x_private:approval_payload` |
+| the new device in the roster | the roster is `GET /v1/self/occurrences` (CSD-037). On `main`, claim-remote writes an owner-binding and a bootstrap peer, **not** an `identity_occurrence` (`claim_remote.rs:704-720`); the new node shows up in `GET /v1/setup/owned-nodes` | CIRISServer | **unconfirmed** which list shows an approved device after 0.5.218: `integ/0.5.218`'s claim-remote still writes no occurrence. Until it is answered, the flow asserts the confirmation, not a roster row |
+| link now, not at restart | 0.5.218: after a successful claim the approving node's reconciler is nudged and the target joins the owner's device set at once — "no consent grant, no reboot" (`src/claim_remote.rs:564-575`) | CIRISServer | **built, unreleased** (#678, point 2) |
+| old private files open on the new device | re-wrap of the self key for the new node at claim time | CIRISServer #678 · CIRISPersist#916 | **not built** on `integ/0.5.218` (no re-wrap in `claim_remote.rs`); a stated limit |
+| make the new device reachable, from here | a per-device announce on the approving side | CIRISServer #678 | **not built** on `integ/0.5.218`. The new device cannot announce itself: the person's key is here |
+| scanning | `QrScanAction` | CIRISClient | **live** (PR #99): `ui/primitives/QrScanAction.kt`, already filling CSD-005's add field |
 
 ## 4. Flow (how)
 
@@ -203,7 +204,9 @@ limits instead. Re-admission after a restart (CIRISEdge#676 / CIRISPersist#911).
   `identity_occurrence`. On `main` the claim path makes it an owned *node* and
   no occurrence, so "the device appears in the roster" is exactly the open
   question in §3. It is not a client bug to paper over.
-* **The session in the response.** The target mints its owner session and hands
-  it back through this device (CIRISServer#393). It is harmless if dropped, but
-  it is a credential for the other device passing through this one. **Ask
-  (CIRISServer):** omit it on a remote (non-loopback) claim.
+* **The session in the response — answered.** On `main` the target mints its
+  owner session and hands it back through this device (CIRISServer#393): a
+  credential for the other device passing through this one. 0.5.218 strips it
+  from a remote claim's result (`without_session`, `src/claim_remote.rs:605`),
+  which is what this card asked for. Against a 0.5.217 node the client still
+  drops it, and the §5 unit test still asserts that.

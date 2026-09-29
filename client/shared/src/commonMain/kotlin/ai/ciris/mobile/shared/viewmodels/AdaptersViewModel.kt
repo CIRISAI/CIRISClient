@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.models.DiscoveredItemData
 import ai.ciris.mobile.shared.models.LoadableAdaptersData
 import ai.ciris.mobile.shared.models.SelectOptionData
 import ai.ciris.mobile.shared.ui.screens.AdapterItem
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Job
@@ -72,6 +73,14 @@ class AdaptersViewModel(
 
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
+    /**
+     * Why the last list read produced no list: the route is not on this host,
+     * or the read failed. Null after a read that answered. The screen never
+     * draws a failure as "No adapters yet" (CSD-020 §2).
+     */
+    private val _listFailure = MutableStateFlow<ReadFailure?>(null)
+    val listFailure: StateFlow<ReadFailure?> = _listFailure.asStateFlow()
 
     private val _statusMessage = MutableStateFlow<String?>(null)
     val statusMessage: StateFlow<String?> = _statusMessage.asStateFlow()
@@ -230,11 +239,13 @@ class AdaptersViewModel(
 
             _adapters.value = adapterItems
             _isConnected.value = true
+            _listFailure.value = null
             logDebug(method, "Adapters list updated: ${adapterItems.map { it.id }}")
 
         } catch (e: Exception) {
             logException(method, e)
             _isConnected.value = false
+            _listFailure.value = ReadFailure.of(e)
             throw e
         }
     }

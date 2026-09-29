@@ -135,9 +135,19 @@ data class CegChatMessage(
     @SerialName("message_id")
     val messageId: String? = null,
 
-    /** Why the row could not be opened, when [body] is absent. */
+    /**
+     * Why the row could not be opened, when [body] is absent — a TOKEN, one of
+     * `contacts_chat.rs::UNOPENED_REASONS` (`not_fetched`, `not_granted`,
+     * `evicted`, `seal_mismatch`, `malformed_row`, `not_text`, `substrate`)
+     * since ciris-server 0.5.218 (CIRISServer#602). Branch on this; show
+     * [unopenedDetail]. A 0.5.217 node sent edge's `Display` text here instead
+     * (`"not_fetched: <sentence>"`); [unopenedText] reads both shapes.
+     */
     @SerialName("unopened_reason")
     val unopenedReason: String? = null,
+    /** The substrate's own sentence for [unopenedReason] — for a person or a log, never for branching. */
+    @SerialName("unopened_detail")
+    val unopenedDetail: String? = null,
 ) {
     val isLive: Boolean get() = status == STATUS_LIVE
 

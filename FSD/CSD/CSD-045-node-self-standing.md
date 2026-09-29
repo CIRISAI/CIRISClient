@@ -55,8 +55,9 @@ screen: NodeSelfStanding
 nav_epistemic_node_self`. Shown on every build: the routes are the node's and
 need no agent. **It calls the node's address**, not `$baseUrl` — every method
 defaults `nodeUrl = LOCAL_NODE_URL` (`CIRISApiClient.kt`, `getSelfStanding` and
-the six `self*` acts), because `/v1/admin/*` is not forwarded by the agent
-(CIRISAgent#1213).
+the six `self*` acts). The agent forwards `/v1/admin/*` to the node from agent
+2.12.1 (CIRISAgent#1213, closed by #1215) and 404s it before that; the direct
+node address works on every agent version, so the card keeps using it.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -151,7 +152,7 @@ error:     {tag: banner_self_unreachable, renders: "'This node could not be reac
 | stop / resume accepting | `POST /v1/admin/self/stop-accepting` · `/resume-accepting` (`:4295`, `:4299`) | CIRISServer | live — `selfStopAccepting` / `selfResumeAccepting` |
 | declare / lift compulsion | `POST /v1/admin/self/compelled` · `/compulsion-lifted` (`:4303`, `:4307`) | CIRISServer | live — `selfDeclareCompelled` / `selfCompulsionLifted` |
 | request body, every act | `SelfCommit {delegation_id, reason, compelled_by?}` (`src/admin_ops.rs:3372-3384`): both required, `reason` refused by name when empty (`admin.refusal.reason_absent`); `compelled_by` read only by the compulsion declaration | CIRISServer | live — `SelfCommitRequest` |
-| reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | **missing**: CIRISAgent#1213. The card calls the node URL directly, so it does not need it |
+| reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | live from agent 2.12.1 (CIRISAgent#1213, closed by #1215); older agents 404. The card calls the node URL directly, which works on every agent version, so it does not depend on it |
 | a declaration that anyone else can see | the act writes a `hard_case:admin_action:{op}` row into persist's local `hard_case_events`: unsigned, no `cohort_scope`, not an attestation, so nothing replicates it | CIRISServer / CIRISPersist | **missing**: CIRISServer#675 |
 
 **Registry gap.** The row kind is `admin_action:{op}` (persist `hard_case.rs`),
@@ -194,6 +195,8 @@ arrives anyway.
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+
 **Platforms.** All five, against a claimed node with an owner session. The
 with-AI legs exercise the node URL, not the agent port. The delegation-supplied
 path needs a 0.5.218 node; the typed fallback needs a 0.5.217 one, and the
@@ -222,6 +225,8 @@ declaration: it cannot today, and that is the upstream gap in §3, not a client 
   audit is honoured locally. What CC's purpose for the act implies, and the route
   doc promises, is that a *peer* can read it. That fails: the row is a local,
   unsigned table entry (CIRISServer#675).
-- **Reach.** Node-only today (CIRISAgent#1213); the card uses the node address.
+- **Reach.** Through the agent from agent 2.12.1 (CIRISAgent#1213, closed by
+  #1215); node-only before that. The card uses the node address, which works on
+  every agent version.
 - **Registry.** `hard_case:{kind}` cannot name the two-segment `admin_action:{op}`
   kind (see §3).

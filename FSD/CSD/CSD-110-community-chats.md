@@ -62,12 +62,12 @@ fields:
     example: "wa-ann-7c31…"
     renders: "resolved, never printed: the contact whose derived `chat_community_id` IS the room's id. Tapping the row opens CSD-091's chat with that contact. A pair room with no such contact carries 'Not a contact any more. The room is still there and nothing can leave it.' and does not open"
     tag: "flag_community_chat_not_a_contact_*"
-  - ceg: x_private:room_unopenable
+  - ceg: x_private:room_open_by_id
     use: display-only
-    type: bool
-    example: true
-    renders: "on every room of more than two: 'A room of more than two cannot be opened here yet; the chat screen opens a room only through a contact.' The row is listed and does not open"
-    tag: "flag_community_chat_room_unopenable_*"
+    type: string
+    example: "chat:room:v1:allotment"
+    renders: "resolved, never printed: a room of more than two is opened BY ITS ID — tapping the row opens CSD-091's chat on `GET/POST /v1/chat/{id}/messages` (CIRISServer#594). `POST /v1/chat` is never asked for it"
+    tag: "community_chat_row_*"
 ```
 
 ```yaml csd:states
@@ -81,13 +81,15 @@ error:     {tag: community_chats_error, renders: "Could not read your communitie
 not mounted ("This node doesn't serve communities yet. It needs CIRISServer
 0.5.216 or later."), never "no rooms".
 
-**Why a room of more than two does not open.** `UserChatViewModel.enter`
-always calls `POST /v1/chat {key_id}` — the pair-room door (`src/contacts_chat.rs`)
-— and there is no way to enter a room by its id. Opening an N-member room
-would mean entering a room the client cannot address, so the row says so
-instead of opening an empty transcript. The edit it needs is CSD-091's: enter
-by community id, read `GET /v1/chat/{id}/messages` directly, and let back
-return to Chats rather than to Contacts.
+**A room of more than two opens by its id — the limit this card stated is
+gone** (the people review, CSD-091). It used to be listed with "cannot be opened
+here yet" (`flag_community_chat_room_unopenable_*`), because
+`UserChatViewModel.enter` always called `POST /v1/chat {key_id}`, the pair-room
+door. The chat screen now enters a room by community id and reads
+`GET /v1/chat/{id}/messages` directly (N-member rooms, CIRISServer#594); the
+tap hands the room to it (`onOpenRoom`), and back returns to this tab. A pair
+room still opens through its contact, and one whose contact is gone still says
+"Not a contact any more" and does not open.
 
 ## 3. Contracts (who)
 
@@ -99,7 +101,7 @@ only, as CSD-102 §3 states and pins.
 | the rooms | `GET /v1/communities` | `list_communities` :1418 | every room the caller is ACTIVE in, pair rooms included (`kind_of` :202); the tier filter is the client's, on the row's `tier` |
 | the contact a pair room is with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | each contact carries the derived `chat_community_id`; the pair room whose id equals it is that contact's. Best effort: a failed contacts read leaves every pair room listed as "not a contact any more", which is the honest reading of "no grant this node can see" |
 | opening a pair room | `POST /v1/chat` `{key_id}` | `contacts_chat.rs::start_chat` | not called here — CSD-091's `UserChatViewModel.enter` calls it on the chat screen this row opens |
-| opening a room of more than two | — | — | no client door: `POST /v1/chat` is pair-only and nothing enters a room by id (§2). Listed, not opened |
+| opening a room of more than two | `GET /v1/chat/{id}/messages`, `POST /v1/chat/{id}/messages` | `contacts_chat.rs` (CIRISServer#594) | not called here — the row hands the room's id to CSD-091's chat screen, which reads and writes the room by id (the people review) |
 
 ## 4. Flow (how)
 
@@ -124,7 +126,8 @@ needs CSD-102's founding on a node with contacts.
    Businesses (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
 2. A pair room resolves to the contact whose `chat_community_id` is its id, and
    to nobody otherwise (`CommunitiesLogicTest.aPairRoomIsWithTheContactWhosePairIdItIs`).
-3. A room of more than two is listed with its reason and has no click handler.
+3. A room of more than two opens by its id, never through `POST /v1/chat`
+   (the people review's `UserChatViewModelTest` pins the chat side).
 
 **Not tested here.** The transcript — CSD-091's. Whether the fold is right —
 the node's.

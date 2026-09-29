@@ -733,7 +733,56 @@ data class GenesisSeedResponse(
      */
     @SerialName("serve_node_reblessed")
     val serveNodeReblessed: Boolean = false,
+    /**
+     * The seed's out-of-band comparison fingerprint (CC 3.2 T5), computed by the
+     * node over the authorization digest (`mesh_genesis::fingerprint`). It is a
+     * TOP-LEVEL field of this response (`src/accord_provision.rs:2592`), not a
+     * field of the bundle — persist's `GenesisBundle` has none — so reading it
+     * from the bundle meant it never rendered. The node sends `""` when it could
+     * not compute one; that is absence, not a fingerprint.
+     */
+    val fingerprint: String? = null,
+    /**
+     * The root THIS node now trusts, once the ceremony completes: the minting node
+     * writes its own `delegates_to(node → root)` acceptance
+     * (`src/accord_provision.rs:2532-2545`). `""` until complete, and `""` after
+     * completion when that write failed — see [trustEdgeError].
+     */
+    @SerialName("node_trusts_root")
+    val nodeTrustsRoot: String? = null,
+    /** Why this node's acceptance of the new root was NOT written. Non-fatal: the seed is valid either way. */
+    @SerialName("trust_edge_error")
+    val trustEdgeError: String? = null,
+    /** Where the node saved the completed seed (`<home>/mesh-genesis.json`); absent until complete. */
+    @SerialName("seed_path")
+    val seedPath: String? = null,
+    /** Why the completed seed could not be saved on the node. Non-fatal: the bundle above is authoritative. */
+    @SerialName("seed_save_error")
+    val seedSaveError: String? = null,
 )
+
+/**
+ * What a COMPLETED seed ceremony means for this node — the done state's one
+ * question. Minting a root and this node trusting it are two acts, and the
+ * second can fail after the first succeeded, so "complete" alone is not "done".
+ */
+sealed interface RemintOutcome {
+    /** Minted, and this node's acceptance of [rootKeyId] is written. */
+    data class Trusted(val rootKeyId: String) : RemintOutcome
+    /** Minted, but this node does not trust it yet; [error] is the node's reason, when it gave one. */
+    data class MintedNotTrusted(val error: String?) : RemintOutcome
+}
+
+/** Pure: the outcome of a completed ceremony, or null while it is not complete. */
+fun remintOutcome(state: GenesisSeedState): RemintOutcome? {
+    if (!state.complete) return null
+    val root = state.nodeTrustsRoot?.trim().orEmpty()
+    return if (root.isNotEmpty()) {
+        RemintOutcome.Trusted(root)
+    } else {
+        RemintOutcome.MintedNotTrusted(state.trustEdgeError?.takeIf { it.isNotBlank() })
+    }
+}
 
 /** A non-200 `{"error": …}` body from the seed ceremony — the node's refusal text. */
 @Serializable
@@ -765,13 +814,24 @@ data class GenesisSeedState(
      * the ceremony is merely mid-flight. When set, MORE HOLDERS WILL NOT HELP.
      */
     val blockedBy: String? = null,
+    /** [GenesisSeedResponse.fingerprint] of the CURRENT bundle; null or blank = the node sent none. */
+    val fingerprint: String? = null,
+    /** [GenesisSeedResponse.nodeTrustsRoot]: the root this node accepted, blank when it did not. */
+    val nodeTrustsRoot: String? = null,
+    /** [GenesisSeedResponse.trustEdgeError]: why this node's acceptance was not written. */
+    val trustEdgeError: String? = null,
+    /** [GenesisSeedResponse.seedPath]: where the node saved the completed seed. */
+    val seedPath: String? = null,
+    /** [GenesisSeedResponse.seedSaveError]: why the node could not save it. */
+    val seedSaveError: String? = null,
 )
 
 /**
  * The DISPLAY-only reads off a seed [GenesisSeedState.bundle]. Read field-by-field
  * off the raw JSON rather than decoded into a typed model, so nothing the server
- * sends is dropped: [fingerprint] is absent on bundles that carry none (omit the
- * line then — never invent one), and counts are 0 when the arrays are absent.
+ * sends is dropped. Counts are 0 when the arrays are absent. [fingerprint] is the
+ * node's, from the RESPONSE (see [GenesisSeedResponse.fingerprint]); null means the
+ * node sent none, and the card says so — it never invents one and never renders blank.
  */
 data class GenesisSeedDisplay(
     val familyKeyId: String,
@@ -790,7 +850,11 @@ data class GenesisSeedDisplay(
  * carrying `holder_key_id` / `key_id`, so the cosign picker can exclude holders who
  * authorized on ANOTHER device (a bundle carried in on a USB stick).
  */
-fun genesisSeedDisplay(bundle: kotlinx.serialization.json.JsonElement): GenesisSeedDisplay {
+fun genesisSeedDisplay(
+    bundle: kotlinx.serialization.json.JsonElement,
+    /** The response's top-level `fingerprint`. The bundle carries none (persist `GenesisBundle`). */
+    fingerprint: String? = null,
+): GenesisSeedDisplay {
     val obj = bundle as? kotlinx.serialization.json.JsonObject
     fun str(field: String): String? =
         (obj?.get(field) as? kotlinx.serialization.json.JsonPrimitive)
@@ -818,7 +882,7 @@ fun genesisSeedDisplay(bundle: kotlinx.serialization.json.JsonElement): GenesisS
         familyKeyId = str("family_key_id").orEmpty(),
         holderCount = size("holders"),
         serveNodeCount = size("serve_nodes"),
-        fingerprint = str("fingerprint"),
+        fingerprint = fingerprint?.trim()?.takeIf { it.isNotEmpty() },
         authorizedKeyIds = authorized,
     )
 }
@@ -847,6 +911,20 @@ data class YubiKeyStatus(
     @SerialName("pkcs11_ed25519_ok") val pkcs11Ed25519Ok: Boolean? = null,
     val hint: String? = null,
 )
+
+/**
+ * The YubiKey probe as the banner renders it. Three answers that must not look
+ * alike: still asking, the node's answer, and a probe that did not answer —
+ * which used to be stored as null and drawn as "CHECKING YUBIKEY…" forever
+ * (Codex, PR #126), or faked by the client as `detected=false`, which says
+ * "no token" about a question nobody got answered.
+ */
+sealed interface YubiKeyProbe {
+    data object Loading : YubiKeyProbe
+    data class Loaded(val status: YubiKeyStatus) : YubiKeyProbe
+    /** [failure] is `NotOnThisNode` when the node has no probe route, `Failed` otherwise. */
+    data class Failed(val failure: ai.ciris.mobile.shared.ui.screens.ReadFailure) : YubiKeyProbe
+}
 
 // ========== POST /v1/self/identity/inspect (CIRISServer#404) ==========
 

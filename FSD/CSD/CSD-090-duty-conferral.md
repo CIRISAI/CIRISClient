@@ -1,7 +1,7 @@
 # CSD-090 — Duty Conferral (two holders hand someone the authority to moderate)
 
 **CSD**: CSD-090 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, leftovers
-**Flow**: unwritten — the tags below are the contract the flow will drive
+**Flow**: `testing/flows/drafts/csd-090-duty-conferral.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -205,6 +205,26 @@ pins it.
 | **what the duties unlock, from the node** | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` | **live and read** — the "What this unlocks" read-out lists the tiers whose SERVED scope the ticked duties carry (`LadderRung.tiersUnlockedBy`), so the tier-2 `slash` disagreement in the next section is the node's table, not this app's opinion; a tier the bundle has no sentence for lists the node's op tokens. Tags are `duty_ladder_t{n}` (they were `duty_ladder_duty.ladder_t{n}`, the localization key verbatim) |
 | **which community the duty is over** | **no field** — `conferral_envelope` carries `dimension` + `scope` + `subject_key_id` and nothing else (`src/accord_duty.rs`, the envelope builder) | CIRISServer / CIRISPersist | **missing** — see the CC delta below |
 
+**The accord's half, re-verified at the accord review (2026-09-28, `origin/main`
+0.5.217 `046e1b39`).** `ProposeRequest` is `{holder{key_id, mldsa_usb_path,
+pkcs11}, subject_key_id, duties[], duty?, sub_delegation, sub_delegation_depth?}`
+(`src/accord_duty.rs:115-133`) and `proposeDutyConferral` sends exactly those
+(`DutyConferralViewModel.kt:431-439`); `CosignRequest` is `{holder, partial}`
+(`:136-139`), the partial byte-identical. `DutyResponse` is `{partial,
+scrub_count, quorum_needed, adopted, conferred?}` (`:142-151`). The three rows
+above that belong to the accord — who is conferring (`GET /v1/accord/family`),
+the holder registry (`GET /v1/accord-holders`), token readiness
+(`GET /v1/accord/yubikey-status`) — match the code. **One gap, on the
+moderation half:** the handler emits fifteen typed refusals
+(`accord.duty.{pkcs11_required, holder_custody, sign_failed, bad_request,
+no_duty, unknown_duty, no_subject, depth_over_rail, depth_without_delegation,
+canonicalize, holder_identity_mismatch, assemble, partial_tampered,
+already_signed, refused}`, `:227-541`) and `friendly()`
+(`DutyConferralViewModel.kt:510-521`) matches on the HTTP status text, so
+`already_signed` and `holder_identity_mismatch` — the two a second holder is
+most likely to hit — render as the node's English rather than by id. Moderation
+owns that screen; recorded here, not fixed here.
+
 ### The CC delta, stated plainly
 
 **1. CC 4.2.1 does not admit this ceremony.** "`HUMANITY_ACCORD` signatures are
@@ -319,6 +339,8 @@ expect:
 ```
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-090-duty-conferral.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop only, and not end to end. The ceremony needs two accord
 holders' YubiKeys, two humans and two PIV PINs; `testing/gate/node_fixture.py`

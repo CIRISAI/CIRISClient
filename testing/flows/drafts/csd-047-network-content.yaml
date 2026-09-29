@@ -23,16 +23,19 @@ steps:
     expect:
       visible: [screen_federation_content, input_peer_search]
 
-  - step_id: the_digest_step_after_a_pick
-    title: Picking a peer opens the digest step
+  - step_id: clearing_the_search
+    title: Clearing the search leaves the pick step in place
     description: >-
-      Optional because it needs at least one peer. The row tag carries the peer's
-      key id; the matrix supplies it.
-    optional_step: true
+      The flow cannot pick a peer: the row tag is `peer_pick_row_<keyId>`, a
+      `click:` takes one literal tag, and no fixture seeds a peer whose key id
+      the flow could name. So it clears the search and stops at the pick step;
+      the digest step below is gated on `input_content_id` and skips until a
+      seeded peer lets the flow open it (CSD-047 §5).
     do:
       - input: {input_peer_search: ""}
     expect:
-      count: {of: "peer_pick_row_*", min: 1}
+      screen: NetworkContent
+      visible: [input_peer_search]
 
   - step_id: a_bad_digest_keeps_fetch_shut
     title: A digest that is not 64 hex characters cannot be fetched
@@ -41,6 +44,8 @@ steps:
       Asserting the button is present and the field took input is what a flow
       can do; the disabled state is the view model's validateContentId.
     optional_step: true
+    requires:
+      visible: [input_content_id]
     do:
       - input: {input_content_id: "not-a-digest"}
     expect:

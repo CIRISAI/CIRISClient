@@ -92,7 +92,7 @@ fields:
     use: display-only
     type: "list[string]"
     example: ["wa-mem-9b02"]
-    renders: "'Moderators' — appointed `moderate` duty holders (founder-rooted delegates_to), or 'No appointed moderator is on record.' Then 'Open Moderation', which goes to CSD-065"
+    renders: "'Moderators' — appointed `moderate` duty holders (founder-rooted delegates_to); or 'No appointed moderator is on record.' when the node read the chain and found none; or, in the danger tone, 'This node could not read who holds the moderation duty here. That is not a report that nobody does.' when it says it could not (`moderators_readable: false`, CIRISServer#688); or 'This node did not send who holds the moderation duty here.' when the list is absent. Then 'Open Moderation', which goes to CSD-065 with this room picked"
     tag: "row_community_moderator_*"
   - ceg: x_private:community_pending_change
     use: emit
@@ -149,7 +149,8 @@ by the same act.
 Verified against CIRISServer `origin/main` 046e1b39 (0.5.217; the routes landed
 in 0.5.216), `src/communities.rs`. Every call goes to the NODE URL
 (`nodeBaseUrl`, the local node), never `baseUrl` — on a with-AI install that is
-the agent, which does not proxy these (CIRISAgent#1213).
+the agent, which proxies these only from agent 2.12.1 (CIRISAgent#1213,
+closed by #1215). The direct node URL works on every agent version, so it stays.
 `CommunitiesViewModelTest.every_call_goes_to_the_node_url_not_the_base_url`
 pins it.
 
@@ -182,11 +183,20 @@ envelope route returns. Calling both would sign the same change twice.
 
 ### 3.1 What the node does not say, and what the card does instead
 
-* **An unreadable moderator chain reads as none.** `room_json` fills
-  `moderators` with `appointed_moderators_of(…).unwrap_or_default()` (:1384), so
-  a persist error and "no moderator appointed" are the same `[]`. The card's
-  sentence is "No appointed moderator is on record" — true in both cases — and
-  sends the person to Moderation, whose named-moderator verdict
+* **An unreadable moderator chain reads as none — on the node; the card is
+  ready for the fix.** `room_json` fills `moderators` with
+  `appointed_moderators_of(…).unwrap_or_default()` (:1384), so a persist error
+  and "no moderator appointed" are the same `[]` (CIRISServer#688, filed; its
+  ask is `moderators_readable: false` or a failed read). The client now decodes
+  `moderators_readable` and `moderatorsShown()` renders four facts four ways:
+  `txt_community_moderators_unreadable` (danger tone) when the node says it
+  could not read, `txt_community_moderators_not_sent` when the list is absent,
+  `txt_community_moderators_none` when it read none, and a row per holder
+  (`ModeratorsShownTest`, red against the old `moderators.orEmpty()`: two
+  failures, `expected Unreadable / NotSent but was None`). Until the node sends
+  the flag, an unreadable chain still arrives as `[]` and reads "No appointed
+  moderator is on record" — true in both cases — and the card sends the person
+  to Moderation, whose named-moderator verdict
   (`operate`/`auto_promote`/`quiesce`, CSD-065) is the read that fails secure.
 * **Appointing a moderator is not on this card.** Persist's appointed set is
   founder-rooted `delegates_to` scoped `moderate`; the only conferral this client
@@ -195,6 +205,22 @@ envelope route returns. Calling both would sign the same change twice.
   "moderators keep using duty conferral"; no route confers a room-scoped duty
   from its founder. Stated on the card (`txt_community_appoint_unavailable`).
 * **The affiliations record** (CC 4.4.3.2.8) has no route — CIRISServer#649.
+
+### 3.2 Moderation takes the room (CSD-065)
+
+`ModerationScreen` takes a `communityPicker`; it is now wired. From Moderation
+the picker (`CommunityModerationPicker`, `community_moderation_picker`) lists
+the person's rooms of more than two at both tiers as chips
+(`chip_community_moderation_<id>`), read through the same two tier view models
+this card uses — no second read. Picking one fills Moderation's community
+field and the quarantine rung's `community_id` with the room's id, which IS the
+`community_key_id` those routes take (`communities.rs:1308`,
+`new_room_community_key_id`). From a room's card, `btn_community_open_moderation`
+opens Moderation with that room already picked (handed back once, so Moderation
+opened later from the nav arrives empty). A failed rooms read says so
+(`txt_community_moderation_pick_unreadable`) and leaves the typed field as the
+way in; no rooms says so (`txt_community_moderation_pick_none`). Pair rooms are
+left out: a two-person chat has no moderation duty to look up.
 * **The group book** — who admitted whom, when, and the change history — is
   CSD-103's, and is CIRISServer#650.
 
@@ -245,6 +271,13 @@ needs a room whose rule one signature does not meet — two nodes and a contact.
 3. Assemble sends back the node's envelope unchanged and every signature
    collected (`CommunitiesViewModelTest.a_quorum_pending_add_is_held_then_assembled`).
 4. Leave and dissolve name who signs before the signature.
+
+**Review (2026-09-28).** Closed: the unreadable-moderators rendering (above,
+red-tested); Moderation's community picker, wired from this card (§3.2, UI
+wiring, verified by compile). Open: CIRISServer#688 (the node still sends `[]`
+for an unreadable chain; no founder-rooted appoint route; no row envelope) and
+CIRISServer#649 (the affiliations record). Stage: building → building
+(`affiliations_declared_record` is `blocked_by: CIRISServer#649`).
 
 **Not tested here.**
 * Whether a signer satisfies the rule — the node's `tally` decides, and a client

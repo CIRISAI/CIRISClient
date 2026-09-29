@@ -30,6 +30,8 @@ import androidx.compose.ui.text.font.FontWeight
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
 import androidx.compose.ui.unit.dp
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
@@ -244,43 +246,50 @@ fun ConsentScreen(
         }
     }
 
-    // Stream change confirmation dialog
+    // Changing the stream is an outward act, and leaving PARTNERED is not an
+    // undo: the agent severs the identity at once and lets what it learned
+    // fade over 90 days (routes/consent.py:293-297). Three facts, two buttons
+    // (CSD-054 §7): who, what changes, who signs — and nobody signs, because
+    // the agent files an unsigned record under a sign-in id (CIRISServer#423).
+    // tagPrefix "stream" keeps btn_stream_confirm / btn_stream_cancel.
     showStreamConfirmDialog?.let { streamId ->
         val stream = consentData.availableStreams.find { it.id == streamId }
-        AlertDialog(
-            onDismissRequest = { showStreamConfirmDialog = null },
-            title = { Text(localizedString("consent_change_title")) },
-            text = {
-                Text(
-                    when (streamId) {
-                        "anonymous" -> localizedString("consent_switch_anonymous")
-                        "temporary" -> localizedString("consent_switch_temporary")
-                        else -> localizedString("consent_switch_stream", mapOf("stream" to (stream?.name ?: streamId)))
-                    }
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onStreamSelect(streamId)
-                        showStreamConfirmDialog = null
+        val leavingPartnered = consentData.currentStream == "partnered"
+        ConfirmSheet(
+            title = localizedString("consent_change_title"),
+            facts = listOf(
+                ConfirmFact(
+                    localizedString("mobile.consent_stream_fact_who"),
+                    localizedString(
+                        "mobile.consent_stream_fact_who_value",
+                        mapOf("from" to (consentData.currentStream ?: localizedString("mobile.consent_stream_none")).uppercase()),
+                    ),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.consent_stream_fact_changes"),
+                    when {
+                        leavingPartnered -> localizedString(
+                            "mobile.consent_stream_leave_partnered",
+                            mapOf("stream" to (stream?.name ?: streamId)),
+                        )
+                        streamId == "anonymous" -> localizedString("mobile.consent_switch_anonymous")
+                        streamId == "temporary" -> localizedString("mobile.consent_switch_temporary")
+                        else -> localizedString("mobile.consent_switch_stream", mapOf("stream" to (stream?.name ?: streamId)))
                     },
-                    modifier = Modifier.testableClickable("btn_stream_confirm") {
-                        onStreamSelect(streamId)
-                        showStreamConfirmDialog = null
-                    }
-                ) {
-                    Text(localizedString("mobile.common_confirm"))
-                }
+                ),
+                ConfirmFact(
+                    localizedString("mobile.consent_stream_fact_signs"),
+                    localizedString("mobile.consent_stream_fact_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("consent_switch_stream_button"),
+            onConfirm = {
+                onStreamSelect(streamId)
+                showStreamConfirmDialog = null
             },
-            dismissButton = {
-                TextButton(
-                    onClick = { showStreamConfirmDialog = null },
-                    modifier = Modifier.testableClickable("btn_stream_cancel") { showStreamConfirmDialog = null }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
+            onDismiss = { showStreamConfirmDialog = null },
+            destructive = leavingPartnered,
+            tagPrefix = "stream",
         )
     }
 }

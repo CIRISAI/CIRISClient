@@ -33,10 +33,10 @@ surface: adapters
 screen: Adapters
 ```
 
-`nav_map` derives `btn_my_things -> nav_instrument_this_node ->
-nav_epistemic_adapters`. The surface is listed in the `this-node` instrument
-(`CirclesNav.kt:145`) and is **not** in that instrument's `agentOnly` set
-(`CirclesNav.kt:153`) — see §3 and §6, because that is a defect, not a choice.
+`nav_map` derives `btn_my_things -> nav_instrument_this_agent ->
+nav_epistemic_adapters`. The surface is listed in the `this-agent` instrument,
+which is `requiresAgent = true` (`CirclesNav.kt`, "the brain and the substrate
+are two instruments") — so a bare node is no longer offered it (§6.1, closed).
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -47,7 +47,7 @@ fields:
     type: string
     example: "agent_files:adapter:discord"
     renders: "Discord — the adapter this row is. The family is the adapter's BYTES (CC 3.1.1 / CC 3.1.9.1), which is what a person is trusting when they load one."
-    tag: "proposed:adapters_row_discord"
+    tag: "adapters_row_*"
   - ceg: x_private:adapter_is_running
     use: display-only
     type: "enum[running,stopped,needs_reauth]"
@@ -59,13 +59,13 @@ fields:
     type: "list[string]"
     example: ["communication", "tool", "wise_authority"]
     renders: "What this gives the agent — Messaging · Tools · Wise Authority. Today this is `GET /v1/system/adapters/{id}`'s `services_registered`, rendered as a bare list with no statement that these ARE the agent's new abilities."
-    tag: "proposed:adapters_services_discord"
+    tag: "adapters_services_*"
   - ceg: x_private:adapter_tools
     use: display-only
     type: "list[string]"
     example: ["send_message", "list_channels"]
     renders: "What it can do there — send_message, list_channels (`tools` on the details route)"
-    tag: "proposed:adapters_tools_discord"
+    tag: "adapters_tools_*"
   - ceg: x_private:agency_scope
     use: display-only
     type: unconfirmed
@@ -85,7 +85,7 @@ fields:
     type: int
     example: 1284
     renders: "1,284 messages · 0 errors · up 6d — `metrics` on the details route"
-    tag: "proposed:adapters_metrics_discord"
+    tag: "adapters_metrics_*"
   # §7 — connectors: database credentials handed to the SQL adapter via /v1/connectors.
   - ceg: x_private:connector
     use: display-only
@@ -130,25 +130,42 @@ are three different things with three revocation paths; a UI that renders all
 three as a green "Connected!" has collapsed them.
 
 ```yaml csd:states
-populated: {tag: "proposed:adapters_list"}
-empty:     {tag: "proposed:adapters_empty", renders: "mobile.adapter_no_adapters — 'No adapters yet' + 'Tap + to add one'. AdaptersScreen.kt:148 renders this whenever `adapters.isEmpty() && !isLoading`."}
-loading:   {tag: "proposed:adapters_loading", renders: "AdaptersScreen.kt:195 — a bare CircularProgressIndicator, no sentence. Correct shape, no tag."}
-error:     {tag: "proposed:adapters_error", renders: "DOES NOT EXIST. `AdaptersViewModel` has no `_error` flow at all (only `_wizardError`), so a failed `GET /v1/system/adapters` falls through to `adapters.isEmpty()` and the person is told they have no adapters."}
+populated: {tag: adapters_list, renders: "one card per adapter (`adapters_row_<type>`); a poll that fails after a good read keeps the list and says so above it (`adapters_refresh_error`)"}
+empty:     {tag: adapters_empty, renders: "mobile.adapter_no_adapters — 'No adapters yet' + 'Tap + to add one'. Only when the agent was asked and answered none"}
+loading:   {tag: adapters_loading, renders: "a progress affordance, no sentence"}
+error:     {tag: adapters_error, renders: "Couldn't read this — the failed read, never the empty card; adapters_not_on_this_node for a host without the adapter routes, which also hides '+'"}
 ```
 
-**`error` and `empty` are the same pixels today, and this is the exact failure
-CSD/3 §2.2 names.** On a node build it is worse than a collapse: it is a
-confident false statement. `CIRISApiClient.listAdapters` calls `nodeSkip`
-(`CIRISApiClient.kt:7745`) and **returns an empty list rather than an error**,
-so "No adapters yet · Tap + to add one" is rendered on a build where + cannot
-work. The "+" then calls `GET /v1/system/adapters/loadable`, which is not
-node-skipped, 404s, and surfaces as `wizardError`.
+**`error` and `empty` were the same pixels, and are not any more** (review,
+2026-09-28). `AdaptersViewModel` had no list-level error: a failed
+`GET /v1/system/adapters` fell through to `adapters.isEmpty()` and told the
+person "No adapters yet · Tap + to add one". On a node build it was worse —
+`CIRISApiClient.listAdapters` `nodeSkip`ped to an empty success. Now the view
+model keeps `listFailure` (`ReadFailure.of`), `listAdapters` throws
+`RouteNotOnThisHost` on a node, and `adaptersBody()` decides LOADING / FAILED /
+EMPTY / LIST (pure; `AdaptersBodyTest`, red against the old fall-through: two
+failures, `expected FAILED but was EMPTY`). The `+` is not offered where the
+routes are absent.
+
+**Removing an adapter is behind a three-fact ConfirmSheet**
+(`sheet_adapter_remove`, `btn_adapter_remove_confirm` / `_cancel`), replacing an
+`AlertDialog` whose only text was "Are you sure?": *which adapter* (name · id),
+*what changes* (the agent stops acting through it now; if it was saved to start
+with the agent it may come back on restart, which this card does not read —
+`GET /v1/system/adapters/persisted` is uncalled), and *who signs* (nobody: it is
+a request to your own agent, and no delegation record is written or withdrawn,
+CIRISAgent#1211).
+
+**Every control on a row is drivable**: `btn_adapter_expand_<type>`,
+`btn_adapter_reload_<type>`, `btn_adapter_remove_<type>`,
+`btn_adapter_reauth_<type>`, `btn_adapter_edit_config_<type>`, and
+`btn_add_menu_cancel` now runs its act for automation (it was a bare tag).
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the adapter list | `GET /v1/system/adapters` | CIRISAgent | live (`routes/system/adapters.py`) — **node-skipped client-side, returns `[]`** |
+| the adapter list | `GET /v1/system/adapters` | CIRISAgent | live (`routes/system/adapters.py`) — on a node build `listAdapters` now throws `RouteNotOnThisHost` (was: an empty success), rendered `adapters_not_on_this_node` |
 | one adapter's detail | `GET /v1/system/adapters/{adapter_id}` | CIRISAgent | live |
 | what may be added | `GET /v1/system/adapters/loadable` | CIRISAgent | live (`adapters.py:595`) — **not node-skipped; 404s on a bare node** |
 | every adapter module type | `GET /v1/system/adapters/types` | CIRISAgent (`adapters.py:237`) | live, **wired and unreached** — `getModuleTypes` (`CIRISApiClient.kt:8040`) has no caller |
@@ -158,8 +175,8 @@ node-skipped, 404s, and surfaces as `wizardError`.
 | install a missing adapter's dependencies | `POST /v1/system/adapters/{adapter_name}/install` | CIRISAgent (`adapters.py:395`) | live, **not called** |
 | re-check eligibility after installing | `POST /v1/system/adapters/{adapter_name}/check-eligibility` | CIRISAgent (`adapters.py:487`) | live, **not called** — so an ineligible adapter has no path to becoming eligible from this card |
 | load one | `POST /v1/system/adapters/{adapter_type}` | CIRISAgent | live |
-| reload one | `PUT /v1/system/adapters/{adapter_id}/reload` | CIRISAgent | live |
-| remove one | `DELETE /v1/system/adapters/{adapter_id}` | CIRISAgent | live |
+| reload one | `PUT /v1/system/adapters/{adapter_id}/reload` | CIRISAgent | live — **also called from LLM settings (CSD-021)**, a second door on purpose (§3.1) |
+| remove one | `DELETE /v1/system/adapters/{adapter_id}` | CIRISAgent | live, behind `sheet_adapter_remove` — **also called from LLM settings (CSD-021)**, a second door on purpose (§3.1) |
 | start the wizard | `POST /v1/system/adapters/{adapter_type}/configure/start` | CIRISAgent | live (`adapter_config.py:258`) |
 | one wizard step | `POST /v1/system/adapters/configure/{session_id}/step` | CIRISAgent | live (`adapter_config.py:397`) |
 | session status | `GET /v1/system/adapters/configure/{session_id}` | CIRISAgent | live (`adapter_config.py:326`) |
@@ -178,6 +195,17 @@ Agent routes read from the `~/CIRISAgent` working tree, last commit
 **2026-08-15** — six weeks stale relative to this branch, so "live" here means
 "live as of that tree." The six catalogue / install rows were added in the
 citation pass from CIRISAgent `main` 29371660de (2026-09-26), `routes/system/adapters.py`.
+
+### 3.1 The other doors to these routes, and why each is one
+
+The route gate lists four adapter writes that another card also makes. Each
+pair is one act with two doors, decided rather than drifted into:
+
+| route | other card | why it is a second door, not a second card |
+|---|---|---|
+| `DELETE /v1/system/adapters/{id}`, `PUT …/{id}/reload` | LLM settings (CSD-021) | That card lists only the adapters whose `services_registered` includes `LLM`, so a person fixing "what is my agent thinking with" need not find the brain's adapter among the channels. Same act, narrower list; it keeps those two controls and grows no others. **This card owns adapter management** — load, configure, re-authorise and every adapter. CSD-021 §3 records the same agreement from its side. |
+| `POST …/{adapter_type}/configure/start`, `…/configure/{session}/step`, `…/configure/{session}/complete` | Setup (CSD-082, the with-AI first run) | The same wizard, run once during setup to give a new agent its first channel. Setup is a one-way path that ends; this card is where the channel is changed afterwards. Neither lists or removes the other's adapters. |
+| `POST /v1/system/adapters/{adapter_type}` | Data management (CSD-039) | `DataManagementViewModel.enableAccordMetrics` loads exactly one adapter, `ciris_accord_metrics` with `consent_given: true` and `persist: true`, as the act of opting in — it is a consent control that happens to be carried by an adapter load. That card loads that one type and manages nothing; this card is where it is then seen, and removed. The route is uncited on CSD-039 (its owner's gap, in the baseline). |
 
 **Nothing under `/v1/system/adapters` exists on the node.** `CIRISServer`'s
 route literals (`git show origin/main -- 'src/*.rs'`) carry `/v1/system/data`,
@@ -240,30 +268,29 @@ reproducible without expiring a real token.
 
 ## 6. Card vs API vs CC — the delta
 
-1. **Wrong build.** `Adapters` is offered on a no-agent build and must not be
-   (`CirclesNav.kt:153`). CC 4.4.3.4.3 is explicit: a key whose `identity_type`
-   contains `node` "MUST carry **only** `infra:*` scopes; a verifier MUST
-   reject any such key presenting any `agency:*` scope." An adapter IS the
-   `agency:message_io` surface. A node has nothing to adapt, by constitution
-   and not by accident. **Ask: add `NavSurface.Adapters` to the `this-node`
-   instrument's `agentOnly` set.**
-2. **A false empty.** `listAdapters`'s `nodeSkip` returns `[]` where the honest
-   answer is "this build cannot have adapters". Even once (1) lands, the skip
-   should return a refusal the screen can render, not a success.
-3. **No error state at all.** `AdaptersViewModel` never models a list-level
-   error. Every failed read reads as "you have none."
-4. **The screen is undrivable.** Seven real tags, all of them chrome
-   (`btn_adapters_back`, `btn_adapters_refresh`, `btn_add_menu`,
-   `btn_add_menu_cancel`, `btn_add_adapter`, `btn_import_skill`,
-   `btn_skill_studio`). The list, the rows, the empty state and every field in
-   §2 are untagged. The wizard is better (`btn_wizard_*`, `btn_oauth_sign_in`,
-   `input_manual_url`).
-5. **The CC gap, and it is the important one.** Nothing on this screen names
-   the delegation an adapter runs under or the grant an OAuth step confers.
-   **Ask (CIRISAgent):** return the adapter's `delegated_scope[]` on
-   `GET /v1/system/adapters/{id}`, and the external scope list on
-   `POST .../configure/start`, so the wizard can say what is being handed over
-   *before* the browser opens rather than "Connected!" after.
+1. **Wrong build — closed.** `Adapters` moved into the `this-agent` instrument
+   (`requiresAgent = true`), so a node build is not offered it. CC 4.4.3.4.3: a
+   node key MUST carry only `infra:*` scopes, and an adapter IS the
+   `agency:message_io` surface.
+2. **A false empty — closed (review, 2026-09-28).** `listAdapters` throws
+   `RouteNotOnThisHost` on a node instead of answering `[]`.
+3. **No error state — closed.** `listFailure` + `adaptersBody()`, red-tested (§2).
+4. **Undrivable — closed.** The list, rows, empty/loading/error states,
+   every row control and the removal sheet carry tags (§2). The row's state
+   chip (`adapters_row_state_<type>`) is still untagged, so it stays `proposed:`.
+5. **Remove without the three facts — closed.** ConfirmSheet (§2).
+6. **The CC gap, and it is the important one — open.** Nothing on this screen
+   names the delegation an adapter runs under or the grant an OAuth step
+   confers. **Ask (CIRISAgent#1211, filed):** return the adapter's
+   `delegated_scope[]` on `GET /v1/system/adapters/{id}`, and the external scope
+   list on `POST .../configure/start`, so the wizard can say what is being
+   handed over *before* the browser opens rather than "Connected!" after.
+7. **Open, client side:** a failed detail read (`GET /v1/system/adapters/{id}`)
+   leaves `details` null and the expanded row draws "None" under Tools — the
+   same collapse one level down. The detail read keeps no failure today.
+
+**Stage:** building → building (`agency_scope`, `oauth_grant_scope`,
+`connector_grant`, `connector_delegation` are `blocked_by: CIRISAgent#1211`).
 
 ## 7. Connectors — the same credential, through a second door
 

@@ -82,6 +82,6 @@ class ClientHouseholds(
         client.cosignFamilyChange(familyId, envelope, signatures, nodeBaseUrl)
     override suspend fun assemble(familyId: String, envelope: JsonObject, signatures: List<FamilySignatureDto>) =
         client.assembleFamilyChange(familyId, envelope, signatures, nodeBaseUrl)
-    override suspend fun contacts(): List<Contact> = client.listContacts().contacts
+    override suspend fun contacts(): List<Contact> = client.listContacts(nodeBaseUrl).contacts
     override suspend fun myKeyId(): String? = client.getOwnedNodes(nodeBaseUrl).owner
 }
