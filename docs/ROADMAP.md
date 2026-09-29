@@ -1,6 +1,6 @@
 # Locked Spec: roadmap
 
-The order the client redesign is built in, and where it stands. **Updated 2026-09-28.**
+The order the client redesign is built in, and where it stands. **Updated 2026-09-29.**
 
 This file is the plan. It tracks dependencies, not dates. The two Gantt artifacts were deleted,
 and the plan now lives here and in backlog issue #71. The Card Atlas, the execution plan and the
@@ -9,72 +9,58 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
 
 ## Where we are
 
-- **Released:** client **0.5.224** is still the latest tag; it carries the whole bug lane, and
-  CIRISAgent#1184 (server 0.5.217 plus client 0.5.224) merged green. Everything below landed on
-  `main` after that tag and ships with the next cut. Server **0.5.217** is the latest server
-  release; **0.5.218 is not cut** (see upstream).
-- **72 CSDs on `main`** (`FSD/CSD`), up from 61 in #90: **64 building, 7 sketched, 1 envisioned**,
-  none `testable` yet. What changed since 2026-09-25:
-  - **New cards:** the six Network tiles (CSD-032 identity, 033 peers, 046 trust graph, 047 content,
-    048 interfaces, 049 queue; #124), the three 0.5.218 cards (092 share contact code, 093 show
-    approval code, 094 approve a new device; #98), communities (102, 103, 110; #121) and key
-    verification (104; #117). CSD-045 (this node's own standing) went from envisioned to building
-    with a surface (#124). CSD-100/101 (household, household members) are on #122.
-  - **Retired by the dedup rule** ("one card per thing it does"): CSD-001 Delegation folded into
-    055 Delegations; System's pause/resume folded into 024 Runtime; SkillImport into 015 Skills;
-    the Map tile into 046 (CSD-034 was reserved for it and is left unused). CSD-105/106 (erase
-    traces, deletion receipts) were dropped for rows on 039 Data (#123); CSD-107 (partnership
-    decisions) and 108 (connectors) were dropped for §7 of 054 Consent and 020 Adapters (#120).
-  - **Still sketched:** 037 My Identity, 042 Help, 044 Health & Reputation, 054 Consent, and
-    092–094, which cannot go further until server 0.5.218 exists. **Envisioned:** 030 Telemetry.
-- **Merged since #90** (2026-09-26 → 28), in three shapes:
-  - **Cards and fixes:** #99 a real QR encoder and scanner; #112 withdraw consent (Revoke on Manage
-    Consent, Remove on People); #113 share my contact code, add a contact by scan or paste; #117/#118
-    the key-verification ceremony on the peer detail; #120 partnership decisions on Consent and
-    connectors on Adapters; #121 communities and affiliations on the Neighbours and Communities hubs,
-    rosters in People, rooms in Chats; #123 erase an agent's traces and check a deletion receipt on
-    Data; #125 two CI flakes that were real bugs.
-  - **The checks that keep the CSDs honest:** #100 tags every card's loading / empty / error / list
-    state and a test keeps CSDs and code from drifting (F7's `states:` half); #107 cites the routes
-    cards already call, verified by call site (28 CSDs); #106 the accord cards are the trust root;
-    #111 + #119 `check_csd_routes.py`, cards keyed by the routes they call, CSD §3 generated from
-    code. **Route gate on `main`: uncited routes 121 → 14, duplicate mutating routes 26 → 23,
-    baseline current**, exit 0.
-  - **Two integration merges**, because every pair of client PRs conflicts on the vendoring digest
-    line: **#115** carried #100, #101 (the People receipt reads the grant envelope), #107 and #112,
-    with #116 as its seven review findings; **#124** is **batch 1 of the gap-closing review** —
-    runtime, identity, interact, setup, network, moderation — each group reviewed against the CSDs,
-    the node/agent APIs and the CC. Headlines: the setup wizard loads templates, adapters and the tool
-    disclosure and connect-node works; Login's 23 post-login routes are attributed to the cards they
-    feed; sign-in state is read; This node › Config edits the node; Transport writes typed values;
-    Runtime reads the step response; admin acts take the node's `owner_delegations`; error never
-    renders as empty across all six groups. Drivable offenders 172 → 151; `:shared:desktopTest`
-    1081/1081.
-- **In review, three PRs:**
-
-  | PR | what | state |
-  |---|---|---|
-  | #77 | B3 Files: Files holds files, Notes to self in Just me › Chats | merged with main and the 0.5.217 pass applied (digest check, node policy, node URL, Family › Files on the picked household; `PENDING-CSD-007.md` folded into CSD-007 §3 and deleted; CSD-008 for Notes) |
-  | #97 | CSD flows run on the five-platform matrix; `state:` now asserts something | mergeable; the localization + vendoring check is red; this is the path from `building` to `testable` (28 draft flows under `testing/flows/drafts/`) |
-  | #122 | households in the Family hub, members on Family › People (CSD-100/101) | mergeable, checks green; asks for edits to CSD-050, 005 and 007 |
-
-- **Next: batch 2 of the gap-closing review** — people/chats/files, consent/data, accord, adapters,
-  households, communities, layer hub — the same shape as #124: each group against its CSDs, the APIs
-  and the CC, integrated as one merge. Then B3 (#77) after its 0.5.217 pass, then B4 Just me closes.
-- **The circles are no longer strictly sequential.** The plan was B3 → B4 → … → B8 one circle at
-  a time. What actually happened: the node shipped households and communities (0.5.216) and the
-  client took them where they belong — Family (#122), Neighbours and Communities (#121) — while
-  Files (#77) sat conflicting. So B5, B6 and B7 are each partly built ahead of B3 and B4. The graph
-  below shows what still has to come before what; it no longer pretends the circles are a chain.
-- **CIRISAgent#1213 is closed** (2026-09-26): the agent proxies the node's prefixes, and the client
-  routes node-owned calls to the node URL anyway. It was the one upstream item that reached every
-  lane; nothing has taken its place. **The nearest thing is the 0.5.218 cut**, which four merged
-  cards and three sketched CSDs are built against.
+- **Released:** client **0.5.224** is still the latest tag. **0.5.225 is PR #131** (the `VERSION`
+  bump and a validated `compat/matrix.json` row: node_min 0.5.168, node_max_tested 0.5.217,
+  agent_min_tested 2.12.1, 12 new capability ids, 29 languages × 5,059 keys); the tag follows once
+  `build.yml` is green on the merge. It carries everything below. Server **0.5.217** is the latest
+  server release; **0.5.218 is not cut**. Agent **2.12.1** shipped CIRISAgent#1213 (the node proxy
+  forwards every `/v1` path the agent does not serve itself), and six CSDs say so (#128).
+- **77 CSDs on `main`** (`FSD/CSD`): **71 building, 5 sketched, 1 envisioned, none `testable`**.
+  New since the last pass: CSD-007 Files and CSD-008 Notes to self (#77), CSD-105 This node's
+  trust root (#126), CSD-100/101 household and members (#122). CSD-092 (share contact code) is
+  now building. **Sketched:** 037 My Identity, 042 Help, 044 Health & Reputation, and 093/094
+  (the second-device cards, which wait for server 0.5.218). **Envisioned:** 030 Telemetry.
+- **Both review batches are merged.** #124 was runtime, identity, interact, setup, network,
+  moderation. **#126** is batch 2: **accord / trust root** (the two unpushed trust-root branches
+  folded in, a `TrustRoot` detail with posture, import, un-trust and family history, all at the
+  node URL; `canonical/supersede` wired as a real rotate; CSD-105 written), **people / chats** (chat
+  and contacts calls at the node URL, rooms of more than two open by id, 0.5.218's
+  `unopened_reason` handled), **consent / data** (one owner for the accord-settings write, logout
+  clears the previous owner's consent record, four-state watchlist, every irreversible act behind
+  a three-fact confirm), **adapters / hubs** (the households dispatcher split so each act has one
+  screen; moderators "could not read" distinct from "none"). #129 fixed Codex's five findings on it
+  (consent reset races, owner-lookup failure, Enable after a failed read, chat pinned to its node,
+  YubiKey probe states); #127 replaced English left in six locale bundles.
+- **The cards that were in review are in:** #77 Files and Notes (B3), #121 communities, #122
+  households, #123 erasure. `PENDING-CSD-007.md` is folded into CSD-007 and gone.
+- **The checks:** route gate on `main` — **uncited routes 2** (121 at #111, 14 after #124),
+  duplicate mutating routes 23, baseline current, exit 0. 302 API methods, 294 routes, 79 screens
+  (70 reach a route), 824 CSD citations. `:shared:desktopTest` 1276/1276 (#129); `pytest testing/`
+  323 (#126).
+- **The flow runner is on the matrix (#97)** and **a two-node fixture stands beside it (#130)**:
+  a Docker-free second `ciris-server` on 5242/5243 per leg, claimed, announced, peered both ways,
+  each owner a contact of the other. Both ran **all five legs green in one run**; `main`'s latest
+  Five-Platform Live QA is green (2026-09-29). One flow is live (`testing/flows/people.yaml`,
+  CSD-005); **37 drafts** wait under `testing/flows/drafts/`.
+- **Nothing is `testable` yet, and #128 says exactly why.** `CSD.md` §1: a card reaches `testable`
+  when its flow's floor is a released version **and** the flow runs on the matrix. On `main`,
+  **21 CSDs open §5 with "Spec complete and flow written"** — 005, 006, 008, 032, 033, 036, 040,
+  045, 046, 047, 048, 049, 057, 068, 069, 081, 090, 091, 092, 100, 101 — with floors of
+  `>=0.5.224` (5), `>=0.5.225` (3) and `unreleased` (13). **One says "Flow not complete"** (082:
+  its claim step asserts a transient state behind an LLM key). The other 49 at `building` fail a
+  trial promotion for a `proposed:` tag, an unconfirmed field, or no flow (003, 026, 070, 110).
+- **Next: promote.** Tag 0.5.225, flip the 13 `unreleased` floors to it, and run the 21 flows on
+  the matrix; each that goes green on every leg is `testable`. The drafts stay staged for one
+  reason: the runner does not navigate and every draft starts somewhere other than where sign-in
+  lands, so promotion is also the `nav_map` hop. Two things are known to stop flows before the
+  client is at fault: **CIRISServer#698** (two released 0.5.217 nodes never key a pair room, so the
+  CSD-091 chat flow cannot cross a message; recorded in `evidence/blocked_upstream.tsv`) and the
+  drafts floored `>=0.5.225`, which the matrix refuses until that version exists.
 
 ## Dependencies
 
 Arrows read "must come before". Upstream items (red hexagons, dotted arrows) are what another repo
-still owes: the lane can start, but can't fully close without it. Done work is folded into the two
+still owes: the lane can start, but can't fully close without it. Done work is folded into the
 green boxes.
 
 ```mermaid
@@ -87,56 +73,57 @@ flowchart TD
     classDef up fill:#F6E2E2,stroke:#B23A3A,color:#000
 
     BASE["Done: F1 F3 F4 F5 foundation, N1-N10 shell and spine, G2 atlas, G4 nav contract, B1 People, B2 receipt sheet, bug lane released in 0.5.224, a CSD for every card PR 90, fix wave PRs 92-95"]:::done
-    WAVE["Done since 09-25: state tags and drift test PR 100, route gate PRs 111 119, citations PR 107, QR PR 99, consent withdraw PR 112, contact code PR 113, key verification PRs 117 118, partnership and connectors PR 120, communities PR 121, erase traces PR 123, review batch 1 PR 124"]:::done
-    REV2["Review batch 2: people chats files, consent data, accord, adapters, households, communities, layer hub"]:::next
-    B3["B3 Files, PR 77, conflicting, needs the 0.5.217 pass"]:::next
-    HH["B5 households in Family, PR 122, CSD-100 101"]:::review
-    FLOWS["F7 flows on the matrix, PR 97, 28 draft flows, the door to testable"]:::review
+    WAVE["Done 09-26 to 09-28: state tags and drift test PR 100, route gate PRs 111 119, citations PR 107, QR PR 99, consent withdraw PR 112, contact code PR 113, key verification PRs 117 118, partnership and connectors PR 120, erase traces PR 123, review batch 1 PR 124"]:::done
+    WAVE2["Done 09-28 to 09-29: B3 Files and Notes PR 77, communities PR 121, households PR 122, review batch 2 PR 126 with CSD-105, Codex fixes PR 129, translations PR 127, promotion-readiness list PR 128"]:::done
+    FLOWS["Done: F7 and G3, the flow runner on the five-platform matrix PR 97, one live flow, 37 drafts"]:::done
+    TWO_NODE["Done: two-node fixture on all five legs PR 130"]:::done
+    REL["Release 0.5.225, PR 131, tag follows CI"]:::review
+    PROMOTE["Next: flip the unreleased floors to 0.5.225 and run the 21 written flows on the matrix, each green on every leg is testable"]:::next
     F2["F2 renderers, per card"]:::part
     F6["F6 invariant guards"]:::part
-    F7["F7 CSD DSL: states landed in PR 100, each not"]:::part
     F8["F8 scopes on the surface"]:::todo
-    S1["S1 receipt CSD-006, building"]:::part
-    G1["G1 moderation exposure contract, tag table in CSD-065, moderation reviewed in PR 124"]:::part
-    B4["B4 Just me: Data erase, consent revoke, partnership; notes wait on B3"]:::part
-    B5["B5 Family: household and members"]:::part
-    B6["B6 Neighbours: affiliations hub, rooms, key verification"]:::part
-    B7["B7 Communities and Businesses: communities hub, rosters"]:::part
-    B8["B8 Everyone"]:::todo
-    B9["B9 instruments: This agent and This node split, six Network tiles, CSD-045 surface, admin acts read owner_delegations"]:::part
-    B10["B10 setup wizard: loads templates adapters tool disclosure, connect-node works; new shape not started"]:::part
-    B11["B11 multi-self: devices in PR 94; CSD-093 094 sketched"]:::part
+    S1["S1 receipt CSD-006, spec complete, flow written"]:::part
+    G1["G1 moderation exposure contract, tag table in CSD-065, moderation reviewed"]:::part
+    B4["B4 Just me: Files, Notes, Data erase, consent revoke, partnership, interact reviewed"]:::part
+    B5["B5 Family: household and members built, reviewed in batch 2"]:::part
+    B6["B6 Neighbours: affiliations hub, rooms, key verification, chats at the node URL"]:::part
+    B7["B7 Communities and Businesses: community, rosters, rooms, moderator picker"]:::part
+    B8["B8 Everyone: agent-mode control replaced by a Settings link"]:::todo
+    B9["B9 instruments: This agent and This node, six Network tiles, CSD-045, trust root detail CSD-105"]:::part
+    B10["B10 setup wizard: loads templates adapters tool disclosure, connect-node works, new shape not started"]:::part
+    B11["B11 multi-self: devices in PR 94, CSD-093 094 sketched"]:::part
     B12["B12 contacts, groups, rosters: contact code, community rosters, household members"]:::part
-    G3["G3 per-circle CSD verification"]:::todo
 
     SRV218{{"Server 0.5.218 cut: 673 contact code, 678 second device, 657 withdraw, 676 delegation_id, 672 OAuth redirect"}}:::up
+    SRV698{{"Server 698: two released nodes cannot key a pair room, Server 696 media policy caps"}}:::up
     UB3{{"Server 614 renditions, 641 descriptor, Edge 646 own devices, Edge 675 person-signed files"}}:::up
-    UB5{{"Server 686 quorum M, 687 pending changes and rename, Persist 916 second-device re-wrap"}}:::up
+    UB5{{"Server 686 quorum M, 687 pending changes and rename"}}:::up
     UB6{{"Server 665 safety reports, 688 moderator chain, 594 N-member communities, 683 684 peer SAS"}}:::up
     UB7{{"Server 648 ledgers, 649 terms, 650 group book, 662 cohort roster, CC 105 registry"}}:::up
-    UB8{{"Server 651 shared knowledge, 652 trust root from a phone, 248 signed root, 681 accepted false"}}:::up
+    UB8{{"Server 651 shared knowledge, 652 trust root from a phone, 248 signed root, 681 accepted false, 682 supersede"}}:::up
     UERA{{"Server 677 self-erasure, Persist 914 erasable minting, Server 671 DSAR, Agent 1207 1220 receipts"}}:::up
-    USELF{{"Server 675 canary visible to peers, 668 670 node facts, 694 add-from-code; Agent 1202-1212 1219-1226"}}:::up
+    USELF{{"Server 675 canary visible to peers, 668 670 node facts, 694 add-from-code, 692 grant pruning; Agent 1202-1212 1219-1227"}}:::up
 
-    BASE --> WAVE
-    WAVE --> REV2 & B3 & HH & FLOWS
-    BASE --> F2 & F6 & B9 & B10
-    WAVE --> B4 & B6 & B7 & B12
-    B3 --> B4
-    HH --> B5 --> B12
-    REV2 --> B4 & B5 & B6 & B7
+    BASE --> WAVE --> WAVE2
+    WAVE2 --> REL --> PROMOTE
+    FLOWS --> PROMOTE
+    TWO_NODE --> PROMOTE
+    BASE --> F2 & F6 & B10
+    WAVE2 --> B4 & B5 & B6 & B7 & B9 & B12
+    PROMOTE --> B4 & B5 & B6 & B7
     B7 --> B8
-    F7 --> FLOWS --> G3
-    F7 --> F8 --> S1
+    F8 --> S1
     G1 --> B6
     F6 --> B6
     B4 --> B11
+    B5 --> B12
     SRV218 -.-> B4 & B9 & B11 & B12
-    UB3 -.-> B3
+    SRV698 -.-> PROMOTE & B4
+    UB3 -.-> B4
     UB5 -.-> B5
     UB6 -.-> B6
     UB7 -.-> B7
-    UB8 -.-> B8
+    UB8 -.-> B8 & B9
     UERA -.-> B4
     USELF -.-> B9
 ```
@@ -151,55 +138,56 @@ red hexagon = owed upstream.
 | F1, F3, F4, F5 | namespace table, tokens + lint, glyphs, primitives | **done** | #62 |
 | F2 | eleven renderers | partial: the enum and mapping exist; composables are written per card | #62 |
 | F6 | invariant guards | partial | #62 |
-| F7 | CSD DSL (`state`, `each`) | partial: `states:` is in every CSD, tagged in code, with a drift test; flows assert it on the matrix in #97; `each` not started | #100, #97 |
-| F8 | `scopes:` on the surface | not started. Meanwhile `check_csd_v3` rejects unknown surface keys and checks `flow_only` | #90 |
+| F7 | CSD DSL (`state`, `each`) | **done** as the flow language: `states:` in every CSD with a drift test; `state`, `each`, `relation`, `count` assert on the matrix | #100, #97 |
+| F8 | `scopes:` on the surface | not started. `check_csd_v3` rejects unknown surface keys and checks `flow_only` | #90 |
 | N1–N10 | nav tree, rail, tabs, gating deleted, the spine | **done** | #63, #64 |
-| S1 | receipt CSD | **building** (CSD-006); the People receipt reads the grant envelope, 5 of 5 facts | #101 |
-| S2 | moderation CSD | **building** (CSD-065, with G1's tag table); reviewed in batch 1 | #90, #124 |
-| S3–S7 | card CSDs | **72 on main**: 64 building, 7 sketched, 1 envisioned; §3 generated from code by the route gate; citations verified by call site | #90, #107, #111, #124 |
+| S1 | receipt CSD | building, spec complete, flow written (CSD-006); the receipt no longer guesses a scope for a grant-less row | #101, #126 |
+| S2 | moderation CSD | building (CSD-065); reviewed in batch 1; a `proposed:` tag and an unconfirmed field keep it off the promote list | #90, #124 |
+| S3–S7 | card CSDs | **77 on main**: 71 building, 5 sketched, 1 envisioned; §3 generated from code; 21 spec-complete with a flow | #90, #107, #111, #128 |
 | B1, B2 | People, receipt sheet | **done** | #62 |
-| B3 | Files | in review: merged with main, the 0.5.217 pass applied; CSD-007 and CSD-008 at `building` | #77 |
-| B4 | Just me | partial: erase traces and deletion receipts on Data, Revoke on Manage Consent, partnership decisions on Consent; notes to self wait on #77; the circle closes after review batch 2 | #123, #112, #120 |
-| B5 | Family | in review: the household in the Family hub, members on Family › People | #122 |
-| B6 | Neighbours | partial: affiliations on the hub, rooms in Chats (CSD-110), key verification on the peer detail; Safety still has nothing a non-duty-holder may do | #121, #117 |
-| B7 | Communities and Businesses | partial: the community itself (Rules), rosters (People), rooms (Chats); ledgers, terms and the group book are upstream | #121 |
-| B8 | Everyone | not started | — |
-| B9 | instruments | partial: This agent / This node split merged; six Network tiles have CSDs and the review; CSD-045 has a surface; Config edits the node; admin acts read `owner_delegations` (0.5.218) | #93, #124 |
-| B10 | setup wizard, new shape | partial: the wizard loads templates, adapters and the tool disclosure, connect-node works, one press runs the final step once; the new shape is not started | #92, #124 |
+| B3 | Files | **done**: Files holds files, Notes to self in Just me › Chats; CSD-007/008 | #77 |
+| B4 | Just me | partial, every card built: Files, Notes, Data (erase, receipts), Manage Consent (revoke), Consent (partnership), Interact reviewed; closes when its flows are `testable` | #77, #123, #112, #120, #124, #126 |
+| B5 | Family | partial, built and reviewed: the household in the hub, members on People; quorum M and rename are upstream | #122, #126 |
+| B6 | Neighbours | partial: affiliations hub, rooms in Chats (CSD-110), key verification, chats at the node URL; Safety still has nothing a non-duty-holder may do | #121, #117, #126 |
+| B7 | Communities and Businesses | partial: the community (Rules), rosters (People), rooms (Chats), moderator picker; ledgers, terms and the group book are upstream | #121, #126 |
+| B8 | Everyone | not started beyond the hub fix (agent-mode control → Settings link) | #126 |
+| B9 | instruments | partial: This agent / This node split; six Network tiles; CSD-045 surface; the trust-root detail (CSD-105) at the node URL; admin acts read `owner_delegations` (0.5.218) | #93, #124, #126 |
+| B10 | setup wizard, new shape | partial: loads templates, adapters and the tool disclosure, connect-node works; the new shape is not started; CSD-082's flow is the one "not complete" | #92, #124 |
 | B11 | multi-self | partial: device labels, revoked devices, release a node; CSD-093/094 sketched against 0.5.218 | #94, #98 |
-| B12 | contacts, groups, rosters | partial: share my contact code, add by scan or paste (0.5.218), community rosters, household members in #122 | #113, #121, #122 |
-| G1 | moderation exposure contract | partial: tags specified in CSD-065; moderation reviewed in batch 1; not yet a surface | #90, #124 |
+| B12 | contacts, groups, rosters | partial: share my contact code (CSD-092 building, route ships in 0.5.218), community rosters, household members | #113, #121, #122 |
+| G1 | moderation exposure contract | partial: tags specified in CSD-065; moderation reviewed; not yet a surface | #90, #124 |
 | G2, G4 | atlas; nav contract | **done** | #64 |
-| G3 | per-circle CSD verification | in review as the flow runner: 28 draft flows, one per CSD that has one, none live until #97 merges and a flow goes green on the matrix | #97 |
-| — | gap-closing review, batch 1 | **done**: runtime, identity, interact, setup, network, moderation | #124 |
-| — | gap-closing review, batch 2 | **next**: people/chats/files, consent/data, accord, adapters, households, communities, layer hub | — |
+| G3 | per-circle CSD verification | **done** as a mechanism: the runner on five legs, the two-node fixture for flows that need a second person; one flow live | #97, #130 |
+| — | gap-closing review, batches 1 and 2 | **done** | #124, #126 |
+| — | promotions | **next**: 21 flows to run at 0.5.225; 13 floors to flip | — |
+| — | release 0.5.225 | in review | #131 |
 
 ## Upstream: what each lane is waiting on
 
-Grouped by the lane the client work sits in. Numbers are issues; the first table row is the one that
-gates four merged cards. The 2026-09-25 list, with verification, is in #90's body; the batch-1
-review filed CIRISAgent#1223–1226 and CIRISServer#692, #694; the card PRs filed the rest.
+Grouped by the lane the client work sits in, from the open issues in CIRISServer, CIRISAgent,
+CIRISPersist and CIRISConstitution on 2026-09-29. The first row gates four merged cards and two
+sketched ones; the second stops a flow.
 
 | lane | owed | issues |
 |---|---|---|
-| **the 0.5.218 cut** (server 0.5.217 is latest) | a person's contact code; a second device that opens old files and replicates; withdraw a `consent:replication` grant; the owner's `delegation_id` on the wire; the OAuth redirect check | **Server#673, #678, #657, #676, #672**; also on the slate: #655 (occurrences unauthenticated), #646/#647/#622 (replication kinds, family cohort, cohort blob) |
-| people / chats / files | renditions and the file descriptor; bytes on your own devices; files signed by the person; peer SAS that can match, and a record when it doesn't; a list of peering grants; rooms after a restart; self-room state that survives a reboot | Server#614, #641, #683, #684, #680, #623, #630; Edge#646, #675; Persist#919; Agent#1210 |
+| **the 0.5.218 cut** (server 0.5.217 is latest) | a person's contact code; a second device that opens old files and replicates; withdraw a `consent:replication` grant; the owner's `delegation_id` on the wire; the OAuth redirect check | **Server#673, #678, #657, #676, #672**; on the same slate: #655 (occurrences unauthenticated), #646/#647/#622 (replication kinds, family cohort, cohort blob), #692 (expired device-code grants never pruned) |
+| **the matrix** | two released nodes keying a pair room (peers stay advisory; the KeyPackage never replicates); which of `/v1/media/policy`'s two caps the write door enforces | **Server#698**, #696 |
+| people / chats / files | renditions and the file descriptor; bytes on your own devices; files signed by the person; peer SAS that can match, and a record when it doesn't; a list of peering grants; rooms after a restart; self-room state that survives a reboot | Server#614, #641, #683, #684, #680, #623, #630, #653; Edge#646, #675; Agent#1210 |
 | consent / data | erase yourself from the app; erasable minting; DSAR without an agent; a DSAR receipt; deletion receipts across a key rotation; consent that speaks scopes; `consent:scope:analyze` readable; erase-traces returns its audit row | Server#677, #671, #685, #659, #661; Persist#914; Agent#1207, #1212, #1219, #1220, #1204, #1221 |
-| households / communities | absolute-M quorum; pending quorum changes and rename; N-member communities above the substrate; a cohort-scoped roster read; claim into all seven cohort scopes; a founder can appoint a moderator; ledgers, terms, the group book; a non-duty-holder can report; the missing registry families | Server#686, #687, #594, #662, #666, #688, #648, #649, #650, #665; Persist#916; CC#105, #109, #110; Agent#1205 |
-| accord / trust root | a signed trust root; re-rooting from a phone; `accepted:false` for the root the node is under; supersede names a route that exists; a Wise Authority surface for owner recovery; the lineage-head cosign | Server#248, #652, #681, #682, #664, #693, #536, #537; Persist#809, #937–#939; CC#118–#121, #127 |
+| households / communities | absolute-M quorum; pending quorum changes and rename; N-member communities above the substrate; a cohort-scoped roster read; claim into all seven cohort scopes; a founder can appoint a moderator; ledgers, terms, the group book; a non-duty-holder can report; the missing registry families | Server#686, #687, #594, #662, #666, #688, #648, #649, #650, #665; CC#105, #109, #110; Agent#1205 |
+| accord / trust root | a signed trust root; re-rooting from a phone; `accepted:false` for the root the node is under; supersede names a route that exists; `canonical/add` (#441); a Wise Authority surface for owner recovery; the lineage-head cosign; the v2 accord invocation label reaching v1 agents | Server#248, #652, #681, #682, #664, #693, #536, #537; CC#118–#121, #127; Agent#1227 |
 | node ops (This node) | the compulsion declaration visible to peers; two node facts with no node route; the transport key on identity; a bare node can take a node code; a config cohort envelope; an audit read; run-without-AI reported as such; deferrals on the node | Server#675, #668, #670, #694, #660, #658, #656, #574, #573, #669, #547 |
 | agent surfaces (This agent) | users without emails; skill import that fails closed; a WA "modify" that is a rejection; inventory reads that match the card; what the agent thinks with, readable; connectors that report honestly and record a delegation; tickets that check transitions; wallet idempotency; billing that doesn't invent credits | Agent#1202, #1203, #1206, #1208, #1209, #1211, #1222, #1223, #1224, #1225, #1226, #945 |
 | setup / identity | is a remote node already owned; a dedicated home with a dedicated identity; a TPM that isn't silently software; a pre-#659 key row detected; device-grant chains; idempotent setup/complete; `claim_pin_file` on setup status | Server#667, #621, #639, #608, #595, #490, #663; Agent#1193–#1196, #1110, #1123, #1152 |
 
-**Closed since 2026-09-25:** CIRISAgent#1213 (the proxy gap that reached every lane),
-CIRISPersist#907 (late members) and #910 (family roster replication), CIRISConstitution#106–#108.
-Client #108 and #109 (vocabulary and operations from the node) closed in #124.
+**Closed since 2026-09-25:** CIRISAgent#1213 (shipped in agent 2.12.1); CIRISPersist#907, #910,
+#916 (second-device re-wrap), #919 (self room on a second device), #809, #937–#939;
+CIRISConstitution#106–#108. Client #108 and #109 closed in #124.
 
-**Shipped upstream and now used by the client:** households (#122, in review), communities and
-rooms (#121), drive CRUD only through #77, peer key verification (#117), trace erasure (#123),
-`/v1/vocabulary` and `/v1/operations` (#124), the Tier S self-standing routes (CSD-045, #124).
-**Still shipped and unused:** `/v1/media/policy` and content digests (both in #77's pass),
-`GET /v1/files/{id}/meta`, rename, move.
+**Shipped upstream and now used by the client:** the drive plane, `/v1/media/policy`, content
+digests and `/meta` (#77); households (#122); communities and rooms (#121); peer key verification
+(#117); trace erasure (#123); `/v1/vocabulary` and `/v1/operations` (#124); the Tier S
+self-standing routes (CSD-045); `/v1/trust-root` and `canonical/supersede` (#126).
 
 ## Client backlog outside the lanes
 
@@ -217,24 +205,9 @@ rooms (#121), drive CRUD only through #77, peer key verification (#117), trace e
   app's version, never the node's), #105 (Health & Reputation reads the same in two circles),
   #110 (Login infers instead of reading `signin-state`; batch 1 reads it, the issue stays open
   until the card is re-checked), #114 (rc5: the reference matcher into `check_csd_v3`).
-- From the CSDs, not yet in a PR: Account vs Settings (a separate `Screen.Account`), about 150
-  text fields without an input sink (drivable offenders 151 after #124), the households dispatcher
-  split named in #122, and the six sketched cards above.
-
-## B3: one pass before merge
-
-Server 0.5.217 changed what #77 should do, and it has been conflicting since #90 landed:
-1. The write gate refuses a file whose bytes contradict its declared type, including a real JPEG
-   sent as `application/octet-stream`. That is what #77 sends when a picker reports no type. Fix:
-   declare the type sniffed from the bytes.
-2. Uploads go up to 64 MiB. Read the caps from `/v1/media/policy`, not the compiled-in 1 MiB.
-3. `content_digest` is on the open-file response, so verify it (CC 5.3.2.5) before anything renders.
-4. Name the note-only `unreadable` state.
-5. ~~Route drive and notes calls to the node URL~~ — CIRISAgent#1213 is closed; the client routes
-   node-owned calls to the node URL regardless (the way #123 does).
-6. Bundle the 0.5.216 and 0.5.217 message ids (#78; #65 is already in #77).
-7. ~~Apply the rows in `FSD/CSD/PENDING-CSD-007.md` to CSD-007 §3 and delete that file in the same
-   commit; take #122's note that Family › Files can list once households exist.~~ — done on #77.
+- From the CSDs, not yet in a PR: Account vs Settings (a separate `Screen.Account`), the text
+  fields without an input sink (drivable offenders 151 after #124), `nav_map` hops so staged flows
+  can start off `Contacts`, and the five sketched cards above.
 
 ## Deferred on purpose
 
