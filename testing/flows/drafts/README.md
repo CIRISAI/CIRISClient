@@ -95,11 +95,35 @@ None moved, for one reason common to all six and one extra for `csd-036`:
 - **`csd-036` is still floored `client: "unreleased"`**, so it would be refused
   on every leg even once it loads.
 
+## Flows that need a second node: `fixture: two_node`
+
+Four drafts name values only a second node can produce — a contact's key id, a
+peer to pick, a message's attestation id — and say `fixture: two_node`. The
+runner then stands a second `ciris-server` up beside the leg's node and seeds
+it before the first of them runs (`testing/gate/two_node.py`; the file format
+and the `${NAME}` values are in `testing/flows/README.md`, "Two-node flows").
+Every leg of `five-platform-live-qa.yml` passes `--node-binary`, so promoting
+one of these costs nothing more than `git mv`; a run whose flows do not ask for
+the fixture never starts it.
+
+| file | fixture values it names | where it stands (Linux desktop, locally, 2026-09-28, candidate 0.5.224 checked as 0.5.225, node v0.5.217) |
+|---|---|---|
+| `csd-005-people.yaml` | `PEER_KEY_ID` — the seeded contact's row, trust chip and receipt | row, chip, hamburger and five-fact receipt passed; fails later at an unrelated scan-button tag (§5) |
+| `csd-006-receipt.yaml` | `PEER_KEY_ID` — opens `btn_receipt_<key>` and asserts the five facts | **pass**, 5/6 with the grant-less step skipped as designed |
+| `csd-047-network-content.yaml` | `PEER_NODE_KEY_ID` — picks `peer_pick_row_<node>`; enters from the hub tile, since NetworkContent has no nav hop | floored `unreleased`, so refused on the matrix; a copy floored at the candidate could not start locally — nav_map's hop to LayerGlobalCommons stops on CircleTab |
+| `csd-091-user-chat.yaml` | `PEER_KEY_ID` to enter the room from People; `MESSAGE_ATTESTATION_ID` / `MESSAGE_TEXT` for the row | **cannot pass on released nodes**: two unconferred v0.5.217 nodes never key the pair room, so no message crosses and `a_room_with_history` fails naming why (`evidence/blocked_upstream.tsv`) |
+
+The drafts are floored `>=0.5.225` while `VERSION` is `0.5.224`, so on today's
+matrix they would be refused even if promoted; they were exercised locally with
+`--client-version 0.5.225` against a candidate built from this tree.
+
 ## What is here
 
 | file | CSD | screen it needs | beyond nav, what else it waits on |
 |---|---|---|---|
-| `csd-006-receipt.yaml` | CSD-006 | Contacts + a contact | a second node to be a contact of; the matrix stands up one |
+| `csd-005-people.yaml` | CSD-005 | Contacts + a contact | `fixture: two_node` seeds the contact |
+| `csd-006-receipt.yaml` | CSD-006 | Contacts + a contact | `fixture: two_node` seeds the contact |
+| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → NetworkContent | `fixture: two_node` admits the peer; floored `unreleased` |
 | `csd-025-system.yaml` | CSD-025 | System | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | **not promoted**: `csd:` key refused on `main` (#97), and floored `unreleased` |
 | `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
@@ -112,6 +136,6 @@ None moved, for one reason common to all six and one extra for `csd-036`:
 | `csd-085-claim-node.yaml` | CSD-085 | ClaimNode | the no-signer step needs the local node stopped mid-flow |
 | `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce. **Not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-090-duty-conferral.yaml` | CSD-090 | DutyConferral | a node that knows an accord family |
-| `csd-091-user-chat.yaml` | CSD-091 | UserChat | a peered contact to have a room with |
+| `csd-091-user-chat.yaml` | CSD-091 | Contacts → UserChat | `fixture: two_node` seeds the contact; a crossed message needs nodes that can key a room (not the released line) |
 
 Six of the fourteen need **only** navigation. They are the ones to promote first.

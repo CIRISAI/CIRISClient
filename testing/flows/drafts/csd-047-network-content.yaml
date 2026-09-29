@@ -12,38 +12,56 @@ description: >-
 # (ui/screens/federation/NetworkContentScreen.kt); federation_content_peers_error /
 # federation_content_peers_not_on_this_node (ReadFailureBlock).
 client: "unreleased"
+# The peer to pick is the two-node fixture's peer NODE (testing/gate/two_node.py):
+# GET /v1/federation/peers lists the nodes this node has admitted, and peering
+# admits ${PEER_NODE_KEY_ID}.
+fixture: two_node
 
 steps:
   - step_id: on_content
-    title: The pick step composes with a drivable search field
+    title: The hub's Content tile opens the pick step with a drivable search field
+    description: >-
+      NetworkContent has no nav hop — it is reached from a tile on the transport
+      hub (LayerGlobalCommons), which does — so the flow starts on the hub and
+      taps the tile, as CSD-047 §4 says.
     requires:
-      screen: NetworkContent
+      screen: LayerGlobalCommons
     do:
+      - click: tile_federation_content
+      - wait: input_peer_search
+        wait_ms: 5000
       - input: {input_peer_search: "zz-no-such-peer"}
     expect:
+      screen: NetworkContent
       visible: [screen_federation_content, input_peer_search]
 
-  - step_id: clearing_the_search
-    title: Clearing the search leaves the pick step in place
-    description: >-
-      The flow cannot pick a peer: the row tag is `peer_pick_row_<keyId>`, a
-      `click:` takes one literal tag, and no fixture seeds a peer whose key id
-      the flow could name. So it clears the search and stops at the pick step;
-      the digest step below is gated on `input_content_id` and skips until a
-      seeded peer lets the flow open it (CSD-047 §5).
+  - step_id: clearing_the_search_lists_the_peer
+    title: Clearing the search lists the peer the fixture admitted
     do:
       - input: {input_peer_search: ""}
+      - wait: "peer_pick_row_${PEER_NODE_KEY_ID}"
+        wait_ms: 2500
     expect:
       screen: NetworkContent
-      visible: [input_peer_search]
+      visible: [input_peer_search, "peer_pick_row_${PEER_NODE_KEY_ID}"]
+      absent: [empty_content_peers]
+
+  - step_id: picking_the_peer_opens_the_digest_step
+    title: Picking the peer opens the digest step
+    do:
+      - click: "peer_pick_row_${PEER_NODE_KEY_ID}"
+      - wait: input_content_id
+        wait_ms: 2500
+    expect:
+      visible: [input_content_id, btn_content_fetch]
 
   - step_id: a_bad_digest_keeps_fetch_shut
     title: A digest that is not 64 hex characters cannot be fetched
     description: >-
       The node would refuse it (INVALID_CONTENT_ID, 400); the card refuses first.
       Asserting the button is present and the field took input is what a flow
-      can do; the disabled state is the view model's validateContentId.
-    optional_step: true
+      can do; the disabled state is the view model's validateContentId. A real
+      fetch needs a digest the peer holds, which the fixture does not seed.
     requires:
       visible: [input_content_id]
     do:

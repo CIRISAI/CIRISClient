@@ -143,7 +143,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-**Flow not complete.** `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) never opens a receipt: the hamburger's tag is `btn_receipt_<keyId>`, a flow `click:` takes one literal tag, and no fixture seeds a contact whose key id the flow could name. Every fact step is therefore gated on `sheet_receipt` and always skips. It is complete when a seeded contact (or a runner that can click the first match of `btn_receipt_*`) lets it open a concrete receipt; until then this card is not ready to promote.
+Spec complete and flow written (`testing/flows/drafts/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`). The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Run locally on the Linux desktop leg 2026-09-28 (candidate 0.5.224 checked as 0.5.225, node v0.5.217): 5/6 passed, the grant-less step skipped as designed because the node sends the grant. Not yet run on the other four legs; promotes when the floor is met and it runs on the matrix.
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

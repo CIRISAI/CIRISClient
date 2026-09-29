@@ -15,21 +15,39 @@ description: >-
 # chat_msg_${attestationId}, chat_msg_unopened_${attestationId},
 # chat_msg_duty_badge_${attestationId} and chat_note_${attestationId} are
 # `testable*` literals in ui/screens/ChatScreen.kt at 0.5.225.
-# NOT asserted: a locked row (chat_msg_unopened_*) — the single-node fixture
-# cannot stage one; its rendering is pinned by ChatEntryPresentationTest.
+# NOT asserted: a locked row (chat_msg_unopened_*) — the fixture does not stage
+# one; its rendering is pinned by ChatEntryPresentationTest.
 client: ">=0.5.225"
+# The two-node fixture (testing/gate/two_node.py) is CIRISServer's chat
+# scenario without Docker: both nodes claimed and announced, each owner a
+# contact of the other, the pair room opened on both sides, and ONE message
+# sent by the peer. ${PEER_KEY_ID} is the contact; ${MESSAGE_ATTESTATION_ID} and
+# ${MESSAGE_TEXT} exist only if that message ARRIVED on the leg's node — a
+# message that did not cross fails `a_room_with_history` naming why, rather
+# than letting a local-only row pass for a conversation.
+fixture: two_node
 
 steps:
   - step_id: on_the_chat
-    title: The room composes a transcript and a composer
+    title: Opening the seeded contact's chat composes a transcript and a composer
     description: >-
-      Entry precondition: UserChat is reached by picking a contact, which the nav
-      map cannot express as a hop. Both tags are asserted because a room that
-      rendered its transcript with no composer is read-only, and CSD-091 §1 is
-      about an exchange.
+      UserChat is reached by picking a contact, which the nav map cannot express
+      as a hop — so the flow starts on People and picks the fixture's contact by
+      its key id. Both tags are asserted because a room that rendered its
+      transcript with no composer is read-only, and CSD-091 §1 is about an
+      exchange.
     requires:
-      screen: UserChat
+      screen: Contacts
+    do:
+      # Sign-in read the list before the fixture added the contact.
+      - click: btn_contacts_refresh
+      - wait: "btn_contacts_chat_${PEER_KEY_ID}"
+        wait_ms: 5000
+      - click: "btn_contacts_chat_${PEER_KEY_ID}"
+      - wait: chat_transcript
+        wait_ms: 5000
     expect:
+      screen: UserChat
       visible: [chat_transcript, input_chat_body, btn_chat_send]
 
   - step_id: the_composer_takes_text
@@ -49,20 +67,24 @@ steps:
       visible: [chat_transcript]
 
   - step_id: a_room_with_history
-    title: A room that has messages renders them as rows
+    title: The peer's message is in the room as a row, not only the system note
     description: >-
-      Optional: it needs a peered pair with a crossed message, which is what
-      CIRISServer's chat ladder builds and the client fixture does not. `count:
-      min 1` over the row class, because the flow cannot know an attestation id and
-      a transcript frame with zero rows answers `visible: [chat_transcript]`
-      correctly.
-    optional_step: true
+      The row by the SENDER's attestation id — a value the leg's node cannot
+      produce for itself, so it proves the row crossed rather than that a room
+      exists. A room holding nothing but a system note answers
+      `visible: [chat_transcript]` and `count: chat_msg_* min 1` would need a
+      real row either way; naming the one the fixture sent is what makes this a
+      conversation.
     requires:
       screen: UserChat
       visible: [chat_transcript]
+    do:
+      - wait: "chat_msg_${MESSAGE_ATTESTATION_ID}"
+        wait_ms: 5000
     expect:
       state: populated
-      count: {of: "chat_msg_*", min: 1}
+      visible: ["chat_msg_${MESSAGE_ATTESTATION_ID}"]
+      text: {"chat_msg_${MESSAGE_ATTESTATION_ID}": "${MESSAGE_TEXT}"}
 
   - step_id: a_refusal_is_not_an_empty_room
     title: When the room cannot be served, the refusal is on screen and the empty state is not

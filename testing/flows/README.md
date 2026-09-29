@@ -137,6 +137,77 @@ bring-up per leg and one session.
   with "no nav hop for Screen.X"; a flow-only screen (pre-login, wizards,
   leaves) is waited for, not walked to. Hops between later steps are the flow's
   own `do:` clicks.
-- **Only what a bare node can show.** The matrix stands up one node with no
-  contacts, no agent and no peers, so CSD-005's populated list and receipt sheet
-  are not driven here.
+- **A second node only when a flow asks.** The matrix stands up one node with
+  no contacts, no agent and no peers. A flow that needs more says
+  `fixture: two_node` — see below. Everything in this directory today runs on
+  the bare node.
+- **No cross-node message on released nodes.** The two-node fixture seeds a
+  contact each way and opens the room, but between two fresh, unconferred
+  nodes of the released line (0.5.217) the room never keys, so no message
+  crosses; see "Two-node flows".
+
+## Two-node flows: `fixture: two_node` and `${NAME}`
+
+```yaml
+fixture: two_node
+steps:
+  - step_id: open_the_receipt
+    title: The seeded contact's receipt opens
+    do:
+      - click: "btn_receipt_${PEER_KEY_ID}"     # QUOTED: `${` is YAML flow syntax
+    expect:
+      visible: ["contacts_row_${PEER_KEY_ID}", sheet_receipt]
+```
+
+`testing/gate/two_node.py` is CIRISServer's `harness/mesh-repro/scenarios/chat.sh`
+without Docker: a second `ciris-server` from the binary the leg downloaded, run
+natively on 5242/5243 with its own `--home` and a unique `--key-id`, claimed on
+its console, announced, peered both ways with the leg's node (which the client
+claimed; the fixture signs in to it as `qaadmin`), each owner added as the
+other's contact, the pair room opened on both sides, and one message sent by
+the peer once the room is keyed. It runs on every leg because it runs on the
+leg's HOST — the client only ever talks to its own node.
+
+The values a flow may name:
+
+| name | what |
+|---|---|
+| `PEER_KEY_ID` | the key the leg's node holds the contact under (the peer's owner; the peer NODE if the owner key never crossed) |
+| `PEER_NODE_KEY_ID` / `PEER_OWNER_KEY_ID` | the peer's node and owner fed-IDs |
+| `PEER_CONTACT_CODE` | the peer's contact code — only from a node that serves `GET /v1/self/contact-code` (0.5.218+) |
+| `LOCAL_NODE_KEY_ID` / `LOCAL_OWNER_KEY_ID` | the leg's node and its owner |
+| `ROOM_ID` | the pair room's community id |
+| `MESSAGE_ATTESTATION_ID` / `MESSAGE_TEXT` | the peer's message — only if it ARRIVED on the leg's node |
+| `PEER_URL` | the peer's read API, from the host |
+
+The rules, each enforced by `testing/test_flow_fixtures.py`:
+
+- A `${NAME}` in a flow with no `fixture:` is a load error.
+- A value the fixture did not produce fails the step — optional or not — and
+  the failure quotes the fixture's own note for why. A message that did not
+  cross is not handed over, so a local-only row cannot pass for a conversation.
+- Flows with no fixture run first, whatever the file order: the fixture changes
+  the leg's node, and `people.yaml` asserts the bare one.
+- The fixture stands up once per leg, only before the first runnable flow that
+  asks for it, and is torn down in a `finally`; the workflow also runs
+  `python3 -m testing.gate.two_node down --work <dir>` under `always()`.
+- `run_platform` / `run_flows` need `--node-binary` (the workflow passes the
+  leg's `node/ciris-server`); without it a fixture flow is `cannot-start`.
+
+Locally, against the throwaway node above:
+
+```bash
+python3 -m testing.gate.run_flows --platform desktop \
+    --flows testing/flows/drafts/csd-006-receipt.yaml --client-version 0.5.225 \
+    --node-binary /tmp/node/ciris-server \
+    --node-url http://127.0.0.1:4243 --peer-work /tmp/flows-peer
+```
+
+**What it cannot do on the released line.** Measured against v0.5.217 on
+2026-09-28: peering, the announce, the owner keys and the contacts all cross,
+but the room never keys — the two nodes admit each other `ADVISORY — not
+conferred`, frames fail the "SignedTransportDestination binds this (peer,
+dest)" check, and the joiner's KeyPackage never replicates, in 480 s of
+waiting. CIRISServer's own chat ladder is green only on a `test-anchor` build
+with a test trust root, which a leg's released binary is not. A flow naming
+`${MESSAGE_ATTESTATION_ID}` therefore fails on the matrix today, saying so.

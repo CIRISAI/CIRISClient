@@ -219,7 +219,7 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97) The populated list and the receipt step are no longer optional: `fixture: two_node` seeds the contact, and on the Linux desktop leg (2026-09-28) the row, its trust chip, its hamburger and the five-fact receipt all passed. The flow then failed at `the_add_card_opens_with_paste_and_scan`: the desktop add card shows `btn_scan_contact_code_status`, not `btn_scan_contact_code` — a defect in that step, unrelated to the fixture.
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
