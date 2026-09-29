@@ -180,6 +180,13 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             raise SessionUnavailable(f"wizard: input_fedid_label would not accept input ({e})") from e
         time.sleep(2.0)
     _reach(drv, "age_band_adult", lambda: drv.click("age_band_adult"))
+    # The legs run against a bare node with no LLM, so answer "run without AI":
+    # it removes the AI step, whose Next waits for a usable LLM choice
+    # (SetupState: AI -> hasUsableLlmChoice). Desktop already defaults there;
+    # iOS asks, and the walk stopped at 'ai' with Next disabled.
+    if "opt_run_without_ai" in _tags(drv):
+        _reach(drv, "opt_run_without_ai", lambda: drv.click("opt_run_without_ai"))
+        time.sleep(1.0)
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
     # must say so rather than spin.
