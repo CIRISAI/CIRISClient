@@ -125,6 +125,8 @@ object TestAutomationHandler {
         testMode = true,
         clientMode = TestAutomationState.clientMode,
         nodeUrl = TestAutomationState.nodeUrl,
+        circle = TestAutomationState.circle,
+        tab = TestAutomationState.tab,
     )
 
     fun handleScreen(): ScreenResponse {

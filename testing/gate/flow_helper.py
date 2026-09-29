@@ -96,6 +96,14 @@ class SyncFlowHelper:
         except DriverError:
             return "unknown"
 
+    async def get_state(self) -> dict:
+        """`/state`: the gate, the node, and — from 0.5.226 — the circle and
+        tab the shell stands in, which is how `navigate` sees a hop land."""
+        try:
+            return self._drv.state()
+        except DriverError:
+            return {}
+
     async def is_element_visible(self, tag: str) -> bool:
         e = await self.get_element(tag)
         if e is None:

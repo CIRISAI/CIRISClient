@@ -360,7 +360,9 @@ class TestAutomationServer(
                         screen = currentScreen,
                         testMode = true,
                         clientMode = ai.ciris.mobile.shared.testing.TestAutomationState.clientMode,
-                        nodeUrl = ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl
+                        nodeUrl = ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl,
+                        circle = ai.ciris.mobile.shared.testing.TestAutomationState.circle,
+                        tab = ai.ciris.mobile.shared.testing.TestAutomationState.tab,
                     ))
                 }
 

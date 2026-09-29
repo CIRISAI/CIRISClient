@@ -31,6 +31,21 @@ object TestAutomationState {
     /** The node URL the app settled on -- local default, or a remote override. */
     var nodeUrl: String = ""
 
+    /**
+     * The circle and tab the shell stands in (`CohortScope.id`, `Tab.id`; ""
+     * outside the shell). Written by `CIRISApp` beside `CirclesShell`.
+     *
+     * A harness walking `circle_x -> tab_y` needs to know the circle CHANGED
+     * before it clicks the tab: `openTab` runs with the `circleNow` the last
+     * composition captured, so a tab clicked in the same frame as the circle
+     * opens the old circle's tab. The 2026-09-29 five-platform run lost four
+     * flows to that race on every desktop leg, each reported as a row that
+     * "never appeared". Nothing in `/tree` says which circle is selected
+     * (the rail's selected state is a background colour), so `/state` says.
+     */
+    var circle: String = ""
+    var tab: String = ""
+
     // Window position offset (desktop only, for converting to screen coords)
     var windowX: Int = 0
     var windowY: Int = 0

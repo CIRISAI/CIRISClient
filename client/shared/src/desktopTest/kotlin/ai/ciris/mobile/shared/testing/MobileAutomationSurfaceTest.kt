@@ -280,4 +280,20 @@ class MobileAutomationSurfaceTest {
         assertEquals("Setup", s.screen)
         assertTrue(s.testMode)
     }
+
+    @Test
+    fun state_reports_the_circle_and_tab_the_shell_stands_in() {
+        // A circle click and the tab click after it race on the composition
+        // that captured `circleNow` (CIRISApp.openTab): a tab clicked before
+        // the frame after the circle click recomposes opens the OLD circle's
+        // tab. The five-platform run of 2026-09-29 lost four flows to that on
+        // every desktop leg. The flow runner now verifies the circle changed
+        // before it clicks the tab, and THIS is what it reads — the shell's
+        // own state, not a localized label.
+        TestAutomationState.circle = "global-communities"
+        TestAutomationState.tab = "rules"
+        val s = TestAutomationHandler.handleState()
+        assertEquals("global-communities", s.circle)
+        assertEquals("rules", s.tab)
+    }
 }

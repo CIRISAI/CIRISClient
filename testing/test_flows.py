@@ -309,6 +309,17 @@ class FakeHelper:
         self.els = {t: _El(t, txt) for t, txt in tags.items()}
         self.calls: list[str] = []
         self.leads: dict = {}
+        # The shell's own account of where it stands (`/state`): a circle click
+        # lands at once here; `_RacyShell` below is the one that lands late.
+        self.circle, self.tab = "", ""
+        # Tags that are on screen but whose click the app refuses, and the
+        # reason the last refusal gave (what the real helper keeps).
+        self.refuse: set = set()
+        self.last_error = ""
+
+    async def get_state(self):
+        self.calls.append("state")
+        return {"screen": self.screen, "circle": self.circle, "tab": self.tab}
 
     async def get_elements(self):
         self.calls.append("tree")
@@ -330,8 +341,14 @@ class FakeHelper:
 
     async def click(self, tag, timeout=2000):
         self.calls.append(f"click {tag}")
-        if tag not in self.els:
+        if tag not in self.els or tag in self.refuse:
+            self.last_error = (f"no such element {tag!r}" if tag not in self.els
+                               else f"HTTP 404: No click handler for {tag!r}")
             return False
+        if tag.startswith("circle_"):
+            self.circle = tag[len("circle_"):].replace("_", "-")
+        elif tag.startswith("tab_"):
+            self.tab = tag[len("tab_"):]
         # A click can move the app: `leads` maps a tag to (screen, tags now shown).
         if tag in self.leads:
             self.screen, shown = self.leads[tag]
@@ -538,10 +555,18 @@ def test_a_flow_only_screen_is_waited_for_not_walked_to(tmp_path):
     assert "no nav hop" not in out.detail, "flow-only is not a missing hop"
 
 
-def test_already_on_the_first_screen_walks_nothing(tmp_path):
-    h = FakeHelper("Thing", {"thing_list": ""})
-    assert _nav_run(_spec(tmp_path), h).status == run_flows.PASS
-    assert not [c for c in h.calls if c.startswith("click")]
+def test_already_on_the_first_screen_still_walks_its_hop(tmp_path):
+    """Being on the screen says nothing about WHICH circle it is shown in —
+    Contacts sits in every circle's People tab — and the last flow left the
+    shell wherever it left it. The hop is re-walked, and verified, so every
+    flow starts from a known circle and tab, not from the previous flow's."""
+    h = _walkable()
+    h.screen = "Thing"
+    h.els["thing_list"] = _El("thing_list", "")
+    out = _nav_run(_spec(tmp_path), h)
+    assert out.status == run_flows.PASS, out.detail
+    assert [c for c in h.calls if c.startswith("click")] == [
+        "click circle_x", "click tab_y", "click nav_thing"]
 
 
 def test_the_real_nav_map_reaches_the_seeded_flows_first_screens():

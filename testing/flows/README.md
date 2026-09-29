@@ -157,10 +157,28 @@ bring-up per leg and one session.
   the hop `testing/gate/nav_map.py` derives for the flow's first
   `requires: screen:` on this build (node or agent tree, from `/state`),
   waiting for each tag before clicking it. A missing hop tag is `cannot-start`
-  naming the tag; a screen with no hop that is not flow-only is `cannot-start`
-  with "no nav hop for Screen.X"; a flow-only screen (pre-login, wizards,
-  leaves) is waited for, not walked to. Hops between later steps are the flow's
-  own `do:` clicks.
+  naming the tag and listing what was on screen; a screen with no hop that is
+  not flow-only is `cannot-start` with "no nav hop for Screen.X"; a flow-only
+  screen (pre-login, wizards, leaves) is waited for, not walked to. Hops
+  between later steps are the flow's own `do:` clicks.
+- **The hop is always walked, and every circle and tab hop is verified.** Being
+  on the screen already says nothing about which circle it is shown in
+  (Contacts sits in every circle's People tab), and the last flow left the
+  shell wherever it left it, so the runner re-selects the hop's circle and tab
+  every time. After each `circle_*` / `tab_*` click it reads `/state` (`circle`,
+  `tab`, from client 0.5.226) until the shell says it stands there; a click
+  that succeeded is not a hop that took — `CIRISApp.openTab` runs with the
+  circle the last composition captured, and a tab clicked in the same frame
+  as the circle opens the OLD circle's tab. That race cost the 2026-09-29 run
+  four flows on every desktop leg, each reported as a row that "never
+  appeared". On a client without those `/state` fields the hop is walked
+  unverified.
+- **A flow closes what it opened, whatever its verdict.** `cleanup:` is a list
+  of actions run after the flow — pass, fail or crash. A flow stops at its
+  first failed step, and a card that step left open (the contact-code card
+  replaces People's body and its open state lives in the view model) is the
+  next flow's failure. A cleanup that fails is reported in the outcome's
+  detail and the per-flow JSON; it never changes the verdict.
 - **A second node only when a flow asks.** The matrix stands up one node with
   no contacts, no agent and no peers. A flow that needs more says
   `fixture: two_node` — see below. Three flows here ask for it
