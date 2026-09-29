@@ -1,0 +1,43 @@
+csd: CSD-053
+flow: csd_053_manage_consent
+title: Manage Consent with one owned node says so, and points at the two consents it does not own
+description: >-
+  CSD-053 §4, the path every fixture can drive: a single owned node is the
+  normal case, so the card's EMPTY state — fewer than two owned nodes, no pair to
+  peer — is what sign-in lands on. The flow asserts that the state is said in
+  words (in the ordinary tone, not the danger colour), that neither peering
+  control is offered, and that the two doors to the consents this card does not
+  own — the person's own stream (CSD-054) and the reasoning-traces opt-in
+  (CSD-039) — are drawn. The traces SWITCH is asserted absent: this card was one
+  of three doors on `PUT /v1/my-data/accord-settings`, and folding it to the Data
+  card is the decision this step holds.
+# Floor: every tag here is a `testable*` literal in ui/screens/ManageConsentScreen.kt.
+# No release carries the fold or the tagged empty state yet.
+client: "unreleased"
+
+steps:
+  - step_id: the_empty_state_is_said
+    title: One owned node reads as "add and select two nodes", not as a failure
+    requires:
+      screen: ManageConsent
+    expect:
+      state: empty
+      visible: [text_consent_need_two_nodes]
+      absent: [btn_consent_setup_peering, btn_consent_revoke_peering, bar_consent_error]
+
+  - step_id: the_two_doors_are_drawn_and_the_third_is_not
+    title: The person's stream and the traces opt-in are pointed at, not duplicated
+    description: >-
+      btn_open_user_consent opens the Consent card (CSD-054); btn_open_data_sharing
+      opens the Data card (CSD-039), which owns the traces write. If
+      toggle_send_traces ever reappears here, someone has re-opened the third door.
+    expect:
+      visible: [btn_open_user_consent, btn_open_data_sharing]
+      absent: [toggle_send_traces]
+
+  - step_id: the_data_door_opens_the_data_card
+    title: The traces door lands on the Data card
+    do:
+      - click: btn_open_data_sharing
+    expect:
+      screen: DataManagement

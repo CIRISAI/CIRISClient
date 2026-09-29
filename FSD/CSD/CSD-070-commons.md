@@ -128,7 +128,7 @@ names `objection:{state}` as one of three families that shipped and admitted
 before they were registered. The prices of the asymmetry deserve the same
 treatment the states got. **Ask: CIRISConstitution — register the reverse-quorum
 price vocabulary, or state that it rides `objection:{state}`'s payload and is
-deliberately not a dimension.**
+deliberately not a dimension.** Filed: CIRISConstitution#110.
 
 ```yaml csd:states
 populated: {tag: txt_commons_standing, renders: "the standing chip (its value is the arm token), its sentence, and — only on the four counted arms — the counts"}
@@ -152,6 +152,27 @@ most carefully built zero-discipline in the client.
 were inputs and buttons, and the write buttons' automation handlers were `{}`:
 a flow could click `btn_commons_object` and nothing happened. Every text field
 now has an input sink and every button's handler runs the same act as a tap.
+
+### 2.0.1 Every write is confirmed first (review, 2026-09-28)
+
+Every write on this screen is signed by this node's key on its owner's behalf
+(`commons_surface.rs`, `sign_hybrid` over the stamped row) and replicates as a
+row to every peer; none can be taken back by the one who made it. Raising a
+brake is lifted only by the cohort's own m-of-n, a ballot is one per
+respondent, and a dismissal is the m-of-n act itself. Before the review all
+three went straight out on a tap. Each now opens a three-fact ConfirmSheet
+first, and the buttons the flow already drives (`btn_commons_object`,
+`btn_commons_uphold` / `_overrule`, `btn_commons_dismiss_submit`) open it:
+
+| sheet | which | what changes | who signs |
+|---|---|---|---|
+| `sheet_commons_raise` → `btn_commons_raise_confirm` | action · cohort key | a brake goes on; it stays until the cohort lifts it with its own threshold; you cannot take it back on your own | this node's key, on your behalf as its owner; the signed row goes to every peer |
+| `sheet_commons_ballot` → `btn_commons_ballot_confirm` | action · cohort key | your uphold / overrule of objection *id* is recorded with your grounds; one per respondent, not taken back | the same |
+| `sheet_commons_dismiss` → `btn_commons_dismiss_confirm` | action · cohort key | the brake from objection *id* is lifted if the signatures meet the threshold; the node counts, and short means nothing lifts | this node's key with the *n* co-signatures added |
+
+The dry run (`btn_commons_dismiss_dry_run`) is not confirmed: it signs and
+submits nothing. UI change, verified by compile; the facts are drawn by the
+shared `ConfirmSheet`, whose three-fact rule `confirmFacts` enforces.
 
 ### 2.1 The asymmetry is drawn and can be broken silently
 
@@ -264,6 +285,15 @@ submit sends.
 2. The raise price and the lift price are never rendered as peers.
 3. The dismissal submit is unreachable before a dry run.
 4. A refusal shows the substrate's own token, not a paraphrase.
+
+**Review (2026-09-28).** Card vs CSD: agrees (tags, eight arms). CSD vs API:
+all four routes live at the node URL; the non-2xx-with-body contract is
+honoured. CSD vs CC: **closed** — irreversible writes now go behind a
+three-fact ConfirmSheet (§2.0.1). Open: the six `x_private:` prices have no
+registry family (the ask in §2 is CIRISConstitution#110, filed and open);
+the raise/lift visual asymmetry and the submit-sends-the-
+dry-run-bytes invariant have no test. Stage: building → building (the floor is
+`unreleased` and no flow has run on the matrix).
 
 **Not tested here.**
 * **The thresholds.** `m`, the respondent floor, the window and the escalation

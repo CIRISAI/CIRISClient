@@ -56,6 +56,8 @@ object PeopleTags {
     fun codeNode(nodeKeyId: String) = "row_contact_code_node_$nodeKeyId"
 
     fun row(keyId: String) = "contacts_row_$keyId"
+    /** The trust chip on the row — Trusted / Untrusted / Blocked / Unknown (CSD-005 `x_private:trust_state`). */
+    fun rowTrust(keyId: String) = "contacts_row_trust_$keyId"
     fun chat(keyId: String) = "btn_contacts_chat_$keyId"
     fun pick(keyId: String) = "btn_contacts_pick_$keyId"
     fun ineligible(keyId: String) = "contacts_chat_ineligible_$keyId"
@@ -102,11 +104,15 @@ const val CONTACT_GRANT_CC = "CC 3.3.7"
  * - which of my agents it is for — `for_key_id`
  *
  * An older node sends no `grant`. Then only the subject (the row's key) is
- * wire; the dimension and scope stay [Fact.ByRule] because the route and
- * CC 3.3.7 fix them; and the attester is [Fact.NotSent] — it USED to be fixed
- * as "this node", but consent moved to the person at 0.5.211, so a grant-less
- * row cannot say who signed and the receipt must not guess. A member the
- * grant does carry but leaves empty is likewise [Fact.NotSent].
+ * wire; the dimension stays [Fact.ByRule] because a contact IS a
+ * `consent:replication:v1` grant (CC 3.3.7, and the route serves nothing
+ * else); and the attester, the scope and the rule are [Fact.NotSent]. The
+ * attester USED to be fixed as "this node", but consent moved to the person at
+ * 0.5.211; the scope USED to be fixed as "federation", but the grant's
+ * `cohort_scope` is the consent AUDIENCE the person chose (`peer.rs`:
+ * `audience … unwrap_or(FEDERATION)`) — so a grant-less row cannot say either,
+ * and the receipt must not guess. A member the grant does carry but leaves
+ * empty is likewise [Fact.NotSent].
  */
 fun contactReceipt(
     contact: Contact,
@@ -126,7 +132,7 @@ fun contactReceipt(
         subject = if (g == null) Fact.Wire(contact.keyId)
         else wire(g.subjectKeyIds.filter { it.isNotBlank() }.joinToString(", ")),
         attester = if (g == null) Fact.NotSent else wire(g.attestingKeyId, attesterGloss),
-        scope = if (g == null) Fact.ByRule("federation", CONTACT_GRANT_CC) else wire(g.cohortScope),
+        scope = if (g == null) Fact.NotSent else wire(g.cohortScope),
         dimension = Dim.consentKind,
         dimensionValue = if (g == null) Fact.ByRule(CONTACT_GRANT_DIMENSION, CONTACT_GRANT_CC) else wire(g.dimension),
         rule = if (g == null) Fact.NotSent else wire(g.consentPrefixes.filter { it.isNotBlank() }.joinToString(", ")),

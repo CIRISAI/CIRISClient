@@ -102,7 +102,7 @@ class CommunitiesViewModel(
             _rooms.value = next
         }
         viewModelScope.launch {
-            val list = try { apiClient.listContacts().contacts } catch (e: Exception) {
+            val list = try { apiClient.listContacts(nodeUrl()).contacts } catch (e: Exception) {
                 PlatformLogger.i(tag, "[listContacts] names unavailable: ${e.message}")
                 null
             }

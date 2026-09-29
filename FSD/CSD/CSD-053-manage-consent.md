@@ -1,7 +1,9 @@
 # CSD-053 — Manage Consent (a grant, and the way back)
 
 **CSD**: CSD-053 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, Rules tab
-**Flow**: written for the revoke path (§4); the set-up path needs two reachable nodes
+**Flow**: `testing/flows/drafts/csd-053-manage-consent.yaml` (`client: unreleased`) drives the
+empty state and the two pointer doors; the revoke path is written in §4 and its red half is
+driven by `WithdrawConsentTest`; the set-up path needs two reachable nodes
 
 ```yaml csd:stage
 stage: building
@@ -66,14 +68,14 @@ fields:
     use: display-only
     type: "enum[granted,in_progress,failed,idle]"
     example: "granted"
-    renders: "A → B  Granted  ·  B → A  Granted, one row per direction. A direction leaves Granted only when the node says it withdrew that grant."
-    tag: "proposed:row_consent_direction"
+    renders: "A → B  Granted  ·  B → A  Granted, one row per direction (`row_consent_a_to_b`, `row_consent_b_to_a`; the tag's text is the direction's state). A direction leaves Granted only when the node says it withdrew that grant."
+    tag: row_consent_a_to_b
   - ceg: x_private:is_ratified
     use: display-only
     type: bool
     example: true
-    renders: "Ratified — both directions granted; otherwise Not ratified. Bilateral is the unit, one grant is not."
-    tag: "proposed:chip_consent_ratified"
+    renders: "Ratified — both directions granted; otherwise Not ratified. Bilateral is the unit, one grant is not. A label, not a chip: it is not a control, and check_ui_drivable holds a `chip_` prefix to be one."
+    tag: txt_consent_ratified
   - ceg: x_private:remaining_grants
     use: display-only
     type: "list[string]"
@@ -100,13 +102,17 @@ fields:
     renders: "Who granted it — since node 0.5.211 that is the OWNER's fed-ID, not the node. Not carried to the client today."
     tag: "proposed:text_consent_attester"
     blocked_by: CIRISServer#657
-  - ceg: x_private:trace_consent
-    use: display-only
-    type: bool
-    example: false
-    renders: "Send reasoning traces — a switch, with Active / Paused under it and the counterparty named"
-    tag: toggle_send_traces
 ```
+
+**The traces switch is gone from this card (2026-09-28).** `toggle_send_traces`
+drove `PUT /v1/my-data/accord-settings` — the same write the Data card
+(CSD-039) and the Add Federation ID catch-up (CSD-086) also issued: one act,
+three doors, and the route checker's duplicate-mutation ratchet listed all
+three. The Data card is where the setting is READ BACK (`switch_consent`,
+`data_row_events_sent`), so it owns the write; this card and the catch-up now
+point at it (`btn_open_data_sharing` here). The card that did the write here
+also documented it as `consent:community_trust:v1`, a leaf CC 3.3.1 does not
+have (below), which is the other reason it went rather than stayed.
 
 **`use: display-only` on `consent:{kind}` is load-bearing, not bookkeeping.**
 The family is **reserved** (CC 3.1.5, `accord-agent`/CIRISAgent), so
@@ -146,8 +152,17 @@ route is mounted, which are readable. The outcome
 lines are cleared when a new set-up starts and again when its A→B grant is
 accepted — a fresh grant under "Withdrawn" would be reporting its
 predecessor's fate as its own — and the whole session (grant id, rows,
-outcome, route answer, node A's token) is forgotten on logout, because the
-ViewModel is app-scoped and outlives the owner.
+outcome, route answer, node A's token) is forgotten on **every** way out of a
+session, because the ViewModel is app-scoped and outlives the owner. Verified
+against the code after #116: the reset is `resetSession()`, called from
+CIRISApp's one token effect, keyed and conditioned on
+`consentSessionAuthenticated(currentAccessToken, isHAAddonMode)` — so the
+three logout menus, a session expiring under Interact and Billing's
+sign-in-again all reset it, and a Home Assistant add-on session (where the
+token stays null by design) does NOT; the next session reloads the pair
+once. `WithdrawConsentTest.logoutForgetsTheSessionsGrantOutcomeAndToken`,
+`…homeAssistantAddOnModeIsASessionNotALogout` and the four in-flight cases pin
+it. The person's own consent record (CSD-054) is reset from the same effect.
 
 **`for_key_id` and the attester are the two facts this screen most needs and does
 not have.** Since 0.5.211 the node signs a replication grant as *the owner's
@@ -170,28 +185,23 @@ CSD-005 §3 files for `GET /v1/contacts`.
   bare title "Manage Consent" and points at the *other* consent — the subject's
   — through `btn_open_user_consent` as a secondary card. A person reading the
   tab sees one word covering two things CC's own drafters kept apart.
-* The traces switch is documented in code as writing
-  `consent:community_trust:v1` (`ManageConsentScreen.kt`, the
-  `dataViewModel` parameter). **No such leaf exists.** CC 3.3.1's catalogue is
+* The traces switch this card used to carry was documented in code as writing
+  `consent:community_trust:v1`. **No such leaf exists.** CC 3.3.1's catalogue is
   `state / stream / deletion_sla / deletion_complete / decay / partnership_grant
   / partnership_accept / scope / replication`, and `community_trust` is not
   among them; the registry has one `consent:{kind}` row and no gloss for that
   kind. Per `client/ceg/README.md`, a family with no registry row cannot be
-  named and therefore cannot be rendered (CC 3.1.7 R2). The switch drives a real
-  endpoint (§3) and the endpoint is fine; it is the dimension name in the
-  comment that is unbacked, and a CSD is where that gets caught before a `Dim.`
-  constant is written against it.
+  named and therefore cannot be rendered (CC 3.1.7 R2). The endpoint was fine;
+  the dimension name was unbacked. The switch and its comment are gone with the
+  fold above, and the Data card (CSD-039) binds the same write to
+  `consent:state` — a leaf that exists.
 
 ```yaml csd:states
-populated: {tag: "proposed:row_consent_direction", renders: "both direction rows, the ratified chip, and the revoke control in whichever of its §2.1 states applies"}
-empty:     {tag: "proposed:text_consent_need_two_nodes", renders: "mobile.manage_consent_need_two_nodes — fewer than two owned nodes, so there is no pair to peer. The branch is real and untagged."}
-loading:   {tag: "proposed:consent_peering_running", renders: "the progress affordance inside btn_consent_setup_peering (state.isRunning) or inside btn_consent_revoke_peering (state.isRevoking)"}
-error:     {tag: consent_revoke_refusal, renders: "the node's typed refusal of the last revoke, localized by reason_id, in the error colour; the set-up path's errorContainer MessageBar is still proposed:bar_consent_error"}
+populated: {tag: row_consent_a_to_b, renders: "both direction rows, the ratified label (txt_consent_ratified), and the revoke control in whichever of its §2.1 states applies"}
+empty:     {tag: text_consent_need_two_nodes, renders: "mobile.manage_consent_need_two_nodes — fewer than two owned nodes, so there is no pair to peer. In the ordinary tone: it was drawn in the danger colour until 2026-09-28"}
+loading:   {tag: consent_peering_running, renders: "the progress affordance inside btn_consent_setup_peering (state.isRunning); the revoke's is consent_revoking, inside btn_consent_revoke_peering"}
+error:     {tag: consent_revoke_refusal, renders: "the node's typed refusal of the last revoke, localized by reason_id, in the error colour; the set-up path's errorContainer MessageBar is bar_consent_error, and the ratified / partial line after a set-up is bar_consent_message (localized: mobile.manage_consent_msg_ratified / _partial — they were English literals in the view model)"}
 ```
-
-`empty` is drawn in the *error* colour today (`colorScheme.error` for "need
-two nodes"): a normal, unremarkable state in the danger tone. Worth one line in
-the same tagging PR.
 
 ## 3. Contracts (who)
 
@@ -205,7 +215,7 @@ the same tagging PR.
 | un-contact a person | `DELETE /v1/contacts/{key_id}` | CIRISServer | live since 0.5.218 (#657; the client side is #112); the People side is CSD-005 |
 | the grant's envelope (attester, `for_key_id`, scope, dimension) | not requested by the client; `grant_receipt` exists node-side (`src/peer.rs:1525`) | CIRISServer + CIRISClient | **unconfirmed** — blocks `building` for `text_consent_attester` and `text_consent_for_key`. CIRISServer#616. |
 | a read of node A's peering grants | none | CIRISServer | **missing.** Revoke names a grant by id and the node lists none, so the control works only on a grant set up here in this session. |
-| the traces opt-in | `GET`/`PUT /v1/my-data/accord-settings` | **CIRISAgent** (`routes/my_data.py:580, 689`) | live on the agent — **wrong-host**: the node serves no `accord-settings` (its `/v1/my-data/*` is `lens-identifier` and `capacity` only, `src/system_data.rs:387,390`). The card is not marked `agentOnly`, so on a node build the switch reads a 404. |
+| the traces opt-in | — (was `GET`/`PUT /v1/my-data/accord-settings`, CIRISAgent) | CIRISAgent, via **CSD-039** | **not this card's, since 2026-09-28.** The write was issued from three screens (this one, Data, Add Federation ID) and the Data card is the one that reads it back, so it owns it; `btn_open_data_sharing` opens it. Folded rather than documented as three doors: on a node-only build this card drew the switch over a 404, and the fold removes that reading here without adding a state for it. |
 
 ## 4. Flow (how)
 
@@ -240,7 +250,7 @@ expect:
   state: populated
   visible: [text_consent_withdrawn]
   absent: [consent_remaining_grants]
-  text: {chip_consent_ratified: "Not ratified"}
+  text: {txt_consent_ratified: "Not ratified", row_consent_a_to_b: "not set"}
 ```
 
 ```yaml
@@ -249,15 +259,27 @@ expect:
   state: populated
   visible: [consent_remaining_grants]
   absent: [text_consent_withdrawn]
-  text: {chip_consent_ratified: "Ratified — both grants present"}
+  text: {txt_consent_ratified: "Ratified — both grants present", row_consent_a_to_b: "granted"}
 ```
 
-`chip_consent_ratified` is still `proposed:`; the two `text:` lines land when
-it does.
+**The empty state, and the two doors** — the one path every fixture can drive,
+because a single owned node is the normal case (staged as
+`testing/flows/drafts/csd-053-manage-consent.yaml`):
+
+```yaml
+expect:
+  state: empty
+  visible: [text_consent_need_two_nodes, btn_open_user_consent, btn_open_data_sharing]
+  absent: [btn_consent_setup_peering, btn_consent_revoke_peering, toggle_send_traces]
+```
+
+`toggle_send_traces` is asserted absent on purpose: if it reappears, someone
+has re-opened the third door on `PUT /v1/my-data/accord-settings` (§3).
 
 ## 5. QA plan
 
-**Platforms.** All five. The peering flow needs two reachable nodes, so it runs
+**Platforms.** All five. The empty state and the two pointer doors run on every
+fixture (the staged flow). The peering flow needs two reachable nodes, so it runs
 where a second profile can be saved — desktop by default. The revoke path's red
 half — the bare 404, the 409 with `grants`, a refusal with a `reason_id` — is
 driven through `ConsentWithdrawApi` by a fake in `WithdrawConsentTest`, and the

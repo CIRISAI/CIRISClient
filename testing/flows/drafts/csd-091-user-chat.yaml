@@ -3,18 +3,21 @@ flow: csd_091_user_chat
 title: A chat with a person, and a refusal that says whether the wait resolves itself
 description: >-
   CSD-091 §4, driven. Six node routes live, all in CIRISServer
-  src/contacts_chat.rs, so there is no wrong-host risk on this card. The flow
-  drives the transcript, the composer and the 16 KB ceiling — one number written
-  twice (MAX_MESSAGE_BYTES at contacts_chat.rs:146, mirrored at ChatScreen.kt:72)
-  — and asserts that a refusal renders as a refusal rather than as an empty room.
+  src/contacts_chat.rs — and until 0.5.225 the client called every one of them
+  at the agent's base URL; they go to the active node's URL now
+  (UserChatViewModelTest pins where each call goes). The flow drives the
+  transcript, the composer and the 16 KB ceiling — one number written twice
+  (MAX_MESSAGE_BYTES at contacts_chat.rs:146, mirrored at ChatScreen.kt) — a
+  room of more than two entered by its id from a circle's Chats tab, and
+  asserts that a refusal renders as a refusal rather than as an empty room.
 # Floor: chat_transcript, input_chat_body, btn_chat_send, btn_chat_refresh,
-# btn_chat_back, chat_refusal, chat_msg_${attestationId} and
-# chat_note_${attestationId} are `testable*` literals in ui/screens/ChatScreen.kt
-# at v0.5.224.
-# NOT asserted: chat_empty, chat_loading, chat_length_counter and
-# chat_msg_duty_badge are still `proposed:` in CSD-091 §2 and in no merged PR, so
-# the empty room, the loading frame and the byte counter cannot be asserted.
-client: ">=0.5.224"
+# btn_chat_back, chat_refusal, chat_empty, chat_loading, chat_length_counter,
+# chat_msg_${attestationId}, chat_msg_unopened_${attestationId},
+# chat_msg_duty_badge_${attestationId} and chat_note_${attestationId} are
+# `testable*` literals in ui/screens/ChatScreen.kt at 0.5.225.
+# NOT asserted: a locked row (chat_msg_unopened_*) — the single-node fixture
+# cannot stage one; its rendering is pinned by ChatEntryPresentationTest.
+client: ">=0.5.225"
 
 steps:
   - step_id: on_the_chat
@@ -62,7 +65,7 @@ steps:
       count: {of: "chat_msg_*", min: 1}
 
   - step_id: a_refusal_is_not_an_empty_room
-    title: When the room cannot be served, the refusal is on screen
+    title: When the room cannot be served, the refusal is on screen and the empty state is not
     description: >-
       `chat_refusal` and NOT an empty transcript. The node returns a reason id and
       a note on a non-2xx, and CSD-091 §3 records the one field that is logged and
@@ -70,7 +73,8 @@ steps:
       refusal it goes to tracing::info! (contacts_chat.rs:2990) and never into
       refuse() two lines later (:2994). So the screen can say "refused" and cannot
       yet say "and it will resolve by itself" — which is the difference between a
-      person waiting and a person retrying.
+      person waiting and a person retrying. `chat_empty` is absent while a
+      refusal is up, so error and empty are two observations.
     optional_step: true
     requires:
       screen: UserChat
@@ -78,10 +82,43 @@ steps:
     expect:
       state: error
       visible: [chat_refusal]
+      absent: [chat_empty]
 
-  - step_id: back_leaves_the_room
-    title: Back returns to People
+  - step_id: back_leaves_the_room_to_people
+    title: Back returns to where the room was opened from — People, here
     do:
       - click: btn_chat_back
     expect:
+      screen: Contacts
       absent: [input_chat_body]
+
+  - step_id: a_room_of_more_than_two_opens_from_chats_by_id
+    title: A room of more than two opens from Neighbours › Chats without POST /v1/chat
+    description: >-
+      Optional: it needs a community of three or more the node lists for this
+      person (CSD-102/103 author it; the fixture does not). The Chats row
+      (community_chat_row_*) enters the room BY ID: GET /v1/chat/{id}/messages
+      reads an N-member room (CIRISServer#594), and POST /v1/chat is pair-only
+      and never asked for one. The transcript and the composer compose; the
+      header counts the room's members from the row that listed it.
+    optional_step: true
+    requires:
+      screen: CommunityChats
+      count: {of: "community_chat_row_*", min: 1}
+    expect:
+      screen: UserChat
+      visible: [chat_transcript, input_chat_body, btn_chat_send]
+
+  - step_id: back_from_a_room_returns_to_chats
+    title: Back from a room opened in Chats returns to Chats, not to People
+    description: >-
+      Until 0.5.225 all three back sites hard-coded Contacts, so a room opened
+      from a circle's Chats tab went back to People. `Screen.UserChat.from`
+      carries where it was opened from.
+    optional_step: true
+    requires:
+      screen: UserChat
+    do:
+      - click: btn_chat_back
+    expect:
+      screen: CommunityChats

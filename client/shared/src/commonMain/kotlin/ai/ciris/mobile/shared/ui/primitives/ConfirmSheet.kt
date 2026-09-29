@@ -50,6 +50,13 @@ fun ConfirmSheet(
     dismissLabel: String = localizedString("mobile.confirm_cancel"),
     destructive: Boolean = false,
     tagPrefix: String = "confirm",
+    /**
+     * A limit the person must know before confirming, when there is one — what
+     * this confirm CANNOT show them (e.g. a check the node does not offer yet).
+     * Not a fourth fact: the three facts say what changes; this says what is
+     * not known. Tagged `<tagPrefix>_note`.
+     */
+    note: String? = null,
 ) {
     val checked = confirmFacts(facts)
     val t = CirisTheme.tokens
@@ -71,6 +78,10 @@ fun ConfirmSheet(
             Spacer(Modifier.height(8.dp))
             checked.forEachIndexed { i, f ->
                 FieldRow(label = f.label, value = f.value, mono = f.mono, tag = "${tagPrefix}_fact_${i + 1}", divider = i < 2)
+            }
+            if (note != null) {
+                Spacer(Modifier.height(10.dp))
+                Text(note, style = type.body, color = t.danger, modifier = Modifier.testable("${tagPrefix}_note", note))
             }
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = androidx.compose.ui.Alignment.End)) {

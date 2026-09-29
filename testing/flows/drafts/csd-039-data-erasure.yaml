@@ -110,3 +110,69 @@ steps:
     expect:
       visible: [data_receipts_none_issued, data_receipt_unreadable]
       absent: [data_receipt_verdict]
+
+  - step_id: reset_confirms_three_facts_then_cancels
+    title: Reset account names who, what changes and who authorises, then cancels
+    description: >-
+      Both destructive acts on this card succeed, so a flow only opens their
+      confirms and cancels. The third fact says the node does this on the owner
+      session and signs nothing as the person (CSD-039 §4). tagPrefix "reset"
+      keeps btn_reset_confirm / btn_reset_cancel.
+    do:
+      - scroll_to: btn_reset_account
+      - click: btn_reset_account
+    expect:
+      visible: [sheet_reset, reset_fact_1, reset_fact_2, reset_fact_3, btn_reset_confirm, btn_reset_cancel]
+
+  - step_id: reset_cancelled
+    title: Cancel closes the reset confirm and nothing resets
+    do:
+      - click: btn_reset_cancel
+    expect:
+      screen: DataManagement
+      absent: [sheet_reset]
+
+  - step_id: wipe_confirms_three_facts_then_cancels
+    title: Wiping the signing key names the key, the loss, and the owner session, then cancels
+    do:
+      - scroll_to: btn_wipe_signing_key
+      - click: btn_wipe_signing_key
+    expect:
+      visible: [sheet_wipe_key, wipe_key_fact_1, wipe_key_fact_2, wipe_key_fact_3, btn_wipe_key_confirm, btn_wipe_key_cancel]
+
+  - step_id: wipe_cancelled
+    title: Cancel closes the wipe confirm and the key stays
+    do:
+      - click: btn_wipe_key_cancel
+    expect:
+      screen: DataManagement
+      absent: [sheet_wipe_key]
+
+  - step_id: the_lens_request_says_nobody_signs
+    title: With an agent, the lens-deletion confirm's third fact is "Nobody", then cancels
+    description: >-
+      Optional: the sharing card is the agent's. The confirm is opened and
+      cancelled, so nothing is requested; a real request would render as
+      REQUESTED and never as done (CIRISAgent#1212), which the CSD's §4 asserts
+      and no fixture drives.
+    optional_step: true
+    requires:
+      screen: DataManagement
+      visible: [btn_delete_traces]
+    do:
+      - input: {input_delete_traces_reason: "flow csd_039: confirm only, then cancel"}
+      - click: btn_delete_traces
+    expect:
+      visible: [sheet_delete_traces, delete_traces_fact_1, delete_traces_fact_2, delete_traces_fact_3]
+      text: {delete_traces_fact_3: "Nobody. The agent files the request under your session; it does not sign it as you (CIRISAgent#1212)."}
+
+  - step_id: the_lens_request_cancelled
+    title: Cancel closes the lens-deletion confirm and nothing is requested
+    optional_step: true
+    requires:
+      visible: [btn_delete_traces_cancel]
+    do:
+      - click: btn_delete_traces_cancel
+    expect:
+      screen: DataManagement
+      absent: [sheet_delete_traces, data_lens_deletion_requested]

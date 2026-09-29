@@ -84,25 +84,30 @@ fields:
     example: "self"
     renders: "'Fed ID added. Your node stays private (self-scoped).' — or, announced, 'federation visibility takes effect on next launch.' The client reports the binding the node re-rooted; it does not assert it (CC 3.4.5)"
     tag: "proposed:txt_fedid_result"
-  - ceg: "consent:{kind}"
-    bind: {kind: replication}
-    use: display-only
-    type: bool
-    example: false
-    renders: "the trace opt-in, and it is ENABLED ONLY when announce is on — an un-announced node never federates its traces, so the control that would say otherwise is not offered"
-    tag: toggle_trace_opt_in
   - ceg: x_private:announce_ownership
     use: emit
     type: bool
     example: true
-    renders: "the same first-class announce decision the wizard makes: announcing is what unlocks sending traces and joining communities. Turning it off also clears the trace opt-in, so the two cannot disagree"
+    renders: "the same first-class announce decision the wizard makes: announcing is what unlocks sending traces and joining communities. The trace opt-in itself is NOT offered here (AnnounceDecisionCard showTraceOptIn=false): it is the Data card's write, and this screen points at it"
     tag: toggle_announce_ownership
+  - ceg: x_private:traces_elsewhere
+    use: display-only
+    type: string
+    example: "Sending reasoning traces is turned on later, on the Data card…"
+    renders: "one line under the announce card naming where the opt-in lives (CSD-039), so a person who wants it is told rather than offered a switch this screen cannot read back"
+    tag: txt_fedid_traces_elsewhere
+  - ceg: x_private:fedid_confirm
+    use: display-only
+    type: "list[string]"
+    example: ["eric-moore-v1", "A federation ID is minted under this name…", "The node, on your owner session…"]
+    renders: "the three-fact confirm before the upgrade — who (the label, mono), what changes (mint + re-root, login preserved, announced or private, the old root superseded not restored), who signs (the node on your owner session; the app holds no keys). sheet_fedid, fedid_fact_1..3, btn_fedid_confirm, btn_fedid_cancel"
+    tag: sheet_fedid
   - ceg: x_private:upgrade_error
     use: display-only
     type: string
     example: "no responsible-user identity yet"
     renders: "an error-container block; the screen RE-ARMS on error (submitted goes back to false) rather than leaving a spent button"
-    tag: "proposed:txt_fedid_error"
+    tag: txt_fedid_error
   - ceg: x_private:upgrade_notice
     use: display-only
     type: string
@@ -121,10 +126,10 @@ on it anywhere. A person who half-succeeded currently finds out on a different
 screen, if at all.
 
 ```yaml csd:states
-populated: {tag: input_fed_label, renders: "the name field with its validation line, the announce card, and Add Federation ID"}
-empty:     {tag: "proposed:txt_fedid_absent", renders: "this device already HAS a fed-ID — there is nothing to add and the screen should say so. Login handles this by not offering the door (`FederationIdentitySection` returns early when keyId != null), but the screen itself has no such guard and renders a form that will collide"}
-loading:   {tag: "proposed:txt_fedid_progress", renders: "a spinner inside the confirm button and every field disabled; the four steps (mint → re-root → announce → opt-in) are NOT individually reported, so a slow announce looks like a stuck mint"}
-error:     {tag: "proposed:txt_fedid_error", renders: "the node's own refusal, in an error container, with the button re-armed"}
+populated: {tag: input_fed_label, renders: "the name field with its validation line, the announce card, the traces-elsewhere line, and Add Federation ID"}
+empty:     {tag: txt_fedid_absent, renders: "this device already HAS a fed-ID (ownerHasFedId == true) — there is nothing to add, the screen says so, and no form is drawn. Login already hid the door (`FederationIdentitySection` returns early when keyId != null); the ManageNodes entry and the catch-up effect did not, and the form they reached would have minted a second identity"}
+loading:   {tag: txt_fedid_progress, renders: "a spinner inside the confirm button and every field disabled; the three steps (mint → re-root → announce) are NOT individually reported, so a slow announce looks like a stuck mint"}
+error:     {tag: txt_fedid_error, renders: "the node's own refusal, in an error container, with the button re-armed"}
 ```
 
 ## 3. Contracts (who)
@@ -135,26 +140,21 @@ error:     {tag: "proposed:txt_fedid_error", renders: "the node's own refusal, i
 | re-root the node on it | `POST /v1/self/upgrade-owner` | CIRISServer (`src/claim_remote.rs:1246`) | live — non-destructive, login preserved (`NodeSwitcherViewModel.kt:563`) |
 | announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (registered `src/claim_remote.rs:1251`; handler `src/claim_remote.rs:1077`) | live — takes effect next boot (`NodeSwitcherViewModel.kt:573`). The answer's `promoted_owner_binding_attestation_id` was read as `promoted_attestation_id` (always null) and `federation_discoverable` was dropped; both fixed (`AnnounceOwnershipWireTest`) |
 | is this node already owned, and by whom | `GET /v1/setup/owned-nodes` | CIRISServer `src/auth/bootstrap.rs` (loopback-only) | live — `NodeSwitcherViewModel.kt:141`, the owner the catch-up upgrades from |
-| trace opt-in | `PUT /v1/my-data/accord-settings` (`CIRISApiClient.kt:12903`) | **CIRISAgent** (`routes/my_data.py:754` on `main`) | live on an agent; **WRONG-HOST on a node-only install** — see below |
+| trace opt-in | — (was `PUT /v1/my-data/accord-settings`, step 4) | CIRISAgent, via **CSD-039** | **not this card's, since 2026-09-28.** The write was issued from three screens (this catch-up, Manage Consent, Data); the Data card reads it back, so it owns it, and this screen says where it lives (`txt_fedid_traces_elsewhere`). Every remaining row is on the node. |
 
-**Three of four rows are on the right host. The fourth is not, and this card
-previously claimed otherwise.** Step 4 is issued against `baseUrl` while steps
-1-3 pin `CIRISApiClient.LOCAL_NODE_URL` (`:4243`). `PUT /v1/my-data/accord-settings`
-is CIRISAgent-only: `git grep 'my-data' origin/main -- src/` in CIRISServer
-returns only `/v1/my-data/capacity` and `/v1/my-data/lens-identifier`, and
-`accord-settings` is in neither. On a run-without-AI install — the class CSD-083
-exists to describe — there is no host for it at all. The failure is swallowed:
-step 4 is non-fatal (`NodeSwitcherViewModel.kt:591-592`), so it surfaces as the
-untagged soft notice §2 already flags, and a person who ticked *send traces* is
-told nothing.
-
-**The upstream ask.** CIRISServer: a node-side home for the trace opt-in, or
-CIRISAgent: nothing — the route is fine where it is; the defect is that this
-screen offers the toggle on an install that cannot honour it. The client fix is
-smaller than either: gate the toggle on `ClientMode`, or send it to the node once
-a node route exists. Either way the previous claim — "No upstream ask on this
-card. Every route it needs exists and is on the right host" — does not hold and
-has been removed.
+**Every row is on the right host now, and the fourth row used to be the one that
+was not.** Step 4 was issued against `baseUrl` while steps 1-3 pin
+`CIRISApiClient.LOCAL_NODE_URL`. `PUT /v1/my-data/accord-settings` is
+CIRISAgent-only (`git grep 'my-data' origin/main -- src/` in CIRISServer returns
+only `/v1/my-data/capacity` and `/v1/my-data/lens-identifier`), so on a
+run-without-AI install — the class CSD-083 exists to describe — there was no
+host for it, the failure was non-fatal and swallowed, and a person who ticked
+*send traces* was told nothing. The fix was neither of the upstream asks this
+row used to carry: the write is gone from here, with the toggle
+(`AnnounceDecisionCard(showTraceOptIn = false)`), and the route checker's
+duplicate-mutation ratchet no longer lists this screen on it. What remains is
+the announce decision, which is the node's and which announcing traces depends
+on. No upstream ask on this card.
 
 ## 4. Flow (how)
 
@@ -198,14 +198,36 @@ expect:
   text: {input_fed_label: "ciris-client-user"}
 ```
 
-Type a unique one, turn announce on, confirm:
+Type a unique one, turn announce on. Sending traces is not offered here; the
+line says where it is:
 
 ```yaml
 expect:
-  visible: [toggle_trace_opt_in]
+  visible: [toggle_announce_ownership, txt_fedid_traces_elsewhere]
+  absent: [toggle_trace_opt_in]
 ```
 
-The screen leaves via `onDone()` back to where it was called from.
+Click `btn_add_fedid_confirm`. Nothing is minted yet: the three-fact confirm
+opens, and the third fact names who signs.
+
+```yaml
+expect:
+  visible: [sheet_fedid, fedid_fact_1, fedid_fact_2, fedid_fact_3, btn_fedid_confirm, btn_fedid_cancel]
+  text: {fedid_fact_1: "eric-moore-v1"}
+```
+
+`btn_fedid_cancel` closes it and mints nothing. `btn_fedid_confirm` runs the
+upgrade; the screen leaves via `onDone()` back to where it was called from.
+
+**A device that already has a fed-ID** (reached from ManageNodes, or by the
+catch-up effect misfiring) is told so and offered no form:
+
+```yaml
+expect:
+  state: empty
+  visible: [txt_fedid_absent]
+  absent: [input_fed_label, btn_add_fedid_confirm]
+```
 
 ## 5. QA plan
 
@@ -223,8 +245,8 @@ that can produce `ownerHasFedId == false`. The announce (takes effect next
 boot); the four-step progress (unreported).
 
 **The pattern this screen gets right, and the one that should be copied.**
-`btn_add_fedid_confirm` passes `onConfirm` — which itself checks `canConfirm`
-— to `testableClickable` (`AddFederationIdScreen.kt:255-270`), so the guard
-lives inside the lambda and a `/click` on a disabled button is a no-op by
-construction. `btn_next` in the setup wizard does not (CSD-082 §5,
-CSD-083 §5), which is the client half of CIRISAgent#1193.
+`btn_add_fedid_confirm` passes `onReview` — which itself checks `canConfirm`
+— to `testableClickable`, so the guard lives inside the lambda and a `/click`
+on a disabled button is a no-op by construction; the sheet's `btn_fedid_confirm`
+checks it again before the upgrade runs. `btn_next` in the setup wizard does
+not (CSD-082 §5, CSD-083 §5), which is the client half of CIRISAgent#1193.

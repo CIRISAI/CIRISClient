@@ -17,8 +17,8 @@ import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
  * Refusals throw [NodeRefusal] with the server's id.
  */
 interface ContactsApi {
-    /** `GET /v1/contacts` — on the client's active node, as before. */
-    suspend fun listContacts(): ContactListResponse
+    /** `GET {nodeUrl}/v1/contacts` — the node's, like every other People call (CSD-005). */
+    suspend fun listContacts(nodeUrl: String): ContactListResponse
 
     /** `GET /v1/federation/peers` — the picker's known identities. */
     suspend fun listPeers(): FederationPeerListResponse
@@ -35,7 +35,7 @@ interface ContactsApi {
 
 /** [ContactsApi] over the real client, with the client's session. */
 class ClientContactsApi(private val client: CIRISApiClient) : ContactsApi {
-    override suspend fun listContacts(): ContactListResponse = client.listContacts()
+    override suspend fun listContacts(nodeUrl: String): ContactListResponse = client.listContacts(nodeUrl)
     override suspend fun listPeers(): FederationPeerListResponse = client.listFederationPeers()
     override suspend fun addContact(nodeUrl: String, keyId: String): AddContactResponse =
         client.addContact(keyId, nodeUrl = nodeUrl)

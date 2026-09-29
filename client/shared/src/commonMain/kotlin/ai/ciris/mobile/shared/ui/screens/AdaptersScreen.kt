@@ -5,6 +5,8 @@ import ai.ciris.mobile.shared.models.AdapterDetailsData
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.utils.DisplayNames
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.expandVertically
@@ -74,6 +76,11 @@ fun AdaptersScreen(
     // Connectors (CSD-020 §7): the database credentials handed to the SQL
     // adapter through /v1/connectors, drawn under the adapter list.
     connectorsSection: (@Composable () -> Unit)? = null,
+    /**
+     * Why the last `GET /v1/system/adapters` produced no list: the route is not
+     * on this host, or the read failed. Never drawn as "No adapters yet" (CSD-020 §2).
+     */
+    listFailure: ReadFailure? = null,
 ) {
     var showRemoveDialog by remember { mutableStateOf<AdapterItem?>(null) }
     var showAddMenu by remember { mutableStateOf(false) }
@@ -122,7 +129,9 @@ fun AdaptersScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
+            // "+" asks the agent what can be loaded; a host without the adapter
+            // routes has no answer, so it is not offered there.
+            if (listFailure !is ReadFailure.NotOnThisNode) FloatingActionButton(
                 onClick = { showAddMenu = true },
                 containerColor = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.testableClickable("btn_add_menu") { showAddMenu = true }
@@ -147,60 +156,43 @@ fun AdaptersScreen(
                 adapterCount = adapters.size
             )
 
-            // Adapter list
-            if (adapters.isEmpty() && !isLoading) {
-                // Empty state
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f)
-                        .testable("adapters_empty")
-                ) {
-                    Column(
+            // Adapter list — four bodies, and a failed read is never the empty one.
+            when (adaptersBody(adapters.size, isLoading, listFailure)) {
+                AdaptersBody.FAILED -> {
+                    ReadFailureBlock(listFailure!!, tagPrefix = "adapters", modifier = Modifier.fillMaxWidth())
+                    connectorsSection?.invoke()
+                }
+                AdaptersBody.EMPTY -> {
+                    // Empty state — the agent was asked and has none.
+                    Card(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .testable("adapters_empty")
                     ) {
-                        Text(
-                            text = localizedString("mobile.adapter_no_adapters"),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = localizedString("mobile.adapter_tap_add"),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = localizedString("mobile.adapter_no_adapters"),
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = localizedString("mobile.adapter_tap_add"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
+                    connectorsSection?.invoke()
                 }
-                connectorsSection?.invoke()
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth().testable("adapters_list"),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(adapters) { adapter ->
-                        AdapterCard(
-                            modifier = Modifier.testable("adapters_row_${adapter.type.lowercase()}"),
-                            adapter = adapter,
-                            isExpanded = adapter.id in expandedAdapterIds,
-                            details = adapterDetails[adapter.id],
-                            onToggleExpand = { onToggleExpanded(adapter.id) },
-                            onReload = { onReloadAdapter(adapter.id) },
-                            onRemove = { showRemoveDialog = adapter },
-                            onEditConfig = { onEditConfig(adapter.type.lowercase()) },
-                            onReauth = { onReauthAdapter(adapter.type.lowercase(), adapter.authStepId) }
-                        )
-                    }
-                    connectorsSection?.let { section -> item { section() } }
-                }
-            }
-
-            if (isLoading && adapters.isEmpty()) {
-                Box(
+                AdaptersBody.LOADING -> Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
@@ -209,34 +201,52 @@ fun AdaptersScreen(
                 ) {
                     CircularProgressIndicator()
                 }
+                AdaptersBody.LIST -> {
+                    // A poll that failed after a good read: the list stays, and
+                    // the failure is said above it rather than hidden.
+                    listFailure?.let { ReadFailureBlock(it, tagPrefix = "adapters_refresh", inline = true) }
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().testable("adapters_list"),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(adapters) { adapter ->
+                            AdapterCard(
+                                modifier = Modifier.testable("adapters_row_${adapter.type.lowercase()}"),
+                                adapter = adapter,
+                                isExpanded = adapter.id in expandedAdapterIds,
+                                details = adapterDetails[adapter.id],
+                                onToggleExpand = { onToggleExpanded(adapter.id) },
+                                onReload = { onReloadAdapter(adapter.id) },
+                                onRemove = { showRemoveDialog = adapter },
+                                onEditConfig = { onEditConfig(adapter.type.lowercase()) },
+                                onReauth = { onReauthAdapter(adapter.type.lowercase(), adapter.authStepId) }
+                            )
+                        }
+                        connectorsSection?.let { section -> item { section() } }
+                    }
+                }
             }
         }
     }
 
-    // Remove confirmation dialog
+    // Remove — irreversible for this run of the agent, so three facts first:
+    // which adapter, what changes, who signs (CSD-020 §2).
     showRemoveDialog?.let { adapter ->
-        AlertDialog(
-            onDismissRequest = { showRemoveDialog = null },
-            title = { Text(localizedString("mobile.adapter_remove_title")) },
-            text = { Text(localizedString("mobile.adapter_remove_confirm", mapOf("name" to adapter.name))) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onRemoveAdapter(adapter.id)
-                        showRemoveDialog = null
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    )
-                ) {
-                    Text(localizedString("mobile.common_remove"))
-                }
+        ConfirmSheet(
+            title = localizedString("mobile.adapter_remove_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.adapter_remove_fact_adapter"), "${adapter.name} · ${adapter.id}"),
+                ConfirmFact(localizedString("mobile.adapter_remove_fact_what"), localizedString("mobile.adapter_remove_what", mapOf("name" to adapter.name))),
+                ConfirmFact(localizedString("mobile.adapter_remove_fact_who"), localizedString("mobile.adapter_remove_who_signs")),
+            ),
+            confirmLabel = localizedString("mobile.common_remove"),
+            onConfirm = {
+                onRemoveAdapter(adapter.id)
+                showRemoveDialog = null
             },
-            dismissButton = {
-                TextButton(onClick = { showRemoveDialog = null }) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
+            onDismiss = { showRemoveDialog = null },
+            destructive = true,
+            tagPrefix = "adapter_remove",
         )
     }
 
@@ -372,7 +382,7 @@ fun AdaptersScreen(
             dismissButton = {
                 TextButton(
                     onClick = { showAddMenu = false },
-                    modifier = Modifier.testable("btn_add_menu_cancel")
+                    modifier = Modifier.testableClickable("btn_add_menu_cancel") { showAddMenu = false }
                 ) {
                     Text(localizedString("mobile.common_cancel"))
                 }
@@ -446,6 +456,8 @@ private fun AdapterCard(
         targetValue = if (isExpanded) 180f else 0f,
         label = "chevron_rotation"
     )
+    // Every control drivable, keyed like the row (`adapters_row_<type>`).
+    val key = adapter.type.lowercase()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -460,6 +472,7 @@ private fun AdapterCard(
                     .fillMaxWidth()
                     .heightIn(min = 72.dp)  // Minimum touch target height
                     .clickable { onToggleExpand() }
+                    .testableClickable("btn_adapter_expand_$key") { onToggleExpand() }
                     .padding(20.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -545,6 +558,7 @@ private fun AdapterCard(
                     }
                     Button(
                         onClick = onReauth,
+                        modifier = Modifier.testableClickable("btn_adapter_reauth_$key") { onReauth() },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error
                         )
@@ -589,6 +603,7 @@ private fun AdapterCard(
                         )
                         TextButton(
                             onClick = onEditConfig,
+                            modifier = Modifier.testableClickable("btn_adapter_edit_config_$key") { onEditConfig() },
                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Icon(
@@ -643,7 +658,7 @@ private fun AdapterCard(
                     if (services.isNotEmpty()) {
                         // Use FlowRow for natural wrapping of chips
                         FlowRow(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testable("adapters_services_$key", services.joinToString(",")),
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
@@ -677,7 +692,10 @@ private fun AdapterCard(
                     )
                     val tools = details?.tools ?: emptyList()
                     if (tools.isNotEmpty()) {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Column(
+                            modifier = Modifier.testable("adapters_tools_$key", tools.joinToString(",") { it.name }),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             tools.forEach { tool ->
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -716,7 +734,7 @@ private fun AdapterCard(
                             fontWeight = FontWeight.Medium
                         )
                         Row(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().testable("adapters_metrics_$key"),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             MetricChip(
@@ -749,7 +767,7 @@ private fun AdapterCard(
             ) {
                 OutlinedButton(
                     onClick = onReload,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testableClickable("btn_adapter_reload_$key") { onReload() }
                 ) {
                     Icon(
                         imageVector = CIRISIcons.refresh,
@@ -764,7 +782,7 @@ private fun AdapterCard(
                 if (adapter.hasAuthStep && !adapter.needsReauth) {
                     OutlinedButton(
                         onClick = onReauth,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f).testableClickable("btn_adapter_reauth_$key") { onReauth() }
                     ) {
                         Icon(
                             imageVector = CIRISIcons.refresh,
@@ -778,7 +796,7 @@ private fun AdapterCard(
 
                 OutlinedButton(
                     onClick = onRemove,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testableClickable("btn_adapter_remove_$key") { onRemove() },
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
@@ -832,3 +850,13 @@ data class AdapterItem(
     val hasAuthStep: Boolean = false,
     val authStepId: String? = null
 )
+
+/** What the adapter list's body is. Pure, so "a failed read is not an empty list" is testable without Compose (CSD-020 §2). */
+enum class AdaptersBody { LOADING, FAILED, EMPTY, LIST }
+
+fun adaptersBody(adapterCount: Int, isLoading: Boolean, failure: ReadFailure?): AdaptersBody = when {
+    adapterCount > 0 -> AdaptersBody.LIST
+    isLoading -> AdaptersBody.LOADING
+    failure != null -> AdaptersBody.FAILED
+    else -> AdaptersBody.EMPTY
+}

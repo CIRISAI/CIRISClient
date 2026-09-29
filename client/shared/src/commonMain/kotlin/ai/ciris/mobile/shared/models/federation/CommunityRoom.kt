@@ -43,6 +43,14 @@ data class CommunityRoom(
     val roles: Map<String, List<String>> = emptyMap(),
     /** Appointed `moderate` duty holders (founder-rooted `delegates_to`). Single-room read only. */
     val moderators: List<String>? = null,
+    /**
+     * False when the node could not read the moderator chain — CIRISServer#688
+     * asks for exactly this, because `room_json` today fills [moderators] with
+     * `unwrap_or_default()` and an unreadable chain arrives as `[]`. Null when
+     * the node does not send it (every node today), which is not a claim either way.
+     */
+    @SerialName("moderators_readable")
+    val moderatorsReadable: Boolean? = null,
     /** How many widening rows the room has. Single-room read only. */
     val widenings: Int? = null,
     /** How many revocation rows the room has. Single-room read only. */

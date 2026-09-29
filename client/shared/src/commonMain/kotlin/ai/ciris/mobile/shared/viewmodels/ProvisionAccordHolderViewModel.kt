@@ -1,6 +1,8 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
+import ai.ciris.mobile.shared.models.federation.firstStringField
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -24,6 +26,11 @@ import kotlinx.coroutines.launch
  * The flow is foolproof by construction: the YubiKey/FIPS acknowledgement (step
  * 1) and a non-empty ML-DSA USB path (step 2) gate the provision action (step 3),
  * and every device / USB / PIN / touch failure is mapped to plain language.
+ *
+ * Two facts the node states and this card shows rather than drops (CSD-068 §2.2):
+ * whether a token is plugged in at all (`GET /v1/accord/yubikey-status` — the
+ * FIPS-approval acknowledgement stays a claim, CC 4.2.2.1), and the custody
+ * class the node recorded in the minted `custody_attestation`.
  */
 class ProvisionAccordHolderViewModel(
     private val apiClient: CIRISApiClient,
@@ -52,12 +59,43 @@ class ProvisionAccordHolderViewModel(
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
-    private val _error = MutableStateFlow<String?>(null)
-    val error: StateFlow<String?> = _error.asStateFlow()
+    /**
+     * A failure, as the KEY of the plain-language sentence (the screen
+     * localizes) plus the node's detail where the sentence has a `{detail}`
+     * slot. A view model never holds a rendered string.
+     */
+    data class ProvisionError(val key: String, val detail: String? = null)
+
+    private val _error = MutableStateFlow<ProvisionError?>(null)
+    val error: StateFlow<ProvisionError?> = _error.asStateFlow()
 
     /** The minted holder key_id, set once provisioning succeeds. Non-null = done. */
     private val _provisionedKeyId = MutableStateFlow<String?>(null)
     val provisionedKeyId: StateFlow<String?> = _provisionedKeyId.asStateFlow()
+
+    /**
+     * The custody class the node recorded in the minted `custody_attestation`
+     * (`custody_tier`, e.g. `portable_2fa`) — the CC 4.2.2.1 producer claim, shown
+     * to the producer. Null when the attestation names none this app can find.
+     */
+    private val _custodyTier = MutableStateFlow<String?>(null)
+    val custodyTier: StateFlow<String?> = _custodyTier.asStateFlow()
+
+    /** The inserted token's readiness (`GET /v1/accord/yubikey-status`); null until read. */
+    private val _yubiKeyStatus = MutableStateFlow<YubiKeyStatus?>(null)
+    val yubiKeyStatus: StateFlow<YubiKeyStatus?> = _yubiKeyStatus.asStateFlow()
+
+    /** Re-probe the inserted YubiKey. "Is a token plugged in" need not be a claim. */
+    fun refreshYubiKeyStatus() {
+        viewModelScope.launch {
+            _yubiKeyStatus.value = try {
+                apiClient.getYubiKeyStatus(CIRISApiClient.LOCAL_NODE_URL)
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[refreshYubiKeyStatus] ${e.message}")
+                null
+            }
+        }
+    }
 
     fun setFipsAcknowledged(value: Boolean) {
         _fipsAcknowledged.value = value
@@ -93,15 +131,15 @@ class ProvisionAccordHolderViewModel(
         val keyId = _keyId.value.trim()
         val usb = _usbPath.value.trim()
         if (!_fipsAcknowledged.value) {
-            _error.value = "Confirm your YubiKey is inserted and already FIPS-approved first."
+            _error.value = ProvisionError("mobile.provision_holder_err_ack")
             return
         }
         if (keyId.isBlank()) {
-            _error.value = "Enter a key ID for this holder identity."
+            _error.value = ProvisionError("mobile.provision_holder_err_key_id")
             return
         }
         if (usb.isBlank()) {
-            _error.value = "Choose the USB folder for the ML-DSA key first."
+            _error.value = ProvisionError("mobile.provision_holder_err_usb")
             return
         }
         _busy.value = true
@@ -113,6 +151,7 @@ class ProvisionAccordHolderViewModel(
                     mldsaUsbPath = usb,
                     userPin = _userPin.value.takeIf { it.isNotBlank() },
                 )
+                _custodyTier.value = firstStringField(res.custodyAttestation, "custody_tier")
                 _provisionedKeyId.value = res.keyId
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[provision] ${e.message}")
@@ -126,6 +165,7 @@ class ProvisionAccordHolderViewModel(
     /** Reset to provision another holder (or retry after a fix). */
     fun reset() {
         _provisionedKeyId.value = null
+        _custodyTier.value = null
         _error.value = null
     }
 
@@ -138,24 +178,20 @@ class ProvisionAccordHolderViewModel(
      * The server already returns human-readable messages; this catches the common
      * device / USB / PIN / touch / FIPS / feature failures and the auth statuses.
      */
-    private fun plainLanguageError(msg: String): String = when {
+    private fun plainLanguageError(msg: String): ProvisionError = when {
         msg.contains("501") || msg.contains("NotImplemented", ignoreCase = true) ||
             msg.contains("without the `pkcs11`") ->
-            "This node build can't reach a YubiKey (no pkcs11 support). Ask your operator to run a " +
-                "ciris-server built with the pkcs11 feature on this host."
+            ProvisionError("mobile.provision_holder_err_pkcs11")
         msg.contains("YubiKey", ignoreCase = true) || msg.contains("slot-", ignoreCase = true) ->
-            "Couldn't use your YubiKey. Check it's inserted, already FIPS-approved with a slot-9c " +
-                "key, and that your PIN is correct."
+            ProvisionError("mobile.provision_holder_err_yubikey")
         msg.contains("PIN", ignoreCase = true) ->
-            "Wrong or missing PIN. Re-enter your YubiKey PIV PIN and try again."
+            ProvisionError("mobile.provision_holder_err_pin")
         msg.contains("not writable", ignoreCase = true) || msg.contains("not a directory", ignoreCase = true) ->
-            "That USB folder isn't writable. Insert your USB key, make sure it's mounted, and choose " +
-                "its folder."
+            ProvisionError("mobile.provision_holder_err_usb_unwritable")
         msg.contains("ykman", ignoreCase = true) ->
-            "Couldn't read the YubiKey attestation (ykman not available). Ask your operator to install " +
-                "yubikey-manager on this host."
-        msg.contains("401") -> "Sign in as the owner on this node first, then provision."
-        msg.contains("403") -> "Provisioning must run on the node's own host (localhost only)."
-        else -> "Provisioning failed: $msg"
+            ProvisionError("mobile.provision_holder_err_ykman")
+        msg.contains("401") -> ProvisionError("mobile.provision_holder_err_owner")
+        msg.contains("403") -> ProvisionError("mobile.provision_holder_err_loopback")
+        else -> ProvisionError("mobile.provision_holder_err_other", detail = msg)
     }
 }

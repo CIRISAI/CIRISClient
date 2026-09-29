@@ -215,6 +215,50 @@ class ChatEntryPresentationTest {
                    "a retry button here says the user can fix what only replication can")
     }
 
+    // ── unopened rows: a TOKEN to branch on, a DETAIL to show (0.5.218, CIRISServer#602) ──
+
+    private fun unopened(reason: String?, detail: String? = null) = CegChatMessage(
+        attestationId = "att-u", body = "", unopenedReason = reason, unopenedDetail = detail,
+    )
+
+    @Test
+    fun every_documented_unopened_token_names_its_own_sentence() {
+        // `contacts_chat.rs::UNOPENED_REASONS`, verbatim. A row edge adds a new
+        // arm for lands on the generic key, with its detail, never on nothing.
+        for (token in UNOPENED_TOKENS) {
+            val u = unopenedText(unopened(token, "the substrate's sentence"))
+            assertEquals("mobile.chat_unopened_$token", u?.key, token)
+            assertEquals("the substrate's sentence", u?.detail)
+        }
+        val other = unopenedText(unopened("some_new_arm", "why"))
+        assertEquals("mobile.chat_unopened_other", other?.key)
+        assertEquals("why", other?.detail)
+    }
+
+    @Test
+    fun an_opened_row_has_no_unopened_text_and_a_pre_218_sentence_is_kept_as_the_detail() {
+        assertEquals(null, unopenedText(entry(body = "hello")))
+        // A 0.5.217 node sent edge's Display text ("not_fetched: <sentence>") in
+        // `unopened_reason` and no detail. The token is the part before the
+        // colon; the rest is the only detail there is.
+        val old = unopenedText(unopened("not_fetched: content is in the blob store", null))
+        assertEquals("mobile.chat_unopened_not_fetched", old?.key)
+        assertEquals("content is in the blob store", old?.detail)
+    }
+
+    @Test
+    fun a_system_entry_that_did_not_open_falls_back_to_the_detail_never_the_token() {
+        // chatEntryText's last resort used to be the raw token — a dotted or
+        // underscored key on a person's screen (CIRISClient#34, again).
+        val e = CegChatMessage(
+            attestationId = "att-s", kind = CegChatMessage.KIND_SYSTEM, body = "",
+            unopenedReason = "not_granted", unopenedDetail = "this reader holds no grant",
+        )
+        assertEquals("this reader holds no grant", chatEntryText(e) { null })
+        assertFalse(chatEntryText(unopened("not_granted")) { null }.contains("not_granted"),
+                    "the token is for branching, not for reading")
+    }
+
     @Test
     fun defaults_are_the_pre_37_shape_so_an_older_node_still_renders() {
         // A node that predates this schema sends none of these fields. It must

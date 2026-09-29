@@ -59,18 +59,9 @@
     "input_canonical_transport_kind",
     "input_remint_ip",
     "input_scrub_module_remint_cosign",
-    "input_scrub_module_remint_propose"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AdaptersScreen.kt": [
-    "btn_add_menu_cancel"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ChildSafetyScreen.kt": [
-    "btn_child_safety_back",
-    "btn_watchlist_disable",
-    "btn_watchlist_enable",
-    "btn_watchlist_refresh",
-    "input_watchlist_group",
-    "input_watchlist_id"
+    "input_scrub_module_remint_propose",
+    "input_supersede_digest",
+    "input_supersede_record"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ClaimNodeScreen.kt": [
     "btn_claim_node_back"
@@ -108,13 +99,6 @@
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/LogsScreen.kt": [
     "input_logs_search"
-  ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ManageConsentScreen.kt": [
-    "btn_consent_revoke_peering",
-    "btn_consent_setup_peering",
-    "btn_manage_consent_back",
-    "btn_open_user_consent",
-    "toggle_send_traces"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ManageNodesScreen.kt": [
     "btn_add_node_by_code",
@@ -206,6 +190,9 @@
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/WiseAuthorityScreen.kt": [
     "input_wisdom_guidance"
+  ],
+  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/ConstitutionalScreen.kt": [
+    "chip_constitutional_family"
   ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/NetworkDiagnosticsScreen.kt": [
     "input_diagnostics_search"

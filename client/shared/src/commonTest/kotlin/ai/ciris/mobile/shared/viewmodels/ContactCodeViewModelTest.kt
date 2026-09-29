@@ -44,8 +44,12 @@ private class FakeContacts(
     val codeCalls = mutableListOf<Pair<String, String?>>()
     val addCalls = mutableListOf<Pair<String, String>>()
     val announceCalls = mutableListOf<String>()
+    val listCalls = mutableListOf<String>()
 
-    override suspend fun listContacts() = ContactListResponse()
+    override suspend fun listContacts(nodeUrl: String): ContactListResponse {
+        listCalls += nodeUrl
+        return ContactListResponse()
+    }
     override suspend fun listPeers() = FederationPeerListResponse()
 
     override suspend fun addContact(nodeUrl: String, keyId: String): AddContactResponse {
@@ -91,6 +95,18 @@ class ContactCodeViewModelTest {
         // The app hands the VM a provider that follows the ACTIVE node (CIRISApp's
         // effectiveNodeUrl); here the same rule, from the client's mode.
         ContactsViewModel(client, { contactsNodeUrl(client.isNodeMode(), client.baseUrl, NODE_URL) }, api)
+
+    // ── GET /v1/contacts is a NODE route, like the rest of People ─────────
+
+    @Test
+    fun theContactListIsReadFromTheNodeNotTheAgentFrontDoor() {
+        // With an agent at the api base the list used to go to `$baseUrl`, which
+        // the route gate charged to the agent front door (CIRISAgent#1213). It
+        // follows the same provider as the add, the code and the removal.
+        val api = FakeContacts()
+        vm(api)
+        assertEquals(listOf(NODE_URL), api.listCalls, "the list read names the node")
+    }
 
     // ── A node switch closes the code (Codex, PR #116) ────────────────────
 

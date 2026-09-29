@@ -35,11 +35,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
@@ -82,6 +85,11 @@ fun ProvisionAccordHolderScreen(
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
     val provisionedKeyId by viewModel.provisionedKeyId.collectAsState()
+    val custodyTier by viewModel.custodyTier.collectAsState()
+    val yubiKeyStatus by viewModel.yubiKeyStatus.collectAsState()
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { viewModel.refreshYubiKeyStatus() }
 
     Scaffold(
         topBar = {
@@ -92,7 +100,7 @@ fun ProvisionAccordHolderScreen(
                         onClick = onBack,
                         modifier = Modifier.testableClickable("btn_provision_holder_back") { onBack() },
                     ) {
-                        Icon(CIRISIcons.arrowBack, contentDescription = "Back")
+                        Icon(CIRISIcons.arrowBack, contentDescription = localizedString("mobile.common_back"))
                     }
                 },
             )
@@ -106,10 +114,12 @@ fun ProvisionAccordHolderScreen(
                 .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
+            // The empty state: the three steps, none done yet.
             Text(
                 text = localizedString("mobile.provision_holder_subtitle"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("txt_provision_holder_start"),
             )
 
             // ── Success state ────────────────────────────────────────────────
@@ -143,6 +153,18 @@ fun ProvisionAccordHolderScreen(
                             fontSize = 12.sp,
                             fontFamily = FontFamily.Monospace,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.testable("txt_provision_holder_key_id"),
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        // The custody class the node recorded — a producer claim
+                        // (CC 4.2.2.1), shown to the producer rather than dropped.
+                        Text(
+                            localizedString("mobile.provision_holder_custody_label") + " " +
+                                (custodyTier ?: localizedString("mobile.provision_holder_custody_none")),
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.testable("txt_provision_holder_custody"),
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
@@ -151,13 +173,31 @@ fun ProvisionAccordHolderScreen(
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                         Spacer(Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { viewModel.reset() },
-                            modifier = Modifier.testableClickable("btn_provision_holder_again") {
-                                viewModel.reset()
-                            },
-                        ) {
-                            Text(localizedString("mobile.provision_holder_again"))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            // The key id is handed to the node owner out of band.
+                            val copyKey = {
+                                clipboard.setText(AnnotatedString(doneKeyId))
+                                copied = true
+                            }
+                            OutlinedButton(
+                                onClick = copyKey,
+                                modifier = Modifier.testableClickable("btn_provision_holder_copy") { copyKey() },
+                            ) {
+                                Text(
+                                    localizedString(
+                                        if (copied) "mobile.provision_holder_copied" else "mobile.provision_holder_copy",
+                                    ),
+                                )
+                            }
+                            OutlinedButton(
+                                onClick = { copied = false; viewModel.reset() },
+                                modifier = Modifier.testableClickable("btn_provision_holder_again") {
+                                    copied = false
+                                    viewModel.reset()
+                                },
+                            ) {
+                                Text(localizedString("mobile.provision_holder_again"))
+                            }
                         }
                     }
                 }
@@ -166,7 +206,8 @@ fun ProvisionAccordHolderScreen(
             }
 
             // ── Error ─────────────────────────────────────────────────────────
-            error?.let { msg ->
+            error?.let { e ->
+                val msg = e.detail?.let { localizedString(e.key, "detail", it) } ?: localizedString(e.key)
                 Spacer(Modifier.height(12.dp))
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -215,6 +256,10 @@ fun ProvisionAccordHolderScreen(
                 fontSize = 11.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // Whether a token is plugged in at all is the node's to say
+            // (`GET /v1/accord/yubikey-status`); FIPS approval stays the person's claim.
+            Spacer(Modifier.height(8.dp))
+            YubiKeyStatusBanner(yubiKeyStatus) { viewModel.refreshYubiKeyStatus() }
 
             // ── key_id ─────────────────────────────────────────────────────────
             Spacer(Modifier.height(16.dp))
@@ -315,7 +360,10 @@ fun ProvisionAccordHolderScreen(
                 },
             ) {
                 if (busy) {
-                    CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(14.dp).testable("spinner_provision_holder"),
+                        strokeWidth = 2.dp,
+                    )
                     Spacer(Modifier.width(8.dp))
                     Text(localizedString("mobile.provision_holder_busy"))
                 } else {

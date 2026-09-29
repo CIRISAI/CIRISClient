@@ -1,10 +1,10 @@
 # CSD-006 — The receipt (the template every CEG item asserts)
 
 **CSD**: CSD-006 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec §2
-**Flow**: none — this is the template other CSDs bind
+**Flow**: `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -107,16 +107,26 @@ so a Notes card binding this template renders `Fact.NotSent` on every row until
 that read joins the others. That is a row to ask for, not a reason to hide the
 hamburger.
 
-**The open work is in THIS repo, not upstream.** `models/federation/Contact.kt:27-66`
-has no `grant` member — its own doc comment lists only four contact-only members —
-so `ui/screens/PeopleSupport.kt:66-83` still builds `attester`, `scope` and
-`dimensionValue` as `Fact.ByRule` and `rule` as `Fact.NotSent`: one wire fact of
-five, against a node that now sends all five. Adding the field and reading it is
-what takes this card, and CSD-005 with it, to `testable`. Re-checked 2026-09-27
-on `integ/0.5.218`: `grant_receipt` is still built per row at
-`src/contacts_chat.rs:1754` and the client still does not read it. Not closed
-in the moderation review because Contacts/People is owned by an unmerged
-branch in that batch; it is the first thing the People review should take.
+**The first binding reads all five off the wire.** `models/federation/Contact.kt`
+decodes the row's `grant` (`ContactGrant`: every member of `peer.rs::grant_receipt`)
+and `ui/screens/PeopleSupport.kt::contactReceipt` renders each fact from it —
+`wireFacts == 5` (`PeopleSupportTest`). Re-checked 2026-09-28 on
+`integ/0.5.218`: `grant_receipt` is built per row at `src/contacts_chat.rs:1754`
+and attached under the key `grant` (`:1823`), `null` when the node holds no
+readable receipt.
+
+**Which facts a binding may fix `ByRule`, decided on the first one.** Only a
+fact the constitution or the route fixes for EVERY row of that kind. On a
+contact that is the dimension alone: a contact IS a `consent:replication:v1`
+grant (CC 3.3.7) and `GET /v1/contacts` serves nothing else. The scope is NOT
+one — a grant's `cohort_scope` is the consent audience the person chose
+(`peer.rs::add_contact`, default federation) — and the attester stopped being
+one at 0.5.211, when consent moved from the node to the person. So a grant-less
+row (a node older than 0.5.217, or `grant: null`) renders the attester, the
+scope and the rule as `NotSent`. The scope used to render `ByRule("federation")`
+there; that was a guess and this review removed it, red first. A binding that
+wants a `ByRule` fact names the section that fixes it, as CSD-005 does for the
+dimension.
 
 **Where this template does NOT apply, and says so.** The Moderation card
 (CSD-065) files a `ModerationEvent` and gets back `{attestation_id, duty}`
