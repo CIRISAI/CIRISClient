@@ -454,6 +454,28 @@ def test_a_cleanup_guarded_by_when_runs_only_while_its_card_is_open(tmp_path):
     assert "cleanup" not in out.detail, out.detail
 
 
+CLEANUP_AFTER_CLOSE = GOOD + """\
+    cleanup:
+      - click: btn_code_close
+      - click: btn_toggle
+        when: card_open
+"""
+
+
+def test_a_cleanup_guard_reads_the_frame_after_the_previous_close(tmp_path):
+    """Local Linux leg, 2026-09-29: closing the contact-code card brought
+    People's add card back on the NEXT frame; the guard read the same
+    instant, saw no card, skipped the toggle, and csd_006 started under the
+    open card after all."""
+    h = _NextFrame("Thing", {"thing_list": "", "btn_code_close": "", "btn_toggle": ""})
+    # Closing the code card lands a frame later, and only then is the add card back.
+    h.leads = {"btn_code_close": ("Thing", ["thing_list", "btn_toggle", "card_open"])}
+    out = _run(_spec(tmp_path, CLEANUP_AFTER_CLOSE), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_toggle", h.calls
+    assert "cleanup" not in out.detail, out.detail
+
+
 def test_when_is_for_cleanup_actions_only(tmp_path):
     """A step's action that quietly does nothing is a step that asserts nothing."""
     body = GOOD.replace("        expect:\n", "        do:\n          - wait: thing_list\n            when: thing_list\n        expect:\n")
@@ -510,6 +532,10 @@ class _NextFrame(FakeHelper):
     async def get_elements(self):
         self._land()
         return await super().get_elements()
+
+    async def get_element(self, tag):
+        self._land()
+        return await super().get_element(tag)
 
     async def get_screen(self):
         self._land()

@@ -850,10 +850,31 @@ class FlowRunner:
         finally:
             await self._cleanup(spec)
 
+    async def _composed(self, tag: str, *, settle: bool, budget: float = EXPECT_SETTLE_S) -> bool:
+        """Is `tag` in /tree — read once, or re-read for up to `budget` when a
+        cleanup action just changed the screen. The local Linux leg
+        (2026-09-29) closed the contact-code card and, in the same instant,
+        read People's add card as gone: the card had not recomposed yet, the
+        guarded toggle was skipped, and csd_006 started under the open card
+        after all (its row on screen only because the window was tall)."""
+        import asyncio  # noqa: PLC0415
+
+        deadline = time.monotonic() + (budget if settle else 0.0)
+        while True:
+            if await self.helper.get_element(tag) is not None:
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            await asyncio.sleep(0.25)
+
     async def _cleanup(self, spec: FlowSpec) -> None:
         """LOCAL DELTA: close what the flow opened, whatever its verdict. A
         failure here is recorded, never raised: it is not this flow's verdict,
         and hiding the verdict behind it would help nobody."""
+        # Whether a cleanup action has run: the tree read after one is the
+        # same-instant race `_settled` names, so "gone" is then judged on
+        # the frame that follows, not the frame the click was made on.
+        changed = False
         for action in spec.cleanup:
             try:
                 action = Action(action.kind,
@@ -871,12 +892,13 @@ class FlowRunner:
             # the card it opened must not then report its cleanup as a failure.
             # `when:` says what "gone" means for a control that would otherwise
             # open the thing it is there to close.
-            if action.when is not None and await self.helper.get_element(action.when) is None:
+            if action.when is not None and not await self._composed(action.when, settle=changed):
                 print(f"     cleanup: nothing to close \u2014 {action.when!r} is not on screen")
                 continue
-            if action.kind in ("click", "input") and await self.helper.get_element(action.target) is None:
+            if action.kind in ("click", "input") and not await self._composed(action.target, settle=changed):
                 print(f"     cleanup: nothing to close \u2014 {action.target!r} is not on screen")
                 continue
+            changed = True
             err = await self._do(action)
             if err:
                 self.cleanup_failures.append(err)
