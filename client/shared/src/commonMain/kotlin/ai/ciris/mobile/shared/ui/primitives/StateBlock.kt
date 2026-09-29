@@ -68,6 +68,29 @@ fun ListState.style(): StateStyle = when (this) {
 /** The glyph tint for a state — never `ok` for an error or an unreviewed state; the test pins it. */
 fun ListState.tint(t: CirisTokens) = t.tone(style().tone)
 
+/**
+ * What `/tree` carries for a state block's tag: EVERYTHING THE BLOCK DRAWS —
+ * the message (or the label when there is none), then an error's body and
+ * detail, one per line. A flow's `text:` is a claim about the sentence a
+ * person reads; CSD-092 puts its version fact in the error's BODY ("It needs
+ * ciris-server 0.5.218 or newer."), and with the title alone registered the
+ * client rendered the right words while the tree could not show them
+ * (every desktop leg, 2026-09-29).
+ */
+fun ListState.automationText(label: String?): String? {
+    val message = when (this) {
+        is ListState.Empty -> message
+        is ListState.Error -> title
+        is ListState.FileGone -> message
+        is ListState.HiddenByRules -> message
+        is ListState.Unreviewed -> message
+        ListState.Loading, ListState.Populated -> null
+    }
+    val error = this as? ListState.Error
+    val parts = listOfNotNull(message ?: label, error?.body, error?.detail)
+    return parts.takeIf { it.isNotEmpty() }?.joinToString("\n")
+}
+
 @Composable
 fun StateBlock(
     state: ListState,
@@ -99,7 +122,7 @@ fun StateBlock(
     }
     val frame = modifier
         .fillMaxWidth()
-        .testable(tag, message ?: label)
+        .testable(tag, state.automationText(label))
         .let { m ->
             if (style.bordered) {
                 m.clip(CirisShape.card)
