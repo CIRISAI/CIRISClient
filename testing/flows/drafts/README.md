@@ -66,25 +66,43 @@ Check first, in this order:
 
 1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it;
 2. its CSD's §5 declares the platforms it should be green on;
-3. the CSD's `stage:` moves to `testable` only after a green run — a green run is
-   evidence for that edit, never the edit itself.
+3. the CSD's `stage:` moves to `verified` only after a green run — a green run is
+   evidence for that edit, never the edit itself. `testable` means the spec is
+   complete and the flow is written; a card promoted there says in its §5 that
+   the flow has not yet run on the matrix.
+
+## Status on `main` (2026-09-28): none of the six nav-only flows promotes yet
+
+Tried for `csd-025`, `csd-036`, `csd-057`, `csd-066`, `csd-068` and `csd-087`.
+None moved, for one reason common to all six and one extra for `csd-036`:
+
+- **They do not load with the loader on `main`.** `testing/gate/run_flows.py`
+  does not exist on `main`, and `FlowSpec.load` in `testing/gate/flow_spec.py`
+  refuses the `csd:` key every draft carries (`unknown key(s) ['csd']; allowed:
+  ['client', 'description', 'flow', 'steps', 'title']`). The binder that reads
+  `csd:` — and the runner that walks a hop — are in #97, still open. With `csd:`
+  removed each of the six parses, so the key is the only thing refused; removing
+  it would unbind the flow from its CSD, which is the wrong fix. They promote
+  when #97 lands.
+- **`csd-036` is still floored `client: "unreleased"`**, so it would be refused
+  on every leg even once it loads.
 
 ## What is here
 
 | file | CSD | screen it needs | beyond nav, what else it waits on |
 |---|---|---|---|
 | `csd-006-receipt.yaml` | CSD-006 | Contacts + a contact | a second node to be a contact of; the matrix stands up one |
-| `csd-025-system.yaml` | CSD-025 | System | nothing |
-| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | nothing |
-| `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing |
-| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | nothing |
-| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder | nothing |
+| `csd-025-system.yaml` | CSD-025 | System | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | **not promoted**: `csd:` key refused on `main` (#97), and floored `unreleased` |
+| `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
+| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-069-accord-ceremony.yaml` | CSD-069 | AccordCeremony | its last step needs six FIPS tokens; it is `optional_step` |
 | `csd-081-login.yaml` | CSD-081 | Login | the observer step needs a second, non-owner account |
 | `csd-082-setup-with-ai.yaml` | CSD-082 | Setup | a node with no owner — the fixture claims one during sign-in |
 | `csd-083-setup-without-ai.yaml` | CSD-083 | Setup | same |
 | `csd-085-claim-node.yaml` | CSD-085 | ClaimNode | the no-signer step needs the local node stopped mid-flow |
-| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce |
+| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce. **Not promoted**: `csd:` key refused on `main` (#97) |
 | `csd-090-duty-conferral.yaml` | CSD-090 | DutyConferral | a node that knows an accord family |
 | `csd-091-user-chat.yaml` | CSD-091 | UserChat | a peered contact to have a room with |
 
