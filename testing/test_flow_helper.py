@@ -84,3 +84,19 @@ def test_scrolling_is_bounded_and_the_bottom_is_reported():
     assert asyncio.run(h.click("tile_far_away")) is False
     assert len(d.scrolls) < 40, "bounded"
     assert "off screen" in h.last_error and "already at the bottom" in h.last_error
+
+
+def test_scroll_into_view_keeps_what_the_screen_answered():
+    """A `visible:` that fails after scrolling quotes the screen's answer, so
+    "composed but off screen" says whether there was anything to scroll."""
+    d = _Drv(refuse="")
+    d.scroll_to = lambda tag, direction="down", amount=300: {
+        "success": False,
+        "error": f"nothing on screen 'Contacts' can scroll (no testableVerticalScroll registered)",
+    }
+    h = SyncFlowHelper(d)
+    assert asyncio.run(h.scroll_into_view("contacts_row_peer")) is False
+    assert h.last_scroll == [
+        "down: nothing on screen 'Contacts' can scroll (no testableVerticalScroll registered)",
+        "up: nothing on screen 'Contacts' can scroll (no testableVerticalScroll registered)",
+    ], h.last_scroll

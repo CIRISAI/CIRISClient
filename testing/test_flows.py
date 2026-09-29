@@ -336,10 +336,19 @@ class FakeHelper:
         return self.screen
 
     async def is_element_visible(self, tag):
-        return tag in self.els
+        # Geometry, as the real helper reads it: composed with zero size is
+        # off screen (a row below the fold), not on screen.
+        e = self.els.get(tag)
+        if e is None:
+            return False
+        return e.visible if e.visible is not None else (e.width > 0 and e.height > 0)
 
     async def scroll_into_view(self, tag):
-        return tag in self.els
+        self.calls.append(f"scroll {tag}")
+        # This screen has nothing the harness can scroll; say so, as the real
+        # helper keeps what `/scroll` answered.
+        self.last_scroll = ["down: nothing on screen can scroll (no testableVerticalScroll registered)"]
+        return await self.is_element_visible(tag)
 
     async def click(self, tag, timeout=2000):
         self.calls.append(f"click {tag}")
@@ -418,6 +427,60 @@ def test_a_cleanup_whose_target_is_already_gone_is_nothing_to_close(tmp_path):
     out = _run(_spec(tmp_path, CLEANUP), h)
     assert out.status == run_flows.PASS
     assert "cleanup" not in out.detail, out.detail
+
+
+CLEANUP_WHEN = GOOD + """\
+    cleanup:
+      - click: btn_toggle
+        when: card_open
+"""
+
+
+def test_a_cleanup_guarded_by_when_runs_only_while_its_card_is_open(tmp_path):
+    """macOS, run 36600766576: csd_005 left People's add card open (its last
+    step provokes a refusal in it) and csd_006's row sat below the fold. The
+    control that closes the card is the header toggle that also OPENS it, so
+    "already gone" has to be decided by the card, not by the toggle."""
+    h = FakeHelper("Thing", {"thing_list": "", "btn_toggle": "", "card_open": ""})
+    out = _run(_spec(tmp_path, CLEANUP_WHEN), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_toggle"
+    assert "cleanup" not in out.detail, out.detail
+
+    h = FakeHelper("Thing", {"thing_list": "", "btn_toggle": ""})  # the toggle is there, the card is not
+    out = _run(_spec(tmp_path, CLEANUP_WHEN), h)
+    assert out.status == run_flows.PASS
+    assert "click btn_toggle" not in h.calls, "a guarded cleanup must not open what it is there to close"
+    assert "cleanup" not in out.detail, out.detail
+
+
+def test_when_is_for_cleanup_actions_only(tmp_path):
+    """A step's action that quietly does nothing is a step that asserts nothing."""
+    body = GOOD.replace("        expect:\n", "        do:\n          - wait: thing_list\n            when: thing_list\n        expect:\n")
+    assert "when: thing_list" in body
+    with pytest.raises(SpecError, match="cleanup"):
+        _spec(tmp_path, body)
+
+
+def test_a_visible_tag_that_was_never_composed_says_so(tmp_path):
+    h = FakeHelper("Thing", {})  # thing_list is not in /tree at all
+    out = _run(_spec(tmp_path), h)
+    assert out.status == run_flows.FAIL
+    assert "'thing_list' is not composed" in out.detail, out.detail
+
+
+def test_a_visible_tag_composed_below_the_fold_says_off_screen_after_scrolling(tmp_path):
+    """The macOS csd_006 shape: the row is in /tree with clipped, zero-size
+    bounds. "Is not on screen" sent the reader to the client; the row was
+    there, under a card the previous flow had left open, on a screen the
+    harness could not scroll — which is what the message now says."""
+    h = FakeHelper("Thing", {"thing_list": ""})
+    h.els["thing_list"] = _El("thing_list", "", visible=None, width=0, height=0)
+    out = _run(_spec(tmp_path), h)
+    assert out.status == run_flows.FAIL
+    assert "'thing_list' is composed but off screen after scrolling" in out.detail, out.detail
+    assert "no testableVerticalScroll" in out.detail, "what /scroll answered belongs in the verdict"
+    assert "scroll thing_list" in h.calls, "the runner tried to bring it on screen first"
 
 
 class _NextFrame(FakeHelper):

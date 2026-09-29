@@ -76,6 +76,10 @@ class SyncFlowHelper:
         #: csd_047 the reason was "composed but off screen", which names both
         #: the cause and the remedy.
         self.last_error = ""
+        #: What the last `scroll_into_view` did, one note per direction tried
+        #: ("down: moved", "up: already at the top"), so a `visible:` that
+        #: fails after scrolling can say what the screen answered.
+        self.last_scroll: List[str] = []
 
     # ---- reaching ---------------------------------------------------------
 
@@ -174,13 +178,17 @@ class SyncFlowHelper:
         `boundsInWindow`, so "visible" here is what the scroll changes. A client
         without /scroll is not a failed scroll: the runner re-asks
         `is_element_visible` and reports honestly either way."""
+        notes: List[str] = []
         for direction in ("down", "up"):
             for _ in range(_SCROLL_STEPS):
                 if await self.is_element_visible(tag):
+                    self.last_scroll = list(dict.fromkeys(notes))
                     return True
                 msg = self._step(tag, direction)
+                notes.append(f"{direction}: {msg or 'moved'}")
                 if msg and ("no /scroll" in msg or any(word in msg for word in _SCROLL_END)):
                     break
+        self.last_scroll = list(dict.fromkeys(notes))
         return await self.is_element_visible(tag)
 
     async def wait_for_element(self, tag: str, timeout: int = 2000) -> bool:

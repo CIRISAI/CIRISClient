@@ -58,7 +58,7 @@ _COND_KEYS = {
     "screen", "visible", "absent", "text",
     "count", "number", "matches", "one_of", "each", "relation", "state",
 }
-_ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms"}
+_ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms", "when"}
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
 _FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture", "cleanup"}
@@ -201,15 +201,29 @@ class Action:
     target: str
     value: Optional[str] = None
     wait_ms: int = 500
+    #: LOCAL DELTA, `cleanup:` only: run this action only while `when` is on
+    #: screen. A cleanup closes what the flow opened, and a control that
+    #: TOGGLES (People's `btn_contacts_add_open` opens the add card and closes
+    #: it) would open on a flow that failed before it got there. `when:` names
+    #: the thing being closed, so "already gone" is decided by the card and
+    #: not by the toggle that is always on screen (macOS leg, run 36600766576).
+    when: Optional[str] = None
 
     @classmethod
-    def parse(cls, raw: Any, where: str) -> "Action":
+    def parse(cls, raw: Any, where: str, *, cleanup: bool = False) -> "Action":
         if not isinstance(raw, dict):
             raise SpecError(f"{where}: expected a mapping, got {type(raw).__name__}")
         unknown = set(raw) - _ACTION_KEYS
         if unknown:
             raise SpecError(f"{where}: unknown key(s) {sorted(unknown)}; allowed: {sorted(_ACTION_KEYS)}")
         wait_ms = int(raw.get("wait_ms", 500))
+        when = raw.get("when")
+        if when is not None and not cleanup:
+            # A step's action that quietly does nothing is a step that asserts
+            # nothing; only a cleanup may be conditional.
+            raise SpecError(f"{where}: `when:` is for `cleanup:` actions only")
+        if when is not None and (not isinstance(when, str) or not when.strip()):
+            raise SpecError(f"{where}: `when:` names one tag")
         verbs = [k for k in ("click", "input", "scroll_to", "wait") if k in raw]
         if len(verbs) != 1:
             raise SpecError(
@@ -221,8 +235,8 @@ class Action:
             if not isinstance(spec, dict) or len(spec) != 1:
                 raise SpecError(f"{where}: `input` takes one {{tag: text}} pair")
             tag, text = next(iter(spec.items()))
-            return cls("input", str(tag), str(text), wait_ms)
-        return cls(verb, str(raw[verb]), None, wait_ms)
+            return cls("input", str(tag), str(text), wait_ms, when)
+        return cls(verb, str(raw[verb]), None, wait_ms, when)
 
     def describe(self) -> str:
         if self.kind == "input":
@@ -296,6 +310,7 @@ class FlowSpec:
         names = {n for step in self.steps for n in _step_variables(step)}
         for a in self.cleanup:
             names |= set(_VAR.findall(a.target)) | set(_VAR.findall(a.value or ""))
+            names |= set(_VAR.findall(a.when or ""))
         return sorted(names)
 
     @classmethod
@@ -335,7 +350,7 @@ class FlowSpec:
         cleanup_raw = raw.get("cleanup") or []
         if not isinstance(cleanup_raw, list):
             raise SpecError(f"{path}: `cleanup` is a list of actions (click / input / scroll_to / wait)")
-        spec.cleanup = [Action.parse(a, f"{path}: cleanup[{i}]") for i, a in enumerate(cleanup_raw)]
+        spec.cleanup = [Action.parse(a, f"{path}: cleanup[{i}]", cleanup=True) for i, a in enumerate(cleanup_raw)]
         # A `${NAME}` with no fixture to fill it would reach the app as the
         # literal text `${NAME}` and fail as "element not found" — the one
         # failure that looks exactly like a broken app. Refused at load.
@@ -414,11 +429,12 @@ class FlowSpec:
                         f"marks `proposed:`"
                     )
         for action in self.cleanup:
-            if action.target in doc.proposed:
-                raise SpecError(
-                    f"{where}: cleanup drives {action.target!r}, which {doc.csd_id} still "
-                    f"marks `proposed:`"
-                )
+            for tag in (action.target, action.when):
+                if tag in doc.proposed:
+                    raise SpecError(
+                        f"{where}: cleanup names {tag!r}, which {doc.csd_id} still "
+                        f"marks `proposed:`"
+                    )
 
 
 class UnresolvedVariable(Exception):
@@ -603,6 +619,22 @@ class FlowRunner:
                 out.append(e.test_tag)
         return sorted(out)
 
+    async def _not_on_screen(self, tag: str) -> str:
+        """LOCAL DELTA: WHY a `visible:` tag is not on screen — never composed,
+        or composed but off screen after the scroll budget. The two send a
+        reader to different places: the first to the client (the tag is not
+        drawn), the second to the flow before this one (what it left open) or
+        to the screen's scroll container (what `/scroll` answered). The macOS
+        leg's csd_006 (run 36600766576) said "is not on screen" for a row that
+        WAS composed, below an add card the previous flow had left open, on a
+        screen the harness cannot scroll; the words above are what it took a
+        screenshot to learn."""
+        if await self.helper.get_element(tag) is None:
+            return f"{tag!r} is not composed (not in /tree)"
+        scrolls = getattr(self.helper, "last_scroll", None) or []
+        answered = f" (scrolls: {'; '.join(scrolls)})" if scrolls else ""
+        return f"{tag!r} is composed but off screen after scrolling{answered}"
+
     async def _check(self, cond: Condition, label: str) -> Optional[str]:
         """None if the condition holds, else the FIRST failure, named precisely."""
         if cond.screen:
@@ -616,7 +648,7 @@ class FlowRunner:
             if not await self.helper.is_element_visible(tag):
                 await self.helper.scroll_into_view(tag)
             if not await self.helper.is_element_visible(tag):
-                return f"{label}: {tag!r} is not on screen"
+                return f"{label}: {await self._not_on_screen(tag)}"
         for tag in cond.absent:
             if await self.helper.is_element_visible(tag):
                 return f"{label}: {tag!r} is on screen but should not be"
@@ -650,7 +682,7 @@ class FlowRunner:
             if not await self.helper.is_element_visible(want):
                 await self.helper.scroll_into_view(want)
             if not await self.helper.is_element_visible(want):
-                return f"{label}: state {cond.state!r} — its tag {want!r} is not on screen"
+                return f"{label}: state {cond.state!r} — its tag {await self._not_on_screen(want)}"
             for other, tag in sorted(self.state_tags.items()):
                 if other != cond.state and tag != want and await self.helper.is_element_visible(tag):
                     return (f"{label}: state {cond.state!r} expected, but {other!r}'s "
@@ -828,13 +860,20 @@ class FlowRunner:
                                 substitute(action.target, self.variables, self.variable_notes),
                                 substitute(action.value, self.variables, self.variable_notes)
                                 if action.value is not None else None,
-                                action.wait_ms)
+                                action.wait_ms,
+                                substitute(action.when, self.variables, self.variable_notes)
+                                if action.when is not None else None)
             except UnresolvedVariable as exc:
                 self.cleanup_failures.append(str(exc))
                 print(f"     cleanup: {exc}")
                 continue
             # Already gone is nothing to close: a flow whose own last step shut
             # the card it opened must not then report its cleanup as a failure.
+            # `when:` says what "gone" means for a control that would otherwise
+            # open the thing it is there to close.
+            if action.when is not None and await self.helper.get_element(action.when) is None:
+                print(f"     cleanup: nothing to close \u2014 {action.when!r} is not on screen")
+                continue
             if action.kind in ("click", "input") and await self.helper.get_element(action.target) is None:
                 print(f"     cleanup: nothing to close \u2014 {action.target!r} is not on screen")
                 continue

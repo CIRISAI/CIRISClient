@@ -19,6 +19,8 @@ description: >-               # optional; say what is NOT driven and why
 client: ">=0.5.224"           # the client that carries every tag it names
 cleanup:                      # optional; run AFTER the flow, pass or fail
   - click: btn_contact_code_close
+  - click: btn_contacts_add_open
+    when: card_contacts_add     # only while the card is open: the toggle would open it
 
 steps:
   - step_id: landing
@@ -185,7 +187,19 @@ bring-up per leg and one session.
   first failed step, and a card that step left open (the contact-code card
   replaces People's body and its open state lives in the view model) is the
   next flow's failure. A cleanup that fails is reported in the outcome's
-  detail and the per-flow JSON; it never changes the verdict.
+  detail and the per-flow JSON; it never changes the verdict. A cleanup
+  action may carry `when: <tag>` and then runs only while that tag is on
+  screen: a control that toggles (People's `btn_contacts_add_open` opens the
+  add card and closes it) would otherwise open the card on a run that failed
+  before it got there. `when:` is for `cleanup:` only — a step's action that
+  quietly does nothing asserts nothing.
+- **A `visible:` that fails says which of two things went wrong.** "Not
+  composed (not in /tree)" is the client's: the tag is not drawn. "Composed
+  but off screen after scrolling" is the screen's or the previous flow's: the
+  runner scrolled both ways within its budget and quotes what `/scroll`
+  answered ("nothing on screen can scroll" names a container with no
+  `testableVerticalScroll`). The macOS csd_006 row (run 36600766576) was the
+  second kind, under an add card csd_005 had left open.
 - **A second node only when a flow asks.** The matrix stands up one node with
   no contacts, no agent and no peers. A flow that needs more says
   `fixture: two_node` — see below. Three flows here ask for it

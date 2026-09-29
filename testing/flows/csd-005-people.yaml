@@ -26,8 +26,19 @@ client: ">=0.5.225"
 fixture: two_node
 # The last step opens the contact-code card, which replaces People's body
 # until closed (csd-092-share-contact-code.yaml); closed here whatever the verdict.
+# Before it, `a_node_code_is_refused_by_name` leaves the add card open with a
+# refusal in it, and on a short window (macOS, 1024x656) the expanded card
+# pushes the list below the fold — csd_006 then found its row composed but
+# off screen (run 36600766576). The refusal clears when the field changes
+# (`onKeyIdChange` -> `clearAddError`) and the card closes on the header
+# toggle; `when:` keeps the toggle from OPENING the card on a run that failed
+# before it got there.
 cleanup:
   - click: btn_contact_code_close
+  - input: {input_contacts_add_key: ""}
+    when: contacts_add_refusal
+  - click: btn_contacts_add_open
+    when: card_contacts_add
 
 steps:
   - step_id: on_people
