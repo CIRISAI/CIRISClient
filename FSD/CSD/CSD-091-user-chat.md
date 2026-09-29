@@ -5,7 +5,7 @@
 **Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries)
 
 ```yaml csd:stage
-stage: testable
+stage: building
 owner: CIRISClient
 ```
 
@@ -203,12 +203,14 @@ as a failure, once as a note.
 **Wrong-host risk: found and closed.** Every route here is the NODE's, on
 `:4243` — and until this review every one of them was called at `$baseUrl`
 (`startChat`, `listChatMessages`, `sendChatMessage`), which the route gate
-charged to the agent front door and which, on a with-AI install, asked the
-agent (CIRISAgent#1213). The sentence above used to read "none", written from
+charged to the agent front door and which, on a with-AI install, asked an
+agent that before 2.12.1 did not forward them (CIRISAgent#1213, closed by
+#1215; reach through the agent works from agent 2.12.1). The sentence above used to read "none", written from
 the server side alone. The three calls now take the node URL from the same
 active-node provider People uses (`UserChatViewModel.nodeUrl`, `ChatApi`), and
-`UserChatViewModelTest` pins where each goes. This surface does not exist on
-the agent and does not ask it anything.
+`UserChatViewModelTest` pins where each goes. This surface is not served by
+the agent's brain and the client does not ask the agent for it: the direct node
+URL works on every agent version.
 
 **What CC fixes for free, and the client obeys.** persist refuses a
 community-scoped promotion unless `attested_key_id == attesting_key_id` and every
@@ -291,6 +293,8 @@ is pinned at unit level instead
 and §5 disclaims it for the matrix.
 
 ## 5. QA plan
+
+**Flow not complete.** `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`) cannot go green on an ordinary matrix run as written: `a_room_with_history` is gated only on `chat_transcript`, which also renders for a room holding nothing but a system note (the single-node `awaiting_peer` room, `ChatScreen.kt`) and for a refusal over an empty room; `SystemNoteRow` carries no tag, so `count: chat_msg_* min 1` fails on the ordinary run and nothing on screen can gate it. It is complete when system notes are tagged or a two-node fixture seeds a message. Until then this card is not ready to promote.
 
 **Platforms.** All five for the transcript and the refusals; **two nodes** for
 anything that involves the other side, which `testing/gate/node_fixture.py` does

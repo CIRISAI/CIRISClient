@@ -5,7 +5,7 @@
 **Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row will offer once CIRISServer#683 lands)
 
 ```yaml csd:stage
-stage: testable
+stage: building
 owner: CIRISClient
 ```
 
@@ -139,7 +139,7 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| contacts | `GET /v1/contacts` at the **node URL** | CIRISServer | live since 0.5.185. It read `$baseUrl` until this review, which the route gate charged to the agent front door and which, on a with-AI install, asked the agent (CIRISAgent#1213). Now `listContacts(nodeUrl)`, on the same active-node provider as the add, the code and the removal (`ContactsViewModel.nodeUrl`); pinned by `ContactCodeViewModelTest.theContactListIsReadFromTheNodeNotTheAgentFrontDoor` |
+| contacts | `GET /v1/contacts` at the **node URL** | CIRISServer | live since 0.5.185. It read `$baseUrl` until this review, which the route gate charged to the agent front door and which, on a with-AI install, asked an agent that before 2.12.1 did not forward `/v1/contacts` (CIRISAgent#1213, closed by #1215; forwarded from agent 2.12.1). Now `listContacts(nodeUrl)`, on the same active-node provider as the add, the code and the removal (`ContactsViewModel.nodeUrl`); pinned by `ContactCodeViewModelTest.theContactListIsReadFromTheNodeNotTheAgentFrontDoor`. Calling the node URL directly works on every agent version, so it stays |
 | the picker's identities (Delegations reaches this screen in picker mode) | `GET /v1/federation/peers` | CIRISServer | live. A delegation target need not be a contact, so the picker reads the wider peer store; cited here because this screen calls it, and the checker had it as this screen's one uncited route |
 | add a contact | `POST /v1/contacts` | CIRISServer | live; returns `consent_prefixes` |
 | add by contact code | `POST /v1/contacts` with the code in `key_id` | CIRISServer | **live**: `AddContactRequest.key_id` takes a fed-ID **or** a fedcode and also accepts the aliases `code` and `contact` (`src/contacts_chat.rs:1732-1742` @ `046e1b39`). The client sends `key_id` (`CIRISApiClient.kt:1490`), so no client change is needed to send a code |
@@ -219,6 +219,8 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
 
@@ -230,6 +232,5 @@ path. The removal end to end and the pasted code from another node, until
 deliberately NOT minted: the field already exists as `input_contacts_add_key`,
 and renaming it would break the tag the five-platform gate drives.
 
-**Stated limit.** `testable` here means the flow is written against real tags
-with a version floor; it has not yet run on the matrix in this review (no node
-in the worktree). `verified` is the stage that says it ran.
+**Stated limit.** The flow is written against real tags with a version floor;
+it has not yet run on the matrix, so this card stays at `building`.

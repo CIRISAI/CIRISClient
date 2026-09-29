@@ -2,7 +2,7 @@
 
 **CSD**: CSD-083 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 (the setup wizard)
 **Pairs with**: CSD-082 (the with-AI pass through the same screen)
-**Flow**: unwritten — `session_fixture` drives the with-AI pass; this one has no fixture
+**Flow**: `testing/flows/drafts/csd-083-setup-without-ai.yaml` (floor `>=0.5.224`); `session_fixture` drives only the with-AI pass, so this one has no fixture
 
 ```yaml csd:stage
 stage: building

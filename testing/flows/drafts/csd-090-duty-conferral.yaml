@@ -113,6 +113,7 @@ steps:
     optional_step: true
     requires:
       screen: DutyConferral
+      visible: [duty_source_error]
     expect:
       absent: [duty_source_name, duty_source_quorum]
 

@@ -47,21 +47,29 @@ steps:
       standing fixture does not create. The assertion is the point — `state:
       error` plus BOTH affordances, because a refusal with no next move is the
       shape CSD-081 §1 exists to forbid.
+      Its precondition is the refusal card itself (`observerBlocked`,
+      LoginScreen.kt:352), so an ordinary run with the owner account skips it
+      rather than failing; what it asserts when the card IS there is the two
+      ways forward.
     optional_step: true
     requires:
       screen: Login
+      visible: [card_observer_blocked]
     expect:
       state: error
-      visible: [card_observer_blocked, btn_choose_different_account, btn_reset_setup]
+      visible: [btn_choose_different_account, btn_reset_setup]
 
   - step_id: straight_from_the_wizard
     title: Arriving from a completed wizard says so, and names the owner
     description: >-
       Optional because it requires the run to have just completed setup. This is
       CIRISClient#48's settled answer rendered: the banner explains the re-login
-      instead of looking like a failure.
+      instead of looking like a failure. Its precondition is the banner
+      (`justCompletedSetup`, LoginScreen.kt:244), so an ordinary run skips it;
+      when the banner is there, the owner hint must be too.
     optional_step: true
     requires:
       screen: Login
+      visible: [banner_setup_complete_relogin]
     expect:
-      visible: [banner_setup_complete_relogin, txt_owner_hint]
+      visible: [txt_owner_hint]

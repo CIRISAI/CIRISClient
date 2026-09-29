@@ -29,6 +29,8 @@ steps:
       Optional because the matrix decides which of the three the node is in. What
       is never allowed is the fourth: the empty sentence over a read that failed.
     optional_step: true
+    requires:
+      visible: [list_peers]
     expect:
       state: populated
       visible: [list_peers]

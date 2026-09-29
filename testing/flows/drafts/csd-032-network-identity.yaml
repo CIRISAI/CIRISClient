@@ -41,6 +41,8 @@ steps:
   - step_id: on_a_bare_node_the_aggregate_says_so
     title: Without an agent the Federation ID card names its absence
     optional_step: true
+    requires:
+      visible: [federation_id_card_not_on_this_node]
     expect:
       visible: [federation_id_card_not_on_this_node]
       absent: [banner_federation_error]

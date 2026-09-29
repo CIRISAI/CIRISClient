@@ -27,12 +27,17 @@ steps:
   - step_id: a_read_counter_is_a_number
     title: Once read, the queue depth is a number
     optional_step: true
+    requires:
+      visible: [text_queue_depth]
     expect:
       number: {text_queue_depth: {min: 0}}
 
   - step_id: the_replication_plane_has_a_standing
     title: A node that reports the plane shows its two standings by token
     optional_step: true
+    requires:
+      absent: [text_replication_not_reported]
+      visible: [card_queue_replication]
     expect:
       visible: [text_carriage_standing, text_receive_standing]
       one_of: {text_carriage_standing: [unreadable, not_exercised, idle, moving, withholding]}

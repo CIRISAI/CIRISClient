@@ -2,7 +2,7 @@
 
 **CSD**: CSD-087 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 (a flow-only screen)
 **Overlaps**: reached only from ManageNodes, so it touches the node-identity area; raised with that card's author before writing
-**Flow**: unwritten — the form is not drivable; see §5
+**Flow**: `testing/flows/drafts/csd-087-verify-agent.yaml` (floor `>=0.5.224`); `input_verify_hash` is not drivable (see §5), so it drives the refusal only
 
 ```yaml csd:stage
 stage: building

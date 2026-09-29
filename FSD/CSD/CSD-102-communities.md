@@ -149,7 +149,8 @@ by the same act.
 Verified against CIRISServer `origin/main` 046e1b39 (0.5.217; the routes landed
 in 0.5.216), `src/communities.rs`. Every call goes to the NODE URL
 (`nodeBaseUrl`, the local node), never `baseUrl` — on a with-AI install that is
-the agent, which does not proxy these (CIRISAgent#1213).
+the agent, which proxies these only from agent 2.12.1 (CIRISAgent#1213,
+closed by #1215). The direct node URL works on every agent version, so it stays.
 `CommunitiesViewModelTest.every_call_goes_to_the_node_url_not_the_base_url`
 pins it.
 

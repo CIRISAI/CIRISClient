@@ -1,7 +1,7 @@
 # CSD-068 — Provision Accord Holder (the custody floor, in three steps)
 
 **CSD**: CSD-068 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-068-provision-accord-holder.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -253,13 +253,16 @@ expect:
 touch, which no platform runner has; §5 says so rather than mocking it.
 
 **Stage.** Every tag is real and nothing in §3 is `unconfirmed`, so
-`check_csd_v3.py` would admit `testable`. The card stays at `building` because
-the lifecycle's other condition for `testable` — the flow's floor flips off
-`unreleased` — is not met: no release carries this screen's custody row, copy
-button or token banner yet (`testing/flows/drafts/csd-068-provision-accord-holder.yaml`
-is `client: "unreleased"`). The pen moves when one does.
+`check_csd_v3.py` would admit `testable`. The flow's floor is already off
+`unreleased` — `testing/flows/drafts/csd-068-provision-accord-holder.yaml` is
+`client: ">=0.5.224"`, and every tag it drives is a literal at v0.5.224 (the
+custody row, copy button and token banner that came later are not in it). The
+one remaining condition is that the flow runs on the matrix (#97); the card
+stays at `building` until it does.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-068-provision-accord-holder.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop and Android in practice — the flow needs a USB path and a
 physical token, and the iOS/browser corners have neither. The screen composes on
