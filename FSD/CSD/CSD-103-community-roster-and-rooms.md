@@ -63,11 +63,13 @@ never an affiliations chat. Tapping one opens the chat CSD-091 already draws
 id). A pair room whose contact is gone is listed with "Not a contact any more"
 and does not open, because the chat screen enters a room only through a contact.
 
-**A room of more than two is listed and does not open.** `UserChatViewModel.enter`
-always calls `POST /v1/chat {key_id}` (pair-only, `contacts_chat.rs`); there is
-no way to enter a room by its id. The row says so
-(`flag_community_chat_room_unopenable_*`) rather than opening an empty
-transcript. The edit it needs is CSD-091's (below).
+**A room of more than two opens by its id** (since the people review,
+CSD-091). `GET/POST /v1/chat/{id}/messages` serve N-member rooms
+(CIRISServer#594), so the chat screen enters such a room by the room's
+community id and never asks `POST /v1/chat` (pair-only) for it. The row used to
+carry "cannot be opened here yet" (`flag_community_chat_room_unopenable_*`);
+that limit is gone. What remains is the pair room whose contact is gone: it
+cannot be entered through a contact and says so.
 
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
@@ -120,7 +122,7 @@ fields:
     use: display-only
     type: "enum[pair,room]"
     example: "pair"
-    renders: "Chats: 'Two people' for a pair room (opens the chat), '{n} people' for a room (listed, does not open, says why)"
+    renders: "Chats: 'Two people' for a pair room (opens the chat through its contact), '{n} people' for a room (opens the chat by the room's id, CSD-091)"
     tag: "community_chat_row_*"
 ```
 
@@ -200,4 +202,5 @@ late member's flag, or a pair room in Chats — each needs a second person.
 * Peer-authored roster rows: persist admits them on signature alone until
   CIRISPersist#908, so a row another node wrote can appear here without the
   room's rule having been checked by this node. Not visible on the card.
-* Opening a room of more than two — not possible yet (§2.0).
+* The transcript of a room of more than two — CSD-091's (it opens by id since
+  the people review; this card only routes the tap).

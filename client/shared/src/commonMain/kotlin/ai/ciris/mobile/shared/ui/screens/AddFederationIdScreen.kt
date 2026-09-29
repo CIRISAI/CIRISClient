@@ -8,20 +8,19 @@ import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.AnnounceDecisionCard
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.viewmodels.FederationIdentitySetupState
 import ai.ciris.mobile.shared.viewmodels.NodeSwitcherViewModel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +31,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -62,12 +60,17 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  *     [FederationIdentitySetupState.REJECTED_GENERIC_LABELS] — to avoid the
  *     `ciris-client-user` identity collision). This names + keys the "one canonical
  *     you".
- *  2. The SAME first-class announce decision as first-run ([AnnounceDecisionCard]):
- *     announcing is what unlocks sending reasoning traces + joining communities. The
- *     trace opt-in is gated inside that card (only enabled when announce is ON).
- *  3. Confirm → run the upgrade (mint → re-root → optional announce → optional trace
- *     opt-in). On success the screen leaves via [onDone]; the success/soft-failure
- *     notice is surfaced by the node-management surface.
+ *  2. The SAME first-class announce decision as first-run ([AnnounceDecisionCard]),
+ *     WITHOUT the trace opt-in: that write is the Data card's (CSD-039), read back
+ *     there, and this screen points at it rather than issuing a second write it
+ *     cannot read back (CSD-086 §3).
+ *  3. Confirm — three facts, two buttons (CC: re-rooting the node on a new
+ *     fed-ID is a supersede, not an undo) — then run the upgrade (mint → re-root →
+ *     optional announce). On success the screen leaves via [onDone]; the
+ *     success/soft-failure notice is surfaced by the node-management surface.
+ *
+ * A device that already HAS a fed-ID ([NodeSwitcherViewModel.ownerHasFedId] true)
+ * is told so and offered no form: a second mint would collide.
  *
  * The app performs NO crypto — the local node mints + signs everything.
  */
@@ -93,11 +96,13 @@ fun AddFederationIdScreen(
 ) {
     val inProgress by viewModel.upgradeInProgress.collectAsState()
     val error by viewModel.error.collectAsState()
+    val ownerHasFedId by viewModel.ownerHasFedId.collectAsState()
 
     var label by remember { mutableStateOf("") }
     var announce by remember { mutableStateOf(false) }
-    var traceOptIn by remember { mutableStateOf(false) }
     var submitted by remember { mutableStateOf(false) }
+    // The confirm is open: three facts before a supersede nobody can undo here.
+    var confirming by remember { mutableStateOf(false) }
 
     // Label validation mirrors the first-run wizard: a name is REQUIRED and must not
     // be a generic default (those collide identities across devices).
@@ -105,7 +110,8 @@ fun AddFederationIdScreen(
     val labelIsGeneric = labelTrimmed.lowercase() in
         FederationIdentitySetupState.REJECTED_GENERIC_LABELS
     val labelHasError = labelTrimmed.isEmpty() || labelIsGeneric
-    val canConfirm = !labelHasError && !inProgress
+    val alreadyHasFedId = ownerHasFedId == true
+    val canConfirm = !labelHasError && !inProgress && !alreadyHasFedId
 
     // Test automation: route /input requests into the label field (the pattern
     // SetupScreen/LoginScreen/InteractScreen use — without this, /input on
@@ -165,6 +171,26 @@ fun AddFederationIdScreen(
                 .testableVerticalScroll(),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            // ── The EMPTY state: nothing to add ──────────────────────────────
+            // Login hides the door when a fed-ID exists; the ManageNodes entry
+            // and the catch-up effect do not, and a form here would mint a
+            // second identity for a device that has one (CSD-086 §2).
+            if (alreadyHasFedId) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.fillMaxWidth().testable("txt_fedid_absent"),
+                ) {
+                    Text(
+                        text = localizedString("mobile.add_fedid_already"),
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(12.dp),
+                    )
+                }
+                return@Column
+            }
+
             Text(
                 text = l10nOr(
                     "mobile.add_fedid_intro",
@@ -221,24 +247,28 @@ fun AddFederationIdScreen(
             )
 
             // ── Step 2: the first-class announce decision (reused) ───────────
-            // Turning announce OFF also clears the trace opt-in so state stays
-            // consistent (un-announced nodes never federate their traces).
+            // No trace opt-in here: that write belongs to the Data card, where
+            // it is read back. Announcing is what makes it possible at all.
             AnnounceDecisionCard(
                 announce = announce,
-                onAnnounceChange = { on ->
-                    announce = on
-                    if (!on) traceOptIn = false
-                },
-                traceOptIn = traceOptIn,
-                onTraceOptInChange = { traceOptIn = it },
+                onAnnounceChange = { on -> announce = on },
+                traceOptIn = false,
+                onTraceOptInChange = {},
+                showTraceOptIn = false,
+            )
+            Text(
+                text = localizedString("mobile.add_fedid_traces_elsewhere"),
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("txt_fedid_traces_elsewhere"),
             )
 
-            // ── Errors ───────────────────────────────────────────────────────
+            // ── Errors: the node's own refusal, and the button re-armed ──────
             error?.let { msg ->
                 Surface(
                     color = MaterialTheme.colorScheme.errorContainer,
                     shape = RoundedCornerShape(8.dp),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testable("txt_fedid_error", msg),
                 ) {
                     Text(
                         text = msg,
@@ -250,31 +280,54 @@ fun AddFederationIdScreen(
             }
 
             // ── Step 3: confirm ──────────────────────────────────────────────
-            // Shared by the Button and the test-automation click registry
-            // (testableClickable), mirroring the SetupScreen btn_next pattern.
-            val onConfirm = {
-                if (canConfirm) {
-                    submitted = true
-                    viewModel.upgradeToFedId(
-                        label = labelTrimmed,
-                        announce = announce,
-                        traceOptIn = traceOptIn,
-                    )
-                }
-            }
+            // The button opens the three-fact confirm; the guard lives inside
+            // the lambda so a /click on a disabled button is a no-op.
+            val onReview = { if (canConfirm) confirming = true }
             Button(
-                onClick = onConfirm,
+                onClick = onReview,
                 enabled = canConfirm,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .testableClickable("btn_add_fedid_confirm") { onConfirm() },
+                    .testableClickable("btn_add_fedid_confirm") { onReview() },
             ) {
                 if (inProgress) {
-                    CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(16.dp).testable("txt_fedid_progress"),
+                        strokeWidth = 2.dp,
+                    )
                     Spacer(Modifier.width(8.dp))
                 }
                 Text(l10nOr("mobile.add_fedid_confirm", "Add Federation ID"))
             }
         }
+    }
+
+    if (confirming) {
+        ConfirmSheet(
+            title = localizedString("mobile.add_fedid_sheet_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.add_fedid_fact_who"), labelTrimmed, mono = true),
+                ConfirmFact(
+                    localizedString("mobile.add_fedid_fact_changes"),
+                    localizedString(
+                        if (announce) "mobile.add_fedid_fact_changes_announced" else "mobile.add_fedid_fact_changes_private",
+                    ),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.add_fedid_fact_signs"),
+                    localizedString("mobile.add_fedid_fact_signs_value"),
+                ),
+            ),
+            confirmLabel = l10nOr("mobile.add_fedid_confirm", "Add Federation ID"),
+            onConfirm = {
+                confirming = false
+                if (canConfirm) {
+                    submitted = true
+                    viewModel.upgradeToFedId(label = labelTrimmed, announce = announce)
+                }
+            },
+            onDismiss = { confirming = false },
+            tagPrefix = "fedid",
+        )
     }
 }

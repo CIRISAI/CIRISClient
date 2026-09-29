@@ -41,6 +41,20 @@ class AccordInvocationKindTest {
     }
 
     @Test
+    fun theBindingNoteHasFourArmsAndNoNotifyFallthrough() {
+        // The binding sentence under an invocation card branched on three values
+        // with `else -> notify`, so a resumption (and an unknown kind) read as a
+        // single-holder broadcast — the pairing CC 4.2.1.2 forbids by name.
+        assertEquals("mobile.accord_binding_constitutional", invocationBindingKey(InvocationKind.CONSTITUTIONAL))
+        assertEquals("mobile.accord_binding_drill", invocationBindingKey(InvocationKind.DRILL))
+        assertEquals("mobile.accord_binding_notify", invocationBindingKey(InvocationKind.NOTIFY))
+        assertEquals("mobile.accord_binding_reactivated", invocationBindingKey(InvocationKind.LIFECYCLE_ACTIVE))
+        assertEquals("mobile.accord_binding_unknown", invocationBindingKey(InvocationKind.UNKNOWN))
+        val keys = InvocationKind.entries.map { invocationBindingKey(it) }
+        assertEquals(keys.size, keys.toSet().size, "two kinds share a binding note: $keys")
+    }
+
+    @Test
     fun everyKindHasADistinctBadge() {
         val keys = InvocationKind.entries.map { invocationBadgeKey(it) }
         assertEquals(keys.size, keys.toSet().size, "two kinds share a badge: $keys")

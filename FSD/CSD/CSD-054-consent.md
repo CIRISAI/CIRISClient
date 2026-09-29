@@ -1,10 +1,11 @@
 # CSD-054 — Consent (the subject's half, offered on a host that does not serve it)
 
 **CSD**: CSD-054 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, Rules tab
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-054-partnership-queue.yaml` (§7); the not-on-this-node
+state and the stream-change confirm are written in §4 and not yet staged as a flow
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -19,24 +20,37 @@ over it … `subject_key_ids` adds the missing half — subject authority."* CC
 about the substrate's continued processing of content where that subject
 appears."*
 
-**One defect defines this card, and it is the flattering kind.** Every route the
-screen calls is served by the **agent** and by nothing else
+**One defect used to define this card, and it was the flattering kind.** Every
+route the screen calls is served by the **agent** and by nothing else
 (`CIRISAgent routes/consent.py:162, 237, 309, 353, 379, 419`); CIRISServer has
 zero axum registrations for `/v1/consent/*` — its own contract note records the
 node's equivalent as a different, single endpoint, `POST /v1/auth/consent`
 (`FSD/QA_AGAINST_RUST.md:38`). The card is placed in all five circles with no
 `agentOnly` flag (`CirclesNav.kt`, `Placement(NavSurface.Consent, Tab.RULES,
-ALL)`), and `getConsentStatus` has no `nodeSkip` guard
-(`CIRISApiClient.kt:9110`). So on a node build every call 404s — and
-`ConsentViewModel.kt:121-127` catches a 404 and logs *"No consent record found
-(404), normal for new users"*, returning `null`.
+ALL)`). So on a node build every call 404s — and `ConsentViewModel` used to
+catch the 404 and log *"No consent record found (404), normal for new users"*,
+returning `null`: **a node that cannot answer and a person who has never
+granted anything rendered the same screen.** That was CSD/3 §2.2's prohibition
+stated exactly, with "you have no consent on file" as the flattery.
 
-**A node that cannot answer and a person who has never granted anything render
-the same screen.** That is CSD/3 §2.2's prohibition stated exactly, and CSD-003's
-principle — a failed read shown as an empty one tells the user a different and
-more flattering thing than the truth — with "you have no consent on file" as the
-flattery. CSD-005 already has the honest shape for this: a node-too-old sentence
-naming the version, in the error tone.
+**Closed.** The 404 is no longer swallowed: the agent answers "no record" with
+`200 + has_consent=false`, so a 404 means *this host has no consent route*, and
+`ConsentViewModel.loadConsentData` now fails the load with a typed
+`ReadFailure` that the screen draws ALONE (`ReadFailureBlock`, tag
+`consent_not_on_this_node` for the absent route, `consent_error` for a failed
+read) — nothing below it may render, because "no consent record" is a claim
+about the person and nobody asked. The true empty (`consent_none`) is reached
+only when the agent answers and `hasConsent` is false.
+
+**A second defect of the same class, closed 2026-09-28.** The model is
+app-scoped and outlives the session, and the screen's spinner shows only while
+the model holds NO record — so after a logout the next signer-in read the
+previous owner's stream, expiry, audit trail and partnership queue for the whole
+reload. `ConsentViewModel.resetSession()` is now called from CIRISApp's one
+token effect, keyed and conditioned on `consentSessionAuthenticated(token,
+isHAAddonMode)` exactly as Manage Consent's reset is (CSD-053 §2.1, PR #116):
+every way out of a session resets it, and a Home Assistant add-on session — the
+token null by design — does not. `ConsentSessionTest` pins both.
 
 ## 2. Surface (what)
 
@@ -57,7 +71,7 @@ fields:
     type: "enum[granted,revoked,expired]"
     example: "granted"
     renders: "Your consent — granted, with when it was granted and when it expires"
-    tag: "proposed:card_consent_status"
+    tag: card_consent_status
   - ceg: "consent:{kind}"
     bind: {kind: stream}
     use: display-only
@@ -80,10 +94,17 @@ fields:
     tag: "proposed:list_consent_audit"
   - ceg: x_private:consent_impact
     use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "What your consent made possible — shown only for partnered and anonymous"
+    type: "list[int]"
+    example: [412, 7, 3]
+    renders: "What your consent made possible — interactions, patterns contributed, users helped, and a score; shown only for partnered and anonymous (`GET /v1/consent/impact`, live on the agent)"
     tag: "proposed:card_consent_impact"
+  - ceg: "consent:{kind}"
+    bind: {kind: stream}
+    use: display-only
+    type: "list[string]"
+    example: ["You — your consent record with this agent (currently PARTNERED).", "Your partnership ends…", "Nobody…"]
+    renders: "the three-fact confirm before a stream change — who (you, and the stream you are on), what changes (leaving PARTNERED: identity severed at once, what it learned fades over 90 days, anonymised safety patterns may be kept — NOT an undo; to TEMPORARY: 14-day auto-forget; to ANONYMOUS: identity removed), who signs (nobody: the agent files an unsigned record under your sign-in id, CIRISServer#423). sheet_stream, stream_fact_1..3, btn_stream_confirm, btn_stream_cancel"
+    tag: sheet_stream
   # §7 — the partnership queue: requests waiting on this agent's answer.
   - ceg: "consent:{kind}"
     bind: {kind: partnership_grant}
@@ -145,28 +166,35 @@ families.** `consent:state:{granted|revoked|expired}`, `consent:stream:{kind}`
 and `consent:partnership_grant` are in the catalogue. The audit trail and the
 impact report are derived views, not wire dimensions, so they are `x_private:`.
 
-**Four tags exist on a 699-line screen**: `btn_consent_back`,
-`btn_consent_refresh`, `btn_stream_cancel`, `btn_stream_confirm`. Every value the
-screen renders is untagged, which is why every `shows:` row above is `proposed:`
-and why this CSD cannot advance past `sketched` on client work alone.
+**The tags that exist.** Controls: `btn_consent_back`, `btn_consent_refresh`,
+`btn_stream_{id}` (one per stream card), `btn_stream_confirm`,
+`btn_stream_cancel`. Values and states: `card_consent_status`, `consent_none`,
+`consent_loading`, `consent_not_on_this_node` / `consent_error`, the confirm's
+`sheet_stream` + `stream_fact_1..3`, and the §7 partnership tags. Still
+`proposed:`: the stream rows' values, the partnership-pending line, the audit
+list and the impact card — real pixels, untagged. The stage moved to `building`
+on the states and the contracts (every §3 row is live or names its blocker),
+not on those four; `testable` waits on them and on a release carrying the tags.
 
 ```yaml csd:states
-populated: {tag: "proposed:card_consent_status", renders: "the current stream, its dates, and the stream rows"}
-empty:     {tag: "proposed:text_consent_none", renders: "You have not set a consent preference yet. — a true empty, reached when the agent answers and hasConsent is false"}
-loading:   {tag: "proposed:consent_loading", renders: "the frame with a progress affordance and NO sentence"}
-error:     {tag: "proposed:consent_unsupported", renders: "This node doesn't hold your consent record. Consent lives with an agent, and this is a node running {version}. — the danger tone, the version named, NEVER the empty sentence"}
+populated: {tag: card_consent_status, renders: "the current stream, its dates, and the stream rows"}
+empty:     {tag: consent_none, renders: "Consent Record Not Yet Created — a true empty, reached ONLY when the agent answers and hasConsent is false (mobile.consent_not_created)"}
+loading:   {tag: consent_loading, renders: "the frame with a progress affordance and NO sentence; shown only while the model holds no record and no failure"}
+error:     {tag: consent_not_on_this_node, renders: "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one. — drawn ALONE, nothing below it; a failed read that is not an absent route is consent_error (ReadFailureBlock, tagPrefix consent). Neither is ever the empty sentence"}
 ```
 
-**The `error` row is the whole point of this file.** It does not exist yet, and
-the sentence is written here so the PR that adds it has a text to add rather than
-a decision to make. It follows `contacts_unsupported` (CSD-005 §2) verbatim in
-shape: name the host, name the version, say which component owns the thing.
+**The `error` row was the whole point of this file, and it exists now.** It
+follows `contacts_unsupported` (CSD-005 §2) in shape — name the host, say which
+component owns the thing — without naming a version, because the route is not
+"too old" on a node: no node version serves it. `ReadFailure.of` classifies a
+served 404 as `NotOnThisNode` and everything else as `Failed`, so the two tags
+cannot collapse into one rendering.
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| consent status | `GET /v1/consent/status` | **CIRISAgent** (`routes/consent.py:162`) | live on the agent; **404 on a node**, and swallowed as empty |
+| consent status | `GET /v1/consent/status` | **CIRISAgent** (`routes/consent.py:162`) | live on the agent; **404 on a node** — no longer swallowed: `ReadFailure.NotOnThisNode`, drawn alone as `consent_not_on_this_node` |
 | available streams | `GET /v1/consent/streams` | CIRISAgent (`:379`) | same |
 | change stream | `POST /v1/consent/grant` | CIRISAgent (`:237`) | same |
 | impact report | `GET /v1/consent/impact` | CIRISAgent (`:309`) | same; already `try`-guarded to null |
@@ -187,7 +215,43 @@ currently answering it wrong.
 
 ## 4. Flow (how)
 
-Unwritten. Four real tags, all controls.
+**On a node without an agent** — the run that matters, because it is the only
+red path this card has:
+
+```yaml
+expect:
+  state: error
+  visible: [consent_not_on_this_node]
+  absent: [consent_none, card_consent_status, btn_stream_temporary]
+```
+
+**On an agent build**, signed in. The record, or the true empty:
+
+```yaml
+expect:
+  visible: [card_consent_status]
+  absent: [consent_not_on_this_node, consent_error]
+```
+
+**Changing the stream is confirmed with three facts, and leaving PARTNERED
+says it is not an undo.** Click `btn_stream_temporary` (or `btn_stream_anonymous`):
+
+```yaml
+expect:
+  visible: [sheet_stream, stream_fact_1, stream_fact_2, stream_fact_3, btn_stream_confirm, btn_stream_cancel]
+  text: {stream_fact_3: "Nobody. The agent files the change as an unsigned record under your sign-in id, not under your key (CIRISServer#423)."}
+```
+
+When the current stream is `partnered`, `stream_fact_2` reads the decay: *"Your
+partnership ends and your stream becomes {stream}. This is not an undo: the
+agent severs your identity at once and lets what it learned from you fade over
+90 days; anonymised safety patterns may be kept."* (`routes/consent.py:293-297`
+— the same fact `partnership_options_revocation` carries in §7). Click
+`btn_stream_cancel`: nothing is sent. `btn_stream_confirm` sends
+`POST /v1/consent/grant` and the card re-reads.
+
+`btn_stream_partnered` does not open the sheet: it files a request
+(`requestPartnership`), which is reversible and waits on the agent (§7).
 
 ## 5. QA plan
 
@@ -201,12 +265,13 @@ a check whose red path has never run.
 * Whether `hasConsent: false` from the agent and a 404 from a node are told apart.
   They are not, today; that is the defect, and asserting it green would pin it.
 
-**The recommendation, so it is on the record.** Either mark the placement
-`agentOnly = true` — which is what `CirclesNav`'s own flag is for and what
-`Interact` already does in Chats — or add the `consent_unsupported` state and
-keep it everywhere. Marking it `agentOnly` is the smaller change and the worse
-one: a person's consent record is theirs whether or not a brain is attached, and
-hiding the card on a node says the opposite. Add the state.
+**The decision, so it is on the record.** The two options were to mark the
+placement `agentOnly = true` — what `CirclesNav`'s own flag is for and what
+`Interact` does in Chats — or to add the error state and keep the card
+everywhere. Marking it `agentOnly` was the smaller change and the worse one: a
+person's consent record is theirs whether or not a brain is attached, and hiding
+the card on a node says the opposite. The state was added
+(`consent_not_on_this_node`); the placement is unchanged.
 
 **And it should be one card, not five.** A consent grant is about the person, not
 about a circle: `cohort_scope` and `subject_key_ids` are *independent* envelope

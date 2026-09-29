@@ -98,6 +98,46 @@ private fun presentationOfMessage(entry: CegChatMessage): Presentation = when {
 }
 
 /**
+ * Every word a row's `unopened_reason` can carry — `contacts_chat.rs::UNOPENED_REASONS`
+ * (0.5.218, CIRISServer#602), verbatim. Each has a sentence of its own in the
+ * bundle (`mobile.chat_unopened_<token>`); a token this list does not know lands
+ * on `mobile.chat_unopened_other`, WITH its detail, so an arm edge adds later
+ * reaches a person as a sentence and never as a bare token.
+ */
+val UNOPENED_TOKENS: List<String> = listOf(
+    "not_fetched", "not_granted", "evicted", "seal_mismatch", "malformed_row", "not_text", "substrate",
+)
+
+/**
+ * How a row that did not open reads: a localization [key] chosen by the token,
+ * and the substrate's [detail] beneath it. A message that cannot be read is NOT
+ * one that says nothing, so an empty bubble is never the rendering.
+ */
+data class UnopenedText(val token: String, val key: String, val detail: String?)
+
+/**
+ * The unopened reading of [entry], or null when its body opened.
+ *
+ * Reads both wire shapes: the 0.5.218 token with `unopened_detail` beside it,
+ * and the 0.5.217 `Display` text (`"not_fetched: <sentence>"`), where the token
+ * is what precedes the colon and the sentence is the only detail there is.
+ */
+fun unopenedText(entry: CegChatMessage): UnopenedText? {
+    if (entry.body.isNotBlank()) return null
+    val raw = entry.unopenedReason?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+    val colon = raw.indexOf(':')
+    val token = (if (colon > 0) raw.substring(0, colon) else raw).trim()
+    val known = token in UNOPENED_TOKENS
+    val detail = entry.unopenedDetail?.takeIf { it.isNotBlank() }
+        ?: (if (colon > 0) raw.substring(colon + 1).trim().takeIf { it.isNotEmpty() } else null)
+        // The oldest shape: a bare sentence, no token, no detail. The sentence
+        // is the only thing there is to show, so it is the detail.
+        ?: raw.takeIf { !known }
+    val key = if (known) "mobile.chat_unopened_$token" else "mobile.chat_unopened_other"
+    return UnopenedText(token, key, detail)
+}
+
+/**
  * The text to show for an entry, given a localizer.
  *
  * [CegChatMessage.messageId] is a localization key and [CegChatMessage.body]
@@ -107,6 +147,11 @@ private fun presentationOfMessage(entry: CegChatMessage): Presentation = when {
  *
  * This is the same lesson as CIRISClient#34, where a raw dotted key reached a
  * user because a cascade returned early.
+ *
+ * An entry whose body did NOT open goes through [unopenedText]: the token
+ * picks a bundle key (localized through the same [localize]), and the
+ * substrate's detail is the fallback — never the token itself, which since
+ * 0.5.218 is a bare word like `not_granted` (CIRISServer#602).
  */
 fun chatEntryText(entry: CegChatMessage, localize: (String) -> String?): String {
     val id = entry.messageId
@@ -117,5 +162,9 @@ fun chatEntryText(entry: CegChatMessage, localize: (String) -> String?): String 
         // reached a user's screen.
         if (!translated.isNullOrBlank() && translated != id) return translated
     }
-    return entry.body.ifBlank { entry.unopenedReason ?: "" }
+    if (entry.body.isNotBlank()) return entry.body
+    val locked = unopenedText(entry) ?: return ""
+    val sentence = localize(locked.key)
+    if (!sentence.isNullOrBlank() && sentence != locked.key) return sentence
+    return locked.detail ?: ""
 }

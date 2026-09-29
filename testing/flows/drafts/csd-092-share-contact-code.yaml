@@ -1,0 +1,100 @@
+csd: CSD-092
+flow: csd_092_share_contact_code
+title: Share my contact code — a code that reaches you, or the honest reason it would not
+description: >-
+  CSD-092 §4, driven. The card is built (PR #113) and the route is readable on
+  CIRISServer integ/0.5.218 (src/self_devices.rs:611), unreleased. On the
+  released line GET /v1/self/contact-code is a bare 404, so the one state that
+  runs on the matrix today is the version fact; the populated, empty and
+  refusal states are asserted for the day 0.5.218 ships and are optional until
+  then. Every call goes to the NODE URL (contactsNodeUrl), never the agent's.
+# Floor: `unreleased` — the route ships with ciris-server 0.5.218. The tags
+# (card_contact_code, qr_contact_code, text_contact_code, btn_contact_code_copy,
+# opt_contact_code_nodes_*, row_contact_code_node_*, text_contact_code_included,
+# text_contact_code_private_note, contact_code_refusal,
+# contact_code_unreachable, btn_contact_code_make_reachable,
+# text_contact_code_reachable_status, contact_code_loading, contact_code_error,
+# btn_contact_code_close) are literals in ui/screens/PeopleSupport.kt at 0.5.225.
+client: unreleased
+
+steps:
+  - step_id: open_the_card
+    title: The card opens from the People header
+    requires:
+      screen: Contacts
+    do:
+      - click: btn_contact_code_open
+    expect:
+      screen: Contacts
+
+  - step_id: a_node_older_than_0_5_218_says_so
+    title: On a node without the route, the card names the version it needs
+    description: >-
+      The released line today. A bare 404 (no reason id) is a version fact, not
+      a failure, and no QR is drawn for a code that does not exist.
+    optional_step: true
+    requires:
+      visible: [contact_code_error]
+    expect:
+      state: error
+      visible: [contact_code_error]
+      absent: [qr_contact_code, card_contact_code]
+      text: {contact_code_error: "0.5.218 or newer"}
+
+  - step_id: a_reachable_code
+    title: With an announced device, the card shows the QR, the code, Copy and the picker
+    optional_step: true
+    requires:
+      visible: [card_contact_code]
+    expect:
+      state: populated
+      visible: [card_contact_code, qr_contact_code, text_contact_code, btn_contact_code_copy, text_contact_code_included, text_contact_code_private_note, opt_contact_code_nodes_all, opt_contact_code_nodes_list, opt_contact_code_nodes_none]
+      matches: {text_contact_code: "^CIRIS-V3-[A-Z2-7-]+$"}
+      count: {of: "row_contact_code_node_*", min: 1}
+
+  - step_id: no_devices_changes_the_code_and_the_sentence
+    title: Choosing "No devices" mints a different code and the included sentence follows
+    optional_step: true
+    requires:
+      visible: [card_contact_code]
+    do:
+      - click: opt_contact_code_nodes_none
+    expect:
+      visible: [text_contact_code, text_contact_code_included]
+      matches: {text_contact_code: "^CIRIS-V3-[A-Z2-7-]+$"}
+
+  - step_id: nothing_announced_means_no_qr
+    title: With no announced device the card declines to show a code that reaches nobody
+    description: >-
+      `empty` is a decision (CSD-092 §2): the node would mint a no-device code
+      that resolves through a directory that does not list this person. The
+      card says so and offers the announce instead.
+    optional_step: true
+    requires:
+      visible: [contact_code_unreachable]
+    expect:
+      state: empty
+      visible: [contact_code_unreachable, btn_contact_code_make_reachable]
+      absent: [qr_contact_code]
+      text: {contact_code_unreachable: "none of your devices is reachable"}
+
+  - step_id: a_stale_pick_is_refused_by_id
+    title: A device made private after the card loaded is refused by name
+    description: >-
+      The picker never lists a private device, so this only arrives when the
+      list went stale; in CI a stub forces it. The refusal renders by id
+      (self.node_not_announced) and the card reloads its devices.
+    optional_step: true
+    requires:
+      visible: [contact_code_refusal]
+    expect:
+      visible: [contact_code_refusal]
+      text: {contact_code_refusal: "isn't reachable"}
+
+  - step_id: close_the_card
+    title: The card closes and People is unchanged beneath it
+    do:
+      - click: btn_contact_code_close
+    expect:
+      screen: Contacts
+      visible: [contacts_list]

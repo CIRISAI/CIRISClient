@@ -1,9 +1,15 @@
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
-import ai.ciris.mobile.shared.localization.LocalizationHelper
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
+import ai.ciris.mobile.shared.ui.primitives.CirisTextField
+import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
+import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
+import ai.ciris.mobile.shared.ui.primitives.FieldRow
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.viewmodels.DataManagementViewModel
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,9 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Refresh
 import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
@@ -29,11 +32,26 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
- * Data Management screen for DSAR self-service.
+ * Data — My things › Everything I shared › Data (CSD-039).
  *
- * Provides two main functions:
- * 1. Delete Local Account & Data - Factory reset of all local data
- * 2. Delete Opt-In Traces Sent - Request deletion of CIRISLens traces (GDPR Art. 17)
+ * The person's data rights, self-served:
+ *  1. Sharing outward (the accord traces opt-in, `PUT /v1/my-data/accord-settings`)
+ *     — THIS card owns that write; Manage Consent and Add Federation ID point here.
+ *  2. Ask CIRISLens to delete the traces already sent — which this card reports
+ *     as REQUESTED and never as done: the agent returns no SLA and no completion
+ *     (CIRISAgent#1212).
+ *  3. Erase an agent's traces on this node, and check a deletion receipt
+ *     (`DataErasureSections.kt`).
+ *  4. Reset the account (key preserved) and wipe the signing key (wallet lost).
+ *
+ * Every irreversible act here is behind a three-fact confirm (who, what
+ * changes, who authorises) — and the third fact is honest about who signs:
+ * for the node's own acts it is the owner session, not a signature of yours.
+ *
+ * A read that failed is said, persistently and tagged (`data_error`), never as
+ * a snackbar with a timer on it; and on a build without an agent the sharing
+ * block says the agent is not here (`data_accord_not_on_this_node`) rather
+ * than offering an "Enable" that has no host.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,12 +60,13 @@ fun DataManagementScreen(
     onNavigateBack: () -> Unit,
     onResetSetup: () -> Unit,
     modifier: Modifier = Modifier,
-    /** An agent is attached: the receipt section shows, and the trace id pre-fills (CSD-039 §2). */
+    /** An agent is attached: the sharing and receipt sections show, and the trace id pre-fills (CSD-039 §2). */
     hasAgent: Boolean = false,
 ) {
     val isLoading by viewModel.isLoading.collectAsState()
     val lensIdentifier by viewModel.lensIdentifier.collectAsState()
     val accordSettings by viewModel.accordSettings.collectAsState()
+    val accordFailure by viewModel.accordFailure.collectAsState()
     val communityPeer by viewModel.communityPeer.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
     val isDeletingLensTraces by viewModel.isDeletingLensTraces.collectAsState()
@@ -62,8 +81,6 @@ fun DataManagementScreen(
     var showWipeSigningKeyDialog by remember { mutableStateOf(false) }
     var showDeleteTracesDialog by remember { mutableStateOf(false) }
     var deletionReason by remember { mutableStateOf("") }
-
-    val snackbarHostState = remember { SnackbarHostState() }
 
     // Load data when screen is first shown
     LaunchedEffect(Unit) {
@@ -86,185 +103,80 @@ fun DataManagementScreen(
         }
     }
 
-    // Show errors in snackbar
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            viewModel.clearError()
-        }
-    }
-
-    // Show deletion result
-    LaunchedEffect(lensDeletionResult) {
-        lensDeletionResult?.let { result ->
-            val message = if (result.success) {
-                LocalizationHelper.getString("mobile.data_deletion_success")
-            } else {
-                "${LocalizationHelper.getString("mobile.data_deletion_failed")}: ${result.message}"
-            }
-            snackbarHostState.showSnackbar(message)
-            viewModel.clearDeletionResult()
-        }
-    }
-
-    // Reset account confirmation dialog (preserves signing key)
+    // ── Reset account: three facts, two buttons (tagPrefix "reset" keeps
+    // btn_reset_confirm / btn_reset_cancel). The node does it on the owner
+    // session; nothing is signed as the person.
     if (showResetDialog) {
-        AlertDialog(
-            onDismissRequest = { showResetDialog = false },
-            title = { Text(localizedString("mobile.data_reset_confirm")) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(localizedString("mobile.data_reset_confirm_body"))
-                    Text(
-                        text = localizedString("mobile.data_reset_wallet_preserved"),
-                        style = MaterialTheme.typography.bodySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
+        ConfirmSheet(
+            title = localizedString("mobile.data_reset_confirm"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.data_fact_who"), localizedString("mobile.data_reset_fact_who")),
+                ConfirmFact(
+                    localizedString("mobile.data_fact_changes"),
+                    localizedString("mobile.data_reset_confirm_body") + " " + localizedString("mobile.data_reset_wallet_preserved"),
+                ),
+                ConfirmFact(localizedString("mobile.data_fact_authorised"), localizedString("mobile.data_fact_owner_session")),
+            ),
+            confirmLabel = localizedString("mobile.data_reset_account"),
+            onConfirm = {
+                showResetDialog = false
+                viewModel.factoryReset()
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showResetDialog = false
-                        viewModel.factoryReset()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.testableClickable("btn_reset_confirm") {
-                        showResetDialog = false
-                        viewModel.factoryReset()
-                    }
-                ) {
-                    Text(localizedString("mobile.data_reset_account"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showResetDialog = false },
-                    modifier = Modifier.testableClickable("btn_reset_cancel") {
-                        showResetDialog = false
-                    }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
+            onDismiss = { showResetDialog = false },
+            destructive = true,
+            tagPrefix = "reset",
         )
     }
 
-    // DANGER: Wipe signing key confirmation dialog (destroys wallet access)
+    // ── Wipe the signing key: the loudest one. tagPrefix "wipe_key" keeps
+    // btn_wipe_key_confirm / btn_wipe_key_cancel.
     if (showWipeSigningKeyDialog) {
-        AlertDialog(
-            onDismissRequest = { showWipeSigningKeyDialog = false },
-            title = {
-                Text(
-                    localizedString("mobile.data_wipe_key_confirm"),
-                    color = MaterialTheme.colorScheme.error
-                )
+        ConfirmSheet(
+            title = localizedString("mobile.data_wipe_key_confirm"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.data_fact_who"), localizedString("mobile.data_wipe_key_fact_who")),
+                ConfirmFact(
+                    localizedString("mobile.data_fact_changes"),
+                    localizedString("mobile.data_wipe_key_warning") + " " + localizedString("mobile.data_wipe_key_funds_lost"),
+                ),
+                ConfirmFact(localizedString("mobile.data_fact_authorised"), localizedString("mobile.data_fact_owner_session")),
+            ),
+            confirmLabel = localizedString("mobile.data_wipe_key_button"),
+            onConfirm = {
+                showWipeSigningKeyDialog = false
+                viewModel.wipeSigningKey()
             },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = localizedString("mobile.data_wipe_key_warning"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                    Text(localizedString("mobile.data_wipe_key_body"))
-                    Text(
-                        text = localizedString("mobile.data_wipe_key_funds_lost"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showWipeSigningKeyDialog = false
-                        viewModel.wipeSigningKey()
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.testableClickable("btn_wipe_key_confirm") {
-                        showWipeSigningKeyDialog = false
-                        viewModel.wipeSigningKey()
-                    }
-                ) {
-                    Text(localizedString("mobile.data_wipe_key_button"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showWipeSigningKeyDialog = false },
-                    modifier = Modifier.testableClickable("btn_wipe_key_cancel") {
-                        showWipeSigningKeyDialog = false
-                    }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
+            onDismiss = { showWipeSigningKeyDialog = false },
+            destructive = true,
+            tagPrefix = "wipe_key",
         )
     }
 
-    // Delete lens traces confirmation dialog
+    // ── Ask CIRISLens to delete the traces already sent. tagPrefix
+    // "delete_traces" keeps btn_delete_traces_confirm / btn_delete_traces_cancel.
+    // The reason is entered on the card (input_delete_traces_reason), not in
+    // the confirm: a confirm names facts, it does not collect them.
     if (showDeleteTracesDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteTracesDialog = false },
-            title = { Text(localizedString("mobile.data_delete_traces")) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        localizedString("mobile.data_delete_traces_body")
-                            .replace("{hash}", accordSettings?.agentIdHash ?: localizedString("mobile.common_loading"))
-                    )
-
-                    OutlinedTextField(
-                        value = deletionReason,
-                        onValueChange = { deletionReason = it },
-                        label = { Text(localizedString("mobile.data_reason")) },
-                        placeholder = { Text(localizedString("mobile.data_reason_placeholder")) },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 2
-                    )
-                }
+        ConfirmSheet(
+            title = localizedString("mobile.data_delete_traces"),
+            facts = listOf(
+                ConfirmFact(
+                    localizedString("mobile.data_fact_who"),
+                    localizedString("mobile.data_delete_traces_fact_who", "hash", accordSettings?.agentIdHash ?: NOT_READ),
+                    mono = true,
+                ),
+                ConfirmFact(localizedString("mobile.data_fact_changes"), localizedString("mobile.data_delete_traces_fact_changes")),
+                ConfirmFact(localizedString("mobile.data_fact_signs"), localizedString("mobile.data_delete_traces_fact_signs")),
+            ),
+            confirmLabel = localizedString("mobile.data_delete_traces_button"),
+            onConfirm = {
+                showDeleteTracesDialog = false
+                viewModel.deleteLensTraces(deletionReason.takeIf { it.isNotBlank() })
+                deletionReason = ""
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteTracesDialog = false
-                        viewModel.deleteLensTraces(deletionReason.takeIf { it.isNotBlank() })
-                        deletionReason = ""
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error
-                    ),
-                    modifier = Modifier.testableClickable("btn_delete_traces_confirm") {
-                        showDeleteTracesDialog = false
-                        viewModel.deleteLensTraces(deletionReason.takeIf { it.isNotBlank() })
-                        deletionReason = ""
-                    }
-                ) {
-                    Text(localizedString("mobile.data_delete_traces_button"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteTracesDialog = false
-                        deletionReason = ""
-                    },
-                    modifier = Modifier.testableClickable("btn_delete_traces_cancel") {
-                        showDeleteTracesDialog = false
-                        deletionReason = ""
-                    }
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            }
+            onDismiss = { showDeleteTracesDialog = false },
+            destructive = true,
+            tagPrefix = "delete_traces",
         )
     }
 
@@ -306,7 +218,6 @@ fun DataManagementScreen(
                 }
             )
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { paddingValues ->
 
         if (isLoading) {
@@ -335,6 +246,16 @@ fun DataManagementScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
+                // A read or an act that failed, said where it stays until the
+                // next refresh — an error with a timer on it is not a state.
+                errorMessage?.let {
+                    StateBlock(
+                        ListState.Error(title = localizedString("mobile.state_read_failed"), detail = it),
+                        tag = "data_error",
+                        inline = true,
+                    )
+                }
+
                 // Header
                 Text(
                     text = localizedString("mobile.data_rights_title"),
@@ -359,10 +280,15 @@ fun DataManagementScreen(
                 )
 
                 DeleteTracesCard(
+                    hasAgent = hasAgent,
                     accordSettings = accordSettings,
+                    accordFailure = accordFailure,
                     communityPeer = communityPeer,
                     isDeleting = isDeletingLensTraces,
                     isLoadingAdapter = isLoadingAdapter,
+                    deletionReason = deletionReason,
+                    onDeletionReasonChange = { deletionReason = it },
+                    deletionResult = lensDeletionResult,
                     onDeleteClick = { showDeleteTracesDialog = true },
                     onConsentChanged = { consent -> viewModel.updateAccordConsent(consent) },
                     onEnableAdapter = { viewModel.enableAccordMetrics() }
@@ -417,13 +343,22 @@ fun DataManagementScreen(
 /**
  * Card for managing CIRISLens trace collection and deletion.
  * Uses accordSettings as the source of truth (matches adapter state shown in Adapters screen).
+ *
+ * The accord routes are the AGENT's. Without an agent the card says so and
+ * offers nothing; with one, a failed read that is not "adapter not loaded"
+ * is said as a failure rather than drawn as the Enable button.
  */
 @Composable
 private fun DeleteTracesCard(
+    hasAgent: Boolean,
     accordSettings: ai.ciris.mobile.shared.api.AccordSettingsData?,
+    accordFailure: ReadFailure?,
     communityPeer: ai.ciris.mobile.shared.models.federation.LocalPeerState?,
     isDeleting: Boolean,
     isLoadingAdapter: Boolean,
+    deletionReason: String,
+    onDeletionReasonChange: (String) -> Unit,
+    deletionResult: ai.ciris.mobile.shared.api.LensDeletionResult?,
     onDeleteClick: () -> Unit,
     onConsentChanged: (Boolean) -> Unit,
     onEnableAdapter: () -> Unit
@@ -431,8 +366,6 @@ private fun DeleteTracesCard(
     val uriHandler = LocalUriHandler.current
     // accordSettings is the source of truth for consent (matches adapter state)
     val isConsentActive = accordSettings?.consentGiven == true
-    // Adapter is loaded if we have accord settings
-    val adapterLoaded = accordSettings != null
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -471,18 +404,29 @@ private fun DeleteTracesCard(
                 }
             )
 
+            // No agent: the sharing routes have no host here. Said, not "Enable".
+            if (!hasAgent) {
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                StateBlock(
+                    ListState.Empty(localizedString("mobile.data_accord_not_on_this_node")),
+                    tag = "data_accord_not_on_this_node",
+                    inline = true,
+                )
+                return@Column
+            }
+
             // Adapter-specific controls - only show when adapter is loaded
             accordSettings?.let { settings ->
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
 
                 // Status info
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    InfoRow(localizedString("mobile.data_agent_hash_label"), settings.agentIdHash)
-                    InfoRow(localizedString("mobile.data_events_sent"), settings.eventsSent.toString())
+                    InfoRow(localizedString("mobile.data_agent_hash_label"), settings.agentIdHash, "data_row_lens_identifier")
+                    InfoRow(localizedString("mobile.data_events_sent"), settings.eventsSent.toString(), "data_row_events_sent")
                     if (settings.eventsReceived > 0 || settings.eventsQueued > 0) {
                         InfoRow(localizedString("mobile.data_events_captured"), settings.eventsReceived.toString())
                         if (settings.eventsQueued > 0) {
-                            InfoRow(localizedString("mobile.data_events_queued"), settings.eventsQueued.toString())
+                            InfoRow(localizedString("mobile.data_events_queued"), settings.eventsQueued.toString(), "data_row_events_queued")
                         }
                     }
                     settings.traceLevel?.let { level ->
@@ -555,6 +499,14 @@ private fun DeleteTracesCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
 
+                CirisTextField(
+                    tag = "input_delete_traces_reason",
+                    value = deletionReason,
+                    onValueChange = onDeletionReasonChange,
+                    placeholder = localizedString("mobile.data_reason_placeholder"),
+                    enabled = !isDeleting,
+                )
+
                 Button(
                     onClick = onDeleteClick,
                     enabled = !isDeleting,
@@ -578,41 +530,94 @@ private fun DeleteTracesCard(
                         else localizedString("mobile.data_delete_traces_revoke")
                     )
                 }
+
+                // What the agent said to the deletion request. REQUESTED, never
+                // done: no SLA and no completion come back (CIRISAgent#1212), so
+                // "requested" is the most this card may say, and it stays on
+                // the card rather than vanishing from a snackbar.
+                deletionResult?.let { LensDeletionOutcome(it) }
             }
 
-            // Adapter not loaded - show enable button
-            if (!adapterLoaded) {
+            // Adapter not loaded - show enable button, and ONLY on the affirmative
+            // adapter-not-loaded answer. A read that failed (including one that
+            // failed before the accord route was asked) is said; a read not
+            // made yet offers nothing (accordOfferOf, Codex PR #126).
+            val offer = ai.ciris.mobile.shared.viewmodels.accordOfferOf(accordSettings, accordFailure)
+            if (offer !is ai.ciris.mobile.shared.viewmodels.AccordOffer.Loaded &&
+                offer !is ai.ciris.mobile.shared.viewmodels.AccordOffer.Unread
+            ) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-
-                Button(
-                    onClick = onEnableAdapter,
-                    enabled = !isLoadingAdapter,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.fillMaxWidth().testableClickable("btn_enable_accord") {
-                        if (!isLoadingAdapter) onEnableAdapter()
+                if (offer is ai.ciris.mobile.shared.viewmodels.AccordOffer.Failure) {
+                    ReadFailureBlock(failure = offer.failure, tagPrefix = "data_accord", inline = true)
+                } else {
+                    Button(
+                        onClick = onEnableAdapter,
+                        enabled = !isLoadingAdapter,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        modifier = Modifier.fillMaxWidth().testableClickable("btn_enable_accord") {
+                            if (!isLoadingAdapter) onEnableAdapter()
+                        }
+                    ) {
+                        if (isLoadingAdapter) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                            Spacer(Modifier.width(8.dp))
+                        }
+                        Text(if (isLoadingAdapter) localizedString("mobile.data_enabling") else localizedString("mobile.data_enable_accord"))
                     }
-                ) {
-                    if (isLoadingAdapter) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            strokeWidth = 2.dp
-                        )
-                        Spacer(Modifier.width(8.dp))
-                    }
-                    Text(if (isLoadingAdapter) localizedString("mobile.data_enabling") else localizedString("mobile.data_enable_accord"))
                 }
             }
         }
     }
 }
 
-/**
- * Card for resetting account data while preserving the signing key.
- * This allows wallet access to be retained after reset.
- */
+/** The agent's answer to a lens-deletion request, as rows: requested (never done), accepted by the lens, local consent revoked. */
+@Composable
+private fun LensDeletionOutcome(r: ai.ciris.mobile.shared.api.LensDeletionResult) {
+    if (!r.success) {
+        StateBlock(
+            ListState.Error(title = localizedString("mobile.data_deletion_failed"), detail = r.message),
+            tag = "data_lens_deletion_refused",
+            inline = true,
+        )
+        return
+    }
+    Column(modifier = Modifier.fillMaxWidth().testable("data_lens_deletion_requested")) {
+        FieldRow(
+            label = localizedString("mobile.data_lens_deletion_label"),
+            value = localizedString("mobile.data_lens_deletion_requested"),
+            tone = Tone.BRAND,
+            tag = "data_lens_deletion_status",
+        )
+        FieldRow(
+            label = localizedString("mobile.data_lens_deletion_lens_label"),
+            value = localizedString(if (r.lensRequestAccepted) "mobile.data_lens_deletion_lens_accepted" else "mobile.data_lens_deletion_lens_not_accepted"),
+            tone = if (r.lensRequestAccepted) Tone.OK else Tone.DANGER,
+            protocol = "lens_request_accepted",
+            tag = "data_lens_deletion_lens",
+        )
+        FieldRow(
+            label = localizedString("mobile.data_lens_deletion_local_label"),
+            value = localizedString(if (r.localConsentRevoked) "mobile.data_lens_deletion_local_revoked" else "mobile.data_lens_deletion_local_kept"),
+            tone = if (r.localConsentRevoked) Tone.OK else Tone.DANGER,
+            protocol = "local_consent_revoked",
+            tag = "data_lens_deletion_local",
+        )
+        FieldRow(
+            label = localizedString("mobile.data_lens_deletion_sla_label"),
+            value = localizedString("mobile.data_lens_deletion_sla_none"),
+            tone = Tone.DIM,
+            divider = false,
+            tag = "data_row_deletion_sla",
+        )
+    }
+}
+
 /**
  * The directed CEG consent object, shown organically: which community the
  * traces go to (the canonical CIRIS community peer), its trust state, and the
@@ -916,9 +921,9 @@ private fun PrivacyInfoCard() {
 }
 
 @Composable
-private fun InfoRow(label: String, value: String) {
+private fun InfoRow(label: String, value: String, tag: String? = null) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = if (tag != null) Modifier.fillMaxWidth().testable(tag, value) else Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(

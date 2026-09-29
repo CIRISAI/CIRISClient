@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.Presentation
 import ai.ciris.mobile.shared.models.chat.chatEntryText
+import ai.ciris.mobile.shared.models.chat.unopenedText
 import ai.ciris.mobile.shared.models.chat.presentationOf
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
@@ -105,19 +106,27 @@ private fun String.utf8Size(): Int = encodeToByteArray().size
 @Composable
 fun ChatScreen(
     viewModel: UserChatViewModel,
-    /** The contact's fed-ID — the other member of the pair. */
-    contactKeyId: String,
     /**
-     * The DERIVED pair community id from the contact card — used to tell one
-     * room from another, NOT as the address to send to. The ViewModel resolves
-     * the authoritative community from the node before anything can be sent.
+     * The contact's fed-ID — the other member of a PAIR room. Null for a room
+     * of more than two, which is entered by [communityId] alone (CSD-091):
+     * `POST /v1/chat` is pair-only and an N-member room has no "other member".
+     */
+    contactKeyId: String?,
+    /**
+     * For a pair, the DERIVED community id from the contact card — used to tell
+     * one room from another, NOT as the address to send to; the ViewModel
+     * resolves the authoritative community from the node before anything can
+     * be sent. For a room, the id the node listed, which IS the address.
      */
     communityId: String,
-    /** Display name for the other member (alias if the peer store has one). */
+    /** Display name: the other member (alias if the peer store has one), or the room's name. */
     contactLabel: String,
     onBack: () -> Unit,
+    /** The room row's `member_count`, for a room; the transcript carries no roster. */
+    memberCount: Int? = null,
 ) {
     val community by viewModel.community.collectAsState()
+    val roomMembers by viewModel.memberCount.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val transcriptLoaded by viewModel.transcriptLoaded.collectAsState()
     val loading by viewModel.loading.collectAsState()
@@ -125,9 +134,11 @@ fun ChatScreen(
     val sending by viewModel.sending.collectAsState()
     val refusalReasonId by viewModel.refusalReasonId.collectAsState()
     val refusalDetail by viewModel.refusalDetail.collectAsState()
+    val isRoom = contactKeyId == null
 
     LaunchedEffect(communityId, contactKeyId) {
-        viewModel.enter(communityId, contactKeyId)
+        if (contactKeyId == null) viewModel.enterRoom(communityId, contactLabel, memberCount)
+        else viewModel.enter(communityId, contactKeyId)
     }
 
     // The transcript is OLDEST FIRST, so the newest row is the last one — that
@@ -149,7 +160,10 @@ fun ChatScreen(
                             localizedString(
                                 "mobile.chat_subtitle_members",
                                 "count",
-                                (community?.memberKeyIds?.size ?: 2).toString(),
+                                // A pair's roster from POST /v1/chat; a room's
+                                // count from the row that listed it. Two is the
+                                // pair's floor, never a room's guess.
+                                (community?.memberKeyIds?.size?.takeIf { it > 0 } ?: roomMembers ?: 2).toString(),
                             ),
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -237,12 +251,15 @@ fun ChatScreen(
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
 
-                    transcriptLoaded && messages.isEmpty() -> Box(
+                    // A refused read is NOT an empty room: the refusal banner
+                    // above is the state, and drawing "No messages yet" under
+                    // it would make error and empty look alike (CSD-091).
+                    transcriptLoaded && messages.isEmpty() && refusalReasonId == null && refusalDetail == null -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_empty"),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
-                            localizedString("mobile.chat_empty"),
+                            localizedString(if (isRoom) "mobile.chat_empty_room" else "mobile.chat_empty"),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(32.dp),
@@ -327,14 +344,18 @@ fun ChatScreen(
                     // Say the ceiling BEFORE the node refuses at it — the
                     // refusal is correct but arrives after the writing.
                     if (draftBytes > MAX_MESSAGE_BYTES / 2) {
-                        Text(
-                            localizedString(
-                                "mobile.chat_length_counter",
-                                mapOf(
-                                    "used" to draftBytes.toString(),
-                                    "max" to MAX_MESSAGE_BYTES.toString(),
-                                ),
+                        val counter = localizedString(
+                            "mobile.chat_length_counter",
+                            mapOf(
+                                "used" to draftBytes.toString(),
+                                "max" to MAX_MESSAGE_BYTES.toString(),
                             ),
+                        )
+                        Text(
+                            counter,
+                            // Tagged (CSD-091 `chat_length_counter`) so the gate can
+                            // read the ceiling BEFORE the node refuses at it.
+                            modifier = Modifier.testable("chat_length_counter", counter),
                             fontSize = 10.sp,
                             color = if (draftBytes > MAX_MESSAGE_BYTES) {
                                 MaterialTheme.colorScheme.error
@@ -369,7 +390,11 @@ private fun SystemNoteRow(message: CegChatMessage) {
     // lets its fallback rules — id, then body, never a blank line and never the
     // raw key — be unit-tested without composing anything.
     val localized = message.messageId?.let { localizedString(it) }
-    val text = chatEntryText(message) { localized }
+    // A note whose body did not open asks for its token's sentence by key;
+    // answer THAT key with that sentence, not with the message_id's.
+    val locked = unopenedText(message)
+    val lockedSentence = locked?.let { localizedString(it.key) }
+    val text = chatEntryText(message) { key -> if (key == locked?.key) lockedSentence else localized }
     val isError = message.kind == CegChatMessage.KIND_ERROR
     Row(
         modifier = Modifier.fillMaxWidth()
@@ -464,10 +489,6 @@ private fun MessageRow(
                         // A plain `member` holding a scoped delegation moderates;
                         // a roster `founder` with no live chain does not. Reading
                         // this off author_role gets both backwards.
-                        if (message.moderates) {
-                            append(" ")
-                            append(localizedString("mobile.chat_moderator_badge"))
-                        }
                     },
                     fontSize = 10.sp,
                     fontFamily = if (!message.mine && message.author?.isNotBlank() == true) {
@@ -477,8 +498,35 @@ private fun MessageRow(
                     },
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                if (message.moderates) {
+                    // Its own element, tagged (CSD-091 `chat_msg_duty_badge_<id>`):
+                    // the duty the node resolved from the live chain, readable
+                    // by the gate without parsing the author line.
+                    val badge = localizedString("mobile.chat_moderator_badge")
+                    Text(
+                        badge,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.testable("chat_msg_duty_badge_${message.attestationId}", badge),
+                    )
+                }
                 Spacer(Modifier.height(2.dp))
-                Text(message.body, fontSize = 14.sp)
+                // A row whose body did not open is NOT a row that says nothing
+                // (0.5.218, CIRISServer#602): the token picks the sentence, the
+                // substrate's detail sits under it, and the tag carries the
+                // sentence so the gate sees a locked row rather than a blank.
+                val locked = unopenedText(message)
+                if (locked == null) {
+                    Text(message.body, fontSize = 14.sp)
+                } else {
+                    val sentence = localizedString(locked.key)
+                    Column(Modifier.testable("chat_msg_unopened_${message.attestationId}", sentence)) {
+                        Text(sentence, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        locked.detail?.let {
+                            Text(it, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
+                        }
+                    }
+                }
                 if (detailsOpen) {
                     Spacer(Modifier.height(8.dp))
                     Text(

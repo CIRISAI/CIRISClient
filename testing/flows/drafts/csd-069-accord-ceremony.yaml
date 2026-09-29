@@ -9,9 +9,12 @@ description: >-
   `txt_ceremony_error`, which are still proposed. §5 disclaims them.
 # Floor: btn_accord_ceremony_begin/_back, btn_ceremony_provision,
 # input_ceremony_holder_name/_key_id/_usb_path/_pin, row_ceremony_slot_$label,
-# accord_ceremony_success, accord_ceremony_genesis_json, remint_done_family and
-# remint_done_holders are all `testable*` literals at v0.5.224
-# (ui/screens/AccordCeremonyScreen.kt and AccordScreen.kt).
+# accord_ceremony_success and accord_ceremony_genesis_json are all `testable*`
+# literals in ui/screens/AccordCeremonyScreen.kt at v0.5.224. The success card's
+# `txt_ceremony_family` is newer than v0.5.224, so it is not asserted under this
+# floor. remint_done_family / remint_done_holders are NOT this screen's: they
+# are the Accord re-mint sheet's (AccordScreen.kt, CSD-067) and never render on
+# AccordCeremony.
 client: ">=0.5.224"
 
 steps:
@@ -59,12 +62,13 @@ steps:
       count: {of: "row_ceremony_slot_*", eq: 6}
 
   - step_id: a_completed_ceremony
-    title: A finished ceremony shows the genesis and names the family it minted
+    title: A finished ceremony shows the genesis it produced
     description: >-
       Optional, and honestly so: completing it needs six physical FIPS tokens
       with PINs and touches, which no platform runner has. `accord_ceremony_success`
-      alone would not be enough — the genesis JSON and the family the ceremony
-      produced are what make the success checkable rather than asserted.
+      alone would not be enough — the genesis JSON is what makes the success
+      checkable rather than asserted. Only what AccordCeremony renders is asserted
+      here; the re-mint sheet's `remint_done_*` rows belong to CSD-067.
     optional_step: true
     requires:
       screen: AccordCeremony
@@ -74,8 +78,6 @@ steps:
       visible:
         - accord_ceremony_success
         - accord_ceremony_genesis_json
-        - remint_done_family
-        - remint_done_holders
 
   - step_id: back_to_accord
     title: Back returns to the Accord screen without minting anything

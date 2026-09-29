@@ -133,6 +133,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-049-network-queue.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+
 **Platforms.** All five.
 
 **Not tested here.** The five unmodelled diagnostic maps (§3); the sent/received

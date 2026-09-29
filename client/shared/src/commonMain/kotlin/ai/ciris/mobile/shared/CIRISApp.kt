@@ -558,8 +558,9 @@ fun CIRISApp(
                 src ?: homeTarget
             }
 
-            // A chat goes back to the contact list it was opened from
-            is Screen.UserChat -> Screen.Contacts
+            // A chat goes back to where it was opened from: the contact list, or
+            // a circle's Chats tab (CSD-091). Never hard-coded to Contacts.
+            is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
 
             // Everything the tree places answers for itself, so the button and
             // the shell's arrow cannot drift apart when a card moves.
@@ -1083,6 +1084,9 @@ fun CIRISApp(
             affiliationsViewModel.clearSessionState()
         }
     }
+    // The room whose card opened Moderation (CSD-102 → CSD-065); Moderation's
+    // community picker hands it back once, so that room arrives filled in.
+    var moderationCommunity by remember { mutableStateOf<String?>(null) }
     // The consent model is reset HERE and nowhere else: every way out of a
     // session — the three logout menus, InteractScreen.onSessionExpired,
     // Billing's onSignInAgain — clears the token, and a reset wired to some of
@@ -1122,7 +1126,9 @@ fun CIRISApp(
     // attestations (rendered through the same AttestationCard as every other
     // CEG object).
     val userChatViewModel: ai.ciris.mobile.shared.viewmodels.UserChatViewModel = viewModel {
-        ai.ciris.mobile.shared.viewmodels.UserChatViewModel(apiClient)
+        // The chat routes are the NODE's (CSD-091), so the model follows the
+        // same active-node provider as People (CIRISAgent#1213).
+        ai.ciris.mobile.shared.viewmodels.UserChatViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
     // Delegate moderation duty — the co-scrubbed conferral of slash/moderate/review
     // onto another self, with the sub-delegation depth stated up front.
@@ -1131,6 +1137,10 @@ fun CIRISApp(
     }
     val accordViewModel: ai.ciris.mobile.shared.viewmodels.AccordViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.AccordViewModel(apiClient)
+    }
+    // Trust root (card: Accord › this node's trust root) — CIRISServer#400.
+    val trustRootViewModel: ai.ciris.mobile.shared.viewmodels.TrustRootViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.TrustRootViewModel(apiClient)
     }
     val provisionAccordHolderViewModel:
         ai.ciris.mobile.shared.viewmodels.ProvisionAccordHolderViewModel = viewModel {
@@ -1174,6 +1184,14 @@ fun CIRISApp(
     }
     val consentViewModel: ConsentViewModel = viewModel {
         ConsentViewModel(apiClient)
+    }
+    // The person's own consent record (CSD-054) is app-scoped, and its screen
+    // shows the record it holds while it reloads: without this the next
+    // signer-in read the previous owner's stream for the whole reload. Same
+    // key and condition as the Manage Consent reset above (PR #116): under
+    // Home Assistant ingress the token stays null by design and is a session.
+    LaunchedEffect(currentAccessToken, isHAAddonMode) {
+        consentViewModel.sessionChanged(consentSessionAuthenticated(currentAccessToken, isHAAddonMode))
     }
     val systemViewModel: SystemViewModel = viewModel {
         SystemViewModel(apiClient)
@@ -3377,6 +3395,7 @@ fun CIRISApp(
                 val isAdaptersLoading by adaptersViewModel.isLoading.collectAsState()
                 val adaptersStatusMessage by adaptersViewModel.statusMessage.collectAsState()
                 val adaptersOperationInProgress by adaptersViewModel.operationInProgress.collectAsState()
+                val adaptersListFailure by adaptersViewModel.listFailure.collectAsState()
                 // Wizard state
                 val showWizardDialog by adaptersViewModel.showWizardDialog.collectAsState()
                 val loadableAdapters by adaptersViewModel.loadableAdapters.collectAsState()
@@ -3413,6 +3432,7 @@ fun CIRISApp(
 
                 AdaptersScreen(
                     adapters = adaptersList,
+                    listFailure = adaptersListFailure,
                     isConnected = isAdaptersConnected,
                     isLoading = isAdaptersLoading || adaptersOperationInProgress,
                     expandedAdapterIds = expandedAdapterIds,
@@ -4193,9 +4213,9 @@ fun CIRISApp(
                     viewModel = consentObjectsViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     onOpenUserConsent = { currentScreen = Screen.Consent },
-                    // Trace-consent: the alternative view of the SAME CEG object
-                    // the wizard writes. One-tap opt-in/out via the my-data PUT.
-                    dataViewModel = dataManagementViewModel,
+                    // The reasoning-traces opt-in is the Data card's (CSD-039):
+                    // one write path, one door. This screen only points at it.
+                    onOpenDataSharing = { currentScreen = Screen.DataManagement },
                     // Revoke: whether the node mounts the route is asked of the
                     // node at runtime (ConsentObjectsViewModel), not decided here.
                 )
@@ -4233,6 +4253,7 @@ fun CIRISApp(
                             contactKeyId = contact.keyId,
                             communityId = contact.chatCommunityId,
                             contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                            from = Screen.Contacts,
                         )
                     },
                     onPeerPicked = if (contactsPickerSourceScreen != null) { peer ->
@@ -4255,7 +4276,9 @@ fun CIRISApp(
                     contactKeyId = route.contactKeyId,
                     communityId = route.communityId,
                     contactLabel = route.contactLabel,
-                    onBack = { currentScreen = Screen.Contacts },
+                    memberCount = route.memberCount,
+                    // Back to where the room was opened from (CSD-091).
+                    onBack = { currentScreen = route.from ?: Screen.Contacts },
                 )
             }
 
@@ -4329,6 +4352,18 @@ fun CIRISApp(
                     // Found-a-new-accord CTA — shown only when no family exists yet.
                     onStartCeremony = { currentScreen = Screen.AccordCeremony },
                     onConferDuty = { currentScreen = Screen.DutyConferral },
+                    onOpenTrustRoot = { currentScreen = Screen.TrustRoot },
+                )
+            }
+
+            Screen.TrustRoot -> {
+                // Trust root (card: Accord): this node's side of the accord's root —
+                // posture, roots, adopt a seed, un-trust. Loopback-only on the node
+                // (CIRISServer#652); the screen says so off the node's machine.
+                TrustRootScreen(
+                    viewModel = trustRootViewModel,
+                    onBack = { currentScreen = Screen.Accord },
+                    nodeUrl = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL,
                 )
             }
 
@@ -4368,6 +4403,18 @@ fun CIRISApp(
                     // The delegate-moderate-duty flow lives on Rules › Delegations
                     // (CSD-001's read view was folded into it, CSD-055).
                     onOpenDelegation = { currentScreen = Screen.Delegations },
+                    // The person's rooms, from both tiers (CSD-102): a room's id is
+                    // the community key the lookup and the quarantine rung take.
+                    // Opened from a room's card, that room arrives picked.
+                    communityPicker = { onPick ->
+                        ai.ciris.mobile.shared.ui.screens.CommunityModerationPicker(
+                            tiers = listOf(communityViewModel, affiliationsViewModel),
+                            preselect = moderationCommunity,
+                            // Handed back once: Moderation opened later from the
+                            // nav arrives with nothing picked.
+                            onPick = { id -> onPick(id); moderationCommunity = null },
+                        )
+                    },
                 )
             }
 
@@ -4896,6 +4943,10 @@ fun CIRISApp(
             Screen.LayerGlobalCommons -> {
                 ai.ciris.mobile.shared.ui.screens.NetworkScreen(
                     viewModel = networkViewModel,
+                    // The agent's network mode is set in Settings, its one door
+                    // (CSD-051 §3); a bare node has no mode, so no link.
+                    hasAgent = clientMode?.isAgent == true,
+                    onOpenModeSettings = { currentScreen = Screen.Settings },
                     onTileClick = { tile ->
                         currentScreen = when (tile) {
                             ai.ciris.mobile.shared.ui.screens.NetworkTile.IDENTITY -> Screen.NetworkIdentity
@@ -5005,29 +5056,47 @@ fun CIRISApp(
                 onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = communityViewModel,
-                onOpenModeration = { currentScreen = Screen.Moderation },
+                onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = affiliationsViewModel,
-                onOpenModeration = { currentScreen = Screen.Moderation },
+                onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
             )
             // ── Communities and affiliations (CSD-103): People and Chats ──
             Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)
             Screen.AffiliationsRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(affiliationsViewModel)
-            Screen.CommunityChats, Screen.AffiliationsChats -> ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
-                viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
-                // A pair room is the two-person chat CSD-091 already draws.
-                onOpenPairChat = { _, contact ->
-                    currentScreen = Screen.UserChat(
-                        contactKeyId = contact.keyId,
-                        communityId = contact.chatCommunityId,
-                        contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
-                    )
-                },
-            )
+            Screen.CommunityChats, Screen.AffiliationsChats -> {
+                // Captured OUTSIDE the lambdas: back must return to the tab the
+                // room was opened from, read at open time, not at back time.
+                val chatsTab = currentScreen
+                ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
+                    viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
+                    // A pair room is the two-person chat CSD-091 already draws.
+                    onOpenPairChat = { _, contact ->
+                        currentScreen = Screen.UserChat(
+                            contactKeyId = contact.keyId,
+                            communityId = contact.chatCommunityId,
+                            contactLabel = contact.aliasOverride ?: (contact.keyId.take(12) + "…"),
+                            from = chatsTab,
+                        )
+                    },
+                    // A room of more than two is entered BY ID (CSD-091): no
+                    // POST /v1/chat, which is pair-only; the transcript route
+                    // reads an N-member room (CIRISServer#594).
+                    onOpenRoom = { room ->
+                        currentScreen = Screen.UserChat(
+                            contactKeyId = null,
+                            communityId = room.communityId,
+                            contactLabel = room.name.ifBlank { room.communityId.take(12) + "…" },
+                            memberCount = room.memberCount,
+                            from = chatsTab,
+                        )
+                    },
+                )
+            }
             // Screen.LayerGlobalCommons handled above alongside Screen.Network —
             // renders the federation transport NetworkScreen.
             // Households (CSD-101): the roster on Family › People.
@@ -5094,7 +5163,7 @@ fun CIRISApp(
                     Screen.NetworkInterfaces, Screen.NetworkPaths, Screen.NetworkAnnounces, Screen.NetworkQueue,
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
-                    is Screen.UserChat -> Screen.Contacts
+                    is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
                     // EnvironmentInfo and Constitutional USED to hang off a
                     // layer hub; the spine placed them in Decisions and Safety,
                     // and this map wins before the placement rule — so leaving
@@ -6005,9 +6074,19 @@ internal sealed class Screen {
      * ViewModel always asks the node rather than acting on the client's guess.
      */
     data class UserChat(
-        val contactKeyId: String,
+        /** The other member of a PAIR room; null for a room of more than two, entered by id (CSD-091). */
+        val contactKeyId: String?,
         val communityId: String,
+        /** The other member's label, or the room's name. */
         val contactLabel: String,
+        /** A room row's `member_count`; the transcript carries no roster. Null for a pair. */
+        val memberCount: Int? = null,
+        /**
+         * Where the room was opened from — Contacts (the default) or a circle's
+         * Chats tab. Back returns THERE, and that surface stays lit while the
+         * room is open: a chat is a leaf of the surface it was opened from.
+         */
+        val from: Screen? = null,
     ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()
@@ -6017,6 +6096,8 @@ internal sealed class Screen {
     // Accord (HUMANITY_ACCORD — constitutional 2/3 kill-switch + holder roster).
     object Accord : Screen()
     object DutyConferral : Screen()
+    // Trust root (card: Accord) — a detail of the Accord card, not a nav row.
+    object TrustRoot : Screen()
     // Provision Accord Holder (mint a portable-2FA accord-holder identity).
     object ProvisionAccordHolder : Screen()
     // Accord Genesis Ceremony (stand up a new mesh's 2-of-3 human kill-switch).
@@ -6176,13 +6257,16 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.Contacts -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     is Screen.Files -> ai.ciris.mobile.shared.ui.nav.NavSurface.Files
     Screen.Notes -> ai.ciris.mobile.shared.ui.nav.NavSurface.Notes
-    // A chat keeps the Contacts card lit — it is a leaf of that surface, not a
-    // sidebar destination of its own.
-    is Screen.UserChat -> ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    // A chat keeps the surface it was opened from lit — Contacts, or a circle's
+    // Chats tab — it is a leaf of that surface, not a sidebar destination of
+    // its own.
+    is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         Screen.DutyConferral -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
+        // Trust root (card: Accord): a detail of the Accord card keeps it lit.
+        Screen.TrustRoot -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
     Screen.ProvisionAccordHolder -> ai.ciris.mobile.shared.ui.nav.NavSurface.ProvisionAccordHolder
     Screen.AccordCeremony -> ai.ciris.mobile.shared.ui.nav.NavSurface.AccordCeremony
     Screen.Moderation -> ai.ciris.mobile.shared.ui.nav.NavSurface.Moderation

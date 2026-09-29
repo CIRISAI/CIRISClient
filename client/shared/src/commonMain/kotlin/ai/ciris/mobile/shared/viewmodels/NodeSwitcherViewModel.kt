@@ -552,7 +552,6 @@ class NodeSwitcherViewModel(
     fun upgradeToFedId(
         label: String? = null,
         announce: Boolean = false,
-        traceOptIn: Boolean = false,
     ) {
         if (_upgradeInProgress.value) return
         _upgradeInProgress.value = true
@@ -594,15 +593,13 @@ class NodeSwitcherViewModel(
                     }
                 }
 
-                // 4) Trace opt-in (only meaningful once announced). Non-fatal.
-                if (announce && traceOptIn) {
-                    try {
-                        apiClient.updateAccordSettings(consentGiven = true)
-                        PlatformLogger.i(TAG, "[upgradeToFedId] accord metrics consent enabled")
-                    } catch (e: Exception) {
-                        PlatformLogger.w(TAG, "[upgradeToFedId] accord opt-in failed (non-fatal): ${e.message}")
-                    }
-                }
+                // There is no step 4. The reasoning-traces opt-in
+                // (`PUT /v1/my-data/accord-settings`) is the Data card's write
+                // (CSD-039): it used to be issued from here as well, against
+                // `baseUrl` — a host that does not exist on a run-without-AI
+                // install — with the failure swallowed, so a person who ticked
+                // "send traces" was told nothing (CSD-086 §3). One write path,
+                // read back where it is written; the catch-up points at it.
 
                 if (_notice.value == null) {
                     _notice.value = if (announce) {

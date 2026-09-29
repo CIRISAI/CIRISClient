@@ -200,45 +200,71 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
         _confirming.value = null
     }
 
-    /** The confirmed act, sent the way this household's protocol allows. */
-    fun confirm() {
-        val act = _confirming.value ?: return
+    /**
+     * The hub's confirm (CSD-100): leave or dissolve, sent the way this
+     * household's protocol allows. A roster act waiting here sends nothing —
+     * it has no control on the hub, so the hub has no door to it.
+     */
+    fun confirmHouseholdAct() {
+        val act = _confirming.value as? HouseholdAct.OfHousehold
+        if (act == null) {
+            PlatformLogger.w(TAG, "[confirmHouseholdAct] ${_confirming.value} is not the hub's act; nothing sent")
+            return
+        }
         _confirming.value = null
         val family = selected() ?: return
         when (routeOf(act, governance(family))) {
-            ActRoute.DIRECT -> direct(family.familyId, act)
-            ActRoute.PROPOSE -> propose(family, act)
-            ActRoute.NOT_ALLOWED -> PlatformLogger.w(TAG, "[confirm] $act is not this person's to make; nothing sent")
-        }
-    }
-
-    private fun direct(familyId: String, act: HouseholdAct) {
-        val notice = when (act) {
-            is HouseholdAct.Add -> HouseholdNotice.ADDED
-            is HouseholdAct.Remove -> HouseholdNotice.REMOVED
-            is HouseholdAct.Role -> HouseholdNotice.ROLE_CHANGED
-            HouseholdAct.Dissolve -> HouseholdNotice.DISSOLVED
-            HouseholdAct.Leave -> HouseholdNotice.LEFT
-        }
-        run(notice) {
-            when (act) {
-                is HouseholdAct.Add -> api.addMember(familyId, act.keyId, null)
-                is HouseholdAct.Remove -> api.removeMember(familyId, act.keyId)
-                is HouseholdAct.Role -> api.changeRole(familyId, act.keyId, act.role)
-                HouseholdAct.Dissolve -> api.dissolveFamily(familyId)
-                HouseholdAct.Leave -> api.leave(familyId)
+            ActRoute.DIRECT -> run(if (act == HouseholdAct.Leave) HouseholdNotice.LEFT else HouseholdNotice.DISSOLVED) {
+                when (act) {
+                    HouseholdAct.Dissolve -> api.dissolveFamily(family.familyId)
+                    HouseholdAct.Leave -> api.leave(family.familyId)
+                }
             }
+            ActRoute.PROPOSE -> propose(family, act, null, null)
+            ActRoute.NOT_ALLOWED -> PlatformLogger.w(TAG, "[confirmHouseholdAct] $act is not this person's to make; nothing sent")
         }
     }
 
-    private fun propose(family: FamilyDto, act: HouseholdAct) {
-        val action = act.envelopeAction ?: return
-        val (key, role) = when (act) {
-            is HouseholdAct.Add -> act.keyId to null
-            is HouseholdAct.Remove -> act.keyId to null
-            is HouseholdAct.Role -> act.keyId to act.role
-            else -> null to null
+    /**
+     * The roster's confirm (CSD-101): add, remove or change a role, sent the
+     * way this household's protocol allows. A hub act waiting here sends
+     * nothing — leaving and dissolving have no control on the roster.
+     */
+    fun confirmMemberAct() {
+        val act = _confirming.value as? HouseholdAct.OfMember
+        if (act == null) {
+            PlatformLogger.w(TAG, "[confirmMemberAct] ${_confirming.value} is not the roster's act; nothing sent")
+            return
         }
+        _confirming.value = null
+        val family = selected() ?: return
+        when (routeOf(act, governance(family))) {
+            ActRoute.DIRECT -> {
+                val notice = when (act) {
+                    is HouseholdAct.Add -> HouseholdNotice.ADDED
+                    is HouseholdAct.Remove -> HouseholdNotice.REMOVED
+                    is HouseholdAct.Role -> HouseholdNotice.ROLE_CHANGED
+                }
+                run(notice) {
+                    when (act) {
+                        is HouseholdAct.Add -> api.addMember(family.familyId, act.keyId, null)
+                        is HouseholdAct.Remove -> api.removeMember(family.familyId, act.keyId)
+                        is HouseholdAct.Role -> api.changeRole(family.familyId, act.keyId, act.role)
+                    }
+                }
+            }
+            ActRoute.PROPOSE -> propose(family, act, act.keyId, (act as? HouseholdAct.Role)?.role)
+            ActRoute.NOT_ALLOWED -> PlatformLogger.w(TAG, "[confirmMemberAct] $act is not this person's to make; nothing sent")
+        }
+    }
+
+    /**
+     * A quorum household's change, proposed for others to sign. The one route
+     * both screens reach, by design: a quorum dissolve is proposed from the hub,
+     * a quorum add / remove / role from the roster (CSD-100 §3.1).
+     */
+    private fun propose(family: FamilyDto, act: HouseholdAct, key: String?, role: String?) {
+        val action = act.envelopeAction ?: return
         run(HouseholdNotice.PROPOSED, reloadAfter = false) {
             val p = api.proposeChange(family.familyId, action, key, role)
             _pending.value = PendingChange(

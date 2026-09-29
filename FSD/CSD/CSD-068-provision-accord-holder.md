@@ -1,7 +1,7 @@
 # CSD-068 — Provision Accord Holder (the custody floor, in three steps)
 
 **CSD**: CSD-068 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-068-provision-accord-holder.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -46,6 +46,22 @@ Two entries, one screen, one nav row — this is a case where the second entry i
 a shortcut into a placed surface rather than an orphan, and `CirclesNavTest`'s
 no-orphans rule is satisfied by the placement.
 
+**Two doors on `POST /v1/accord/provision-holder`, and why they stay two.**
+`packaging/check_csd_routes.py` reports this screen and `AccordCeremony`
+(CSD-069) as a duplicate mutation on the same route (the ratchet carries it).
+They are not one card under two names. This screen provisions **one** holder
+identity for a person joining an accord that already exists — they walk away
+with a `key_id` and a next step that belongs to the node owner (`POST
+/v1/accord/holder`, which this screen never calls). The ceremony provisions
+**six** in sequence for three people founding a NEW mesh, registers each itself,
+and continues into the envelope co-sign and the genesis assemble that this
+screen has no business with. Same route, same YubiKey touch, different
+mission, different done state; folding the ceremony's provision step into this
+screen would put a six-key sequencer on a one-key form, and folding this screen
+into the ceremony would make a person who only needs a seat walk a genesis
+wizard that is offered only when no family exists. CSD-069 §3 says the same
+from its side.
+
 ```yaml csd:shows
 registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
 fields:
@@ -73,8 +89,20 @@ fields:
     use: display-only
     type: string
     example: "No FIPS token found on this node."
-    renders: "the plain-language reason: no key / wrong PIN / USB not writable / not FIPS-approved"
+    renders: "the plain-language reason: no key / wrong PIN / USB not writable / not FIPS-approved — localized from a key the view model chooses, never a rendered string"
     tag: provision_holder_error
+  - ceg: x_private:custody_tier
+    use: display-only
+    type: string
+    example: "portable_2fa"
+    renders: "Custody class the node recorded: portable_2fa — the minted custody_attestation's tier, shown to the producer (CC 4.2.2.1: a producer claim, and now at least a visible one)"
+    tag: txt_provision_holder_custody
+  - ceg: x_private:token_present
+    use: display-only
+    type: bool
+    example: true
+    renders: "the YubiKey readiness banner — detected / FIPS / slot-9c key / PIN tries — from the node, beside the acknowledgement the person still makes"
+    tag: yubikey_status_banner
 ```
 
 **`key_boundary:{scope}` is RESERVED** — `substrate-self-report` at CC 3.4.3,
@@ -94,17 +122,17 @@ it. **Ask: CIRISConstitution — reconcile `hardware_custody:{platform}`'s vocab
 with the CC 4.2.2 table, or state that they are two different fields.**
 
 ```yaml csd:states
-populated: {tag: provision_holder_success, renders: "the minted key_id and the one next step — ask the node owner to register you"}
-empty:     {tag: "proposed:txt_provision_holder_start", renders: "the three steps, none of them done yet; the provision button is not enabled"}
-loading:   {tag: "proposed:spinner_provision_holder", renders: "the button carries the progress affordance; the token is waiting for a touch"}
+populated: {tag: provision_holder_success, renders: "the minted key_id (txt_provision_holder_key_id, with btn_provision_holder_copy), the custody class the node recorded, and the one next step — ask the node owner to register you"}
+empty:     {tag: txt_provision_holder_start, renders: "the three steps, none of them done yet; the provision button is not enabled"}
+loading:   {tag: spinner_provision_holder, renders: "the button carries the progress affordance; the token is waiting for a touch"}
 error:     {tag: provision_holder_error, renders: "the plain-language reason, in the error tone"}
 ```
 
-**Populated and error are real, tagged and visually distinct** — success is a
-`primaryContainer` block with a check glyph (`:122`), failure an
-`errorContainer` text (`:180`). That is the CSD/3 §2.2 requirement met, and this
-is the only surface in safety-commons where it is met without a `proposed:` tag
-on either side.
+**All four are real, tagged and visually distinct** — success is a
+`primaryContainer` block with a check glyph, failure an `errorContainer` text,
+the start state the three-step intro, loading the spinner inside the disabled
+button. That is the CSD/3 §2.2 requirement met with no `proposed:` tag on any
+side (the last two were made real at the accord review).
 
 ### 2.1 Why the three steps are gates and not a form
 
@@ -121,14 +149,19 @@ volume is a holder who thinks they have a spare and does not.
   `key_id` and a next step. It does not echo back the USB path the node actually
   wrote to, nor the artifact filenames. A holder who typed one path and had the
   node resolve another has no way to notice — and this is the artifact they will
-  reach for during a halt.
-* **The custody class the node recorded.** `provisionAccordHolder` returns the
-  minted key; `AccordHolderDto` has no custody field either (CSD-067 §3). So the
-  claim CC 4.2.2.1 warns is only a producer claim is not even displayed to the
-  producer.
-* **A copy affordance.** The minted `key_id` must be handed to the node owner
-  out of band and there is no copy button on it; the Accord screen has three
-  (`btn_coscrub_export_copy` and friends) for a less consequential artifact.
+  reach for during a halt. **Still open, upstream** (§3: the node only logs them).
+* ~~**The custody class the node recorded.**~~ **Shown** since the accord
+  review: `txt_provision_holder_custody` reads `custody_tier` out of the
+  response's `custody_attestation` (`firstStringField`, tolerant of where the
+  signed envelope nests it — `CanonicalSupersedeTest.aStringFieldIsFoundWhereverTheEnvelopeNestsIt`),
+  and says "not stated" when the attestation names none.
+* ~~**A copy affordance.**~~ **Added**: `btn_provision_holder_copy` puts the
+  minted `key_id` on the clipboard and says so.
+* **The plain-language errors were English literals in the view model.** A view
+  model cannot call the composable `localizedString`, so `error` is now a key
+  plus the node's detail (`ProvisionError`) and the screen localizes it — eleven
+  `mobile.provision_holder_err_*` keys. `AccordCeremonyViewModel` and
+  `AccordViewModel` still carry the literal form (CSD-067 §2.3, CSD-069 §2.2).
 
 ## 3. Contracts (who)
 
@@ -138,10 +171,10 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 |---|---|---|---|
 | provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live**, loopback-only |
 | register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **live** — but this screen does not call it; it tells the person to ask the node owner |
-| token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live and unused here** — the ceremony screen calls it, this one does not |
+| token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live, called** (accord review) — `ProvisionAccordHolderViewModel.refreshYubiKeyStatus` on entry and on demand, drawn by the same `YubiKeyStatusBanner` the ceremony uses (`yubikey_status_banner`). The FIPS-approval acknowledgement stays a claim (CC 4.2.2.1); whether a token is plugged in no longer is |
 | the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
-| the recorded custody class | **on the wire here, and discarded by the client** | CIRISClient | §2.2's second bullet is ours, not upstream |
-| the node's own judgment of a SEATED holder's hardware | `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` | CIRISServer `src/trust_root_api.rs:415` (verdict passed through verbatim, `:76-79`); shape CIRISPersist v48.0.0 `federation/trust_root.rs:372` | **live on this node's own machine, not called** — and only for holders the root's charter counts, so it answers "did my seat's hardware pass" after seating, never "what did I just mint". **Remote reach** `blocked_by: CIRISServer#652` |
+| the recorded custody class | on the wire here (`custody_attestation` → `custody_tier`) | CIRISClient | **rendered** — `txt_provision_holder_custody`; §2.2's second bullet, closed |
+| the node's own judgment of a SEATED holder's hardware | `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` | CIRISServer `src/trust_root_api.rs:415` (verdict passed through verbatim, `:76-79`); shape CIRISPersist v48.0.0 `federation/trust_root.rs:372` | **live on this node's own machine, called** by the Accord card's trust-root detail (`row_trust_root_holder_<root>_<holder>`, CSD-067 §3), not by this screen — and only for holders the root's charter counts, so it answers "did my seat's hardware pass" after seating, never "what did I just mint". **Remote reach** `blocked_by: CIRISServer#652` |
 
 **The fourth row said `unconfirmed` and its premise was false.** The response
 shape IS established in the client: the node returns
@@ -174,11 +207,10 @@ the first place the person could see it. It is loopback-only like the rest of
 this flow, which here costs nothing: provisioning already needs the YubiKey on
 the node's own host.
 
-**`/v1/accord/yubikey-status` is the cheapest fix on this screen.**
-`AccordCeremonyViewModel` already calls it (`getYubiKeyStatus`); this flow asks
-the person to *acknowledge* a token is inserted when the node can be asked. The
-acknowledgement should stay — CC 4.2.2.1 means FIPS-approval remains a claim —
-but "is a token plugged in at all" does not have to be one.
+**`/v1/accord/yubikey-status` was the cheapest fix on this screen, and it is
+done.** The acknowledgement stays — CC 4.2.2.1 means FIPS-approval remains a
+claim — and "is a token plugged in at all" is now the node's answer, in the
+banner above the checkbox.
 
 ## 4. Flow (how)
 
@@ -189,10 +221,12 @@ Land on `ProvisionAccordHolder` (Everyone › Safety, derived).
 
 ```yaml
 expect:
-  visible: [chk_provision_holder_fips, input_provision_holder_key_id,
+  state: empty
+  visible: [txt_provision_holder_start, yubikey_status_banner,
+            chk_provision_holder_fips, input_provision_holder_key_id,
             input_provision_holder_usb_path, input_provision_holder_pin,
             btn_provision_holder_usb_browse, btn_provision_holder_submit]
-  absent:  [provision_holder_success, provision_holder_error]
+  absent:  [provision_holder_success, provision_holder_error, spinner_provision_holder]
 ```
 
 Press `btn_provision_holder_submit` with nothing filled in — the button is
@@ -213,10 +247,22 @@ expect:
   absent:  [provision_holder_success]
 ```
 
-*Cannot yet assert:* the happy path. It needs a physical FIPS YubiKey with a PIN
-and a touch, which no platform runner has; §5 says so rather than mocking it.
+*Cannot yet assert:* the happy path — `provision_holder_success`,
+`txt_provision_holder_key_id`, `txt_provision_holder_custody`,
+`btn_provision_holder_copy`. It needs a physical FIPS YubiKey with a PIN and a
+touch, which no platform runner has; §5 says so rather than mocking it.
+
+**Stage.** Every tag is real and nothing in §3 is `unconfirmed`, so
+`check_csd_v3.py` would admit `testable`. The flow's floor is already off
+`unreleased` — `testing/flows/drafts/csd-068-provision-accord-holder.yaml` is
+`client: ">=0.5.224"`, and every tag it drives is a literal at v0.5.224 (the
+custody row, copy button and token banner that came later are not in it). The
+one remaining condition is that the flow runs on the matrix (#97); the card
+stays at `building` until it does.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-068-provision-accord-holder.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop and Android in practice — the flow needs a USB path and a
 physical token, and the iOS/browser corners have neither. The screen composes on

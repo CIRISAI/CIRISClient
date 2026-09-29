@@ -1,7 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
-import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
+import ai.ciris.mobile.shared.models.federation.YubiKeyProbe
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -144,13 +144,20 @@ class AccordCeremonyViewModel(
 
     /** The inserted YubiKey's readiness (detected / FIPS / 9C key+cert / PIN tries),
      *  driving the "YUBI DETECTED — FIPS COMPLIANT — 9C PROVISIONED — READY" banner. */
-    private val _yubiKeyStatus = MutableStateFlow<YubiKeyStatus?>(null)
-    val yubiKeyStatus: StateFlow<YubiKeyStatus?> = _yubiKeyStatus.asStateFlow()
+    private val _yubiKeyStatus = MutableStateFlow<YubiKeyProbe>(YubiKeyProbe.Loading)
+    val yubiKeyStatus: StateFlow<YubiKeyProbe> = _yubiKeyStatus.asStateFlow()
 
     /** Re-probe the inserted YubiKey (called on entering PROVISION + on demand). */
     fun refreshYubiKeyStatus() {
+        _yubiKeyStatus.value = YubiKeyProbe.Loading
         viewModelScope.launch {
-            _yubiKeyStatus.value = apiClient.getYubiKeyStatus(CIRISApiClient.LOCAL_NODE_URL)
+            _yubiKeyStatus.value = try {
+                YubiKeyProbe.Loaded(apiClient.getYubiKeyStatus(CIRISApiClient.LOCAL_NODE_URL))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                YubiKeyProbe.Failed(ai.ciris.mobile.shared.ui.screens.ReadFailure.of(e))
+            }
         }
     }
 
@@ -386,6 +393,19 @@ class AccordCeremonyViewModel(
 
     /** The assembled genesis serialized as pretty JSON for the SAVE step. */
     fun genesisJson(): String = _genesis.value?.toString() ?: ""
+
+    /** The family the assembled genesis names (`family_key_id`), or null before DONE. */
+    fun genesisFamilyKeyId(): String? =
+        ai.ciris.mobile.shared.models.federation.firstStringField(_genesis.value, "family_key_id")
+
+    /** A notice raised by the screen (copy / save of the artifact), in the same banner. */
+    fun setExternalNotice(message: String, error: Boolean = false) {
+        if (error) {
+            _error.value = message
+        } else {
+            _notice.value = message
+        }
+    }
 
     fun clearMessages() {
         _error.value = null

@@ -183,8 +183,9 @@ Tags: `file_preview_text`, `file_not_rendered`, `file_save_blocked`,
 Sources: CIRISServer `origin/main` 046e1b39 (0.5.217), `src/drive.rs` and
 `src/media_gate.rs`; client lines are this branch. Every drive route is the
 node's and every call goes to the node URL (`ClientDrive`, read at call time;
-never `$baseUrl` — CIRISAgent#1213 is closed, and an older agent still 404s
-them). Rows marked "not called" are live on the node and not yet wired here.
+never `$baseUrl`). Reach through the agent works from agent 2.12.1
+(CIRISAgent#1213, closed by #1215); an older agent 404s them, and the direct
+node URL works on every agent version, so the client keeps calling it. Rows marked "not called" are live on the node and not yet wired here.
 
 | value | endpoint | owner | state |
 |---|---|---|---|

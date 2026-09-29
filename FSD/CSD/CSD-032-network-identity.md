@@ -121,6 +121,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-032-network-identity.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+
 **Platforms.** All five; the bare-node variant on desktop and Android.
 
 **Not tested here.** The QR placeholders (`img_identity_qr_placeholder`,

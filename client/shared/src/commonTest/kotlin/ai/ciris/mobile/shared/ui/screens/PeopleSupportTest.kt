@@ -54,7 +54,11 @@ class PeopleSupportTest {
         // Consent moved from the node to the person at 0.5.211: without the grant
         // nobody can say who signed, so it is not-sent — never "this node" by rule.
         assertEquals(Fact.NotSent, r.attester)
-        assertEquals(Fact.ByRule("federation", CONTACT_GRANT_CC), r.scope)
+        // The grant's cohort_scope is the consent AUDIENCE the person chose
+        // (peer.rs::add_contact: `audience … unwrap_or(FEDERATION)`), not a
+        // constant CC 3.3.7 fixes — so without the grant it is not-sent, never
+        // "federation" by rule.
+        assertEquals(Fact.NotSent, r.scope)
         assertSame(Dim.consentKind, r.dimension)
         assertEquals(Fact.ByRule("consent:replication:v1", CONTACT_GRANT_CC), r.dimensionValue)
         assertEquals(Fact.NotSent, r.rule)
@@ -123,6 +127,12 @@ class PeopleSupportTest {
               "chat_community_id":"c-1","chat_started":false,"occurrence_key_ids":[]
             }],"total":1}
         """.trimIndent()
+    }
+
+    @Test
+    fun theTrustChipTagIsReal() {
+        // CSD-005's `proposed:contacts_row_trust` is minted here, per row.
+        assertEquals("contacts_row_trust_k1", PeopleTags.rowTrust("k1"))
     }
 
     @Test

@@ -150,7 +150,7 @@ fun HouseholdPanel(
 
     val family = viewModel.selected()
     confirming?.let { act ->
-        if (family != null) HouseholdConfirm(act, family, viewModel.governance(family), viewModel::confirm, viewModel::cancelConfirm)
+        if (family != null) HouseholdConfirm(act, family, viewModel.governance(family), viewModel::confirmHouseholdAct, viewModel::cancelConfirm)
     }
     receiptFor?.let { ReceiptSheet(receipt = it, onDismiss = { receiptFor = null }) }
 }
@@ -259,7 +259,7 @@ fun HouseholdMembersScreen(
 
     val family = viewModel.selected()
     confirming?.let { act ->
-        if (family != null) HouseholdConfirm(act, family, viewModel.governance(family), viewModel::confirm, viewModel::cancelConfirm)
+        if (family != null) HouseholdConfirm(act, family, viewModel.governance(family), viewModel::confirmMemberAct, viewModel::cancelConfirm)
     }
 }
 

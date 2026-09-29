@@ -1,7 +1,7 @@
 # CSD-069 — Accord Genesis Ceremony (six keys, three humans, one artifact)
 
 **CSD**: CSD-069 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-069-accord-ceremony.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -82,8 +82,8 @@ fields:
     use: display-only
     type: string
     example: "humanity-accord"
-    renders: "the assembled family — its name, its fingerprint, its three holders"
-    tag: remint_done_family
+    renders: "'Family humanity-accord — entrenched, quorum:2/3' on the done card, the id read from the assembled genesis the node returned (family_key_id)"
+    tag: txt_ceremony_family
   - ceg: "accord:holders"
     use: display-only
     type: "list[string]"
@@ -107,8 +107,8 @@ fields:
     use: display-only
     type: "enum[intro,provision,cosign,done]"
     example: "cosign"
-    renders: "which of the four phases the trio is in"
-    tag: "proposed:txt_ceremony_phase"
+    renders: "which of the four phases the trio is in — one line above every phase, so a failed step (error banner, phase unchanged) and an unreached step (a later phase) are different renderings"
+    tag: txt_ceremony_phase
 ```
 
 `accord:*` is **reserved**, `accord_holder-only` at CC 3.4.1, so `display-only`
@@ -117,19 +117,21 @@ and the re-inserted YubiKey signs. The app holds no keys through all six
 provisions and all three co-signs.
 
 ```yaml csd:states
-populated: {tag: accord_ceremony_success, renders: "DONE — the family, its fingerprint, the six holders, and the genesis JSON to save"}
-empty:     {tag: "proposed:txt_ceremony_intro", renders: "what you need before you start: 6 FIPS YubiKeys, 6 USB keys, 3 humans in one room"}
-loading:   {tag: "proposed:spinner_ceremony_step", renders: "the current step's button carries the progress affordance; the token is waiting for a touch"}
-error:     {tag: "proposed:txt_ceremony_error", renders: "which step failed and why — and the sequence does NOT advance"}
+populated: {tag: accord_ceremony_success, renders: "DONE — the family (txt_ceremony_family), the genesis JSON, and the two ways to keep it"}
+empty:     {tag: txt_ceremony_intro, renders: "what you need before you start: 6 FIPS YubiKeys, 6 USB keys, 3 humans in one room — and what you are about to entrench"}
+loading:   {tag: spinner_ceremony_step, renders: "the current step's button carries the progress affordance; the token is waiting for a touch"}
+error:     {tag: accord_ceremony_error, renders: "which step failed and why, in the error tone — and the phase line does NOT advance"}
 ```
 
-**`error` is the gap and it is the dangerous one on this screen.** A ceremony is
-a sequence; a step that failed and a step that has not been reached look the
-same in a wizard unless the wizard says otherwise. There is no error tag and, on
-inspection, no error surface distinct from the phase rendering — so a failed
-provision of key B2 and an un-started provision of key B2 are the same pixels,
-in a flow where the operator is holding six physical tokens and tracking which
-one they have already done.
+**`error` was said to be the gap, and the finding was half right.** The
+error banner existed and was tagged (`MessageCard(…, "accord_ceremony_error")`,
+`AccordCeremonyScreen.kt`) — this CSD said there was no error tag, and there
+was. What was genuinely missing was the *phase*: a failed provision of key B2
+and an un-started provision of key B2 were the same pixels because nothing on
+the screen said which step the wizard was on. `txt_ceremony_phase` (accord
+review) is that line; with it, "failed" is *error banner + phase unchanged* and
+"not reached" is *a later phase*, which a flow can tell apart. The four states
+are real and tagged.
 
 ### 2.1 What the ceremony gets right
 
@@ -142,21 +144,27 @@ one they have already done.
   `btn_ceremony_cosign` / `btn_ceremony_assemble` — three verbs, three phases,
   no way to assemble before cosigning.
 
-### 2.2 What it does not
+### 2.2 What it did not, and does now (accord review)
 
-* **Nothing asserts the artifact was kept.** `accord_ceremony_genesis_json` is
-  displayed; there is no save, no copy and no acknowledgement that it has been
-  stored. The Accord screen's co-scrub export has all three
-  (`btn_coscrub_export_copy` / `_save` / `_dismiss`, `AccordScreen.kt:1767-1776`)
-  for an artifact that is recoverable. This one is the cold start.
-* **The correlated-failure geometry is not stated.** CC 4.2.3 names it outright
-  — two of three CIRIS holders share a household, so a 2-of-3 quorum is
-  physically reachable from one address, and "the mitigant is diversifying the
-  holder set" is called an active obligation. A wizard that walks three people
-  through choosing themselves is the one moment that advice can land, and it
-  says nothing.
-* **`consensus_protocol_entrenched` is not shown.** The person is making a
-  decision that is deliberately hard to reverse and the screen does not say so.
+* ~~**Nothing asserts the artifact was kept.**~~ `btn_ceremony_genesis_copy`
+  puts the genesis on the clipboard; `btn_ceremony_genesis_save` writes it as
+  `humanity_accord_genesis.json` to a chosen folder (`writeTextFile`, desktop);
+  each says so in the notice banner. The done card also says, in words
+  (`txt_ceremony_not_seed`), that this JSON is the entrenched family and NOT the
+  portable seed other nodes adopt — §3's finding, put where the person is.
+* ~~**The correlated-failure geometry is not stated.**~~ `txt_ceremony_diversity`
+  on the intro: three people who do not share a household or an employer,
+  because two of three from one address is a quorum one door can reach — CC
+  4.2.3's *"the mitigant is diversifying the holder set"*, at the one moment it
+  can land.
+* ~~**`consensus_protocol_entrenched` is not shown.**~~ `txt_ceremony_entrenched`
+  on the intro: the family's `quorum:2/3` cannot be lowered later by anyone
+  inside the federation; replacing a seat is a new ceremony and a re-minted
+  seed, not an edit.
+* **Open:** `AccordCeremonyViewModel` composes its notices and plain-language
+  errors as English literals (`"Provisioning A1… TOUCH your YubiKey…"`, the
+  ten `plainLanguageError` sentences). The fix is the key-plus-detail shape
+  `ProvisionAccordHolderViewModel` now uses (CSD-068 §2.2).
 
 ### 2.3 Should it be placed?
 
@@ -192,7 +200,7 @@ Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
 | the family envelope | `POST /v1/accord/genesis/envelope` | `src/accord.rs:2621` | **live** |
 | a primary's co-sign | `POST /v1/accord/family/cosign` | `src/accord_provision.rs:3701` | **live** |
 | assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **live** |
-| did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **live on this node's own machine, not called**; **remote reach** `blocked_by: CIRISServer#652` |
+| did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **live on this node's own machine, called** from the Accord card's trust-root detail (`txt_trust_posture_state`, CSD-067 §3), not from this ceremony; **remote reach** `blocked_by: CIRISServer#652` |
 | adopt the ceremony's output on another node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live, and it does NOT take this ceremony's artifact** — see below |
 | change the family after genesis — build the quorum envelope | `POST /v1/accord/family/change/envelope` | `src/accord.rs:2637` | live, **not called, and cannot succeed for this family**: it hardcodes `humanity-accord` (`:2151`) while supersede refuses that id — CIRISServer#682 |
 | replace the family | `POST /v1/accord/family/supersede` | `src/accord.rs:2641` | live, **not called**: always refuses `humanity-accord` by design (`:2306-2315`); its refusal names a route that does not exist — CIRISServer#682. The accord changes seats by re-running the ceremony and re-minting the seed (CSD-067 §3.1). `GET /v1/accord/family/history` (`:2645`) is read on the Accord card |
@@ -213,12 +221,24 @@ this ceremony's roster. So the done state should not tell anyone this JSON is
 what other nodes attach; it is the entrenched family, and attaching happens one
 step later (CSD-067 §3.1).
 
+**Two doors on `POST /v1/accord/provision-holder`, by design.** The route
+checker reports this screen and `ProvisionAccordHolder` (CSD-068) as a
+duplicate mutation; the ratchet carries it and both CSDs say why it stays. This
+ceremony provisions six keys in sequence for three founders of a NEW mesh,
+registers each (`POST /v1/accord/holder`, which CSD-068's screen never calls),
+then co-signs the envelope and assembles the genesis. CSD-068's screen
+provisions ONE identity for a person joining an accord that already exists and
+hands them a next step that is the node owner's. Same route, same touch,
+different mission and done state: a one-key form should not carry a six-key
+sequencer, and a person who needs a seat should not walk a genesis wizard that
+is only offered when no family exists.
+
 **Every route this ceremony needs is live.** The two amendment rows cannot succeed for the accord family (CIRISServer#682);
 the accord's seats change by a new ceremony and a re-minted seed. The route-coverage report also filed
 `admit-node` and `announce` here; both are called from the Accord screen and are
 cited in CSD-067 §3. The whole of this document's gap
-list is client-side: four states with one tag between them, no save affordance
-on the artifact, and a surface the checker cannot resolve.
+list is client-side, and after the accord review it is: the English literals in
+the view model (§2.2), and a surface the checker cannot resolve (§2.3).
 
 ## 4. Flow (how)
 
@@ -233,7 +253,11 @@ Once on the screen:
 
 ```yaml
 expect:
-  visible: [btn_accord_ceremony_begin, btn_accord_ceremony_back]
+  state: empty
+  visible: [txt_ceremony_phase, txt_ceremony_intro, txt_ceremony_entrenched,
+            txt_ceremony_diversity, btn_accord_ceremony_begin, btn_accord_ceremony_back]
+  text:
+    txt_ceremony_phase: "Before you begin"
 ```
 
 Begin → the provision phase, slot A1:
@@ -242,23 +266,46 @@ Begin → the provision phase, slot A1:
 expect:
   visible: [input_ceremony_holder_name, input_ceremony_key_id,
             input_ceremony_usb_path, input_ceremony_pin, btn_ceremony_provision]
-  count: {of: "row_ceremony_slot_*", eq: 6}
+  text:
+    txt_ceremony_phase: "Provisioning the six keys"
+  absent: [accord_ceremony_error]
 ```
 
-*Cannot yet assert:* which slot is current, that a failed provision did not
-advance the sequence, or that the phase is what it says — all three need
-`txt_ceremony_phase` and `txt_ceremony_error`.
+Provision A1 against a node with no token — the step fails in words and the
+sequence does not advance:
+
+```yaml
+expect:
+  state: error
+  visible: [accord_ceremony_error]
+  text:
+    txt_ceremony_phase: "Provisioning the six keys"
+  count: {of: "row_ceremony_slot_*", eq: 0}
+```
+
+*Cannot yet assert:* which slot is current — the slot chip is untagged.
 
 Done, against a completed ceremony:
 
 ```yaml
 expect:
   state: populated
-  visible: [accord_ceremony_success, accord_ceremony_genesis_json,
-            remint_done_family, remint_done_holders]
+  visible: [accord_ceremony_success, txt_ceremony_family, accord_ceremony_genesis_json,
+            btn_ceremony_genesis_copy, btn_ceremony_genesis_save, txt_ceremony_not_seed]
+  text:
+    txt_ceremony_phase: "Done — the genesis is assembled"
 ```
 
+**`remint_done_family` / `remint_done_holders` were asserted here and are not on
+this screen.** They are tags of the Accord card's re-mint sheet
+(`AccordScreen.kt`, `RemintTrustRootSheet`), a different ceremony with a
+different artifact: this one entrenches the family, the re-mint mints the
+portable seed. The assertion moved to CSD-067 §4, where the tags live. This
+screen draws no tagged family line, so `accord:family` above is `proposed:`.
+
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop in practice. Six FIPS YubiKeys and six USB volumes, each
 re-inserted, are not a thing any platform runner has; the screen composes on all
@@ -273,8 +320,17 @@ five and the ceremony runs on one.
 **Not tested here.**
 * **Six provisions and three co-signs.** Physical hardware, PIN and touch;
   there is no endpoint for a touch and a mocked one tests the mock.
-* **Acceptance 2**, entirely — there is no error tag (§2).
-* **Acceptance 3's second half** — the artifact is shown and never saved (§2.2).
+* **Acceptance 2 past the first slot** — the no-token failure on A1 is
+  asserted (§4); a failure on B2 after five successes needs five touches.
+* **Acceptance 3's second half on a runner** — copy and save are tagged; that
+  the person then kept the file is theirs.
+
+**Stage.** Every tag is real and §3 has no `unconfirmed`, so `check_csd_v3.py`
+would admit `testable`. The draft flow's floor is already off `unreleased`
+(`client: ">=0.5.224"`): it drives only tags that v0.5.224 carries, and leaves
+the later phase line, intro sentences, family line and copy/save unasserted.
+As for CSD-068, the one remaining condition is that the flow runs on the
+matrix (#97); the card stays at `building` until it does.
 * **The hop.** Unlike every other CSD in this area, the runner cannot walk to
   this screen, so "the entry exists" is asserted by the parent's CSD-067 flow
   and by nothing here.

@@ -2,7 +2,7 @@
 
 **CSD**: CSD-082 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 (the setup wizard)
 **Pairs with**: CSD-083 (the run-without-AI pass through the same screen)
-**Flow**: partly written — `testing/gate/session_fixture.py` drives it today
+**Flow**: `testing/flows/drafts/csd-082-setup-with-ai.yaml` (floor `>=0.5.224`); `testing/gate/session_fixture.py` also drives it during sign-in
 
 ```yaml csd:stage
 stage: building
@@ -316,6 +316,8 @@ The node restarts and the app returns to **Login** with
 `banner_setup_complete_relogin` (CSD-081).
 
 ## 5. QA plan
+
+**Flow not complete.** `testing/flows/drafts/csd-082-setup-with-ai.yaml` (floor `>=0.5.224`) cannot go green on an ordinary matrix run as written: `the_claim_is_a_real_loading_state` presses Finish and asserts `setup_ownership_claiming` with `btn_next` absent. Its only precondition is `screen: Setup`, which always holds; whether Finish is live at all depends on the runner having an LLM key, and the loading state it asserts is transient, so an ordinary run can fail it either way. No tag marks the state it needs beforehand. It is complete when that step is gated on one (or split into a flow for a runner that holds a key); `FinalStepOnceTest` pins the behaviour meanwhile. Until then this card is not ready to promote.
 
 **Platforms.** All five. Every input on the YOU and AI steps declares its sink
 at `SetupScreen.kt:201`, so they are drivable — with two exceptions below.

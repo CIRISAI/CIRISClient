@@ -72,6 +72,13 @@ fun AnnounceDecisionCard(
     modifier: Modifier = Modifier,
     announceTestTag: String = "toggle_announce_ownership",
     traceTestTag: String = "toggle_trace_opt_in",
+    /**
+     * Offer the trace opt-in at all. The wizard does (its claim path writes it);
+     * the Add Federation ID catch-up does NOT — the opt-in is the Data card's
+     * write (CSD-039) and is read back there, so the catch-up points at it
+     * instead of issuing a second, unread write (CSD-086 §3).
+     */
+    showTraceOptIn: Boolean = true,
 ) {
     val scheme = MaterialTheme.colorScheme
     // Emphasise the ON choice: primaryContainer when opting in, the calmer
@@ -148,6 +155,8 @@ fun AnnounceDecisionCard(
                     },
                 )
             }
+
+            if (!showTraceOptIn) return@Column
 
             Spacer(Modifier.height(12.dp))
             HorizontalDivider(color = onContainer.copy(alpha = 0.15f))

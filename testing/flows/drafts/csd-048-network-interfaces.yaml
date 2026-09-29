@@ -23,6 +23,8 @@ steps:
   - step_id: a_medium_per_card
     title: A node carrying tcp traffic shows one tcp card, not one per peer
     optional_step: true
+    requires:
+      count: {of: "card_transport_*", min: 1}
     expect:
       state: populated
       visible: [card_transport_tcp]
