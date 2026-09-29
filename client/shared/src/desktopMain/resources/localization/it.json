@@ -724,7 +724,7 @@
     "verb_unknown": "{duty}: un incarico che questo nodo svolge e per il quale questa app non ha ancora una descrizione",
     "verb_license": "licenza: rilasciare una licenza per conto del delegante",
     "verb_grant": "concessione: rilasciare una concessione per conto del delegante",
-    "ladder_tier_generic": "tier {tier} · {ops}",
+    "ladder_tier_generic": "livello {tier} · {ops}",
     "vocabulary_not_on_this_node": "Questo nodo non pubblica il proprio vocabolario degli incarichi (nessun /v1/vocabulary), quindi questo elenco è una copia propria di questa app e potrebbe non includere incarichi che il nodo accetta.",
     "vocabulary_unreadable": "Non è stato possibile leggere il vocabolario degli incarichi di questo nodo ({detail}), quindi questo elenco è una copia propria di questa app e potrebbe non includere incarichi che il nodo accetta."
   },
