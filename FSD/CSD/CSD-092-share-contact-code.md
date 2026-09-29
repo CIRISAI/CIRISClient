@@ -199,7 +199,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-092-share-contact-code.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. The tags are the client's at 0.5.225; the route is ciris-server 0.5.218's, so on an older node the flow drives the version fact and skips the populated, empty and refusal states.
+Spec complete and flow written (`testing/flows/csd-092-share-contact-code.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. The tags are the client's at 0.5.225; the route is ciris-server 0.5.218's, so on an older node the flow drives the version fact and skips the populated, empty and refusal states. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **3/7 passed, 4 skipped** — the card opens, names the version it needs ("0.5.218 or newer") and closes; the four 0.5.218 states skipped as designed. On the matrix run of the same day (36588619656) the version step failed on every desktop leg: the client drew the sentence as the error's body and `StateBlock` registered its tag with the title alone, so the tree could not show it — fixed in the client (the tag now carries body and detail). The flow also closes its card whatever its verdict (`cleanup:`), because left open it replaced People's body for the three flows after it.
 
 **Platforms.** All five for the card. The copy → paste → contact round trip
 needs two nodes and runs on desktop.

@@ -10,8 +10,9 @@ description: >-
   (PeopleTags in ContactsScreen/PeopleSupport.kt).
 
   Not driven here, and why: the populated list and the receipt sheet need a
-  second node to be a contact of, which the matrix does not stand up; the
-  `proposed:` trust chip cannot be named by a flow at all.
+  second node to be a contact of — `csd-005-people.yaml` and
+  `csd-006-receipt.yaml` drive them with the two-node fixture, and the runner
+  orders this flow before any fixture so the node is still bare here.
 client: ">=0.5.224"
 
 steps:

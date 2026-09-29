@@ -74,23 +74,28 @@ Every file in this directory runs on every leg. Promoted from
 `testing/flows/drafts/` on the 0.5.225 run (2026-09-29); what still waits
 there, and why, is in `drafts/README.md`.
 
-| file | CSD | first screen | fixture | floor |
-|---|---|---|---|---|
-| `people.yaml` | CSD-005 | Contacts (bare node: the add card instead of an empty block) | — | `>=0.5.224` |
-| `csd-005-people.yaml` | CSD-005 | Contacts (a seeded contact: row, chip, hamburger, receipt) | `two_node` | `>=0.5.225` |
-| `csd-006-receipt.yaml` | CSD-006 | Contacts (the five facts, off the wire) | `two_node` | `>=0.5.225` |
-| `csd-008-notes-to-self.yaml` | CSD-008 | Notes | — | `>=0.5.225` |
-| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → `tile_federation_content` | `two_node` | `>=0.5.225` |
-| `csd-057-wallet.yaml` | CSD-057 | Wallet (read-only; never presses send) | — | `>=0.5.224` |
-| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder (the no-token refusal) | — | `>=0.5.224` |
-| `csd-092-share-contact-code.yaml` | CSD-092 | Contacts → the contact-code card | — | `>=0.5.225` |
-| `csd-101-household-members.yaml` | CSD-101 | HouseholdMembers (the bare node's empty shape; the roster is gated) | — | `>=0.5.225` |
+| file | CSD | first screen | fixture | floor | Linux desktop, local, 2026-09-29 |
+|---|---|---|---|---|---|
+| `people.yaml` | CSD-005 | Contacts (bare node: the add card instead of an empty block) | — | `>=0.5.224` | pass 3/3 |
+| `csd-005-people.yaml` | CSD-005 | Contacts (a seeded contact: row, chip, hamburger, receipt) | `two_node` | `>=0.5.225` | pass 11/12, 1 skipped (no camera) |
+| `csd-006-receipt.yaml` | CSD-006 | Contacts (the five facts, off the wire) | `two_node` | `>=0.5.225` | pass 5/6, 1 skipped (the node sends the grant) |
+| `csd-008-notes-to-self.yaml` | CSD-008 | Notes | — | `>=0.5.225` | pass 2/2 |
+| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → `tile_federation_content` | `two_node` | `>=0.5.225` | pass 4/4 |
+| `csd-057-wallet.yaml` | CSD-057 | Wallet (read-only; never presses send) | — | `>=0.5.224` | pass 3/6, 3 skipped (no address on a node build) |
+| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder (the no-token refusal) | — | `>=0.5.224` | pass 5/5 |
+| `csd-092-share-contact-code.yaml` | CSD-092 | Contacts → the contact-code card | — | `>=0.5.225` | pass 3/7, 4 skipped (0.5.218 states) |
+| `csd-101-household-members.yaml` | CSD-101 | HouseholdMembers (the bare node's empty shape; the roster is gated) | — | `>=0.5.225` | pass 2/4, 2 skipped (no household) |
 
 A flow's floor is the client that carries every tag it names — checked at the
-keyboard by `testing/test_flows.py`. `csd-005` and `csd-006` were run locally on
-the Linux desktop leg before promotion (their CSDs' §5 say what passed); the
-other six have not run anywhere yet, which is what their CSDs' `stage:`
-(`building`) says.
+keyboard by `testing/test_flows.py`. The last column is the Linux desktop leg
+run locally the way the workflow runs it (candidate 0.5.225, node v0.5.217,
+`--flows testing/flows`, the two-node fixture) after the fixes for the
+0.5.225 matrix run (36588619656): that run failed all three desktop legs —
+every row hop lost to a circle-hop race, three flows to a card the previous
+flow left open, csd-092 to a tree text that carried only a title, and Windows
+to a session fixture that slept two seconds through the wizard's mint. None of
+the nine has run on the other four legs since, which is what their CSDs'
+`stage:` (`building`) says.
 
 ## Verdicts
 

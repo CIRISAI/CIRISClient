@@ -143,7 +143,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Linux desktop, 2026-09-28 (candidate 0.5.224 checked as 0.5.225, node v0.5.217): 5/6 passed, the grant-less step skipped as designed. Not yet run on the other four legs.
+Spec complete and flow written (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **5/6 passed, 1 skipped** — the seeded row's hamburger, all five envelope rows, the wire dimension, the rule row off the wire (`chat:` among the grant's prefixes) and the close; the grant-less step skipped as designed (the node sends the grant). On the matrix run of the same day (36588619656) every desktop leg failed this flow for csd-092's open contact-code card, since fixed (`cleanup:`). Not yet run on the other four legs.
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

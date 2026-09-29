@@ -167,7 +167,7 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`.
+Spec complete and flow written (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/4 passed, 2 skipped** — the roster composes in its empty shape and points to the hub; the populated roster and the add card skipped as designed (no household on the bare node). On the matrix run of the same day (36588619656) it could not start on any desktop leg (the tab was clicked before the circle hop landed; fixed in the runner).
 
 **Platforms.** All five.
 

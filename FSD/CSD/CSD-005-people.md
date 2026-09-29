@@ -219,7 +219,7 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. The two-node fixture seeds the contact; on the Linux desktop leg (2026-09-28) the row, its trust chip, its hamburger and the five-fact receipt passed, and the step that then failed (`btn_scan_contact_code` is a button only where there is a camera) is now gated on the button.
+Spec complete and flow written (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **11/12 passed, 1 skipped** — the list, the seeded row with its trust chip and hamburger, the five-fact receipt and its close, the empty search and its clearing, the add card, the node-code refusal by name, and the code card from the header; `a_scan_is_offered_where_there_is_a_camera` skipped as designed (desktop has no `btn_scan_contact_code`). The matrix run of the same day (36588619656) failed this flow on every desktop leg for csd-092's open contact-code card, which now closes itself (`cleanup:`), and its fixture waited only for the peer's owner key, not the binding (`reachable_nodes`, CIRISServer#699) — both fixed. Not yet run on the other four legs.
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
