@@ -153,11 +153,6 @@
     "input_moderation_note",
     "input_moderation_targets"
   ],
-  "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/ProvisionAccordHolderScreen.kt": [
-    "input_provision_holder_key_id",
-    "input_provision_holder_pin",
-    "input_provision_holder_usb_path"
-  ],
   "shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/SelfReaderOpsSection.kt": [
     "chip_reader_standing"
   ],

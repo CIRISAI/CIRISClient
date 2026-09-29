@@ -2,6 +2,8 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
+import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
@@ -91,6 +93,27 @@ fun ProvisionAccordHolderScreen(
     var copied by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { viewModel.refreshYubiKeyStatus() }
 
+    // TEXT ENTRY FOR TEST AUTOMATION (CIRISClient#30). The three fields carried
+    // `input_*` tags and nothing subscribed to them, so `/input` had nothing to
+    // apply to: CSD-068's flow reached this screen for the first time on
+    // 2026-09-29 and failed its third step on a form a person can type into.
+    // Declared beside the dispatch, as SetupScreen does, so the two cannot
+    // drift apart (check_ui_drivable.py fails a dispatched tag with no sink).
+    rememberInputSinks("input_provision_holder_key_id", "input_provision_holder_usb_path", "input_provision_holder_pin")
+    val textInputRequest by TestAutomation.textInputRequests.collectAsState()
+    LaunchedEffect(textInputRequest) {
+        textInputRequest?.let { request ->
+            val (current, apply) = when (request.testTag) {
+                "input_provision_holder_key_id" -> keyId to viewModel::setKeyId
+                "input_provision_holder_usb_path" -> usbPath to viewModel::setUsbPath
+                "input_provision_holder_pin" -> userPin to viewModel::setUserPin
+                else -> return@let
+            }
+            apply(if (request.clearFirst) request.text else current + request.text)
+            TestAutomation.clearTextInputRequest()
+        }
+    }
+
     Scaffold(
         topBar = {
             ScreenTopBar(
@@ -114,13 +137,19 @@ fun ProvisionAccordHolderScreen(
                 .testableVerticalScroll(),
         ) {
             Spacer(Modifier.height(8.dp))
-            // The empty state: the three steps, none done yet.
-            Text(
-                text = localizedString("mobile.provision_holder_subtitle"),
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.testable("txt_provision_holder_start"),
-            )
+            // The empty state: the three steps, none done yet — and ONLY then.
+            // CSD-068 declares this tag as the empty state and
+            // `provision_holder_error` as the error; drawn in every state, a
+            // refused submit showed both at once, and error and empty must
+            // never look alike (CSD/3 §2.2; the local Linux leg, 2026-09-29).
+            if (!busy && error == null && provisionedKeyId == null) {
+                Text(
+                    text = localizedString("mobile.provision_holder_subtitle"),
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_provision_holder_start"),
+                )
+            }
 
             // ── Success state ────────────────────────────────────────────────
             val doneKeyId = provisionedKeyId
