@@ -379,6 +379,111 @@ def test_a_flow_whose_expects_hold_passes(tmp_path):
     assert run_flows.leg_ok([out])
 
 
+CLEANUP = GOOD + """\
+    cleanup:
+      - click: btn_close
+"""
+
+
+def test_a_flows_cleanup_runs_even_after_a_failed_step(tmp_path):
+    """csd_092 opened the contact-code card, failed on its second step, and
+    left the card open; `people`, `csd_005` and `csd_006` then failed for its
+    reason on every desktop leg (2026-09-29). Only the flow knows what it
+    opened; the runner guarantees the closing runs."""
+    h = FakeHelper("Thing", {"btn_close": ""})  # thing_list absent: the step fails
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.FAIL
+    assert "click btn_close" in h.calls
+
+
+def test_a_flows_cleanup_runs_after_a_pass_too(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_close": ""})
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_close"
+
+
+def test_a_cleanup_that_fails_is_said_and_is_not_the_verdict(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_close": ""})
+    h.refuse = {"btn_close"}  # on screen, and the app refuses the click
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert "cleanup" in out.detail and "btn_close" in out.detail and "No click handler" in out.detail
+
+
+def test_a_cleanup_whose_target_is_already_gone_is_nothing_to_close(tmp_path):
+    """csd_092's own last step closes the card it opened; its cleanup then
+    finds nothing to close, and that is not a failure to report."""
+    h = FakeHelper("Thing", {"thing_list": ""})  # btn_close absent
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert "cleanup" not in out.detail, out.detail
+
+
+class _NextFrame(FakeHelper):
+    """A click whose effect lands on the next frame — 0.3 s later on the wall
+    clock, as a Compose recomposition does after `/click` returns. Reading the
+    tree in the same instant sees the old screen."""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.lands_at = None
+
+    async def click(self, tag, timeout=2000):
+        import time as _t
+        if tag in self.leads:
+            self.calls.append(f"click {tag}")
+            self.lands_at = (_t.monotonic() + 0.3, self.leads[tag])
+            return True
+        return await super().click(tag, timeout)
+
+    def _land(self):
+        import time as _t
+        if self.lands_at and _t.monotonic() >= self.lands_at[0]:
+            self.screen, shown = self.lands_at[1]
+            self.els = {t: _El(t, "") for t in shown}
+            self.lands_at = None
+
+    async def get_elements(self):
+        self._land()
+        return await super().get_elements()
+
+    async def get_screen(self):
+        self._land()
+        return await super().get_screen()
+
+
+def test_an_expect_after_an_action_waits_for_the_frame(tmp_path):
+    """csd_057's back click 'succeeded' and the same-instant expect still saw
+    `card_wallet_balance` (local Linux leg, 2026-09-29): the click returns
+    before the frame that applies it. An assertion made in the instant of the
+    click is a race, not a test — the same rule `navigate` already states."""
+    body = GOOD.replace("        expect:\n          visible: [thing_list]\n",
+                        "        do:\n          - click: btn_back\n        expect:\n"
+                        "          absent: [thing_list]\n          screen: Elsewhere\n")
+    h = _NextFrame("Thing", {"thing_list": "", "btn_back": ""})
+    h.leads = {"btn_back": ("Elsewhere", ["other"])}
+    out = _run(_spec(tmp_path, body), h)
+    assert out.status == run_flows.PASS, out.detail
+
+
+def test_an_expect_that_never_holds_still_fails_and_is_bounded(tmp_path):
+    import time as _t
+    body = GOOD.replace("visible: [thing_list]", "visible: [thing_list, never_there]")
+    started = _t.monotonic()
+    out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
+    assert out.status == run_flows.FAIL and "never_there" in out.detail
+    assert _t.monotonic() - started < 10
+
+
+def test_a_failed_action_carries_the_drivers_reason(tmp_path):
+    """"did not succeed" was the whole verdict on csd_047; the driver knew why."""
+    body = GOOD.replace("        expect:\n", "        do:\n          - click: btn_gone\n        expect:\n")
+    out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
+    assert out.status == run_flows.FAIL
+    assert "no such element 'btn_gone'" in out.detail, out.detail
+
+
 def test_a_failing_expect_fails_the_flow_and_the_leg(tmp_path):
     out = _run(_spec(tmp_path), FakeHelper("Thing", {"something_else": ""}))
     assert out.status == run_flows.FAIL
@@ -535,7 +640,83 @@ def test_a_missing_hop_tag_is_cannot_start_and_names_the_tag(tmp_path):
     assert out.status == run_flows.CANNOT_START
     assert "'tab_y'" in out.detail and "hop 2 of 3" in out.detail
     assert "never appeared" in out.detail, "waited for, not blindly clicked"
+    # THE EVIDENCE TRAVELS WITH THE VERDICT. Four cannot-starts on the
+    # 2026-09-29 run said "never appeared ... on 'CircleTab'" and nothing
+    # else; which rows WERE listed was the fact that named the cause.
+    assert "on screen and drivable now" in out.detail and "circle_x" in out.detail
     assert not run_flows.leg_ok([out])
+
+
+# ── the circle hop must LAND before the tab is clicked ──────────────────────
+
+class _RacyShell(FakeHelper):
+    """`CIRISApp.openTab` as it behaves: a circle click changes the circle on
+    the NEXT FRAME (modelled as the next `/state` read), and a tab click opens
+    the tab of whichever circle the last frame saw. Sign-in lands a node
+    client in Neighbours (`defaultCircle`), whose Chats tab is Rooms; the
+    flow wants Just me › Chats › Notes."""
+
+    def __init__(self):
+        super().__init__("Contacts", {"circle_agent": "", "tab_chats": ""})
+        self.circle, self.tab, self.pending = "local-community", "people", None
+
+    async def get_state(self):
+        self.calls.append("state")
+        if self.pending:
+            self.circle, self.pending = self.pending, None
+        return {"screen": self.screen, "circle": self.circle, "tab": self.tab}
+
+    async def click(self, tag, timeout=2000):
+        self.calls.append(f"click {tag}")
+        if tag.startswith("circle_"):
+            self.pending = tag[len("circle_"):].replace("_", "-")
+            return True
+        if tag == "tab_chats":
+            self.tab = "chats"
+            self.screen = "Notes" if self.circle == "agent" else "CommunityChats"
+            body = "input_note" if self.screen == "Notes" else "rooms_list"
+            self.els = {t: _El(t, "") for t in ("circle_agent", "tab_chats", body)}
+            return True
+        return tag in self.els
+
+
+def test_navigate_waits_for_the_circle_hop_to_land_before_the_tab():
+    """macOS, 2026-09-29: `circle_agent -> tab_chats` landed on CommunityChats —
+    the tab was clicked with the circle the previous frame had."""
+    h = _RacyShell()
+    got = asyncio.run(run_flows.navigate(h, "Notes", ["circle_agent", "tab_chats"],
+                                         hop_timeout=1.0, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.screen == "Notes"
+    assert h.calls.index("state") < h.calls.index("click tab_chats"), \
+        "the circle was read back before the tab was clicked"
+
+
+def test_a_circle_hop_that_never_lands_is_named_as_the_circle_not_the_row():
+    h = _RacyShell()
+
+    async def stuck():
+        h.calls.append("state")
+        return {"screen": h.screen, "circle": "local-community", "tab": h.tab}
+    h.get_state = stuck
+    got = asyncio.run(run_flows.navigate(h, "Notes", ["circle_agent", "tab_chats"],
+                                         hop_timeout=0.3, arrive_timeout=0.1))
+    assert got and "circle_agent" in got and "local-community" in got, got
+    assert "click tab_chats" not in h.calls, "no tab is clicked in the wrong circle"
+
+
+def test_a_client_whose_state_has_no_circle_is_walked_without_verification():
+    """An older client serves no `circle` in /state: the runner cannot verify
+    the hop, says so, and still walks it rather than refusing every flow."""
+    h = _walkable()
+
+    async def old_state():
+        return {"screen": h.screen}
+    h.get_state = old_state
+    got = asyncio.run(run_flows.navigate(h, "Thing", ["circle_x", "tab_y", "nav_thing"],
+                                         hop_timeout=0.2, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.screen == "Thing"
 
 
 def test_a_screen_with_no_hop_that_is_not_flow_only_cannot_start(tmp_path):

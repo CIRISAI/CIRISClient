@@ -74,6 +74,14 @@ _VAR = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 
 
 _RELATION_OPS = {"eq", "ne", "lt", "lte", "gt", "gte", "min_of", "max_of", "sum_of"}
+
+#: LOCAL DELTA: how long an `expect` may take to hold after the step's actions.
+#: `/click` returns before the frame that applies it, so an assertion read in
+#: the same instant sees the screen the click is leaving: csd_057's back
+#: "succeeded" and `absent: [card_wallet_balance]` failed on the local Linux
+#: leg (2026-09-29). The expect is re-read every quarter second until it holds
+#: or this runs out; a condition that never holds still fails, in this long.
+EXPECT_SETTLE_S = 2.5
 _STATES = {"populated", "empty", "loading", "error"}
 
 
@@ -705,6 +713,19 @@ class FlowRunner:
                 return err
         return None
 
+    async def _settled(self, cond: Condition, label: str, budget: float = EXPECT_SETTLE_S) -> Optional[str]:
+        """LOCAL DELTA: `_check`, re-read until it holds or `budget` runs out —
+        an assertion made in the instant of a click is a race, not a test (the
+        rule `run_flows.navigate` already states for hops)."""
+        import asyncio  # noqa: PLC0415
+
+        deadline = time.monotonic() + budget
+        while True:
+            err = await self._check(cond, label)
+            if err is None or time.monotonic() >= deadline:
+                return err
+            await asyncio.sleep(0.25)
+
     async def _number(self, tag: str) -> Optional[float]:
         """The element's text as a number, or None if it is not one."""
         elem = await self.helper.get_element(tag)
@@ -889,7 +910,7 @@ class FlowRunner:
                     return False
                 print(f"     did: {action.describe()}")
 
-            post = await self._check(step.expect, "expect")
+            post = await self._settled(step.expect, "expect")
             drivable = await self._drivable()
             shot = self._shot(spec, step)
             if post:
