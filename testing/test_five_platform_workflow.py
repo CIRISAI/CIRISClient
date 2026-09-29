@@ -311,3 +311,65 @@ def test_the_emulator_script_has_no_line_continuations():
         assert "\\" not in script, (
             "a line continuation in `script:` reaches the runner as a literal argument"
         )
+
+
+# ── the two-node fixture (testing/gate/two_node.py) ─────────────────────────
+
+import re  # noqa: E402
+
+#: Each run_platform invocation and the peer work dir it must name.
+_PLATFORM_LEGS = {
+    "linux-android": ("two-node-linux", "two-node-android"),
+    "macos-ios": ("two-node-macos", "two-node-ios"),
+    "windows": ("two-node-windows",),
+}
+
+
+def _run_platform_calls(job: dict) -> list[str]:
+    """Every `run_platform` command line in a job, continuations joined."""
+    calls = []
+    for step in job["steps"]:
+        for text in (step.get("run"), (step.get("with") or {}).get("script")):
+            if not text:
+                continue
+            joined = re.sub(r"\\\n\s*", " ", str(text))
+            calls += [ln for ln in joined.splitlines() if "testing.gate.run_platform" in ln]
+    return calls
+
+
+@pytest.mark.parametrize("leg", LEGS)
+def test_every_platform_can_stand_up_the_second_node(wf, leg):
+    """A `fixture: two_node` flow on a leg with no --node-binary is
+    cannot-start: red, but for the gate's reason, not the client's."""
+    calls = _run_platform_calls(wf["jobs"][leg])
+    assert len(calls) == len(_PLATFORM_LEGS[leg]), calls
+    for call, work in zip(calls, _PLATFORM_LEGS[leg]):
+        assert "--node-binary node/ciris-server" in call, f"{leg}: {call}"
+        assert f'--peer-work "$RUNNER_TEMP/{work}"' in call, f"{leg}: {call}"
+
+
+@pytest.mark.parametrize("leg", LEGS)
+def test_every_peer_is_torn_down_even_when_the_leg_failed(wf, leg):
+    """The runner's `finally` does not survive a SIGKILL; an always() step does."""
+    teardown = [s for s in wf["jobs"][leg]["steps"]
+                if "testing.gate.two_node down" in str(s.get("run", ""))
+                and str(s.get("if", "")).strip() == "always()"]
+    assert teardown, f"{leg} never tears its peer down under always()"
+    body = " ".join(str(s["run"]) for s in teardown)
+    for work in _PLATFORM_LEGS[leg]:
+        leg_name = work.removeprefix("two-node-")
+        assert work in body or leg_name in body, f"{leg}: {work} is never torn down"
+
+
+def test_the_android_leg_gets_a_fresh_node_when_the_fixture_seeded_the_shared_one(wf):
+    """The desktop leg's fixture leaves the shared node with a contact; the
+    Android leg's bare-node flows must not inherit it."""
+    steps = wf["jobs"]["linux-android"]["steps"]
+    names = [s.get("name", "") for s in steps]
+    fresh = next(s for s in steps if s.get("name") == "A fresh node for the Android leg")
+    assert "seeded" in str(fresh.get("if", ""))
+    assert fresh["uses"] == "./.github/actions/ciris-node"
+    assert fresh["with"]["home"] != "", "a fresh node needs a fresh home"
+    assert names.index("A fresh node for the Android leg") < names.index("Android emulator")
+    assert names.index("Linux desktop") < names.index("A fresh node for the Android leg")
+
