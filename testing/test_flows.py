@@ -153,19 +153,43 @@ def test_a_proposed_tag_named_anywhere_in_a_flow_is_a_load_error(tmp_path, where
         FlowSpec.load(_flow(tmp_path, body), csd_root=_csd_root(tmp_path))
 
 
-def test_the_real_csd_005_refuses_its_proposed_trust_chip(tmp_path):
-    """Against the shipped document, not a fixture: `contacts_row_trust` is
-    `proposed:` in CSD-005, so no flow may assert it yet."""
-    body = """\
+def _a_real_proposed_tag():
+    """(CSD id, a tag it still marks `proposed:`) from the shipped documents.
+
+    Derived, not named: this test used CSD-005's `contacts_row_trust`, and the
+    chip shipped — the document stopped marking it proposed and the test went
+    red for the product doing its job. Any real CSD with a proposed tag proves
+    the same thing."""
+    import re as _re  # noqa: PLC0415
+    from testing.gate.csd_doc import CsdError, load  # noqa: PLC0415
+    for path in sorted((REPO / "FSD" / "CSD").glob("CSD-*.md")):
+        m = _re.match(r"(CSD-\d+)", path.name)
+        try:
+            doc = load(m.group(1)) if m else None
+        except CsdError:
+            continue
+        if doc is not None and doc.proposed:
+            return doc.csd_id, sorted(doc.proposed)[0]
+    return None
+
+
+def test_a_real_csd_refuses_a_tag_it_still_marks_proposed(tmp_path):
+    """Against a shipped document, not a fixture: a tag a real CSD still marks
+    `proposed:` may not be asserted by a flow."""
+    found = _a_real_proposed_tag()
+    if found is None:
+        pytest.skip("no shipped CSD marks any tag proposed")
+    csd_id, tag = found
+    body = f"""\
         flow: p
-        csd: CSD-005
+        csd: {csd_id}
         steps:
           - step_id: s
             title: t
             expect:
-              visible: [contacts_row_trust]
+              visible: [{tag}]
     """
-    with pytest.raises(SpecError, match="contacts_row_trust.*proposed"):
+    with pytest.raises(SpecError, match=f"{tag}.*proposed"):
         FlowSpec.load(_flow(tmp_path, body))
 
 
