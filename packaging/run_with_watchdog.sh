@@ -2,6 +2,7 @@
 # Run a long build so that STALLED and SLOW stop looking the same.
 #
 #   packaging/run_with_watchdog.sh <idle_seconds> <heartbeat_seconds> <label> -- cmd...
+#   packaging/run_with_watchdog.sh --self-test   # prove the CPU arithmetic on BSD ps output
 #
 # GitHub Actions offers only a WALL-CLOCK timeout, which cannot tell a build
 # that is working from one that is wedged: both end at the limit, both report
@@ -23,12 +24,6 @@
 # The exit code is the command's own. A watchdog that swallowed it would be a
 # new way to report green.
 set -uo pipefail
-
-idle="$1"; heartbeat="$2"; label="$3"; shift 3
-[ "${1:-}" = "--" ] && shift
-
-log="$(mktemp -t watchdog.XXXXXX)"
-started=$(date +%s)
 
 elapsed() { printf '%dm%02ds' $((($(date +%s) - started) / 60)) $((($(date +%s) - started) % 60)); }
 
@@ -60,17 +55,34 @@ mtime() {
 # whole backgrounded pipeline into the log — noise in CI output, and noise in
 # the very stream the quiet check reads.
 #
-# `ps -A -o pid=,ppid=,time=` on both GNU and BSD; TIME is [dd-]hh:mm:ss.
+# `ps -A -o pid=,ppid=,time=` on both GNU and BSD; TIME is [dd-]hh:mm:ss on
+# GNU and [dd-]hh:mm:ss.ff on BSD.
+#
+# THE ANSWER IS AN INTEGER, ALWAYS. macOS `ps` prints hundredths — "7:18.74"
+# — and this once summed them faithfully into "438.74", which bash arithmetic
+# rejects: `$(( cpu - last_cpu ))` printed `syntax error: invalid arithmetic
+# operator`, and because an expansion error ends a non-interactive shell, the
+# heartbeat subshell DIED on its first tick. The 0.5.225 iOS leg then ran 33
+# more minutes with no heartbeat and no hang detection at all — on the one
+# runner this check was written for. The fraction is dropped per process
+# before summing, and `printf %d` fixes the shape even if some `ps` prints a
+# form not seen yet. `--self-test` feeds that exact "438.74" through the same
+# expression so this cannot come back quietly.
 cpu_seconds() {
   ps -A -o pid=,ppid=,time= 2>/dev/null | awk -v root="$1" '
     {
       ppid[$1] = $2
       t = $3
-      gsub("-", ":", t)
+      sub(/\.[0-9]+$/, "", t)
+      days = 0
+      if (index(t, "-") > 0) {
+        days = substr(t, 1, index(t, "-") - 1) + 0
+        t = substr(t, index(t, "-") + 1)
+      }
       n = split(t, p, ":")
       s = 0
       for (i = 1; i <= n; i++) s = s * 60 + p[i]
-      cpu[$1] = s
+      cpu[$1] = days * 86400 + s
       pids[NR] = $1
     }
     END {
@@ -86,10 +98,53 @@ cpu_seconds() {
         }
       }
       for (i = 1; i <= NR; i++) if (intree[pids[i]]) total += cpu[pids[i]]
-      print total + 0
+      printf "%d\n", total
     }
   '
 }
+
+# PROVE THE ARITHMETIC ON THE OUTPUT THAT BROKE IT. A fake `ps` on PATH prints
+# the BSD shape (fractions), the GNU day prefix, and a process outside the
+# tree; the total must be the integer sum of the tree, and it must survive the
+# exact `$(( cpu - last_cpu ))` the heartbeat died on. Exit 0 on pass, 1 on
+# fail. Wired into testing/test_publish_ios_leg.py, which also proves this
+# goes RED when the fraction is left in.
+self_test() {
+  local fake got want
+  fake="$(mktemp -d -t watchdog-selftest.XXXXXX)"
+  {
+    echo '#!/usr/bin/env bash'
+    echo '# `ps -A -o pid=,ppid=,time=` as macOS prints it, plus one GNU day-prefixed'
+    echo '# row. Tree under 100: 100, 101, 102 (child of 101), 103. 200 is not.'
+    echo "printf '%s\\n' '  100     1 7:18.74' '  101   100 0:01.50' '  102   101 1:00:00.25' '  103   100 1-02:03:04' '  200     1 9:59.99'"
+  } > "$fake/ps"
+  chmod +x "$fake/ps"
+  got="$(PATH="$fake:$PATH" cpu_seconds 100)"
+  rm -rf "$fake"
+  want=$(( 438 + 1 + 3600 + (86400 + 2 * 3600 + 3 * 60 + 4) ))
+  case "$got" in
+    ''|*[!0-9]*) echo "[FAIL] self-test: cpu_seconds printed '$got', not an integer"; return 1 ;;
+  esac
+  if [ "$got" -ne "$want" ]; then
+    echo "[FAIL] self-test: cpu_seconds summed the tree to $got, expected $want"; return 1
+  fi
+  # The expression itself, in a subshell, because an arithmetic syntax error
+  # kills the shell it happens in — which is how the heartbeat loop died.
+  if ! ( moved=$(( got - 0 )); [ "$moved" -eq "$want" ] ) 2>/dev/null; then
+    echo "[FAIL] self-test: '$got' does not survive \$(( cpu - last_cpu ))"; return 1
+  fi
+  echo "[OK] self-test: fractional BSD ps times sum to the integer $got and survive bash arithmetic"
+}
+
+if [ "${1:-}" = "--self-test" ]; then
+  self_test; exit $?
+fi
+
+idle="$1"; heartbeat="$2"; label="$3"; shift 3
+[ "${1:-}" = "--" ] && shift
+
+log="$(mktemp -t watchdog.XXXXXX)"
+started=$(date +%s)
 
 "$@" > >(tee "$log") 2>&1 &
 cmd_pid=$!
