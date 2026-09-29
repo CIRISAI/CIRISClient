@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import re
 import json
 import sys
 import time
@@ -140,13 +141,17 @@ async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: fl
         # the rows rather than guess.
         rows = sorted({e.test_tag for e in await helper.get_elements()
                        if e.test_tag.startswith("nav_epistemic_")})
-        if len(rows) == 1:
-            await helper.click(rows[0], timeout=int(hop_timeout * 1000))
+        # The row for THIS screen, when the list has it (Contacts sits in every
+        # circle's People tab; a tab can list several cards).
+        want = "nav_epistemic_" + re.sub(r"(?<!^)(?=[A-Z])", "_", screen).lower()
+        pick = want if want in rows else (rows[0] if len(rows) == 1 else None)
+        if pick:
+            await helper.click(pick, timeout=int(hop_timeout * 1000))
             got = await _settle_on(helper, screen, arrive_timeout)
         elif rows:
             return (f"navigation to Screen.{screen}: walked {' -> '.join(chain)} and landed on "
                     f"the tab's card list with {len(rows)} rows ({', '.join(rows)}); nav_map "
-                    f"expected one card")
+                    f"expected one card, and none is {want!r} — was the circle hop applied?")
     if got != screen:
         return (f"navigation to Screen.{screen}: walked {' -> '.join(chain)} and landed on "
                 f"{got!r}")

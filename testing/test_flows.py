@@ -543,3 +543,29 @@ def test_navigate_opens_the_single_card_when_a_compact_tab_lists_it():
                                          hop_timeout=0.1, arrive_timeout=0.1))
     assert got is None, got
     assert h.clicked[-1] == "nav_epistemic_contacts"
+
+
+def test_navigate_prefers_the_target_row_when_a_tab_lists_several():
+    import asyncio
+    from testing.gate import run_flows
+
+    class E:
+        def __init__(self, t): self.test_tag = t
+
+    class H:
+        def __init__(self): self.screen = "Login"; self.clicked = []
+        async def wait_for_element(self, tag, timeout=0): return True
+        async def click(self, tag, timeout=0):
+            self.clicked.append(tag)
+            self.screen = {"tab_people": "CircleTab", "nav_epistemic_contacts": "Contacts",
+                           "nav_epistemic_community_roster": "CommunityRoster"}.get(tag, self.screen)
+            return True
+        async def get_screen(self): return self.screen
+        async def get_elements(self):
+            return [E("nav_epistemic_community_roster"), E("nav_epistemic_contacts")]
+
+    h = H()
+    got = asyncio.run(run_flows.navigate(h, "Contacts", ["circle_agent", "tab_people"],
+                                         hop_timeout=0.1, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.clicked[-1] == "nav_epistemic_contacts"
