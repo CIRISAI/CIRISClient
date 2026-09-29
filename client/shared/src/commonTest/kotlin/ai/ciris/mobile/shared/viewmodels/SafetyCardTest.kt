@@ -107,6 +107,21 @@ class SafetyCardTest {
     }
 
     @Test
+    fun aFailedOwnerLookupIsNotAnUnclaimedNode() {
+        // Codex, PR #126: owned-nodes failing is "we could not ask", never
+        // "no owner" — asking about the node key drew the wrong posture and
+        // hid the owner's restate controls.
+        val fake = FakeSafety(ownedNodesFails = true)
+        val vm = vm(fake)
+        vm.probeIdentityAndStatus()
+        val s = vm.state.value
+        assertTrue(fake.statusAskedFor.isEmpty(), "no posture is read when whose posture it is could not be resolved")
+        assertNull(s.subjectKeyId)
+        assertIs<ReadFailure.Failed>(s.subjectFailure)
+        assertEquals(NODE_KEY, s.selfKeyId, "the node key stays the signer")
+    }
+
+    @Test
     fun aFailedPostureReadIsNotNoBandOnRecord() {
         val fake = FakeSafety(status = { throw RuntimeException("status: 503") })
         val vm = vm(fake)

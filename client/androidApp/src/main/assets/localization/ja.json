@@ -2154,6 +2154,9 @@
     "provision_holder_err_owner": "まずこのノードの所有者としてサインインしてから、プロビジョニングしてください。",
     "provision_holder_err_loopback": "プロビジョニングはノード自身のホスト（localhostのみ）で実行する必要があります。",
     "provision_holder_err_other": "プロビジョニングに失敗しました：{detail}",
+    "yubikey_probe_failed": "YubiKeyの状態を読み取れませんでした",
+    "yubikey_probe_not_on_this_node": "このノードはYubiKeyの状態を報告しません",
+    "yubikey_probe_reason": "理由：{detail}",
     "receipt_holders_count": "保持者 {count} 名",
     "receipt_notes": "他の人が残したメモ",
     "receipt_notes_none": "メモを残した人はいません。",
@@ -3749,7 +3752,8 @@
     "data_erase_button": "これらのトレースを消去",
     "data_erase_confirm_title": "このノードからこれらのトレースを消去しますか？",
     "data_erase_fact_erased_label": "消去済み",
-    "data_erase_fact_erased": "このノード上で{hash}のもとに記録されたすべてのトレースと、そのモデル呼び出し。検出はリンクを失います。"
+    "data_erase_fact_erased": "このノード上で{hash}のもとに記録されたすべてのトレースと、そのモデル呼び出し。検出はリンクを失います。",
+    "child_safety_subject_unresolved": "誰の状態かを特定できませんでした。所有者の照会に失敗したため、代わりの状態は表示しません。"
   },
   "moderation": {
     "ladder": {

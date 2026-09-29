@@ -18,14 +18,50 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
+ * What the lens-traces card offers when it holds no accord settings. Pure, so
+ * the rule is pinned in a test: "Enable" is offered only on an AFFIRMATIVE
+ * adapter-not-loaded answer (the route's 404) — never over a read that failed,
+ * and never over one that was not made.
+ */
+sealed interface AccordOffer {
+    /** Settings were read; the card shows them. */
+    data object Loaded : AccordOffer
+    /** The accord route answered 404: the adapter is not loaded. Offer Enable. */
+    data object EnableAdapter : AccordOffer
+    /** The read failed (or never got as far as the accord route): say so. */
+    data class Failure(val failure: ai.ciris.mobile.shared.ui.screens.ReadFailure) : AccordOffer
+    /** Not read yet. */
+    data object Unread : AccordOffer
+}
+
+fun accordOfferOf(
+    settings: AccordSettingsData?,
+    failure: ai.ciris.mobile.shared.ui.screens.ReadFailure?,
+): AccordOffer = when {
+    settings != null -> AccordOffer.Loaded
+    failure is ai.ciris.mobile.shared.ui.screens.ReadFailure.NotOnThisNode -> AccordOffer.EnableAdapter
+    failure is ai.ciris.mobile.shared.ui.screens.ReadFailure.Failed -> AccordOffer.Failure(failure)
+    else -> AccordOffer.Unread
+}
+
+/**
  * ViewModel for the Data Management screen.
  * Handles DSAR self-service for local data and CIRISLens trace deletion.
  */
 class DataManagementViewModel(
     private val apiClient: CIRISApiClient,
     private val secureStorage: SecureStorage,
-    private val envFileUpdater: EnvFileUpdater
+    private val envFileUpdater: EnvFileUpdater,
+    /** `GET /v1/my-data/lens-identifier`. The client's by default; a test's fake fails it. */
+    readLensIdentifier: (suspend () -> LensIdentifierData)? = null,
+    /** `GET /v1/my-data/accord-settings`. */
+    readAccordSettings: (suspend () -> AccordSettingsData)? = null,
 ) : ViewModel() {
+
+    private val lensIdentifierReader: suspend () -> LensIdentifierData =
+        readLensIdentifier ?: { apiClient.getLensIdentifier() }
+    private val accordSettingsReader: suspend () -> AccordSettingsData =
+        readAccordSettings ?: { apiClient.getAccordSettings() }
 
     companion object {
         private const val TAG = "DataManagementVM"
@@ -125,7 +161,7 @@ class DataManagementViewModel(
 
             try {
                 // Load lens identifier (shows agent hash and trace count)
-                val lensData = apiClient.getLensIdentifier()
+                val lensData = lensIdentifierReader()
                 _lensIdentifier.value = lensData
                 logInfo(method, "Lens identifier loaded: hash=${lensData.agentIdHash.take(8)}..., " +
                         "consent=${lensData.consentGiven}, tracesSent=${lensData.tracesSent}")
@@ -133,7 +169,7 @@ class DataManagementViewModel(
                 // Also load accord settings for more detailed info
                 try {
                     logDebug(method, "Fetching accord settings...")
-                    val accordData = apiClient.getAccordSettings()
+                    val accordData = accordSettingsReader()
                     _accordSettings.value = accordData
                     _accordFailure.value = null
                     logInfo(method, "Accord settings loaded: consent=${accordData.consentGiven}, " +
@@ -162,6 +198,16 @@ class DataManagementViewModel(
             } catch (e: Exception) {
                 logError(method, "Failed to load data: ${e.message}")
                 _errorMessage.value = "Failed to load data management info: ${e.message}"
+                // The lens read failed BEFORE the accord route was asked, so
+                // this card has no accord answer at all. Recorded as a failed
+                // read for the card — never left null, which drew "Enable"
+                // over a read nobody made (Codex, PR #126). Always Failed, even
+                // on a 404 here: that 404 is the lens route's, not the
+                // affirmative adapter-not-loaded answer Enable requires.
+                _accordSettings.value = null
+                _accordFailure.value = ai.ciris.mobile.shared.ui.screens.ReadFailure.Failed(
+                    e.message ?: e::class.simpleName,
+                )
             } finally {
                 _isLoading.value = false
             }

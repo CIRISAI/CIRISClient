@@ -5459,19 +5459,23 @@ class CIRISApiClient(
     ): ai.ciris.mobile.shared.models.federation.YubiKeyStatus {
         val method = "getYubiKeyStatus"
         val client = federationHttpClient()
+        // A probe that did not answer THROWS: it is not "no token detected".
+        // A 404 is a node without the probe route (RouteNotOnThisHost); every
+        // other failure is a failed read the banner says with its reason.
         return try {
             val response = client.get("$nodeUrl/v1/accord/yubikey-status")
+            if (response.status == HttpStatusCode.NotFound) throw RouteNotOnThisHost("/v1/accord/yubikey-status")
             val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("HTTP ${response.status.value}: ${raw.take(200)}")
+            }
             jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.YubiKeyStatus.serializer(),
                 raw,
             )
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl")
-            ai.ciris.mobile.shared.models.federation.YubiKeyStatus(
-                detected = false,
-                hint = "couldn't reach the node's YubiKey probe: ${e.message}",
-            )
+            throw e
         } finally {
             client.close()
         }

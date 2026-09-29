@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.ui.screens.ConsentScreenData
 import ai.ciris.mobile.shared.ui.screens.ConsentStreamInfo
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,7 +38,24 @@ class ConsentViewModel(
     private val apiClient: CIRISApiClient,
     /** Where the card starts. Empty in the app; a test seeds a previous owner's record to forget. */
     initialData: ConsentScreenData = ConsentScreenData(),
+    /** The record read (status, streams, partnership, impact, audit). The API's by default; a test holds it open across a reset. */
+    readRecord: (suspend () -> ConsentScreenData)? = null,
+    /** The partnership-queue read (options, pending, metrics). */
+    readQueue: (suspend () -> PartnershipQueueRead)? = null,
+    /** One person's partnership history. */
+    readHistory: (suspend (String) -> AgentRead<PartnershipHistoryDto>)? = null,
 ) : ViewModel() {
+
+    /** What [loadPartnershipQueue] publishes: the options read and the queue. */
+    data class PartnershipQueueRead(
+        val options: AgentRead<PartnershipOptionsDto>,
+        val queue: PartnershipQueue,
+    )
+
+    private val recordReader: suspend () -> ConsentScreenData = readRecord ?: { readRecordFromApi() }
+    private val queueReader: suspend () -> PartnershipQueueRead = readQueue ?: { readQueueFromApi() }
+    private val historyReader: suspend (String) -> AgentRead<PartnershipHistoryDto> =
+        readHistory ?: { userId -> apiClient.partnershipHistory(userId) }
 
     companion object {
         private const val TAG = "ConsentViewModel"
@@ -63,8 +81,15 @@ class ConsentViewModel(
      * (CSD-054 §2; the Manage Consent half of the same defect was PR #116).
      */
     fun resetSession() {
+        // Every read in flight belongs to the session that just ended: cancel
+        // them, and advance the epoch so one already past its last suspension
+        // point discards its result instead of publishing it (Codex, PR #126).
+        sessionEpoch += 1
+        sessionJobs.toList().forEach { it.cancel() }
+        sessionJobs.clear()
         stopPartnershipPolling()
         dataLoadStarted = false
+        _isLoading.value = false
         _consentData.value = ConsentScreenData()
         _error.value = null
         _successMessage.value = null
@@ -109,6 +134,33 @@ class ConsentViewModel(
     private var partnershipPollJob: Job? = null
     private var dataLoadStarted = false
 
+    /**
+     * Session epoch: advanced by [resetSession]. Every coroutine that publishes
+     * into this model captures it at LAUNCH and re-checks before publishing —
+     * the reset empties the flows exactly once, and without the gate a read
+     * still in flight at logout repopulated them with the previous owner's
+     * stream, audit trail and partnership queue (the same gate as
+     * ContactsViewModel / ConsentObjectsViewModel). Confined to the main
+     * dispatcher by `viewModelScope`, so a plain Long suffices.
+     */
+    private var sessionEpoch: Long = 0L
+
+    /** The reads in flight for this session; [resetSession] cancels them. */
+    private val sessionJobs = mutableSetOf<Job>()
+
+    /** Launch a read owned by the current session: tracked, and given its epoch. */
+    private fun launchInSession(block: suspend (epoch: Long) -> Unit): Job {
+        val epoch = sessionEpoch
+        val job = viewModelScope.launch { block(epoch) }
+        if (job.isActive) {
+            sessionJobs += job
+            job.invokeOnCompletion { sessionJobs -= job }
+        }
+        return job
+    }
+
+    private fun current(epoch: Long) = epoch == sessionEpoch
+
     init {
         logInfo("init", "ConsentViewModel initialized (data load deferred until startPolling() called)")
         // NOTE: Don't auto-load here - wait for startPolling() to be called
@@ -148,93 +200,18 @@ class ConsentViewModel(
         val method = "loadConsentData"
         logInfo(method, "Loading consent data")
 
-        viewModelScope.launch {
+        launchInSession { epoch ->
             _isLoading.value = true
             _error.value = null
 
             try {
-                // Load consent status. No 404 swallow: the agent answers "no
-                // record" with 200 + has_consent=false (routes/consent.py), so a
-                // 404 means THIS HOST HAS NO CONSENT ROUTE (a node), not "a new
-                // user with no record". Treating it as the latter told a node
-                // owner they had never consented, about a question nobody could
-                // answer (CSD-054). It now fails the load and says which.
-                val statusResponse = apiClient.getConsentStatus()
+                val record = recordReader()
+                if (!current(epoch)) return@launchInSession
+                _consentData.value = record
+                val isPending = record.partnershipPending
 
-                // Load available streams
-                val streamsResponse = apiClient.getConsentStreams()
-
-                // Load partnership status
-                val partnershipResponse = try {
-                    apiClient.getPartnershipStatus()
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to load partnership status: ${e.message}")
-                    null
-                }
-
-                // Load impact data if applicable
-                val impactData = if (statusResponse?.stream in listOf("partnered", "anonymous")) {
-                    try {
-                        apiClient.getConsentImpact()
-                    } catch (e: Exception) {
-                        logWarn(method, "Failed to load impact data: ${e.message}")
-                        null
-                    }
-                } else null
-
-                // Load audit trail
-                val auditEntries = try {
-                    apiClient.getConsentAudit(10)
-                } catch (e: Exception) {
-                    logWarn(method, "Failed to load audit trail: ${e.message}")
-                    emptyList()
-                }
-
-                // Build stream info list with benefits
-                val availableStreams = streamsResponse.streams.map { (id, metadata) ->
-                    ConsentStreamInfo(
-                        id = id,
-                        name = metadata.name,
-                        description = metadata.description,
-                        durationDays = metadata.durationDays,
-                        autoForget = metadata.autoForget,
-                        learningEnabled = metadata.learningEnabled,
-                        identityRemoved = metadata.identityRemoved,
-                        requiresApproval = metadata.requiresCategories,
-                        benefits = getStreamBenefits(id)
-                    )
-                }
-
-                val isPending = partnershipResponse?.status == "pending"
-
-                _consentData.value = ConsentScreenData(
-                    hasConsent = statusResponse != null,
-                    currentStream = statusResponse?.stream,
-                    expiresAt = statusResponse?.expiresAt,
-                    partnershipPending = isPending,
-                    availableStreams = availableStreams,
-                    impactData = impactData?.let {
-                        ConsentImpactData(
-                            totalInteractions = it.totalInteractions,
-                            patternsContributed = it.patternsContributed,
-                            usersHelped = it.usersHelped,
-                            impactScore = it.impactScore
-                        )
-                    },
-                    auditEntries = auditEntries.map {
-                        ConsentAuditEntryData(
-                            entryId = it.entryId,
-                            timestamp = it.timestamp,
-                            previousStream = it.previousStream,
-                            newStream = it.newStream,
-                            initiatedBy = it.initiatedBy,
-                            reason = it.reason
-                        )
-                    }
-                )
-
-                logInfo(method, "Consent data loaded: hasConsent=${statusResponse != null}, " +
-                        "stream=${statusResponse?.stream}, partnershipPending=$isPending")
+                logInfo(method, "Consent data loaded: hasConsent=${record.hasConsent}, " +
+                        "stream=${record.currentStream}, partnershipPending=$isPending")
 
                 // Start polling if partnership is pending
                 if (isPending) {
@@ -243,14 +220,109 @@ class ConsentViewModel(
                     stopPartnershipPolling()
                 }
 
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                if (!current(epoch)) return@launchInSession
                 logError(method, "Failed to load consent data: ${e::class.simpleName}: ${e.message}")
                 _error.value = "Failed to load consent data: ${e.message}"
                 _consentData.value = ConsentScreenData(readFailure = ReadFailure.of(e))
             } finally {
-                _isLoading.value = false
+                // A superseded load must not clear the next session's spinner.
+                if (current(epoch)) _isLoading.value = false
             }
         }
+    }
+
+    /** The record, read from the agent. Throws on a failed status or streams read. */
+    private suspend fun readRecordFromApi(): ConsentScreenData {
+        val method = "readRecordFromApi"
+        // Load consent status. No 404 swallow: the agent answers "no
+        // record" with 200 + has_consent=false (routes/consent.py), so a
+        // 404 means THIS HOST HAS NO CONSENT ROUTE (a node), not "a new
+        // user with no record". Treating it as the latter told a node
+        // owner they had never consented, about a question nobody could
+        // answer (CSD-054). It now fails the load and says which.
+        val statusResponse = apiClient.getConsentStatus()
+
+        // Load available streams
+        val streamsResponse = apiClient.getConsentStreams()
+
+        // Load partnership status
+        val partnershipResponse = try {
+            apiClient.getPartnershipStatus()
+        } catch (e: Exception) {
+            logWarn(method, "Failed to load partnership status: ${e.message}")
+            null
+        }
+
+        // Load impact data if applicable
+        val impactData = if (statusResponse?.stream in listOf("partnered", "anonymous")) {
+            try {
+                apiClient.getConsentImpact()
+            } catch (e: Exception) {
+                logWarn(method, "Failed to load impact data: ${e.message}")
+                null
+            }
+        } else null
+
+        // Load audit trail
+        val auditEntries = try {
+            apiClient.getConsentAudit(10)
+        } catch (e: Exception) {
+            logWarn(method, "Failed to load audit trail: ${e.message}")
+            emptyList()
+        }
+
+        // Build stream info list with benefits
+        val availableStreams = streamsResponse.streams.map { (id, metadata) ->
+            ConsentStreamInfo(
+                id = id,
+                name = metadata.name,
+                description = metadata.description,
+                durationDays = metadata.durationDays,
+                autoForget = metadata.autoForget,
+                learningEnabled = metadata.learningEnabled,
+                identityRemoved = metadata.identityRemoved,
+                requiresApproval = metadata.requiresCategories,
+                benefits = getStreamBenefits(id)
+            )
+        }
+
+        val isPending = partnershipResponse?.status == "pending"
+
+        return ConsentScreenData(
+            hasConsent = statusResponse != null,
+            currentStream = statusResponse?.stream,
+            expiresAt = statusResponse?.expiresAt,
+            partnershipPending = isPending,
+            availableStreams = availableStreams,
+            impactData = impactData?.let {
+                ConsentImpactData(
+                    totalInteractions = it.totalInteractions,
+                    patternsContributed = it.patternsContributed,
+                    usersHelped = it.usersHelped,
+                    impactScore = it.impactScore
+                )
+            },
+            auditEntries = auditEntries.map {
+                ConsentAuditEntryData(
+                    entryId = it.entryId,
+                    timestamp = it.timestamp,
+                    previousStream = it.previousStream,
+                    newStream = it.newStream,
+                    initiatedBy = it.initiatedBy,
+                    reason = it.reason
+                )
+            }
+        )
+    }
+
+    private suspend fun readQueueFromApi(): PartnershipQueueRead {
+        val options = apiClient.partnershipOptions()
+        val pending = apiClient.partnershipPending()
+        val metrics = if (pending is AgentRead.Ok) apiClient.partnershipMetrics() else null
+        return PartnershipQueueRead(options, partnershipQueueOf(pending, metrics))
     }
 
     /**
@@ -260,7 +332,7 @@ class ConsentViewModel(
         val method = "changeStream"
         logInfo(method, "Changing consent stream to: $streamId")
 
-        viewModelScope.launch {
+        launchInSession { epoch ->
             _isLoading.value = true
             _error.value = null
 
@@ -272,13 +344,16 @@ class ConsentViewModel(
                 )
 
                 logInfo(method, "Stream changed successfully to $streamId")
+                if (!current(epoch)) return@launchInSession
                 _successMessage.value = "Consent stream changed to ${streamId.uppercase()}"
                 loadConsentData() // Reload to show updated status
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logError(method, "Failed to change stream: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Failed to change consent stream: ${e.message}"
+                if (current(epoch)) _error.value = "Failed to change consent stream: ${e.message}"
             } finally {
-                _isLoading.value = false
+                if (current(epoch)) _isLoading.value = false
             }
         }
     }
@@ -290,7 +365,7 @@ class ConsentViewModel(
         val method = "requestPartnership"
         logInfo(method, "Requesting partnership")
 
-        viewModelScope.launch {
+        launchInSession { epoch ->
             _isLoading.value = true
             _error.value = null
 
@@ -300,6 +375,7 @@ class ConsentViewModel(
                 )
 
                 logInfo(method, "Partnership request submitted")
+                if (!current(epoch)) return@launchInSession
                 _successMessage.value = "Partnership request submitted. The agent will review your request."
 
                 // Update UI to show pending state
@@ -307,11 +383,13 @@ class ConsentViewModel(
 
                 // Start polling for status
                 startPartnershipPolling()
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 logError(method, "Failed to request partnership: ${e::class.simpleName}: ${e.message}")
-                _error.value = "Failed to submit partnership request: ${e.message}"
+                if (current(epoch)) _error.value = "Failed to submit partnership request: ${e.message}"
             } finally {
-                _isLoading.value = false
+                if (current(epoch)) _isLoading.value = false
             }
         }
     }
@@ -327,6 +405,7 @@ class ConsentViewModel(
         }
 
         logInfo(method, "Starting partnership status polling")
+        val epoch = sessionEpoch
         partnershipPollJob = viewModelScope.launch {
             while (isActive) {
                 delay(PARTNERSHIP_POLL_INTERVAL_MS)
@@ -334,6 +413,7 @@ class ConsentViewModel(
                 try {
                     val status = apiClient.getPartnershipStatus()
                     logDebug(method, "Partnership status: ${status.status}")
+                    if (!current(epoch)) break
 
                     if (status.status != "pending") {
                         // Status changed
@@ -403,12 +483,12 @@ class ConsentViewModel(
     val partnershipHistory: StateFlow<Map<String, AgentRead<PartnershipHistoryDto>?>> = _partnershipHistory.asStateFlow()
 
     fun loadPartnershipQueue() {
-        viewModelScope.launch {
+        launchInSession { epoch ->
             _partnershipQueue.value = PartnershipQueue.Loading
-            _partnershipOptions.value = apiClient.partnershipOptions()
-            val pending = apiClient.partnershipPending()
-            val metrics = if (pending is AgentRead.Ok) apiClient.partnershipMetrics() else null
-            _partnershipQueue.value = partnershipQueueOf(pending, metrics)
+            val read = queueReader()
+            if (!current(epoch)) return@launchInSession
+            _partnershipOptions.value = read.options
+            _partnershipQueue.value = read.queue
             logInfo("loadPartnershipQueue", "queue=${_partnershipQueue.value::class.simpleName}")
         }
     }
@@ -420,9 +500,9 @@ class ConsentViewModel(
             return
         }
         _partnershipHistory.value = _partnershipHistory.value + (userId to null)
-        viewModelScope.launch {
-            val read = apiClient.partnershipHistory(userId)
-            if (userId in _partnershipHistory.value) {
+        launchInSession { epoch ->
+            val read = historyReader(userId)
+            if (current(epoch) && userId in _partnershipHistory.value) {
                 _partnershipHistory.value = _partnershipHistory.value + (userId to read)
             }
         }

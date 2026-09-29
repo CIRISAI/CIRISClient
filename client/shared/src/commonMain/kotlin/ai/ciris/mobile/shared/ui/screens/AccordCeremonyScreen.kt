@@ -40,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import ai.ciris.mobile.shared.models.federation.YubiKeyProbe
 import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
 import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
 import ai.ciris.mobile.shared.platform.DirectoryPickerPurpose
@@ -658,12 +659,14 @@ private fun SlotRow(label: String, holderName: String, primary: Boolean, done: B
  * [AccordCeremonyViewModel.yubiKeyStatus] (GET /v1/accord/yubikey-status).
  */
 @Composable
-internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) {
+internal fun YubiKeyStatusBanner(probe: YubiKeyProbe, onRefresh: () -> Unit) {
+    val status = (probe as? YubiKeyProbe.Loaded)?.status
+    val failure = (probe as? YubiKeyProbe.Failed)?.failure
     val detected = status?.detected == true
     val ready = status?.ready == true
     val bg = when {
         ready -> MaterialTheme.colorScheme.primaryContainer
-        detected -> MaterialTheme.colorScheme.errorContainer
+        detected || failure is ReadFailure.Failed -> MaterialTheme.colorScheme.errorContainer
         else -> MaterialTheme.colorScheme.surfaceVariant
     }
     Surface(shape = RoundedCornerShape(10.dp), color = bg, modifier = Modifier.fillMaxWidth().testable("yubikey_status_banner")) {
@@ -677,6 +680,8 @@ internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) 
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = when {
+                        failure is ReadFailure.NotOnThisNode -> localizedString("mobile.yubikey_probe_not_on_this_node")
+                        failure != null -> localizedString("mobile.yubikey_probe_failed")
                         status == null -> "CHECKING YUBIKEY…"
                         !detected -> "NO YUBIKEY DETECTED"
                         else -> buildString {
@@ -698,9 +703,30 @@ internal fun YubiKeyStatusBanner(status: YubiKeyStatus?, onRefresh: () -> Unit) 
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     fontFamily = FontFamily.Monospace,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.weight(1f).testable(
+                        "yubikey_status_state",
+                        when (probe) {
+                            YubiKeyProbe.Loading -> "loading"
+                            is YubiKeyProbe.Loaded -> "loaded"
+                            is YubiKeyProbe.Failed ->
+                                if (failure is ReadFailure.NotOnThisNode) "not_on_this_node" else "failed"
+                        },
+                    ),
                 )
-                TextButton(onClick = onRefresh) { Text("Re-check") }
+                TextButton(
+                    onClick = onRefresh,
+                    modifier = Modifier.testableClickable("btn_yubikey_recheck") { onRefresh() },
+                ) { Text("Re-check") }
+            }
+            // The probe's failure, with its reason — never a spinner that never ends.
+            failure?.detail?.takeIf { it.isNotBlank() }?.let { reason ->
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    localizedString("mobile.yubikey_probe_reason", "detail", reason),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("txt_yubikey_probe_reason", reason),
+                )
             }
             status?.takeIf { it.detected }?.let { s ->
                 Spacer(Modifier.height(4.dp))

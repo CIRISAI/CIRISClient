@@ -4,6 +4,11 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.PartnershipQueue
 import ai.ciris.mobile.shared.ui.screens.ConsentAuditEntryData
 import ai.ciris.mobile.shared.ui.screens.ConsentScreenData
+import ai.ciris.mobile.shared.models.AgentRead
+import ai.ciris.mobile.shared.models.PartnershipHistoryDto
+import ai.ciris.mobile.shared.models.PartnershipOptionsDto
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -59,5 +64,59 @@ class ConsentSessionTest {
         // effect passes consentSessionAuthenticated(null, isHAAddonMode=true).
         vm.sessionChanged(consentSessionAuthenticated(currentAccessToken = null, isHAAddonMode = true))
         assertTrue(vm.consentData.value.hasConsent, "an ingress-header session is a session, not a logout")
+    }
+
+    // ── A read in flight at the reset publishes nothing (Codex, PR #126) ──
+
+    @Test
+    fun aLoadSuspendedAcrossAResetPublishesNothing() {
+        val record = CompletableDeferred<ConsentScreenData>()
+        val queue = CompletableDeferred<ConsentViewModel.PartnershipQueueRead>()
+        val history = CompletableDeferred<AgentRead<PartnershipHistoryDto>>()
+        val vm = ConsentViewModel(
+            CIRISApiClient(baseUrl = "http://127.0.0.1:9"),
+            readRecord = { record.await() },
+            readQueue = { queue.await() },
+            readHistory = { history.await() },
+        )
+        vm.startPolling()
+        vm.togglePartnershipHistory("alice")
+        vm.sessionChanged(authenticated = false)
+
+        // The previous owner's reads land AFTER the session ended.
+        record.complete(previousOwner)
+        queue.complete(
+            ConsentViewModel.PartnershipQueueRead(
+                AgentRead.Ok(PartnershipOptionsDto()),
+                PartnershipQueue.AdminOnly,
+            )
+        )
+        history.complete(AgentRead.AdminOnly)
+
+        val s = vm.consentData.value
+        assertFalse(s.hasConsent, "a record read for the previous owner must not repopulate the reset card")
+        assertTrue(s.auditEntries.isEmpty())
+        assertNull(s.readFailure)
+        assertEquals(PartnershipQueue.Loading, vm.partnershipQueue.value)
+        assertNull(vm.partnershipOptions.value)
+        assertTrue(vm.partnershipHistory.value.isEmpty())
+        assertFalse(vm.isLoading.value)
+    }
+
+    @Test
+    fun aFailedLoadSuspendedAcrossAResetIsNotAFailureOfTheNextSession() {
+        val record = CompletableDeferred<ConsentScreenData>()
+        val vm = ConsentViewModel(
+            CIRISApiClient(baseUrl = "http://127.0.0.1:9"),
+            readRecord = { record.await() },
+            readQueue = {
+                ConsentViewModel.PartnershipQueueRead(AgentRead.Failed(ReadFailure.Failed("x")), PartnershipQueue.AdminOnly)
+            },
+        )
+        vm.startPolling()
+        vm.resetSession()
+        record.completeExceptionally(RuntimeException("503"))
+        assertNull(vm.consentData.value.readFailure)
+        assertNull(vm.error.value)
     }
 }

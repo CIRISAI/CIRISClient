@@ -912,6 +912,20 @@ data class YubiKeyStatus(
     val hint: String? = null,
 )
 
+/**
+ * The YubiKey probe as the banner renders it. Three answers that must not look
+ * alike: still asking, the node's answer, and a probe that did not answer —
+ * which used to be stored as null and drawn as "CHECKING YUBIKEY…" forever
+ * (Codex, PR #126), or faked by the client as `detected=false`, which says
+ * "no token" about a question nobody got answered.
+ */
+sealed interface YubiKeyProbe {
+    data object Loading : YubiKeyProbe
+    data class Loaded(val status: YubiKeyStatus) : YubiKeyProbe
+    /** [failure] is `NotOnThisNode` when the node has no probe route, `Failed` otherwise. */
+    data class Failed(val failure: ai.ciris.mobile.shared.ui.screens.ReadFailure) : YubiKeyProbe
+}
+
 // ========== POST /v1/self/identity/inspect (CIRISServer#404) ==========
 
 /**
