@@ -87,19 +87,26 @@ def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
     # Down first (the wizard fills top to bottom), then back up past the
     # start: an element the earlier steps scrolled past sits ABOVE the fold.
     notes: list[str] = []
-    for direction in ["down"] * (tries // 2) + ["up"] * tries:
-        try:
-            return act()
-        except DriverError as e:
-            if "off screen" not in str(e):
-                raise
+    # Down until the screen says it is at the bottom, then up until the top,
+    # trying the act after every step. A phone with the keyboard up has a
+    # small viewport, so a fixed number of steps can turn around before it
+    # ever reaches the last field.
+    for direction in ("down", "up"):
+        for _ in range(tries * 3):
             try:
-                r = drv.scroll_to(tag, direction=direction, amount=400)
-                notes.append(f"{direction}: {(r or {}).get('error') or 'moved'}"
-                             if isinstance(r, dict) else f"{direction}: moved")
+                return act()
+            except DriverError as e:
+                if "off screen" not in str(e):
+                    raise
+            try:
+                r = drv.scroll_to(tag, direction=direction, amount=300)
+                msg = (r or {}).get("error") if isinstance(r, dict) else None
             except DriverError as se:
-                notes.append(f"{direction}: {str(se)[-160:]}")
-            time.sleep(0.8)
+                msg = str(se)[-160:]
+            notes.append(f"{direction}: {msg or 'moved'}")
+            time.sleep(0.6)
+            if msg and ("already at the" in msg or "NO overflow" in msg):
+                break
     try:
         return act()
     except DriverError as e:
