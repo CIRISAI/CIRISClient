@@ -1,0 +1,62 @@
+flow: people
+csd: CSD-005
+title: People on a node with no contacts yet
+description: >-
+  The matrix's first CSD flow, and the one that proves the wiring: every leg signs
+  in on a bare ciris-server, which has no contacts, so People lands in the
+  "empty and unsearched" shape CSD-005 §4 describes — the add card INSTEAD of an
+  empty block. A search nothing matches then shows the empty state proper, and
+  clearing it brings the add card back. Every tag here ships in 0.5.224
+  (PeopleTags in ContactsScreen/PeopleSupport.kt).
+
+  Not driven here, and why: the populated list and the receipt sheet need a
+  second node to be a contact of, which the matrix does not stand up; the
+  `proposed:` trust chip cannot be named by a flow at all.
+client: ">=0.5.224"
+
+steps:
+  - step_id: landing
+    title: Signing in on a bare node lands on People, offering to add someone
+    description: >-
+      `requires` is the entry precondition, stated rather than assumed: a client
+      that landed anywhere else reports "cannot start", not "a People element is
+      broken". The wait absorbs the first /v1/contacts read (the loading state).
+    requires:
+      screen: Contacts
+    do:
+      - wait: card_contacts_add
+        wait_ms: 5000
+    expect:
+      screen: Contacts
+      visible: [input_contacts_search, card_contacts_add, input_contacts_add_key,
+                btn_contacts_add_submit, btn_contacts_refresh]
+      # The add card stands in for the empty block over an EMPTY, UNSEARCHED
+      # list; and a node that answered is neither loading, nor in error, nor
+      # too old for contacts.
+      absent: [contacts_empty, contacts_list, contacts_loading, contacts_error,
+               contacts_unsupported]
+
+  - step_id: search_no_match
+    title: A search nothing matches is the empty state, not an error
+    description: >-
+      `state: empty` is checked against CSD-005's `states:` block: contacts_empty
+      on screen, and the populated, loading and error tags all absent — so an
+      error cannot pass for "no matches".
+    do:
+      - input: {input_contacts_search: "zz-no-such-contact"}
+      - wait: contacts_empty
+        wait_ms: 2500
+    expect:
+      state: empty
+      absent: [card_contacts_add]
+
+  - step_id: clear_search
+    title: Clearing the search brings the add card back
+    do:
+      - input: {input_contacts_search: ""}
+      - wait: card_contacts_add
+        wait_ms: 2500
+    expect:
+      screen: Contacts
+      visible: [card_contacts_add]
+      absent: [contacts_empty, contacts_error]

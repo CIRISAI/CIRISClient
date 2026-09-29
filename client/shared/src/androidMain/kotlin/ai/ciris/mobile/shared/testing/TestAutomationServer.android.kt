@@ -94,7 +94,9 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
                 // Input text to element
                 post("/input") {
                     val request = call.receive<InputRequest>()
-                    call.respond(TestAutomationHandler.handleInput(request))
+                    val resp = TestAutomationHandler.handleInput(request)
+                    // A failed input is not a 200 (desktop answers 404; iOS now does too).
+                    call.respond(if (resp.success) HttpStatusCode.OK else HttpStatusCode.NotFound, resp)
                 }
 
                 // Scroll the screen (recovery after an off-screen refusal)

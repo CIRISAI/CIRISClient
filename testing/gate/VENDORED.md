@@ -67,6 +67,24 @@ tagged is drivable" about a screen with no elements on it.
 `check_csd.py`, and two implementations of one DSL is the drift this repo exists
 to measure.
 
+### `flow_spec.py` — local delta: a flow names its CSD (`csd:`)
+
+Added so CSD flows can run on this repo's matrix (`testing/flows/`,
+`testing/gate/run_flows.py`). Each change is marked `LOCAL DELTA` in the source:
+
+| change | reason |
+|---|---|
+| `csd` added to `_FLOW_KEYS`; `FlowSpec.csd_id` / `FlowSpec.csd` | a flow says which CSD it tests, so the runner can read that CSD's `shows:` (→ `field_tags`, for `relation`) and `states:` (→ `state_tags`, for `state:`) instead of every caller wiring them by hand |
+| `FlowSpec.load(path, csd_root=None)` binds the CSD at load | a CSD that is missing, ambiguous or does not parse is a **load error**, never a skip — a flow that silently loses its CSD loses the checks that make `state:`/`relation:` mean anything. The CSD is read by `csd_doc.py` (ours), which takes its block grammar from `packaging/check_csd_v3.py` rather than re-typing it |
+| a `proposed:` tag named in `requires`/`expect`/`do`, a `state:` whose tag is proposed or absent, or a `relation` operand that is not a `shows:` field → load error | no client carries a proposed tag, so asserting it fails as "element not found" — indistinguishable from a broken app. `count`/`each` globs are deliberately NOT checked: CSD-005's real `contacts_row_*` rows share a prefix with its proposed `contacts_row_trust` chip |
+| `state:` is now CHECKED: that state's tag on screen, every other state's tag not; with no `states:` map it fails | upstream's `state:` body was `pass` — the one predicate CSD/3 makes mandatory asserted nothing, a vacuous green. Upstream flows do not use `state:`, so none of them changes behaviour |
+| `FlowRunner(state_tags=…)`; `run()` fills both maps from `spec.csd` when the caller did not | one source for the maps: the CSD |
+| `write_report` records `csd` | a result that cannot say what it tested cannot be acted on |
+
+A flow without `csd:` still loads and runs exactly as before; `run_flows.py`
+is what requires the key for flows in this repo. Upstream needs the same key
+before CIRISAgent's flows can be checked against their CSDs the same way.
+
 ### `platforms.py` — and a mistake this file previously recorded as a fact
 
 An earlier version of this document said all three vendored modules were

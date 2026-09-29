@@ -265,7 +265,11 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                 }
                 method == "POST" && path == "/input" -> {
                     val req = json.decodeFromString<InputRequest>(body)
-                    200 to json.encodeToString(TestAutomationHandler.handleInput(req))
+                    val resp = TestAutomationHandler.handleInput(req)
+                    // A failed input is not a 200: desktop answers 404, and a
+                    // harness that checks the status (the gate's driver did)
+                    // otherwise believes it typed into a field that took nothing.
+                    (if (resp.success) 200 else 404) to json.encodeToString(resp)
                 }
                 method == "POST" && path == "/wait" -> {
                     val req = json.decodeFromString<WaitRequest>(body)

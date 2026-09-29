@@ -64,6 +64,71 @@ def _tags(drv: TestAutomationServer) -> set[str]:
     return {e.test_tag for e in drv.tree()}
 
 
+def _wait_clickable(drv: TestAutomationServer, tag: str, timeout: float = 20.0) -> bool:
+    """True once `tag` reports can_click (or the server does not report it at all)."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        for e in drv.tree():
+            if e.test_tag == tag:
+                if e.can_click is None or e.can_click:
+                    return True
+                break
+        time.sleep(1.0)
+    return False
+
+
+def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
+    """Run `act()` against `tag`, scrolling it into view first when the app
+    says it is composed but off screen. A phone's first-run wizard is taller
+    than the screen: on the iPhone the account fields sit below the age band
+    and the AI choice, and /input and /click refuse what the person could not
+    see (CIRISClient#33). Scroll down a step at a time, bounded; anything else
+    raises as before."""
+    # Down first (the wizard fills top to bottom), then back up past the
+    # start: an element the earlier steps scrolled past sits ABOVE the fold.
+    notes: list[str] = []
+    # Down until the screen says it is at the bottom, then up until the top,
+    # trying the act after every step. A phone with the keyboard up has a
+    # small viewport, so a fixed number of steps can turn around before it
+    # ever reaches the last field.
+    for direction in ("down", "up"):
+        for _ in range(tries * 3):
+            try:
+                return act()
+            except DriverError as e:
+                if "off screen" not in str(e):
+                    raise
+            try:
+                r = drv.scroll_to(tag, direction=direction, amount=300)
+                msg = (r or {}).get("error") if isinstance(r, dict) else None
+            except DriverError as se:
+                msg = str(se)[-160:]
+            notes.append(f"{direction}: {msg or 'moved'}")
+            time.sleep(0.6)
+            if msg and ("already at the" in msg or "NO overflow" in msg):
+                break
+    try:
+        return act()
+    except DriverError as e:
+        # Say what the scrolls answered: "no overflow" means the wizard's own
+        # scrollable is not the one registered, which is a client defect.
+        raise DriverError(f"{e} | scrolls: {'; '.join(dict.fromkeys(notes))}") from None
+
+
+def _field_report(drv: TestAutomationServer) -> str:
+    """What each tagged element on screen holds: input values (passwords by
+    length only), texts, and click/input capability — so a disabled Next
+    names the condition it is waiting on instead of just the tag list."""
+    parts = []
+    for e in drv.tree():
+        val = getattr(e, "input_value", None)
+        if val is not None and "password" in e.test_tag:
+            val = f"<{len(val)} chars>"
+        txt = (e.text or "")[:60]
+        parts.append(f"{e.test_tag}[v={val!r} t={txt!r} c={e.can_click} i={e.can_input}]")
+    return "; ".join(sorted(parts))
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -79,7 +144,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     if "txt_owner_hint" in _tags(drv):
         return  # already owned; nothing to do
 
-    drv.click("btn_local_login")
+    # Desktop's first run shows Login; a client whose first run opens the wizard
+    # directly is already where this click would take it, and clicking a
+    # `btn_local_login` that is not on screen fails the fixture for nothing.
+    if drv.screen() != "Setup":
+        drv.click("btn_local_login")
     if not _settle(drv, "Setup", timeout=30):
         raise SessionUnavailable(
             f"btn_local_login did not reach Setup (on {drv.screen()!r}); on a node "
@@ -91,10 +160,33 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                        ("input_password_confirm", password),
                        ("input_device_name", device)):
         try:
-            drv.input(tag, value)
+            _reach(drv, tag, lambda t=tag, v=value: drv.input(t, v))
         except DriverError as e:
             raise SessionUnavailable(f"wizard: {tag} would not accept input ({e})") from e
-    drv.click("age_band_adult")
+        # iOS needs ~2 s between fields for the value to reach the ViewModel's
+        # StateFlow (client/CLAUDE.md, "Important iOS notes"). Without it the
+        # fields read empty and Next never enables: the first iOS run of this
+        # fixture stopped at "wizard did not advance past 'you'".
+        time.sleep(2.0)
+    # The fed-ID label: desktop mints/admits the identity itself, but a client
+    # that asks (iOS) keeps Next disabled until the label is valid
+    # (SetupState.canProceedFromCurrentStep: YOU -> fedIdOk; generic words
+    # like "me" are refused, so use the device name, which is specific).
+    if "input_fedid_label" in _tags(drv):
+        try:
+            _reach(drv, "input_fedid_label",
+                   lambda: drv.input("input_fedid_label", f"{device} gate identity"))
+        except DriverError as e:
+            raise SessionUnavailable(f"wizard: input_fedid_label would not accept input ({e})") from e
+        time.sleep(2.0)
+    _reach(drv, "age_band_adult", lambda: drv.click("age_band_adult"))
+    # The legs run against a bare node with no LLM, so answer "run without AI":
+    # it removes the AI step, whose Next waits for a usable LLM choice
+    # (SetupState: AI -> hasUsableLlmChoice). Desktop already defaults there;
+    # iOS asks, and the walk stopped at 'ai' with Next disabled.
+    if "opt_run_without_ai" in _tags(drv):
+        _reach(drv, "opt_run_without_ai", lambda: drv.click("opt_run_without_ai"))
+        time.sleep(1.0)
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
     # must say so rather than spin.
@@ -106,7 +198,12 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         # answered (no default, like the age band above). Yes is the fixture's
         # answer for the same reason age_band_adult is: the unrestricted path.
         if "trace_consent_yes" in tags:
-            drv.click("trace_consent_yes")
+            _reach(drv, "trace_consent_yes", lambda: drv.click("trace_consent_yes"))
+            # The step advances only once the answer has reached the ViewModel
+            # (`SetupState.canProceedFromCurrentStep`: JOIN_FEDERATION ->
+            # traceConsentAnswered). A Next clicked in the same instant as the
+            # answer raced it on Windows; give the answer a beat to land.
+            time.sleep(1.5)
             tags = _tags(drv)
         nxt = "btn_wizard_complete" if "btn_wizard_complete" in tags else "btn_next"
         if nxt not in tags:
@@ -114,11 +211,51 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 f"wizard step {_active_step(drv)!r} offers no advance control; "
                 f"on screen: {sorted(tags)}"
             )
+        # A disabled advance control is present but has no click handler (a
+        # `testableClickable(enabled = false)`), and clicking it is a 404 that
+        # says nothing about WHY. On iOS the fields reach the ViewModel a beat
+        # after they are typed, so Next enables late: wait for it, bounded, and
+        # if it never enables say which step and what was on screen.
+        if not _wait_clickable(drv, nxt, timeout=20.0):
+            raise SessionUnavailable(
+                f"wizard step {_active_step(drv)!r}: {nxt} never became clickable; "
+                f"on screen: {sorted(_tags(drv))}"
+            )
         before = (drv.screen(), _active_step(drv))
-        drv.click(nxt)
+        # iOS's /tree omits `canClick` when it is false (defaults are not
+        # serialized), so `_wait_clickable` cannot see a disabled Next there.
+        # A disabled control answers the click with 404 "No click handler":
+        # treat that as "not yet", bounded, and name the step if it stays so.
+        clicked = False
+        for _ in range(15):
+            try:
+                _reach(drv, nxt, lambda: drv.click(nxt))
+                clicked = True
+                break
+            except DriverError as e:
+                if "No click handler" not in str(e):
+                    raise
+                time.sleep(2.0)
+        if not clicked:
+            raise SessionUnavailable(
+                f"wizard step {before[1]!r}: {nxt} stayed disabled for 30s; "
+                f"fields: {_field_report(drv)}"
+            )
         time.sleep(2.0)
         if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
-            raise SessionUnavailable(f"wizard did not advance past {before[1]!r}")
+            # One retry when the step's question is still on screen: the answer
+            # may not have landed before Next was clicked.
+            if "trace_consent_yes" in _tags(drv):
+                drv.click("trace_consent_yes")
+                time.sleep(2.0)
+                drv.click(nxt)
+                time.sleep(2.0)
+        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+            # Say what was on screen: a required field the fixture doesn't fill
+            # (the with-AI wizard asks for more than the node one) shows up here.
+            raise SessionUnavailable(
+                f"wizard did not advance past {before[1]!r}; on screen: {sorted(_tags(drv))}"
+            )
 
     # The claim has no button; it completes and the app returns to Login.
     if not _settle(drv, "Login", timeout=180):

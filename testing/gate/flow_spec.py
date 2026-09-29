@@ -59,7 +59,9 @@ _COND_KEYS = {
     "count", "number", "matches", "one_of", "each", "relation", "state",
 }
 _ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms"}
-_FLOW_KEYS = {"flow", "title", "description", "client", "steps"}
+#: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
+#: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
+_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd"}
 
 
 _RELATION_OPS = {"eq", "ne", "lt", "lte", "gt", "gte", "min_of", "max_of", "sum_of"}
@@ -68,6 +70,14 @@ _STATES = {"populated", "empty", "loading", "error"}
 
 class SpecError(Exception):
     """The spec itself is wrong. Raised at load time, before anything is driven."""
+
+
+def _tags_of(cond: "Condition") -> List[str]:
+    """Every literal tag a condition names (globs and field ids excluded)."""
+    out = list(cond.visible) + list(cond.absent)
+    for d in (cond.text, cond.number, cond.matches, cond.one_of):
+        out.extend(d.keys())
+    return out
 
 
 @dataclass
@@ -251,9 +261,12 @@ class FlowSpec:
     description: str = ""
     client_floor: Optional[str] = None
     path: Optional[Path] = None
+    #: LOCAL DELTA: the CSD this flow tests, when it names one (`csd: CSD-005`).
+    csd_id: Optional[str] = None
+    csd: Any = None  # testing.gate.csd_doc.CsdDoc
 
     @classmethod
-    def load(cls, path: Path) -> "FlowSpec":
+    def load(cls, path: Path, csd_root: Optional[Path] = None) -> "FlowSpec":
         try:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         except yaml.YAMLError as exc:
@@ -274,7 +287,7 @@ class FlowSpec:
             if s.step_id in seen:
                 raise SpecError(f"{path}: duplicate step_id {s.step_id!r} (steps {seen[s.step_id]} and {i})")
             seen[s.step_id] = i
-        return cls(
+        spec = cls(
             flow=str(raw["flow"]),
             title=str(raw.get("title") or raw["flow"]),
             description=str(raw.get("description") or ""),
@@ -282,6 +295,74 @@ class FlowSpec:
             steps=steps,
             path=path,
         )
+        if "csd" in raw:
+            spec._bind_csd(raw["csd"], csd_root)
+        return spec
+
+    def _bind_csd(self, csd_id: Any, csd_root: Optional[Path]) -> None:
+        """LOCAL DELTA: load the named CSD and hold the flow to it.
+
+        A CSD that is missing or does not parse is a LOAD ERROR, never a skip —
+        the flow would otherwise run with `state:` and `relation:` unanchored.
+        And a flow may not name a `proposed:` tag anywhere: no client carries
+        it, so driving or asserting it fails as "element not found", which is
+        indistinguishable from a broken app.
+        """
+        from testing.gate.csd_doc import CsdError, load as load_csd  # noqa: PLC0415
+
+        where = f"{self.path}"
+        try:
+            doc = load_csd(csd_id, csd_root)
+        except CsdError as e:
+            raise SpecError(f"{where}: `csd:` {e}") from e
+        self.csd_id, self.csd = str(csd_id), doc
+
+        for step in self.steps:
+            at = f"{where}: step {step.step_id!r}"
+            for half, cond in (("requires", step.requires), ("expect", step.expect)):
+                for tag in _tags_of(cond):
+                    if tag in doc.proposed:
+                        raise SpecError(
+                            f"{at}.{half} names {tag!r}, which {doc.csd_id} still marks "
+                            f"`proposed:` — a flow cannot assert a tag no client carries"
+                        )
+                # Globs (`count`/`each` `of:`) are NOT checked against the
+                # proposed set: CSD-005's real `contacts_row_*` rows share a
+                # prefix with its proposed `contacts_row_trust` chip, and
+                # refusing the glob would refuse a flow that names no proposed
+                # tag. `each` over an empty match already fails at run time.
+                if cond.state is not None:
+                    if cond.state in doc.proposed_states:
+                        raise SpecError(
+                            f"{at}.{half} asserts `state: {cond.state}`, whose tag "
+                            f"{doc.csd_id} still marks `proposed:`"
+                        )
+                    if cond.state not in doc.state_tags:
+                        raise SpecError(
+                            f"{at}.{half} asserts `state: {cond.state}`, but {doc.csd_id}'s "
+                            f"`states:` names no tag for it, so it cannot be checked"
+                        )
+                if cond.relation is not None:
+                    r = cond.relation
+                    operands = [r["left"]] + list(r.get("of") or []) + (
+                        [r["right"]] if r.get("right") else [])
+                    for fid in map(str, operands):
+                        if fid in doc.proposed_fields:
+                            raise SpecError(
+                                f"{at}.{half} relates {fid!r}, whose tag {doc.csd_id} "
+                                f"still marks `proposed:`"
+                            )
+                        if ":" in fid and fid not in doc.field_tags:
+                            raise SpecError(
+                                f"{at}.{half} relates {fid!r}, which is not a field "
+                                f"of {doc.csd_id}'s `shows:`"
+                            )
+            for action in step.do:
+                if action.target in doc.proposed:
+                    raise SpecError(
+                        f"{at}.do drives {action.target!r}, which {doc.csd_id} still "
+                        f"marks `proposed:`"
+                    )
 
 
 def check_client_floor(floor: Optional[str], actual: Optional[str]) -> Optional[str]:
@@ -354,7 +435,8 @@ class FlowRunner:
     """Executes a FlowSpec against a connected DesktopAppHelper."""
 
     def __init__(self, helper, platform=None, artifacts: Optional[Path] = None,
-                 field_tags: Optional[Dict[str, str]] = None) -> None:
+                 field_tags: Optional[Dict[str, str]] = None,
+                 state_tags: Optional[Dict[str, str]] = None) -> None:
         self.helper = helper
         self.platform = platform
         self.artifacts = Path(artifacts) if artifacts else None
@@ -363,6 +445,9 @@ class FlowRunner:
         #: block. `relation` operands are field ids, so without this a flow
         #: could only relate boxes rather than constitutional values.
         self.field_tags: Dict[str, str] = dict(field_tags or {})
+        #: LOCAL DELTA: state -> tag, from the CSD's `states:` block. Filled
+        #: from the spec's CSD at `run()` when the caller does not pass it.
+        self.state_tags: Dict[str, str] = dict(state_tags or {})
 
     async def _drivable(self) -> List[str]:
         """Tags actually ON SCREEN. The failure message's most useful sentence.
@@ -415,7 +500,25 @@ class FlowRunner:
             # state's row names. Kept as a plain visibility check rather than a
             # new mechanism: the CSD already had to name a tag per state, and a
             # second way to say the same thing is how two spellings drift.
-            pass  # asserted via `visible:`/`absent:` alongside; see CSD/3 §2.3
+            #
+            # LOCAL DELTA. Upstream this was `pass`, so `state:` asserted
+            # NOTHING — a vacuous green in the one predicate CSD/3 makes
+            # mandatory. It now reads the CSD's `states:` map: that state's tag
+            # must be on screen and every OTHER state's tag must not be, so an
+            # error cannot pass for an empty list. With no map it FAILS rather
+            # than passing: an unanchored `state:` is unchecked, not true.
+            want = self.state_tags.get(cond.state)
+            if not want:
+                return (f"{label}: `state: {cond.state}` cannot be checked — no CSD "
+                        f"`states:` tag for it (does the flow name its `csd:`?)")
+            if not await self.helper.is_element_visible(want):
+                await self.helper.scroll_into_view(want)
+            if not await self.helper.is_element_visible(want):
+                return f"{label}: state {cond.state!r} — its tag {want!r} is not on screen"
+            for other, tag in sorted(self.state_tags.items()):
+                if other != cond.state and tag != want and await self.helper.is_element_visible(tag):
+                    return (f"{label}: state {cond.state!r} expected, but {other!r}'s "
+                            f"tag {tag!r} is on screen")
 
         if cond.count is not None:
             got = _match_glob(on_screen, cond.count["of"])
@@ -551,6 +654,10 @@ class FlowRunner:
         return str(got) if got else None
 
     async def run(self, spec: FlowSpec) -> bool:
+        if spec.csd is not None:
+            # LOCAL DELTA: a flow that names its CSD carries its own maps.
+            self.field_tags = self.field_tags or dict(spec.csd.field_tags)
+            self.state_tags = self.state_tags or dict(spec.csd.state_tags)
         print(f"\n FLOW {spec.flow} — {spec.title}")
         if spec.description:
             print(f"   {spec.description}")
@@ -630,6 +737,7 @@ class FlowRunner:
             "flow": spec.flow,
             "title": spec.title,
             "spec": str(spec.path),
+            "csd": spec.csd_id,
             "client_floor": spec.client_floor,
             "passed": all(r.status != "fail" for r in self.results),
             "steps": [
