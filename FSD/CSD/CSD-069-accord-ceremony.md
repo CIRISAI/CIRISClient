@@ -1,7 +1,7 @@
 # CSD-069 — Accord Genesis Ceremony (six keys, three humans, one artifact)
 
 **CSD**: CSD-069 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-069-accord-ceremony.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -304,6 +304,8 @@ portable seed. The assertion moved to CSD-067 §4, where the tags live. This
 screen draws no tagged family line, so `accord:family` above is `proposed:`.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop in practice. Six FIPS YubiKeys and six USB volumes, each
 re-inserted, are not a thing any platform runner has; the screen composes on all

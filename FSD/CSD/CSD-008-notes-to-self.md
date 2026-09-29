@@ -87,6 +87,8 @@ The new note is **not** listed under Files (CSD-007: `DriveEntry.isNote`).
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-008-notes-to-self.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Verified live** (desktop, scratch ciris-server 0.5.215, 2026-09-24): writing
 a note from the UI and reading it back from `/v1/notes`; a readable note
 rendering its body (the `open` / `here` token bug, fixed with a test).

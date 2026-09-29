@@ -116,6 +116,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-033-network-peers.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five. The add-by-code path needs an agent; the bare-node leg
 asserts the sheet's "not on this node" copy instead.
 

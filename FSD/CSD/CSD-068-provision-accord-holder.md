@@ -1,7 +1,7 @@
 # CSD-068 — Provision Accord Holder (the custody floor, in three steps)
 
 **CSD**: CSD-068 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-068-provision-accord-holder.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -260,6 +260,8 @@ button or token banner yet (`testing/flows/drafts/csd-068-provision-accord-holde
 is `client: "unreleased"`). The pen moves when one does.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-068-provision-accord-holder.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** Desktop and Android in practice — the flow needs a USB path and a
 physical token, and the iOS/browser corners have neither. The screen composes on

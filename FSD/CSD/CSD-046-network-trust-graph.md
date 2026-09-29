@@ -93,6 +93,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-046-network-trust-graph.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five; the canvas has no per-vertex tags, so the populated
 assertion is the canvas and the count is not assertable (the list, CSD-033,
 carries the count).

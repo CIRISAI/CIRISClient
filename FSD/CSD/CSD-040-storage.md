@@ -1,7 +1,7 @@
 # CSD-040 — Storage (My things › Everything I shared › Storage)
 
 **CSD**: CSD-040 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
-**Flow**: unwritten — the tags below are the contract the flow will drive
+**Flow**: `testing/flows/drafts/csd-040-storage.yaml` (floor `unreleased`)
 
 ```yaml csd:stage
 stage: building
@@ -178,6 +178,8 @@ That third block used to assert the card's silent absence as a warning to
 itself; the fix landed (2026-09-28) and the block now asserts the sentence.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-040-storage.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** All five. The Postgres-only variant is a server-side fixture, not
 a client platform, and belongs in CIRISServer's matrix; this flow only needs the

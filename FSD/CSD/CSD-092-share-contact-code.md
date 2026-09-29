@@ -199,6 +199,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-092-share-contact-code.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five for the card. The copy → paste → contact round trip
 needs two nodes and runs on desktop.
 

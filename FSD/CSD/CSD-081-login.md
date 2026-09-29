@@ -1,7 +1,7 @@
 # CSD-081 — Login (the one door, and which one it is)
 
 **CSD**: CSD-081 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10
-**Flow**: unwritten — the tags below are the contract the flow will drive
+**Flow**: `testing/flows/drafts/csd-081-login.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -218,6 +218,8 @@ expect:
 ```
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-081-login.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** All five. `btn_local_login` / `input_username` / `input_password`
 / `btn_login_submit` are exactly the tags CIRISAgent's five-platform gate sends

@@ -2,7 +2,7 @@
 
 **CSD**: CSD-082 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 (the setup wizard)
 **Pairs with**: CSD-083 (the run-without-AI pass through the same screen)
-**Flow**: partly written — `testing/gate/session_fixture.py` drives it today
+**Flow**: `testing/flows/drafts/csd-082-setup-with-ai.yaml` (floor `>=0.5.224`); `testing/gate/session_fixture.py` also drives it during sign-in
 
 ```yaml csd:stage
 stage: building
@@ -316,6 +316,8 @@ The node restarts and the app returns to **Login** with
 `banner_setup_complete_relogin` (CSD-081).
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-082-setup-with-ai.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** All five. Every input on the YOU and AI steps declares its sink
 at `SetupScreen.kt:201`, so they are drivable — with two exceptions below.

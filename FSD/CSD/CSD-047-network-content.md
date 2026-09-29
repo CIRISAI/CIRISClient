@@ -108,6 +108,8 @@ expect:
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-047-network-content.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five, as the node's owner. A real fetch needs a second node
 holding a known digest; the matrix stands one up.
 

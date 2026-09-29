@@ -1,7 +1,7 @@
 # CSD-057 — Wallet (real money, in a circle, bound to a family that does not exist)
 
 **CSD**: CSD-057 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, Rules tab
-**Flow**: unwritten
+**Flow**: `testing/flows/drafts/csd-057-wallet.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
 stage: building
@@ -151,6 +151,8 @@ renders an amber experimental warning, and a flow that asserts the balance while
 letting the warning quietly disappear would be testing the wrong half.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-057-wallet.yaml`, floor `>=0.5.224`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** All five, agent build. Plus a node build for the
 `wallet_unsupported` state in §2 once it exists.

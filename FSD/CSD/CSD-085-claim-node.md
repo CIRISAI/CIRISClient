@@ -1,7 +1,7 @@
 # CSD-085 — Claim a node (binding a responsible party to an unowned key)
 
 **CSD**: CSD-085 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 · **Reads against**: `docs/FSD-remote-first-run-claim.md`
-**Flow**: unwritten — and today unwritable; see §5
+**Flow**: `testing/flows/drafts/csd-085-claim-node.yaml` (floor `>=0.5.224`); its three text fields are not drivable yet and its no-signer step needs the local node stopped mid-flow (see §5)
 
 ```yaml csd:stage
 stage: building

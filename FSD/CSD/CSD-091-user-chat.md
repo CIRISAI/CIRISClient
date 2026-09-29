@@ -5,7 +5,7 @@
 **Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries)
 
 ```yaml csd:stage
-stage: testable
+stage: building
 owner: CIRISClient
 ```
 
@@ -293,6 +293,8 @@ is pinned at unit level instead
 and §5 disclaims it for the matrix.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-091-user-chat.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 **Platforms.** All five for the transcript and the refusals; **two nodes** for
 anything that involves the other side, which `testing/gate/node_fixture.py` does

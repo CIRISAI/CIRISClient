@@ -4,7 +4,7 @@
 **Flow**: `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
 
 ```yaml csd:stage
-stage: testable
+stage: building
 owner: CIRISClient
 ```
 
@@ -142,6 +142,8 @@ a receipt of `ByRule` guesses.
 Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
+
+Spec complete and flow written (`testing/flows/drafts/csd-006-receipt.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

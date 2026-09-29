@@ -64,12 +64,19 @@ and `testing/gate/nav_map.py` derives the chain (`CSD.md` §2.0).
 
 Check first, in this order:
 
-1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it;
+1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it
+   (that module and the `csd:` binder arrive with #97; on `main` today
+   `FlowSpec.load` refuses the key — see below);
 2. its CSD's §5 declares the platforms it should be green on;
-3. the CSD's `stage:` moves to `verified` only after a green run — a green run is
-   evidence for that edit, never the edit itself. `testable` means the spec is
-   complete and the flow is written; a card promoted there says in its §5 that
-   the flow has not yet run on the matrix.
+3. the CSD's `stage:` follows `CSD.md` §1, and is edited by hand, never inferred:
+   - `testable` needs the flow's `client:` floor to name a released version (not
+     `unreleased`) **and** the flow to run on the matrix;
+   - `verified` needs that run green on every platform the CSD's §5 declares.
+
+   A green run is evidence for the edit, never the edit itself. A card whose spec
+   is complete and whose flow is written, but which has not met that bar, stays
+   at `building` and says so in one line at the top of its §5, so the promotion
+   is a mechanical flip once it does.
 
 ## Status on `main` (2026-09-28): none of the six nav-only flows promotes yet
 

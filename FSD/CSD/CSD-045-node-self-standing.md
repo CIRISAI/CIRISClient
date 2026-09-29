@@ -195,6 +195,8 @@ arrives anyway.
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five, against a claimed node with an owner session. The
 with-AI legs exercise the node URL, not the agent port. The delegation-supplied
 path needs a 0.5.218 node; the typed fallback needs a 0.5.217 one, and the

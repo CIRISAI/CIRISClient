@@ -5,7 +5,7 @@
 **Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row will offer once CIRISServer#683 lands)
 
 ```yaml csd:stage
-stage: testable
+stage: building
 owner: CIRISClient
 ```
 
@@ -219,6 +219,8 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
 
@@ -230,6 +232,5 @@ path. The removal end to end and the pasted code from another node, until
 deliberately NOT minted: the field already exists as `input_contacts_add_key`,
 and renaming it would break the tag the five-platform gate drives.
 
-**Stated limit.** `testable` here means the flow is written against real tags
-with a version floor; it has not yet run on the matrix in this review (no node
-in the worktree). `verified` is the stage that says it ran.
+**Stated limit.** The flow is written against real tags with a version floor;
+it has not yet run on the matrix, so this card stays at `building`.

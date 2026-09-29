@@ -152,6 +152,8 @@ That second block was written before the fix and failed; it now passes.
 
 ## 5. QA plan
 
+Spec complete and flow written (`testing/flows/drafts/csd-036-network-ops.yaml`, floor `unreleased`); promotes to `testable` when the floor is released and the flow runs on the matrix (#97).
+
 **Platforms.** All five. The node-only variant needs the run-without-AI build,
 which is exactly where the defect showed.
 
