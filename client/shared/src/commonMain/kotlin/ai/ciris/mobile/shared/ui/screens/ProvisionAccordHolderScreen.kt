@@ -336,7 +336,7 @@ fun ProvisionAccordHolderScreen(
                     TextButton(
                         onClick = { if (!busy) showDirPicker = true },
                         enabled = !busy,
-                        modifier = Modifier.testableClickable("btn_provision_holder_usb_browse") {
+                        modifier = Modifier.testableClickable("btn_provision_holder_usb_browse", enabled = !busy) {
                             if (!busy) showDirPicker = true
                         },
                     ) {
@@ -381,10 +381,17 @@ fun ProvisionAccordHolderScreen(
             // ── Step 3: Provision ──────────────────────────────────────────────
             Spacer(Modifier.height(24.dp))
             val canProvision = fipsAck && keyId.isNotBlank() && usbPath.isNotBlank() && !busy
+            // `enabled` goes to the automation handler too (CIRISClient#69):
+            // without it `/click` ran provision() behind the greyed-out
+            // button and put the "confirm your YubiKey" banner on a form
+            // nobody had submitted (Windows leg, run 36600766576).
             Button(
                 onClick = { viewModel.provision() },
                 enabled = canProvision,
-                modifier = Modifier.fillMaxWidth().testableClickable("btn_provision_holder_submit") {
+                modifier = Modifier.fillMaxWidth().testableClickable(
+                    "btn_provision_holder_submit",
+                    enabled = canProvision,
+                ) {
                     viewModel.provision()
                 },
             ) {

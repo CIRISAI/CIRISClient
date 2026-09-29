@@ -186,3 +186,104 @@ def test_every_csd_surface_is_reachable():
         assert m, f"{doc.name}: no csd:surface block"
         screen = _re.search(r"screen:\s*(\w+)", m.group(1)).group(1)
         assert screen in hops, f"{doc.name}: no sidebar route to Screen.{screen}"
+
+
+# ── A disabled control a flow clicks must be disabled to `/click` too (#69) ───
+#
+# Windows, run 36600766576 (2026-09-29), csd_068 `fips_and_a_path`: the
+# "Confirm your YubiKey…" banner was on screen before anything had been
+# submitted. The flow's second step had clicked `btn_provision_holder_submit`
+# while it was greyed out, and the click RAN `provision()`: the Button passed
+# `enabled = canProvision` but its `testableClickable` did not, so the
+# automation handler stayed registered — CIRISClient#69's shape, which
+# `bindClickHandler` exists to close and which every call site has to opt into.
+#
+# Linux and macOS passed the same step by accident: the runner had scrolled
+# down to reach the submit, the banner composed above the fold with a clipped,
+# zero-size bounds, and the geometry-based `absent:` read it as gone. Windows'
+# shorter window scrolled back up for the checkbox and the banner was there.
+#
+# Pinned for the tags flows CLICK (a flow asserting "a disabled submit does
+# nothing" is asserting exactly this), parsed with `re`, per AGENTS.md.
+
+FLOWS_DIR = pathlib.Path(__file__).resolve().parents[1] / "testing" / "flows"
+COMMON = SHARED / "commonMain" / "kotlin"
+BUTTONS = re.compile(
+    r"\b(?:Button|OutlinedButton|TextButton|FilledTonalButton|ElevatedButton|IconButton|FilledIconButton)\("
+)
+
+
+def _flow_click_targets() -> set[str]:
+    """Every literal tag a shipped flow clicks (`${...}` tags cannot be grepped)."""
+    tags: set[str] = set()
+    for flow in FLOWS_DIR.glob("*.yaml"):
+        for tag in re.findall(r"^\s*-\s*click:\s*\"?([A-Za-z0-9_]+)\"?\s*$", flow.read_text(encoding="utf-8"), re.M):
+            tags.add(tag)
+    return tags
+
+
+def _args_of(src: str, open_paren: int) -> str:
+    """The text inside the parentheses that open at `open_paren`."""
+    depth = 0
+    for i in range(open_paren, len(src)):
+        if src[i] == "(":
+            depth += 1
+        elif src[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return src[open_paren + 1:i]
+    return src[open_paren + 1:]
+
+
+def _top_level(text: str) -> str:
+    """`text` with nested braces and parentheses blanked, so a Button's own
+    `enabled =` is found and a lambda's or a nested call's is not."""
+    out, depth = [], 0
+    for ch in text:
+        if ch in "({":
+            depth += 1
+        elif ch in ")}":
+            depth -= 1
+        elif depth == 0:
+            out.append(ch)
+    return "".join(out)
+
+
+def _buttons_that_do_not_disable_their_click_handler() -> dict[str, str]:
+    """tag -> file:line for every Button whose `enabled =` is not mirrored into
+    its `testableClickable(...)`, restricted to the tags flows click."""
+    wanted = _flow_click_targets()
+    found: dict[str, str] = {}
+    for path in sorted(COMMON.rglob("*.kt")):
+        src = path.read_text(encoding="utf-8")
+        for m in BUTTONS.finditer(src):
+            args = _args_of(src, m.end() - 1)
+            if not re.search(r"(?:^|,)\s*enabled\s*=", _top_level(args), re.M):
+                continue
+            tc = re.search(r"testableClickable\(", args)
+            if not tc:
+                continue
+            tc_args = _args_of(args, tc.end() - 1)
+            tag = re.search(r'"([A-Za-z0-9_]+)"', tc_args)
+            if not tag or tag.group(1) not in wanted:
+                continue
+            if re.search(r"\benabled\s*=", _top_level(tc_args)):
+                continue
+            line = src[:m.start()].count("\n") + 1
+            found[tag.group(1)] = f"{path.relative_to(SHARED)}:{line}"
+    return found
+
+
+def test_the_probe_sees_the_flows_click_targets():
+    """A parser that finds nothing where the construct plainly exists must fail loudly."""
+    tags = _flow_click_targets()
+    assert "btn_provision_holder_submit" in tags and "btn_nav_back" in tags, tags
+
+
+def test_a_button_a_flow_clicks_disables_its_click_handler_with_itself():
+    offenders = _buttons_that_do_not_disable_their_click_handler()
+    assert not offenders, (
+        "a Button's `enabled =` must be passed to its testableClickable too, or "
+        "`/click` presses what the person cannot (CIRISClient#69): "
+        + ", ".join(f"{t} at {where}" for t, where in sorted(offenders.items()))
+    )
