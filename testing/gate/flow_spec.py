@@ -61,7 +61,16 @@ _COND_KEYS = {
 _ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms"}
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
-_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd"}
+_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture"}
+
+#: LOCAL DELTA: fixtures a flow may ask for with `fixture:`. A flow pays for a
+#: fixture only when it names one; `two_node` stands a second ciris-server up
+#: beside the leg's node and seeds it (testing/gate/two_node.py).
+FIXTURES = {"two_node"}
+
+#: LOCAL DELTA: `${NAME}` in a tag, a text or an input value is a value the
+#: flow's fixture produced — a key id no flow could know when it was written.
+_VAR = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 
 
 _RELATION_OPS = {"eq", "ne", "lt", "lte", "gt", "gte", "min_of", "max_of", "sum_of"}
@@ -264,6 +273,12 @@ class FlowSpec:
     #: LOCAL DELTA: the CSD this flow tests, when it names one (`csd: CSD-005`).
     csd_id: Optional[str] = None
     csd: Any = None  # testing.gate.csd_doc.CsdDoc
+    #: LOCAL DELTA: the fixture this flow needs (`fixture: two_node`), or None.
+    fixture: Optional[str] = None
+
+    def variables(self) -> List[str]:
+        """Every `${NAME}` the flow names, sorted."""
+        return sorted({n for step in self.steps for n in _step_variables(step)})
 
     @classmethod
     def load(cls, path: Path, csd_root: Optional[Path] = None) -> "FlowSpec":
@@ -295,6 +310,19 @@ class FlowSpec:
             steps=steps,
             path=path,
         )
+        fixture = raw.get("fixture")
+        if fixture is not None and fixture not in FIXTURES:
+            raise SpecError(f"{path}: `fixture: {fixture!r}` is not one of {sorted(FIXTURES)}")
+        spec.fixture = fixture
+        # A `${NAME}` with no fixture to fill it would reach the app as the
+        # literal text `${NAME}` and fail as "element not found" — the one
+        # failure that looks exactly like a broken app. Refused at load.
+        names = spec.variables()
+        if names and fixture is None:
+            raise SpecError(
+                f"{path}: names {', '.join('${' + n + '}' for n in names)} but asks for no "
+                f"`fixture:` that could supply {'it' if len(names) == 1 else 'them'}"
+            )
         if "csd" in raw:
             spec._bind_csd(raw["csd"], csd_root)
         return spec
@@ -363,6 +391,78 @@ class FlowSpec:
                         f"{at}.do drives {action.target!r}, which {doc.csd_id} still "
                         f"marks `proposed:`"
                     )
+
+
+class UnresolvedVariable(Exception):
+    """A `${NAME}` the fixture did not produce. The message says why, from the
+    fixture's own notes, so the failure names the missing value's cause."""
+
+
+def _strings_of(step: "Step") -> List[str]:
+    out: List[str] = []
+    for a in step.do:
+        out.append(a.target)
+        if a.value is not None:
+            out.append(a.value)
+    for cond in (step.requires, step.expect):
+        out += list(cond.visible) + list(cond.absent)
+        for d in (cond.text, cond.matches):
+            out += list(d.keys()) + list(d.values())
+        out += list(cond.number.keys())
+        for k, v in cond.one_of.items():
+            out += [k, *v]
+        for sel in (cond.count, cond.each):
+            if sel:
+                out.append(str(sel.get("of", "")))
+    return out
+
+
+def _step_variables(step: "Step") -> set:
+    return {m for text in _strings_of(step) for m in _VAR.findall(text)}
+
+
+def substitute(text: str, values: Dict[str, str], why: Sequence[str] = (), *,
+               escape: bool = False) -> str:
+    """`${NAME}` -> values[NAME]. A name with no value raises UnresolvedVariable
+    quoting `why` (the fixture's notes). `escape` for a regex (`matches:`)."""
+    def one(m: "re.Match[str]") -> str:
+        name = m.group(1)
+        val = values.get(name)
+        if not val:
+            reason = "; ".join(why) or "the fixture produced no such value"
+            raise UnresolvedVariable(f"${{{name}}} was not provided by the fixture: {reason}")
+        return re.escape(val) if escape else val
+    return _VAR.sub(one, text)
+
+
+def resolve_step(step: "Step", values: Dict[str, str], why: Sequence[str] = ()) -> "Step":
+    """A copy of `step` with every `${NAME}` replaced. The original is untouched,
+    so one loaded spec can run again against another fixture."""
+    import copy  # noqa: PLC0415
+
+    if not _step_variables(step):
+        return step
+
+    def sub(t: str) -> str:
+        return substitute(t, values, why)
+
+    out = copy.deepcopy(step)
+    for a in out.do:
+        a.target = sub(a.target)
+        if a.value is not None:
+            a.value = sub(a.value)
+    for cond in (out.requires, out.expect):
+        cond.visible = [sub(t) for t in cond.visible]
+        cond.absent = [sub(t) for t in cond.absent]
+        cond.text = {sub(k): sub(v) for k, v in cond.text.items()}
+        cond.matches = {sub(k): substitute(v, values, why, escape=True)
+                        for k, v in cond.matches.items()}
+        cond.number = {sub(k): v for k, v in cond.number.items()}
+        cond.one_of = {sub(k): [sub(x) for x in v] for k, v in cond.one_of.items()}
+        for sel in (cond.count, cond.each):
+            if sel and "of" in sel:
+                sel["of"] = sub(str(sel["of"]))
+    return out
 
 
 def check_client_floor(floor: Optional[str], actual: Optional[str]) -> Optional[str]:
@@ -436,8 +536,14 @@ class FlowRunner:
 
     def __init__(self, helper, platform=None, artifacts: Optional[Path] = None,
                  field_tags: Optional[Dict[str, str]] = None,
-                 state_tags: Optional[Dict[str, str]] = None) -> None:
+                 state_tags: Optional[Dict[str, str]] = None,
+                 variables: Optional[Dict[str, str]] = None,
+                 variable_notes: Sequence[str] = ()) -> None:
         self.helper = helper
+        #: LOCAL DELTA: `${NAME}` -> value, from the flow's fixture, and the
+        #: fixture's notes — quoted when a flow names a value it did not produce.
+        self.variables: Dict[str, str] = dict(variables or {})
+        self.variable_notes: List[str] = list(variable_notes)
         self.platform = platform
         self.artifacts = Path(artifacts) if artifacts else None
         self.results: List[StepResult] = []
@@ -666,6 +772,17 @@ class FlowRunner:
         for step in spec.steps:
             started = time.monotonic()
             print(f"\n  [{step.step_id}] {step.title}")
+
+            # LOCAL DELTA: fill `${NAME}` from the fixture. A value the fixture
+            # did not produce FAILS the step, optional or not: the flow asked
+            # for it, and a skip would report a two-node claim as untested
+            # rather than as broken.
+            try:
+                step = resolve_step(step, self.variables, self.variable_notes)
+            except UnresolvedVariable as exc:
+                print(f"     [FAIL] {exc}")
+                self.results.append(StepResult(step.step_id, step.title, "fail", "requires", str(exc)))
+                return False
 
             # BEFORE. A precondition failure is reported as one -- the difference
             # between "this flow cannot start here" and "this element is broken".

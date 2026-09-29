@@ -49,7 +49,7 @@ import sys
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, List, Optional, Sequence
+from typing import Any, Callable, List, Optional, Sequence
 
 from testing.gate.flow_spec import FlowRunner, FlowSpec, SpecError, check_client_floor, discover
 
@@ -147,7 +147,8 @@ def nav_hops(has_agent: bool) -> tuple[dict, set]:
 
 async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[Path] = None,
                   client_version: Optional[str] = None, start_timeout: float = 30.0,
-                  hops: Optional[dict] = None, flow_only: frozenset | set = frozenset()) -> FlowOutcome:
+                  hops: Optional[dict] = None, flow_only: frozenset | set = frozenset(),
+                  variables: Optional[dict] = None, variable_notes: Sequence[str] = ()) -> FlowOutcome:
     """Run one flow. With `hops` (nav_map's Screen -> chain), the runner first
     WALKS to the flow's starting screen; without, it only waits for it."""
     refusal = check_client_floor(spec.client_floor, client_version)
@@ -179,7 +180,8 @@ async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[
             print(f"\n FLOW {spec.flow} ({spec.csd_id}) — CANNOT START\n   {err}")
             return FlowOutcome(spec.flow, spec.csd_id, CANNOT_START, err)
 
-    runner = FlowRunner(helper, platform=platform, artifacts=artifacts)
+    runner = FlowRunner(helper, platform=platform, artifacts=artifacts,
+                        variables=variables, variable_notes=variable_notes)
     try:
         ok = await runner.run(spec)
     except Exception as e:  # noqa: BLE001 — a crash in a flow is that flow's verdict
@@ -227,12 +229,30 @@ def sign_in(drv, username: str, password: str) -> str:
     return session_fixture.log_in(drv, username, password)
 
 
+def fixture_order(specs: Sequence[FlowSpec]) -> List[FlowSpec]:
+    """Flows with no fixture first, in their order; then each fixture's flows.
+
+    A fixture CHANGES the leg's node — two_node leaves it with a contact and a
+    room — so a flow asserting the bare node (people.yaml's "no contacts yet")
+    must run before any fixture does, and must not depend on file order."""
+    plain = [s for s in specs if not s.fixture]
+    return plain + [s for s in specs if s.fixture]
+
+
 def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optional[Path] = None,
             client_version: Optional[str] = None, username: str = "qaadmin",
             password: str = "QaAdmin!2345", establish_session: bool = True,
-            helper: Any = None, navigate_to_start: bool = True) -> List[FlowOutcome]:
-    """Run every flow in order against one live client. Signs in once, only if
-    some flow will actually run."""
+            helper: Any = None, navigate_to_start: bool = True,
+            fixtures: Optional[Callable[[str], Any]] = None) -> List[FlowOutcome]:
+    """Run every flow against one live client. Signs in once, only if some flow
+    will actually run.
+
+    `fixtures(name)` builds the fixture a flow's `fixture:` asks for (an object
+    with `up() -> {NAME: value}`, `down()` and `values.notes`). It is stood up
+    ONCE, just before the first runnable flow that needs it, and torn down in a
+    `finally` — so only runs whose flows ask for it pay for it, and a failed
+    flow still cleans up. A fixture that cannot be stood up leaves its flows
+    `cannot-start`, naming why: red, because they never ran."""
     from testing.gate.flow_helper import SyncFlowHelper  # noqa: PLC0415
 
     helper = helper or SyncFlowHelper(drv)
@@ -253,16 +273,98 @@ def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optiona
                 mode = ""
         hops, flow_only = nav_hops(has_agent=mode.upper() == "AGENT")
 
-    async def go() -> List[FlowOutcome]:
-        return [await run_one(s, helper, platform=platform, artifacts=artifacts,
-                              client_version=client_version, hops=hops,
-                              flow_only=flow_only) for s in specs]
+    started: dict = {}      # fixture name -> (object, vars, notes) or (None, None, [why])
 
-    outcomes = asyncio.run(go())
+    def fixture_for(name: str):
+        if name not in started:
+            if fixtures is None:
+                started[name] = (None, None, [
+                    f"no `{name}` fixture was provided to this run (run_platform / run_flows "
+                    f"need --node-binary to stand one up)"])
+            else:
+                fx = None
+                try:
+                    fx = fixtures(name)
+                    got = fx.up()
+                    notes = list(getattr(getattr(fx, "values", None), "notes", []) or [])
+                    started[name] = (fx, got, notes)
+                    print(f"\n fixture {name}: up — {sorted(got)}")
+                    for n in notes:
+                        print(f"   note: {n}")
+                except Exception as e:  # noqa: BLE001 — a fixture that cannot stand up is a verdict
+                    if fx is not None:
+                        try:
+                            fx.down()
+                        except Exception:  # noqa: BLE001
+                            pass
+                    started[name] = (None, None, [f"the `{name}` fixture could not be stood up: "
+                                                  f"{type(e).__name__}: {e}"])
+                    print(f"\n fixture {name}: UNAVAILABLE — {started[name][2][0]}")
+        return started[name]
+
+    async def go() -> List[FlowOutcome]:
+        out: List[FlowOutcome] = []
+        for s in fixture_order(specs):
+            variables, notes = None, ()
+            if s.fixture and not check_client_floor(s.client_floor, client_version):
+                _, variables, notes = fixture_for(s.fixture)
+                if variables is None:
+                    print(f"\n FLOW {s.flow} ({s.csd_id}) — CANNOT START\n   {notes[0]}")
+                    out.append(FlowOutcome(s.flow, s.csd_id, CANNOT_START, notes[0]))
+                    continue
+            out.append(await run_one(s, helper, platform=platform, artifacts=artifacts,
+                                     client_version=client_version, hops=hops,
+                                     flow_only=flow_only, variables=variables,
+                                     variable_notes=notes))
+        return out
+
+    try:
+        outcomes = asyncio.run(go())
+    finally:
+        for name, (fx, _, _) in started.items():
+            if fx is not None:
+                try:
+                    fx.down()
+                    print(f" fixture {name}: down")
+                except Exception as e:  # noqa: BLE001 — teardown must not hide the verdict
+                    print(f" fixture {name}: teardown failed: {e}")
     print(f"\n flows: {summary(outcomes)}")
     for o in outcomes:
         print(f"  [{o.status:^12}] {o.flow} ({o.csd}): {o.detail}")
     return outcomes
+
+
+def add_fixture_args(ap: argparse.ArgumentParser) -> None:
+    """The flags a `fixture: two_node` flow needs. Shared by run_platform."""
+    ap.add_argument("--node-binary", type=Path,
+                    help="the ciris-server binary the leg downloaded; with it, flows that ask "
+                         "for `fixture: two_node` get a second node (testing/gate/two_node.py)")
+    ap.add_argument("--node-url", default="http://127.0.0.1:4243",
+                    help="the read API of the node the client under test uses, as seen from "
+                         "this host (the fixture signs in to it as the client's owner)")
+    ap.add_argument("--peer-port", type=int, default=5242,
+                    help="the second node's transport port; its read API is the next one")
+    ap.add_argument("--peer-work", type=Path,
+                    help="where the second node's home and log go (default: a fresh temp dir)")
+
+
+def fixture_factory(args, leg: str = "") -> Optional[Callable[[str], Any]]:
+    """A `fixtures(name)` callable for run_all, or None when no binary was given
+    (then a fixture flow is `cannot-start`, saying so)."""
+    binary = getattr(args, "node_binary", None)
+    if not binary:
+        return None
+
+    def build(name: str):
+        from testing.gate import two_node  # noqa: PLC0415
+        if name != two_node.FIXTURE:
+            raise ValueError(f"unknown fixture {name!r}")
+        import tempfile  # noqa: PLC0415
+        work = args.peer_work or Path(tempfile.mkdtemp(prefix=f"ciris-two-node-{leg or 'leg'}-"))
+        return two_node.TwoNodeFixture(binary, work, node_url=args.node_url,
+                                       username=args.username, password=args.password,
+                                       port=args.peer_port)
+    return build
 
 
 def main(argv: Optional[List[str]] = None) -> int:
@@ -280,6 +382,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--password", default="QaAdmin!2345")
     ap.add_argument("--no-sign-in", action="store_true",
                     help="drive whatever screen the client is on; do not make a session")
+    add_fixture_args(ap)
     args = ap.parse_args(argv)
 
     try:
@@ -300,7 +403,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         drv.wait_for_server(timeout=30)
         outcomes = run_all(specs, drv, platform=build_platform(args), artifacts=artifacts,
                            client_version=version, username=args.username,
-                           password=args.password, establish_session=not args.no_sign_in)
+                           password=args.password, establish_session=not args.no_sign_in,
+                           fixtures=fixture_factory(args, leg=args.platform))
     except (DriverError, SessionUnavailable) as e:
         print(f"[FAIL] {e}")
         return 1

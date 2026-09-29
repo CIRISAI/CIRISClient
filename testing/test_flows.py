@@ -248,6 +248,11 @@ def _client_tag_strings() -> tuple[set[str], set[str]]:
 
 
 def client_carries(tag: str, literals: set[str], prefixes: set[str]) -> bool:
+    # A fixture-filled tag (`btn_receipt_${PEER_KEY_ID}`): its literal head must
+    # BE one of the client's interpolated prefixes — the client builds exactly
+    # `"btn_receipt_$keyId"` — not merely start like one.
+    if "${" in tag:
+        return tag.split("${", 1)[0] in prefixes
     return tag in literals or any(tag.startswith(p) for p in prefixes)
 
 
@@ -259,6 +264,9 @@ def client_carries(tag: str, literals: set[str], prefixes: set[str]) -> bool:
     ("opt_run_with_ai", True),       # a whole literal still matches
     ("contacts_no_such_tag", False),
     ("btn_no_such_button", False),   # a one-segment prefix vouches for nothing
+    ("btn_receipt_${PEER_KEY_ID}", True),    # "btn_receipt_$keyId"  PeopleSupport.kt
+    ("chat_msg_${MESSAGE_ATTESTATION_ID}", True),
+    ("btn_no_such_${PEER_KEY_ID}", False),  # a fixture value vouches for nothing either
 ])
 def test_the_client_tag_check_sees_interpolated_tags_and_nothing_else(tag, carried):
     assert client_carries(tag, *_client_tag_strings()) is carried
