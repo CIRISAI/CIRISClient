@@ -24,6 +24,10 @@ client: ">=0.5.225"
 # The bare-node shape — the add card INSTEAD of an empty block — is
 # testing/flows/people.yaml, which the runner orders before any fixture.
 fixture: two_node
+# The last step opens the contact-code card, which replaces People's body
+# until closed (csd-092-share-contact-code.yaml); closed here whatever the verdict.
+cleanup:
+  - click: btn_contact_code_close
 
 steps:
   - step_id: on_people

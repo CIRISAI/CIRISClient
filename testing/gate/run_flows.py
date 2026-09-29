@@ -285,6 +285,10 @@ async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[
         else:
             status = FAIL
             detail = f"step {bad.step_id!r} ({bad.phase}): {bad.detail}" if bad else "failed"
+    if runner.cleanup_failures:
+        # Said, not judged: the verdict is the flow's; a cleanup that did not
+        # run is what the NEXT flow will fail for, so it is on the record here.
+        detail += "; cleanup: " + "; ".join(runner.cleanup_failures)
     return FlowOutcome(spec.flow, spec.csd_id, status, detail, steps, str(report) if report else None)
 
 

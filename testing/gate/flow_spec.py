@@ -61,7 +61,7 @@ _COND_KEYS = {
 _ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms"}
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
-_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture"}
+_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture", "cleanup"}
 
 #: LOCAL DELTA: fixtures a flow may ask for with `fixture:`. A flow pays for a
 #: fixture only when it names one; `two_node` stands a second ciris-server up
@@ -275,10 +275,20 @@ class FlowSpec:
     csd: Any = None  # testing.gate.csd_doc.CsdDoc
     #: LOCAL DELTA: the fixture this flow needs (`fixture: two_node`), or None.
     fixture: Optional[str] = None
+    #: LOCAL DELTA: actions run AFTER the flow, pass or fail — closing what it
+    #: opened. A flow stops at its first failed step, and a card that step left
+    #: open is the next flow's failure: csd_092 opened the contact-code card,
+    #: failed on its second step, and `people`, `csd_005` and `csd_006` then
+    #: failed for its reason on every desktop leg (2026-09-29). Only the flow
+    #: knows what it opened; the runner guarantees the closing runs.
+    cleanup: List[Action] = field(default_factory=list)
 
     def variables(self) -> List[str]:
         """Every `${NAME}` the flow names, sorted."""
-        return sorted({n for step in self.steps for n in _step_variables(step)})
+        names = {n for step in self.steps for n in _step_variables(step)}
+        for a in self.cleanup:
+            names |= set(_VAR.findall(a.target)) | set(_VAR.findall(a.value or ""))
+        return sorted(names)
 
     @classmethod
     def load(cls, path: Path, csd_root: Optional[Path] = None) -> "FlowSpec":
@@ -314,6 +324,10 @@ class FlowSpec:
         if fixture is not None and fixture not in FIXTURES:
             raise SpecError(f"{path}: `fixture: {fixture!r}` is not one of {sorted(FIXTURES)}")
         spec.fixture = fixture
+        cleanup_raw = raw.get("cleanup") or []
+        if not isinstance(cleanup_raw, list):
+            raise SpecError(f"{path}: `cleanup` is a list of actions (click / input / scroll_to / wait)")
+        spec.cleanup = [Action.parse(a, f"{path}: cleanup[{i}]") for i, a in enumerate(cleanup_raw)]
         # A `${NAME}` with no fixture to fill it would reach the app as the
         # literal text `${NAME}` and fail as "element not found" — the one
         # failure that looks exactly like a broken app. Refused at load.
@@ -391,6 +405,12 @@ class FlowSpec:
                         f"{at}.do drives {action.target!r}, which {doc.csd_id} still "
                         f"marks `proposed:`"
                     )
+        for action in self.cleanup:
+            if action.target in doc.proposed:
+                raise SpecError(
+                    f"{where}: cleanup drives {action.target!r}, which {doc.csd_id} still "
+                    f"marks `proposed:`"
+                )
 
 
 class UnresolvedVariable(Exception):
@@ -547,6 +567,8 @@ class FlowRunner:
         self.platform = platform
         self.artifacts = Path(artifacts) if artifacts else None
         self.results: List[StepResult] = []
+        #: LOCAL DELTA: what the flow's `cleanup:` could not do, one line each.
+        self.cleanup_failures: List[str] = []
         #: CSD `ceg:` field id -> the tag carrying it, from the CSD's `shows:`
         #: block. `relation` operands are field ids, so without this a flow
         #: could only relate boxes rather than constitutional values.
@@ -760,6 +782,40 @@ class FlowRunner:
         return str(got) if got else None
 
     async def run(self, spec: FlowSpec) -> bool:
+        """The steps, then — pass, fail or crash — the flow's `cleanup:`."""
+        try:
+            return await self._steps(spec)
+        finally:
+            await self._cleanup(spec)
+
+    async def _cleanup(self, spec: FlowSpec) -> None:
+        """LOCAL DELTA: close what the flow opened, whatever its verdict. A
+        failure here is recorded, never raised: it is not this flow's verdict,
+        and hiding the verdict behind it would help nobody."""
+        for action in spec.cleanup:
+            try:
+                action = Action(action.kind,
+                                substitute(action.target, self.variables, self.variable_notes),
+                                substitute(action.value, self.variables, self.variable_notes)
+                                if action.value is not None else None,
+                                action.wait_ms)
+            except UnresolvedVariable as exc:
+                self.cleanup_failures.append(str(exc))
+                print(f"     cleanup: {exc}")
+                continue
+            # Already gone is nothing to close: a flow whose own last step shut
+            # the card it opened must not then report its cleanup as a failure.
+            if action.kind in ("click", "input") and await self.helper.get_element(action.target) is None:
+                print(f"     cleanup: nothing to close \u2014 {action.target!r} is not on screen")
+                continue
+            err = await self._do(action)
+            if err:
+                self.cleanup_failures.append(err)
+                print(f"     cleanup: {err}")
+            else:
+                print(f"     cleanup: {action.describe()}")
+
+    async def _steps(self, spec: FlowSpec) -> bool:
         if spec.csd is not None:
             # LOCAL DELTA: a flow that names its CSD carries its own maps.
             self.field_tags = self.field_tags or dict(spec.csd.field_tags)
@@ -857,6 +913,7 @@ class FlowRunner:
             "csd": spec.csd_id,
             "client_floor": spec.client_floor,
             "passed": all(r.status != "fail" for r in self.results),
+            "cleanup_failures": list(self.cleanup_failures),
             "steps": [
                 {
                     "step_id": r.step_id, "title": r.title, "status": r.status,

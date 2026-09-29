@@ -80,6 +80,7 @@ Added so CSD flows can run on this repo's matrix (`testing/flows/`,
 | `state:` is now CHECKED: that state's tag on screen, every other state's tag not; with no `states:` map it fails | upstream's `state:` body was `pass` — the one predicate CSD/3 makes mandatory asserted nothing, a vacuous green. Upstream flows do not use `state:`, so none of them changes behaviour |
 | `FlowRunner(state_tags=…)`; `run()` fills both maps from `spec.csd` when the caller did not | one source for the maps: the CSD |
 | `write_report` records `csd` | a result that cannot say what it tested cannot be acted on |
+| `cleanup` added to `_FLOW_KEYS`; `FlowSpec.cleanup` (a list of actions); `FlowRunner.run()` runs them in a `finally`, pass, fail or crash, and records what could not be done (`cleanup_failures`, in the report and the outcome's detail) | a flow stops at its first failed step, and whatever that step left open is the NEXT flow's failure. On 2026-09-29 `csd_092` opened the contact-code card (which replaces People's body, and whose open state lives in the view model), failed on step two, and `people`, `csd_005` and `csd_006` failed for its reason on every desktop leg. Only the flow knows what it opened; the runner guarantees the closing runs. A cleanup that fails is said, never the verdict — the verdict is the flow's |
 
 A flow without `csd:` still loads and runs exactly as before; `run_flows.py`
 is what requires the key for flows in this repo. Upstream needs the same key

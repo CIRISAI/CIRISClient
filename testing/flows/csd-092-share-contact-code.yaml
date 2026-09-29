@@ -17,6 +17,12 @@ description: >-
 # text_contact_code_reachable_status, contact_code_loading, contact_code_error,
 # btn_contact_code_close) are literals in ui/screens/PeopleSupport.kt at 0.5.225.
 client: ">=0.5.225"
+# The card replaces People's body while it is open (ContactsScreen: "Open, it
+# IS the body"), and its open state lives in the view model, so a flow that
+# stops with it open leaves the next flow on People with no list and no add
+# card. Closed whatever this flow's verdict.
+cleanup:
+  - click: btn_contact_code_close
 
 steps:
   - step_id: open_the_card

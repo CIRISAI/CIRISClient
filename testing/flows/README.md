@@ -17,6 +17,8 @@ title: People on a node with no contacts yet
 description: >-               # optional; say what is NOT driven and why
   …
 client: ">=0.5.224"           # the client that carries every tag it names
+cleanup:                      # optional; run AFTER the flow, pass or fail
+  - click: btn_contact_code_close
 
 steps:
   - step_id: landing
