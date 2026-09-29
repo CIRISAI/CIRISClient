@@ -44,6 +44,7 @@ from pathlib import Path
 
 from testing.driver import DriverError, TestAutomationServer
 from testing.gate import bringup
+from testing.gate.console import utf8_console
 from testing.gate.platforms import CaptureKind
 
 
@@ -235,6 +236,7 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
 
 
 def main() -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--platform", required=True, choices=("desktop", "android", "ios"))

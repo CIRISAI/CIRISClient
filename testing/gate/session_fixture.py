@@ -47,6 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from testing.driver import DriverError, TestAutomationServer  # noqa: E402
+from testing.gate.console import utf8_console  # noqa: E402
 
 
 class SessionUnavailable(RuntimeError):
@@ -318,6 +319,7 @@ def establish(drv: TestAutomationServer, username: str, password: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--url", default="http://127.0.0.1:9091")

@@ -52,6 +52,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence
 
+from testing.gate.console import utf8_console
 from testing.gate.flow_spec import FlowRunner, FlowSpec, SpecError, check_client_floor, discover
 
 REPO = Path(__file__).resolve().parents[2]
@@ -456,6 +457,7 @@ def fixture_factory(args, leg: str = "") -> Optional[Callable[[str], Any]]:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--platform", default="desktop", choices=("desktop", "android", "ios"))

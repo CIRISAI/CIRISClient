@@ -116,6 +116,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from testing.gate.console import utf8_console
+
 #: The flow-level key a flow sets to ask for this fixture (`fixture: two_node`).
 FIXTURE = "two_node"
 
@@ -761,6 +763,7 @@ class TwoNodeFixture:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
     u = sub.add_parser("up", help="start, claim, peer and seed; leave the peer running")

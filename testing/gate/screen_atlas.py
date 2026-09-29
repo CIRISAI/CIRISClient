@@ -370,7 +370,7 @@ def main() -> int:
             "flow_only": sorted(flow_only()),
             "screens": results,
         }
-        (args.out / "atlas.json").write_text(json.dumps(manifest, indent=2))
+        (args.out / "atlas.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
         print(f"\n{manifest['captured']}/{manifest['total']} captured -> {args.out}")
         return 0 if manifest["captured"] else 1
     finally:
