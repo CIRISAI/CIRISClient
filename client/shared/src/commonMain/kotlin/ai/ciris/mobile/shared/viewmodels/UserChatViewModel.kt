@@ -32,7 +32,8 @@ import kotlinx.coroutines.launch
  * @param nodeUrl where the NODE is right now. Every chat route is the node's
  *   (`src/contacts_chat.rs`); on a with-AI install `baseUrl` is the agent
  *   (CIRISAgent#1213). A provider, because the active node can be switched
- *   while this app-scoped model lives.
+ *   while this app-scoped model lives. Read ONCE per room, on entering it:
+ *   every operation of that room goes to the node it was opened on.
  * @param chat every chat call this view model makes; a fake in tests.
  */
 class UserChatViewModel(
@@ -116,6 +117,15 @@ class UserChatViewModel(
     /** The in-flight entry, cancelled when a newer one supersedes it. */
     private var entryJob: Job? = null
 
+    /**
+     * The node the open room lives on, captured ONCE on entering it
+     * (Codex, PR #126). The provider answers "where is the node NOW", and the
+     * active node can be switched while `open()` is suspended; reading it per
+     * operation opened the room on A and then read and SENT on B. Every
+     * operation of a room — open, transcript, refresh, send — uses this.
+     */
+    private var roomNodeUrl: String? = null
+
     /** Take a ticket; every later publication must still hold the current one. */
     private fun nextEpoch(): Long {
         entryEpoch += 1
@@ -154,11 +164,13 @@ class UserChatViewModel(
         val epoch = nextEpoch()
         entryJob?.cancel()
         resetIfAnotherRoom(communityId)
+        val node = nodeUrl()
+        roomNodeUrl = node
         // A pair's count is the roster POST /v1/chat returns, never a room's.
         _memberCount.value = null
         entryJob = viewModelScope.launch {
             clearRefusal()
-            val opened = callTyped("startChat") { chat.open(nodeUrl(), contactKeyId) } ?: return@launch
+            val opened = callTyped("startChat") { chat.open(node, contactKeyId) } ?: return@launch
             if (epoch != entryEpoch) {
                 // A newer room was entered while this one was opening. Publishing
                 // now is the wrong-room send.
@@ -174,7 +186,7 @@ class UserChatViewModel(
                 tag,
                 "[enter] community=${opened.communityId.take(24)}… fresh=${opened.freshlyCreated}",
             )
-            loadMessages(opened.communityId, epoch)
+            loadMessages(node, opened.communityId, epoch)
         }
     }
 
@@ -195,12 +207,14 @@ class UserChatViewModel(
         val epoch = nextEpoch()
         entryJob?.cancel()
         resetIfAnotherRoom(communityId)
+        val node = nodeUrl()
+        roomNodeUrl = node
         _memberCount.value = memberCount
         _community.value = ChatCommunity(communityId = communityId, communityName = name)
         PlatformLogger.i(tag, "[enterRoom] community=${communityId.take(24)}… members=${memberCount ?: "?"}")
         entryJob = viewModelScope.launch {
             clearRefusal()
-            loadMessages(communityId, epoch)
+            loadMessages(node, communityId, epoch)
         }
     }
 
@@ -218,8 +232,9 @@ class UserChatViewModel(
     /** Re-read the transcript for the community currently open. */
     fun refresh() {
         val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
         val epoch = entryEpoch
-        viewModelScope.launch { loadMessages(id, epoch) }
+        viewModelScope.launch { loadMessages(node, id, epoch) }
     }
 
     fun setDraft(text: String) {
@@ -236,6 +251,8 @@ class UserChatViewModel(
      */
     fun send() {
         val id = _community.value?.communityId ?: return
+        // The room's node, captured with the room — never the provider's answer now.
+        val node = roomNodeUrl ?: return
         val text = _draft.value
         if (text.isBlank()) return
         // Captured at SEND TIME, not at completion. Reading `entryEpoch` after
@@ -249,7 +266,7 @@ class UserChatViewModel(
             _sending.value = true
             clearRefusal()
             try {
-                val result = chat.send(nodeUrl(), id, text)
+                val result = chat.send(node, id, text)
                 if (epochAtSend == entryEpoch) {
                     _draft.value = ""
                 }
@@ -261,7 +278,7 @@ class UserChatViewModel(
                         "[send] ${result.attestationId.take(24)}… landed; read-back deferred — refreshing",
                     )
                 }
-                loadMessages(id, epochAtSend)
+                loadMessages(node, id, epochAtSend)
             } catch (e: NodeRefusal) {
                 if (epochAtSend == entryEpoch) recordRefusal("send", e)
             } catch (e: Exception) {
@@ -291,10 +308,10 @@ class UserChatViewModel(
      * still the current entry (see [entryEpoch]) — otherwise A's history paints
      * under B's header.
      */
-    private suspend fun loadMessages(communityId: String, epoch: Long) {
+    private suspend fun loadMessages(node: String, communityId: String, epoch: Long) {
         _loading.value = true
         try {
-            val transcript = chat.transcript(nodeUrl(), communityId)
+            val transcript = chat.transcript(node, communityId)
             if (epoch != entryEpoch) {
                 PlatformLogger.i(
                     tag,

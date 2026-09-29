@@ -366,8 +366,6 @@ private fun DeleteTracesCard(
     val uriHandler = LocalUriHandler.current
     // accordSettings is the source of truth for consent (matches adapter state)
     val isConsentActive = accordSettings?.consentGiven == true
-    // Adapter is loaded if we have accord settings
-    val adapterLoaded = accordSettings != null
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -540,13 +538,17 @@ private fun DeleteTracesCard(
                 deletionResult?.let { LensDeletionOutcome(it) }
             }
 
-            // Adapter not loaded - show enable button; a read that failed for
-            // another reason is said instead of drawn as "Enable".
-            if (!adapterLoaded) {
+            // Adapter not loaded - show enable button, and ONLY on the affirmative
+            // adapter-not-loaded answer. A read that failed (including one that
+            // failed before the accord route was asked) is said; a read not
+            // made yet offers nothing (accordOfferOf, Codex PR #126).
+            val offer = ai.ciris.mobile.shared.viewmodels.accordOfferOf(accordSettings, accordFailure)
+            if (offer !is ai.ciris.mobile.shared.viewmodels.AccordOffer.Loaded &&
+                offer !is ai.ciris.mobile.shared.viewmodels.AccordOffer.Unread
+            ) {
                 HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
-                val f = accordFailure
-                if (f is ReadFailure.Failed) {
-                    ReadFailureBlock(failure = f, tagPrefix = "data_accord", inline = true)
+                if (offer is ai.ciris.mobile.shared.viewmodels.AccordOffer.Failure) {
+                    ReadFailureBlock(failure = offer.failure, tagPrefix = "data_accord", inline = true)
                 } else {
                     Button(
                         onClick = onEnableAdapter,

@@ -237,15 +237,23 @@ class DutyConferralViewModel(
      * the room rather than from a failed signature.
      */
     private val _yubiKeyStatus =
-        MutableStateFlow<ai.ciris.mobile.shared.models.federation.YubiKeyStatus?>(null)
-    val yubiKeyStatus: StateFlow<ai.ciris.mobile.shared.models.federation.YubiKeyStatus?> =
+        MutableStateFlow<ai.ciris.mobile.shared.models.federation.YubiKeyProbe>(
+            ai.ciris.mobile.shared.models.federation.YubiKeyProbe.Loading,
+        )
+    val yubiKeyStatus: StateFlow<ai.ciris.mobile.shared.models.federation.YubiKeyProbe> =
         _yubiKeyStatus.asStateFlow()
 
     fun refreshYubiKeyStatus() {
+        _yubiKeyStatus.value = ai.ciris.mobile.shared.models.federation.YubiKeyProbe.Loading
         viewModelScope.launch {
-            runCatching { apiClient.getYubiKeyStatus() }
-                .onSuccess { _yubiKeyStatus.value = it }
-                .onFailure { PlatformLogger.w(TAG, "[yubikey] ${it.message}") }
+            _yubiKeyStatus.value = try {
+                ai.ciris.mobile.shared.models.federation.YubiKeyProbe.Loaded(apiClient.getYubiKeyStatus())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[yubikey] ${e.message}")
+                ai.ciris.mobile.shared.models.federation.YubiKeyProbe.Failed(ReadFailure.of(e))
+            }
         }
     }
 

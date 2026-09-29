@@ -26,6 +26,8 @@ private const val ROOM = "room-community-9"
 /** A node that answers what it is told to and records WHERE each chat call went. */
 private class FakeChat(
     var transcriptRefusal: NodeRefusal? = null,
+    /** Runs while `open` is in flight — a test switches the active node here. */
+    var onOpen: () -> Unit = {},
 ) : ChatApi {
     val openCalls = mutableListOf<Pair<String, String>>()
     val transcriptCalls = mutableListOf<Pair<String, String>>()
@@ -33,6 +35,7 @@ private class FakeChat(
 
     override suspend fun open(nodeUrl: String, contactKeyId: String): ChatCommunity {
         openCalls += nodeUrl to contactKeyId
+        onOpen()
         return ChatCommunity(communityId = PAIR, memberKeyIds = listOf("me", contactKeyId))
     }
 
@@ -121,5 +124,26 @@ class UserChatViewModelTest {
         vm.enter(PAIR, "peer-1")
         assertNull(vm.memberCount.value, "a pair's count is the roster POST /v1/chat returned, never a stale room's")
         assertEquals(PAIR, vm.community.value?.communityId)
+    }
+
+    @Test
+    fun aRoomIsReadAndWrittenOnTheNodeItWasOpenedOn() {
+        // Codex, PR #126: the active node switches while `open()` is in flight.
+        // The room exists on A; reading or sending it on B addresses a room
+        // that is not there, or worse, one with the same id on another node.
+        val nodeA = "http://node-a.invalid:4243"
+        val nodeB = "http://node-b.invalid:4243"
+        var active = nodeA
+        val chat = FakeChat(onOpen = { active = nodeB })
+        val vm = UserChatViewModel(CIRISApiClient(baseUrl = AGENT_URL), { active }, chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(listOf(nodeA to "peer-1"), chat.openCalls)
+        assertEquals(listOf(nodeA to PAIR), chat.transcriptCalls, "the transcript is read where the room was opened")
+
+        vm.refresh()
+        vm.setDraft("hello")
+        vm.send()
+        assertEquals(listOf(nodeA, nodeA, nodeA), chat.transcriptCalls.map { it.first }, "refresh and the post-send read stay on A")
+        assertEquals(listOf(Triple(nodeA, PAIR, "hello")), chat.sendCalls, "the send goes to the room's node, not the newly active one")
     }
 }

@@ -154,6 +154,12 @@ data class SafetyState(
     val subjectKeyId: String? = null,
     /** True when [subjectKeyId] is the owner's fed-ID; false when it is the node's key (unclaimed). */
     val subjectIsOwner: Boolean = false,
+    /**
+     * Why whose posture this is could not be resolved: the owned-nodes read
+     * FAILED. Not "unclaimed" — only a successful answer naming no owner is
+     * that — so no posture is read and the node key is never substituted.
+     */
+    val subjectFailure: ReadFailure? = null,
     val ageAssurance: AgeAssurance? = null,
     val statusHonesty: SafetyHonesty? = null,
     val statusLoading: Boolean = false,
@@ -246,22 +252,27 @@ class SafetyViewModel(
                 null
             }
             // The PERSON: the bound owner's fed-ID. A node's signer key has no
-            // age; only an unclaimed node (no owner) is asked about its own.
-            val owner = try {
-                api.ownedNodes().owner?.takeIf { it.isNotBlank() }
+            // age; only an unclaimed node — a SUCCESSFUL owned-nodes answer
+            // naming no owner — is asked about its own. A FAILED lookup is not
+            // "unclaimed": substituting the node key there showed the wrong
+            // posture and hid the owner's controls (Codex, PR #126).
+            val owner: Result<String?> = try {
+                Result.success(api.ownedNodes().owner?.takeIf { it.isNotBlank() })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                PlatformLogger.w(TAG, "probeIdentity: owned-nodes unreadable (${e.message}); posture falls back to the node key")
-                null
+                PlatformLogger.w(TAG, "probeIdentity: owned-nodes unreadable (${e.message}); whose posture is unresolved")
+                Result.failure(e)
             }
-            val subject = owner ?: keyId
-            val subjectIsOwner = owner != null
+            val failure = owner.exceptionOrNull()
+            val ownerKey = owner.getOrNull()
+            val subject = if (failure != null) null else ownerKey ?: keyId
             _state.value = _state.value.copy(
                 selfKeyId = keyId,
                 identityProbed = true,
                 subjectKeyId = subject,
-                subjectIsOwner = subjectIsOwner,
+                subjectIsOwner = ownerKey != null,
+                subjectFailure = failure?.let { ReadFailure.of(it) },
             )
             if (subject != null) loadStatus(subject)
         }

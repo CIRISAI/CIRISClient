@@ -149,6 +149,20 @@ fun ChildSafetyScreen(
                     PostureSubject(state.subjectKeyId, state.subjectIsOwner, state.identityProbed)
                     Spacer(Modifier.height(8.dp))
                     when {
+                        // Whose posture this is could not be resolved: its own
+                        // state, never the node key's posture drawn as the owner's.
+                        state.subjectFailure != null -> Column {
+                            Text(
+                                localizedString("mobile.child_safety_subject_unresolved"),
+                                fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testable("txt_posture_subject_unresolved"),
+                            )
+                            ReadFailureBlock(
+                                failure = state.subjectFailure!!,
+                                tagPrefix = "posture_subject",
+                                inline = true,
+                            )
+                        }
                         state.statusLoading -> CircularProgressIndicator(
                             Modifier.width(20.dp).height(20.dp).testable("spinner_posture"),
                             strokeWidth = 2.dp,

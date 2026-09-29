@@ -1,11 +1,14 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.models.federation.YubiKeyProbe
 import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
 import ai.ciris.mobile.shared.models.federation.firstStringField
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -34,7 +37,12 @@ import kotlinx.coroutines.launch
  */
 class ProvisionAccordHolderViewModel(
     private val apiClient: CIRISApiClient,
+    /** `GET /v1/accord/yubikey-status` on the local node. The client's by default; a test's fake fails it. */
+    readYubiKeyStatus: (suspend () -> YubiKeyStatus)? = null,
 ) : ViewModel() {
+
+    private val yubiKeyStatusReader: suspend () -> YubiKeyStatus =
+        readYubiKeyStatus ?: { apiClient.getYubiKeyStatus(CIRISApiClient.LOCAL_NODE_URL) }
 
     companion object {
         private const val TAG = "ProvisionHolderVM"
@@ -81,18 +89,25 @@ class ProvisionAccordHolderViewModel(
     private val _custodyTier = MutableStateFlow<String?>(null)
     val custodyTier: StateFlow<String?> = _custodyTier.asStateFlow()
 
-    /** The inserted token's readiness (`GET /v1/accord/yubikey-status`); null until read. */
-    private val _yubiKeyStatus = MutableStateFlow<YubiKeyStatus?>(null)
-    val yubiKeyStatus: StateFlow<YubiKeyStatus?> = _yubiKeyStatus.asStateFlow()
+    /**
+     * The inserted token's readiness (`GET /v1/accord/yubikey-status`): asking,
+     * answered, or a probe that did not answer — the last with its reason,
+     * never left as "checking" (Codex, PR #126).
+     */
+    private val _yubiKeyStatus = MutableStateFlow<YubiKeyProbe>(YubiKeyProbe.Loading)
+    val yubiKeyStatus: StateFlow<YubiKeyProbe> = _yubiKeyStatus.asStateFlow()
 
     /** Re-probe the inserted YubiKey. "Is a token plugged in" need not be a claim. */
     fun refreshYubiKeyStatus() {
+        _yubiKeyStatus.value = YubiKeyProbe.Loading
         viewModelScope.launch {
             _yubiKeyStatus.value = try {
-                apiClient.getYubiKeyStatus(CIRISApiClient.LOCAL_NODE_URL)
+                YubiKeyProbe.Loaded(yubiKeyStatusReader())
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[refreshYubiKeyStatus] ${e.message}")
-                null
+                YubiKeyProbe.Failed(ReadFailure.of(e))
             }
         }
     }
