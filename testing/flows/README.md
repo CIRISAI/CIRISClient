@@ -209,9 +209,21 @@ without Docker: a second `ciris-server` from the binary the leg downloaded, run
 natively on 5242/5243 with its own `--home` and a unique `--key-id`, claimed on
 its console, announced, peered both ways with the leg's node (which the client
 claimed; the fixture signs in to it as `qaadmin`), each owner added as the
-other's contact, the pair room opened on both sides, and one message sent by
-the peer once the room is keyed. It runs on every leg because it runs on the
-leg's HOST — the client only ever talks to its own node.
+other's contact **and waited for until the other is reachable from it**, the
+pair room opened on both sides, and one message sent by the peer once the room
+is keyed. It runs on every leg because it runs on the leg's HOST — the client
+only ever talks to its own node.
+
+The reachability wait is CIRISServer `FSD/TOPOLOGY.md` §2.5's `reachable(A, q)`
+relation: `POST /v1/contacts` on A for q reporting `reachable_nodes >= 1`,
+which means q's owner→node BINDING is held on A at federation scope — a later
+fact than q's owner KEY being known, which is all the fixture used to wait for.
+A contact added while it is 0 keys a pair room whose bodies read `not_granted`
+for good (CIRISServer#699); the 2026-09-29 run logged `reachable_nodes=0` on
+both sides and then `awaiting_peer` for the whole wait. The POST is the
+predicate (no read route answers it), so the fixture re-asks it every 5 s, up
+to `reachable_wait` (120 s), and writes what it waited on and for how long into
+`values.notes`.
 
 The values a flow may name:
 

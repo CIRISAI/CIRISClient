@@ -37,6 +37,22 @@ WHAT IS THE SAME AS THE SERVER HARNESS, and why each piece is kept:
     handing over each node's `self-key-record`.
   * The owner key crosses by replication, waited for and RECORDED; the room is
     opened by both sides and the message is sent only once the room is keyed.
+  * The owner→node BINDING is waited for too, and it is a different, later
+    thing than the key. CIRISServer `FSD/TOPOLOGY.md` (chore/adopt-edge-v33)
+    §2.5 defines the relation this fixture must realise before the room:
+    `reachable(A, q) >= n` — "`POST /v1/contacts` on A for q reports
+    `reachable_nodes >= n` (q's owner→node binding held on A at federation
+    scope); the gate CIRISServer#699 needs" — and §3 rule 5 says it needs one
+    of q's nodes `announced: true`, which the announce above is. A contact
+    added while `reachable_nodes=0` keys a pair room whose bodies read
+    `not_granted` for good (#699: reproduced 3/3, fixed-by-ordering 2/2); the
+    2026-09-29 matrix logged exactly `reachable_nodes=0` on both sides, then
+    `awaiting_peer` for the whole 150 s. So [add_contact] re-asks the POST —
+    the route TOPOLOGY names as the predicate; no read route answers it —
+    until the count is >= 1, bounded, and records what it waited on and for
+    how long. The two direct peers also satisfy §2.3: scoped content (chat
+    bodies) reaches DIRECTLY-ATTACHED peers only (CC 5.4.6), and the peer
+    dials the leg's node.
 
 WHAT IS DIFFERENT, and why:
 
@@ -515,10 +531,25 @@ def knows(host: Party, key_id: str) -> bool:
     return status == 200
 
 
+def _reachable(body: Any) -> int:
+    try:
+        return int((body or {}).get("reachable_nodes") or 0)
+    except (TypeError, ValueError, AttributeError):
+        return 0
+
+
 def add_contact(host: Party, guest: Party, wait: float, notes: List[str],
-                code: str = "", log: Log = _say) -> Tuple[str, str]:
+                code: str = "", log: Log = _say, reachable_wait: float = 120.0) -> Tuple[str, str]:
     """(key the contact is held under, how). The person if their key crossed;
-    their contact code if the node serves one; else their NODE, said so."""
+    their contact code if the node serves one; else their NODE, said so.
+
+    Then the BINDING: the add answers `reachable_nodes`, and 0 means the
+    guest's owner→node binding is not yet held on `host` at federation scope
+    (module doc, TOPOLOGY §2.5). The POST is idempotent (a standing grant is
+    `freshly_emitted: false`), so it is re-asked every 5 s for up to
+    `reachable_wait` until the count is >= 1; what was waited on, and for how
+    long, goes in `notes`. Unreachable is still not a refusal: the contact
+    stands, and the note says the room may key without a grant (#699)."""
     deadline = time.monotonic() + wait
     while guest.owner_key_id and not knows(host, guest.owner_key_id) and time.monotonic() < deadline:
         time.sleep(5.0)
@@ -533,7 +564,29 @@ def add_contact(host: Party, guest: Party, wait: float, notes: List[str],
         if _ok(status) and isinstance(body, dict):
             log(f"contact {host.name}->{guest.name} via {via}: {status} key={body.get('key_id')} "
                 f"reachable_nodes={body.get('reachable_nodes')} prefixes={body.get('consent_prefixes')}")
-            return str(body.get("key_id") or key), via
+            held = str(body.get("key_id") or key)
+            reachable = _reachable(body)
+            if reachable == 0 and reachable_wait > 0:
+                started, asks = time.monotonic(), 1
+                while reachable == 0 and time.monotonic() - started < reachable_wait:
+                    time.sleep(5.0)
+                    again, body = http("POST", f"{host.url}/v1/contacts", host.token, {"key_id": key})
+                    asks += 1
+                    reachable = _reachable(body) if _ok(again) and isinstance(body, dict) else 0
+                waited = time.monotonic() - started
+                if reachable >= 1:
+                    notes.append(
+                        f"waited {waited:.0f}s (POST /v1/contacts asked {asks}x) for {guest.name}'s "
+                        f"owner\u2192node binding to be held on {host.name}: reachable_nodes={reachable} "
+                        f"(FSD/TOPOLOGY.md \u00a72.5 `reachable`; a room opened before it keys with "
+                        f"bodies `not_granted`, CIRISServer#699)")
+                else:
+                    notes.append(
+                        f"{guest.name} is still reachable_nodes=0 on {host.name} after {waited:.0f}s "
+                        f"({asks} asks) \u2014 their owner\u2192node binding never crossed; the pair room "
+                        f"opened next may key with bodies `not_granted` (CIRISServer#699)")
+                log(notes[-1])
+            return held, via
         reason = body.get("reason_id") if isinstance(body, dict) else body
         notes.append(f"contact {host.name}->{guest.name} via {via} refused: {status} {str(reason)[:120]}")
         log(notes[-1])
@@ -563,12 +616,13 @@ def open_room(party: Party, with_key: str) -> str:
 
 def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
          owner_wait: float = 90.0, ready_wait: float = 150.0, arrive_wait: float = 120.0,
-         log: Log = _say) -> FixtureValues:
+         reachable_wait: float = 120.0, log: Log = _say) -> FixtureValues:
     """The chat scenario between the leg's node (`local`) and the peer (`remote`).
 
-    Both announced; peered both ways; each owner adds the other; both open the
-    pair room; the PEER speaks once the room is keyed; the arrival on the leg's
-    node is waited for and recorded."""
+    Both announced; peered both ways; each owner adds the other and WAITS for
+    the other to be reachable from it (TOPOLOGY §2.5 `reachable`, #699 — see
+    the module doc); both open the pair room; the PEER speaks once the room is
+    keyed; the arrival on the leg's node is waited for and recorded."""
     v = FixtureValues(peer_url=remote.url, message_text=message)
     for p in (remote, local):
         announce(p, log)
@@ -588,8 +642,10 @@ def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
         v.notes.append(f"the peer serves no contact code (GET /v1/self/contact-code: {status}) — "
                        f"it ships in ciris-server 0.5.218 (CIRISServer#673)")
 
-    v.peer_key_id, v.contact_via = add_contact(local, remote, owner_wait, v.notes, v.peer_contact_code, log)
-    back_key, back_via = add_contact(remote, local, owner_wait, v.notes, "", log)
+    v.peer_key_id, v.contact_via = add_contact(local, remote, owner_wait, v.notes, v.peer_contact_code, log,
+                                               reachable_wait=reachable_wait)
+    back_key, back_via = add_contact(remote, local, owner_wait, v.notes, "", log,
+                                     reachable_wait=reachable_wait)
     if v.contact_via != "owner":
         v.notes.append(f"the peer's owner key never reached the leg's node within {owner_wait:.0f}s; "
                        f"the contact is held under the peer NODE ({v.peer_key_id})")
