@@ -44,6 +44,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import re
 import json
 import sys
 import time
@@ -133,6 +134,24 @@ async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: fl
         if not await helper.click(tag, timeout=int(hop_timeout * 1000)):
             return f"navigation to Screen.{screen}: clicking hop tag {tag!r} failed, {where}"
     got = await _settle_on(helper, screen, arrive_timeout)
+    if got == "CircleTab" and screen != "CircleTab":
+        # A tab with ONE card opens it directly in the wide layout (nav_map
+        # drops the row hop), but the compact layout (phones) lists the one
+        # card first. Open it when there is exactly one row; otherwise name
+        # the rows rather than guess.
+        rows = sorted({e.test_tag for e in await helper.get_elements()
+                       if e.test_tag.startswith("nav_epistemic_")})
+        # The row for THIS screen, when the list has it (Contacts sits in every
+        # circle's People tab; a tab can list several cards).
+        want = "nav_epistemic_" + re.sub(r"(?<!^)(?=[A-Z])", "_", screen).lower()
+        pick = want if want in rows else (rows[0] if len(rows) == 1 else None)
+        if pick:
+            await helper.click(pick, timeout=int(hop_timeout * 1000))
+            got = await _settle_on(helper, screen, arrive_timeout)
+        elif rows:
+            return (f"navigation to Screen.{screen}: walked {' -> '.join(chain)} and landed on "
+                    f"the tab's card list with {len(rows)} rows ({', '.join(rows)}); nav_map "
+                    f"expected one card, and none is {want!r} — was the circle hop applied?")
     if got != screen:
         return (f"navigation to Screen.{screen}: walked {' -> '.join(chain)} and landed on "
                 f"{got!r}")
