@@ -1,7 +1,7 @@
 # CSD-006 — The receipt (the template every CEG item asserts)
 
 **CSD**: CSD-006 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec §2
-**Flow**: `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
+**Flow**: `testing/flows/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
 
 ```yaml csd:stage
 stage: building
@@ -143,7 +143,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`). The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Run locally on the Linux desktop leg 2026-09-28 (candidate 0.5.224 checked as 0.5.225, node v0.5.217): 5/6 passed, the grant-less step skipped as designed because the node sends the grant. Not yet run on the other four legs; promotes when the floor is met and it runs on the matrix.
+Spec complete and flow written (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Linux desktop, 2026-09-28 (candidate 0.5.224 checked as 0.5.225, node v0.5.217): 5/6 passed, the grant-less step skipped as designed. Not yet run on the other four legs.
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

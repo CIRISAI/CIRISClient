@@ -14,8 +14,7 @@ description: >-
 # text_carriage_standing, text_receive_standing, text_replication_served,
 # text_replication_applied (ui/screens/federation/NetworkQueueScreen.kt);
 # federation_queue_error / federation_queue_not_on_this_node (ReadFailureBlock).
-client: "unreleased"
-
+client: ">=0.5.225"
 steps:
   - step_id: on_queue
     title: The counters and the replication card compose

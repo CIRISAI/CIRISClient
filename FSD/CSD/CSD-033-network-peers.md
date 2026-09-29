@@ -3,7 +3,7 @@
 **CSD**: CSD-033 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
 **Covers**: `Screen.NetworkPeers` (`ui/screens/federation/NetworkPeersScreen.kt` + `viewmodels/NetworkPeersViewModel.kt`)
 **Reads with**: **CSD-104** (a peer row opens `Screen.NetworkPeerDetail`: trust, appearance and the short-code ceremony live there, not here), CSD-046 (the same peer set drawn as a graph), CSD-051 (the hub)
-**Flow**: `testing/flows/drafts/csd-033-network-peers.yaml` (floor `unreleased`)
+**Flow**: `testing/flows/drafts/csd-033-network-peers.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -116,7 +116,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-033-network-peers.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-033-network-peers.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkPeers` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons (which has a hop) and tap `tile_federation_peers`, as csd-047 does.
 
 **Platforms.** All five. The add-by-code path needs an agent; the bare-node leg
 asserts the sheet's "not on this node" copy instead.

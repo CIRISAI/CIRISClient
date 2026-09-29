@@ -2,7 +2,7 @@
 
 **CSD**: CSD-101 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the plan's B5 Family; CIRISServer 0.5.216 (`/v1/families/{id}/members`)
 **Pairs with**: CSD-100 (the household itself, in the Family hub on Family › Rules) · CSD-005 (People: where a person becomes a contact first)
-**Flow**: `testing/flows/drafts/csd-101-household-members.yaml` (staged; floor `unreleased`)
+**Flow**: `testing/flows/csd-101-household-members.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -150,7 +150,7 @@ the hub) and stays recorded as that decision.
 
 ## 4. Flow (how)
 
-`testing/flows/drafts/csd-101-household-members.yaml`. Sign in as the owner of a
+`testing/flows/csd-101-household-members.yaml`. Sign in as the owner of a
 node ≥ 0.5.216 who has formed a household (CSD-100's flow leaves one); open
 Family › People › Household.
 
@@ -167,7 +167,7 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-101-household-members.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`.
 
 **Platforms.** All five.
 

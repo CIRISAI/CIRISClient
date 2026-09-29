@@ -1,141 +1,148 @@
-# Staged CSD flows — complete, load-clean, and waiting on one thing
+# Staged CSD flows — written, load-clean, and each waiting on one named thing
 
-Every file here is a finished flow for a CSD at `building`. Each one:
+Every file here names its CSD with `csd: CSD-NNN` and loads through
+`testing.gate.run_flows.load_flows` — bound to its CSD's `shows:` and `states:`
+blocks, no `proposed:` tag anywhere, `requires` stated rather than assumed.
+`flow_spec.discover` globs `p.glob("*.yaml")`, not `rglob`, so nothing in this
+directory runs on the matrix. That is the whole mechanism.
 
-- names its CSD with `csd: CSD-NNN` and loads clean against the binder in
-  `testing/gate/flow_spec.py` — no `proposed:` tag in any `requires`, `expect` or
-  `do`, and no `state:` the CSD gives a proposed tag;
-- carries `client: ">=0.5.224"`, because every literal tag in it was grepped out
-  of the `v0.5.224` tree rather than assumed;
-- follows its CSD's §4, with `requires` stated rather than assumed.
+Until #97 the one reason for staging was that the runner did not navigate. It
+does now — before a flow's first step it walks the hop `testing/gate/nav_map.py`
+derives for the flow's first `requires: screen:` — so on the 0.5.225 run
+(2026-09-29) eight drafts moved up to `testing/flows/`. What holds each
+remaining file back is per-file, in the table at the end.
 
-**They are here and not one directory up for exactly one reason: the runner does
-not navigate.** `testing/flows/README.md` says so plainly — *"Every flow today
-starts where sign-in lands (`Contacts`). A flow for another surface needs
-`nav_map` to drive the hop."* — and `cannot-start` is **red on purpose**, so that
-a flow which never reached its first screen cannot be mistaken for one that
-passed.
+## The 0.5.225 run (2026-09-29)
 
-Sign-in lands on `Contacts`. Every flow here starts somewhere else. Putting them
-in `testing/flows/` would turn all five matrix legs red for a reason that has
-nothing to do with the client.
+**Moved to `testing/flows/` (8):** `csd-005-people`, `csd-006-receipt`,
+`csd-008-notes-to-self`, `csd-047-network-content`, `csd-057-wallet`,
+`csd-068-provision-accord-holder`, `csd-092-share-contact-code`,
+`csd-101-household-members`. Each floor that was `unreleased` flipped to
+`>=0.5.225` after every tag the flow drives was found in `client/shared/src` by
+`testing/test_flows.py`'s rule; each first screen has a hop (or is Contacts,
+where sign-in lands). Three drafts were edited on the way so an ordinary run
+can go green: `csd-005`'s scan button is gated on there being a camera,
+`csd-092`'s close step no longer expects `contacts_list` on a bare node, and
+`csd-101`'s first step accepts the roster's empty shape.
 
-`flow_spec.discover` globs `p.glob("*.yaml")` — **not** `rglob` — so this
-subdirectory is staged and never run. That is the whole mechanism.
+**Not moved — floor left `unreleased` (5):** `csd-032`, `csd-036`, `csd-040`,
+`csd-045`, `csd-100`. Each names a tag the client builds by interpolation with
+an interpolated *head* — `"${tagPrefix}_not_on_this_node"` (`ReadFailureBlock`),
+`"sheet_$tagPrefix"` / `"${tagPrefix}_fact_$i"` / `"btn_${tagPrefix}_confirm"`
+(`ConfirmSheet`), `"input_${tagPrefix}_delegation_id"` (`OwnerDelegationPicker`).
+They are real in 0.5.225 and the flow tag check cannot see them (below), so a
+promoted flow naming them goes red at the keyboard. The CSD's §5 line names the
+tags.
 
-## One thing to fix in #97 before four of these can be promoted
+**Not moved — first screen is flow-only (7):** `csd-033`, `csd-046`, `csd-048`,
+`csd-049` (the transport-hub leaves), `csd-069` (AccordCeremony), `csd-081`
+(Login), `csd-090` (DutyConferral). `nav_map` derives no hop to these screens;
+the runner only waits for one after sign-in lands on Contacts, so each would be
+`cannot-start` — red — on every leg. The fix is in the flow's entry: start on a
+screen that has a hop and tap into the leaf, as `csd-047` does from
+LayerGlobalCommons. `csd-081` is different: the runner signs in before any flow,
+so Login is gone; it needs `--no-sign-in` or a sign-out step of its own.
 
-`testing/test_flows.py::test_every_tag_a_seeded_flow_names_exists_in_the_client`
-builds its set with
+**Not moved — known red upstream (1):** `csd-091-user-chat`. Two released nodes
+never key a pair room (CIRISServer#698, `evidence/blocked_upstream.tsv`), so
+`a_room_with_history` fails on every leg for a defect the client does not have.
 
-```python
-re.findall(r'"([a-z][a-z0-9_]+)"', kt.read_text(...))
-```
+**Not on the list (16 files):** their CSDs are not yet "spec complete and flow
+written" — a `proposed:` tag or an `unconfirmed` §3 field still holds the card
+at `building` for the checker's reasons, or the flow is incomplete (`csd-082`).
 
-There is no `$` in that character class, so a tag the client builds by
-interpolation is invisible to it. Seven such tags are named by four flows here,
-and every one is real at run time:
+## The blind spot in the flow tag check
 
-| tag named by a flow | how the client writes it | where |
+`testing/test_flows.py::_client_tag_strings` reads `commonMain` for whole
+literals (`"opt_run_with_ai"`) and for `$`-headed prefixes with two segments
+(`"age_band_$token"` vouches for `age_band_adult`). It cannot see a tag whose
+head is itself interpolated:
+
+| how the client writes it | where | a draft that names the result |
 |---|---|---|
-| `age_band_adult` | `"age_band_$token"` | `SetupScreen.kt:2661` |
-| `trace_consent_yes` / `_no` | `"trace_consent_$token"` | `SetupScreen.kt:1095` |
-| `radio_cohort_self` | `"radio_cohort_$value"` | `ClaimNodeScreen.kt:383` |
-| `chk_duty_box_moderate` / `_review` / `_consent_revocation` | `"chk_duty_box_$verb"` | `DutyConferralScreen.kt:301` |
+| `"${tagPrefix}_not_on_this_node"` | `ReadFailureBlock` | `csd-032`, `csd-036`, `csd-040` |
+| `"sheet_$tagPrefix"`, `"${tagPrefix}_fact_$i"`, `"btn_${tagPrefix}_confirm"` / `_cancel` | `ui/primitives/ConfirmSheet.kt` | `csd-045`, `csd-100` |
+| `"input_${tagPrefix}_delegation_id"`, `"opt_${tagPrefix}_owner_delegation_$i"` | `SelfReaderOpsSection.kt` | `csd-045` |
+| `"${tag}_status"` | `ui/primitives/QrScanAction.kt` | none — `csd-005` deliberately does not assert the desktop sentence |
 
-Promoting `csd-082`, `csd-083`, `csd-085` or `csd-090` as written would turn that
-test red against a client that carries every tag. The fix belongs in the test,
-not in the flows: collect the literals that contain `$`, keep the part before the
-first `$` as a prefix, and accept a named tag that starts with one. `opt_run_with_ai`
-shows the distinction — it is written as a whole literal
-(`SetupScreen.kt:2567`) and is seen today.
-
-The same blind spot is worth knowing about generally: a plain string-literal grep
-cannot tell a test tag from a localization key either. `graph_simulating` and
-`graph_updated` look like tags and are `localizedString(...)` keys
-(`GraphMemoryScreen.kt:219`, `:539`), which is why CSD-028 correctly still marks
-them `proposed:`.
+`testing/test_csd_state_tags.py::source_tags` already resolves a `tagPrefix`
+parameter slot to the callers' literals and sees all of these except
+`${tagPrefix}_fact_$i`. The fix belongs in `test_flows.py`, not in the flows:
+teach `_client_tag_strings` the same rule. Until then a flow naming one of these
+tags waits here with its floor left `unreleased`, which is the convention this
+directory has always used: a floor states what the grep can prove.
 
 ## Promoting one
 
-When the runner can walk a hop, a flow here is promoted by `git mv` and nothing
-else. The hop itself is never written into the flow: the CSD names the surface
-and `testing/gate/nav_map.py` derives the chain (`CSD.md` §2.0).
+A flow here is promoted by `git mv` and nothing else. The hop is never written
+into the flow: the CSD names the surface and `nav_map` derives the chain
+(`CSD.md` §2.0).
 
 Check first, in this order:
 
-1. `python3 -m testing.gate.run_flows --flows testing/flows/drafts/<file>` loads it
-   (that module and the `csd:` binder arrive with #97; on `main` today
-   `FlowSpec.load` refuses the key — see below);
-2. its CSD's §5 declares the platforms it should be green on;
-3. the CSD's `stage:` follows `CSD.md` §1, and is edited by hand, never inferred:
+1. `python3 -c "from testing.gate import run_flows; run_flows.load_flows(['testing/flows/drafts/<file>'])"`
+   loads it, bound to its CSD;
+2. every tag it drives passes `testing/test_flows.py::client_carries` — a
+   promoted flow is under `test_every_tag_a_seeded_flow_names_exists_in_the_client`;
+3. its first `requires: screen:` is in `run_flows.nav_hops(has_agent=False)[0]`
+   (a hop exists) or is Contacts — a flow-only screen is `cannot-start`;
+4. its CSD's §5 declares the platforms it should be green on;
+5. the CSD's `stage:` follows `CSD.md` §1, and is edited by hand, never inferred:
    - `testable` needs the flow's `client:` floor to be no longer `unreleased`
      (any `>=X` / `>X` form) **and** the flow to run on the matrix;
    - `verified` needs that run green on every platform the CSD's §5 declares;
    - `shipped` is the stage whose floor names a published version.
 
-   A green run is evidence for the edit, never the edit itself. A card whose spec
-   is complete and whose flow is written, but which has not met that bar, stays
-   at `building` and says so in one line at the top of its §5, so the promotion
-   is a mechanical flip once it does.
-
-## Status on `main` (2026-09-28): none of the six nav-only flows promotes yet
-
-Tried for `csd-025`, `csd-036`, `csd-057`, `csd-066`, `csd-068` and `csd-087`.
-None moved, for one reason common to all six and one extra for `csd-036`:
-
-- **They do not load with the loader on `main`.** `testing/gate/run_flows.py`
-  does not exist on `main`, and `FlowSpec.load` in `testing/gate/flow_spec.py`
-  refuses the `csd:` key every draft carries (`unknown key(s) ['csd']; allowed:
-  ['client', 'description', 'flow', 'steps', 'title']`). The binder that reads
-  `csd:` — and the runner that walks a hop — are in #97, still open. With `csd:`
-  removed each of the six parses, so the key is the only thing refused; removing
-  it would unbind the flow from its CSD, which is the wrong fix. They promote
-  when #97 lands.
-- **`csd-036` is still floored `client: "unreleased"`**, so it would be refused
-  on every leg even once it loads.
+   A green run is evidence for the edit, never the edit itself. A card whose
+   flow is written but has not met that bar stays at `building` and says so in
+   one line at the top of its §5, so the promotion is a mechanical flip.
 
 ## Flows that need a second node: `fixture: two_node`
 
-Four drafts name values only a second node can produce — a contact's key id, a
-peer to pick, a message's attestation id — and say `fixture: two_node`. The
-runner then stands a second `ciris-server` up beside the leg's node and seeds
-it before the first of them runs (`testing/gate/two_node.py`; the file format
-and the `${NAME}` values are in `testing/flows/README.md`, "Two-node flows").
-Every leg of `five-platform-live-qa.yml` passes `--node-binary`, so promoting
-one of these costs nothing more than `git mv`; a run whose flows do not ask for
-the fixture never starts it.
+A draft that names a value only a second node can produce — a contact's key
+id, a peer to pick, a message's attestation id — says `fixture: two_node`, and
+the runner stands a second `ciris-server` up beside the leg's node before the
+first of them runs (`testing/gate/two_node.py`; the `${NAME}` values are in
+`testing/flows/README.md`, "Two-node flows"). Every leg passes `--node-binary`,
+so a fixture flow costs nothing more than `git mv`.
 
-| file | fixture values it names | where it stands (Linux desktop, locally, 2026-09-28, candidate 0.5.224 checked as 0.5.225, node v0.5.217) |
+`csd-005-people`, `csd-006-receipt` and `csd-047-network-content` moved on the
+0.5.225 run. One stays:
+
+| file | fixture values it names | why it stays |
 |---|---|---|
-| `csd-005-people.yaml` | `PEER_KEY_ID` — the seeded contact's row, trust chip and receipt | row, chip, hamburger and five-fact receipt passed; fails later at an unrelated scan-button tag (§5) |
-| `csd-006-receipt.yaml` | `PEER_KEY_ID` — opens `btn_receipt_<key>` and asserts the five facts | **pass**, 5/6 with the grant-less step skipped as designed |
-| `csd-047-network-content.yaml` | `PEER_NODE_KEY_ID` — picks `peer_pick_row_<node>`; enters from the hub tile, since NetworkContent has no nav hop | floored `unreleased`, so refused on the matrix; a copy floored at the candidate could not start locally — nav_map's hop to LayerGlobalCommons stops on CircleTab |
-| `csd-091-user-chat.yaml` | `PEER_KEY_ID` to enter the room from People; `MESSAGE_ATTESTATION_ID` / `MESSAGE_TEXT` for the row | **cannot pass on released nodes**: two unconferred v0.5.217 nodes never key the pair room, so no message crosses and `a_room_with_history` fails naming why (`evidence/blocked_upstream.tsv`) |
-
-The drafts are floored `>=0.5.225` while `VERSION` is `0.5.224`, so on today's
-matrix they would be refused even if promoted; they were exercised locally with
-`--client-version 0.5.225` against a candidate built from this tree.
+| `csd-091-user-chat.yaml` | `PEER_KEY_ID` to enter the room from People; `MESSAGE_ATTESTATION_ID` / `MESSAGE_TEXT` for the row | two unconferred v0.5.217 nodes never key the pair room, so no message crosses and `a_room_with_history` fails naming why (CIRISServer#698) |
 
 ## What is here
 
-| file | CSD | screen it needs | beyond nav, what else it waits on |
+| file | CSD | first screen | why it is still here |
 |---|---|---|---|
-| `csd-005-people.yaml` | CSD-005 | Contacts + a contact | `fixture: two_node` seeds the contact |
-| `csd-006-receipt.yaml` | CSD-006 | Contacts + a contact | `fixture: two_node` seeds the contact |
-| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → NetworkContent | `fixture: two_node` admits the peer; floored `unreleased` |
-| `csd-025-system.yaml` | CSD-025 | System | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
-| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | **not promoted**: `csd:` key refused on `main` (#97), and floored `unreleased` |
-| `csd-057-wallet.yaml` | CSD-057 | Wallet | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
-| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
-| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder | nothing — **not promoted**: `csd:` key refused on `main` (#97) |
-| `csd-069-accord-ceremony.yaml` | CSD-069 | AccordCeremony | its last step needs six FIPS tokens; it is `optional_step` |
-| `csd-081-login.yaml` | CSD-081 | Login | the observer step needs a second, non-owner account |
-| `csd-082-setup-with-ai.yaml` | CSD-082 | Setup | a node with no owner — the fixture claims one during sign-in |
-| `csd-083-setup-without-ai.yaml` | CSD-083 | Setup | same |
-| `csd-085-claim-node.yaml` | CSD-085 | ClaimNode | the no-signer step needs the local node stopped mid-flow |
-| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | nothing — the refusal is the only state any node can produce. **Not promoted**: `csd:` key refused on `main` (#97) |
-| `csd-090-duty-conferral.yaml` | CSD-090 | DutyConferral | a node that knows an accord family |
-| `csd-091-user-chat.yaml` | CSD-091 | Contacts → UserChat | `fixture: two_node` seeds the contact; a crossed message needs nodes that can key a room (not the released line) |
-
-Six of the fourteen need **only** navigation. They are the ones to promote first.
+| `csd-007-files.yaml` | CSD-007 | Files | CSD at `building`: `holds_bytes:sha256:{prefix}` unconfirmed |
+| `csd-020-adapter-connectors.yaml` | CSD-020 | Adapters | CSD at `building`: proposed tags and unconfirmed fields; agent-only surface |
+| `csd-025-system.yaml` | CSD-025 | System | CSD at `building`: `health:liveness:{version}`, `x_private:queue_depth` proposed |
+| `csd-032-network-identity.yaml` | CSD-032 | NetworkIdentity | `federation_id_card_not_on_this_node` is interpolation-built (above); also flow-only first screen |
+| `csd-033-network-peers.yaml` | CSD-033 | NetworkPeers | flow-only first screen; floor `>=0.5.225`; enter from the hub tile, then move |
+| `csd-036-network-ops.yaml` | CSD-036 | NetworkOps | `netops_not_on_this_node` is interpolation-built (above) |
+| `csd-039-data-erasure.yaml` | CSD-039 | DataManagement | CSD at `building`: `consent:{kind}` proposed, several fields unconfirmed |
+| `csd-040-storage.yaml` | CSD-040 | Storage | `storage_disk_not_on_this_node` is interpolation-built (above) |
+| `csd-045-node-self-standing.yaml` | CSD-045 | NodeSelfStanding | the ConfirmSheet's and the delegation picker's tags are interpolation-built (above) |
+| `csd-046-network-trust-graph.yaml` | CSD-046 | NetworkTrustGraph | flow-only first screen; floor `>=0.5.225`; enter from the hub tile, then move |
+| `csd-048-network-interfaces.yaml` | CSD-048 | NetworkInterfaces | flow-only first screen; floor `>=0.5.225`; enter from the hub tile, then move |
+| `csd-049-network-queue.yaml` | CSD-049 | NetworkQueue | flow-only first screen; floor `>=0.5.225`; enter from the hub tile, then move |
+| `csd-053-manage-consent.yaml` | CSD-053 | ManageConsent | CSD at `building`: `x_private:for_key_id`, `x_private:attesting_key_id` proposed and unconfirmed |
+| `csd-054-partnership-queue.yaml` | CSD-054 | Consent | CSD at `building`: `consent:{kind}` proposed, `x_private:partnership_signed_by` unconfirmed |
+| `csd-066-child-safety.yaml` | CSD-066 | ChildSafety | CSD at `building`: `hard_case:{kind}` proposed |
+| `csd-066-child-safety-states.yaml` | CSD-066 | ChildSafety | same; and step `a_refresh_is_never_nothing` has a `do:` entry with no verb, so it does not load |
+| `csd-069-accord-ceremony.yaml` | CSD-069 | AccordCeremony | flow-only first screen; floor `>=0.5.224`; enter from Accord, then move |
+| `csd-081-login.yaml` | CSD-081 | Login | the runner signs in before any flow; needs `--no-sign-in` or its own sign-out |
+| `csd-082-setup-with-ai.yaml` | CSD-082 | Setup | flow incomplete: the Finish step cannot be gated (CSD-082 §5) |
+| `csd-083-setup-without-ai.yaml` | CSD-083 | Setup | CSD at `building`: `x_private:backend_endpoint` proposed; needs an unclaimed node |
+| `csd-085-claim-node.yaml` | CSD-085 | ClaimNode | CSD at `building`: proposed tags; text fields not drivable |
+| `csd-087-verify-agent.yaml` | CSD-087 | VerifyAgent | CSD at `building`: proposed tags; `input_verify_hash` not drivable |
+| `csd-090-duty-conferral.yaml` | CSD-090 | DutyConferral | flow-only first screen; floor `>=0.5.224`; enter from the conferring screen, then move |
+| `csd-091-user-chat.yaml` | CSD-091 | Contacts → UserChat | known red on released nodes (CIRISServer#698) |
+| `csd-100-household.yaml` | CSD-100 | LayerFamily | the ConfirmSheet's tags are interpolation-built (above) |
+| `csd-102-communities.yaml` | CSD-102 | LayerLocalCommunity | CSD at `building`: `x_private:affiliations_declared_record` unconfirmed |
+| `csd-103-community-roster.yaml` | CSD-103 | CommunityRoster | CSD at `building`: two fields unconfirmed |
+| `csd-104-key-verification.yaml` | CSD-104 | NetworkPeerDetail | CSD at `building`: SAS fields proposed and unconfirmed |
+| `csd-105-trust-root.yaml` | CSD-105 | TrustRoot | CSD at `building`: `x_private:witnessed_head`, `x_private:seed_fingerprint` proposed and unconfirmed |

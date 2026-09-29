@@ -3,7 +3,7 @@
 **CSD**: CSD-047 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
 **Covers**: `Screen.NetworkContent` (`ui/screens/federation/NetworkContentScreen.kt` + `viewmodels/federation/NetworkContentViewModel.kt`)
 **Reads with**: CSD-051 (the hub), CSD-033 (the peer list it picks from), `PENDING-CSD-007` (Files, where a directory of what can be fetched would live; CIRISServer#651)
-**Flow**: `testing/flows/drafts/csd-047-network-content.yaml` (floor `unreleased`)
+**Flow**: `testing/flows/csd-047-network-content.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -108,7 +108,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-047-network-content.yaml`, floor `unreleased`, `fixture: two_node`): it enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. It has NOT run: besides the floor, the runner cannot reach its first screen on this build — nav_map's hop to LayerGlobalCommons (`circle_global_commons -> tab_rules -> nav_epistemic_layer_global_commons`) stops on CircleTab with the last tag never appearing (Linux desktop, 2026-09-28). A real fetch still needs a digest the peer holds, which the fixture does not seed.
+Spec complete and flow written (`testing/flows/csd-047-network-content.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. It enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. Its hop to LayerGlobalCommons stopped on CircleTab when last walked (2026-09-28, before `navigate` learned to open a one-card tab); if it still does, the leg reports `cannot-start` naming the hop. A real fetch still needs a digest the peer holds, which the fixture does not seed.
 
 **Platforms.** All five, as the node's owner. A real fetch needs a second node
 holding a known digest; the matrix stands one up.

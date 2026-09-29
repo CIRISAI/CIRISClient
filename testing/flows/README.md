@@ -66,6 +66,30 @@ Each of these is a **load error**, found before any app is started:
 `testing/test_flows.py` also checks that every literal tag a flow here names is
 a string in the client's `commonMain` source.
 
+## What is here
+
+Every file in this directory runs on every leg. Promoted from
+`testing/flows/drafts/` on the 0.5.225 run (2026-09-29); what still waits
+there, and why, is in `drafts/README.md`.
+
+| file | CSD | first screen | fixture | floor |
+|---|---|---|---|---|
+| `people.yaml` | CSD-005 | Contacts (bare node: the add card instead of an empty block) | — | `>=0.5.224` |
+| `csd-005-people.yaml` | CSD-005 | Contacts (a seeded contact: row, chip, hamburger, receipt) | `two_node` | `>=0.5.225` |
+| `csd-006-receipt.yaml` | CSD-006 | Contacts (the five facts, off the wire) | `two_node` | `>=0.5.225` |
+| `csd-008-notes-to-self.yaml` | CSD-008 | Notes | — | `>=0.5.225` |
+| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → `tile_federation_content` | `two_node` | `>=0.5.225` |
+| `csd-057-wallet.yaml` | CSD-057 | Wallet (read-only; never presses send) | — | `>=0.5.224` |
+| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder (the no-token refusal) | — | `>=0.5.224` |
+| `csd-092-share-contact-code.yaml` | CSD-092 | Contacts → the contact-code card | — | `>=0.5.225` |
+| `csd-101-household-members.yaml` | CSD-101 | HouseholdMembers (the bare node's empty shape; the roster is gated) | — | `>=0.5.225` |
+
+A flow's floor is the client that carries every tag it names — checked at the
+keyboard by `testing/test_flows.py`. `csd-005` and `csd-006` were run locally on
+the Linux desktop leg before promotion (their CSDs' §5 say what passed); the
+other six have not run anywhere yet, which is what their CSDs' `stage:`
+(`building`) says.
+
 ## Verdicts
 
 | verdict | when | leg |
@@ -139,8 +163,9 @@ bring-up per leg and one session.
   own `do:` clicks.
 - **A second node only when a flow asks.** The matrix stands up one node with
   no contacts, no agent and no peers. A flow that needs more says
-  `fixture: two_node` — see below. Everything in this directory today runs on
-  the bare node.
+  `fixture: two_node` — see below. Three flows here ask for it
+  (`csd-005-people`, `csd-006-receipt`, `csd-047-network-content`); the rest
+  run on the bare node.
 - **No cross-node message on released nodes.** The two-node fixture seeds a
   contact each way and opens the room, but between two fresh, unconferred
   nodes of the released line (0.5.217) the room never keys, so no message
@@ -198,7 +223,7 @@ Locally, against the throwaway node above:
 
 ```bash
 python3 -m testing.gate.run_flows --platform desktop \
-    --flows testing/flows/drafts/csd-006-receipt.yaml --client-version 0.5.225 \
+    --flows testing/flows/csd-006-receipt.yaml --client-version 0.5.225 \
     --node-binary /tmp/node/ciris-server \
     --node-url http://127.0.0.1:4243 --peer-work /tmp/flows-peer
 ```

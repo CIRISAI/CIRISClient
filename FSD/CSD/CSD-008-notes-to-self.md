@@ -2,7 +2,7 @@
 
 **CSD**: CSD-008 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B3 ("Files holds files") and B4 (Just me)
 **Pairs with**: CSD-007 (Files: the drive plane these notes are rows of) · CSD-010 (Interact: the other card in Just me › Chats, when an agent is attached)
-**Flow**: `testing/flows/drafts/csd-008-notes-to-self.yaml` (staged; floor `unreleased`)
+**Flow**: `testing/flows/csd-008-notes-to-self.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -87,7 +87,7 @@ The new note is **not** listed under Files (CSD-007: `DriveEntry.isNote`).
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-008-notes-to-self.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix.
 
 **Verified live** (desktop, scratch ciris-server 0.5.215, 2026-09-24): writing
 a note from the UI and reading it back from `/v1/notes`; a readable note

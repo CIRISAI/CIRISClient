@@ -7,18 +7,29 @@ description: >-
   only, because the node admits only a registered identity
   (family.unknown_member_key, CIRISServer src/family_api.rs:925-947).
 # Floor: every tag below is a string literal in ui/screens/HouseholdsSupport.kt
-# (HouseholdTags), added with this card; no release carries them yet.
+# (HouseholdTags); all literals at 0.5.225.
 # NOT asserted: adding a real member. It needs a second identity registered on
 # the node, which the fixture does not stand up.
-client: "unreleased"
-
+client: ">=0.5.225"
 steps:
   - step_id: on_the_roster
-    title: The roster names who is in the household you are looking at
+    title: The roster composes in one of its states, never a blank
     description: >-
       Entry: circle_family -> tab_people -> nav_epistemic_household_members
-      (derived by nav_map). Needs a household (CSD-100's flow forms one). A
+      (derived by nav_map). The matrix's node has no household, so this step
+      accepts the empty shape; the populated one below is gated on the list.
+    requires:
+      screen: HouseholdMembers
+    expect:
+      count: {of: "household_members_*", min: 1}
+      absent: [household_members_error]
+
+  - step_id: the_roster_names_who_is_in_the_household
+    title: With a household, the roster names who is in it
+    description: >-
+      Needs a household (CSD-100's flow forms one; the bare node has none). A
       household always holds at least its founder, so min 1.
+    optional_step: true
     requires:
       screen: HouseholdMembers
       visible: [household_members_list]

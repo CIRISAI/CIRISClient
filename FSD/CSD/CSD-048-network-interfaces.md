@@ -3,7 +3,7 @@
 **CSD**: CSD-048 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
 **Covers**: `Screen.NetworkInterfaces` (`ui/screens/federation/NetworkInterfacesScreen.kt` + `viewmodels/federation/NetworkInterfacesViewModel.kt`)
 **Reads with**: **CSD-049** (the Queue tile: the same `GET /v1/federation/metrics` snapshot, projected per plane instead of per medium — two doors, see §6), CSD-051 (the hub)
-**Flow**: `testing/flows/drafts/csd-048-network-interfaces.yaml` (floor `unreleased`)
+**Flow**: `testing/flows/drafts/csd-048-network-interfaces.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -96,7 +96,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-048-network-interfaces.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-048-network-interfaces.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkInterfaces` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its interfaces tile, as csd-047 does.
 
 **Platforms.** All five. A LoRa or Bluetooth row needs hardware; the matrix
 asserts tcp.

@@ -1,7 +1,7 @@
 # CSD-005 — People (the Contacts surface, rebuilt on the primitives)
 
 **CSD**: CSD-005 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 0
-**Flow**: `testing/flows/drafts/csd-005-people.yaml` (floor `>=0.5.225`)
+**Flow**: `testing/flows/csd-005-people.yaml` (floor `>=0.5.225`)
 **Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row will offer once CIRISServer#683 lands)
 
 ```yaml csd:stage
@@ -219,7 +219,7 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97) The populated list and the receipt step are no longer optional: `fixture: two_node` seeds the contact, and on the Linux desktop leg (2026-09-28) the row, its trust chip, its hamburger and the five-fact receipt all passed. The flow then failed at `the_add_card_opens_with_paste_and_scan`: the desktop add card shows `btn_scan_contact_code_status`, not `btn_scan_contact_code` — a defect in that step, unrelated to the fixture.
+Spec complete and flow written (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. The two-node fixture seeds the contact; on the Linux desktop leg (2026-09-28) the row, its trust chip, its hamburger and the five-fact receipt passed, and the step that then failed (`btn_scan_contact_code` is a button only where there is a camera) is now gated on the button.
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.

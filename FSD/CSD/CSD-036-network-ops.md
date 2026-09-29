@@ -152,7 +152,7 @@ That second block was written before the fix and failed; it now passes.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-036-network-ops.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-036-network-ops.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names `netops_not_on_this_node` (ReadFailureBlock builds `${tagPrefix}_not_on_this_node`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
 
 **Platforms.** All five. The node-only variant needs the run-without-AI build,
 which is exactly where the defect showed.

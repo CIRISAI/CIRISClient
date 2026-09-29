@@ -13,8 +13,7 @@ description: >-
 # text_add_peer_error, btn_federation_peers_refresh, btn_network_peers_back
 # (ui/screens/federation/NetworkPeersScreen.kt); federation_peers_error /
 # federation_peers_not_on_this_node (ReadFailureBlock).
-client: "unreleased"
-
+client: ">=0.5.225"
 steps:
   - step_id: on_peers
     title: The peer list composes with its filter and its add door
