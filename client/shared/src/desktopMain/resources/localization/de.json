@@ -1964,7 +1964,6 @@
     "manage_consent_in_progress": "…",
     "manage_consent_need_two_nodes": "Fügen Sie zwei Knoten hinzu und wählen Sie sie aus (unter „Knoten“), um Replikations-Peering einzurichten.",
     "manage_consent_not_ratified": "Nicht ratifiziert",
-    "manage_consent_open_data": "Open Data",
     "consent_stream_fact_who": "Wer",
     "consent_stream_fact_who_value": "Sie — Ihr Zustimmungseintrag bei diesem Agenten (aktuell {from}).",
     "consent_stream_none": "keiner",
@@ -3749,7 +3748,8 @@
     "community_moderation_pick": "Ihre Communities",
     "community_moderation_pick_none": "Sie sind in keiner Community mit mehr als zwei Personen.",
     "community_moderation_pick_unreadable": "Ihre Communities konnten nicht gelesen werden. Geben Sie stattdessen oben den Community-Schlüssel ein.",
-    "adapter_remove_what": "Ihr Agent handelt ab sofort nicht mehr über {name}, und was es dem Agenten gegeben hat, geht mit. Wenn es so gespeichert war, dass es mit dem Agenten startet, kann es beim nächsten Neustart zurückkommen; diese Karte liest das nicht."
+    "adapter_remove_what": "Ihr Agent handelt ab sofort nicht mehr über {name}, und was es dem Agenten gegeben hat, geht mit. Wenn es so gespeichert war, dass es mit dem Agenten startet, kann es beim nächsten Neustart zurückkommen; diese Karte liest das nicht.",
+    "manage_consent_open_data": "Daten öffnen"
   },
   "moderation": {
     "ladder": {
