@@ -184,3 +184,30 @@ def test_a_console_root_owner_is_read_off_its_username(monkeypatch):
     p = tn.Party("local", "http://h", "t")
     tn.owner_of(p)
     assert p.owner_key_id == "o-user-2"
+
+
+def test_standalone_up_leaves_the_peer_running(monkeypatch, tmp_path):
+    """`python -m testing.gate.two_node up` must not kill the peer on exit (Codex, #130)."""
+    import atexit
+    from testing.gate import two_node
+
+    stopped = []
+
+    class FakeNode:
+        def __init__(self, spec, work): pass
+        def start(self): pass
+        def claim(self): return object()
+        def stop(self, keep_home=False): stopped.append(True)
+
+    registered = []
+    monkeypatch.setattr(two_node, "PeerNode", FakeNode)
+    monkeypatch.setattr(two_node, "resolve_binary", lambda b: b)
+    monkeypatch.setattr(two_node, "login", lambda *a, **k: "tok")
+    monkeypatch.setattr(two_node, "seed", lambda *a, **k: two_node.FixtureValues(peer_key_id="p"))
+    monkeypatch.setattr(atexit, "register", lambda f: registered.append(f))
+    monkeypatch.setattr(atexit, "unregister", lambda f: registered.remove(f))
+    rc = two_node.main(["up", "--binary", str(tmp_path / "ciris-server"), "--work", str(tmp_path)])
+    assert rc == 0
+    assert registered == [], "the exit cleanup is still armed after a standalone up"
+    for f in registered: f()
+    assert stopped == []

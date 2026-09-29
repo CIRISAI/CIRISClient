@@ -683,6 +683,15 @@ class TwoNodeFixture:
         (self.work / "values.json").write_text(json.dumps(asdict(self.values), indent=2), encoding="utf-8")
         return self.values.as_vars()
 
+    def detach(self) -> None:
+        """Hand the running peer to a later `two_node down`: drop the exit and
+        SIGTERM cleanup `up` installed, so a standalone `up` that returns does
+        not kill the peer it was asked to leave running (Codex, PR #130)."""
+        atexit.unregister(self.down)
+        if threading.current_thread() is threading.main_thread() and hasattr(signal, "SIGTERM"):
+            signal.signal(signal.SIGTERM, signal.SIG_DFL)
+        self.node = None
+
     def down(self) -> None:
         if self.node is not None:
             self.node.stop(keep_home=self.keep_home)
@@ -725,6 +734,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.values:
         args.values.write_text(json.dumps(values, indent=2), encoding="utf-8")
     print(json.dumps({"vars": values, "notes": fx.values.notes if fx.values else []}, indent=2))
+    # `up` means "leave the peer running": the in-process runner keeps its
+    # cleanup, the standalone command hands the peer to `two_node down`.
+    fx.detach()
     return 0
 
 
