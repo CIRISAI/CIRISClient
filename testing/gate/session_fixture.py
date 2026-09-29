@@ -129,6 +129,26 @@ def _field_report(drv: TestAutomationServer) -> str:
     return "; ".join(sorted(parts))
 
 
+#: How long a wizard step may take to show the next one after Next. Windows
+#: (run 36588619656) went blank for more than the 2 s the fixture used to
+#: sleep — the fed-ID mint on Next and the next step's first composition on a
+#: cold JVM — and the fixture called a working wizard stuck. A step that has
+#: not moved in this long has stalled, and is reported by name.
+ADVANCE_TIMEOUT = 90.0
+
+
+def _advanced(drv: TestAutomationServer, before: tuple, timeout: float, poll: float = 1.0) -> bool:
+    """True once the wizard is past `before` (screen, active step) or the claim
+    has taken over; False when it is still there after `timeout`."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if (drv.screen(), _active_step(drv)) != before or "setup_ownership_claimed" in _tags(drv):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(poll)
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -241,20 +261,22 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 f"wizard step {before[1]!r}: {nxt} stayed disabled for 30s; "
                 f"fields: {_field_report(drv)}"
             )
-        time.sleep(2.0)
-        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+        # WAITED FOR, NOT SLEPT AT. The step advances when the app is ready,
+        # not two seconds after the click (see ADVANCE_TIMEOUT).
+        if not _advanced(drv, before, ADVANCE_TIMEOUT):
             # One retry when the step's question is still on screen: the answer
             # may not have landed before Next was clicked.
             if "trace_consent_yes" in _tags(drv):
                 drv.click("trace_consent_yes")
                 time.sleep(2.0)
                 drv.click(nxt)
-                time.sleep(2.0)
-        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+                if _advanced(drv, before, 30.0):
+                    continue
             # Say what was on screen: a required field the fixture doesn't fill
             # (the with-AI wizard asks for more than the node one) shows up here.
             raise SessionUnavailable(
-                f"wizard did not advance past {before[1]!r}; on screen: {sorted(_tags(drv))}"
+                f"wizard did not advance past {before[1]!r} within {ADVANCE_TIMEOUT:.0f}s; "
+                f"on screen: {sorted(_tags(drv))}"
             )
 
     # The claim has no button; it completes and the app returns to Login.

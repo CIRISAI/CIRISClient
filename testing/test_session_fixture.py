@@ -1,0 +1,118 @@
+"""The session fixture waits for the wizard; it does not sleep through it.
+
+Windows, run 36588619656 (2026-09-29): Next on step `you` was clicked, the
+form went blank while the next step composed (the on-screen list two seconds
+later was `btn_next` and the step indicators, nothing else — the indicator
+still said `you`), and the fixture, which slept a fixed 2 s and then judged,
+raised "wizard did not advance past 'you'". The wizard was not stuck; the
+fixture's clock was wrong. Driven here against a fake wizard on a fake clock,
+so the red path (a slow step) and the honest path (a step that truly stalls)
+both run in milliseconds.
+"""
+
+from __future__ import annotations
+
+import pytest
+
+from testing.driver import DriverError, Element
+from testing.gate import session_fixture as sf
+
+
+class _Clock:
+    def __init__(self):
+        self.t = 0.0
+
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += s
+
+
+def _el(tag, text=None, can_click=True):
+    return Element(test_tag=tag, x=0, y=0, width=10, height=10, text=text, can_click=can_click)
+
+
+class _SlowWizard:
+    """A desktop first run. Login -> (btn_local_login) -> Setup step `you`;
+    Next takes `advance_after` seconds to show `join_federation`, with a BLANK
+    body meanwhile — the shape the Windows leg showed. The consent step
+    answers, Next again claims, and the claim returns the app to Login."""
+
+    def __init__(self, clock: _Clock, advance_after: float):
+        self.clock, self.advance_after = clock, advance_after
+        self.on = "Login"
+        self.step = "you"
+        self.next_at: float | None = None
+        self.consented = False
+        self.claimed_at: float | None = None
+        self.inputs: dict[str, str] = {}
+        self.clicks: list[str] = []
+
+    def _tick(self):
+        if self.step == "you" and self.next_at is not None and self.clock.t - self.next_at >= self.advance_after:
+            self.step, self.next_at = "join_federation", None
+
+    def screen(self):
+        if self.claimed_at is not None and self.clock.t - self.claimed_at >= 1.0:
+            return "Login"
+        return self.on
+
+    def tree(self):
+        self._tick()
+        if self.screen() == "Login":
+            return [_el("btn_local_login")]
+        if self.step == "claimed":
+            return [_el("setup_ownership_claimed")]
+        indicators = [_el("setup_step_indicators"),
+                      _el("step_indicator_you", "active" if self.step == "you" else ""),
+                      _el("step_indicator_join_federation", "active" if self.step == "join_federation" else "")]
+        if self.step == "you" and self.next_at is not None:
+            return [_el("btn_next")] + indicators  # blank body: the next step is composing
+        if self.step == "you":
+            return [_el(t) for t in ("input_username", "input_password", "input_password_confirm",
+                                     "input_device_name", "age_band_adult", "btn_next")] + indicators
+        return [_el("trace_consent_yes"), _el("btn_next")] + indicators
+
+    def click(self, tag):
+        self.clicks.append(tag)
+        if tag not in {e.test_tag for e in self.tree()}:
+            raise DriverError(f"POST /click -> HTTP 404: No click handler for {tag!r}")
+        if tag == "btn_local_login":
+            self.on = "Setup"
+        elif tag == "trace_consent_yes":
+            self.consented = True
+        elif tag == "btn_next":
+            if self.step == "you":
+                self.next_at = self.clock.t
+            elif self.step == "join_federation" and self.consented:
+                self.step, self.claimed_at = "claimed", self.clock.t
+
+    def input(self, tag, text):
+        self.inputs[tag] = text
+
+    def scroll_to(self, tag, direction="down", amount=300):
+        return {"error": "NO overflow"}
+
+
+def _drive(monkeypatch, advance_after: float):
+    clock = _Clock()
+    monkeypatch.setattr(sf, "time", clock)
+    w = _SlowWizard(clock, advance_after)
+    return clock, w
+
+
+def test_a_slow_step_is_waited_for_not_slept_through(monkeypatch):
+    clock, w = _drive(monkeypatch, advance_after=6.0)
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert w.step == "claimed" and w.screen() == "Login"
+    assert w.inputs["input_username"] == "qaadmin"
+    assert w.clicks.count("btn_next") == 2, "Next once per step, not hammered while the step composed"
+
+
+def test_a_step_that_truly_stalls_is_still_reported_by_name(monkeypatch):
+    clock, w = _drive(monkeypatch, advance_after=10 ** 6)
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert "'you'" in str(e.value)
+    assert clock.t < 300, "bounded: a stalled wizard is reported in minutes, not hours"
