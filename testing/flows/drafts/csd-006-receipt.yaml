@@ -6,43 +6,49 @@ description: >-
   it on the first surface that carries it (Contacts, CSD-005). The claim is that
   the sheet renders FIVE rows every time — never four, never blank — because a
   fact the node did not send is itself a fact about the node and renders as
-  "This node did not send this." rather than nothing.
+  "This node did not send this." rather than nothing. The two-node fixture
+  (testing/gate/two_node.py) seeds the contact whose receipt this opens: the
+  peer's owner, added by the leg's owner, so the grant is a real
+  consent:replication:v1 row authored on this node.
 # Floor: sheet_receipt and the five receipt_* tags are `testable*` literals in
 # ui/primitives/ReceiptSheet.kt at 0.5.225, and the hamburger is derived by
 # ItemRow from the receipt id (PeopleTags.receipt, PeopleSupport.kt). The rule
 # row reads the wire (Contact.grant) since PR #101; 0.5.225 is the client whose
 # grant-less receipt no longer guesses the scope.
 client: ">=0.5.225"
-# INCOMPLETE: no step clicks a concrete `btn_receipt_<keyId>` -- `click:` takes a
-# literal tag and no fixture seeds a contact with a known key id -- so every
-# step gated on `sheet_receipt` skips. CSD-006 §5 says so; this flow is not
-# evidence for the five facts until it opens a receipt.
+# ${PEER_KEY_ID} is the key the leg's node holds the contact under — the peer's
+# owner when their key crossed, else the peer node (the fixture says which).
+fixture: two_node
 
 steps:
-  - step_id: a_row_with_a_hamburger
-    title: A CEG row carries a hamburger; app chrome does not
+  - step_id: the_contact_row_carries_a_hamburger
+    title: The seeded contact's row is on People and carries a hamburger
     description: >-
-      Entry precondition: a contact must exist for there to be a claim to open.
-      The flow cannot know its key id, so it asserts the class of tags rather than
-      one instance — which is also the honest shape, since the rule in CSD-006 §1
-      is about every row, not a particular one.
-    optional_step: true
+      The row and its hamburger by the contact's own key id, not by class: a
+      `count: btn_receipt_* min 1` would pass on any row, and this flow is about
+      THE grant the fixture authored.
+      The list People read at sign-in predates the fixture's contact, so the
+      step refreshes first — what a person does after someone adds them.
     requires:
       screen: Contacts
-      visible: [contacts_list]
+    do:
+      - click: btn_contacts_refresh
+      - wait: "contacts_row_${PEER_KEY_ID}"
+        wait_ms: 5000
     expect:
-      count: {of: "btn_receipt_*", min: 1}
+      visible: ["contacts_row_${PEER_KEY_ID}", "btn_receipt_${PEER_KEY_ID}"]
 
   - step_id: five_facts_every_time
-    title: The sheet renders all five envelope rows
+    title: The hamburger opens the sheet, and the sheet renders all five envelope rows
     description: >-
       Five separate tags, not one `sheet_receipt` check. A sheet that composed its
       frame and three rows answers a `visible: [sheet_receipt]` assertion
       correctly, and "all five, always" is the entire contract this template
       exists to state.
-    optional_step: true
-    requires:
-      visible: [sheet_receipt]
+    do:
+      - click: "btn_receipt_${PEER_KEY_ID}"
+      - wait: sheet_receipt
+        wait_ms: 2500
     expect:
       visible:
         - sheet_receipt
@@ -58,7 +64,6 @@ steps:
       `consent:replication:v1` for a contact. The plain label sits ABOVE the mono
       string; the row asserted here is the protocol value, which is what makes the
       receipt auditable rather than decorative.
-    optional_step: true
     requires:
       visible: [sheet_receipt]
     expect:
@@ -71,10 +76,7 @@ steps:
       (`grant`, built by peer.rs::grant_receipt); Contact.kt decodes it and
       PeopleSupport.contactReceipt renders every fact from it, so the rule row
       is the grant's consent_prefixes — "chat:" for any contact who can be
-      messaged. This step used to assert "did not send" while the client still
-      composed the row from rules; it flipped in the same commit that read the
-      field, which is the point of asserting it at all.
-    optional_step: true
+      messaged. The fixture's node is 0.5.217 or later, so this is not optional.
     requires:
       visible: [sheet_receipt]
     expect:
@@ -89,7 +91,8 @@ steps:
       consent audience the person chose, peer.rs::add_contact) are facts the
       node did not send, and the sheet says so instead of "this node" or
       "Everyone". Pinned at unit level (PeopleSupportTest) and asserted here
-      only against an old node.
+      only against an old node — the fixture's node sends the grant, so on the
+      matrix this step skips, and says so.
     optional_step: true
     requires:
       visible: [sheet_receipt]
@@ -97,3 +100,12 @@ steps:
     expect:
       text: {receipt_attester: "did not send", receipt_scope: "did not send"}
       matches: {receipt_dimension: "consent:replication"}
+
+  - step_id: the_sheet_closes
+    title: The sheet closes and People is back
+    do:
+      - click: btn_receipt_close
+    expect:
+      screen: Contacts
+      absent: [sheet_receipt]
+      visible: ["contacts_row_${PEER_KEY_ID}"]

@@ -108,7 +108,7 @@ expect:
 
 ## 5. QA plan
 
-**Flow not complete.** `testing/flows/drafts/csd-047-network-content.yaml` (floor `unreleased`) never reaches the digest step: that needs a peer picked by `peer_pick_row_<keyId>`, a `click:` takes one literal tag, and no fixture seeds a peer whose key id the flow could name. The digest steps are gated on `input_content_id` and always skip, so the flow is green without driving the half this card is about. It is complete when a seeded peer lets it pick one. Until then this card is not ready to promote.
+Spec complete and flow written (`testing/flows/drafts/csd-047-network-content.yaml`, floor `unreleased`, `fixture: two_node`): it enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. It has NOT run: besides the floor, the runner cannot reach its first screen on this build — nav_map's hop to LayerGlobalCommons (`circle_global_commons -> tab_rules -> nav_epistemic_layer_global_commons`) stops on CircleTab with the last tag never appearing (Linux desktop, 2026-09-28). A real fetch still needs a digest the peer holds, which the fixture does not seed.
 
 **Platforms.** All five, as the node's owner. A real fetch needs a second node
 holding a known digest; the matrix stands one up.

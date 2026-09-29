@@ -29,6 +29,17 @@
 # FSD/ONE_CLIENT_N_NODES.md describes and is why no Android node binary is
 # needed — CIRISServer publishes none.
 #
+# A SECOND NODE, ONLY WHEN A FLOW ASKS. A flow with `fixture: two_node` (a
+# receipt to open, a peer to pick, a room with a real message) gets a second
+# ciris-server on the same runner — the binary this leg already downloaded,
+# started natively on 5242/5243 with its own --home under $RUNNER_TEMP and a
+# unique --key-id — claimed, announced, peered with the leg's node, and seeded
+# with a contact each way and one chat message (testing/gate/two_node.py, the
+# Docker-free port of CIRISServer harness/mesh-repro/scenarios/chat.sh). Every
+# leg passes --node-binary; a run with no such flow never starts it. Each job
+# tears it down under always(), because the flow runner's `finally` does not
+# survive a SIGKILL.
+#
 # :4243 AND NOT :8080. A bare ciris-server has no brain and never binds the
 # agent's port; see .github/actions/ciris-node. This comment said 8080 for the
 # whole life of the gate, and so did every probe and forward under it.
@@ -241,7 +252,37 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/linux.json --flows testing/flows
+            --shots shots --report reports/linux.json --flows testing/flows \
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-linux"
+
+      # THE ANDROID LEG SHARES THIS NODE, AND THE FIXTURE CHANGED IT. A
+      # `fixture: two_node` flow on the desktop leg leaves the node with a
+      # contact and a room; the Android leg's bare-node flows ("People with no
+      # contacts yet") would then fail for the desktop's reason. So when the
+      # fixture ran (it writes values.json), the Android leg gets a fresh node
+      # on a fresh home, and claims it through its own wizard like any first run.
+      - name: Was the node seeded by the two-node fixture?
+        id: seeded
+        if: always()
+        run: |
+          python3 -m testing.gate.two_node down --work "$RUNNER_TEMP/two-node-linux" || true
+          if [ -f "$RUNNER_TEMP/two-node-linux/values.json" ]; then
+            echo "seeded=true" >> "$GITHUB_OUTPUT"
+            for port in 4242 4243; do
+              pids=$(sudo lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
+              [ -n "$pids" ] && { echo "stopping the seeded node on :$port ($pids)"; sudo kill $pids || true; }
+            done
+            sleep 2
+          else
+            echo "seeded=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: A fresh node for the Android leg
+        if: steps.seeded.outputs.seeded == 'true'
+        uses: ./.github/actions/ciris-node
+        with:
+          home: ${{ runner.temp }}/ciris-home-android
+          log: node-android.log
 
       # WITHOUT THIS THE EMULATOR RUNS IN SOFTWARE AND DIES.
       #
@@ -301,7 +342,17 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+
+      # THE PEER DIES WITH THE JOB, WHATEVER KILLED IT. The runner's `finally`
+      # and its SIGTERM handler cover a failed flow and a cancelled step; this
+      # covers the rest, by the pidfile each leg's fixture wrote.
+      - name: Tear down the two-node peers
+        if: always()
+        run: |
+          for leg in linux android; do
+            python3 -m testing.gate.two_node down --work "$RUNNER_TEMP/two-node-$leg" || true
+          done
 
       # ALWAYS. A failure you cannot diagnose from the artifact costs a re-run
       # to learn what this run already knew.
@@ -313,8 +364,11 @@ jobs:
             shots/
             reports/
             node.log
+            node-android.log
             *-app.log
             logcat.txt
+            ${{ runner.temp }}/two-node-*/peer.log
+            ${{ runner.temp }}/two-node-*/values.json
 
   macos-ios:
     name: macos desktop + ios simulator
@@ -373,7 +427,8 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/macos.json --flows testing/flows
+            --shots shots --report reports/macos.json --flows testing/flows \
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-macos"
 
       # ── THE iOS BUNDLE, MATERIALIZED THE WAY THE AGENT'S GATE DOES IT ──────
       #
@@ -655,10 +710,17 @@ jobs:
           echo "simulator: $UDID"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
+          # The macOS leg's peer, if its runner was killed before `finally`:
+          # 5242/5243 must be free for this leg's own.
+          python3 -m testing.gate.two_node down --work "$RUNNER_TEMP/two-node-macos" || true
           rc=0
+          # The simulator shares the runner's loopback, so the node the app
+          # embeds is 127.0.0.1:4243 from here too — the fixture's --node-url
+          # default — and the peer on 5242/5243 does not collide with it.
           python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/ios.json --flows testing/flows || rc=$?
+            --shots shots --report reports/ios.json --flows testing/flows \
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-ios" || rc=$?
 
           # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
           # to a real screen — "Engine Failed to Start: server did not become
@@ -709,6 +771,13 @@ jobs:
           fi
           exit $rc
 
+      - name: Tear down the two-node peers
+        if: always()
+        run: |
+          for leg in macos ios; do
+            python3 -m testing.gate.two_node down --work "$RUNNER_TEMP/two-node-$leg" || true
+          done
+
       - if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -719,6 +788,8 @@ jobs:
             node.log
             *-app.log
             ios-logs/
+            ${{ runner.temp }}/two-node-*/peer.log
+            ${{ runner.temp }}/two-node-*/values.json
             client/iosApp/app_packages_native_sim/MANIFEST.txt
             client/iosApp/substrate.lock.json
 
@@ -762,7 +833,13 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ steps.node.outputs.version }}" \
-            --shots shots --report reports/windows.json --flows testing/flows
+            --shots shots --report reports/windows.json --flows testing/flows \
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-windows"
+
+      - name: Tear down the two-node peer
+        if: always()
+        shell: bash
+        run: python3 -m testing.gate.two_node down --work "$RUNNER_TEMP/two-node-windows" || true
 
       - if: always()
         uses: actions/upload-artifact@v4
@@ -773,6 +850,8 @@ jobs:
             reports/
             node.log
             *-app.log
+            ${{ runner.temp }}/two-node-*/peer.log
+            ${{ runner.temp }}/two-node-*/values.json
 
   gallery:
     name: screenshot gallery

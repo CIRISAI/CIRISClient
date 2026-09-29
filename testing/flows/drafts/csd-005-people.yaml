@@ -17,6 +17,11 @@ description: >-
 # NOT asserted: the removal end to end and a code pasted from another node,
 # which need ciris-server 0.5.218 (unreleased); the camera half of the scan.
 client: ">=0.5.225"
+# The populated list needs a contact: the two-node fixture adds the peer's owner
+# (testing/gate/two_node.py), and ${PEER_KEY_ID} is the key it is held under.
+# The bare-node shape — the add card INSTEAD of an empty block — is
+# testing/flows/people.yaml, which the runner orders before any fixture.
+fixture: two_node
 
 steps:
   - step_id: on_people
@@ -27,28 +32,31 @@ steps:
       a list and the chain ends on `nav_epistemic_contacts` (CSD-005 §2).
     requires:
       screen: Contacts
+    do:
+      # Sign-in read the list before the two-node fixture added a contact;
+      # refresh is what a person does next.
+      - click: btn_contacts_refresh
+      - wait: contacts_list
+        wait_ms: 5000
     expect:
       visible: [contacts_list, input_contacts_search]
 
   - step_id: a_row_carries_its_trust_and_its_hamburger
-    title: Every contact row shows a trust chip and a hamburger
+    title: The seeded contact's row shows a trust chip and a hamburger
     description: >-
-      Optional: it needs at least one contact, which the client fixture does not
-      author. Both counts over the row class, because the flow cannot know a key
-      id. A row without a hamburger would be furniture (CSD-006 §1); a row
-      without a trust chip would hide the one x_private:trust_state fact the
-      list carries.
-    optional_step: true
+      The fixture's contact, by its key id. A row without a hamburger would be
+      furniture (CSD-006 §1); a row without a trust chip would hide the one
+      x_private:trust_state fact the list carries.
     requires:
       screen: Contacts
       visible: [contacts_list]
     expect:
       state: populated
-      count: {of: "contacts_row_*", min: 1}
+      visible: ["contacts_row_${PEER_KEY_ID}", "contacts_row_trust_${PEER_KEY_ID}",
+                "btn_receipt_${PEER_KEY_ID}"]
 
   - step_id: every_row_has_a_trust_chip
     title: Every contact row shows its trust state as a chip
-    optional_step: true
     requires:
       visible: [contacts_list]
     expect:
@@ -56,7 +64,6 @@ steps:
 
   - step_id: every_row_has_a_hamburger
     title: Every contact row carries a hamburger, because it is a claim
-    optional_step: true
     requires:
       visible: [contacts_list]
     expect:
@@ -65,17 +72,26 @@ steps:
   - step_id: the_receipt_renders_five_facts
     title: The receipt opens with all five facts, the rule row off the wire
     description: >-
-      Optional (needs a contact). Five tags, not one sheet check (CSD-006 §5).
-      On a 0.5.217+ node the rule row is the grant's consent_prefixes, so it
-      contains "chat:"; on an older node it reads "did not send", and so do the
-      attester and the scope — the sheet says what the node did not send rather
-      than guessing.
-    optional_step: true
-    requires:
-      visible: [sheet_receipt]
+      Five tags, not one sheet check (CSD-006 §5). The fixture's node is
+      0.5.217 or later, so the rule row is the grant's consent_prefixes and
+      contains "chat:"; on an older node it would read "did not send", and so
+      would the attester and the scope.
+    do:
+      - click: "btn_receipt_${PEER_KEY_ID}"
+      - wait: sheet_receipt
+        wait_ms: 2500
     expect:
       visible: [sheet_receipt, receipt_subject, receipt_attester, receipt_scope, receipt_dimension, receipt_rule, btn_receipt_close]
       matches: {receipt_dimension: "consent:replication", receipt_rule: "chat:"}
+
+  - step_id: the_receipt_closes
+    title: Closing the receipt returns to the list
+    do:
+      - click: btn_receipt_close
+    expect:
+      screen: Contacts
+      absent: [sheet_receipt]
+      visible: [contacts_list]
 
   - step_id: search_that_matches_nothing_is_empty_not_error
     title: A search no contact matches renders the empty state

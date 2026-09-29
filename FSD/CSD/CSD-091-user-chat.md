@@ -294,7 +294,7 @@ and §5 disclaims it for the matrix.
 
 ## 5. QA plan
 
-**Flow not complete.** `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`) cannot go green on an ordinary matrix run as written: `a_room_with_history` is gated only on `chat_transcript`, which also renders for a room holding nothing but a system note (the single-node `awaiting_peer` room, `ChatScreen.kt`) and for a refusal over an empty room; `SystemNoteRow` carries no tag, so `count: chat_msg_* min 1` fails on the ordinary run and nothing on screen can gate it. It is complete when system notes are tagged or a two-node fixture seeds a message. Until then this card is not ready to promote.
+Spec complete and flow written (`testing/flows/drafts/csd-091-user-chat.yaml`, floor `>=0.5.225`, `fixture: two_node`): it enters the room from People by `btn_contacts_chat_${PEER_KEY_ID}` and asserts the peer's message by its attestation id (`chat_msg_${MESSAGE_ATTESTATION_ID}`), not a class count a system note could satisfy. It CANNOT go green on the released line: two unconferred v0.5.217 nodes never key the pair room (peers admitted ADVISORY, frames fail the SignedTransportDestination check), so no message crosses and `a_room_with_history` fails naming why (`evidence/blocked_upstream.tsv`). Linux desktop, 2026-09-28: the entry, composer and refresh steps passed; history failed as stated.
 
 **Platforms.** All five for the transcript and the refusals; **two nodes** for
 anything that involves the other side, which `testing/gate/node_fixture.py` does

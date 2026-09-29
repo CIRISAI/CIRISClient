@@ -254,6 +254,12 @@ def main() -> int:
                          "repeatable) against the same app — see testing/flows/README.md")
     ap.add_argument("--client-version", default=None,
                     help="the version under test, for flows' `client:` floors (default: VERSION)")
+    ap.add_argument("--username", default="qaadmin")
+    ap.add_argument("--password", default="QaAdmin!2345")
+    # `fixture: two_node` flows: the leg's own ciris-server binary, and where
+    # the node the client uses answers from this host (testing/gate/two_node.py).
+    from testing.gate.run_flows import add_fixture_args
+    add_fixture_args(ap)
     args = ap.parse_args()
 
     rep = Report(platform=args.platform, node_version=args.node_version)
@@ -332,7 +338,9 @@ def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None
     try:
         outcomes = run_flows.run_all(specs, drv, platform=platform,
                                      artifacts=args.shots / f"flows-{leg}",
-                                     client_version=version)
+                                     client_version=version, username=args.username,
+                                     password=args.password,
+                                     fixtures=run_flows.fixture_factory(args, leg=leg))
     except SessionUnavailable as e:
         rep.add("flows", False, f"no session to run them in: {e}")
         return
