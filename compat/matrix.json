@@ -1271,6 +1271,51 @@
       },
       "notes": "THE LOCKED SPEC SHELL, AND THE FIXES CIRISAgent#1184 IS WAITING ON. (1) Run-without-AI hand-off (#73): after the agent hands off to the node on :4243, the client follows the node when the pinned agent goes quiet. This fixes #66 (macOS stalls on Startup 'Restarting your node...' at 0/22 services, the red leg on CIRISAgent#1184) and #67 (Windows loses the setup session and loops to Login). (2) Setup honesty (#74): the final step runs once per press (#69), a skipped claim is not reported as success and the fed-ID is minted before the PIN (#68; new tag btn_setup_finish_unclaimed, key mobile.setup_finish_unclaimed), a login refusal keeps the server's reason (#70). (3) The Locked Spec redesign, waves 0-1 and the spine (#62, #63, #64, #45): two grounds, sixteen tokens, nine primitives, five circles with seven tabs, My things, a pinned Stop, one top bar, one back, a rail that closes. EVERY EXISTING TEST TAG AND /screen NAME IS KEPT, but nav hops moved: Interact is circle_agent -> tab_chats -> nav_epistemic_interact, the accord cards are under circle_global_commons -> tab_safety, Memory is under This node. testing/gate/nav_map.py derives every hop; see CIRISAgent#1181. Contacts' visible title is now 'People'. (4) Test mode only: desktop /screenshot reads the window's own frame (#75, #60) and copies it before the native bitmap is freed (#79; the Windows JVM crashed on main's run 36127990873); iOS records uncaught Kotlin exceptions to Documents/ciris/logs/kotlin_crash.log (#76, for #50). (5) The missing-node startup error said 'pip install ciris-server==<client version>', a server release that does not exist since the version lines split; it now says 'pip install --upgrade ciris-server'. Tested: five-platform live QA on main against ciris-server v0.5.216 (Linux/Android and Windows pass on the #79 fix run 36140908172). No wire change.",
       "published": null
+    },
+    {
+      "client_version": "0.5.225",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Every surface added in this release (households/communities 0.5.216, media policy and content digest 0.5.217, contact code / withdraw / owner delegations 0.5.218) reads a route an older node lacks and says so in words with the version it needs, never as an empty card; the rest reads the same routes as 0.5.224.",
+      "node_max_tested": "0.5.217",
+      "agent_min_tested": "2.12.1",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes"
+      ],
+      "capabilities_note": "new: households, communities and affiliations, withdraw consent and remove a contact, share a contact code (node 0.5.218), finish the key-verification ceremony, erase an agent's traces and check deletion receipts, the partnership queue, connectors, the trust root's posture/import/un-trust, Files and Notes to self.",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5059
+      },
+      "notes": "THE GAP-CLOSING REVIEW, BOTH BATCHES, AND THE CARDS IT FOUND MISSING. Every CSD was reviewed against its card, the node/agent API and the CC (#124, #126), with duplicate cards folded (Delegation→Delegations, System→Runtime, SkillImport→Skills, Map→Trust graph) and uncited routes cut from 121 to 2 under a new route gate (#111, #119). New cards: households (#122), communities (#121), key verification (#117, #118), erasure and receipts (#123), partnership queue and connectors (#120), contact code (#113), withdraw consent (#112), Files and Notes (#77). Fixes: node-owned calls (contacts, chat, config, drive) go to the node URL; logout and every auth exit reset consent, contacts and chat state, with epoch-guarded jobs (#115, #116, #129); two CI flakes were real races (#125). The CSD flow runner now runs on the five-platform matrix (#97) and a two-node fixture stands up a second person (#130). Tested: five-platform live QA green on all legs against ciris-server v0.5.217; :shared:desktopTest 1276/1276. Upstream: CIRISServer#698 (two released nodes cannot key a pair room).",
+      "published": null
     }
   ]
 }
