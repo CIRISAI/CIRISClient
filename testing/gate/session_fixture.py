@@ -86,6 +86,7 @@ def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
     raises as before."""
     # Down first (the wizard fills top to bottom), then back up past the
     # start: an element the earlier steps scrolled past sits ABOVE the fold.
+    notes: list[str] = []
     for direction in ["down"] * (tries // 2) + ["up"] * tries:
         try:
             return act()
@@ -93,11 +94,18 @@ def _reach(drv: TestAutomationServer, tag: str, act, tries: int = 8):
             if "off screen" not in str(e):
                 raise
             try:
-                drv.scroll_to(tag, direction=direction, amount=400)
-            except DriverError:
-                pass
+                r = drv.scroll_to(tag, direction=direction, amount=400)
+                notes.append(f"{direction}: {(r or {}).get('error') or 'moved'}"
+                             if isinstance(r, dict) else f"{direction}: moved")
+            except DriverError as se:
+                notes.append(f"{direction}: {str(se)[-160:]}")
             time.sleep(0.8)
-    return act()
+    try:
+        return act()
+    except DriverError as e:
+        # Say what the scrolls answered: "no overflow" means the wizard's own
+        # scrollable is not the one registered, which is a client defect.
+        raise DriverError(f"{e} | scrolls: {'; '.join(dict.fromkeys(notes))}") from None
 
 
 def _field_report(drv: TestAutomationServer) -> str:
