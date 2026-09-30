@@ -130,27 +130,33 @@ fun FailurePanel(
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.testable("failure_panel_title"),
+                // THE TEXTS ARE REGISTERED, NOT ONLY DRAWN. `testable(tag)` puts a
+                // tag on /tree with no text unless it is handed one, so a driver saw
+                // this panel and could not read it: Android, run 36746575125, the
+                // session fixture reported "(no reason on screen)" over a panel
+                // that said "claim PIN not captured". FailurePanelAutomationTextTest.
+                modifier = Modifier.testable("failure_panel_title", text = title),
             )
             Spacer(Modifier.height(10.dp))
+            val guidance = when (kind) {
+                FailureKind.Timeout ->
+                    "This is taking longer than expected. It may still finish — you can keep " +
+                        "waiting, or restart the app. If it never completes, please open an " +
+                        "issue so we can fix it."
+                FailureKind.Recoverable ->
+                    "This didn't work just now, but it should work shortly — nothing is " +
+                        "broken and nothing needs reinstalling. Try again in a moment. If it " +
+                        "keeps failing, please open an issue so we can fix it."
+                FailureKind.Unrecoverable ->
+                    "We're sorry — this error is not recoverable by retrying. Please open an " +
+                        "issue on GitHub so we can fix it, or wipe and reinstall the app to " +
+                        "start over."
+            }
             Text(
-                text = when (kind) {
-                    FailureKind.Timeout ->
-                        "This is taking longer than expected. It may still finish — you can keep " +
-                            "waiting, or restart the app. If it never completes, please open an " +
-                            "issue so we can fix it."
-                    FailureKind.Recoverable ->
-                        "This didn't work just now, but it should work shortly — nothing is " +
-                            "broken and nothing needs reinstalling. Try again in a moment. If it " +
-                            "keeps failing, please open an issue so we can fix it."
-                    FailureKind.Unrecoverable ->
-                        "We're sorry — this error is not recoverable by retrying. Please open an " +
-                            "issue on GitHub so we can fix it, or wipe and reinstall the app to " +
-                            "start over."
-                },
+                text = guidance,
                 fontSize = 15.sp,
                 color = MaterialTheme.colorScheme.onErrorContainer,
-                modifier = Modifier.testable("failure_panel_guidance"),
+                modifier = Modifier.testable("failure_panel_guidance", text = guidance),
             )
 
             Spacer(Modifier.height(14.dp))
@@ -183,7 +189,7 @@ fun FailurePanel(
                     modifier = Modifier
                         .padding(8.dp)
                         .testableVerticalScroll()
-                        .testable("failure_panel_detail"),
+                        .testable("failure_panel_detail", text = detail),
                 )
             }
 

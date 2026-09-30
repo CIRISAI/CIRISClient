@@ -3368,7 +3368,7 @@ private fun CompleteStep(
                         },
                     context = "first-run claim",
                     onRetry = if (ownershipClaim.errorRecoverable) onRetryClaim else null,
-                    modifier = Modifier.testable("setup_ownership_error"),
+                    modifier = Modifier.testable("setup_ownership_error", text = ownershipClaim.error),
                 )
                 if (onFinishUnclaimed != null) {
                     Spacer(modifier = Modifier.height(12.dp))

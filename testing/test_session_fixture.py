@@ -40,8 +40,15 @@ class _SlowWizard:
     answers, Next again claims, and the claim returns the app to Login."""
 
     def __init__(self, clock: _Clock, advance_after: float, claim_takes: float = 0.0,
-                 claim_error: str | None = None):
+                 claim_error: str | None = None, claim_error_on: str = "container"):
         self.clock, self.advance_after = clock, advance_after
+        # WHERE the reason is readable in /tree. "container": on
+        # `setup_ownership_error` itself. "panel": only on the FailurePanel's
+        # own texts — the container carries none. "nowhere": no element on the
+        # error screen carries text, which is what a client whose panel
+        # registered its tags without their texts served (Android, run
+        # 36746575125: "(no reason on screen)" with the reason on screen).
+        self.claim_error_on = claim_error_on
         # The claim is WORK: `setup_ownership_claiming` for `claim_takes`
         # seconds (step indicators up, no step active, no advance control),
         # then claimed — or the error panel, which never returns to Login.
@@ -86,7 +93,13 @@ class _SlowWizard:
             if phase == "claiming":
                 return [_el("setup_ownership_claiming")] + indicators
             if phase == "error":
-                return [_el("setup_ownership_error", self.claim_error)] + indicators
+                on = self.claim_error_on
+                panel = [_el("failure_panel"),
+                         _el("failure_panel_title", "This node could not be claimed" if on == "panel" else None),
+                         _el("failure_panel_detail", self.claim_error if on == "panel" else None),
+                         _el("btn_failure_report"), _el("btn_setup_finish_unclaimed")]
+                return ([_el("setup_ownership_error", self.claim_error if on == "container" else None)]
+                        + panel + indicators)
             return [_el("setup_ownership_claimed")]
         indicators = [_el("setup_step_indicators"),
                       _el("step_indicator_you", "active" if self.step == "you" else ""),
@@ -174,6 +187,34 @@ def test_a_refused_claim_is_reported_with_its_reason(monkeypatch):
         sf.run_setup(w, "qaadmin", "QaAdmin!2345")
     assert "claim PIN was not captured" in str(e.value)
     assert clock.t < 60, "a refused claim is reported when it is refused, not at the timeout"
+
+
+def test_a_reason_on_the_failure_panel_is_read_from_the_panel(monkeypatch):
+    """Android, run 36746575125: `setup_ownership_error` is the panel's
+    CONTAINER and carries no text; the reason is the panel's detail. The
+    fixture reported "(no reason on screen)" with `failure_panel_detail` in
+    the very list it printed."""
+    clock, w = _drive(monkeypatch, advance_after=1.0, claim_takes=5.0,
+                      claim_error="claim PIN not captured", claim_error_on="panel")
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    msg = str(e.value)
+    assert "claim PIN not captured" in msg, msg
+    assert "This node could not be claimed" in msg, msg
+    assert "no reason on screen" not in msg, msg
+
+
+def test_a_reason_nobody_registered_says_what_each_element_held(monkeypatch):
+    """When no element carries text, say so per element — the field report —
+    so the next red run shows that the CLIENT withheld the text rather than
+    reading as though the node gave no reason."""
+    clock, w = _drive(monkeypatch, advance_after=1.0, claim_takes=5.0,
+                      claim_error="claim PIN not captured", claim_error_on="nowhere")
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    msg = str(e.value)
+    assert "failure_panel_detail[" in msg, msg
+    assert "registered no text" in msg, msg
 
 
 def test_a_next_that_answers_disabled_is_waited_for_like_one_with_no_handler(monkeypatch):

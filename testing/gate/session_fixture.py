@@ -162,6 +162,26 @@ def _claim_started(tags: set[str]) -> bool:
     return bool(CLAIM_TAGS & tags)
 
 
+#: Where a failed claim's reason is readable, most specific first.
+#: `setup_ownership_error` is the FailurePanel's CONTAINER; the reason itself is
+#: the panel's detail, under its title. Android, run 36746575125: the fixture
+#: read only the container, found no text there, and printed "(no reason on
+#: screen)" beside a list that included `failure_panel_detail`.
+CLAIM_REASON_TAGS = ("setup_ownership_error", "failure_panel_title", "failure_panel_detail")
+
+
+def _claim_failure_reason(drv: TestAutomationServer, tree) -> str:
+    """The failed claim's reason as the screen states it. When no element
+    carries text, say THAT — with what each element held — because "no
+    reason" reads as the node's silence when it is the client's."""
+    texts = {e.test_tag: (e.text or "").strip() for e in tree if e.test_tag in CLAIM_REASON_TAGS}
+    said = list(dict.fromkeys(t for t in (texts.get(k, "") for k in CLAIM_REASON_TAGS) if t))
+    if said:
+        return " — ".join(said)
+    return ("the error screen registered no text for "
+            f"{', '.join(k for k in CLAIM_REASON_TAGS if k in texts)}; fields: {_field_report(drv)}")
+
+
 def _await_claim(drv: TestAutomationServer, timeout: float = CLAIM_TIMEOUT, poll: float = 1.5) -> None:
     """Wait out `setup_ownership_claiming`. It has no control — Android (run
     36733112700) showed it with the step indicators and no active step, and a
@@ -175,9 +195,8 @@ def _await_claim(drv: TestAutomationServer, timeout: float = CLAIM_TIMEOUT, poll
         tree = drv.tree()
         tags = {e.test_tag for e in tree}
         if "setup_ownership_error" in tags:
-            why = next((e.text for e in tree if e.test_tag == "setup_ownership_error" and e.text), "")
             raise SessionUnavailable(
-                f"the node refused the ownership claim: {why or '(no reason on screen)'}; "
+                f"the ownership claim failed: {_claim_failure_reason(drv, tree)}; "
                 f"on screen: {sorted(tags)}"
             )
         if "setup_ownership_claiming" not in tags:
