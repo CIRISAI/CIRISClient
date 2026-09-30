@@ -52,6 +52,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Callable, List, Optional, Sequence
 
+from testing.gate.console import utf8_console
 from testing.gate.flow_spec import FlowRunner, FlowSpec, SpecError, check_client_floor, discover
 
 REPO = Path(__file__).resolve().parents[2]
@@ -117,22 +118,81 @@ async def _settle_on(helper, screen: str, timeout: float, poll: float = 1.0) -> 
     return cur
 
 
+async def _on_screen(helper) -> List[str]:
+    """Tags on screen now, by the runner's own rule (FlowRunner._drivable)."""
+    try:
+        elements = await helper.get_elements()
+    except Exception:  # noqa: BLE001 — diagnosis must never raise
+        return []
+    out = []
+    for e in elements:
+        vis = getattr(e, "visible", None)
+        shown = vis if vis is not None else (getattr(e, "width", 1) > 0 and getattr(e, "height", 1) > 0)
+        if shown:
+            out.append(e.test_tag)
+    return sorted(out)
+
+
+async def _hop_landed(helper, tag: str, timeout: float, poll: float = 0.25) -> Optional[str]:
+    """After a circle or tab hop is clicked, wait for the shell to SAY it stands
+    there (`/state`'s `circle` / `tab`). None once it does, or on a client that
+    serves neither (an older client: the hop is walked unverified); else why.
+
+    THE CLICK IS NOT THE HOP. `CIRISApp.openTab` runs with the `circleNow` the
+    last composition captured, so a tab clicked before the frame after the
+    circle click has recomposed opens the OLD circle's tab. Every desktop leg
+    of the 2026-09-29 run lost four flows to that: Just me's Rules tab has no
+    Wallet row, its Safety tab has one card and opens ChildSafety directly, its
+    People tab opens Contacts directly — each reported as a row that "never
+    appeared", and on macOS, where a node client signs in under Neighbours,
+    even `circle_agent -> tab_chats` landed on Rooms.
+    """
+    if tag.startswith("circle_"):
+        key, want = "circle", tag[len("circle_"):].replace("_", "-")
+    elif tag.startswith("tab_"):
+        key, want = "tab", tag[len("tab_"):]
+    else:
+        return None
+    read = getattr(helper, "get_state", None)
+    if read is None:
+        return None
+    deadline = time.monotonic() + timeout
+    while True:
+        state = await read()
+        if not isinstance(state, dict) or key not in state:
+            return None
+        got = state.get(key)
+        if got == want:
+            return None
+        if time.monotonic() >= deadline:
+            return (f"{tag!r} was clicked, but the shell still stands in {key} {got!r} "
+                    f"after {timeout:.0f}s — the hop did not take")
+        await asyncio.sleep(poll)
+
+
 async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: float = 20.0,
                    arrive_timeout: float = 20.0) -> Optional[str]:
     """Walk `chain` (nav_map's derived hop) to `screen`. None on arrival, else
     the reason — naming the hop tag that was missing, because "could not reach
-    Screen.X" alone sends the reader to the wrong end of the chain.
+    Screen.X" alone sends the reader to the wrong end of the chain, and listing
+    what WAS on screen, because that is what names the cause.
 
     Each tag is WAITED for before it is clicked: a circle's tabs compose after
     the circle is chosen, and clicking before they exist is a race, not a test.
+    And each circle or tab hop is VERIFIED to have landed before the next is
+    clicked (`_hop_landed`): a click that succeeded is not a hop that took.
     """
     for i, tag in enumerate(chain, 1):
         where = f"hop {i} of {len(chain)} ({' -> '.join(chain)})"
         if not await helper.wait_for_element(tag, timeout=int(hop_timeout * 1000)):
             return (f"navigation to Screen.{screen}: hop tag {tag!r} never appeared, {where}; "
-                    f"on {await helper.get_screen()!r}")
+                    f"on {await helper.get_screen()!r}; on screen and drivable now: "
+                    f"{await _on_screen(helper)}")
         if not await helper.click(tag, timeout=int(hop_timeout * 1000)):
             return f"navigation to Screen.{screen}: clicking hop tag {tag!r} failed, {where}"
+        landed = await _hop_landed(helper, tag, hop_timeout)
+        if landed:
+            return f"navigation to Screen.{screen}: {landed}, {where}"
     got = await _settle_on(helper, screen, arrive_timeout)
     if got == "CircleTab" and screen != "CircleTab":
         # A tab with ONE card opens it directly in the wide layout (nav_map
@@ -179,20 +239,26 @@ async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[
     if start and hops is None:
         await _settle_on(helper, start, start_timeout)
     elif start:
-        # A landing still composing is not a flow on the wrong screen: give the
-        # client a moment before deciding to walk anywhere.
-        cur = await _settle_on(helper, start, min(start_timeout, 5.0))
         err = None
-        if cur != start:
-            if start in hops:
-                print(f"\n FLOW {spec.flow} — walking to Screen.{start}: {' -> '.join(hops[start])}")
-                err = await navigate(helper, start, hops[start],
-                                     hop_timeout=start_timeout, arrive_timeout=start_timeout)
-            elif start in flow_only:
-                # Pre-login, wizards, leaves: nothing in the shell leads there,
-                # so the flow must already be on it. Wait, then let `requires` judge.
-                await _settle_on(helper, start, start_timeout)
-            else:
+        if start in hops:
+            # ALWAYS WALKED, even when the client already shows the screen.
+            # Contacts sits in every circle's People tab, and the last flow
+            # left the shell wherever it left it; being on the screen says
+            # nothing about the circle it is shown in. Re-selecting the hop's
+            # circle and tab — and verifying each landed — is what makes every
+            # flow start from a known place rather than the previous flow's.
+            print(f"\n FLOW {spec.flow} — walking to Screen.{start}: {' -> '.join(hops[start])}")
+            err = await navigate(helper, start, hops[start],
+                                 hop_timeout=start_timeout, arrive_timeout=start_timeout)
+        elif start in flow_only:
+            # Pre-login, wizards, leaves: nothing in the shell leads there,
+            # so the flow must already be on it. Wait, then let `requires` judge.
+            await _settle_on(helper, start, start_timeout)
+        else:
+            # A landing still composing is not a flow on the wrong screen: give
+            # the client a moment before deciding it is elsewhere.
+            cur = await _settle_on(helper, start, min(start_timeout, 5.0))
+            if cur != start:
                 err = (f"no nav hop for Screen.{start} on this build, and it is not a "
                        f"flow-only screen (on {cur!r})")
         if err:
@@ -220,6 +286,10 @@ async def run_one(spec: FlowSpec, helper, *, platform=None, artifacts: Optional[
         else:
             status = FAIL
             detail = f"step {bad.step_id!r} ({bad.phase}): {bad.detail}" if bad else "failed"
+    if runner.cleanup_failures:
+        # Said, not judged: the verdict is the flow's; a cleanup that did not
+        # run is what the NEXT flow will fail for, so it is on the record here.
+        detail += "; cleanup: " + "; ".join(runner.cleanup_failures)
     return FlowOutcome(spec.flow, spec.csd_id, status, detail, steps, str(report) if report else None)
 
 
@@ -387,6 +457,7 @@ def fixture_factory(args, leg: str = "") -> Optional[Callable[[str], Any]]:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--platform", default="desktop", choices=("desktop", "android", "ios"))

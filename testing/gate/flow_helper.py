@@ -37,10 +37,29 @@ long screen as an upper bound.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
 from testing.driver import DriverError, TestAutomationServer
+
+#: How many 300px steps to try in each direction before saying a target stays
+#: off screen. The wizard's `_reach` (session_fixture) uses the same budget.
+_SCROLL_STEPS = 24
+#: The answers `/scroll` gives when there is nowhere further to go.
+_SCROLL_END = ("already at the", "NO overflow", "can scroll")
+#: How long a plain `click:` waits for a control refused as disabled to enable.
+#: `/input` returns before the frame that applies it, so a submit clicked right
+#: after typing can still be disabled: iOS, run 36733112700, csd_005 clicked Add
+#: in that frame, and (before the handler followed `enabled`) nothing was sent
+#: and nothing said so. A control that stays disabled this long IS disabled,
+#: and the click fails with that reason.
+ENABLE_SETTLE_S = 5.0
+
+#: How a platform refuses a click on a DISABLED control. From 0.5.225 every
+#: platform says "is disabled" (409); before that iOS and Android answered
+#: "No click handler" (404), because a disabled `testableClickable` has none.
+_REFUSED_AS_DISABLED = ("is disabled", "No click handler")
 
 
 @dataclass
@@ -65,6 +84,52 @@ class SyncFlowHelper:
 
     def __init__(self, drv: TestAutomationServer) -> None:
         self._drv = drv
+        #: Why the last click / input was refused, verbatim from the driver.
+        #: The runner used to report "did not succeed" and nothing else; on
+        #: csd_047 the reason was "composed but off screen", which names both
+        #: the cause and the remedy.
+        self.last_error = ""
+        #: What the last `scroll_into_view` did, one note per direction tried
+        #: ("down: moved", "up: already at the top"), so a `visible:` that
+        #: fails after scrolling can say what the screen answered.
+        self.last_scroll: List[str] = []
+
+    # ---- reaching ---------------------------------------------------------
+
+    def _step(self, tag: str, direction: str) -> Optional[str]:
+        """One `/scroll`; the app's reason when it did not move, else None."""
+        try:
+            r = self._drv.scroll_to(tag, direction=direction, amount=300)
+        except AttributeError:
+            return "this driver has no /scroll"
+        except DriverError as e:
+            return str(e)[-160:]
+        return (r or {}).get("error") if isinstance(r, dict) else None
+
+    def _reach(self, tag: str, act) -> bool:
+        """Run `act()`, scrolling `tag` into view when the app refuses it as
+        composed but off screen (CIRISClient#33): down until the bottom, then
+        up until the top, bounded. Any other refusal is final and kept."""
+        notes: list = []
+        for direction in ("down", "up"):
+            for _ in range(_SCROLL_STEPS):
+                try:
+                    act()
+                    return True
+                except DriverError as e:
+                    if "off screen" not in str(e):
+                        self.last_error = str(e)
+                        return False
+                msg = self._step(tag, direction)
+                notes.append(f"{direction}: {msg or 'moved'}")
+                if msg and any(word in msg for word in _SCROLL_END):
+                    break
+        try:
+            act()
+            return True
+        except DriverError as e:
+            self.last_error = f"{e} | scrolls: {'; '.join(dict.fromkeys(notes))}"
+            return False
 
     # ---- reads --------------------------------------------------------------
 
@@ -96,6 +161,14 @@ class SyncFlowHelper:
         except DriverError:
             return "unknown"
 
+    async def get_state(self) -> dict:
+        """`/state`: the gate, the node, and — from 0.5.226 — the circle and
+        tab the shell stands in, which is how `navigate` sees a hop land."""
+        try:
+            return self._drv.state()
+        except DriverError:
+            return {}
+
     async def is_element_visible(self, tag: str) -> bool:
         e = await self.get_element(tag)
         if e is None:
@@ -107,27 +180,68 @@ class SyncFlowHelper:
     # ---- actions ------------------------------------------------------------
 
     async def click(self, tag: str, timeout: int = 2000) -> bool:
-        try:
-            self._drv.click(tag)
-            return True
-        except DriverError:
+        """Click `tag`. Refused as disabled, it is retried until the control
+        enables or ENABLE_SETTLE_S runs out — the frame after an input, not a
+        padded flow. Every other refusal is final, as before."""
+        deadline = time.monotonic() + ENABLE_SETTLE_S
+        while True:
+            if self._reach(tag, lambda: self._drv.click(tag)):
+                return True
+            if "is disabled" not in self.last_error or time.monotonic() >= deadline:
+                return False
+            time.sleep(0.25)
+
+    async def click_refused(self, tag: str, timeout: int = 2000) -> bool:
+        """Click a control the flow says is DISABLED, and hold only if nothing
+        ran behind it: the platform refused the click, or (desktop before
+        0.5.225) fell back to a coordinate click that no handler answered —
+        the step's `absent:` then judges whether anything happened. A
+        programmatic handler that ran is CIRISClient#69's shape and fails;
+        so does a control that is not there at all (that is not a refusal,
+        it is a missing control)."""
+        seen: dict = {}
+
+        def act() -> None:
+            try:
+                seen["answer"] = self._drv.click(tag)
+            except DriverError as e:
+                if any(word in str(e) for word in _REFUSED_AS_DISABLED):
+                    seen["refused"] = str(e)
+                    return
+                raise
+
+        if not self._reach(tag, act):
             return False
+        if "refused" in seen:
+            return True
+        answer = seen.get("answer")
+        if isinstance(answer, dict) and answer.get("action") == "mouse-click":
+            return True
+        self.last_error = (f"{tag} accepted the click and its handler ran: a disabled control "
+                           f"that still fires is CIRISClient#69's shape")
+        return False
 
     async def input_text(self, tag: str, text: str) -> bool:
-        try:
-            self._drv.input(tag, text)
-            return True
-        except DriverError:
-            return False
+        return self._reach(tag, lambda: self._drv.input(tag, text))
 
     async def scroll_into_view(self, tag: str) -> bool:
-        try:
-            self._drv.scroll_to(tag)
-            return True
-        except (DriverError, AttributeError):
-            # A client without /scroll is not a failed scroll: the runner will
-            # re-ask `is_element_visible` and report honestly either way.
-            return False
+        """Bring `tag` on screen: step down until it has size, then up, bounded.
+        An element below the fold is composed with a clipped, zero-size
+        `boundsInWindow`, so "visible" here is what the scroll changes. A client
+        without /scroll is not a failed scroll: the runner re-asks
+        `is_element_visible` and reports honestly either way."""
+        notes: List[str] = []
+        for direction in ("down", "up"):
+            for _ in range(_SCROLL_STEPS):
+                if await self.is_element_visible(tag):
+                    self.last_scroll = list(dict.fromkeys(notes))
+                    return True
+                msg = self._step(tag, direction)
+                notes.append(f"{direction}: {msg or 'moved'}")
+                if msg and ("no /scroll" in msg or any(word in msg for word in _SCROLL_END)):
+                    break
+        self.last_scroll = list(dict.fromkeys(notes))
+        return await self.is_element_visible(tag)
 
     async def wait_for_element(self, tag: str, timeout: int = 2000) -> bool:
         try:

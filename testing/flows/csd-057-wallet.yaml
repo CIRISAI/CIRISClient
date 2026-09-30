@@ -95,7 +95,13 @@ steps:
 
   - step_id: back_leaves_the_card
     title: Back returns to Communities and Businesses > Rules
+    description: >-
+      The shell's back (`btn_nav_back`, CirclesShell) — the card opened from a
+      seven-card tab, and that is the arrow a person sees. `btn_wallet_back` is
+      the page's own arrow, drawn only when the page runs outside the shell
+      in a wide window; on the Linux desktop leg (2026-09-29) it was not on
+      screen and this step failed on it.
     do:
-      - click: btn_wallet_back
+      - click: btn_nav_back
     expect:
       absent: [card_wallet_balance]

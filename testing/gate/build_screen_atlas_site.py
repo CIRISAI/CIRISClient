@@ -497,7 +497,7 @@ def main() -> int:
     ap.add_argument("--out", required=True, type=Path, help="site directory to write")
     args = ap.parse_args()
 
-    manifest = json.loads((args.atlas / "atlas.json").read_text())
+    manifest = json.loads((args.atlas / "atlas.json").read_text(encoding="utf-8"))
     # The SHAPE and the REASONS ride along with the pictures, so the page can
     # explain an arrangement instead of merely listing it.
     from testing.gate import atlas_context, nav_map
@@ -518,8 +518,8 @@ def main() -> int:
     if shots_out.exists():
         shutil.rmtree(shots_out)
     shutil.copytree(args.atlas / "shots", shots_out)
-    (args.out / "atlas.json").write_text(json.dumps(manifest, indent=2))
-    (args.out / "index.html").write_text(PAGE)
+    (args.out / "atlas.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    (args.out / "index.html").write_text(PAGE, encoding="utf-8")
 
     kept = len(list(shots_out.glob("*.png")))
     print(f"site -> {args.out}  ({kept} shots, {manifest['captured']}/{manifest['total']} captured)")

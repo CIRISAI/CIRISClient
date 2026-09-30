@@ -27,7 +27,7 @@ def namespaces() -> dict:
     """The constitutional family count, from the file that generates it."""
     if not REGISTRY.exists():
         return {}
-    meta = json.loads(REGISTRY.read_text()).get("_meta", {})
+    meta = json.loads(REGISTRY.read_text(encoding="utf-8")).get("_meta", {})
     return {
         "cc_version": meta.get("cc_version"),
         "families": meta.get("n_families"),

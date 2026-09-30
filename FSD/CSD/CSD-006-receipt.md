@@ -1,10 +1,10 @@
 # CSD-006 — The receipt (the template every CEG item asserts)
 
 **CSD**: CSD-006 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec §2
-**Flow**: `testing/flows/drafts/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
+**Flow**: `testing/flows/csd-006-receipt.yaml` (floor `>=0.5.225`) — driven on the first surface that binds the template (Contacts, CSD-005)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -143,7 +143,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`). The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Run locally on the Linux desktop leg 2026-09-28 (candidate 0.5.224 checked as 0.5.225, node v0.5.217): 5/6 passed, the grant-less step skipped as designed because the node sends the grant. Not yet run on the other four legs; promotes when the floor is met and it runs on the matrix.
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **5/6 passed, 1 skipped** — the seeded row's hamburger, all five envelope rows, the wire dimension, the rule row off the wire (`chat:` among the grant's prefixes) and the close; the grant-less step skipped as designed (the node sends the grant). On the matrix run of the same day (36588619656) every desktop leg failed this flow for csd-092's open contact-code card, since fixed (`cleanup:`). Not yet run on the other four legs. On the second matrix run (36600766576) it passed 6/6 on Linux and failed on macOS at its first step: `contacts_row_${PEER_KEY_ID}` was composed but below the fold, under the add card csd_005 had left open with a refusal, on a screen the harness cannot scroll (People's list is a LazyColumn with no `testableVerticalScroll`). csd_005's `cleanup:` now closes the card, and the runner says "composed but off screen after scrolling" with what `/scroll` answered, rather than "not on screen".
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

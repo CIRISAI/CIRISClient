@@ -1,11 +1,11 @@
 # CSD-005 — People (the Contacts surface, rebuilt on the primitives)
 
 **CSD**: CSD-005 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 0
-**Flow**: `testing/flows/drafts/csd-005-people.yaml` (floor `>=0.5.225`)
+**Flow**: `testing/flows/csd-005-people.yaml` (floor `>=0.5.225`)
 **Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row will offer once CIRISServer#683 lands)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -219,7 +219,7 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-005-people.yaml`, floor `>=0.5.225`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97) The populated list and the receipt step are no longer optional: `fixture: two_node` seeds the contact, and on the Linux desktop leg (2026-09-28) the row, its trust chip, its hamburger and the five-fact receipt all passed. The flow then failed at `the_add_card_opens_with_paste_and_scan`: the desktop add card shows `btn_scan_contact_code_status`, not `btn_scan_contact_code` — a defect in that step, unrelated to the fixture.
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **11/12 passed, 1 skipped** — the list, the seeded row with its trust chip and hamburger, the five-fact receipt and its close, the empty search and its clearing, the add card, the node-code refusal by name, and the code card from the header; `a_scan_is_offered_where_there_is_a_camera` skipped as designed (desktop has no `btn_scan_contact_code`). The matrix run of the same day (36588619656) failed this flow on every desktop leg for csd-092's open contact-code card, which now closes itself (`cleanup:`), and its fixture waited only for the peer's owner key, not the binding (`reachable_nodes`, CIRISServer#699) — both fixed. Not yet run on the other four legs. On the second matrix run (36600766576) it passed 11/12 on Linux and macOS (the scan step skipped, no camera) and could not start on Windows (the fixture's console crash, fixed in the gate); its last steps left the add card open with a refusal in it, which on macOS's shorter window pushed the list below the fold for csd_006 — the flow's `cleanup:` now clears the refusal and closes the card (`when:` guards the header toggle).
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.

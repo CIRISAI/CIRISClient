@@ -15,13 +15,30 @@ description: >-
 # ui/screens/PeopleSupport.kt (PeopleTags) at 0.5.225; sheet_receipt and the
 # five receipt_* tags are in ui/primitives/ReceiptSheet.kt.
 # NOT asserted: the removal end to end and a code pasted from another node,
-# which need ciris-server 0.5.218 (unreleased); the camera half of the scan.
+# which need ciris-server 0.5.218 (unreleased); the camera half of the scan;
+# the desktop "paste instead" sentence (`btn_scan_contact_code_status`, built as
+# `${tag}_status`, invisible to testing/test_flows.py's literal grep).
 client: ">=0.5.225"
 # The populated list needs a contact: the two-node fixture adds the peer's owner
 # (testing/gate/two_node.py), and ${PEER_KEY_ID} is the key it is held under.
 # The bare-node shape — the add card INSTEAD of an empty block — is
 # testing/flows/people.yaml, which the runner orders before any fixture.
 fixture: two_node
+# The last step opens the contact-code card, which replaces People's body
+# until closed (csd-092-share-contact-code.yaml); closed here whatever the verdict.
+# Before it, `a_node_code_is_refused_by_name` leaves the add card open with a
+# refusal in it, and on a short window (macOS, 1024x656) the expanded card
+# pushes the list below the fold — csd_006 then found its row composed but
+# off screen (run 36600766576). The refusal clears when the field changes
+# (`onKeyIdChange` -> `clearAddError`) and the card closes on the header
+# toggle; `when:` keeps the toggle from OPENING the card on a run that failed
+# before it got there.
+cleanup:
+  - click: btn_contact_code_close
+  - input: {input_contacts_add_key: ""}
+    when: contacts_add_refusal
+  - click: btn_contacts_add_open
+    when: card_contacts_add
 
 steps:
   - step_id: on_people
@@ -111,12 +128,26 @@ steps:
       visible: [contacts_list]
       absent: [contacts_empty]
 
-  - step_id: the_add_card_opens_with_paste_and_scan
-    title: Add a contact takes a pasted code, and offers a scan that never submits
+  - step_id: the_add_card_opens_for_a_pasted_code
+    title: Add a contact takes a pasted code
     do:
       - click: btn_contacts_add_open
     expect:
-      visible: [card_contacts_add, input_contacts_add_key, btn_contacts_add_submit, btn_scan_contact_code]
+      visible: [card_contacts_add, input_contacts_add_key, btn_contacts_add_submit]
+
+  - step_id: a_scan_is_offered_where_there_is_a_camera
+    title: Where the device has a camera, the card offers a scan that never submits
+    description: >-
+      Android and iOS render `btn_scan_contact_code`; desktop and web render one
+      sentence saying to paste instead and no button (ui/primitives/QrScanAction.kt).
+      Gated on the button, so the three desktop legs skip it rather than fail
+      (Linux desktop, 2026-09-28). The desktop sentence is `${tag}_status`, built
+      by interpolation, which the flow tag check cannot see, so it is not asserted.
+    optional_step: true
+    requires:
+      visible: [btn_scan_contact_code]
+    expect:
+      visible: [btn_scan_contact_code, card_contacts_add]
 
   - step_id: a_node_code_is_refused_by_name
     title: Pasting a node code is refused as "not a person's code"

@@ -21,7 +21,20 @@ class DisabledClickHandlerTest {
     private val tag = "btn_disabled_probe"
 
     @AfterTest
-    fun cleanup() = TestAutomation.unregisterClickHandler(tag)
+    fun cleanup() = releaseClickHandler(tag)
+
+    @Test
+    fun aDisabledControlIsKnownAsDisabledUntilItIsEnabledOrGone() {
+        // So `/click` can answer "disabled" rather than "no click handler"
+        // (iOS, run 36733112700) — the same answer on every platform.
+        bindClickHandler(tag, enabled = false) {}
+        assertTrue(DisabledControls.isDisabled(tag))
+        bindClickHandler(tag, enabled = true) {}
+        assertFalse(DisabledControls.isDisabled(tag), "an enabled control is not disabled")
+        bindClickHandler(tag, enabled = false) {}
+        releaseClickHandler(tag)
+        assertFalse(DisabledControls.isDisabled(tag), "a disposed control is not anything")
+    }
 
     @Test
     fun aDisabledControlCannotBeClicked() {

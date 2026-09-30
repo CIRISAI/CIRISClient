@@ -5148,6 +5148,15 @@ fun CIRISApp(
                 is Screen.CircleTab -> ai.ciris.mobile.shared.ui.nav.Tab.entries.firstOrNull { it.id == sc.tabId }
                 else -> activeSurface?.let { ai.ciris.mobile.shared.ui.nav.CirclesNav.tabOf(it) }
             }
+            // Publish where the shell stands to test automation (`/state`), so
+            // a harness can see a circle hop LAND before it clicks the tab:
+            // `onTab` below runs with the `circleNow` of the composition that
+            // made it, and a tab clicked before the next frame opens the old
+            // circle's tab (the 2026-09-29 matrix run, every desktop leg).
+            LaunchedEffect(circleNow, tabNow) {
+                ai.ciris.mobile.shared.testing.TestAutomationState.circle = circleNow.id
+                ai.ciris.mobile.shared.testing.TestAutomationState.tab = tabNow?.id ?: ""
+            }
             fun openTab(c: ai.ciris.mobile.shared.ui.nav.CohortScope, t: ai.ciris.mobile.shared.ui.nav.Tab) {
                 val cards = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(c, t, hasAgentNow)
                 currentCircle = c
@@ -5378,9 +5387,32 @@ private suspend fun checkFirstRunStatus(
             // waited for rather than declared unreachable.
             if (ActiveBackend.endpoint == NODE_ONLY_ENDPOINT) {
                 if (isNodeReachable(nodeUrl)) {
+                    // ANSWERING IS NOT OWNED. This branch used to return
+                    // "setup complete" the moment the node answered, which is
+                    // right after the run-without-AI hand-off (#48: that node
+                    // was claimed before the agent left) and wrong for a node
+                    // nobody has claimed yet: the Android leg of the
+                    // five-platform gate (run 36600766576) met a fresh
+                    // ciris-server, was told it was configured, rendered Login
+                    // with isFirstRun=false, and "Local login" opened a
+                    // password form for an owner that did not exist. Desktop
+                    // never saw it only because its ActiveBackend was still
+                    // the agent pin at this point, so it took the
+                    // /v1/setup/status + probeNodeOwnership path below and got
+                    // FRESH. Ask the node the same two questions here.
+                    val ownership = probeNodeOwnership(nodeUrl)
+                    if (ownership == NodeOwnership.FRESH) {
+                        platformLog(
+                            "checkFirstRunStatus",
+                            "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers, " +
+                                "but it has no owner (FRESH) — first run",
+                        )
+                        return true
+                    }
                     platformLog(
                         "checkFirstRunStatus",
-                        "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers — setup complete",
+                        "[INFO] backend is the node on :${ActiveBackend.endpoint.port} and it answers, " +
+                            "$ownership — setup complete",
                     )
                     return false
                 }

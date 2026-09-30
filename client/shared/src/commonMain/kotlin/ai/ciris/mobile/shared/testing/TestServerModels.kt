@@ -87,7 +87,10 @@ data class StateResponse(
     val screen: String,
     val testMode: Boolean,
     val clientMode: String,
-    val nodeUrl: String
+    val nodeUrl: String,
+    /** The circle and tab the shell stands in — see `TestAutomationState.circle`. */
+    val circle: String = "",
+    val tab: String = "",
 )
 
 /**

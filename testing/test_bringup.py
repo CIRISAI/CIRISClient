@@ -280,3 +280,130 @@ def test_the_mobile_launches_are_NOT_backgrounded():
     # them background would drop the only synchronisation those plans have.
     android = bringup.android_plan(Path("/tmp/a.apk"), "pkg")
     assert not android.steps[android.index_of("launch")].background
+
+
+# ---- the claim PIN crosses from the host's node to the device ---------------
+#
+# Android, run 36746575125: the app reached first-run Setup, drove the wizard,
+# and gave up with "claim PIN not captured after wait — leaving node unclaimed"
+# (logcat, SetupViewModel). The node never saw a claim. The app reads the PIN
+# from `<its CIRIS_HOME>/claim_pin` — `files/ciris` INSIDE the emulator — while
+# the node it attached to runs on the HOST and wrote its PIN there. Desktop and
+# iOS share the host's filesystem and read the file the node declares; Android
+# cannot, so the harness carries it, standing in for the operator at the node's
+# console, exactly as two_node.py does for the peer.
+
+PIN = "FCZX-WTDT"
+
+
+def test_android_hands_the_claim_pin_over_after_install_and_before_launch():
+    p = android_plan(APK, PKG, claim_pin=PIN)
+    assert p.index_of("install") < p.index_of("hand-over-claim-pin") < p.index_of("launch")
+
+
+def test_the_pin_lands_in_the_home_the_app_reads():
+    step = android_plan(APK, PKG, claim_pin=PIN).steps[
+        android_plan(APK, PKG, claim_pin=PIN).index_of("hand-over-claim-pin")]
+    cmd = " ".join(step.cmd)
+    # CirisVerify.setup(): CIRIS_HOME = filesDir/ciris; PythonRuntime.android
+    # readLocalClaimPin() reads File(CIRIS_HOME, "claim_pin").
+    assert f"run-as {PKG}" in cmd, "only the app's own uid can write its private files"
+    assert f"/data/data/{PKG}/files/ciris/claim_pin" in cmd
+    assert PIN in cmd
+
+
+def test_no_pin_no_handover_step():
+    # An owned node has no PIN; the fixture logs in instead of claiming.
+    assert "hand-over-claim-pin" not in android_plan(APK, PKG).names()
+
+
+@pytest.mark.parametrize("bad", ["ABCD-EFGH; rm -rf /", "$(id)", "a'b", "", "X" * 200])
+def test_a_pin_that_is_not_a_pin_is_refused_before_it_reaches_a_shell(bad):
+    with pytest.raises(CannotRun):
+        android_plan(APK, PKG, claim_pin=bad)
+
+
+def test_teardown_takes_the_handed_over_pin_back():
+    # A copy left on the device outlives the claim that consumed the node's own
+    # file — the stale-PIN shape CIRISClient#49 was about, planted by the gate.
+    td = android_teardown(PKG)
+    assert "remove-claim-pin" in td.names()
+    step = td.steps[td.index_of("remove-claim-pin")]
+    assert step.optional and f"/data/data/{PKG}/files/ciris/claim_pin" in " ".join(step.cmd)
+
+
+class _StatusNode:
+    """A node's read API, serving only `/v1/setup/status`."""
+
+    def __init__(self, body: dict):
+        import http.server
+        import json
+        import threading
+
+        payload = json.dumps(body).encode()
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):  # noqa: N802
+                if self.path != "/v1/setup/status":
+                    self.send_error(404)
+                    return
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.end_headers()
+                self.wfile.write(payload)
+
+            def log_message(self, *a):
+                pass
+
+        self.srv = http.server.HTTPServer(("127.0.0.1", 0), H)
+        threading.Thread(target=self.srv.serve_forever, daemon=True).start()
+        self.url = f"http://127.0.0.1:{self.srv.server_address[1]}"
+
+    def close(self):
+        self.srv.shutdown()
+
+
+def test_the_pin_is_read_from_the_file_the_node_declares(tmp_path):
+    pin_file = tmp_path / "claim_pin"
+    pin_file.write_text(PIN + "\n")
+    node = _StatusNode({"data": {"is_first_run": True, "setup_required": True,
+                                 "claim_pin_file": str(pin_file)}})
+    try:
+        assert bringup.node_claim_pin(node.url, timeout=2) == PIN
+    finally:
+        node.close()
+
+
+def test_an_owned_node_has_no_pin_to_hand_over():
+    node = _StatusNode({"data": {"is_first_run": False, "setup_required": False}})
+    try:
+        assert bringup.node_claim_pin(node.url, timeout=2) is None
+    finally:
+        node.close()
+
+
+def test_a_first_run_node_whose_pin_cannot_be_read_fails_loudly(tmp_path):
+    # Not None: None means "owned, log in", and the leg would then fail at the
+    # claim two minutes later for a reason this line already knew.
+    missing = tmp_path / "nowhere" / "claim_pin"
+    node = _StatusNode({"data": {"is_first_run": True, "setup_required": True,
+                                 "claim_pin_file": str(missing)}})
+    try:
+        with pytest.raises(CannotRun) as e:
+            bringup.node_claim_pin(node.url, timeout=1, poll=0.2)
+        assert str(missing) in str(e.value)
+    finally:
+        node.close()
+
+
+def test_the_android_leg_asks_its_node_for_the_pin(monkeypatch):
+    from testing.gate import run_platform
+
+    asked = []
+    monkeypatch.setattr(bringup, "node_claim_pin", lambda url, **kw: asked.append(url) or PIN)
+    args = type("A", (), dict(platform="android", apk=str(APK), package=PKG, serial=None,
+                              activity=bringup.ANDROID_ACTIVITY,
+                              node_url="http://127.0.0.1:4243"))()
+    plan = run_platform.plan_for(args)
+    assert asked == ["http://127.0.0.1:4243"]
+    assert "hand-over-claim-pin" in plan.names()

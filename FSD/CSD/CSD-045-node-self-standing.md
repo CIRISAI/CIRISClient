@@ -195,7 +195,7 @@ arrives anyway.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names the ConfirmSheet's `sheet_self_act`, `self_act_fact_1..3`, `btn_self_act_confirm` / `_cancel` and OwnerDelegationPicker's `input_self_delegation_id`, `opt_self_owner_delegation_0`, `text_self_no_owner_delegation` (every one built from `tagPrefix`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
 
 **Platforms.** All five, against a claimed node with an owner session. The
 with-AI legs exercise the node URL, not the agent port. The delegation-supplied

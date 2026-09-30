@@ -2,11 +2,11 @@
 
 **CSD**: CSD-092 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.218 client brief (CIRISServer#673; the route is readable on `origin/integ/0.5.218`, `src/self_devices.rs:562-847`)
 **Pairs with**: CSD-005 (People: the other half, where a code is pasted or scanned in)
-**Flow**: `testing/flows/drafts/csd-092-share-contact-code.yaml` (floor `unreleased` — the route ships with ciris-server 0.5.218)
+**Flow**: `testing/flows/csd-092-share-contact-code.yaml` (floor `>=0.5.225`; the route ships with ciris-server 0.5.218)
 **Card**: built, PR #113 — `ContactsScreen.kt` (the card), `ContactCodeState.kt` + `ContactsViewModel` (the states), `ContactCodeResponse` (the wire), `ContactCodeViewModelTest` / `ContactCodeWireTest`
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -199,7 +199,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-092-share-contact-code.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-092-share-contact-code.yaml`, floor `>=0.5.225`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. The tags are the client's at 0.5.225; the route is ciris-server 0.5.218's, so on an older node the flow drives the version fact and skips the populated, empty and refusal states. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **3/7 passed, 4 skipped** — the card opens, names the version it needs ("0.5.218 or newer") and closes; the four 0.5.218 states skipped as designed. On the matrix run of the same day (36588619656) the version step failed on every desktop leg: the client drew the sentence as the error's body and `StateBlock` registered its tag with the title alone, so the tree could not show it — fixed in the client (the tag now carries body and detail). The flow also closes its card whatever its verdict (`cleanup:`), because left open it replaced People's body for the three flows after it.
 
 **Platforms.** All five for the card. The copy → paste → contact round trip
 needs two nodes and runs on desktop.

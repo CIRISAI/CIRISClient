@@ -33,12 +33,13 @@ steps:
   - step_id: empty_submit_does_nothing
     title: Submit with nothing filled in produces no banner at all
     description: >-
-      The button is disabled, so the click is swallowed by design. The assertion
-      is that NEITHER banner appears — a disabled control that still fires its
-      handler is CIRISClient#70's shape, and #92 added a disabled-click probe for
-      exactly this class.
+      The button is disabled, so the click is refused by design: `click_refused`
+      holds when the platform refuses it or no handler answers, and fails if the
+      handler runs. The assertion is also that NEITHER banner appears — a
+      disabled control that still fires its handler is CIRISClient#70's shape,
+      and #92 added a disabled-click probe for exactly this class.
     do:
-      - click: btn_provision_holder_submit
+      - click_refused: btn_provision_holder_submit
     expect:
       screen: ProvisionAccordHolder
       absent: [provision_holder_success, provision_holder_error]
@@ -75,7 +76,10 @@ steps:
 
   - step_id: back_leaves_the_screen
     title: Back returns to Everyone > Safety
+    description: >-
+      The shell's back (`btn_nav_back`); the page's own `btn_provision_holder_back`
+      is drawn only outside the shell (csd-057-wallet.yaml says the same).
     do:
-      - click: btn_provision_holder_back
+      - click: btn_nav_back
     expect:
       absent: [btn_provision_holder_submit]

@@ -58,10 +58,17 @@ _COND_KEYS = {
     "screen", "visible", "absent", "text",
     "count", "number", "matches", "one_of", "each", "relation", "state",
 }
-_ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms"}
+_ACTION_KEYS = {"click", "click_refused", "input", "scroll_to", "wait", "wait_ms", "when"}
+#: The verbs, one per action. LOCAL DELTA: `click_refused: TAG` clicks a control
+#: the step says is DISABLED and holds only when nothing ran behind it — the
+#: platform refused the click, or no handler answered it. A handler that fires
+#: fails the action (CIRISClient#69); the step's `absent:` judges the effect.
+#: iOS, run 36733112700: a plain `click:` called the refusal of a disabled
+#: submit a failure, on the step whose claim IS that the click does nothing.
+_VERBS = ("click", "click_refused", "input", "scroll_to", "wait")
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
-_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture"}
+_FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture", "cleanup"}
 
 #: LOCAL DELTA: fixtures a flow may ask for with `fixture:`. A flow pays for a
 #: fixture only when it names one; `two_node` stands a second ciris-server up
@@ -74,6 +81,14 @@ _VAR = re.compile(r"\$\{([A-Z][A-Z0-9_]*)\}")
 
 
 _RELATION_OPS = {"eq", "ne", "lt", "lte", "gt", "gte", "min_of", "max_of", "sum_of"}
+
+#: LOCAL DELTA: how long an `expect` may take to hold after the step's actions.
+#: `/click` returns before the frame that applies it, so an assertion read in
+#: the same instant sees the screen the click is leaving: csd_057's back
+#: "succeeded" and `absent: [card_wallet_balance]` failed on the local Linux
+#: leg (2026-09-29). The expect is re-read every quarter second until it holds
+#: or this runs out; a condition that never holds still fails, in this long.
+EXPECT_SETTLE_S = 2.5
 _STATES = {"populated", "empty", "loading", "error"}
 
 
@@ -187,25 +202,39 @@ class Condition:
 
 @dataclass
 class Action:
-    """One interaction. Exactly one of click/input/scroll_to/wait per entry."""
+    """One interaction. Exactly one of click/click_refused/input/scroll_to/wait per entry."""
 
     kind: str
     target: str
     value: Optional[str] = None
     wait_ms: int = 500
+    #: LOCAL DELTA, `cleanup:` only: run this action only while `when` is on
+    #: screen. A cleanup closes what the flow opened, and a control that
+    #: TOGGLES (People's `btn_contacts_add_open` opens the add card and closes
+    #: it) would open on a flow that failed before it got there. `when:` names
+    #: the thing being closed, so "already gone" is decided by the card and
+    #: not by the toggle that is always on screen (macOS leg, run 36600766576).
+    when: Optional[str] = None
 
     @classmethod
-    def parse(cls, raw: Any, where: str) -> "Action":
+    def parse(cls, raw: Any, where: str, *, cleanup: bool = False) -> "Action":
         if not isinstance(raw, dict):
             raise SpecError(f"{where}: expected a mapping, got {type(raw).__name__}")
         unknown = set(raw) - _ACTION_KEYS
         if unknown:
             raise SpecError(f"{where}: unknown key(s) {sorted(unknown)}; allowed: {sorted(_ACTION_KEYS)}")
         wait_ms = int(raw.get("wait_ms", 500))
-        verbs = [k for k in ("click", "input", "scroll_to", "wait") if k in raw]
+        when = raw.get("when")
+        if when is not None and not cleanup:
+            # A step's action that quietly does nothing is a step that asserts
+            # nothing; only a cleanup may be conditional.
+            raise SpecError(f"{where}: `when:` is for `cleanup:` actions only")
+        if when is not None and (not isinstance(when, str) or not when.strip()):
+            raise SpecError(f"{where}: `when:` names one tag")
+        verbs = [k for k in _VERBS if k in raw]
         if len(verbs) != 1:
             raise SpecError(
-                f"{where}: exactly one of click/input/scroll_to/wait per action, got {verbs or 'none'}"
+                f"{where}: exactly one of {'/'.join(_VERBS)} per action, got {verbs or 'none'}"
             )
         verb = verbs[0]
         if verb == "input":
@@ -213,8 +242,8 @@ class Action:
             if not isinstance(spec, dict) or len(spec) != 1:
                 raise SpecError(f"{where}: `input` takes one {{tag: text}} pair")
             tag, text = next(iter(spec.items()))
-            return cls("input", str(tag), str(text), wait_ms)
-        return cls(verb, str(raw[verb]), None, wait_ms)
+            return cls("input", str(tag), str(text), wait_ms, when)
+        return cls(verb, str(raw[verb]), None, wait_ms, when)
 
     def describe(self) -> str:
         if self.kind == "input":
@@ -275,10 +304,21 @@ class FlowSpec:
     csd: Any = None  # testing.gate.csd_doc.CsdDoc
     #: LOCAL DELTA: the fixture this flow needs (`fixture: two_node`), or None.
     fixture: Optional[str] = None
+    #: LOCAL DELTA: actions run AFTER the flow, pass or fail — closing what it
+    #: opened. A flow stops at its first failed step, and a card that step left
+    #: open is the next flow's failure: csd_092 opened the contact-code card,
+    #: failed on its second step, and `people`, `csd_005` and `csd_006` then
+    #: failed for its reason on every desktop leg (2026-09-29). Only the flow
+    #: knows what it opened; the runner guarantees the closing runs.
+    cleanup: List[Action] = field(default_factory=list)
 
     def variables(self) -> List[str]:
         """Every `${NAME}` the flow names, sorted."""
-        return sorted({n for step in self.steps for n in _step_variables(step)})
+        names = {n for step in self.steps for n in _step_variables(step)}
+        for a in self.cleanup:
+            names |= set(_VAR.findall(a.target)) | set(_VAR.findall(a.value or ""))
+            names |= set(_VAR.findall(a.when or ""))
+        return sorted(names)
 
     @classmethod
     def load(cls, path: Path, csd_root: Optional[Path] = None) -> "FlowSpec":
@@ -314,6 +354,10 @@ class FlowSpec:
         if fixture is not None and fixture not in FIXTURES:
             raise SpecError(f"{path}: `fixture: {fixture!r}` is not one of {sorted(FIXTURES)}")
         spec.fixture = fixture
+        cleanup_raw = raw.get("cleanup") or []
+        if not isinstance(cleanup_raw, list):
+            raise SpecError(f"{path}: `cleanup` is a list of actions ({' / '.join(_VERBS)})")
+        spec.cleanup = [Action.parse(a, f"{path}: cleanup[{i}]", cleanup=True) for i, a in enumerate(cleanup_raw)]
         # A `${NAME}` with no fixture to fill it would reach the app as the
         # literal text `${NAME}` and fail as "element not found" — the one
         # failure that looks exactly like a broken app. Refused at load.
@@ -389,6 +433,13 @@ class FlowSpec:
                 if action.target in doc.proposed:
                     raise SpecError(
                         f"{at}.do drives {action.target!r}, which {doc.csd_id} still "
+                        f"marks `proposed:`"
+                    )
+        for action in self.cleanup:
+            for tag in (action.target, action.when):
+                if tag in doc.proposed:
+                    raise SpecError(
+                        f"{where}: cleanup names {tag!r}, which {doc.csd_id} still "
                         f"marks `proposed:`"
                     )
 
@@ -547,6 +598,8 @@ class FlowRunner:
         self.platform = platform
         self.artifacts = Path(artifacts) if artifacts else None
         self.results: List[StepResult] = []
+        #: LOCAL DELTA: what the flow's `cleanup:` could not do, one line each.
+        self.cleanup_failures: List[str] = []
         #: CSD `ceg:` field id -> the tag carrying it, from the CSD's `shows:`
         #: block. `relation` operands are field ids, so without this a flow
         #: could only relate boxes rather than constitutional values.
@@ -573,6 +626,22 @@ class FlowRunner:
                 out.append(e.test_tag)
         return sorted(out)
 
+    async def _not_on_screen(self, tag: str) -> str:
+        """LOCAL DELTA: WHY a `visible:` tag is not on screen — never composed,
+        or composed but off screen after the scroll budget. The two send a
+        reader to different places: the first to the client (the tag is not
+        drawn), the second to the flow before this one (what it left open) or
+        to the screen's scroll container (what `/scroll` answered). The macOS
+        leg's csd_006 (run 36600766576) said "is not on screen" for a row that
+        WAS composed, below an add card the previous flow had left open, on a
+        screen the harness cannot scroll; the words above are what it took a
+        screenshot to learn."""
+        if await self.helper.get_element(tag) is None:
+            return f"{tag!r} is not composed (not in /tree)"
+        scrolls = getattr(self.helper, "last_scroll", None) or []
+        answered = f" (scrolls: {'; '.join(scrolls)})" if scrolls else ""
+        return f"{tag!r} is composed but off screen after scrolling{answered}"
+
     async def _check(self, cond: Condition, label: str) -> Optional[str]:
         """None if the condition holds, else the FIRST failure, named precisely."""
         if cond.screen:
@@ -586,7 +655,7 @@ class FlowRunner:
             if not await self.helper.is_element_visible(tag):
                 await self.helper.scroll_into_view(tag)
             if not await self.helper.is_element_visible(tag):
-                return f"{label}: {tag!r} is not on screen"
+                return f"{label}: {await self._not_on_screen(tag)}"
         for tag in cond.absent:
             if await self.helper.is_element_visible(tag):
                 return f"{label}: {tag!r} is on screen but should not be"
@@ -620,7 +689,7 @@ class FlowRunner:
             if not await self.helper.is_element_visible(want):
                 await self.helper.scroll_into_view(want)
             if not await self.helper.is_element_visible(want):
-                return f"{label}: state {cond.state!r} — its tag {want!r} is not on screen"
+                return f"{label}: state {cond.state!r} — its tag {await self._not_on_screen(want)}"
             for other, tag in sorted(self.state_tags.items()):
                 if other != cond.state and tag != want and await self.helper.is_element_visible(tag):
                     return (f"{label}: state {cond.state!r} expected, but {other!r}'s "
@@ -683,6 +752,19 @@ class FlowRunner:
                 return err
         return None
 
+    async def _settled(self, cond: Condition, label: str, budget: float = EXPECT_SETTLE_S) -> Optional[str]:
+        """LOCAL DELTA: `_check`, re-read until it holds or `budget` runs out —
+        an assertion made in the instant of a click is a race, not a test (the
+        rule `run_flows.navigate` already states for hops)."""
+        import asyncio  # noqa: PLC0415
+
+        deadline = time.monotonic() + budget
+        while True:
+            err = await self._check(cond, label)
+            if err is None or time.monotonic() >= deadline:
+                return err
+            await asyncio.sleep(0.25)
+
     async def _number(self, tag: str) -> Optional[float]:
         """The element's text as a number, or None if it is not one."""
         elem = await self.helper.get_element(tag)
@@ -730,14 +812,27 @@ class FlowRunner:
               "lte": left <= right, "gt": left > right, "gte": left >= right}[op]
         return None if ok else f"{label}: {left} {op} {right} is false"
 
+    def _why(self) -> str:
+        """LOCAL DELTA: the driver's own reason for a refusal, when the helper
+        kept one (`last_error`) — "did not succeed" alone sent csd_047's reader
+        to the wrong place."""
+        why = getattr(self.helper, "last_error", "")
+        return f" ({why})" if why else ""
+
     async def _do(self, action: Action) -> Optional[str]:
+        if hasattr(self.helper, "last_error"):
+            self.helper.last_error = ""
         try:
             if action.kind == "click":
                 ok = await self.helper.click(action.target, timeout=action.wait_ms * 4)
-                return None if ok else f"click {action.target!r} did not succeed"
+                return None if ok else f"click {action.target!r} did not succeed{self._why()}"
+            if action.kind == "click_refused":
+                ok = await self.helper.click_refused(action.target, timeout=action.wait_ms * 4)
+                return None if ok else (f"click_refused {action.target!r}: the disabled control "
+                                        f"did not refuse{self._why()}")
             if action.kind == "input":
                 ok = await self.helper.input_text(action.target, action.value or "")
-                return None if ok else f"input into {action.target!r} did not succeed"
+                return None if ok else f"input into {action.target!r} did not succeed{self._why()}"
             if action.kind == "scroll_to":
                 ok = await self.helper.scroll_into_view(action.target)
                 return None if ok else f"could not bring {action.target!r} on screen"
@@ -760,6 +855,69 @@ class FlowRunner:
         return str(got) if got else None
 
     async def run(self, spec: FlowSpec) -> bool:
+        """The steps, then — pass, fail or crash — the flow's `cleanup:`."""
+        try:
+            return await self._steps(spec)
+        finally:
+            await self._cleanup(spec)
+
+    async def _composed(self, tag: str, *, settle: bool, budget: float = EXPECT_SETTLE_S) -> bool:
+        """Is `tag` in /tree — read once, or re-read for up to `budget` when a
+        cleanup action just changed the screen. The local Linux leg
+        (2026-09-29) closed the contact-code card and, in the same instant,
+        read People's add card as gone: the card had not recomposed yet, the
+        guarded toggle was skipped, and csd_006 started under the open card
+        after all (its row on screen only because the window was tall)."""
+        import asyncio  # noqa: PLC0415
+
+        deadline = time.monotonic() + (budget if settle else 0.0)
+        while True:
+            if await self.helper.get_element(tag) is not None:
+                return True
+            if time.monotonic() >= deadline:
+                return False
+            await asyncio.sleep(0.25)
+
+    async def _cleanup(self, spec: FlowSpec) -> None:
+        """LOCAL DELTA: close what the flow opened, whatever its verdict. A
+        failure here is recorded, never raised: it is not this flow's verdict,
+        and hiding the verdict behind it would help nobody."""
+        # Whether a cleanup action has run: the tree read after one is the
+        # same-instant race `_settled` names, so "gone" is then judged on
+        # the frame that follows, not the frame the click was made on.
+        changed = False
+        for action in spec.cleanup:
+            try:
+                action = Action(action.kind,
+                                substitute(action.target, self.variables, self.variable_notes),
+                                substitute(action.value, self.variables, self.variable_notes)
+                                if action.value is not None else None,
+                                action.wait_ms,
+                                substitute(action.when, self.variables, self.variable_notes)
+                                if action.when is not None else None)
+            except UnresolvedVariable as exc:
+                self.cleanup_failures.append(str(exc))
+                print(f"     cleanup: {exc}")
+                continue
+            # Already gone is nothing to close: a flow whose own last step shut
+            # the card it opened must not then report its cleanup as a failure.
+            # `when:` says what "gone" means for a control that would otherwise
+            # open the thing it is there to close.
+            if action.when is not None and not await self._composed(action.when, settle=changed):
+                print(f"     cleanup: nothing to close \u2014 {action.when!r} is not on screen")
+                continue
+            if action.kind in ("click", "click_refused", "input") and not await self._composed(action.target, settle=changed):
+                print(f"     cleanup: nothing to close \u2014 {action.target!r} is not on screen")
+                continue
+            changed = True
+            err = await self._do(action)
+            if err:
+                self.cleanup_failures.append(err)
+                print(f"     cleanup: {err}")
+            else:
+                print(f"     cleanup: {action.describe()}")
+
+    async def _steps(self, spec: FlowSpec) -> bool:
         if spec.csd is not None:
             # LOCAL DELTA: a flow that names its CSD carries its own maps.
             self.field_tags = self.field_tags or dict(spec.csd.field_tags)
@@ -824,7 +982,7 @@ class FlowRunner:
                     return False
                 print(f"     did: {action.describe()}")
 
-            post = await self._check(step.expect, "expect")
+            post = await self._settled(step.expect, "expect")
             drivable = await self._drivable()
             shot = self._shot(spec, step)
             if post:
@@ -857,6 +1015,7 @@ class FlowRunner:
             "csd": spec.csd_id,
             "client_floor": spec.client_floor,
             "passed": all(r.status != "fail" for r in self.results),
+            "cleanup_failures": list(self.cleanup_failures),
             "steps": [
                 {
                     "step_id": r.step_id, "title": r.title, "status": r.status,

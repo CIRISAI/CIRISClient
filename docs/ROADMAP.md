@@ -15,11 +15,12 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
   `build.yml` is green on the merge. It carries everything below. Server **0.5.217** is the latest
   server release; **0.5.218 is not cut**. Agent **2.12.1** shipped CIRISAgent#1213 (the node proxy
   forwards every `/v1` path the agent does not serve itself), and six CSDs say so (#128).
-- **77 CSDs on `main`** (`FSD/CSD`): **71 building, 5 sketched, 1 envisioned, none `testable`**.
-  New since the last pass: CSD-007 Files and CSD-008 Notes to self (#77), CSD-105 This node's
+- **79 CSDs** (`FSD/CSD`): **7 testable, 65 building, 5 sketched, 2 envisioned**. New since the
+  last pass: CSD-106 membership invitations (envisioned, #137) and CSD-107 Where is this file (#139).
+  Before that: CSD-007 Files and CSD-008 Notes to self (#77), CSD-105 This node's
   trust root (#126), CSD-100/101 household and members (#122). CSD-092 (share contact code) is
   now building. **Sketched:** 037 My Identity, 042 Help, 044 Health & Reputation, and 093/094
-  (the second-device cards, which wait for server 0.5.218). **Envisioned:** 030 Telemetry.
+  (the second-device cards, which wait for server 0.5.218). **Envisioned:** 030 Telemetry, 106 membership invitations.
 - **Both review batches are merged.** #124 was runtime, identity, interact, setup, network,
   moderation. **#126** is batch 2: **accord / trust root** (the two unpushed trust-root branches
   folded in, a `TrustRoot` detail with posture, import, un-trust and family history, all at the
@@ -42,20 +43,17 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
   each owner a contact of the other. Both ran **all five legs green in one run**; `main`'s latest
   Five-Platform Live QA is green (2026-09-29). One flow is live (`testing/flows/people.yaml`,
   CSD-005); **37 drafts** wait under `testing/flows/drafts/`.
-- **Nothing is `testable` yet, and #128 says exactly why.** `CSD.md` §1: a card reaches `testable`
-  when its flow's floor is a released version **and** the flow runs on the matrix. On `main`,
-  **21 CSDs open §5 with "Spec complete and flow written"** — 005, 006, 008, 032, 033, 036, 040,
-  045, 046, 047, 048, 049, 057, 068, 069, 081, 090, 091, 092, 100, 101 — with floors of
-  `>=0.5.224` (5), `>=0.5.225` (3) and `unreleased` (13). **One says "Flow not complete"** (082:
-  its claim step asserts a transient state behind an LLM key). The other 49 at `building` fail a
-  trial promotion for a `proposed:` tag, an unconfirmed field, or no flow (003, 026, 070, 110).
-- **Next: promote.** Tag 0.5.225, flip the 13 `unreleased` floors to it, and run the 21 flows on
-  the matrix; each that goes green on every leg is `testable`. The drafts stay staged for one
-  reason: the runner does not navigate and every draft starts somewhere other than where sign-in
-  lands, so promotion is also the `nav_map` hop. Two things are known to stop flows before the
-  client is at fault: **CIRISServer#698** (two released 0.5.217 nodes never key a pair room, so the
-  CSD-091 chat flow cannot cross a message; recorded in `evidence/blocked_upstream.tsv`) and the
-  drafts floored `>=0.5.225`, which the matrix refuses until that version exists.
+- **Seven CSDs are `testable`** (#133): 005 People, 006 Receipt, 008 Notes to self, 047 Network
+  content, 057 Wallet, 068 Provision an accord holder, 092 Share contact code. Their flows passed on
+  all five legs in run 36775704425 (Linux, macOS, Windows desktop; Android emulator; iOS simulator)
+  against released floors `>=0.5.224`/`>=0.5.225`. CSD-101's flow passed too; it stays `building`
+  on `x_private:membership_invitation` (CIRISPersist#955). Getting there took seven matrix runs and
+  fixed real client bugs on the way: a stale-circle tab hop, a disabled button that swallowed
+  automation clicks, a receipt sheet whose Close was below the fold on a phone, and a claim PIN the
+  Android app could not reach.
+- **Next: the 30 drafts** under `testing/flows/drafts/` — the same route: a released floor, a nav
+  hop, a green matrix run. **CIRISServer#698** still stops CSD-091's chat flow (two released 0.5.217
+  nodes never key a pair room; recorded in `evidence/blocked_upstream.tsv`).
 
 ## Dependencies
 

@@ -2,7 +2,7 @@
 
 **CSD**: CSD-101 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the plan's B5 Family; CIRISServer 0.5.216 (`/v1/families/{id}/members`)
 **Pairs with**: CSD-100 (the household itself, in the Family hub on Family › Rules) · CSD-005 (People: where a person becomes a contact first)
-**Flow**: `testing/flows/drafts/csd-101-household-members.yaml` (staged; floor `unreleased`)
+**Flow**: `testing/flows/csd-101-household-members.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -182,7 +182,7 @@ someone" with the invitee's pending row, is **CSD-106** (`envisioned`);
 
 ## 4. Flow (how)
 
-`testing/flows/drafts/csd-101-household-members.yaml`. Sign in as the owner of a
+`testing/flows/csd-101-household-members.yaml`. Sign in as the owner of a
 node ≥ 0.5.216 who has formed a household (CSD-100's flow leaves one); open
 Family › People › Household.
 
@@ -199,7 +199,7 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-101-household-members.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`); the flow passed on all five legs in the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217), but the CSD stays at `building`: `x_private:membership_invitation` (the consent-to-join ruling, CSD-106) is `blocked_by: CIRISPersist#955`, and `testable` admits no unconfirmed field. The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/4 passed, 2 skipped** — the roster composes in its empty shape and points to the hub; the populated roster and the add card skipped as designed (no household on the bare node). On the matrix run of the same day (36588619656) it could not start on any desktop leg (the tab was clicked before the circle hop landed; fixed in the runner).
 
 **Platforms.** All five.
 

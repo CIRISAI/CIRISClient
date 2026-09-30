@@ -360,7 +360,9 @@ class TestAutomationServer(
                         screen = currentScreen,
                         testMode = true,
                         clientMode = ai.ciris.mobile.shared.testing.TestAutomationState.clientMode,
-                        nodeUrl = ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl
+                        nodeUrl = ai.ciris.mobile.shared.testing.TestAutomationState.nodeUrl,
+                        circle = ai.ciris.mobile.shared.testing.TestAutomationState.circle,
+                        tab = ai.ciris.mobile.shared.testing.TestAutomationState.tab,
                     ))
                 }
 
@@ -402,6 +404,25 @@ class TestAutomationServer(
                             action = "click",
                             coordinates = element?.let { "${it.centerX},${it.centerY}" }
                         ))
+                        return@post
+                    }
+
+                    // DISABLED: REFUSED, NOT COORDINATE-CLICKED. A disabled
+                    // `testableClickable` has no handler by design, and the
+                    // fallback below used to click the greyed-out button and
+                    // answer success — while iOS and Android answered "No click
+                    // handler" for the same control (run 36733112700). All three
+                    // now say what it is (ai.ciris.mobile.shared.platform.DisabledControls).
+                    if (ai.ciris.mobile.shared.platform.DisabledControls.isDisabled(request.testTag)) {
+                        call.respond(
+                            HttpStatusCode.Conflict,
+                            ActionResponse(
+                                success = false,
+                                element = request.testTag,
+                                action = ai.ciris.mobile.shared.platform.DisabledControls.REFUSED_ACTION,
+                                error = ai.ciris.mobile.shared.platform.DisabledControls.refusal(request.testTag),
+                            )
+                        )
                         return@post
                     }
 

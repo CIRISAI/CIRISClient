@@ -204,7 +204,7 @@ fun ChatScreen(
                         // finish first, letting the OLDER response overwrite the
                         // newer transcript. The handler re-checks what enabled
                         // gates.
-                        modifier = Modifier.testableWithHandler("btn_chat_refresh") {
+                        modifier = Modifier.testableWithHandler("btn_chat_refresh", enabled = !loading) {
                             if (!loading) viewModel.refresh()
                         },
                     ) {
@@ -341,7 +341,7 @@ fun ChatScreen(
                         Button(
                             onClick = { viewModel.send() },
                             enabled = canSend,
-                            modifier = Modifier.testableWithHandler("btn_chat_send") {
+                            modifier = Modifier.testableWithHandler("btn_chat_send", enabled = canSend) {
                                 if (canSend) viewModel.send()
                             },
                         ) {

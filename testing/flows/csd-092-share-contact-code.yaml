@@ -8,14 +8,21 @@ description: >-
   runs on the matrix today is the version fact; the populated, empty and
   refusal states are asserted for the day 0.5.218 ships and are optional until
   then. Every call goes to the NODE URL (contactsNodeUrl), never the agent's.
-# Floor: `unreleased` — the route ships with ciris-server 0.5.218. The tags
+# Floor: `>=0.5.225` — the client that carries the card. The route ships with
+# ciris-server 0.5.218; on an older node the card shows its version fact. The tags
 # (card_contact_code, qr_contact_code, text_contact_code, btn_contact_code_copy,
 # opt_contact_code_nodes_*, row_contact_code_node_*, text_contact_code_included,
 # text_contact_code_private_note, contact_code_refusal,
 # contact_code_unreachable, btn_contact_code_make_reachable,
 # text_contact_code_reachable_status, contact_code_loading, contact_code_error,
 # btn_contact_code_close) are literals in ui/screens/PeopleSupport.kt at 0.5.225.
-client: unreleased
+client: ">=0.5.225"
+# The card replaces People's body while it is open (ContactsScreen: "Open, it
+# IS the body"), and its open state lives in the view model, so a flow that
+# stops with it open leaves the next flow on People with no list and no add
+# card. Closed whatever this flow's verdict.
+cleanup:
+  - click: btn_contact_code_close
 
 steps:
   - step_id: open_the_card
@@ -93,8 +100,13 @@ steps:
 
   - step_id: close_the_card
     title: The card closes and People is unchanged beneath it
+    description: >-
+      Beneath the card a bare node shows the add card, not `contacts_list`
+      (people.yaml), so what is asserted is that the card is gone and the header
+      button that opened it is still there.
     do:
       - click: btn_contact_code_close
     expect:
       screen: Contacts
-      visible: [contacts_list]
+      visible: [btn_contact_code_open]
+      absent: [card_contact_code, contact_code_error, contact_code_unreachable]

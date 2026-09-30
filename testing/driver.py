@@ -208,8 +208,11 @@ class TestAutomationServer:
 
     # ---- writes -------------------------------------------------------
 
-    def click(self, test_tag: str) -> None:
-        self._call("POST", "/click", {"testTag": test_tag})
+    def click(self, test_tag: str) -> Any:
+        """Click, and return the app's answer: `action` says whether a
+        programmatic handler ran ("click") or desktop fell back to a
+        coordinate click ("mouse-click"), which `click_refused` tells apart."""
+        return self._call("POST", "/click", {"testTag": test_tag})
 
     def input(self, test_tag: str, text: str, clear_first: bool = True,
               verify: bool = True) -> None:

@@ -11,11 +11,18 @@ DISCOVERED BY DRIVING IT, NOT BY READING IT. The sequence below is what the
 client actually does on a fresh node, observed step by step through /tree:
 
     Login (isFirstRun=true)     `btn_local_login`
+      (isFirstRun=false: the same button reveals the LOGIN FORM instead —
+       the client's own verdict that the node is owned; the fixture takes
+       that verdict and signs in, and if the node then refuses, says which
+       of the two was wrong)
       -> Setup, step `you`      username / password / confirm / device name,
                                 an age band, then `btn_next`
       -> Setup, step `join_federation`   `trace_consent_yes`, consent toggles, `btn_next`
-      -> `setup_ownership_claimed`       no advance control: the claim is work,
-                                         not a step, and it finishes on its own
+      -> `setup_ownership_claiming`      no advance control and no active step:
+                                         the claim is work, not a step, and it
+                                         finishes on its own (CLAIM_TIMEOUT)
+      -> `setup_ownership_claimed`       or `setup_ownership_error`, which
+                                         names why the node refused
       -> Login, now with `txt_owner_hint`
     Login                        `btn_local_login` reveals the form,
                                  username / password, `btn_login_submit`
@@ -47,6 +54,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from testing.driver import DriverError, TestAutomationServer  # noqa: E402
+from testing.gate.console import utf8_console  # noqa: E402
 
 
 class SessionUnavailable(RuntimeError):
@@ -129,6 +137,90 @@ def _field_report(drv: TestAutomationServer) -> str:
     return "; ".join(sorted(parts))
 
 
+#: How a platform refuses a click on a disabled control: every platform from
+#: 0.5.225 (DisabledControls, HTTP 409), and iOS/Android before it (HTTP 404).
+DISABLED_ANSWERS = ("is disabled", "No click handler")
+
+
+#: How long a wizard step may take to show the next one after Next. Windows
+#: (run 36588619656) went blank for more than the 2 s the fixture used to
+#: sleep — the fed-ID mint on Next and the next step's first composition on a
+#: cold JVM — and the fixture called a working wizard stuck. A step that has
+#: not moved in this long has stalled, and is reported by name.
+ADVANCE_TIMEOUT = 90.0
+
+
+#: The claim's three faces (SetupScreen's completion step). Any of them means
+#: the wizard is done asking and the fixture has nothing left to click.
+CLAIM_TAGS = frozenset({"setup_ownership_claiming", "setup_ownership_claimed", "setup_ownership_error"})
+
+#: How long the in-progress claim may run before the fixture calls it stuck.
+CLAIM_TIMEOUT = 120.0
+
+
+def _claim_started(tags: set[str]) -> bool:
+    return bool(CLAIM_TAGS & tags)
+
+
+#: Where a failed claim's reason is readable, most specific first.
+#: `setup_ownership_error` is the FailurePanel's CONTAINER; the reason itself is
+#: the panel's detail, under its title. Android, run 36746575125: the fixture
+#: read only the container, found no text there, and printed "(no reason on
+#: screen)" beside a list that included `failure_panel_detail`.
+CLAIM_REASON_TAGS = ("setup_ownership_error", "failure_panel_title", "failure_panel_detail")
+
+
+def _claim_failure_reason(drv: TestAutomationServer, tree) -> str:
+    """The failed claim's reason as the screen states it. When no element
+    carries text, say THAT — with what each element held — because "no
+    reason" reads as the node's silence when it is the client's."""
+    texts = {e.test_tag: (e.text or "").strip() for e in tree if e.test_tag in CLAIM_REASON_TAGS}
+    said = list(dict.fromkeys(t for t in (texts.get(k, "") for k in CLAIM_REASON_TAGS) if t))
+    if said:
+        return " — ".join(said)
+    return ("the error screen registered no text for "
+            f"{', '.join(k for k in CLAIM_REASON_TAGS if k in texts)}; fields: {_field_report(drv)}")
+
+
+def _await_claim(drv: TestAutomationServer, timeout: float = CLAIM_TIMEOUT, poll: float = 1.5) -> None:
+    """Wait out `setup_ownership_claiming`. It has no control — Android (run
+    36733112700) showed it with the step indicators and no active step, and a
+    fixture looking for Next there raised "offers no advance control". Returns
+    once the claim resolved (claimed, or the app left Setup); raises with the
+    node's reason on `setup_ownership_error`, and with the screen on timeout."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if drv.screen() != "Setup":
+            return
+        tree = drv.tree()
+        tags = {e.test_tag for e in tree}
+        if "setup_ownership_error" in tags:
+            raise SessionUnavailable(
+                f"the ownership claim failed: {_claim_failure_reason(drv, tree)}; "
+                f"on screen: {sorted(tags)}"
+            )
+        if "setup_ownership_claiming" not in tags:
+            return
+        if time.monotonic() >= deadline:
+            raise SessionUnavailable(
+                f"the claim did not finish within {timeout:.0f}s (still claiming); "
+                f"on screen: {sorted(tags)}"
+            )
+        time.sleep(poll)
+
+
+def _advanced(drv: TestAutomationServer, before: tuple, timeout: float, poll: float = 1.0) -> bool:
+    """True once the wizard is past `before` (screen, active step) or the claim
+    has taken over; False when it is still there after `timeout`."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if (drv.screen(), _active_step(drv)) != before or _claim_started(_tags(drv)):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(poll)
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -138,21 +230,58 @@ def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool
     return False
 
 
+#: The login FORM: what "Local login" reveals when the client has judged the
+#: node OWNED (LoginScreen: `if (isFirstRun) onLocalLogin() else showLoginForm`).
+LOGIN_FORM = frozenset({"input_username", "input_password", "btn_login_submit"})
+
+
+def _login_form_shown(drv: TestAutomationServer) -> bool:
+    return drv.screen() == "Login" and LOGIN_FORM <= _tags(drv)
+
+
+def _after_local_login(drv: TestAutomationServer, timeout: float) -> str:
+    """Where `btn_local_login` took the client: "Setup" (the wizard — the
+    client read the node as fresh), "form" (the login form — the client read
+    it as owned), or "" when neither showed within `timeout`."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if drv.screen() == "Setup":
+            return "Setup"
+        if _login_form_shown(drv):
+            return "form"
+        if time.monotonic() >= deadline:
+            return ""
+        time.sleep(1.5)
+
+
 def run_setup(drv: TestAutomationServer, username: str, password: str,
               device: str = "gate") -> None:
-    """Drive the first-run wizard until the node has an owner."""
-    if "txt_owner_hint" in _tags(drv):
-        return  # already owned; nothing to do
+    """Drive the first-run wizard until the node has an owner — or find that
+    the client already holds the node to be owned, and leave it to `log_in`.
+
+    THE CLIENT'S VERDICT, NOT A HINT. `txt_owner_hint` composes only when
+    `/v1/auth/owner-hint` returns a hint, which a node claimed by this very
+    fixture need not serve; the Android leg (run 36600766576) showed Login
+    without it, "Local login" opened the login FORM (the client's isFirstRun
+    was false), and the fixture — waiting for Setup — called that "did not
+    reach Setup" and blamed a missing hint. What the form says is that the
+    client judged the node owned; that is the thing to act on, and if the
+    node then refuses the credentials, `log_in` says which side was wrong."""
+    if "txt_owner_hint" in _tags(drv) or _login_form_shown(drv):
+        return  # the client holds the node to be owned; sign in
 
     # Desktop's first run shows Login; a client whose first run opens the wizard
     # directly is already where this click would take it, and clicking a
     # `btn_local_login` that is not on screen fails the fixture for nothing.
     if drv.screen() != "Setup":
         drv.click("btn_local_login")
-    if not _settle(drv, "Setup", timeout=30):
+    landed = _after_local_login(drv, timeout=30)
+    if landed == "form":
+        return
+    if landed != "Setup":
         raise SessionUnavailable(
-            f"btn_local_login did not reach Setup (on {drv.screen()!r}); on a node "
-            f"that already has an owner this fixture should have seen txt_owner_hint"
+            f"btn_local_login reached neither Setup (the wizard) nor the login form "
+            f"within 30s (on {drv.screen()!r}); on screen: {sorted(_tags(drv))}"
         )
 
     for tag, value in (("input_username", username),
@@ -192,7 +321,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     # must say so rather than spin.
     for _ in range(12):
         tags = _tags(drv)
-        if "setup_ownership_claimed" in tags or drv.screen() != "Setup":
+        if _claim_started(tags) or drv.screen() != "Setup":
             break
         # Screen 2 asks whether to send traces and will not advance until
         # answered (no default, like the age band above). Yes is the fixture's
@@ -224,8 +353,9 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         before = (drv.screen(), _active_step(drv))
         # iOS's /tree omits `canClick` when it is false (defaults are not
         # serialized), so `_wait_clickable` cannot see a disabled Next there.
-        # A disabled control answers the click with 404 "No click handler":
-        # treat that as "not yet", bounded, and name the step if it stays so.
+        # A disabled control refuses the click — 409 "is disabled" from 0.5.225
+        # on every platform, 404 "No click handler" on older mobile clients:
+        # treat either as "not yet", bounded, and name the step if it stays so.
         clicked = False
         for _ in range(15):
             try:
@@ -233,31 +363,43 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 clicked = True
                 break
             except DriverError as e:
-                if "No click handler" not in str(e):
+                if not any(w in str(e) for w in DISABLED_ANSWERS):
                     raise
+                # A Next that refuses while the step's question is still on
+                # screen may be waiting on an answer that never landed (Android,
+                # run 36762606620: one click on `trace_consent_yes`, Next
+                # disabled for 30 s). Answering again is idempotent.
+                if "trace_consent_yes" in _tags(drv):
+                    try:
+                        drv.click("trace_consent_yes")
+                    except DriverError:
+                        pass
                 time.sleep(2.0)
         if not clicked:
             raise SessionUnavailable(
                 f"wizard step {before[1]!r}: {nxt} stayed disabled for 30s; "
                 f"fields: {_field_report(drv)}"
             )
-        time.sleep(2.0)
-        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+        # WAITED FOR, NOT SLEPT AT. The step advances when the app is ready,
+        # not two seconds after the click (see ADVANCE_TIMEOUT).
+        if not _advanced(drv, before, ADVANCE_TIMEOUT):
             # One retry when the step's question is still on screen: the answer
             # may not have landed before Next was clicked.
             if "trace_consent_yes" in _tags(drv):
                 drv.click("trace_consent_yes")
                 time.sleep(2.0)
                 drv.click(nxt)
-                time.sleep(2.0)
-        if (drv.screen(), _active_step(drv)) == before and "setup_ownership_claimed" not in _tags(drv):
+                if _advanced(drv, before, 30.0):
+                    continue
             # Say what was on screen: a required field the fixture doesn't fill
             # (the with-AI wizard asks for more than the node one) shows up here.
             raise SessionUnavailable(
-                f"wizard did not advance past {before[1]!r}; on screen: {sorted(_tags(drv))}"
+                f"wizard did not advance past {before[1]!r} within {ADVANCE_TIMEOUT:.0f}s; "
+                f"on screen: {sorted(_tags(drv))}"
             )
 
     # The claim has no button; it completes and the app returns to Login.
+    _await_claim(drv)
     if not _settle(drv, "Login", timeout=180):
         raise SessionUnavailable(
             f"setup never returned to Login (on {drv.screen()!r}) — the claim did not finish"
@@ -283,7 +425,44 @@ def log_in(drv: TestAutomationServer, username: str, password: str,
         if screen != "Login":
             return screen
         time.sleep(1.5)
-    raise SessionUnavailable(f"still on Login after {timeout:.0f}s")
+    raise SessionUnavailable(f"still on Login after {timeout:.0f}s{_why_login_failed(drv)}")
+
+
+def _node_setup_required(node_url: str) -> bool | None:
+    """The NODE's own first-run predicate (`GET /v1/setup/status`), or None
+    when it cannot be read. Best effort: this is a diagnosis, never a gate."""
+    import json  # noqa: PLC0415
+    import urllib.request  # noqa: PLC0415
+    try:
+        with urllib.request.urlopen(f"{node_url.rstrip('/')}/v1/setup/status", timeout=5) as r:
+            body = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:  # noqa: BLE001 — unreadable is "cannot say"
+        return None
+    data = body.get("data", body) if isinstance(body, dict) else {}
+    value = data.get("setup_required") if isinstance(data, dict) else None
+    return value if isinstance(value, bool) else None
+
+
+def _why_login_failed(drv: TestAutomationServer) -> str:
+    """Which side was wrong when the client's login form refused the fixture's
+    owner: the node (it has an owner and these are not its credentials) or
+    the client (the node says setup is required — it has NO owner — and the
+    client offered a password form instead of the wizard). Read off the
+    node's own predicate, from the node URL the client reports in `/state`."""
+    try:
+        node_url = str(drv.state().get("nodeUrl") or "")
+    except Exception:  # noqa: BLE001 — an older client serves no /state
+        node_url = ""
+    if not node_url:
+        return ""
+    required = _node_setup_required(node_url)
+    if required is True:
+        return (f"; the node at {node_url} says setup_required=true (it has no owner), yet the "
+                f"client offered a login form instead of the wizard: the client's first-run "
+                f"check is wrong, not these credentials (CIRISApp.checkFirstRunStatus, NODE-only branch)")
+    if required is False:
+        return f"; the node at {node_url} has an owner, and these are not its credentials"
+    return f"; the node at {node_url} could not say whether it has an owner"
 
 
 def establish(drv: TestAutomationServer, username: str, password: str) -> str:
@@ -296,6 +475,7 @@ def establish(drv: TestAutomationServer, username: str, password: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    utf8_console()
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--url", default="http://127.0.0.1:9091")

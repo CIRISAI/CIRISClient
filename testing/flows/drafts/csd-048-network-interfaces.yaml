@@ -10,8 +10,7 @@ description: >-
 # empty_interfaces, card_transport_${row.id}
 # (ui/screens/federation/NetworkInterfacesScreen.kt); federation_interfaces_error /
 # federation_interfaces_not_on_this_node (ReadFailureBlock).
-client: "unreleased"
-
+client: ">=0.5.225"
 steps:
   - step_id: on_interfaces
     title: The card composes

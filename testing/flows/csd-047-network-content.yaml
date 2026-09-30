@@ -11,7 +11,7 @@ description: >-
 # text_content_fetch_error, card_content_result
 # (ui/screens/federation/NetworkContentScreen.kt); federation_content_peers_error /
 # federation_content_peers_not_on_this_node (ReadFailureBlock).
-client: "unreleased"
+client: ">=0.5.225"
 # The peer to pick is the two-node fixture's peer NODE (testing/gate/two_node.py):
 # GET /v1/federation/peers lists the nodes this node has admitted, and peering
 # admits ${PEER_NODE_KEY_ID}.

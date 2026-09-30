@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.primitives
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.theme.CirisShape
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import androidx.compose.foundation.layout.Arrangement
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -70,18 +72,29 @@ fun ConfirmSheet(
         tonalElevation = 0.dp,
         dragHandle = null,
     ) {
+        // THE BUTTONS ARE PINNED, THE FACTS SCROLL. With no scroll at all, a
+        // confirm taller than a small phone squeezed its third fact and its
+        // note to nothing: the buttons stayed, the facts the person is meant to
+        // read before confirming did not, and nothing could bring them back.
+        // Same shape as the receipt's hidden Close (matrix run 36752849889).
         Column(
             modifier = Modifier.fillMaxWidth().testable("sheet_$tagPrefix", title)
+                .statusBarsPadding()
                 .padding(horizontal = 18.dp, vertical = 14.dp).navigationBarsPadding(),
         ) {
             Text(title, style = type.title, color = t.ink)
             Spacer(Modifier.height(8.dp))
-            checked.forEachIndexed { i, f ->
-                FieldRow(label = f.label, value = f.value, mono = f.mono, tag = "${tagPrefix}_fact_${i + 1}", divider = i < 2)
-            }
-            if (note != null) {
-                Spacer(Modifier.height(10.dp))
-                Text(note, style = type.body, color = t.danger, modifier = Modifier.testable("${tagPrefix}_note", note))
+            Column(
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
+                    .testableVerticalScroll(name = "sheet_$tagPrefix"),
+            ) {
+                checked.forEachIndexed { i, f ->
+                    FieldRow(label = f.label, value = f.value, mono = f.mono, tag = "${tagPrefix}_fact_${i + 1}", divider = i < 2)
+                }
+                if (note != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(note, style = type.body, color = t.danger, modifier = Modifier.testable("${tagPrefix}_note", note))
+                }
             }
             Spacer(Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, alignment = androidx.compose.ui.Alignment.End)) {

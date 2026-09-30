@@ -136,12 +136,70 @@ def test_add_contact_falls_back_to_the_node_and_says_so(monkeypatch):
         return 500, {}
 
     monkeypatch.setattr(tn, "http", fake_http)
+    # The node contact answers reachable_nodes=0 too; the bounded reachability
+    # wait below runs on a fake clock, so this stays a millisecond test.
+    monkeypatch.setattr(tn, "time", _Clock())
     host = tn.Party("local", "http://h", "t")
     guest = tn.Party("peer", "http://g", "t", owner_key_id="peer-user", node_key_id="peer-node")
     notes: list = []
     key, via = tn.add_contact(host, guest, wait=0, notes=notes, log=lambda m: None)
     assert (key, via) == ("peer-node", "node")
     assert any("via owner refused" in n for n in notes)
+
+
+class _Clock:
+    def __init__(self):
+        self.t = 0.0
+
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += s
+
+
+def _contacts_http(answers, posts):
+    def fake_http(method, url, token=None, body=None, timeout=0):
+        if url.endswith("/v1/federation/peers/peer-user"):
+            return 200, {"key_id": "peer-user"}
+        if url.endswith("/v1/contacts"):
+            posts.append(body)
+            n = answers.pop(0) if answers else 1
+            return 200, {"key_id": body["key_id"], "reachable_nodes": n, "consent_prefixes": ["chat:"]}
+        return 500, {}
+    return fake_http
+
+
+def test_add_contact_waits_for_the_binding_to_land_before_calling_it_reachable(monkeypatch):
+    """CIRISServer#699: a contact added while `reachable_nodes=0` keys a room
+    whose bodies read `not_granted` for good. The owner KEY crossing (what the
+    fixture waited for) is earlier than the owner->node BINDING (what
+    `reachable_nodes` counts); TOPOLOGY §2.5 defines `reachable(A, q)` by the
+    POST itself, so the fixture re-asks until it is >= 1, bounded, and says
+    how long it waited."""
+    posts, notes, clock = [], [], _Clock()
+    monkeypatch.setattr(tn, "http", _contacts_http([0, 0, 1], posts))
+    monkeypatch.setattr(tn, "time", clock)
+    host = tn.Party("local", "http://h", "t")
+    guest = tn.Party("peer", "http://g", "t", owner_key_id="peer-user", node_key_id="peer-node")
+    key, via = tn.add_contact(host, guest, wait=0, notes=notes, log=lambda m: None,
+                              reachable_wait=60)
+    assert (key, via) == ("peer-user", "owner")
+    assert len(posts) == 3, "re-asked until the binding was held"
+    assert any("reachable_nodes" in n and "TOPOLOGY" in n and "waited" in n for n in notes), notes
+
+
+def test_add_contact_says_when_the_binding_never_lands(monkeypatch):
+    posts, notes, clock = [], [], _Clock()
+    monkeypatch.setattr(tn, "http", _contacts_http([0] * 50, posts))
+    monkeypatch.setattr(tn, "time", clock)
+    host = tn.Party("local", "http://h", "t")
+    guest = tn.Party("peer", "http://g", "t", owner_key_id="peer-user", node_key_id="peer-node")
+    key, via = tn.add_contact(host, guest, wait=0, notes=notes, log=lambda m: None,
+                              reachable_wait=20)
+    assert (key, via) == ("peer-user", "owner"), "unreachable is not a refusal"
+    assert clock.t <= 30 and 2 <= len(posts) <= 8, "bounded"
+    assert any("reachable_nodes=0" in n and "#699" in n for n in notes), notes
 
 
 def test_down_kills_the_peer_by_its_pidfile_and_deletes_its_home(tmp_path):

@@ -6,8 +6,8 @@ description: >-
   self room (CIRISServer src/drive.rs:3020); GET /v1/notes reads it back with
   the drive's byte-state words. Both calls go to the node URL.
 # Floor: every tag below is a string literal in ui/screens/files/NotesScreen.kt
-# (NotesTags); no release carries them yet.
-client: "unreleased"
+# (NotesTags); all literals at 0.5.225.
+client: ">=0.5.225"
 
 steps:
   - step_id: notes_is_in_just_me_chats

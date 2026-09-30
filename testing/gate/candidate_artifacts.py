@@ -81,7 +81,7 @@ def expected_jar_version() -> str:
     1.5.201 where VERSION reads 0.5.201. Derived here rather than pattern-matched
     so the two cannot drift.
     """
-    major, minor, patch = (ROOT / "VERSION").read_text().strip().split(".")[:3]
+    major, minor, patch = (ROOT / "VERSION").read_text(encoding="utf-8").strip().split(".")[:3]
     return f"{max(int(major), 1)}.{minor}.{patch}"
 
 
@@ -128,7 +128,7 @@ def local(kind: str) -> Path:
         others = ", ".join(h.name for h in hits[:4])
         raise Stale(
             f"{art.name} is not this tree's build -- VERSION is "
-            f"{(ROOT / 'VERSION').read_text().strip()}, so the jar should carry {want}.\n"
+            f"{(ROOT / 'VERSION').read_text(encoding='utf-8').strip()}, so the jar should carry {want}.\n"
             f"  Found: {others}\n"
             f"  Rebuild:  ./gradlew {task}\n"
             f"  Driving a stale jar reports a platform green for code that is not the\n"

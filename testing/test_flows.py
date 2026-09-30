@@ -278,6 +278,8 @@ def test_every_tag_a_seeded_flow_names_exists_in_the_client():
     literals, prefixes = _client_tag_strings()
     missing = []
     for spec in run_flows.load_flows([FLOWS]):
+        missing += [f"{spec.flow}/cleanup: {a.target}" for a in spec.cleanup
+                    if not client_carries(a.target, literals, prefixes)]
         for step in spec.steps:
             tags = [a.target for a in step.do]
             for cond in (step.requires, step.expect):
@@ -309,6 +311,17 @@ class FakeHelper:
         self.els = {t: _El(t, txt) for t, txt in tags.items()}
         self.calls: list[str] = []
         self.leads: dict = {}
+        # The shell's own account of where it stands (`/state`): a circle click
+        # lands at once here; `_RacyShell` below is the one that lands late.
+        self.circle, self.tab = "", ""
+        # Tags that are on screen but whose click the app refuses, and the
+        # reason the last refusal gave (what the real helper keeps).
+        self.refuse: set = set()
+        self.last_error = ""
+
+    async def get_state(self):
+        self.calls.append("state")
+        return {"screen": self.screen, "circle": self.circle, "tab": self.tab}
 
     async def get_elements(self):
         self.calls.append("tree")
@@ -323,19 +336,44 @@ class FakeHelper:
         return self.screen
 
     async def is_element_visible(self, tag):
-        return tag in self.els
+        # Geometry, as the real helper reads it: composed with zero size is
+        # off screen (a row below the fold), not on screen.
+        e = self.els.get(tag)
+        if e is None:
+            return False
+        return e.visible if e.visible is not None else (e.width > 0 and e.height > 0)
 
     async def scroll_into_view(self, tag):
-        return tag in self.els
+        self.calls.append(f"scroll {tag}")
+        # This screen has nothing the harness can scroll; say so, as the real
+        # helper keeps what `/scroll` answered.
+        self.last_scroll = ["down: nothing on screen can scroll (no testableVerticalScroll registered)"]
+        return await self.is_element_visible(tag)
 
     async def click(self, tag, timeout=2000):
         self.calls.append(f"click {tag}")
-        if tag not in self.els:
+        if tag not in self.els or tag in self.refuse:
+            self.last_error = (f"no such element {tag!r}" if tag not in self.els
+                               else f"HTTP 404: No click handler for {tag!r}")
             return False
+        if tag.startswith("circle_"):
+            self.circle = tag[len("circle_"):].replace("_", "-")
+        elif tag.startswith("tab_"):
+            self.tab = tag[len("tab_"):]
         # A click can move the app: `leads` maps a tag to (screen, tags now shown).
         if tag in self.leads:
             self.screen, shown = self.leads[tag]
             self.els = {t: _El(t, "") for t in shown}
+        return True
+
+    async def click_refused(self, tag, timeout=2000):
+        self.calls.append(f"click_refused {tag}")
+        if tag not in self.els:
+            self.last_error = f"no such element {tag!r}"
+            return False
+        if tag not in self.refuse:
+            self.last_error = f"{tag} accepted the click and its handler ran"
+            return False
         return True
 
     async def input_text(self, tag, text):
@@ -358,6 +396,226 @@ def test_a_flow_whose_expects_hold_passes(tmp_path):
     out = _run(_spec(tmp_path), FakeHelper("Thing", {"thing_list": ""}))
     assert out.status == run_flows.PASS
     assert run_flows.leg_ok([out])
+
+
+CLEANUP = GOOD + """\
+    cleanup:
+      - click: btn_close
+"""
+
+
+def test_a_flows_cleanup_runs_even_after_a_failed_step(tmp_path):
+    """csd_092 opened the contact-code card, failed on its second step, and
+    left the card open; `people`, `csd_005` and `csd_006` then failed for its
+    reason on every desktop leg (2026-09-29). Only the flow knows what it
+    opened; the runner guarantees the closing runs."""
+    h = FakeHelper("Thing", {"btn_close": ""})  # thing_list absent: the step fails
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.FAIL
+    assert "click btn_close" in h.calls
+
+
+def test_a_flows_cleanup_runs_after_a_pass_too(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_close": ""})
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_close"
+
+
+def test_a_cleanup_that_fails_is_said_and_is_not_the_verdict(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_close": ""})
+    h.refuse = {"btn_close"}  # on screen, and the app refuses the click
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert "cleanup" in out.detail and "btn_close" in out.detail and "No click handler" in out.detail
+
+
+def test_a_cleanup_whose_target_is_already_gone_is_nothing_to_close(tmp_path):
+    """csd_092's own last step closes the card it opened; its cleanup then
+    finds nothing to close, and that is not a failure to report."""
+    h = FakeHelper("Thing", {"thing_list": ""})  # btn_close absent
+    out = _run(_spec(tmp_path, CLEANUP), h)
+    assert out.status == run_flows.PASS
+    assert "cleanup" not in out.detail, out.detail
+
+
+CLEANUP_WHEN = GOOD + """\
+    cleanup:
+      - click: btn_toggle
+        when: card_open
+"""
+
+
+def test_a_cleanup_guarded_by_when_runs_only_while_its_card_is_open(tmp_path):
+    """macOS, run 36600766576: csd_005 left People's add card open (its last
+    step provokes a refusal in it) and csd_006's row sat below the fold. The
+    control that closes the card is the header toggle that also OPENS it, so
+    "already gone" has to be decided by the card, not by the toggle."""
+    h = FakeHelper("Thing", {"thing_list": "", "btn_toggle": "", "card_open": ""})
+    out = _run(_spec(tmp_path, CLEANUP_WHEN), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_toggle"
+    assert "cleanup" not in out.detail, out.detail
+
+    h = FakeHelper("Thing", {"thing_list": "", "btn_toggle": ""})  # the toggle is there, the card is not
+    out = _run(_spec(tmp_path, CLEANUP_WHEN), h)
+    assert out.status == run_flows.PASS
+    assert "click btn_toggle" not in h.calls, "a guarded cleanup must not open what it is there to close"
+    assert "cleanup" not in out.detail, out.detail
+
+
+CLEANUP_AFTER_CLOSE = GOOD + """\
+    cleanup:
+      - click: btn_code_close
+      - click: btn_toggle
+        when: card_open
+"""
+
+
+def test_a_cleanup_guard_reads_the_frame_after_the_previous_close(tmp_path):
+    """Local Linux leg, 2026-09-29: closing the contact-code card brought
+    People's add card back on the NEXT frame; the guard read the same
+    instant, saw no card, skipped the toggle, and csd_006 started under the
+    open card after all."""
+    h = _NextFrame("Thing", {"thing_list": "", "btn_code_close": "", "btn_toggle": ""})
+    # Closing the code card lands a frame later, and only then is the add card back.
+    h.leads = {"btn_code_close": ("Thing", ["thing_list", "btn_toggle", "card_open"])}
+    out = _run(_spec(tmp_path, CLEANUP_AFTER_CLOSE), h)
+    assert out.status == run_flows.PASS
+    assert h.calls[-1] == "click btn_toggle", h.calls
+    assert "cleanup" not in out.detail, out.detail
+
+
+def test_when_is_for_cleanup_actions_only(tmp_path):
+    """A step's action that quietly does nothing is a step that asserts nothing."""
+    body = GOOD.replace("        expect:\n", "        do:\n          - wait: thing_list\n            when: thing_list\n        expect:\n")
+    assert "when: thing_list" in body
+    with pytest.raises(SpecError, match="cleanup"):
+        _spec(tmp_path, body)
+
+
+def test_a_visible_tag_that_was_never_composed_says_so(tmp_path):
+    h = FakeHelper("Thing", {})  # thing_list is not in /tree at all
+    out = _run(_spec(tmp_path), h)
+    assert out.status == run_flows.FAIL
+    assert "'thing_list' is not composed" in out.detail, out.detail
+
+
+def test_a_visible_tag_composed_below_the_fold_says_off_screen_after_scrolling(tmp_path):
+    """The macOS csd_006 shape: the row is in /tree with clipped, zero-size
+    bounds. "Is not on screen" sent the reader to the client; the row was
+    there, under a card the previous flow had left open, on a screen the
+    harness could not scroll — which is what the message now says."""
+    h = FakeHelper("Thing", {"thing_list": ""})
+    h.els["thing_list"] = _El("thing_list", "", visible=None, width=0, height=0)
+    out = _run(_spec(tmp_path), h)
+    assert out.status == run_flows.FAIL
+    assert "'thing_list' is composed but off screen after scrolling" in out.detail, out.detail
+    assert "no testableVerticalScroll" in out.detail, "what /scroll answered belongs in the verdict"
+    assert "scroll thing_list" in h.calls, "the runner tried to bring it on screen first"
+
+
+class _NextFrame(FakeHelper):
+    """A click whose effect lands on the next frame — 0.3 s later on the wall
+    clock, as a Compose recomposition does after `/click` returns. Reading the
+    tree in the same instant sees the old screen."""
+
+    def __init__(self, *a, **kw):
+        super().__init__(*a, **kw)
+        self.lands_at = None
+
+    async def click(self, tag, timeout=2000):
+        import time as _t
+        if tag in self.leads:
+            self.calls.append(f"click {tag}")
+            self.lands_at = (_t.monotonic() + 0.3, self.leads[tag])
+            return True
+        return await super().click(tag, timeout)
+
+    def _land(self):
+        import time as _t
+        if self.lands_at and _t.monotonic() >= self.lands_at[0]:
+            self.screen, shown = self.lands_at[1]
+            self.els = {t: _El(t, "") for t in shown}
+            self.lands_at = None
+
+    async def get_elements(self):
+        self._land()
+        return await super().get_elements()
+
+    async def get_element(self, tag):
+        self._land()
+        return await super().get_element(tag)
+
+    async def get_screen(self):
+        self._land()
+        return await super().get_screen()
+
+
+def test_an_expect_after_an_action_waits_for_the_frame(tmp_path):
+    """csd_057's back click 'succeeded' and the same-instant expect still saw
+    `card_wallet_balance` (local Linux leg, 2026-09-29): the click returns
+    before the frame that applies it. An assertion made in the instant of the
+    click is a race, not a test — the same rule `navigate` already states."""
+    body = GOOD.replace("        expect:\n          visible: [thing_list]\n",
+                        "        do:\n          - click: btn_back\n        expect:\n"
+                        "          absent: [thing_list]\n          screen: Elsewhere\n")
+    h = _NextFrame("Thing", {"thing_list": "", "btn_back": ""})
+    h.leads = {"btn_back": ("Elsewhere", ["other"])}
+    out = _run(_spec(tmp_path, body), h)
+    assert out.status == run_flows.PASS, out.detail
+
+
+def test_an_expect_that_never_holds_still_fails_and_is_bounded(tmp_path):
+    import time as _t
+    body = GOOD.replace("visible: [thing_list]", "visible: [thing_list, never_there]")
+    started = _t.monotonic()
+    out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
+    assert out.status == run_flows.FAIL and "never_there" in out.detail
+    assert _t.monotonic() - started < 10
+
+
+def test_a_failed_action_carries_the_drivers_reason(tmp_path):
+    """"did not succeed" was the whole verdict on csd_047; the driver knew why."""
+    body = GOOD.replace("        expect:\n", "        do:\n          - click: btn_gone\n        expect:\n")
+    out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
+    assert out.status == run_flows.FAIL
+    assert "no such element 'btn_gone'" in out.detail, out.detail
+
+
+REFUSED = GOOD.replace("        expect:\n", "        do:\n          - click_refused: btn_submit\n        expect:\n", 1)
+
+
+def test_click_refused_parses_as_its_own_verb(tmp_path):
+    spec = _spec(tmp_path, REFUSED)
+    act = spec.steps[0].do[0]
+    assert (act.kind, act.target) == ("click_refused", "btn_submit")
+    assert act.describe() == "click_refused 'btn_submit'"
+
+
+def test_click_refused_is_one_verb_among_the_others(tmp_path):
+    body = GOOD.replace("        expect:\n",
+                        "        do:\n          - {click_refused: btn_submit, click: btn_submit}\n        expect:\n", 1)
+    with pytest.raises(SpecError, match="exactly one of"):
+        _spec(tmp_path, body)
+
+
+def test_a_refused_click_passes_the_step_that_claims_it_does_nothing(tmp_path):
+    """csd_068 `empty_submit_does_nothing` on iOS, run 36733112700: the
+    platform refused the disabled submit, and a plain `click:` called that a
+    failure. The refusal is the outcome the step claims."""
+    h = FakeHelper("Thing", {"thing_list": "", "btn_submit": ""})
+    h.refuse = {"btn_submit"}
+    out = _run(_spec(tmp_path, REFUSED), h)
+    assert out.status == run_flows.PASS, out.detail
+    assert "click_refused btn_submit" in h.calls
+
+
+def test_a_disabled_control_whose_handler_fires_fails_click_refused(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_submit": ""})
+    out = _run(_spec(tmp_path, REFUSED), h)
+    assert out.status == run_flows.FAIL
+    assert "handler ran" in out.detail, out.detail
 
 
 def test_a_failing_expect_fails_the_flow_and_the_leg(tmp_path):
@@ -516,7 +774,83 @@ def test_a_missing_hop_tag_is_cannot_start_and_names_the_tag(tmp_path):
     assert out.status == run_flows.CANNOT_START
     assert "'tab_y'" in out.detail and "hop 2 of 3" in out.detail
     assert "never appeared" in out.detail, "waited for, not blindly clicked"
+    # THE EVIDENCE TRAVELS WITH THE VERDICT. Four cannot-starts on the
+    # 2026-09-29 run said "never appeared ... on 'CircleTab'" and nothing
+    # else; which rows WERE listed was the fact that named the cause.
+    assert "on screen and drivable now" in out.detail and "circle_x" in out.detail
     assert not run_flows.leg_ok([out])
+
+
+# ── the circle hop must LAND before the tab is clicked ──────────────────────
+
+class _RacyShell(FakeHelper):
+    """`CIRISApp.openTab` as it behaves: a circle click changes the circle on
+    the NEXT FRAME (modelled as the next `/state` read), and a tab click opens
+    the tab of whichever circle the last frame saw. Sign-in lands a node
+    client in Neighbours (`defaultCircle`), whose Chats tab is Rooms; the
+    flow wants Just me › Chats › Notes."""
+
+    def __init__(self):
+        super().__init__("Contacts", {"circle_agent": "", "tab_chats": ""})
+        self.circle, self.tab, self.pending = "local-community", "people", None
+
+    async def get_state(self):
+        self.calls.append("state")
+        if self.pending:
+            self.circle, self.pending = self.pending, None
+        return {"screen": self.screen, "circle": self.circle, "tab": self.tab}
+
+    async def click(self, tag, timeout=2000):
+        self.calls.append(f"click {tag}")
+        if tag.startswith("circle_"):
+            self.pending = tag[len("circle_"):].replace("_", "-")
+            return True
+        if tag == "tab_chats":
+            self.tab = "chats"
+            self.screen = "Notes" if self.circle == "agent" else "CommunityChats"
+            body = "input_note" if self.screen == "Notes" else "rooms_list"
+            self.els = {t: _El(t, "") for t in ("circle_agent", "tab_chats", body)}
+            return True
+        return tag in self.els
+
+
+def test_navigate_waits_for_the_circle_hop_to_land_before_the_tab():
+    """macOS, 2026-09-29: `circle_agent -> tab_chats` landed on CommunityChats —
+    the tab was clicked with the circle the previous frame had."""
+    h = _RacyShell()
+    got = asyncio.run(run_flows.navigate(h, "Notes", ["circle_agent", "tab_chats"],
+                                         hop_timeout=1.0, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.screen == "Notes"
+    assert h.calls.index("state") < h.calls.index("click tab_chats"), \
+        "the circle was read back before the tab was clicked"
+
+
+def test_a_circle_hop_that_never_lands_is_named_as_the_circle_not_the_row():
+    h = _RacyShell()
+
+    async def stuck():
+        h.calls.append("state")
+        return {"screen": h.screen, "circle": "local-community", "tab": h.tab}
+    h.get_state = stuck
+    got = asyncio.run(run_flows.navigate(h, "Notes", ["circle_agent", "tab_chats"],
+                                         hop_timeout=0.3, arrive_timeout=0.1))
+    assert got and "circle_agent" in got and "local-community" in got, got
+    assert "click tab_chats" not in h.calls, "no tab is clicked in the wrong circle"
+
+
+def test_a_client_whose_state_has_no_circle_is_walked_without_verification():
+    """An older client serves no `circle` in /state: the runner cannot verify
+    the hop, says so, and still walks it rather than refusing every flow."""
+    h = _walkable()
+
+    async def old_state():
+        return {"screen": h.screen}
+    h.get_state = old_state
+    got = asyncio.run(run_flows.navigate(h, "Thing", ["circle_x", "tab_y", "nav_thing"],
+                                         hop_timeout=0.2, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.screen == "Thing"
 
 
 def test_a_screen_with_no_hop_that_is_not_flow_only_cannot_start(tmp_path):
@@ -538,10 +872,18 @@ def test_a_flow_only_screen_is_waited_for_not_walked_to(tmp_path):
     assert "no nav hop" not in out.detail, "flow-only is not a missing hop"
 
 
-def test_already_on_the_first_screen_walks_nothing(tmp_path):
-    h = FakeHelper("Thing", {"thing_list": ""})
-    assert _nav_run(_spec(tmp_path), h).status == run_flows.PASS
-    assert not [c for c in h.calls if c.startswith("click")]
+def test_already_on_the_first_screen_still_walks_its_hop(tmp_path):
+    """Being on the screen says nothing about WHICH circle it is shown in —
+    Contacts sits in every circle's People tab — and the last flow left the
+    shell wherever it left it. The hop is re-walked, and verified, so every
+    flow starts from a known circle and tab, not from the previous flow's."""
+    h = _walkable()
+    h.screen = "Thing"
+    h.els["thing_list"] = _El("thing_list", "")
+    out = _nav_run(_spec(tmp_path), h)
+    assert out.status == run_flows.PASS, out.detail
+    assert [c for c in h.calls if c.startswith("click")] == [
+        "click circle_x", "click tab_y", "click nav_thing"]
 
 
 def test_the_real_nav_map_reaches_the_seeded_flows_first_screens():

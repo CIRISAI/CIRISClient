@@ -2183,7 +2183,7 @@ private fun PreferencesSection() {
                                     )
                                 }
                             },
-                            modifier = Modifier.testableWithHandler("language_${language.code}", onSelectLanguage)
+                            modifier = Modifier.testableWithHandler("language_${language.code}", onClick = onSelectLanguage)
                         )
                     }
                 }

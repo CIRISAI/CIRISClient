@@ -3,7 +3,7 @@
 **CSD**: CSD-046 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): two screens with routes and no CSD
 **Covers**: `Screen.NetworkTrustGraph` (`ui/screens/federation/NetworkTrustGraphScreen.kt` + `viewmodels/federation/NetworkTrustGraphViewModel.kt`). **`Screen.NetworkMap` is retired into it** (below).
 **Reads with**: CSD-033 (the same peers as a list), CSD-104 (tapping a node opens the peer detail), CSD-051 (the hub)
-**Flow**: `testing/flows/drafts/csd-046-network-trust-graph.yaml` (floor `unreleased`)
+**Flow**: `testing/flows/drafts/csd-046-network-trust-graph.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
 stage: building
@@ -93,7 +93,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-046-network-trust-graph.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-046-network-trust-graph.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkTrustGraph` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its trust-graph tile, as csd-047 does.
 
 **Platforms.** All five; the canvas has no per-vertex tags, so the populated
 assertion is the canvas and the count is not assertable (the list, CSD-033,

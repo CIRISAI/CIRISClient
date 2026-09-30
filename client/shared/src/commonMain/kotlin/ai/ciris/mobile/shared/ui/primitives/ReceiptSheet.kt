@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.ceg.cohortScopeOf
 import ai.ciris.mobile.shared.ceg.shortKey
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.glyphs.Glyph
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.theme.CirisShape
@@ -19,8 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
@@ -60,60 +60,78 @@ fun ReceiptSheet(
         tonalElevation = 0.dp,
         dragHandle = null,
     ) {
+        // THE WAY OUT IS IN THE HEADER, AND ONLY THE BODY SCROLLS. Close used
+        // to sit at the end of the sheet's own scroll: on a phone-height
+        // Android emulator it was below the fold, and that scroll was a plain
+        // verticalScroll automation could not drive, so /scroll moved the list
+        // BEHIND the sheet and /click btn_receipt_close answered 404 "composed
+        // but off screen" (matrix run 36752849889, CSD-005/006). A person on a
+        // small phone had the same problem with a thumb.
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .testable(tag, receipt.id)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 18.dp, vertical = 14.dp)
+                // A full-height sheet runs under the status bar; the header
+                // (and Close in it) must not sit beneath the system icons.
+                .statusBarsPadding()
                 .navigationBarsPadding(),
-            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 18.dp, end = 8.dp, top = 8.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 Glyph(GlyphName.RECEIPT, tint = t.brand, size = 18.dp)
-                Text(localizedString("mobile.receipt_title"), style = type.title, color = t.ink)
-            }
-            Spacer(Modifier.height(6.dp))
-
-            FactRow(Envelope.subjectKeyIds, receipt.subject, "receipt_subject", keyish = true)
-            FactRow(Envelope.attestingKeyId, receipt.attester, "receipt_attester", keyish = true)
-            ScopeRow(receipt.scope, receipt.scopeNote)
-            FactRow(Envelope.dimension, receipt.dimensionValue, "receipt_dimension", keyish = false)
-            FactRow(Envelope.consentScope, receipt.rule, "receipt_rule", keyish = false, divider = receipt.forAgent != null)
-            receipt.forAgent?.let { FactRow(ForAgentMember, it, "receipt_for_agent", keyish = true, divider = false) }
-
-            Spacer(Modifier.height(10.dp))
-            FieldRow(
-                label = localizedString("mobile.receipt_holders"),
-                value = receipt.holders?.let { localizedString("mobile.receipt_holders_count", "count", it.toString()) }
-                    ?: localizedString("ceg.envelope.not_sent"),
-                tone = if (receipt.holders == null) Tone.DANGER else Tone.INK,
-                mono = receipt.holders != null,
-                tag = "receipt_holders",
-            )
-            FieldRow(
-                label = localizedString("mobile.receipt_notes"),
-                value = if (receipt.notes.isEmpty()) localizedString("mobile.receipt_notes_none")
-                else receipt.notes.joinToString("\n") { "${it.by}: ${it.text}" },
-                tone = if (receipt.notes.isEmpty()) Tone.DIM else Tone.INK,
-                tag = "receipt_notes",
-                divider = receipt.acts.isNotEmpty(),
-            )
-            if (receipt.acts.isNotEmpty()) {
                 Text(
-                    localizedString("mobile.receipt_acts").uppercase(),
-                    style = type.label, color = t.mute,
-                    modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+                    localizedString("mobile.receipt_title"), style = type.title, color = t.ink,
+                    modifier = Modifier.weight(1f),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (act in receipt.acts) {
-                        Chip(ChipSpec(label = act.label, tag = act.tag, kind = ChipKind.CHOICE, tone = Tone.BRAND, onClick = act.onAct))
+                CirisTextButton(localizedString("mobile.receipt_close"), tag = "btn_receipt_close", onClick = onDismiss)
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f, fill = false)
+                    .testableVerticalScroll(name = tag)
+                    .padding(start = 18.dp, end = 18.dp, top = 2.dp, bottom = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                FactRow(Envelope.subjectKeyIds, receipt.subject, "receipt_subject", keyish = true)
+                FactRow(Envelope.attestingKeyId, receipt.attester, "receipt_attester", keyish = true)
+                ScopeRow(receipt.scope, receipt.scopeNote)
+                FactRow(Envelope.dimension, receipt.dimensionValue, "receipt_dimension", keyish = false)
+                FactRow(Envelope.consentScope, receipt.rule, "receipt_rule", keyish = false, divider = receipt.forAgent != null)
+                receipt.forAgent?.let { FactRow(ForAgentMember, it, "receipt_for_agent", keyish = true, divider = false) }
+
+                Spacer(Modifier.height(10.dp))
+                FieldRow(
+                    label = localizedString("mobile.receipt_holders"),
+                    value = receipt.holders?.let { localizedString("mobile.receipt_holders_count", "count", it.toString()) }
+                        ?: localizedString("ceg.envelope.not_sent"),
+                    tone = if (receipt.holders == null) Tone.DANGER else Tone.INK,
+                    mono = receipt.holders != null,
+                    tag = "receipt_holders",
+                )
+                FieldRow(
+                    label = localizedString("mobile.receipt_notes"),
+                    value = if (receipt.notes.isEmpty()) localizedString("mobile.receipt_notes_none")
+                    else receipt.notes.joinToString("\n") { "${it.by}: ${it.text}" },
+                    tone = if (receipt.notes.isEmpty()) Tone.DIM else Tone.INK,
+                    tag = "receipt_notes",
+                    divider = receipt.acts.isNotEmpty(),
+                )
+                if (receipt.acts.isNotEmpty()) {
+                    Text(
+                        localizedString("mobile.receipt_acts").uppercase(),
+                        style = type.label, color = t.mute,
+                        modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (act in receipt.acts) {
+                            Chip(ChipSpec(label = act.label, tag = act.tag, kind = ChipKind.CHOICE, tone = Tone.BRAND, onClick = act.onAct))
+                        }
                     }
                 }
-            }
-            Spacer(Modifier.height(12.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                CirisTextButton(localizedString("mobile.receipt_close"), tag = "btn_receipt_close", onClick = onDismiss)
             }
         }
     }

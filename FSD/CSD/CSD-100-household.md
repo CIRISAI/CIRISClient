@@ -337,7 +337,7 @@ facts → confirm → the household is gone from the switcher.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-100-household.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97).
+Spec complete and flow written (`testing/flows/drafts/csd-100-household.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names the ConfirmSheet's `sheet_confirm_household`, `confirm_household_fact_1..3`, `btn_confirm_household_confirm` / `_cancel` (built from `tagPrefix`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
 
 **Platforms.** All five; the card calls only the node.
 

@@ -11,8 +11,7 @@ description: >-
 # btn_trust_graph_refresh (ui/screens/federation/NetworkTrustGraphScreen.kt);
 # federation_trust_graph_error / federation_trust_graph_not_on_this_node
 # (ReadFailureBlock).
-client: "unreleased"
-
+client: ">=0.5.225"
 steps:
   - step_id: on_trust_graph
     title: The canvas composes

@@ -17,13 +17,17 @@ title: People on a node with no contacts yet
 description: >-               # optional; say what is NOT driven and why
   …
 client: ">=0.5.224"           # the client that carries every tag it names
+cleanup:                      # optional; run AFTER the flow, pass or fail
+  - click: btn_contact_code_close
+  - click: btn_contacts_add_open
+    when: card_contacts_add     # only while the card is open: the toggle would open it
 
 steps:
   - step_id: landing
     title: Signing in on a bare node lands on People
     requires:                 # checked BEFORE the step; the first step's is the entry
       screen: Contacts
-    do:                       # click / input / scroll_to / wait (one per entry)
+    do:                       # click / click_refused / input / scroll_to / wait (one per entry)
       - wait: card_contacts_add
         wait_ms: 5000         # a `wait` waits wait_ms × 4
     expect:                   # checked AFTER
@@ -40,7 +44,9 @@ steps:
 
 The language is `testing/gate/flow_spec.py`'s — vendored from CIRISAgent, with
 the CSD/3 §3 predicates (`count`, `number`, `matches`, `one_of`, `each`,
-`relation`, `state`) and one local addition, `csd:` (see
+`relation`, `state`) and local additions — `csd:`, `cleanup:` with `when:`, and
+`click_refused:` for a control the step says is disabled, which holds when the
+platform refuses the click and fails when a handler runs (see
 `testing/gate/VENDORED.md`). Unknown keys anywhere are a load error.
 
 ### How a flow is tied to its CSD
@@ -65,6 +71,35 @@ Each of these is a **load error**, found before any app is started:
 
 `testing/test_flows.py` also checks that every literal tag a flow here names is
 a string in the client's `commonMain` source.
+
+## What is here
+
+Every file in this directory runs on every leg. Promoted from
+`testing/flows/drafts/` on the 0.5.225 run (2026-09-29); what still waits
+there, and why, is in `drafts/README.md`.
+
+| file | CSD | first screen | fixture | floor | Linux desktop, local, 2026-09-29 |
+|---|---|---|---|---|---|
+| `people.yaml` | CSD-005 | Contacts (bare node: the add card instead of an empty block) | — | `>=0.5.224` | pass 3/3 |
+| `csd-005-people.yaml` | CSD-005 | Contacts (a seeded contact: row, chip, hamburger, receipt) | `two_node` | `>=0.5.225` | pass 11/12, 1 skipped (no camera) |
+| `csd-006-receipt.yaml` | CSD-006 | Contacts (the five facts, off the wire) | `two_node` | `>=0.5.225` | pass 5/6, 1 skipped (the node sends the grant) |
+| `csd-008-notes-to-self.yaml` | CSD-008 | Notes | — | `>=0.5.225` | pass 2/2 |
+| `csd-047-network-content.yaml` | CSD-047 | LayerGlobalCommons → `tile_federation_content` | `two_node` | `>=0.5.225` | pass 4/4 |
+| `csd-057-wallet.yaml` | CSD-057 | Wallet (read-only; never presses send) | — | `>=0.5.224` | pass 3/6, 3 skipped (no address on a node build) |
+| `csd-068-provision-accord-holder.yaml` | CSD-068 | ProvisionAccordHolder (the no-token refusal) | — | `>=0.5.224` | pass 5/5 |
+| `csd-092-share-contact-code.yaml` | CSD-092 | Contacts → the contact-code card | — | `>=0.5.225` | pass 3/7, 4 skipped (0.5.218 states) |
+| `csd-101-household-members.yaml` | CSD-101 | HouseholdMembers (the bare node's empty shape; the roster is gated) | — | `>=0.5.225` | pass 2/4, 2 skipped (no household) |
+
+A flow's floor is the client that carries every tag it names — checked at the
+keyboard by `testing/test_flows.py`. The last column is the Linux desktop leg
+run locally the way the workflow runs it (candidate 0.5.225, node v0.5.217,
+`--flows testing/flows`, the two-node fixture) after the fixes for the
+0.5.225 matrix run (36588619656): that run failed all three desktop legs —
+every row hop lost to a circle-hop race, three flows to a card the previous
+flow left open, csd-092 to a tree text that carried only a title, and Windows
+to a session fixture that slept two seconds through the wizard's mint. None of
+the nine has run on the other four legs since, which is what their CSDs'
+`stage:` (`building`) says.
 
 ## Verdicts
 
@@ -133,14 +168,45 @@ bring-up per leg and one session.
   the hop `testing/gate/nav_map.py` derives for the flow's first
   `requires: screen:` on this build (node or agent tree, from `/state`),
   waiting for each tag before clicking it. A missing hop tag is `cannot-start`
-  naming the tag; a screen with no hop that is not flow-only is `cannot-start`
-  with "no nav hop for Screen.X"; a flow-only screen (pre-login, wizards,
-  leaves) is waited for, not walked to. Hops between later steps are the flow's
-  own `do:` clicks.
+  naming the tag and listing what was on screen; a screen with no hop that is
+  not flow-only is `cannot-start` with "no nav hop for Screen.X"; a flow-only
+  screen (pre-login, wizards, leaves) is waited for, not walked to. Hops
+  between later steps are the flow's own `do:` clicks.
+- **The hop is always walked, and every circle and tab hop is verified.** Being
+  on the screen already says nothing about which circle it is shown in
+  (Contacts sits in every circle's People tab), and the last flow left the
+  shell wherever it left it, so the runner re-selects the hop's circle and tab
+  every time. After each `circle_*` / `tab_*` click it reads `/state` (`circle`,
+  `tab`, from client 0.5.226) until the shell says it stands there; a click
+  that succeeded is not a hop that took — `CIRISApp.openTab` runs with the
+  circle the last composition captured, and a tab clicked in the same frame
+  as the circle opens the OLD circle's tab. That race cost the 2026-09-29 run
+  four flows on every desktop leg, each reported as a row that "never
+  appeared". On a client without those `/state` fields the hop is walked
+  unverified.
+- **A flow closes what it opened, whatever its verdict.** `cleanup:` is a list
+  of actions run after the flow — pass, fail or crash. A flow stops at its
+  first failed step, and a card that step left open (the contact-code card
+  replaces People's body and its open state lives in the view model) is the
+  next flow's failure. A cleanup that fails is reported in the outcome's
+  detail and the per-flow JSON; it never changes the verdict. A cleanup
+  action may carry `when: <tag>` and then runs only while that tag is on
+  screen: a control that toggles (People's `btn_contacts_add_open` opens the
+  add card and closes it) would otherwise open the card on a run that failed
+  before it got there. `when:` is for `cleanup:` only — a step's action that
+  quietly does nothing asserts nothing.
+- **A `visible:` that fails says which of two things went wrong.** "Not
+  composed (not in /tree)" is the client's: the tag is not drawn. "Composed
+  but off screen after scrolling" is the screen's or the previous flow's: the
+  runner scrolled both ways within its budget and quotes what `/scroll`
+  answered ("nothing on screen can scroll" names a container with no
+  `testableVerticalScroll`). The macOS csd_006 row (run 36600766576) was the
+  second kind, under an add card csd_005 had left open.
 - **A second node only when a flow asks.** The matrix stands up one node with
   no contacts, no agent and no peers. A flow that needs more says
-  `fixture: two_node` — see below. Everything in this directory today runs on
-  the bare node.
+  `fixture: two_node` — see below. Three flows here ask for it
+  (`csd-005-people`, `csd-006-receipt`, `csd-047-network-content`); the rest
+  run on the bare node.
 - **No cross-node message on released nodes.** The two-node fixture seeds a
   contact each way and opens the room, but between two fresh, unconferred
   nodes of the released line (0.5.217) the room never keys, so no message
@@ -164,9 +230,21 @@ without Docker: a second `ciris-server` from the binary the leg downloaded, run
 natively on 5242/5243 with its own `--home` and a unique `--key-id`, claimed on
 its console, announced, peered both ways with the leg's node (which the client
 claimed; the fixture signs in to it as `qaadmin`), each owner added as the
-other's contact, the pair room opened on both sides, and one message sent by
-the peer once the room is keyed. It runs on every leg because it runs on the
-leg's HOST — the client only ever talks to its own node.
+other's contact **and waited for until the other is reachable from it**, the
+pair room opened on both sides, and one message sent by the peer once the room
+is keyed. It runs on every leg because it runs on the leg's HOST — the client
+only ever talks to its own node.
+
+The reachability wait is CIRISServer `FSD/TOPOLOGY.md` §2.5's `reachable(A, q)`
+relation: `POST /v1/contacts` on A for q reporting `reachable_nodes >= 1`,
+which means q's owner→node BINDING is held on A at federation scope — a later
+fact than q's owner KEY being known, which is all the fixture used to wait for.
+A contact added while it is 0 keys a pair room whose bodies read `not_granted`
+for good (CIRISServer#699); the 2026-09-29 run logged `reachable_nodes=0` on
+both sides and then `awaiting_peer` for the whole wait. The POST is the
+predicate (no read route answers it), so the fixture re-asks it every 5 s, up
+to `reachable_wait` (120 s), and writes what it waited on and for how long into
+`values.notes`.
 
 The values a flow may name:
 
@@ -198,7 +276,7 @@ Locally, against the throwaway node above:
 
 ```bash
 python3 -m testing.gate.run_flows --platform desktop \
-    --flows testing/flows/drafts/csd-006-receipt.yaml --client-version 0.5.225 \
+    --flows testing/flows/csd-006-receipt.yaml --client-version 0.5.225 \
     --node-binary /tmp/node/ciris-server \
     --node-url http://127.0.0.1:4243 --peer-work /tmp/flows-peer
 ```
