@@ -18,8 +18,11 @@ client actually does on a fresh node, observed step by step through /tree:
       -> Setup, step `you`      username / password / confirm / device name,
                                 an age band, then `btn_next`
       -> Setup, step `join_federation`   `trace_consent_yes`, consent toggles, `btn_next`
-      -> `setup_ownership_claimed`       no advance control: the claim is work,
-                                         not a step, and it finishes on its own
+      -> `setup_ownership_claiming`      no advance control and no active step:
+                                         the claim is work, not a step, and it
+                                         finishes on its own (CLAIM_TIMEOUT)
+      -> `setup_ownership_claimed`       or `setup_ownership_error`, which
+                                         names why the node refused
       -> Login, now with `txt_owner_hint`
     Login                        `btn_local_login` reveals the form,
                                  username / password, `btn_login_submit`
@@ -142,12 +145,52 @@ def _field_report(drv: TestAutomationServer) -> str:
 ADVANCE_TIMEOUT = 90.0
 
 
+#: The claim's three faces (SetupScreen's completion step). Any of them means
+#: the wizard is done asking and the fixture has nothing left to click.
+CLAIM_TAGS = frozenset({"setup_ownership_claiming", "setup_ownership_claimed", "setup_ownership_error"})
+
+#: How long the in-progress claim may run before the fixture calls it stuck.
+CLAIM_TIMEOUT = 120.0
+
+
+def _claim_started(tags: set[str]) -> bool:
+    return bool(CLAIM_TAGS & tags)
+
+
+def _await_claim(drv: TestAutomationServer, timeout: float = CLAIM_TIMEOUT, poll: float = 1.5) -> None:
+    """Wait out `setup_ownership_claiming`. It has no control — Android (run
+    36733112700) showed it with the step indicators and no active step, and a
+    fixture looking for Next there raised "offers no advance control". Returns
+    once the claim resolved (claimed, or the app left Setup); raises with the
+    node's reason on `setup_ownership_error`, and with the screen on timeout."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if drv.screen() != "Setup":
+            return
+        tree = drv.tree()
+        tags = {e.test_tag for e in tree}
+        if "setup_ownership_error" in tags:
+            why = next((e.text for e in tree if e.test_tag == "setup_ownership_error" and e.text), "")
+            raise SessionUnavailable(
+                f"the node refused the ownership claim: {why or '(no reason on screen)'}; "
+                f"on screen: {sorted(tags)}"
+            )
+        if "setup_ownership_claiming" not in tags:
+            return
+        if time.monotonic() >= deadline:
+            raise SessionUnavailable(
+                f"the claim did not finish within {timeout:.0f}s (still claiming); "
+                f"on screen: {sorted(tags)}"
+            )
+        time.sleep(poll)
+
+
 def _advanced(drv: TestAutomationServer, before: tuple, timeout: float, poll: float = 1.0) -> bool:
     """True once the wizard is past `before` (screen, active step) or the claim
     has taken over; False when it is still there after `timeout`."""
     deadline = time.monotonic() + timeout
     while True:
-        if (drv.screen(), _active_step(drv)) != before or "setup_ownership_claimed" in _tags(drv):
+        if (drv.screen(), _active_step(drv)) != before or _claim_started(_tags(drv)):
             return True
         if time.monotonic() >= deadline:
             return False
@@ -254,7 +297,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
     # must say so rather than spin.
     for _ in range(12):
         tags = _tags(drv)
-        if "setup_ownership_claimed" in tags or drv.screen() != "Setup":
+        if _claim_started(tags) or drv.screen() != "Setup":
             break
         # Screen 2 asks whether to send traces and will not advance until
         # answered (no default, like the age band above). Yes is the fixture's
@@ -322,6 +365,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             )
 
     # The claim has no button; it completes and the app returns to Login.
+    _await_claim(drv)
     if not _settle(drv, "Login", timeout=180):
         raise SessionUnavailable(
             f"setup never returned to Login (on {drv.screen()!r}) — the claim did not finish"

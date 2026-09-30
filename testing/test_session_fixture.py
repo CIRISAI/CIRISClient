@@ -39,8 +39,13 @@ class _SlowWizard:
     body meanwhile — the shape the Windows leg showed. The consent step
     answers, Next again claims, and the claim returns the app to Login."""
 
-    def __init__(self, clock: _Clock, advance_after: float):
+    def __init__(self, clock: _Clock, advance_after: float, claim_takes: float = 0.0,
+                 claim_error: str | None = None):
         self.clock, self.advance_after = clock, advance_after
+        # The claim is WORK: `setup_ownership_claiming` for `claim_takes`
+        # seconds (step indicators up, no step active, no advance control),
+        # then claimed — or the error panel, which never returns to Login.
+        self.claim_takes, self.claim_error = claim_takes, claim_error
         self.on = "Login"
         self.step = "you"
         self.next_at: float | None = None
@@ -53,8 +58,18 @@ class _SlowWizard:
         if self.step == "you" and self.next_at is not None and self.clock.t - self.next_at >= self.advance_after:
             self.step, self.next_at = "join_federation", None
 
+    def _claim_phase(self) -> str:
+        if self.claimed_at is None:
+            return ""
+        spent = self.clock.t - self.claimed_at
+        if spent < self.claim_takes:
+            return "claiming"
+        if self.claim_error is not None:
+            return "error"
+        return "Login" if spent >= self.claim_takes + 1.0 else "claimed"
+
     def screen(self):
-        if self.claimed_at is not None and self.clock.t - self.claimed_at >= 1.0:
+        if self._claim_phase() == "Login":
             return "Login"
         return self.on
 
@@ -63,6 +78,14 @@ class _SlowWizard:
         if self.screen() == "Login":
             return [_el("btn_local_login")]
         if self.step == "claimed":
+            phase = self._claim_phase()
+            # Android, run 36733112700: the indicators stay, none is active.
+            indicators = [_el("setup_step_indicators"), _el("step_indicator_you", ""),
+                          _el("step_indicator_join_federation", "")]
+            if phase == "claiming":
+                return [_el("setup_ownership_claiming")] + indicators
+            if phase == "error":
+                return [_el("setup_ownership_error", self.claim_error)] + indicators
             return [_el("setup_ownership_claimed")]
         indicators = [_el("setup_step_indicators"),
                       _el("step_indicator_you", "active" if self.step == "you" else ""),
@@ -95,10 +118,10 @@ class _SlowWizard:
         return {"error": "NO overflow"}
 
 
-def _drive(monkeypatch, advance_after: float):
+def _drive(monkeypatch, advance_after: float, **kw):
     clock = _Clock()
     monkeypatch.setattr(sf, "time", clock)
-    w = _SlowWizard(clock, advance_after)
+    w = _SlowWizard(clock, advance_after, **kw)
     return clock, w
 
 
@@ -116,6 +139,35 @@ def test_a_step_that_truly_stalls_is_still_reported_by_name(monkeypatch):
         sf.run_setup(w, "qaadmin", "QaAdmin!2345")
     assert "'you'" in str(e.value)
     assert clock.t < 300, "bounded: a stalled wizard is reported in minutes, not hours"
+
+
+def test_a_claim_in_progress_is_waited_for_not_asked_for_a_control(monkeypatch):
+    """Android, run 36733112700: after the last Next the wizard showed
+    `setup_ownership_claiming` with no step active and no advance control, and
+    the fixture raised "wizard step '' offers no advance control". The claim
+    is work that finishes on its own; the fixture waits for it."""
+    clock, w = _drive(monkeypatch, advance_after=1.0, claim_takes=40.0)
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert w.screen() == "Login"
+    assert w.clicks.count("btn_next") == 2
+
+
+def test_a_claim_that_never_finishes_is_reported_with_the_screen(monkeypatch):
+    clock, w = _drive(monkeypatch, advance_after=1.0, claim_takes=10 ** 6)
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    msg = str(e.value)
+    assert "claim did not finish" in msg and "setup_ownership_claiming" in msg, msg
+    assert clock.t < 300, "bounded"
+
+
+def test_a_refused_claim_is_reported_with_its_reason(monkeypatch):
+    clock, w = _drive(monkeypatch, advance_after=1.0, claim_takes=5.0,
+                      claim_error="claim PIN was not captured")
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert "claim PIN was not captured" in str(e.value)
+    assert clock.t < 60, "a refused claim is reported when it is refused, not at the timeout"
 
 
 class _OwnedLogin:
