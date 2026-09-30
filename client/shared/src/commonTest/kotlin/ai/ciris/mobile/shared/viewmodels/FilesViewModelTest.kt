@@ -66,6 +66,8 @@ private class FakeDrive(
     }
     override suspend fun writeFile(write: FileWrite): FileWritten { writes += write; return written }
     override suspend fun readNotes(): NoteListing = NoteListing("self", notes.toList())
+    override suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): ai.ciris.mobile.shared.models.drive.FileCustody =
+        throw NodeRefusal(null, null, 404) // a released node: the route is not mounted
     override suspend fun writeNote(body: String) {
         noteWrites += body
         notes += Note("n${notes.size}", "2026-09-24T00:00:00Z", "me", body, "open") // the notes wire says open, not here

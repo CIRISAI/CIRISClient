@@ -1,0 +1,96 @@
+csd: CSD-107
+flow: csd_107_file_custody
+title: Where is this file — the version fact on the released line, and the devices when the route is there
+description: >-
+  CSD-107 §4, driven. The card is built on this branch; the route
+  (GET /v1/files/{id}/custody?cohort&room_id) is CIRISServer#704, unmerged,
+  and on no released node, where it is a bare 404. So the state the matrix can
+  reach today is the version fact, and it is reached through Notes, because a
+  note can be written on a bare node without a file picker: write a note, open
+  its receipt, choose Where is this file. The populated steps are asserted for
+  a node built from CSD-107 §3a (actor `one` on D1, a 24 MiB self file on D1,
+  D2 receipted) and are optional until the route ships. Every call goes to the
+  NODE URL.
+# Floor: `unreleased` — every tag below is a literal in
+# ui/screens/files/FileCustodySheet.kt (CustodyTags) or NotesScreen.kt, in no
+# release yet. When a released node carries the route, the
+# `the_released_node_names_the_version` step goes red by design: flip it to
+# optional and promote the populated steps.
+client: "unreleased"
+
+steps:
+  - step_id: write_a_note
+    title: A note is written, so there is a file to ask about
+    description: >-
+      Entry: circle_agent -> tab_chats -> nav_epistemic_notes (CSD-008). A note
+      is an unnamed text/plain row in the self room — a file the custody route
+      answers for at cohort=self.
+    requires:
+      screen: Notes
+      visible: [input_note]
+    do:
+      - input: {input_note: "Where is this note"}
+      - click: btn_note_save
+    expect:
+      visible: [notes_list]
+      count: {of: "notes_row_*", min: 1}
+
+  - step_id: the_receipt_offers_where_is_this_file
+    title: The note's receipt hamburger opens the receipt, and its acts hold Where is this file
+    requires:
+      screen: Notes
+      count: {of: "btn_receipt_*", min: 1}
+    do:
+      - click: "btn_receipt_*"
+    expect:
+      visible: [sheet_receipt, btn_receipt_close]
+      count: {of: "btn_receipt_act_where_*", min: 1}
+
+  - step_id: the_released_node_names_the_version
+    title: On a node without the route, the card says the node is too old, not that the file is nowhere
+    description: >-
+      A bare 404 (no reason id) is a version fact, rendered as CSD-092's
+      contact-code card renders it: never an empty card and never a device
+      list with nothing on it.
+    requires:
+      visible: [sheet_receipt]
+    do:
+      - click: "btn_receipt_act_where_*"
+    expect:
+      state: error
+      visible: [sheet_file_custody, custody_node_too_old, btn_custody_close]
+      absent: [card_file_custody, text_custody_summary, custody_empty]
+      text: {custody_node_too_old: "newer ciris-server"}
+
+  - step_id: the_devices_are_listed
+    title: With the route (CSD-107 §3a), the card lists both devices and D2 as received
+    optional_step: true
+    requires:
+      visible: [card_file_custody]
+    expect:
+      state: populated
+      visible: [card_file_custody, text_custody_summary, custody_held_here, custody_copies, custody_author, custody_footnote_remove]
+      matches: {text_custody_summary: "^On (at least )?[0-9]+ of your [0-9]+ devices"}
+      count: {of: "row_custody_device_*", eq: 2}
+      text: {custody_copies: "can't be counted"}
+
+  - step_id: a_receipt_is_a_time_not_a_promise
+    title: The received device is named (with a time once persist v52 sends one), and the node says what a receipt proves
+    optional_step: true
+    requires:
+      visible: [card_file_custody]
+      count: {of: "custody_holds_*", min: 2}
+    expect:
+      count: {of: "btn_custody_remove_*", min: 1}
+      visible: [custody_why_custody_receipt_is_delivery_not_holding, custody_why_custody_receipt_is_delivery_not_holding_detail]
+
+  - step_id: close_the_card
+    title: The card closes and Notes is unchanged beneath it
+    requires:
+      visible: [btn_custody_close]
+    do:
+      - click: btn_custody_close
+    expect:
+      screen: Notes
+      visible: [notes_list]
+      absent: [sheet_file_custody]

@@ -29,6 +29,8 @@ import ai.ciris.mobile.shared.ui.screens.ReadFailureBlock
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.viewmodels.AddState
+import ai.ciris.mobile.shared.viewmodels.CustodyTarget
+import ai.ciris.mobile.shared.viewmodels.FileCustodyViewModel
 import ai.ciris.mobile.shared.viewmodels.FilesCohort
 import ai.ciris.mobile.shared.viewmodels.FilesState
 import ai.ciris.mobile.shared.viewmodels.FilesViewModel
@@ -152,7 +154,13 @@ internal fun fileReceipt(entry: DriveEntry, acts: List<ReceiptAct>): Receipt = R
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null, households: HouseholdsViewModel? = null) {
+fun FilesScreen(
+    viewModel: FilesViewModel,
+    nodeVersion: String? = null,
+    households: HouseholdsViewModel? = null,
+    /** The one "Where is this file" card (CSD-107); null leaves the item out of the menu. */
+    custody: FileCustodyViewModel? = null,
+) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
     val open by viewModel.open.collectAsState()
@@ -303,6 +311,7 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null, househol
                             }
                             items(group.entries, key = { it.attestationId }) { entry ->
                                 val openLabel = localizedString("mobile.files_open")
+                                val whereLabel = localizedString("mobile.files_custody_where")
                                 ItemRow(
                                     glyph = fileGlyph(entry.mediaType),
                                     title = entry.filename ?: localizedString("mobile.files_untitled"),
@@ -311,10 +320,18 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null, househol
                                     secondary = byteStateText(entry.byteState),
                                     receipt = fileReceipt(
                                         entry,
-                                        acts = listOf(ReceiptAct(openLabel, "btn_receipt_act_open_${entry.attestationId}") {
-                                            receiptFor = null
-                                            viewModel.openFile(entry)
-                                        }),
+                                        acts = listOfNotNull(
+                                            ReceiptAct(openLabel, "btn_receipt_act_open_${entry.attestationId}") {
+                                                receiptFor = null
+                                                viewModel.openFile(entry)
+                                            },
+                                            if (custody == null) null else {
+                                                ReceiptAct(whereLabel, CustodyTags.whereAct(entry.attestationId)) {
+                                                    receiptFor = null
+                                                    custody.open(custodyTargetOf(entry))
+                                                }
+                                            },
+                                        ),
                                     ),
                                     onClick = { viewModel.openFile(entry) },
                                     onOpenReceipt = { receiptFor = it },
@@ -347,7 +364,12 @@ fun FilesScreen(viewModel: FilesViewModel, nodeVersion: String? = null, househol
 
     if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() })
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
+    custody?.let { FileCustodyHost(it, nodeVersion) }
 }
+
+/** A drive row as the custody route's per-file query: its cohort, and its room unless it is a self file. */
+internal fun custodyTargetOf(entry: DriveEntry): CustodyTarget =
+    CustodyTarget(entry.attestationId, entry.cohort, entry.roomId, entry.filename)
 
 /** What happened to the last add, in words. The three facts the server keeps apart stay apart here. */
 @Composable

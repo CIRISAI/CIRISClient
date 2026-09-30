@@ -1,6 +1,18 @@
 package ai.ciris.mobile.shared.ui.screens.files
 
+import ai.ciris.mobile.shared.ceg.Dim
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.models.drive.Note
+import ai.ciris.mobile.shared.platform.testableWithHandler
+import ai.ciris.mobile.shared.ui.glyphs.Glyph
+import ai.ciris.mobile.shared.ui.primitives.Fact
+import ai.ciris.mobile.shared.ui.primitives.Receipt
+import ai.ciris.mobile.shared.ui.primitives.ReceiptAct
+import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
+import ai.ciris.mobile.shared.viewmodels.CustodyTarget
+import ai.ciris.mobile.shared.viewmodels.FileCustodyViewModel
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.IconButton
 import ai.ciris.mobile.shared.models.drive.ByteState
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
@@ -55,12 +67,20 @@ object NotesTags {
  */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun NotesScreen(viewModel: NotesViewModel, nodeVersion: String? = null) {
+fun NotesScreen(
+    viewModel: NotesViewModel,
+    nodeVersion: String? = null,
+    /** The one "Where is this file" card (CSD-107); null leaves the item out of the menu. */
+    custody: FileCustodyViewModel? = null,
+) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
     val writing by viewModel.writing.collectAsState()
     val writeError by viewModel.writeError.collectAsState()
     var draft by remember { mutableStateOf("") }
+    var receiptFor by remember { mutableStateOf<Receipt?>(null) }
+    val whereLabel = localizedString("mobile.files_custody_where")
+    val noteLabel = localizedString("mobile.notes_title")
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -106,8 +126,34 @@ fun NotesScreen(viewModel: NotesViewModel, nodeVersion: String? = null) {
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         items(s.notes, key = { it.attestationId }) { note ->
+                            // A note is a signed row like any file, so it carries the same
+                            // receipt and hamburger ItemRow gives a drive row (`btn_receipt_<id>`);
+                            // its acts hold "Where is this file" (CSD-107).
+                            val receipt = noteReceipt(
+                                note,
+                                acts = listOfNotNull(
+                                    if (custody == null) null else {
+                                        ReceiptAct(whereLabel, CustodyTags.whereAct(note.attestationId)) {
+                                            receiptFor = null
+                                            custody.open(CustodyTarget(note.attestationId, "self", null, noteName(note, noteLabel)))
+                                        }
+                                    },
+                                ),
+                            )
                             CardShell(tag = NotesTags.row(note.attestationId)) {
-                                Text(note.assertedAt.take(16).replace('T', ' '), style = CirisTheme.type.label, color = t.mute)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        note.assertedAt.take(16).replace('T', ' '),
+                                        style = CirisTheme.type.label, color = t.mute,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                    IconButton(
+                                        onClick = { receiptFor = receipt },
+                                        modifier = Modifier.size(32.dp).testableWithHandler("btn_receipt_${receipt.id}") { receiptFor = receipt },
+                                    ) {
+                                        Glyph(GlyphName.RECEIPT, tint = t.mute, size = 18.dp, contentDescription = localizedString("mobile.receipt_open"))
+                                    }
+                                }
                                 // A note this device cannot open is still a note that exists; say where it is.
                                 if (note.body != null && note.byteState == ByteState.HERE) {
                                     Text(note.body, style = CirisTheme.type.body, color = t.ink)
@@ -145,4 +191,27 @@ fun NotesScreen(viewModel: NotesViewModel, nodeVersion: String? = null) {
             }
         }
     }
+    receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
+    custody?.let { FileCustodyHost(it, nodeVersion) }
 }
+
+/**
+ * A note's receipt: what `GET /v1/notes` carries (who wrote it; the self
+ * cohort, since a note lives in the self room by definition) and what it does
+ * not, said as not sent.
+ */
+internal fun noteReceipt(note: Note, acts: List<ReceiptAct>): Receipt = Receipt(
+    id = note.attestationId,
+    subject = Fact.NotSent,
+    attester = Fact.Wire(note.authorKeyId),
+    scope = Fact.Wire("self"),
+    dimension = Dim.holdsBytesSha256Prefix,
+    dimensionValue = Fact.NotSent,
+    rule = Fact.NotSent,
+    holders = null,
+    acts = acts,
+)
+
+/** What the custody card calls a note: its first line when this device can read it, else "Notes to self". */
+internal fun noteName(note: Note, fallback: String): String =
+    note.body?.lineSequence()?.firstOrNull()?.trim()?.take(60)?.takeIf { it.isNotEmpty() } ?: fallback

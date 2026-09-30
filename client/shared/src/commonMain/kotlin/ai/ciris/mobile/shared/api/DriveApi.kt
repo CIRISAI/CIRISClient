@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.api
 
 import ai.ciris.mobile.shared.models.drive.DriveListing
+import ai.ciris.mobile.shared.models.drive.FileCustody
 import ai.ciris.mobile.shared.models.drive.FileWrite
 import ai.ciris.mobile.shared.models.drive.FileWritten
 import ai.ciris.mobile.shared.models.drive.MediaPolicy
@@ -27,6 +28,14 @@ interface DriveApi {
 
     /** `GET /v1/media/policy`: this node's render policy (0.5.217, CIRISServer#643). Public; a 404 is a node that predates it. */
     suspend fun readMediaPolicy(): MediaPolicy
+
+    /**
+     * `GET /v1/files/{id}/custody` (CSD-107): which of the person's devices a file
+     * is on. [cohort] is `self` | `family` | `community`; [roomId] names the
+     * family or community room and is omitted for `self`. Provisional route: a
+     * released node answers a bare 404.
+     */
+    suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): FileCustody
 }
 
 /**
@@ -47,4 +56,6 @@ class ClientDrive(
     override suspend fun readNotes(): NoteListing = client.readNotes(nodeUrl = nodeUrl())
     override suspend fun writeNote(body: String) = client.writeNote(body, nodeUrl = nodeUrl())
     override suspend fun readMediaPolicy(): MediaPolicy = client.readMediaPolicy(nodeUrl = nodeUrl())
+    override suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): FileCustody =
+        client.readFileCustody(attestationId, cohort, roomId, nodeUrl = nodeUrl())
 }

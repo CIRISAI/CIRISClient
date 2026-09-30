@@ -1,7 +1,7 @@
 # CSD-007 — Files (the drive plane)
 
 **CSD**: CSD-007 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B3 ("Files holds files")
-**Pairs with**: CSD-008 (notes to self, the chat of one in Just me › Chats) · CSD-100 (the household whose files Family › Files lists) · `FSD/MEDIA_EDGE.md` (the renderer stack)
+**Pairs with**: CSD-107 (Where is this file — the custody card every row's receipt opens) · CSD-008 (notes to self, the chat of one in Just me › Chats) · CSD-100 (the household whose files Family › Files lists) · `FSD/MEDIA_EDGE.md` (the renderer stack)
 **Flow**: `testing/flows/drafts/csd-007-files.yaml` (staged; floor `unreleased`)
 
 ```yaml csd:stage
@@ -196,6 +196,7 @@ node URL works on every agent version, so the client keeps calling it. Rows mark
 | the households, for which room Family › Files lists | `GET /v1/families` | CIRISServer `src/family_api.rs` (CSD-100 §3) | called — `viewmodels/HouseholdsViewModel.kt:136`, the shared household model |
 | the contacts the household model names people from | `GET /v1/contacts` | the api base (CSD-005, CSD-100 §3) | called — `api/HouseholdsApi.kt:85`, by the shared household model; Files reads nothing from it |
 | this owner's key, so the roster can say "you" | `GET /v1/setup/owned-nodes` | CIRISServer (CSD-100 §3) | called — `api/HouseholdsApi.kt:86`, by the shared household model |
+| which of the person's devices the file is on | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/files/FilesScreen.kt:331`, from the row receipt's **Where is this file** act (`btn_receipt_act_where_<id>`); the card is CSD-107's |
 | everything about a file except its bytes, **including `content_digest`** | `GET /v1/files/{id}/meta` | CIRISServer `src/drive.rs:3017` (handler `:1872`; digest `:1917-1921`, `:1951-1952`; costs a whole read, so it is computed here and on open, never per listed row) | live, **not called** — the card opens the bytes to learn what a meta read would say |
 | rename | `POST /v1/files/{id}/rename` | CIRISServer `src/drive.rs:3018` (handler `:2272`) — a new row over the SAME bytes, old row withdrawn, author only | live, **not called** |
 | move to another circle ("going out asks": this call IS the ask) | `POST /v1/files/{id}/move` `{…, keep_source}` | CIRISServer `src/drive.rs:3019` (handler `:2465`) — reseals at the target room's tier; author only, and a member of the target | live, **not called**. This is the cross-circle move the Files tab needs; `keep_source: true` is "share to" |
