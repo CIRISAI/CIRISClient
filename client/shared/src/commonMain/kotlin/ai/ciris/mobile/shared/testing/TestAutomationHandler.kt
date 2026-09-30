@@ -207,6 +207,18 @@ object TestAutomationHandler {
             )
         }
 
+        // DISABLED IS AN ANSWER, NOT A MISSING HANDLER. A `testableClickable`
+        // with `enabled = false` has no handler by design (CIRISClient#69);
+        // say so, the same way on every platform (HTTP 409 via the action).
+        if (ai.ciris.mobile.shared.platform.DisabledControls.isDisabled(request.testTag)) {
+            return ActionResponse(
+                success = false,
+                element = request.testTag,
+                action = ai.ciris.mobile.shared.platform.DisabledControls.REFUSED_ACTION,
+                error = ai.ciris.mobile.shared.platform.DisabledControls.refusal(request.testTag),
+            )
+        }
+
         if (element == null) {
             return ActionResponse(
                 success = false,

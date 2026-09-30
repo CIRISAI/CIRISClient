@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.testing
 
+import ai.ciris.mobile.shared.platform.DisabledControls
 import ai.ciris.mobile.shared.platform.TestAutomation
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
@@ -64,6 +65,7 @@ class MobileAutomationSurfaceTest {
         TestAutomationState.clearElements()
         TestAutomation.unregisterInputSink(field)
         TestAutomation.unregisterClickHandler(btn)
+        DisabledControls.mark(btn, disabled = false)
     }
 
     // ── /input must not claim to have typed into nothing ──────────────────
@@ -225,6 +227,25 @@ class MobileAutomationSurfaceTest {
             val r = TestAutomationHandler.handleClick(ClickRequest("btn_absent"))
             assertFalse(r.success)
             assertTrue((r.error ?: "").contains("Element not found"), r.error ?: "")
+        } finally {
+            Dispatchers.resetMain()
+            exec.shutdownNow()
+        }
+    }
+
+    @Test
+    fun a_click_on_a_disabled_control_says_disabled_not_no_handler() = runTest {
+        // iOS, run 36733112700: the disabled Provision submit answered 404 "No
+        // click handler", which reads as a wiring defect. It is a state.
+        val exec = Executors.newSingleThreadExecutor { r -> Thread(r, "ciris-main-probe") }
+        Dispatchers.setMain(exec.asCoroutineDispatcher())
+        try {
+            register(btn)
+            DisabledControls.mark(btn, disabled = true)
+            val r = TestAutomationHandler.handleClick(ClickRequest(btn))
+            assertFalse(r.success)
+            assertEquals(DisabledControls.REFUSED_ACTION, r.action, "the servers map this action to 409")
+            assertTrue((r.error ?: "").contains("is disabled"), r.error ?: "")
         } finally {
             Dispatchers.resetMain()
             exec.shutdownNow()

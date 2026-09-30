@@ -47,6 +47,10 @@ from testing.driver import DriverError, TestAutomationServer
 _SCROLL_STEPS = 24
 #: The answers `/scroll` gives when there is nowhere further to go.
 _SCROLL_END = ("already at the", "NO overflow", "can scroll")
+#: How a platform refuses a click on a DISABLED control. From 0.5.225 every
+#: platform says "is disabled" (409); before that iOS and Android answered
+#: "No click handler" (404), because a disabled `testableClickable` has none.
+_REFUSED_AS_DISABLED = ("is disabled", "No click handler")
 
 
 @dataclass
@@ -168,6 +172,36 @@ class SyncFlowHelper:
 
     async def click(self, tag: str, timeout: int = 2000) -> bool:
         return self._reach(tag, lambda: self._drv.click(tag))
+
+    async def click_refused(self, tag: str, timeout: int = 2000) -> bool:
+        """Click a control the flow says is DISABLED, and hold only if nothing
+        ran behind it: the platform refused the click, or (desktop before
+        0.5.225) fell back to a coordinate click that no handler answered —
+        the step's `absent:` then judges whether anything happened. A
+        programmatic handler that ran is CIRISClient#69's shape and fails;
+        so does a control that is not there at all (that is not a refusal,
+        it is a missing control)."""
+        seen: dict = {}
+
+        def act() -> None:
+            try:
+                seen["answer"] = self._drv.click(tag)
+            except DriverError as e:
+                if any(word in str(e) for word in _REFUSED_AS_DISABLED):
+                    seen["refused"] = str(e)
+                    return
+                raise
+
+        if not self._reach(tag, act):
+            return False
+        if "refused" in seen:
+            return True
+        answer = seen.get("answer")
+        if isinstance(answer, dict) and answer.get("action") == "mouse-click":
+            return True
+        self.last_error = (f"{tag} accepted the click and its handler ran: a disabled control "
+                           f"that still fires is CIRISClient#69's shape")
+        return False
 
     async def input_text(self, tag: str, text: str) -> bool:
         return self._reach(tag, lambda: self._drv.input(tag, text))

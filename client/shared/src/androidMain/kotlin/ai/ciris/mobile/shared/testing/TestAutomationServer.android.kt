@@ -85,8 +85,15 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
                 post("/click") {
                     val request = call.receive<ClickRequest>()
                     val resp = TestAutomationHandler.handleClick(request)
+                    // 409 for a disabled control: it exists and refuses, which
+                    // is not "not found" (desktop and iOS answer the same).
                     call.respond(
-                        if (resp.success) HttpStatusCode.OK else HttpStatusCode.NotFound,
+                        when {
+                            resp.success -> HttpStatusCode.OK
+                            resp.action == ai.ciris.mobile.shared.platform.DisabledControls.REFUSED_ACTION ->
+                                HttpStatusCode.Conflict
+                            else -> HttpStatusCode.NotFound
+                        },
                         resp
                     )
                 }

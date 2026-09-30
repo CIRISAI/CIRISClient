@@ -46,6 +46,7 @@ class _SlowWizard:
         # seconds (step indicators up, no step active, no advance control),
         # then claimed — or the error panel, which never returns to Login.
         self.claim_takes, self.claim_error = claim_takes, claim_error
+        self.refuse_next = 0
         self.on = "Login"
         self.step = "you"
         self.next_at: float | None = None
@@ -101,6 +102,11 @@ class _SlowWizard:
         self.clicks.append(tag)
         if tag not in {e.test_tag for e in self.tree()}:
             raise DriverError(f"POST /click -> HTTP 404: No click handler for {tag!r}")
+        if tag == "btn_next" and self.refuse_next > 0:
+            # Next still disabled (iOS: the fields reach the ViewModel late),
+            # answered the way every platform answers from 0.5.225.
+            self.refuse_next -= 1
+            raise DriverError(f"POST /click -> HTTP 409: {tag} is disabled: it refuses /click")
         if tag == "btn_local_login":
             self.on = "Setup"
         elif tag == "trace_consent_yes":
@@ -168,6 +174,16 @@ def test_a_refused_claim_is_reported_with_its_reason(monkeypatch):
         sf.run_setup(w, "qaadmin", "QaAdmin!2345")
     assert "claim PIN was not captured" in str(e.value)
     assert clock.t < 60, "a refused claim is reported when it is refused, not at the timeout"
+
+
+def test_a_next_that_answers_disabled_is_waited_for_like_one_with_no_handler(monkeypatch):
+    """From 0.5.225 a disabled control answers "is disabled" (409) on every
+    platform, not "No click handler"; the fixture's wait for a late-enabling
+    Next must read both."""
+    clock, w = _drive(monkeypatch, advance_after=1.0)
+    w.refuse_next = 3
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert w.screen() == "Login"
 
 
 class _OwnedLogin:

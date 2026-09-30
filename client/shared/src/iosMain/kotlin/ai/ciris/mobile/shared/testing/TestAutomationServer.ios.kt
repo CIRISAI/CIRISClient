@@ -261,7 +261,14 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                 method == "POST" && path == "/click" -> {
                     val req = json.decodeFromString<ClickRequest>(body)
                     val resp = TestAutomationHandler.handleClick(req)
-                    (if (resp.success) 200 else 404) to json.encodeToString(resp)
+                    // 409 for a disabled control: it exists and refuses, which
+                    // is not "not found" (desktop and Android answer the same).
+                    val status = when {
+                        resp.success -> 200
+                        resp.action == ai.ciris.mobile.shared.platform.DisabledControls.REFUSED_ACTION -> 409
+                        else -> 404
+                    }
+                    status to json.encodeToString(resp)
                 }
                 method == "POST" && path == "/input" -> {
                     val req = json.decodeFromString<InputRequest>(body)

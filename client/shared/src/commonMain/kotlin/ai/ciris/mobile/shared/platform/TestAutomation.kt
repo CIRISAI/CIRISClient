@@ -12,7 +12,9 @@ import androidx.compose.ui.composed
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.update
 
 /**
  * Data class for pending text input requests.
@@ -231,8 +233,8 @@ fun Modifier.testable(tag: String, text: String? = null): Modifier = composed {
  * Register [tag]'s programmatic click handler only while the control is
  * [enabled]; a disabled control has none.
  *
- * With no handler `/click` answers "No click handler" and `/tree` reports
- * `canClick: false` — which is what a disabled control IS. The handler used to
+ * With no handler `/tree` reports `canClick: false` — which is what a disabled
+ * control IS — and `/click` answers that it is disabled ([DisabledControls]). The handler used to
  * be registered unconditionally, so `/click btn_next` ran the wizard's final
  * step while Next was greyed out for a step already in flight (CIRISClient#69):
  * a robot could do what no person could.
@@ -240,6 +242,39 @@ fun Modifier.testable(tag: String, text: String? = null): Modifier = composed {
 internal fun bindClickHandler(tag: String, enabled: Boolean, handler: () -> Unit) {
     if (enabled) TestAutomation.registerClickHandler(tag, handler)
     else TestAutomation.unregisterClickHandler(tag)
+    DisabledControls.mark(tag, disabled = !enabled)
+}
+
+/** The control is gone (or its `enabled` is about to change): no handler, and no longer "disabled". */
+internal fun releaseClickHandler(tag: String) {
+    TestAutomation.unregisterClickHandler(tag)
+    DisabledControls.mark(tag, disabled = false)
+}
+
+/**
+ * The controls composed right now with `enabled = false` — so `/click` can say
+ * "disabled" instead of "no click handler", on every platform, in one sentence.
+ *
+ * iOS, run 36733112700: a disabled Provision submit answered `/click` with 404
+ * "No click handler", which reads as a wiring defect, while desktop fell back
+ * to a coordinate click on the greyed-out button and answered success. Three
+ * platforms, two answers, neither of them "disabled". A disabled control is
+ * a known state of a known control, and the answer now names it (HTTP 409,
+ * `action = "click-refused"`).
+ */
+object DisabledControls {
+    /** The `action` a refused click reports; the servers map it to HTTP 409. */
+    const val REFUSED_ACTION = "click-refused"
+
+    private val tags = MutableStateFlow<Set<String>>(emptySet())
+
+    fun mark(tag: String, disabled: Boolean) =
+        tags.update { if (disabled) it + tag else it - tag }
+
+    fun isDisabled(tag: String): Boolean = tag in tags.value
+
+    fun refusal(tag: String): String =
+        "$tag is disabled: it refuses /click, as it refuses a press, until the screen enables it"
 }
 
 /**
@@ -266,13 +301,13 @@ fun Modifier.testableClickable(
     val currentOnClick by rememberUpdatedState(onClick)
     DisposableEffect(tag) {
         onDispose {
-            TestAutomation.unregisterClickHandler(tag)
+            releaseClickHandler(tag)
             TestAutomation.unregisterElement(tag)
         }
     }
     DisposableEffect(tag, enabled) {
         bindClickHandler(tag, enabled) { currentOnClick() }
-        onDispose { TestAutomation.unregisterClickHandler(tag) }
+        onDispose { releaseClickHandler(tag) }
     }
     this.testTag(tag).clickable(enabled = enabled) { onClick() }.trackPosition(tag, text)
 }

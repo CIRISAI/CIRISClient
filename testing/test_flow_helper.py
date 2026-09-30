@@ -20,7 +20,10 @@ from testing.gate.flow_helper import SyncFlowHelper
 class _Drv:
     """A driver whose target sits `off_screen_until` scrolls below the fold."""
 
-    def __init__(self, off_screen_until: int = 0, refuse: str = "", bottom_after: int = 99):
+    def __init__(self, off_screen_until: int = 0, refuse: str = "", bottom_after: int = 99,
+                 response=None):
+        #: What an ACCEPTED /click answers (the driver returns the body).
+        self.response = response if response is not None else {"success": True, "action": "click"}
         self.scrolls: list = []
         self.clicks: list = []
         self.inputs: list = []
@@ -36,6 +39,7 @@ class _Drv:
     def click(self, tag):
         self.clicks.append(tag)
         self._gate("click", tag)
+        return self.response
 
     def input(self, tag, text):
         self.inputs.append((tag, text))
@@ -76,6 +80,61 @@ def test_a_refusals_reason_is_kept_for_the_verdict():
     assert asyncio.run(h.click("btn_x")) is False
     assert "No click handler" in h.last_error
     assert not d.scrolls, "a refusal that is not about the fold is not answered by scrolling"
+
+
+# ── click_refused: a disabled control's click does nothing ────────────────
+# iOS, run 36733112700, csd_068 `empty_submit_does_nothing`: a disabled
+# Provision submit answered /click with a refusal (1dcf0b0c), the driver
+# raised, and the step whose claim IS "clicking this does nothing" failed.
+
+
+def test_a_click_refused_as_disabled_is_the_outcome_click_refused_asks_for():
+    d = _Drv(refuse="POST /click -> HTTP 409: btn_submit is disabled: it refuses /click, "
+                    "as it refuses a press")
+    h = SyncFlowHelper(d)
+    assert asyncio.run(h.click_refused("btn_submit")) is True
+    assert d.clicks == ["btn_submit"]
+
+
+def test_an_older_mobile_clients_no_click_handler_is_a_refusal_too():
+    d = _Drv(refuse="POST /click -> HTTP 404: No click handler for: btn_submit")
+    assert asyncio.run(SyncFlowHelper(d).click_refused("btn_submit")) is True
+
+
+def test_an_older_desktops_coordinate_click_is_accepted_and_judged_by_the_expect():
+    """Desktop before 0.5.225 fell back to a mouse click on a control with no
+    handler; Compose ignores it on a disabled button. No handler ran, so the
+    action holds and the step's `absent:` judges the effect."""
+    d = _Drv(response={"success": True, "action": "mouse-click",
+                       "error": "no programmatic handler for btn_submit; used a coordinate click"})
+    assert asyncio.run(SyncFlowHelper(d).click_refused("btn_submit")) is True
+
+
+def test_a_handler_that_fires_behind_a_disabled_control_fails_click_refused():
+    d = _Drv(response={"success": True, "action": "click"})
+    h = SyncFlowHelper(d)
+    assert asyncio.run(h.click_refused("btn_submit")) is False
+    assert "handler ran" in h.last_error and "#69" in h.last_error
+
+
+def test_click_refused_on_a_missing_control_is_a_failure_not_a_refusal():
+    d = _Drv(refuse="POST /click -> HTTP 404: Element not found: btn_submit; on screen: []")
+    h = SyncFlowHelper(d)
+    assert asyncio.run(h.click_refused("btn_submit")) is False
+    assert "Element not found" in h.last_error
+
+
+def test_click_refused_scrolls_an_off_screen_control_first():
+    d = _Drv(off_screen_until=2, response={"success": True, "action": "click"})
+    d.refuse_after_scroll = True
+    real_gate = d._gate
+
+    def gate(verb, tag):
+        real_gate(verb, tag)
+        raise DriverError(f"POST /click -> HTTP 409: {tag} is disabled")
+    d._gate = gate
+    assert asyncio.run(SyncFlowHelper(d).click_refused("btn_submit")) is True
+    assert len(d.scrolls) == 2
 
 
 def test_scrolling_is_bounded_and_the_bottom_is_reported():

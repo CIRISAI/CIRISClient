@@ -214,10 +214,12 @@ BUTTONS = re.compile(
 
 
 def _flow_click_targets() -> set[str]:
-    """Every literal tag a shipped flow clicks (`${...}` tags cannot be grepped)."""
+    """Every literal tag a shipped flow clicks (`${...}` tags cannot be grepped),
+    including `click_refused:` — the control a flow asserts is disabled is the
+    one whose handler most needs to follow `enabled`."""
     tags: set[str] = set()
     for flow in FLOWS_DIR.glob("*.yaml"):
-        for tag in re.findall(r"^\s*-\s*click:\s*\"?([A-Za-z0-9_]+)\"?\s*$", flow.read_text(encoding="utf-8"), re.M):
+        for tag in re.findall(r"^\s*-\s*click(?:_refused)?:\s*\"?([A-Za-z0-9_]+)\"?\s*$", flow.read_text(encoding="utf-8"), re.M):
             tags.add(tag)
     return tags
 

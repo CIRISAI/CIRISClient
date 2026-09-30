@@ -137,6 +137,11 @@ def _field_report(drv: TestAutomationServer) -> str:
     return "; ".join(sorted(parts))
 
 
+#: How a platform refuses a click on a disabled control: every platform from
+#: 0.5.225 (DisabledControls, HTTP 409), and iOS/Android before it (HTTP 404).
+DISABLED_ANSWERS = ("is disabled", "No click handler")
+
+
 #: How long a wizard step may take to show the next one after Next. Windows
 #: (run 36588619656) went blank for more than the 2 s the fixture used to
 #: sleep — the fed-ID mint on Next and the next step's first composition on a
@@ -329,8 +334,9 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
         before = (drv.screen(), _active_step(drv))
         # iOS's /tree omits `canClick` when it is false (defaults are not
         # serialized), so `_wait_clickable` cannot see a disabled Next there.
-        # A disabled control answers the click with 404 "No click handler":
-        # treat that as "not yet", bounded, and name the step if it stays so.
+        # A disabled control refuses the click — 409 "is disabled" from 0.5.225
+        # on every platform, 404 "No click handler" on older mobile clients:
+        # treat either as "not yet", bounded, and name the step if it stays so.
         clicked = False
         for _ in range(15):
             try:
@@ -338,7 +344,7 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 clicked = True
                 break
             except DriverError as e:
-                if "No click handler" not in str(e):
+                if not any(w in str(e) for w in DISABLED_ANSWERS):
                     raise
                 time.sleep(2.0)
         if not clicked:

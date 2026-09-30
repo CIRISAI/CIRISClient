@@ -27,7 +27,7 @@ steps:
     title: Signing in on a bare node lands on People
     requires:                 # checked BEFORE the step; the first step's is the entry
       screen: Contacts
-    do:                       # click / input / scroll_to / wait (one per entry)
+    do:                       # click / click_refused / input / scroll_to / wait (one per entry)
       - wait: card_contacts_add
         wait_ms: 5000         # a `wait` waits wait_ms × 4
     expect:                   # checked AFTER
@@ -44,7 +44,9 @@ steps:
 
 The language is `testing/gate/flow_spec.py`'s — vendored from CIRISAgent, with
 the CSD/3 §3 predicates (`count`, `number`, `matches`, `one_of`, `each`,
-`relation`, `state`) and one local addition, `csd:` (see
+`relation`, `state`) and local additions — `csd:`, `cleanup:` with `when:`, and
+`click_refused:` for a control the step says is disabled, which holds when the
+platform refuses the click and fails when a handler runs (see
 `testing/gate/VENDORED.md`). Unknown keys anywhere are a load error.
 
 ### How a flow is tied to its CSD

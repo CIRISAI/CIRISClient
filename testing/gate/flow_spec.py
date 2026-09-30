@@ -58,7 +58,14 @@ _COND_KEYS = {
     "screen", "visible", "absent", "text",
     "count", "number", "matches", "one_of", "each", "relation", "state",
 }
-_ACTION_KEYS = {"click", "input", "scroll_to", "wait", "wait_ms", "when"}
+_ACTION_KEYS = {"click", "click_refused", "input", "scroll_to", "wait", "wait_ms", "when"}
+#: The verbs, one per action. LOCAL DELTA: `click_refused: TAG` clicks a control
+#: the step says is DISABLED and holds only when nothing ran behind it — the
+#: platform refused the click, or no handler answered it. A handler that fires
+#: fails the action (CIRISClient#69); the step's `absent:` judges the effect.
+#: iOS, run 36733112700: a plain `click:` called the refusal of a disabled
+#: submit a failure, on the step whose claim IS that the click does nothing.
+_VERBS = ("click", "click_refused", "input", "scroll_to", "wait")
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
 _FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture", "cleanup"}
@@ -195,7 +202,7 @@ class Condition:
 
 @dataclass
 class Action:
-    """One interaction. Exactly one of click/input/scroll_to/wait per entry."""
+    """One interaction. Exactly one of click/click_refused/input/scroll_to/wait per entry."""
 
     kind: str
     target: str
@@ -224,10 +231,10 @@ class Action:
             raise SpecError(f"{where}: `when:` is for `cleanup:` actions only")
         if when is not None and (not isinstance(when, str) or not when.strip()):
             raise SpecError(f"{where}: `when:` names one tag")
-        verbs = [k for k in ("click", "input", "scroll_to", "wait") if k in raw]
+        verbs = [k for k in _VERBS if k in raw]
         if len(verbs) != 1:
             raise SpecError(
-                f"{where}: exactly one of click/input/scroll_to/wait per action, got {verbs or 'none'}"
+                f"{where}: exactly one of {'/'.join(_VERBS)} per action, got {verbs or 'none'}"
             )
         verb = verbs[0]
         if verb == "input":
@@ -349,7 +356,7 @@ class FlowSpec:
         spec.fixture = fixture
         cleanup_raw = raw.get("cleanup") or []
         if not isinstance(cleanup_raw, list):
-            raise SpecError(f"{path}: `cleanup` is a list of actions (click / input / scroll_to / wait)")
+            raise SpecError(f"{path}: `cleanup` is a list of actions ({' / '.join(_VERBS)})")
         spec.cleanup = [Action.parse(a, f"{path}: cleanup[{i}]", cleanup=True) for i, a in enumerate(cleanup_raw)]
         # A `${NAME}` with no fixture to fill it would reach the app as the
         # literal text `${NAME}` and fail as "element not found" — the one
@@ -819,6 +826,10 @@ class FlowRunner:
             if action.kind == "click":
                 ok = await self.helper.click(action.target, timeout=action.wait_ms * 4)
                 return None if ok else f"click {action.target!r} did not succeed{self._why()}"
+            if action.kind == "click_refused":
+                ok = await self.helper.click_refused(action.target, timeout=action.wait_ms * 4)
+                return None if ok else (f"click_refused {action.target!r}: the disabled control "
+                                        f"did not refuse{self._why()}")
             if action.kind == "input":
                 ok = await self.helper.input_text(action.target, action.value or "")
                 return None if ok else f"input into {action.target!r} did not succeed{self._why()}"
@@ -895,7 +906,7 @@ class FlowRunner:
             if action.when is not None and not await self._composed(action.when, settle=changed):
                 print(f"     cleanup: nothing to close \u2014 {action.when!r} is not on screen")
                 continue
-            if action.kind in ("click", "input") and not await self._composed(action.target, settle=changed):
+            if action.kind in ("click", "click_refused", "input") and not await self._composed(action.target, settle=changed):
                 print(f"     cleanup: nothing to close \u2014 {action.target!r} is not on screen")
                 continue
             changed = True

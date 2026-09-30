@@ -366,6 +366,16 @@ class FakeHelper:
             self.els = {t: _El(t, "") for t in shown}
         return True
 
+    async def click_refused(self, tag, timeout=2000):
+        self.calls.append(f"click_refused {tag}")
+        if tag not in self.els:
+            self.last_error = f"no such element {tag!r}"
+            return False
+        if tag not in self.refuse:
+            self.last_error = f"{tag} accepted the click and its handler ran"
+            return False
+        return True
+
     async def input_text(self, tag, text):
         self.calls.append(f"input {tag}")
         return tag in self.els
@@ -571,6 +581,41 @@ def test_a_failed_action_carries_the_drivers_reason(tmp_path):
     out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
     assert out.status == run_flows.FAIL
     assert "no such element 'btn_gone'" in out.detail, out.detail
+
+
+REFUSED = GOOD.replace("        expect:\n", "        do:\n          - click_refused: btn_submit\n        expect:\n", 1)
+
+
+def test_click_refused_parses_as_its_own_verb(tmp_path):
+    spec = _spec(tmp_path, REFUSED)
+    act = spec.steps[0].do[0]
+    assert (act.kind, act.target) == ("click_refused", "btn_submit")
+    assert act.describe() == "click_refused 'btn_submit'"
+
+
+def test_click_refused_is_one_verb_among_the_others(tmp_path):
+    body = GOOD.replace("        expect:\n",
+                        "        do:\n          - {click_refused: btn_submit, click: btn_submit}\n        expect:\n", 1)
+    with pytest.raises(SpecError, match="exactly one of"):
+        _spec(tmp_path, body)
+
+
+def test_a_refused_click_passes_the_step_that_claims_it_does_nothing(tmp_path):
+    """csd_068 `empty_submit_does_nothing` on iOS, run 36733112700: the
+    platform refused the disabled submit, and a plain `click:` called that a
+    failure. The refusal is the outcome the step claims."""
+    h = FakeHelper("Thing", {"thing_list": "", "btn_submit": ""})
+    h.refuse = {"btn_submit"}
+    out = _run(_spec(tmp_path, REFUSED), h)
+    assert out.status == run_flows.PASS, out.detail
+    assert "click_refused btn_submit" in h.calls
+
+
+def test_a_disabled_control_whose_handler_fires_fails_click_refused(tmp_path):
+    h = FakeHelper("Thing", {"thing_list": "", "btn_submit": ""})
+    out = _run(_spec(tmp_path, REFUSED), h)
+    assert out.status == run_flows.FAIL
+    assert "handler ran" in out.detail, out.detail
 
 
 def test_a_failing_expect_fails_the_flow_and_the_leg(tmp_path):
