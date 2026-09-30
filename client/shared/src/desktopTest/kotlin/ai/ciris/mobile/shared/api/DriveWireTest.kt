@@ -71,6 +71,35 @@ class DriveWireTest {
     }
 
     @Test
+    fun custodyGoesToTheNodeWithTheCohortAndRoomAndABare404IsNotAnId() {
+        // CSD-107: the per-file query every drive route takes, at the NODE; a
+        // released node has no such route and answers a bare 404.
+        val agent = Recorder(emptyMap(), 404 to """{"detail":"Not Found"}""")
+        val node = Recorder(
+            mapOf("/v1/files/att-1/custody" to (200 to """{"devices_total":2,"devices":[{"node_key_id":"D1","this_device":true,"holds":"here"}],"receipts_supported":false}""")),
+            404 to "",
+        )
+        try {
+            val drive = ClientDrive(CIRISApiClient(agent.url)) { node.url }
+            runBlocking {
+                val c = drive.readCustody("att-1", "family", "fam 1")
+                assertEquals(2, c.devicesTotal)
+                assertEquals(false, c.receiptsSupported)
+                drive.readCustody("att-1", "self", null)
+                val refusal = assertFailsWith<NodeRefusal> { drive.readCustody("att-2", "self", null) }
+                assertEquals(404, refusal.statusCode)
+                assertEquals(null, refusal.reasonId)
+            }
+            assertTrue(node.seen.contains("GET /v1/files/att-1/custody?cohort=family&room_id=fam%201"), node.seen.toString())
+            assertTrue(node.seen.contains("GET /v1/files/att-1/custody?cohort=self"), node.seen.toString())
+            assertTrue(agent.seen.isEmpty(), "a custody call reached the api base: ${agent.seen}")
+        } finally {
+            agent.server.stop(0)
+            node.server.stop(0)
+        }
+    }
+
+    @Test
     fun aNodeWithoutThePolicyRouteRefusesByStatusNotById() {
         val node = Recorder(emptyMap(), 404 to """{"detail":"Not Found"}""")
         try {

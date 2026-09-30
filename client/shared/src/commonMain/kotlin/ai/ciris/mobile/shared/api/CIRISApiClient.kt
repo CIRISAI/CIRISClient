@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.api
 
 import ai.ciris.mobile.shared.models.drive.DriveListing
+import ai.ciris.mobile.shared.models.drive.FileCustody
 import ai.ciris.mobile.shared.models.drive.FileWrite
 import ai.ciris.mobile.shared.models.drive.FileWritten
 import ai.ciris.mobile.shared.models.drive.MediaPolicy
@@ -1665,6 +1666,42 @@ class CIRISApiClient(
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
             jsonConfig.decodeFromString(OpenedFile.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "attestation=$attestationId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `GET /v1/files/{id}/custody?cohort=…&room_id=…` (CSD-107): which of the
+     * person's devices the file is on. The per-file query every drive route
+     * takes (`FileQuery`, CIRISServer `src/drive.rs`): `cohort` always, and
+     * `room_id` for a family or community file. The NODE's route, like every
+     * drive route, so it goes to [nodeUrl], never `$baseUrl`.
+     *
+     * PROVISIONAL: the route is a server PR in progress and on no released
+     * node. A released node answers a bare 404, which the caller reads as
+     * "this node is too old" ([FileCustody] is parsed leniently for the same
+     * reason: its field names may still change).
+     */
+    suspend fun readFileCustody(attestationId: String, cohort: String, roomId: String?, nodeUrl: String): FileCustody {
+        val method = "readFileCustody"
+        val query = buildList {
+            add("cohort=${cohort.encodeURLParameter()}")
+            roomId?.takeIf { it.isNotBlank() }?.let { add("room_id=${it.encodeURLParameter()}") }
+        }.joinToString("&")
+        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}/custody?$query"
+        logInfo(method, "GET $url")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get(url) { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            FileCustody.fromWire(jsonConfig.parseToJsonElement(raw).jsonObject).also {
+                logInfo(method, "devices=${it.devices.size}/${it.devicesTotal} held_here=${it.heldHere} receipts=${it.receiptsSupported}")
+            }
         } catch (e: Exception) {
             logException(method, e, "attestation=$attestationId")
             throw e

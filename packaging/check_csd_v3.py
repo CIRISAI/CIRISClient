@@ -130,6 +130,116 @@ def _family_for(ceg: str, reg: dict) -> tuple[dict | None, dict[str, str]]:
     return None, {}
 
 
+#: CSD/4 `csd:topology` — the layers CIRISServer `FSD/TOPOLOGY.md` §2 names,
+#: plus `checks:` (FSD/CSD4_EVALUATION.md §1.3). An unknown layer fails for the
+#: same reason an unknown `csd:surface` key does: an unread key is a silent no.
+TOPOLOGY_LAYERS = {"roots", "canonicals", "nodes", "persons", "relations", "actor", "negatives", "checks"}
+#: TOPOLOGY.md §2.5's relations, plus `community`, which CSD4_EVALUATION §4.1
+#: declares as LACKING and the builder refuses by name.
+TOPOLOGY_RELATIONS = {
+    "peered", "rooted_with", "reachable", "contact", "room", "message", "file",
+    "member", "quorum_change", "community",
+}
+#: TOPOLOGY.md §2.6's negatives.
+TOPOLOGY_NEGATIVES = {"cannot_list_room", "holds_no_row"}
+#: Named by a CSD before TOPOLOGY.md on the server's main lists them — which is
+#: not the same as unbuilt: an entry may already run in the server's builder on
+#: a branch, and its note says where. Accepted
+#: so a CSD can state the fixture it needs; each entry says who asked and where
+#: the server stands. Remove an entry when TOPOLOGY.md on main lists it.
+TOPOLOGY_PENDING = {
+    "custody": "CSD-107 — in TOPOLOGY.md §2.5 and the builder on CIRISServer#704 (feat/file-custody-0.5.218, unmerged); its csd-107-file-custody topology passes on real nodes there",
+    "no_wider_self_rows": "CSD-107 — built (harness/native/topology.py on CIRISServer chore/adopt-edge-v33; used by topologies/selffiles.yaml); TOPOLOGY.md §2.6 does not list it",
+}
+
+
+def check_topology(topo: object) -> list[str]:
+    """Structural checks on a CSD/4 `csd:topology` block — NOT realizability.
+
+    What this asserts: the block is `topology:` with only known layers; every
+    id a layer references (`holds`, `accepts`, `dials`, `owns`, `between`,
+    `person`, `device`, the actor) is declared; each relation and negative is
+    one TOPOLOGY.md names or one listed in TOPOLOGY_PENDING; and rule 2 (a
+    person accepts a root only if every node they own does). What it does NOT:
+    rules 1 and 3-7, which are the builder's (`harness/native`, CIRISServer),
+    and whether the server can build the block today.
+    """
+    problems: list[str] = []
+    if not isinstance(topo, dict) or not isinstance(topo.get("topology"), dict):
+        return ["topology: the block must be a mapping under `topology:`"]
+    t = topo["topology"]
+    unknown = sorted(set(t) - TOPOLOGY_LAYERS)
+    if unknown:
+        problems.append(f"topology: unknown layer(s) {unknown} — known: {sorted(TOPOLOGY_LAYERS)}")
+
+    def _rows(layer: str) -> list[dict]:
+        rows = t.get(layer) or []
+        if not isinstance(rows, list) or not all(isinstance(r, dict) for r in rows):
+            problems.append(f"topology: `{layer}` must be a list of mappings")
+            return []
+        return rows
+
+    roots = {r.get("id") for r in _rows("roots")}
+    canon = {r.get("id"): r for r in _rows("canonicals")}
+    nodes = {r.get("id"): r for r in _rows("nodes")}
+    persons = {r.get("id"): r for r in _rows("persons")}
+    every_node = set(canon) | set(nodes)
+
+    def _ref(where: str, got: object, pool: set, what: str) -> None:
+        for g in got if isinstance(got, list) else [got]:
+            if g not in pool:
+                problems.append(f"topology: {where} names {what} {g!r}, which no layer declares")
+
+    for cid, c in canon.items():
+        _ref(f"canonical {cid}", c.get("holds"), roots, "root")
+    for nid, n in nodes.items():
+        _ref(f"node {nid}", n.get("dials", []), every_node, "node")
+        _ref(f"node {nid}", n.get("accepts"), roots, "root")
+    for pid, p in persons.items():
+        _ref(f"person {pid}", p.get("owns", []), set(nodes), "node")
+        _ref(f"person {pid}", p.get("accepts"), roots, "root")
+        # Realizability rule 2 (TOPOLOGY.md §3).
+        if p.get("accepts") in roots:
+            bad = [o for o in p.get("owns", []) if o in nodes and nodes[o].get("accepts") != p["accepts"]]
+            if bad:
+                problems.append(
+                    f"topology: person {pid} accepts {p['accepts']!r} but owns {bad}, which do not "
+                    f"— rule 2: a person accepts a root only if every node they own does"
+                )
+
+    for r in _rows("relations"):
+        rel = r.get("rel")
+        if rel not in TOPOLOGY_RELATIONS and rel not in TOPOLOGY_PENDING:
+            problems.append(f"topology: relation {rel!r} is not in TOPOLOGY.md §2.5 nor declared pending")
+        if "between" in r:
+            _ref(f"relation {rel}", r["between"], every_node, "node")
+        if "person" in r:
+            _ref(f"relation {rel}", r["person"], set(persons), "person")
+        if "device" in r:
+            _ref(f"relation {rel}", r["device"], set(nodes), "node")
+            if r.get("person") in persons and r["device"] not in persons[r["person"]].get("owns", []):
+                problems.append(f"topology: relation {rel} puts person {r['person']!r} on {r['device']!r}, which they do not own")
+
+    for n in _rows("negatives"):
+        check_name = n.get("check")
+        if check_name not in TOPOLOGY_NEGATIVES and check_name not in TOPOLOGY_PENDING:
+            problems.append(f"topology: negative {check_name!r} is not in TOPOLOGY.md §2.6 nor declared pending")
+        if "person" in n:
+            _ref(f"negative {check_name}", n["person"], set(persons), "person")
+
+    actor = t.get("actor")
+    if actor is not None:
+        if not isinstance(actor, dict):
+            problems.append("topology: `actor` must be {person, device}")
+        else:
+            _ref("actor", actor.get("person"), set(persons), "person")
+            _ref("actor", actor.get("device"), set(nodes), "node")
+            p = persons.get(actor.get("person"))
+            if p is not None and actor.get("device") not in p.get("owns", []):
+                problems.append(f"topology: the actor's device {actor.get('device')!r} is not one {actor.get('person')!r} owns")
+    return problems
+
+
 def check(doc: Path, reg: dict) -> list[str]:
     text = doc.read_text(encoding="utf-8")
     blocks: dict[str, object] = {}
@@ -320,6 +430,9 @@ def check(doc: Path, reg: dict) -> list[str]:
                         f"surface: {sid!r} derives {want!r} but Screen.{screen} is reached "
                         f"via {hops[screen][-1]!r} — the surface id and the screen disagree"
                     )
+
+    if "topology" in blocks:
+        problems.extend(check_topology(blocks["topology"]))
 
     states = blocks.get("states") or {}
     if states:
