@@ -97,7 +97,7 @@ fields:
     type: unconfirmed
     blocked_by: CIRISPersist#907
     example: false
-    renders: "'Someone added after a room was founded is listed and sealed to, and cannot read its messages yet (CIRISPersist#907).' — always on the card, because the node lists and seals to a widened member that persist's read gate still refuses"
+    renders: "'Someone added after a room was founded is listed and sealed to, and cannot read its messages yet (CIRISPersist#907).' — always on the card, because the node lists and seals to a widened member that persist's read gate still refuses. #907 is fixed in persist v49; the server markers (the ignored `a_widened_member_reads_the_rooms_messages_cirispersist_907`, the module doc 'What a widened member cannot do yet') are still on `integ/0.5.218` and clear with CIRISServer#700, and this sentence goes when a release carries that"
     tag: txt_community_limit_widened_reads
   - ceg: x_private:community_group_book
     use: display-only
@@ -118,6 +118,13 @@ fields:
     example: "wa-bo-e2a4…"
     renders: "'Remove' on each row, behind a ConfirmSheet: which room · what changes (removed, key rotated, nothing new reaches them, what they had stays) · who signs (you, under the room's rule)"
     tag: "btn_community_member_remove_*"
+  - ceg: x_private:membership_invitation
+    use: emit
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "'Add someone' becomes 'Invite someone': picking a contact sends an invitation, and the room's section shows them as 'Invited — waiting for them to accept' with its expiry until they accept or decline (CSD-106). Until persist carries invitations, the direct add is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.1)"
+    tag: "proposed:community_member_invite"
+    blocked_by: CIRISPersist#955
   - ceg: x_private:community_room_kind
     use: display-only
     type: "enum[pair,room]"
@@ -155,10 +162,32 @@ CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL onl
 | rosters | `GET /v1/communities` | `list_communities` :1418 | every room's `members` is the fold (record ∪ widenings − revocations) — "the roster is the FOLD", module doc; a removed member is already gone |
 | one room, re-read after a change | `GET /v1/communities/{id}` | `read_community` :1497 | the shared view model re-reads the selected room after an add or remove applies (`loadDetail`); `community.not_found` for a room you are no longer in |
 | names, and who can be added | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the add control offers a chip per contact not already in the room, and each member row is titled by the contact's alias when this node has one. A member need not be a contact; the roster is the node's, the names are a courtesy |
-| add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752) |
+| add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752). **Refused once CIRISServer#700 ships:** 409 `membership.consent_required` (§3.1) |
 | remove | `DELETE /v1/communities/{id}/members/{key_id}` | `remove_member` :1556 | naming yourself is leaving (:1569); `community.last_founder` guards an orphaned room |
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |
-| widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907 |
+| widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907. #907 is **fixed in persist v49**; the server markers (the module doc and the ignored `…_cirispersist_907` test, both still on `integ/0.5.218`) clear with CIRISServer#700 |
+
+### 3.1 Nobody joins without their own consent (ruling of 2026-09-30)
+
+The maintainer ruled on 2026-09-30 that **adding someone to a family or a
+community requires their consent**, founding members included
+(CIRISConstitution#133; persist's enforcement CIRISPersist#955, v52: one
+inviter proposes, the invitee accepts or declines, the quorum stays on the
+admitting record, expiry 30 days or less). Until persist carries the
+invitation, **CIRISServer#700** (open, unreleased) refuses every door that
+grows a roster with **409 `membership.consent_required`**. On this card:
+
+* **the direct add** (`input_community_add_member` → `POST
+  /v1/communities/{id}/members`) is refused for anyone not already active;
+* **a held add** (`community.quorum_pending`) can no longer be started here,
+  and finishing one on CSD-102 is refused at cosign and assemble.
+
+Unaffected: remove, role changes, re-adding someone already active (still
+`community.already_member`), and pair rooms. The add control above is kept as
+written — it is what 0.5.216–0.5.217 serve — and the refusal renders by id
+(`membership.consent_required` is in `en.json`). The replacement, "Invite
+someone" with a pending row per invitee, is **CSD-106** (`envisioned`);
+`x_private:membership_invitation` above is `blocked_by: CIRISPersist#955`.
 
 ## 4. Flow (how)
 
@@ -200,7 +229,8 @@ late member's flag, or a pair room in Chats — each needs a second person.
 * Whether a removed member's future reads fail — the DEK rotation is the
   node's (CC 4.4.3.2.2), and a client fixture cannot observe it.
 * Peer-authored roster rows: persist admits them on signature alone until
-  CIRISPersist#908, so a row another node wrote can appear here without the
+  CIRISPersist#908 (fixed in persist v49; CIRISServer#700 records it in the
+  server FSD), so a row another node wrote can appear here without the
   room's rule having been checked by this node. Not visible on the card.
 * The transcript of a room of more than two — CSD-091's (it opens by id since
   the people review; this card only routes the tap).

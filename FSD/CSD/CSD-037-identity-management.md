@@ -106,9 +106,16 @@ fields:
     example: "ciris1q…"
     renders: "this new device's fedcode, as text and QR, for the primary to enroll"
     tag: identity_enroll_fedcode
+  - ceg: x_private:eviction_report
+    use: display-only
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "NOT RENDERED, and not yet servable to this client. After an eviction: each part that finished and each that did not (`withdrawn`, `occurrences_revoked`, `failed: [{part, target, error}]`, `replication_kicked`), and the node's own `history` sentence verbatim: already-shared history stays readable by the evicted device. Any failed part answers `self.evict_incomplete` (500), rendered by id. The shape is CIRISServer#700's (`EvictionReport`, `src/self_devices.rs` on `fix/evict-device-0.5.218`), open and unreleased; on 0.5.217 every revoke from the app answers 401 (§3)"
+    tag: "proposed:identity_revoke_result"
+    blocked_by: CIRISServer#700
 ```
 
-Seven of the ten rows are `proposed:` and four are `unconfirmed`. The roster
+Eight of the eleven rows are `proposed:` and five are `unconfirmed`. The roster
 itself is tagged (`identity_device_list`, `identity_row_{occurrenceKeyId}`,
 `identity_self_key_id`: `IdentityManagementScreen.kt:170, 228, 236`; and the enrolled fedcode, `identity_enroll_fedcode` at `:423`), but
 nothing inside a row is, so a flow can count devices and click one it cannot
@@ -119,10 +126,11 @@ that announce is per device, and that the public roster is exactly the devices
 a person chose to announce on. This page is the owner's view, so it shows
 every device and says which kind each is. The words are "Reachable" and
 "Private", not "announced", because that is what the choice means to the
-person. Making a device reachable from here is planned, not built: this
-device's own announce is `POST /v1/federation/announce` (live), and a
-per-device "make this device reachable" on the approving side is #678, still
-building. A private row therefore offers "Make reachable" only when it is the
+person. Making a device reachable from here is not wired: this
+device's own announce is `POST /v1/federation/announce` (live), and the
+per-device "make this device reachable" on the approving side,
+`POST /v1/self/nodes/{node_key_id}/announce` (#678), is built on
+`integ/0.5.218` (`src/self_devices.rs:338-423`) and unreleased (CSD-094 §3). A private row therefore offers "Make reachable" only when it is the
 device in hand.
 
 **Approve a new device** (CSD-094) sits directly below the roster, because it
@@ -147,10 +155,10 @@ an error also must not look alike.
 | the self fed-ID | `GET /v1/setup/owned-nodes` → `owner`, falling back to `GET /v1/federation/self-key-record` | CIRISServer | live — `bootstrap.rs:1489`, `federation_admin.rs:900` |
 | the roster | `GET /v1/self/occurrences?identity_key_id=…` | CIRISServer | live — `src/auth/occurrence.rs:668`, **unauthenticated** on 0.5.217. On 0.5.218 (#655) the owner's session sees every row; anyone else sees only announced nodes and an owner with none announced gets the unknown-identity empty answer, marked only by a top-level `audience: "owner" \| "public"`. `SelfOccurrencesResponse` has no `audience`, so a session mismatch would render "No devices enrolled yet" over a roster the node withheld — error looking like empty. To wire with the 0.5.218 client pass (with `GET /v1/self/contact-code`'s per-device `announced`, which is where "public vs private device" lives; there is no per-row flag) |
 | reachable / private on a row | same route, owner session | CIRISServer | **unconfirmed** field name, until CIRISClient#78 |
-| make a device reachable | this device: `POST /v1/federation/announce` (`src/claim_remote.rs:1250`, live, owner-gated, loopback; the RNS announce follows on next boot). Another device: planned on the approving side | CIRISServer | this device **live**; another device **not built** (#678, still building) |
+| make a device reachable | this device: `POST /v1/federation/announce` (`src/claim_remote.rs:1250`, live, owner-gated, loopback; the RNS announce follows on next boot). Another device: `POST /v1/self/nodes/{node_key_id}/announce` on the approving side (`src/self_devices.rs:338-423` on `integ/0.5.218`) | CIRISServer | this device **live**; another device **built, unreleased, not wired** (#678; CSD-094 §3) |
 | approve a new device | `POST /v1/setup/claim-remote` | CIRISServer | live; specified in CSD-094 |
 | add a device | `POST /v1/self/occurrence` | CIRISServer | live on the node — `occurrence.rs:663` (handler `:288`) — and **unreachable from this client**: the route demands the person's hybrid request signature (`x-ciris-key-id` + Ed25519/ML-DSA-65, `auth/verify.rs`) before anything else, and the client only ever sends a Bearer; `federationHttpClient` does not sign. Every call answers 401 "missing x-ciris-key-id", which the view model renders as "Sign in as yourself first" — the wrong remedy. There is no owner-session variant. blocked_by: a signing path in the client or an owner-session route on the node (draft issue in the review report) |
-| evict a device | `POST /v1/self/occurrence/revoke` | CIRISServer | live — `occurrence.rs:665` (handler `:436`), **same signature requirement, same 401**: the lost/stolen-device eviction this card exists for cannot happen from the app. Its confirm is also an AlertDialog naming neither the device nor the signer, where CC 3.3.6.1 wants both plus "already-shared content is not re-encrypted" (the release confirm below does it right) |
+| evict a device | `POST /v1/self/occurrence/revoke` | CIRISServer | live — `occurrence.rs:665` (handler `:436`), **same signature requirement, same 401**: the lost/stolen-device eviction this card exists for cannot happen from the app. Its confirm is also an AlertDialog naming neither the device nor the signer, where CC 3.3.6.1 wants both plus "already-shared content is not re-encrypted" (the release confirm below does it right). **CIRISServer#700** (open, branch `fix/evict-device-0.5.218`, unreleased) moves this route to the self-device router and authorises it by the **owner's session bearer**, the owner's pen signing server-side, as `release` is. The app's bearer is then enough, and this 401 should clear when #700 ships; a request with no session still answers 401 (`self.owner_session_required`), and a delegated session is refused (`self.delegate_may_not_author`). #700 also makes revoke and `release` ONE act (`evict_device`): withdraw the owner binding, write a SIGNED occurrence revocation that replicates, kick replication, read both halves back, and answer with each part done or failed plus `history`; any failed part is `self.evict_incomplete` (500). blocked_by: CIRISServer#700 (`x_private:eviction_report`, §2) |
 | hand a node back | `POST /v1/self/nodes/{node_key_id}/release` | CIRISServer `src/self_devices.rs:212` (route `:469`), owner session | live — `releaseNode` via `SelfDevicesApi`; ConfirmSheet naming the node, the effect and the signer, and a second sheet when the node refuses `self.release_self_requires_force` because it is the one you are talking to. Refusals render by id (all ten `self.*` ids in en.json) |
 | the node's own warnings | `GET /v1/system/health` on the NODE | CIRISServer `src/health.rs:589` | live — `SelfDevicesApi.nodeWarnings()`, the node's (not the brain's) health warnings shown above the roster |
 | mint this device's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `identity.rs:1945`, loopback-only |

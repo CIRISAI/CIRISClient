@@ -80,6 +80,13 @@ fields:
     example: "founder"
     renders: "Make founder / Make member, on each row but your own"
     tag: "btn_household_member_role_{keyId}"
+  - ceg: x_private:membership_invitation
+    use: emit
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "Add someone becomes Invite someone: picking a contact sends an invitation, and the roster shows them as 'Invited — waiting for them to accept' (with its expiry) until they accept or decline (CSD-106). Until persist carries invitations, the direct add is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.3)"
+    tag: "proposed:household_member_invite"
+    blocked_by: CIRISPersist#955
 ```
 
 **No hamburger on a member row.** The node sends one envelope per household,
@@ -117,10 +124,10 @@ Node-owned, at the node URL. CIRISServer `origin/main` @ `046e1b39`, `src/family
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the roster | `members[{key_id, role, joined_at}]` in the list view | CIRISServer | **live** (`view`, `:541-571`); the fold, never the raw record |
-| add | `POST /v1/families/{id}/members {key_id, role?}` → view + `dek_rewrap` | CIRISServer | **live** (`:858-921`); founder_only founder only; the target must be a registered identity (`check_addable`, `:925-947`); the node re-wraps existing DEKs to them and reports it |
+| add | `POST /v1/families/{id}/members {key_id, role?}` → view + `dek_rewrap` | CIRISServer | **live** (`:858-921`); founder_only founder only; the target must be a registered identity (`check_addable`, `:925-947`); the node re-wraps existing DEKs to them and reports it. **Refused once CIRISServer#700 ships:** 409 `membership.consent_required` for anyone not already active (§3.3) |
 | remove | `DELETE /v1/families/{id}/members/{key_id}` → view + `removed` | CIRISServer | **live** (`:969-1004`); the last founder cannot be removed (`family.last_founder`) |
 | role | `POST /v1/families/{id}/members/{key_id}/role {role}` → view | CIRISServer | **live** (`:1091-1149`); a role is a short non-empty name (`family.bad_role`) |
-| quorum add / remove / role | `POST /v1/families/{id}/changes/envelope {action: add\|remove\|role, key_id, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); the proposal is then signed and applied from the hub (cosign / assemble, §3.2) |
+| quorum add / remove / role | `POST /v1/families/{id}/changes/envelope {action: add\|remove\|role, key_id, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); the proposal is then signed and applied from the hub (cosign / assemble, §3.2). **With CIRISServer#700** an `add` is refused 409 `membership.consent_required` at envelope, cosign and assemble; remove and role are unaffected (§3.3) |
 | the households, and which one is shown | `GET /v1/families?after=` → `{families, resume}` | CIRISServer | **live** (`:748-792`); the same read the hub makes, through the shared view model, so the switcher here is the switcher there |
 | who to add | `GET /v1/contacts` | CIRISServer | **live** (`src/contacts_chat.rs`); the only source. The v3 contact code (CSD-092) would let a person find someone first; it is unmerged, so this card picks from existing contacts |
 | who "you" are | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback |
@@ -142,11 +149,36 @@ the hub) and stays recorded as that decision.
 
 ### 3.2 Stated limits
 
-1. **An added member or a new role reaches only this node.** The other
-   members' nodes keep the roster they first received. CIRISPersist#910.
-2. **Someone removed cannot be added back.** The node refuses
-   `family.readd_unsupported`; the confirm for a removal says so before it
-   happens. CIRISPersist#910.
+Both limits this section listed are **fixed in persist v49 (CIRISPersist#910)**
+and cleared on `integ/0.5.218`, which builds on v49: an addition and a role
+change are signed rows that replicate (`src/family_api.rs:57-61`, `:1296`), and
+a removed member can be added back (`:1099-1100`). They still hold against a
+0.5.217 node (persist v48) — an added member or new role reaches only that
+node, and re-adding is refused `family.readd_unsupported`, which the removal
+confirm says — and the card keeps saying so until 0.5.218 ships. After
+CIRISServer#700, adding anyone waits on their acceptance (§3.3).
+
+### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+
+The maintainer ruled on 2026-09-30 that **adding someone to a household or a
+community requires their consent**, founding members included
+(CIRISConstitution#133; persist's enforcement CIRISPersist#955, v52: one
+inviter proposes, the invitee accepts or declines, the quorum stays on the
+admitting record, expiry 30 days or less). Until persist carries the
+invitation, **CIRISServer#700** (open, unreleased) refuses every door that
+grows a roster with **409 `membership.consent_required`**. On this card:
+
+* **the direct add** (`btn_household_member_pick_*` → `POST
+  /v1/families/{id}/members`) is refused for anyone not already active;
+* **a quorum add** proposed from here is refused at envelope, and at cosign and
+  assemble on the hub (CSD-100 §3.3).
+
+Unaffected: remove, role changes, and re-adding someone already active (still
+`family.already_member`). The add picker and its confirm stay as written above
+— they describe what 0.5.216–0.5.217 serve — and a refusal renders by id
+(`membership.consent_required` is in `en.json`). The replacement, "Invite
+someone" with the invitee's pending row, is **CSD-106** (`envisioned`);
+`x_private:membership_invitation` above is `blocked_by: CIRISPersist#955`.
 
 ## 4. Flow (how)
 
