@@ -5339,6 +5339,7 @@
     "not_your_node": "Nóòdù yẹn kò sí lára àwọn tí o ni, nítorí náà kò ṣe tìrẹ láti tú sílẹ̀.",
     "owner_session_required": "Àwọn ẹ̀rọ rẹ jẹ́ ojú-ìṣàkóso tí ó jẹ́ ti olówó fúnra rẹ̀. Wọlé gẹ́gẹ́ bí olówó nóòdù yìí.",
     "release_incomplete": "A fọwọ́sí ìtúsílẹ̀ náà, ṣùgbọ́n nóòdù náà ṣì ka nóòdù yẹn sí tìrẹ: àkọsílẹ̀ ẹ̀tọ́ ìní kan tí kò lè rí ṣì wà lọ́wọ́. Ohun tí ó lè yọ kúrò ṣì dúró ní yíyọ-kúrò.",
+    "evict_incomplete": "Ẹ̀rọ yẹn kò yọ kúrò ní kíkún. Ìdáhùn nóòdù náà ṣe àkọsílẹ̀ apá kọ̀ọ̀kan tí kò tíì parí; àwọn apá tí ó ti parí yóò sì wà bẹ́ẹ̀ ní parí. Gbìyànjú lẹ́ẹ̀kan sí i.",
     "release_self_requires_force": "Èyí ni nóòdù tí o ń bá sọ̀rọ̀. Títú u sílẹ̀ yóò fòpin sí ẹ̀tọ́ ìní rẹ níhìín, tí ó fi sáà yìí sínú rẹ̀.",
     "store_unavailable": "Nóòdù náà kò lè ka tàbí kọ ilé-ìtọ́jú ìdánimọ̀ rẹ̀. Kò sí ohun tí a yí padà.",
     "node_not_announced": "Ẹ̀rọ yẹn kò lè dé wá, nítorí náà kò lè wọ inú kóòdù kan.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "A kọ̀",
     "outcome_deferred": "A fi falẹ̀",
     "outcome_expired": "Àkókò ti kọjá"
+  },
+  "membership": {
+    "consent_required": "Ẹnìkan gbọ́dọ̀ gba ìpè kí wọ́n tó darapọ̀ mọ́ ọn. A kò lè fi ẹnikẹ́ni kún ìdílé tàbí àwùjọ láìsí bẹ́ẹ̀ni tiwọn fúnra wọn."
   }
 }

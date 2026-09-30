@@ -10,6 +10,10 @@ description: >-
 # (HouseholdTags), added with this card; no release carries them yet.
 # NOT asserted: adding a real member. It needs a second identity registered on
 # the node, which the fixture does not stand up.
+# CONSENT TO JOIN (ruling 2026-09-30, CIRISConstitution#133): once CIRISServer#700
+# ships, confirming an add answers 409 membership.consent_required, and the
+# invitation replaces it (CSD-106, CIRISPersist#955). No step here confirms an
+# add, so nothing below changes; `add_picks_from_contacts` only opens the picker.
 client: "unreleased"
 
 steps:

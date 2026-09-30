@@ -5339,6 +5339,7 @@
     "not_your_node": "Nút đó không thuộc quyền sở hữu của bạn, nên bạn không thể giải phóng nó.",
     "owner_session_required": "Thiết bị của bạn là bề mặt riêng của chủ sở hữu. Hãy đăng nhập với tư cách chủ sở hữu của nút này.",
     "release_incomplete": "Việc giải phóng đã được ký, nhưng nút vẫn liệt kê nút đó là của bạn: một bản ghi quyền sở hữu mà nó không thể thấy vẫn còn hiệu lực. Những gì nó có thể rút lại thì vẫn được rút lại.",
+    "evict_incomplete": "Thiết bị đó chưa được gỡ bỏ hoàn toàn. Câu trả lời của nút liệt kê từng phần chưa hoàn tất; những phần đã hoàn tất thì vẫn giữ nguyên. Hãy thử lại.",
     "release_self_requires_force": "Đó là nút bạn đang trò chuyện với. Giải phóng nút đó sẽ kết thúc quyền sở hữu của bạn ở đây, bao gồm cả phiên này.",
     "store_unavailable": "Nút không thể đọc hoặc ghi kho danh tính của mình. Không có gì bị thay đổi.",
     "node_not_announced": "Thiết bị đó không thể tiếp cận, nên không thể nằm trong mã.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "Đã từ chối",
     "outcome_deferred": "Đã trì hoãn",
     "outcome_expired": "Đã hết hạn"
+  },
+  "membership": {
+    "consent_required": "Ai đó phải chấp nhận lời mời trước khi tham gia. Không ai bị thêm vào một hộ gia đình hay cộng đồng mà không có sự đồng ý của chính họ."
   }
 }

@@ -5339,6 +5339,7 @@
     "not_your_node": "Wancan node ba wanda kuke da shi ba ne, don haka ba naku ba ne don ku saki shi.",
     "owner_session_required": "Na'urorinku fage ne na mai shi kansa. Ku shiga a matsayin mai wannan node.",
     "release_incomplete": "An sa hannu kan sakin, amma node ɗin har yanzu yana jera wancan node a matsayin naku: akwai rikodin mallaka da ba zai iya gani ba wanda har yanzu yana aiki. Abin da ya iya janyewa ya ci gaba da kasancewa an janye shi.",
+    "evict_incomplete": "Ba a cire wancan na'urar sosai ba. Amsar node ɗin tana lissafa kowace sashe da bai kammala ba; sassan da suka kammala sun tsaya kamar yadda suke. Sake gwadawa.",
     "release_self_requires_force": "Wancan ne node ɗin da kuke magana da shi. Sakinsa yana kawo ƙarshen mallakarku a nan, tare da wannan zama.",
     "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba.",
     "node_not_announced": "Wannan na'urar ba za a iya isa gare ta ba, don haka ba za ta iya shiga cikin lambar ba.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "An ƙi",
     "outcome_deferred": "An jinkirta",
     "outcome_expired": "Ya ƙare"
+  },
+  "membership": {
+    "consent_required": "Dole ne wani ya karɓi gayyata kafin ya shiga. Ba a ƙara kowa a cikin iyali ko al'umma ba tare da yardarsa ba."
   }
 }

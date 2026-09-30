@@ -5339,6 +5339,7 @@
     "not_your_node": "Ese nodo no es de tu propiedad, así que no es tuyo para liberar.",
     "owner_session_required": "Tus dispositivos son la superficie propia del propietario. Inicia sesión como el propietario de este nodo.",
     "release_incomplete": "La liberación se firmó, pero el nodo todavía lista ese nodo como tuyo: un registro de propiedad que no puede ver sigue activo. Lo que pudo retirar permanece retirado.",
+    "evict_incomplete": "Ese dispositivo no se eliminó por completo. La respuesta del nodo enumera cada parte que no finalizó; las partes que sí finalizaron permanecen así. Inténtalo de nuevo.",
     "release_self_requires_force": "Ese es el nodo con el que estás hablando. Liberarlo termina tu propiedad aquí, incluida esta sesión.",
     "store_unavailable": "El nodo no pudo leer ni escribir su almacén de identidades. No se cambió nada.",
     "node_not_announced": "Ese dispositivo no es alcanzable, así que no puede incluirse en un código.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "Rechazado",
     "outcome_deferred": "Diferido",
     "outcome_expired": "Caducado"
+  },
+  "membership": {
+    "consent_required": "Alguien tiene que aceptar una invitación antes de unirse. Nadie se añade a un hogar o una comunidad sin su propio sí."
   }
 }

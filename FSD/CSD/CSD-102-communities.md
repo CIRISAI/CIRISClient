@@ -113,6 +113,13 @@ fields:
     example: "affiliation_archetype: informal_adhoc"
     renders: "affiliations only: 'What this body has declared it can do with what you put here … has no route yet (CIRISServer#649). Joining does not show it, and this app will not guess it.'"
     tag: txt_affiliations_terms_unavailable
+  - ceg: x_private:membership_invitation
+    use: emit
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "founding with other people becomes: found it with you alone, then invite each person, who joins only by accepting (CSD-106). The founding card's member chips are what changes. Until then a create naming anyone but the founder is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.3)"
+    tag: "proposed:community_create_invite"
+    blocked_by: CIRISPersist#955
 ```
 
 ```yaml csd:states
@@ -158,14 +165,14 @@ pins it.
 |---|---|---|---|
 | my rooms | `GET /v1/communities` | `list_communities` :1418 | `{communities: [room], total, resume}`; a room is `room_json` :1351 — `community_id, name, kind: pair\|room, tier, cohort_scope, consensus_protocol, founded_at, member_count, my_role, members: [{key_id, role, joined_at}] (member_json :1106), roles: {role: [key_id]}` |
 | one room | `GET /v1/communities/{id}` | `read_community` :1497 | `room_json(detail = true)`: adds `moderators: [key_id]`, `widenings`, `revocations`; `community.not_found` 404 for a non-member (:238) |
-| found | `POST /v1/communities` `{name, members?, tier?, consensus_protocol?}` | `create_community` :1220 | 201 + `room_json`; `community.name_empty`, `.bad_tier`, `.bad_consensus_protocol` (a quorum's N must equal the founding roster, :1276), `.not_a_contact` |
+| found | `POST /v1/communities` `{name, members?, tier?, consensus_protocol?}` | `create_community` :1220 | 201 + `room_json`; `community.name_empty`, `.bad_tier`, `.bad_consensus_protocol` (a quorum's N must equal the founding roster, :1276), `.not_a_contact`. **With CIRISServer#700:** a `members` naming anyone but the founder is refused 409 `membership.consent_required` (§3.3) |
 | role | `POST /v1/communities/{id}/members/{key_id}/role` `{role}` | `change_role` :1584 | `applied()` :1114 `{community_id, op, applied, members}` or `community.quorum_pending` |
 | dissolve | `DELETE /v1/communities/{id}` | `dissolve_community` :1673 | the same two outcomes |
 | leave | `POST /v1/communities/{id}/leave` | `leave_community` :1616 → `leave_room` :1632 | `{community_id, op: "leave", applied, key_id}`; `community.last_founder`, `.pair_room_fixed` |
 | held change | any governed write | `quorum_pending` :1180 | **409** `{error, reason_id: "community.quorum_pending", change_envelope, signing_bytes_base64, signatures, valid, required, eligible_signers, consensus_protocol}` |
 | envelope | `POST /v1/communities/{id}/changes/envelope` `{op, key_id?, role?}` | `change_envelope` :1693 | the same body at 200. **Not called**: every direct write already returns it when held (below) |
 | cosign | `POST /v1/communities/{id}/changes/cosign` `{change_envelope}` | `change_cosign` :1764 | `{community_id, op, signature}` — stateless |
-| assemble | `POST /v1/communities/{id}/changes/assemble` `{change_envelope, signatures}` | `change_assemble` :1815 | `applied()`, or `quorum_pending` again with the count |
+| assemble | `POST /v1/communities/{id}/changes/assemble` `{change_envelope, signatures}` | `change_assemble` :1815 | `applied()`, or `quorum_pending` again with the count. **With CIRISServer#700:** an envelope, cosign or assemble whose proposed roster grows is refused 409 `membership.consent_required` (§3.3) |
 | names, and who can be founded with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the founding card's member chips are the caller's contacts (a room member must be a contact whose grant covers `chat:`), and every key on the card is titled by the contact's alias when this node has one. Best effort: a failed contacts read hides nothing the node said about the room |
 
 Refusal bodies are `{error, reason_id}` (`src/auth/refusal.rs:52`), with
@@ -223,6 +230,33 @@ way in; no rooms says so (`txt_community_moderation_pick_none`). Pair rooms are
 left out: a two-person chat has no moderation duty to look up.
 * **The group book** — who admitted whom, when, and the change history — is
   CSD-103's, and is CIRISServer#650.
+
+### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+
+The maintainer ruled on 2026-09-30 that **adding someone to a family or a
+community requires their consent, including founding members named at
+create** (CIRISConstitution#133). Persist's enforcement is CIRISPersist#955
+(v52): one inviter proposes, the invitee accepts or declines, the quorum stays
+on the admitting record, and an invitation expires in 30 days or less. Reverse
+quorum is not a membership rule; it stays CSD-070's commons brake.
+
+Until persist carries the invitation, **CIRISServer#700** (open, branch
+`fix/evict-device-0.5.218`, unreleased) refuses every door that grows a roster
+with **409 `membership.consent_required`** — one literal id shared with
+households. On this card:
+
+* **found with members**: the founding card's member chips send `members`, and a
+  create naming anyone but the founder is refused. Founding a room of one still
+  works (§4's flow does exactly that, so it is unaffected).
+* **a held add** finished here (cosign, assemble) is refused when the proposed
+  roster grows; the direct add itself is CSD-103 §3.1.
+
+Unaffected: leave, dissolve, remove, role changes, re-adding someone already
+active (still `community.already_member`), and pair rooms (the contact grant each
+side authors). The rows above record what 0.5.216–0.5.217 serve and are kept.
+The refusal renders by id (`membership.consent_required` is in `en.json`). The
+replacement is the invitation, **CSD-106** (`envisioned`);
+`x_private:membership_invitation` above is `blocked_by: CIRISPersist#955`.
 
 ## 4. Flow (how)
 

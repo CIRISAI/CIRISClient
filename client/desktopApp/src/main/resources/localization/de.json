@@ -5339,6 +5339,7 @@
     "not_your_node": "Dieser Knoten gehört Ihnen nicht, daher können Sie ihn nicht freigeben.",
     "owner_session_required": "Ihre Geräte sind die Oberfläche des Eigentümers selbst. Melden Sie sich als Eigentümer dieses Knotens an.",
     "release_incomplete": "Die Freigabe wurde signiert, aber der Knoten führt jenen Knoten weiterhin als Ihren: Ein Eigentumseintrag, den er nicht einsehen kann, ist weiterhin aktiv. Was er entziehen konnte, bleibt entzogen.",
+    "evict_incomplete": "Dieses Gerät wurde nicht vollständig entfernt. Die Antwort des Knotens listet jeden Teil auf, der nicht abgeschlossen wurde; die Teile, die abgeschlossen wurden, bleiben erledigt. Versuchen Sie es erneut.",
     "release_self_requires_force": "Das ist der Knoten, mit dem Sie sprechen. Seine Freigabe beendet Ihr Eigentum hier, einschließlich dieser Sitzung.",
     "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert.",
     "node_not_announced": "Dieses Gerät ist nicht erreichbar und kann daher nicht in einen Code aufgenommen werden.",
@@ -5505,5 +5506,8 @@
     "may_add": "Kann auch abdecken",
     "categories_none": "keine genannt",
     "ending": "Die Partnerschaft beenden"
+  },
+  "membership": {
+    "consent_required": "Jemand muss eine Einladung annehmen, bevor er beitritt. Niemand wird ohne sein eigenes Ja zu einem Haushalt oder einer Gemeinschaft hinzugefügt."
   }
 }

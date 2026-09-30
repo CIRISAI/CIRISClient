@@ -5339,6 +5339,7 @@
     "not_your_node": "该节点不是您所拥有的，因此您无权释放它。",
     "owner_session_required": "您的设备是所有者本人的界面。请以此节点所有者的身份登录。",
     "release_incomplete": "释放操作已签名，但节点仍将该节点列为您所拥有：有一条它无法看到的所有权记录仍处于生效状态。它所能撤销的部分，仍保持已撤销状态。",
+    "evict_incomplete": "该设备未被完全移除。节点的答复列出了每个未完成的部分；已完成的部分仍保持完成状态。请重试。",
     "release_self_requires_force": "那就是您正在对话的节点。释放它将终止您在此处的所有权，包括本次会话。",
     "store_unavailable": "节点无法读取或写入其身份存储。未做任何更改。",
     "node_not_announced": "该设备不可联系，因此无法加入代码。",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "已拒绝",
     "outcome_deferred": "已推迟",
     "outcome_expired": "已过期"
+  },
+  "membership": {
+    "consent_required": "必须有人接受邀请，才能加入。未经本人同意，任何人都不会被加入家族或社区。"
   }
 }

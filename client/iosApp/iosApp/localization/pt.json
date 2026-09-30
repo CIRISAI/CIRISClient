@@ -5339,6 +5339,7 @@
     "not_your_node": "Esse nó não é seu, portanto não é seu para liberar.",
     "owner_session_required": "Seus dispositivos são a superfície do próprio proprietário. Entre como o proprietário deste nó.",
     "release_incomplete": "A liberação foi assinada, mas o nó ainda lista aquele nó como seu: existe um registro de propriedade que ele não pode ver e que ainda está ativo. O que pôde ser retirado permanece retirado.",
+    "evict_incomplete": "Esse dispositivo não foi totalmente removido. A resposta do nó lista cada parte que não foi concluída; as partes que foram concluídas permanecem concluídas. Tente novamente.",
     "release_self_requires_force": "Esse é o nó com quem você está falando. Liberá-lo encerra sua propriedade aqui, incluindo esta sessão.",
     "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado.",
     "node_not_announced": "Esse dispositivo não está acessível, portanto não pode entrar em um código.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "Recusada",
     "outcome_deferred": "Postergada",
     "outcome_expired": "Expirada"
+  },
+  "membership": {
+    "consent_required": "Alguém precisa aceitar um convite antes de entrar. Ninguém é adicionado a uma família ou a uma comunidade sem o seu próprio consentimento."
   }
 }

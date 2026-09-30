@@ -119,7 +119,7 @@ is taken from the maintainer's brief and is not readable source.
 | the new device in the roster | the roster is `GET /v1/self/occurrences` (CSD-037). On `main`, claim-remote writes an owner-binding and a bootstrap peer, **not** an `identity_occurrence` (`claim_remote.rs:704-720`); the new node shows up in `GET /v1/setup/owned-nodes` | CIRISServer | **unconfirmed** which list shows an approved device after 0.5.218: `integ/0.5.218`'s claim-remote still writes no occurrence. Until it is answered, the flow asserts the confirmation, not a roster row |
 | link now, not at restart | 0.5.218: after a successful claim the approving node's reconciler is nudged and the target joins the owner's device set at once — "no consent grant, no reboot" (`src/claim_remote.rs:564-575`) | CIRISServer | **built, unreleased** (#678, point 2) |
 | old private files open on the new device | re-wrap of the self key for the new node at claim time | CIRISServer #678 · CIRISPersist#916 | **not built** on `integ/0.5.218` (no re-wrap in `claim_remote.rs`); a stated limit |
-| make the new device reachable, from here | a per-device announce on the approving side | CIRISServer #678 | **not built** on `integ/0.5.218`. The new device cannot announce itself: the person's key is here |
+| make the new device reachable, from here | `POST /v1/self/nodes/{node_key_id}/announce` on the approving side: handler `announce_node`, `src/self_devices.rs:338-423`, mounted at `:860-863`, on `integ/0.5.218` @ `dad7f385`; refusals `self.announce_not_your_node`, `self.announce_refused` | CIRISServer #678 | **built on `integ/0.5.218`, unreleased, not wired in the client** (this row said "not built"; that was wrong). No release carries it, so the floor stays `unreleased`. The new device cannot announce itself: the person's key is here |
 | scanning | `QrScanAction` | CIRISClient | **live** (PR #99): `ui/primitives/QrScanAction.kt`, already filling CSD-005's add field |
 
 ## 4. Flow (how)
@@ -172,8 +172,9 @@ node, and in no log line. The owner session in the response is asserted to be
 dropped. Both are shown red on a planted defect first.
 
 **Not tested here.** The camera (QrScanAction's double stands in). History on
-the new device, linking without a restart, and announcing it from here: none is
-built, so there is nothing to test yet, and the confirmation text asserts the
+the new device is not built; linking without a restart and announcing it from
+here are built on `integ/0.5.218` but unreleased (and announce is unwired), so
+there is nothing to test yet, and the confirmation text asserts the
 limits instead. Re-admission after a restart (CIRISEdge#676 / CIRISPersist#911).
 
 ## 6. Delta — card vs API vs CC
@@ -185,12 +186,17 @@ limits instead. Re-admission after a restart (CIRISEdge#676 / CIRISPersist#911).
   * The two devices sync only once linked, and today that happens at the next
     restart. #678 makes the approval link them at once.
   * The new device cannot announce itself, because the person's key is on this
-    one. A per-device "make this device reachable" on the approving side is
-    planned (#678). Until then the new device stays private.
+    one. The per-device "make this device reachable" on the approving side is
+    built on `integ/0.5.218` (`POST /v1/self/nodes/{node_key_id}/announce`,
+    §3) and unreleased. Until a release carries it and this card calls it, the
+    new device stays private.
   * A device that restarts loses its place in the self room and is not
     re-admitted by itself (CIRISEdge#676 / CIRISPersist#911).
   * Revoking a lost device reaches the person's other devices only once #646
-    lands.
+    lands. CIRISServer#700 (open, unreleased) is the fix in flight: it makes
+    `release` and `occurrence/revoke` one signed act that withdraws the owner
+    binding, writes a signed occurrence revocation that replicates, and kicks
+    replication (CSD-037 §3).
 * **Two ways to add a device on one page.** CSD-037's "Add a device"
   (`input_identity_device_code` → `POST /v1/self/occurrence`, a fedcode the new
   device minted for itself) and this card do different things under similar
