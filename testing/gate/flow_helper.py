@@ -37,6 +37,7 @@ long screen as an upper bound.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -47,6 +48,14 @@ from testing.driver import DriverError, TestAutomationServer
 _SCROLL_STEPS = 24
 #: The answers `/scroll` gives when there is nowhere further to go.
 _SCROLL_END = ("already at the", "NO overflow", "can scroll")
+#: How long a plain `click:` waits for a control refused as disabled to enable.
+#: `/input` returns before the frame that applies it, so a submit clicked right
+#: after typing can still be disabled: iOS, run 36733112700, csd_005 clicked Add
+#: in that frame, and (before the handler followed `enabled`) nothing was sent
+#: and nothing said so. A control that stays disabled this long IS disabled,
+#: and the click fails with that reason.
+ENABLE_SETTLE_S = 5.0
+
 #: How a platform refuses a click on a DISABLED control. From 0.5.225 every
 #: platform says "is disabled" (409); before that iOS and Android answered
 #: "No click handler" (404), because a disabled `testableClickable` has none.
@@ -171,7 +180,16 @@ class SyncFlowHelper:
     # ---- actions ------------------------------------------------------------
 
     async def click(self, tag: str, timeout: int = 2000) -> bool:
-        return self._reach(tag, lambda: self._drv.click(tag))
+        """Click `tag`. Refused as disabled, it is retried until the control
+        enables or ENABLE_SETTLE_S runs out — the frame after an input, not a
+        padded flow. Every other refusal is final, as before."""
+        deadline = time.monotonic() + ENABLE_SETTLE_S
+        while True:
+            if self._reach(tag, lambda: self._drv.click(tag)):
+                return True
+            if "is disabled" not in self.last_error or time.monotonic() >= deadline:
+                return False
+            time.sleep(0.25)
 
     async def click_refused(self, tag: str, timeout: int = 2000) -> bool:
         """Click a control the flow says is DISABLED, and hold only if nothing

@@ -137,6 +137,55 @@ def test_click_refused_scrolls_an_off_screen_control_first():
     assert len(d.scrolls) == 2
 
 
+# ── A click refused as disabled waits for the frame, bounded ─────────────
+# iOS, run 36733112700, csd_005: the Add submit was clicked before the frame
+# that applied the typed key enabled it. With the handler bound to `enabled`
+# the click is refused as "is disabled"; the helper waits for the control to
+# enable, as `expect:` waits for its frame, and fails if it never does.
+
+
+class _FakeClock:
+    def __init__(self):
+        self.t = 0.0
+
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += s
+
+
+def _disabled_for(n: int) -> _Drv:
+    d = _Drv()
+    d.disabled_left = n
+
+    def gate(verb, tag):
+        if d.disabled_left > 0:
+            d.disabled_left -= 1
+            raise DriverError(f"POST /click -> HTTP 409: {tag} is disabled: it refuses /click")
+    d._gate = gate
+    return d
+
+
+def test_a_click_refused_as_disabled_is_retried_until_the_control_enables(monkeypatch):
+    from testing.gate import flow_helper
+    monkeypatch.setattr(flow_helper, "time", _FakeClock())
+    d = _disabled_for(3)
+    assert asyncio.run(SyncFlowHelper(d).click("btn_contacts_add_submit")) is True
+    assert d.clicks.count("btn_contacts_add_submit") == 4
+
+
+def test_a_control_that_never_enables_fails_with_its_reason_and_is_bounded(monkeypatch):
+    from testing.gate import flow_helper
+    clock = _FakeClock()
+    monkeypatch.setattr(flow_helper, "time", clock)
+    d = _disabled_for(10 ** 6)
+    h = SyncFlowHelper(d)
+    assert asyncio.run(h.click("btn_contacts_add_submit")) is False
+    assert "is disabled" in h.last_error
+    assert clock.t <= flow_helper.ENABLE_SETTLE_S + 1, "bounded"
+
+
 def test_scrolling_is_bounded_and_the_bottom_is_reported():
     d = _Drv(off_screen_until=10 ** 6, bottom_after=3)
     h = SyncFlowHelper(d)

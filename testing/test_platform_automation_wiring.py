@@ -291,6 +291,48 @@ def test_a_button_a_flow_clicks_disables_its_click_handler_with_itself():
     )
 
 
+# ── A disabled control's handler is REMOVED, not silenced ─────────────────────
+#
+# iOS, run 36733112700, csd_005 `a_node_code_is_refused_by_name`: the flow typed
+# a node code and clicked Add. The click answered success, no request was ever
+# made (no `[addContact] POST` in the app log), and no refusal composed.
+# `CirisButton` registered its handler unconditionally as
+# `{ if (enabled) onClick() }`: the click landed before the frame that applied
+# the typed key, the handler still held `enabled = false`, did nothing, and
+# said it had clicked. A guard INSIDE the handler turns "disabled" into a silent
+# success; the handler has to follow `enabled` (bindClickHandler) so `/tree`
+# says canClick=false and `/click` says "is disabled".
+
+_SILENT_GUARD = re.compile(r"testableWithHandler\(([^)]*)\)\s*\{\s*if\s*\(")
+
+
+def _handlers_that_silently_ignore_a_click() -> list[str]:
+    found = []
+    for path in sorted(COMMON.rglob("*.kt")):
+        src = path.read_text(encoding="utf-8")
+        for m in _SILENT_GUARD.finditer(src):
+            if "enabled" in m.group(1):
+                continue  # the guard is belt-and-braces behind a bound handler
+            found.append(f"{path.relative_to(SHARED)}:{src[:m.start()].count(chr(10)) + 1}")
+    return found
+
+
+def test_the_silent_guard_probe_sees_the_construct():
+    """Red path: the probe finds the shape it exists to find."""
+    src = 'Modifier.testableWithHandler(tag) { if (enabled) onClick() }'
+    assert _SILENT_GUARD.search(src)
+    assert not _SILENT_GUARD.search('Modifier.testableWithHandler(tag, enabled = enabled) { onClick() }')
+
+
+def test_no_click_handler_silently_ignores_a_click_while_disabled():
+    offenders = _handlers_that_silently_ignore_a_click()
+    assert not offenders, (
+        "a handler guarded by `{ if (...) }` answers /click with success while "
+        "doing nothing; pass `enabled =` to testableWithHandler instead: "
+        + ", ".join(offenders)
+    )
+
+
 # ── A node that ANSWERS is not a node that is OWNED (Android leg) ────────────
 #
 # Run 36600766576: the Android leg's node was fresh (the desktop leg's seeded

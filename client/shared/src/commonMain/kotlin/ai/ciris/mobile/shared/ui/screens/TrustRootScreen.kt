@@ -125,7 +125,7 @@ fun TrustRootScreen(
                     IconButton(
                         onClick = { viewModel.refresh() },
                         enabled = !busy,
-                        modifier = Modifier.testableWithHandler("btn_trust_root_refresh") { if (!busy) viewModel.refresh() },
+                        modifier = Modifier.testableWithHandler("btn_trust_root_refresh", enabled = !busy) { if (!busy) viewModel.refresh() },
                     ) {
                         Glyph(GlyphName.REFRESH, tint = if (busy) t.mute else t.dim, contentDescription = localizedString("common_refresh"))
                     }

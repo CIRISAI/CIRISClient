@@ -51,7 +51,7 @@ fun CirisButton(
             disabledContentColor = t.mute,
         ),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
-        modifier = modifier.testableWithHandler(tag) { if (enabled) onClick() },
+        modifier = modifier.testableWithHandler(tag, enabled = enabled) { if (enabled) onClick() },
     ) {
         Text(label, style = CirisTheme.type.body)
     }
@@ -75,7 +75,7 @@ fun CirisTextButton(
             contentColor = if (danger) t.danger else t.brand,
             disabledContentColor = t.mute,
         ),
-        modifier = modifier.testableWithHandler(tag) { if (enabled) onClick() },
+        modifier = modifier.testableWithHandler(tag, enabled = enabled) { if (enabled) onClick() },
     ) {
         Text(label, style = CirisTheme.type.body)
     }

@@ -201,7 +201,7 @@ fun ContactsScreen(
                     IconButton(
                         onClick = { viewModel.refresh() },
                         enabled = !loading,
-                        modifier = Modifier.testableWithHandler(PeopleTags.REFRESH) { if (!loading) viewModel.refresh() },
+                        modifier = Modifier.testableWithHandler(PeopleTags.REFRESH, enabled = !loading) { if (!loading) viewModel.refresh() },
                     ) {
                         Glyph(GlyphName.REFRESH, tint = if (loading) t.mute else t.dim, contentDescription = localizedString("common_refresh"))
                     }

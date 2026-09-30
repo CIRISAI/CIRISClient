@@ -316,17 +316,30 @@ fun Modifier.testableClickable(
  * Track an element and register a handler WITHOUT adding `clickable`.
  *
  * For components that already handle their own clicks (Button, DropdownMenuItem)
- * — adding another `clickable` would give them two.
+ * — adding another `clickable` would give them two. Pass the component's
+ * `enabled`, so a disabled one is disabled to `/click` too.
  */
-fun Modifier.testableWithHandler(tag: String, onClick: () -> Unit): Modifier = composed {
+fun Modifier.testableWithHandler(
+    tag: String,
+    enabled: Boolean = true,
+    onClick: () -> Unit,
+): Modifier = composed {
     if (!TestAutomation.isEnabled()) return@composed this.testTag(tag)
     val currentOnClick by rememberUpdatedState(onClick)
     DisposableEffect(tag) {
-        TestAutomation.registerClickHandler(tag) { currentOnClick() }
         onDispose {
-            TestAutomation.unregisterClickHandler(tag)
+            releaseClickHandler(tag)
             TestAutomation.unregisterElement(tag)
         }
+    }
+    // [enabled] is the component's own `enabled`, bound as in
+    // [testableClickable]. A guard INSIDE the handler (`{ if (enabled) … }`)
+    // answered /click with success while doing nothing: iOS, run 36733112700,
+    // csd_005 clicked Add in the frame before the typed key enabled it, and
+    // nothing was sent and nothing said so.
+    DisposableEffect(tag, enabled) {
+        bindClickHandler(tag, enabled) { currentOnClick() }
+        onDispose { releaseClickHandler(tag) }
     }
     this.testTag(tag).trackPosition(tag, null)
 }
