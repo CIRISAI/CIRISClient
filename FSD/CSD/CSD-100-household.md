@@ -143,6 +143,13 @@ fields:
     example: "founder_only"
     renders: "three chips: A founder decides (default, sent as no protocol) / Most members sign / Everyone signs. The node stores the last two as quorum:M/N"
     tag: opt_household_protocol_founder_only
+  - ceg: x_private:membership_invitation
+    use: emit
+    type: unconfirmed
+    example: "unconfirmed"
+    renders: "forming a household with anyone besides you becomes: form it with you alone, then invite each person, who joins only by accepting (CSD-106). Until then a create naming anyone but the founder is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.3)"
+    tag: "proposed:household_create_invite"
+    blocked_by: CIRISPersist#955
 ```
 
 **The receipt's rule row is `NotSent`.** No `consent:scope` travels with a family
@@ -214,10 +221,10 @@ routes mounted at `:1624-1632`.
 | my households | `GET /v1/families?after=` → `{families, resume}` | CIRISServer | **live** (`:748-792`); owner session, delegates may read; the fold, accord family excluded; paged 100 (max 500) by id, `resume` = next `after`. The client follows `resume` (max 20 pages) |
 | one household's view | `{family_id, name, consensus_protocol, founded_at, members[{key_id, role, joined_at}], my_role, envelope{subject, attester, cohort_scope, dimension, persist_row_hash}}` | CIRISServer | **live** (`view`, `:541-571`); `attester` is null for a row with no signed read (`authority_of`, `:529-539`) |
 | read one | `GET /v1/families/{id}` | CIRISServer | **live** (`:796-808`); a non-member gets `family.not_found` 404, identical to an unknown id (`:508-527`). The card reads the list and does not call this |
-| form | `POST /v1/families {name, consensus_protocol?, members?}` → 201 + view | CIRISServer | **live** (`:661-736`); `majority`/`unanimous` stored as `quorum:M/N` over the founding roster (`normalize_protocol`, `:430-456`) |
+| form | `POST /v1/families {name, consensus_protocol?, members?}` → 201 + view | CIRISServer | **live** (`:661-736`); `majority`/`unanimous` stored as `quorum:M/N` over the founding roster (`normalize_protocol`, `:430-456`). **Changes with CIRISServer#700:** a `members` naming anyone but the founder is refused 409 `membership.consent_required` (§3.3); founding alone still works |
 | dissolve | `DELETE /v1/families/{id}` → `{family_id, dissolved}` | CIRISServer | **live** (`:1153-1183`); founder_only one call, quorum through the envelope |
 | leave | `POST /v1/families/{id}/leave` → `{family_id, left}` | CIRISServer | **live** (`:1008-1082`); any protocol; the last founder of a family with others is refused `family.last_founder` |
-| propose | `POST /v1/families/{id}/changes/envelope {action, key_id?, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); quorum only |
+| propose | `POST /v1/families/{id}/changes/envelope {action, key_id?, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); quorum only. **Changes with CIRISServer#700:** an `add` (a roster that grows) is refused 409 `membership.consent_required` here, at cosign and at assemble; remove, role and dissolve are unaffected (§3.3) |
 | sign | `POST /v1/families/{id}/changes/cosign {change_envelope, signatures}` → `{signature, signatures, required_signatures, quorum_met}` | CIRISServer | **live** (`:1420-1473`); this node's owner signs with their own pen |
 | apply | `POST /v1/families/{id}/changes/assemble {change_envelope, signatures}` | CIRISServer | **live** (`:1492-1612`); the node verifies the quorum, the client only counts |
 | who to name | `GET /v1/contacts` | CIRISServer (`src/contacts_chat.rs`) | **live**; the founding-member picker on the form card, and the names on the founders row and the ceremony's signer chips. Called through `listContacts(nodeBaseUrl)` (`ClientHouseholds.contacts`), at the node URL like the household routes themselves — it built its URL from `$baseUrl` until the People review (CSD-005 §3) |
@@ -260,14 +267,47 @@ stays in the baseline as that decision.
 These are the network's, not the card's, and the card says them rather than
 promising otherwise:
 
-1. **A roster change after forming reaches only this node.** Creation and
-   removals replicate; an added member, a role change and a quorum change do
-   not reach members' other nodes, and a member whose node holds the stale
-   record gets `family.bad_change` on cosign. CIRISPersist#910 (`put_family` is
-   a plain INSERT; `supersede_group_row` never re-indexes).
-2. **Someone removed cannot be added back.** The family fold has no
-   re-admission; the node refuses `family.readd_unsupported` (409). CIRISPersist#910.
-3. **The name is fixed at forming.** No rename route (§3).
+1. **The name is fixed at forming.** No rename route (§3).
+
+Two limits this list carried until 0.5.218 are **fixed in persist v49
+(CIRISPersist#910)** and cleared on `integ/0.5.218`, which builds on v49: an
+addition and a role change are now their own signed rows that replicate
+(`src/family_api.rs:57-61`, `:1073`, `:1296`), and someone removed can be
+added back (`:1099-1100`; `tests/family_crud.rs:386`), so the node no longer
+refuses `family.readd_unsupported`. A 0.5.217 node (persist v48) still behaves
+the old way — a roster change after forming reaches only that node, and
+re-adding is refused `family.readd_unsupported` — and the card's
+`household_limits` sentence still says so until 0.5.218 ships. From
+CIRISServer#700 on, *adding* anyone at all waits on the invitation (§3.3).
+
+### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+
+The maintainer ruled on 2026-09-30 that **adding someone to a household or a
+community requires their consent, including founding members named when it is
+formed.** The normative text is CIRISConstitution#133. Persist's enforcement is
+CIRISPersist#955 (v52): one inviter proposes, the invitee accepts or declines,
+the quorum stays on the admitting record, and an invitation expires in 30 days
+or less. Reverse quorum is not a membership rule; it stays CSD-070's commons
+brake.
+
+Until persist carries the invitation, **CIRISServer#700** (open, branch
+`fix/evict-device-0.5.218`, unreleased) closes every door that grows a roster.
+Each answers **409 `membership.consent_required`**, one literal id for households
+and communities. On this card that changes:
+
+* **form** with founding members: a create whose `members` names anyone but the
+  founder is refused. Forming a household of one still works.
+* **a quorum add** (propose / sign / apply, §2.2) whose proposed roster grows is
+  refused at envelope, cosign and assemble.
+* the direct add on the roster, CSD-101 §3.3.
+
+Unaffected: leave, dissolve, remove, role changes, and re-adding someone already
+active (still `family.already_member`). The text above records what
+0.5.216–0.5.217 serve and is kept as it is. The client renders the new refusal
+by id (`membership.consent_required` is in `en.json`). The replacement is the
+invitation — the invitee's inbox, accept, decline, the inviter's pending state
+— specified in **CSD-106** (`envisioned`; `x_private:membership_invitation`
+above is `blocked_by: CIRISPersist#955`).
 
 ## 4. Flow (how)
 
@@ -312,8 +352,10 @@ sign and apply carry the signatures; a pasted change for another household is
 refused.
 
 **Untested, and must be established on a live node.** The ceremony across two
-real nodes (it needs a quorum household whose record is on both, which #910
-makes fragile); `family.author_signer_unavailable` on a node whose owner pen
+real nodes (it needs a quorum household whose record is on both, which
+CIRISPersist#910 made fragile on persist v48; fixed in persist v49 and cleared
+in `integ/0.5.218`'s code, while the devices ladder's red-expected family rungs
+move to consent-to-join with CIRISServer#700); `family.author_signer_unavailable` on a node whose owner pen
 cannot open; the pager past 100 households.
 
 **Not tested here.** Clipboard contents (no `/clipboard` endpoint); the flow

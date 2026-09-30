@@ -5339,6 +5339,7 @@
     "not_your_node": "That node is not one you own, so it is not yours to release.",
     "owner_session_required": "Your devices are the owner's own surface. Sign in as the owner of this node.",
     "release_incomplete": "The release was signed, but the node still lists that node as yours: an ownership record it cannot see is still live. What it could withdraw stays withdrawn.",
+    "evict_incomplete": "That device wasn't fully removed. The node's answer lists each part that didn't finish; the parts that did finish stay done. Try again.",
     "release_self_requires_force": "That is the node you are talking to. Releasing it ends your ownership here, including this session.",
     "store_unavailable": "The node could not read or write its identity store. Nothing was changed.",
     "node_not_announced": "That device isn't reachable, so it can't go in a code.",
@@ -5477,6 +5478,9 @@
     "quorum_pending": "The room's rule needs more signatures before this change takes effect.",
     "store_unavailable": "The node could not read or write its directory.",
     "write_failed": "The node could not write the change."
+  },
+  "membership": {
+    "consent_required": "Someone has to accept an invitation before they join. Nobody is added to a household or a community without their own yes."
   },
   "partnership_queue": {
     "title": "Partnering with this agent",

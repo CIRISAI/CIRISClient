@@ -5339,6 +5339,7 @@
     "not_your_node": "Nodi hiyo si mojawapo unayoimiliki, hivyo si yako kuiachilia.",
     "owner_session_required": "Vifaa vyako ni uso wa mmiliki mwenyewe. Ingia kama mmiliki wa nodi hii.",
     "release_incomplete": "Uachiliaji ulitiwa saini, lakini nodi bado inaorodhesha nodi hiyo kama yako: rekodi ya umiliki ambayo haiwezi kuiona bado ipo hai. Kile ilichoweza kuondoa kinasalia kikiwa kimeondolewa.",
+    "evict_incomplete": "Kifaa hicho hakikuondolewa kikamilifu. Jibu la nodi linaorodhesha kila sehemu ambayo haikumalizika; sehemu zilizomalizika zinasalia hivyo. Jaribu tena.",
     "release_self_requires_force": "Hiyo ni nodi unayoizungumza nayo. Kuiachilia kunakomesha umiliki wako hapa, ikiwa ni pamoja na kikao hiki.",
     "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa.",
     "node_not_announced": "Kifaa hicho hakiwezi kufikiwa, hivyo hakiwezi kuwekwa katika msimbo.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "Imekataliwa",
     "outcome_deferred": "Imeahirishwa",
     "outcome_expired": "Imeisha muda wake"
+  },
+  "membership": {
+    "consent_required": "Mtu anapaswa kukubali mwaliko kabla ya kujiunga. Hakuna mtu anayeongezwa kwenye kaya au Jamii bila ridhaa yake mwenyewe."
   }
 }

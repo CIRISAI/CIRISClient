@@ -5339,6 +5339,7 @@
     "not_your_node": "Bu düğüm sahip olduğunuz bir düğüm değil, dolayısıyla serbest bırakma yetkiniz yok.",
     "owner_session_required": "Cihazlarınız bu düğümün sahibinin kendi yüzeyidir. Bu düğümün sahibi olarak oturum açın.",
     "release_incomplete": "Serbest bırakma imzalandı, ancak düğüm hâlâ o düğümü sizin olarak listeliyor: göremediği bir sahiplik kaydı hâlâ geçerli. Geri çekebildiği şey geri çekilmiş durumda kalır.",
+    "evict_incomplete": "O cihaz tamamen kaldırılmadı. Düğümün yanıtı tamamlanmayan her bir parçayı listeler; tamamlanan parçalar tamamlanmış kalır. Tekrar deneyin.",
     "release_self_requires_force": "Bu, konuştuğunuz düğüm. Onu serbest bırakmak buradaki sahipliğinizi, bu oturum dahil, sona erdirir.",
     "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi.",
     "node_not_announced": "O cihaz erişilebilir değil, bu nedenle bir koda dahil edilemez.",
@@ -5505,5 +5506,8 @@
     "signed_by_label": "İmzalayan",
     "signed_by_nobody": "Hiç kimse. Ajan, ortaklıkları imzasız kayıtlar olarak, kimsenin anahtarı altında değil bir oturum açma kimliği altında dosyalar (CIRISServer#423).",
     "waiting_title": "Ajanınızdan yanıt bekleniyor"
+  },
+  "membership": {
+    "consent_required": "Katılmadan önce birinin daveti kabul etmesi gerekir. Kimse kendi onayı olmadan bir aileye veya topluluğa eklenmez."
   }
 }

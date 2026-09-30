@@ -472,6 +472,9 @@ jobs:
             # slow step: even the long Kotlin/Native links emit task lines.
             idle_seconds: 600
             cache_read_only: true
+            # ubuntu-latest has 16 GB; gradle.properties' -Xmx8g fits, and the
+            # AAR is not a Kotlin/Native link. Nothing to bound here.
+            gradle_args: ""
           - name: ios-xcframework
             # Kotlin/Native cannot cross-compile Apple targets, and release
             # linking is the expensive part: MEASURED at >85 minutes for
@@ -495,6 +498,59 @@ jobs:
             # minutes with thread stacks instead of at 350 with "cancelled".
             idle_seconds: 1500
             cache_read_only: false
+            # THE LINK GETS ITS OWN JVM, AND BOTH JVMS FIT THE RUNNER.
+            #
+            # `client/gradle.properties` says `org.gradle.jvmargs=-Xmx8g`. That
+            # is right for a desktop and larger than this runner: macos-14 is
+            # a 3-core M1 with 7 GB. And in Kotlin Gradle plugin 2.0.21 the
+            # Kotlin/Native compiler runs INSIDE the Gradle JVM by default
+            # (KotlinNativeToolRunner.runInProcess — `kotlin.native.
+            # disableCompilerDaemon` is the property that flips it to
+            # `javaexec`), so the whole-program release link — the LTO call
+            # graph, which is where it died — lived in a heap the machine
+            # could not back. 0.5.224 passed in 3h11m against ~161 min
+            # measured, which is what paging looks like; 0.5.225, two review
+            # batches larger, hit `GC overhead limit exceeded` at 37 min.
+            #
+            #   --max-workers=1
+            #     One task at a time, so the peak is ONE link, never two.
+            #     org.gradle.parallel is already false; this makes the worker
+            #     pool say the same thing instead of relying on it.
+            #   -Dorg.gradle.jvmargs=-Xmx2g
+            #     Gradle only configures and waits once the link is out of
+            #     process. Configuring AGP + Compose here is ~1 GB; 2 GB is a
+            #     cap with room, not a commitment. A `-D` on the command line
+            #     outranks gradle.properties, so the desktop setting — and
+            #     the XCFramework cache key, which hashes gradle.properties —
+            #     stay untouched. The property's `-XX:+UseParallelGC` goes
+            #     with it; Gradle's own GC choice is irrelevant to a JVM that
+            #     is idle for 160 minutes.
+            #   -Pkotlin.native.disableCompilerDaemon=true
+            #     The link runs in its own JVM, one per link task, which
+            #     exits when the task does. Two links, two JVMs, never at the
+            #     same time — that is the "one link per invocation" without
+            #     splitting the Gradle invocation the watchdog wraps.
+            #   -Pkotlin.native.jvmArgs=-Xmx4g
+            #     That JVM's heap. KGP's own default for it is
+            #     `-Xmx3g -XX:TieredStopAtLevel=1`. The budget on 7 GB:
+            #     ~1.3 GB macOS + runner agent, ≤2 GB Gradle, 4 GB link. The
+            #     C1-only flag is not carried over — it trades peak
+            #     throughput for startup, and this JVM runs for over an hour.
+            #
+            # 4 GB IS A BUDGET, NOT A MEASUREMENT. Nothing here has measured
+            # the link's live set; what is measured is that 8 GB on a 7 GB box
+            # fails. If 4 GB is short the leg fails in tens of minutes with
+            # the same OOM from a process whose heap is known, which is the
+            # right failure — and the answer is still the one above this
+            # matrix: build it locally and upload it before the tag.
+            # `-XX:-UseGCOverheadLimit` is not an option here: it only turns
+            # off the 98%-time-in-GC circuit breaker, and the same JVM then
+            # crawls to a hard OutOfMemoryError later instead.
+            gradle_args: >-
+              --max-workers=1
+              -Dorg.gradle.jvmargs=-Xmx2g
+              -Pkotlin.native.disableCompilerDaemon=true
+              -Pkotlin.native.jvmArgs=-Xmx4g
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -632,10 +688,13 @@ jobs:
         # it.
         if: matrix.name != 'ios-xcframework' || (steps.xcf-cache.outputs.cache-hit != 'true' && steps.prebuilt.outputs.hit != 'true')
         working-directory: client
+        # `gradle_args` is unquoted on purpose: it is a space-separated list
+        # of single tokens (see the matrix), and quoting it would hand Gradle
+        # one argument it does not recognise.
         run: |
           ../packaging/run_with_watchdog.sh \
             "${{ matrix.idle_seconds }}" 300 "${{ matrix.name }}" \
-            -- ./gradlew --no-daemon ${{ matrix.task }}
+            -- ./gradlew --no-daemon ${{ matrix.gradle_args }} ${{ matrix.task }}
 
       - name: Restored, not rebuilt
         # SAY WHICH STORE IT CAME FROM. The two have different trust stories —

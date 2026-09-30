@@ -5339,6 +5339,7 @@
     "not_your_node": "Node itu bukan milik Anda, sehingga tidak bisa Anda lepaskan.",
     "owner_session_required": "Perangkat Anda adalah ranah pemilik sendiri. Masuklah sebagai pemilik node ini.",
     "release_incomplete": "Pelepasan telah ditandatangani, tetapi node masih mencantumkannya sebagai milik Anda: ada catatan kepemilikan yang tidak dapat dilihatnya namun masih berlaku. Apa yang dapat dicabutnya tetap dicabut.",
+    "evict_incomplete": "Perangkat tersebut tidak dihapus secara sepenuhnya. Jawaban node mencantumkan setiap bagian yang belum selesai; bagian yang sudah selesai tetap selesai. Coba lagi.",
     "release_self_requires_force": "Itu adalah node yang sedang Anda ajak bicara. Melepaskannya mengakhiri kepemilikan Anda di sini, termasuk sesi ini.",
     "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah.",
     "node_not_announced": "Perangkat itu tidak dapat dijangkau, sehingga tidak dapat dimasukkan ke dalam kode.",
@@ -5505,5 +5506,8 @@
     "outcome_rejected": "Ditolak",
     "outcome_deferred": "Ditunda",
     "outcome_expired": "Kedaluwarsa"
+  },
+  "membership": {
+    "consent_required": "Seseorang harus menerima undangan sebelum bergabung. Tidak ada yang ditambahkan ke keluarga atau komunitas tanpa persetujuannya sendiri."
   }
 }
