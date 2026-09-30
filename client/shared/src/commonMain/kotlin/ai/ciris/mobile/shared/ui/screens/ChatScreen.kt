@@ -15,6 +15,11 @@ import ai.ciris.mobile.shared.ui.components.AttOp
 import ai.ciris.mobile.shared.ui.components.AttStatus
 import ai.ciris.mobile.shared.ui.components.Attestation
 import ai.ciris.mobile.shared.ui.components.AttestationCard
+import ai.ciris.mobile.shared.ui.components.ExtraOp
+import ai.ciris.mobile.shared.models.drive.isFileContentType
+import ai.ciris.mobile.shared.ui.screens.files.FileCustodyHost
+import ai.ciris.mobile.shared.viewmodels.CustodyTarget
+import ai.ciris.mobile.shared.viewmodels.FileCustodyViewModel
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.components.ViewerAuthority
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
@@ -124,6 +129,9 @@ fun ChatScreen(
     onBack: () -> Unit,
     /** The room row's `member_count`, for a room; the transcript carries no roster. */
     memberCount: Int? = null,
+    /** The one "Where is this file" card (CSD-107), offered on a row that is a file. */
+    custody: FileCustodyViewModel? = null,
+    nodeVersion: String? = null,
 ) {
     val community by viewModel.community.collectAsState()
     val roomMembers by viewModel.memberCount.collectAsState()
@@ -149,6 +157,7 @@ fun ChatScreen(
     }
 
     var detailsFor by remember { mutableStateOf<String?>(null) }
+    val whereLabel = localizedString("mobile.files_custody_where")
 
     Scaffold(
         topBar = {
@@ -286,6 +295,7 @@ fun ChatScreen(
                             MessageRow(
                                 message = msg,
                                 detailsOpen = detailsFor == msg.attestationId,
+                                extraOps = chatFileOps(msg, custody, whereLabel),
                                 onOp = { op ->
                                     // Only ViewDetails / History are ever
                                     // enabled for a message; the rest are
@@ -368,7 +378,29 @@ fun ChatScreen(
             }
         }
     }
+    custody?.let { FileCustodyHost(it, nodeVersion) }
 }
+
+/** The chat tag for "Where is this file" on a message row. */
+fun chatWhereTag(attestationId: String) = "mi_op_where_$attestationId"
+
+/**
+ * The chat row's extra hamburger item: "Where is this file", only on a row
+ * that IS a file ([isFileContentType]) and only when the card is wired. The
+ * chat plane is text-only today (`chat.unsupported_content_type`), so on a
+ * released node this is always empty; the item arrives with the first file row.
+ * The room is the message's community room at its cohort.
+ */
+internal fun chatFileOps(message: CegChatMessage, custody: FileCustodyViewModel?, label: String): List<ExtraOp> {
+    val target = chatCustodyTarget(message) ?: return emptyList()
+    if (custody == null) return emptyList()
+    return listOf(ExtraOp(label, chatWhereTag(message.attestationId)) { custody.open(target) })
+}
+
+/** Pure: the custody query for a chat row, or null when the row is not a file. */
+fun chatCustodyTarget(message: CegChatMessage): CustodyTarget? =
+    if (!isFileContentType(message.contentType)) null
+    else CustodyTarget(message.attestationId, message.cohortScope, message.communityId, null)
 
 // ═════════════════════════════════════════════════════════════════════════════
 // One message = one attestation card
@@ -417,6 +449,7 @@ private fun MessageRow(
     message: CegChatMessage,
     detailsOpen: Boolean,
     onOp: (AttOp) -> Unit,
+    extraOps: List<ExtraOp> = emptyList(),
 ) {
     val badge = localizedString("mobile.chat_badge_message")
     val att = Attestation(
@@ -455,6 +488,7 @@ private fun MessageRow(
                 // permission.
                 viewer = ViewerAuthority(isHolder = message.mine),
                 onOp = onOp,
+                extraOps = extraOps,
             ) {
                 // `mine` follows the AUTHOR (the server derives it from the same
                 // envelope field), so this stays correct now that the attester is

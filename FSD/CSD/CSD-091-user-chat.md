@@ -2,7 +2,7 @@
 
 **CSD**: CSD-091 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, leftovers
 **Flow**: `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`)
-**Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries)
+**Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries), CSD-107 (Where is this file, on a row that is a file)
 
 ```yaml csd:stage
 stage: building
@@ -198,6 +198,7 @@ as a failure, once as a note.
 | the room's handshake state | carried as a system entry with `message_id: chat.state.*` (`src/contacts_chat.rs:694-751`, `803-818`) | CIRISServer | live — and the client renders it correctly through `SystemNoteRow` + `chatEntryText`, whose fallback rules are id, then the server's English, never a blank line and never the raw key (CIRISClient#34) |
 | **does this wait resolve by itself** | `converges_on_its_own` — present on `GET .../messages` (`:3742`) and on the contacts refusal (`:2063`), **absent from the send refusal** (`:2986-2996`) | CIRISServer | **missing on the one route that needs it** |
 | edit / withdraw / recant a message | no route — it needs the author's own signature and the app holds no keys | CIRISServer | **missing by design**, and the UI says so per-op rather than hiding the verb |
+| where a file in chat is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/ChatScreen.kt:397`, as **Where is this file** (`mi_op_where_<id>`) on a message card's `⋮`, only on a row whose `content_type` is not `text/*`. **Dormant**: the chat plane refuses anything but text (`chat.unsupported_content_type`), so no row carries it today. The card is CSD-107's |
 | a CEG family for `chat:message:v1` | not in the pinned registry | CIRISConstitution / CIRISRegistry | **missing** — every message field above is `x_private:` for want of it |
 
 **Wrong-host risk: found and closed.** Every route here is the NODE's, on

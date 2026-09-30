@@ -1049,6 +1049,11 @@ fun CIRISApp(
     val notesViewModel: ai.ciris.mobile.shared.viewmodels.NotesViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.NotesViewModel(drive)
     }
+    // CSD-107: ONE "Where is this file" card, reached from the drive, notes and
+    // chat hamburgers. A node route like every drive route.
+    val fileCustodyViewModel: ai.ciris.mobile.shared.viewmodels.FileCustodyViewModel = viewModel(key = "file-custody") {
+        ai.ciris.mobile.shared.viewmodels.FileCustodyViewModel(drive)
+    }
     // Same leak class as the approvals ViewModel (both are app-scoped and
     // survive logout): the contact list is owner-gated content and must not
     // survive into the next session. Declared here, not in the approval-watch
@@ -4225,13 +4230,19 @@ fun CIRISApp(
                 // Family › Files lists the household picked in the Family hub's switcher (CSD-100): same view model.
                 "family" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
                     viewModel = familyFilesViewModel, nodeVersion = nodeVersion, households = householdsViewModel,
+                    custody = fileCustodyViewModel,
                 )
-                "community" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = communityFilesViewModel, nodeVersion = nodeVersion)
-                else -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(viewModel = selfFilesViewModel, nodeVersion = nodeVersion)
+                "community" -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                    viewModel = communityFilesViewModel, nodeVersion = nodeVersion, custody = fileCustodyViewModel,
+                )
+                else -> ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                    viewModel = selfFilesViewModel, nodeVersion = nodeVersion, custody = fileCustodyViewModel,
+                )
             }
             Screen.Notes -> ai.ciris.mobile.shared.ui.screens.files.NotesScreen(
                 viewModel = notesViewModel,
                 nodeVersion = nodeVersion,
+                custody = fileCustodyViewModel,
             )
             Screen.Contacts -> {
                 // Contacts: the owner's consented peers, and the node client's
@@ -4279,6 +4290,9 @@ fun CIRISApp(
                     memberCount = route.memberCount,
                     // Back to where the room was opened from (CSD-091).
                     onBack = { currentScreen = route.from ?: Screen.Contacts },
+                    // "Where is this file" on a row that is a file (CSD-107).
+                    custody = fileCustodyViewModel,
+                    nodeVersion = nodeVersion,
                 )
             }
 

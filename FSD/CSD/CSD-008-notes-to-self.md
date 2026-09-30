@@ -1,7 +1,7 @@
 # CSD-008 — Notes to self (the chat of one, in Just me › Chats)
 
 **CSD**: CSD-008 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B3 ("Files holds files") and B4 (Just me)
-**Pairs with**: CSD-007 (Files: the drive plane these notes are rows of) · CSD-010 (Interact: the other card in Just me › Chats, when an agent is attached)
+**Pairs with**: CSD-007 (Files: the drive plane these notes are rows of) · CSD-107 (Where is this file — each note's receipt opens it) · CSD-010 (Interact: the other card in Just me › Chats, when an agent is attached)
 **Flow**: `testing/flows/drafts/csd-008-notes-to-self.yaml` (staged; floor `unreleased`)
 
 ```yaml csd:stage
@@ -66,6 +66,7 @@ call goes to the node URL (`ClientDrive`), never `$baseUrl`.
 |---|---|---|---|
 | the notes | `GET /v1/notes` | CIRISServer `src/drive.rs:3020` (handler `read_notes`); owner session only; `state` is one of `drive::BYTE_STATES` (`:193-201`) | called — `viewmodels/NotesViewModel.kt:43` |
 | write a note | `POST /v1/notes` `{body}` | CIRISServer `src/drive.rs:3020` (handler `write_note`); an empty body is `notes.empty`; since 0.5.217 the body goes through the same write gate as a file (CIRISServer#642) | called — `viewmodels/NotesViewModel.kt:62` |
+| which of the person's devices a note is on | `GET /v1/files/{id}/custody?cohort=self` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/files/NotesScreen.kt:138`, from the note's receipt hamburger (`btn_receipt_<id>`, new: a note is a signed row like any file) → **Where is this file** (`btn_receipt_act_where_<id>`); the card is CSD-107's |
 | edit a note | `PUT /v1/notes/{id}` | CIRISServer `src/drive.rs:3023` (handler `:2793`) — new row, old withdrawn | live, **not called** |
 | withdraw a note | `DELETE /v1/notes/{id}` | CIRISServer `src/drive.rs:3023` (handler `:2843`) | live, **not called** |
 

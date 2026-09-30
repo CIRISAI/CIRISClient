@@ -94,6 +94,14 @@ enum class AttOp {
     Recant,
 }
 
+/**
+ * A surface-specific item appended AFTER the uniform [AttOp] vocabulary, so the
+ * shared shape stays the same on every card and only a surface that has the act
+ * adds it. First use: "Where is this file" on a chat row that is a file
+ * (CSD-107). [tag] is the item's drivable tag.
+ */
+data class ExtraOp(val label: String, val tag: String, val onClick: () -> Unit)
+
 /** What the viewer is allowed to do, best-effort (the node re-checks + 401/403s). */
 data class ViewerAuthority(
     /** The local node carries an accord-holder key (roster non-empty ≈ can attempt). */
@@ -280,6 +288,7 @@ fun AttestationHamburger(
     expanded: Boolean,
     onDismiss: () -> Unit,
     onOp: (AttOp) -> Unit,
+    extraOps: List<ExtraOp> = emptyList(),
 ) {
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         AttOp.values().forEach { op ->
@@ -313,6 +322,13 @@ fun AttestationHamburger(
                 },
             )
         }
+        extraOps.forEach { extra ->
+            DropdownMenuItem(
+                text = { Text(extra.label) },
+                onClick = { onDismiss(); extra.onClick() },
+                modifier = Modifier.testableClickable(extra.tag, extra.label) { onDismiss(); extra.onClick() },
+            )
+        }
     }
 }
 
@@ -329,6 +345,7 @@ fun AttestationCard(
     viewer: ViewerAuthority,
     onOp: (AttOp) -> Unit,
     modifier: Modifier = Modifier,
+    extraOps: List<ExtraOp> = emptyList(),
     inlineSlot: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
     val style = attestationStyle(att.kind, att.styleKey, att.status)
@@ -381,6 +398,7 @@ fun AttestationCard(
                         expanded = menu,
                         onDismiss = { menu = false },
                         onOp = onOp,
+                        extraOps = extraOps,
                     )
                 }
             }
