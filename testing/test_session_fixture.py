@@ -54,6 +54,9 @@ class _SlowWizard:
         # then claimed — or the error panel, which never returns to Login.
         self.claim_takes, self.claim_error = claim_takes, claim_error
         self.refuse_next = 0
+        # Clicks on `trace_consent_yes` that land but change nothing: the
+        # answer's handler was not live yet (Android, run 36762606620).
+        self.lose_consent_clicks = 0
         self.on = "Login"
         self.step = "you"
         self.next_at: float | None = None
@@ -123,7 +126,13 @@ class _SlowWizard:
         if tag == "btn_local_login":
             self.on = "Setup"
         elif tag == "trace_consent_yes":
-            self.consented = True
+            if self.lose_consent_clicks > 0:
+                self.lose_consent_clicks -= 1
+            else:
+                self.consented = True
+        elif tag == "btn_next" and self.step == "join_federation" and not self.consented:
+            # SetupState.canProceedFromCurrentStep: unanswered -> Next disabled.
+            raise DriverError(f"POST /click -> HTTP 409: {tag} is disabled: it refuses /click")
         elif tag == "btn_next":
             if self.step == "you":
                 self.next_at = self.clock.t
@@ -225,6 +234,28 @@ def test_a_next_that_answers_disabled_is_waited_for_like_one_with_no_handler(mon
     w.refuse_next = 3
     sf.run_setup(w, "qaadmin", "QaAdmin!2345")
     assert w.screen() == "Login"
+
+
+def test_a_consent_answer_that_did_not_land_is_given_again(monkeypatch):
+    """Android, run 36762606620: the fixture clicked `trace_consent_yes`
+    once, the answer never reached the ViewModel, and Next stayed disabled
+    for 30 s while the question sat unanswered on screen. The fixture only
+    re-answered after a Next that CLICKED but did not advance, never after a
+    Next that refused. Answering again is idempotent; waiting is not."""
+    clock, w = _drive(monkeypatch, advance_after=1.0)
+    w.lose_consent_clicks = 2
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert w.screen() == "Login"
+    assert w.clicks.count("trace_consent_yes") >= 3
+
+
+def test_a_consent_that_never_lands_is_still_reported_by_step(monkeypatch):
+    clock, w = _drive(monkeypatch, advance_after=1.0)
+    w.lose_consent_clicks = 10 ** 6
+    with pytest.raises(sf.SessionUnavailable) as e:
+        sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert "'join_federation'" in str(e.value) and "stayed disabled" in str(e.value)
+    assert clock.t < 120, "bounded"
 
 
 class _OwnedLogin:

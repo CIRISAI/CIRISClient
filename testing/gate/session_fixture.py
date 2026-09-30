@@ -365,6 +365,15 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             except DriverError as e:
                 if not any(w in str(e) for w in DISABLED_ANSWERS):
                     raise
+                # A Next that refuses while the step's question is still on
+                # screen may be waiting on an answer that never landed (Android,
+                # run 36762606620: one click on `trace_consent_yes`, Next
+                # disabled for 30 s). Answering again is idempotent.
+                if "trace_consent_yes" in _tags(drv):
+                    try:
+                        drv.click("trace_consent_yes")
+                    except DriverError:
+                        pass
                 time.sleep(2.0)
         if not clicked:
             raise SessionUnavailable(
