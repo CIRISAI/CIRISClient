@@ -6,7 +6,7 @@
 **Flow**: `testing/flows/csd-047-network-content.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -108,7 +108,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-047-network-content.yaml`, floor `>=0.5.225`, `fixture: two_node`); promotes to `testable` when it runs on the matrix. It enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **4/4 passed** — the Content tile (below the fold; the runner now scrolls to an off-screen control), the peer search, the fixture's peer row, the digest step and its refusal of a bad digest. On the matrix run of the same day (36588619656) it could not start on any desktop leg: the tab was clicked before the circle hop had landed, so Everyone › Rules was never shown; fixed in the runner. A real fetch still needs a digest the peer holds, which the fixture does not seed.
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-047-network-content.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. It enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **4/4 passed** — the Content tile (below the fold; the runner now scrolls to an off-screen control), the peer search, the fixture's peer row, the digest step and its refusal of a bad digest. On the matrix run of the same day (36588619656) it could not start on any desktop leg: the tab was clicked before the circle hop had landed, so Everyone › Rules was never shown; fixed in the runner. A real fetch still needs a digest the peer holds, which the fixture does not seed.
 
 **Platforms.** All five, as the node's owner. A real fetch needs a second node
 holding a known digest; the matrix stands one up.

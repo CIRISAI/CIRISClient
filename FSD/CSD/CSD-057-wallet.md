@@ -4,7 +4,7 @@
 **Flow**: `testing/flows/csd-057-wallet.yaml` (floor `>=0.5.224`)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -161,7 +161,7 @@ warning quietly disappear would be testing the wrong half.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-057-wallet.yaml`, floor `>=0.5.224`); promotes to `testable` when it runs on the matrix. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **3/6 passed, 3 skipped** — the experimental notice before any number, the paymaster and the limits, and back to the tab; the address, the transfer form and its inputs skipped as designed (a node build synthesises a wallet with no address). On the matrix run of the same day (36588619656) it could not start on any desktop leg (the tab was clicked before the circle hop landed; fixed in the runner), and the page's own `btn_wallet_back` is not drawn under the shell — the flow presses the shell's `btn_nav_back` (§4 step 6).
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-057-wallet.yaml`, floor `>=0.5.224`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **3/6 passed, 3 skipped** — the experimental notice before any number, the paymaster and the limits, and back to the tab; the address, the transfer form and its inputs skipped as designed (a node build synthesises a wallet with no address). On the matrix run of the same day (36588619656) it could not start on any desktop leg (the tab was clicked before the circle hop landed; fixed in the runner), and the page's own `btn_wallet_back` is not drawn under the shell — the flow presses the shell's `btn_nav_back` (§4 step 6).
 
 **Platforms.** All five, agent build. Plus a node build for the
 `wallet_unsupported` state in §2 once it exists.

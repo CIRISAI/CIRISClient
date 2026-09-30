@@ -5,7 +5,7 @@
 **Flow**: `testing/flows/csd-008-notes-to-self.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
-stage: building
+stage: testable
 owner: CIRISClient
 ```
 
@@ -87,7 +87,7 @@ The new note is **not** listed under Files (CSD-007: `DriveEntry.isNote`).
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/2 passed**. On the matrix run of the same day (36588619656) it passed on Linux and could not start on macOS — `circle_agent -> tab_chats` landed on Rooms because the tab was clicked before the circle hop had landed (a node client signs in under Neighbours); the runner now verifies each hop against `/state`. Not yet run on the other four legs since.
+**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/2 passed**. On the matrix run of the same day (36588619656) it passed on Linux and could not start on macOS — `circle_agent -> tab_chats` landed on Rooms because the tab was clicked before the circle hop had landed (a node client signs in under Neighbours); the runner now verifies each hop against `/state`. Not yet run on the other four legs since.
 
 **Verified live** (desktop, scratch ciris-server 0.5.215, 2026-09-24): writing
 a note from the UI and reading it back from `/v1/notes`; a readable note
