@@ -74,8 +74,11 @@ def plan_for(args) -> bringup.Plan:
     if args.platform == "android":
         if not args.apk:
             raise bringup.CannotRun("--apk is required for android")
+        # The node is on THIS host; the app is not. Carry its claim PIN across
+        # (bringup.android_plan) — None when the node is already owned.
+        pin = bringup.node_claim_pin(args.node_url)
         return bringup.android_plan(Path(args.apk), args.package, serial=args.serial,
-                                    activity=args.activity)
+                                    activity=args.activity, claim_pin=pin)
     if args.platform == "ios":
         if not args.app:
             raise bringup.CannotRun("--app is required for ios")

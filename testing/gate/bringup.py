@@ -41,9 +41,13 @@ THE ORDERING INVARIANTS, AND WHY EACH ONE COST SOMEBODY SOMETHING
 
 from __future__ import annotations
 
+import json
 import os
+import re
 import shutil
 import subprocess
+import time
+import urllib.request
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -82,6 +86,21 @@ NODE_API_PORT = 4243
 #: environment of the process it launches, so the sentinel is the only handle a
 #: harness has. Read once at startup — see invariant 1.
 ANDROID_TEST_SENTINEL = "/data/local/tmp/ciris_test_mode"
+
+
+#: Where the Android app reads the node's one-time claim PIN: `CIRIS_HOME` is
+#: `filesDir/ciris` (CirisVerify.setup) and PythonRuntime.android's
+#: readLocalClaimPin() reads `File(CIRIS_HOME, "claim_pin")`. `/data/data/<pkg>`
+#: is the app's own data directory, writable through `run-as` on a debug build.
+ANDROID_CLAIM_PIN = "files/ciris/claim_pin"
+
+#: What a claim PIN looks like (`FCZX-WTDT`), loosely: it is written into a
+#: device shell command, so anything else is refused rather than quoted.
+_PIN_SHAPE = re.compile(r"[A-Za-z0-9-]{4,32}")
+
+
+def _android_pin_path(package: str) -> str:
+    return f"/data/data/{package}/{ANDROID_CLAIM_PIN}"
 
 
 class CannotRun(RuntimeError):
@@ -171,7 +190,8 @@ ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity"
 
 
 def android_plan(apk: Path, package: str, serial: str | None = None,
-                 host_port: int = 19091, activity: str = ANDROID_ACTIVITY) -> Plan:
+                 host_port: int = 19091, activity: str = ANDROID_ACTIVITY,
+                 claim_pin: str | None = None) -> Plan:
     """Emulator on this runner, node on the host, client reaching back to it.
 
     The node runs on the HOST and the app reaches it through `adb reverse`, so
@@ -179,8 +199,31 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
     in the REMOTE-node shape described by FSD/ONE_CLIENT_N_NODES.md and means no
     Android-specific node binary is needed — which is just as well, since
     CIRISServer publishes none.
+
+    THE PIN DOES NOT CROSS `adb reverse`. A first-run node writes its one-time
+    claim PIN to `<its home>/claim_pin` on the HOST; the app looks for it in
+    ITS home, inside the emulator. Desktop and iOS share the host's filesystem
+    and read the file the node declares; Android cannot, and in run
+    36746575125 it drove the whole wizard and then gave up with "claim PIN not
+    captured after wait" — the node never saw a claim. So with `claim_pin`
+    (from [node_claim_pin]) the plan writes it where the app reads it, after
+    install (the data directory exists) and before launch (setup reads it on
+    the final step, but a PIN that arrives late is a race nobody needs). The
+    harness is the operator at the node's console here, as two_node.py is for
+    the peer; the PIN still never crosses HTTP.
     """
     adb = _adb(serial)
+    handover: list[Step] = []
+    if claim_pin is not None:
+        if not _PIN_SHAPE.fullmatch(claim_pin):
+            raise CannotRun(f"refusing to hand over a claim PIN that does not look like one: {claim_pin!r}")
+        path = _android_pin_path(package)
+        handover.append(Step(
+            "hand-over-claim-pin",
+            adb + ["shell", f"run-as {package} sh -c "
+                            f"'umask 077 && mkdir -p {path.rsplit('/', 1)[0]} && "
+                            f"printf %s {claim_pin} > {path}'"],
+        ))
     return Plan(
         platform="android",
         test_url=f"http://127.0.0.1:{host_port}",
@@ -193,6 +236,7 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             Step("force-stop", adb + ["shell", "am", "force-stop", package], optional=True),
             # INVARIANT 3: installed before anything is forwarded.
             Step("install", adb + ["install", "-r", str(apk)]),
+            *handover,
             # INVARIANT 2: the node is reachable before the app probes it.
             Step("reverse-node", adb + ["reverse", f"tcp:{NODE_API_PORT}", f"tcp:{NODE_API_PORT}"]),
             Step("forward-automation", adb + ["forward", f"tcp:{host_port}", f"tcp:{CLIENT_TEST_PORT}"]),
@@ -243,10 +287,57 @@ def android_teardown(package: str, serial: str | None = None,
         steps=[
             Step("stop-app", adb + ["shell", "am", "force-stop", package], optional=True),
             Step("disarm-test-mode", adb + ["shell", "rm", "-f", ANDROID_TEST_SENTINEL], optional=True),
+            # The node deletes ITS file when the claim consumes the PIN; the copy
+            # handed to the device would outlive it and be offered to the next
+            # first run — a stale PIN, which is CIRISClient#49 planted by the gate.
+            Step("remove-claim-pin",
+                 adb + ["shell", f"run-as {package} rm -f {_android_pin_path(package)}"], optional=True),
             Step("remove-forward", adb + ["forward", "--remove", f"tcp:{host_port}"], optional=True),
             Step("remove-reverse", adb + ["reverse", "--remove", f"tcp:{NODE_API_PORT}"], optional=True),
         ],
     )
+
+
+def node_claim_pin(node_url: str, timeout: float = 30.0, poll: float = 1.0) -> str | None:
+    """The one-time claim PIN of the node at `node_url`, read from the file the
+    node itself declares (`GET /v1/setup/status` -> `claim_pin_file`, the same
+    declaration desktop's PythonRuntime reads), or None when the node is
+    already owned — the session fixture then logs in instead of claiming.
+
+    Only the PATH crosses HTTP. The read is a same-host read of a 0600 file,
+    which is what makes this the operator's act and not a network one.
+
+    A first-run node whose PIN cannot be read within `timeout` RAISES. None
+    would mean "owned", and the leg would fail at the claim minutes later for a
+    reason known here. The node writes the file a few seconds after /health
+    answers, hence the wait.
+    """
+    deadline = time.monotonic() + timeout
+    last = "no answer yet"
+    while True:
+        try:
+            with urllib.request.urlopen(f"{node_url.rstrip('/')}/v1/setup/status", timeout=5) as r:
+                status = json.load(r)
+            data = status.get("data", status) if isinstance(status, dict) else {}
+            if not (data.get("setup_required") or data.get("is_first_run")):
+                return None
+            declared = data.get("claim_pin_file")
+            if not declared:
+                last = f"the node is first-run but declares no claim_pin_file: {data}"
+            else:
+                try:
+                    pin = Path(declared).read_text(encoding="utf-8").strip()
+                except OSError as e:
+                    last = f"cannot read the declared claim_pin_file {declared}: {e}"
+                else:
+                    if pin:
+                        return pin
+                    last = f"the declared claim_pin_file {declared} is empty"
+        except (OSError, ValueError) as e:
+            last = f"GET {node_url}/v1/setup/status failed: {e}"
+        if time.monotonic() >= deadline:
+            raise CannotRun(f"no claim PIN to hand the app after {timeout:.0f}s: {last}")
+        time.sleep(poll)
 
 
 def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -> Plan:
