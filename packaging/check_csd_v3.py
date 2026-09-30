@@ -142,12 +142,14 @@ TOPOLOGY_RELATIONS = {
 }
 #: TOPOLOGY.md §2.6's negatives.
 TOPOLOGY_NEGATIVES = {"cannot_list_room", "holds_no_row"}
-#: Named by a CSD before TOPOLOGY.md on the server's main lists them. Accepted
+#: Named by a CSD before TOPOLOGY.md on the server's main lists them — which is
+#: not the same as unbuilt: an entry may already run in the server's builder on
+#: a branch, and its note says where. Accepted
 #: so a CSD can state the fixture it needs; each entry says who asked and where
 #: the server stands. Remove an entry when TOPOLOGY.md on main lists it.
 TOPOLOGY_PENDING = {
-    "custody": "CSD-107 — added to TOPOLOGY.md §2.5 by CIRISServer#704 (unmerged)",
-    "no_wider_self_rows": "CSD-107 — the builder already runs it (harness/native/topologies/selffiles.yaml); TOPOLOGY.md §2.6 does not list it",
+    "custody": "CSD-107 — in TOPOLOGY.md §2.5 and the builder on CIRISServer#704 (feat/file-custody-0.5.218, unmerged); its csd-107-file-custody topology passes on real nodes there",
+    "no_wider_self_rows": "CSD-107 — built (harness/native/topology.py on CIRISServer chore/adopt-edge-v33; used by topologies/selffiles.yaml); TOPOLOGY.md §2.6 does not list it",
 }
 
 
