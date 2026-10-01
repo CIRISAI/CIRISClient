@@ -1,0 +1,107 @@
+csd: CSD-106
+flow: csd_106_membership_invites
+title: Invitations — the inbox on the household hub, Invite on the roster
+description: >-
+  CSD-106 §4, driven. On one node, as its owner: the household hub composes an
+  inbox state (on a fresh node, nothing: the empty marker, never the error),
+  and on a node >= 0.5.218 the roster's add control is "Invite someone" whose
+  picker opens. Sending, accepting and declining need two persons on two nodes
+  (Ada invites Cy; Cy's node receives the proposal by replication and
+  answers). Those steps are optional until the fixture can stand them up.
+# Floor: every tag below is a string literal or a literal-prefixed builder in
+# ui/screens/InvitesSupport.kt (InviteTags) or ui/screens/HouseholdsSupport.kt
+# (HouseholdTags); sheet_invitation_answer_accept, invitation_answer_accept_fact_1..3
+# and btn_invitation_answer_accept_confirm/_cancel are derived by ConfirmSheet
+# from tagPrefix "invitation_answer_accept". No release carries them yet; client
+# 0.5.226 will.
+# FIXTURE. The optional steps need two persons: testing/gate/two_node.py stands
+# up a second ciris-server, claims it as a second person and peers the two, so
+# each node holds the other's owner key — which is what POST /v1/families/{id}/
+# invites needs (the invitee must be a registered key). It seeds a CHAT room,
+# not a household, so it needs one more step before these run: Ada forms a
+# household on the leg's node and invites the peer's owner over HTTP
+# (POST /v1/families/{id}/invites {key_id: <peer owner>}), and the leg's client
+# is signed in as the PEER to see the inbox row. Until that seeding exists the
+# populated steps skip as designed.
+# NOT asserted: delivery of the proposal to the invitee's node and of the
+# acceptance back (persist's replication, CSD-106 §5).
+client: "unreleased"
+
+steps:
+  - step_id: the_hub_composes_an_inbox_state
+    title: The household hub shows the inbox in one of its states, never a blank and never the error
+    description: >-
+      Entry: Family › Rules (LayerFamily). On a fresh node there are no
+      invitations, which says nothing: the zero-height marker carries the tag.
+      A node older than 0.5.218 draws invitations_not_on_this_node instead.
+    requires:
+      screen: LayerFamily
+    expect:
+      count: {of: "invitations_*", min: 1}
+      absent: [invitations_error]
+
+  - step_id: an_older_node_says_so
+    title: On a node without the invites routes, the hub says this node can't carry invitations
+    optional_step: true
+    requires:
+      screen: LayerFamily
+      visible: [invitations_not_on_this_node]
+    expect:
+      visible: [invitations_not_on_this_node]
+      absent: [invitations_list, invitations_error]
+
+  - step_id: the_roster_offers_invite
+    title: With a household, the roster's add control opens the picker
+    description: >-
+      Needs a household (CSD-100's flow forms one). On a node >= 0.5.218 the
+      button reads "Invite someone" and the picker card is titled "Invite from
+      your contacts"; the tag is the same as the direct add's, so this step
+      also holds on an older node.
+    optional_step: true
+    requires:
+      screen: HouseholdMembers
+      visible: [btn_household_member_add_open]
+    do:
+      - click: btn_household_member_add_open
+    expect:
+      visible: [card_household_member_add]
+
+  - step_id: an_invitation_waits_on_the_roster
+    title: An invitation sent from this household shows as a pending row, not a member
+    description: >-
+      Needs the two-person seeding (see FIXTURE). The pending row carries its
+      expiry and, on your own invitation, Withdraw.
+    optional_step: true
+    requires:
+      screen: HouseholdMembers
+      visible: [household_members_list]
+    expect:
+      count: {of: "invitation_pending_*", min: 1}
+
+  - step_id: the_invitee_sees_it
+    title: Signed in as the invitee, the household hub lists the invitation with Accept and Decline
+    description: >-
+      Needs the two-person seeding, with the client signed in as the peer.
+    optional_step: true
+    requires:
+      screen: LayerFamily
+      visible: [invitations_list]
+    expect:
+      state: populated
+      count: {of: "invitation_row_*", min: 1}
+
+  - step_id: each_invitation_offers_both_answers
+    title: Each invitation offers Accept and Decline
+    description: >-
+      A click needs a literal tag, and the row's tag carries the proposal id,
+      which only the seeding knows. Once the fixture writes it into the flow's
+      values, the next step clicks btn_invitation_accept_<id> and asserts
+      sheet_invitation_answer_accept with invitation_answer_accept_fact_1..3,
+      then dismisses it (btn_invitation_answer_accept_cancel) so nothing is
+      signed and the invitation stays for the next leg.
+    optional_step: true
+    requires:
+      screen: LayerFamily
+      visible: [invitations_list]
+    expect:
+      count: {of: "btn_invitation_accept_*", min: 1}

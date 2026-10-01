@@ -3,9 +3,10 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.api.NodeRefusal
-import ai.ciris.mobile.shared.models.chat.PairRoomInvite
-import ai.ciris.mobile.shared.models.chat.PairRoomInviteAnswer
-import ai.ciris.mobile.shared.models.chat.PairRoomInviteInbox
+import ai.ciris.mobile.shared.models.chat.pairRooms
+import ai.ciris.mobile.shared.models.federation.InboxInvite
+import ai.ciris.mobile.shared.models.federation.InviteAnswer
+import ai.ciris.mobile.shared.models.federation.InviteInbox
 import ai.ciris.mobile.shared.models.federation.AddContactResponse
 import ai.ciris.mobile.shared.models.federation.AnnounceOwnershipResponse
 import ai.ciris.mobile.shared.models.federation.Contact
@@ -32,7 +33,7 @@ private const val BOB_ROOM = "chat:pair:v1:bbbb"
 
 /** The inbox and the contact list, as a 0.5.218 node answers them; records every decline. */
 private class FakeInboxNode(
-    var inbox: PairRoomInviteInbox = PairRoomInviteInbox(),
+    var inbox: InviteInbox = InviteInbox(),
     var inboxError: NodeRefusal? = null,
     var declineError: NodeRefusal? = null,
 ) : ContactsApi {
@@ -48,19 +49,19 @@ private class FakeInboxNode(
     override suspend fun addContact(nodeUrl: String, keyId: String): AddContactResponse = error("not used")
     override suspend fun contactCode(nodeUrl: String, nodes: String?): ContactCodeResponse = error("not used")
     override suspend fun announceThisDevice(nodeUrl: String): AnnounceOwnershipResponse = error("not used")
-    override suspend fun pairRoomInvites(nodeUrl: String): PairRoomInviteInbox {
+    override suspend fun pairRoomInvites(nodeUrl: String): InviteInbox {
         inboxError?.let { throw it }
         return inbox
     }
-    override suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): PairRoomInviteAnswer {
+    override suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): InviteAnswer {
         declines += nodeUrl to proposalId
         declineError?.let { throw it }
-        inbox = PairRoomInviteInbox(invites = inbox.invites.filterNot { it.proposalId == proposalId })
-        return PairRoomInviteAnswer(state = "declined", proposalId = proposalId, replyId = "reply-1")
+        inbox = InviteInbox(invites = inbox.invites.filterNot { it.proposalId == proposalId })
+        return InviteAnswer(state = "declined", proposalId = proposalId, replyId = "reply-1")
     }
 }
 
-private fun pairInvite(id: String, room: String) = PairRoomInvite(
+private fun pairInvite(id: String, room: String) = InboxInvite(
     proposalId = id, groupKind = "community", groupId = room, isPairRoom = true,
     role = "founder", proposerKeyId = "the-other-persons-NODE",
 )
@@ -80,11 +81,11 @@ class PairRoomInvitationTest {
     @Test
     fun aPairRoomInvitationLandsOnTheContactWhoseRoomItIs() {
         val node = FakeInboxNode(
-            inbox = PairRoomInviteInbox(
+            inbox = InviteInbox(
                 invites = listOf(
                     pairInvite("prop-alice", ALICE_ROOM),
                     // A household's invitation is CSD-106's inbox, not a conversation.
-                    PairRoomInvite(proposalId = "prop-family", groupKind = "family", groupId = "family:x"),
+                    InboxInvite(proposalId = "prop-family", groupKind = "family", groupId = "family:x"),
                     // A pair room with someone who is not a contact: no row to put it on.
                     pairInvite("prop-stranger", "chat:pair:v1:ffff"),
                 ),
@@ -97,8 +98,8 @@ class PairRoomInvitationTest {
 
     @Test
     fun aRowMarkedAsAPairRoomButOutsideThePairPrefixIsNotAConversation() {
-        val inbox = PairRoomInviteInbox(
-            invites = listOf(PairRoomInvite(proposalId = "p", groupId = "chat:room:v1:123", isPairRoom = true)),
+        val inbox = InviteInbox(
+            invites = listOf(InboxInvite(proposalId = "p", groupId = "chat:room:v1:123", isPairRoom = true)),
         )
         assertTrue(inbox.pairRooms.isEmpty())
     }
@@ -114,7 +115,7 @@ class PairRoomInvitationTest {
 
     @Test
     fun declineSendsTheProposalToTheNodeAndTheRowGoesBackToChat() {
-        val node = FakeInboxNode(inbox = PairRoomInviteInbox(invites = listOf(pairInvite("prop-bob", BOB_ROOM))))
+        val node = FakeInboxNode(inbox = InviteInbox(invites = listOf(pairInvite("prop-bob", BOB_ROOM))))
         val vm = vm(node)
         assertEquals(setOf(BOB), vm.pairInvites.value.keys)
         vm.declinePairInvite(BOB)
@@ -126,7 +127,7 @@ class PairRoomInvitationTest {
     @Test
     fun aRefusedDeclineIsSaidByIdAndTheInvitationStays() {
         val node = FakeInboxNode(
-            inbox = PairRoomInviteInbox(invites = listOf(pairInvite("prop-bob", BOB_ROOM))),
+            inbox = InviteInbox(invites = listOf(pairInvite("prop-bob", BOB_ROOM))),
             declineError = NodeRefusal("membership.invite_expired", "That invitation has expired.", 410),
         )
         val vm = vm(node)
@@ -136,11 +137,11 @@ class PairRoomInvitationTest {
     }
 
     @Test
-    fun theInboxWireShapeIsTheServersAndCsd106s() {
+    fun theInboxWireShapeIsTheServersReadThroughCsd106sOneModel() {
         // `src/membership_invites.rs::inbox` at 53d1ffb5, field for field.
         val json = Json { ignoreUnknownKeys = true }
         val inbox = json.decodeFromString(
-            PairRoomInviteInbox.serializer(),
+            InviteInbox.serializer(),
             """{"invitee_key_id":"me","invites":[{"proposal_id":"p1","group_kind":"community","group_id":"chat:pair:v1:ab",""" +
                 """"group_name":null,"is_pair_room":true,"role":"founder","proposer_key_id":"node-x",""" +
                 """"proposed_at":"2026-10-01T00:00:00Z","expires_at":"2026-10-15T00:00:00Z"}]}""",

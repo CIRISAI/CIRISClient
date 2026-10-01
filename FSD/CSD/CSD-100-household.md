@@ -144,12 +144,11 @@ fields:
     renders: "three chips: A founder decides (default, sent as no protocol) / Most members sign / Everyone signs. The node stores the last two as quorum:M/N"
     tag: opt_household_protocol_founder_only
   - ceg: x_private:membership_invitation
-    use: emit
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "forming a household with anyone besides you becomes: form it with you alone, then invite each person, who joins only by accepting (CSD-106). Until then a create naming anyone but the founder is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.3)"
-    tag: "proposed:household_create_invite"
-    blocked_by: CIRISPersist#955
+    use: display-only
+    type: string
+    example: "You form a household on your own. Once it exists, invite each person from Family › People; they join only by accepting."
+    renders: "on a node that carries invitations (GET /v1/self/invites answers, ≥ 0.5.218) the form card drops its founding-member chips and says this instead, and the create sends no `members`: the node seats only the founder (`membership.founding_member_unsigned` otherwise). On an older node the chips stay. The invitee's inbox, accept and decline, sits above the household on this hub (CSD-106)"
+    tag: household_create_found_alone
 ```
 
 **The receipt's rule row is `NotSent`.** No `consent:scope` travels with a family
@@ -290,24 +289,26 @@ the quorum stays on the admitting record, and an invitation expires in 30 days
 or less. Reverse quorum is not a membership rule; it stays CSD-070's commons
 brake.
 
-Until persist carries the invitation, **CIRISServer#700** (open, branch
-`fix/evict-device-0.5.218`, unreleased) closes every door that grows a roster.
-Each answers **409 `membership.consent_required`**, one literal id for households
-and communities. On this card that changes:
+**CIRISServer 0.5.218** ships it (persist v52, edge v38; merged at
+`53d1ffb5`). The interim 409 `membership.consent_required` of CIRISServer#700
+never reached a release. On this card (CSD-106):
 
+* **the invitee's inbox** is drawn first on this hub: household invitations
+  addressed to the owner (`GET /v1/self/invites`), each with Accept and Decline
+  behind a three-fact confirm (`POST /v1/self/invites/{proposal_id}/accept`,
+  `…/decline`). On a node without the route it says "This node can't carry
+  invitations yet", never "you have none".
 * **form** with founding members: a create whose `members` names anyone but the
-  founder is refused. Forming a household of one still works.
-* **a quorum add** (propose / sign / apply, §2.2) whose proposed roster grows is
-  refused at envelope, cosign and assemble.
-* the direct add on the roster, CSD-101 §3.3.
+  founder is refused `membership.founding_member_unsigned`. On a node that
+  carries invitations the form card offers no member chips and says to invite
+  once the household exists (`household_create_found_alone`).
+* **a quorum add** (propose / sign / apply, §2.2) is how a quorum household
+  seats someone who has ACCEPTED an invitation: persist admits the widening
+  only on that acceptance (`membership.awaiting_acceptance` otherwise). It is
+  proposed from the roster's accepted row (CSD-101 §3.3).
 
 Unaffected: leave, dissolve, remove, role changes, and re-adding someone already
-active (still `family.already_member`). The text above records what
-0.5.216–0.5.217 serve and is kept as it is. The client renders the new refusal
-by id (`membership.consent_required` is in `en.json`). The replacement is the
-invitation — the invitee's inbox, accept, decline, the inviter's pending state
-— specified in **CSD-106** (`envisioned`; `x_private:membership_invitation`
-above is `blocked_by: CIRISPersist#955`).
+active (still `family.already_member`).
 
 ## 4. Flow (how)
 

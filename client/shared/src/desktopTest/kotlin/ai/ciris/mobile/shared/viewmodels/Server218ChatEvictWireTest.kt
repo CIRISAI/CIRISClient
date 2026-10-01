@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
 import ai.ciris.mobile.shared.models.chat.PairPhase
 import ai.ciris.mobile.shared.models.chat.pairPhase
+import ai.ciris.mobile.shared.models.chat.pairRooms
 import ai.ciris.mobile.shared.models.federation.EvictionReport
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.runBlocking
@@ -89,9 +90,9 @@ class Server218ChatEvictWireTest {
                 """{"state":"declined","proposal_id":"prop-pair","reply_id":"r1","group_kind":"community","group_id":"chat:pair:v1:ab","awaiting":null}"""),
         ))
         val c = client(n)
-        val inbox = c.listPairRoomInvites(n.url)
+        val inbox = c.listMyInvites(n.url)
         assertEquals(listOf("prop-pair"), inbox.pairRooms.map { it.proposalId })
-        val answer = c.declinePairRoomInvite("prop-pair", n.url)
+        val answer = c.declineInvite("prop-pair", n.url)
         assertEquals("declined", answer.state)
         assertEquals(listOf("GET /v1/self/invites", "POST /v1/self/invites/prop-pair/decline"), n.seen)
     }
@@ -99,7 +100,7 @@ class Server218ChatEvictWireTest {
     @Test
     fun aNodeWithoutTheInboxAnswersABare404() = runBlocking {
         val n = node(emptyMap())
-        val e = assertFailsWith<NodeRefusal> { client(n).listPairRoomInvites(n.url) }
+        val e = assertFailsWith<NodeRefusal> { client(n).listMyInvites(n.url) }
         assertEquals(404, e.statusCode)
         assertNull(e.reasonId)
     }

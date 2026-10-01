@@ -5,8 +5,8 @@ import ai.ciris.mobile.shared.models.federation.AnnounceOwnershipResponse
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
-import ai.ciris.mobile.shared.models.chat.PairRoomInviteAnswer
-import ai.ciris.mobile.shared.models.chat.PairRoomInviteInbox
+import ai.ciris.mobile.shared.models.federation.InviteAnswer
+import ai.ciris.mobile.shared.models.federation.InviteInbox
 
 /**
  * What the People screen asks a node (CSD-005, CSD-092).
@@ -37,13 +37,18 @@ interface ContactsApi {
     /**
      * `GET {nodeUrl}/v1/self/invites` (0.5.218) — the invitations waiting for
      * this person, of which People shows the PAIR-ROOM ones on their contact's
-     * row (CSD-005, CSD-091). Defaulted so a fake that does not care answers
+     * row (CSD-005, CSD-091). The same client method as CSD-106's hubs
+     * (`listMyInvites`). Defaulted so a fake that does not care answers
      * "none"; the real client reads the node.
      */
-    suspend fun pairRoomInvites(nodeUrl: String): PairRoomInviteInbox = PairRoomInviteInbox()
+    suspend fun pairRoomInvites(nodeUrl: String): InviteInbox = InviteInbox()
 
-    /** `POST {nodeUrl}/v1/self/invites/{proposal_id}/decline` — the person's own signed decline. */
-    suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): PairRoomInviteAnswer =
+    /**
+     * `POST {nodeUrl}/v1/self/invites/{proposal_id}/decline` — the person's own
+     * signed decline, through the ONE client method for it (CSD-106's
+     * `declineInvite`): a pair room's decline and a household's are one act.
+     */
+    suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): InviteAnswer =
         throw UnsupportedOperationException("declinePairRoomInvite")
 }
 
@@ -57,8 +62,8 @@ class ClientContactsApi(private val client: CIRISApiClient) : ContactsApi {
         client.getContactCode(nodes, nodeUrl = nodeUrl)
     override suspend fun announceThisDevice(nodeUrl: String): AnnounceOwnershipResponse =
         client.announceOwnership(localNodeUrl = nodeUrl)
-    override suspend fun pairRoomInvites(nodeUrl: String): PairRoomInviteInbox =
-        client.listPairRoomInvites(nodeUrl)
-    override suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): PairRoomInviteAnswer =
-        client.declinePairRoomInvite(proposalId, nodeUrl)
+    override suspend fun pairRoomInvites(nodeUrl: String): InviteInbox =
+        client.listMyInvites(nodeUrl)
+    override suspend fun declinePairRoomInvite(nodeUrl: String, proposalId: String): InviteAnswer =
+        client.declineInvite(proposalId, nodeUrl)
 }

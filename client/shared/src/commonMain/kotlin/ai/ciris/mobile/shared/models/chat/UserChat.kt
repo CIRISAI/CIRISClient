@@ -311,69 +311,22 @@ fun ChatCommunity.pairPhase(acceptedHere: Boolean = false): PairPhase = when {
     else -> PairPhase.OPEN
 }
 
+/** The `chat:pair:v1:` id prefix — edge's `PAIR_COMMUNITY_PREFIX`. */
+const val PAIR_ROOM_PREFIX = "chat:pair:v1:"
+
 /**
- * One row of `GET /v1/self/invites` (CIRISServer 0.5.218,
- * `src/membership_invites.rs::inbox`), as far as a PAIR-ROOM invitation needs
- * it. The field names are the server's and the same as CSD-106's
- * `InboxInvite` (PR #141), so both read one wire shape; the hubs' inbox
- * leaves pair rooms out, and People shows them on the contact's row.
- *
- * `proposer_key_id` is the proposal's attester — for a pair room the opener's
- * NODE (edge founds the room with the node signer), not the person — so a row
- * is matched to a contact by [groupId], which IS that contact's derived
- * `chat_community_id`, never by the proposer.
+ * The PAIR-ROOM rows of `GET /v1/self/invites` (ciris-server 0.5.218), read
+ * through CSD-106's one inbox model ([ai.ciris.mobile.shared.models.federation.InviteInbox]).
+ * The hubs' inbox leaves these out; People shows each on its contact's row.
+ * `is_pair_room` is the server's word; the id prefix is the same fact,
+ * checked too, so a family's or community's invitation is never taken for a
+ * conversation. `proposer_key_id` on these rows is the other person's NODE
+ * (edge founds a pair room with the node signer), so a row is matched to a
+ * contact by `group_id` — that contact's derived `chat_community_id` — never
+ * by the proposer.
  */
-@Serializable
-data class PairRoomInvite(
-    @SerialName("proposal_id")
-    val proposalId: String,
-    @SerialName("group_kind")
-    val groupKind: String = "",
-    @SerialName("group_id")
-    val groupId: String = "",
-    @SerialName("group_name")
-    val groupName: String? = null,
-    @SerialName("is_pair_room")
-    val isPairRoom: Boolean = false,
-    val role: String? = null,
-    @SerialName("proposer_key_id")
-    val proposerKeyId: String = "",
-    @SerialName("proposed_at")
-    val proposedAt: String? = null,
-    @SerialName("expires_at")
-    val expiresAt: String? = null,
-)
-
-/** `GET /v1/self/invites` → `{invitee_key_id, invites}`. */
-@Serializable
-data class PairRoomInviteInbox(
-    @SerialName("invitee_key_id")
-    val inviteeKeyId: String? = null,
-    val invites: List<PairRoomInvite> = emptyList(),
-) {
-    /**
-     * The pair-room rows only. `is_pair_room` is the server's word; the id
-     * prefix (`chat:pair:v1:`, edge's `PAIR_COMMUNITY_PREFIX`) is the same
-     * fact, checked too, so a family's or a community's invitation is never
-     * taken for a conversation.
-     */
-    val pairRooms: List<PairRoomInvite>
-        get() = invites.filter { it.isPairRoom && it.groupId.startsWith(PAIR_ROOM_PREFIX) }
-
-    companion object {
-        const val PAIR_ROOM_PREFIX = "chat:pair:v1:"
-    }
-}
-
-/** `POST /v1/self/invites/{proposal_id}/decline` → `{state: "declined", proposal_id, reply_id, …}`. */
-@Serializable
-data class PairRoomInviteAnswer(
-    val state: String = "",
-    @SerialName("proposal_id")
-    val proposalId: String = "",
-    @SerialName("reply_id")
-    val replyId: String? = null,
-)
+val ai.ciris.mobile.shared.models.federation.InviteInbox.pairRooms: List<ai.ciris.mobile.shared.models.federation.InboxInvite>
+    get() = invites.filter { it.isPairRoom && it.groupId.startsWith(PAIR_ROOM_PREFIX) }
 
 /** ``GET /v1/chat/{community_id}/messages`` → the transcript, OLDEST FIRST. */
 @Serializable

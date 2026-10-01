@@ -12,7 +12,8 @@ import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.RemoveContactResponse
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
-import ai.ciris.mobile.shared.models.chat.PairRoomInvite
+import ai.ciris.mobile.shared.models.chat.pairRooms
+import ai.ciris.mobile.shared.models.federation.InboxInvite
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -146,8 +147,8 @@ class ContactsViewModel(
      * with a non-contact cannot carry a message (`chat.not_a_contact`), and
      * the hubs' inbox (CSD-106) is where every other invitation is answered.
      */
-    private val _pairInvites = MutableStateFlow<Map<String, PairRoomInvite>>(emptyMap())
-    val pairInvites: StateFlow<Map<String, PairRoomInvite>> = _pairInvites.asStateFlow()
+    private val _pairInvites = MutableStateFlow<Map<String, InboxInvite>>(emptyMap())
+    val pairInvites: StateFlow<Map<String, InboxInvite>> = _pairInvites.asStateFlow()
 
     /** The contact whose invitation is being declined right now, or null. */
     private val _declining = MutableStateFlow<String?>(null)

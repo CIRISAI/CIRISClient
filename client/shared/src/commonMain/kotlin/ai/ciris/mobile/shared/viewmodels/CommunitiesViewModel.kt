@@ -9,6 +9,9 @@ import ai.ciris.mobile.shared.models.federation.CommunityRoom
 import ai.ciris.mobile.shared.models.federation.CommunityRoomMember
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.platform.PlatformLogger
+import ai.ciris.mobile.shared.ui.screens.InviteSupport
+import ai.ciris.mobile.shared.ui.screens.MEMBERSHIP_CONSENT_REQUIRED
+import ai.ciris.mobile.shared.ui.screens.isInviteRouteMissing
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -86,6 +89,27 @@ class CommunitiesViewModel(
     /** The signature this node's owner just made over someone else's envelope, as JSON to send back. */
     val cosignature: StateFlow<String?> = _cosignature.asStateFlow()
 
+    private val _invites = MutableStateFlow<Map<String, GroupInvitesRead>>(emptyMap())
+    /** Community id → its invitations (CSD-106), read per room section on the roster. */
+    val invites: StateFlow<Map<String, GroupInvitesRead>> = _invites.asStateFlow()
+
+    private val _inviteSupport = MutableStateFlow(InviteSupport.UNKNOWN)
+    /** Whether adding someone is inviting them on this node — answered by the invites route (CSD-106). */
+    val inviteSupport: StateFlow<InviteSupport> = _inviteSupport.asStateFlow()
+
+    private val _myKeyId = MutableStateFlow<String?>(null)
+    /**
+     * The owner's person key (`GET /v1/setup/owned-nodes` → `owner`, the same
+     * source the household roster uses), read once, and only when a room's
+     * invitations arrive without the node's own `viewer_key_id` (0.5.218).
+     * Null when unreadable: Withdraw then falls back to every pending row.
+     */
+    val myKeyId: StateFlow<String?> = _myKeyId.asStateFlow()
+
+    private val _inviteNotice = MutableStateFlow<String?>(null)
+    /** One-shot: [NOTICE_INVITED] or [NOTICE_WITHDRAWN]. An invitation is never reported as an applied add. */
+    val inviteNotice: StateFlow<String?> = _inviteNotice.asStateFlow()
+
     // ── Reads ────────────────────────────────────────────────────────────────
 
     fun refresh() {
@@ -152,8 +176,88 @@ class CommunitiesViewModel(
         }
     }
 
+    /**
+     * The direct add a 0.5.216–0.5.217 node serves. A 202 `{state: "invited"}`
+     * (0.5.218's alias) comes back as an invitation, and a 409
+     * `membership.consent_required` (the interim build) re-reads the room's
+     * invites route so the roster offers Invite if the node serves it.
+     */
     fun addMember(communityId: String, keyId: String, role: String? = null) =
-        governed("add", communityId) { apiClient.addCommunityMember(communityId, keyId.trim(), role, nodeUrl()) }
+        governed("add", communityId) {
+            try {
+                apiClient.addCommunityMember(communityId, keyId.trim(), role, nodeUrl())
+            } catch (e: NodeRefusal) {
+                if (e.reasonId == MEMBERSHIP_CONSENT_REQUIRED) {
+                    _inviteSupport.value = InviteSupport.UNKNOWN
+                    loadInvites(communityId)
+                }
+                throw e
+            }
+        }
+
+    /**
+     * Read one room's invitations. Also the node's answer to whether it
+     * carries invitations at all: a bare 404 is an older node, where the room
+     * keeps today's direct add.
+     */
+    fun loadInvites(communityId: String) {
+        val epoch = sessionEpoch
+        viewModelScope.launch {
+            if (_invites.value[communityId] !is GroupInvitesRead.Loaded) {
+                _invites.value = _invites.value + (communityId to GroupInvitesRead.Loading)
+            }
+            val next = try {
+                val list = apiClient.listCommunityInvites(communityId, nodeUrl())
+                if (list.viewerKeyId.isNullOrBlank() && _myKeyId.value == null) {
+                    _myKeyId.value = runCatching { apiClient.getOwnedNodes(nodeUrl()).owner }.getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                }
+                GroupInvitesRead.Loaded(list.invites, list.viewerKeyId)
+            } catch (e: Exception) {
+                PlatformLogger.w(tag, "[listCommunityInvites] ${(e as? NodeRefusal)?.reasonId ?: e.message}")
+                GroupInvitesRead.of(e)
+            }
+            if (epoch != sessionEpoch) return@launch
+            _invites.value = _invites.value + (communityId to next)
+            when (next) {
+                is GroupInvitesRead.Loaded -> _inviteSupport.value = InviteSupport.INVITES
+                GroupInvitesRead.NotOnThisNode -> _inviteSupport.value = InviteSupport.LEGACY
+                else -> {}
+            }
+        }
+    }
+
+    /**
+     * Invite [keyId] into the room (0.5.218+). A bare 404 sends nothing in its
+     * place — the direct add is a different act — and the roster switches to
+     * offering it, saying why ([INVITES_NOT_ON_THIS_NODE]).
+     */
+    fun invite(communityId: String, keyId: String) {
+        act("invite") {
+            try {
+                apiClient.inviteCommunityMember(communityId, keyId.trim(), null, nodeUrl())
+            } catch (e: NodeRefusal) {
+                if (!isInviteRouteMissing(e)) throw e
+                _inviteSupport.value = InviteSupport.LEGACY
+                _invites.value = _invites.value + (communityId to GroupInvitesRead.NotOnThisNode)
+                throw NodeRefusal(INVITES_NOT_ON_THIS_NODE, e.detail, e.statusCode)
+            }
+            _inviteSupport.value = InviteSupport.INVITES
+            _inviteNotice.value = NOTICE_INVITED
+            loadInvites(communityId)
+        }
+    }
+
+    /** Withdraw an invitation nobody has answered. The node refuses anyone but its proposer. */
+    fun withdrawInvite(communityId: String, proposalId: String) {
+        act("withdraw") {
+            apiClient.withdrawCommunityInvite(communityId, proposalId, nodeUrl())
+            _inviteNotice.value = NOTICE_WITHDRAWN
+            loadInvites(communityId)
+        }
+    }
+
+    fun consumeInviteNotice() { _inviteNotice.value = null }
 
     fun removeMember(communityId: String, keyId: String) =
         governed("remove", communityId) { apiClient.removeCommunityMember(communityId, keyId, nodeUrl()) }
@@ -236,6 +340,12 @@ class CommunitiesViewModel(
                     _pending.value = _pending.value + (communityId to out.change)
                     PlatformLogger.i(tag, "[$op] held: ${out.change.valid} of ${out.change.required} under ${out.change.consensusProtocol}")
                 }
+                is CommunityChangeOutcome.Invited -> {
+                    // 0.5.218's `…/members` alias invited them: nobody joined.
+                    _inviteSupport.value = InviteSupport.INVITES
+                    _inviteNotice.value = NOTICE_INVITED
+                    loadInvites(communityId)
+                }
             }
         }
     }
@@ -273,9 +383,16 @@ class CommunitiesViewModel(
         _applied.value = null
         _pending.value = emptyMap()
         _cosignature.value = null
+        _invites.value = emptyMap()
+        _inviteSupport.value = InviteSupport.UNKNOWN
+        _inviteNotice.value = null
+        _myKeyId.value = null
     }
 
     companion object {
+        const val NOTICE_INVITED = "invited"
+        const val NOTICE_WITHDRAWN = "withdrawn"
+
         /** A paste that is not JSON of the expected shape. The client's own id, never the node's. */
         const val MALFORMED_PASTE = "mobile.community_paste_malformed"
         const val NOT_FOUND = "community.not_found"

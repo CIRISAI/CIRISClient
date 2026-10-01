@@ -14,6 +14,7 @@
     "POST /v1/self/age :: ChildSafety, Setup",
     "POST /v1/self/associate :: IdentityManagement, Setup",
     "POST /v1/self/identity :: AddFederationId, IdentityManagement, Setup",
+    "POST /v1/self/invites/{}/decline :: Contacts, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity",
     "POST /v1/setup/claim-remote :: ClaimNode, Setup",
     "POST /v1/setup/discover-local-llm :: LLMSettings, Setup",
     "POST /v1/setup/list-models :: LLMSettings, Settings",
