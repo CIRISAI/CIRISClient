@@ -234,3 +234,46 @@ def test_a_body_that_says_it_failed_raises_even_on_http_200():
             raise AssertionError("a success:false body was accepted as typed")
     finally:
         srv.shutdown()
+
+
+class _El:
+    def __init__(self, tag):
+        self.test_tag = tag
+
+
+def test_wait_for_element_rides_out_a_failing_tree_read(monkeypatch):
+    """Android, run 36910751218: one /tree read failed mid-transition and the
+    wait returned at once, though the tag composed a beat later."""
+    import testing.driver as d
+    drv = d.TestAutomationServer.__new__(d.TestAutomationServer)
+    calls = {"n": 0}
+
+    def tree():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise d.DriverError("GET /tree -> HTTP 500: composing")
+        return [_El("input_peer_search")]
+
+    drv.tree = tree
+    drv.screen = lambda: "NetworkContent"
+    monkeypatch.setattr(d.time, "sleep", lambda s: None)
+    assert drv.wait_for_element("input_peer_search", timeout=5).test_tag == "input_peer_search"
+    assert calls["n"] == 2
+
+
+def test_wait_for_element_names_the_last_tree_error_at_the_deadline(monkeypatch):
+    import pytest
+    import testing.driver as d
+    drv = d.TestAutomationServer.__new__(d.TestAutomationServer)
+    clock = {"t": 0.0}
+
+    def tree():
+        raise d.DriverError("GET /tree -> HTTP 500: composing")
+
+    monkeypatch.setattr(d.time, "monotonic", lambda: clock["t"])
+    monkeypatch.setattr(d.time, "sleep", lambda s: clock.__setitem__("t", clock["t"] + s))
+    drv.tree = tree
+    drv.screen = lambda: "NetworkContent"
+    with pytest.raises(d.DriverError) as e:
+        drv.wait_for_element("input_peer_search", timeout=2)
+    assert "last /tree error" in str(e.value) and "HTTP 500" in str(e.value)

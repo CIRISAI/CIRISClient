@@ -7,8 +7,8 @@ import ai.ciris.mobile.shared.platform.util.QrMatrix
 import ai.ciris.mobile.shared.ui.theme.CirisShape
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.theme.PaperTokens
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -71,8 +72,12 @@ fun QrCode(
         return
     }
     val (light, dark) = qrColours()
-    Canvas(
-        modifier = modifier
+    // An empty Box, not a Canvas: Canvas is a Spacer, and a Spacer takes a size
+    // only from FIXED constraints, so `defaultMinSize` left it 0 x 0 — no symbol
+    // drawn and a zero box in `/tree` (CSD-092 on 0.5.218; QrCodeIsDrawnTest).
+    // An empty Box measures to its minimum, which is what the default is.
+    Box(
+        modifier
             .defaultMinSize(minWidth = QR_DEFAULT_SIDE, minHeight = QR_DEFAULT_SIDE)
             .clip(CirisShape.input)
             .border(CirisShape.hairlineWidth, CirisTheme.tokens.hairlineStrong, CirisShape.input)
@@ -80,14 +85,15 @@ fun QrCode(
                 this.contentDescription = contentDescription
                 role = Role.Image
             }
-            .testable(tag, value),
-    ) {
-        val g = QrGeometry.fit(min(size.width, size.height), matrix.size)
-        val originX = floor((size.width - g.side) / 2f)
-        val originY = floor((size.height - g.side) / 2f)
-        drawRect(light, Offset(originX, originY), Size(g.side, g.side))
-        drawModules(matrix, dark, originX + g.inset, originY + g.inset, g.cell)
-    }
+            .testable(tag, value)
+            .drawBehind {
+                val g = QrGeometry.fit(min(size.width, size.height), matrix.size)
+                val originX = floor((size.width - g.side) / 2f)
+                val originY = floor((size.height - g.side) / 2f)
+                drawRect(light, Offset(originX, originY), Size(g.side, g.side))
+                drawModules(matrix, dark, originX + g.inset, originY + g.inset, g.cell)
+            },
+    )
 }
 
 private val QR_DEFAULT_SIDE = 176.dp
