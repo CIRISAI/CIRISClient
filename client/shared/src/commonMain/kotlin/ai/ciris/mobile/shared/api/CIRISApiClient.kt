@@ -1624,13 +1624,26 @@ class CIRISApiClient(
     // the id and the node's English. `ClientDrive` binds these to `DriveApi`.
     // ═══════════════════════════════════════════════════════════════════════
 
-    /** `GET /v1/drive`, optionally narrowed to a cohort (`self` | `family` | `community`) or a room. */
-    suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, nodeUrl: String): DriveListing {
+    /**
+     * `GET /v1/drive`: with no [cohort], the WHOLE drive (every room this
+     * person is admitted to); `self` alone; or ONE family or community room,
+     * for which the node requires [roomId] (`drive.family_id_required` /
+     * `drive.community_id_required`, `src/drive.rs` `room_for`, 0.5.217 and
+     * 0.5.218 alike). A [roomId] without `family` / `community` would be
+     * dropped by the node without a word, so it is refused here instead.
+     * [limit] is ONE budget across every room listed (self rows first), so a
+     * caller that wants a later room walks [after] = the last page's `resume`.
+     */
+    suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, nodeUrl: String, after: String? = null): DriveListing {
         val method = "readDrive"
+        require(roomId == null || cohort == "family" || cohort == "community") {
+            "a drive room needs its cohort (family | community); cohort=$cohort would ignore room_id=$roomId"
+        }
         val query = buildList {
-            cohort?.let { add("cohort=$it") }
+            cohort?.let { add("cohort=${it.encodeURLParameter()}") }
             roomId?.let { add("room_id=${it.encodeURLParameter()}") }
             add("limit=$limit")
+            after?.let { add("after=${it.encodeURLParameter()}") }
         }.joinToString("&")
         logInfo(method, "GET $nodeUrl/v1/drive?$query")
         val client = federationHttpClient()
@@ -1652,13 +1665,28 @@ class CIRISApiClient(
     }
 
     /**
-     * `GET /v1/files/{id}`. A 409 `drive.not_fetched` (on another device) and a
-     * 403 `drive.not_granted` come back as [NodeRefusal]s with the id intact:
-     * they are true answers, not failures, and the UI says them in words.
+     * The query every per-file drive route takes (`FileQuery`, CIRISServer
+     * `src/drive.rs`, the same on 0.5.217 and 0.5.218): `cohort` ALWAYS, and
+     * `room_id` (the family id, or the community room) for a family or
+     * community file. Never left to the node's default: `Cohort::parse` reads
+     * a missing cohort as `self`, so a family file asked without one is looked
+     * for in the self room and answered `404 drive.not_in_room`. A `self` file
+     * names no room: the room IS the owner, and the node ignores one.
      */
-    suspend fun readFile(attestationId: String, roomId: String, nodeUrl: String): OpenedFile {
+    internal fun fileQuery(cohort: String, roomId: String?): String = buildList {
+        add("cohort=${cohort.encodeURLParameter()}")
+        if (cohort != "self") roomId?.takeIf { it.isNotBlank() }?.let { add("room_id=${it.encodeURLParameter()}") }
+    }.joinToString("&")
+
+    /**
+     * `GET /v1/files/{id}?cohort=…&room_id=…` ([fileQuery]). A 409
+     * `drive.not_fetched` (on another device) and a 403 `drive.not_granted`
+     * come back as [NodeRefusal]s with the id intact: they are true answers,
+     * not failures, and the UI says them in words.
+     */
+    suspend fun readFile(attestationId: String, cohort: String, roomId: String?, nodeUrl: String): OpenedFile {
         val method = "readFile"
-        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}?room_id=${roomId.encodeURLParameter()}"
+        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}?${fileQuery(cohort, roomId)}"
         logInfo(method, "GET $url")
         val client = federationHttpClient()
         return try {
@@ -1677,22 +1705,19 @@ class CIRISApiClient(
     /**
      * `GET /v1/files/{id}/custody?cohort=…&room_id=…` (CSD-107): which of the
      * person's devices the file is on. The per-file query every drive route
-     * takes (`FileQuery`, CIRISServer `src/drive.rs`): `cohort` always, and
-     * `room_id` for a family or community file. The NODE's route, like every
-     * drive route, so it goes to [nodeUrl], never `$baseUrl`.
+     * takes ([fileQuery]). The NODE's route, like every drive route, so it
+     * goes to [nodeUrl], never `$baseUrl`.
      *
-     * PROVISIONAL: the route is a server PR in progress and on no released
-     * node. A released node answers a bare 404, which the caller reads as
-     * "this node is too old" ([FileCustody] is parsed leniently for the same
-     * reason: its field names may still change).
+     * The route is in CIRISServer v0.5.218 (`src/drive.rs` `file_custody`),
+     * which is TAGGED (405acc17) but not released: no GitHub release and no
+     * PyPI 0.5.218 as of 2026-10-01; the latest release is 0.5.217, which
+     * does not mount it and answers a bare 404. The caller reads that 404 as
+     * "this node is too old" ([FileCustody] is parsed leniently, so a field
+     * the release adds or renames does not break the read).
      */
     suspend fun readFileCustody(attestationId: String, cohort: String, roomId: String?, nodeUrl: String): FileCustody {
         val method = "readFileCustody"
-        val query = buildList {
-            add("cohort=${cohort.encodeURLParameter()}")
-            roomId?.takeIf { it.isNotBlank() }?.let { add("room_id=${it.encodeURLParameter()}") }
-        }.joinToString("&")
-        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}/custody?$query"
+        val url = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}/custody?${fileQuery(cohort, roomId)}"
         logInfo(method, "GET $url")
         val client = federationHttpClient()
         return try {

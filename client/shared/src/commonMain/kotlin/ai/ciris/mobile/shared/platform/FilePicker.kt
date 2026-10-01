@@ -31,14 +31,26 @@ data class PickedFile(
 }
 
 /**
+ * A file the picker would not read: it is over [limitBytes]
+ * ([PickedFile.MAX_FILE_SIZE_BYTES]; uploads are still one inline base64
+ * body, so the cap stays until streaming upload lands).
+ */
+data class PickTooLarge(val name: String, val sizeBytes: Long, val limitBytes: Long = PickedFile.MAX_FILE_SIZE_BYTES)
+
+/**
  * Platform-specific file picker composable.
  * When [show] is true, displays a native file picker dialog.
  * Calls [onFilePicked] with the selected file, or [onDismiss] if cancelled.
+ *
+ * A file over [PickedFile.MAX_FILE_SIZE_BYTES] is NOT read and calls
+ * [onTooLarge] instead — required, with no default, because every picker used
+ * to drop such a file without a word and the person saw nothing happen.
  */
 @Composable
 expect fun FilePickerDialog(
     show: Boolean,
     mimeTypes: List<String> = PickedFile.ALLOWED_MIME_TYPES,
     onFilePicked: (PickedFile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTooLarge: (PickTooLarge) -> Unit,
 )

@@ -138,7 +138,7 @@ class Server218ChatEvictWireTest {
     fun aWholeReadAboveTheCapIsRefusedByName() = runBlocking {
         val n = node(mapOf("GET /v1/files/att-big" to (413 to
             """{"error":"drive.too_large_for_whole_read","reason_id":"drive.too_large_for_whole_read","detail":"this file is 70000000 bytes, above the 67108864-byte whole-read cap"}""")))
-        val e = assertFailsWith<NodeRefusal> { client(n).readFile("att-big", "self", n.url) }
+        val e = assertFailsWith<NodeRefusal> { client(n).readFile("att-big", "self", null, nodeUrl = n.url) }
         assertEquals("drive.too_large_for_whole_read", e.reasonId)
         assertEquals(413, e.statusCode)
     }

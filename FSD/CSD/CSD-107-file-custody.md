@@ -16,9 +16,10 @@ owner: CIRISClient
 ```
 
 `building`, not `testable`: the card is built and every §3 row is answered,
-but the route is CIRISServer#704, open and unmerged, on no released node, so the
-flow's floor is `unreleased` and the one state the matrix can reach is the
-version fact.
+but the route (CIRISServer#704) is in v0.5.218, which is TAGGED at 405acc17
+and not released: no GitHub release and no PyPI 0.5.218 as of 2026-10-01. The
+latest release, 0.5.217, does not mount it, so the flow's floor stays
+`unreleased` and the one state the matrix can reach is the version fact.
 
 ## 1. Mission (why)
 
@@ -167,8 +168,10 @@ error:     {tag: custody_error, renders: "'Couldn't find out where this file is.
 The route is **CIRISServer#704** at `d1a15286` (`feat/file-custody-0.5.218`, open into
 `chore/adopt-edge-v33`, which is headed for `integ/0.5.218`): `src/drive.rs`
 (the handler), `src/file_custody.rs` (the reasons), `FSD/FILE_CUSTODY.md` (the
-contract). Not merged and on no released node, so the floor stays
-`unreleased`. The model cites it in its KDoc (`models/drive/Custody.kt`).
+contract). It is in tag `v0.5.218` (405acc17; `src/drive.rs:3921`, handler
+`:2548`, the same `FileQuery` as every per-file route), which is tagged and not
+released (no GitHub release, no PyPI 0.5.218, as of 2026-10-01), so the floor
+stays `unreleased`. The model cites it in its KDoc (`models/drive/Custody.kt`).
 Every field is optional and parsed by hand over a `JsonObject`: a renamed or
 retyped member reads as absent (then "not sent"), never as a crash.
 
@@ -197,7 +200,7 @@ per-file `FileQuery` every `/v1/files/{id}/…` handler takes — `cohort`
 <!-- generated: python3 packaging/check_csd_routes.py --print CSD-107 (screen Files; heuristic) — the custody row; the other rows it prints are CSD-007's -->
 | value | endpoint | owner | state |
 |---|---|---|---|
-| where the file is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer#704 (unmerged; same auth and `FileQuery` as `/v1/files/{id}/meta`, `src/drive.rs:1872` on main) | called — `api/DriveApi.kt:60` (`ClientDrive.readCustody` → `CIRISApiClient.readFileCustody`), opened from `ui/screens/files/FilesScreen.kt:331` (drive), `ui/screens/files/NotesScreen.kt:138` (notes), `ui/screens/ChatScreen.kt:397` (chat); built, **unreleased**: a released node answers a bare 404, rendered as `custody_node_too_old` |
+| where the file is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer#704, in tag v0.5.218 (405acc17, tagged, not released) at `src/drive.rs:3921` (handler `:2548`; same auth and `FileQuery` as `/v1/files/{id}/meta`) | called — `api/DriveApi.kt:60` (`ClientDrive.readCustody` → `CIRISApiClient.readFileCustody`, query from `CIRISApiClient.fileQuery`: `cohort` always, `room_id` unless `self`), opened from `ui/screens/files/FilesScreen.kt:332` (drive), `ui/screens/files/NotesScreen.kt:138` (notes), `ui/screens/ChatScreen.kt:397` (chat); built, **unreleased**: 0.5.217, the latest release, answers a bare 404, rendered as `custody_node_too_old` |
 | the response | `{attestation_id, cohort, room_id, tier, size_bytes\|null, at_rest_sha256, author_device, this_device_is_author, checked_at, devices_total, devices[{node_key_id, label?, this_device, can_open\|null, received{epoch,k,at\|null}\|null, holds: here\|received\|none\|unknown, checked_at (this device), reported_at\|null}], held_here, copies_known, copies_observable, announced_holders[{node_key_id,size_bytes}], access[{person_key_id,devices,via}]\|null, receipts_supported, receipts_unsupported_reason, receipts_from_other_keys[], why[{reason_id,detail}]}` | CIRISServer#704 `d1a15286`, `FSD/FILE_CUSTODY.md` §1.1 | parsed leniently by `FileCustody.fromWire`. Rendered: every device row, held here, copies (§1), the author device ("Device that wrote it", `custody_author`), the count of receipts from keys that aren't your devices (`custody_receipts_other_keys`, when > 0), every `why[]`. Read and not rendered: `announced_holders`, `access`, `tier`, `size_bytes`, `at_rest_sha256`, `checked_at` |
 | a remote device saying it has no copy | `holds: "none"` + `reported_at` from `custody:ack:v1` (here\|none, live 72 h) | CC 3.1.3.3 (CIRISConstitution#130); CIRISPersist v53. Not in the vendored namespace registry, so cited by CC section, not as a registry family | today only THIS device can say `none`; other devices read `unknown` with `custody.no_copy_reports_pending`. The row shows 'The device reported this at <time>' once `reported_at` arrives |
 | the receipt time | `received.at` | CIRISPersist v52 | `null` until then; the row says "Received it" with no time, never a blank or an epoch |

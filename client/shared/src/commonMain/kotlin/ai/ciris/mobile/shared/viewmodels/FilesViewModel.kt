@@ -142,8 +142,18 @@ class FilesViewModel(
         viewModelScope.launch {
             readPolicyOnce()
             _state.value = try {
-                val listing = api.readDrive(cohort = cohort.wire, roomId = roomId.takeIf { cohort == FilesCohort.FAMILY })
-                val groups = listing.entries
+                val entries = when (cohort) {
+                    FilesCohort.SELF -> api.readDrive(cohort = cohort.wire).entries
+                    FilesCohort.FAMILY -> api.readDrive(cohort = cohort.wire, roomId = roomId).entries
+                    // `cohort=community` with no room is refused by the node
+                    // (`400 drive.community_id_required`, 0.5.217 and 0.5.218),
+                    // and this tab spans EVERY community room. So it reads the
+                    // whole drive — the rooms persist admits this person to —
+                    // and keeps the community rows. The limit is one budget
+                    // across all rooms, self first, so it walks `resume`.
+                    FilesCohort.COMMUNITY -> wholeDrive()
+                }
+                val groups = entries
                     .filter { it.cohort == cohort.wire && !it.isNote } // notes live in Chats, not here
                     .groupBy { it.roomId }
                     .map { (room, entries) -> FileGroup(room, entries.sortedByDescending { it.assertedAt }) }
@@ -156,6 +166,28 @@ class FilesViewModel(
                 FilesState.Failed(e.message ?: e::class.simpleName ?: "error")
             }
         }
+    }
+
+    /** Every page of the unfiltered drive, up to [MAX_PAGES] (a cursor that never ends is the node's bug, not a hang here). */
+    private suspend fun wholeDrive(): List<DriveEntry> {
+        val out = mutableListOf<DriveEntry>()
+        var after: String? = null
+        repeat(MAX_PAGES) {
+            val page = api.readDrive(cohort = null, roomId = null, limit = PAGE, after = after)
+            out += page.entries
+            after = page.resume ?: return out
+        }
+        PlatformLogger.w(TAG, "drive still had pages after $MAX_PAGES; listing what was read")
+        return out
+    }
+
+    /**
+     * A file the platform picker refused before reading it (over
+     * [ai.ciris.mobile.shared.platform.PickedFile.MAX_FILE_SIZE_BYTES]). Said
+     * in the same words as the node's own cap, never dropped without a word.
+     */
+    fun refuseTooLarge(name: String, sizeBytes: Long, limitBytes: Long) {
+        _add.value = AddState.TooLarge(name, sizeBytes, limitBytes)
     }
 
     /**
@@ -180,7 +212,9 @@ class FilesViewModel(
         _open.value = OpenState.Opening(entry)
         viewModelScope.launch {
             _open.value = try {
-                val file = api.readFile(entry.attestationId, entry.roomId)
+                // The row's OWN scope, as the listing named it: a family file is
+                // asked in its household, never in the node's default (self).
+                val file = api.readFile(entry.attestationId, entry.cohort, entry.roomId)
                 val bytes = Base64.decode(file.bytesBase64)
                 // CC 5.3.2.5: the digest is checked BEFORE the bytes reach any renderer.
                 when (val check = DigestCheck.of(file, bytes)) {
@@ -257,5 +291,8 @@ class FilesViewModel(
     private companion object {
         const val TAG = "FilesVM"
         const val OCTET = "application/octet-stream"
+        /** The node's `MAX_PAGE` (`src/drive.rs`); a larger limit is clamped to it. */
+        const val PAGE = 500
+        const val MAX_PAGES = 20
     }
 }

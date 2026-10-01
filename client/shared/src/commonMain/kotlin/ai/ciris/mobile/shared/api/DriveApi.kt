@@ -20,8 +20,9 @@ import ai.ciris.mobile.shared.models.drive.OpenedFile
  * Every call throws [NodeRefusal] with the server's id on a non-2xx answer.
  */
 interface DriveApi {
-    suspend fun readDrive(cohort: String? = null, roomId: String? = null, limit: Int = 100): DriveListing
-    suspend fun readFile(attestationId: String, roomId: String): OpenedFile
+    suspend fun readDrive(cohort: String? = null, roomId: String? = null, limit: Int = 100, after: String? = null): DriveListing
+    /** `GET /v1/files/{id}`: [cohort] is the row's own (`DriveEntry.cohort`), never a default; [roomId] names the family or community room and is dropped for `self`. */
+    suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile
     suspend fun writeFile(write: FileWrite): FileWritten
     suspend fun readNotes(): NoteListing
     suspend fun writeNote(body: String)
@@ -32,8 +33,8 @@ interface DriveApi {
     /**
      * `GET /v1/files/{id}/custody` (CSD-107): which of the person's devices a file
      * is on. [cohort] is `self` | `family` | `community`; [roomId] names the
-     * family or community room and is omitted for `self`. Provisional route: a
-     * released node answers a bare 404.
+     * family or community room and is omitted for `self`. In v0.5.218 (tagged, not released); 0.5.217
+     * answers a bare 404.
      */
     suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): FileCustody
 }
@@ -48,10 +49,10 @@ class ClientDrive(
     private val client: CIRISApiClient,
     private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
 ) : DriveApi {
-    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int): DriveListing =
-        client.readDrive(cohort, roomId, limit, nodeUrl = nodeUrl())
-    override suspend fun readFile(attestationId: String, roomId: String): OpenedFile =
-        client.readFile(attestationId, roomId, nodeUrl = nodeUrl())
+    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, after: String?): DriveListing =
+        client.readDrive(cohort, roomId, limit, nodeUrl = nodeUrl(), after = after)
+    override suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile =
+        client.readFile(attestationId, cohort, roomId, nodeUrl = nodeUrl())
     override suspend fun writeFile(write: FileWrite): FileWritten = client.writeFile(write, nodeUrl = nodeUrl())
     override suspend fun readNotes(): NoteListing = client.readNotes(nodeUrl = nodeUrl())
     override suspend fun writeNote(body: String) = client.writeNote(body, nodeUrl = nodeUrl())

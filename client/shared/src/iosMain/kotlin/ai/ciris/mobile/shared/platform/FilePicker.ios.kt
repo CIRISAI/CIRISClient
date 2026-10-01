@@ -29,10 +29,11 @@ actual fun FilePickerDialog(
     show: Boolean,
     mimeTypes: List<String>,
     onFilePicked: (PickedFile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTooLarge: (PickTooLarge) -> Unit,
 ) {
     val delegate = remember {
-        FilePickerDelegate(onFilePicked, onDismiss)
+        FilePickerDelegate(onFilePicked, onDismiss, onTooLarge)
     }
 
     LaunchedEffect(show) {
@@ -76,7 +77,8 @@ actual fun FilePickerDialog(
 @OptIn(ExperimentalForeignApi::class, ExperimentalEncodingApi::class)
 private class FilePickerDelegate(
     private val onFilePicked: (PickedFile) -> Unit,
-    private val onDismiss: () -> Unit
+    private val onDismiss: () -> Unit,
+    private val onTooLarge: (PickTooLarge) -> Unit,
 ) : NSObject(), UIDocumentPickerDelegateProtocol {
 
     override fun documentPicker(
@@ -100,7 +102,7 @@ private class FilePickerDelegate(
         val sizeBytes = data.length.toLong()
         if (sizeBytes > PickedFile.MAX_FILE_SIZE_BYTES) {
             PlatformLogger.w("FilePicker", "File too large: $sizeBytes bytes")
-            onDismiss()
+            onTooLarge(PickTooLarge(fileName, sizeBytes))
             return
         }
 

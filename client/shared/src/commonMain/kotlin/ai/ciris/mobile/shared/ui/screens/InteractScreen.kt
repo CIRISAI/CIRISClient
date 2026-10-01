@@ -208,6 +208,7 @@ fun InteractScreen(
     val trustStatus by viewModel.trustStatus.collectAsState()
     val walletStatus by viewModel.walletStatus.collectAsState()
     val attachedFiles by viewModel.attachedFiles.collectAsState()
+    val attachmentRefused by viewModel.attachmentRefused.collectAsState()
     val pipelineState by viewModel.pipelineState.collectAsState()
     val pendingDeferrals by viewModel.pendingDeferrals.collectAsState()
     val systemWarnings by viewModel.systemWarnings.collectAsState()
@@ -681,6 +682,12 @@ fun InteractScreen(
             )
         }
 
+            attachmentRefused?.let { r ->
+                ai.ciris.mobile.shared.ui.components.PickTooLargeNotice(
+                    r, tag = "interact_attachment_too_large", onDismiss = { viewModel.dismissAttachmentRefusal() },
+                )
+            }
+
             // Input bar with agent state icon
             // Input bar with agent state icon
             // navigationBarsPadding here so input sits above the system nav bar
@@ -711,7 +718,11 @@ fun InteractScreen(
                     viewModel.addAttachment(file)
                     showFilePicker = false
                 },
-                onDismiss = { showFilePicker = false }
+                onDismiss = { showFilePicker = false },
+                onTooLarge = { r ->
+                    showFilePicker = false
+                    viewModel.refuseAttachment(r)
+                },
             )
         } // End of Column
 

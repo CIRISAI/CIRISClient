@@ -393,6 +393,20 @@ class InteractViewModel(
     private val _attachedFiles = MutableStateFlow<List<PickedFile>>(emptyList())
     val attachedFiles: StateFlow<List<PickedFile>> = _attachedFiles.asStateFlow()
 
+    /** The last attachment refused for its size, shown until dismissed; never dropped without a word. */
+    private val _attachmentRefused = MutableStateFlow<ai.ciris.mobile.shared.platform.PickTooLarge?>(null)
+    val attachmentRefused: StateFlow<ai.ciris.mobile.shared.platform.PickTooLarge?> = _attachmentRefused.asStateFlow()
+
+    /** The picker refused [refusal] before reading it; say so in the chat. */
+    fun refuseAttachment(refusal: ai.ciris.mobile.shared.platform.PickTooLarge) {
+        logWarn("refuseAttachment", "${refusal.name} is ${refusal.sizeBytes} bytes (limit ${refusal.limitBytes})")
+        _attachmentRefused.value = refusal
+    }
+
+    fun dismissAttachmentRefusal() {
+        _attachmentRefused.value = null
+    }
+
     // CIRIS capacity (ratchet) — drives cell-viz ambient dials. Defaults to
     // CellVizState.DEFAULT so the cell renders as-designed until the first
     // fetch arrives. User-facing only; never piped into agent context.
@@ -757,6 +771,7 @@ class InteractViewModel(
         }
         if (file.sizeBytes > PickedFile.MAX_FILE_SIZE_BYTES) {
             logWarn(method, "File ${file.name} exceeds max size (${file.sizeBytes} > ${PickedFile.MAX_FILE_SIZE_BYTES})")
+            _attachmentRefused.value = ai.ciris.mobile.shared.platform.PickTooLarge(file.name, file.sizeBytes)
             return
         }
         logInfo(method, "Adding attachment: ${file.name} (${file.mediaType}, ${file.sizeBytes} bytes)")

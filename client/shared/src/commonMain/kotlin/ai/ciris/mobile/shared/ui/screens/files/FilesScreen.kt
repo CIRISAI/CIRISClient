@@ -198,6 +198,7 @@ fun FilesScreen(
             }
         },
         onDismiss = { picking = false },
+        onTooLarge = { r -> picking = false; viewModel.refuseTooLarge(r.name, r.sizeBytes, r.limitBytes) },
     )
 
     Scaffold(

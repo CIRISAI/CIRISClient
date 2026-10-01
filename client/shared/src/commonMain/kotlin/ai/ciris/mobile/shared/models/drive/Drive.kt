@@ -46,6 +46,8 @@ enum class ByteState {
 data class DriveListing(
     val rooms: List<DriveRoom> = emptyList(),
     val entries: List<DriveEntry> = emptyList(),
+    /** `null` when the drive is exhausted; otherwise passed back as `after` for the next page. */
+    val resume: String? = null,
 )
 
 @Serializable
@@ -59,7 +61,7 @@ data class DriveRoom(
 data class DriveEntry(
     /** The cohort this row was listed from: `self` | `family` | `community`. */
     val cohort: String,
-    /** The room id to pass back to [OpenedFile]'s `GET /v1/files/{id}`. */
+    /** The room id to pass back, WITH [cohort], to `GET /v1/files/{id}` (the node defaults a missing cohort to `self`). */
     @SerialName("room_id") val roomId: String,
     @SerialName("attestation_id") val attestationId: String,
     @SerialName("author_key_id") val authorKeyId: String,
