@@ -350,16 +350,27 @@ class TestAutomationServer:
     def wait_for_element(self, test_tag: str, timeout: float = 60.0) -> Element:
         deadline = time.monotonic() + timeout
         seen: set[str] = set()
+        last_error = ""
         while time.monotonic() < deadline:
-            for e in self.tree():
+            # A /tree read that fails mid-transition is not an answer: keep
+            # asking until the deadline (Android, run 36910751218: csd_047's
+            # wait gave up in 314 ms while the tag it waited for was composing).
+            try:
+                elements = self.tree()
+            except DriverError as e:
+                last_error = str(e)
+                time.sleep(0.5)
+                continue
+            for e in elements:
                 seen.add(e.test_tag)
                 if e.test_tag == test_tag:
                     return e
             time.sleep(0.5)
         near = ", ".join(sorted(seen)[:25]) or "<nothing registered>"
+        why = f"; last /tree error: {last_error}" if last_error else ""
         raise DriverError(
             f"element {test_tag!r} never appeared within {timeout:.0f}s "
-            f"(screen={self.screen()!r}; registered: {near})"
+            f"(screen={self.screen()!r}; registered: {near}{why})"
         )
 
     def wait_for_screen(self, screen: str, timeout: float = 90.0) -> None:
