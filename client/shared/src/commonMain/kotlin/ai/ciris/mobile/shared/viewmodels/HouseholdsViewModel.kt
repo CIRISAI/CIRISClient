@@ -202,7 +202,7 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
         }
         if (_invites.value !is GroupInvitesRead.Loaded) _invites.value = GroupInvitesRead.Loading
         val next = try {
-            GroupInvitesRead.Loaded(api.listInvites(familyId).invites)
+            api.listInvites(familyId).let { GroupInvitesRead.Loaded(it.invites, it.viewerKeyId) }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[invites] ${(e as? NodeRefusal)?.reasonId ?: e.message}")
             GroupInvitesRead.of(e)

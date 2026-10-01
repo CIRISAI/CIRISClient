@@ -97,6 +97,15 @@ class CommunitiesViewModel(
     /** Whether adding someone is inviting them on this node — answered by the invites route (CSD-106). */
     val inviteSupport: StateFlow<InviteSupport> = _inviteSupport.asStateFlow()
 
+    private val _myKeyId = MutableStateFlow<String?>(null)
+    /**
+     * The owner's person key (`GET /v1/setup/owned-nodes` → `owner`, the same
+     * source the household roster uses), read once, and only when a room's
+     * invitations arrive without the node's own `viewer_key_id` (0.5.218).
+     * Null when unreadable: Withdraw then falls back to every pending row.
+     */
+    val myKeyId: StateFlow<String?> = _myKeyId.asStateFlow()
+
     private val _inviteNotice = MutableStateFlow<String?>(null)
     /** One-shot: [NOTICE_INVITED] or [NOTICE_WITHDRAWN]. An invitation is never reported as an applied add. */
     val inviteNotice: StateFlow<String?> = _inviteNotice.asStateFlow()
@@ -198,7 +207,12 @@ class CommunitiesViewModel(
                 _invites.value = _invites.value + (communityId to GroupInvitesRead.Loading)
             }
             val next = try {
-                GroupInvitesRead.Loaded(apiClient.listCommunityInvites(communityId, nodeUrl()).invites)
+                val list = apiClient.listCommunityInvites(communityId, nodeUrl())
+                if (list.viewerKeyId.isNullOrBlank() && _myKeyId.value == null) {
+                    _myKeyId.value = runCatching { apiClient.getOwnedNodes(nodeUrl()).owner }.getOrNull()
+                        ?.takeIf { it.isNotBlank() }
+                }
+                GroupInvitesRead.Loaded(list.invites, list.viewerKeyId)
             } catch (e: Exception) {
                 PlatformLogger.w(tag, "[listCommunityInvites] ${(e as? NodeRefusal)?.reasonId ?: e.message}")
                 GroupInvitesRead.of(e)
@@ -372,6 +386,7 @@ class CommunitiesViewModel(
         _invites.value = emptyMap()
         _inviteSupport.value = InviteSupport.UNKNOWN
         _inviteNotice.value = null
+        _myKeyId.value = null
     }
 
     companion object {

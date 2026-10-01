@@ -57,8 +57,10 @@ already stand. One app-scoped view model (`InvitationsViewModel`) reads
 `family` rows and each community hub the `community` rows
 (`inboxFor`, `ui/screens/InvitesSupport.kt`). A pair room's invitation is left
 out: a two-person chat is answered by opening it (CSD-091, `POST /v1/chat`).
-**Both community hubs draw the same community invitations**, because the inbox
-row does not say the room's tier (§6).
+**A row's `tier` places it on its own community hub** (`community` →
+Neighbours, `affiliations` → Communities and Businesses). 0.5.218 does not send
+`tier`, so until 0.5.219 a row without it is drawn on **both** community hubs
+rather than hidden from either (§6).
 
 **Accept and decline are each behind a ConfirmSheet with three facts**: *who
 invites you* (the inviter, by your contact's name for them when you have one),
@@ -120,7 +122,7 @@ fields:
     use: emit
     type: string
     example: "att-1"
-    renders: "Withdraw, on a pending row, behind a three-fact confirm. The household roster offers it on your own invitations only; the community roster cannot tell yours apart (it reads no owner key) and offers it on every pending row, and the node refuses anyone else by id (`membership.not_the_proposer`)"
+    renders: "Withdraw, behind a three-fact confirm, on a pending row whose `proposer_key_id` is the viewer's own key: the list's `viewer_key_id` (0.5.219+) when sent, else the owner from GET /v1/setup/owned-nodes (`withdrawShown`, `viewerOf`). Someone else's invitation shows none. Only when no key is readable is it offered on every pending row, and the node refuses anyone but the proposer by id (`membership.not_the_proposer`)"
     tag: "btn_invitation_withdraw_*"
 ```
 
@@ -154,6 +156,15 @@ them (CIRISAgent#1213). CIRISServer **0.5.218**, merged to server `main` at
 | founding | `POST /v1/families`, `POST /v1/communities` with `members` naming anyone but the founder | CIRISServer | **refused 409 `membership.founding_member_unsigned`** at 0.5.218. The founding cards stop offering member chips on a node that carries invitations |
 | refusals | 18 `membership.*` ids (`refused` and the flow's own, `membership_invites.rs` :105-300) | CIRISServer | **live**. Rendered by id through `NodeRefusal`; the bundle entries are the server-strings PR's (`feat/server-0.5.218-parity`), and until it lands the node's English shows |
 | the rows | `membership:proposal:v1`, `membership:acceptance:v1`, `membership:decline:v1` | CIRISPersist#955 (v52) / CIRISEdge (v38 `membership`) | **shipped**; the admission rule is persist's alone |
+| who "you" are, for Withdraw | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback. Read by the household roster already (CSD-101); the community roster reads it once, only when a list arrives without `viewer_key_id` |
+
+### 3.1 Additions planned for 0.5.219 (parsed now, optional)
+
+| value | where | what the client does |
+|---|---|---|
+| `viewer_key_id` | beside `invites` on `GET /v1/{families,communities}/{id}/invites` | `GroupInviteList.viewerKeyId`. Preferred over the owner read for "is this my invitation?" (`viewerOf`); absent on 0.5.218, where `owned-nodes` stands in |
+| `tier` (`community` \| `affiliations`; null for families and pair rooms) | each `GET /v1/self/invites` row | `InboxInvite.tier`. When present, each community hub shows only its own tier's rows; a row without it (0.5.218) is shown on both community hubs |
+
 
 ## 4. Flow (how)
 
@@ -204,12 +215,11 @@ cannot observe.
   the roster's "Accepted: waiting…" never report the acceptance as
   membership; only the node's `joined` (accepted AND on the fold) does, and
   that row is the member row.
-* **The inbox row does not carry the room's tier.** `GET /v1/self/invites`
-  sends `group_kind: community` for both `community` and `affiliations` rooms,
-  and the invitee's node may not hold the room's record. So both community
-  hubs draw the community invitations; the split by circle this card asked for
-  needs `tier` (or `cohort_scope`) on the inbox row. Server ask in the PR
-  report.
+* **The inbox row does not carry the room's tier at 0.5.218.** It sends
+  `group_kind: community` for both `community` and `affiliations` rooms, and
+  the invitee's node may not hold the room's record. 0.5.219 adds `tier` to
+  each row (§3.1); the client already filters by it when present, and until
+  then draws an untiered community invitation on both community hubs.
 * **A quorum ROOM cannot seat an accepted invitee from this client.** The
   server seats them through `…/changes/envelope {op: add}` → cosign →
   assemble; this client has never called the community envelope route (every
@@ -217,9 +227,10 @@ cannot observe.
   The accepted row says so ("this app can't start that yet") rather than
   offering a control. The household equivalent works (its envelope route was
   already called from the roster).
-* **The community roster has no owner key**, so its Withdraw is offered on
-  every pending row and the node refuses non-proposers by id. The household
-  roster knows the owner (`owned-nodes`) and offers it on your own only.
+* **"Your own invitation" is the viewer's key against `proposer_key_id`.**
+  0.5.219 sends `viewer_key_id` on the list (§3.1); on 0.5.218 both rosters
+  read the owner from `owned-nodes`. Only with neither readable is Withdraw
+  offered on every pending row, and the node refuses non-proposers by id.
 * **Pair rooms are out of scope.** A two-person chat's invitation also arrives
   in `GET /v1/self/invites` (`is_pair_room: true`); it is answered by opening
   the chat (CSD-091), and this inbox leaves it out.

@@ -16,6 +16,8 @@ import ai.ciris.mobile.shared.ui.screens.inboxFor
 import ai.ciris.mobile.shared.ui.screens.isInviteRouteMissing
 import ai.ciris.mobile.shared.ui.screens.rosterInvites
 import ai.ciris.mobile.shared.ui.screens.routeOf
+import ai.ciris.mobile.shared.ui.screens.viewerOf
+import ai.ciris.mobile.shared.ui.screens.withdrawShown
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -166,6 +168,44 @@ class InvitationsViewModelTest {
         assertFalse(canWithdraw(mine, "bo"))
         assertFalse(canWithdraw(mine, null), "with no known me, no row can be told apart as mine")
         assertFalse(canWithdraw(mine.copy(state = InviteState.ACCEPTED), "me"))
+    }
+
+    @Test
+    fun withdrawShowsOnlyOnTheViewersOwnPendingInvitation() {
+        val mine = GroupInvite(proposalId = "p", proposerKeyId = "me", state = InviteState.PENDING)
+        val theirs = mine.copy(proposerKeyId = "bo")
+        assertTrue(withdrawShown(mine, "me"), "proposer == me shows Withdraw")
+        assertFalse(withdrawShown(theirs, "me"), "someone else's invitation hides it")
+        assertFalse(withdrawShown(mine.copy(state = InviteState.ACCEPTED), "me"), "an answered one cannot be withdrawn")
+        // No key at all: every pending row, and the node refuses non-proposers by id.
+        assertTrue(withdrawShown(theirs, null))
+        assertFalse(withdrawShown(theirs.copy(state = InviteState.DECLINED), null))
+    }
+
+    @Test
+    fun theNodesViewerKeyIsPreferredOverTheCardsOwnerRead() {
+        val inv = listOf(GroupInvite(proposalId = "p", proposerKeyId = "me"))
+        assertEquals("me", viewerOf(GroupInvitesRead.Loaded(inv, viewerKeyId = "me"), ownerKeyId = "other"))
+        assertEquals("owner", viewerOf(GroupInvitesRead.Loaded(inv, viewerKeyId = null), ownerKeyId = "owner"), "0.5.218 sends none")
+        assertEquals("owner", viewerOf(GroupInvitesRead.Loaded(inv, viewerKeyId = ""), ownerKeyId = "owner"))
+        assertNull(viewerOf(GroupInvitesRead.Loaded(inv), ownerKeyId = null))
+        assertNull(viewerOf(GroupInvitesRead.NotAsked, ownerKeyId = null))
+    }
+
+    @Test
+    fun aRowsTierPlacesItOnOneCommunityHubAndNoTierShowsItOnBoth() {
+        val c = InboxInvite.KIND_COMMUNITY
+        val rows = listOf(
+            inboxRow("n", c).copy(tier = "community"),
+            inboxRow("a", c).copy(tier = "affiliations"),
+            inboxRow("old", c), // 0.5.218: no tier
+        )
+        assertEquals(setOf("n", "old"), inboxFor(rows, c, "community").map { it.proposalId }.toSet())
+        assertEquals(setOf("a", "old"), inboxFor(rows, c, "affiliations").map { it.proposalId }.toSet())
+        assertEquals(setOf("n", "a", "old"), inboxFor(rows, c).map { it.proposalId }.toSet(), "no hub tier: all")
+        val untiered = listOf(inboxRow("x", c), inboxRow("y", c))
+        assertEquals(2, inboxFor(untiered, c, "community").size, "until the node sends tier, every row on every hub")
+        assertEquals(2, inboxFor(untiered, c, "affiliations").size)
     }
 
     @Test

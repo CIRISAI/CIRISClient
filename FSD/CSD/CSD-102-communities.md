@@ -245,8 +245,9 @@ this card (CSD-106):
 
 * **the invitee's inbox** for community invitations is drawn at the top of the
   section (`GET /v1/self/invites`, Accept / Decline behind a three-fact
-  confirm). The inbox row does not carry the room's tier, so **both** community
-  hubs show the same community invitations (CSD-106 §6).
+  confirm). A row's `tier` (a 0.5.219 addition) places it on this tier's hub
+  only; 0.5.218 sends none, so until then an untiered community invitation is
+  shown on **both** community hubs (CSD-106 §3.1, §6).
 * **found with members**: a create naming anyone but the founder is refused
   `membership.founding_member_unsigned`. On a node that carries invitations the
   founding card offers no member chips (`community_create_found_alone`).

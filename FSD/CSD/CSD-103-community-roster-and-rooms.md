@@ -164,7 +164,8 @@ CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL onl
 | add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752). **At 0.5.218 an alias for the invitation** (202 `{state: "invited"}`, `communities.rs::add_member` :1695), read as `CommunityChangeOutcome.Invited`, never an applied add. Called only on a node without the invites route (§3.1) |
 | invite | `POST /v1/communities/{community_id}/invites` `{key_id, role?}` → 202 `{state: "invited", proposal_id, …, expires_at}` | `communities.rs::invite` :1725 (0.5.218) | one inviter: a founder under `founder_only`, any member otherwise; a contact grant is NOT required. Sent by `CommunitiesViewModel.invite` behind the `community_invite` confirm (CSD-106) |
 | the invitations | `GET /v1/communities/{community_id}/invites` → `{community_id, invites: [{proposal_id, invitee_key_id, role, proposer_key_id, proposed_at, expires_at, state, reply_id}], seated_now}` | `list_invites` :1808 (0.5.218) | read per room section (`loadInvites`). A bare 404 is an older node: the room keeps the direct add. A founder's read seats an accepted invitee of a `founder_only` room |
-| withdraw | `DELETE /v1/communities/{community_id}/invites/{proposal_id}` | `withdraw_invite` :1888 (0.5.218) | the proposer only (`membership.not_the_proposer`). This card reads no owner key, so it offers Withdraw on every pending row and the node answers by id (CSD-106 §6) |
+| withdraw | `DELETE /v1/communities/{community_id}/invites/{proposal_id}` | `withdraw_invite` :1888 (0.5.218) | the proposer only (`membership.not_the_proposer`). Offered only where the row's `proposer_key_id` is the viewer's own key (below); with no key readable, on every pending row, and the node answers by id |
+| who "you" are, for Withdraw | `viewer_key_id` beside `invites` (**0.5.219 addition**), else `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | the list's own `viewer_key_id` is preferred; on 0.5.218, which does not send it, the view model reads `owned-nodes` once (`CommunitiesViewModel.myKeyId`), the same source the household roster uses (CSD-101) |
 | remove | `DELETE /v1/communities/{id}/members/{key_id}` | `remove_member` :1556 | naming yourself is leaving (:1569); `community.last_founder` guards an orphaned room |
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |
 | widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907. #907 is **fixed in persist v49**; the server markers (the module doc and the ignored `…_cirispersist_907` test, both still on `integ/0.5.218`) clear with CIRISServer#700 |
@@ -184,7 +185,8 @@ admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
   three-fact confirm, then `POST …/invites`. The notice says "Invitation sent.
   They join only if they accept.", never "Done: add".
 * **pending rows** under the room's members, never counted as members:
-  pending (with "expires {date}" and Withdraw), accepted, declined, expired.
+  pending (with "expires {date}", and Withdraw on your own), accepted,
+  declined, expired.
 * **an accepted invitee of a quorum room** is seated by the members through
   `…/changes/envelope {op: add}` → cosign → assemble (a co-signed widening,
   refused `membership.awaiting_acceptance` without the acceptance). This

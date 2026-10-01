@@ -143,6 +143,7 @@ class MembershipInvitesWireTest {
                 assertEquals(2, rows.size)
                 assertTrue(rows[1].isPairRoom)
                 assertNull(rows[1].groupName)
+                assertNull(rows[0].tier, "0.5.218 sends no tier")
                 val accepted = api.accept("att-9")
                 assertEquals("accepted", accepted.state)
                 assertEquals("the group's widening", accepted.awaiting)
@@ -338,6 +339,54 @@ class MembershipInvitesWireTest {
                 assertTrue(log.any { it.method == "GET" && it.path == "/v1/communities/$room/invites" })
             }
         } finally { node.stop(0) }
+    }
+
+    @Test
+    fun the_0_5_219_fields_decode_when_sent_and_default_when_not() {
+        val (node, _) = serving(mapOf(
+            "GET /v1/families/$fam/invites" to (200 to groupInvites.replace("\"seated_now\":[]", "\"seated_now\":[],\"viewer_key_id\":\"k-me\"")),
+            "GET /v1/self/invites" to (200 to inbox.replace("\"is_pair_room\":false,", "\"is_pair_room\":false,\"tier\":null,")
+                .replace("\"group_id\":\"chat:pair:v1:x\"", "\"group_id\":\"chat:pair:v1:x\",\"tier\":\"community\"")),
+        ))
+        try {
+            runBlocking {
+                val c = CIRISApiClient("http://127.0.0.1:1")
+                assertEquals("k-me", c.listFamilyInvites(fam, node.url()).viewerKeyId)
+                val rows = c.listMyInvites(node.url()).invites
+                assertNull(rows[0].tier, "a household row carries tier null")
+                assertEquals("community", rows[1].tier)
+                // A 0.5.218 body (no viewer_key_id, no tier) decodes to null for both:
+                // the_household_invite_routes… and the_inbox_routes… read exactly that.
+            }
+        } finally { node.stop(0) }
+    }
+
+    @Test
+    fun the_community_roster_prefers_viewer_key_id_and_reads_owned_nodes_only_without_it() {
+        val list = """{"community_id":"$room","invites":[
+            {"proposal_id":"att-1","invitee_key_id":"k-cy","proposer_key_id":"k-me","state":"pending"}],"seated_now":[]"""
+        val (with219, log219) = serving(mapOf(
+            "GET /v1/communities/$room/invites" to (200 to "$list,\"viewer_key_id\":\"k-me\"}"),
+        ))
+        val (with218, log218) = serving(mapOf(
+            "GET /v1/communities/$room/invites" to (200 to "$list}"),
+            "GET /v1/setup/owned-nodes" to (200 to """{"owner":"k-me","nodes":[]}"""),
+        ))
+        try {
+            runBlocking {
+                val a = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with219.url() }
+                a.loadInvites(room)
+                awaitThat("0.5.219 list") { a.invites.value[room] is GroupInvitesRead.Loaded }
+                assertEquals("k-me", (a.invites.value[room] as GroupInvitesRead.Loaded).viewerKeyId)
+                assertTrue(log219.none { it.path == "/v1/setup/owned-nodes" }, "viewer_key_id makes the owner read unnecessary")
+
+                val b = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with218.url() }
+                b.loadInvites(room)
+                awaitThat("0.5.218 list") { b.invites.value[room] is GroupInvitesRead.Loaded }
+                assertEquals("k-me", b.myKeyId.value, "without viewer_key_id the owner comes from owned-nodes")
+                assertTrue(log218.any { it.path == "/v1/setup/owned-nodes" })
+            }
+        } finally { with219.stop(0); with218.stop(0) }
     }
 
     @Test

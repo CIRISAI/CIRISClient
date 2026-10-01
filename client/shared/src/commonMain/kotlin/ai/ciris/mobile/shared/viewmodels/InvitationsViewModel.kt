@@ -32,7 +32,11 @@ sealed interface InboxRead {
 sealed interface GroupInvitesRead {
     data object NotAsked : GroupInvitesRead
     data object Loading : GroupInvitesRead
-    data class Loaded(val invites: List<ai.ciris.mobile.shared.models.federation.GroupInvite>) : GroupInvitesRead
+    /** [viewerKeyId] is the node's `viewer_key_id` (0.5.219+), null when it did not send one. */
+    data class Loaded(
+        val invites: List<ai.ciris.mobile.shared.models.federation.GroupInvite>,
+        val viewerKeyId: String? = null,
+    ) : GroupInvitesRead
     data object NotOnThisNode : GroupInvitesRead
     data class Failed(val refusal: NodeRefusal?, val detail: String?) : GroupInvitesRead
 

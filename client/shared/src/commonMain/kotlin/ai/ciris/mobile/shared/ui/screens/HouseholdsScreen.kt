@@ -115,7 +115,7 @@ fun HouseholdPanel(
     val names = rememberNames(contacts, me)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-        invitations?.let { InvitationsInbox(it, InboxInvite.KIND_FAMILY, names) }
+        invitations?.let { InvitationsInbox(it, InboxInvite.KIND_FAMILY, nameOf = names) }
         when (val l = load) {
             HouseholdsLoad.Loading -> StateBlock(ListState.Loading, tag = HouseholdTags.LOADING, inline = true)
             is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.ERROR, HouseholdTags.NOT_ON_THIS_NODE)
@@ -264,7 +264,7 @@ fun HouseholdMembersScreen(
                 // Never counted as members, and never drawn inside the list above.
                 PendingInvites(
                     read = invites,
-                    me = me,
+                    ownerKeyId = me,
                     quorum = governance is Governance.Quorum,
                     busy = busy,
                     nameOf = names,

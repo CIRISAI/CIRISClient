@@ -95,10 +95,35 @@ private fun stateOrder(state: String): Int = when (state) {
  * community hub shows `community`. A pair room's invitation is left out: a
  * two-person chat is answered by opening it (CSD-091), not here.
  */
-fun inboxFor(invites: List<InboxInvite>, kind: String): List<InboxInvite> =
-    invites.filter { !it.isPairRoom && it.groupKind == kind }
+fun inboxFor(invites: List<InboxInvite>, kind: String, hubTier: String? = null): List<InboxInvite> =
+    invites.filter { !it.isPairRoom && it.groupKind == kind && tierMatches(it, hubTier) }
         .sortedByDescending { it.proposedAt.orEmpty() }
+
+/**
+ * A row's `tier` (0.5.219+) places it on one community hub. A row without one
+ * (0.5.218, which does not send it) is shown on every community hub: the
+ * client cannot tell which circle it belongs to, and hiding it would hide an
+ * invitation the person has to answer.
+ */
+private fun tierMatches(invite: InboxInvite, hubTier: String?): Boolean =
+    hubTier == null || invite.tier == null || invite.tier == hubTier
 
 /** May this person withdraw it? Only its proposer, and only while nobody has answered. */
 fun canWithdraw(invite: GroupInvite, me: String?): Boolean =
     me != null && invite.proposerKeyId == me && invite.state == InviteState.PENDING
+
+/**
+ * Is Withdraw offered on this row? With a known [me], on your own pending
+ * invitations only (`proposer_key_id == me`). With none — the node sent no
+ * `viewer_key_id` and `owned-nodes` was unreadable — on every pending row,
+ * and the node refuses anyone but the proposer by id
+ * (`membership.not_the_proposer`), which is the better failure than hiding
+ * the only way to take back an invitation you sent.
+ */
+fun withdrawShown(invite: GroupInvite, me: String?): Boolean =
+    if (me == null) invite.state == InviteState.PENDING else canWithdraw(invite, me)
+
+/** Who "me" is on a roster: the node's `viewer_key_id` when sent (0.5.219+), else the owner key the card read. */
+fun viewerOf(read: ai.ciris.mobile.shared.viewmodels.GroupInvitesRead, ownerKeyId: String?): String? =
+    ((read as? ai.ciris.mobile.shared.viewmodels.GroupInvitesRead.Loaded)?.viewerKeyId)
+        ?.takeIf { it.isNotBlank() } ?: ownerKeyId?.takeIf { it.isNotBlank() }

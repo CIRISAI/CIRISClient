@@ -77,6 +77,12 @@ data class GroupInvite(
 data class GroupInviteList(
     val invites: List<GroupInvite> = emptyList(),
     @SerialName("seated_now") val seatedNow: List<String> = emptyList(),
+    /**
+     * The caller's own key, as the node read it from the session (0.5.219+;
+     * absent on 0.5.218). Compared with [GroupInvite.proposerKeyId] to offer
+     * Withdraw on your own invitations only.
+     */
+    @SerialName("viewer_key_id") val viewerKeyId: String? = null,
 )
 
 /** One row of the invitee's inbox, `GET /v1/self/invites`. */
@@ -94,6 +100,12 @@ data class InboxInvite(
     @SerialName("proposer_key_id") val proposerKeyId: String = "",
     @SerialName("proposed_at") val proposedAt: String? = null,
     @SerialName("expires_at") val expiresAt: String? = null,
+    /**
+     * `community` or `affiliations` — the room's audience tier (0.5.219+; null
+     * for a household, a pair room, and on 0.5.218, which does not send it).
+     * When present, each community hub shows only its own tier's invitations.
+     */
+    val tier: String? = null,
 ) {
     companion object {
         const val KIND_FAMILY = "family"

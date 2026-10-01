@@ -332,7 +332,7 @@ fun CommunityGovernanceSection(
                 )
             }
         }
-        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, nameOf = { nameOf(it, contacts) }) }
+        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
         RefusalLine(refusal)
         AppliedLine(applied)
 
@@ -853,6 +853,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     val invites by viewModel.invites.collectAsState()
     val inviteSupport by viewModel.inviteSupport.collectAsState()
     val inviteNotice by viewModel.inviteNotice.collectAsState()
+    val myKeyId by viewModel.myKeyId.collectAsState()
     var addFor by remember { mutableStateOf<String?>(null) }
     var addKey by remember { mutableStateOf("") }
     var removing by remember { mutableStateOf<Pair<CommunityRoom, CommunityRoomMember>?>(null) }
@@ -931,7 +932,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                 val roomInvites = invites[room.communityId] ?: GroupInvitesRead.NotAsked
                 PendingInvites(
                     read = roomInvites,
-                    me = null,
+                    ownerKeyId = myKeyId,
                     quorum = protocolFamily(room.consensusProtocol) != "founder_only",
                     busy = busy,
                     nameOf = { nameOf(it, contacts) },
@@ -941,7 +942,6 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                     // call yet: the row says so instead of offering it.
                     onSeat = null,
                     seatLimit = s("invites_community_seat_limit"),
-                    proposerUnknown = true,
                 )
                 val legacy = inviteSupport == InviteSupport.LEGACY
                 if (addFor == room.communityId) {

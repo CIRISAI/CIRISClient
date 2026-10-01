@@ -53,6 +53,12 @@ import kotlinx.datetime.Instant
 fun InvitationsInbox(
     viewModel: InvitationsViewModel,
     kind: String,
+    /**
+     * A community hub's tier (`community` / `affiliations`). Rows that carry
+     * `tier` (0.5.219+) are shown on their own hub only; rows without it on
+     * every community hub. Null for the household hub.
+     */
+    hubTier: String? = null,
     /** A key as this owner knows it (a contact's alias), else a short key. */
     nameOf: (String) -> String = { shortKey(it, head = 12, tail = 0) },
 ) {
@@ -91,7 +97,7 @@ fun InvitationsInbox(
                 tag = InviteTags.INBOX_ERROR, inline = true,
             )
             is InboxRead.Loaded -> {
-                val mine = inboxFor(r.invites, kind)
+                val mine = inboxFor(r.invites, kind, hubTier)
                 if (mine.isEmpty()) {
                     // No invitations is the normal case and says nothing: the
                     // hub's own empty state speaks. The tag is for the flows.
@@ -227,7 +233,13 @@ private fun AnswerConfirm(
 @Composable
 fun PendingInvites(
     read: GroupInvitesRead,
-    me: String?,
+    /**
+     * The owner's key as the card read it (`owned-nodes`), or null. The node's
+     * own `viewer_key_id` on the list (0.5.219+) is preferred when it sent one
+     * ([viewerOf]); with neither, Withdraw falls back to every pending row
+     * ([withdrawShown]).
+     */
+    ownerKeyId: String?,
     quorum: Boolean,
     busy: Boolean,
     nameOf: (String) -> String,
@@ -235,19 +247,13 @@ fun PendingInvites(
     onSeat: ((GroupInvite) -> Unit)?,
     /** Said on an accepted row when nobody here can seat them (a quorum room: CSD-103 §3.1). */
     seatLimit: String? = null,
-    /**
-     * This card does not know the owner's key (the community rosters read no
-     * `owned-nodes`), so it cannot tell its own invitations apart: Withdraw is
-     * offered on every pending row and the node refuses anyone but the
-     * proposer by id (`membership.not_the_proposer`).
-     */
-    proposerUnknown: Boolean = false,
 ) {
     when (read) {
         is GroupInvitesRead.Loaded -> {
             val shown = rosterInvites(read.invites)
+            val me = viewerOf(read, ownerKeyId)
             for (inv in shown) {
-                val withdraw = canWithdraw(inv, me) || (proposerUnknown && inv.state == InviteState.PENDING)
+                val withdraw = withdrawShown(inv, me)
                 PendingInviteRow(inv, nameOf(inv.inviteeKeyId), withdraw, quorum, busy, onWithdraw, onSeat, seatLimit)
             }
         }
