@@ -265,8 +265,9 @@ author, so the self room's body reaches it directly.
 **How the checker treats it.** `packaging/check_csd_v3.py` now validates a
 `csd:topology` block **structurally** (`check_topology`): known layers only;
 every id a layer names is declared; each relation and negative is one
-TOPOLOGY.md names, or one listed in `TOPOLOGY_PENDING` with the CSD that asked
-for it and where the server stands (`custody`, `no_wider_self_rows`); realizability rule 2;
+TOPOLOGY.md names (both `custody` and `no_wider_self_rows` are listed since
+CIRISServer v0.5.218, so neither is pending any longer), or one listed in
+`TOPOLOGY_PENDING` with the CSD that asked for it; realizability rule 2;
 and the actor on a device their person owns. It does NOT check rules 1 and 3-7
 or buildability, which are the builder's. `testing/test_csd_topology.py`
 plants eight breaks against this block and each fails.
