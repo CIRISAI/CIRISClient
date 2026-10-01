@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.glyphs.Glyph
@@ -50,8 +51,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -227,7 +226,11 @@ fun ContactsScreen(
             // Open, it IS the body: a QR, the code and the picker do not fit
             // above a list on a phone, and this is a task with an end.
             if (codeOpen) {
-                Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                // Drivable (`testableVerticalScroll`), not a bare verticalScroll:
+                // on 0.5.218, the first node to serve the code, the QR sits below
+                // the fold and the harness's /scroll could not reach it (run
+                // 36905352239, csd_092 `a_reachable_code`, every desktop leg).
+                Column(Modifier.fillMaxSize().testableVerticalScroll(name = "contact_code")) {
                     ContactCodeCard(
                         state = contactCode,
                         nodesChoice = contactCodeNodes,
