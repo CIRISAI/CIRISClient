@@ -38,7 +38,7 @@ surface: null
 screen: Setup
 flow_only: true
 entry: "Setup's YOU step on a first-run node (reached as in CSD-082: Login `btn_local_login`, Startup under the HA addon, or ServerConnection after a node switch), then `proposed:btn_setup_use_existing_identity` (Use an existing identity) → Show approval code"
-exit: "Login, once `GET /v1/setup/status` reports `is_first_run: false` (the device you already have claimed this node). Cancel returns to the YOU step with nothing written"
+exit: "Once `GET /v1/setup/status` reports `is_first_run: false` (the device you already have claimed this node): signed in, on a 0.5.218+ node, with the session `POST /v1/setup/claimed-session` collects; Login on an older node or when no session is waiting. Cancel returns to the YOU step with nothing written"
 ```
 
 **Where it lives, decided from the code.** A branch of `Screen.Setup`'s YOU
@@ -101,21 +101,27 @@ error:     {tag: "proposed:approval_code_error", renders: "'Could not read this 
 | this node's code | `GET /v1/federation/node-code` (`client.getNodeCode`, `SetupViewModel.kt:1197`), or the code captured from the boot banner | CIRISServer | live |
 | the claim PIN | the node's own `<home>/claim_pin` file (0600), located by `claim_pin_file` in `GET /v1/setup/status` (`src/auth/bootstrap.rs:1418`) and read by `readLocalClaimPin()` (`CIRISApp.kt:2663`); the boot-banner capture is the fallback | CIRISServer (writes) · CIRISClient (reads a local file) | live; the same provider the self-claim uses |
 | "you've been approved" | `GET /v1/setup/status` → `is_first_run` flips to `false` once `/v1/setup/root` has accepted the claim (`bootstrap.rs:1413-1436`) | CIRISServer | live; the card polls it |
+| this device's owner session, once approved | `POST /v1/setup/claimed-session {claim_pin}` on this device's OWN node (`src/auth/bootstrap.rs` `claimed_session`, mounted loopback-only beside `setup/status`; CIRISServer `main` @ `53d1ffb5`, the 0.5.218 merge). When another device made the claim, `setup/root` answers `session_pickup: "local"` with no token and holds the session here for 15 minutes. Answers: `200` the `/v1/auth/login` shape (`access_token, token_type, expires_in, role, user_id`); `401 auth.claim.pin_invalid`; `404 auth.claim.no_pending_session` (nothing held, the window passed, or already collected) | CIRISServer | **wired in the client; the card that calls it is not built.** `CIRISApiClient.collectClaimedSession` → `SetupViewModel.collectClaimedSession` → `ClaimedSessionState` (`Collected` applies the session as the self-claim does and hands it to the host to persist; `Refused` by id; `no_pending_session` goes to Login). A **bare** 404 is a node older than 0.5.218 (`NodeTooOld`): its claim gave the session to the approver, so the old ending, Login, stands. Tests: `ClaimedSessionTest` (commonTest), `ClaimedSessionWireTest` (desktopTest) |
 | an address the other device can reach | the node code's `transport_hint`, or `target_url` in the claim body; 0.5.218 makes `target_url` override the hint and REFUSES to fall back to the approving node's own loopback for a code that names another device (`src/claim_remote.rs:484-499` on `origin/integ/0.5.218`: "falling back for it would POST another device's claim to ourselves") | CIRISServer | **readable, and the flow still cannot work without an answer**: a desktop or phone node's code carries no hint, so the QR must carry `target_url`, and whether a phone behind a carrier NAT can be reached over HTTP at all — or the second-device path will ride the mesh — is the design answer pending on CIRISServer#678 (open). `blocked_by` on the payload field above |
 | the QR payload format (node code + PIN + address) | none: a client-side format that CSD-093 writes and CSD-094 reads | CIRISClient | **blocked** on the row above: the address member is the open half. Proposed as one URI carrying `node_code`, `claim_pin` and `target_url`; to be pinned by a shared unit test in `commonTest` before either card is `building` |
 | the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **live** (PR #99): `ui/primitives/QrCode.kt`, already drawing CSD-092's code |
 
 ### The PIN contract (asserted, not just intended)
 
-**No request this client makes carries the claim PIN.** On this branch the
-client reads the PIN from a local file and draws it; the only way it leaves the
-device is by someone looking at the screen or scanning the QR. The branch makes
-no `claim-remote`, no `setup/root`, no `setup/complete`, and logs nothing that
-contains it (`DebugBundle.kt:123-136` already redacts it from debug bundles, and
-that stays true).
+**No request this client makes carries the claim PIN off this device.** On
+this branch the client reads the PIN from a local file and draws it; the only
+way it leaves the device is by someone looking at the screen or scanning the
+QR. The branch makes no `claim-remote`, no `setup/root`, no `setup/complete`,
+and logs nothing that contains it (`DebugBundle.kt:123-136` already redacts it
+from debug bundles, and that stays true). **One request carries it, to this
+device's own node and nowhere else:** `POST /v1/setup/claimed-session`, after
+the approval, which is how 0.5.218 hands this device its owner session (the
+PIN is the gate, the route is loopback-only on the node, and the held session
+is collected once). `collectClaimedSession` logs the URL, never the PIN.
 
 How it is asserted: a `commonTest` drives this branch against a recording API
-client and fails if any request's URL, headers or body contains the PIN string.
+client and fails if any request's URL, headers or body contains the PIN string,
+except the `claimed-session` body sent to the local node.
 That is a unit-level assertion because the flow DSL has no predicate over
 requests (CSD.md §5); it is still a contract, and it must be shown to fail on a
 planted leak before it is believed (AGENTS.md).

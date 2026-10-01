@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "node này chưa sẵn sàng cho việc xác lập quyền sở hữu lần đầu (không có mã PIN dùng một lần) — quyền sở hữu có thể đã được xác lập",
       "pin_invalid": "mã PIN xác lập quyền sở hữu dùng một lần không hợp lệ",
-      "pin_missing": "yêu cầu xác lập quyền ROOT lần đầu phải kèm theo `claim_pin` (mã PIN dùng một lần được in trên bảng điều khiển của node này khi khởi động)"
+      "pin_missing": "yêu cầu xác lập quyền ROOT lần đầu phải kèm theo `claim_pin` (mã PIN dùng một lần được in trên bảng điều khiển của node này khi khởi động)",
+      "already_claimed": "quyền ROOT đã được xác lập; thiết lập lần đầu đã đóng",
+      "body_invalid": "Không thể đọc được yêu cầu thiết lập, nên không có gì được xác lập.",
+      "cohort_invalid": "Phạm vi thiết lập đó không phải phạm vi mà nút này biết. Phạm vi phải là self, family hoặc community.",
+      "cohort_missing": "yêu cầu xác lập quyền ROOT lần đầu phải kèm theo `cohort_scope` (một trong self|family|community)",
+      "no_pending_session": "không có phiên nào đang chờ: thiết bị này không được một thiết bị khác xác lập quyền sở hữu trong 15 phút qua, hoặc phiên của nó đã được thu thập",
+      "node_code_invalid": "Không thể đọc được mã node. Hãy kiểm tra lại và thử lại.",
+      "node_code_missing": "yêu cầu xác lập quyền ROOT lần đầu phải cố định danh tính của nút này: cung cấp `node_code` (CIRIS-V1-...) hoặc `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "yêu cầu xác lập quyền ROOT lần đầu phải kèm theo một `owner_binding` đầy đủ (gói delegates_to: được người dùng ký + các chữ ký + key_id + các khóa công khai)",
+      "owner_binding_rejected": "Nút này đã từ chối liên kết chủ sở hữu, nên quyền sở hữu không được xác lập.",
+      "store_unavailable": "Nút này không thể truy cập kho lưu trữ của nó, nên không có gì được xác lập. Hãy thử lại sau ít lâu.",
+      "wrong_node": "NodeCode được cung cấp không khớp với danh tính của nút này — có thể bạn đã kết nối sai nút"
     },
     "link": {
       "ambiguous_handle": "Chỉ gửi mã tài khoản hoặc địa chỉ email, không gửi cả hai — chúng có ý nghĩa khác nhau."
@@ -5343,6 +5354,13 @@
   "drive": {
     "author_signer_unavailable": "Nút này hiện không thể ký với tư cách bạn, nên tệp đã không được ghi.",
     "community_id_required": "Một tệp cộng đồng cần nêu rõ phòng của nó.",
+    "evicted": "Các byte này đã bị dọn khỏi nút này và không thể đọc lại ở đây nữa.",
+    "field_after_file": "Thông tin chi tiết của tệp tải lên đến sau tệp. Không có gì được ghi; hãy gửi tệp sau cùng.",
+    "filename_empty": "việc đổi tên cần có một tên — một tên tệp trống sẽ khiến tệp không có tên thay vì được đổi tên",
+    "format_mismatch": "Tệp không đúng như loại của nó cho biết, nên nó không được thêm vào.",
+    "not_author": "Chỉ tác giả mới có thể thay đổi hoặc rút lại một tệp. Một tệp bạn đã ghi trên một thiết bị khác của bạn phải được thay đổi từ thiết bị đó.",
+    "range_not_satisfiable": "Phạm vi được yêu cầu nằm ngoài tệp này.",
+    "same_room": "tệp đã ở trong phòng đó — muốn di chuyển thì cần một phòng khác",
     "family_id_required": "Một tệp gia đình cần nêu rõ gia đình của nó. Không có gia đình mặc định.",
     "listing_failed": "Nút này không thể liệt kê các tệp trong phòng đó.",
     "no_node_key": "Nút này không tìm thấy khóa của chính nó.",
@@ -5353,17 +5371,31 @@
     "owner_session_required": "Đăng nhập với tư cách chủ sở hữu của nút này để sử dụng tệp của bạn.",
     "publish_failed": "Không thể xuất bản tệp này.",
     "readable_by_nobody": "Sẽ không ai có thể đọc được tệp này, nên nó đã không được ghi.",
+    "seal_mismatch": "Các byte không mở được dưới bản ghi của tệp này. Bản ghi và các byte không khớp với nhau.",
+    "too_large_for_whole_read": "Tệp này quá lớn để đọc trong một lần. Nó phải được truyền theo luồng.",
+    "withdraw_failed": "Không thể rút lại tệp. Hãy thử lại.",
+    "withdrawn": "Tác giả của tệp này đã rút lại nó. Các byte không còn được cung cấp ở bất kỳ đâu nữa.",
     "store_unavailable": "Nút này không thể truy cập kho tệp của nó.",
     "too_large": "Tệp đó quá lớn để thêm vào đây.",
     "unknown_cohort": "Đó không phải là nơi có thể lưu tệp. Hãy dùng Chỉ tôi, một gia đình hoặc một cộng đồng.",
-    "unopened": "Thiết bị này không thể mở tệp này."
+    "unopened": "Thiết bị này không thể mở tệp này.",
+    "bad_base64": "Nội dung của tệp không phải base64 hợp lệ, nên không có gì được ghi.",
+    "bad_body": "Không thể đọc được tệp tải lên. Không có gì được ghi; hãy gửi lại.",
+    "bad_cursor": "`after` không phải là con trỏ do drive này cấp — hãy truyền lại `resume` của một trang nguyên văn",
+    "bad_filename": "không còn gì hiển thị được của tên tệp đó sau khi loại bỏ các thành phần đường dẫn và các ký tự điều khiển / bidi (RFC 6266 §4.3)",
+    "bad_media_type": "Đó không phải là một loại tệp hợp lệ (type/subtype).",
+    "bad_move_target": "Đó không phải là nơi tệp này có thể được di chuyển đến.",
+    "declared_length_mismatch": "Kích thước tệp không khớp với kích thước đã khai báo. Không có gì được ghi; hãy gửi lại.",
+    "delegate_may_not_author": "người được ủy quyền không thể ghi, thay đổi hoặc rút lại một tệp: hàng dữ liệu được ký vào đồ thị như hành động của chính chủ sở hữu, và một ủy quyền dù đã kết thúc cũng không thể gỡ bỏ chữ ký đó"
   },
   "notes": {
     "author_signer_unavailable": "Nút này hiện không thể ký với tư cách bạn, nên ghi chú đã không được ghi lại.",
     "empty": "Một ghi chú không có nội dung thì không phải là ghi chú.",
     "listing_failed": "Nút này không thể đọc ghi chú của bạn.",
     "no_node_key": "Nút này không tìm thấy khóa của chính nó.",
-    "owner_session_required": "Đăng nhập với tư cách chủ sở hữu của nút này để sử dụng ghi chú của bạn."
+    "not_found": "Đó không phải là một trong các ghi chú của bạn.",
+    "owner_session_required": "Đăng nhập với tư cách chủ sở hữu của nút này để sử dụng ghi chú của bạn.",
+    "delegate_may_not_author": "người được ủy quyền không thể ghi, thay đổi hoặc rút lại một ghi chú: ghi chú được ký vào đồ thị như lời của chính chủ sở hữu, và một ủy quyền dù đã kết thúc cũng không thể gỡ bỏ chữ ký đó"
   },
   "self": {
     "author_signer_unavailable": "Không thể mở danh tính của bạn để ký thay đổi này.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Nút đó không thuộc quyền sở hữu của bạn, nên bạn không thể giải phóng nó.",
     "owner_session_required": "Thiết bị của bạn là bề mặt riêng của chủ sở hữu. Hãy đăng nhập với tư cách chủ sở hữu của nút này.",
     "release_incomplete": "Việc giải phóng đã được ký, nhưng nút vẫn liệt kê nút đó là của bạn: một bản ghi quyền sở hữu mà nó không thể thấy vẫn còn hiệu lực. Những gì nó có thể rút lại thì vẫn được rút lại.",
-    "evict_incomplete": "Thiết bị đó chưa được gỡ bỏ hoàn toàn. Câu trả lời của nút liệt kê từng phần chưa hoàn tất; những phần đã hoàn tất thì vẫn giữ nguyên. Hãy thử lại.",
+    "evict_incomplete": "Một phần của việc loại bỏ thiết bị đó chưa hoàn tất. Những gì đã được thực hiện vẫn được giữ; câu trả lời nêu rõ những gì chưa được thực hiện.",
     "release_self_requires_force": "Đó là nút bạn đang trò chuyện với. Giải phóng nút đó sẽ kết thúc quyền sở hữu của bạn ở đây, bao gồm cả phiên này.",
     "store_unavailable": "Nút không thể đọc hoặc ghi kho danh tính của mình. Không có gì bị thay đổi.",
     "node_not_announced": "Thiết bị đó không thể tiếp cận, nên không thể nằm trong mã.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Không thể tạo mã liên hệ của bạn từ các khóa mà nút này đang giữ.",
     "associate": {
       "hardware_custody_unavailable": "Thiết bị này không có phần cứng nào có thể niêm phong khóa (không có TPM hoặc secure enclave), nên chưa có gì được thiết lập. Bạn có thể sử dụng lưu giữ bằng phần mềm thay thế: khóa được giữ trong một tệp đã mã hóa trên thiết bị này."
-    }
+    },
+    "announce_not_your_node": "nút đó không phải là nút bạn sở hữu, nên bạn không có quyền công bố nó",
+    "announce_refused": "quyền sở hữu nút đó không thể được công bố từ thiết bị này",
+    "sessions_unavailable": "Nút không thể đọc được thiết bị nào trong số các thiết bị của bạn đang trả lời. Hãy thử lại sau ít lâu."
   },
   "households": {
     "empty": "Bạn chưa ở trong gia đình nào. Hãy thành lập một gia đình ở đây, sau đó thêm người từ danh bạ của bạn.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Đã hết hạn"
   },
   "membership": {
-    "consent_required": "Ai đó phải chấp nhận lời mời trước khi tham gia. Không ai bị thêm vào một hộ gia đình hay cộng đồng mà không có sự đồng ý của chính họ."
+    "consent_required": "Ai đó phải chấp nhận lời mời trước khi tham gia. Không ai bị thêm vào một hộ gia đình hay cộng đồng mà không có sự đồng ý của chính họ.",
+    "acceptance_mismatch": "Câu trả lời đó không khớp với lời mời mà nó nêu tên.",
+    "already_answered": "Lời mời đó đã được trả lời theo hướng khác.",
+    "awaiting_acceptance": "Họ chưa chấp nhận lời mời, nên họ không thể tham gia.",
+    "bad_expiry": "Một lời mời có hiệu lực từ một đến ba mươi ngày.",
+    "declined": "Họ đã từ chối lời mời, nên họ không thể được thêm vào theo lời mời đó.",
+    "delegate_may_not_answer": "Một phiên được ủy quyền có thể xem các lời mời nhưng không thể trả lời chúng. Câu trả lời của bạn được ký bằng khóa của riêng bạn.",
+    "founding_member_unsigned": "Một nhóm được thành lập chỉ bởi bạn. Hãy mời những người khác sau khi nhóm đã tồn tại.",
+    "invite_closed": "Lời mời đó không còn mở nữa, nên không thể rút lại.",
+    "invite_expired": "Lời mời đó đã hết hạn. Hãy gửi một lời mời mới.",
+    "invite_not_found": "Lời mời đó không có ở đây. Có thể nó chưa đến, hoặc nó chưa từng được gửi cho bạn.",
+    "invite_not_here_yet": "Lời mời đó chưa đến được thiết bị này. Hãy thử lại sau ít lâu.",
+    "not_the_invitee": "Chỉ người được mời mới có thể trả lời lời mời.",
+    "not_the_proposer": "Chỉ người đã gửi lời mời mới có thể rút lại nó.",
+    "owner_session_required": "Các lời mời được trả lời bởi chủ sở hữu của nút này. Hãy đăng nhập với tư cách chủ sở hữu.",
+    "refused": "Các quy định của nhóm đã từ chối thay đổi thành viên đó.",
+    "signer_unavailable": "Không thể mở danh tính của bạn để ký câu trả lời này.",
+    "store_unavailable": "Nút không thể đọc hoặc ghi các bản ghi thành viên của nó. Không có gì bị thay đổi.",
+    "supersede_cannot_add": "Một thay đổi đối với bản ghi của nhóm không thể thêm bất kỳ ai. Thành viên mới tham gia bằng lời mời."
   },
   "custody": {
     "inline_no_receipt": "Tệp này nhỏ đủ để được lưu trữ thành một khối duy nhất, và một tệp được lưu thành một khối như vậy chưa có biên nhận giao. Các thiết bị khác của bạn có thể đang giữ nó, nhưng thiết bị này không thể được cho biết điều đó.",
-    "copies_unobservable_by_design": "Các tệp của riêng bạn và của gia đình bạn không bao giờ được công bố cho bất kỳ ai, nên các bản sao trên thiết bị khác không thể được đếm. Biên nhận giao là dấu hiệu duy nhất cho thấy một thiết bị đã nhận được một bản.",
-    "receipt_is_delivery_not_holding": "Biên nhận giao chứng minh rằng một thiết bị đã nhận được toàn bộ tệp. Nó không chứng minh thiết bị đó vẫn còn giữ tệp: xóa một bản sao chưa thu hồi lại biên nhận của nó.",
+    "copies_unobservable_by_design": "Tệp của riêng bạn và của gia đình bạn không bao giờ được thông báo cho ai, nên không thể đếm được các bản sao trên các thiết bị khác; biên nhận giao là dấu hiệu duy nhất cho thấy một thiết bị đã nhận được một bản.",
+    "receipt_is_delivery_not_holding": "Một biên nhận giao chứng minh rằng một thiết bị đã nhận được toàn bộ tệp. Nó không chứng minh thiết bị vẫn còn giữ tệp: xóa một bản sao chưa thu hồi biên nhận của nó.",
     "receipt_time_unknown": "Thời điểm mỗi thiết bị nhận được tệp chưa có sẵn.",
-    "receipts_admitted_on_author_device": "Biên nhận giao được thu thập bởi thiết bị đã ghi tệp. Thiết bị này chỉ liệt kê các biên nhận mà nó giữ. Hãy hỏi thiết bị đã ghi tệp để có câu trả lời đầy đủ.",
-    "receipt_signer_not_your_device": "Một số biên nhận được ký bởi các khóa không phải là thiết bị của bạn, chẳng hạn như một thành viên khác trong phòng hoặc khóa riêng của một tác nhân. Chúng được tính riêng.",
-    "receipts_unreadable": "Thiết bị này vừa rồi không đọc được các biên nhận giao của nó. Những thiết bị nào đã nhận được tệp vẫn chưa được biết cho đến khi nó có thể đọc được.",
-    "commons_readable_by_holders": "Tệp này là công khai: bất kỳ ai giữ các byte đều có thể đọc chúng, nên ai có thể mở nó không phải là một danh sách.",
-    "no_copy_reports_pending": "Các thiết bị khác của bạn chưa thể báo cáo rằng chúng không giữ bản sao nào. Những báo cáo đó đi kèm với xác nhận lưu giữ. Cho đến lúc đó, một thiết bị không có biên nhận giao sẽ hiển thị là chưa biết.",
-    "no_copy_here": "Thiết bị này không giữ bản sao nào của tệp, nên ai có thể mở nó và có bao nhiêu bản sao được công bố chỉ có thể được trả lời bởi một thiết bị đang giữ nó."
+    "receipts_admitted_on_author_device": "Các biên nhận giao được thu thập bởi thiết bị đã ghi tệp. Thiết bị này chỉ liệt kê các biên nhận mà nó giữ; hãy hỏi thiết bị đã ghi tệp để có câu trả lời đầy đủ.",
+    "receipt_signer_not_your_device": "Một số biên nhận được ký bởi các thiết bị không thuộc các thiết bị của bạn (một thành viên khác trong phòng, hoặc khóa riêng của một Tác Nhân); chúng được liệt kê riêng.",
+    "receipts_unreadable": "Thiết bị này hiện không thể đọc các biên nhận giao của nó; thiết bị nào đã nhận được tệp sẽ không rõ cho đến khi nó có thể đọc được.",
+    "commons_readable_by_holders": "Tệp này là công khai: bất kỳ ai đang giữ các byte đều có thể đọc chúng, nên ai có thể mở nó không phải là một danh sách.",
+    "no_copy_reports_pending": "Các thiết bị khác của bạn chưa thể báo cáo rằng chúng không giữ bản sao nào; các báo cáo đó đến kèm với các xác nhận lưu giữ trong cùng nhóm. Cho đến khi đó, một thiết bị không có biên nhận giao được hiển thị là không xác định.",
+    "no_copy_here": "Thiết bị này không giữ bản sao nào của tệp, nên ai có thể mở nó và có bao nhiêu bản sao được thông báo sẽ do một thiết bị đang giữ tệp đó trả lời."
+  },
+  "claim": {
+    "bad_request": "Không thể đọc được yêu cầu xác lập quyền sở hữu đó.",
+    "binding_unsigned": "Không thể ký liên kết chủ sở hữu, nên thiết bị khác không được xác lập quyền sở hữu.",
+    "cohort_invalid": "Đó không phải là phạm vi mà một thiết bị có thể được xác lập vào. Phạm vi phải là self, family hoặc community.",
+    "no_identity": "chưa có danh tính người dùng chịu trách nhiệm — hãy tạo ID liên hợp của bạn (POST /v1/self/identity) trước khi xác lập quyền sở hữu",
+    "no_route": "mã node này không mang địa chỉ nào mà thiết bị này có thể kết nối tới, và đó không phải thiết bị này — hãy quét mã trên cùng mạng với thiết bị mới, hoặc cung cấp địa chỉ của nó",
+    "node_code_invalid": "Không thể đọc được mã node. Hãy kiểm tra, rồi quét hoặc dán lại.",
+    "password_not_forwarded": "mật khẩu chỉ được đặt trên thiết bị mà nó được nhập vào; việc xác lập quyền sở hữu một thiết bị khác không cần mật khẩu — liên kết chủ sở hữu đã ký là bằng chứng, và chủ sở hữu đăng nhập ở đó bằng ID liên hợp của họ",
+    "signer_unavailable": "Không thể mở danh tính của bạn để ký yêu cầu xác lập quyền sở hữu.",
+    "target_refused": "Thiết bị khác đã từ chối yêu cầu xác lập quyền sở hữu.",
+    "target_unreachable": "Không thể kết nối tới thiết bị khác. Hãy đảm bảo nó đang mở và có thể kết nối, rồi thử lại."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Một thiết bị khác của bạn đang trả lời thay cho bạn trong trao đổi này.",
+      "handled_here": "Thiết bị này đang trả lời thay cho bạn trong trao đổi này."
+    }
   }
 }

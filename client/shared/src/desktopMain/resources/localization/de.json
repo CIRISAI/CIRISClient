@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "dieser Node ist nicht für eine Erstübernahme scharfgeschaltet (keine Einmal-PIN) — die Eigentümerschaft wurde möglicherweise bereits beansprucht",
       "pin_invalid": "ungültige Einmal-PIN für die Übernahme",
-      "pin_missing": "die ROOT-Erstübernahme muss `claim_pin` enthalten (die Einmal-PIN, die beim Start auf der Konsole dieses Nodes ausgegeben wird)"
+      "pin_missing": "die ROOT-Erstübernahme muss `claim_pin` enthalten (die Einmal-PIN, die beim Start auf der Konsole dieses Nodes ausgegeben wird)",
+      "already_claimed": "Root wurde bereits beansprucht; die Ersteinrichtung ist abgeschlossen",
+      "body_invalid": "Die Einrichtungsanfrage konnte nicht gelesen werden, daher wurde nichts beansprucht.",
+      "cohort_invalid": "Dieser Einrichtungsbereich ist diesem Knoten nicht bekannt. Er muss self, family oder community sein.",
+      "cohort_missing": "die ROOT-Erstübernahme muss `cohort_scope` enthalten (eines von self|family|community)",
+      "no_pending_session": "keine Sitzung wartet: dieses Gerät wurde in den letzten 15 Minuten von keinem anderen Gerät beansprucht, oder seine Sitzung wurde bereits abgeholt",
+      "node_code_invalid": "Der Knoten-Code konnte nicht gelesen werden. Prüfen Sie ihn und versuchen Sie es erneut.",
+      "node_code_missing": "die ROOT-Erstübernahme muss die Identität dieses Knotens festlegen: geben Sie `node_code` (CIRIS-V1-...) oder `key_id` + `pubkey_ed25519_base64` an",
+      "owner_binding_missing": "die ROOT-Erstübernahme muss ein vollständiges `owner_binding` enthalten (das vom Benutzer signierte delegates_to: Envelope + Signaturen + key_id + Pubkeys)",
+      "owner_binding_rejected": "Dieser Knoten hat das Owner-Binding abgelehnt, daher wurde er nicht beansprucht.",
+      "store_unavailable": "Dieser Knoten konnte seinen Speicher nicht erreichen, daher wurde nichts beansprucht. Versuchen Sie es in Kürze erneut.",
+      "wrong_node": "der angegebene NodeCode stimmt nicht mit der Identität dieses Knotens überein — möglicherweise haben Sie den falschen Knoten erreicht"
     },
     "link": {
       "ambiguous_handle": "Senden Sie entweder eine Konto-ID oder eine E-Mail-Adresse, nicht beides – sie bedeuten Unterschiedliches."
@@ -5353,17 +5364,38 @@
     "owner_session_required": "Melden Sie sich als Eigentümer dieses Knotens an, um Ihre Dateien zu nutzen.",
     "publish_failed": "Die Datei konnte nicht veröffentlicht werden.",
     "readable_by_nobody": "Niemand wäre in der Lage, diese Datei zu lesen, daher wurde sie nicht geschrieben.",
+    "seal_mismatch": "Die Bytes ließen sich unter dem Eintrag dieser Datei nicht öffnen. Der Eintrag und die Bytes stimmen nicht überein.",
+    "too_large_for_whole_read": "Diese Datei ist zu groß, um in einem Stück gelesen zu werden. Sie muss gestreamt werden.",
+    "withdraw_failed": "Die Datei konnte nicht zurückgezogen werden. Versuchen Sie es erneut.",
+    "withdrawn": "Der Autor hat diese Datei zurückgezogen. Die Bytes werden nirgendwo mehr bereitgestellt.",
     "store_unavailable": "Dieser Knoten konnte seinen Dateispeicher nicht erreichen.",
     "too_large": "Diese Datei ist zu groß, um hier hinzugefügt zu werden.",
     "unknown_cohort": "Das ist kein Ort, an dem Dateien abgelegt werden können. Verwenden Sie Nur ich, eine Familie oder eine Community.",
-    "unopened": "Dieses Gerät kann sie nicht öffnen."
+    "unopened": "Dieses Gerät kann sie nicht öffnen.",
+    "bad_base64": "Der Inhalt der Datei war kein gültiges Base64, daher wurde nichts geschrieben.",
+    "bad_body": "Der Upload konnte nicht gelesen werden. Es wurde nichts geschrieben; senden Sie ihn erneut.",
+    "bad_cursor": "`after` ist kein Cursor, der von diesem Drive ausgegeben wurde — geben Sie das `resume` einer Seite unverändert zurück",
+    "bad_filename": "von diesem Dateinamen bleibt nichts Anzeigbares übrig, sobald Pfadkomponenten und Steuer-/Bidi-Zeichen entfernt werden (RFC 6266 §4.3)",
+    "bad_media_type": "Das ist kein gültiger Dateityp (type/subtype).",
+    "bad_move_target": "Dorthin kann diese Datei nicht verschoben werden.",
+    "declared_length_mismatch": "Die Größe der Datei stimmte nicht mit der angegebenen Größe überein. Es wurde nichts geschrieben; senden Sie sie erneut.",
+    "delegate_may_not_author": "ein Delegierter darf keine Datei schreiben, ändern oder zurückziehen: der Eintrag wird als eigene Handlung des Eigentümers in den Graphen signiert, und eine beendete Delegation kann diese Signatur nicht aufheben",
+    "evicted": "Diese Bytes wurden von diesem Knoten entfernt und können hier nicht erneut gelesen werden.",
+    "field_after_file": "Die Details des Uploads kamen nach der Datei. Es wurde nichts geschrieben; senden Sie die Datei zuletzt.",
+    "filename_empty": "eine Umbenennung benötigt einen Namen — ein leerer Dateiname würde die Datei unbenannt statt umbenannt lassen",
+    "format_mismatch": "Die Datei entspricht nicht dem angegebenen Dateityp, daher wurde sie nicht hinzugefügt.",
+    "not_author": "Nur der Autor kann eine Datei ändern oder zurückziehen. Eine Datei, die Sie auf einem anderen Ihrer Geräte geschrieben haben, wird von jenem Gerät aus geändert.",
+    "range_not_satisfiable": "Der angeforderte Bereich liegt außerhalb dieser Datei.",
+    "same_room": "die Datei ist bereits in jenem Raum — zum Verschieben braucht es einen anderen Raum"
   },
   "notes": {
     "author_signer_unavailable": "Dieser Knoten kann derzeit nicht als Sie signieren, daher wurde die Notiz nicht geschrieben.",
     "empty": "Eine Notiz ohne Inhalt ist keine Notiz.",
     "listing_failed": "Dieser Knoten konnte Ihre Notizen nicht lesen.",
     "no_node_key": "Dieser Knoten konnte seinen eigenen Schlüssel nicht finden.",
-    "owner_session_required": "Melden Sie sich als Eigentümer dieses Knotens an, um Ihre Notizen zu nutzen."
+    "owner_session_required": "Melden Sie sich als Eigentümer dieses Knotens an, um Ihre Notizen zu nutzen.",
+    "delegate_may_not_author": "ein Delegierter darf keine Notiz schreiben, ändern oder zurückziehen: sie wird als eigene Worte des Eigentümers in den Graphen signiert, und eine beendete Delegation kann diese Signatur nicht aufheben",
+    "not_found": "Das ist keine Ihrer Notizen."
   },
   "self": {
     "author_signer_unavailable": "Ihre Identität konnte nicht geöffnet werden, um diese Änderung zu signieren.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Dieser Knoten gehört Ihnen nicht, daher können Sie ihn nicht freigeben.",
     "owner_session_required": "Ihre Geräte sind die Oberfläche des Eigentümers selbst. Melden Sie sich als Eigentümer dieses Knotens an.",
     "release_incomplete": "Die Freigabe wurde signiert, aber der Knoten führt jenen Knoten weiterhin als Ihren: Ein Eigentumseintrag, den er nicht einsehen kann, ist weiterhin aktiv. Was er entziehen konnte, bleibt entzogen.",
-    "evict_incomplete": "Dieses Gerät wurde nicht vollständig entfernt. Die Antwort des Knotens listet jeden Teil auf, der nicht abgeschlossen wurde; die Teile, die abgeschlossen wurden, bleiben erledigt. Versuchen Sie es erneut.",
+    "evict_incomplete": "Ein Teil der Entfernung dieses Geräts wurde nicht abgeschlossen. Was erledigt wurde, bleibt erledigt; die Antwort nennt, was nicht erledigt wurde.",
     "release_self_requires_force": "Das ist der Knoten, mit dem Sie sprechen. Seine Freigabe beendet Ihr Eigentum hier, einschließlich dieser Sitzung.",
     "store_unavailable": "Der Knoten konnte seinen Identitätsspeicher nicht lesen oder schreiben. Es wurde nichts geändert.",
     "node_not_announced": "Dieses Gerät ist nicht erreichbar und kann daher nicht in einen Code aufgenommen werden.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Ihr Kontakt-Code konnte aus den Schlüsseln, die dieser Knoten besitzt, nicht erstellt werden.",
     "associate": {
       "hardware_custody_unavailable": "Dieses Gerät verfügt über keine Hardware, die einen Schlüssel versiegeln kann (kein TPM oder Secure Enclave), daher wurde nichts eingerichtet. Sie können stattdessen Software-Verwahrung verwenden: Der Schlüssel wird in einer verschlüsselten Datei auf diesem Gerät gespeichert."
-    }
+    },
+    "announce_not_your_node": "jener Knoten gehört Ihnen nicht, daher ist es nicht an Ihnen, ihn anzukündigen",
+    "announce_refused": "die Eigentümerschaft dieses Knotens konnte von diesem Gerät nicht angekündigt werden",
+    "sessions_unavailable": "Der Knoten konnte nicht lesen, welches Ihrer Geräte antwortet. Versuchen Sie es in Kürze erneut."
   },
   "households": {
     "create_founding_label": "Wer von Anfang an dabei ist",
@@ -5543,18 +5578,54 @@
     "ending": "Die Partnerschaft beenden"
   },
   "membership": {
-    "consent_required": "Jemand muss eine Einladung annehmen, bevor er beitritt. Niemand wird ohne sein eigenes Ja zu einem Haushalt oder einer Gemeinschaft hinzugefügt."
+    "consent_required": "Jemand muss eine Einladung annehmen, bevor er beitritt. Niemand wird ohne sein eigenes Ja zu einem Haushalt oder einer Gemeinschaft hinzugefügt.",
+    "acceptance_mismatch": "Diese Antwort stimmt nicht mit der darin genannten Einladung überein.",
+    "already_answered": "Diese Einladung wurde bereits anders beantwortet.",
+    "awaiting_acceptance": "Diese Person hat die Einladung noch nicht angenommen und kann daher nicht beitreten.",
+    "bad_expiry": "Eine Einladung gilt zwischen einem und dreißig Tagen.",
+    "declined": "Diese Person hat die Einladung abgelehnt und kann daher nicht aufgrund dieser hinzugefügt werden.",
+    "delegate_may_not_answer": "Eine delegierte Sitzung kann Einladungen sehen, aber nicht beantworten. Ihre Antwort wird mit Ihrem eigenen Schlüssel signiert.",
+    "founding_member_unsigned": "Eine Gruppe wird von Ihnen allein gegründet. Laden Sie die anderen ein, sobald sie besteht.",
+    "invite_closed": "Diese Einladung ist nicht mehr offen und kann daher nicht zurückgezogen werden.",
+    "invite_expired": "Diese Einladung ist abgelaufen. Senden Sie eine neue.",
+    "invite_not_found": "Diese Einladung liegt hier nicht vor. Sie ist möglicherweise noch nicht angekommen, oder sie wurde nie an Sie gesendet.",
+    "invite_not_here_yet": "Diese Einladung hat dieses Gerät noch nicht erreicht. Versuchen Sie es in Kürze erneut.",
+    "not_the_invitee": "Nur die eingeladene Person kann eine Einladung beantworten.",
+    "not_the_proposer": "Nur die Person, die eine Einladung gesendet hat, kann sie zurückziehen.",
+    "owner_session_required": "Einladungen werden vom Eigentümer dieses Knotens beantwortet. Melden Sie sich als Eigentümer an.",
+    "refused": "Die Regeln der Gruppe haben diese Mitgliedschaftsänderung abgelehnt.",
+    "signer_unavailable": "Ihre Identität konnte nicht geöffnet werden, um diese Antwort zu signieren.",
+    "store_unavailable": "Der Knoten konnte seine Mitgliedschaftseinträge nicht lesen oder schreiben. Es wurde nichts geändert.",
+    "supersede_cannot_add": "Eine Änderung am Eintrag der Gruppe kann niemanden hinzufügen. Neue Mitglieder treten per Einladung bei."
   },
   "custody": {
     "inline_no_receipt": "Diese Datei ist klein genug, um in einem Stück gespeichert zu werden, und eine in einem Stück gespeicherte Datei hat noch keine Empfangsbestätigung. Ihre anderen Geräte könnten sie halten, aber dieses Gerät kann darüber nichts erfahren.",
-    "copies_unobservable_by_design": "Ihre eigenen Dateien und die Ihrer Familie werden niemandem angekündigt, daher können Kopien auf anderen Geräten nicht gezählt werden. Eine Empfangsbestätigung ist das einzige Zeichen, dass ein Gerät die Datei erhalten hat.",
-    "receipt_is_delivery_not_holding": "Eine Empfangsbestätigung belegt, dass ein Gerät die gesamte Datei empfangen hat. Sie belegt nicht, dass das Gerät sie noch besitzt: Das Entfernen einer Kopie nimmt die Empfangsbestätigung noch nicht zurück.",
+    "copies_unobservable_by_design": "Ihre eigenen Dateien und die Ihrer Familie werden niemandem angekündigt, daher können Kopien auf anderen Geräten nicht gezählt werden; eine Empfangsbestätigung ist das einzige Zeichen, dass ein Gerät eine Kopie erhalten hat.",
+    "receipt_is_delivery_not_holding": "Eine Empfangsbestätigung belegt, dass ein Gerät die gesamte Datei empfangen hat. Sie belegt nicht, dass das Gerät sie noch besitzt: Das Entfernen einer Kopie zieht ihre Empfangsbestätigung noch nicht zurück.",
     "receipt_time_unknown": "Der Zeitpunkt, zu dem jedes Gerät die Datei empfangen hat, ist noch nicht verfügbar.",
-    "receipts_admitted_on_author_device": "Empfangsbestätigungen werden von dem Gerät gesammelt, das die Datei geschrieben hat. Dieses Gerät listet nur die Empfangsbestätigungen auf, die es besitzt. Fragen Sie das Gerät, das die Datei geschrieben hat, nach der vollständigen Antwort.",
-    "receipt_signer_not_your_device": "Einige Empfangsbestätigungen wurden von Schlüsseln signiert, die nicht Ihre Geräte sind, etwa von einem anderen Mitglied des Raums oder dem eigenen Schlüssel eines Agenten. Sie werden separat gezählt.",
-    "receipts_unreadable": "Dieses Gerät konnte seine Empfangsbestätigungen gerade nicht lesen. Welche Geräte die Datei empfangen haben, ist unbekannt, bis es das wieder kann.",
-    "commons_readable_by_holders": "Diese Datei ist öffentlich: Jeder, der die Bytes besitzt, kann sie lesen, daher ist es keine Liste, wer sie öffnen kann.",
-    "no_copy_reports_pending": "Ihre anderen Geräte können noch nicht melden, dass sie keine Kopie besitzen. Diese Meldungen erfolgen zusammen mit Empfangsbestätigungen. Bis dahin wird ein Gerät ohne Empfangsbestätigung als unbekannt angezeigt.",
-    "no_copy_here": "Dieses Gerät besitzt keine Kopie der Datei. Nur ein Gerät, das sie besitzt, kann sagen, wer sie öffnen kann und wie viele Kopien angekündigt wurden."
+    "receipts_admitted_on_author_device": "Empfangsbestätigungen werden von dem Gerät gesammelt, das die Datei geschrieben hat. Dieses Gerät listet nur die Bestätigungen auf, die es besitzt; fragen Sie das Gerät, das die Datei geschrieben hat, nach der vollständigen Antwort.",
+    "receipt_signer_not_your_device": "Einige Bestätigungen wurden von Geräten signiert, die nicht zu Ihren Geräten gehören (ein anderes Mitglied des Raums oder der eigene Schlüssel eines Agenten); sie werden separat aufgeführt.",
+    "receipts_unreadable": "Dieses Gerät konnte seine Empfangsbestätigungen gerade nicht lesen; welche Geräte die Datei empfangen haben, ist unbekannt, bis dies möglich ist.",
+    "commons_readable_by_holders": "Diese Datei ist öffentlich: Wer die Bytes besitzt, kann sie lesen, daher gibt es keine Liste dafür, wer sie öffnen kann.",
+    "no_copy_reports_pending": "Ihre anderen Geräte können noch nicht melden, dass sie keine Kopie besitzen; diese Meldungen kommen mit kohorteninternen Verwahrungsbestätigungen. Bis dahin wird ein Gerät ohne Empfangsbestätigung als unbekannt angezeigt.",
+    "no_copy_here": "Dieses Gerät besitzt keine Kopie der Datei; wer sie öffnen kann und wie viele Kopien angekündigt sind, kann nur ein Gerät beantworten, das eine Kopie besitzt."
+  },
+  "claim": {
+    "bad_request": "Diese Übernahmeanfrage konnte nicht gelesen werden.",
+    "binding_unsigned": "Das Owner-Binding konnte nicht signiert werden, daher wurde das andere Gerät nicht beansprucht.",
+    "cohort_invalid": "Das ist kein Bereich, in den ein Gerät beansprucht werden kann. Er muss self, family oder community sein.",
+    "no_identity": "noch keine Identität des verantwortlichen Benutzers — erstellen Sie Ihre Föderations-ID (POST /v1/self/identity), bevor Sie die Eigentümerschaft beanspruchen",
+    "no_route": "dieser Knoten-Code enthält keine Adresse, die dieses Gerät erreichen kann, und es ist nicht dieses Gerät — scannen Sie den Code im selben Netzwerk wie das neue Gerät, oder geben Sie dessen Adresse an",
+    "node_code_invalid": "Der Knoten-Code konnte nicht gelesen werden. Prüfen Sie ihn und scannen oder fügen Sie ihn erneut ein.",
+    "password_not_forwarded": "ein Passwort wird nur auf dem Gerät festgelegt, auf dem es eingegeben wird; die Übernahme eines anderen Geräts benötigt keines — das signierte Owner-Binding ist der Nachweis, und der Eigentümer meldet sich dort mit seiner Föderations-ID an",
+    "signer_unavailable": "Ihre Identität konnte nicht geöffnet werden, um die Übernahme zu signieren.",
+    "target_refused": "Das andere Gerät hat die Übernahme abgelehnt.",
+    "target_unreachable": "Das andere Gerät konnte nicht erreicht werden. Stellen Sie sicher, dass es eingeschaltet und erreichbar ist, und versuchen Sie es dann erneut."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Ein anderes Ihrer Geräte antwortet in diesem Austausch für Sie.",
+      "handled_here": "Dieses Gerät antwortet in diesem Austausch für Sie."
+    }
   }
 }

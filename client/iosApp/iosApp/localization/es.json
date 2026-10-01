@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "este nodo no está preparado para una reclamación de primer arranque (sin PIN de un solo uso) — puede que la propiedad ya haya sido reclamada",
       "pin_invalid": "PIN de reclamación de un solo uso no válido",
-      "pin_missing": "la reclamación ROOT de primer arranque debe incluir `claim_pin` (el PIN de un solo uso impreso en la consola de este nodo al arrancar)"
+      "pin_missing": "la reclamación ROOT de primer arranque debe incluir `claim_pin` (el PIN de un solo uso impreso en la consola de este nodo al arrancar)",
+      "already_claimed": "la raíz ya fue reclamada; la configuración de primer arranque está cerrada",
+      "body_invalid": "No se pudo leer la solicitud de configuración, así que no se reclamó nada.",
+      "cohort_invalid": "Ese ámbito de configuración no es uno que este nodo reconozca. Debe ser self, family o community.",
+      "cohort_missing": "la reclamación ROOT de primer arranque debe incluir `cohort_scope` (uno de self|family|community)",
+      "no_pending_session": "no hay ninguna sesión en espera: este dispositivo no fue reclamado por otro dispositivo en los últimos 15 minutos, o su sesión ya fue recogida",
+      "node_code_invalid": "No se pudo leer el código del nodo. Revísalo e inténtalo de nuevo.",
+      "node_code_missing": "la reclamación ROOT de primer arranque debe fijar la identidad de este nodo: proporciona `node_code` (CIRIS-V1-...) o `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "la reclamación ROOT de primer arranque debe incluir un `owner_binding` completo (el envelope delegates_to firmado por el usuario + firmas + key_id + pubkeys)",
+      "owner_binding_rejected": "Este nodo rechazó la vinculación de propietario, así que no fue reclamado.",
+      "store_unavailable": "Este nodo no pudo acceder a su almacén, así que no se reclamó nada. Inténtalo de nuevo en breve.",
+      "wrong_node": "el NodeCode proporcionado no coincide con la identidad de este nodo — puede que hayas llegado al nodo equivocado"
     },
     "link": {
       "ambiguous_handle": "Envía un id de cuenta o una dirección de correo electrónico, no ambos: significan cosas distintas."
@@ -5342,6 +5353,22 @@
   },
   "drive": {
     "author_signer_unavailable": "Este nodo no puede firmar en tu nombre ahora mismo, así que el archivo no se escribió.",
+    "bad_filename": "no queda nada visible de ese nombre de archivo una vez que se eliminan los componentes de ruta y los caracteres de control / bidi (RFC 6266 §4.3)",
+    "bad_media_type": "Ese no es un tipo de archivo válido (type/subtype).",
+    "bad_move_target": "Ese no es un lugar al que este archivo pueda moverse.",
+    "declared_length_mismatch": "El tamaño del archivo no coincidió con el tamaño declarado. No se escribió nada; envíalo de nuevo.",
+    "delegate_may_not_author": "un delegado no puede escribir, cambiar ni retirar un archivo: la fila se firma en el grafo como el acto propio del propietario, y una delegación que termina no puede deshacer esa firma",
+    "evicted": "Estos bytes fueron eliminados de este nodo y no pueden leerse aquí de nuevo.",
+    "field_after_file": "Los detalles de la carga llegaron después del archivo. No se escribió nada; envía el archivo al final.",
+    "filename_empty": "renombrar necesita un nombre — un nombre de archivo vacío dejaría el archivo sin nombre en lugar de renombrado",
+    "format_mismatch": "El archivo no es lo que su tipo dice que es, así que no se añadió.",
+    "not_author": "Solo el autor puede cambiar o retirar un archivo. Un archivo que escribiste en otro de tus dispositivos se cambia desde ese dispositivo.",
+    "range_not_satisfiable": "El rango solicitado está fuera de este archivo.",
+    "same_room": "el archivo ya está en esa sala — un movimiento necesita un círculo diferente",
+    "seal_mismatch": "Los bytes no se abrieron bajo el registro de este archivo. El registro y los bytes no coinciden.",
+    "too_large_for_whole_read": "Este archivo es demasiado grande para leerse de una sola vez. Debe transmitirse en flujo.",
+    "withdraw_failed": "El archivo no pudo retirarse. Inténtalo de nuevo.",
+    "withdrawn": "Su autor retiró este archivo. Los bytes ya no se sirven en ningún lugar.",
     "community_id_required": "Un archivo de comunidad debe indicar su sala.",
     "family_id_required": "Un archivo de familia debe indicar su familia. No hay una familia predeterminada.",
     "listing_failed": "Este nodo no pudo listar los archivos de esa sala.",
@@ -5356,14 +5383,19 @@
     "store_unavailable": "Este nodo no pudo acceder a su almacén de archivos.",
     "too_large": "Ese archivo es demasiado grande para añadirlo aquí.",
     "unknown_cohort": "Ese no es un lugar donde puedan ir archivos. Usa Solo yo, una familia o una comunidad.",
-    "unopened": "Este dispositivo no puede abrirlo."
+    "unopened": "Este dispositivo no puede abrirlo.",
+    "bad_base64": "El contenido del archivo no era base64 válido, así que no se escribió nada.",
+    "bad_body": "No se pudo leer la subida. No se escribió nada; envíala de nuevo.",
+    "bad_cursor": "`after` no es un cursor emitido por este drive — devuelve tal cual el `resume` de una página"
   },
   "notes": {
     "author_signer_unavailable": "Este nodo no puede firmar en tu nombre ahora mismo, así que la nota no se escribió.",
     "empty": "Una nota sin nada dentro no es una nota.",
     "listing_failed": "Este nodo no pudo leer tus notas.",
     "no_node_key": "Este nodo no pudo encontrar su propia clave.",
-    "owner_session_required": "Inicia sesión como propietario de este nodo para usar tus notas."
+    "owner_session_required": "Inicia sesión como propietario de este nodo para usar tus notas.",
+    "delegate_may_not_author": "un delegado no puede escribir, cambiar ni retirar una nota: se firma en el grafo como las propias palabras del propietario, y una delegación que termina no puede deshacer esa firma",
+    "not_found": "Esa no es una de tus notas."
   },
   "self": {
     "author_signer_unavailable": "No se pudo abrir tu identidad para firmar este cambio.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Ese nodo no es de tu propiedad, así que no es tuyo para liberar.",
     "owner_session_required": "Tus dispositivos son la superficie propia del propietario. Inicia sesión como el propietario de este nodo.",
     "release_incomplete": "La liberación se firmó, pero el nodo todavía lista ese nodo como tuyo: un registro de propiedad que no puede ver sigue activo. Lo que pudo retirar permanece retirado.",
-    "evict_incomplete": "Ese dispositivo no se eliminó por completo. La respuesta del nodo enumera cada parte que no finalizó; las partes que sí finalizaron permanecen así. Inténtalo de nuevo.",
+    "evict_incomplete": "Parte de la eliminación de ese dispositivo no se completó. Lo que se hizo permanece hecho; la respuesta indica lo que no.",
     "release_self_requires_force": "Ese es el nodo con el que estás hablando. Liberarlo termina tu propiedad aquí, incluida esta sesión.",
     "store_unavailable": "El nodo no pudo leer ni escribir su almacén de identidades. No se cambió nada.",
     "node_not_announced": "Ese dispositivo no es alcanzable, así que no puede incluirse en un código.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "No se pudo generar tu código de contacto a partir de las claves que tiene este nodo.",
     "associate": {
       "hardware_custody_unavailable": "Este dispositivo no tiene hardware que pueda sellar una clave (sin TPM ni enclave seguro), así que no se configuró nada. Puedes usar custodia por software en su lugar: la clave se guarda en un archivo cifrado en este dispositivo."
-    }
+    },
+    "announce_not_your_node": "ese nodo no es uno que posees, así que no es tuyo para anunciar",
+    "announce_refused": "la propiedad de ese nodo no pudo anunciarse desde este dispositivo",
+    "sessions_unavailable": "El nodo no pudo leer cuál de tus dispositivos está respondiendo. Inténtalo de nuevo en breve."
   },
   "households": {
     "empty": "Todavía no formas parte de ningún hogar. Forma uno aquí y luego añade personas desde tus contactos.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Caducado"
   },
   "membership": {
-    "consent_required": "Alguien tiene que aceptar una invitación antes de unirse. Nadie se añade a un hogar o una comunidad sin su propio sí."
+    "consent_required": "Alguien tiene que aceptar una invitación antes de unirse. Nadie se añade a un hogar o una comunidad sin su propio sí.",
+    "acceptance_mismatch": "Esa respuesta no coincide con la invitación que nombra.",
+    "already_answered": "Esa invitación ya fue respondida de otra manera.",
+    "awaiting_acceptance": "Todavía no han aceptado la invitación, así que no pueden unirse.",
+    "bad_expiry": "Una invitación dura entre uno y treinta días.",
+    "declined": "Rechazaron la invitación, así que no pueden añadirse bajo ella.",
+    "delegate_may_not_answer": "Una sesión delegada puede ver invitaciones pero no puede responderlas. Tu respuesta se firma con tu propia clave.",
+    "founding_member_unsigned": "Un grupo es fundado únicamente por ti. Invita a los demás una vez que exista.",
+    "invite_closed": "Esa invitación ya no está abierta, así que no puede retirarse.",
+    "invite_expired": "Esa invitación ha expirado. Envía una nueva.",
+    "invite_not_found": "Esa invitación no está aquí. Puede que todavía no haya llegado, o nunca se te envió.",
+    "invite_not_here_yet": "Esa invitación todavía no ha llegado a este dispositivo. Inténtalo de nuevo en breve.",
+    "not_the_invitee": "Solo la persona que fue invitada puede responder una invitación.",
+    "not_the_proposer": "Solo la persona que envió una invitación puede retirarla.",
+    "owner_session_required": "Las invitaciones las responde el propietario de este nodo. Inicia sesión como el propietario.",
+    "refused": "Las reglas del grupo rechazaron ese cambio de membresía.",
+    "signer_unavailable": "No se pudo abrir tu identidad para firmar esta respuesta.",
+    "store_unavailable": "El nodo no pudo leer ni escribir sus registros de membresía. No se cambió nada.",
+    "supersede_cannot_add": "Un cambio al registro del grupo no puede añadir a nadie. Los miembros nuevos se unen por invitación."
   },
   "custody": {
     "inline_no_receipt": "Este archivo es lo bastante pequeño para almacenarse en una sola pieza, y un archivo almacenado en una sola pieza todavía no tiene recibo de entrega. Tus otros dispositivos pueden tenerlo, pero este dispositivo no puede saberlo.",
-    "copies_unobservable_by_design": "Tus archivos propios y los de tu familia nunca se anuncian a nadie, así que las copias en otros dispositivos no se pueden contar. Un recibo de entrega es la única señal de que un dispositivo recibió uno.",
+    "copies_unobservable_by_design": "Tus archivos y los de tu familia nunca se anuncian a nadie, así que las copias en otros dispositivos no pueden contarse; un recibo de entrega es la única señal de que un dispositivo recibió una.",
     "receipt_is_delivery_not_holding": "Un recibo de entrega demuestra que un dispositivo recibió el archivo completo. No demuestra que el dispositivo todavía lo tenga: eliminar una copia todavía no retira su recibo.",
     "receipt_time_unknown": "La hora en que cada dispositivo recibió el archivo todavía no está disponible.",
-    "receipts_admitted_on_author_device": "Los recibos de entrega los recoge el dispositivo que escribió el archivo. Este dispositivo solo enumera los recibos que tiene. Pide la respuesta completa al dispositivo que lo escribió.",
-    "receipt_signer_not_your_device": "Algunos recibos fueron firmados por claves que no son tus dispositivos, como otro miembro de la sala o la propia clave de un agente. Se cuentan por separado.",
-    "receipts_unreadable": "Este dispositivo no pudo leer sus recibos de entrega en este momento. Qué dispositivos recibieron el archivo se desconoce hasta que pueda hacerlo.",
+    "receipts_admitted_on_author_device": "Los recibos de entrega los recoge el dispositivo que escribió el archivo. Este dispositivo solo lista los recibos que tiene; pregunta al dispositivo que lo escribió para obtener la respuesta completa.",
+    "receipt_signer_not_your_device": "Algunos recibos fueron firmados por dispositivos que no están entre tus dispositivos (otro miembro de la sala, o la clave propia de un agente); se listan por separado.",
+    "receipts_unreadable": "Este dispositivo no pudo leer sus recibos de entrega en este momento; qué dispositivos recibieron el archivo se desconoce hasta que pueda hacerlo.",
     "commons_readable_by_holders": "Este archivo es público: cualquiera que tenga los bytes puede leerlos, así que quién puede abrirlo no es una lista.",
-    "no_copy_reports_pending": "Tus otros dispositivos todavía no pueden informar que no tienen ninguna copia. Esos informes llegan con confirmaciones de custodia. Hasta entonces, un dispositivo sin recibo de entrega se muestra como desconocido.",
-    "no_copy_here": "Este dispositivo no tiene ninguna copia del archivo, así que quién puede abrirlo y cuántas copias se anuncian solo puede responderlo un dispositivo que lo tenga."
+    "no_copy_reports_pending": "Tus otros dispositivos todavía no pueden informar que no tienen ninguna copia; esos informes llegan con las confirmaciones de custodia dentro del grupo. Hasta entonces, un dispositivo sin recibo de entrega se muestra como desconocido.",
+    "no_copy_here": "Este dispositivo no tiene ninguna copia del archivo, así que quién puede abrirlo y cuántas copias se han anunciado lo responde un dispositivo que sí la tenga."
+  },
+  "claim": {
+    "bad_request": "No se pudo leer esa solicitud de reclamación.",
+    "binding_unsigned": "La vinculación de propietario no pudo firmarse, así que el otro dispositivo no fue reclamado.",
+    "cohort_invalid": "Ese no es un ámbito al que un dispositivo pueda reclamarse. Debe ser self, family o community.",
+    "no_identity": "todavía no hay una identidad de usuario responsable — crea tu ID de federación (POST /v1/self/identity) antes de reclamar la propiedad",
+    "no_route": "este código de nodo no lleva ninguna dirección a la que este dispositivo pueda llegar, y no es este dispositivo — escanea el código en la misma red que el dispositivo nuevo, o indica su dirección",
+    "node_code_invalid": "No se pudo leer el código del nodo. Revísalo y luego escanéalo o pégalo de nuevo.",
+    "password_not_forwarded": "una contraseña se establece solo en el dispositivo en el que se escribe; reclamar otro dispositivo no necesita ninguna — la vinculación de propietario firmada es la prueba, y el propietario inicia sesión ahí con su ID de federación",
+    "signer_unavailable": "Tu identidad no pudo abrirse para firmar la reclamación.",
+    "target_refused": "El otro dispositivo rechazó la reclamación.",
+    "target_unreachable": "No se pudo contactar con el otro dispositivo. Asegúrate de que esté encendido y accesible, luego inténtalo de nuevo."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Otro de tus dispositivos está respondiendo por ti en este intercambio.",
+      "handled_here": "Este dispositivo está respondiendo por ti en este intercambio."
+    }
   }
 }

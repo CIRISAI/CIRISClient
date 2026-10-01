@@ -334,9 +334,20 @@
       "waiting": "Conclua o início de sessão com a Google no seu navegador e depois volte aqui."
     },
     "claim": {
+      "cohort_missing": "a reivindicação ROOT de primeira execução deve incluir `cohort_scope` (um dos: self|family|community)",
+      "no_pending_session": "nenhuma sessão está em espera: este dispositivo não foi reivindicado por outro dispositivo nos últimos 15 minutos, ou sua sessão já foi coletada",
+      "node_code_invalid": "O código do nó não pôde ser lido. Verifique-o e tente novamente.",
+      "node_code_missing": "a reivindicação ROOT de primeira execução deve fixar a identidade deste nó: forneça `node_code` (CIRIS-V1-...) ou `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "a reivindicação ROOT de primeira execução deve incluir um `owner_binding` completo (o envelope delegates_to assinado pelo usuário + assinaturas + key_id + chaves públicas)",
+      "owner_binding_rejected": "Este nó recusou o vínculo de titularidade, portanto não foi reivindicado.",
+      "store_unavailable": "Este nó não conseguiu aceder ao seu armazenamento, portanto nada foi reivindicado. Tente novamente em breve.",
+      "wrong_node": "o NodeCode fornecido não corresponde à identidade deste nó — você pode ter alcançado o nó errado",
       "not_armed": "este nó não está preparado para uma reivindicação de primeira execução (sem PIN de uso único) — a titularidade pode já ter sido reivindicada",
       "pin_invalid": "PIN de reivindicação de uso único inválido",
-      "pin_missing": "a reivindicação ROOT de primeira execução deve incluir `claim_pin` (o PIN de uso único exibido no console deste nó ao iniciar)"
+      "pin_missing": "a reivindicação ROOT de primeira execução deve incluir `claim_pin` (o PIN de uso único exibido no console deste nó ao iniciar)",
+      "already_claimed": "o ROOT já foi reivindicado; a configuração de primeira execução está encerrada",
+      "body_invalid": "A solicitação de configuração não pôde ser lida, portanto nada foi reivindicado.",
+      "cohort_invalid": "Este nó não reconhece esse escopo de configuração. Ele precisa ser self (Apenas eu), family (família) ou community (comunidade)."
     },
     "link": {
       "ambiguous_handle": "Envie um id de conta ou um endereço de e-mail, não os dois — eles significam coisas diferentes."
@@ -5356,14 +5367,35 @@
     "store_unavailable": "Este nó não conseguiu acessar seu repositório de arquivos.",
     "too_large": "Esse arquivo é grande demais para ser adicionado aqui.",
     "unknown_cohort": "Esse não é um lugar onde arquivos podem ir. Use Apenas eu, uma família ou uma comunidade.",
-    "unopened": "Este dispositivo não consegue abri-lo."
+    "unopened": "Este dispositivo não consegue abri-lo.",
+    "bad_base64": "O conteúdo do arquivo não era um base64 válido, portanto nada foi escrito.",
+    "bad_body": "O envio não pôde ser lido. Nada foi escrito; envie-o novamente.",
+    "bad_cursor": "`after` não é um cursor emitido por este drive — devolva o `resume` de uma página exatamente como recebido",
+    "bad_filename": "nada exibível resta desse nome de arquivo depois que os componentes de caminho e os caracteres de controle/bidi são removidos (RFC 6266 §4.3)",
+    "bad_media_type": "Esse não é um tipo de arquivo válido (tipo/subtipo).",
+    "bad_move_target": "Esse não é um local para onde este arquivo possa ser movido.",
+    "declared_length_mismatch": "O tamanho do arquivo não correspondeu ao tamanho declarado. Nada foi escrito; envie-o novamente.",
+    "delegate_may_not_author": "um delegado não pode escrever, alterar ou retirar um arquivo: o registro é assinado no grafo como o próprio ato do titular, e uma delegação encerrada não pode desassiná-lo",
+    "evicted": "Esses bytes foram removidos deste nó e não podem ser lidos aqui novamente.",
+    "field_after_file": "Os detalhes do envio vieram depois do arquivo. Nada foi escrito; envie o arquivo por último.",
+    "filename_empty": "renomear exige um nome — um nome de arquivo vazio deixaria o arquivo sem nome em vez de renomeado",
+    "format_mismatch": "O arquivo não é o que seu tipo afirma ser, portanto não foi adicionado.",
+    "not_author": "Somente o autor pode alterar ou retirar um arquivo. Um arquivo que você escreveu em outro dos seus dispositivos é alterado a partir daquele dispositivo.",
+    "range_not_satisfiable": "O intervalo solicitado está fora deste arquivo.",
+    "same_room": "o arquivo já está nessa sala — uma movimentação exige um círculo diferente",
+    "seal_mismatch": "Os bytes não abriram sob o registro deste arquivo. O registro e os bytes estão em desacordo.",
+    "too_large_for_whole_read": "Este arquivo é grande demais para ser lido em uma única peça. Ele precisa ser transmitido em fluxo.",
+    "withdraw_failed": "O arquivo não pôde ser retirado. Tente novamente.",
+    "withdrawn": "Seu autor retirou este arquivo. Os bytes não são mais servidos em lugar nenhum."
   },
   "notes": {
     "author_signer_unavailable": "Este nó não consegue assinar como você agora, portanto a nota não foi escrita.",
     "empty": "Uma nota sem nada dentro não é uma nota.",
     "listing_failed": "Este nó não conseguiu ler suas notas.",
     "no_node_key": "Este nó não conseguiu encontrar a própria chave.",
-    "owner_session_required": "Entre como proprietário deste nó para usar suas notas."
+    "owner_session_required": "Entre como proprietário deste nó para usar suas notas.",
+    "delegate_may_not_author": "um delegado não pode escrever, alterar ou retirar uma nota: ela é assinada no grafo como as próprias palavras do titular, e uma delegação encerrada não pode desassiná-las",
+    "not_found": "Essa não é uma das suas notas."
   },
   "self": {
     "author_signer_unavailable": "Sua identidade não pôde ser aberta para assinar esta alteração.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Esse nó não é seu, portanto não é seu para liberar.",
     "owner_session_required": "Seus dispositivos são a superfície do próprio proprietário. Entre como o proprietário deste nó.",
     "release_incomplete": "A liberação foi assinada, mas o nó ainda lista aquele nó como seu: existe um registro de propriedade que ele não pode ver e que ainda está ativo. O que pôde ser retirado permanece retirado.",
-    "evict_incomplete": "Esse dispositivo não foi totalmente removido. A resposta do nó lista cada parte que não foi concluída; as partes que foram concluídas permanecem concluídas. Tente novamente.",
+    "evict_incomplete": "Parte da remoção desse dispositivo não foi concluída. O que foi feito permanece feito; a resposta indica o que não foi.",
     "release_self_requires_force": "Esse é o nó com quem você está falando. Liberá-lo encerra sua propriedade aqui, incluindo esta sessão.",
     "store_unavailable": "O nó não conseguiu ler ou escrever seu repositório de identidades. Nada foi alterado.",
     "node_not_announced": "Esse dispositivo não está acessível, portanto não pode entrar em um código.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Seu código de contato não pôde ser gerado a partir das chaves que este nó possui.",
     "associate": {
       "hardware_custody_unavailable": "Este dispositivo não tem hardware capaz de selar uma chave (sem TPM ou secure enclave), portanto nada foi configurado. Você pode usar custódia por software em vez disso: a chave é mantida em um arquivo criptografado neste dispositivo."
-    }
+    },
+    "announce_not_your_node": "esse nó não é um que você possua, portanto não é seu para anunciar",
+    "announce_refused": "a titularidade desse nó não pôde ser anunciada a partir deste dispositivo",
+    "sessions_unavailable": "O nó não conseguiu ler qual dos seus dispositivos está respondendo. Tente novamente em breve."
   },
   "households": {
     "change_import_bad": "Essa não é uma alteração para uma família da qual você faz parte neste nó.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Expirada"
   },
   "membership": {
-    "consent_required": "Alguém precisa aceitar um convite antes de entrar. Ninguém é adicionado a uma família ou a uma comunidade sem o seu próprio consentimento."
+    "consent_required": "Alguém precisa aceitar um convite antes de entrar. Ninguém é adicionado a uma família ou a uma comunidade sem o seu próprio consentimento.",
+    "acceptance_mismatch": "Essa resposta não corresponde ao convite que ela indica.",
+    "already_answered": "Esse convite já foi respondido da outra forma.",
+    "awaiting_acceptance": "Essa pessoa ainda não aceitou o convite, portanto não pode entrar.",
+    "bad_expiry": "Um convite dura entre um e trinta dias.",
+    "declined": "Essa pessoa recusou o convite, portanto não pode ser adicionada por meio dele.",
+    "delegate_may_not_answer": "Uma sessão delegada pode ver convites, mas não pode respondê-los. Sua resposta é assinada com sua própria chave.",
+    "founding_member_unsigned": "Um grupo é fundado por você sozinho. Convide os outros depois que ele existir.",
+    "invite_closed": "Esse convite não está mais aberto, portanto não pode ser retirado.",
+    "invite_expired": "Esse convite expirou. Envie um novo.",
+    "invite_not_found": "Esse convite não está aqui. Ele pode ainda não ter chegado, ou nunca foi enviado a você.",
+    "invite_not_here_yet": "Esse convite ainda não chegou a este dispositivo. Tente novamente em breve.",
+    "not_the_invitee": "Somente a pessoa que foi convidada pode responder a um convite.",
+    "not_the_proposer": "Somente a pessoa que enviou um convite pode retirá-lo.",
+    "owner_session_required": "Os convites são respondidos pelo titular deste nó. Entre como o titular.",
+    "refused": "As regras do grupo recusaram essa alteração de associação.",
+    "signer_unavailable": "Sua identidade não pôde ser aberta para assinar esta resposta.",
+    "store_unavailable": "O nó não conseguiu ler ou escrever seus registros de associação. Nada foi alterado.",
+    "supersede_cannot_add": "Uma alteração no registro do grupo não pode adicionar ninguém. Novos membros entram por convite."
   },
   "custody": {
     "inline_no_receipt": "Este arquivo é pequeno o suficiente para ser armazenado em uma única peça, e um arquivo armazenado em uma única peça ainda não tem recibo de entrega. Seus outros dispositivos podem tê-lo, mas este dispositivo não pode ser informado disso.",
-    "copies_unobservable_by_design": "Seus próprios arquivos e os da sua família nunca são anunciados a ninguém, portanto cópias em outros dispositivos não podem ser contadas. Um recibo de entrega é o único sinal de que um dispositivo recebeu um.",
-    "receipt_is_delivery_not_holding": "Um recibo de entrega prova que um dispositivo recebeu o arquivo completo. Não prova que o dispositivo ainda o tem: remover uma cópia ainda não retira o recibo dela.",
+    "copies_unobservable_by_design": "Seus arquivos e os da sua família nunca são anunciados a ninguém, portanto as cópias em outros dispositivos não podem ser contadas; um recibo de entrega é o único sinal de que um dispositivo recebeu uma cópia.",
+    "receipt_is_delivery_not_holding": "Um recibo de entrega prova que um dispositivo recebeu o arquivo inteiro. Não prova que o dispositivo ainda o possui: remover uma cópia ainda não retira seu recibo.",
     "receipt_time_unknown": "O horário em que cada dispositivo recebeu o arquivo ainda não está disponível.",
-    "receipts_admitted_on_author_device": "Os recibos de entrega são coletados pelo dispositivo que escreveu o arquivo. Este dispositivo lista apenas os recibos que possui. Peça ao dispositivo que o escreveu a resposta completa.",
-    "receipt_signer_not_your_device": "Alguns recibos foram assinados por chaves que não são seus dispositivos, como outro membro da sala ou a própria chave de um agente. Eles são contados separadamente.",
-    "receipts_unreadable": "Este dispositivo não conseguiu ler seus recibos de entrega agora. Quais dispositivos receberam o arquivo é desconhecido até que ele consiga.",
-    "commons_readable_by_holders": "Este arquivo é público: qualquer pessoa que tenha os bytes pode lê-los, portanto quem pode abri-lo não é uma lista.",
-    "no_copy_reports_pending": "Seus outros dispositivos ainda não podem informar que não possuem uma cópia. Esses relatos vêm com confirmações de custódia. Até então, um dispositivo sem recibo de entrega aparece como desconhecido.",
-    "no_copy_here": "Este dispositivo não possui uma cópia do arquivo, portanto a pergunta sobre quem pode abri-lo e quantas cópias são anunciadas só pode ser respondida por um dispositivo que o possua."
+    "receipts_admitted_on_author_device": "Os recibos de entrega são coletados pelo dispositivo que escreveu o arquivo. Este dispositivo lista apenas os recibos que possui; peça ao dispositivo que o escreveu para obter a resposta completa.",
+    "receipt_signer_not_your_device": "Alguns recibos foram assinados por dispositivos que não estão entre os seus dispositivos (outro membro da sala, ou a própria chave de um agente); eles são listados separadamente.",
+    "receipts_unreadable": "Este dispositivo não conseguiu ler seus recibos de entrega agora; quais dispositivos receberam o arquivo é desconhecido até que consiga.",
+    "commons_readable_by_holders": "Este arquivo é público: qualquer pessoa que tenha os bytes pode lê-los, portanto não há uma lista de quem pode abri-lo.",
+    "no_copy_reports_pending": "Seus outros dispositivos ainda não podem informar que não possuem cópia; esses relatórios chegam junto com as confirmações de custódia dentro do grupo. Até então, um dispositivo sem recibo de entrega é exibido como desconhecido.",
+    "no_copy_here": "Este dispositivo não possui cópia do arquivo, portanto apenas um dispositivo que tenha uma cópia pode dizer quem pode abri-lo e quantas cópias são anunciadas."
+  },
+  "claim": {
+    "bad_request": "Essa solicitação de reivindicação não pôde ser lida.",
+    "binding_unsigned": "O vínculo de titularidade não pôde ser assinado, portanto o outro dispositivo não foi reivindicado.",
+    "cohort_invalid": "Esse não é um escopo no qual um dispositivo pode ser reivindicado. Ele precisa ser self (Apenas eu), family (família) ou community (comunidade).",
+    "no_identity": "ainda não há identidade de usuário responsável — crie seu ID de federação (POST /v1/self/identity) antes de reivindicar a titularidade",
+    "no_route": "este código de nó não carrega um endereço que este dispositivo possa alcançar, e ele não é este dispositivo — leia o código na mesma rede do novo dispositivo, ou informe seu endereço",
+    "node_code_invalid": "O código do nó não pôde ser lido. Verifique-o e, em seguida, leia-o ou cole-o novamente.",
+    "password_not_forwarded": "uma senha é definida apenas no dispositivo em que foi digitada; reivindicar outro dispositivo não exige nenhuma — o vínculo de titularidade assinado é a prova, e o titular entra ali com seu ID de federação",
+    "signer_unavailable": "Sua identidade não pôde ser aberta para assinar a reivindicação.",
+    "target_refused": "O outro dispositivo recusou a reivindicação.",
+    "target_unreachable": "O outro dispositivo não pôde ser alcançado. Certifique-se de que está ligado e acessível, depois tente novamente."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Outro dos seus dispositivos está respondendo por você nesta troca.",
+      "handled_here": "Este dispositivo está respondendo por você nesta troca."
+    }
   }
 }
