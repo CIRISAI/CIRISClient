@@ -1083,10 +1083,19 @@ fun CIRISApp(
     val affiliationsViewModel: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel = viewModel(key = "communities-affiliations") {
         ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel(apiClient, "affiliations") { nodeBaseUrl }
     }
+    // Invitations (CSD-106): the invitee's inbox, one read shared by the three
+    // hubs that draw it (household, Neighbours, Communities and Businesses), so
+    // an answer given on one is gone from the others. Node-owned, owner-gated.
+    val invitationsViewModel: ai.ciris.mobile.shared.viewmodels.InvitationsViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.InvitationsViewModel(
+            ai.ciris.mobile.shared.api.ClientMembershipInvites(apiClient, nodeBaseUrl),
+        )
+    }
     LaunchedEffect(currentAccessToken) {
         if (currentAccessToken == null) {
             communityViewModel.clearSessionState()
             affiliationsViewModel.clearSessionState()
+            invitationsViewModel.clearSessionState()
         }
     }
     // The room whose card opened Moderation (CSD-102 → CSD-065); Moderation's
@@ -5061,6 +5070,7 @@ fun CIRISApp(
                     ai.ciris.mobile.shared.ui.screens.HouseholdPanel(
                         viewModel = householdsViewModel,
                         onOpenMembers = { currentScreen = Screen.HouseholdMembers },
+                        invitations = invitationsViewModel,
                     )
                 },
             )
@@ -5071,6 +5081,7 @@ fun CIRISApp(
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = communityViewModel,
                 onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
+                invitations = invitationsViewModel,
             )
             Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
@@ -5078,6 +5089,7 @@ fun CIRISApp(
                 onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = affiliationsViewModel,
                 onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
+                invitations = invitationsViewModel,
             )
             // ── Communities and affiliations (CSD-103): People and Chats ──
             Screen.CommunityRoster -> ai.ciris.mobile.shared.ui.screens.CommunityRosterScreen(communityViewModel)

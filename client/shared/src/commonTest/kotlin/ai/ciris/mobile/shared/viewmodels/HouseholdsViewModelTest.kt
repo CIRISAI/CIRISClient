@@ -10,7 +10,13 @@ import ai.ciris.mobile.shared.models.federation.FamilyDto
 import ai.ciris.mobile.shared.models.federation.FamilyListResponse
 import ai.ciris.mobile.shared.models.federation.FamilyMemberDto
 import ai.ciris.mobile.shared.models.federation.FamilySignatureDto
+import ai.ciris.mobile.shared.models.federation.GroupInvite
+import ai.ciris.mobile.shared.models.federation.GroupInviteList
+import ai.ciris.mobile.shared.models.federation.InviteSent
+import ai.ciris.mobile.shared.models.federation.InviteWithdrawn
 import ai.ciris.mobile.shared.ui.screens.HouseholdAct
+import ai.ciris.mobile.shared.ui.screens.InviteSupport
+import ai.ciris.mobile.shared.ui.screens.MEMBERSHIP_CONSENT_REQUIRED
 import ai.ciris.mobile.shared.ui.screens.ProtocolChoice
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import kotlinx.coroutines.Dispatchers
@@ -69,7 +75,31 @@ private class FakeHouseholds(
         return f
     }
     override suspend fun dissolveFamily(familyId: String) = write("dissolve $familyId")
-    override suspend fun addMember(familyId: String, keyId: String, role: String?) = write("add $familyId $keyId")
+    /** What a direct add answers: null (added) or an invitation (0.5.218's alias). */
+    var addAnswer: InviteSent? = null
+    override suspend fun addMember(familyId: String, keyId: String, role: String?): InviteSent? {
+        write("add $familyId $keyId"); return addAnswer
+    }
+    /** The invites routes: absent (a bare 404) when [invitesMissing]; [inviteError] refuses a send. */
+    var invitesMissing: Boolean = false
+    var inviteError: NodeRefusal? = null
+    var invites: List<GroupInvite> = emptyList()
+    var invitesReads = 0
+    override suspend fun inviteMember(familyId: String, keyId: String, role: String?): InviteSent {
+        calls += "invite $familyId $keyId"
+        if (invitesMissing) throw NodeRefusal(null, null, 404)
+        inviteError?.let { throw it }
+        return InviteSent(state = "invited", proposalId = "p-$keyId", inviteeKeyId = keyId, expiresAt = "2026-10-15T00:00:00Z")
+    }
+    override suspend fun listInvites(familyId: String): GroupInviteList {
+        invitesReads++
+        if (invitesMissing) throw NodeRefusal(null, null, 404)
+        return GroupInviteList(invites)
+    }
+    override suspend fun withdrawInvite(familyId: String, proposalId: String): InviteWithdrawn {
+        write("withdraw $familyId $proposalId")
+        return InviteWithdrawn(state = "withdrawn", proposalId = proposalId)
+    }
     override suspend fun removeMember(familyId: String, keyId: String) = write("remove $familyId $keyId")
     override suspend fun changeRole(familyId: String, keyId: String, role: String) = write("role $familyId $keyId $role")
     override suspend fun leave(familyId: String) = write("leave $familyId")
@@ -99,7 +129,18 @@ class HouseholdsViewModelTest {
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
-    private fun loaded(api: FakeHouseholds): HouseholdsViewModel = HouseholdsViewModel(api).also { it.load() }
+    /** Loaded as the roster loads it: the households, then the selected one's invitations. */
+    private fun loaded(api: FakeHouseholds): HouseholdsViewModel = HouseholdsViewModel(api).also { it.load(); it.loadInvites() }
+
+    @Test
+    fun readingTheHouseholdsAloneNeverAsksAboutInvitations() {
+        // Files reads the household list through this view model (load only).
+        val api = FakeHouseholds()
+        val vm = HouseholdsViewModel(api).also { it.load() }
+        assertEquals(0, api.invitesReads)
+        assertEquals(GroupInvitesRead.NotAsked, vm.invites.value)
+        assertEquals(InviteSupport.UNKNOWN, vm.inviteSupport.value)
+    }
 
     // ── Reading ──────────────────────────────────────────────────────────
 
@@ -278,4 +319,152 @@ class HouseholdsViewModelTest {
         assertEquals(listOf(FamilySignatureDto(BO, "e", "m")), api.cosignedWith, "their signature travels with the change")
         assertTrue(vm.pending.value!!.quorumMet)
     }
+
+    // ── Invitations (CSD-106) ────────────────────────────────────────────
+
+    @Test
+    fun onANodeWithInvitesPickingAContactSendsAnInvitationNotAnAdd() {
+        val api = FakeHouseholds()
+        api.invites = listOf(GroupInvite(proposalId = "p-bo", inviteeKeyId = BO, proposerKeyId = ME, state = "pending"))
+        val vm = loaded(api)
+        assertEquals(InviteSupport.INVITES, vm.inviteSupport.value, "a 2xx on GET …/invites is a 0.5.218+ node")
+        assertEquals(1, assertIs<GroupInvitesRead.Loaded>(vm.invites.value).invites.size)
+        val act = vm.pickAct(CY, "Cy")
+        assertIs<HouseholdAct.Invite>(act)
+        vm.request(act)
+        assertTrue(api.calls.isEmpty(), "nothing is sent before the confirm")
+        vm.confirmMemberAct()
+        assertEquals(listOf("invite family:v1:a $CY"), api.calls)
+        assertEquals(HouseholdNotice.INVITED, vm.notice.value, "an invitation is never said as Added")
+    }
+
+    @Test
+    fun aBare404OnTheInvitesRouteKeepsTodaysDirectAdd() {
+        val api = FakeHouseholds().apply { invitesMissing = true }
+        val vm = loaded(api)
+        assertEquals(InviteSupport.LEGACY, vm.inviteSupport.value)
+        assertEquals(GroupInvitesRead.NotOnThisNode, vm.invites.value)
+        val act = vm.pickAct(CY, "Cy")
+        assertIs<HouseholdAct.Add>(act)
+        vm.request(act)
+        vm.confirmMemberAct()
+        assertEquals(listOf("add family:v1:a $CY"), api.calls)
+        assertEquals(HouseholdNotice.ADDED, vm.notice.value)
+    }
+
+    @Test
+    fun aConfirmedInvitationThatMeetsNoRouteSendsNothingInItsPlace() {
+        val api = FakeHouseholds()
+        val vm = loaded(api)
+        // The node behind the session is not the one the roster was read from
+        // (or the read failed): the act itself finds out.
+        api.invitesMissing = true
+        vm.request(HouseholdAct.Invite(CY, "Cy"))
+        vm.confirmMemberAct()
+        assertEquals(listOf("invite family:v1:a $CY"), api.calls, "no direct add was sent: the person confirmed an invitation")
+        assertEquals(INVITES_NOT_ON_THIS_NODE, vm.refusal.value?.reasonId)
+        assertEquals(InviteSupport.LEGACY, vm.inviteSupport.value)
+        assertIs<HouseholdAct.Add>(vm.pickAct(CY, "Cy"), "the roster now offers the add, behind its own confirm")
+    }
+
+    @Test
+    fun consentRequiredOnTheDirectAddReReadsTheInvitesRouteAndSwitchesToInvite() {
+        val api = FakeHouseholds().apply { invitesMissing = true }
+        val vm = loaded(api)
+        assertEquals(InviteSupport.LEGACY, vm.inviteSupport.value)
+        // The node moved on under us: the add door is closed, the invites route is live.
+        api.writeError = NodeRefusal(MEMBERSHIP_CONSENT_REQUIRED, "consent", 409)
+        api.invitesMissing = false
+        val reads = api.invitesReads
+        vm.request(vm.pickAct(CY, "Cy"))
+        vm.confirmMemberAct()
+        assertEquals(MEMBERSHIP_CONSENT_REQUIRED, vm.refusal.value?.reasonId, "the refusal renders by id")
+        assertTrue(api.invitesReads > reads, "the invites route was asked again")
+        assertEquals(InviteSupport.INVITES, vm.inviteSupport.value)
+        assertIs<HouseholdAct.Invite>(vm.pickAct(CY, "Cy"))
+        api.writeError = null
+        vm.request(vm.pickAct(CY, "Cy"))
+        vm.confirmMemberAct()
+        assertEquals("invite family:v1:a $CY", api.calls.last())
+    }
+
+    @Test
+    fun theReloadAfterAnActDoesNotUndoWhatTheActLearned() {
+        // invite() → bare 404 sets LEGACY, and no reload follows a refused act,
+        // so the roster stays on the add it now offers.
+        val api = FakeHouseholds()
+        val vm = loaded(api)
+        api.invitesMissing = true
+        vm.request(HouseholdAct.Invite(CY, "Cy"))
+        vm.confirmMemberAct()
+        assertEquals(GroupInvitesRead.NotOnThisNode, vm.invites.value)
+    }
+
+    @Test
+    fun aDirectAddTheNodeAnsweredAsAnInvitationIsAnInvitation() {
+        val api = FakeHouseholds().apply { invitesMissing = true; addAnswer = InviteSent(state = "invited", proposalId = "p1") }
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Add(CY, "Cy"))
+        api.invitesMissing = false
+        vm.confirmMemberAct()
+        assertEquals(HouseholdNotice.INVITED, vm.notice.value)
+        assertEquals(InviteSupport.INVITES, vm.inviteSupport.value)
+    }
+
+    @Test
+    fun everyRefusalOfAnInvitationRendersByItsId() {
+        for (id in MEMBERSHIP_IDS) {
+            val api = FakeHouseholds().apply { inviteError = NodeRefusal(id, "en", 409) }
+            val vm = loaded(api)
+            vm.request(HouseholdAct.Invite(CY, "Cy"))
+            vm.confirmMemberAct()
+            assertEquals(id, vm.refusal.value?.reasonId, id)
+            assertNull(vm.notice.value, "$id is not a success")
+        }
+    }
+
+    @Test
+    fun withdrawingIsOneCallByTheProposer() {
+        val api = FakeHouseholds()
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Withdraw("p-cy", CY, "Cy"))
+        vm.confirmMemberAct()
+        assertEquals(listOf("withdraw family:v1:a p-cy"), api.calls)
+        assertEquals(HouseholdNotice.WITHDRAWN, vm.notice.value)
+    }
+
+    @Test
+    fun inAQuorumHouseholdAnyMemberInvitesDirectlyAndSeatingIsProposed() {
+        val api = FakeHouseholds(pages = listOf(FamilyListResponse(listOf(
+            family("family:v1:q", protocol = "quorum:2/3", myRole = "member",
+                members = listOf(ME to "member", BO to "founder", CY to "member")),
+        ))))
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Invite("dee", "Dee"))
+        vm.confirmMemberAct()
+        assertEquals(listOf("invite family:v1:q dee"), api.calls, "one inviter signs; the quorum is on the widening")
+        // Dee accepted: the roster's "Propose adding" is the envelope's `add`.
+        vm.request(HouseholdAct.Add("dee", "Dee"))
+        vm.confirmMemberAct()
+        assertEquals("propose family:v1:q add dee", api.calls.last())
+    }
+
+    @Test
+    fun aMemberOfAFounderOnlyHouseholdInvitesNobody() {
+        val api = FakeHouseholds(pages = listOf(FamilyListResponse(listOf(family("family:v1:a", myRole = "member")))))
+        val vm = loaded(api)
+        vm.request(HouseholdAct.Invite(CY, "Cy"))
+        vm.confirmMemberAct()
+        assertTrue(api.calls.isEmpty(), "persist refuses any proposer but a founder under founder_only")
+    }
 }
+
+/** The 18 refusal ids `src/membership_invites.rs` (CIRISServer 0.5.218) can answer an invitation with. */
+internal val MEMBERSHIP_IDS = listOf(
+    "membership.awaiting_acceptance", "membership.invite_not_here_yet", "membership.declined",
+    "membership.invite_expired", "membership.acceptance_mismatch", "membership.already_answered",
+    "membership.founding_member_unsigned", "membership.supersede_cannot_add", "membership.refused",
+    "membership.invite_not_found", "membership.not_the_invitee", "membership.not_the_proposer",
+    "membership.invite_closed", "membership.bad_expiry", "membership.owner_session_required",
+    "membership.delegate_may_not_answer", "membership.signer_unavailable", "membership.store_unavailable",
+)

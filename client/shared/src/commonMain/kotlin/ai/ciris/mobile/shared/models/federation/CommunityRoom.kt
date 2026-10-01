@@ -148,4 +148,10 @@ data class CommunityCosignature(
 sealed interface CommunityChangeOutcome {
     data class Applied(val result: CommunityChangeApplied) : CommunityChangeOutcome
     data class Pending(val change: CommunityPendingChange) : CommunityChangeOutcome
+    /**
+     * 0.5.218: the add was an INVITATION (`POST …/members` aliases `…/invites`
+     * and answers 202 `{state: "invited"}`). Nobody joined; they will only by
+     * accepting (CSD-106).
+     */
+    data class Invited(val invite: InviteSent) : CommunityChangeOutcome
 }
