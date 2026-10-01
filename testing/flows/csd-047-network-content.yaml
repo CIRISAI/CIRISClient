@@ -37,8 +37,15 @@ steps:
 
   - step_id: clearing_the_search_lists_the_peer
     title: Clearing the search lists the peer the fixture admitted
+    description: >-
+      Searched for by its key, as a person with a long list would. From
+      ciris-server 0.5.218 a node discovers more peers, so the list holds more
+      than the fixture's one and the picker is a lazy list: a row below the
+      fold is not composed at all (iOS, run 36918401535: six other
+      `ciris-client-*` rows, the fixture's peer seventh).
     do:
       - input: {input_peer_search: ""}
+      - input: {input_peer_search: "${PEER_NODE_KEY_ID}"}
       - wait: "peer_pick_row_${PEER_NODE_KEY_ID}"
         wait_ms: 2500
     expect:
