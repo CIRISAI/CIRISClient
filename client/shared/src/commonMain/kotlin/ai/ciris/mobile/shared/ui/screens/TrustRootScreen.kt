@@ -93,6 +93,7 @@ fun TrustRootScreen(
     var seedText by remember { mutableStateOf("") }
     var allegianceFrom by remember { mutableStateOf("") }
     var pickFile by remember { mutableStateOf(false) }
+    var pickRefused by remember { mutableStateOf<ai.ciris.mobile.shared.platform.PickTooLarge?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -191,6 +192,9 @@ fun TrustRootScreen(
                         onClick = { viewModel.beginImport(seedText) },
                     )
                 }
+                pickRefused?.let { r ->
+                    ai.ciris.mobile.shared.ui.components.PickTooLargeNotice(r, tag = "trust_root_pick_too_large", onDismiss = { pickRefused = null })
+                }
                 ImportResult(importStage)
             }
         }
@@ -208,6 +212,7 @@ fun TrustRootScreen(
             }
         },
         onDismiss = { pickFile = false },
+        onTooLarge = { r -> pickFile = false; pickRefused = r },
     )
 
     // ── The two confirms: three facts each ──────────────────────────────────

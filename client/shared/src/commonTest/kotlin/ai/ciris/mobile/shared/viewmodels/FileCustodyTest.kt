@@ -260,8 +260,8 @@ private class CustodyDrive(var answer: () -> FileCustody) : DriveApi {
         asked += Triple(attestationId, cohort, roomId)
         return answer()
     }
-    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int): DriveListing = error("unused")
-    override suspend fun readFile(attestationId: String, roomId: String): OpenedFile = error("unused")
+    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, after: String?): DriveListing = error("unused")
+    override suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile = error("unused")
     override suspend fun writeFile(write: FileWrite): FileWritten = error("unused")
     override suspend fun readNotes(): NoteListing = error("unused")
     override suspend fun writeNote(body: String) = error("unused")

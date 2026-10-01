@@ -17,7 +17,8 @@ actual fun FilePickerDialog(
     show: Boolean,
     mimeTypes: List<String>,
     onFilePicked: (PickedFile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTooLarge: (PickTooLarge) -> Unit,
 ) {
     val context = LocalContext.current
 
@@ -28,11 +29,10 @@ actual fun FilePickerDialog(
             onDismiss()
             return@rememberLauncherForActivityResult
         }
-        val picked = readFileFromUri(context, uri)
-        if (picked != null) {
-            onFilePicked(picked)
-        } else {
-            onDismiss()
+        when (val read = readFileFromUri(context, uri)) {
+            is PickedFile -> onFilePicked(read)
+            is PickTooLarge -> onTooLarge(read)
+            else -> onDismiss()
         }
     }
 
@@ -43,8 +43,9 @@ actual fun FilePickerDialog(
     }
 }
 
+/** A [PickedFile], a [PickTooLarge] (not read), or null when the file could not be read. */
 @OptIn(ExperimentalEncodingApi::class)
-private fun readFileFromUri(context: Context, uri: Uri): PickedFile? {
+private fun readFileFromUri(context: Context, uri: Uri): Any? {
     return try {
         val contentResolver = context.contentResolver
         val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
@@ -63,7 +64,7 @@ private fun readFileFromUri(context: Context, uri: Uri): PickedFile? {
 
         if (fileSize > PickedFile.MAX_FILE_SIZE_BYTES) {
             PlatformLogger.w("FilePicker", "File too large: $fileSize bytes")
-            return null
+            return PickTooLarge(fileName, fileSize)
         }
 
         // Read bytes and encode to base64

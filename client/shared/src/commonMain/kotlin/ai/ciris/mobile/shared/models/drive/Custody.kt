@@ -17,8 +17,10 @@ import kotlinx.serialization.json.longOrNull
  * **CIRISServer#704** at `d1a15286` (`feat/file-custody-0.5.218`, open into
  * `chore/adopt-edge-v33`; `src/drive.rs` handler, `src/file_custody.rs`,
  * `FSD/FILE_CUSTODY.md` §1.1). A device that holds the row and not the bytes
- * answers 200 with its own `holds: "none"` (no longer a 409). Not merged and on no released node, so field
- * names can still move: every field is optional and the parse is by hand over
+ * answers 200 with its own `holds: "none"` (no longer a 409). In tag v0.5.218
+ * (405acc17), which is tagged and not released (no GitHub release, no PyPI
+ * 0.5.218, as of 2026-10-01), so field names can still move before the
+ * release: every field is optional and the parse is by hand over
  * a [JsonObject]. A renamed or retyped member reads as absent (rendered "not
  * sent"), never as a crash.
  *

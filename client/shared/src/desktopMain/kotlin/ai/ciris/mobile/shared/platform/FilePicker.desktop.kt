@@ -17,7 +17,8 @@ actual fun FilePickerDialog(
     show: Boolean,
     mimeTypes: List<String>,
     onFilePicked: (PickedFile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTooLarge: (PickTooLarge) -> Unit,
 ) {
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
@@ -32,10 +33,10 @@ actual fun FilePickerDialog(
         val chosen = chooseFileOnEdt(mimeTypes)
         val result = chosen?.let { withContext(Dispatchers.IO) { readDesktopFile(it) } }
 
-        if (result != null) {
-            onFilePicked(result)
-        } else {
-            onDismiss()
+        when (result) {
+            is PickedFile -> onFilePicked(result)
+            is PickTooLarge -> onTooLarge(result)
+            else -> onDismiss()
         }
     }
 }
@@ -103,13 +104,14 @@ private fun showNativeFileChooser(mimeTypes: List<String>): File? {
     return chooser.selectedFile
 }
 
+/** A [PickedFile], a [PickTooLarge] (not read), or null when the file could not be read. */
 @OptIn(ExperimentalEncodingApi::class)
-private fun readDesktopFile(file: File): PickedFile? {
+private fun readDesktopFile(file: File): Any? {
     return try {
         val sizeBytes = file.length()
         if (sizeBytes > PickedFile.MAX_FILE_SIZE_BYTES) {
             println("[FilePicker] File too large: $sizeBytes bytes")
-            return null
+            return PickTooLarge(file.name, sizeBytes)
         }
 
         val bytes = file.readBytes()

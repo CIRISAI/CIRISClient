@@ -46,20 +46,28 @@ private class FakeDrive(
     val noteWrites = mutableListOf<String>()
     var driveReads = 0
     val driveAsks = mutableListOf<Pair<String?, String?>>()
+    /** Every `after` the drive was asked with, in order (null = the first page). */
+    val driveAfters = mutableListOf<String?>()
+    /** Pages to answer in turn for an unfiltered drive; [listing] when empty. */
+    var pages: MutableList<DriveListing> = mutableListOf()
+    /** Every per-file open, as (id, cohort, room) — the query `GET /v1/files/{id}` is sent with. */
+    val fileAsks = mutableListOf<Triple<String, String, String?>>()
     var policyReads = 0
 
-    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int): DriveListing {
+    override suspend fun readDrive(cohort: String?, roomId: String?, limit: Int, after: String?): DriveListing {
         driveReads++
         driveAsks += cohort to roomId
+        driveAfters += after
         listingError?.let { throw it }
-        return listing
+        return if (pages.isNotEmpty()) pages.removeAt(0) else listing
     }
     override suspend fun readMediaPolicy(): MediaPolicy {
         policyReads++
         policy?.let { return it }
         throw policyError ?: IllegalStateException("no policy")
     }
-    override suspend fun readFile(attestationId: String, roomId: String): OpenedFile {
+    override suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile {
+        fileAsks += Triple(attestationId, cohort, roomId)
         openError?.let { throw it }
         fileJson?.let { return json.decodeFromString(OpenedFile.serializer(), it) }
         return OpenedFile(attestationId, "text/plain", "a.txt", bytesBase64 = "aGVsbG8=") // "hello"
@@ -257,6 +265,59 @@ class FilesViewModelTest {
         vm.addFile(PickedFile("a.txt", "text/plain", "aGk=", 2))
         assertEquals("family", drive.writes.last().cohort)
         assertEquals("fam-1", drive.writes.last().roomId, "a family add goes to the picked household without naming it again")
+    }
+
+    @Test
+    fun aFamilyFileOpensInItsHouseholdNotInTheSelfDefault() {
+        // The bug: `GET /v1/files/{id}?room_id=…` with no cohort, which the node
+        // reads as `self` (`Cohort::parse`) and answers `404 drive.not_in_room`.
+        val household = entry("f", "fam-1", cohort = "family")
+        val drive = FakeDrive(listing = DriveListing(entries = listOf(household)))
+        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { it.refresh("fam-1") }
+        vm.openFile(assertIs<FilesState.Listed>(vm.state.value).groups.single().entries.single())
+        assertEquals(Triple("f", "family", "fam-1"), drive.fileAsks.single(), "the household's scope, as the listing named it")
+        assertIs<OpenState.Opened>(vm.open.value)
+    }
+
+    @Test
+    fun everyCohortOpensWithItsOwnScope() {
+        val drive = FakeDrive()
+        FilesViewModel(drive, FilesCohort.SELF).openFile(entry("s", "owner-room", cohort = "self"))
+        FilesViewModel(drive, FilesCohort.COMMUNITY).openFile(entry("c", "room-9", cohort = "community"))
+        assertEquals(
+            listOf<Triple<String, String, String?>>(Triple("s", "self", "owner-room"), Triple("c", "community", "room-9")),
+            drive.fileAsks,
+            "the row's cohort always travels; the client drops the room for self (ClientDrive)",
+        )
+    }
+
+    @Test
+    fun aCommunityTabReadsTheWholeDriveAndWalksEveryPage() {
+        // `cohort=community` with no room is `400 drive.community_id_required`
+        // on 0.5.217 and 0.5.218, so the tab asks the unfiltered drive (every
+        // admitted room) and keeps the community rows, page after page.
+        val drive = FakeDrive().apply {
+            pages = mutableListOf(
+                DriveListing(entries = listOf(entry("mine", "me", cohort = "self")), resume = "cur-1"),
+                DriveListing(entries = listOf(entry("c1", "room-1"), entry("fam", "fam-1", cohort = "family")), resume = "cur-2"),
+                DriveListing(entries = listOf(entry("c2", "room-2")), resume = null),
+            )
+        }
+        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY).also { it.refresh() }
+        assertEquals(List<Pair<String?, String?>>(3) { null to null }, drive.driveAsks, "no cohort, no room: the whole drive")
+        assertEquals(listOf(null, "cur-1", "cur-2"), drive.driveAfters)
+        val listed = assertIs<FilesState.Listed>(vm.state.value)
+        assertEquals(listOf("c1", "c2"), listed.groups.flatMap { g -> g.entries.map { it.attestationId } })
+    }
+
+    @Test
+    fun aPickTheDeviceRefusedIsSaidNotDropped() {
+        val drive = FakeDrive()
+        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        vm.refuseTooLarge("film.mov", 50L * 1024 * 1024, PickedFile.MAX_FILE_SIZE_BYTES)
+        val tooLarge = assertIs<AddState.TooLarge>(vm.add.value)
+        assertEquals(PickedFile.MAX_FILE_SIZE_BYTES, tooLarge.limitBytes)
+        assertTrue(drive.writes.isEmpty())
     }
 
     @Test
