@@ -102,6 +102,7 @@ only, as CSD-102 §3 states and pins.
 | the contact a pair room is with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | each contact carries the derived `chat_community_id`; the pair room whose id equals it is that contact's. Best effort: a failed contacts read leaves every pair room listed as "not a contact any more", which is the honest reading of "no grant this node can see" |
 | opening a pair room | `POST /v1/chat` `{key_id}` | `contacts_chat.rs::start_chat` | not called here — CSD-091's `UserChatViewModel.enter` calls it on the chat screen this row opens |
 | opening a room of more than two | `GET /v1/chat/{id}/messages`, `POST /v1/chat/{id}/messages` | `contacts_chat.rs` (CIRISServer#594) | not called here — the row hands the room's id to CSD-091's chat screen, which reads and writes the room by id (the people review) |
+| a pair room still joining (0.5.218) | `GET /v1/communities` lists the rooms the caller is ACTIVE in | CIRISServer (`src/communities.rs::list_communities`) | **by the route, not listed here**: since 0.5.218 a pair room opens by invitation (CIRISServer#706), and until both people are seated the invitee is in no room, so the Chats list cannot show an invitation; the opener's one-member room is listed only once its record is held. An invitation to talk is shown on the contact's People row (CSD-005) and the waiting room in the chat itself (CSD-091 `chat_pair_waiting`) |
 
 ## 4. Flow (how)
 

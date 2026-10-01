@@ -42,6 +42,53 @@ sealed interface ReleaseState {
     data class Released(val nodeKeyId: String, val releasedSelf: Boolean) : ReleaseState
     /** The node refused by name (`self.not_your_node`, `self.release_incomplete`, …). */
     data class Refused(val node: OwnedNodeDto, val refusal: NodeRefusal) : ReleaseState
+    /**
+     * 0.5.218: a release IS an eviction, and part of it did not finish
+     * (`self.evict_incomplete` / `self.release_incomplete` carrying the report).
+     * Rendered part by part, with Try again — the same act and force.
+     */
+    data class Incomplete(
+        val node: OwnedNodeDto,
+        val force: Boolean,
+        val refusal: NodeRefusal,
+        val report: ai.ciris.mobile.shared.models.federation.EvictionReport,
+    ) : ReleaseState
+}
+
+/**
+ * Where evicting a DEVICE stands (`POST /v1/self/occurrence/revoke`, 0.5.218).
+ *
+ * The same two-confirm shape as [ReleaseState], for the same reason: revoking
+ * the device that is ANSWERING withdraws this node's owner-binding and ends
+ * the owner's authority here (`force_self`, `src/self_devices.rs`). The app
+ * does not decide which device is "this one" — the node does, by refusing
+ * `self.release_self_requires_force` — and `force_self` is sent only from
+ * [ConfirmingForce], whose sheet says this device will lose access.
+ */
+sealed interface RevokeState {
+    data object Idle : RevokeState
+    /** The first confirm (three facts) is up for [occurrenceKeyId]. */
+    data class Confirming(val occurrenceKeyId: String) : RevokeState
+    /** The node refused because the device is the one answering; the screen explains and may offer the second confirm. */
+    data class NeedsForce(val occurrenceKeyId: String, val refusal: NodeRefusal) : RevokeState
+    /** The SECOND confirm: this device will lose access. */
+    data class ConfirmingForce(val occurrenceKeyId: String) : RevokeState
+    data class Working(val occurrenceKeyId: String, val force: Boolean) : RevokeState
+    /** Done. [releasedSelf]: the device evicted was the one answering. [history]: the node's own sentence. */
+    data class Revoked(val occurrenceKeyId: String, val releasedSelf: Boolean, val history: String?) : RevokeState
+    /**
+     * Part of the eviction did not finish (`self.evict_incomplete`, 500): the
+     * node's report, part by part. What was done stays done; Try again re-runs
+     * the same act (with the same force), which the node makes idempotent.
+     */
+    data class Incomplete(
+        val occurrenceKeyId: String,
+        val force: Boolean,
+        val refusal: NodeRefusal,
+        val report: ai.ciris.mobile.shared.models.federation.EvictionReport,
+    ) : RevokeState
+    /** Refused by name (`self.not_your_device`, `self.owner_session_required`, …). */
+    data class Refused(val occurrenceKeyId: String, val refusal: NodeRefusal) : RevokeState
 }
 
 /**
@@ -83,6 +130,8 @@ class IdentityManagementViewModel(
         private const val TAG = "IdentityMgmtVM"
         const val REASON_RELEASE_SELF_REQUIRES_FORCE = "self.release_self_requires_force"
         const val REASON_RELEASE_INCOMPLETE = "self.release_incomplete"
+        /** 0.5.218: part of an eviction (revoke or release) did not complete; the body names each part. */
+        const val REASON_EVICT_INCOMPLETE = "self.evict_incomplete"
     }
 
     /** The self fed-ID `key_id` whose roster we list / mutate (the node's bound owner). */
@@ -154,6 +203,9 @@ class IdentityManagementViewModel(
 
     private val _release = MutableStateFlow<ReleaseState>(ReleaseState.Idle)
     val release: StateFlow<ReleaseState> = _release.asStateFlow()
+
+    private val _revoke = MutableStateFlow<RevokeState>(RevokeState.Idle)
+    val revoke: StateFlow<RevokeState> = _revoke.asStateFlow()
 
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading.asStateFlow()
@@ -363,31 +415,72 @@ class IdentityManagementViewModel(
         }
     }
 
-    /** REVOKE a (lost / stolen) device. Sign with a SURVIVING key, never the lost one. */
-    fun revoke(occurrenceKeyId: String, reason: String? = null) {
+    // ─── Evict a device (POST /v1/self/occurrence/revoke, 0.5.218) ─────────
+
+    /** Put up the first confirm for evicting [occurrenceKeyId]. */
+    fun askRevoke(occurrenceKeyId: String) {
+        _revoke.value = RevokeState.Confirming(occurrenceKeyId.trim())
+    }
+
+    fun cancelRevoke() {
+        _revoke.value = RevokeState.Idle
+    }
+
+    /** The first confirm was accepted: evict WITHOUT force. */
+    fun confirmRevoke() {
+        val state = _revoke.value as? RevokeState.Confirming ?: return
+        revokeDevice(state.occurrenceKeyId, force = false)
+    }
+
+    /**
+     * The person read why the node refused and asked to go on: put up the
+     * SECOND confirm. Only reachable from [RevokeState.NeedsForce].
+     */
+    fun askForceRevoke() {
+        val state = _revoke.value as? RevokeState.NeedsForce ?: return
+        _revoke.value = RevokeState.ConfirmingForce(state.occurrenceKeyId)
+    }
+
+    /** The second confirm was accepted: the only path that sends `force_self: true`. */
+    fun confirmForceRevoke() {
+        val state = _revoke.value as? RevokeState.ConfirmingForce ?: return
+        revokeDevice(state.occurrenceKeyId, force = true)
+    }
+
+    /** Try an incomplete eviction again — the same act, with the force it was sent with. */
+    fun retryRevoke() {
+        val state = _revoke.value as? RevokeState.Incomplete ?: return
+        revokeDevice(state.occurrenceKeyId, state.force)
+    }
+
+    private fun revokeDevice(occurrenceKeyId: String, force: Boolean) {
         val keyId = _identityKeyId.value
         if (keyId == null) {
+            _revoke.value = RevokeState.Idle
             _error.value = "This device's identity isn't resolved yet — try again."
             return
         }
-        if (_busy.value) return
-        _busy.value = true
-        _error.value = null
-        _notice.value = null
+        _revoke.value = RevokeState.Working(occurrenceKeyId, force)
         viewModelScope.launch {
             try {
-                apiClient.revokeOccurrence(keyId, occurrenceKeyId.trim(), reason)
-                _notice.value = "Revoked ${occurrenceKeyId.take(16)}…"
+                val result = devices.revokeOccurrence(keyId, occurrenceKeyId, null, force)
+                _revoke.value = RevokeState.Revoked(occurrenceKeyId, result.releasedSelf, result.history)
                 refreshRoster(keyId)
+            } catch (e: NodeRefusal) {
+                PlatformLogger.w(TAG, "[revoke] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode} force=$force")
+                val report = if (e.reasonId == REASON_EVICT_INCOMPLETE || e.reasonId == REASON_RELEASE_INCOMPLETE) {
+                    ai.ciris.mobile.shared.models.federation.EvictionReport.fromBody(e.body)
+                } else null
+                _revoke.value = when {
+                    e.reasonId == REASON_RELEASE_SELF_REQUIRES_FORCE && !force -> RevokeState.NeedsForce(occurrenceKeyId, e)
+                    report != null -> RevokeState.Incomplete(occurrenceKeyId, force, e, report)
+                    else -> RevokeState.Refused(occurrenceKeyId, e)
+                }
+                // An incomplete eviction was partly SIGNED: re-read what the node now lists.
+                if (report != null) refreshRoster(keyId)
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[revoke] ${e.message}")
-                val msg = e.message.orEmpty()
-                _error.value = when {
-                    msg.contains("401") -> "Sign in with a surviving key first."
-                    else -> "Couldn't revoke: ${e.message}"
-                }
-            } finally {
-                _busy.value = false
+                _revoke.value = RevokeState.Refused(occurrenceKeyId, NodeRefusal(null, e.message, 0))
             }
         }
     }
@@ -590,6 +683,12 @@ class IdentityManagementViewModel(
         _release.value = ReleaseState.ConfirmingForce(state.node)
     }
 
+    /** Try an incomplete release again — the same act, with the force it was sent with. */
+    fun retryRelease() {
+        val state = _release.value as? ReleaseState.Incomplete ?: return
+        release(state.node, state.force)
+    }
+
     /** The second confirm was accepted: the only path that sends `force_self: true`. */
     fun confirmForceRelease() {
         val state = _release.value as? ReleaseState.ConfirmingForce ?: return
@@ -605,16 +704,21 @@ class IdentityManagementViewModel(
                 refreshOwnedNodes()
             } catch (e: NodeRefusal) {
                 PlatformLogger.w(TAG, "[release] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                val report = if (e.reasonId == REASON_EVICT_INCOMPLETE || e.reasonId == REASON_RELEASE_INCOMPLETE) {
+                    ai.ciris.mobile.shared.models.federation.EvictionReport.fromBody(e.body)
+                } else null
                 _release.value = when {
                     e.statusCode == 404 && e.reasonId == null -> {
                         _devicesUnsupported.value = true
                         ReleaseState.Idle
                     }
                     e.reasonId == REASON_RELEASE_SELF_REQUIRES_FORCE && !force -> ReleaseState.NeedsForce(node, e)
+                    // 0.5.218: the part-by-part account, when the node sent one.
+                    report != null -> ReleaseState.Incomplete(node, force, e, report)
                     else -> ReleaseState.Refused(node, e)
                 }
-                // A release_incomplete was SIGNED: re-read what the node now lists.
-                if (e.reasonId == REASON_RELEASE_INCOMPLETE) refreshOwnedNodes()
+                // An incomplete release was SIGNED in part: re-read what the node now lists.
+                if (e.reasonId == REASON_RELEASE_INCOMPLETE || e.reasonId == REASON_EVICT_INCOMPLETE) refreshOwnedNodes()
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[release] ${e.message}")
                 _release.value = ReleaseState.Refused(node, NodeRefusal(null, e.message, 0))
