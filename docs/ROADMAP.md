@@ -15,8 +15,9 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
   `build.yml` is green on the merge. It carries everything below. Server **0.5.217** is the latest
   server release; **0.5.218 is not cut**. Agent **2.12.1** shipped CIRISAgent#1213 (the node proxy
   forwards every `/v1` path the agent does not serve itself), and six CSDs say so (#128).
-- **79 CSDs** (`FSD/CSD`): **7 testable, 65 building, 5 sketched, 2 envisioned**. New since the
-  last pass: CSD-106 membership invitations (envisioned, #137) and CSD-107 Where is this file (#139).
+- **79 CSDs** (`FSD/CSD`): **8 testable, 65 building, 5 sketched, 1 envisioned**. New since the
+  last pass: CSD-106 membership invitations (now building: the inbox on the hubs, Invite and the
+  pending rows on the rosters, against CIRISServer 0.5.218) and CSD-107 Where is this file (#139).
   Before that: CSD-007 Files and CSD-008 Notes to self (#77), CSD-105 This node's
   trust root (#126), CSD-100/101 household and members (#122). CSD-092 (share contact code) is
   now building. **Sketched:** 037 My Identity, 042 Help, 044 Health & Reputation, and 093/094
@@ -43,11 +44,12 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
   each owner a contact of the other. Both ran **all five legs green in one run**; `main`'s latest
   Five-Platform Live QA is green (2026-09-29). One flow is live (`testing/flows/people.yaml`,
   CSD-005); **37 drafts** wait under `testing/flows/drafts/`.
-- **Seven CSDs are `testable`** (#133): 005 People, 006 Receipt, 008 Notes to self, 047 Network
-  content, 057 Wallet, 068 Provision an accord holder, 092 Share contact code. Their flows passed on
+- **Eight CSDs are `testable`** (#133): 005 People, 006 Receipt, 008 Notes to self, 047 Network
+  content, 057 Wallet, 068 Provision an accord holder, 092 Share contact code, and 101 Household
+  members. Their flows passed on
   all five legs in run 36775704425 (Linux, macOS, Windows desktop; Android emulator; iOS simulator)
-  against released floors `>=0.5.224`/`>=0.5.225`. CSD-101's flow passed too; it stays `building`
-  on `x_private:membership_invitation` (CIRISPersist#955). Getting there took seven matrix runs and
+  against released floors `>=0.5.224`/`>=0.5.225`. CSD-101's flow passed too; it was held at `building`
+  on `x_private:membership_invitation` (CIRISPersist#955) until 0.5.218's invites routes answered it. Getting there took seven matrix runs and
   fixed real client bugs on the way: a stale-circle tab hop, a disabled button that swallowed
   automation clicks, a receipt sheet whose Close was below the fold on a phone, and a claim PIN the
   Android app could not reach.

@@ -22,6 +22,15 @@ class NodeRefusal(
     val detail: String?,
     /** The HTTP status that carried the refusal. */
     val statusCode: Int,
+    /**
+     * The whole refusal body as the node sent it, when it came off the wire.
+     * Most refusals are `{error, reason_id, detail}` and need nothing more;
+     * a few carry a structured account BESIDE the id — an eviction that did
+     * not finish names each part done and not done (`self.evict_incomplete`,
+     * [ai.ciris.mobile.shared.models.federation.EvictionReport]) — and that
+     * account must reach the screen, not just its headline.
+     */
+    val body: String? = null,
 ) : RuntimeException(detail ?: reasonId ?: "node refused ($statusCode)") {
     companion object {
         /**
@@ -59,6 +68,7 @@ class NodeRefusal(
                 detail = (if (errorIsId) null else errorField) ?: nested.str("error") ?: nested.str("message")
                     ?: obj.str("detail"),
                 statusCode = statusCode,
+                body = raw.takeIf { it.isNotBlank() },
             )
         }
     }

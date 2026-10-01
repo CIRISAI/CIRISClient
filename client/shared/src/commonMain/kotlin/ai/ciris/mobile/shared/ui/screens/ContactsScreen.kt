@@ -151,6 +151,19 @@ fun ContactsScreen(
     var confirmRemove by remember { mutableStateOf<Contact?>(null) }
     val removeLabel = localizedString("mobile.contacts_remove")
 
+    // An invitation to talk (0.5.218): accept and decline each behind a ConfirmSheet.
+    val pairInvites by viewModel.pairInvites.collectAsState()
+    val declining by viewModel.declining.collectAsState()
+    val declineRefusal by viewModel.declineRefusal.collectAsState()
+    var confirmAccept by remember { mutableStateOf<Contact?>(null) }
+    var confirmDecline by remember { mutableStateOf<Contact?>(null) }
+    // Opening a chat with someone whose invitation is waiting IS accepting it
+    // (`POST /v1/chat` accepts a held invitation from that contact — the
+    // server's step 1), so it goes through the accept confirm, never straight in.
+    val openOrAccept: (Contact) -> Unit = { c ->
+        if (pairInvites.containsKey(c.keyId)) confirmAccept = c else onOpenChat(c)
+    }
+
     Scaffold(
         containerColor = t.ground,
         topBar = {
@@ -252,6 +265,20 @@ fun ContactsScreen(
             // ── What the last removal did ─────────────────────────────────────
             removal?.let { r -> RemovalOutcome(r, onDismiss = viewModel::clearRemoval) }
 
+            // ── A decline the node refused, by name ──────────────────────────
+            declineRefusal?.let { r ->
+                StateBlock(
+                    ListState.Error(
+                        title = r.reasonId?.let { id -> localizedString(id).takeIf { it != id } }
+                            ?: localizedString("mobile.contacts_chat_decline_failed"),
+                        detail = r.detail,
+                    ),
+                    tag = PeopleTags.DECLINE_REFUSAL, inline = true,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    action = { CirisTextButton(localizedString("common_close"), tag = "btn_contacts_chat_decline_refusal_dismiss", onClick = viewModel::clearDeclineRefusal) },
+                )
+            }
+
             // ── Add someone ───────────────────────────────────────────────────
             if (showAddCard) {
                 AddContactCard(
@@ -349,12 +376,16 @@ fun ContactsScreen(
                             chatIneligible = contact.keyId in chatIneligible,
                             receipt = contactReceipt(
                                 contact, attesterGloss, openChatLabel, scopeNote,
-                                onOpenChat = { receiptFor = null; onOpenChat(contact) },
+                                onOpenChat = { receiptFor = null; openOrAccept(contact) },
                                 removeLabel = removeLabel.takeIf { removing == null },
                                 onRemove = { receiptFor = null; confirmRemove = contact },
                             ),
-                            onOpenChat = { onOpenChat(contact) },
+                            onOpenChat = { openOrAccept(contact) },
                             onOpenReceipt = { receiptFor = it },
+                            invited = contact.keyId in pairInvites,
+                            declining = declining == contact.keyId,
+                            onAccept = { confirmAccept = contact },
+                            onDecline = { confirmDecline = contact },
                         )
                     }
                 }
@@ -364,6 +395,53 @@ fun ContactsScreen(
     }
 
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
+
+    // ── Accept / decline an invitation to talk — three facts each ──────────
+    confirmAccept?.let { c ->
+        val who = c.aliasOverride ?: shortKey(c.keyId, head = 12, tail = 0)
+        ConfirmSheet(
+            title = localizedString("mobile.contacts_chat_accept_title", "who", who),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.contacts_chat_invite_fact_from"), c.keyId, mono = true),
+                ConfirmFact(
+                    localizedString("mobile.contacts_chat_invite_fact_room"),
+                    localizedString("mobile.contacts_chat_invite_room_value", "who", who),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.contacts_chat_invite_fact_signs"),
+                    localizedString("mobile.contacts_chat_accept_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.contacts_chat_accept"),
+            // Accepting IS opening the chat from this side: POST /v1/chat
+            // accepts the held invitation from this contact (CSD-091).
+            onConfirm = { confirmAccept = null; onOpenChat(c) },
+            onDismiss = { confirmAccept = null },
+            tagPrefix = PeopleTags.ACCEPT_CONFIRM_PREFIX,
+        )
+    }
+    confirmDecline?.let { c ->
+        val who = c.aliasOverride ?: shortKey(c.keyId, head = 12, tail = 0)
+        ConfirmSheet(
+            title = localizedString("mobile.contacts_chat_decline_title", "who", who),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.contacts_chat_invite_fact_from"), c.keyId, mono = true),
+                ConfirmFact(
+                    localizedString("mobile.contacts_chat_invite_fact_effect"),
+                    localizedString("mobile.contacts_chat_decline_effect_value", "who", who),
+                ),
+                ConfirmFact(
+                    localizedString("mobile.contacts_chat_invite_fact_signs"),
+                    localizedString("mobile.contacts_chat_decline_signs_value"),
+                ),
+            ),
+            confirmLabel = localizedString("mobile.contacts_chat_decline"),
+            onConfirm = { confirmDecline = null; viewModel.declinePairInvite(c.keyId) },
+            onDismiss = { confirmDecline = null },
+            destructive = true,
+            tagPrefix = PeopleTags.DECLINE_CONFIRM_PREFIX,
+        )
+    }
 
     confirmRemove?.let { c ->
         val who = c.aliasOverride ?: shortKey(c.keyId, head = 12, tail = 0)
@@ -575,10 +653,20 @@ private fun ContactRow(
     receipt: Receipt,
     onOpenChat: () -> Unit,
     onOpenReceipt: (Receipt) -> Unit,
+    /**
+     * This contact's invitation to talk is waiting (0.5.218): the row says so
+     * and offers Accept and Decline, each behind its ConfirmSheet, in place of
+     * the Chat chip — opening the chat would accept it.
+     */
+    invited: Boolean = false,
+    declining: Boolean = false,
+    onAccept: () -> Unit = {},
+    onDecline: () -> Unit = {},
 ) {
     val t = CirisTheme.tokens
     val (glyph, tone) = contact.trust.reading()
     val flags = buildList {
+        if (invited) add(RowFlag(localizedString("mobile.contacts_chat_invited"), tag = PeopleTags.chatInvite(contact.keyId), tone = Tone.BRAND))
         // The de-admitted-but-still-consented arm. Said out loud rather than
         // rendered as a normal row, because the grant is real and only the
         // human can retract it.
@@ -601,13 +689,32 @@ private fun ContactRow(
         flags = flags,
         receipt = receipt,
         trailing = {
-            Chip(ChipSpec(
-                label = localizedString("mobile.contacts_open_chat"),
-                tag = PeopleTags.chat(contact.keyId),
-                kind = ChipKind.CHOICE,
-                tone = Tone.BRAND,
-                onClick = onOpenChat,
-            ))
+            if (invited) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Chip(ChipSpec(
+                        label = localizedString("mobile.contacts_chat_accept"),
+                        tag = PeopleTags.chatAccept(contact.keyId),
+                        kind = ChipKind.CHOICE,
+                        tone = Tone.BRAND,
+                        onClick = onAccept,
+                    ))
+                    Chip(ChipSpec(
+                        label = localizedString("mobile.contacts_chat_decline"),
+                        tag = PeopleTags.chatDecline(contact.keyId),
+                        kind = ChipKind.CHOICE,
+                        tone = Tone.DIM,
+                        onClick = if (declining) null else onDecline,
+                    ))
+                }
+            } else {
+                Chip(ChipSpec(
+                    label = localizedString("mobile.contacts_open_chat"),
+                    tag = PeopleTags.chat(contact.keyId),
+                    kind = ChipKind.CHOICE,
+                    tone = Tone.BRAND,
+                    onClick = onOpenChat,
+                ))
+            }
         },
         tag = PeopleTags.row(contact.keyId),
         onClick = onOpenChat,

@@ -163,6 +163,19 @@ class FilesViewModelTest {
     }
 
     @Test
+    fun aFileAboveTheWholeReadCapIsNamedTooLargeNotAFailure() {
+        // ciris-server 0.5.218: a whole read above 64 MiB is 413
+        // `drive.too_large_for_whole_read`. The bytes are there; this client
+        // has no streaming read, so it is a named state — not "could not open".
+        val drive = FakeDrive(openError = NodeRefusal("drive.too_large_for_whole_read", "this file is 70000000 bytes", 413))
+        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        vm.openFile(entry("big", "self", cohort = "self"))
+        val tooLarge = assertIs<OpenState.TooLarge>(vm.open.value)
+        assertEquals("big", tooLarge.entry.attestationId)
+        assertEquals(413, tooLarge.refusal.statusCode)
+    }
+
+    @Test
     fun anOpenedFileCarriesItsBytes() {
         val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF)
         vm.openFile(entry("x", "self", cohort = "self"))

@@ -30,6 +30,10 @@ import ai.ciris.mobile.shared.viewmodels.CommunityActRefusal
 import ai.ciris.mobile.shared.viewmodels.CommunityDetailRead
 import ai.ciris.mobile.shared.viewmodels.CommunityListRead
 import ai.ciris.mobile.shared.viewmodels.CommunityReadFailure
+import ai.ciris.mobile.shared.viewmodels.GroupInvitesRead
+import ai.ciris.mobile.shared.viewmodels.InvitationsViewModel
+import ai.ciris.mobile.shared.models.federation.InboxInvite
+import ai.ciris.mobile.shared.models.federation.InviteState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -287,9 +291,16 @@ fun CommunityGovernanceSection(
      * community picker preselects (its lookup and the quarantine rung's scope).
      */
     onOpenModeration: ((communityId: String) -> Unit)? = null,
+    /**
+     * The invitee's inbox (CSD-106): community invitations addressed to this
+     * owner, on the hub because they are not in the room yet. The inbox row
+     * does not say a room's tier, so both community hubs show it (CSD-106 §6).
+     */
+    invitations: InvitationsViewModel? = null,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
+    val founding = invitations?.support?.collectAsState()?.value ?: InviteSupport.UNKNOWN
     val read by viewModel.rooms.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
     val selected by viewModel.selected.collectAsState()
@@ -321,6 +332,7 @@ fun CommunityGovernanceSection(
                 )
             }
         }
+        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
         RefusalLine(refusal)
         AppliedLine(applied)
 
@@ -396,6 +408,7 @@ fun CommunityGovernanceSection(
             CreateCommunityCard(
                 affiliations = affiliations,
                 contacts = contacts,
+                foundAlone = founding == InviteSupport.INVITES,
                 busy = busy,
                 onCreate = { name, members, protocol ->
                     viewModel.create(name, members, protocol)
@@ -476,6 +489,8 @@ fun CommunityModerationPicker(
 private fun CreateCommunityCard(
     affiliations: Boolean,
     contacts: List<Contact>,
+    /** 0.5.218+: a room is founded by its founder alone, and the others are invited (CSD-106). */
+    foundAlone: Boolean,
     busy: Boolean,
     onCreate: (name: String, members: List<String>, protocol: String?) -> Unit,
     onCancel: () -> Unit,
@@ -498,7 +513,12 @@ private fun CreateCommunityCard(
             input = { CirisTextField(tag = CommunityTags.CREATE_NAME, value = name, onValueChange = { name = it }, enabled = !busy) },
         )
         Text(s("community_create_members"), style = type.label, color = t.mute)
-        if (contacts.isEmpty()) {
+        if (foundAlone) {
+            // persist seats only who signed the founding record, and this node
+            // signs it with the founder alone (`membership.founding_member_unsigned`).
+            val text = s("invites_found_alone_community")
+            Text(text, style = type.body, color = t.dim, modifier = Modifier.testable(InviteTags.FOUND_ALONE_COMMUNITY, text))
+        } else if (contacts.isEmpty()) {
             Text(s("community_create_members_none"), style = type.body, color = t.dim)
         } else {
             FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -542,7 +562,7 @@ private fun CreateCommunityCard(
                 label = s("community_create_submit"),
                 tag = CommunityTags.CREATE_SUBMIT,
                 enabled = !busy && name.isNotBlank() && !quorumIncomplete,
-                onClick = { onCreate(name, members.toList(), protocol) },
+                onClick = { onCreate(name, if (foundAlone) emptyList() else members.toList(), protocol) },
             )
         }
     }
@@ -830,9 +850,15 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     val refusal by viewModel.refusal.collectAsState()
     val applied by viewModel.applied.collectAsState()
     val pending by viewModel.pending.collectAsState()
+    val invites by viewModel.invites.collectAsState()
+    val inviteSupport by viewModel.inviteSupport.collectAsState()
+    val inviteNotice by viewModel.inviteNotice.collectAsState()
+    val myKeyId by viewModel.myKeyId.collectAsState()
     var addFor by remember { mutableStateOf<String?>(null) }
     var addKey by remember { mutableStateOf("") }
     var removing by remember { mutableStateOf<Pair<CommunityRoom, CommunityRoomMember>?>(null) }
+    var inviting by remember { mutableStateOf<Pair<CommunityRoom, String>?>(null) }
+    var withdrawing by remember { mutableStateOf<Pair<CommunityRoom, ai.ciris.mobile.shared.models.federation.GroupInvite>?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -855,6 +881,10 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
         )
         RefusalLine(refusal)
         AppliedLine(applied)
+        inviteNotice?.let { n ->
+            val text = s(if (n == CommunitiesViewModel.NOTICE_WITHDRAWN) "invites_notice_withdrawn" else "invites_notice_invited")
+            Text(text, style = type.body, color = t.ok, modifier = Modifier.testable(InviteTags.INBOX_NOTICE + "_roster", text))
+        }
         if (pending.isNotEmpty()) Text(s("community_roster_pending_note"), style = type.body, color = t.brand)
 
         val rooms = roomsOrState(
@@ -896,13 +926,34 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                         },
                     )
                 }
+                // Invitations (CSD-106): read per room, drawn under its members
+                // and never counted as one of them.
+                LaunchedEffect(room.communityId) { viewModel.loadInvites(room.communityId) }
+                val roomInvites = invites[room.communityId] ?: GroupInvitesRead.NotAsked
+                PendingInvites(
+                    read = roomInvites,
+                    ownerKeyId = myKeyId,
+                    quorum = protocolFamily(room.consensusProtocol) != "founder_only",
+                    busy = busy,
+                    nameOf = { nameOf(it, contacts) },
+                    onWithdraw = { inv -> withdrawing = room to inv },
+                    // A room under a quorum seats an accepted invitee through
+                    // `…/changes/envelope` `{op: add}`, which this card does not
+                    // call yet: the row says so instead of offering it.
+                    onSeat = null,
+                    seatLimit = s("invites_community_seat_limit"),
+                )
+                val legacy = inviteSupport == InviteSupport.LEGACY
                 if (addFor == room.communityId) {
                     FieldRow(
                         label = s("community_add_key"),
                         divider = false,
                         input = { CirisTextField(tag = CommunityTags.ADD_KEY, value = addKey, onValueChange = { addKey = it }, enabled = !busy, mono = true) },
                     )
-                    val candidates = contacts.filter { c -> room.members.none { it.keyId == c.keyId } }
+                    val asked = (roomInvites as? GroupInvitesRead.Loaded)?.invites.orEmpty()
+                        .filter { it.state == InviteState.PENDING || it.state == InviteState.ACCEPTED }
+                        .map { it.inviteeKeyId }.toSet()
+                    val candidates = contacts.filter { c -> room.members.none { it.keyId == c.keyId } && c.keyId !in asked }
                     if (candidates.isNotEmpty()) {
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             for (c in candidates) {
@@ -916,19 +967,25 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                             }
                         }
                     }
-                    Text(s("community_add_body"), style = type.body, color = t.dim)
+                    Text(s(if (legacy) "community_add_body" else "invites_community_add_body"), style = type.body, color = t.dim)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         CirisTextButton(localizedString("mobile.confirm_cancel"), tag = "btn_community_add_member_cancel", onClick = { addFor = null; addKey = "" })
                         CirisButton(
-                            s("community_add_submit"), tag = CommunityTags.ADD_SUBMIT,
+                            s(if (legacy) "community_add_submit" else "invites_community_invite_submit"), tag = CommunityTags.ADD_SUBMIT,
                             enabled = !busy && addKey.isNotBlank(),
-                            onClick = { viewModel.addMember(room.communityId, addKey); addFor = null; addKey = "" },
+                            onClick = {
+                                // The node decides the door: an invitation (behind
+                                // its own confirm) on 0.5.218+, the direct add on
+                                // a node without the invites route.
+                                if (legacy) viewModel.addMember(room.communityId, addKey) else inviting = room to addKey.trim()
+                                addFor = null; addKey = ""
+                            },
                         )
                     }
                 } else {
                     CirisTextButton(
-                        s("community_add_open"), tag = CommunityTags.addOpen(room.communityId),
-                        onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); addFor = room.communityId; addKey = "" },
+                        s(if (legacy) "community_add_open" else "invites_invite_open"), tag = CommunityTags.addOpen(room.communityId),
+                        onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); viewModel.consumeInviteNotice(); addFor = room.communityId; addKey = "" },
                     )
                 }
             }
@@ -949,6 +1006,40 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
             tagPrefix = "community_remove",
             onConfirm = { removing = null; viewModel.removeMember(room.communityId, m.keyId) },
             onDismiss = { removing = null },
+        )
+    }
+
+    inviting?.let { (room, key) ->
+        val who = nameOf(key, contacts)
+        val roomName = room.name.ifBlank { shortKey(room.communityId) }
+        ConfirmSheet(
+            title = s("invites_community_invite_title", mapOf("name" to who, "room" to roomName)),
+            facts = listOf(
+                ConfirmFact(s("community_confirm_who"), "$who · $roomName"),
+                ConfirmFact(s("community_confirm_what"), s("invites_community_invite_what")),
+                ConfirmFact(s("community_confirm_signs"), s("invites_community_signs", "rule", room.consensusProtocol)),
+            ),
+            confirmLabel = s("invites_confirm_send"),
+            tagPrefix = InviteTags.COMMUNITY_CONFIRM_INVITE,
+            onConfirm = { inviting = null; viewModel.invite(room.communityId, key) },
+            onDismiss = { inviting = null },
+        )
+    }
+
+    withdrawing?.let { (room, inv) ->
+        val who = nameOf(inv.inviteeKeyId, contacts)
+        ConfirmSheet(
+            title = s("invites_withdraw_title", "name", who),
+            facts = listOf(
+                ConfirmFact(s("community_confirm_who"), who + " · " + room.name.ifBlank { shortKey(room.communityId) }),
+                ConfirmFact(s("community_confirm_what"), s("invites_withdraw_what")),
+                ConfirmFact(s("community_confirm_signs"), s("invites_signs_proposer")),
+            ),
+            confirmLabel = s("invites_confirm_withdraw"),
+            destructive = true,
+            tagPrefix = InviteTags.COMMUNITY_CONFIRM_WITHDRAW,
+            onConfirm = { withdrawing = null; viewModel.withdrawInvite(room.communityId, inv.proposalId) },
+            onDismiss = { withdrawing = null },
         )
     }
 }

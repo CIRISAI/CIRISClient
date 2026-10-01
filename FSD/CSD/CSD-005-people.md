@@ -96,6 +96,18 @@ fields:
     example: "already"
     renders: "'Added {who}.' on a fresh grant; 'Already in your contacts.' when the node returns freshly_emitted: false (the same person twice is a no-op, not an error); the refusal block otherwise"
     tag: contacts_add_already
+  - ceg: x_private:pair_room_invitation
+    use: display-only
+    type: string
+    example: "chat:pair:v1:3f…"
+    renders: "ciris-server 0.5.218 (CIRISServer#706): a two-person room opens by invitation, and the invitation waits in `GET /v1/self/invites` (`is_pair_room: true`). It is shown on the row of the contact it comes from — matched by the invitation's `group_id`, which IS that contact's `chat_community_id`, never by `proposer_key_id` (the other person's NODE) — as the flag 'Wants to talk with you', with Accept and Decline in place of the Chat chip. Tapping the row or the receipt's Chat goes to the accept confirm too, because opening the chat IS accepting it. An invitation from someone who is not a contact is not shown here (a room with a non-contact cannot carry a message, `chat.not_a_contact`); a household's or community's invitation is CSD-106's inbox"
+    tag: "contacts_chat_invite_*"
+  - ceg: x_private:pair_room_answer
+    use: emit
+    type: "enum[accept,decline]"
+    example: "accept"
+    renders: "each behind the shared ConfirmSheet with three facts. Accept: From (their key) · Who can read it ('You and {who}, and nobody else') · Who signs ('You. Your answer is signed for you and sent back to them.'), then the chat opens — `POST /v1/chat` accepts the held invitation from that contact (CSD-091) and the room reads 'Joining the conversation with {who}' until both devices have caught up. Decline: From · What changes ('This invitation closes. {who} can invite you again.') · Who signs ('You. The decline is signed with your own key.'), then `POST /v1/self/invites/{proposal_id}/decline`; a refusal is shown by its id (`contacts_chat_decline_refusal`) and the invitation stays"
+    tag: "btn_contacts_chat_accept_*"
 ```
 
 **The receipt renders all five facts every time, and reads all five off the
@@ -152,6 +164,9 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 | scan a code | `QrScanAction` primitive, `btn_scan_contact_code` | CIRISClient | **live** (PR #99): `ui/primitives/QrScanAction.kt`; it fills `input_contacts_add_key` and never submits. Paste does not depend on it |
 | the grant's envelope on the list route | `GET /v1/contacts` → `grant` (built by `peer.rs::grant_receipt`) | CIRISServer | **live since 0.5.217** (#616 closed); `src/contacts_chat.rs:1704-1712` on `main`, `:1754` on `integ/0.5.218` |
 | reading that envelope into the sheet | — | **CIRISClient** | **live** — `Contact.kt` decodes `grant` and `PeopleSupport.contactReceipt` renders all five facts from it (§2); a grant-less row says "This node did not send this" for the attester, the scope and the rule, never a guess |
+| an invitation to talk (0.5.218) | `GET /v1/self/invites` at the node URL — the pair-room rows (`is_pair_room`, `group_id` with the `chat:pair:v1:` prefix) | CIRISServer (`src/membership_invites.rs::inbox` @ `53d1ffb5`) | **0.5.218, called** — read after every contact list (`ContactsViewModel.refreshPairInvites`), keyed by contact. A node without the route (bare 404) means "no invitations" and the list still shows; any other failure is logged and the rows stay as they are. Read through CSD-106's ONE inbox model and client method (`InviteInbox` / `InboxInvite`, `listMyInvites`), narrowed by `InviteInbox.pairRooms` (`PairRoomInvitationTest`) |
+| accept it | `POST /v1/chat {key_id}` (CSD-091) | CIRISServer (`src/contacts_chat.rs::start_chat`, step 1) | **0.5.218, called** — the person's own `POST /v1/chat` for that contact IS their consent to that pair room (the maintainer's ruling, `pair_intents.rs`); it accepts only an invitation whose proposer resolves to that contact. Reached only through the accept ConfirmSheet |
+| decline it | `POST /v1/self/invites/{proposal_id}/decline` at the node URL | CIRISServer (`src/membership_invites.rs::answer`) | **0.5.218, called** — signed with the person's own pen; final for that invitation; the server forgets the person's standing request for that room. **Two doors on purpose, one client method (`declineInvite`):** pair-room invitations (one contact asking to talk) are declined here on that contact's row, beside Accept; group invitations (households, communities) are declined on the hubs' inbox (CSD-106). Recorded as a deliberate duplicate in `packaging/csd_routes_baseline.json`. Refusals by id (`membership.invite_expired`, `membership.already_answered`, …) |
 | check a contact's key in person (CSD-104's ceremony from a People row) | `GET /v1/federation/peers/{key_id}/sas` over (my identity key, their identity key) | CIRISServer | **blocked: CIRISServer#683** (open). The node computes the code over its OWN node key and the other side's PERSON key, so two honest people never see the same code. No control is offered on the row until it lands; when it does, the row gets a control that sets `Screen.NetworkPeerDetail(contact.keyId)` — one line in `CIRISApp.kt`, no copy of that screen (CSD-104 §2) |
 
 ## 4. Flow (how)
@@ -223,6 +238,8 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
+
+**An invitation to talk is pinned below the flow** (0.5.218): showing one needs a second person who opened a chat with the leg's person first, which the two-node fixture does not stage yet, so the row flag, the matching by room id, the 0.5.217 404 and the decline are pinned in `PairRoomInvitationTest` and on the wire in `Server218ChatEvictWireTest`. Not run on any leg.
 
 **Not tested here.** The long-press gesture (no `/long-press` endpoint); the
 hamburger is the drivable equivalent. The camera half of the scan: it needs the

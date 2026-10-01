@@ -12,6 +12,8 @@ import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.RemoveContactResponse
 import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
+import ai.ciris.mobile.shared.models.chat.pairRooms
+import ai.ciris.mobile.shared.models.federation.InboxInvite
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -127,6 +129,34 @@ class ContactsViewModel(
      */
     private val _chatIneligible = MutableStateFlow<Set<String>>(emptySet())
     val chatIneligible: StateFlow<Set<String>> = _chatIneligible.asStateFlow()
+
+    // ── Invitations to talk (0.5.218, CIRISServer#706) ───────────────────────
+
+    /**
+     * A pair-room invitation waiting for this person, keyed by the CONTACT it
+     * comes from. Since persist v52 a two-person room is founded by one side
+     * and the other joins by accepting; the invitation rides the same inbox
+     * as a household's (`GET /v1/self/invites`, `is_pair_room`). It is shown
+     * where a person looks to talk to someone — their row on People — and
+     * matched by the room id, which IS the contact's derived
+     * `chat_community_id`; the proposal's attester is the other person's
+     * NODE, not them, so it cannot be the key.
+     *
+     * Empty on a node older than 0.5.218 (its bare 404 is "no invitations"),
+     * and empty for an invitation from someone who is not a contact: a room
+     * with a non-contact cannot carry a message (`chat.not_a_contact`), and
+     * the hubs' inbox (CSD-106) is where every other invitation is answered.
+     */
+    private val _pairInvites = MutableStateFlow<Map<String, InboxInvite>>(emptyMap())
+    val pairInvites: StateFlow<Map<String, InboxInvite>> = _pairInvites.asStateFlow()
+
+    /** The contact whose invitation is being declined right now, or null. */
+    private val _declining = MutableStateFlow<String?>(null)
+    val declining: StateFlow<String?> = _declining.asStateFlow()
+
+    /** The node's refusal of the last decline, by id. */
+    private val _declineRefusal = MutableStateFlow<NodeRefusal?>(null)
+    val declineRefusal: StateFlow<NodeRefusal?> = _declineRefusal.asStateFlow()
 
     // ── Raw peer list (picker mode — all, unsearched) ────────────────────────
 
@@ -258,6 +288,9 @@ class ContactsViewModel(
                 _allContacts.value = sortedContacts(resp.contacts)
                 listNodeUrl = url
                 applySearch()
+                // Which of these people asked to talk: read once the rows
+                // exist, because an invitation is shown ON a contact's row.
+                refreshPairInvites(epoch, url)
             } catch (e: NodeRefusal) {
                 // A late refusal from the node switched away from is not a fact
                 // about the node on screen: publishing its bare 404 as
@@ -293,6 +326,69 @@ class ContactsViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Read the pair-room invitations and key each by its contact (see
+     * [pairInvites]). Quiet on failure — the rows are still the rows, and an
+     * unread inbox must not blank the list — but logged, and the previous
+     * map is dropped rather than left standing for a node that no longer says it.
+     */
+    private suspend fun refreshPairInvites(epoch: Long, url: String) {
+        val byRoom = _allContacts.value.filter { it.chatCommunityId.isNotBlank() }.associateBy { it.chatCommunityId }
+        val found = try {
+            api.pairRoomInvites(url).pairRooms.mapNotNull { invite ->
+                byRoom[invite.groupId]?.let { contact -> contact.keyId to invite }
+            }.toMap()
+        } catch (e: NodeRefusal) {
+            if (!(e.statusCode == 404 && e.reasonId == null)) {
+                PlatformLogger.w(tag, "[pairRoomInvites] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+            }
+            emptyMap()
+        } catch (e: Exception) {
+            PlatformLogger.w(tag, "[pairRoomInvites] ${e.message}")
+            emptyMap()
+        }
+        if (!current(epoch, url)) return
+        _pairInvites.value = found
+    }
+
+    /**
+     * Decline [contactKeyId]'s invitation to talk — the person's own signed
+     * decline (`POST /v1/self/invites/{id}/decline`), final for that
+     * invitation; they can invite again. Only ever called from the decline
+     * ConfirmSheet. The inbox is re-read afterwards: the node's answer, not
+     * our edit, is what the row shows.
+     */
+    fun declinePairInvite(contactKeyId: String) {
+        val invite = _pairInvites.value[contactKeyId] ?: return
+        val url = listNodeUrl ?: nodeUrl()
+        val epoch = sessionEpoch
+        if (_declining.value != null) return
+        _declining.value = contactKeyId
+        _declineRefusal.value = null
+        viewModelScope.launch {
+            try {
+                api.declinePairRoomInvite(url, invite.proposalId)
+                if (!current(epoch, url)) return@launch
+                _pairInvites.value = _pairInvites.value - contactKeyId
+                refreshPairInvites(epoch, url)
+            } catch (e: NodeRefusal) {
+                if (!current(epoch, url)) return@launch
+                _declineRefusal.value = e
+                PlatformLogger.w(tag, "[declinePairInvite] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+            } catch (e: Exception) {
+                if (!current(epoch, url)) return@launch
+                _declineRefusal.value = NodeRefusal(null, e.message, 0)
+                PlatformLogger.e(tag, "[declinePairInvite] ${e.message}", e)
+            } finally {
+                if (epoch == sessionEpoch) _declining.value = null
+            }
+        }
+    }
+
+    fun clearDeclineRefusal() {
+        _declineRefusal.value = null
     }
 
     /**
@@ -362,6 +458,8 @@ class ContactsViewModel(
         _contacts.value = emptyList()
         _contactsLoaded.value = false
         _chatIneligible.value = emptySet()
+        _pairInvites.value = emptyMap()
+        _declineRefusal.value = null
         _removal.value = null
     }
 
@@ -775,6 +873,9 @@ class ContactsViewModel(
         _contacts.value = emptyList()
         _contactsLoaded.value = false
         _chatIneligible.value = emptySet()
+        _pairInvites.value = emptyMap()
+        _declining.value = null
+        _declineRefusal.value = null
         _allPeers.value = emptyList()
         _peers.value = emptyList()
         _searchQuery.value = ""

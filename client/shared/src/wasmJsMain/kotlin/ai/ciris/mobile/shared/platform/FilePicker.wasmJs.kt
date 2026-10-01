@@ -7,7 +7,8 @@ actual fun FilePickerDialog(
     show: Boolean,
     mimeTypes: List<String>,
     onFilePicked: (PickedFile) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onTooLarge: (PickTooLarge) -> Unit,
 ) {
     // TODO: Implement using HTML file input element
     // For now, dismiss immediately as web file picking requires HTML input element integration

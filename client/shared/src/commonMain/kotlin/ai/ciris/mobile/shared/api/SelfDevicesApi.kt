@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.models.federation.AssociateResponse
 import ai.ciris.mobile.shared.models.federation.LabelOccurrenceResponse
 import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
 import ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse
+import ai.ciris.mobile.shared.models.federation.RevokeOccurrenceResponse
 import ai.ciris.mobile.shared.models.federation.SelfOccurrencesResponse
 
 /**
@@ -33,6 +34,18 @@ interface SelfDevicesApi {
     /** `POST /v1/self/nodes/{node_key_id}/release`. */
     suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse
 
+    /**
+     * `POST /v1/self/occurrence/revoke` — evict a device (0.5.218). [forceSelf]
+     * only from the second confirm, after the node refused because the device
+     * is the one answering.
+     */
+    suspend fun revokeOccurrence(
+        identityKeyId: String,
+        occurrenceKeyId: String,
+        reason: String?,
+        forceSelf: Boolean,
+    ): RevokeOccurrenceResponse
+
     /** The NODE's health warnings (not the brain's — see [NodeHealth.warnings]). */
     suspend fun nodeWarnings(): List<SystemWarning>
 
@@ -53,6 +66,13 @@ class ClientSelfDevices(
         client.labelOccurrence(occurrenceKeyId, label)
     override suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse =
         client.releaseNode(nodeKeyId, forceSelf)
+    override suspend fun revokeOccurrence(
+        identityKeyId: String,
+        occurrenceKeyId: String,
+        reason: String?,
+        forceSelf: Boolean,
+    ): RevokeOccurrenceResponse =
+        client.revokeOccurrence(identityKeyId, occurrenceKeyId, reason, forceSelf = forceSelf)
     override suspend fun nodeWarnings(): List<SystemWarning> = client.getNodeHealth(nodeBaseUrl).warnings
     override suspend fun associate(sourceDir: String, device: String?): AssociateResponse =
         client.associateFedId(sourceDir = sourceDir, device = device, nodeUrl = nodeBaseUrl)

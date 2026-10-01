@@ -66,6 +66,18 @@ sealed interface OpenState {
 
     /** The bytes did not open; [refusal] carries `drive.not_fetched` / `drive.not_granted`, which are answers, not failures. */
     data class NotOpened(val entry: DriveEntry, val refusal: NodeRefusal?, val message: String) : OpenState
+
+    /**
+     * The file is above the node's whole-read cap (64 MiB, ciris-server 0.5.218:
+     * `413 drive.too_large_for_whole_read`). Not an error and not "could not
+     * open": the bytes are there and open for this viewer, and this client
+     * reads files whole — it has no streaming read yet. Named as that.
+     */
+    data class TooLarge(val entry: DriveEntry, val refusal: NodeRefusal) : OpenState
+
+    companion object {
+        const val REASON_TOO_LARGE_FOR_WHOLE_READ = "drive.too_large_for_whole_read"
+    }
 }
 
 /** Adding a file. [Written] keeps the server's three facts apart: reached the audience, fetchable, fully granted. */
@@ -210,7 +222,8 @@ class FilesViewModel(
                     else -> OpenState.Opened(entry, file, bytes, check)
                 }
             } catch (e: NodeRefusal) {
-                OpenState.NotOpened(entry, e, e.detail ?: entry.detail)
+                if (e.reasonId == OpenState.REASON_TOO_LARGE_FOR_WHOLE_READ) OpenState.TooLarge(entry, e)
+                else OpenState.NotOpened(entry, e, e.detail ?: entry.detail)
             } catch (e: Exception) {
                 OpenState.NotOpened(entry, null, e.message ?: "error")
             }

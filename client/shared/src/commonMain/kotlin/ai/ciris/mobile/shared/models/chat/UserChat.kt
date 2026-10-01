@@ -243,7 +243,90 @@ data class ChatCommunity(
     val cohortScope: String = CegChatMessage.COHORT_SCOPE_COMMUNITY,
     @SerialName("freshly_created")
     val freshlyCreated: Boolean = false,
-)
+    /**
+     * Where the two-step join stands (ciris-server 0.5.218, CIRISServer#706):
+     * `open` / `invited` / `accepted` / `awaiting_invitation`. Since persist
+     * v52 a pair room is founded by ONE person and the other joins by
+     * accepting an invitation, so a room can exist with one member and
+     * nothing wrong. NULL on a 0.5.217 node, which never sends it — and then
+     * the room behaves exactly as it always did ([pairPhase]).
+     */
+    val state: String? = null,
+    /** The invitation's id (`membership:proposal:v1`), when there is one. */
+    @SerialName("proposal_id")
+    val proposalId: String? = null,
+) {
+    companion object {
+        const val STATE_OPEN = "open"
+        /** This side opened it and invited the other person; they have not accepted. */
+        const val STATE_INVITED = "invited"
+        /** The invitation is accepted; the opener's node has not seated the joiner yet. */
+        const val STATE_ACCEPTED = "accepted"
+        /** The other person's side founds the room; their invitation has not reached here yet. */
+        const val STATE_AWAITING_INVITATION = "awaiting_invitation"
+    }
+}
+
+/**
+ * **What a pair room IS right now, for the person looking at it** — one of four
+ * phases, decided from the server's answer and nothing else.
+ *
+ * The order of the checks is the point:
+ *
+ *  1. No `state` (a 0.5.217 node) → [PairPhase.OPEN]: that node opens a room in
+ *     one step and the client behaves exactly as it did.
+ *  2. Both people on the active roster → [PairPhase.OPEN], whatever `state`
+ *     says. The roster is the fold; `state` is the route's account of the
+ *     join, and at 0.5.218 the JOINER's `POST /v1/chat` answers
+ *     `awaiting_invitation` even after it has been seated (the joiner branch
+ *     returns before it looks at the room) — a seated person must never be
+ *     told to wait.
+ *  3. `invited` → [PairPhase.WAITING_FOR_THEM]; `accepted` → [PairPhase.JOINING].
+ *  4. `awaiting_invitation` → [PairPhase.JOINING] when this person already
+ *     accepted here (the same route answers it after an accept, because the
+ *     invitation it accepted is no longer pending), else
+ *     [PairPhase.WAITING_FOR_THEIR_SIDE].
+ *  5. A token this client does not know → [PairPhase.OPEN], as on 0.5.217:
+ *     a word nobody documented must not lock a person out of a room.
+ */
+enum class PairPhase {
+    /** A normal room: the transcript and the composer. */
+    OPEN,
+    /** I opened it; the other person has not accepted the invitation. */
+    WAITING_FOR_THEM,
+    /** The invitation is accepted; the room opens when both devices have caught up. */
+    JOINING,
+    /** The other person's side opens it; my request is kept until their invitation arrives. */
+    WAITING_FOR_THEIR_SIDE,
+}
+
+fun ChatCommunity.pairPhase(acceptedHere: Boolean = false): PairPhase = when {
+    state == null -> PairPhase.OPEN
+    memberKeyIds.distinct().size >= 2 -> PairPhase.OPEN
+    state == ChatCommunity.STATE_OPEN -> PairPhase.OPEN
+    state == ChatCommunity.STATE_INVITED -> PairPhase.WAITING_FOR_THEM
+    state == ChatCommunity.STATE_ACCEPTED -> PairPhase.JOINING
+    state == ChatCommunity.STATE_AWAITING_INVITATION ->
+        if (acceptedHere) PairPhase.JOINING else PairPhase.WAITING_FOR_THEIR_SIDE
+    else -> PairPhase.OPEN
+}
+
+/** The `chat:pair:v1:` id prefix — edge's `PAIR_COMMUNITY_PREFIX`. */
+const val PAIR_ROOM_PREFIX = "chat:pair:v1:"
+
+/**
+ * The PAIR-ROOM rows of `GET /v1/self/invites` (ciris-server 0.5.218), read
+ * through CSD-106's one inbox model ([ai.ciris.mobile.shared.models.federation.InviteInbox]).
+ * The hubs' inbox leaves these out; People shows each on its contact's row.
+ * `is_pair_room` is the server's word; the id prefix is the same fact,
+ * checked too, so a family's or community's invitation is never taken for a
+ * conversation. `proposer_key_id` on these rows is the other person's NODE
+ * (edge founds a pair room with the node signer), so a row is matched to a
+ * contact by `group_id` — that contact's derived `chat_community_id` — never
+ * by the proposer.
+ */
+val ai.ciris.mobile.shared.models.federation.InviteInbox.pairRooms: List<ai.ciris.mobile.shared.models.federation.InboxInvite>
+    get() = invites.filter { it.isPairRoom && it.groupId.startsWith(PAIR_ROOM_PREFIX) }
 
 /** ``GET /v1/chat/{community_id}/messages`` → the transcript, OLDEST FIRST. */
 @Serializable
