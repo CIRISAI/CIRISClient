@@ -1505,6 +1505,74 @@ class SetupViewModel(
         }
     }
 
+    // ========== Second device: collect the session the approval left here ==========
+
+    private val _claimedSession = MutableStateFlow<ClaimedSessionState>(ClaimedSessionState.Idle)
+
+    /** CSD-093's last step, once the other device has approved this one. */
+    val claimedSession: StateFlow<ClaimedSessionState> = _claimedSession.asStateFlow()
+
+    /**
+     * **Collect this device's owner session after ANOTHER device approved it**
+     * — `POST /v1/setup/claimed-session` (CIRISServer 0.5.218, #678; CSD-093).
+     *
+     * Called by the approval-code branch when `GET /v1/setup/status` reports
+     * the node claimed. Since 0.5.218 the claim the approving device delivered
+     * does not hand that device this one's session: the node keeps it for this
+     * wizard, and the PIN the wizard showed collects it, once, within 15
+     * minutes. On success the session is applied to the client exactly as the
+     * self-claim applies the session its claim minted ([claimLocalNodeOwnership]),
+     * and [onSession] lets the host persist it the way a sign-in is persisted.
+     *
+     * A bare 404 is a node older than 0.5.218 ([ClaimedSessionState.NodeTooOld]):
+     * the card keeps its old ending, "Approved. Sign in to finish." The PIN is
+     * never logged.
+     */
+    fun collectClaimedSession(
+        claimPinProvider: suspend () -> String?,
+        collector: ClaimedSessionCollector? = null,
+        onSession: suspend (ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant) -> Unit = {},
+    ) {
+        if (_claimedSession.value == ClaimedSessionState.Collecting) return
+        val collect = collector
+            ?: (apiClient as? CIRISApiClient)?.let { c -> ClaimedSessionCollector { pin -> c.collectClaimedSession(pin) } }
+        if (collect == null) {
+            _claimedSession.value = ClaimedSessionState.Failed("Local node unavailable: API client does not support it")
+            return
+        }
+        _claimedSession.value = ClaimedSessionState.Collecting
+        viewModelScope.launch {
+            val pin = try {
+                claimPinProvider()?.trim()
+            } catch (e: Exception) {
+                null
+            }
+            if (pin.isNullOrEmpty()) {
+                PlatformLogger.w(TAG, "[claimedSession] no claim PIN on this device; nothing to collect with")
+                _claimedSession.value = ClaimedSessionState.NoPin
+                return@launch
+            }
+            _claimedSession.value = try {
+                val grant = collect.collect(pin)
+                apiClient.setAccessToken(grant.accessToken)
+                onSession(grant)
+                PlatformLogger.i(TAG, "[claimedSession] collected the owner session (role=${grant.role})")
+                ClaimedSessionState.Collected(grant.role)
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                if (e.statusCode == 404 && e.reasonId == null) {
+                    PlatformLogger.i(TAG, "[claimedSession] node predates /v1/setup/claimed-session (bare 404)")
+                    ClaimedSessionState.NodeTooOld
+                } else {
+                    PlatformLogger.w(TAG, "[claimedSession] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                    ClaimedSessionState.Refused(e.reasonId, e.detail, e.statusCode)
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[claimedSession] failed: ${e.message}")
+                ClaimedSessionState.Failed(e.message ?: e::class.simpleName)
+            }
+        }
+    }
+
     // ========== Look before you import (CIRISServer#404) ==========
 
     /**

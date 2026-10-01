@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "Ẹ̀rọ yìí kò wà ní ìmúrasílẹ̀ fún ìbéèrè ẹ̀tọ́ ìní àkọ́kọ́ (kò sí PIN ìgbà-kan) — ó ṣeé ṣe kí a ti gba ẹ̀tọ́ ìní rẹ̀ tẹ́lẹ̀.",
       "pin_invalid": "PIN ìgbà-kan fún ìbéèrè ẹ̀tọ́ ìní kò tọ̀nà",
-      "pin_missing": "Ìbéèrè ROOT àkọ́kọ́ gbọ́dọ̀ gbé `claim_pin` (PIN ìgbà-kan tí a tẹ̀ jáde sórí kọ̀ńsólù ẹ̀rọ yìí nígbà ìbẹ̀rẹ̀)."
+      "pin_missing": "Ìbéèrè ROOT àkọ́kọ́ gbọ́dọ̀ gbé `claim_pin` (PIN ìgbà-kan tí a tẹ̀ jáde sórí kọ̀ńsólù ẹ̀rọ yìí nígbà ìbẹ̀rẹ̀).",
+      "already_claimed": "A ti gba ẹ̀tọ́ ìní root tẹ́lẹ̀; ìṣètò ìbẹ̀rẹ̀ àkọ́kọ́ ti wà ní títì.",
+      "body_invalid": "A kò lè ka ìbéèrè ìṣètò náà, nítorí náà a kò gba ẹ̀tọ́ ìní kankan.",
+      "cohort_invalid": "Àgbègbè ìṣètò yẹn kì í ṣe ọ̀kan tí nódù yìí mọ̀. Ó gbọ́dọ̀ jẹ́ ti ara-ẹni, ìdílé, tàbí àwùjọ.",
+      "cohort_missing": "Ìbéèrè ROOT àkọ́kọ́ gbọ́dọ̀ gbé `cohort_scope` (ọ̀kan nínú self|family|community).",
+      "no_pending_session": "kò sí sáà tí ó dúró dè: a kò gba ẹ̀tọ́ ìní ẹ̀rọ yìí láti ọwọ́ ẹ̀rọ mìíràn láàrin ìṣẹ́jú 15 sẹ́yìn, tàbí a ti gba sáà rẹ̀ tẹ́lẹ̀.",
+      "node_code_invalid": "A kò lè ka kóòdù nódù náà. Ṣàyẹ̀wò rẹ̀ kí o sì gbìyànjú lẹ́ẹ̀kansi.",
+      "node_code_missing": "Ìbéèrè ROOT àkọ́kọ́ gbọ́dọ̀ dá ìdánimọ̀ nódù yìí mọ̀: pèsè `node_code` (CIRIS-V1-...) tàbí `key_id` + `pubkey_ed25519_base64`.",
+      "owner_binding_missing": "Ìbéèrè ROOT àkọ́kọ́ gbọ́dọ̀ gbé `owner_binding` tí ó pé (delegates_to: envelope tí olùlo fọwọ́ sí + àwọn ìfọwọ́sí + key_id + àwọn pubkey).",
+      "owner_binding_rejected": "Nódù yìí kọ̀ ìdè-ìní náà, nítorí náà a kò gba ẹ̀tọ́ ìní rẹ̀.",
+      "store_unavailable": "Nódù yìí kò lè dé ibi ìpamọ́ rẹ̀, nítorí náà a kò gba ẹ̀tọ́ ìní kankan. Gbìyànjú lẹ́ẹ̀kansi láìpẹ́.",
+      "wrong_node": "NodeCode tí a pèsè kò bá ìdánimọ̀ nódù yìí mu — ó ṣeé ṣe kí o ti dé ọ̀dọ̀ nódù tí kò tọ́."
     },
     "link": {
       "ambiguous_handle": "Fi ìdánimọ̀ àkàǹtì tàbí àdírẹ́sì ìmẹ́ìlì ránṣẹ́, kì í ṣe àwọn méjèèjì — ohun ọ̀tọ̀ọ̀tọ̀ ni wọ́n túmọ̀ sí."
@@ -5343,6 +5354,17 @@
   "drive": {
     "author_signer_unavailable": "Nódù yìí kò lè fọwọ́sí bí ìwọ ní ìsinsìnyí, nítorí náà a kò kọ fáìlì náà.",
     "community_id_required": "Fáìlì àwùjọ nílò láti dárúkọ yàrá rẹ̀.",
+    "evicted": "A ti kó àwọn byte wọ̀nyí kúrò lórí nódù yìí, a kò sì lè kà wọ́n níbí mọ́.",
+    "field_after_file": "Àwọn kúnrẹ́rẹ́ ìgbékalẹ̀ náà dé lẹ́yìn fáìlì náà. A kò kọ ohunkóhun; fi fáìlì náà ránṣẹ́ kẹ́yìn.",
+    "filename_empty": "ìyípadà orúkọ nílò orúkọ kan — orúkọ fáìlì tí ó ṣófo yóò fi fáìlì náà sílẹ̀ láìní orúkọ dípò kí a yí orúkọ rẹ̀ padà",
+    "format_mismatch": "Fáìlì náà kì í ṣe ohun tí irúfẹ́ rẹ̀ sọ pé ó jẹ́, nítorí náà a kò fi kún un.",
+    "not_author": "Aṣẹ̀dá nìkan ni ó lè yí fáìlì padà tàbí yọ ọ́ kúrò. Fáìlì tí o kọ sórí ẹ̀rọ rẹ mìíràn ni a óo yí padà láti ẹ̀rọ yẹn.",
+    "range_not_satisfiable": "Àgbègbè tí a béèrè wà lóde fáìlì yìí.",
+    "same_room": "fáìlì náà wà nínú yàrá yẹn tẹ́lẹ̀ — ìgbéró nílò àyíká tí ó yàtọ̀",
+    "seal_mismatch": "Àwọn byte náà kò ṣí sábẹ́ àkọsílẹ̀ fáìlì yìí. Àkọsílẹ̀ náà àti àwọn byte náà kò fohùnṣọ̀kan.",
+    "too_large_for_whole_read": "Fáìlì yìí tóbi jù láti kà ní ẹ̀ka kan ṣoṣo. Ó gbọ́dọ̀ jẹ́ ṣíṣàn (stream).",
+    "withdraw_failed": "A kò lè yọ fáìlì náà kúrò. Gbìyànjú lẹ́ẹ̀kansi.",
+    "withdrawn": "Aṣẹ̀dá rẹ̀ ti yọ fáìlì yìí kúrò. A kò ní í pèsè àwọn byte náà ní ibikíbi mọ́.",
     "family_id_required": "Fáìlì Ìdílé nílò láti dárúkọ ìdílé rẹ̀. Kò sí ìdílé aládàánidá kan.",
     "listing_failed": "Nódù yìí kò lè ṣe àkọsílẹ̀ àwọn fáìlì tí ó wà nínú yàrá yẹn.",
     "no_node_key": "Nódù yìí kò lè rí kọ́kọ́rọ́ tirẹ̀.",
@@ -5356,14 +5378,24 @@
     "store_unavailable": "Nódù yìí kò lè dé ibi ìpamọ́ fáìlì rẹ̀.",
     "too_large": "Fáìlì yẹn tóbi jù láti fi kún síbí.",
     "unknown_cohort": "Èyí kì í ṣe ibi tí àwọn fáìlì lè lọ. Lo Èmi nìkan, ìdílé kan tàbí àwùjọ kan.",
-    "unopened": "Ẹ̀rọ yìí kò lè ṣí i."
+    "unopened": "Ẹ̀rọ yìí kò lè ṣí i.",
+    "bad_base64": "Àkóónú fáìlì náà kì í ṣe base64 tí ó tọ́, nítorí náà a kò kọ ohunkóhun.",
+    "bad_body": "A kò lè ka ìgbékalẹ̀ náà. A kò kọ ohunkóhun; fi í ránṣẹ́ padà.",
+    "bad_cursor": "`after` kì í ṣe cursor tí drive yìí ti fi jáde — fi `resume` ìwé kan padà gẹ́gẹ́ bí ó ti jẹ́.",
+    "bad_filename": "kò sí ohun tí a lè fi hàn tí ó kù nínú orúkọ fáìlì yẹn nígbà tí a bá yọ àwọn ẹ̀yà ipa-ọ̀nà àti àwọn àmì ìdarí / bidi kúrò (RFC 6266 §4.3)",
+    "bad_media_type": "Èyí kì í ṣe irúfẹ́ fáìlì tí ó tọ́ (type/subtype).",
+    "bad_move_target": "Èyí kì í ṣe ibi tí a lè gbé fáìlì yìí sí.",
+    "declared_length_mismatch": "Ìwọ̀n fáìlì náà kò bá ìwọ̀n tí a kéde mu. A kò kọ ohunkóhun; fi í ránṣẹ́ padà.",
+    "delegate_may_not_author": "aṣojú tí a fún ní ìfilélẹ̀-àṣẹ kò lè kọ, yí padà tàbí yọ fáìlì kúrò: a fọwọ́ sí ìlà náà sínú gíráàfù (graph) gẹ́gẹ́ bí ìṣe olóhun fúnra rẹ̀, ìfilélẹ̀-àṣẹ tí ó bá parí kò sì lè yọ ìfọwọ́sí náà kúrò"
   },
   "notes": {
     "author_signer_unavailable": "Nódù yìí kò lè fọwọ́sí bí ìwọ ní ìsinsìnyí, nítorí náà a kò kọ àkọsílẹ̀ náà.",
     "empty": "Àkọsílẹ̀ tí kò ní ohunkóhun nínú kì í ṣe àkọsílẹ̀.",
     "listing_failed": "Nódù yìí kò lè ka àwọn àkọsílẹ̀ rẹ.",
     "no_node_key": "Nódù yìí kò lè rí kọ́kọ́rọ́ tirẹ̀.",
-    "owner_session_required": "Wọlé gẹ́gẹ́ bí olóhun nódù yìí láti lè lo àwọn àkọsílẹ̀ rẹ."
+    "not_found": "Èyí kì í ṣe ọ̀kan nínú àwọn àkọsílẹ̀ rẹ.",
+    "owner_session_required": "Wọlé gẹ́gẹ́ bí olóhun nódù yìí láti lè lo àwọn àkọsílẹ̀ rẹ.",
+    "delegate_may_not_author": "aṣojú tí a fún ní ìfilélẹ̀-àṣẹ kò lè kọ, yí padà tàbí yọ àkọsílẹ̀ kúrò: a fọwọ́ sí i sínú gíráàfù (graph) gẹ́gẹ́ bí ọ̀rọ̀ olóhun fúnra rẹ̀, ìfilélẹ̀-àṣẹ tí ó bá parí kò sì lè yọ ìfọwọ́sí wọn kúrò"
   },
   "self": {
     "author_signer_unavailable": "A kò lè ṣí ìdánimọ̀ rẹ láti fọwọ́sí ìyípadà yìí.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Nóòdù yẹn kò sí lára àwọn tí o ni, nítorí náà kò ṣe tìrẹ láti tú sílẹ̀.",
     "owner_session_required": "Àwọn ẹ̀rọ rẹ jẹ́ ojú-ìṣàkóso tí ó jẹ́ ti olówó fúnra rẹ̀. Wọlé gẹ́gẹ́ bí olówó nóòdù yìí.",
     "release_incomplete": "A fọwọ́sí ìtúsílẹ̀ náà, ṣùgbọ́n nóòdù náà ṣì ka nóòdù yẹn sí tìrẹ: àkọsílẹ̀ ẹ̀tọ́ ìní kan tí kò lè rí ṣì wà lọ́wọ́. Ohun tí ó lè yọ kúrò ṣì dúró ní yíyọ-kúrò.",
-    "evict_incomplete": "Ẹ̀rọ yẹn kò yọ kúrò ní kíkún. Ìdáhùn nóòdù náà ṣe àkọsílẹ̀ apá kọ̀ọ̀kan tí kò tíì parí; àwọn apá tí ó ti parí yóò sì wà bẹ́ẹ̀ ní parí. Gbìyànjú lẹ́ẹ̀kan sí i.",
+    "evict_incomplete": "Apá kan nínú yíyọ ẹ̀rọ yẹn kúrò kò parí. Ohun tí a ṣe ṣì dúró bí a ti ṣe é; ìdáhùn náà dárúkọ ohun tí a kò ṣe.",
     "release_self_requires_force": "Èyí ni nóòdù tí o ń bá sọ̀rọ̀. Títú u sílẹ̀ yóò fòpin sí ẹ̀tọ́ ìní rẹ níhìín, tí ó fi sáà yìí sínú rẹ̀.",
     "store_unavailable": "Nóòdù náà kò lè ka tàbí kọ ilé-ìtọ́jú ìdánimọ̀ rẹ̀. Kò sí ohun tí a yí padà.",
     "node_not_announced": "Ẹ̀rọ yẹn kò lè dé wá, nítorí náà kò lè wọ inú kóòdù kan.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "A kò lè ṣe kóòdù olùbásọ̀rọ̀ rẹ láti inú àwọn kọ́kọ́rọ́ tí nóòdù yìí dì mọ́.",
     "associate": {
       "hardware_custody_unavailable": "Ẹ̀rọ yìí kò ní ohun-èlò tí ó lè dí kọ́kọ́rọ́ mọ́ (kò sí TPM tàbí secure enclave), nítorí náà a kò ṣètò ohunkóhun. O lè lo ìtọ́jú software dípò: kọ́kọ́rọ́ náà ni a ó pa mọ́ sínú fáìlì tí a kọ́ọ́dì sórí ẹ̀rọ yìí."
-    }
+    },
+    "announce_not_your_node": "nódù yẹn kì í ṣe ọ̀kan tí o ní, nítorí náà kì í ṣe tìrẹ láti kéde",
+    "announce_refused": "a kò lè kéde ẹ̀tọ́ ìní nódù yẹn láti ẹ̀rọ yìí",
+    "sessions_unavailable": "Nódù náà kò lè mọ èwo nínú àwọn ẹ̀rọ rẹ ní ó ń dáhùn. Gbìyànjú lẹ́ẹ̀kansi láìpẹ́."
   },
   "households": {
     "change_copy": "Ṣe àdàkọ fún àwọn ẹlòmíràn",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Àkókò ti kọjá"
   },
   "membership": {
-    "consent_required": "Ẹnìkan gbọ́dọ̀ gba ìpè kí wọ́n tó darapọ̀ mọ́ ọn. A kò lè fi ẹnikẹ́ni kún ìdílé tàbí àwùjọ láìsí bẹ́ẹ̀ni tiwọn fúnra wọn."
+    "consent_required": "Ẹnìkan gbọ́dọ̀ gba ìpè kí wọ́n tó darapọ̀ mọ́ ọn. A kò lè fi ẹnikẹ́ni kún ìdílé tàbí àwùjọ láìsí bẹ́ẹ̀ni tiwọn fúnra wọn.",
+    "acceptance_mismatch": "Ìdáhùn yẹn kò bá ìpè tí ó dárúkọ mu.",
+    "already_answered": "A ti dáhùn ìpè yẹn ní ọ̀nà mìíràn tẹ́lẹ̀.",
+    "awaiting_acceptance": "Wọn kò tíì gba ìpè náà síi, nítorí náà wọn kò lè darapọ̀ mọ́.",
+    "bad_expiry": "Ìpè kan a máa wà fún láàrin ọjọ́ kan sí ọgbọ̀n ọjọ́.",
+    "declined": "Wọ́n kọ̀ ìpè náà, nítorí náà a kò lè fi wọ́n kún lábẹ́ rẹ̀.",
+    "delegate_may_not_answer": "Sáà tí a fi àṣẹ lélẹ̀ fún lè rí àwọn ìpè, ṣùgbọ́n kò lè dáhùn wọn. A óo fi kọ́kọ́rọ́ tìrẹ fọwọ́sí ìdáhùn rẹ.",
+    "founding_member_unsigned": "Ìwọ nìkan ló dá àwùjọ kan sílẹ̀. Pe àwọn yòókù ní kété tí ó bá ti wà.",
+    "invite_closed": "Ìpè yẹn kò ṣí sílẹ̀ mọ́, nítorí náà a kò lè yọ ọ́ kúrò.",
+    "invite_expired": "Ìpè yẹn ti kọjá àkókò rẹ̀. Fi tuntun ránṣẹ́.",
+    "invite_not_found": "Ìpè yẹn kò sí níbí. Ó lè jẹ́ pé kò tíì dé, tàbí a kò fi ránṣẹ́ sí ọ rí.",
+    "invite_not_here_yet": "Ìpè yẹn kò tíì dé ẹ̀rọ yìí síi. Gbìyànjú lẹ́ẹ̀kansi láìpẹ́.",
+    "not_the_invitee": "Ẹni tí a pè nìkan ló lè dáhùn ìpè kan.",
+    "not_the_proposer": "Ẹni tí ó fi ìpè kan ránṣẹ́ nìkan ló lè yọ ọ́ kúrò.",
+    "owner_session_required": "Olórí-ẹ̀tọ́ nódù yìí ni ó máa ń dáhùn àwọn ìpè. Wọlé gẹ́gẹ́ bí olórí-ẹ̀tọ́ náà.",
+    "refused": "Àwọn òfin àwùjọ kọ̀ ìyípadà-ọmọ-ẹgbẹ́ yẹn.",
+    "signer_unavailable": "A kò lè ṣí ìdánimọ̀ rẹ láti fọwọ́sí ìdáhùn yìí.",
+    "store_unavailable": "Nódù náà kò lè ka tàbí kọ àwọn àkọsílẹ̀ ọmọ-ẹgbẹ́ rẹ̀. A kò yí ohunkóhun padà.",
+    "supersede_cannot_add": "Ìyípadà sí àkọsílẹ̀ àwùjọ kò lè fi ẹnikẹ́ni kún un. Àwọn ọmọ ẹgbẹ́ tuntun a máa darapọ̀ mọ́ nípasẹ̀ ìpè."
   },
   "custody": {
     "inline_no_receipt": "Fáìlì yìí kéré tó láti fi pa mọ́ ní ẹ̀ka kan ṣoṣo, fáìlì tí a bá fi pa mọ́ ní ẹ̀ka kan ṣoṣo kò sì ní ìwé-ẹ̀rí ìfijíṣẹ́ kankan síi. Àwọn ẹ̀rọ rẹ mìíràn lè ní i, ṣùgbọ́n a kò lè sọ fún ẹ̀rọ yìí bẹ́ẹ̀.",
-    "copies_unobservable_by_design": "Àwọn fáìlì tìrẹ àti ti Ìdílé rẹ kò ní í kéde fún ẹnikẹ́ni rárá, nítorí náà àwọn àdàkọ tí ó wà lórí àwọn ẹ̀rọ mìíràn kò ṣe é kà. Ìwé-ẹ̀rí ìfijíṣẹ́ nìkan ni àmì kan ṣoṣo tí ó fi hàn pé ẹ̀rọ kan gbà ọ̀kan.",
-    "receipt_is_delivery_not_holding": "Ìwé-ẹ̀rí ìfijíṣẹ́ kan fi hàn dájú pé ẹ̀rọ kan gba fáìlì náà ní odindi. Kò fi hàn dájú pé ẹ̀rọ náà ṣì ní i: yíyọ àdàkọ kan kúrò kò tíì yọ ìwé-ẹ̀rí rẹ̀ kúrò.",
+    "copies_unobservable_by_design": "A kì í kéde fáìlì tìrẹ tàbí ti ìdílé rẹ fún ẹnikẹ́ni rí, nítorí náà a kò lè ka iye ẹ̀dà tí ó wà lórí àwọn ẹ̀rọ mìíràn; ìwé-ẹ̀rí ìfijíṣẹ́ nìkan ni àmì tí ó fi hàn pé ẹ̀rọ kan ti gba ọ̀kan.",
+    "receipt_is_delivery_not_holding": "Ìwé-ẹ̀rí ìfijíṣẹ́ fi hàn pé ẹ̀rọ kan ti gba gbogbo fáìlì náà. Kò fi hàn pé ẹ̀rọ náà ṣì ní i lọ́wọ́: yíyọ ẹ̀dà kan kúrò kò yọ ìwé-ẹ̀rí rẹ̀ kúrò síi.",
     "receipt_time_unknown": "Àkókò tí ẹ̀rọ kọ̀ọ̀kan gbà fáìlì náà kò tíì sí síi.",
-    "receipts_admitted_on_author_device": "Ẹ̀rọ tí ó kọ fáìlì náà ni ó ń kó àwọn ìwé-ẹ̀rí ìfijíṣẹ́ jọ. Ẹ̀rọ yìí ń ṣe àtòjọ àwọn ìwé-ẹ̀rí tí ó dì nìkan. Bèèrè lọ́wọ́ ẹ̀rọ tí ó kọ ọ́ fún ìdáhùn kíkún.",
-    "receipt_signer_not_your_device": "Àwọn ìwé-ẹ̀rí kan ni a fi àwọn kọ́kọ́rọ́ tí kì í ṣe ti àwọn ẹ̀rọ rẹ fọwọ́sí, bí àpẹẹrẹ, ti ọmọ ẹgbẹ́ mìíràn nínú yàrá náà tàbí kọ́kọ́rọ́ tirẹ̀ ti aṣojú kan. Wọ́n ka wọ́n lọ́tọ̀ọ̀tọ̀.",
-    "receipts_unreadable": "Ẹ̀rọ yìí kò lè ka àwọn ìwé-ẹ̀rí ìfijíṣẹ́ tirẹ̀ ní ìsinsìnyí. A kò mọ àwọn ẹ̀rọ tí ó gba fáìlì náà títí ó fi lè ṣe é.",
-    "commons_readable_by_holders": "Fáìlì yìí jẹ́ gbangba: ẹnikẹ́ni tí ó bá dì àwọn bytes náà lè kà wọ́n, nítorí náà, ẹni tí ó lè ṣí i kì í ṣe àtòjọ.",
-    "no_copy_reports_pending": "Àwọn ẹ̀rọ rẹ mìíràn kò tíì lè jábọ̀ pé wọn kò ní àdàkọ kankan. Àwọn ìjábọ̀ wọ̀nyẹn máa ń wá pẹ̀lú àwọn ìmúdájú ìtọ́jú. Títí di ìgbà náà, ẹ̀rọ tí kò ní ìwé-ẹ̀rí ìfijíṣẹ́ kankan á fara hàn gẹ́gẹ́ bí àìmọ̀.",
-    "no_copy_here": "Ẹ̀rọ yìí kò ní àdàkọ kankan ti fáìlì náà. Ẹ̀rọ tí ó ní i nìkan ni ó lè sọ ẹni tí ó lè ṣí i àti iye àdàkọ tí a ti kéde."
+    "receipts_admitted_on_author_device": "Ẹ̀rọ tí ó kọ fáìlì náà ni ó máa ń kójọpọ̀ àwọn ìwé-ẹ̀rí ìfijíṣẹ́. Ẹ̀rọ yìí ṣe àkọsílẹ̀ àwọn ìwé-ẹ̀rí tí ó ní lọ́wọ́ nìkan; béèrè lọ́wọ́ ẹ̀rọ tí ó kọ ọ́ fún ìdáhùn kíkún.",
+    "receipt_signer_not_your_device": "Àwọn ẹ̀rọ tí kì í ṣe ti rẹ ni wọ́n fọwọ́sí àwọn ìwé-ẹ̀rí kan (ọmọ ẹgbẹ́ mìíràn nínú yàrá náà, tàbí kọ́kọ́rọ́ ti aṣojú fúnra rẹ̀); a ṣe àkọsílẹ̀ wọn lọ́tọ̀ọ̀tọ̀.",
+    "receipts_unreadable": "Ẹ̀rọ yìí kò lè ka àwọn ìwé-ẹ̀rí ìfijíṣẹ́ rẹ̀ ní ìsinsìnyí; a kò mọ àwọn ẹ̀rọ tí ó gba fáìlì náà títí tí ó bá lè ṣe é.",
+    "commons_readable_by_holders": "Fáìlì yìí jẹ́ gbangba: ẹnikẹ́ni tí ó bá ní àwọn byte náà lọ́wọ́ lè kà wọ́n, nítorí náà ẹni tí ó lè ṣí i kì í ṣe àkọsílẹ̀.",
+    "no_copy_reports_pending": "Àwọn ẹ̀rọ rẹ mìíràn kò tíì lè jábọ̀ pé wọn kò ní ẹ̀dà kankan lọ́wọ́; àwọn ìjábọ̀ wọ̀nyẹn á dé pẹ̀lú àwọn ìjẹ́rìí-ìtọ́jú láàrin-àgbègbè. Títí di ìgbà náà, a óo fi ẹ̀rọ tí kò ní ìwé-ẹ̀rí ìfijíṣẹ́ hàn gẹ́gẹ́ bí aláìmọ̀.",
+    "no_copy_here": "Ẹ̀rọ yìí kò ní ẹ̀dà fáìlì náà lọ́wọ́, nítorí náà ẹ̀rọ tí ó ní i lọ́wọ́ ni yóò dáhùn ìbéèrè nípa ẹni tí ó lè ṣí i àti iye ẹ̀dà tí a kéde."
+  },
+  "claim": {
+    "bad_request": "A kò lè ka ìbéèrè ẹ̀tọ́ ìní yẹn.",
+    "binding_unsigned": "A kò lè fọwọ́sí ìdè-ìní náà, nítorí náà a kò gba ẹ̀tọ́ ìní ẹ̀rọ mìíràn náà.",
+    "cohort_invalid": "Èyí kì í ṣe àgbègbè tí a lè gba ẹ̀tọ́ ìní ẹ̀rọ kan sínú rẹ̀. Ó gbọ́dọ̀ jẹ́ ti ara-ẹni, ìdílé, tàbí àwùjọ.",
+    "no_identity": "kò sí ìdánimọ̀ olùlo-onídùúró síi — ṣẹ̀dá ID Ìṣọ̀kan-Àjùmọ̀ṣe rẹ (POST /v1/self/identity) kí o tó gba ẹ̀tọ́ ìní",
+    "no_route": "kóòdù nódù yìí kò gbé àdírẹ́sì kankan tí ẹ̀rọ yìí lè dé, kì í sì í ṣe ẹ̀rọ yìí — ṣàyẹ̀wò kóòdù náà lórí nẹ́tiwọ́kì kan náà pẹ̀lú ẹ̀rọ tuntun náà, tàbí fún àdírẹ́sì rẹ̀",
+    "node_code_invalid": "A kò lè ka kóòdù nódù náà. Ṣàyẹ̀wò rẹ̀, kí o sì tún ṣe síkánì tàbí fi í sínú padà.",
+    "password_not_forwarded": "a óo ṣètò ọ̀rọ̀-ìgbaniwọlé kan ṣoṣo lórí ẹ̀rọ tí a tẹ̀ ẹ́ sí; kò sí ọ̀rọ̀-ìgbaniwọlé tí a nílò láti gba ẹ̀tọ́ ìní ẹ̀rọ mìíràn — ìdè-ìní tí a fọwọ́ sí ni ẹ̀rí náà, olórí-ẹ̀tọ́ náà a sì wọlé síbẹ̀ pẹ̀lú ID Ìṣọ̀kan-Àjùmọ̀ṣe rẹ̀",
+    "signer_unavailable": "A kò lè ṣí ìdánimọ̀ rẹ láti fọwọ́sí ìbéèrè ẹ̀tọ́ ìní náà.",
+    "target_refused": "Ẹ̀rọ mìíràn náà kọ̀ ìbéèrè ẹ̀tọ́ ìní náà.",
+    "target_unreachable": "A kò lè dé ọ̀dọ̀ ẹ̀rọ mìíràn náà. Rí i dájú pé ó ti ṣiṣẹ́ àti pé a lè dé ọ̀dọ̀ rẹ̀, kí o sì tún gbìyànjú."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Ẹ̀rọ rẹ mìíràn ni ó ń dáhùn fún ọ nínú ìpàsípààrọ̀ yìí.",
+      "handled_here": "Ẹ̀rọ yìí ni ó ń dáhùn fún ọ nínú ìpàsípààrọ̀ yìí."
+    }
   }
 }

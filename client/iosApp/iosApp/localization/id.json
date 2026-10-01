@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "node ini tidak disiapkan untuk klaim kepemilikan awal (tidak ada PIN sekali pakai) — kepemilikan mungkin sudah diklaim",
       "pin_invalid": "PIN klaim sekali pakai tidak valid",
-      "pin_missing": "klaim ROOT saat pertama kali dijalankan harus menyertakan `claim_pin` (PIN sekali pakai yang dicetak di konsol node ini saat boot)"
+      "pin_missing": "klaim ROOT saat pertama kali dijalankan harus menyertakan `claim_pin` (PIN sekali pakai yang dicetak di konsol node ini saat boot)",
+      "already_claimed": "ROOT sudah diklaim; pengaturan saat pertama kali dijalankan sudah ditutup",
+      "body_invalid": "Permintaan pengaturan tidak dapat dibaca, sehingga tidak ada yang diklaim.",
+      "cohort_invalid": "Cakupan pengaturan tersebut bukan salah satu yang dikenal node ini. Cakupan harus self, family, atau community.",
+      "cohort_missing": "klaim ROOT saat pertama kali dijalankan harus menyertakan `cohort_scope` (salah satu dari self|family|community)",
+      "no_pending_session": "tidak ada sesi yang menunggu: perangkat ini belum diklaim oleh perangkat lain dalam 15 menit terakhir, atau sesinya sudah diambil",
+      "node_code_invalid": "Kode node tidak dapat dibaca. Periksa kembali dan coba lagi.",
+      "node_code_missing": "klaim ROOT saat pertama kali dijalankan harus menetapkan identitas node ini: sertakan `node_code` (CIRIS-V1-...) atau `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "klaim ROOT saat pertama kali dijalankan harus menyertakan `owner_binding` yang lengkap (envelope delegates_to yang ditandatangani pengguna + tanda tangan + key_id + pubkeys)",
+      "owner_binding_rejected": "Node ini menolak owner binding tersebut, sehingga tidak diklaim.",
+      "store_unavailable": "Node ini tidak dapat mengakses penyimpanannya, sehingga tidak ada yang diklaim. Coba lagi sebentar lagi.",
+      "wrong_node": "NodeCode yang diberikan tidak cocok dengan identitas node ini — Anda mungkin telah mencapai node yang salah"
     },
     "link": {
       "ambiguous_handle": "Kirim salah satu saja: id akun atau alamat email, jangan keduanya — keduanya berarti hal yang berbeda."
@@ -5356,14 +5367,35 @@
     "store_unavailable": "Node ini tidak dapat mengakses penyimpanan berkasnya.",
     "too_large": "Berkas itu terlalu besar untuk ditambahkan di sini.",
     "unknown_cohort": "Itu bukan tempat berkas dapat disimpan. Gunakan Hanya saya, sebuah keluarga, atau komunitas.",
-    "unopened": "Perangkat ini tidak dapat membukanya."
+    "unopened": "Perangkat ini tidak dapat membukanya.",
+    "bad_base64": "Isi berkas bukan base64 yang valid, sehingga tidak ada yang ditulis.",
+    "bad_body": "Unggahan tidak dapat dibaca. Tidak ada yang ditulis; kirim lagi.",
+    "bad_cursor": "`after` bukan kursor yang diterbitkan oleh drive ini — kirim kembali `resume` dari halaman tersebut apa adanya",
+    "bad_filename": "tidak ada lagi yang dapat ditampilkan dari nama berkas tersebut setelah komponen jalur dan karakter kontrol/bidi dihapus (RFC 6266 §4.3)",
+    "bad_media_type": "Itu bukan jenis berkas yang valid (type/subtype).",
+    "bad_move_target": "Itu bukan tempat yang dapat dituju untuk memindahkan berkas ini.",
+    "declared_length_mismatch": "Ukuran berkas tidak sesuai dengan ukuran yang dinyatakan. Tidak ada yang ditulis; kirim lagi.",
+    "delegate_may_not_author": "delegasi tidak dapat menulis, mengubah, atau menarik berkas: baris tersebut ditandatangani ke dalam graf sebagai tindakan pemilik sendiri, dan delegasi yang berakhir tidak dapat membatalkan tanda tangan tersebut",
+    "evicted": "Bita-bita ini telah dibersihkan dari node ini dan tidak dapat dibaca lagi di sini.",
+    "field_after_file": "Detail unggahan datang setelah berkas. Tidak ada yang ditulis; kirim berkas di urutan terakhir.",
+    "filename_empty": "mengganti nama membutuhkan sebuah nama — nama berkas yang kosong akan membuat berkas tidak bernama, bukan berganti nama",
+    "format_mismatch": "Berkas tersebut bukan seperti yang dinyatakan oleh jenisnya, sehingga tidak ditambahkan.",
+    "not_author": "Hanya penulis yang dapat mengubah atau menarik sebuah berkas. Berkas yang Anda tulis di salah satu perangkat lain Anda hanya dapat diubah dari perangkat tersebut.",
+    "range_not_satisfiable": "Rentang yang diminta berada di luar berkas ini.",
+    "same_room": "berkas tersebut sudah berada di ruang itu — pemindahan membutuhkan ruang yang berbeda",
+    "seal_mismatch": "Bita-bita tersebut tidak dapat dibuka berdasarkan catatan berkas ini. Catatan dan bita-bitanya tidak sesuai.",
+    "too_large_for_whole_read": "Berkas ini terlalu besar untuk dibaca dalam satu bagian. Berkas ini harus dialirkan (streaming).",
+    "withdraw_failed": "Berkas tidak dapat ditarik. Coba lagi.",
+    "withdrawn": "Penulisnya telah menarik berkas ini. Bita-bitanya tidak lagi disajikan di mana pun."
   },
   "notes": {
     "author_signer_unavailable": "Node ini tidak dapat menandatangani sebagai Anda saat ini, sehingga catatan tidak ditulis.",
     "empty": "Catatan yang tidak berisi apa pun bukanlah catatan.",
     "listing_failed": "Node ini tidak dapat membaca catatan Anda.",
     "no_node_key": "Node ini tidak dapat menemukan kuncinya sendiri.",
-    "owner_session_required": "Masuk sebagai pemilik node ini untuk menggunakan catatan Anda."
+    "owner_session_required": "Masuk sebagai pemilik node ini untuk menggunakan catatan Anda.",
+    "delegate_may_not_author": "delegasi tidak dapat menulis, mengubah, atau menarik catatan: catatan tersebut ditandatangani ke dalam graf sebagai kata-kata pemilik sendiri, dan delegasi yang berakhir tidak dapat membatalkan tanda tangan tersebut",
+    "not_found": "Itu bukan salah satu catatan Anda."
   },
   "self": {
     "author_signer_unavailable": "Identitas Anda tidak dapat dibuka untuk menandatangani perubahan ini.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Node itu bukan milik Anda, sehingga tidak bisa Anda lepaskan.",
     "owner_session_required": "Perangkat Anda adalah ranah pemilik sendiri. Masuklah sebagai pemilik node ini.",
     "release_incomplete": "Pelepasan telah ditandatangani, tetapi node masih mencantumkannya sebagai milik Anda: ada catatan kepemilikan yang tidak dapat dilihatnya namun masih berlaku. Apa yang dapat dicabutnya tetap dicabut.",
-    "evict_incomplete": "Perangkat tersebut tidak dihapus secara sepenuhnya. Jawaban node mencantumkan setiap bagian yang belum selesai; bagian yang sudah selesai tetap selesai. Coba lagi.",
+    "evict_incomplete": "Sebagian dari proses penghapusan perangkat tersebut tidak selesai. Apa yang sudah dilakukan tetap berlaku; jawaban ini menyebutkan apa yang belum.",
     "release_self_requires_force": "Itu adalah node yang sedang Anda ajak bicara. Melepaskannya mengakhiri kepemilikan Anda di sini, termasuk sesi ini.",
     "store_unavailable": "Node tidak dapat membaca atau menulis penyimpanan identitasnya. Tidak ada yang diubah.",
     "node_not_announced": "Perangkat itu tidak dapat dijangkau, sehingga tidak dapat dimasukkan ke dalam kode.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Kode kontak Anda tidak dapat dibuat dari kunci-kunci yang dimiliki node ini.",
     "associate": {
       "hardware_custody_unavailable": "Perangkat ini tidak memiliki perangkat keras yang dapat menyegel kunci (tidak ada TPM atau secure enclave), sehingga tidak ada yang disiapkan. Anda dapat menggunakan penyimpanan perangkat lunak sebagai gantinya: kunci disimpan dalam berkas terenkripsi di perangkat ini."
-    }
+    },
+    "announce_not_your_node": "node tersebut bukan milik Anda, sehingga bukan hak Anda untuk mengumumkannya",
+    "announce_refused": "kepemilikan node tersebut tidak dapat diumumkan dari perangkat ini",
+    "sessions_unavailable": "Node tidak dapat membaca perangkat mana dari Anda yang sedang menjawab. Coba lagi sebentar lagi."
   },
   "households": {
     "empty": "Anda belum menjadi anggota keluarga mana pun. Bentuk satu di sini, lalu tambahkan orang dari kontak Anda.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Kedaluwarsa"
   },
   "membership": {
-    "consent_required": "Seseorang harus menerima undangan sebelum bergabung. Tidak ada yang ditambahkan ke keluarga atau komunitas tanpa persetujuannya sendiri."
+    "consent_required": "Seseorang harus menerima undangan sebelum bergabung. Tidak ada yang ditambahkan ke keluarga atau komunitas tanpa persetujuannya sendiri.",
+    "acceptance_mismatch": "Jawaban tersebut tidak sesuai dengan undangan yang disebutkannya.",
+    "already_answered": "Undangan tersebut sudah dijawab dengan cara yang berbeda.",
+    "awaiting_acceptance": "Mereka belum menerima undangan tersebut, sehingga belum dapat bergabung.",
+    "bad_expiry": "Undangan berlaku antara satu hingga tiga puluh hari.",
+    "declined": "Mereka menolak undangan tersebut, sehingga tidak dapat ditambahkan berdasarkan undangan itu.",
+    "delegate_may_not_answer": "Sesi delegasi dapat melihat undangan, tetapi tidak dapat menjawabnya. Jawaban Anda ditandatangani dengan kunci Anda sendiri.",
+    "founding_member_unsigned": "Sebuah grup didirikan oleh Anda sendiri. Undang yang lain setelah grup tersebut ada.",
+    "invite_closed": "Undangan tersebut tidak lagi terbuka, sehingga tidak dapat ditarik.",
+    "invite_expired": "Undangan tersebut telah berakhir. Kirim undangan baru.",
+    "invite_not_found": "Undangan tersebut tidak ada di sini. Undangan itu mungkin belum tiba, atau memang tidak pernah dikirim kepada Anda.",
+    "invite_not_here_yet": "Undangan tersebut belum sampai ke perangkat ini. Coba lagi sebentar lagi.",
+    "not_the_invitee": "Hanya orang yang diundang yang dapat menjawab undangan tersebut.",
+    "not_the_proposer": "Hanya orang yang mengirim undangan yang dapat menariknya.",
+    "owner_session_required": "Undangan dijawab oleh pemilik node ini. Masuklah sebagai pemilik.",
+    "refused": "Aturan grup menolak perubahan keanggotaan tersebut.",
+    "signer_unavailable": "Identitas Anda tidak dapat dibuka untuk menandatangani jawaban ini.",
+    "store_unavailable": "Node tidak dapat membaca atau menulis catatan keanggotaannya. Tidak ada yang diubah.",
+    "supersede_cannot_add": "Perubahan pada catatan grup tidak dapat menambahkan siapa pun. Anggota baru bergabung melalui undangan."
   },
   "custody": {
     "inline_no_receipt": "File ini cukup kecil untuk disimpan dalam satu bagian, dan file yang disimpan dalam satu bagian belum memiliki tanda terima pengiriman. Perangkat lain Anda mungkin menyimpannya, tetapi perangkat ini belum dapat diberi tahu soal itu.",
-    "copies_unobservable_by_design": "File milik Anda sendiri maupun file keluarga tidak pernah diumumkan kepada siapa pun, sehingga salinan di perangkat lain tidak dapat dihitung. Tanda terima pengiriman adalah satu-satunya tanda bahwa sebuah perangkat telah menerimanya.",
-    "receipt_is_delivery_not_holding": "Tanda terima pengiriman membuktikan bahwa sebuah perangkat telah menerima seluruh file. Itu tidak membuktikan bahwa perangkat masih menyimpannya: menghapus salinan belum menarik kembali tanda terimanya.",
+    "copies_unobservable_by_design": "Berkas Anda sendiri dan berkas keluarga Anda tidak pernah diumumkan kepada siapa pun, sehingga salinan pada perangkat lain tidak dapat dihitung; tanda terima pengiriman adalah satu-satunya tanda bahwa sebuah perangkat telah menerimanya.",
+    "receipt_is_delivery_not_holding": "Tanda terima pengiriman membuktikan bahwa sebuah perangkat telah menerima seluruh berkas. Itu tidak membuktikan perangkat tersebut masih menyimpannya: menghapus salinan belum menarik tanda terimanya.",
     "receipt_time_unknown": "Waktu setiap perangkat menerima file ini belum tersedia.",
-    "receipts_admitted_on_author_device": "Tanda terima pengiriman dikumpulkan oleh perangkat yang menulis file ini. Perangkat ini hanya mencantumkan tanda terima yang dimilikinya. Tanyakan pada perangkat yang menulisnya untuk jawaban lengkap.",
-    "receipt_signer_not_your_device": "Beberapa tanda terima ditandatangani oleh kunci yang bukan milik perangkat Anda, seperti anggota lain di ruangan atau kunci milik agen itu sendiri. Tanda terima tersebut dihitung secara terpisah.",
-    "receipts_unreadable": "Perangkat ini tidak dapat membaca tanda terima pengirimannya saat ini. Perangkat mana yang menerima file ini belum diketahui sampai perangkat dapat membacanya.",
-    "commons_readable_by_holders": "File ini bersifat publik: siapa pun yang memegang byte-nya dapat membacanya, sehingga siapa yang dapat membukanya bukan berupa daftar.",
-    "no_copy_reports_pending": "Perangkat lain Anda belum dapat melaporkan bahwa mereka tidak menyimpan salinan. Laporan semacam itu disertai pengakuan penitipan. Sampai saat itu, perangkat tanpa tanda terima pengiriman ditampilkan sebagai tidak diketahui.",
-    "no_copy_here": "Perangkat ini tidak menyimpan salinan file ini, sehingga siapa yang dapat membukanya dan berapa banyak salinan yang diumumkan hanya dapat dijawab oleh perangkat yang menyimpannya."
+    "receipts_admitted_on_author_device": "Tanda terima pengiriman dikumpulkan oleh perangkat yang menulis berkas tersebut. Perangkat ini hanya mencantumkan tanda terima yang disimpannya; tanyakan kepada perangkat yang menulisnya untuk jawaban lengkap.",
+    "receipt_signer_not_your_device": "Beberapa tanda terima ditandatangani oleh perangkat yang bukan milik Anda (anggota ruang lain, atau kunci milik Agen sendiri); tanda terima tersebut dicantumkan secara terpisah.",
+    "receipts_unreadable": "Perangkat ini tidak dapat membaca tanda terima pengirimannya saat ini; perangkat mana yang menerima berkas tersebut belum diketahui sampai dapat dibaca.",
+    "commons_readable_by_holders": "Berkas ini bersifat publik: siapa pun yang memegang bita-bitanya dapat membacanya, sehingga siapa yang dapat membukanya bukan sebuah daftar.",
+    "no_copy_reports_pending": "Perangkat lain Anda belum dapat melaporkan bahwa mereka tidak menyimpan salinan; laporan tersebut tiba bersama pengakuan custody dalam kohort. Sampai saat itu, perangkat tanpa tanda terima pengiriman ditampilkan sebagai tidak diketahui.",
+    "no_copy_here": "Perangkat ini tidak menyimpan salinan berkas tersebut, sehingga siapa yang dapat membukanya dan berapa banyak salinan yang diumumkan dijawab oleh perangkat yang menyimpannya."
+  },
+  "claim": {
+    "bad_request": "Permintaan klaim tersebut tidak dapat dibaca.",
+    "binding_unsigned": "Owner binding tidak dapat ditandatangani, sehingga perangkat lain tidak diklaim.",
+    "cohort_invalid": "Itu bukan cakupan yang dapat digunakan untuk mengklaim perangkat. Cakupan harus self, family, atau community.",
+    "no_identity": "belum ada identitas pengguna penanggung jawab — buat ID federasi Anda (POST /v1/self/identity) sebelum mengklaim kepemilikan",
+    "no_route": "kode node ini tidak membawa alamat yang dapat dijangkau perangkat ini, dan ini bukan perangkat ini — pindai kode tersebut pada jaringan yang sama dengan perangkat baru, atau berikan alamatnya",
+    "node_code_invalid": "Kode node tidak dapat dibaca. Periksa kembali, lalu pindai atau tempelkan lagi.",
+    "password_not_forwarded": "kata sandi hanya berlaku pada perangkat tempat kata sandi itu diketikkan; mengklaim perangkat lain tidak memerlukan kata sandi — owner binding yang ditandatangani adalah buktinya, dan pemilik masuk di sana dengan ID federasinya",
+    "signer_unavailable": "Identitas Anda tidak dapat dibuka untuk menandatangani klaim ini.",
+    "target_refused": "Perangkat lain menolak klaim tersebut.",
+    "target_unreachable": "Perangkat lain tidak dapat dihubungi. Pastikan perangkat tersebut aktif dan dapat dijangkau, lalu coba lagi."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Perangkat lain Anda sedang menjawab untuk Anda dalam pertukaran ini.",
+      "handled_here": "Perangkat ini sedang menjawab untuk Anda dalam pertukaran ini."
+    }
   }
 }

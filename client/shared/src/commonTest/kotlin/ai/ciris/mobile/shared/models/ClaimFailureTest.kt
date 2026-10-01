@@ -27,6 +27,21 @@ class ClaimFailureTest {
         )
     }
 
+    /** CIRISServer 0.5.218 (#678): every claim-remote refusal carries a stable id. */
+    @Test
+    fun the_0_5_218_claim_remote_ids_classify() {
+        fun body(status: Int, id: String) =
+            "claim-remote failed: $status: {\"error\":\"x\",\"reason_id\":\"$id\"}"
+        assertEquals(ClaimFailure.UNREACHABLE, classifyClaimFailure(body(502, "claim.target_unreachable")))
+        assertEquals(ClaimFailure.UNREACHABLE, classifyClaimFailure(body(400, "claim.no_route")))
+        assertEquals(ClaimFailure.BAD_NODE_CODE, classifyClaimFailure(body(400, "claim.node_code_invalid")))
+        assertEquals(ClaimFailure.ALREADY_CLAIMED, classifyClaimFailure(body(409, "auth.claim.already_claimed")))
+        // A target's own refusal passes through claim-remote under the target's id.
+        assertEquals(ClaimFailure.PIN_REJECTED, classifyClaimFailure(body(401, "auth.claim.pin_invalid")))
+        // Named, but not one of the four: kept verbatim rather than guessed at.
+        assertEquals(ClaimFailure.UNKNOWN, classifyClaimFailure(body(400, "claim.password_not_forwarded")))
+    }
+
     @Test
     fun a_reworded_server_message_still_classifies_by_code() {
         // The whole reason to match the code: this sentence is not the sentence

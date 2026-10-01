@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "bu düğüm ilk çalıştırma sahiplenmesi için hazırlanmamış (tek kullanımlık PIN yok) — sahiplik zaten talep edilmiş olabilir",
       "pin_invalid": "geçersiz tek kullanımlık sahiplenme PIN'i",
-      "pin_missing": "ilk çalıştırma ROOT sahiplenmesi `claim_pin` içermelidir (açılışta bu düğümün konsoluna yazdırılan tek kullanımlık PIN)"
+      "pin_missing": "ilk çalıştırma ROOT sahiplenmesi `claim_pin` içermelidir (açılışta bu düğümün konsoluna yazdırılan tek kullanımlık PIN)",
+      "already_claimed": "root zaten sahiplenildi; ilk çalıştırma kurulumu kapalı",
+      "body_invalid": "Kurulum isteği okunamadı, bu nedenle hiçbir şey sahiplenilmedi.",
+      "cohort_invalid": "Bu kurulum kapsamı bu düğümün tanıdığı bir kapsam değil. Self, family veya community olmalı.",
+      "cohort_missing": "ilk çalıştırma ROOT sahiplenmesi `cohort_scope` içermelidir (self|family|community'den biri)",
+      "no_pending_session": "bekleyen bir oturum yok: bu cihaz son 15 dakika içinde başka bir cihaz tarafından sahiplenilmedi veya oturumu zaten alındı",
+      "node_code_invalid": "Düğüm kodu okunamadı. Kontrol edip tekrar deneyin.",
+      "node_code_missing": "ilk çalıştırma ROOT sahiplenmesi bu düğümün kimliğini sabitlemelidir: `node_code` (CIRIS-V1-...) veya `key_id` + `pubkey_ed25519_base64` sağlayın",
+      "owner_binding_missing": "ilk çalıştırma ROOT sahiplenmesi eksiksiz bir `owner_binding` içermelidir (kullanıcı tarafından imzalanmış delegates_to: zarf + imzalar + key_id + pubkeys)",
+      "owner_binding_rejected": "Bu düğüm sahiplik bağlamasını reddetti, bu nedenle sahiplenilmedi.",
+      "store_unavailable": "Bu düğüm deposuna ulaşamadı, bu nedenle hiçbir şey sahiplenilmedi. Kısa süre sonra tekrar deneyin.",
+      "wrong_node": "sağlanan NodeCode bu düğümün kimliğiyle eşleşmiyor — yanlış düğüme erişmiş olabilirsiniz"
     },
     "link": {
       "ambiguous_handle": "Bir hesap kimliği veya bir e-posta adresi gönderin, ikisini birden değil — bunlar farklı şeyler anlamına gelir."
@@ -5353,17 +5364,38 @@
     "owner_session_required": "Dosyalarınızı kullanmak için bu düğümün sahibi olarak oturum açın.",
     "publish_failed": "Dosya yayınlanamadı.",
     "readable_by_nobody": "Bu dosyayı kimse okuyamayacağından yazılmadı.",
+    "seal_mismatch": "Baytlar bu dosyanın kaydı altında açılmadı. Kayıt ile baytlar birbiriyle uyuşmuyor.",
+    "too_large_for_whole_read": "Bu dosya tek parça halinde okunamayacak kadar büyük. Akış halinde okunması gerekir.",
+    "withdraw_failed": "Dosya geri çekilemedi. Tekrar deneyin.",
+    "withdrawn": "Yazarı bu dosyayı geri çekti. Baytlar artık hiçbir yerde sunulmuyor.",
     "store_unavailable": "Bu düğüm dosya deposuna ulaşamadı.",
     "too_large": "Bu dosya buraya eklenemeyecek kadar büyük.",
     "unknown_cohort": "Bu, dosyaların gidebileceği bir yer değil. Sadece ben, bir aile veya bir topluluk kullanın.",
-    "unopened": "Bu cihaz onu açamıyor."
+    "unopened": "Bu cihaz onu açamıyor.",
+    "bad_base64": "Dosyanın içeriği geçerli base64 değildi, bu nedenle hiçbir şey yazılmadı.",
+    "bad_body": "Yükleme okunamadı. Hiçbir şey yazılmadı; tekrar gönderin.",
+    "bad_cursor": "`after` bu sürücünün verdiği bir imleç değil — bir sayfanın `resume` değerini olduğu gibi geri gönderin",
+    "bad_filename": "yol bileşenleri ve kontrol / bidi karakterleri kaldırıldığında o dosya adından görüntülenebilir hiçbir şey kalmıyor (RFC 6266 §4.3)",
+    "bad_media_type": "Bu geçerli bir dosya türü değil (tür/alt tür).",
+    "bad_move_target": "Bu, dosyanın taşınabileceği bir yer değil.",
+    "declared_length_mismatch": "Dosyanın boyutu beyan edilen boyutla eşleşmedi. Hiçbir şey yazılmadı; tekrar gönderin.",
+    "delegate_may_not_author": "yetki devri alan bir kişi bir dosyayı yazamaz, değiştiremez veya geri çekemez: satır, grafiğe sahibinin kendi edimi olarak imzalanır ve sona eren bir yetki devri bunun imzasını geri alamaz",
+    "evicted": "Bu baytlar bu düğümden temizlendi ve burada bir daha okunamaz.",
+    "field_after_file": "Yüklemenin ayrıntıları dosyadan sonra geldi. Hiçbir şey yazılmadı; dosyayı son olarak gönderin.",
+    "filename_empty": "yeniden adlandırma bir ad gerektirir — boş bir dosya adı, dosyayı yeniden adlandırılmış değil, adsız bırakır",
+    "format_mismatch": "Dosya, türünün söylediği şey değil, bu nedenle eklenmedi.",
+    "not_author": "Bir dosyayı yalnızca yazarı değiştirebilir veya geri çekebilir. Başka bir cihazınızda yazdığınız bir dosya o cihazdan değiştirilir.",
+    "range_not_satisfiable": "İstenen aralık bu dosyanın dışında.",
+    "same_room": "dosya zaten o odada — taşımak için farklı bir oda gerekir"
   },
   "notes": {
     "author_signer_unavailable": "Bu düğüm şu anda sizin adınıza imza atamıyor, bu nedenle not yazılmadı.",
     "empty": "İçinde hiçbir şey olmayan bir not, not değildir.",
     "listing_failed": "Bu düğüm notlarınızı okuyamadı.",
     "no_node_key": "Bu düğüm kendi anahtarını bulamadı.",
-    "owner_session_required": "Notlarınızı kullanmak için bu düğümün sahibi olarak oturum açın."
+    "owner_session_required": "Notlarınızı kullanmak için bu düğümün sahibi olarak oturum açın.",
+    "delegate_may_not_author": "yetki devri alan bir kişi bir notu yazamaz, değiştiremez veya geri çekemez: not, grafiğe sahibinin kendi sözleri olarak imzalanır ve sona eren bir yetki devri bunların imzasını geri alamaz",
+    "not_found": "Bu sizin notlarınızdan biri değil."
   },
   "self": {
     "author_signer_unavailable": "Bu değişikliği imzalamak için kimliğiniz açılamadı.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Bu düğüm sahip olduğunuz bir düğüm değil, dolayısıyla serbest bırakma yetkiniz yok.",
     "owner_session_required": "Cihazlarınız bu düğümün sahibinin kendi yüzeyidir. Bu düğümün sahibi olarak oturum açın.",
     "release_incomplete": "Serbest bırakma imzalandı, ancak düğüm hâlâ o düğümü sizin olarak listeliyor: göremediği bir sahiplik kaydı hâlâ geçerli. Geri çekebildiği şey geri çekilmiş durumda kalır.",
-    "evict_incomplete": "O cihaz tamamen kaldırılmadı. Düğümün yanıtı tamamlanmayan her bir parçayı listeler; tamamlanan parçalar tamamlanmış kalır. Tekrar deneyin.",
+    "evict_incomplete": "O cihazı kaldırma işleminin bir kısmı tamamlanmadı. Yapılan şey yapılmış olarak kalır; yanıt yapılmayanı belirtir.",
     "release_self_requires_force": "Bu, konuştuğunuz düğüm. Onu serbest bırakmak buradaki sahipliğinizi, bu oturum dahil, sona erdirir.",
     "store_unavailable": "Düğüm kimlik deposunu okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi.",
     "node_not_announced": "O cihaz erişilebilir değil, bu nedenle bir koda dahil edilemez.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Kişi kodunuz, bu düğümün tuttuğu anahtarlardan oluşturulamadı.",
     "associate": {
       "hardware_custody_unavailable": "Bu cihazda bir anahtarı mühürleyebilecek donanım yok (TPM veya secure enclave yok), bu nedenle hiçbir şey kurulmadı. Bunun yerine yazılım tabanlı saklamayı kullanabilirsiniz: anahtar bu cihazda şifrelenmiş bir dosyada saklanır."
-    }
+    },
+    "announce_not_your_node": "o düğüm sizin sahip olduğunuz bir düğüm değil, bu nedenle onu duyurmak size düşmez",
+    "announce_refused": "o düğümün sahipliği bu cihazdan duyurulamadı",
+    "sessions_unavailable": "Düğüm, cihazlarınızdan hangisinin yanıt verdiğini okuyamadı. Kısa süre sonra tekrar deneyin."
   },
   "households": {
     "empty": "Henüz bir ailede değilsiniz. Burada bir aile kurun, ardından kişilerinizden ekleyin.",
@@ -5543,18 +5578,54 @@
     "waiting_title": "Ajanınızdan yanıt bekleniyor"
   },
   "membership": {
-    "consent_required": "Katılmadan önce birinin daveti kabul etmesi gerekir. Kimse kendi onayı olmadan bir aileye veya topluluğa eklenmez."
+    "consent_required": "Katılmadan önce birinin daveti kabul etmesi gerekir. Kimse kendi onayı olmadan bir aileye veya topluluğa eklenmez.",
+    "acceptance_mismatch": "Bu yanıt, adını verdiği davetle eşleşmiyor.",
+    "already_answered": "Bu davet zaten tersi şekilde yanıtlandı.",
+    "awaiting_acceptance": "Henüz daveti kabul etmediler, bu nedenle katılamazlar.",
+    "bad_expiry": "Bir davet bir ile otuz gün arasında geçerlidir.",
+    "declined": "Daveti reddettiler, bu nedenle bu davet kapsamında eklenemezler.",
+    "delegate_may_not_answer": "Yetki devri alan bir oturum davetleri görebilir ama onlara yanıt veremez. Yanıtınız kendi anahtarınızla imzalanır.",
+    "founding_member_unsigned": "Bir grup yalnızca sizin tarafınızdan kurulur. Grup var olduktan sonra diğerlerini davet edin.",
+    "invite_closed": "Bu davet artık açık değil, bu nedenle geri çekilemez.",
+    "invite_expired": "Bu davetin süresi doldu. Yeni bir davet gönderin.",
+    "invite_not_found": "Bu davet burada değil. Henüz ulaşmamış olabilir veya size hiç gönderilmemiş olabilir.",
+    "invite_not_here_yet": "Bu davet henüz bu cihaza ulaşmadı. Kısa süre sonra tekrar deneyin.",
+    "not_the_invitee": "Bir daveti yalnızca davet edilen kişi yanıtlayabilir.",
+    "not_the_proposer": "Bir daveti yalnızca gönderen kişi geri çekebilir.",
+    "owner_session_required": "Davetler bu düğümün sahibi tarafından yanıtlanır. Sahip olarak oturum açın.",
+    "refused": "Grubun kuralları bu üyelik değişikliğini reddetti.",
+    "signer_unavailable": "Bu yanıtı imzalamak için kimliğiniz açılamadı.",
+    "store_unavailable": "Düğüm üyelik kayıtlarını okuyamadı veya yazamadı. Hiçbir şey değiştirilmedi.",
+    "supersede_cannot_add": "Grubun kaydına yapılan bir değişiklik kimseyi ekleyemez. Yeni üyeler davetle katılır."
   },
   "custody": {
     "inline_no_receipt": "Bu dosya tek parça halinde saklanabilecek kadar küçük ve tek parça halinde saklanan bir dosyanın henüz teslim alındısı yok. Diğer cihazlarınız onu tutuyor olabilir, ancak bu cihaza bu bildirilemez.",
-    "copies_unobservable_by_design": "Kendi dosyalarınız ve aile dosyalarınız hiç kimseye duyurulmaz, bu yüzden diğer cihazlardaki kopyalar sayılamaz. Bir teslim alındısı, bir cihazın dosyayı aldığının tek işaretidir.",
-    "receipt_is_delivery_not_holding": "Bir teslim alındısı, bir cihazın dosyanın tümünü aldığını kanıtlar. Cihazın onu hâlâ elinde tuttuğunu kanıtlamaz: bir kopyayı kaldırmak henüz onun alındısını geri almaz.",
+    "copies_unobservable_by_design": "Kendi dosyalarınız ve ailenizin dosyaları hiç kimseye duyurulmaz, bu nedenle diğer cihazlardaki kopyalar sayılamaz; bir cihazın bir kopya aldığının tek işareti teslim alındısıdır.",
+    "receipt_is_delivery_not_holding": "Bir teslim alındısı, bir cihazın dosyanın tamamını aldığını kanıtlar. Cihazın onu hâlâ elinde tuttuğunu kanıtlamaz: bir kopyayı kaldırmak henüz alındısını geri çekmez.",
     "receipt_time_unknown": "Her cihazın dosyayı ne zaman aldığı henüz mevcut değil.",
-    "receipts_admitted_on_author_device": "Teslim alındıları, dosyayı yazan cihaz tarafından toplanır. Bu cihaz yalnızca kendisinde tuttuğu alındıları listeler. Tam yanıt için dosyayı yazan cihaza sorun.",
-    "receipt_signer_not_your_device": "Bazı makbuzlar, odadaki başka bir üye veya bir ajanın kendi anahtarı gibi sizin cihazlarınız olmayan anahtarlarla imzalanmıştır. Bunlar ayrı sayılır.",
-    "receipts_unreadable": "Bu cihaz az önce teslim alındılarını okuyamadı. Hangi cihazların dosyayı aldığı, cihaz bunu okuyabilene kadar bilinmiyor.",
-    "commons_readable_by_holders": "Bu dosya herkese açıktır: baytları elinde tutan herkes onları okuyabilir, dolayısıyla onu kimin açabileceği bir liste değildir.",
-    "no_copy_reports_pending": "Diğer cihazlarınız henüz hiçbir kopya tutmadıklarını bildiremez. Bu bildirimler tutma onaylarıyla birlikte gelir. O zamana kadar, teslim alındısı olmayan bir cihaz bilinmiyor olarak görünür.",
-    "no_copy_here": "Bu cihazda dosyanın kopyası yok, bu nedenle onu kimin açabileceği ve kaç kopyanın duyurulduğu sorusu yalnızca dosyayı tutan bir cihaz tarafından yanıtlanabilir."
+    "receipts_admitted_on_author_device": "Teslim alındıları, dosyayı yazan cihaz tarafından toplanır. Bu cihaz yalnızca kendi elinde tuttuğu alındıları listeler; eksiksiz yanıt için dosyayı yazan cihaza sorun.",
+    "receipt_signer_not_your_device": "Bazı alındılar, cihazlarınız arasında olmayan cihazlar tarafından imzalanmıştır (odanın başka bir üyesi veya bir ajanın kendi anahtarı); bunlar ayrıca listelenir.",
+    "receipts_unreadable": "Bu cihaz az önce teslim alındılarını okuyamadı; bunu yapabilene kadar dosyayı hangi cihazların aldığı bilinmiyor.",
+    "commons_readable_by_holders": "Bu dosya herkese açıktır: baytları elinde tutan herkes onları okuyabilir, bu nedenle kimin açabileceği bir liste değildir.",
+    "no_copy_reports_pending": "Diğer cihazlarınız henüz kopya tutmadıklarını bildiremiyor; bu bildirimler kapsam içi saklama onaylarıyla birlikte gelir. O zamana kadar teslim alındısı olmayan bir cihaz bilinmiyor olarak gösterilir.",
+    "no_copy_here": "Bu cihaz dosyanın bir kopyasını tutmuyor, bu nedenle kimin onu açabileceğini ve kaç kopya duyurulduğunu dosyayı tutan bir cihaz yanıtlar."
+  },
+  "claim": {
+    "bad_request": "Bu sahiplenme isteği okunamadı.",
+    "binding_unsigned": "Sahiplik bağlaması imzalanamadı, bu nedenle diğer cihaz sahiplenilmedi.",
+    "cohort_invalid": "Bu, bir cihazın sahiplenilebileceği bir kapsam değil. Self, family veya community olmalı.",
+    "no_identity": "henüz sorumlu kullanıcı kimliği yok — sahiplik talep etmeden önce federasyon kimliğinizi oluşturun (POST /v1/self/identity)",
+    "no_route": "bu düğüm kodu bu cihazın erişebileceği bir adres taşımıyor ve bu, bu cihaz da değil — kodu yeni cihazla aynı ağda tarayın veya onun adresini girin",
+    "node_code_invalid": "Düğüm kodu okunamadı. Kontrol edip tekrar tarayın veya yapıştırın.",
+    "password_not_forwarded": "bir parola yalnızca yazıldığı cihazda ayarlanır; başka bir cihazı sahiplenmek parola gerektirmez — kanıt imzalı sahiplik bağlamasıdır ve sahibi orada federasyon kimliğiyle oturum açar",
+    "signer_unavailable": "Sahiplenme talebini imzalamak için kimliğiniz açılamadı.",
+    "target_refused": "Diğer cihaz sahiplenmeyi reddetti.",
+    "target_unreachable": "Diğer cihaza erişilemedi. Açık ve erişilebilir olduğundan emin olup tekrar deneyin."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Bu etkileşimde sizin yerinize başka bir cihazınız yanıt veriyor.",
+      "handled_here": "Bu etkileşimde sizin yerinize bu cihaz yanıt veriyor."
+    }
   }
 }

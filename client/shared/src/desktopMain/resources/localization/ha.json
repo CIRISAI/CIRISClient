@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "ba a shirya wannan node don da'awar farkon amfani ba (babu PIN na lokaci ɗaya) — mai yiwuwa an riga an yi da'awar mallaka",
       "pin_invalid": "PIN na da'awa na lokaci ɗaya ba daidai ba ne",
-      "pin_missing": "da'awar ROOT ta farkon amfani dole ta ƙunshi `claim_pin` (PIN na lokaci ɗaya da aka buga a kan console na wannan node a lokacin ƙaddamarwa)"
+      "pin_missing": "da'awar ROOT ta farkon amfani dole ta ƙunshi `claim_pin` (PIN na lokaci ɗaya da aka buga a kan console na wannan node a lokacin ƙaddamarwa)",
+      "already_claimed": "an riga an yi da'awar root; shirin farkon amfani ya rufe",
+      "body_invalid": "Ba a iya karanta buƙatar shirin ba, don haka ba a yi da'awar komai ba.",
+      "cohort_invalid": "Wannan iyakar shiri ba wani abu da wannan node ya sani ba. Dole ne ya kasance Kai, Iyali, ko al'umma.",
+      "cohort_missing": "da'awar ROOT ta farkon amfani dole ta ƙunshi `cohort_scope` (ɗaya daga cikin self|family|community)",
+      "no_pending_session": "babu zama mai jiran aiki: ba a yi da'awar wannan na'ura daga wata na'ura ba cikin mintuna 15 da suka gabata, ko kuma an riga an karɓi zamanta",
+      "node_code_invalid": "Ba a iya karanta lambar node ba. Duba ta sannan sake gwadawa.",
+      "node_code_missing": "da'awar ROOT ta farkon amfani dole ta ƙayyade shaidar wannan node: ba da `node_code` (CIRIS-V1-...) ko `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "da'awar ROOT ta farkon amfani dole ta ƙunshi cikakken `owner_binding` (envelope na delegates_to da mai amfani ya sa hannu a kai + sa hannu + key_id + pubkeys)",
+      "owner_binding_rejected": "Wannan node ya ƙi owner binding, don haka ba a yi da'awarsa ba.",
+      "store_unavailable": "Wannan node bai iya isa ga ma'ajiyarsa ba, don haka ba a yi da'awar komai ba. Sake gwadawa ba da daɗewa ba.",
+      "wrong_node": "NodeCode da aka bayar bai dace da shaidar wannan node ba — mai yiwuwa kun isa node mara daidai"
     },
     "link": {
       "ambiguous_handle": "Aika ko dai ID na asusu ko adireshin imel, ba duka biyu ba — suna nufin abubuwa daban-daban."
@@ -5356,6 +5367,25 @@
     "too_large": "Wannan fayil ya yi girma sosai don a ƙara shi a nan.",
     "unknown_cohort": "Wannan ba wuri ne da fayiloli za su iya zuwa ba. Yi amfani da Kai Kaɗai, Iyali ko al'umma.",
     "unopened": "Wannan na'ura ba za ta iya buɗe shi ba.",
+    "bad_base64": "Abubuwan cikin fayil ba su kasance base64 mai inganci ba, don haka ba a rubuta komai ba.",
+    "bad_body": "Ba a iya karanta abin da aka loda ba. Ba a rubuta komai ba; sake aika shi.",
+    "bad_cursor": "`after` ba cursor da wannan drive ya bayar ba — mayar da `resume` na shafi daidai yadda yake",
+    "bad_filename": "babu wani abu mai nunawa da ya rage daga wancan sunan fayil bayan an cire sassan hanya da haruffan control / bidi (RFC 6266 §4.3)",
+    "bad_media_type": "Wannan ba irin fayil mai inganci ba ne (type/subtype).",
+    "bad_move_target": "Wannan ba wuri ne da za a iya kai wannan fayil zuwa ciki ba.",
+    "declared_length_mismatch": "Girman fayil bai dace da girman da aka bayyana ba. Ba a rubuta komai ba; aika shi sake.",
+    "delegate_may_not_author": "wakili ba shi da ikon rubuta, canza, ko janye fayil: an sa hannu kan layin a cikin Zane na alaƙa a matsayin ainihin aikin mai mallaka, kuma Wakilci da ya ƙare ba zai iya janye sa hannun ba",
+    "evicted": "An share waɗannan bytes daga wannan node kuma ba za a iya karanta su a nan sake ba.",
+    "field_after_file": "Bayanan loda sun zo bayan fayil. Ba a rubuta komai ba; aika fayil a ƙarshe.",
+    "filename_empty": "sake suna yana buƙatar suna — sunan fayil mara komai zai bar fayil ba shi da suna maimakon an sake masa suna",
+    "format_mismatch": "Fayil ba abin da irin nasa ya ce ba ne, don haka ba a ƙara shi ba.",
+    "not_author": "Marubucin ne kawai zai iya canza ko janye fayil. Fayil da kuka rubuta a kan wata daga na'urorinku, a kan wancan na'urar ake canza shi.",
+    "range_not_satisfiable": "Kewayon da ake buƙata yana waje da wannan fayil.",
+    "same_room": "fayil yana cikin wancan ɗaki tuni — matsawa yana buƙatar da'ira daban",
+    "seal_mismatch": "Bytes ba su buɗe a ƙarƙashin rikodin wannan fayil ba. Rikodin da bytes ba su yarda da juna ba.",
+    "too_large_for_whole_read": "Wannan fayil ya girma sosai don a karanta shi gaba ɗaya. Dole ne a yi streaming nasa.",
+    "withdraw_failed": "Ba a iya janye fayil ba. Sake gwadawa.",
+    "withdrawn": "Marubucinsa ya janye wannan fayil. Ba a ƙara bayar da bytes a ko'ina ba.",
     "not_a_member": "Ba ku cikin mambobin wannan ɗakin ba."
   },
   "notes": {
@@ -5363,7 +5393,9 @@
     "empty": "Bayani mara komai a ciki ba bayani ba ne.",
     "listing_failed": "Wannan kumburi bai iya karanta bayananku ba.",
     "no_node_key": "Wannan kumburi bai iya samun maɓallinsa na kansa ba.",
-    "owner_session_required": "Ku shiga a matsayin mai wannan kumburi domin amfani da bayananku."
+    "owner_session_required": "Ku shiga a matsayin mai wannan kumburi domin amfani da bayananku.",
+    "delegate_may_not_author": "wakili ba shi da ikon rubuta, canza, ko janye bayani: an sa hannu a kai a cikin Zane na alaƙa a matsayin ainihin kalaman mai mallaka, kuma Wakilci da ya ƙare ba zai iya janye sa hannun ba",
+    "not_found": "Wancan ba ɗaya daga cikin bayananku ba ne."
   },
   "self": {
     "author_signer_unavailable": "Ba a iya buɗe shaidarku don sa hannu a kan wannan canjin ba.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Wancan node ba wanda kuke da shi ba ne, don haka ba naku ba ne don ku saki shi.",
     "owner_session_required": "Na'urorinku fage ne na mai shi kansa. Ku shiga a matsayin mai wannan node.",
     "release_incomplete": "An sa hannu kan sakin, amma node ɗin har yanzu yana jera wancan node a matsayin naku: akwai rikodin mallaka da ba zai iya gani ba wanda har yanzu yana aiki. Abin da ya iya janyewa ya ci gaba da kasancewa an janye shi.",
-    "evict_incomplete": "Ba a cire wancan na'urar sosai ba. Amsar node ɗin tana lissafa kowace sashe da bai kammala ba; sassan da suka kammala sun tsaya kamar yadda suke. Sake gwadawa.",
+    "evict_incomplete": "Wani sashe na cire wancan na'ura bai cika ba. Abin da aka yi ya ci gaba da kasancewa an yi shi; amsar ta ambaci abin da ba a yi ba.",
     "release_self_requires_force": "Wancan ne node ɗin da kuke magana da shi. Sakinsa yana kawo ƙarshen mallakarku a nan, tare da wannan zama.",
     "store_unavailable": "Node ɗin bai iya karanta ko rubuta ma'ajiyar shaidarsa ba. Ba a canza komai ba.",
     "node_not_announced": "Wannan na'urar ba za a iya isa gare ta ba, don haka ba za ta iya shiga cikin lambar ba.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Ba a iya yin lambar sadarwarku daga maɓallan da wannan node yake riƙe da su ba.",
     "associate": {
       "hardware_custody_unavailable": "Wannan na'ura ba ta da kayan aiki da za su iya kulle maɓalli (babu TPM ko secure enclave), don haka ba a saita kome ba. Za ku iya amfani da kula ta software maimakon haka: za a adana maɓallin a cikin fayil mai ɓoye a wannan na'ura."
-    }
+    },
+    "announce_not_your_node": "wancan node ba naku ba ne, don haka ba naku ba ne don sanarwa",
+    "announce_refused": "ba a iya sanar da mallakar wancan node daga wannan na'ura ba",
+    "sessions_unavailable": "Node ɗin bai iya karanta wace daga cikin na'urorinku take amsawa ba. Sake gwadawa ba da daɗewa ba."
   },
   "households": {
     "empty": "Ba ku cikin iyali tukuna. Ku kafa ɗaya a nan, sannan ku ƙara mutane daga lambobin sadarwar ku.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Ya ƙare"
   },
   "membership": {
-    "consent_required": "Dole ne wani ya karɓi gayyata kafin ya shiga. Ba a ƙara kowa a cikin iyali ko al'umma ba tare da yardarsa ba."
+    "consent_required": "Dole ne wani ya karɓi gayyata kafin ya shiga. Ba a ƙara kowa a cikin iyali ko al'umma ba tare da yardarsa ba.",
+    "acceptance_mismatch": "Wancan amsa bai dace da gayyatar da ya ambata ba.",
+    "already_answered": "An riga an amsa wancan gayyata ta wata hanya dabam.",
+    "awaiting_acceptance": "Ba su karɓi gayyatar tukuna ba, don haka ba za su iya shiga ba.",
+    "bad_expiry": "Gayyata tana tsayawa tsakanin kwana ɗaya zuwa kwanaki talatin.",
+    "declined": "Sun ƙi gayyatar, don haka ba za a iya ƙara su a ƙarƙashinta ba.",
+    "delegate_may_not_answer": "Zama mai Wakilci yana iya ganin gayyatoci amma ba zai iya amsa su ba. Ana sa hannu kan amsarku da maɓallinku na kanku.",
+    "founding_member_unsigned": "Ku kaɗai ne kuke kafa ƙungiya. Gayyaci sauran bayan ta kasance.",
+    "invite_closed": "Wancan gayyata ba ta buɗe ba yanzu, don haka ba za a iya janye ta ba.",
+    "invite_expired": "Wancan gayyata ta ƙare. Aika sabuwa.",
+    "invite_not_found": "Wancan gayyata ba ta nan ba. Mai yiwuwa ba ta isa tukuna ba, ko kuma ba a taɓa aika muku da ita ba.",
+    "invite_not_here_yet": "Wancan gayyata har yanzu ba ta isa wannan na'ura ba. Sake gwadawa ba da daɗewa ba.",
+    "not_the_invitee": "Wanda aka gayyata ne kawai zai iya amsa gayyata.",
+    "not_the_proposer": "Wanda ya aika gayyata ne kawai zai iya janye ta.",
+    "owner_session_required": "Mai mallakar wannan node ne yake amsa gayyatoci. Shiga a matsayin mai mallaka.",
+    "refused": "Dokokin ƙungiya sun ƙi wancan canjin memba.",
+    "signer_unavailable": "Ba a iya buɗe shaidarku don sa hannu kan wannan amsar ba.",
+    "store_unavailable": "Node ɗin bai iya karanta ko rubuta rikodin membobinsa ba. Ba a canza komai ba.",
+    "supersede_cannot_add": "Canji ga rikodin ƙungiya ba zai iya ƙara kowa ba. Sabbin membobi suna shiga ta hanyar gayyata."
   },
   "custody": {
     "inline_no_receipt": "Wannan fayil ya isa ƙarami don a ajiye shi gaba ɗaya, kuma fayil da an ajiye gaba ɗaya ba shi da rasit na isarwa tukuna. Wasu na'urorinku na iya samun sa, amma ba za a iya gaya wa wannan na'urar hakan ba.",
-    "copies_unobservable_by_design": "Ba a taɓa sanar da kowa game da fayilolinku da na iyalinku ba, don haka ba za a iya ƙidaya kwafe-kwafen da ke wasu na'urori ba. Rasit na isarwa shi ne kawai alamar da take nuna cewa na'ura ta samu ɗaya.",
-    "receipt_is_delivery_not_holding": "Rasit na isarwa yana tabbatar da cewa na'ura ta samu fayil ɗin gaba ɗaya. Ba ya tabbatar da cewa na'urar tana da shi tukuna: cire kwafi ba ya janye rasit ɗinsa tukuna.",
+    "copies_unobservable_by_design": "Ba a sanar da kowa game da fayilolinku da na Iyalinku, don haka ba za a iya ƙidaya kwafi a kan sauran na'urori ba; rasit na isarwa shi ne kawai alamar da na'ura ta samu guda ɗaya.",
+    "receipt_is_delivery_not_holding": "Rasit na isarwa yana tabbatar da cewa na'ura ta samu dukan fayil. Ba ya tabbatar da cewa na'urar har yanzu tana riƙe da shi: cire kwafi ba ya janye rasitinsa tukuna.",
     "receipt_time_unknown": "Lokacin da kowace na'ura ta samu fayil ɗin ba a samu shi tukuna ba.",
-    "receipts_admitted_on_author_device": "Na'urar da ta rubuta fayil ɗin ce take tattara rasitocin isarwa. Wannan na'ura tana jera rasitocin da take da su ne kawai. A tambayi na'urar da ta rubuta shi domin cikakken amsa.",
-    "receipt_signer_not_your_device": "Wasu rasitoci an sa musu hannu da maɓallan da ba na'urorinku ba ne, kamar wani memba na ɗakin ko maɓallin wakili da kansa. Ana ƙidaya su daban.",
-    "receipts_unreadable": "Wannan na'ura ba ta iya karanta rasitocin isarwarta a yanzu ba. Ba a san waɗanne na'urori suka samu fayil ɗin ba sai ta iya.",
-    "commons_readable_by_holders": "Wannan fayil na jama'a ne: duk wanda ya riƙe bytes ɗin zai iya karanta su, don haka wanda zai iya buɗe shi ba jeri ba ne.",
-    "no_copy_reports_pending": "Wasu na'urorinku ba za su iya bayar da rahoto tukuna cewa ba su da kwafi ba. Waɗannan rahotannin suna zuwa tare da tabbacin riƙo. Har sai lokacin, na'ura da ba ta da rasit na isarwa za ta nuna a matsayin ba a sani ba.",
-    "no_copy_here": "Wannan na'ura ba ta da kwafin fayil ɗin, don haka wanda zai iya buɗe shi da yawan kwafe-kwafen da aka sanar, kawai na'ura mai riƙe da shi za ta iya amsa."
+    "receipts_admitted_on_author_device": "Na'urar da ta rubuta fayil ce take tara rasit-rasit na isarwa. Wannan na'ura tana jera rasit-rasit da take riƙe da su kawai; tambayi na'urar da ta rubuta shi domin cikakkiyar amsa.",
+    "receipt_signer_not_your_device": "An sa hannu a kan wasu rasit-rasit ta na'urorin da ba na ku ba (wani memba na ɗakin, ko maɓallin Wakili kansa); an jera su daban.",
+    "receipts_unreadable": "Wannan na'ura ba ta iya karanta rasit-rasitin isarwarta a yanzu ba; wace na'urori suka samu fayil ba a sani ba sai ta iya.",
+    "commons_readable_by_holders": "Wannan fayil na jama'a ne: duk wanda yake riƙe da bytes zai iya karanta su, don haka wanda zai iya buɗe shi ba jeri ba ne.",
+    "no_copy_reports_pending": "Sauran na'urorinku ba za su iya bayar da rahoton cewa ba su riƙe da kwafi tukuna ba; waɗannan rahotanni suna isowa tare da tabbatar riƙon a cikin ƙungiya. Har sai lokacin, ana nuna na'ura mara rasit na isarwa a matsayin wacce ba a sani ba.",
+    "no_copy_here": "Wannan na'ura ba ta riƙe da kwafin fayil ba, don haka wanda zai iya buɗe shi da yawan kwafi da ake sanarwa, na'urar da take riƙe da shi ce za ta amsa."
+  },
+  "claim": {
+    "bad_request": "Ba a iya karanta wancan buƙatar da'awa ba.",
+    "binding_unsigned": "Ba a iya sa hannu kan owner binding ba, don haka ba a yi da'awar wata na'urar ba.",
+    "cohort_invalid": "Wannan ba iyaka ce da za a iya yin da'awar na'ura a cikinta ba. Dole ne ya kasance Kai, Iyali, ko al'umma.",
+    "no_identity": "babu shaidar mai amfani mai alhaki tukuna — ƙirƙiri ID na haɗin gwiwarku (POST /v1/self/identity) kafin yin da'awar mallaka",
+    "no_route": "wannan lambar node ba ta ɗauke da adireshin da wannan na'ura za ta iya isa ba, kuma ba wannan na'ura ce ba — ɗauki hoton lambar a cikin wannan hanyar sadarwa da sabuwar na'urar ke ciki, ko ku bayar da adireshinta",
+    "node_code_invalid": "Ba a iya karanta lambar node ba. Duba ta, sannan ku sake ɗaukar hotonta ko ku sake manna ta.",
+    "password_not_forwarded": "ana saita kalmar sirri ne kawai a kan na'urar da aka buga ta a kai; da'awar wata na'ura ba ta buƙatar ɗaya ba — owner binding da aka sa hannu a kai shi ne shaidar, kuma mai mallakar ya shiga a can da ID na haɗin gwiwarsa",
+    "signer_unavailable": "Ba a iya buɗe shaidarku don sa hannu kan da'awar ba.",
+    "target_refused": "Wata na'urar ta ƙi da'awar.",
+    "target_unreachable": "Ba a iya isa ga wata na'urar ba. Tabbatar tana aiki kuma ana iya isa mata, sannan sake gwadawa."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Wata daga cikin na'urorinku tana amsawa a madadinku a cikin wannan musanya.",
+      "handled_here": "Wannan na'ura tana amsawa a madadinku a cikin wannan musanya."
+    }
   }
 }

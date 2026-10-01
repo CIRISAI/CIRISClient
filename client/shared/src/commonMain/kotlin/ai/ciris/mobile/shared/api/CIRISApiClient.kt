@@ -2985,6 +2985,9 @@ class CIRISApiClient(
         // and the owner can then authenticate to NOTHING (CIRISServer#384).
         ownerOauthProvider: String? = null,
         ownerOauthExternalId: String? = null,
+        // Another device's address (0.5.218, `claim.no_route`): see
+        // [ClaimRemoteRequest.targetUrl]. Null on the self-claim.
+        targetUrl: String? = null,
     ): ClaimRemoteResponse {
         val method = "claimRemote"
         // Log WHETHER an owner session path is being installed, and which kind.
@@ -3011,6 +3014,7 @@ class CIRISApiClient(
                 ownerUsername = ownerUsername,
                 ownerOauthProvider = oauthPair?.first,
                 ownerOauthExternalId = oauthPair?.second,
+                targetUrl = targetUrl?.trim()?.trimEnd('/')?.takeIf { it.isNotEmpty() },
             )
             val bodyText = jsonConfig.encodeToString(ClaimRemoteRequest.serializer(), request)
             val response = client.post("$localNodeUrl/v1/setup/claim-remote") {
@@ -3026,6 +3030,58 @@ class CIRISApiClient(
             decodeFederationEnvelope(raw, ClaimRemoteResponse.serializer())
         } catch (e: Exception) {
             logException(method, e, "localNodeUrl=$localNodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Collect the owner session ANOTHER device's claim left here —
+     * `POST {nodeUrl}/v1/setup/claimed-session` (CIRISServer 0.5.218, #678).
+     *
+     * The new device's half of the second-device flow (CSD-093). The approving
+     * device's `claim-remote` delivers the claim to this node's `setup/root`;
+     * since 0.5.218 the session that claim mints is kept HERE for this
+     * device's wizard instead of travelling back to the approver. The wizard
+     * already holds the one-time claim PIN (it showed it), and the PIN is what
+     * collects the session: once, within 15 minutes, over loopback.
+     *
+     * UNAUTHENTICATED by design: this device has no session yet, which is the
+     * point. No password crosses the network and the token never leaves the
+     * device.
+     *
+     * Throws [NodeRefusal] on a non-2xx: `auth.claim.pin_invalid` (401),
+     * `auth.claim.no_pending_session` (404 WITH an id), and a bare 404 from a
+     * node older than 0.5.218, where the route does not exist.
+     */
+    suspend fun collectClaimedSession(
+        claimPin: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant {
+        val method = "collectClaimedSession"
+        // Never the PIN: it is a live secret until the node is claimed.
+        logInfo(method, "POST $nodeUrl/v1/setup/claimed-session")
+        val client = federationHttpClient()
+        return try {
+            val bodyText = jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.ClaimedSessionRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.ClaimedSessionRequest(claimPin = claimPin.trim()),
+            )
+            val response = client.post("$nodeUrl/v1/setup/claimed-session") {
+                contentType(ContentType.Application.Json)
+                setBody(bodyText)
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant.serializer(),
+                raw,
+            )
+        } catch (e: NodeRefusal) {
+            throw e
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
             throw e
         } finally {
             client.close()

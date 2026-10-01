@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "nodi hii haijaandaliwa kwa dai la matumizi ya kwanza (hakuna PIN ya matumizi moja) — huenda umiliki tayari umedaiwa",
       "pin_invalid": "PIN ya dai ya matumizi moja si sahihi",
-      "pin_missing": "dai la ROOT la matumizi ya kwanza lazima libebe `claim_pin` (PIN ya matumizi moja inayochapishwa kwenye konsoli ya nodi hii wakati wa kuwasha)"
+      "pin_missing": "dai la ROOT la matumizi ya kwanza lazima libebe `claim_pin` (PIN ya matumizi moja inayochapishwa kwenye konsoli ya nodi hii wakati wa kuwasha)",
+      "already_claimed": "ROOT tayari imedaiwa; usanidi wa matumizi ya kwanza umefungwa",
+      "body_invalid": "Ombi la usanidi halikuweza kusomwa, kwa hivyo hakuna kilichodaiwa.",
+      "cohort_invalid": "Wigo huo wa usanidi si mojawapo ambao nodi hii inautambua. Lazima uwe self, family, au community.",
+      "cohort_missing": "dai la ROOT la matumizi ya kwanza lazima libebe `cohort_scope` (moja ya self|family|community)",
+      "no_pending_session": "hakuna kikao kinachosubiri: kifaa hiki hakikudaiwa na kifaa kingine katika dakika 15 zilizopita, au kikao chake tayari kimekusanywa",
+      "node_code_invalid": "Msimbo wa nodi haukuweza kusomwa. Uangalie na ujaribu tena.",
+      "node_code_missing": "dai la ROOT la matumizi ya kwanza lazima libainishe utambulisho wa nodi hii: toa `node_code` (CIRIS-V1-...) au `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "dai la ROOT la matumizi ya kwanza lazima libebe `owner_binding` kamili (bahasha ya delegates_to iliyotiwa saini na mtumiaji + saini + key_id + pubkeys)",
+      "owner_binding_rejected": "Nodi hii ilikataa kiunganisho cha umiliki, kwa hivyo haikudaiwa.",
+      "store_unavailable": "Nodi hii haikuweza kufikia hifadhi yake, kwa hivyo hakuna kilichodaiwa. Jaribu tena baadaye kidogo.",
+      "wrong_node": "NodeCode uliyotoa haufanani na utambulisho wa nodi hii — huenda umefika kwenye nodi isiyo sahihi"
     },
     "link": {
       "ambiguous_handle": "Tuma kitambulisho cha akaunti au anwani ya barua pepe, si vyote viwili — vina maana tofauti."
@@ -5343,6 +5354,17 @@
   "drive": {
     "author_signer_unavailable": "Nodi hii haiwezi kutia saini kama wewe kwa sasa, kwa hivyo faili halikuandikwa.",
     "community_id_required": "Faili la jamii linahitaji kutaja chumba chake.",
+    "evicted": "Baiti hizi zilifagiliwa kutoka nodi hii na haziwezi kusomwa hapa tena.",
+    "field_after_file": "Maelezo ya upakiaji yalifika baada ya faili. Hakuna kilichoandikwa; tuma faili mwishoni.",
+    "filename_empty": "kubadilisha jina kunahitaji jina — jina la faili lisilo na kitu lingeacha faili bila jina badala ya kubadilishwa jina",
+    "format_mismatch": "Faili hii si kile ambacho aina yake inasema ilivyo, kwa hivyo haikuongezwa.",
+    "not_author": "Mwandishi tu ndiye anayeweza kubadilisha au kuondoa faili. Faili uliyoiandika kwenye kifaa kingine chako hubadilishwa kutoka kifaa hicho.",
+    "range_not_satisfiable": "Wigo ulioombwa uko nje ya faili hii.",
+    "same_room": "faili tayari iko katika chumba hicho — kuhamisha kunahitaji duru tofauti",
+    "seal_mismatch": "Baiti hazikufunguka chini ya rekodi ya faili hii. Rekodi na baiti hazikubaliani.",
+    "too_large_for_whole_read": "Faili hii ni kubwa mno kusomwa kama kipande kimoja. Inahitaji kutiririshwa.",
+    "withdraw_failed": "Faili haikuweza kuondolewa. Jaribu tena.",
+    "withdrawn": "Mwandishi wake aliondoa faili hii. Baiti hazitolewi tena popote.",
     "family_id_required": "Faili la familia linahitaji kutaja familia yake. Hakuna familia chaguo-msingi.",
     "listing_failed": "Nodi hii haikuweza kuorodhesha faili katika chumba hicho.",
     "no_node_key": "Nodi hii haikuweza kupata ufunguo wake yenyewe.",
@@ -5356,14 +5378,24 @@
     "store_unavailable": "Nodi hii haikuweza kufikia hifadhi yake ya faili.",
     "too_large": "Faili hilo ni kubwa mno kuongezwa hapa.",
     "unknown_cohort": "Hapo si mahali faili zinaweza kuwekwa. Tumia Mimi tu, familia au jamii.",
-    "unopened": "Kifaa hiki hakiwezi kulifungua."
+    "unopened": "Kifaa hiki hakiwezi kulifungua.",
+    "bad_base64": "Maudhui ya faili hayakuwa base64 sahihi, kwa hivyo hakuna kilichoandikwa.",
+    "bad_body": "Upakiaji haukuweza kusomwa. Hakuna kilichoandikwa; tuma tena.",
+    "bad_cursor": "`after` si kielekezi ambacho hifadhi hii ilitoa — rudisha `resume` ya ukurasa kama ilivyo",
+    "bad_filename": "hakuna kinachoweza kuonyeshwa kinachobaki katika jina hilo la faili baada ya vipengele vya njia na herufi za udhibiti / bidi kuondolewa (RFC 6266 §4.3)",
+    "bad_media_type": "Hiyo si aina sahihi ya faili (type/subtype).",
+    "bad_move_target": "Hilo si mahali ambapo faili hii inaweza kuhamishiwa.",
+    "declared_length_mismatch": "Ukubwa wa faili haukufanana na ukubwa ulioelezwa. Hakuna kilichoandikwa; tuma tena.",
+    "delegate_may_not_author": "mkabidhiwa hawezi kuandika, kubadilisha au kuondoa faili: safu hiyo hutiwa saini kwenye grafu kama tendo la mmiliki mwenyewe, na ukabidhi unaoisha hauwezi kubatilisha saini hiyo"
   },
   "notes": {
     "author_signer_unavailable": "Nodi hii haiwezi kutia saini kama wewe kwa sasa, kwa hivyo kumbukumbu haikuandikwa.",
     "empty": "Kumbukumbu isiyo na chochote ndani yake si kumbukumbu.",
     "listing_failed": "Nodi hii haikuweza kusoma kumbukumbu zako.",
     "no_node_key": "Nodi hii haikuweza kupata ufunguo wake yenyewe.",
-    "owner_session_required": "Ingia kama mmiliki wa nodi hii ili kutumia kumbukumbu zako."
+    "not_found": "Hiyo si mojawapo ya kumbukumbu zako.",
+    "owner_session_required": "Ingia kama mmiliki wa nodi hii ili kutumia kumbukumbu zako.",
+    "delegate_may_not_author": "mkabidhiwa hawezi kuandika, kubadilisha au kuondoa kumbukumbu: hutiwa saini kwenye grafu kama maneno ya mmiliki mwenyewe, na ukabidhi unaoisha hauwezi kubatilisha saini hiyo"
   },
   "self": {
     "author_signer_unavailable": "Utambulisho wako haukuweza kufunguliwa ili kutia saini mabadiliko haya.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Nodi hiyo si mojawapo unayoimiliki, hivyo si yako kuiachilia.",
     "owner_session_required": "Vifaa vyako ni uso wa mmiliki mwenyewe. Ingia kama mmiliki wa nodi hii.",
     "release_incomplete": "Uachiliaji ulitiwa saini, lakini nodi bado inaorodhesha nodi hiyo kama yako: rekodi ya umiliki ambayo haiwezi kuiona bado ipo hai. Kile ilichoweza kuondoa kinasalia kikiwa kimeondolewa.",
-    "evict_incomplete": "Kifaa hicho hakikuondolewa kikamilifu. Jibu la nodi linaorodhesha kila sehemu ambayo haikumalizika; sehemu zilizomalizika zinasalia hivyo. Jaribu tena.",
+    "evict_incomplete": "Sehemu ya kuondoa kifaa hicho haikukamilika. Kilichofanywa kinasalia kimefanywa; jibu hutaja kile ambacho hakikufanyika.",
     "release_self_requires_force": "Hiyo ni nodi unayoizungumza nayo. Kuiachilia kunakomesha umiliki wako hapa, ikiwa ni pamoja na kikao hiki.",
     "store_unavailable": "Nodi haikuweza kusoma au kuandika hifadhi yake ya utambulisho. Hakuna kilichobadilishwa.",
     "node_not_announced": "Kifaa hicho hakiwezi kufikiwa, hivyo hakiwezi kuwekwa katika msimbo.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Msimbo wako wa anwani haukuweza kutengenezwa kutoka kwa funguo ambazo nodi hii inazo.",
     "associate": {
       "hardware_custody_unavailable": "Kifaa hiki hakina maunzi yanayoweza kufunga funguo (hakuna TPM au secure enclave), hivyo hakuna kilichosanidiwa. Unaweza kutumia hifadhi ya programu badala yake: funguo huhifadhiwa katika faili iliyosimbwa kwenye kifaa hiki."
-    }
+    },
+    "announce_not_your_node": "nodi hiyo si miliki yako, kwa hivyo si yako kuitangaza",
+    "announce_refused": "umiliki wa nodi hiyo haukuweza kutangazwa kutoka kifaa hiki",
+    "sessions_unavailable": "Nodi haikuweza kusoma kifaa chako kipi kinachojibu. Jaribu tena baadaye kidogo."
   },
   "households": {
     "change_copy": "Nakili kwa wengine",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Imeisha muda wake"
   },
   "membership": {
-    "consent_required": "Mtu anapaswa kukubali mwaliko kabla ya kujiunga. Hakuna mtu anayeongezwa kwenye kaya au Jamii bila ridhaa yake mwenyewe."
+    "consent_required": "Mtu anapaswa kukubali mwaliko kabla ya kujiunga. Hakuna mtu anayeongezwa kwenye kaya au Jamii bila ridhaa yake mwenyewe.",
+    "acceptance_mismatch": "Jibu hilo halifanani na mwaliko unaoutaja.",
+    "already_answered": "Mwaliko huo tayari ulijibiwa kwa njia tofauti.",
+    "awaiting_acceptance": "Hawajakubali mwaliko bado, kwa hivyo hawawezi kujiunga.",
+    "bad_expiry": "Mwaliko hudumu kati ya siku moja na thelathini.",
+    "declined": "Walikataa mwaliko, kwa hivyo hawawezi kuongezwa chini yake.",
+    "delegate_may_not_answer": "Kikao kilichokabidhiwa kinaweza kuona mialiko lakini hakiwezi kuijibu. Jibu lako hutiwa saini kwa ufunguo wako mwenyewe.",
+    "founding_member_unsigned": "Kikundi huanzishwa na wewe pekee. Waalike wengine mara kikiwepo.",
+    "invite_closed": "Mwaliko huo haufunguki tena, kwa hivyo hauwezi kuondolewa.",
+    "invite_expired": "Mwaliko huo umeisha muda wake. Tuma mpya.",
+    "invite_not_found": "Mwaliko huo haupo hapa. Huenda haujafika bado, au haukutumwa kwako kabisa.",
+    "invite_not_here_yet": "Mwaliko huo haujafika kwenye kifaa hiki bado. Jaribu tena baadaye kidogo.",
+    "not_the_invitee": "Mtu aliyealikwa tu ndiye anayeweza kujibu mwaliko.",
+    "not_the_proposer": "Mtu aliyetuma mwaliko tu ndiye anayeweza kuuondoa.",
+    "owner_session_required": "Mialiko hujibiwa na mmiliki wa nodi hii. Ingia kama mmiliki.",
+    "refused": "Kanuni za kikundi zilikataa mabadiliko hayo ya uanachama.",
+    "signer_unavailable": "Utambulisho wako haukuweza kufunguliwa ili kutia saini jibu hili.",
+    "store_unavailable": "Nodi haikuweza kusoma au kuandika rekodi zake za uanachama. Hakuna kilichobadilishwa.",
+    "supersede_cannot_add": "Mabadiliko kwenye rekodi ya kikundi hayawezi kuongeza mtu yeyote. Wanachama wapya hujiunga kwa mwaliko."
   },
   "custody": {
     "inline_no_receipt": "Faili hii ni ndogo vya kutosha kuhifadhiwa kama kipande kimoja, na faili iliyohifadhiwa kama kipande kimoja haina risiti ya uwasilishaji bado. Vifaa vyako vingine vinaweza kuishikilia, lakini kifaa hiki hakiwezi kuarifiwa hilo.",
-    "copies_unobservable_by_design": "Faili zako binafsi na za familia yako hazitangazwi kwa mtu yeyote, hivyo nakala zilizoko kwenye vifaa vingine haziwezi kuhesabiwa. Risiti ya uwasilishaji ni ishara pekee kwamba kifaa kilipokea moja.",
-    "receipt_is_delivery_not_holding": "Risiti ya uwasilishaji inathibitisha kwamba kifaa kilipokea faili nzima. Haithibitishi kwamba kifaa bado kinayo: kuondoa nakala hakuiondoi risiti yake bado.",
+    "copies_unobservable_by_design": "Faili zako na za familia yako kamwe hazitangazwi kwa mtu yeyote, kwa hivyo nakala zilizo kwenye vifaa vingine haziwezi kuhesabiwa; risiti ya uwasilishaji ndiyo ishara pekee kwamba kifaa kimepokea nakala.",
+    "receipt_is_delivery_not_holding": "Risiti ya uwasilishaji inathibitisha kwamba kifaa kimepokea faili zima. Haithibitishi kwamba kifaa bado kinaishikilia: kuondoa nakala hakuondoi risiti yake bado.",
     "receipt_time_unknown": "Muda ambao kila kifaa kilipokea faili haujapatikana bado.",
-    "receipts_admitted_on_author_device": "Risiti za uwasilishaji hukusanywa na kifaa kilichoandika faili. Kifaa hiki kinaorodhesha risiti zinazoshikiliwa nacho tu. Uliza kifaa kilichoiandika kwa jibu kamili.",
-    "receipt_signer_not_your_device": "Baadhi ya risiti zilitiwa saini na funguo ambazo si vifaa vyako, kama mwanachama mwingine wa chumba au ufunguo wa wakala wenyewe. Zinahesabiwa kando.",
-    "receipts_unreadable": "Kifaa hiki hakikuweza kusoma risiti zake za uwasilishaji sasa hivi. Ni vifaa gani vilivyopokea faili haijulikani hadi kifaa hiki kiweze kusoma risiti zake tena.",
-    "commons_readable_by_holders": "Faili hii ni ya umma: yeyote anayeshikilia baiti anaweza kuisoma, hivyo ni nani anayeweza kuifungua si orodha.",
-    "no_copy_reports_pending": "Vifaa vyako vingine haviwezi kuripoti bado kwamba havina nakala. Ripoti hizo huja pamoja na uthibitisho wa uhifadhi. Hadi wakati huo, kifaa bila risiti ya uwasilishaji huonyeshwa kama hakijulikani.",
-    "no_copy_here": "Kifaa hiki hakishikilii nakala ya faili, hivyo nani anayeweza kuifungua na ni nakala ngapi zimetangazwa yanaweza kujibiwa tu na kifaa kinachoishikilia."
+    "receipts_admitted_on_author_device": "Risiti za uwasilishaji hukusanywa na kifaa kilichoandika faili hiyo. Kifaa hiki huorodhesha tu risiti zinazoshikiliwa nacho; muulize kifaa kilichoiandika kwa jibu kamili.",
+    "receipt_signer_not_your_device": "Risiti kadhaa zilitiwa saini na vifaa ambavyo si miongoni mwa vifaa vyako (mwanachama mwingine wa chumba, au ufunguo wa Wakala mwenyewe); zimeorodheshwa kando.",
+    "receipts_unreadable": "Kifaa hiki hakikuweza kusoma risiti zake za uwasilishaji kwa sasa; vifaa vilivyopokea faili hiyo havijulikani mpaka kiweze.",
+    "commons_readable_by_holders": "Faili hii ni ya umma: yeyote anayeshikilia baiti anaweza kuzisoma, kwa hivyo nani anayeweza kuifungua si orodha.",
+    "no_copy_reports_pending": "Vifaa vyako vingine haviwezi bado kuripoti kuwa havishikilii nakala; ripoti hizo huwasili pamoja na uthibitisho wa ulinzi ndani ya kundi. Hadi hapo, kifaa bila risiti ya uwasilishaji huonyeshwa kama hakijulikani.",
+    "no_copy_here": "Kifaa hiki hakishikilii nakala ya faili hiyo, kwa hivyo nani anayeweza kuifungua na nakala ngapi zimetangazwa hujibiwa na kifaa kinachoishikilia."
+  },
+  "claim": {
+    "bad_request": "Ombi hilo la dai halikuweza kusomwa.",
+    "binding_unsigned": "Kiunganisho cha umiliki hakikuweza kutiwa saini, kwa hivyo kifaa kingine hakikudaiwa.",
+    "cohort_invalid": "Huo si wigo ambao kifaa kinaweza kudaiwa ndani yake. Lazima uwe self, family, au community.",
+    "no_identity": "bado hakuna utambulisho wa mtumiaji-mwajibikaji — unda kitambulisho chako cha shirikisho (POST /v1/self/identity) kabla ya kudai umiliki",
+    "no_route": "msimbo huu wa nodi haubebi anwani ambayo kifaa hiki kinaweza kufikia, na si kifaa hiki — skani msimbo huo kwenye mtandao mmoja na kifaa kipya, au toa anwani yake",
+    "node_code_invalid": "Msimbo wa nodi haukuweza kusomwa. Uangalie, kisha uskani au ubandike tena.",
+    "password_not_forwarded": "nenosiri huwekwa tu kwenye kifaa ambacho limeandikwa; kudai kifaa kingine hakuhitaji nenosiri — kifungo cha umiliki kilichotiwa saini ndicho uthibitisho, na mmiliki huingia kwenye kifaa hicho kingine kwa kitambulisho chake cha shirikisho",
+    "signer_unavailable": "Utambulisho wako haukuweza kufunguliwa ili kutia saini dai hilo.",
+    "target_refused": "Kifaa kingine kilikataa dai hilo.",
+    "target_unreachable": "Kifaa kingine hakikuweza kufikiwa. Hakikisha kimewashwa na kinafikika, kisha jaribu tena."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Kifaa kingine chako kinajibu kwa niaba yako katika mazungumzo haya.",
+      "handled_here": "Kifaa hiki kinajibu kwa niaba yako katika mazungumzo haya."
+    }
   }
 }
