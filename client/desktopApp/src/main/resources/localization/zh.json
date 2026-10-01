@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "此节点未进入首次运行认领状态（没有一次性 PIN）——所有权可能已被认领",
       "pin_invalid": "一次性认领 PIN 无效",
-      "pin_missing": "首次运行的 ROOT 认领必须携带 `claim_pin`（启动时打印在此节点控制台上的一次性 PIN）"
+      "pin_missing": "首次运行的 ROOT 认领必须携带 `claim_pin`（启动时打印在此节点控制台上的一次性 PIN）",
+      "already_claimed": "根节点已被认领；首次运行设置已关闭",
+      "body_invalid": "设置请求无法读取，因此未认领任何内容。",
+      "cohort_invalid": "该设置范围不是此节点所知的范围。必须是自身、家族或社区。",
+      "cohort_missing": "首次运行的 ROOT 认领必须携带 `cohort_scope`（self|family|community 三者之一）",
+      "no_pending_session": "没有等待中的会话：此设备在过去 15 分钟内未被其他设备认领，或其会话已被取走。",
+      "node_code_invalid": "节点代码无法读取。请检查后重试。",
+      "node_code_missing": "首次运行的 ROOT 认领必须锁定此节点的身份：请提供 `node_code`（CIRIS-V1-...）或 `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "首次运行的 ROOT 认领必须携带完整的 `owner_binding`（用户签名的 delegates_to：封套 + 签名 + key_id + 公钥）",
+      "owner_binding_rejected": "此节点拒绝了所有者绑定，因此未被认领。",
+      "store_unavailable": "此节点无法访问其存储，因此未认领任何内容。请稍后重试。",
+      "wrong_node": "提供的 NodeCode 与此节点的身份不匹配——您可能连接到了错误的节点"
     },
     "link": {
       "ambiguous_handle": "请只发送账号 ID 或电子邮件地址中的一项，不要同时发送——两者含义不同。"
@@ -5356,14 +5367,35 @@
     "store_unavailable": "此节点无法访问其文件存储。",
     "too_large": "该文件过大，无法在此添加。",
     "unknown_cohort": "那不是文件可以存放的位置。请使用“仅我自己”、家族或社区。",
-    "unopened": "此设备无法打开它。"
+    "unopened": "此设备无法打开它。",
+    "bad_base64": "文件内容不是有效的 base64，因此未写入任何内容。",
+    "bad_body": "上传内容无法读取。未写入任何内容；请重新发送。",
+    "bad_cursor": "`after` 不是此云盘发出的游标——请原样传回页面中的 `resume`",
+    "bad_filename": "在移除路径部分及控制/双向（bidi）字符后，该文件名不再留有可显示的内容（RFC 6266 §4.3）",
+    "bad_media_type": "这不是有效的文件类型（type/subtype）。",
+    "bad_move_target": "此文件无法移动到该位置。",
+    "declared_length_mismatch": "文件大小与声明的大小不一致。未写入任何内容；请重新发送。",
+    "delegate_may_not_author": "被委派人不得写入、更改或撤回文件：该记录是以所有者本人行为的名义签入图谱的，而委派一旦结束，并不能撤销这一签名。",
+    "evicted": "这些字节已从此节点清除，无法在此再次读取。",
+    "field_after_file": "上传的详细信息出现在文件之后。未写入任何内容；请将文件放在最后发送。",
+    "filename_empty": "重命名需要一个名称——空文件名会使文件处于无名状态，而非完成重命名",
+    "format_mismatch": "该文件的实际内容与其所声明的类型不符，因此未被添加。",
+    "not_author": "只有作者才能更改或撤回文件。您在其他设备上写入的文件，需从该设备进行更改。",
+    "range_not_satisfiable": "请求的范围超出了此文件的范围。",
+    "same_room": "该文件已在该聊天室中——移动操作需要一个不同的圈",
+    "seal_mismatch": "这些字节无法在此文件记录下打开。记录与字节内容不一致。",
+    "too_large_for_whole_read": "此文件过大，无法整块读取，必须以流式方式读取。",
+    "withdraw_failed": "文件撤回失败。请重试。",
+    "withdrawn": "其作者已撤回此文件。这些字节已不再在任何地方提供。"
   },
   "notes": {
     "author_signer_unavailable": "此节点当前无法以您的身份签名，因此笔记未能写入。",
     "empty": "空无一物的笔记不算是笔记。",
     "listing_failed": "此节点无法读取您的笔记。",
     "no_node_key": "此节点找不到自己的密钥。",
-    "owner_session_required": "请以此节点所有者的身份登录以使用您的笔记。"
+    "owner_session_required": "请以此节点所有者的身份登录以使用您的笔记。",
+    "delegate_may_not_author": "被委派人不得写入、更改或撤回笔记：笔记是以所有者本人言辞的名义签入图谱的，而委派一旦结束，并不能撤销这一签名",
+    "not_found": "这不是您的笔记之一。"
   },
   "self": {
     "author_signer_unavailable": "无法打开您的身份以对此更改进行签名。",
@@ -5374,7 +5406,7 @@
     "not_your_node": "该节点不是您所拥有的，因此您无权释放它。",
     "owner_session_required": "您的设备是所有者本人的界面。请以此节点所有者的身份登录。",
     "release_incomplete": "释放操作已签名，但节点仍将该节点列为您所拥有：有一条它无法看到的所有权记录仍处于生效状态。它所能撤销的部分，仍保持已撤销状态。",
-    "evict_incomplete": "该设备未被完全移除。节点的答复列出了每个未完成的部分；已完成的部分仍保持完成状态。请重试。",
+    "evict_incomplete": "移除该设备的部分操作未能完成。已完成的部分将保持已完成；回复中会列明未完成的部分。",
     "release_self_requires_force": "那就是您正在对话的节点。释放它将终止您在此处的所有权，包括本次会话。",
     "store_unavailable": "节点无法读取或写入其身份存储。未做任何更改。",
     "node_not_announced": "该设备不可联系，因此无法加入代码。",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "无法根据此节点持有的密钥生成您的联系人代码。",
     "associate": {
       "hardware_custody_unavailable": "此设备没有可用于封存密钥的硬件（无 TPM 或 Secure Enclave），因此未完成任何设置。您可以改用软件托管：密钥将保存在此设备上的加密文件中。"
-    }
+    },
+    "announce_not_your_node": "该节点不属于您，因此您无权宣告它",
+    "announce_refused": "无法从此设备宣告该节点的所有权",
+    "sessions_unavailable": "节点无法读取您的哪台设备正在回复。请稍后重试。"
   },
   "households": {
     "empty": "您尚未加入任何家族。请在此处创建一个，然后从您的联系人中添加成员。",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "已过期"
   },
   "membership": {
-    "consent_required": "必须有人接受邀请，才能加入。未经本人同意，任何人都不会被加入家族或社区。"
+    "consent_required": "必须有人接受邀请，才能加入。未经本人同意，任何人都不会被加入家族或社区。",
+    "acceptance_mismatch": "该回复与其所指的邀请不匹配。",
+    "already_answered": "该邀请已以另一种方式被回复过。",
+    "awaiting_acceptance": "对方尚未接受邀请，因此无法加入。",
+    "bad_expiry": "邀请的有效期须介于一天到三十天之间。",
+    "declined": "对方已拒绝邀请，因此无法据此将其加入。",
+    "delegate_may_not_answer": "受委派的会话可以查看邀请，但不能回复邀请。您的回复需用您自己的密钥签名。",
+    "founding_member_unsigned": "群组仅由您本人创建。群组建立后再邀请其他人。",
+    "invite_closed": "该邀请已不再开放，因此无法撤回。",
+    "invite_expired": "该邀请已过期。请发送新的邀请。",
+    "invite_not_found": "此处没有该邀请。它可能尚未送达，或从未发送给您。",
+    "invite_not_here_yet": "该邀请尚未送达此设备。请稍后重试。",
+    "not_the_invitee": "只有受邀人本人才能回复邀请。",
+    "not_the_proposer": "只有发出邀请的人才能撤回邀请。",
+    "owner_session_required": "邀请需由此节点的所有者回复。请以所有者身份登录。",
+    "refused": "群组规则拒绝了此成员变更。",
+    "signer_unavailable": "无法打开您的身份以对此回复进行签名。",
+    "store_unavailable": "节点无法读取或写入其成员记录。未做任何更改。",
+    "supersede_cannot_add": "对群组记录的更改无法添加任何人。新成员须通过邀请加入。"
   },
   "custody": {
     "inline_no_receipt": "此文件足够小，可以整块存储，而以整块方式存储的文件目前还没有收据。您的其他设备可能持有它，但此设备无法得知这一点。",
-    "copies_unobservable_by_design": "您自己和家族的文件从不会向任何人宣告，因此其他设备上的副本无法统计。收据是设备已接收该文件的唯一标志。",
-    "no_copy_here": "此设备未持有该文件的副本，因此谁能打开它以及宣告了多少份副本，只能由持有该文件的设备来回答。",
-    "receipt_is_delivery_not_holding": "收据证明设备已接收整个文件，但不证明设备仍然持有它：删除副本目前尚不会撤销其收据。",
+    "copies_unobservable_by_design": "您个人及您家族的文件从不会向任何人宣告，因此无法统计其他设备上的副本数量；送达收据是设备已收到文件的唯一证明。",
+    "receipt_is_delivery_not_holding": "送达收据证明设备已收到完整文件，但并不证明该设备仍持有它：删除副本并不会撤销其收据。",
     "receipt_time_unknown": "目前还无法获取每台设备接收该文件的时间。",
-    "receipts_admitted_on_author_device": "收据由写入该文件的设备收集。此设备仅列出它所持有的收据。如需完整答案，请询问写入该文件的设备。",
-    "receipt_signer_not_your_device": "有些收据是由不属于您设备的密钥签名的，例如聊天室的另一位成员或智能体自身的密钥。它们会单独计数。",
-    "receipts_unreadable": "此设备刚才无法读取其收据。在能够读取之前，哪些设备接收了该文件尚不清楚。",
-    "commons_readable_by_holders": "此文件是公开的：任何持有这些字节的人都能读取它，因此谁能打开它并不是一份清单。",
-    "no_copy_reports_pending": "您的其他设备目前还无法报告它们没有副本。这类报告将随保管确认一起到来。在此之前，没有收据的设备显示为未知。"
+    "receipts_admitted_on_author_device": "送达收据由写入该文件的设备收集。此设备仅列出其自身持有的收据；完整答案请询问写入该文件的设备。",
+    "receipt_signer_not_your_device": "部分收据由不属于您设备的设备签名（聊天室的另一位成员，或智能体自身的密钥）；这些收据将单独列出。",
+    "receipts_unreadable": "此设备刚才无法读取其送达收据；在恢复之前，无法确定哪些设备已收到该文件。",
+    "commons_readable_by_holders": "此文件为公开文件：任何持有其字节的人都可以读取，因此谁能打开它并非一份名单所能列明。",
+    "no_copy_reports_pending": "您的其他设备尚无法报告自己未持有副本；这些报告会随同组内的保管确认一同送达。在此之前，没有送达收据的设备会显示为未知状态。",
+    "no_copy_here": "此设备未持有该文件的副本，因此谁能打开它以及已宣告的副本数量，需由持有该文件的设备来回答。"
+  },
+  "claim": {
+    "bad_request": "该认领请求无法读取。",
+    "binding_unsigned": "所有者绑定未能签名，因此另一台设备未被认领。",
+    "cohort_invalid": "设备无法被认领进入该范围。必须是自身、家族或社区。",
+    "no_identity": "尚无责任用户身份——请先创建您的联邦 ID（POST /v1/self/identity），再认领所有权",
+    "no_route": "此节点代码未携带此设备可访问的地址，且它不是此设备——请在与新设备相同的网络中扫描该代码，或提供其地址",
+    "node_code_invalid": "节点代码无法读取。请检查后重新扫描或粘贴。",
+    "password_not_forwarded": "密码只设置在输入它的那台设备上；认领另一台设备无需密码——已签名的所有者绑定即是证明，所有者在那台设备上使用其联邦 ID 登录",
+    "signer_unavailable": "无法打开您的身份以对该认领进行签名。",
+    "target_refused": "另一台设备拒绝了该认领。",
+    "target_unreachable": "无法连接到另一台设备。请确保它已开机且可访问，然后重试。"
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "在此次交流中，您的另一台设备正代您回复。",
+      "handled_here": "在此次交流中，此设备正代您回复。"
+    }
   }
 }

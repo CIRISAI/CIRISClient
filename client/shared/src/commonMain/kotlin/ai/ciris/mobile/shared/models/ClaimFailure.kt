@@ -67,7 +67,18 @@ fun classifyClaimFailure(message: String?): ClaimFailure {
     if (m.contains("auth.claim.pin_invalid") || m.contains("auth.claim.pin_missing")) {
         return ClaimFailure.PIN_REJECTED
     }
-    if (m.contains("auth.claim.not_armed")) return ClaimFailure.ALREADY_CLAIMED
+    if (m.contains("auth.claim.not_armed") || m.contains("auth.claim.already_claimed")) {
+        return ClaimFailure.ALREADY_CLAIMED
+    }
+    // 0.5.218 (CIRISServer#678): every claim-remote refusal carries an id. The
+    // claim's transport failing and the code naming no address this device can
+    // reach are both "it could not get there"; an undecodable code is the code.
+    if (m.contains("claim.target_unreachable") || m.contains("claim.no_route")) {
+        return ClaimFailure.UNREACHABLE
+    }
+    if (m.contains("claim.node_code_invalid") || m.contains("auth.claim.node_code_invalid")) {
+        return ClaimFailure.BAD_NODE_CODE
+    }
 
     // 2) Prose, for nodes older than those codes. Never the primary signal.
     // "not armed for a first-run claim" is the distinguishing phrase, and it

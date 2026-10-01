@@ -91,6 +91,20 @@ data class ClaimRemoteRequest(
      */
     @SerialName("owner_oauth_external_id")
     val ownerOauthExternalId: String? = null,
+    /**
+     * Where the target node answers, when the claim is for ANOTHER device.
+     *
+     * 0.5.218 (CIRISServer#678, `src/claim_remote.rs`) overrides the code's
+     * `transport_hint` with this, and REFUSES (`claim.no_route`) a code that
+     * names another device and carries no hint when this is absent — before,
+     * the local node fell back to its own loopback and posted another device's
+     * claim to itself. A desktop or phone code carries no hint, so the
+     * approving side sends the address it actually reached and pinned the
+     * target at. Null on the self-claim: the code names this node, and the
+     * node finds itself.
+     */
+    @SerialName("target_url")
+    val targetUrl: String? = null,
 )
 
 /**
@@ -134,4 +148,37 @@ data class ClaimRemoteResponse(
     val tokenType: String? = null,
     @SerialName("expires_in")
     val expiresIn: Long? = null,
+)
+
+/**
+ * Body of `POST {localNodeUrl}/v1/setup/claimed-session` (CIRISServer 0.5.218,
+ * `src/auth/bootstrap.rs` `claimed_session`).
+ *
+ * When ANOTHER device claims this one, the owner session the claim mints is
+ * not carried back to the approving device: this node holds it for its own
+ * wizard (`session_pickup: "local"` on the setup/root answer), and the wizard
+ * collects it with the one-time claim PIN it already showed. Loopback-only on
+ * the node; the PIN is the gate, and it is collected once.
+ */
+@Serializable
+data class ClaimedSessionRequest(
+    @SerialName("claim_pin")
+    val claimPin: String,
+)
+
+/**
+ * The session `claimed-session` answers with: the node's one session shape
+ * (`SessionGrant`, the same as `/v1/auth/login`), minted at collection.
+ */
+@Serializable
+data class ClaimedSessionGrant(
+    @SerialName("access_token")
+    val accessToken: String,
+    @SerialName("token_type")
+    val tokenType: String? = null,
+    @SerialName("expires_in")
+    val expiresIn: Long? = null,
+    val role: String? = null,
+    @SerialName("user_id")
+    val userId: String? = null,
 )

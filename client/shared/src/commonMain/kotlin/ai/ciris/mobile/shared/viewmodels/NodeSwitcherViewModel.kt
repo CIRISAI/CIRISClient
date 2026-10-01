@@ -787,6 +787,11 @@ class NodeSwitcherViewModel(
                     nodeCode = targetNodeCode,
                     claimPin = claimPin.trim(),
                     cohortScope = cohortScope,
+                    // The address this client reached and identity-pinned the
+                    // target at. 0.5.218 refuses another device's code with no
+                    // transport hint unless the claim names where it answers
+                    // (`claim.no_route`); a desktop or phone code has no hint.
+                    targetUrl = profile.baseUrl,
                 )
                 PlatformLogger.i(TAG, "[claimAdmin] local node claimed ${profile.baseUrl} → role=${resp.role}")
                 _bootstrap.value = _bootstrap.value.copy(

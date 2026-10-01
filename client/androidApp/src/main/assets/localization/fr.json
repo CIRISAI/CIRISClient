@@ -336,7 +336,18 @@
     "claim": {
       "not_armed": "ce nœud n'est pas armé pour une revendication de premier démarrage (pas de PIN à usage unique) — la propriété a peut-être déjà été revendiquée",
       "pin_invalid": "PIN de revendication à usage unique invalide",
-      "pin_missing": "la revendication ROOT de premier démarrage doit contenir `claim_pin` (le PIN à usage unique affiché sur la console de ce nœud au démarrage)"
+      "pin_missing": "la revendication ROOT de premier démarrage doit contenir `claim_pin` (le PIN à usage unique affiché sur la console de ce nœud au démarrage)",
+      "already_claimed": "ROOT est déjà revendiqué ; la configuration de premier démarrage est fermée",
+      "body_invalid": "La demande de configuration n'a pas pu être lue, rien n'a donc été revendiqué.",
+      "cohort_invalid": "Cette portée de configuration n'est pas reconnue par ce nœud. Elle doit être self, family ou community.",
+      "cohort_missing": "la revendication ROOT de premier démarrage doit contenir `cohort_scope` (l'une des valeurs self|family|community)",
+      "no_pending_session": "aucune session n'est en attente : cet appareil n'a pas été revendiqué par un autre appareil au cours des 15 dernières minutes, ou sa session a déjà été récupérée",
+      "node_code_invalid": "Le code du nœud n'a pas pu être lu. Vérifiez-le et réessayez.",
+      "node_code_missing": "la revendication ROOT de premier démarrage doit fixer l'identité de ce nœud : fournissez `node_code` (CIRIS-V1-...) ou `key_id` + `pubkey_ed25519_base64`",
+      "owner_binding_missing": "la revendication ROOT de premier démarrage doit contenir un `owner_binding` complet (l'enveloppe delegates_to: signée par l'utilisateur + signatures + key_id + clés publiques)",
+      "owner_binding_rejected": "Ce nœud a refusé la liaison de propriétaire : il n'a donc pas été revendiqué.",
+      "store_unavailable": "Ce nœud n'a pas pu joindre son magasin, rien n'a donc été revendiqué. Réessayez dans un instant.",
+      "wrong_node": "le NodeCode fourni ne correspond pas à l'identité de ce nœud — vous avez peut-être atteint le mauvais nœud"
     },
     "link": {
       "ambiguous_handle": "Envoyez soit un identifiant de compte, soit une adresse e-mail, mais pas les deux — ils n'ont pas la même signification."
@@ -5356,14 +5367,35 @@
     "store_unavailable": "Ce nœud n'a pas pu joindre son magasin de fichiers.",
     "too_large": "Ce fichier est trop volumineux pour être ajouté ici.",
     "unknown_cohort": "Ce n'est pas un endroit où des fichiers peuvent aller. Utilisez Moi seul, une famille ou une communauté.",
-    "unopened": "Cet appareil ne peut pas l'ouvrir."
+    "unopened": "Cet appareil ne peut pas l'ouvrir.",
+    "bad_base64": "Le contenu du fichier n'était pas du base64 valide, rien n'a donc été écrit.",
+    "bad_body": "Le téléversement n'a pas pu être lu. Rien n'a été écrit ; envoyez-le à nouveau.",
+    "bad_cursor": "`after` n'est pas un curseur émis par ce drive — renvoyez tel quel le `resume` d'une page",
+    "bad_filename": "il ne reste rien d'affichable de ce nom de fichier une fois les composants de chemin et les caractères de contrôle / bidi retirés (RFC 6266 §4.3)",
+    "bad_media_type": "Ce n'est pas un type de fichier valide (type/sous-type).",
+    "bad_move_target": "Ce n'est pas un emplacement vers lequel ce fichier peut être déplacé.",
+    "declared_length_mismatch": "La taille du fichier ne correspondait pas à la taille déclarée. Rien n'a été écrit ; envoyez-le à nouveau.",
+    "delegate_may_not_author": "un délégué ne peut pas écrire, modifier ou retirer un fichier : la ligne est signée dans le graphe comme l'acte propre du propriétaire, et une délégation qui se termine ne peut pas annuler cette signature",
+    "evicted": "Ces octets ont été purgés de ce nœud et ne peuvent plus être lus ici.",
+    "field_after_file": "Les détails du téléversement sont arrivés après le fichier. Rien n'a été écrit ; envoyez le fichier en dernier.",
+    "filename_empty": "un renommage nécessite un nom — un nom de fichier vide laisserait le fichier sans nom plutôt que renommé",
+    "format_mismatch": "Le fichier ne correspond pas au type qu'il indique, il n'a donc pas été ajouté.",
+    "not_author": "Seul l'auteur peut modifier ou retirer un fichier. Un fichier que vous avez écrit sur un autre de vos appareils se modifie depuis cet appareil.",
+    "range_not_satisfiable": "La plage demandée est hors des limites de ce fichier.",
+    "same_room": "le fichier se trouve déjà dans cette salle — un déplacement nécessite un cercle différent",
+    "seal_mismatch": "Les octets ne se sont pas ouverts sous l'enregistrement de ce fichier. L'enregistrement et les octets sont en désaccord.",
+    "too_large_for_whole_read": "Ce fichier est trop volumineux pour être lu en une seule fois. Il doit être diffusé en flux continu.",
+    "withdraw_failed": "Le fichier n'a pas pu être retiré. Réessayez.",
+    "withdrawn": "Son auteur a retiré ce fichier. Les octets ne sont plus servis nulle part."
   },
   "notes": {
     "author_signer_unavailable": "Ce nœud ne peut pas signer en votre nom pour le moment, la note n'a donc pas été écrite.",
     "empty": "Une note sans contenu n'est pas une note.",
     "listing_failed": "Ce nœud n'a pas pu lire vos notes.",
     "no_node_key": "Ce nœud n'a pas pu trouver sa propre clé.",
-    "owner_session_required": "Connectez-vous en tant que propriétaire de ce nœud pour utiliser vos notes."
+    "owner_session_required": "Connectez-vous en tant que propriétaire de ce nœud pour utiliser vos notes.",
+    "delegate_may_not_author": "un délégué ne peut pas écrire, modifier ou retirer une note : elle est signée dans le graphe comme les propres mots du propriétaire, et une délégation qui se termine ne peut pas annuler cette signature",
+    "not_found": "Ce n'est pas une de vos notes."
   },
   "self": {
     "author_signer_unavailable": "Votre identité n'a pas pu être ouverte pour signer cette modification.",
@@ -5374,7 +5406,7 @@
     "not_your_node": "Ce nœud ne vous appartient pas, vous ne pouvez donc pas le libérer.",
     "owner_session_required": "Vos appareils relèvent de la surface propre du propriétaire. Connectez-vous en tant que propriétaire de ce nœud.",
     "release_incomplete": "La libération a été signée, mais le nœud continue de répertorier ce nœud comme vous appartenant : un enregistrement de propriété qu'il ne peut pas voir reste actif. Ce qu'il a pu retirer reste retiré.",
-    "evict_incomplete": "Cet appareil n'a pas été entièrement supprimé. La réponse du nœud liste chaque partie qui n'a pas été terminée ; les parties déjà terminées restent terminées. Réessayez.",
+    "evict_incomplete": "Une partie de la suppression de cet appareil ne s'est pas terminée. Ce qui a été fait le reste ; la réponse indique ce qui ne l'a pas été.",
     "release_self_requires_force": "C'est le nœud auquel vous parlez. Le libérer mettrait fin à votre propriété ici, y compris cette session.",
     "store_unavailable": "Le nœud n'a pas pu lire ni écrire dans son magasin d'identités. Rien n'a été modifié.",
     "node_not_announced": "Cet appareil n'est pas accessible ; il ne peut donc pas figurer dans un code.",
@@ -5385,7 +5417,10 @@
     "contact_code_unencodable": "Votre code de contact n'a pas pu être créé à partir des clés que détient ce nœud.",
     "associate": {
       "hardware_custody_unavailable": "Cet appareil ne dispose d'aucun matériel capable de sceller une clé (pas de TPM ni d'enclave sécurisée), donc rien n'a été configuré. Vous pouvez utiliser la garde logicielle à la place : la clé est conservée dans un fichier chiffré sur cet appareil."
-    }
+    },
+    "announce_not_your_node": "ce nœud ne vous appartient pas, il ne vous revient donc pas de l'annoncer",
+    "announce_refused": "la propriété de ce nœud n'a pas pu être annoncée depuis cet appareil",
+    "sessions_unavailable": "Le nœud n'a pas pu déterminer lequel de vos appareils répond. Réessayez dans un instant."
   },
   "households": {
     "empty": "Vous ne faites pas encore partie d'un foyer. Formez-en un ici, puis ajoutez des personnes depuis vos contacts.",
@@ -5543,18 +5578,54 @@
     "outcome_expired": "Expirée"
   },
   "membership": {
-    "consent_required": "Une personne doit accepter une invitation avant de devenir membre. Personne n'est ajouté à un foyer ou à une communauté sans son propre consentement."
+    "consent_required": "Une personne doit accepter une invitation avant de devenir membre. Personne n'est ajouté à un foyer ou à une communauté sans son propre consentement.",
+    "acceptance_mismatch": "Cette réponse ne correspond pas à l'invitation qu'elle nomme.",
+    "already_answered": "Cette invitation a déjà reçu une réponse opposée.",
+    "awaiting_acceptance": "La personne invitée n'a pas encore accepté l'invitation, elle ne peut donc pas encore rejoindre le groupe.",
+    "bad_expiry": "Une invitation dure entre un et trente jours.",
+    "declined": "La personne invitée a refusé l'invitation, elle ne peut donc pas être ajoutée sous celle-ci.",
+    "delegate_may_not_answer": "Une session déléguée peut voir les invitations mais ne peut pas y répondre. Votre réponse est signée avec votre propre clé.",
+    "founding_member_unsigned": "Un groupe est fondé par vous seul. Invitez les autres une fois qu'il existe.",
+    "invite_closed": "Cette invitation n'est plus ouverte, elle ne peut donc pas être retirée.",
+    "invite_expired": "Cette invitation a expiré. Envoyez-en une nouvelle.",
+    "invite_not_found": "Cette invitation n'est pas ici. Elle n'est peut-être pas encore arrivée, ou elle ne vous a jamais été envoyée.",
+    "invite_not_here_yet": "Cette invitation n'a pas encore atteint cet appareil. Réessayez dans un instant.",
+    "not_the_invitee": "Seule la personne invitée peut répondre à une invitation.",
+    "not_the_proposer": "Seule la personne qui a envoyé une invitation peut la retirer.",
+    "owner_session_required": "Les invitations sont répondues par le propriétaire de ce nœud. Connectez-vous en tant que propriétaire.",
+    "refused": "Les règles du groupe ont refusé cette modification d'adhésion.",
+    "signer_unavailable": "Votre identité n'a pas pu être ouverte pour signer cette réponse.",
+    "store_unavailable": "Le nœud n'a pas pu lire ou écrire ses enregistrements d'adhésion. Rien n'a été modifié.",
+    "supersede_cannot_add": "Une modification de l'enregistrement du groupe ne peut ajouter personne. Les nouveaux membres rejoignent sur invitation."
   },
   "custody": {
     "inline_no_receipt": "Ce fichier est assez petit pour être stocké en un seul morceau, et un fichier stocké en un seul morceau n'a pas encore d'accusé de réception. Vos autres appareils peuvent le détenir, mais cet appareil ne peut pas en être informé.",
-    "copies_unobservable_by_design": "Vos propres fichiers et ceux de votre famille ne sont jamais annoncés à quiconque ; les copies sur d'autres appareils ne peuvent donc pas être comptées. Un accusé de réception est le seul signe qu'un appareil en a reçu une copie.",
-    "receipt_is_delivery_not_holding": "Un accusé de réception prouve qu'un appareil a reçu le fichier complet. Il ne prouve pas que l'appareil le possède encore : supprimer une copie ne retire pas encore son accusé de réception.",
+    "copies_unobservable_by_design": "Vos fichiers et ceux de votre famille ne sont jamais annoncés à qui que ce soit ; les copies sur d'autres appareils ne peuvent donc pas être comptées. Un accusé de réception est le seul signe qu'un appareil en a reçu une.",
+    "no_copy_here": "Cet appareil ne détient aucune copie du fichier ; qui peut l'ouvrir et combien de copies existent sont des réponses apportées par un appareil qui le détient.",
+    "receipt_is_delivery_not_holding": "Un accusé de réception prouve qu'un appareil a reçu l'intégralité du fichier. Il ne prouve pas que l'appareil le détient encore : supprimer une copie ne retire pas encore son accusé de réception.",
     "receipt_time_unknown": "L'heure à laquelle chaque appareil a reçu le fichier n'est pas encore disponible.",
-    "receipts_admitted_on_author_device": "Les accusés de réception sont collectés par l'appareil qui a écrit le fichier. Cet appareil ne liste que les accusés qu'il détient. Demandez à l'appareil qui l'a écrit pour obtenir la réponse complète.",
-    "receipt_signer_not_your_device": "Certains accusés de réception ont été signés par des clés qui ne sont pas les vôtres, comme celle d'un autre membre de la pièce ou la clé propre d'un agent. Ils sont comptés séparément.",
-    "receipts_unreadable": "Cet appareil n'a pas pu lire ses accusés de réception à l'instant. Les appareils ayant reçu le fichier sont inconnus jusqu'à ce qu'il le puisse.",
+    "receipts_admitted_on_author_device": "Les accusés de réception sont collectés par l'appareil qui a écrit le fichier. Cet appareil ne répertorie que les accusés qu'il détient ; demandez la réponse complète à l'appareil qui l'a écrit.",
+    "receipt_signer_not_your_device": "Certains accusés de réception ont été signés par des appareils qui ne figurent pas parmi les vôtres (un autre membre de la salle, ou la propre clé d'un agent) ; ils sont répertoriés séparément.",
+    "receipts_unreadable": "Cet appareil n'a pas pu lire ses accusés de réception à l'instant ; les appareils ayant reçu le fichier sont inconnus jusqu'à ce qu'il le puisse.",
     "commons_readable_by_holders": "Ce fichier est public : toute personne détenant les octets peut les lire ; qui peut l'ouvrir n'est donc pas une liste.",
-    "no_copy_reports_pending": "Vos autres appareils ne peuvent pas encore signaler qu'ils ne détiennent aucune copie. Ces signalements sont accompagnés d'accusés de garde. En attendant, un appareil sans accusé de réception s'affiche comme inconnu.",
-    "no_copy_here": "Cet appareil ne détient aucune copie du fichier ; qui peut l'ouvrir et combien de copies sont annoncées ne peuvent donc être déterminés que par un appareil qui le détient."
+    "no_copy_reports_pending": "Vos autres appareils ne peuvent pas encore signaler qu'ils ne détiennent aucune copie ; ces signalements arriveront avec les confirmations de détention échangées au sein de la cohorte. D'ici là, un appareil sans accusé de réception est indiqué comme inconnu."
+  },
+  "claim": {
+    "bad_request": "Cette demande de revendication n'a pas pu être lue.",
+    "binding_unsigned": "La liaison de propriétaire n'a pas pu être signée, l'autre appareil n'a donc pas été revendiqué.",
+    "cohort_invalid": "Ce n'est pas une portée dans laquelle un appareil peut être revendiqué. Elle doit être self, family ou community.",
+    "no_identity": "aucune identité d'utilisateur responsable pour le moment — créez votre identifiant de fédération (POST /v1/self/identity) avant de revendiquer la propriété",
+    "no_route": "ce code de nœud ne porte aucune adresse que cet appareil puisse atteindre, et il ne s'agit pas de cet appareil — scannez le code sur le même réseau que le nouvel appareil, ou indiquez son adresse",
+    "node_code_invalid": "Le code du nœud n'a pas pu être lu. Vérifiez-le, puis scannez-le ou collez-le à nouveau.",
+    "password_not_forwarded": "un mot de passe n'est défini que sur l'appareil sur lequel il est saisi ; revendiquer un autre appareil n'en nécessite aucun — la liaison de propriétaire signée en est la preuve, et le propriétaire s'y connecte avec son identifiant de fédération",
+    "signer_unavailable": "Votre identité n'a pas pu être ouverte pour signer la revendication.",
+    "target_refused": "L'autre appareil a refusé la revendication.",
+    "target_unreachable": "L'autre appareil n'a pas pu être atteint. Assurez-vous qu'il est allumé et accessible, puis réessayez."
+  },
+  "session": {
+    "state": {
+      "handled_elsewhere": "Un autre de vos appareils répond à votre place dans cet échange.",
+      "handled_here": "Cet appareil répond à votre place dans cet échange."
+    }
   }
 }

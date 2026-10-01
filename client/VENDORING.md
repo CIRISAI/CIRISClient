@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.188` (`1b4f3772c9fb5ecde42d4821daaaf0cb919ca614`) | `merge/server-v0.5.188` | 2026-08-24 |
+| `CIRISAI/CIRISServer` | `0.5.218` (`53d1ffb5d15cfab8558d12676d4433e4322a6a91`) | `feat/server-0.5.218-parity` (emitted ids reconciled; server main at the #679 merge, tag `v0.5.218` not yet cut) | 2026-10-01 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -33,14 +33,14 @@ source is the pair a bisect wants:
 | | |
 |---|---|
 | **Source repo** | [`CIRISAI/CIRISServer`](https://github.com/CIRISAI/CIRISServer) |
-| **Commit** | `1b4f3772c9fb5ecde42d4821daaaf0cb919ca614` |
+| **Commit** | `53d1ffb5d15cfab8558d12676d4433e4322a6a91` |
 
 ### The state digest
 
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `bcc99e88f48334e8ecc1657a73c6e13df5f82eb27229a6dc0749ab82a293cf9f`
+**state digest:** `602aff98f7cd319266153c43eb87a30793bfbb0c65c1f6e6c8a31daf7f9ff22b`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
