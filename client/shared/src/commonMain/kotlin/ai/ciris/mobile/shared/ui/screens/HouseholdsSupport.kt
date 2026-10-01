@@ -131,7 +131,23 @@ sealed interface HouseholdAct {
         val label: String
     }
 
+    /**
+     * The direct add a 0.5.216–0.5.217 node serves; on 0.5.218 it is only ever
+     * a quorum household PROPOSING to seat someone who already accepted (the
+     * envelope's `add`, now a co-signed widening persist admits only on that
+     * acceptance — CSD-106).
+     */
     data class Add(override val keyId: String, override val label: String) : OfMember { override val envelopeAction = "add" }
+    /**
+     * Invite someone (0.5.218+, CSD-106). ONE inviter signs — a founder under
+     * `founder_only`, any member under a quorum — so it is never proposed: the
+     * quorum stays on the widening that seats them after they accept.
+     */
+    data class Invite(override val keyId: String, override val label: String) : OfMember { override val envelopeAction: String? = null }
+    /** Withdraw an invitation nobody has answered. Only its proposer may; never proposed. */
+    data class Withdraw(val proposalId: String, override val keyId: String, override val label: String) : OfMember {
+        override val envelopeAction: String? = null
+    }
     data class Remove(override val keyId: String, override val label: String) : OfMember { override val envelopeAction = "remove" }
     data class Role(override val keyId: String, override val label: String, val role: String) : OfMember { override val envelopeAction = "role" }
     data object Dissolve : OfHousehold { override val envelopeAction = "dissolve" }
@@ -151,6 +167,14 @@ enum class ActRoute { DIRECT, PROPOSE, NOT_ALLOWED }
  */
 fun routeOf(act: HouseholdAct, governance: Governance): ActRoute = when {
     act is HouseholdAct.Leave -> ActRoute.DIRECT
+    // The node refuses anyone but the proposer (`membership.not_the_proposer`);
+    // the roster offers it only on the proposer's own pending rows.
+    act is HouseholdAct.Withdraw -> ActRoute.DIRECT
+    act is HouseholdAct.Invite -> when {
+        governance is Governance.FounderOnly && governance.iAmFounder -> ActRoute.DIRECT
+        governance is Governance.Quorum -> ActRoute.DIRECT
+        else -> ActRoute.NOT_ALLOWED
+    }
     governance is Governance.FounderOnly && governance.iAmFounder -> ActRoute.DIRECT
     governance is Governance.Quorum -> ActRoute.PROPOSE
     else -> ActRoute.NOT_ALLOWED

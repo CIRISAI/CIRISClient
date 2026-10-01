@@ -14582,10 +14582,23 @@ class CIRISApiClient(
         familyCall("dissolveFamily", HttpMethod.Delete, nodeUrl, familyPath(familyId))
     }
 
-    /** `POST /v1/families/{id}/members` `{key_id, role?}`. */
-    suspend fun addFamilyMember(familyId: String, keyId: String, role: String?, nodeUrl: String = LOCAL_NODE_URL) {
+    /**
+     * `POST /v1/families/{id}/members` `{key_id, role?}`. Null when the node
+     * ADDED them (0.5.216–0.5.217); the [InviteSent] when it answered 202
+     * `{state: "invited"}` instead, which 0.5.218's alias for `…/invites` does —
+     * an invitation, never a membership (CSD-106).
+     */
+    suspend fun addFamilyMember(
+        familyId: String,
+        keyId: String,
+        role: String?,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.InviteSent? {
         val body = buildJsonObject { put("key_id", keyId); role?.let { put("role", it) } }
-        familyCall("addFamilyMember", HttpMethod.Post, nodeUrl, familyPath(familyId, "/members"), body)
+        val raw = familyCall("addFamilyMember", HttpMethod.Post, nodeUrl, familyPath(familyId, "/members"), body)
+        return if (isInvitation(raw)) {
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteSent.serializer(), raw)
+        } else null
     }
 
     /** `DELETE /v1/families/{id}/members/{key_id}`. */
@@ -14642,6 +14655,75 @@ class CIRISApiClient(
     ) {
         val body = buildJsonObject { put("change_envelope", envelope); put("signatures", familySignatures(signatures)) }
         familyCall("assembleFamilyChange", HttpMethod.Post, nodeUrl, familyPath(familyId, "/changes/assemble"), body)
+    }
+
+    /**
+     * `POST /v1/families/{id}/invites` `{key_id, role?}` → 202 [InviteSent]
+     * (CIRISServer 0.5.218, `family_api.rs::invite`). ONE inviter signs: a
+     * founder under `founder_only`, any member under a quorum. A bare 404 is a
+     * node older than 0.5.218 (CSD-106).
+     */
+    suspend fun inviteFamilyMember(
+        familyId: String,
+        keyId: String,
+        role: String?,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.InviteSent {
+        val body = buildJsonObject { put("key_id", keyId); role?.let { put("role", it) } }
+        val raw = familyCall("inviteFamilyMember", HttpMethod.Post, nodeUrl, familyPath(familyId, "/invites"), body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteSent.serializer(), raw)
+    }
+
+    /** `GET /v1/families/{id}/invites` — every invitation into the household and its state. */
+    suspend fun listFamilyInvites(
+        familyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.GroupInviteList {
+        val raw = familyCall("listFamilyInvites", HttpMethod.Get, nodeUrl, familyPath(familyId, "/invites"))
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.GroupInviteList.serializer(), raw)
+    }
+
+    /** `DELETE /v1/families/{id}/invites/{proposal_id}` — the proposer withdraws a pending invitation. */
+    suspend fun withdrawFamilyInvite(
+        familyId: String,
+        proposalId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.InviteWithdrawn {
+        val raw = familyCall(
+            "withdrawFamilyInvite", HttpMethod.Delete, nodeUrl,
+            familyPath(familyId, "/invites/${proposalId.encodeURLPathPart()}"),
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteWithdrawn.serializer(), raw)
+    }
+
+    // ─── THE INVITEE'S INBOX (/v1/self/invites) — CSD-106 ───────────────────
+    //
+    // CIRISServer 0.5.218 `src/membership_invites.rs::router`. Node-owned and
+    // owner-gated like the household routes, so they ride the same call. A
+    // delegate may read the inbox; only the owner's own session answers.
+
+    /** `GET /v1/self/invites` — every live, unanswered invitation naming this node's owner. */
+    suspend fun listMyInvites(nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.InviteInbox {
+        val raw = familyCall("listMyInvites", HttpMethod.Get, nodeUrl, "/v1/self/invites")
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteInbox.serializer(), raw)
+    }
+
+    /** `POST /v1/self/invites/{proposal_id}/accept` — signed with the invitee's own key. Accepted is not joined. */
+    suspend fun acceptInvite(proposalId: String, nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.InviteAnswer {
+        val raw = familyCall(
+            "acceptInvite", HttpMethod.Post, nodeUrl,
+            "/v1/self/invites/${proposalId.encodeURLPathPart()}/accept", buildJsonObject { },
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteAnswer.serializer(), raw)
+    }
+
+    /** `POST /v1/self/invites/{proposal_id}/decline` — final: joining later takes a new invitation. */
+    suspend fun declineInvite(proposalId: String, nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.InviteAnswer {
+        val raw = familyCall(
+            "declineInvite", HttpMethod.Post, nodeUrl,
+            "/v1/self/invites/${proposalId.encodeURLPathPart()}/decline", buildJsonObject { },
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteAnswer.serializer(), raw)
     }
     // ─── end HOUSEHOLDS ─────────────────────────────────────────────────────
 
@@ -15023,6 +15105,11 @@ class CIRISApiClient(
         status: Int,
         raw: String,
     ): ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome? = when {
+        // 0.5.218: `POST …/members` is an alias for `…/invites` and answers 202
+        // `{state: "invited"}` — an invitation, never an applied add (CSD-106).
+        status in 200..299 && isInvitation(raw) -> ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome.Invited(
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteSent.serializer(), raw),
+        )
         status in 200..299 -> ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome.Applied(
             jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityChangeApplied.serializer(), raw),
         )
@@ -15031,6 +15118,68 @@ class CIRISApiClient(
                 jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.CommunityPendingChange.serializer(), raw),
             )
         else -> null
+    }
+    /** A 2xx body that is an invitation (`state: "invited"`), not a change applied. */
+    private fun isInvitation(raw: String): Boolean =
+        ((runCatching { jsonConfig.parseToJsonElement(raw) }.getOrNull() as? JsonObject)?.get("state") as? JsonPrimitive)
+            ?.content == ai.ciris.mobile.shared.models.federation.InviteSent.STATE_INVITED
+
+    /**
+     * `POST {nodeUrl}/v1/communities/{id}/invites` `{key_id, role?}` → 202
+     * [InviteSent] (CIRISServer 0.5.218, `communities.rs::invite`). One inviter:
+     * a founder under `founder_only`, any member otherwise. A contact grant is
+     * not required. A bare 404 is a node older than 0.5.218 (CSD-106).
+     */
+    suspend fun inviteCommunityMember(
+        communityId: String,
+        keyId: String,
+        role: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.InviteSent {
+        val method = "inviteCommunityMember"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/invites"
+        logInfo(method, "POST $url")
+        val body = buildJsonObject {
+            put("key_id", keyId)
+            role?.let { put("role", it) }
+        }
+        val raw = communityCall(method, url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteSent.serializer(), raw)
+    }
+
+    /** `GET {nodeUrl}/v1/communities/{id}/invites` — every invitation into the room and its state. */
+    suspend fun listCommunityInvites(
+        communityId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.GroupInviteList {
+        val method = "listCommunityInvites"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/invites"
+        logInfo(method, "GET $url")
+        val raw = communityCall(method, url) { client ->
+            client.get(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.GroupInviteList.serializer(), raw)
+    }
+
+    /** `DELETE {nodeUrl}/v1/communities/{id}/invites/{proposal_id}` — the proposer withdraws it. */
+    suspend fun withdrawCommunityInvite(
+        communityId: String,
+        proposalId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.InviteWithdrawn {
+        val method = "withdrawCommunityInvite"
+        val url = "$nodeUrl/v1/communities/${communityId.encodeURLPathPart()}/invites/${proposalId.encodeURLPathPart()}"
+        logInfo(method, "DELETE $url")
+        val raw = communityCall(method, url) { client ->
+            client.delete(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteWithdrawn.serializer(), raw)
     }
     // ─── end Communities and affiliations ────────────────────────────────────
 

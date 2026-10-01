@@ -120,11 +120,10 @@ fields:
     tag: "btn_community_member_remove_*"
   - ceg: x_private:membership_invitation
     use: emit
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "'Add someone' becomes 'Invite someone': picking a contact sends an invitation, and the room's section shows them as 'Invited — waiting for them to accept' with its expiry until they accept or decline (CSD-106). Until persist carries invitations, the direct add is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.1)"
-    tag: "proposed:community_member_invite"
-    blocked_by: CIRISPersist#955
+    type: string
+    example: "wa-cy-19c2"
+    renders: "on a node that carries invitations (≥ 0.5.218, detected by GET /v1/communities/{id}/invites answering) each room's 'Add someone' is 'Invite someone': a key or a contact chip, then the three-fact confirm (which room · they join only if they accept, within 14 days · you, under the room's rule) and POST /v1/communities/{id}/invites. The room's section then shows them under its members as 'Invited: waiting for them to accept · expires {date}' until they accept or decline (CSD-106). On an older node (a bare 404 on that route) the direct add stands"
+    tag: "btn_community_add_member_open_*"
   - ceg: x_private:community_room_kind
     use: display-only
     type: "enum[pair,room]"
@@ -162,7 +161,10 @@ CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL onl
 | rosters | `GET /v1/communities` | `list_communities` :1418 | every room's `members` is the fold (record ∪ widenings − revocations) — "the roster is the FOLD", module doc; a removed member is already gone |
 | one room, re-read after a change | `GET /v1/communities/{id}` | `read_community` :1497 | the shared view model re-reads the selected room after an add or remove applies (`loadDetail`); `community.not_found` for a room you are no longer in |
 | names, and who can be added | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the add control offers a chip per contact not already in the room, and each member row is titled by the contact's alias when this node has one. A member need not be a contact; the roster is the node's, the names are a courtesy |
-| add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752). **Refused once CIRISServer#700 ships:** 409 `membership.consent_required` (§3.1) |
+| add | `POST /v1/communities/{id}/members` `{key_id, role?}` | `add_member` :1524 → `direct_change` :1133 | target must be a contact (`community.not_a_contact`), not already in (`.already_member`); `founder_only` admits a founder OR an appointed `moderate` holder for a plain member (`tally` :752). **At 0.5.218 an alias for the invitation** (202 `{state: "invited"}`, `communities.rs::add_member` :1695), read as `CommunityChangeOutcome.Invited`, never an applied add. Called only on a node without the invites route (§3.1) |
+| invite | `POST /v1/communities/{community_id}/invites` `{key_id, role?}` → 202 `{state: "invited", proposal_id, …, expires_at}` | `communities.rs::invite` :1725 (0.5.218) | one inviter: a founder under `founder_only`, any member otherwise; a contact grant is NOT required. Sent by `CommunitiesViewModel.invite` behind the `community_invite` confirm (CSD-106) |
+| the invitations | `GET /v1/communities/{community_id}/invites` → `{community_id, invites: [{proposal_id, invitee_key_id, role, proposer_key_id, proposed_at, expires_at, state, reply_id}], seated_now}` | `list_invites` :1808 (0.5.218) | read per room section (`loadInvites`). A bare 404 is an older node: the room keeps the direct add. A founder's read seats an accepted invitee of a `founder_only` room |
+| withdraw | `DELETE /v1/communities/{community_id}/invites/{proposal_id}` | `withdraw_invite` :1888 (0.5.218) | the proposer only (`membership.not_the_proposer`). This card reads no owner key, so it offers Withdraw on every pending row and the node answers by id (CSD-106 §6) |
 | remove | `DELETE /v1/communities/{id}/members/{key_id}` | `remove_member` :1556 | naming yourself is leaving (:1569); `community.last_founder` guards an orphaned room |
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |
 | widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907. #907 is **fixed in persist v49**; the server markers (the module doc and the ignored `…_cirispersist_907` test, both still on `integ/0.5.218`) clear with CIRISServer#700 |
@@ -173,21 +175,32 @@ The maintainer ruled on 2026-09-30 that **adding someone to a family or a
 community requires their consent**, founding members included
 (CIRISConstitution#133; persist's enforcement CIRISPersist#955, v52: one
 inviter proposes, the invitee accepts or declines, the quorum stays on the
-admitting record, expiry 30 days or less). Until persist carries the
-invitation, **CIRISServer#700** (open, unreleased) refuses every door that
-grows a roster with **409 `membership.consent_required`**. On this card:
+admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
+(merged at `53d1ffb5`). On this card (CSD-106):
 
-* **the direct add** (`input_community_add_member` → `POST
-  /v1/communities/{id}/members`) is refused for anyone not already active;
-* **a held add** (`community.quorum_pending`) can no longer be started here,
-  and finishing one on CSD-102 is refused at cosign and assemble.
+* **each room's add is "Invite someone"** on a node that answers
+  `GET /v1/communities/{id}/invites`: the key field and contact chips as
+  before (anyone already invited and unanswered is left out), then a
+  three-fact confirm, then `POST …/invites`. The notice says "Invitation sent.
+  They join only if they accept.", never "Done: add".
+* **pending rows** under the room's members, never counted as members:
+  pending (with "expires {date}" and Withdraw), accepted, declined, expired.
+* **an accepted invitee of a quorum room** is seated by the members through
+  `…/changes/envelope {op: add}` → cosign → assemble (a co-signed widening,
+  refused `membership.awaiting_acceptance` without the acceptance). This
+  client does not call the community envelope route, so the row says "this app
+  can't start that yet" instead of offering a control. Under `founder_only`
+  the founder's node seats them on its own (the bridge, or the founder's read
+  of the invitations).
+* **an older node** (a bare 404 on the invites route) keeps "Add someone" and
+  the direct add as written above. A confirmed invitation that meets a bare
+  404 sends nothing in its place; a direct add answered 409
+  `membership.consent_required` (the unreleased interim branch,
+  CIRISServer#700) re-reads the invites route and offers Invite if served.
 
 Unaffected: remove, role changes, re-adding someone already active (still
-`community.already_member`), and pair rooms. The add control above is kept as
-written — it is what 0.5.216–0.5.217 serve — and the refusal renders by id
-(`membership.consent_required` is in `en.json`). The replacement, "Invite
-someone" with a pending row per invitee, is **CSD-106** (`envisioned`);
-`x_private:membership_invitation` above is `blocked_by: CIRISPersist#955`.
+`community.already_member`), and pair rooms, whose invitation is the chat's
+own (`POST /v1/chat`, CSD-091).
 
 ## 4. Flow (how)
 

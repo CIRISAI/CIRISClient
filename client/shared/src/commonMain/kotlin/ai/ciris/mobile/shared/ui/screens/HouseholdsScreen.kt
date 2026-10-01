@@ -32,6 +32,10 @@ import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.viewmodels.HouseholdNotice
 import ai.ciris.mobile.shared.viewmodels.HouseholdsLoad
 import ai.ciris.mobile.shared.viewmodels.HouseholdsViewModel
+import ai.ciris.mobile.shared.viewmodels.GroupInvitesRead
+import ai.ciris.mobile.shared.viewmodels.InvitationsViewModel
+import ai.ciris.mobile.shared.models.federation.InboxInvite
+import ai.ciris.mobile.shared.models.federation.InviteState
 import ai.ciris.mobile.shared.viewmodels.PendingChange
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -81,6 +85,12 @@ import kotlinx.datetime.Instant
 fun HouseholdPanel(
     viewModel: HouseholdsViewModel,
     onOpenMembers: () -> Unit,
+    /**
+     * The invitee's inbox (CSD-106): household invitations addressed to this
+     * owner, above the household itself, because the person invited is not
+     * in it yet. Null draws none.
+     */
+    invitations: InvitationsViewModel? = null,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -93,6 +103,11 @@ fun HouseholdPanel(
     val pending by viewModel.pending.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
     val me by viewModel.myKeyId.collectAsState()
+    // Whether this node founds a household with its founder alone (0.5.218+:
+    // persist seats only who signed the founding record). Read off the inbox,
+    // which is the one read every hub makes, so a person with no household
+    // yet still gets the right founding card.
+    val founding = invitations?.support?.collectAsState()?.value ?: InviteSupport.UNKNOWN
 
     LaunchedEffect(Unit) { viewModel.load() }
     var creating by remember { mutableStateOf(false) }
@@ -100,6 +115,7 @@ fun HouseholdPanel(
     val names = rememberNames(contacts, me)
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+        invitations?.let { InvitationsInbox(it, InboxInvite.KIND_FAMILY, names) }
         when (val l = load) {
             HouseholdsLoad.Loading -> StateBlock(ListState.Loading, tag = HouseholdTags.LOADING, inline = true)
             is HouseholdsLoad.Failed -> HouseholdsFailure(l, HouseholdTags.ERROR, HouseholdTags.NOT_ON_THIS_NODE)
@@ -115,6 +131,7 @@ fun HouseholdPanel(
                 if (creating || l.families.isEmpty()) {
                     CreateHouseholdCard(
                         contacts = contacts,
+                        foundAlone = founding == InviteSupport.INVITES,
                         busy = busy,
                         showCancel = l.families.isNotEmpty(),
                         onCancel = { creating = false },
@@ -180,8 +197,12 @@ fun HouseholdMembersScreen(
     val contacts by viewModel.contacts.collectAsState()
     val contactsFailed by viewModel.contactsFailed.collectAsState()
     val me by viewModel.myKeyId.collectAsState()
+    val invites by viewModel.invites.collectAsState()
+    val inviteSupport by viewModel.inviteSupport.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.load() }
+    // The invitations of the household shown, re-read when the switcher moves (CSD-106).
+    LaunchedEffect(selectedId) { viewModel.loadInvites() }
     var adding by remember { mutableStateOf(false) }
     val names = rememberNames(contacts, me)
 
@@ -239,15 +260,42 @@ fun HouseholdMembersScreen(
                     }
                 }
 
+                // Invitations (CSD-106): who has been asked and not yet seated.
+                // Never counted as members, and never drawn inside the list above.
+                PendingInvites(
+                    read = invites,
+                    me = me,
+                    quorum = governance is Governance.Quorum,
+                    busy = busy,
+                    nameOf = names,
+                    onWithdraw = { inv -> viewModel.request(HouseholdAct.Withdraw(inv.proposalId, inv.inviteeKeyId, names(inv.inviteeKeyId))) },
+                    // A quorum household seats someone who accepted through its
+                    // own envelope (`action: add`), proposed from here as before.
+                    onSeat = if (governance is Governance.Quorum) {
+                        { inv -> viewModel.request(HouseholdAct.Add(inv.inviteeKeyId, names(inv.inviteeKeyId))) }
+                    } else null,
+                )
+
                 if (canChange) {
+                    // The node decides the door: Invite on 0.5.218+, today's
+                    // direct add on a node without the invites route.
+                    val legacy = inviteSupport == InviteSupport.LEGACY
                     if (!adding) {
-                        CirisButton(localizedString("households.add_member"), tag = HouseholdTags.ADD_OPEN, onClick = { adding = true; viewModel.clearMessages() }, enabled = !busy)
+                        CirisButton(
+                            localizedString(if (legacy) "households.add_member" else "mobile.invites_invite_open"),
+                            tag = HouseholdTags.ADD_OPEN, onClick = { adding = true; viewModel.clearMessages() }, enabled = !busy,
+                        )
                     } else {
+                        // Someone already asked (and not yet answered no) is not offered again.
+                        val asked = (invites as? GroupInvitesRead.Loaded)?.invites.orEmpty()
+                            .filter { it.state == InviteState.PENDING || it.state == InviteState.ACCEPTED }
+                            .map { it.inviteeKeyId }.toSet()
                         AddMemberCard(
-                            contacts = contacts.filter { c -> family.members.none { it.keyId == c.keyId } },
+                            contacts = contacts.filter { c -> family.members.none { it.keyId == c.keyId } && c.keyId !in asked },
                             contactsFailed = contactsFailed,
                             names = names,
-                            onPick = { c -> adding = false; viewModel.request(HouseholdAct.Add(c.keyId, names(c.keyId))) },
+                            title = localizedString(if (legacy) "households.add_title_card" else "mobile.invites_pick_title"),
+                            onPick = { c -> adding = false; viewModel.request(viewModel.pickAct(c.keyId, names(c.keyId))) },
                             onCancel = { adding = false },
                         )
                     }
@@ -322,7 +370,12 @@ private fun HouseholdMessages(refusal: NodeRefusal?, notice: HouseholdNotice?) {
     }
     notice?.let {
         Text(
-            localizedString("households.notice_${it.name.lowercase()}"),
+            when (it) {
+                // An invitation is never said as "Added" (CSD-106 §6).
+                HouseholdNotice.INVITED -> localizedString("mobile.invites_notice_invited")
+                HouseholdNotice.WITHDRAWN -> localizedString("mobile.invites_notice_withdrawn")
+                else -> localizedString("households.notice_${it.name.lowercase()}")
+            },
             style = CirisTheme.type.body, color = CirisTheme.tokens.ok,
             modifier = Modifier.testable(HouseholdTags.NOTICE, it.name.lowercase()),
         )
@@ -498,6 +551,8 @@ private fun PendingChangeBlock(
 @Composable
 private fun CreateHouseholdCard(
     contacts: List<Contact>,
+    /** 0.5.218+: a household is formed by its founder alone, and the others are invited (CSD-106). */
+    foundAlone: Boolean,
     busy: Boolean,
     showCancel: Boolean,
     onCancel: () -> Unit,
@@ -530,9 +585,16 @@ private fun CreateHouseholdCard(
         }
         Spacer(Modifier.height(10.dp))
         Text(localizedString("households.create_founding_label").uppercase(), style = type.label, color = t.mute)
-        Text(localizedString("households.create_founding_hint"), style = type.body, color = t.dim)
+        if (foundAlone) {
+            // persist seats only who signed the founding record, and this node
+            // signs it with the founder alone (`membership.founding_member_unsigned`).
+            val text = localizedString("mobile.invites_found_alone_household")
+            Text(text, style = type.body, color = t.dim, modifier = Modifier.testable(InviteTags.FOUND_ALONE_HOUSEHOLD, text))
+        } else {
+            Text(localizedString("households.create_founding_hint"), style = type.body, color = t.dim)
+        }
         Spacer(Modifier.height(4.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (!foundAlone) Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             for (c in contacts) {
                 val on = c.keyId in founding
                 Chip(ChipSpec(
@@ -549,7 +611,7 @@ private fun CreateHouseholdCard(
             CirisButton(
                 localizedString("households.create_submit"), tag = HouseholdTags.CREATE_SUBMIT,
                 enabled = !busy && name.isNotBlank(),
-                onClick = { onCreate(name, protocol, founding.toList()) },
+                onClick = { onCreate(name, protocol, if (foundAlone) emptyList() else founding.toList()) },
             )
         }
     }
@@ -609,12 +671,13 @@ private fun AddMemberCard(
     contacts: List<Contact>,
     contactsFailed: Boolean,
     names: (String) -> String,
+    title: String,
     onPick: (Contact) -> Unit,
     onCancel: () -> Unit,
 ) {
     val t = CirisTheme.tokens
     CardShell(tag = HouseholdTags.ADD_CARD) {
-        Text(localizedString("households.add_title_card"), style = CirisTheme.type.title, color = t.ink)
+        Text(title, style = CirisTheme.type.title, color = t.ink)
         Spacer(Modifier.height(8.dp))
         when {
             contactsFailed -> StateBlock(
@@ -657,6 +720,10 @@ private fun HouseholdConfirm(
     val (title, what) = when (act) {
         is HouseholdAct.Add -> localizedString("households.add_title", "name", act.label) to
             localizedString("households.add_what", "name", act.label)
+        is HouseholdAct.Invite -> localizedString("mobile.invites_household_invite_title", "name", act.label) to
+            localizedString("mobile.invites_household_invite_what", "name", act.label)
+        is HouseholdAct.Withdraw -> localizedString("mobile.invites_withdraw_title", "name", act.label) to
+            localizedString("mobile.invites_withdraw_what")
         is HouseholdAct.Remove -> localizedString("households.remove_title", "name", act.label) to
             localizedString("households.remove_what", "name", act.label)
         is HouseholdAct.Role -> if (act.role == ROLE_FOUNDER)
@@ -669,6 +736,10 @@ private fun HouseholdConfirm(
     }
     val who = when {
         act is HouseholdAct.Leave -> localizedString("households.signs_you_only")
+        act is HouseholdAct.Withdraw -> localizedString("mobile.invites_signs_proposer")
+        act is HouseholdAct.Invite && governance is Governance.Quorum ->
+            localizedString("mobile.invites_signs_inviter_quorum", mapOf("m" to governance.m.toString(), "n" to governance.n.toString()))
+        act is HouseholdAct.Invite -> localizedString("mobile.invites_signs_inviter_founder")
         governance is Governance.Quorum -> localizedString("households.signs_quorum", mapOf("m" to governance.m.toString(), "n" to governance.n.toString()))
         else -> localizedString("households.signs_you_founder")
     }
@@ -679,10 +750,15 @@ private fun HouseholdConfirm(
             ConfirmFact(localizedString("households.confirm_what"), what),
             ConfirmFact(localizedString("households.confirm_who_signs"), who),
         ),
-        confirmLabel = localizedString(if (route == ActRoute.PROPOSE) "households.confirm_propose" else "households.confirm_do"),
+        confirmLabel = when {
+            act is HouseholdAct.Invite -> localizedString("mobile.invites_confirm_send")
+            act is HouseholdAct.Withdraw -> localizedString("mobile.invites_confirm_withdraw")
+            route == ActRoute.PROPOSE -> localizedString("households.confirm_propose")
+            else -> localizedString("households.confirm_do")
+        },
         onConfirm = onConfirm,
         onDismiss = onDismiss,
-        destructive = act is HouseholdAct.Remove || act is HouseholdAct.Dissolve || act is HouseholdAct.Leave,
+        destructive = act is HouseholdAct.Remove || act is HouseholdAct.Dissolve || act is HouseholdAct.Leave || act is HouseholdAct.Withdraw,
         tagPrefix = HouseholdTags.CONFIRM,
     )
 }

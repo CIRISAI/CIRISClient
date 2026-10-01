@@ -10,6 +10,9 @@ import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.ActRoute
 import ai.ciris.mobile.shared.ui.screens.Governance
 import ai.ciris.mobile.shared.ui.screens.HouseholdAct
+import ai.ciris.mobile.shared.ui.screens.InviteSupport
+import ai.ciris.mobile.shared.ui.screens.MEMBERSHIP_CONSENT_REQUIRED
+import ai.ciris.mobile.shared.ui.screens.isInviteRouteMissing
 import ai.ciris.mobile.shared.ui.screens.ProtocolChoice
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.ui.screens.action
@@ -60,7 +63,7 @@ data class PendingChange(
 }
 
 /** What just happened, said once on screen. */
-enum class HouseholdNotice { CREATED, ADDED, REMOVED, ROLE_CHANGED, LEFT, DISSOLVED, PROPOSED, SIGNED, APPLIED }
+enum class HouseholdNotice { CREATED, ADDED, REMOVED, ROLE_CHANGED, LEFT, DISSOLVED, PROPOSED, SIGNED, APPLIED, INVITED, WITHDRAWN }
 
 /**
  * Drives both household cards: the household in the Family hub (CSD-100,
@@ -114,6 +117,18 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
     private val _pending = MutableStateFlow<PendingChange?>(null)
     val pending: StateFlow<PendingChange?> = _pending.asStateFlow()
 
+    /** The selected household's invitations (CSD-106), read with the roster. */
+    private val _invites = MutableStateFlow<GroupInvitesRead>(GroupInvitesRead.NotAsked)
+    val invites: StateFlow<GroupInvitesRead> = _invites.asStateFlow()
+
+    /**
+     * Whether adding someone is inviting them on this node. Decided by the
+     * invites ROUTE: a 2xx on `GET …/invites` is 0.5.218+, a bare 404 is an
+     * older node whose direct add the roster keeps (CSD-106 §2).
+     */
+    private val _inviteSupport = MutableStateFlow(InviteSupport.UNKNOWN)
+    val inviteSupport: StateFlow<InviteSupport> = _inviteSupport.asStateFlow()
+
     /** The household being looked at: the selected one, else the first. */
     fun selected(): FamilyDto? {
         val families = (_load.value as? HouseholdsLoad.Loaded)?.families ?: return null
@@ -163,11 +178,60 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
         }
     }
 
+    /**
+     * Read the selected household's invitations — the roster asks (CSD-101),
+     * on opening and whenever the household changes. Not part of [load]:
+     * Files reads the household list through this view model and has no
+     * business asking the node about invitations.
+     */
+    fun loadInvites() {
+        viewModelScope.launch { reloadInvites() }
+    }
+
+    /**
+     * The selected household's invitations. Also the node's answer to "does
+     * adding someone mean inviting them here?" — the route answers, a version
+     * string does not. A refusal with an id (the node has the route and said
+     * no) leaves [inviteSupport] as it was.
+     */
+    private suspend fun reloadInvites() {
+        val familyId = selected()?.familyId
+        if (familyId == null) {
+            _invites.value = GroupInvitesRead.NotAsked
+            return
+        }
+        if (_invites.value !is GroupInvitesRead.Loaded) _invites.value = GroupInvitesRead.Loading
+        val next = try {
+            GroupInvitesRead.Loaded(api.listInvites(familyId).invites)
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[invites] ${(e as? NodeRefusal)?.reasonId ?: e.message}")
+            GroupInvitesRead.of(e)
+        }
+        // The person may have switched household while this was in flight.
+        if (selected()?.familyId != familyId) return
+        _invites.value = next
+        when (next) {
+            is GroupInvitesRead.Loaded -> _inviteSupport.value = InviteSupport.INVITES
+            GroupInvitesRead.NotOnThisNode -> _inviteSupport.value = InviteSupport.LEGACY
+            else -> {}
+        }
+    }
+
     fun select(familyId: String) {
         _selectedId.value = familyId
         _refusal.value = null
         _notice.value = null
+        // The roster re-reads for the household now shown (its LaunchedEffect keys on the selection).
+        _invites.value = GroupInvitesRead.NotAsked
     }
+
+    /**
+     * What picking a contact on the roster asks for: an invitation on a node
+     * that carries them (and on one not yet known — the act itself finds out),
+     * the direct add on a node that does not.
+     */
+    fun pickAct(keyId: String, label: String): HouseholdAct.OfMember =
+        if (_inviteSupport.value == InviteSupport.LEGACY) HouseholdAct.Add(keyId, label) else HouseholdAct.Invite(keyId, label)
 
     fun clearMessages() {
         _refusal.value = null
@@ -239,23 +303,61 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
         _confirming.value = null
         val family = selected() ?: return
         when (routeOf(act, governance(family))) {
-            ActRoute.DIRECT -> {
-                val notice = when (act) {
-                    is HouseholdAct.Add -> HouseholdNotice.ADDED
-                    is HouseholdAct.Remove -> HouseholdNotice.REMOVED
-                    is HouseholdAct.Role -> HouseholdNotice.ROLE_CHANGED
+            ActRoute.DIRECT -> when (act) {
+                is HouseholdAct.Invite -> runFor { invite(family, act) }
+                is HouseholdAct.Add -> runFor { add(family, act) }
+                is HouseholdAct.Withdraw -> run(HouseholdNotice.WITHDRAWN) {
+                    api.withdrawInvite(family.familyId, act.proposalId)
                 }
-                run(notice) {
-                    when (act) {
-                        is HouseholdAct.Add -> api.addMember(family.familyId, act.keyId, null)
-                        is HouseholdAct.Remove -> api.removeMember(family.familyId, act.keyId)
-                        is HouseholdAct.Role -> api.changeRole(family.familyId, act.keyId, act.role)
-                    }
-                }
+                is HouseholdAct.Remove -> run(HouseholdNotice.REMOVED) { api.removeMember(family.familyId, act.keyId) }
+                is HouseholdAct.Role -> run(HouseholdNotice.ROLE_CHANGED) { api.changeRole(family.familyId, act.keyId, act.role) }
             }
             ActRoute.PROPOSE -> propose(family, act, act.keyId, (act as? HouseholdAct.Role)?.role)
             ActRoute.NOT_ALLOWED -> PlatformLogger.w(TAG, "[confirmMemberAct] $act is not this person's to make; nothing sent")
         }
+    }
+
+    /**
+     * Send the invitation the person confirmed. A bare 404 is a node with no
+     * invites route: nothing is sent in its place — a direct add is a
+     * different act, with its own confirm — the roster switches to offering
+     * it and says why ([INVITES_NOT_ON_THIS_NODE]).
+     */
+    private suspend fun invite(family: FamilyDto, act: HouseholdAct.Invite): HouseholdNotice {
+        try {
+            api.inviteMember(family.familyId, act.keyId, null)
+        } catch (e: NodeRefusal) {
+            if (!isInviteRouteMissing(e)) throw e
+            _inviteSupport.value = InviteSupport.LEGACY
+            _invites.value = GroupInvitesRead.NotOnThisNode
+            throw NodeRefusal(INVITES_NOT_ON_THIS_NODE, e.detail, e.statusCode)
+        }
+        _inviteSupport.value = InviteSupport.INVITES
+        return HouseholdNotice.INVITED
+    }
+
+    /**
+     * The direct add, on a node that serves it. Two answers mean the node has
+     * moved on, and both are taken at their word rather than reported as an add:
+     * a 202 `{state: "invited"}` (0.5.218's alias) is an invitation, and a 409
+     * `membership.consent_required` (the interim build) is a closed door — the
+     * roster re-reads the invites route, and offers Invite if the node serves it.
+     */
+    private suspend fun add(family: FamilyDto, act: HouseholdAct.Add): HouseholdNotice {
+        val invited = try {
+            api.addMember(family.familyId, act.keyId, null)
+        } catch (e: NodeRefusal) {
+            if (e.reasonId == MEMBERSHIP_CONSENT_REQUIRED) {
+                _inviteSupport.value = InviteSupport.UNKNOWN
+                reloadInvites()
+            }
+            throw e
+        }
+        if (invited != null) {
+            _inviteSupport.value = InviteSupport.INVITES
+            return HouseholdNotice.INVITED
+        }
+        return HouseholdNotice.ADDED
     }
 
     /**
@@ -338,18 +440,27 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
 
     // ── Plumbing ────────────────────────────────────────────────────────────
 
-    private fun run(notice: HouseholdNotice, reloadAfter: Boolean = true, block: suspend () -> Unit) {
+    private fun run(notice: HouseholdNotice, reloadAfter: Boolean = true, block: suspend () -> Unit) =
+        runFor(reloadAfter) { block(); notice }
+
+    /** [run] for an act whose outcome decides what is said (an add the node answered as an invitation). */
+    private fun runFor(reloadAfter: Boolean = true, block: suspend () -> HouseholdNotice) {
         if (_busy.value) return
         _busy.value = true
         _refusal.value = null
         _notice.value = null
         viewModelScope.launch {
+            var notice: HouseholdNotice? = null
             try {
-                block()
+                notice = block()
                 _notice.value = notice
-                if (reloadAfter) reload()
+                if (reloadAfter) {
+                    reload()
+                    // What the roster shows of invitations changes with every roster act.
+                    if (_invites.value != GroupInvitesRead.NotAsked) reloadInvites()
+                }
             } catch (e: NodeRefusal) {
-                PlatformLogger.w(TAG, "[$notice] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                PlatformLogger.w(TAG, "[${notice ?: "act"}] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
                 _refusal.value = e
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[$notice] failed: ${e.message}")
@@ -368,6 +479,8 @@ class HouseholdsViewModel(private val api: HouseholdsApi) : ViewModel() {
         _myKeyId.value = null
         _pending.value = null
         _confirming.value = null
+        _invites.value = GroupInvitesRead.NotAsked
+        _inviteSupport.value = InviteSupport.UNKNOWN
         clearMessages()
     }
 }

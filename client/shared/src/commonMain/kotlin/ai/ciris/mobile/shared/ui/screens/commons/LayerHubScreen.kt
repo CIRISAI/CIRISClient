@@ -79,6 +79,8 @@ fun LayerHubScreen(
     // Businesses pass their tier's view model; every other circle passes null.
     communities: ai.ciris.mobile.shared.viewmodels.CommunitiesViewModel? = null,
     onOpenModeration: ((communityId: String) -> Unit)? = null,
+    /** The invitee's inbox (CSD-106), drawn with the circle's communities. */
+    invitations: ai.ciris.mobile.shared.viewmodels.InvitationsViewModel? = null,
 ) {
     val scrollState = rememberTestableScrollState()
     Box(
@@ -119,6 +121,7 @@ fun LayerHubScreen(
                 ai.ciris.mobile.shared.ui.screens.CommunityGovernanceSection(
                     viewModel = communities,
                     onOpenModeration = onOpenModeration,
+                    invitations = invitations,
                 )
                 return@Column
             }

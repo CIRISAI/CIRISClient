@@ -6,6 +6,9 @@ import ai.ciris.mobile.shared.models.federation.FamilyCosignResponse
 import ai.ciris.mobile.shared.models.federation.FamilyDto
 import ai.ciris.mobile.shared.models.federation.FamilyListResponse
 import ai.ciris.mobile.shared.models.federation.FamilySignatureDto
+import ai.ciris.mobile.shared.models.federation.GroupInviteList
+import ai.ciris.mobile.shared.models.federation.InviteSent
+import ai.ciris.mobile.shared.models.federation.InviteWithdrawn
 import kotlinx.serialization.json.JsonObject
 
 /**
@@ -32,8 +35,21 @@ interface HouseholdsApi {
     /** `DELETE /v1/families/{id}` — dissolve (founder_only). */
     suspend fun dissolveFamily(familyId: String)
 
-    /** `POST /v1/families/{id}/members` `{key_id, role?}`. */
-    suspend fun addMember(familyId: String, keyId: String, role: String?)
+    /**
+     * `POST /v1/families/{id}/members` `{key_id, role?}` — the direct add a
+     * 0.5.216–0.5.217 node serves. Null when they were added; the invitation
+     * when the node answered `{state: "invited"}` instead (0.5.218's alias).
+     */
+    suspend fun addMember(familyId: String, keyId: String, role: String?): InviteSent?
+
+    /** `POST /v1/families/{id}/invites` `{key_id, role?}` — 0.5.218+. A bare 404 is an older node (CSD-106). */
+    suspend fun inviteMember(familyId: String, keyId: String, role: String?): InviteSent
+
+    /** `GET /v1/families/{id}/invites` — every invitation into the household and its state. */
+    suspend fun listInvites(familyId: String): GroupInviteList
+
+    /** `DELETE /v1/families/{id}/invites/{proposal_id}` — only the proposer may. */
+    suspend fun withdrawInvite(familyId: String, proposalId: String): InviteWithdrawn
 
     /** `DELETE /v1/families/{id}/members/{key_id}`. */
     suspend fun removeMember(familyId: String, keyId: String)
@@ -69,8 +85,14 @@ class ClientHouseholds(
     override suspend fun createFamily(name: String, consensusProtocol: String?, members: List<String>): FamilyDto =
         client.createFamily(name, consensusProtocol, members, nodeBaseUrl)
     override suspend fun dissolveFamily(familyId: String) = client.dissolveFamily(familyId, nodeBaseUrl)
-    override suspend fun addMember(familyId: String, keyId: String, role: String?) =
+    override suspend fun addMember(familyId: String, keyId: String, role: String?): InviteSent? =
         client.addFamilyMember(familyId, keyId, role, nodeBaseUrl)
+    override suspend fun inviteMember(familyId: String, keyId: String, role: String?): InviteSent =
+        client.inviteFamilyMember(familyId, keyId, role, nodeBaseUrl)
+    override suspend fun listInvites(familyId: String): GroupInviteList =
+        client.listFamilyInvites(familyId, nodeBaseUrl)
+    override suspend fun withdrawInvite(familyId: String, proposalId: String): InviteWithdrawn =
+        client.withdrawFamilyInvite(familyId, proposalId, nodeBaseUrl)
     override suspend fun removeMember(familyId: String, keyId: String) =
         client.removeFamilyMember(familyId, keyId, nodeBaseUrl)
     override suspend fun changeRole(familyId: String, keyId: String, role: String) =

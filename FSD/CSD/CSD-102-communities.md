@@ -114,12 +114,11 @@ fields:
     renders: "affiliations only: 'What this body has declared it can do with what you put here … has no route yet (CIRISServer#649). Joining does not show it, and this app will not guess it.'"
     tag: txt_affiliations_terms_unavailable
   - ceg: x_private:membership_invitation
-    use: emit
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "founding with other people becomes: found it with you alone, then invite each person, who joins only by accepting (CSD-106). The founding card's member chips are what changes. Until then a create naming anyone but the founder is refused 409 `membership.consent_required` once CIRISServer#700 ships (§3.3)"
-    tag: "proposed:community_create_invite"
-    blocked_by: CIRISPersist#955
+    use: display-only
+    type: string
+    example: "You found it on your own. Once it exists, invite each person from People; they join only by accepting."
+    renders: "on a node that carries invitations (GET /v1/self/invites answers, ≥ 0.5.218) the founding card drops its member chips and says this instead, and the create sends no `members`: the node seats only the founder (`membership.founding_member_unsigned` otherwise). On an older node the chips stay. The invitee's inbox for community invitations sits at the top of this section (CSD-106)"
+    tag: community_create_found_alone
 ```
 
 ```yaml csd:states
@@ -240,23 +239,26 @@ create** (CIRISConstitution#133). Persist's enforcement is CIRISPersist#955
 on the admitting record, and an invitation expires in 30 days or less. Reverse
 quorum is not a membership rule; it stays CSD-070's commons brake.
 
-Until persist carries the invitation, **CIRISServer#700** (open, branch
-`fix/evict-device-0.5.218`, unreleased) refuses every door that grows a roster
-with **409 `membership.consent_required`** — one literal id shared with
-households. On this card:
+**CIRISServer 0.5.218** ships it (merged at `53d1ffb5`); the interim 409
+`membership.consent_required` of CIRISServer#700 never reached a release. On
+this card (CSD-106):
 
-* **found with members**: the founding card's member chips send `members`, and a
-  create naming anyone but the founder is refused. Founding a room of one still
-  works (§4's flow does exactly that, so it is unaffected).
-* **a held add** finished here (cosign, assemble) is refused when the proposed
-  roster grows; the direct add itself is CSD-103 §3.1.
+* **the invitee's inbox** for community invitations is drawn at the top of the
+  section (`GET /v1/self/invites`, Accept / Decline behind a three-fact
+  confirm). The inbox row does not carry the room's tier, so **both** community
+  hubs show the same community invitations (CSD-106 §6).
+* **found with members**: a create naming anyone but the founder is refused
+  `membership.founding_member_unsigned`. On a node that carries invitations the
+  founding card offers no member chips (`community_create_found_alone`).
+  Founding a room of one still works (§4's flow does exactly that).
+* **a held add** finished here (cosign, assemble) is admitted only when the
+  joiner has accepted (`membership.awaiting_acceptance` otherwise). A governed
+  write that comes back as an invitation (`CommunityChangeOutcome.Invited`)
+  re-reads the room's invitations (`GET /v1/communities/{community_id}/invites`).
 
-Unaffected: leave, dissolve, remove, role changes, re-adding someone already
-active (still `community.already_member`), and pair rooms (the contact grant each
-side authors). The rows above record what 0.5.216–0.5.217 serve and are kept.
-The refusal renders by id (`membership.consent_required` is in `en.json`). The
-replacement is the invitation, **CSD-106** (`envisioned`);
-`x_private:membership_invitation` above is `blocked_by: CIRISPersist#955`.
+Unaffected: role changes, leave, dissolve, re-adding someone already active
+(still `community.already_member`), and pair rooms (the contact grant each
+side authors).
 
 ## 4. Flow (how)
 

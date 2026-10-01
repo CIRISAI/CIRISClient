@@ -10,10 +10,11 @@ description: >-
 # (HouseholdTags); all literals at 0.5.225.
 # NOT asserted: adding a real member. It needs a second identity registered on
 # the node, which the fixture does not stand up.
-# CONSENT TO JOIN (ruling 2026-09-30, CIRISConstitution#133): once CIRISServer#700
-# ships, confirming an add answers 409 membership.consent_required, and the
-# invitation replaces it (CSD-106, CIRISPersist#955). No step here confirms an
-# add, so nothing below changes; `add_picks_from_contacts` only opens the picker.
+# CONSENT TO JOIN (ruling 2026-09-30, CIRISConstitution#133): on a node >= 0.5.218
+# the add control is "Invite someone" and picking a contact sends an invitation
+# (CSD-106); on an older node it is still the direct add. Same tags either way, and
+# no step here confirms an add or an invitation; `add_picks_from_contacts` only
+# opens the picker. The invitation is driven by CSD-106's draft flow.
 client: ">=0.5.225"
 
 steps:
