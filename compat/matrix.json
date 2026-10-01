@@ -1316,6 +1316,56 @@
       },
       "notes": "THE GAP-CLOSING REVIEW, BOTH BATCHES, AND THE CARDS IT FOUND MISSING. Every CSD was reviewed against its card, the node/agent API and the CC (#124, #126), with duplicate cards folded (Delegation→Delegations, System→Runtime, SkillImport→Skills, Map→Trust graph) and uncited routes cut from 121 to 2 under a new route gate (#111, #119). New cards: households (#122), communities (#121), key verification (#117, #118), erasure and receipts (#123), partnership queue and connectors (#120), contact code (#113), withdraw consent (#112), Files and Notes (#77). Fixes: node-owned calls (contacts, chat, config, drive) go to the node URL; logout and every auth exit reset consent, contacts and chat state, with epoch-guarded jobs (#115, #116, #129); two CI flakes were real races (#125). The CSD flow runner now runs on the five-platform matrix (#97) and a two-node fixture stands up a second person (#130). Tested: five-platform live QA green on all legs against ciris-server v0.5.217; :shared:desktopTest 1276/1276. Upstream: CIRISServer#698 (two released nodes cannot key a pair room).",
       "published": null
+    },
+    {
+      "client_version": "0.5.226",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Every 0.5.218 surface added here (membership invitations, pair-room invitations, claimed-session collection, eviction report, file custody) reads a route a 0.5.217 node lacks and falls back to that node's behaviour: direct add, a plain chat room, Login, the raw revoke, and the custody card's node-version state.",
+      "node_max_tested": "0.5.218",
+      "agent_min_tested": "2.12.1",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody"
+      ],
+      "capabilities_note": "new: family and community invitations with an inbox on the hubs (CSD-106), chat rooms opened by invitation with accept/decline on People, the second device's own owner session (POST /v1/setup/claimed-session), a per-part eviction report with Try again, revoking this device behind a second confirm, Where is this file (CSD-107). Fixed: family and community file opens sent no cohort (404 drive.not_in_room on 0.5.217 and 0.5.218), and the QR never drew (zero size).",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5268
+      },
+      "notes": "SERVER 0.5.218 COMPATIBILITY. Every server-emitted id at v0.5.218 is in the bundle (65 added, 9 re-synced, #142); the localization pin is the v0.5.218 tag. On a 0.5.218 node a direct roster add now answers 202 invited — this release reads it as an invitation (0.5.225 could not decode it on a community add), so 0.5.226 is the minimum client for community adds on a 0.5.218 node. PRs: #141 invitations, #142 strings and claimed-session, #143 pair-room invitations, eviction report, force_self, the 413 too-large state, #145 drive scope (cohort), #146 the QR's size and a driver wait that rides out a failing /tree read, #139 file custody, #144 MEDIA_EDGE.md §8/§9 for agent consumers. Tested: five-platform live QA against ciris-server v0.5.218 — see the release PR for the run. Upstream for 0.5.219: CIRISServer#711.",
+      "published": null
     }
   ]
 }

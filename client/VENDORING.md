@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `0.5.218` (`53d1ffb5d15cfab8558d12676d4433e4322a6a91`) | `feat/server-0.5.218-parity` (emitted ids reconciled; server main at the #679 merge, tag `v0.5.218` not yet cut) | 2026-10-01 |
+| `CIRISAI/CIRISServer` | `v0.5.218` (`405acc170cc3ec7229e2d695d1f87b1e847fbf13`) | `release/0.5.226` (emitted ids reconciled in #142 against `53d1ffb5`; the tag adds one test file, `tests/drive_crud.rs`) | 2026-10-01 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,

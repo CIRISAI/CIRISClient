@@ -35,12 +35,16 @@ def test_csd_107_block_is_clean() -> None:
     assert check_csd_v3.check_topology(_block()) == []
 
 
-def test_csd_107_names_the_pending_relation_and_negative() -> None:
+def test_csd_107_names_the_relation_and_negative_server_0_5_218_lists() -> None:
+    """Both were pending until CIRISServer v0.5.218's TOPOLOGY.md listed them
+    (§2.5 `custody`, §2.6 `no_wider_self_rows`); the table's rule then removed them."""
     t = _block()["topology"]
     assert {"rel": "custody", "person": "one", "device": "D1", "file": "last"} in t["relations"]
     assert [n["check"] for n in t["negatives"]] == ["no_wider_self_rows"]
-    assert "custody" in check_csd_v3.TOPOLOGY_PENDING
-    assert "no_wider_self_rows" in check_csd_v3.TOPOLOGY_PENDING
+    assert "custody" in check_csd_v3.TOPOLOGY_RELATIONS
+    assert "no_wider_self_rows" in check_csd_v3.TOPOLOGY_NEGATIVES
+    assert "custody" not in check_csd_v3.TOPOLOGY_PENDING
+    assert "no_wider_self_rows" not in check_csd_v3.TOPOLOGY_PENDING
 
 
 def _broken(mutate) -> list[str]:

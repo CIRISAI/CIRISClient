@@ -134,23 +134,21 @@ def _family_for(ceg: str, reg: dict) -> tuple[dict | None, dict[str, str]]:
 #: plus `checks:` (FSD/CSD4_EVALUATION.md §1.3). An unknown layer fails for the
 #: same reason an unknown `csd:surface` key does: an unread key is a silent no.
 TOPOLOGY_LAYERS = {"roots", "canonicals", "nodes", "persons", "relations", "actor", "negatives", "checks"}
-#: TOPOLOGY.md §2.5's relations, plus `community`, which CSD4_EVALUATION §4.1
-#: declares as LACKING and the builder refuses by name.
+#: TOPOLOGY.md §2.5's relations (CIRISServer v0.5.218, 405acc17), plus
+#: `community`, which CSD4_EVALUATION §4.1 declares as LACKING and the builder
+#: refuses by name. `custody` and `session` arrived with 0.5.218.
 TOPOLOGY_RELATIONS = {
     "peered", "rooted_with", "reachable", "contact", "room", "message", "file",
-    "member", "quorum_change", "community",
+    "member", "quorum_change", "community", "custody", "session",
 }
-#: TOPOLOGY.md §2.6's negatives.
-TOPOLOGY_NEGATIVES = {"cannot_list_room", "holds_no_row"}
+#: TOPOLOGY.md §2.6's negatives (v0.5.218; `no_wider_self_rows` listed there).
+TOPOLOGY_NEGATIVES = {"cannot_list_room", "holds_no_row", "no_wider_self_rows"}
 #: Named by a CSD before TOPOLOGY.md on the server's main lists them — which is
 #: not the same as unbuilt: an entry may already run in the server's builder on
 #: a branch, and its note says where. Accepted
 #: so a CSD can state the fixture it needs; each entry says who asked and where
 #: the server stands. Remove an entry when TOPOLOGY.md on main lists it.
-TOPOLOGY_PENDING = {
-    "custody": "CSD-107 — in TOPOLOGY.md §2.5 and the builder on CIRISServer#704 (feat/file-custody-0.5.218, unmerged); its csd-107-file-custody topology passes on real nodes there",
-    "no_wider_self_rows": "CSD-107 — built (harness/native/topology.py on CIRISServer chore/adopt-edge-v33; used by topologies/selffiles.yaml); TOPOLOGY.md §2.6 does not list it",
-}
+TOPOLOGY_PENDING: dict[str, str] = {}
 
 
 def check_topology(topo: object) -> list[str]:
