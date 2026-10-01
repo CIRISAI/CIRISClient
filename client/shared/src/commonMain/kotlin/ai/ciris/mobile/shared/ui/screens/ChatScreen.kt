@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
+import ai.ciris.mobile.shared.models.chat.PairPhase
 import ai.ciris.mobile.shared.models.chat.Presentation
 import ai.ciris.mobile.shared.models.chat.chatEntryText
 import ai.ciris.mobile.shared.models.chat.unopenedText
@@ -25,6 +26,10 @@ import ai.ciris.mobile.shared.ui.components.ViewerAuthority
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.viewmodels.UserChatViewModel
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
+import ai.ciris.mobile.shared.ui.glyphs.GlyphName
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -106,6 +111,7 @@ private fun String.utf8Size(): Int = encodeToByteArray().size
  *  - ``btn_chat_refresh``       — re-read the transcript
  *  - ``btn_chat_back``          — back navigation
  *  - ``chat_refusal``           — the typed refusal banner
+ *  - ``chat_pair_waiting``      — a pair room still joining (0.5.218): who it waits on, no composer
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,7 +148,19 @@ fun ChatScreen(
     val sending by viewModel.sending.collectAsState()
     val refusalReasonId by viewModel.refusalReasonId.collectAsState()
     val refusalDetail by viewModel.refusalDetail.collectAsState()
+    val pairPhase by viewModel.pairPhase.collectAsState()
     val isRoom = contactKeyId == null
+    // A pair room still joining (ciris-server 0.5.218): not an empty room.
+    val joining = !isRoom && pairPhase != PairPhase.OPEN
+    // Every phase but OPEN clears when the OTHER side's row replicates, so
+    // there is no retry button; the screen asks again on its own, and the
+    // top bar's refresh asks now.
+    LaunchedEffect(joining, communityId) {
+        while (joining) {
+            delay(PAIR_RECHECK_MS)
+            viewModel.recheck()
+        }
+    }
 
     LaunchedEffect(communityId, contactKeyId) {
         if (contactKeyId == null) viewModel.enterRoom(communityId, contactLabel, memberCount)
@@ -166,7 +184,11 @@ fun ChatScreen(
                     Column {
                         Text(contactLabel.ifBlank { localizedString("mobile.chat_title_fallback") })
                         Text(
-                            localizedString(
+                            // A pair room still joining has ONE active member and
+                            // nothing wrong; "1 members" would read as a broken
+                            // room, so the header says it has not started.
+                            if (joining) localizedString("mobile.chat_subtitle_not_started")
+                            else localizedString(
                                 "mobile.chat_subtitle_members",
                                 "count",
                                 // A pair's roster from POST /v1/chat; a room's
@@ -255,6 +277,16 @@ fun ChatScreen(
             // ── Transcript ────────────────────────────────────────────────────
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 when {
+                    // A pair room waiting on someone: a state, not an empty chat
+                    // and not a refusal. Checked first, because a joining room
+                    // has no transcript to load and no messages to show.
+                    joining && refusalReasonId == null && refusalDetail == null -> Box(
+                        modifier = Modifier.fillMaxSize().padding(16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        PairWaitingBlock(pairPhase, contactLabel.ifBlank { localizedString("mobile.chat_title_fallback") })
+                    }
+
                     loading && messages.isEmpty() -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_loading"),
                         contentAlignment = Alignment.Center,
@@ -315,7 +347,10 @@ fun ChatScreen(
             // Recomputed once per keystroke rather than once per recomposition:
             // encoding a 16 KB string on every frame of a scroll would be waste.
             val draftBytes = remember(draft) { draft.utf8Size() }
-            Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
+            // No composer while a pair room is joining: there is nobody seated
+            // to carry a message to, and a field that types into nothing says
+            // otherwise.
+            if (!joining) Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                     rememberTextInputDriver("input_chat_body", draft, enabled = !sending, onValueChange = viewModel::setDraft)
                     Row(verticalAlignment = Alignment.Bottom) {
@@ -379,6 +414,39 @@ fun ChatScreen(
         }
     }
     custody?.let { FileCustodyHost(it, nodeVersion) }
+}
+
+/** How often a joining pair room asks the node again — the node's own pair-room cadence is 30 s. */
+private const val PAIR_RECHECK_MS = 15_000L
+
+/** The bundle key for each waiting phase's headline and body. Pure, so a test pins every phase to its own words. */
+fun pairWaitingKeys(phase: PairPhase): Pair<String, String>? = when (phase) {
+    PairPhase.OPEN -> null
+    PairPhase.WAITING_FOR_THEM -> "mobile.chat_pair_invited_title" to "mobile.chat_pair_invited_body"
+    PairPhase.JOINING -> "mobile.chat_pair_joining_title" to "mobile.chat_pair_joining_body"
+    PairPhase.WAITING_FOR_THEIR_SIDE -> "mobile.chat_pair_awaiting_title" to "mobile.chat_pair_awaiting_body"
+}
+
+/**
+ * A pair room between its two steps (ciris-server 0.5.218, CIRISServer#706):
+ * WHO it is waiting on and what happens next, as a StateBlock — never the
+ * empty-chat sentence, which would say the room works and nobody has spoken.
+ *
+ * There is no Withdraw: the server founds a pair room and proposes the other
+ * person with the NODE's key, and withdrawing an invitation needs its
+ * proposer's own pen (`membership_invites::withdraw` refuses
+ * `membership.not_the_proposer`). The body says the invitation stays open
+ * until they answer or it lapses, which is what is true.
+ */
+@Composable
+private fun PairWaitingBlock(phase: PairPhase, who: String) {
+    val (titleKey, bodyKey) = pairWaitingKeys(phase) ?: return
+    val title = localizedString(titleKey, "who", who)
+    val body = localizedString(bodyKey, "who", who)
+    StateBlock(
+        ListState.Empty(message = "$title\n$body", glyph = if (phase == PairPhase.JOINING) GlyphName.SYNC else GlyphName.HOLD),
+        tag = "chat_pair_waiting",
+    )
 }
 
 /** The chat tag for "Where is this file" on a message row. */

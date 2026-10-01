@@ -159,6 +159,17 @@ data class RevokeOccurrenceRequest(
     val occurrenceKeyId: String,
     /** Optional operator annotation (e.g. "laptop lost 2026-06-23"). */
     val reason: String? = null,
+    /**
+     * Required (0.5.218) when the occurrence is one of the keys of the node
+     * SERVING the request: evicting it withdraws this node's owner-binding and
+     * ends the owner's authority here, as a self-release does. Without it the
+     * node refuses `self.release_self_requires_force` (409). The client sends
+     * it only from the second confirm, which says this device loses access —
+     * never on a first attempt (`IdentityManagementViewModel.RevokeState`).
+     * Omitted when false, so the body a 0.5.217 node reads is unchanged.
+     */
+    @SerialName("force_self")
+    val forceSelf: Boolean? = null,
 )
 
 /** Response of `POST /v1/self/occurrence/revoke` (REVOKE). */
@@ -174,7 +185,97 @@ data class RevokeOccurrenceResponse(
     /** RFC-3339 effective time (== now; effective immediately). */
     @SerialName("effective_at")
     val effectiveAt: String = "",
+    /** 0.5.218: `true` when every part of the eviction completed. */
+    val revoked: Boolean? = null,
+    /** 0.5.218: the device evicted was the node answering — this session's authority ended with it. */
+    @SerialName("released_self")
+    val releasedSelf: Boolean = false,
+    /** 0.5.218: the node's own sentence — already-shared history stays readable to the evicted device. */
+    val history: String? = null,
 )
+
+/**
+ * **What an eviction did, part by part** (ciris-server 0.5.218, CIRISServer#700,
+ * `src/self_devices.rs::EvictionReport`). Both `POST /v1/self/occurrence/revoke`
+ * and `POST /v1/self/nodes/{id}/release` are now ONE act — withdraw the
+ * owner-binding, write a signed occurrence revocation, kick replication, read
+ * both halves back — and when any part does not finish the node answers 500
+ * `self.evict_incomplete` (or `self.release_incomplete`) carrying THIS report,
+ * so the person sees what DID complete (it stays done) and what did not.
+ *
+ * Read off [ai.ciris.mobile.shared.api.NodeRefusal.body] by [fromBody]; never
+ * re-derived. Every member is optional: a part of the report this client does
+ * not decode must not cost the person the parts it does.
+ */
+@Serializable
+data class EvictionReport(
+    val nodes: List<String> = emptyList(),
+    /** One per withdrawn owner-binding: `{node_key_id, binding, withdraws, cohort_scope}`. */
+    val withdrawn: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    /** One per signed occurrence revocation: `{occurrence_key_id, attesting_key_id, effective_at}`. */
+    @SerialName("occurrences_revoked")
+    val occurrencesRevoked: List<kotlinx.serialization.json.JsonObject> = emptyList(),
+    @SerialName("occurrences_already_revoked")
+    val occurrencesAlreadyRevoked: List<String> = emptyList(),
+    val failed: List<EvictFailure> = emptyList(),
+    @SerialName("replication_kicked")
+    val replicationKicked: Boolean = false,
+    /** `EVICTION_HISTORY_NOTE`, verbatim: already-shared history stays readable by the evicted device. */
+    val history: String? = null,
+) {
+    /**
+     * The report as a list a person reads: every part done, then every part
+     * not done, each naming its kind ([EvictPart.part], one of [EvictPart.KNOWN]
+     * or a word this client does not know) and what it was about.
+     */
+    val parts: List<EvictPart>
+        get() = buildList {
+            withdrawn.forEach { add(EvictPart(EvictPart.OWNER_BINDING_WITHDRAWAL, it.str("node_key_id").orEmpty(), done = true)) }
+            occurrencesRevoked.forEach { add(EvictPart(EvictPart.OCCURRENCE_REVOCATION, it.str("occurrence_key_id").orEmpty(), done = true)) }
+            occurrencesAlreadyRevoked.forEach { add(EvictPart(EvictPart.OCCURRENCE_REVOCATION, it, done = true)) }
+            failed.forEach { add(EvictPart(it.part, it.target, done = false, error = it.error)) }
+        }
+
+    companion object {
+        private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; isLenient = true }
+
+        /** The report a refusal body carries, or null when it carries none (an older node, or another refusal). */
+        fun fromBody(body: String?): EvictionReport? {
+            if (body.isNullOrBlank()) return null
+            return try {
+                val obj = json.parseToJsonElement(body) as? kotlinx.serialization.json.JsonObject ?: return null
+                // A refusal without the report's own members is not a report.
+                if (!obj.containsKey("failed") && !obj.containsKey("history")) return null
+                json.decodeFromJsonElement(serializer(), obj)
+            } catch (_: Exception) {
+                null
+            }
+        }
+
+        private fun kotlinx.serialization.json.JsonObject.str(key: String): String? =
+            (this[key] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+    }
+}
+
+/** One part of an eviction that did not complete (`EvictFailure`). */
+@Serializable
+data class EvictFailure(
+    val part: String = "",
+    val target: String = "",
+    val error: String = "",
+)
+
+/** One line of [EvictionReport.parts]: what kind of part, about which key, and whether it finished. */
+data class EvictPart(val part: String, val target: String, val done: Boolean, val error: String? = null) {
+    companion object {
+        const val OWNER_BINDING_WITHDRAWAL = "owner_binding_withdrawal"
+        const val OWNER_BINDING_WITNESS = "owner_binding_witness"
+        const val OCCURRENCE_REVOCATION = "occurrence_revocation"
+        const val OCCURRENCE_WITNESS = "occurrence_witness"
+        /** The four parts `src/self_devices.rs::EvictFailure.part` documents. */
+        val KNOWN = setOf(OWNER_BINDING_WITHDRAWAL, OWNER_BINDING_WITNESS, OCCURRENCE_REVOCATION, OCCURRENCE_WITNESS)
+    }
+}
 
 /** Body of `POST /v1/self/occurrence/label`. The label is display-only, 1–64 characters. */
 @Serializable

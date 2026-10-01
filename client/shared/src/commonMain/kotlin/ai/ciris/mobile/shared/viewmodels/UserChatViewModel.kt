@@ -6,6 +6,8 @@ import ai.ciris.mobile.shared.api.ClientChatApi
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
+import ai.ciris.mobile.shared.models.chat.PairPhase
+import ai.ciris.mobile.shared.models.chat.pairPhase
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -55,6 +57,32 @@ class UserChatViewModel(
      */
     private val _memberCount = MutableStateFlow<Int?>(null)
     val memberCount: StateFlow<Int?> = _memberCount.asStateFlow()
+
+    /**
+     * Where a PAIR room's two-step join stands (ciris-server 0.5.218,
+     * CIRISServer#706), decided by [pairPhase] from `POST /v1/chat`'s answer.
+     * [PairPhase.OPEN] for a room of more than two and for every answer from a
+     * 0.5.217 node, which never sends `state` — that node behaves as before.
+     *
+     * Anything but OPEN is NOT an empty room: the screen shows who the room is
+     * waiting on, no composer, and no transcript read (the room cannot carry a
+     * message until both people are seated, and a read of a room this person
+     * is not seated in is a refusal, not a conversation).
+     */
+    private val _pairPhase = MutableStateFlow(PairPhase.OPEN)
+    val pairPhase: StateFlow<PairPhase> = _pairPhase.asStateFlow()
+
+    /**
+     * Pair rooms whose invitation THIS session accepted (`POST /v1/chat`
+     * answered `accepted`). At 0.5.218 the joiner's next `POST /v1/chat`
+     * answers `awaiting_invitation` — the invitation it accepted is no longer
+     * pending — and without this the person who just said yes would be told
+     * the other side has not opened the room yet.
+     */
+    private val acceptedHere = mutableSetOf<String>()
+
+    /** The contact of the open pair room, for [recheck]; null for a room of more than two. */
+    private var roomContactKeyId: String? = null
 
     private val _messages = MutableStateFlow<List<CegChatMessage>>(emptyList())
     val messages: StateFlow<List<CegChatMessage>> = _messages.asStateFlow()
@@ -166,27 +194,60 @@ class UserChatViewModel(
         resetIfAnotherRoom(communityId)
         val node = nodeUrl()
         roomNodeUrl = node
+        roomContactKeyId = contactKeyId
         // A pair's count is the roster POST /v1/chat returns, never a room's.
         _memberCount.value = null
         entryJob = viewModelScope.launch {
             clearRefusal()
-            val opened = callTyped("startChat") { chat.open(node, contactKeyId) } ?: return@launch
-            if (epoch != entryEpoch) {
-                // A newer room was entered while this one was opening. Publishing
-                // now is the wrong-room send.
-                PlatformLogger.i(
-                    tag,
-                    "[enter] discarding stale open for ${opened.communityId.take(24)}… " +
-                        "(epoch $epoch != $entryEpoch)",
-                )
-                return@launch
-            }
-            _community.value = opened
+            openPair(node, contactKeyId, epoch, "enter")
+        }
+    }
+
+    /**
+     * Ask the node again where a pair room's join stands — `POST /v1/chat`
+     * again, which is idempotent (the creator's re-open re-derives the same
+     * record; a held acceptance is widened by the opener's own pen; the
+     * joiner's call accepts the creator's invitation once it has arrived,
+     * which is the request the joiner already made). When the room is OPEN
+     * the transcript is read. A no-op for an open room or a room of more than
+     * two: there is nothing to re-check.
+     */
+    fun recheck() {
+        if (_pairPhase.value == PairPhase.OPEN) return
+        val contact = roomContactKeyId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch { openPair(node, contact, epoch, "recheck") }
+    }
+
+    /** `POST /v1/chat`, published only under [epoch]; reads the transcript once the room is OPEN. */
+    private suspend fun openPair(node: String, contactKeyId: String, epoch: Long, operation: String) {
+        val opened = callTyped("startChat") { chat.open(node, contactKeyId) } ?: return
+        if (epoch != entryEpoch) {
+            // A newer room was entered while this one was opening. Publishing
+            // now is the wrong-room send.
             PlatformLogger.i(
                 tag,
-                "[enter] community=${opened.communityId.take(24)}… fresh=${opened.freshlyCreated}",
+                "[$operation] discarding stale open for ${opened.communityId.take(24)}… " +
+                    "(epoch $epoch != $entryEpoch)",
             )
+            return
+        }
+        if (opened.state == ChatCommunity.STATE_ACCEPTED) acceptedHere += opened.communityId
+        val phase = opened.pairPhase(acceptedHere = opened.communityId in acceptedHere)
+        _community.value = opened
+        _pairPhase.value = phase
+        PlatformLogger.i(
+            tag,
+            "[$operation] community=${opened.communityId.take(24)}… fresh=${opened.freshlyCreated} " +
+                "state=${opened.state ?: "<none>"} phase=$phase",
+        )
+        if (phase == PairPhase.OPEN) {
             loadMessages(node, opened.communityId, epoch)
+        } else {
+            // Not an empty room and not a refused read: nothing to read yet.
+            _messages.value = emptyList()
+            _transcriptLoaded.value = false
         }
     }
 
@@ -209,6 +270,10 @@ class UserChatViewModel(
         resetIfAnotherRoom(communityId)
         val node = nodeUrl()
         roomNodeUrl = node
+        roomContactKeyId = null
+        // A room of more than two is founded and joined through CSD-102's
+        // routes; by the time it is listed, it is a room.
+        _pairPhase.value = PairPhase.OPEN
         _memberCount.value = memberCount
         _community.value = ChatCommunity(communityId = communityId, communityName = name)
         PlatformLogger.i(tag, "[enterRoom] community=${communityId.take(24)}… members=${memberCount ?: "?"}")
@@ -222,6 +287,9 @@ class UserChatViewModel(
     private fun resetIfAnotherRoom(communityId: String) {
         if (_community.value?.communityId != communityId) {
             _community.value = null
+            // Until the node says otherwise, a new room is not known to be
+            // waiting on anyone — and must not inherit the last room's wait.
+            _pairPhase.value = PairPhase.OPEN
             _messages.value = emptyList()
             _transcriptLoaded.value = false
             // The draft belongs to the room it was written in, not to the screen.
@@ -229,8 +297,15 @@ class UserChatViewModel(
         }
     }
 
-    /** Re-read the transcript for the community currently open. */
+    /**
+     * Re-read the transcript for the community currently open — or, for a pair
+     * room still joining, ask the node where the join stands ([recheck]).
+     */
     fun refresh() {
+        if (_pairPhase.value != PairPhase.OPEN) {
+            recheck()
+            return
+        }
         val id = _community.value?.communityId ?: return
         val node = roomNodeUrl ?: return
         val epoch = entryEpoch
@@ -250,6 +325,8 @@ class UserChatViewModel(
      * about a committed write.
      */
     fun send() {
+        // A pair room that is not open has nobody to carry a message to.
+        if (_pairPhase.value != PairPhase.OPEN) return
         val id = _community.value?.communityId ?: return
         // The room's node, captured with the room — never the provider's answer now.
         val node = roomNodeUrl ?: return

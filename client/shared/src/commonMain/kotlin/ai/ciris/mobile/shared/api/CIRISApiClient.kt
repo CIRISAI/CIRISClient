@@ -2043,8 +2043,69 @@ class CIRISApiClient(
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
             val decoded = jsonConfig.decodeFromString(ChatCommunity.serializer(), raw)
-            logInfo(method, "community=${decoded.communityId.take(24)}… members=${decoded.memberKeyIds.size} fresh=${decoded.freshlyCreated}")
+            logInfo(
+                method,
+                "community=${decoded.communityId.take(24)}… members=${decoded.memberKeyIds.size} " +
+                    "fresh=${decoded.freshlyCreated} state=${decoded.state ?: "<none: pre-0.5.218>"}",
+            )
             decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * The invitations waiting for this node's owner — `GET {nodeUrl}/v1/self/invites`
+     * (ciris-server 0.5.218, `src/membership_invites.rs::inbox`). Families,
+     * communities AND pair rooms; People reads the pair rooms
+     * ([PairRoomInviteInbox.pairRooms]) and shows each on its contact's row.
+     * A node older than 0.5.218 answers a bare 404, thrown as [NodeRefusal]
+     * like every other refusal; the caller treats it as "no invitations".
+     */
+    suspend fun listPairRoomInvites(nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.chat.PairRoomInviteInbox {
+        val method = "listPairRoomInvites"
+        logInfo(method, "GET $nodeUrl/v1/self/invites")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/self/invites") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val decoded = jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.chat.PairRoomInviteInbox.serializer(), raw)
+            logInfo(method, "${decoded.invites.size} invitation(s), ${decoded.pairRooms.size} for a pair room")
+            decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Decline a pair-room invitation — `POST {nodeUrl}/v1/self/invites/{proposal_id}/decline`.
+     * The owner's own pen signs the decline; it is final for that invitation,
+     * and the server forgets this person's standing request for that room
+     * (`pair_intents::forget`), so nothing auto-accepts a re-offer.
+     */
+    suspend fun declinePairRoomInvite(
+        proposalId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.chat.PairRoomInviteAnswer {
+        val method = "declinePairRoomInvite"
+        logInfo(method, "POST $nodeUrl/v1/self/invites/${proposalId.take(16)}…/decline")
+        val client = federationHttpClient()
+        return try {
+            val response = client.post("$nodeUrl/v1/self/invites/${proposalId.encodeURLPathPart()}/decline") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.chat.PairRoomInviteAnswer.serializer(), raw)
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
             throw e
@@ -3603,6 +3664,13 @@ class CIRISApiClient(
      * you must sign with a different surviving key — never the compromised one
      * (CEG §11.7.4). The app sends a plain owner-session POST to the LOCAL node; the
      * node signs with the resolved user signer.
+     *
+     * 0.5.218 (CIRISServer#700): the owner's session bearer authorises it and
+     * revoke is an EVICTION — [forceSelf] is required when the device is the
+     * node answering (else `self.release_self_requires_force`, 409), and a part
+     * that did not finish answers 500 `self.evict_incomplete` with the part-by-part
+     * report in the body. Throws [NodeRefusal] on a non-2xx answer, carrying
+     * that body ([NodeRefusal.body]) so the report reaches the screen.
      */
     suspend fun revokeOccurrence(
         identityKeyId: String,
@@ -3610,12 +3678,13 @@ class CIRISApiClient(
         reason: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
         token: String? = accessToken,
+        forceSelf: Boolean = false,
     ): ai.ciris.mobile.shared.models.federation.RevokeOccurrenceResponse {
         val method = "revokeOccurrence"
         logInfo(
             method,
             "POST $nodeUrl/v1/self/occurrence/revoke identity=${identityKeyId.take(16)}… " +
-                "occurrence=${occurrenceKeyId.take(16)}…",
+                "occurrence=${occurrenceKeyId.take(16)}… force_self=$forceSelf",
         )
         val client = federationHttpClient()
         return try {
@@ -3625,6 +3694,8 @@ class CIRISApiClient(
                     identityKeyId = identityKeyId,
                     occurrenceKeyId = occurrenceKeyId,
                     reason = reason?.takeIf { it.isNotBlank() },
+                    // Absent unless set: the body an older node reads is unchanged.
+                    forceSelf = forceSelf.takeIf { it },
                 ),
             )
             val response = client.post("$nodeUrl/v1/self/occurrence/revoke") {
@@ -3634,7 +3705,7 @@ class CIRISApiClient(
             }
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) {
-                throw RuntimeException("revoke occurrence failed: ${response.status}: ${raw.take(200)}")
+                throw nodeRefusal(method, response.status, raw)
             }
             decodeFederationEnvelope(
                 raw,

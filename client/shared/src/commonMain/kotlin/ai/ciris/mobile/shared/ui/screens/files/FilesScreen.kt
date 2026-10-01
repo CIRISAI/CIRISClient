@@ -475,6 +475,19 @@ private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit
                         modifier = Modifier.testable("file_not_opened"),
                     )
                 }
+                is OpenState.TooLarge -> {
+                    // Above the whole-read cap: a named state, not an error.
+                    // The bytes are there; this device cannot hold them in one
+                    // read yet (no streaming read).
+                    Text(open.entry.filename ?: localizedString("mobile.files_untitled"), style = CirisTheme.type.title, color = t.ink)
+                    StateBlock(
+                        ListState.Empty(
+                            message = localizedString("mobile.files_too_large_to_open"),
+                            glyph = GlyphName.FILE,
+                        ),
+                        tag = "file_too_large", inline = true,
+                    )
+                }
                 is OpenState.Unreadable -> {
                     // The bytes are not what the node said it sent. Not empty,
                     // not "could not open": unreadable, in the error tone, and

@@ -15,6 +15,12 @@ import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
 import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.viewmodels.ReleaseState
+import ai.ciris.mobile.shared.viewmodels.RevokeState
+import ai.ciris.mobile.shared.ui.primitives.CardShell
+import ai.ciris.mobile.shared.ui.primitives.CirisTextButton
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel
 import androidx.compose.foundation.layout.Arrangement
@@ -120,6 +126,7 @@ fun IdentityManagementScreen(
     val labelling by viewModel.labelling.collectAsState()
     val labelRefusal by viewModel.labelRefusal.collectAsState()
     val release by viewModel.release.collectAsState()
+    val revoke by viewModel.revoke.collectAsState()
     val sealInHardware by viewModel.sealInHardware.collectAsState()
     val associateRefusal by viewModel.associateRefusal.collectAsState()
 
@@ -142,7 +149,6 @@ fun IdentityManagementScreen(
             }
         }
     }
-    var pendingRevoke by remember { mutableStateOf<String?>(null) }
     // Portable software identity occurrence + associate-existing-fedID state.
     var portableDir by remember { mutableStateOf("") }
     var showPortablePicker by remember { mutableStateOf(false) }
@@ -378,11 +384,14 @@ fun IdentityManagementScreen(
                                 }
                                 // A revoked device is history: nothing left to revoke.
                                 if (occ.revoked != true) {
+                                    // The handler re-checks what `enabled` gates: testableClickable
+                                    // appends an unconditional clickable, and an eviction is signed.
+                                    val canRevoke = !busy && revoke !is RevokeState.Working
                                     OutlinedButton(
-                                        onClick = { pendingRevoke = occ.occurrenceKeyId },
-                                        enabled = !busy,
-                                        modifier = Modifier.testableClickable("btn_identity_revoke_${occ.occurrenceKeyId}") {
-                                            pendingRevoke = occ.occurrenceKeyId
+                                        onClick = { viewModel.askRevoke(occ.occurrenceKeyId) },
+                                        enabled = canRevoke,
+                                        modifier = Modifier.testableWithHandler("btn_identity_revoke_${occ.occurrenceKeyId}", enabled = canRevoke) {
+                                            if (canRevoke) viewModel.askRevoke(occ.occurrenceKeyId)
                                         },
                                     ) {
                                         Text(localizedString("mobile.identity_revoke"))
@@ -403,6 +412,13 @@ fun IdentityManagementScreen(
                     }
                 }
             }
+
+            RevokeOutcome(
+                state = revoke,
+                onForce = { viewModel.askForceRevoke() },
+                onRetry = { viewModel.retryRevoke() },
+                onDismiss = { viewModel.cancelRevoke() },
+            )
 
             // ── Your nodes (release) ──────────────────────────────────────────
             Spacer(Modifier.height(20.dp))
@@ -474,6 +490,7 @@ fun IdentityManagementScreen(
             ReleaseOutcome(
                 state = release,
                 onForce = { viewModel.askForceRelease() },
+                onRetry = { viewModel.retryRelease() },
                 onDismiss = { viewModel.cancelRelease() },
             )
 
@@ -935,40 +952,39 @@ fun IdentityManagementScreen(
         else -> Unit
     }
 
-    // ── Revoke confirmation dialog ────────────────────────────────────────────
-    pendingRevoke?.let { keyId ->
-        AlertDialog(
-            onDismissRequest = { pendingRevoke = null },
-            title = { Text(localizedString("mobile.identity_revoke_confirm")) },
-            text = { Text(localizedString("mobile.identity_revoke_confirm_body")) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        pendingRevoke = null
-                        viewModel.revoke(keyId)
-                    },
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                    ),
-                    modifier = Modifier.testableClickable("btn_identity_revoke_confirm") {
-                        pendingRevoke = null
-                        viewModel.revoke(keyId)
-                    },
-                ) {
-                    Text(localizedString("mobile.identity_revoke"))
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { pendingRevoke = null },
-                    modifier = Modifier.testableClickable("btn_identity_revoke_cancel") {
-                        pendingRevoke = null
-                    },
-                ) {
-                    Text(localizedString("mobile.common_cancel"))
-                }
-            },
+    // ── Evict-a-device confirmations ──────────────────────────────────────────
+    // The first names the device, what eviction withholds and what it does
+    // not undo, and who signs. The second is only reachable after the node
+    // refused because the device is the one answering, and says what that
+    // costs: this device loses access (`force_self`, 0.5.218).
+    when (val r = revoke) {
+        is RevokeState.Confirming -> ConfirmSheet(
+            title = localizedString("mobile.identity_revoke_confirm"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_revoke_fact_device"), r.occurrenceKeyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_revoke_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_signer"), localizedString("mobile.identity_release_signer")),
+            ),
+            confirmLabel = localizedString("mobile.identity_revoke"),
+            onConfirm = { viewModel.confirmRevoke() },
+            onDismiss = { viewModel.cancelRevoke() },
+            destructive = true,
+            tagPrefix = "identity_revoke",
         )
+        is RevokeState.ConfirmingForce -> ConfirmSheet(
+            title = localizedString("mobile.identity_revoke_force_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_revoke_fact_device"), r.occurrenceKeyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_revoke_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_session"), localizedString("mobile.identity_revoke_force_session")),
+            ),
+            confirmLabel = localizedString("mobile.identity_revoke_force_confirm"),
+            onConfirm = { viewModel.confirmForceRevoke() },
+            onDismiss = { viewModel.cancelRevoke() },
+            destructive = true,
+            tagPrefix = "identity_revoke_force",
+        )
+        else -> Unit
     }
 }
 
@@ -1051,7 +1067,11 @@ private fun DeviceLabelEditor(
  * confirm, never straight to a forced release.
  */
 @Composable
-private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onDismiss: () -> Unit) {
+private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onRetry: () -> Unit, onDismiss: () -> Unit) {
+    if (state is ReleaseState.Incomplete) {
+        EvictionIncompleteBlock(state.refusal, state.report, tagPrefix = "identity_release", onRetry = onRetry, onDismiss = onDismiss)
+        return
+    }
     val (text, isError) = when (state) {
         is ReleaseState.Released -> if (state.releasedSelf) {
             localizedString("mobile.identity_released_self") to false
@@ -1103,6 +1123,67 @@ private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onDismiss: 
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * What evicting a device came to: done (with the history note), refused by
+ * name, incomplete part by part with Try again, or — for the device you are
+ * using — why the node refused and the one way on, which leads to a SECOND
+ * confirm saying this device will lose access, never straight to `force_self`.
+ */
+@Composable
+private fun RevokeOutcome(state: RevokeState, onForce: () -> Unit, onRetry: () -> Unit, onDismiss: () -> Unit) {
+    val t = CirisTheme.tokens
+    when (state) {
+        RevokeState.Idle, is RevokeState.Confirming, is RevokeState.ConfirmingForce -> return
+        is RevokeState.Incomplete -> {
+            EvictionIncompleteBlock(state.refusal, state.report, tagPrefix = "identity_revoke", onRetry = onRetry, onDismiss = onDismiss)
+            return
+        }
+        is RevokeState.Working -> {
+            StateBlock(ListState.Loading, tag = "identity_revoke_working", inline = true, modifier = Modifier.padding(vertical = 8.dp))
+            return
+        }
+        else -> Unit
+    }
+    val (title, body, isError) = when (state) {
+        is RevokeState.Revoked -> Triple(
+            if (state.releasedSelf) localizedString("mobile.identity_revoked_self")
+            else localizedString("mobile.identity_revoked", "device", truncMid(state.occurrenceKeyId)),
+            localizedString("mobile.evict_history_note"),
+            false,
+        )
+        is RevokeState.NeedsForce -> Triple(
+            localizedString("mobile.identity_revoke_self_title"),
+            localizedString("mobile.identity_revoke_self_body"),
+            true,
+        )
+        is RevokeState.Refused -> Triple(refusalText(state.refusal), null, true)
+        else -> return
+    }
+    CardShell(
+        modifier = Modifier.padding(vertical = 8.dp),
+        tag = "identity_revoke_outcome",
+        accent = if (isError) t.danger else t.ok,
+    ) {
+        Text(
+            title,
+            style = CirisTheme.type.title,
+            color = t.ink,
+            modifier = Modifier.testable("identity_revoke_message", (state as? RevokeState.Refused)?.refusal?.reasonId ?: title),
+        )
+        body?.let {
+            Spacer(Modifier.height(4.dp))
+            Text(it, style = CirisTheme.type.body, color = t.dim)
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (state is RevokeState.NeedsForce) {
+                CirisTextButton(localizedString("mobile.identity_revoke_self_offer"), tag = "btn_identity_revoke_force", onClick = onForce, danger = true)
+            }
+            CirisTextButton(localizedString("mobile.common_dismiss"), tag = "btn_identity_revoke_dismiss", onClick = onDismiss)
         }
     }
 }

@@ -75,6 +75,18 @@ object PeopleTags {
     const val REMOVE_REFUSAL = "contacts_remove_refusal"
     const val REMOVE_UNSUPPORTED = "contacts_remove_unsupported"
     const val REMOVE_DISMISS = "btn_contacts_remove_dismiss"
+
+    // ── An invitation to talk (0.5.218, CIRISServer#706; CSD-005, CSD-091) ──
+    /** The row's "wants to talk with you" flag. */
+    fun chatInvite(keyId: String) = "contacts_chat_invite_$keyId"
+    /** Accept: opens the ConfirmSheet, never answers on its own. */
+    fun chatAccept(keyId: String) = "btn_contacts_chat_accept_$keyId"
+    /** Decline: opens the ConfirmSheet, never answers on its own. */
+    fun chatDecline(keyId: String) = "btn_contacts_chat_decline_$keyId"
+    /** ConfirmSheet prefixes: `btn_contacts_chat_accept_confirm` / `btn_contacts_chat_decline_confirm`. */
+    const val ACCEPT_CONFIRM_PREFIX = "contacts_chat_accept"
+    const val DECLINE_CONFIRM_PREFIX = "contacts_chat_decline"
+    const val DECLINE_REFUSAL = "contacts_chat_decline_refusal"
 }
 
 /** How a trust state reads: a glyph and a tone. Never a colour. */

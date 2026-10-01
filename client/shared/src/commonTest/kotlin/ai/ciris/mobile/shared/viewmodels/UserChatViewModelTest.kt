@@ -6,6 +6,8 @@ import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
 import ai.ciris.mobile.shared.models.chat.ChatTranscript
+import ai.ciris.mobile.shared.models.chat.PairPhase
+import ai.ciris.mobile.shared.models.chat.pairPhase
 import ai.ciris.mobile.shared.models.chat.SendChatMessageResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -15,6 +17,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -28,6 +31,8 @@ private class FakeChat(
     var transcriptRefusal: NodeRefusal? = null,
     /** Runs while `open` is in flight — a test switches the active node here. */
     var onOpen: () -> Unit = {},
+    /** What `POST /v1/chat` answers, in order; the last answer repeats. Null: the open two-member room. */
+    var openAnswers: List<ChatCommunity>? = null,
 ) : ChatApi {
     val openCalls = mutableListOf<Pair<String, String>>()
     val transcriptCalls = mutableListOf<Pair<String, String>>()
@@ -36,6 +41,7 @@ private class FakeChat(
     override suspend fun open(nodeUrl: String, contactKeyId: String): ChatCommunity {
         openCalls += nodeUrl to contactKeyId
         onOpen()
+        openAnswers?.let { answers -> return answers[minOf(openCalls.size - 1, answers.lastIndex)] }
         return ChatCommunity(communityId = PAIR, memberKeyIds = listOf("me", contactKeyId))
     }
 
@@ -145,5 +151,127 @@ class UserChatViewModelTest {
         vm.send()
         assertEquals(listOf(nodeA, nodeA, nodeA), chat.transcriptCalls.map { it.first }, "refresh and the post-send read stay on A")
         assertEquals(listOf(Triple(nodeA, PAIR, "hello")), chat.sendCalls, "the send goes to the room's node, not the newly active one")
+    }
+
+    // ── The pair room by invitation (ciris-server 0.5.218, CIRISServer#706) ──
+
+    private fun answer(state: String?, members: List<String>, proposal: String? = null) =
+        ChatCommunity(communityId = PAIR, memberKeyIds = members, state = state, proposalId = proposal)
+
+    @Test
+    fun theOpenerOfAnInvitedRoomWaitsForThemAndReadsNoTranscript() {
+        val chat = FakeChat(openAnswers = listOf(answer("invited", listOf("me"), "prop-1")))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(PairPhase.WAITING_FOR_THEM, vm.pairPhase.value)
+        assertEquals("prop-1", vm.community.value?.proposalId)
+        assertTrue(chat.transcriptCalls.isEmpty(), "a room nobody else is seated in has no conversation to read")
+        assertFalse(vm.transcriptLoaded.value, "waiting is not 'loaded and empty'")
+        assertNull(vm.refusalReasonId.value, "waiting is not a refusal")
+    }
+
+    @Test
+    fun aWaitingRoomCannotSend() {
+        val chat = FakeChat(openAnswers = listOf(answer("invited", listOf("me"), "prop-1")))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        vm.setDraft("anyone there?")
+        vm.send()
+        assertTrue(chat.sendCalls.isEmpty(), "nothing is sent into a room the other person has not joined")
+    }
+
+    @Test
+    fun theRoomBecomesANormalRoomWhenTheyAccept() {
+        val chat = FakeChat(
+            openAnswers = listOf(
+                answer("invited", listOf("me"), "prop-1"),
+                answer("open", listOf("me", "peer-1"), "prop-1"),
+            ),
+        )
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(PairPhase.WAITING_FOR_THEM, vm.pairPhase.value)
+        vm.recheck()
+        assertEquals(listOf(NODE_URL to "peer-1", NODE_URL to "peer-1"), chat.openCalls, "the re-check asks the room's node")
+        assertEquals(PairPhase.OPEN, vm.pairPhase.value)
+        assertEquals(listOf(NODE_URL to PAIR), chat.transcriptCalls, "an open room reads its transcript")
+        assertEquals(1, vm.messages.value.size)
+    }
+
+    @Test
+    fun refreshOnAWaitingRoomAsksTheNodeAgainInsteadOfReadingATranscript() {
+        val chat = FakeChat(openAnswers = listOf(answer("invited", listOf("me"))))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        vm.refresh()
+        assertEquals(2, chat.openCalls.size)
+        assertTrue(chat.transcriptCalls.isEmpty())
+    }
+
+    @Test
+    fun theInviteeWhoAcceptedIsJoiningEvenWhenTheNextAnswerSaysAwaitingInvitation() {
+        // At 0.5.218 the joiner's POST /v1/chat answers `accepted` once, then
+        // `awaiting_invitation` (the invitation is no longer pending) until the
+        // opener's widening replicates back.
+        val chat = FakeChat(
+            openAnswers = listOf(
+                answer("accepted", emptyList(), "prop-9"),
+                answer("awaiting_invitation", listOf("peer-1")),
+                answer("awaiting_invitation", listOf("me", "peer-1")),
+            ),
+        )
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(PairPhase.JOINING, vm.pairPhase.value)
+        vm.recheck()
+        assertEquals(PairPhase.JOINING, vm.pairPhase.value, "a person who said yes is never told the other side has not opened it")
+        vm.recheck()
+        assertEquals(PairPhase.OPEN, vm.pairPhase.value, "seated on the roster is open, whatever `state` says")
+        assertEquals(listOf(NODE_URL to PAIR), chat.transcriptCalls)
+    }
+
+    @Test
+    fun aJoinerWithNoInvitationYetWaitsForTheirSide() {
+        val chat = FakeChat(openAnswers = listOf(answer("awaiting_invitation", emptyList())))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(PairPhase.WAITING_FOR_THEIR_SIDE, vm.pairPhase.value)
+        assertTrue(chat.transcriptCalls.isEmpty())
+    }
+
+    @Test
+    fun a0_5_217AnswerWithNoStateBehavesExactlyAsBefore() {
+        // A 0.5.217 node: no `state`, no `proposal_id`. Even a one-member
+        // roster opens the room and reads the transcript, as it always did.
+        val chat = FakeChat(openAnswers = listOf(ChatCommunity(communityId = PAIR, memberKeyIds = listOf("me"))))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        assertEquals(PairPhase.OPEN, vm.pairPhase.value)
+        assertEquals(listOf(NODE_URL to PAIR), chat.transcriptCalls)
+        vm.setDraft("hi")
+        vm.send()
+        assertEquals(1, chat.sendCalls.size)
+    }
+
+    @Test
+    fun enteringAnotherRoomDoesNotInheritTheLastRoomsWait() {
+        val chat = FakeChat(openAnswers = listOf(answer("invited", listOf("me"))))
+        val vm = vm(chat)
+        vm.enter(PAIR, "peer-1")
+        vm.enterRoom(ROOM, name = "Garden club", memberCount = 4)
+        assertEquals(PairPhase.OPEN, vm.pairPhase.value)
+    }
+
+    @Test
+    fun pairPhaseReadsEveryStateAndFallsBackToOpenOnAnUnknownWord() {
+        fun c(state: String?, n: Int) = ChatCommunity(communityId = PAIR, memberKeyIds = List(n) { "k$it" }, state = state)
+        assertEquals(PairPhase.OPEN, c(null, 1).pairPhase())
+        assertEquals(PairPhase.OPEN, c("open", 2).pairPhase())
+        assertEquals(PairPhase.WAITING_FOR_THEM, c("invited", 1).pairPhase())
+        assertEquals(PairPhase.JOINING, c("accepted", 0).pairPhase())
+        assertEquals(PairPhase.WAITING_FOR_THEIR_SIDE, c("awaiting_invitation", 0).pairPhase())
+        assertEquals(PairPhase.JOINING, c("awaiting_invitation", 1).pairPhase(acceptedHere = true))
+        assertEquals(PairPhase.OPEN, c("awaiting_invitation", 2).pairPhase(), "seated is open")
+        assertEquals(PairPhase.OPEN, c("some_future_word", 1).pairPhase(), "an undocumented word must not lock anyone out")
     }
 }
