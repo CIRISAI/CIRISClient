@@ -27,7 +27,32 @@ class NodeWaitBlockTest {
         isEnabled = { false },
     )
 
-    private fun <T> render(state: NodeWait, onRetry: () -> Unit = {}, read: () -> T): T {
+    @Test
+    fun the_gate_wait_draws_its_own_waiting_line_on_the_tree() {
+        renderBrain(NodeWait.Waiting(elapsedSeconds = 12, attempt = 7)) {
+            assertTrue(StartupBrainTags.WAITING in registered, "the gate wait must be visible to a driver: $registered")
+            assertTrue(!registered[StartupBrainTags.WAITING].isNullOrBlank(), "and carry its sentence")
+            assertFalse(StartupNodeTags.WAITING in registered, "and not be mistaken for the node wait")
+        }
+    }
+
+    @Test
+    fun the_gate_error_names_what_failed_and_its_retry_is_drivable() {
+        var retried = 0
+        val failure = "Node health failed: 500 Internal Server Error"
+        renderBrain(NodeWait.TimedOut("http://127.0.0.1:4243/v1/system/health", 90, detail = failure), onRetry = { retried++ }) {
+            val text = registered[StartupBrainTags.UNREACHABLE].orEmpty()
+            assertEquals(3, text.lines().size, "title, body AND the failure on /tree: $text")
+            assertEquals(failure, text.lines()[2], "the error names what failed, verbatim")
+            assertTrue(TestAutomation.triggerClick(StartupBrainTags.RETRY), "Retry must accept a /click")
+        }
+        assertEquals(1, retried)
+    }
+
+    private fun <T> renderBrain(state: NodeWait, onRetry: () -> Unit = {}, read: () -> T): T =
+        render(state, onRetry, brain = true, read = read)
+
+    private fun <T> render(state: NodeWait, onRetry: () -> Unit = {}, brain: Boolean = false, read: () -> T): T {
         TestAutomation.configure(
             onRegister = { tag, _, _, _, _, text -> registered[tag] = text },
             onUnregister = { registered.remove(it) },
@@ -36,7 +61,8 @@ class NodeWaitBlockTest {
             isEnabled = { true },
         )
         return ImageComposeScene(width = 600, height = 1000) {
-            NodeWaitBlock(nodeWait = state, onRetry = onRetry)
+            if (brain) BrainWaitBlock(brainWait = state, onRetry = onRetry)
+            else NodeWaitBlock(nodeWait = state, onRetry = onRetry)
         }.use {
             it.render()
             it.render() // onGloballyPositioned lands after the first layout pass

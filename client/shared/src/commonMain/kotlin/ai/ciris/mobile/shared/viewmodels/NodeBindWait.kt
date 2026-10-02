@@ -18,8 +18,12 @@ sealed interface NodeWait {
     /** The node has refused [attempt] reads over [elapsedSeconds] and is being asked again. */
     data class Waiting(val elapsedSeconds: Int, val attempt: Int) : NodeWait
 
-    /** Nothing answered at [nodeUrl] for the whole deadline. Rendered as an error with Retry. */
-    data class TimedOut(val nodeUrl: String, val waitedSeconds: Int) : NodeWait
+    /**
+     * Nothing usable came from [nodeUrl] for the whole deadline. Rendered as an
+     * error with Retry. [detail] is the last read's failure, verbatim, when it
+     * had one (the gate probe does; a refused bind has nothing to add).
+     */
+    data class TimedOut(val nodeUrl: String, val waitedSeconds: Int, val detail: String? = null) : NodeWait
 }
 
 /**

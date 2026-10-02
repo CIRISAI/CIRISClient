@@ -246,6 +246,102 @@ class StartupViewModel(
         _nodeWaitRetries.value = _nodeWaitRetries.value + 1
     }
 
+    // ─── Waiting for the gate probe Setup holds on (CIRISClient#149) ────────
+    private val _brainWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+
+    /** Where startup stands on the gate probe. See [awaitBrainProbe]. */
+    val brainWait: StateFlow<NodeWait> = _brainWait.asStateFlow()
+
+    private val _brainProbeRetries = MutableStateFlow(0)
+
+    /** Bumped by [retryBrainProbe]; the gate probe is relaunched on it. */
+    val brainProbeRetries: StateFlow<Int> = _brainProbeRetries.asStateFlow()
+
+    /**
+     * Retry the gate probe until it RESOLVES, on the same backoff and deadline
+     * as the node bind.
+     *
+     * Setup will not compose the wizard until the gate probe has said whether
+     * this node has an agent (`brainPresent`). The probe used to run once
+     * inline: a throw left the gate unset with only a log line, and an
+     * undetermined answer was retried for 60 s in the background and then
+     * dropped. Either way Setup held on StartupScreen indefinitely, which is
+     * the same failure as #149 coming from a node that does answer.
+     *
+     * While it waits, [brainWait] is [NodeWait.Waiting], which the splash
+     * shows as a line on `/tree`. Past the deadline, [brainWait] is
+     * [NodeWait.TimedOut] carrying the last failure, which the splash shows
+     * as an error with Retry.
+     *
+     * This does NOT touch the startup timer or the status line. It runs in
+     * the background, beside the first-run check, which owns both.
+     *
+     * @param target the address probed, for the log and the error's body.
+     * @param probe one attempt. Returns once the gate is resolved and
+     *   committed. Throws on failure, and the message names what failed.
+     * @return true once resolved, false when the deadline passed.
+     */
+    suspend fun awaitBrainProbe(
+        target: String,
+        probe: suspend () -> Unit,
+        deadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
+        nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    ): Boolean = try {
+        brainProbeLoop(target, probe, deadlineSeconds, nowMs)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // Superseded (a newer probe, or the composition left): do not leave a
+        // stale "waiting" line behind.
+        if (_brainWait.value is NodeWait.Waiting) _brainWait.value = NodeWait.Idle
+        throw e
+    }
+
+    private suspend fun brainProbeLoop(
+        target: String,
+        probe: suspend () -> Unit,
+        deadlineSeconds: Int,
+        nowMs: () -> Long,
+    ): Boolean {
+        val start = nowMs()
+        val deadlineMs = deadlineSeconds * 1000L
+        var failed = 0
+        while (true) {
+            val failure: String? = try {
+                probe()
+                null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.message?.take(200) ?: e::class.simpleName ?: "unknown failure"
+            }
+            val elapsed = nowMs() - start
+            if (failure == null) {
+                if (failed > 0) {
+                    PlatformLogger.i(TAG, "[GATE] $target resolved after $failed failed probe(s), ${elapsed}ms")
+                }
+                _brainWait.value = NodeWait.Idle
+                return true
+            }
+            failed++
+            if (elapsed >= deadlineMs) {
+                PlatformLogger.e(TAG, "[GATE] $target unresolved after ${deadlineSeconds}s ($failed probes): $failure — error with Retry")
+                _brainWait.value = NodeWait.TimedOut(target, deadlineSeconds, detail = failure)
+                return false
+            }
+            if (failed == 1) {
+                PlatformLogger.i(TAG, "[GATE] $target: $failure — retrying for up to ${deadlineSeconds}s")
+            }
+            _brainWait.value = NodeWait.Waiting(elapsedSeconds = (elapsed / 1000).toInt(), attempt = failed)
+            delay(NodeBindWait.delayFor(failed - 1).coerceAtMost(deadlineMs - elapsed).coerceAtLeast(1L))
+        }
+    }
+
+    /** Retry after the gate probe's [NodeWait.TimedOut]: clears it and relaunches the probe. */
+    fun retryBrainProbe() {
+        PlatformLogger.i(TAG, "[GATE] Retry — probing the gate again")
+        _brainWait.value = NodeWait.Idle
+        _brainProbeRetries.value = _brainProbeRetries.value + 1
+    }
+
     /**
      * Step 1: Initialize Python interpreter
      */
@@ -843,6 +939,7 @@ class StartupViewModel(
         _phase2StepsCompleted = 0
         _hasError.value = false
         _nodeWait.value = NodeWait.Idle
+        _brainWait.value = NodeWait.Idle
         startCIRIS()
     }
 
