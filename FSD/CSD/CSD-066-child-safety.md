@@ -40,7 +40,7 @@ screen: ChildSafety
 ends on the tab. That placement is half right and half wrong; §2.3.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "age_assurance:{level}:{band}:{version}"
     bind: {level: provider, band: adult, version: v1}
@@ -49,7 +49,7 @@ fields:
     example: "adult"
     renders: "Adult posture — content gates are off for this identity"
     tag: txt_posture_band
-  - ceg: "age_self_declared:{band}:{version}"
+  - ceg: "age_self_declared:band:{band}:{version}"
     bind: {band: adult, version: v1}
     use: display-only
     type: bool

@@ -48,7 +48,7 @@ The switcher at the top is the same one as CSD-100's, driven by the same view
 model, so the household chosen in Rules is the one shown here.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:family_members
     use: display-only

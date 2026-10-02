@@ -2738,7 +2738,7 @@ private fun AgeRangeSection(
         // The subject has the right not to state an age, and the question is
         // required, so declining has to be something they can actually choose.
         // It is NOT a band: nothing is recorded, because writing
-        // `age_self_declared:minor:v1` for someone who never said it would put
+        // `age_self_declared:band:minor:v1` for someone who never said it would put
         // a statement they did not make into their own assurance record.
         //
         // The consequence is stated on the option itself rather than discovered

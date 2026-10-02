@@ -271,9 +271,9 @@ Two things to know:
 | `packaging/check_wheel_size.py` | does each wheel fit under 104,857,600 bytes? | seconds |
 | `python -m readiness` | the build-readiness gates below | seconds |
 | `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline (933 in 46 files at landing) that can only fall | seconds |
-| `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry + glosses + renderer overrides generate, and does every emitted localization key resolve? | seconds |
+| `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry (CC v1.0-rc6, 158 families) + glosses + renderer overrides generate, does the registry hash to its own `registry_sha256`, and does every emitted localization key resolve? | seconds |
 | `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |
-| `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins? | seconds |
+| `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins (`registry_sha256` = the grammar hash)? | seconds |
 | `packaging/check_csd_routes.py` | does every route a screen calls (heuristic closure over `CIRISApp.kt` → composables → view models → `CIRISApiClient`) appear in §3 of a CSD on that screen or a sibling screen (same host composable, e.g. the four `LayerHubScreen` hubs), and has no new pair of cards started calling the same mutating route? A baseline that can only fall and must be re-recorded when it does; `--report` is the route map, `--print CSD-NNN` generates §3 rows | seconds A `reset*`/`clear*`/`forget*`/`dismiss*` member call does not charge the model's init-time reads to the caller. |
 
 All of them run in [`.github/workflows/build.yml`](.github/workflows/build.yml).

@@ -883,7 +883,7 @@ class SetupViewModel(
      * **State your age range** — drive THIS device's LOCAL node to record the
      * founder's self-declared age band (`POST /v1/safety/age-assurance`, self
      * level). The app performs NO crypto: the local node signs + promotes the
-     * subject-signed `age_self_declared:{band}:v1` assurance in its substrate.
+     * subject-signed `age_self_declared:band:{band}:v1` assurance in its substrate.
      *
      * The subject controls their OWN band: misdeclaration NEVER slashes (it
      * routes to adjudication). This sets PROTECTIVE defaults ahead of content —
@@ -929,7 +929,7 @@ class SetupViewModel(
      * rule apply exactly as they would to a declared minor. Adult treatment
      * follows from an adult declaration; silence never yields it.
      *
-     * Nothing is POSTED. Recording `age_self_declared:minor:v1` here would write a
+     * Nothing is POSTED. Recording `age_self_declared:band:minor:v1` here would write a
      * statement into the subject's own assurance record that they never made, and
      * age.rs's honesty discipline — self-declared, subject-controlled, never
      * punitive — is precisely what this surface exists to uphold. The band stays

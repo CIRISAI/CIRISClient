@@ -55,7 +55,7 @@ the person was never asked. Both collapse to one predicate deliberately, and the
 distinction survives in the copy, not in the step machine.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:run_without_ai
     use: emit
@@ -69,7 +69,7 @@ fields:
     example: "node-only:4243"
     renders: "not drawn anywhere — and that is the defect. The answer above silently re-points every subsequent request, and the only surface that reports which backend is live is the Login status chip"
     tag: "proposed:txt_setup_backend"
-  - ceg: "age_self_declared:{band}:{version}"
+  - ceg: "age_self_declared:band:{band}:{version}"
     bind: {band: adult, version: v1}
     use: emit
     type: "enum[adult,minor,declined]"

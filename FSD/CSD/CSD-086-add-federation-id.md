@@ -69,7 +69,7 @@ state this effect exists to prevent (`CIRISApp.kt:975-983`). A flow that only
 drives `btn_federation_create` never touches it.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:federation_label
     use: emit

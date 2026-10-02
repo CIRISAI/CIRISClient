@@ -19,8 +19,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-#: The Constitution's generated namespace registry. Sibling checkout.
-REGISTRY = Path.home() / "CIRISConstitution" / "manifests" / "namespace_registry.json"
+#: The Constitution's generated namespace registry — the copy this repo PINS
+#: (client/ceg/README.md), not a sibling checkout: a checkout reports whatever
+#: branch it is on (it reported rc7-in-progress while the client was on rc6).
+REGISTRY = Path(__file__).resolve().parents[2] / "client" / "ceg" / "namespace_registry.json"
 
 
 def namespaces() -> dict:
