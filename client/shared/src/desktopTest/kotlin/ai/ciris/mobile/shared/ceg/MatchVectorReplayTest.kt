@@ -52,7 +52,9 @@ class MatchVectorReplayTest {
         assertTrue(admitted.size >= 100, "only ${admitted.size} admitted vectors parsed — shape changed?")
         val wrong = admitted.mapNotNull { v ->
             val dim = v["dimension"]!!.jsonPrimitive.content
-            val want = v["family"]!!.jsonPrimitive.content
+            // `family: null` is the reference admitting a string no family claims
+            // (open vocabulary under no registered stem): nothing to draw it as.
+            val want = v["family"].let { if (it == null || it is JsonNull) null else it.jsonPrimitive.content }
             val got = Dim.forWire(dim)?.prefix
             if (got == want) null else "$dim → $got (reference: $want)"
         }
