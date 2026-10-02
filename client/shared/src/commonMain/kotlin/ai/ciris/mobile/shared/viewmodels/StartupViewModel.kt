@@ -117,17 +117,7 @@ class StartupViewModel(
 
             // Start elapsed time counter
             // Timer runs until: (phase is READY or ERROR) AND keepTimerAlive is false
-            launch {
-                while (isActive) {
-                    val shouldStop = (_phase.value == StartupPhase.READY || _phase.value == StartupPhase.ERROR) && !_keepTimerAlive.value
-                    if (shouldStop) {
-                        PlatformLogger.d(TAG, "[TIMER] Stopping timer: phase=${_phase.value}, keepTimerAlive=${_keepTimerAlive.value}")
-                        break
-                    }
-                    _elapsedSeconds.value = ((Clock.System.now().toEpochMilliseconds() - startTime) / 1000).toInt()
-                    delay(100)  // Update more frequently for smoother display
-                }
-            }
+            launchElapsedTimer()
 
             // Execute startup sequence
             try {
@@ -142,6 +132,118 @@ class StartupViewModel(
                 _phase.value = StartupPhase.ERROR
             }
         }
+    }
+
+    private var timerJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * The elapsed-time counter. Runs until (phase is READY or ERROR) AND
+     * keepTimerAlive is false. Restartable, because a node-wait Retry
+     * (CIRISClient#149) resumes waiting after the counter has stopped.
+     */
+    private fun launchElapsedTimer() {
+        if (timerJob?.isActive == true) return
+        timerJob = viewModelScope.launch {
+            while (isActive) {
+                val shouldStop = (_phase.value == StartupPhase.READY || _phase.value == StartupPhase.ERROR) && !_keepTimerAlive.value
+                if (shouldStop) {
+                    PlatformLogger.d(TAG, "[TIMER] Stopping timer: phase=${_phase.value}, keepTimerAlive=${_keepTimerAlive.value}")
+                    break
+                }
+                _elapsedSeconds.value = ((Clock.System.now().toEpochMilliseconds() - startTime) / 1000).toInt()
+                delay(100)  // Update more frequently for smoother display
+            }
+        }
+    }
+
+    // ─── Waiting for THIS device's node to bind (CIRISClient#149) ───────────
+    private val _nodeWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+
+    /** Where startup stands on the local node. See [awaitNodeBound]. */
+    val nodeWait: StateFlow<NodeWait> = _nodeWait.asStateFlow()
+
+    private val _nodeWaitRetries = MutableStateFlow(0)
+
+    /** Bumped by [retryNodeWait]; the first-run check is keyed on it so Retry re-runs it. */
+    val nodeWaitRetries: StateFlow<Int> = _nodeWaitRetries.asStateFlow()
+
+    /**
+     * Wait for the local node to ANSWER before anything reads it.
+     *
+     * A refused read in the node's first seconds of boot means the node is not
+     * up yet. Until CIRISClient#149 the first-run check treated that refusal as
+     * an answer. The ownership probe degraded to FRESH. The gate probe threw, so
+     * the wizard held on an unprobed brain. The timer stopped with no retry and
+     * no message.
+     *
+     * Now a refusal is asked again on the [NodeBindWait] backoff until the node
+     * answers or the deadline passes. While it waits, the splash says it is
+     * waiting for the node and the timer keeps counting. Past the deadline,
+     * [nodeWait] becomes [NodeWait.TimedOut], which the screen renders as an
+     * error with Retry.
+     *
+     * @param nodeUrl the address being asked, for the log and the error's body.
+     * @param answers one read of the node: true when it answered, false when it
+     *   refused or was unreachable. A throw counts as a refusal.
+     * @param deadlineSeconds how long a cold boot may take ([NodeBindWait.deadlineSeconds]).
+     * @param nowMs a monotonic clock in ms, injected so a test runs on virtual time.
+     * @return true once the node answered, false when the deadline passed.
+     */
+    suspend fun awaitNodeBound(
+        nodeUrl: String,
+        answers: suspend () -> Boolean,
+        deadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
+        nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    ): Boolean {
+        val start = nowMs()
+        val deadlineMs = deadlineSeconds * 1000L
+        var refused = 0
+        while (true) {
+            val answered = try {
+                answers()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+            val elapsed = nowMs() - start
+            if (answered) {
+                if (refused > 0) {
+                    PlatformLogger.i(TAG, "[NODE] $nodeUrl answered after $refused refused read(s), ${elapsed}ms")
+                }
+                _nodeWait.value = NodeWait.Idle
+                return true
+            }
+            refused++
+            if (elapsed >= deadlineMs) {
+                PlatformLogger.e(TAG, "[NODE] $nodeUrl did not answer in ${deadlineSeconds}s ($refused reads refused) — error with Retry")
+                _nodeWait.value = NodeWait.TimedOut(nodeUrl, deadlineSeconds)
+                setKeepTimerAlive(false)
+                return false
+            }
+            if (refused == 1) {
+                PlatformLogger.i(TAG, "[NODE] $nodeUrl refused — the node is still binding; asking again for up to ${deadlineSeconds}s")
+                setKeepTimerAlive(true)
+            }
+            val seconds = (elapsed / 1000).toInt()
+            _nodeWait.value = NodeWait.Waiting(elapsedSeconds = seconds, attempt = refused)
+            setStatus(LocalizationHelper.getString("mobile.startup_waiting_node", mapOf("seconds" to seconds.toString())))
+            delay(NodeBindWait.delayFor(refused - 1).coerceAtMost(deadlineMs - elapsed).coerceAtLeast(1L))
+        }
+    }
+
+    /**
+     * Retry after [NodeWait.TimedOut]. This does not restart the runtime: the
+     * agent, if there is one, is up, and only the node failed to answer. The
+     * first-run check is keyed on [nodeWaitRetries], so bumping it runs the check
+     * again, and the check begins with this wait.
+     */
+    fun retryNodeWait() {
+        PlatformLogger.i(TAG, "[NODE] Retry — waiting for the node again")
+        _nodeWait.value = NodeWait.Idle
+        setKeepTimerAlive(true)
+        launchElapsedTimer()
+        _nodeWaitRetries.value = _nodeWaitRetries.value + 1
     }
 
     /**
@@ -740,6 +842,7 @@ class StartupViewModel(
         _phase1StepsCompleted = 0
         _phase2StepsCompleted = 0
         _hasError.value = false
+        _nodeWait.value = NodeWait.Idle
         startCIRIS()
     }
 

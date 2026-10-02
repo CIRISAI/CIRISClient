@@ -11,8 +11,15 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISSignet
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.viewmodels.NodeWait
 import ai.ciris.mobile.shared.viewmodels.StartupPhase
 import ai.ciris.mobile.shared.viewmodels.StartupViewModel
+import ai.ciris.mobile.shared.ui.primitives.CirisButton
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.CirisShape
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import androidx.compose.ui.draw.clip
 import ai.ciris.mobile.shared.ui.components.DebugLogsBlock
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -77,6 +84,7 @@ fun StartupScreen(
     // keeps the current 22-light behavior. Verify/prep/boot steps apply to both.
     val clientMode by viewModel.clientMode.collectAsState()
     val showServiceLights = clientMode?.isNode != true
+    val nodeWait by viewModel.nodeWait.collectAsState()
 
     // Language rotation for startup screen when no explicit language selection
     val localization = LocalLocalization.current
@@ -328,6 +336,9 @@ fun StartupScreen(
                 }
             }
 
+            // Waiting for, or given up on, THIS device's node (CIRISClient#149).
+            NodeWaitBlock(nodeWait = nodeWait, onRetry = viewModel::retryNodeWait)
+
             // Error section with debug info (appears on error)
             // Retry button is shown FIRST (above the fold), then error details below
             errorMessage?.let { error ->
@@ -408,6 +419,60 @@ fun StartupScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Test tags for the node wait (CIRISClient#149). */
+object StartupNodeTags {
+    /** While waiting: carries the "Waiting for the node to start" line as text. */
+    const val WAITING = "startup_waiting_node"
+    /** Past the deadline: the error StateBlock. */
+    const val UNREACHABLE = "startup_node_unreachable"
+    /** Its Retry. */
+    const val RETRY = "btn_startup_node_retry"
+}
+
+/**
+ * The node wait on the splash (CIRISClient#149).
+ *
+ * WAITING is a drivable marker that carries the same words as the status line,
+ * so a harness can tell "waiting for the node" from a stopped splash.
+ * TIMED OUT is the locked-spec error state with a Retry, on a raised card so it
+ * reads on the splash's dark field whichever ground the theme resolves.
+ */
+@Composable
+internal fun NodeWaitBlock(nodeWait: NodeWait, onRetry: () -> Unit) {
+    when (nodeWait) {
+        NodeWait.Idle -> Unit
+        is NodeWait.Waiting -> Box(
+            Modifier.testable(
+                StartupNodeTags.WAITING,
+                localizedString("mobile.startup_waiting_node", mapOf("seconds" to nodeWait.elapsedSeconds.toString())),
+            ),
+        )
+        is NodeWait.TimedOut -> {
+            val t = CirisTheme.tokens
+            Spacer(Modifier.height(16.dp))
+            Box(Modifier.widthIn(max = 480.dp).clip(CirisShape.card).background(t.raised)) {
+                StateBlock(
+                    ListState.Error(
+                        title = localizedString("mobile.startup_node_unreachable_title"),
+                        body = localizedString(
+                            "mobile.startup_node_unreachable_body",
+                            mapOf("url" to nodeWait.nodeUrl, "seconds" to nodeWait.waitedSeconds.toString()),
+                        ),
+                    ),
+                    tag = StartupNodeTags.UNREACHABLE,
+                    action = {
+                        CirisButton(
+                            label = localizedString("mobile.startup_retry"),
+                            tag = StartupNodeTags.RETRY,
+                            onClick = onRetry,
+                        )
+                    },
+                )
             }
         }
     }

@@ -499,10 +499,10 @@ fun CIRISApp(
     var addFederationIdReturnScreen by remember { mutableStateOf<Screen>(Screen.ManageNodes) }
     var fedIdCatchupPrompted by remember { mutableStateOf(false) }
 
-    // Track screen changes for test automation
-    LaunchedEffect(currentScreen) {
-        TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
-    }
+    // `/screen` is reported from INSIDE the screen host (ReportComposedScreen in
+    // mainScreenContent), not from here. A LaunchedEffect on `currentScreen`
+    // reported the navigation intent, which said Setup while StartupScreen was
+    // composed (CIRISClient#149).
 
     // Publish the node-vs-agent gate to test automation.
     //
@@ -1306,10 +1306,49 @@ fun CIRISApp(
         )
     }
 
-    LaunchedEffect(phase) {
+    // Bumped by the node-wait Retry; a key here so Retry re-runs this check (CIRISClient#149).
+    val nodeWaitRetries by startupViewModel.nodeWaitRetries.collectAsState()
+
+    LaunchedEffect(phase, nodeWaitRetries) {
         if (phase == StartupPhase.READY && !checkingFirstRun) {
             checkingFirstRun = true
             platformLog(TAG, "[INFO] Startup READY, checking first-run status...")
+
+            // ─── WAIT FOR THE NODE TO ANSWER BEFORE ASKING IT ANYTHING ──────
+            // (CIRISClient#149). Every read below goes to this device's node: the
+            // gate probe, the ownership probe and the wizard's own hold. The node
+            // binds seconds into its boot, and on a with-AI first run READY means
+            // the AGENT answered, which says nothing about the node. CIRISAgent
+            // run 37010300145 asked :4243 0.6 s before it bound. The refusal read
+            // as FRESH, the gate probe threw so `brainPresent` stayed null, Setup
+            // held on StartupScreen forever, and the timer had already stopped.
+            //
+            // WHY WAIT, AND NOT PROCEED ON THE AGENT'S firstRun=true. The agent's
+            // `setup_required` says whether ITS .env exists. Whether this is a
+            // first run is the NODE's answer, and the two disagree in practice
+            // (CIRISAgent#1061: brain unconfigured, node owned, and re-entering
+            // the wizard re-claims an owned node). The wizard needs the node
+            // anyway: it claims it on COMPLETE and holds on the gate probe that
+            // reads it, so proceeding would move the strand into the wizard. A
+            // node-only client has no agent answer to fall back on at all. A short
+            // wait for the authority beats a fast guess without it.
+            //
+            // Skipped during the post-setup hold, which waits for the node's
+            // REBIND on its own, longer clock, and under Home Assistant ingress,
+            // where this app does not run the node.
+            if (!reconfiguring && !isHAAddonMode) {
+                val waitUrl = CIRISApiClient.LOCAL_NODE_URL
+                val bound = startupViewModel.awaitNodeBound(
+                    nodeUrl = waitUrl,
+                    answers = { isNodeReachable(CIRISApiClient.reconcileLocalNode { isNodeReachable(it) }) },
+                )
+                if (!bound) {
+                    // The error state with Retry is on screen (StartupScreen reads
+                    // nodeWait). Clear the latch so Retry's re-run gets past it.
+                    checkingFirstRun = false
+                    return@LaunchedEffect
+                }
+            }
 
             // ─── Derive the ONE node-vs-agent gate (server now reachable) ────
             // Probe the NODE ONCE for its version (the mismatch banner) and its
@@ -1592,6 +1631,9 @@ fun CIRISApp(
             if (isFirstRun == null) {
                 // Server unreachable after all retries - show error
                 platformLog(TAG, "[ERROR] Backend unreachable, cannot determine setup status")
+                // Clear the latch so the error's Retry (which restarts startup and
+                // reaches READY again) re-runs this check instead of skipping it.
+                checkingFirstRun = false
                 startupViewModel.onErrorDetected("Backend unreachable. Please restart the app.")
                 return@LaunchedEffect
             } else if (isFirstRun == true) {
@@ -1901,6 +1943,8 @@ fun CIRISApp(
 
             val mainScreenContent: @Composable (androidx.compose.ui.Modifier) -> Unit = { contentModifier ->
                 androidx.compose.foundation.layout.Box(modifier = contentModifier) {
+            // What is COMPOSED, reported from inside the content (CIRISClient#149).
+            ReportComposedScreen(composedScreen(currentScreen, brainPresent))
             when (currentScreen) {
             Screen.Startup -> {
                 StartupScreen(viewModel = startupViewModel)
@@ -2734,7 +2778,9 @@ fun CIRISApp(
                 //
                 // Waiting is safe — the probe is bounded by the startup budget
                 // and StartupScreen is what the user is already looking at.
-                if (brainPresent == null) {
+                // The rule lives in composedScreen() so `/screen` reports this
+                // hold as Startup, which is what is on screen (CIRISClient#149).
+                if (composedScreen(currentScreen, brainPresent) is Screen.Startup) {
                     platformLog(TAG, "[INFO][Screen.Setup] holding — brainPresent not yet probed")
                     StartupScreen(viewModel = startupViewModel)
                     return@Box
