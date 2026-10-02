@@ -49,7 +49,7 @@ node build the ground section says why it is absent
 cannot serve. The three planes are still one scroll (§6.3).
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "provenance:build_manifest:{target}:locale:{lang_code}"
     bind: {target: ciris_client, lang_code: yo}

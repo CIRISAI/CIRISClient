@@ -1165,23 +1165,23 @@
     "cross_framed": []
   },
   "namespaces": {
-    "cc_version": "1.0-rc5",
-    "families": 116,
+    "cc_version": "1.0-rc6",
+    "families": 158,
     "components": 9,
     "components_normative": 8,
     "per_component": {
-      "accord-agent": 19,
+      "accord-agent": 29,
       "anti-sybil": 6,
-      "attestation": 18,
+      "attestation": 21,
       "cirisbench": 1,
       "lens": 15,
-      "node": 35,
-      "persist": 6,
-      "registry": 11,
-      "transport-delivery": 5
+      "node": 49,
+      "persist": 13,
+      "registry": 18,
+      "transport-delivery": 6
     },
     "source": "constitution/part_3_the_namespace.md",
-    "source_sha256": "95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839"
+    "source_sha256": "459d3ef52bc6d021d8bed58af908f75c11fdaf83b5cb841e100040fbe6437ea9"
   },
   "explainer": {
     "circles": [
@@ -1241,7 +1241,7 @@
           "None of this is a promise in a policy document. It is in the bytes, and a designer can rely on it.",
           "<b>Every claim names two authorities, not one.</b> The envelope carries <code>attesting_key_id</code> \u2014 who said it \u2014 and <code>subject_key_ids</code> \u2014 who it is about. The Constitution is blunt about why: \u201cConsent is incomplete if only the producer of data has authority over it\u2026 a person who appears in someone else's data can still pull it.\u201d",
           "<b>Five things travel with every flow:</b> the subject, the sender, the recipient, the <b>information type</b>, and the <b>transmission principle</b> \u2014 the rule the flow must follow next. Each is both <b>named and signed</b>, not merely labelled: the reconstruction test split on exactly this point, and the answer is both. Not free text either \u2014 <code>consent:{kind}</code> is a catalogued family, open in its parameters and closed in its leaves.",
-          "<b>The information type is a real, shared list.</b> 116 namespace families across 9 components, generated into <code>namespace_registry.json</code>. When a field on screen is \u201cnamed by its family\u201d, that is the list it is named from. Nobody has to invent categories.",
+          "<b>The information type is a real, shared list.</b> 158 namespace families across 9 components, generated into <code>namespace_registry.json</code>. When a field on screen is \u201cnamed by its family\u201d, that is the list it is named from. Nobody has to invent categories.",
           "<b>Taking it back is a verb, not a support ticket.</b> The wire surface is 1+4: <code>scores</code> plus <code>delegates_to</code>, <code>supersedes</code>, <code>withdraws</code>, <code>recants</code>. Two of those four exist purely so a claim can be undone. The surface is conformance-frozen \u2014 changing those bytes is a defect, not an edit."
         ]
       },
@@ -1265,7 +1265,7 @@
     "answered": [
       [
         "\u201cThe group a thing belongs to\u201d \u2014 what is the real list?",
-        "116 namespace families, 9 owning components (8 normative), generated into <code>manifests/namespace_registry.json</code> at CC 1.0-rc5. It is the shared taxonomy every tag component depends on. Do not invent categories."
+        "158 namespace families, 9 owning components (8 normative), generated into <code>manifests/namespace_registry.json</code> at CC 1.0-rc6. It is the shared taxonomy every tag component depends on. Do not invent categories."
       ],
       [
         "\u201cA note with your own name on it\u201d \u2014 what does add-a-contact accept?",

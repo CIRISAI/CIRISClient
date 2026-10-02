@@ -16,7 +16,7 @@ prose was.
 What did NOT come back is what this page is built around. The designer who
 read only the simple version could not name the shared vocabulary behind "the
 group a thing belongs to", so they invented placeholder categories — while a
-registry of 116 real families sits in the Constitution. They could not name
+registry of real families (116 then, 158 at rc6) sits in the Constitution. They could not name
 the identity scheme behind "a note with your own name on it", so they could
 not say what the add-a-contact field must accept. They could not tell whether
 "no promise beats another" had any positive expression on screen. Each of
@@ -109,7 +109,7 @@ SECTIONS = [
             "test split on exactly this point, and the answer is both. Not free "
             "text either — <code>consent:{kind}</code> is a catalogued family, "
             "open in its parameters and closed in its leaves.",
-            "<b>The information type is a real, shared list.</b> 116 namespace "
+            "<b>The information type is a real, shared list.</b> 158 namespace "
             "families across 9 components, generated into "
             "<code>namespace_registry.json</code>. When a field on screen is "
             "“named by its family”, that is the list it is named from. Nobody has "
@@ -160,8 +160,8 @@ SECTIONS = [
 #: a real mechanism that simply had not been named to them.
 ANSWERED = [
     ("“The group a thing belongs to” — what is the real list?",
-     "116 namespace families, 9 owning components (8 normative), generated into "
-     "<code>manifests/namespace_registry.json</code> at CC 1.0-rc5. It is the "
+     "158 namespace families, 9 owning components (8 normative), generated into "
+     "<code>manifests/namespace_registry.json</code> at CC 1.0-rc6. It is the "
      "shared taxonomy every tag component depends on. Do not invent categories."),
     ("“A note with your own name on it” — what does add-a-contact accept?",
      "A federation identity (fed-ID) and its fedcode — self-minted, signed, no "

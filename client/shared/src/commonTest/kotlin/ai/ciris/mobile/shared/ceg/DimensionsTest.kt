@@ -16,11 +16,12 @@ class DimensionsTest {
     @Test
     fun oneRowPerFamilyAndNoDuplicates() {
         assertEquals(REGISTRY_FAMILY_COUNT, Dim.all.size)
-        assertEquals(116, Dim.all.size, "rc5 @44ae7b2 has 116 families")
+        assertEquals(158, Dim.all.size, "rc6 @3c3e63f has 158 families")
         assertEquals(Dim.all.size, Dim.all.map { it.prefix }.toSet().size)
         assertEquals(Dim.all.size, Dim.all.map { it.slug }.toSet().size)
-        assertTrue(REGISTRY_SOURCE_SHA256.startsWith("95665a2c"), "pinned to the CC#104 ruling commit")
-        assertEquals("1.0-rc5", REGISTRY_CC_VERSION)
+        assertEquals("f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37", REGISTRY_SHA256,
+            "the rc6 grammar hash every CSD pins (CIRISConstitution#112)")
+        assertEquals("1.0-rc6", REGISTRY_CC_VERSION)
     }
 
     @Test
@@ -29,7 +30,11 @@ class DimensionsTest {
             if (d.polarity.minusOnly) assertEquals(Renderer.VIOLATION_MARKER, d.renderer, d.prefix)
             if (d.renderer == Renderer.VIOLATION_MARKER) assertTrue(d.polarity.minusOnly, d.prefix)
             if (d.polarity == Polarity.POSITIVE_ONLY) assertTrue(d.renderer != Renderer.SIGNED_SCORE, d.prefix)
+            if (d.polarity == Polarity.PLUS_ONE_ONLY) {
+                assertTrue(d.renderer != Renderer.SIGNED_SCORE && d.renderer != Renderer.POSITIVE_ONLY_ACCRUAL, d.prefix)
+            }
         }
+        assertEquals(Polarity.PLUS_ONE_ONLY, Dim.accordLifecycleActive.polarity)
         assertEquals(Renderer.VIOLATION_MARKER, Dim.prohibitedCategory.renderer)
         assertEquals(Renderer.POSITIVE_ONLY_ACCRUAL, Dim.creditsDomainLanguageSubject.renderer)
         assertEquals(Renderer.STATE_PILL, Dim.objectionState.renderer)
@@ -51,10 +56,18 @@ class DimensionsTest {
 
     @Test
     fun aWireDimensionResolvesToItsFamily() {
-        assertSame(Dim.consentKind, Dim.forWire("consent:replication:v1"))
+        // rc6 registers the consent leaves as rows of their own (CC 3.3.1); the
+        // longer literal match wins. (forWire resolves for rendering; it is not
+        // the validator — an unlisted leaf is refused by the reference matcher,
+        // which check_csd_v3 does not port yet: CIRISClient#114.)
+        assertSame(Dim.consentReplicationVersion, Dim.forWire("consent:replication:v1"))
+        // CIRISServer#717: the device-name row. The old name resolves to nothing.
+        assertSame(Dim.deviceLabel, Dim.forWire("device:label:v1"))
+        assertNull(Dim.forWire("self:device_label:v1"), "self is a cohort scope and names no family (rc6)")
         assertSame(Dim.holdsBytesSha256Prefix, Dim.forWire("holds_bytes:sha256:ab12"))
         assertSame(Dim.objectionState, Dim.forWire("objection:open"))
-        assertNull(Dim.forWire("image:jpeg"), "not a registry family — cannot be rendered")
+        assertSame(Dim.image, Dim.forWire("image:leaf:v1"), "rc6 registers image:*")
+        assertNull(Dim.forWire("zz_unminted:jpeg"), "not a registry family — cannot be rendered")
         assertSame(Dim.consentKind, Dim.byPrefix("consent:{kind}"))
     }
 

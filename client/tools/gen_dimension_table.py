@@ -5,7 +5,7 @@
     python3 client/tools/gen_dimension_table.py --check       # fail if stale / unresolvable
     python3 client/tools/gen_dimension_table.py --self-test   # prove --check goes red
 
-THE IDEA (design handoff, "The namespace is the design system"). The 116 CEG
+THE IDEA (design handoff, "The namespace is the design system"). The 158 CEG
 families in CIRISConstitution's `namespace_registry.json` each carry a
 polarity, and polarity is a render instruction. So the UI table is a JOIN onto
 the registry — family -> renderer class, label key, gloss key — generated,
@@ -52,6 +52,10 @@ POLARITY = {
     "boolean-via-score": ("BOOLEAN_VIA_SCORE", False),
     "boolean-via-score; Indeterminate allowed → RESTRICTED": ("BOOLEAN_VIA_SCORE", True),
     "positive-only": ("POSITIVE_ONLY", False),
+    # rc6: the five accord-holder invocation / heartbeat rows (CC 3.4.1 table,
+    # CC 4.2.1). A row that is either asserted at +1.0 or absent — one mark, not
+    # an accrual and never a score, the positive mirror of `-1 only`.
+    "+1.0 only": ("PLUS_ONE_ONLY", False),
     "enumerated": ("ENUMERATED", False),
     "-1 only": ("MINUS_ONE_ONLY", False),
     "-1 / -0.5 only": ("MINUS_ONE_OR_HALF", False),
@@ -65,6 +69,9 @@ RENDERERS_ALL = [
     "CONFIG_RECORD", "CONSENT_LEAF", "SETTLEMENT_RECEIPT",
 ]
 MINUS = {"MINUS_ONE_ONLY", "MINUS_ONE_OR_HALF"}
+#: What a `+1.0 only` row may never be drawn as: a score (it has one value), an
+#: accrual (one assertion is not a count), or the minus-only marker.
+PLUS_ONE_FORBIDDEN = {"SIGNED_SCORE", "POSITIVE_ONLY_ACCRUAL", "VIOLATION_MARKER"}
 
 # The CC 2.1 envelope members the receipt renders. Not registry rows; the
 # CSD convention for them is `x_private:<member>` (CSD-004).
@@ -123,6 +130,13 @@ def resolve_key(en: dict, key: str) -> bool:
     return isinstance(node, str)
 
 
+def _grammar_sha(meta: dict, families: list) -> str:
+    """`_meta.registry_sha256` as `tools/build_cc_namespace.py` computes it (CC rc6)."""
+    grammar = {k: v for k, v in meta.items() if k not in ("source_sha256", "registry_sha256", "cc_version")}
+    return hashlib.sha256(json.dumps({"_meta": grammar, "families": families}, sort_keys=True,
+                                     separators=(",", ":")).encode("utf-8")).hexdigest()
+
+
 def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_path: pathlib.Path,
           en_path: pathlib.Path) -> str:
     reg = json.loads(registry_path.read_text(encoding="utf-8"))
@@ -159,6 +173,8 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
             raise Refusal(f"{prefix}: unknown polarity {raw!r} — extend POLARITY deliberately")
         pol, indeterminate = POLARITY[raw]
         rule = (f.get("reserved_rule") or {}).get("rule")
+        if pol not in default_by_polarity:
+            raise Refusal(f"{prefix}: renderers.json has no default_by_polarity for {pol} — add one deliberately")
         renderer = default_by_polarity[pol]
         if rule in rule_overrides:
             renderer = rule_overrides[rule]
@@ -171,6 +187,8 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
             raise Refusal(f"{prefix}: VIOLATION_MARKER is for minus-only families; polarity is {raw!r}")
         if pol == "POSITIVE_ONLY" and renderer == "SIGNED_SCORE":
             raise Refusal(f"{prefix}: a positive-only family is never a signed score")
+        if pol == "PLUS_ONE_ONLY" and renderer in PLUS_ONE_FORBIDDEN:
+            raise Refusal(f"{prefix}: a +1.0-only family is one mark, never {renderer}")
         name = kotlin_name(prefix)
         if name in names:
             raise Refusal(f"Kotlin name collision: {name} ({prefix})")
@@ -207,11 +225,21 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
                 raise Refusal(f"{k}: localization key {key} does not resolve in en.json")
 
     file_sha = hashlib.sha256(registry_path.read_bytes()).hexdigest()
+    # CIRISConstitution#112 (rc6+): the grammar hash, what a CSD pins. Recomputed
+    # here rather than copied, so a registry that misstates its own pin refuses.
+    registry_sha = _grammar_sha(meta, families)
+    if "registry_sha256" not in meta:
+        raise Refusal(f"{registry_path}: no _meta.registry_sha256 — registry predates rc6?")
+    if meta["registry_sha256"] != registry_sha:
+        raise Refusal(f"{registry_path}: _meta.registry_sha256 {meta['registry_sha256'][:12]}… but the "
+                      f"grammar hashes to {registry_sha[:12]}…")
 
     out = [HEADER]
     out.append(f"const val REGISTRY_CC_VERSION = {kstr(meta['cc_version'])}\n")
     out.append(f"const val REGISTRY_FAMILY_COUNT = {len(rows)}\n")
-    out.append("/** `_meta.source_sha256` — the CSD `registry_sha256:` convention (hash of the CC source). */\n")
+    out.append("/** `_meta.registry_sha256` — the grammar hash (CIRISConstitution#112); what every CSD `registry_sha256:` pins. */\n")
+    out.append(f"const val REGISTRY_SHA256 = {kstr(registry_sha)}\n")
+    out.append("/** `_meta.source_sha256` — hash of the CC Part 3 prose; moves on a wording edit, so nothing pins it. */\n")
     out.append(f"const val REGISTRY_SOURCE_SHA256 = {kstr(meta['source_sha256'])}\n")
     out.append("/** sha256 of client/ceg/namespace_registry.json itself; the currency gate compares this. */\n")
     out.append(f"const val REGISTRY_FILE_SHA256 = {kstr(file_sha)}\n\n")
@@ -322,18 +350,30 @@ def self_test() -> int:
         if check(reg, glo, ren, en, tgt) == 0:
             print("[FAIL] self-test: a polarity-contradicting override did not go red"); return 1
         shutil.copy(RENDERERS, ren)
-        # (c) a dropped registry row
+        # (c) a dropped registry row, pin re-stamped so only the staleness is wrong
         d = json.loads(reg.read_text()); d["families"] = d["families"][1:]
+        d["_meta"]["registry_sha256"] = _grammar_sha(d["_meta"], d["families"])
         reg.write_text(json.dumps(d))
         if check(reg, glo, ren, en, tgt) == 0:
             print("[FAIL] self-test: a changed registry did not go red"); return 1
+        # (c2) the same registry, pin NOT re-stamped: it misstates its own hash
+        d["_meta"]["registry_sha256"] = json.loads(REGISTRY.read_text())["_meta"]["registry_sha256"]
+        reg.write_text(json.dumps(d))
+        if check(reg, glo, ren, en, tgt) == 0:
+            print("[FAIL] self-test: a registry misstating registry_sha256 did not go red"); return 1
         shutil.copy(REGISTRY, reg)
+        # (c3) a +1.0-only family overridden into a score
+        r = json.loads(ren.read_text()); r["accord:lifecycle"] = "SIGNED_SCORE"
+        ren.write_text(json.dumps(r))
+        if check(reg, glo, ren, en, tgt) == 0:
+            print("[FAIL] self-test: a +1.0-only family rendered as a score did not go red"); return 1
+        shutil.copy(RENDERERS, ren)
         # (d) an emitted key that no longer resolves
         e = json.loads(en.read_text()); del e["ceg"]["consent_kind"]["gloss"]
         en.write_text(json.dumps(e))
         if check(reg, glo, ren, en, tgt) == 0:
             print("[FAIL] self-test: an unresolvable localization key did not go red"); return 1
-    print("[OK] self-test: the check goes red on four deliberate breaks")
+    print("[OK] self-test: the check goes red on six deliberate breaks")
     return 0
 
 

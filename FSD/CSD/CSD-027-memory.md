@@ -33,7 +33,7 @@ nav_epistemic_memory`. Listed as `agentOnly` (`CirclesNav.kt:154`) — **and
 that is wrong**: every route this screen calls is served by the node. See §6.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:memory_node_id
     use: display-only

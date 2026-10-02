@@ -39,7 +39,7 @@ which is `requiresAgent = true` (`CirclesNav.kt`, "the brain and the substrate
 are two instruments") — so a bare node is no longer offered it (§6.1, closed).
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "agent_files:{kind}:{platform_or_target}"
     bind: {kind: adapter, platform_or_target: discord}

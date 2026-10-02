@@ -66,7 +66,7 @@ CSD-080..087 range carry it. What it still cannot be cross-checked against is in
 §5.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "health:liveness:{version}"
     bind: {version: v1}

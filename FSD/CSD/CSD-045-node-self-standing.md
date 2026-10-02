@@ -60,7 +60,7 @@ the six `self*` acts). The agent forwards `/v1/admin/*` to the node from agent
 node address works on every agent version, so the card keeps using it.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:self_standing_load_shed
     use: display-only

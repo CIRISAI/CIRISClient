@@ -44,7 +44,7 @@ No nav hop â€” `VerifyAgent` is in `FLOW_ONLY` (`screen_atlas.py:43`); CSD-080 Â
 records why `flow_only:` is a checked key.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "build:registered:{target}"
     bind: {target: agent}

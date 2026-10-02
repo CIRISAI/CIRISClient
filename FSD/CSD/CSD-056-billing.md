@@ -36,7 +36,7 @@ screen: Billing
 nav_epistemic_billing`.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: x_private:credit_balance
     use: display-only
@@ -72,7 +72,7 @@ fields:
 
 **Every row is `x_private:` and that is correct, not a shortcut.** There is no
 billing, payment, wallet or currency family in the registry — I checked all 116
-prefixes. `bond_posted:{currency}` is a forfeitable Sybil-resistance stake, not a
+rc5 prefixes, and again all 158 at rc6 (CIRISClient#150). `bond_posted:{currency}` is a forfeitable Sybil-resistance stake, not a
 balance.
 
 **And `credits:*` is a trap this card must never fall into.** The registry has
