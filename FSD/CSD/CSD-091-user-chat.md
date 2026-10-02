@@ -74,15 +74,15 @@ the pair-only open. Creating a room, adding to it and leaving it are CSD-102's
 routes, not this card's.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
-  - ceg: x_private:chat_message_body
+  - ceg: "chat:*"
     use: display-only
     type: string
     example: "did the node come back up?"
     renders: "one message row, oldest first, inside an AttestationCard badged MESSAGE. The tag carries the TEXT as well as the id (ChatScreen.kt:418), so /tree answers 'did the reply arrive, and is it the right one' rather than only 'a row exists' (CIRISClient#27)"
     tag: "chat_msg_*"
-  - ceg: x_private:chat_draft
+  - ceg: "chat:*"
     use: emit
     type: string
     example: "on its way"
@@ -164,14 +164,15 @@ fields:
     tag: "chat_msg_unopened_*"
 ```
 
-**The object this whole surface moves has no family in the pinned registry.** A
-chat message is an `attestation_type: scores` row whose dimension is
-`chat:message:v1` (CIRISServer `src/contacts_chat.rs:12`). `chat:*` is not one of
-the registry's 116 prefixes, so every row above that describes the message itself
-is `x_private:`. Under CC 4.5.1.3 an open-vocabulary `{kind}` is a legitimate
-registration; the registry this CSD pins simply does not carry it, so a rendered
-message cannot name its constitutional family. That is an ask (§3), not a
-licence to invent one.
+**The object this whole surface moves has a family since rc6.** A chat
+message is an `attestation_type: scores` row whose dimension is
+`chat:message:v1` (CIRISServer `src/contacts_chat.rs:12`). CC rc5's 116
+prefixes did not carry it, so the message body and the draft were
+`x_private:`; CC v1.0-rc6 registers `chat:*` (CC 3.1.9, semantics at CC 3.3.11;
+open, not reserved, owned by `node`), and `chat:message:v1` resolves to it
+(`Dim.chat`). Both rows above now name it. The rest of the `x_private:` rows are
+the envelope, the room's handshake and the client's own state — none of them a
+registry family.
 
 ```yaml csd:states
 populated: {tag: chat_transcript, renders: "the LazyColumn, oldest first, scrolled to the newest row — that is what a reader entering a conversation wants under their thumb"}
@@ -209,7 +210,7 @@ as a failure, once as a note.
 | **does this wait resolve by itself** | `converges_on_its_own` — present on `GET .../messages` (`:3742`) and on the contacts refusal (`:2063`), **absent from the send refusal** (`:2986-2996`) | CIRISServer | **missing on the one route that needs it** |
 | edit / withdraw / recant a message | no route — it needs the author's own signature and the app holds no keys | CIRISServer | **missing by design**, and the UI says so per-op rather than hiding the verb |
 | where a file in chat is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/ChatScreen.kt:397`, as **Where is this file** (`mi_op_where_<id>`) on a message card's `⋮`, only on a row whose `content_type` is not `text/*`. **Dormant**: the chat plane refuses anything but text (`chat.unsupported_content_type`), so no row carries it today. The card is CSD-107's |
-| a CEG family for `chat:message:v1` | not in the pinned registry | CIRISConstitution / CIRISRegistry | **missing** — every message field above is `x_private:` for want of it |
+| a CEG family for `chat:message:v1` | `chat:*` (CC 3.1.9 / 3.3.11) | CIRISConstitution | **registered in rc6** (CIRISClient#150) — the body and draft rows bind it |
 
 **Wrong-host risk: found and closed.** Every route here is the NODE's, on
 `:4243` — and until this review every one of them was called at `$baseUrl`

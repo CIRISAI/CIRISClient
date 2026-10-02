@@ -86,12 +86,37 @@ def _screen_classes() -> set[str]:
     return set(SCREEN_MEMBER.findall(src[open_at + 1:i]))
 
 
+def grammar_sha256(reg: dict) -> str:
+    """CIRISConstitution#112's pin: sha256 over the GRAMMAR — `families` plus
+    `_meta` minus the prose hash, the pin itself and `cc_version` — as canonical
+    JSON (sorted keys, no whitespace). Mirrors `tools/build_cc_namespace.py` at
+    CC v1.0-rc6, so a wording edit in Part 3 does not move every card's pin."""
+    meta = {k: v for k, v in reg["_meta"].items()
+            if k not in ("source_sha256", "registry_sha256", "cc_version")}
+    body = json.dumps({"_meta": meta, "families": reg["families"]},
+                      sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()
+
+
 def load_registry(path: Path) -> dict:
     raw = path.read_bytes()
     reg = json.loads(raw)
+    meta = reg["_meta"]
+    # rc6+ carries `registry_sha256` (the grammar hash, what a CSD pins). A
+    # registry that claims one it does not hash to is refused outright: the pin
+    # every card is compared against would otherwise be whatever the file says.
+    # rc5 and earlier have only the prose hash, which was the convention then.
+    if "registry_sha256" in meta:
+        got = grammar_sha256(reg)
+        if got != meta["registry_sha256"]:
+            sys.exit(f"{path}: _meta.registry_sha256 {meta['registry_sha256'][:12]}… "
+                     f"but the grammar hashes to {got[:12]}… — refusing a registry that misstates its own pin")
+        pin = meta["registry_sha256"]
+    else:
+        pin = meta["source_sha256"]
     return {
         "families": {f["prefix"]: f for f in reg["families"]},
-        "sha256": reg["_meta"]["source_sha256"],
+        "sha256": pin,
         "private": reg["_meta"]["private_use_prefix"],
         "vocab": re.compile(reg["_meta"]["case_rule"]["vocab_pattern"]),
         "refusal": reg["_meta"]["case_rule"]["refusal_token"],

@@ -12,11 +12,13 @@ import androidx.compose.runtime.Immutable
  * be rendered (CC 3.1.7 R2).
  */
 
-/** The registry's nine polarity strings, normalised. Polarity is a render instruction. */
+/** The registry's ten polarity strings, normalised. Polarity is a render instruction. */
 enum class Polarity {
     SIGNED,
     BOOLEAN_VIA_SCORE,
     POSITIVE_ONLY,
+    /** `+1.0 only` (rc6) — the accord invocations and heartbeat: asserted or absent, one mark, never a score or a count. */
+    PLUS_ONE_ONLY,
     ENUMERATED,
     /** `-1 only` — a mark, never a score. */
     MINUS_ONE_ONLY,
@@ -30,7 +32,7 @@ enum class Polarity {
     val minusOnly: Boolean get() = this == MINUS_ONE_ONLY || this == MINUS_ONE_OR_HALF
 }
 
-/** The eleven renderer classes (design execution plan, "116 families → 11 renderers"). */
+/** The eleven renderer classes (design execution plan, "116 families → 11 renderers"; rc6 has 158). */
 enum class Renderer {
     /** A value with polarity and its attester named. Never without the attester. */
     SIGNED_SCORE,

@@ -6,7 +6,9 @@ outputs and namespaces as two tables and left the DSL unable to check either.
 **Profiles**: `FSD/CSD_STANDARD.md` v1.0 (CIRISAgent) — §1–§6, the flow
 byte-identity rule and `check_csd.py` are inherited and unchanged unless named.
 **Registry**: CIRISConstitution `manifests/namespace_registry.json`, pinned per
-document by `source_sha256`.
+document by `_meta.registry_sha256` — the grammar hash (CIRISConstitution#112),
+which a wording edit in Part 3 does not move. Registries before rc6 carry only
+`source_sha256` (the prose hash), which was the pin until then.
 
 ## 0. What changed, and why a third version
 
@@ -130,7 +132,7 @@ Account, a second route to `Screen.Settings`; the row was deleted in #93, and #9
 > identifier, so the constitutional vocabulary and the UI contract are one table.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: capacity:composite
     use: display-only            # read | display-only | emit

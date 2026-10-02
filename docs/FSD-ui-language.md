@@ -263,7 +263,7 @@ with no hamburger is furniture. CSD-006 is the template; CSD-005 (People) is
 its first binding.
 
 **The namespace is the design system.** `ceg/Dimensions.kt` is generated from
-the pinned CEG registry (`client/ceg/`, rc5@44ae7b2): one `Dim.<name>` per
+the pinned CEG registry (`client/ceg/`, v1.0-rc6@3c3e63f, 158 families): one `Dim.<name>` per
 family with its polarity, renderer class, and label/gloss localization keys.
 A screen names `Dim.consentKind`; a family with no registry row cannot be
 named, so cannot be rendered (CC 3.1.7 R2). `gen_dimension_table.py --check`

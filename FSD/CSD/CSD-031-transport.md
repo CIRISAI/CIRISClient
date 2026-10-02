@@ -36,7 +36,7 @@ is the only card in this area carrying a real screen-level tag
 (`screen_transport`, `TransportScreen.kt:55`).
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
   - ceg: "transport:{kind}"
     bind: {kind: reticulum}

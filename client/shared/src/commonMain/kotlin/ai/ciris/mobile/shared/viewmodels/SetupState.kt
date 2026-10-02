@@ -468,7 +468,7 @@ data class AgeRangeSetupState(
      * is what [SetupFormState.isMinorBand] returns and what the stewardship rule
      * keys on. Adult treatment follows from an adult declaration, not from silence.
      *
-     * It is deliberately NOT recorded as `age_self_declared:minor:v1`. That would
+     * It is deliberately NOT recorded as `age_self_declared:band:minor:v1`. That would
      * put a statement in the subject's own assurance record that they never made,
      * and age.rs's honesty discipline is the whole point of this surface. Nothing
      * is posted; the protective treatment is applied locally. Closing that gap
@@ -478,7 +478,7 @@ data class AgeRangeSetupState(
     val inProgress: Boolean = false,
     /** Set once the local node recorded the self-declared assurance. */
     val recorded: Boolean = false,
-    /** The `age_self_declared:{band}:v1` dimension the node returned. */
+    /** The `age_self_declared:band:{band}:v1` dimension the node returned. */
     val dimension: String? = null,
     val error: String? = null,
 )

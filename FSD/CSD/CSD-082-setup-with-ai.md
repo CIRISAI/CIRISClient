@@ -19,11 +19,11 @@ choice, not after.
 
 Three constitutional rules do the shaping, and all three are visible in the UI:
 
-* **CC 3.4.11** — `age_self_declared:{band}:v1` is subject-signed and
+* **CC 3.4.11** — `age_self_declared:band:{band}:v1` is subject-signed and
   non-reserved; the band is `minor | adult`; "declined to state" resolves to the
   protective `minor` default. That is why declining is a real, selectable option
   that says on itself what it costs, and why nothing is recorded when it is
-  chosen — writing `age_self_declared:minor:v1` for someone who never said it
+  chosen — writing `age_self_declared:band:minor:v1` for someone who never said it
   would put a statement they did not make into their own assurance record.
 * **CC 3.2**, minor-stewardship rule — no minor `user` identity operates without
   a live adult steward, fail-secure. So a `minor` band does **not** self-claim;
@@ -55,9 +55,9 @@ CSD-083 is the same screen with `runWithoutAi = true`: two dots, Finish on
 `JOIN_FEDERATION`.
 
 ```yaml csd:shows
-registry_sha256: 95665a2c49627257be3ff84d10287aa49ef5b3cd8b7c6ec048ba6e6224dea839
+registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
-  - ceg: "age_self_declared:{band}:{version}"
+  - ceg: "age_self_declared:band:{band}:{version}"
     bind: {band: adult, version: v1}
     use: emit
     type: "enum[adult,minor,declined]"
