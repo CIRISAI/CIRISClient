@@ -37,10 +37,14 @@ WATCHDOG = ROOT / "packaging" / "run_with_watchdog.sh"
 LOCAL_BUILD = ROOT / "packaging" / "build_xcframework_local.sh"
 
 #: What the runner has, and what the two JVM caps together may claim of it.
-#: 7 GB minus ~1 GB for macOS and the runner agent. A cap is not a commitment,
-#: but two caps that sum past physical RAM are the defect this guards against.
-RUNNER_GB = 7
-MAX_COMBINED_HEAP_GB = 6
+#: A cap is not a commitment, but two caps that sum past physical RAM are the
+#: defect this guards against.
+#: GitHub's standard runners for a public repo, by label: memory in GB.
+#: macos-14 (arm64, 3 cores) ran the link out of heap on 0.5.225 and 0.5.226;
+#: macos-15-intel (x86_64, 4 cores) is the leg's runner since.
+RUNNER_MEMORY_GB = {"macos-14": 7, "macos-15": 7, "macos-15-intel": 14}
+#: Leave 2 GB of the runner to the OS, Xcode's tools and the link's native memory.
+HEADROOM_GB = 2
 #: KGP 2.0.21's own default for the out-of-process compiler JVM. Going below
 #: it would be a regression dressed as a bound.
 KGP_DEFAULT_NATIVE_HEAP_GB = 3
@@ -79,9 +83,12 @@ def test_the_ios_leg_bounds_both_jvms(ios_entry):
     native = [a for a in args if a.startswith("-Pkotlin.native.jvmArgs=")]
     assert len(gradle) == 1 and len(native) == 1, f"one heap each, got {args}"
     g, n = _xmx_gb(gradle[0]), _xmx_gb(native[0])
-    assert g + n <= MAX_COMBINED_HEAP_GB, (
-        f"Gradle {g} GB + link {n} GB = {g + n} GB does not fit a {RUNNER_GB} GB runner "
-        f"with headroom (max {MAX_COMBINED_HEAP_GB})"
+    runner = ios_entry["runner"]
+    assert runner in RUNNER_MEMORY_GB, f"unknown runner {runner!r}: add its memory to RUNNER_MEMORY_GB"
+    runner_gb = RUNNER_MEMORY_GB[runner]
+    assert g + n <= runner_gb - HEADROOM_GB, (
+        f"Gradle {g} GB + link {n} GB = {g + n} GB does not fit a {runner_gb} GB {runner} "
+        f"with {HEADROOM_GB} GB headroom (max {runner_gb - HEADROOM_GB})"
     )
     assert n >= KGP_DEFAULT_NATIVE_HEAP_GB, (
         f"link heap {n} GB is below KGP's own default of {KGP_DEFAULT_NATIVE_HEAP_GB} GB"
