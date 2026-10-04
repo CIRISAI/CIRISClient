@@ -70,6 +70,14 @@ runs:
   steps:
     - shell: bash
       env:
+        # A PERSON'S DEVICE, NOT A SERVER. From ciris-server 0.5.220 a node
+        # with no declared class is a server and is given no keys for a
+        # person's self content: csd_008's note write was refused with
+        # "holds no key_grant" on every desktop leg (run 37225868206). The
+        # binary does read this one variable (src/backend.rs
+        # host_device_class), whatever its boot banner says about env vars.
+        # testing/gate/node_env.py does the same for the two-node peer.
+        CIRIS_DEVICE_CLASS: laptop
         CIRIS_NODE_BINARY: ${{ inputs.binary }}
         CIRIS_NODE_HOME: ${{ inputs.home }}
         CIRIS_NODE_LOG: ${{ inputs.log }}

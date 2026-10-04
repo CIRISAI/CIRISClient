@@ -23,3 +23,10 @@ def test_both_fixtures_start_their_node_with_it():
     root = Path(__file__).resolve().parent.parent
     for f in ("testing/gate/node_fixture.py", "testing/gate/two_node.py"):
         assert "env=node_env()" in (root / f).read_text(encoding="utf-8"), f
+
+
+def test_the_workflow_node_action_starts_a_laptop():
+    """The leg's own node is started by the composite action, not a fixture."""
+    root = Path(__file__).resolve().parent.parent
+    action = (root / ".github/actions/ciris-node/action.yml").read_text(encoding="utf-8")
+    assert "CIRIS_DEVICE_CLASS: laptop" in action
