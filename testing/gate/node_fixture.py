@@ -32,6 +32,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from testing.gate.node_env import node_env
 
 #: The node's own port and liveness route. Not the agent's — see the module doc.
 NODE_PORT = 4243
@@ -84,7 +85,7 @@ def start(binary: Path, home: Path, log: Path, timeout: float = 120.0) -> subpro
 
     handle = log.open("wb")
     proc = subprocess.Popen([str(binary), "--home", str(home)],
-                            stdout=handle, stderr=subprocess.STDOUT)
+                            stdout=handle, stderr=subprocess.STDOUT, env=node_env())
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         # A DEAD PROCESS IS NOT A SLOW ONE. Without this the wait burns the whole
