@@ -29,6 +29,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 /** Where the ceremony is, as the node says. */
 sealed interface FinalGenesisPhase {
@@ -183,32 +184,71 @@ class FinalGenesisViewModel(
         }
         _refusal.value = null
         _recoveryFailures.value = emptyMap()
+        // A new display: the dial hints are what the node serves NOW. An edit
+        // survives only a Retry inside the same form (Codex on #154).
+        _dialHints.value = emptyMap()
         probe()
         if (_phase.value != FinalGenesisPhase.Legacy) loadSource()
     }
 
-    /** Re-read the status (the sheet polls this while planned). */
-    fun refresh(): Job = viewModelScope.launch { probe() }
+    /**
+     * Re-read the status (the sheet polls this, awaiting each). One probe at a
+     * time: a refresh while one is out returns that one rather than racing it.
+     */
+    fun refresh(): Job =
+        probeJob?.takeIf { it.isActive } ?: viewModelScope.launch { probe() }.also { probeJob = it }
 
-    private suspend fun probe() {
-        try {
-            val status = apiClient.getFinalGenesisStatus(nodeUrl())
-            planned(status)
+    private var probeJob: Job? = null
+    private val probeMutex = kotlinx.coroutines.sync.Mutex()
+
+    /**
+     * Bumped by every state an action or a probe applies. A probe applies its
+     * answer only if nothing was applied since it started, so a slow answer can
+     * never land over a newer one.
+     */
+    private var stateEpoch = 0L
+
+    private suspend fun probe() = probeMutex.withLock {
+        val started = stateEpoch
+        val apply: () -> Unit = try {
+            val status = apiClient.getFinalGenesisStatus(nodeUrl());
+            { planned(status) }
         } catch (e: NodeRefusal) {
-            when (finalGenesisProbe(e.statusCode, e.reasonId)) {
-                FinalGenesisProbe.LEGACY -> _phase.value = FinalGenesisPhase.Legacy
-                FinalGenesisProbe.NOT_PLANNED -> {
+            when (finalGenesisProbe(e.statusCode, e.reasonId, e.body)) {
+                FinalGenesisProbe.LEGACY -> ({ _phase.value = FinalGenesisPhase.Legacy })
+                FinalGenesisProbe.NOT_PLANNED -> ({
                     // No ceremony on the node: whatever is planned next is a new one.
                     known.clear()
                     // A finished ceremony stays finished on screen; a node that
                     // lost its state is a different fact, shown as not planned.
                     if (_phase.value !is FinalGenesisPhase.Finished) _phase.value = FinalGenesisPhase.NotPlanned
-                }
-                FinalGenesisProbe.REFUSED -> _phase.value = FinalGenesisPhase.Unavailable(FinalGenesisRefusal.of(e))
+                })
+                FinalGenesisProbe.REFUSED -> ({ _phase.value = FinalGenesisPhase.Unavailable(FinalGenesisRefusal.of(e)) })
             }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[probe] ${e.message}")
-            _phase.value = FinalGenesisPhase.Unavailable(FinalGenesisRefusal.transport(e))
+            ({ _phase.value = FinalGenesisPhase.Unavailable(FinalGenesisRefusal.transport(e)) })
+        }
+        if (stateEpoch == started) {
+            apply()
+            stateEpoch++
+        }
+    }
+
+    /**
+     * Run one ceremony action (plan, sign, finish, a token read) unless one is
+     * already running — checked and claimed SYNCHRONOUSLY, before anything
+     * launches, so two rapid taps open exactly one hardware session.
+     */
+    private fun exclusive(block: suspend () -> Unit): Job {
+        if (_busy.value) return Job().apply { complete() }
+        _busy.value = true
+        return viewModelScope.launch {
+            try {
+                block()
+            } finally {
+                _busy.value = false
+            }
         }
     }
 
@@ -231,7 +271,7 @@ class FinalGenesisViewModel(
             }
             // Prefill each canonical's address once; what the operator typed stays.
             _dialHints.value = src.canonicals.associate { c ->
-                c.keyId to (_dialHints.value[c.keyId] ?: initialDialHint(c.keyId, c.transportHints))
+                c.keyId to (_dialHints.value[c.keyId] ?: initialDialHint(c.transportHints))
             }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[loadSource] ${e.message}")
@@ -257,7 +297,9 @@ class FinalGenesisViewModel(
             _recovery.value = (holders + byHolder.keys).distinct().associateWith { h ->
                 val entry = byHolder[h]
                 when {
-                    entry == null -> fallbackRow(h)
+                    // The node answered and left this holder out: unknown, not
+                    // the pairing — that fallback is the bare-404 path's alone.
+                    entry == null -> RecoveryRow.Unread
                     entry.recoveryKeyId == null -> RecoveryRow.Missing(RECOVERY_PAIRING[h])
                     entry.source == RecoveryKeySource.HARDWARE -> RecoveryRow.Verified(
                         entry.recoveryKeyId,
@@ -271,7 +313,7 @@ class FinalGenesisViewModel(
         } catch (e: Exception) {
             val refusal = e as? NodeRefusal
             _planBlockedBy.value = emptyList()
-            if (refusal != null && refusal.statusCode == 404 && refusal.reasonId == null) {
+            if (refusal != null && refusal.statusCode == 404 && refusal.body.isNullOrBlank()) {
                 // ONLY a bare 404: a 0.5.220 build from before the route.
                 recoveryRoute = false
                 _recoveryRefusal.value = null
@@ -328,8 +370,8 @@ class FinalGenesisViewModel(
      * required when the node has none (`recovery_key_id: null`).
      */
     fun verifyRecovery(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
-        viewModelScope.launch {
-            val spare = spareFor(holder) ?: return@launch
+        exclusive {
+            val spare = spareFor(holder) ?: return@exclusive
             val prior = _recovery.value[holder]
             setRecovery(holder, RecoveryRow.Verifying(spare))
             _recoveryFailures.value = _recoveryFailures.value - holder
@@ -364,13 +406,14 @@ class FinalGenesisViewModel(
         _clockChecked.value = false
         replaceConfirmed = false
         // The sheet disables Plan for the same reasons; this holds it if a tap gets through.
-        if (planHeld()) return viewModelScope.launch { }
-        return viewModelScope.launch { planNow() }
+        if (planHeld()) return Job().apply { complete() }
+        return exclusive { planNow() }
     }
 
     /** Plan waits on the node's recovery keys: unread, or missing for a holder. */
     fun planHeld(): Boolean =
         _recoveryUnavailable.value || _planBlockedBy.value.isNotEmpty() ||
+            _recovery.value.values.any { it == RecoveryRow.Unread } ||
             // A failed refresh of the source leaves a roster and canonicals the
             // node may no longer list; nothing is planned from them.
             _sourceRefusal.value != null || _source.value == null ||
@@ -381,14 +424,14 @@ class FinalGenesisViewModel(
     fun confirmClock(): Job {
         _clockChecked.value = true
         _confirm.value = null
-        return viewModelScope.launch { planNow() }
+        return exclusive { planNow() }
     }
 
     /** The operator confirmed discarding the planned ceremony. */
     fun confirmReplace(): Job {
         _confirm.value = null
         replaceConfirmed = true
-        return viewModelScope.launch { planNow() }
+        return exclusive { planNow() }
     }
 
     fun dismissConfirm() {
@@ -411,7 +454,6 @@ class FinalGenesisViewModel(
     private suspend fun planNow() {
         val replace = replaceConfirmed
         replaceConfirmed = false
-        _busy.value = true
         _refusal.value = null
         try {
             val status = apiClient.planFinalGenesis(
@@ -425,6 +467,7 @@ class FinalGenesisViewModel(
             _clockChecked.value = false
             _replanning.value = false
             _notes.value = emptyMap()
+            stateEpoch++
             planned(status)
         } catch (e: NodeRefusal) {
             val ask = planConfirmFor(e.reasonId)
@@ -435,15 +478,12 @@ class FinalGenesisViewModel(
             }
         } catch (e: Exception) {
             _refusal.value = FinalGenesisRefusal.transport(e)
-        } finally {
-            _busy.value = false
         }
     }
 
     /** One YubiKey session signs everything [holder] owes now. */
     fun sign(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
-        viewModelScope.launch {
-            _busy.value = true
+        exclusive {
             setNote(holder, HolderSignNote.Signing)
             try {
                 val res = apiClient.signFinalGenesis(holder, usbPath, pin, modulePath, nodeUrl())
@@ -460,8 +500,6 @@ class FinalGenesisViewModel(
                 }
             } catch (e: Exception) {
                 setNote(holder, HolderSignNote.Refused(FinalGenesisRefusal.transport(e)))
-            } finally {
-                _busy.value = false
             }
         }
 
@@ -470,18 +508,17 @@ class FinalGenesisViewModel(
     }
 
     /** Assemble, verify and write the bundle. */
-    fun finish(): Job = viewModelScope.launch {
-        _busy.value = true
+    fun finish(): Job = exclusive {
         _refusal.value = null
         try {
-            _phase.value = FinalGenesisPhase.Finished(apiClient.finishFinalGenesis(nodeUrl()))
+            val done = apiClient.finishFinalGenesis(nodeUrl())
+            stateEpoch++
+            _phase.value = FinalGenesisPhase.Finished(done)
         } catch (e: NodeRefusal) {
             _refusal.value = FinalGenesisRefusal.of(e)
             if (e.reasonId == FinalGenesisReason.CEREMONY_INCOMPLETE) probe()
         } catch (e: Exception) {
             _refusal.value = FinalGenesisRefusal.transport(e)
-        } finally {
-            _busy.value = false
         }
     }
 

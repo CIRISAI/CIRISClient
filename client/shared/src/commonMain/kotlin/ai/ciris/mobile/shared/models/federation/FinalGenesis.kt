@@ -255,54 +255,82 @@ fun shortCommitment(commitment: String?): String? =
 data class PlanServeNode(val keyId: String, val destination: String)
 
 /**
- * The July bake's canonical-1 and where it is dialled: persist v53.0.1
- * `src/federation/genesis/canonical_seed.json` (`produced_at`
- * 2026-08-14T14:48:31Z; the record's `valid_from` 2026-07-31), serve node
- * `ciris-canonical-1-d7bdeu223k`, `transport_hints` `[{kind: ip, destination:
- * 108.61.242.236:4242}]`. Used ONLY as the editable prefill for that key when
- * `remint-source` lists it with no transport hint; the node's own hint always
- * wins, and no other canonical gets an address the operator did not type.
- */
-object JulyBakeCanonical1 {
-    const val KEY_ID = "ciris-canonical-1-d7bdeu223k"
-    const val DIAL = "108.61.242.236:4242"
-}
-
-/**
  * The address a serve node's field starts with: the node's own hint for it
- * (an `ip` one first), else — for the July bake's canonical-1 only — its baked
- * address, else nothing.
+ * (an `ip` one first), else nothing. No address is compiled in: on a node
+ * holding the July bake, `remint-source` serves canonical-1's hint itself, and
+ * a second copy here could not follow it being rebound (Codex on #154).
  */
-fun initialDialHint(keyId: String, hints: List<TransportHintDto>?): String =
+fun initialDialHint(hints: List<TransportHintDto>?): String =
     hints.orEmpty().let { h -> (h.firstOrNull { it.kind == "ip" } ?: h.firstOrNull())?.destination?.trim() }
-        ?.takeIf { it.isNotEmpty() }
-        ?: if (keyId == JulyBakeCanonical1.KEY_ID) JulyBakeCanonical1.DIAL else ""
+        .orEmpty()
 
 /**
- * `host:port`: a hostname or IPv4 address (letters, digits, dots, hyphens) or a
- * bracketed IPv6 address, a colon, and a port 1–65535. No spaces, no scheme.
+ * Whether [text] is a destination the node's dialer accepts — CIRISServer
+ * 814dd7c6 `require_dial_hint` → `compose::ip_addrs_from_hints`, which keeps an
+ * `ip` hint only when `destination.parse::<std::net::SocketAddr>()` succeeds:
+ *
+ * - `a.b.c.d:port` — four decimal octets 0–255, no leading zeros (Rust's
+ *   `Ipv4Addr` refuses them), or
+ * - `[ipv6]:port` — a bracketed IPv6 literal (`::` compression and a trailing
+ *   dotted IPv4 allowed);
+ * - never a hostname, never a bare address.
+ *
+ * Stricter than the server in two places, both on purpose: the port must be
+ * 1–65535 (Rust parses `:0`, which no peer can dial) and digits only (`u16`
+ * parsing takes a leading `+`); and an IPv6 zone (`%eth0`) is refused.
  */
 fun isDialHint(text: String): Boolean {
-    val t = text.trim()
-    if (t.isEmpty() || t.any { it.isWhitespace() }) return false
+    if (text.isEmpty() || text.any { it.isWhitespace() }) return false
     val host: String
     val port: String
-    if (t.startsWith("[")) {
-        val end = t.indexOf("]:")
+    if (text.startsWith("[")) {
+        val end = text.indexOf("]:")
         if (end < 0) return false
-        host = t.substring(1, end)
-        port = t.substring(end + 2)
-        if (host.isEmpty() || !host.all { it.isLetterOrDigit() || it == ':' || it == '.' }) return false
+        host = text.substring(1, end)
+        port = text.substring(end + 2)
+        if (!isIpv6Literal(host)) return false
     } else {
-        val i = t.lastIndexOf(':')
+        val i = text.lastIndexOf(':')
         if (i <= 0) return false
-        host = t.substring(0, i)
-        port = t.substring(i + 1)
-        if (!host.all { it.isLetterOrDigit() || it == '.' || it == '-' }) return false
-        if (host.startsWith('.') || host.startsWith('-') || host.endsWith('.') || host.endsWith('-')) return false
+        host = text.substring(0, i)
+        port = text.substring(i + 1)
+        if (!isIpv4Literal(host)) return false
     }
-    if (port.isEmpty() || !port.all { it.isDigit() } || port.length > 5) return false
+    if (port.isEmpty() || port.length > 5 || !port.all { it in '0'..'9' }) return false
     return port.toInt() in 1..65535
+}
+
+private fun isIpv4Literal(s: String): Boolean {
+    val parts = s.split('.')
+    if (parts.size != 4) return false
+    return parts.all { p ->
+        p.isNotEmpty() && p.length <= 3 && p.all { it in '0'..'9' } &&
+            !(p.length > 1 && p[0] == '0') && p.toInt() <= 255
+    }
+}
+
+private fun isIpv6Literal(s: String): Boolean {
+    if (s.isEmpty() || s.contains('%')) return false
+    var body = s
+    var extra = 0
+    if ('.' in s) {
+        val cut = s.lastIndexOf(':')
+        if (cut < 0 || !isIpv4Literal(s.substring(cut + 1))) return false
+        body = s.substring(0, cut + 1) + "0"   // the IPv4 tail counts as two groups
+        extra = 1
+    }
+    val halves = body.split("::")
+    if (halves.size > 2) return false
+    fun groups(h: String): List<String>? =
+        if (h.isEmpty()) emptyList() else h.split(':').takeIf { g -> g.all { it.length in 1..4 && it.all { c -> c.isDigit() || c.lowercaseChar() in 'a'..'f' } } }
+    val left = groups(halves[0]) ?: return false
+    val count = if (halves.size == 2) {
+        val right = groups(halves[1]) ?: return false
+        left.size + right.size + extra
+    } else {
+        left.size + extra
+    }
+    return if (halves.size == 2) count <= 7 else count == 8
 }
 
 /** A refusal reduced to what the sheet renders: the id (localized by id), the node's English, the status. */
@@ -334,9 +362,11 @@ object FinalGenesisReason {
  */
 enum class FinalGenesisProbe { LEGACY, NOT_PLANNED, REFUSED }
 
-fun finalGenesisProbe(statusCode: Int, reasonId: String?): FinalGenesisProbe = when {
-    statusCode == 404 && reasonId == null -> FinalGenesisProbe.LEGACY
+fun finalGenesisProbe(statusCode: Int, reasonId: String?, body: String? = null): FinalGenesisProbe = when {
+    // ONLY a blank 404: a non-empty one without a known id (a proxy's HTML,
+    // `{"error":"Not Found"}`) is a route that did not answer, not an old node.
     reasonId == FinalGenesisReason.NOT_PLANNED -> FinalGenesisProbe.NOT_PLANNED
+    statusCode == 404 && reasonId == null && body.isNullOrBlank() -> FinalGenesisProbe.LEGACY
     else -> FinalGenesisProbe.REFUSED
 }
 

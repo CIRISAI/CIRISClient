@@ -17,6 +17,9 @@ class FinalGenesisTest {
         assertEquals(FinalGenesisProbe.REFUSED, finalGenesisProbe(403, null), "off the node's machine is not an old node")
         assertEquals(FinalGenesisProbe.REFUSED, finalGenesisProbe(404, "something.else"))
         assertEquals(FinalGenesisProbe.REFUSED, finalGenesisProbe(500, null))
+        assertEquals(FinalGenesisProbe.REFUSED, finalGenesisProbe(404, null, """{"error":"Not Found"}"""), "a 404 with a body is not the missing route")
+        assertEquals(FinalGenesisProbe.REFUSED, finalGenesisProbe(404, null, "<html>404</html>"))
+        assertEquals(FinalGenesisProbe.LEGACY, finalGenesisProbe(404, null, "  "))
     }
 
     @Test
@@ -96,5 +99,21 @@ class FinalGenesisTest {
         // An English `error` beside a different id stays the sentence.
         val f = NodeRefusal.fromBody(400, """{"error":"Bad thing happened","reason_id":"x.y"}""")
         assertEquals("Bad thing happened", f.detail)
+    }
+
+    @Test
+    fun aDialHintIsAnIpLiteralAndAPortAsTheServersDialerParsesIt() {
+        // CIRISServer 814dd7c6 `require_dial_hint` → `compose::ip_addrs_from_hints`:
+        // `destination.parse::<std::net::SocketAddr>()` — an IP literal, never a name.
+        for (ok in listOf("108.61.242.236:4242", "203.0.113.7:1", "0.0.0.0:65535", "[2001:db8::1]:4242", "[::1]:4242",
+                "[::ffff:192.0.2.1]:4242", "[2001:db8:0:0:0:0:0:1]:80")) {
+            assertTrue(isDialHint(ok), ok)
+        }
+        for (bad in listOf("canon2.example.net:4242", "localhost:4242", "108.61.242.236", "108.61.242.236:", "108.61.242.236:0",
+                "108.61.242.236:65536", "108.61.242.236:+4242", "256.1.1.1:4242", "01.2.3.4:4242", "1.2.3:4242",
+                "2001:db8::1:4242", "[2001:db8::1]", "[2001:db8:::1]:4242", "[1:2:3:4:5:6:7:8:9]:4242", "[g::1]:4242",
+                " 108.61.242.236 :4242", "")) {
+            assertFalse(isDialHint(bad), bad)
+        }
     }
 }

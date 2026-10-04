@@ -94,7 +94,7 @@ class FinalGenesisWireTest {
         client.planFinalGenesis(
             listOf(
                 ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-1", "203.0.113.7:4242"),
-                ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-2", "canon2.example.net:4242"),
+                ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-2", "198.51.100.20:4242"),
             ),
             clockChecked = true, replace = true, nodeUrl = n.url,
         )
@@ -106,7 +106,7 @@ class FinalGenesisWireTest {
         )
         assertEquals(
             parse("""{"serve_nodes":[{"key_id":"ciris-canonical-1","transport_hints":[{"kind":"ip","destination":"203.0.113.7:4242"}]},""" +
-                """{"key_id":"ciris-canonical-2","transport_hints":[{"kind":"ip","destination":"canon2.example.net:4242"}]}],"clock_checked":true,"replace":true}"""),
+                """{"key_id":"ciris-canonical-2","transport_hints":[{"kind":"ip","destination":"198.51.100.20:4242"}]}],"clock_checked":true,"replace":true}"""),
             n.json(1),
         )
     }

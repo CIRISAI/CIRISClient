@@ -45,17 +45,31 @@ class FinalGenesisViewModelTest {
         private val queues = routes.mapValues { CopyOnWriteArrayList(it.value) }
         val seen: MutableList<String> = CopyOnWriteArrayList()
         val bodies: MutableList<Pair<String, String>> = CopyOnWriteArrayList()
+        /** "METHOD /path#n" (n = 1-based arrival) → milliseconds to hold that answer. */
+        val delays: MutableMap<String, Long> = java.util.concurrent.ConcurrentHashMap()
+        private val arrivals = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
+        private val inFlight = java.util.concurrent.ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
+        val maxInFlight: MutableMap<String, Int> = java.util.concurrent.ConcurrentHashMap()
         val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            // Concurrent, as a node is: overlap and ordering are what some tests assert.
+            executor = java.util.concurrent.Executors.newCachedThreadPool()
             createContext("/") { ex ->
                 val key = "${ex.requestMethod} ${ex.requestURI.rawPath}"
                 seen += key
                 bodies += key to ex.requestBody.readBytes().decodeToString()
-                val q = queues[key]
-                val (status, body) = when {
-                    q == null || q.isEmpty() -> 404 to ""
-                    q.size > 1 -> q.removeAt(0)
-                    else -> q[0]
+                val nth = arrivals.getOrPut(key) { java.util.concurrent.atomic.AtomicInteger() }.incrementAndGet()
+                val now = inFlight.getOrPut(key) { java.util.concurrent.atomic.AtomicInteger() }.incrementAndGet()
+                maxInFlight.merge(key, now) { a, b -> maxOf(a, b) }
+                val (status, body) = synchronized(this@Node) {
+                    val q = queues[key]
+                    when {
+                        q == null || q.isEmpty() -> 404 to ""
+                        q.size > 1 -> q.removeAt(0)
+                        else -> q[0]
+                    }
                 }
+                delays["$key#$nth"]?.let { Thread.sleep(it) }
+                inFlight[key]!!.decrementAndGet()
                 val bytes = body.toByteArray()
                 ex.responseHeaders.add("Content-Type", "application/json")
                 ex.sendResponseHeaders(status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
@@ -853,7 +867,7 @@ class FinalGenesisViewModelTest {
         vm.open().join()
         assertEquals("", vm.dialHints.value["ciris-canonical-1"].orEmpty(), "nothing invented when the node has no hint")
         assertTrue(vm.planHeld())
-        for (bad in listOf("108.61.242.236", ":4242", "host:0", "host:99999", "two words:4242", "[::1]")) {
+        for (bad in listOf("canon1.example.net:4242", "108.61.242.236", ":4242", "198.51.100.4:0", "198.51.100.4:99999", "two words:4242", "[::1]")) {
             vm.setDialHint("ciris-canonical-1", bad)
             assertTrue(vm.planHeld(), "'$bad' is not host:port")
         }
@@ -907,7 +921,9 @@ class FinalGenesisViewModelTest {
     )
 
     @Test
-    fun canonicalOneOfTheJulyBakeFallsBackToItsBakedAddressOnlyWhenTheNodeGivesNone() = runBlocking<Unit> {
+    fun aCanonicalWithNoHintStartsEmptyEvenCanonicalOne() = runBlocking<Unit> {
+        // Codex 4178293555: no second copy of an address that can be rebound —
+        // remint-source serves canonical-1's hint on a node holding the bake.
         for (hints in listOf("null", "[]")) {
             val n = node(mapOf(
                 "GET /v1/accord/final-genesis" to listOf(notPlanned),
@@ -915,19 +931,18 @@ class FinalGenesisViewModelTest {
             ))
             val vm = vm(n)
             vm.open().join()
-            assertEquals("108.61.242.236:4242", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"], "hints=$hints")
-            assertFalse(vm.planHeld())
+            assertEquals("", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"].orEmpty(), "hints=$hints")
+            assertTrue(vm.planHeld())
         }
-        // The node's own hint wins over the baked one.
         val n = node(mapOf(
             "GET /v1/accord/final-genesis" to listOf(notPlanned),
             "GET /v1/accord/genesis/remint-source" to listOf(sourceWith(
-                "ciris-canonical-1-d7bdeu223k" to """[{"kind":"ip","destination":"198.51.100.9:4242"}]""",
+                "ciris-canonical-1-d7bdeu223k" to """[{"kind":"ip","destination":"108.61.242.236:4242"}]""",
             )),
         ))
         val vm = vm(n)
         vm.open().join()
-        assertEquals("198.51.100.9:4242", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"])
+        assertEquals("108.61.242.236:4242", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"], "the bake's hint, from the node")
     }
 
     @Test
@@ -946,9 +961,108 @@ class FinalGenesisViewModelTest {
         vm.toggleServeNode("ciris-canonical-2")
         assertTrue(vm.planHeld(), "canonical-2 is seated with no address")
         vm.setDialHint("ciris-canonical-2", "canon2.example.net:4242")
+        assertTrue(vm.planHeld(), "a hostname is not dialable (814dd7c6)")
+        vm.setDialHint("ciris-canonical-2", "[2001:db8::20]:4242")
         assertFalse(vm.planHeld())
         vm.plan().join()
         val nodes = n.bodiesOf("POST /v1/accord/final-genesis/plan").single()["serve_nodes"]!!.jsonArray
         assertEquals(2, nodes.size)
+    }
+
+    // ── Codex, fourth round on #154 (15:41) ──────────────────────────────────
+
+    @Test
+    fun aHolderMissingFromA200RecoveryKeysAnswerIsUnreadAndHoldsPlan() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(rks(rk("A1", "A2", cA, "record"), rk("B1", "B2", cB, "record"))),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals(RecoveryRow.Unread, vm.recovery.value["C1"], "the pairing fallback is for a bare 404 only")
+        assertTrue(vm.planHeld())
+        vm.plan().join()
+        assertFalse("POST /v1/accord/final-genesis/plan" in n.seen)
+    }
+
+    @Test
+    fun reopeningTakesTheDialHintsTheNodeServesNowAndARetryKeepsAnEdit() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(
+                source,
+                503 to refusal("final_genesis.store_unavailable", "store down"),
+                source,
+                200 to source.second.replace("203.0.113.7:4242", "203.0.113.8:4242"),
+            ),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.setDialHint("ciris-canonical-1", "198.51.100.1:4242")
+        vm.retrySource().join()   // fails: the edit stays
+        vm.retrySource().join()   // succeeds within the same form: the edit stays
+        assertEquals("198.51.100.1:4242", vm.dialHints.value["ciris-canonical-1"], "a retry keeps what the operator typed")
+        vm.open().join()          // a new display: what the node says now
+        assertEquals("203.0.113.8:4242", vm.dialHints.value["ciris-canonical-1"])
+    }
+
+    @Test
+    fun aSlowStatusProbeIsNeverOverlappedAndNeverLandsOverANewerOne() = runBlocking<Unit> {
+        val afterA1 = status(r1.associateWith { listOf("B1", "C1") } + r2.associateWith { all })
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan, 200 to freshPlan, 200 to afterA1),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/sign" to listOf(200 to """{"signed":${r1.joinToString(",", "[", "]") { "\"$it\"" }},"owed":{},"complete":false}"""),
+        ))
+        n.delays["GET /v1/accord/final-genesis#2"] = 800
+        val vm = vm(n)
+        vm.open().join()
+        val slow = vm.refresh()                 // the poll: answered late, with the OLD state
+        kotlinx.coroutines.delay(100)
+        vm.refresh()                            // a second poll while the first is out: not a second request
+        vm.sign("A1", "/media/a1", "1").join()  // its probe answers the NEW state
+        slow.join()
+        assertEquals(1, n.maxInFlight["GET /v1/accord/final-genesis"], "probes never overlap")
+        assertEquals(3, n.seen.count { it == "GET /v1/accord/final-genesis" })
+        assertEquals(GenesisCell.SIGNED, vm.grid()!!.cell("A1", "row:genesis-charter"), "the older answer did not overwrite the newer")
+    }
+
+    @Test
+    fun twoRapidSignTapsOpenOneHardwareSession() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/sign" to listOf(200 to """{"signed":["row:genesis-charter"],"owed":{},"complete":false}"""),
+            "POST /v1/accord/final-genesis/finish" to listOf(409 to refusal("ceremony_incomplete", "owed")),
+            "POST /v1/accord/final-genesis/recovery-key" to listOf(200 to
+                """{"holder_key_id":"A1","recovery_key":{"key_id":"A2","pubkey_ed25519_base64":"AA==","pubkey_ml_dsa_65_base64":"z"},"recorded":["A1"]}"""),
+        ))
+        n.delays["POST /v1/accord/final-genesis/sign#1"] = 300
+        val vm = vm(n)
+        vm.open().join()
+        val first = vm.sign("A1", "/media/a1", "1")
+        val second = vm.sign("A1", "/media/a1", "1")
+        val finish = vm.finish()
+        val verify = vm.verifyRecovery("A1", "/media/a2", "1")
+        listOf(first, second, finish, verify).forEach { it.join() }
+        assertEquals(1, n.seen.count { it == "POST /v1/accord/final-genesis/sign" }, "one hardware session")
+        assertFalse("POST /v1/accord/final-genesis/finish" in n.seen, "nothing else launches while a ceremony action runs")
+        assertFalse("POST /v1/accord/final-genesis/recovery-key" in n.seen)
+    }
+
+    @Test
+    fun aNonBlank404WithoutAKnownIdIsARefusalNotAnOldNode() = runBlocking<Unit> {
+        for (body in listOf("""{"error":"Not Found"}""", "<html><body>404 Not Found</body></html>")) {
+            val n = node(mapOf(
+                "GET /v1/accord/final-genesis" to listOf(404 to body),
+                "GET /v1/accord/genesis/remint-source" to listOf(source),
+            ))
+            val vm = vm(n)
+            vm.open().join()
+            val p = assertIs<FinalGenesisPhase.Unavailable>(vm.phase.value, body)
+            assertEquals(404, p.refusal.statusCode)
+        }
     }
 }

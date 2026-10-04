@@ -104,7 +104,8 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
     LaunchedEffect(polling) {
         while (polling) {
             delay(5_000)
-            vm.refresh()
+            // Awaited: the next poll starts only after this one has landed.
+            vm.refresh().join()
         }
     }
 
