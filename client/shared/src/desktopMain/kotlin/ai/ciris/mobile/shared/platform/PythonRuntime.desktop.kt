@@ -779,13 +779,16 @@ actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
  * The `device_class` this app gives a node it starts on a desktop. ciris-server
  * 0.5.220 resolves a node's class as: `CIRIS_DEVICE_CLASS` if valid, else
  * `phone` on an Android/iOS build, else `server` — and replication of a
- * person's self and family content skips server-class nodes. A value the user
- * already set (and the server accepts) is kept; anything else becomes `laptop`.
+ * person's self and family content skips server-class nodes. So an UNSET
+ * class becomes `laptop`; a value the user set is passed through untouched.
+ * The server alone decides what is valid: a second, committed copy of its
+ * class list here would drift the day the server's changes (Codex, #153).
  */
 internal object NodeDeviceClass {
-    val VALID = setOf("phone", "laptop", "server", "embedded", "agent", "service")
     const val DESKTOP = "laptop"
 
+    // Normalized (trimmed, lowercased) but not validated: the server reads the
+    // canonical spelling only and falls back to `server` on anything else.
     fun forDesktopSpawn(current: String?): String =
-        current?.trim()?.lowercase()?.takeIf { it in VALID } ?: DESKTOP
+        current?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: DESKTOP
 }
