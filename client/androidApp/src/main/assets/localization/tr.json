@@ -19,7 +19,8 @@
       "refused": "Altyapı bu yetki devrini reddetti. Kabul edilmedi ve hiçbir yetki verilmedi.",
       "sign_failed": "Anlaşma sahibinin anahtarı bir imza üretmedi. Hiçbir şey değiştirilmedi.",
       "unknown_duty": "Bu, ağın tanıdığı bir görev değil. Verilmesi burada yetki olarak görünür ve her kapıda reddedilirdi."
-    }
+    },
+    "genesis_superseded": "2'den 3'ü öner/ortak-imzala yeniden ihraç yöntemi kullanımdan kaldırıldı; genesis, /v1/accord/final-genesis adresinde üç sahibin tümü tarafından imzalanan tek bir törendir (plan, sign, finish)"
   },
   "adapters": {
     "navigation": {
@@ -1429,6 +1430,10 @@
     "files_bytes_not_granted": "Bu cihaz bunu açamıyor",
     "files_bytes_unreadable": "Açıldı, ancak okunabilir metin değil",
     "files_bytes_unopened": "Burada açılamıyor",
+    "files_bytes_awaiting_key": "Bu dosyanın anahtarı bekleniyor",
+    "files_awaiting_key_body": "Baytları bu cihazda, ancak onları açacak anahtar henüz gelmedi. Kendiliğinden gelecektir; yanlış bir şey yok.",
+    "files_awaiting_key_check_again": "Yeniden kontrol et",
+    "files_custody_awaiting_key": "Bu dosyanın anahtarı bu cihaza henüz ulaşmadı, bu nedenle dosyanın nerede olduğunu söyleyemez. Kendiliğinden gelecektir; kısa süre sonra tekrar kontrol edin.",
     "files_room": "{room} odası",
     "files_choose_room": "Hangi odaya eklensin?",
     "files_uploading": "{name} ekleniyor…",
@@ -2307,6 +2312,8 @@
     "provision_holder_err_owner": "Önce bu düğümde sahip olarak oturum açın, ardından sağlama işlemini yapın.",
     "provision_holder_err_loopback": "Sağlama işlemi yalnızca düğümün kendi ana bilgisayarında (yalnızca localhost) çalıştırılabilir.",
     "provision_holder_err_other": "Sağlama başarısız oldu: {detail}",
+    "trust_root_import_not_yet_accepted": "İçe aktarıldı, henüz kabul edilmedi",
+    "trust_root_import_not_yet_accepted_why": "Kökün kayıtları bu düğümde bulunuyor, ancak bu düğüm ona henüz güvenmiyor. Ya kökün genesis kayıtlarını henüz tutmuyor ve kabul, bir sonraki başlatma veya içe aktarmada yeniden denenecek, ya da kabulü yazılamadı.",
     "yubikey_probe_failed": "YubiKey durumu okunamadı",
     "yubikey_probe_not_on_this_node": "Bu düğüm YubiKey durumunu bildirmiyor",
     "yubikey_probe_reason": "Neden: {detail}",
@@ -3097,6 +3104,12 @@
     "trust_root_accepted_no": "Hayır: bu düğüm tarafından biliniyor, güvenilmiyor",
     "trust_root_accepted_yes": "Evet: bu düğümün kabulü ona ulaşıyor",
     "trust_root_banner_label": "Düğüm diyor ki",
+    "trust_root_bundle_title": "Bu düğümün çalıştığı tohum",
+    "trust_root_bundle_not_in_force": "Bu düğüm henüz kendi tohumuyla çalışmıyor, bu yüzden karşılaştırma için gösterebileceği bir tohumu yok.",
+    "trust_root_bundle_fingerprint_label": "Parmak izi",
+    "trust_root_bundle_charter_root_label": "Tüzük kökü",
+    "trust_root_state_not_adopted_held": "Daha yeni kök benimsenmedi: önceki kök yürürlükte kalıyor ({leg} etap)",
+    "trust_root_state_not_adopted": "Kök benimsenmedi: bu ikili dosyanın kökü reddedildi ve önceki bir kök tutulmuyor ({leg} bacağı)",
     "trust_root_bounded_label": "Şu tarihe kadar geçerli",
     "trust_root_bounded_none": "İçindeki hiçbir şey yalnızca süreye bağlı olarak sona ermez",
     "trust_root_confirm_fact_signs": "Kim imzalıyor",
@@ -3159,6 +3172,8 @@
     "trust_root_refused_no_root": "Hiçbir kök adlandırılmadı.",
     "trust_root_refused_other": "Düğüm reddetti ({id}).",
     "trust_root_refused_withdraw_failed": "Düğüm kabulünü geri çekemedi.",
+    "trust_root_refused_bundle_unlabelled": "Bu tohum, final genesis'ten öncesine ait. Hiçbir şey kurulmadı.",
+    "trust_root_refused_bundle_unlabelled_body": "Güven kayıtları, her birinin ne için olduğunu belirten etiketler taşımıyor — kayıtlar etiketlenmeden önce basılmışlardı. Bu düğüm onu hiç tüzüğü yokmuş gibi kurardı, bu nedenle onu reddetti. Bunun yerine final genesis'ten sürüm 3 bir tohum içe aktarın.",
     "trust_root_roots_title": "Bu düğümün bildiği kökler",
     "trust_root_state_divergent": "Değiştirilmiş: {leg} bacağı mevcut ve hatalı",
     "trust_root_state_entrenched": "Köklenmiş: köke gereksinim duyan her kontrol geçebilir",
@@ -3346,6 +3361,8 @@
     "chat_empty_room": "Henüz mesaj yok. Burada gönderdikleriniz, bu odanın üye listesindeki herkese yönelik imzalı bir beyandır — onu yalnızca odanın üyeleri okuyabilir, başka hiç kimse okuyamaz.",
     "chat_unopened_not_fetched": "Bu mesaj henüz bu cihaza ulaşmadı.",
     "chat_unopened_not_granted": "Bu mesaj, bu cihaz burada okuyabilir hale gelmeden önce mühürlendiği için bu cihazda açılmayacak.",
+    "chat_unopened_awaiting_key": "Bu mesaj burada, ancak onu açacak anahtar bu cihaza henüz ulaşmadı. Kendiliğinden gelecektir.",
+    "chat_unopened_withdrawn": "Yazarı bu mesajı geri çekti.",
     "chat_unopened_evicted": "Bu mesajın içeriği artık bu cihazda tutulmuyor.",
     "chat_unopened_seal_mismatch": "Bu mesajın mührü eşleşmiyor, bu yüzden açılmadı.",
     "chat_unopened_malformed_row": "Bu mesaj okunamadı: satır hatalı biçimlendirilmiş.",
@@ -5294,7 +5311,9 @@
   "trust_play_integrity": "Play Bütünlüğü",
   "trust_play_validates": "Play Bütünlüğü uygulama özgünlüğünü doğrular",
   "trust_root": {
-    "no_root": "hangi kök? yol, güveni kaldırılacak root_key_id değerini belirtmelidir"
+    "no_root": "hangi kök? yol, güveni kaldırılacak root_key_id değerini belirtmelidir",
+    "bundle_unlabelled": "bu paket, güven kökü satırları görev etiketlerini taşımadan önce basılmıştı (trust:charter:v1); bu düğümde hiç tüzük yokmuş gibi kurulurdu. Bunun yerine final genesis'ten (FSD/FINAL_GENESIS.md) bir paket içe aktarın. Bu düğümde hiçbir şey değişmedi.",
+    "bundle_not_in_force": "Bu düğüm taşıdığı paketle henüz çalışmıyor, bu yüzden hiçbir paket sunmuyor."
   },
   "trust_running": "Çalışıyor",
   "trust_verify_desc": "Doğrulama durumu ve detayları",
@@ -5471,6 +5490,7 @@
     "too_large_for_whole_read": "Bu dosya tek parça halinde okunamayacak kadar büyük. Akış halinde okunması gerekir.",
     "withdraw_failed": "Dosya geri çekilemedi. Tekrar deneyin.",
     "withdrawn": "Yazarı bu dosyayı geri çekti. Baytlar artık hiçbir yerde sunulmuyor.",
+    "awaiting_key": "Baytları burada, ancak bu cihazın onlar için anahtarı henüz gelmedi. Kendiliğinden gelecektir; kısa süre sonra tekrar deneyin.",
     "store_unavailable": "Bu düğüm dosya deposuna ulaşamadı.",
     "too_large": "Bu dosya buraya eklenemeyecek kadar büyük.",
     "unknown_cohort": "Bu, dosyaların gidebileceği bir yer değil. Sadece ben, bir aile veya bir topluluk kullanın.",
@@ -5730,5 +5750,28 @@
       "handled_elsewhere": "Bu etkileşimde sizin yerinize başka bir cihazınız yanıt veriyor.",
       "handled_here": "Bu etkileşimde sizin yerinize bu cihaz yanıt veriyor."
     }
+  },
+  "final_genesis": {
+    "already_planned": "bu düğümde zaten planlanmış bir tören var; onu atmak için \"replace\": true değerini geçin",
+    "bad_request": "test_holder_seed_b64, tam olarak 32 baytın base64 kodlaması olmalıdır",
+    "clock_not_synchronized": "bu sunucunun saati NTP ile senkronize değildir; genesis içindeki her an bu saatten damgalanır ve bir alıcı, kendi geleceğine göre 300 sn'den daha ileride olan bir anı reddeder",
+    "clock_unverified": "bu sunucu, ana makinenin saat senkronizasyon durumunu okuyamıyor; saatin senkronize olduğunu doğrulayın ve \"clock_checked\": true değerini geçin",
+    "no_hardware_signer": "imzalama için `pkcs11` özelliği gerekir (sahibin YubiKey'i + USB ML-DSA imzalayıcısı)",
+    "no_serve_nodes": "bir genesis en az bir kanonik sunucuyu yerine oturtur",
+    "not_planned": "bu düğümde planlanmış bir tören yok — önce POST /v1/accord/final-genesis/plan yapın",
+    "not_testing_mode": "yazılımsal bir sahip tohumu yalnızca CIRIS_TESTING_MODE=true ile (deneme çalıştırmasında) kabul edilir",
+    "not_a_holder": "O anahtar yerleşik bir anlaşma sahibi değil.",
+    "nothing_to_sign": "Bu sahibin şu anda imzalanabilir hiçbir borcu yok. Ya borçlu olduğu her şey imzalanmıştır ya da sıradaki tur başka bir sahibin tüzüğü imzalamasını beklemektedir.",
+    "recovery_key_is_a_holder": "O anahtar, yerleşik bir sahibin imzalama anahtarıdır. Bir kurtarma anahtarı yedek olmalıdır.",
+    "recovery_key_mismatch": "Açılan belirteç, anlaşma töreninin bu yedek için kaydettiği anahtarı tutmuyor. Doğru YubiKey ve USB olduğunu denetleyin.",
+    "recovery_key_shared": "O yedek, zaten başka bir sahibin kurtarma anahtarı olarak kayıtlı.",
+    "recovery_key_wrong_holder": "Bu yedek, bu sahibin kurtarma anahtarı değil. Her sahip, kendi eşleştirilmiş yedeğiyle kurtarma yapar.",
+    "serve_node_no_dial_hint": "Bu kanonik düğüm hiçbir taşıma ipucu taşımıyor. Adresini (host:4242) anahtarıyla birlikte geçin; genesis'in ipucu olmadan yerleştirdiği kanonik bir düğümü hiçbir yeni düğüm bulamaz.",
+    "serve_node_no_pqc": "O düğümün kaydında ML-DSA-65 anahtarı yok. Bir genesis düğümü her iki yarıya da ihtiyaç duyar.",
+    "serve_node_unknown": "O düğümün burada bir anahtar kaydı yok. Kimliği yerine tam kaydını geçin.",
+    "sign_failed": "İmzalama yarıda başarısız oldu. Zaten imzalanmış olanlar korunuyor; kalanını tamamlamak için tekrar imzalayın.",
+    "signer_unavailable": "Sahibin imzalayıcısı (YubiKey ve USB) açılamadı.",
+    "store_failed": "Bu düğüm, törenin durumunu yazamadı.",
+    "store_unavailable": "Bu düğüm, anahtar deposuna ulaşamadı."
   }
 }

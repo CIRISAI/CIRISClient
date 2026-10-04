@@ -133,6 +133,12 @@ so a lesson learned here reaches the models that would otherwise repeat it.
   `ɓ ɗ ƙ`.
 - **Bare demonstratives.** "This", standing alone, forces gendered languages to
   invent agreement with a noun that is not there — Italian did. Name the noun.
+- **Elliptical terms of art.** Server English drops the head noun a term of art
+  stands for: "a genesis seats at least one canonical" means a canonical NODE
+  (the serve node the genesis seats). Restoring that noun — "canonical node" —
+  is the meaning, not an addition, and a reviewer must not count it as one;
+  rendering the bare adjective as a noun most languages cannot use is the error.
+  (0.5.220: 19 of 28 locales rejected on every rung over exactly this.)
 - **The corpus outranks your instinct.** A rendering that disagrees with the
   shipped anchors is wrong even when it is defensible, because the anchors are
   what users are already reading. Say so if you think the corpus is wrong;

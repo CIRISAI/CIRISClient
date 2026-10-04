@@ -75,8 +75,17 @@ sealed interface OpenState {
      */
     data class TooLarge(val entry: DriveEntry, val refusal: NodeRefusal) : OpenState
 
+    /**
+     * The bytes are on this device and this device's per-epoch key for them
+     * has not arrived yet (ciris-server 0.5.220: `409 drive.awaiting_key`).
+     * A named wait — "Waiting for this file's key" — never an error: the key
+     * follows on its own, and asking again is the whole remedy.
+     */
+    data class AwaitingKey(val entry: DriveEntry, val refusal: NodeRefusal) : OpenState
+
     companion object {
         const val REASON_TOO_LARGE_FOR_WHOLE_READ = "drive.too_large_for_whole_read"
+        const val REASON_AWAITING_KEY = "drive.awaiting_key"
     }
 }
 
@@ -222,8 +231,11 @@ class FilesViewModel(
                     else -> OpenState.Opened(entry, file, bytes, check)
                 }
             } catch (e: NodeRefusal) {
-                if (e.reasonId == OpenState.REASON_TOO_LARGE_FOR_WHOLE_READ) OpenState.TooLarge(entry, e)
-                else OpenState.NotOpened(entry, e, e.detail ?: entry.detail)
+                when (e.reasonId) {
+                    OpenState.REASON_TOO_LARGE_FOR_WHOLE_READ -> OpenState.TooLarge(entry, e)
+                    OpenState.REASON_AWAITING_KEY -> OpenState.AwaitingKey(entry, e)
+                    else -> OpenState.NotOpened(entry, e, e.detail ?: entry.detail)
+                }
             } catch (e: Exception) {
                 OpenState.NotOpened(entry, null, e.message ?: "error")
             }

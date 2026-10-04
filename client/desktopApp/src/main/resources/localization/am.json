@@ -19,7 +19,8 @@
       "refused": "መሠረቱ ይህን ስጦታ አልተቀበለውም። አልገባም፣ ምንም ሥልጣንም አልተሰጠም።",
       "sign_failed": "የስምምነት ያዡ ቁልፍ ፊርማ አላመነጨም። ምንም አልተቀየረም።",
       "unknown_duty": "ያ ይህ መረብ የሚያውቀው ግዴታ አይደለም። መስጠቱ እዚህ እንደ ሥልጣን ይታያል፣ በእያንዳንዱ በር ላይ ግን ይከለከላል።"
-    }
+    },
+    "genesis_superseded": "የ2-ከ-3 ሀሳብ-አቅርቦት/የጋራ-ፊርማ እንደገና-ማውጣት ተቋርጧል፤ የመነሻ ሥነ ሥርዓቱ በ/v1/accord/final-genesis ላይ በሦስቱም ያዦች የሚፈረም አንድ ሥነ ሥርዓት ነው (ዕቅድ፣ ፊርማ፣ ማጠናቀቅ)።"
   },
   "adapters": {
     "navigation": {
@@ -3152,6 +3153,10 @@
     "files_bytes_not_granted": "ይህ መሣሪያ ሊከፍተው አይችልም",
     "files_bytes_unreadable": "ተከፍቷል፣ ነገር ግን ሊነበብ የሚችል ጽሁፍ አይደለም",
     "files_bytes_unopened": "እዚህ ሊከፈት አይችልም",
+    "files_bytes_awaiting_key": "የዚህ ፋይል ቁልፍ በመጠበቅ ላይ",
+    "files_awaiting_key_body": "ባይቶቹ በዚህ መሣሪያ ላይ ናቸው፣ ነገር ግን የሚከፍታቸው ቁልፍ ገና አልደረሰም። በራሱ ይመጣል፤ ምንም የተሳሳተ ነገር የለም።",
+    "files_awaiting_key_check_again": "እንደገና ያረጋግጡ",
+    "files_custody_awaiting_key": "የዚህ ፋይል ቁልፍ ገና ወደዚህ መሣሪያ አልደረሰም፣ ስለዚህ ፋይሉ የት እንዳለ መናገር አይቻልም። በራሱ ይመጣል፤ ትንሽ ቆይተው እንደገና ያረጋግጡ።",
     "files_room": "ክፍል {room}",
     "files_choose_room": "የትኛው ክፍል ውስጥ ይጨመር?",
     "files_uploading": "{name}ን በመጨመር ላይ…",
@@ -3208,6 +3213,8 @@
     "chat_empty_room": "እስካሁን ምንም መልዕክቶች የሉም። እዚህ የሚልኩት በዚህ ክፍል የአባላት ዝርዝር ውስጥ ላሉ ሁሉ የተፈረመ ምስክርነት ነው — አባላቱ ማንበብ ይችላሉ፣ ከዚያ ውጭ ግን ማንም አይችልም።",
     "chat_unopened_not_fetched": "ይህ መልዕክት እስካሁን ወደዚህ መሣሪያ አልደረሰም።",
     "chat_unopened_not_granted": "ይህ መልዕክት ይህ መሣሪያ እዚህ ማንበብ ከመቻሉ በፊት ተዘግቷል፣ ስለዚህ በዚህ ላይ አይከፈትም።",
+    "chat_unopened_awaiting_key": "ይህ መልዕክት እዚህ አለ፣ ነገር ግን የሚከፍተው ቁልፍ ገና ወደዚህ መሣሪያ አልደረሰም። በራሱ ይመጣል።",
+    "chat_unopened_withdrawn": "ደራሲው ይህን መልዕክት መልሶ ወስዷል።",
     "chat_unopened_evicted": "የዚህ መልዕክት ይዘት በዚህ መሣሪያ ላይ ከእንግዲህ አልተያዘም።",
     "chat_unopened_seal_mismatch": "የዚህ መልዕክት ማህተም አይመሳሰልም፣ ስለዚህ አልተከፈተም።",
     "chat_unopened_malformed_row": "ይህ መልዕክት ማንበብ አልተቻለም፦ ረድፉ የተበላሸ ነው።",
@@ -3813,6 +3820,14 @@
     "trust_root_accepted_no": "አይ፦ ለዚህ ኖድ የታወቀ፣ ያልታመነ",
     "trust_root_accepted_yes": "አዎ፦ የዚህ ኖድ ተቀባይነት ይደርሰዋል",
     "trust_root_banner_label": "ኖዱ ይላል",
+    "trust_root_bundle_title": "ይህ ኖድ የሚሠራበት ዘር",
+    "trust_root_bundle_not_in_force": "ይህ ኖድ በዘሩ ላይ ገና አይሰራም፣ ስለዚህ ለማነጻጻር የሚያሳየው ዘር የለውም።",
+    "trust_root_bundle_fingerprint_label": "የጣት አሻራ",
+    "trust_root_bundle_charter_root_label": "የቻርተር ሥር",
+    "trust_root_state_not_adopted_held": "አዲሱ ሥር አልተቀበለም፦ ቀዳሚው ሥር በሥራ ላይ ይቆያል ({leg} እግር)",
+    "trust_root_state_not_adopted": "ሥር አልተቀበለም፦ የዚህ ባይነሪ ሥር ተከልክሏል እና ምንም ቀደም ያለ ሥር አልተያዘም ({leg} እግር)",
+    "trust_root_import_not_yet_accepted": "ገብቷል፣ ገና ተቀባይነት አላገኘም",
+    "trust_root_import_not_yet_accepted_why": "የሥሩ መዝገቦች በዚህ ኖድ ላይ ይገኛሉ፣ ነገር ግን ይህ ኖድ እስካሁን አያምነውም። ወይ የሥሩን የመነሻ መዝገቦች ገና አልያዘም፣ እና ተቀባይነቱም በሚቀጥለው ማስነሳት ወይም ማስገባት ላይ ዳግም ይሞከራል፣ ወይም ተቀባይነቱ ሊጻፍ አልቻለም።",
     "trust_root_bounded_label": "የሚቆይ እስከ",
     "trust_root_bounded_none": "በውስጡ ምንም በጊዜ ብቻ የሚያበቃ ነገር የለም",
     "trust_root_confirm_fact_signs": "ማን ይፈርማል",
@@ -3875,6 +3890,8 @@
     "trust_root_refused_no_root": "ምንም ሥር አልተጠቀሰም።",
     "trust_root_refused_other": "ኖዱ ከልክሏል ({id})።",
     "trust_root_refused_withdraw_failed": "ኖዱ ተቀባይነቱን ማውጣት አልቻለም።",
+    "trust_root_refused_bundle_unlabelled": "ይህ ዘር ከመጨረሻው መነሻ በፊት ነው። ምንም አልተጫነም።",
+    "trust_root_refused_bundle_unlabelled_body": "የእምነት መዝገቦቹ እያንዳንዳቸው ለምን እንደሆኑ የሚገልጽ መለያ የላቸውም፤ መዝገቦች መለያ ከመያዛቸው በፊት የተፈጠሩ ናቸው። ይህ ኖድ ምንም ቻርተር እንደሌለው አድርጎ ይጭነው ስለነበር አልተቀበለውም። በምትኩ ከመጨረሻው ጀነሲስ የተገኘ ስሪት 3 ዘር ያስገቡ።",
     "trust_root_roots_title": "ይህ ኖድ የሚያውቃቸው ሥሮች",
     "trust_root_state_divergent": "ተለውጧል፦ {leg} ቅርንጫፍ አለ እና ትክክል አይደለም",
     "trust_root_state_entrenched": "ሥር ያለው፦ ሥር የሚያስፈልገው እያንዳንዱ ምርመራ ማለፍ ይችላል",
@@ -5294,7 +5311,9 @@
   "trust_play_integrity": "የጨዋታ ማጠናከር",
   "trust_play_validates": "የጨዋታ ማጠናከር የመተግበሪያ ትክክለኛነትን ያረጋግጣል",
   "trust_root": {
-    "no_root": "የትኛው ስር? እምነት የሚነሳበትን root_key_id መንገዱ መሰየም አለበት"
+    "no_root": "የትኛው ስር? እምነት የሚነሳበትን root_key_id መንገዱ መሰየም አለበት",
+    "bundle_unlabelled": "ይህ ጥቅል የመተማመን-ስር ረድፎች የሥራ መለያቸውን (trust:charter:v1) ከማግኘታቸው በፊት ወጥቷል፤ በዚህ ኖድ ላይ እንደ ምንም ቻርተር ባለው ሁኔታ ይጫናል። በምትኩ ከመጨረሻው መነሻ (FSD/FINAL_GENESIS.md) ጥቅል ያስገቡ። በዚህ ኖድ ላይ ምንም አልተቀየረም።",
+    "bundle_not_in_force": "ይህ ኖድ የያዘውን ጥቅል ገና አይሰራበትም፣ ስለዚህ ምንም አያገልግልም።"
   },
   "trust_running": "በማስኬድ ላይ",
   "trust_verify_desc": "የማረጋገጫ ሁኔታ እና ዝርዝሮች",
@@ -5489,7 +5508,8 @@
     "seal_mismatch": "ባይቶቹ በዚህ ፋይል መዝገብ ስር አልተከፈቱም። መዝገቡ እና ባይቶቹ አይገጣጠሙም።",
     "too_large_for_whole_read": "ይህ ፋይል በአንድ ቁራጭ ለማንበብ በጣም ትልቅ ነው። በዥረት መተላለፍ አለበት።",
     "withdraw_failed": "ፋይሉ ሊወገድ አልቻለም። እንደገና ይሞክሩ።",
-    "withdrawn": "ጸሐፊው ይህን ፋይል አስወግዶታል። ባይቶቹ ከእንግዲህ የትም አይቀርቡም።"
+    "withdrawn": "ጸሐፊው ይህን ፋይል አስወግዶታል። ባይቶቹ ከእንግዲህ የትም አይቀርቡም።",
+    "awaiting_key": "ባይቶቹ እዚህ አሉ፣ ነገር ግን የዚህ መሣሪያ ቁልፍ ለእነሱ እስካሁን አልደረሰም። በራሱ ይከተላል፤ ትንሽ ቆይተው እንደገና ይሞክሩ።"
   },
   "notes": {
     "author_signer_unavailable": "ይህ ኖድ አሁን እንደ እርስዎ መፈረም አይችልም፣ ስለዚህ ማስታወሻው አልተጻፈም።",
@@ -5730,5 +5750,28 @@
       "handled_elsewhere": "በዚህ ልውውጥ ውስጥ ሌላ የእርስዎ መሣሪያ ለእርስዎ እየመለሰ ነው።",
       "handled_here": "ይህ መሣሪያ በዚህ ልውውጥ ውስጥ ለእርስዎ እየመለሰ ነው።"
     }
+  },
+  "final_genesis": {
+    "already_planned": "በዚህ ኖድ ላይ ሥነ ሥርዓት አስቀድሞ ተዘጋጅቷል፤ እሱን ለማስወገድ \"replace\": true ያስተላልፉ",
+    "bad_request": "test_holder_seed_b64 በትክክል የ32 ባይት base64 መሆን አለበት",
+    "clock_not_synchronized": "የዚህ ሆስት ሰዓት በNTP አልተመሳከረም፤ በመነሻው ውስጥ ያለው እያንዳንዱ ቅጽበት ከዚህ ሰዓት ይታተማል፣ ተቀባዩም ከወደፊቱ በ300 ሰከንድ በላይ የሆነን ጊዜ ይከልክላል።",
+    "clock_unverified": "ይህ ሰርቨር የሆስቱን የሰዓት-ማስማሚያ ሁኔታ ማንበብ አይችልም፤ ሰዓቱ መመሳከሩን አረጋግጠው \"clock_checked\": true ያስተላልፉ",
+    "no_hardware_signer": "መፈረም የ`pkcs11` ባህሪን ይፈልጋል (የያዡ YubiKey + USB ML-DSA ፈራሚ)",
+    "no_serve_nodes": "መነሻ ቢያንስ አንድ ቀኖናዊ ኖድ ያስቀምጣል",
+    "not_planned": "በዚህ ኖድ ላይ ምንም ሥነ ሥርዓት አልተዘጋጀም — መጀመሪያ POST /v1/accord/final-genesis/plan ያድርጉ",
+    "not_testing_mode": "የሶፍትዌር ያዥ ዘር የሚቀበለው ከ CIRIS_TESTING_MODE=true (የሙከራ ሩጫ) ጋር ብቻ ነው",
+    "not_a_holder": "ያ ቁልፍ የተቀመጠ የስምምነት ያዥ አይደለም።",
+    "nothing_to_sign": "ይህ ያዥ አሁን የሚፈርመው ምንም ነገር የለበትም። የሚገባውን ሁሉ ፈርሟል፣ ወይም ቀጣዩ ዙር ሌላ ያዥ ቻርተሩን እንዲፈርም በመጠበቅ ላይ ነው።",
+    "recovery_key_is_a_holder": "ያ ቁልፍ የተቀመጠ ያዥ የፊርማ ቁልፍ ነው። የማገገም ቁልፍ መለዋወጫ መሆን አለበት።",
+    "recovery_key_mismatch": "የተከፈተው ቶከን ለዚህ መለዋወጫ የስምምነት ሥነ ሥርዓቱ የመዘገበውን ቁልፍ አይዝም። ትክክለኛው YubiKey እና USB መሆኑን ያረጋግጡ።",
+    "recovery_key_shared": "ያ መለዋወጫ አስቀድሞ የሌላ ያዥ የማገገም ቁልፍ ተብሎ ተመዝግቧል።",
+    "recovery_key_wrong_holder": "ያ መለዋወጫ የዚህ ያዥ ማገገሚያ ቁልፍ አይደለም። እያንዳንዱ ያዥ በራሱ ተጣምሮ በተቀናበረ መለዋወጫ ያገግማል።",
+    "serve_node_no_dial_hint": "ያ ቀኖናዊ ኖድ ምንም የትራንስፖርት ጥቆማ አይይዝም። አድራሻውን (host:4242) ከቁልፉ ጋር ያስተላልፉ፤ መነሻው ያለ ጥቆማ የሚያስቀምጠውን ቀኖናዊ ኖድ ማንም አዲስ ኖድ ሊያገኘው አይችልም።",
+    "serve_node_no_pqc": "የዚያ ኖድ መዝገብ ምንም ML-DSA-65 ቁልፍ አይዝም። የመነሻ ኖድ ሁለቱንም ግማሾች ይፈልጋል።",
+    "serve_node_unknown": "ያ ኖድ እዚህ ምንም የቁልፍ መዝገብ የለውም። ከመታወቂያው ይልቅ ሙሉ መዝገቡን ያስተላልፉ።",
+    "sign_failed": "ፊርማው በመካከል አልተሳካም። የተፈረመው ይቆያል፤ የቀረውን ለማጠናቀቅ እንደገና ይፈርሙ።",
+    "signer_unavailable": "የያዡ ፈራሚ (YubiKey እና USB) ሊከፈት አልቻለም።",
+    "store_failed": "ይህ ኖድ የሥነ ሥርዓቱን ሁኔታ ሊጽፍ አልቻለም።",
+    "store_unavailable": "ይህ ኖድ የቁልፍ ማከማቻውን ማግኘት አልቻለም።"
   }
 }

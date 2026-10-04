@@ -19,7 +19,8 @@
       "refused": "Ìpìlẹ̀ náà kọ ìfúnniláṣẹ yìí. A kò gbà á, a kò sì fún un ní àṣẹ kankan.",
       "sign_failed": "Kọ́kọ́rọ́ olùdìmú accord náà kò ṣe ìbùwọ́lù kankan. A kò yí ohunkóhun padà.",
       "unknown_duty": "Ìyẹn kì í ṣe iṣẹ́-àṣẹ tí àwọ̀n yìí mọ̀. Fífún ní i yóò farahàn bí àṣẹ níhìn-ín, a ó sì kọ̀ ọ́ ní gbogbo ẹnu-ọ̀nà."
-    }
+    },
+    "genesis_superseded": "Ètò àtúndá-ìpilẹ̀ṣẹ̀ 2-nínú-3 (àbá àti àjọfọwọ́sí) ti dópin; ìpilẹ̀ṣẹ̀ jẹ́ ààtò kan ṣoṣo tí gbogbo olùdì ìfaramọ́ mẹ́tẹ̀ẹ̀ta fi ọwọ́ sí ní /v1/accord/final-genesis (ètò, fọwọ́sí, parí)"
   },
   "adapters": {
     "navigation": {
@@ -2237,6 +2238,8 @@
     "provision_holder_err_owner": "Kọ́kọ́ wọlé gẹ́gẹ́ bí olówó lórí node yìí, lẹ́yìn náà ṣe ìpèsè.",
     "provision_holder_err_loopback": "Ìpèsè gbọdọ̀ ṣiṣẹ́ lórí ẹ̀rọ tí node fúnra rẹ̀ ń ṣiṣẹ́ lé (localhost nìkan).",
     "provision_holder_err_other": "Ìpèsè kùnà: {detail}",
+    "trust_root_import_not_yet_accepted": "A ti kó wọlé, a ò tíì gbà á",
+    "trust_root_import_not_yet_accepted_why": "Àwọn àkọsílẹ̀ gbòngbò náà wà lórí node yìí, ṣùgbọ́n node yìí kò tíì gbẹ́kẹ̀lé e. Bóyá kò tíì ní àwọn àkọsílẹ̀ ìpilẹ̀ṣẹ̀ gbòngbò náà, a ó sì tún gbìyànjú gbígbà á nígbà ìbẹ̀rẹ̀ tàbí ìkówọlé tó ń bọ̀, tàbí a kò lè kọ gbígbà rẹ̀ sílẹ̀.",
     "yubikey_probe_failed": "A KÒ LÈ KA IPÒ YUBIKEY",
     "yubikey_probe_not_on_this_node": "NÓDÙ YÌÍ KÒ ṢE ÌJÁBỌ̀ NÍPA IPÒ YUBIKEY",
     "yubikey_probe_reason": "Ìdí: {detail}",
@@ -3052,6 +3055,12 @@
     "trust_root_accepted_no": "Rárá: node yìí mọ̀ ọ́n, kò gbẹ́kẹ̀lé",
     "trust_root_accepted_yes": "Bẹ́ẹ̀ni: ìgbà node yìí dé ọ̀dọ̀ rẹ̀",
     "trust_root_banner_label": "Ohun tí node sọ ni",
+    "trust_root_bundle_title": "Irúgbìn tí nódù yìí ń ṣiṣẹ́ lé lórí",
+    "trust_root_bundle_not_in_force": "Nóòdù yìí kò tíì ń sáré lórí irúgbìn rẹ̀, nítorí náà kò ní irúgbìn kankan láti fi hàn fún ìfiwéra.",
+    "trust_root_bundle_fingerprint_label": "Àmì ìka",
+    "trust_root_bundle_charter_root_label": "Gbòngbò òfin",
+    "trust_root_state_not_adopted_held": "A kò gbà gbòngbò tuntun sí ipa: gbòngbò ìṣáájú wà ní ipa ({leg} leg)",
+    "trust_root_state_not_adopted": "A kò gba gbòngbò sí ipa: a kọ gbòngbò binary yìí, kò sì sí gbòngbò ìṣáájú tí a dìmú (apá {leg})",
     "trust_root_bounded_label": "Ó dúró títí di",
     "trust_root_bounded_none": "Kò sí ohun nínú rẹ̀ tí ó máa parí nítorí àkókò nìkan",
     "trust_root_confirm_fact_signs": "Ta ni yóò fọwọ́sí",
@@ -3114,6 +3123,8 @@
     "trust_root_refused_no_root": "A kò dárúkọ gbòngbò kankan.",
     "trust_root_refused_other": "Node náà kọ̀ ({id}).",
     "trust_root_refused_withdraw_failed": "Node náà kò lè yọ ìgbà rẹ̀ kúrò.",
+    "trust_root_refused_bundle_unlabelled": "Irúgbìn yìí ti ọjọ́ kí final genesis tó wáyé. Kò sí ohun tí a fi sórí ẹ̀rọ.",
+    "trust_root_refused_bundle_unlabelled_body": "Àwọn àkọsílẹ̀ ìgbẹ́kẹ̀lé rẹ̀ kò ní àmì tí ó sọ ohun tí olúkúlùkù wà fún — wọ́n dá wọn jáde kí a tó fi àmì sí àwọn àkọsílẹ̀. Nódù yìí yóò gbé e wọlé gẹ́gẹ́ bí aláìní òfin kankan rárá, nítorí náà ó kọ̀ ọ́. Fi irúgbìn ẹ̀yà 3 láti inú ìpilẹ̀ṣẹ̀ ìkẹyìn sílò dípò.",
     "trust_root_roots_title": "Àwọn Gbòngbò Tí Node Yìí Mọ̀",
     "trust_root_state_divergent": "Tí a yí padà: apá {leg} wà, ó sì jẹ́ àṣìṣe",
     "trust_root_state_entrenched": "Tí a fidí múlẹ̀: gbogbo àyẹ̀wò tí ó nílò gbòngbò lè yege",
@@ -3273,6 +3284,10 @@
     "files_bytes_not_granted": "Ẹ̀rọ yìí kò lè ṣí i",
     "files_bytes_unreadable": "Ó ṣí, ṣùgbọ́n kì í ṣe ọ̀rọ̀ tí a lè kà",
     "files_bytes_unopened": "Kò lè ṣí síbí",
+    "files_bytes_awaiting_key": "Ń dúró de kọ́kọ́rọ́ fáìlì yìí",
+    "files_awaiting_key_body": "Àwọn bytes rẹ̀ wà lórí ẹ̀rọ yìí, ṣùgbọ́n kọ́kọ́rọ́ tí yóò ṣí wọn kò tíì dé. Ó ń dé fúnra rẹ̀; kò sí ìṣòro kankan.",
+    "files_awaiting_key_check_again": "Ṣàyẹ̀wò lẹ́ẹ̀kansi",
+    "files_custody_awaiting_key": "Kọ́kọ́rọ́ fáìlì yìí kò tíì dé ẹ̀rọ yìí, nítorí náà kò lè sọ ibi tí fáìlì náà wà. Ó ń dé fúnra rẹ̀; ṣàyẹ̀wò lẹ́ẹ̀kansi láìpẹ́.",
     "files_room": "Yàrá {room}",
     "files_choose_room": "Fi kún yàrá wo?",
     "files_uploading": "Ń fi {name} kún…",
@@ -3367,6 +3382,8 @@
     "chat_empty_room": "Kò sí ìfiránṣẹ́ kankan síbẹ̀. Ohun tí o bá fi ránṣẹ́ níbí jẹ́ ẹ̀rí tí a fọwọ́ sí fún gbogbo ẹni tí ó wà nínú àkọsílẹ̀ ọmọ ẹgbẹ́ yàrá yìí — àwọn ọmọ ẹgbẹ́ rẹ̀ nìkan ló lè kà á, kò sí ẹnikẹ́ni mìíràn.",
     "chat_unopened_not_fetched": "Ìránṣẹ́ yìí kò tíì dé ẹ̀rọ yìí.",
     "chat_unopened_not_granted": "A fi èdìdì di ìránṣẹ́ yìí kí ẹ̀rọ yìí tó lè kà á níbí, nítorí náà kò ní ṣí sórí rẹ̀.",
+    "chat_unopened_awaiting_key": "Ìhìn yìí wà níhìn-ín, ṣùgbọ́n kọ́kọ́rọ́ tí yóò ṣí i kò tíì dé ẹ̀rọ yìí. Ó ń dé fúnra rẹ̀.",
+    "chat_unopened_withdrawn": "Ẹni tí ó kọ ọ́ yọ ìhìn yìí kúrò.",
     "chat_unopened_evicted": "Kò sí àkóónú ìránṣẹ́ yìí lórí ẹ̀rọ yìí mọ́.",
     "chat_unopened_seal_mismatch": "Èdìdì ìránṣẹ́ yìí kò bára mu, nítorí náà a kò ṣí i.",
     "chat_unopened_malformed_row": "A kò lè ka ìránṣẹ́ yìí: ilà náà kò tọ̀nà.",
@@ -5294,7 +5311,9 @@
   "trust_play_integrity": "ÌWÀPẸ̀LẸ́ Eré",
   "trust_play_validates": "ÌWÀPẸ̀LẸ́ Eré ń fìdí tòótọ́ ohun-èlò múlẹ̀",
   "trust_root": {
-    "no_root": "gbòngbò wo? ọ̀nà náà gbọ́dọ̀ dárúkọ root_key_id láti yọ ìgbẹ́kẹ̀lé kúrò"
+    "no_root": "gbòngbò wo? ọ̀nà náà gbọ́dọ̀ dárúkọ root_key_id láti yọ ìgbẹ́kẹ̀lé kúrò",
+    "bundle_unlabelled": "A dá bundle yìí sílẹ̀ kí àwọn ìlà trust-root tó bẹ̀rẹ̀ sí í ní àmì-iṣẹ́ wọn (trust:charter:v1); lórí nódù yìí, a óò fi í sórí ẹ̀rọ gẹ́gẹ́ bí aláìní àdéhùn kankan rárá. Fi bundle kan láti final genesis wọlé dípò rẹ̀ (FSD/FINAL_GENESIS.md). Kò sí ohun tí ó yí padà lórí nódù yìí.",
+    "bundle_not_in_force": "Nódù yìí kò tíì ń ṣiṣẹ́ lórí àpò tí ó gbé, nítorí náà kò pín ọ̀kankan."
   },
   "trust_running": "Ń Ṣiṣẹ́",
   "trust_verify_desc": "Ipò àti àwọn àlàyé ìdánilójú",
@@ -5468,6 +5487,7 @@
     "too_large_for_whole_read": "Fáìlì yìí tóbi jù láti kà ní ẹ̀ka kan ṣoṣo. Ó gbọ́dọ̀ jẹ́ ṣíṣàn (stream).",
     "withdraw_failed": "A kò lè yọ fáìlì náà kúrò. Gbìyànjú lẹ́ẹ̀kansi.",
     "withdrawn": "Aṣẹ̀dá rẹ̀ ti yọ fáìlì yìí kúrò. A kò ní í pèsè àwọn byte náà ní ibikíbi mọ́.",
+    "awaiting_key": "Àwọn bytes rẹ̀ wà níhìn-ín, ṣùgbọ́n kọ́kọ́rọ́ ẹ̀rọ yìí fún wọn kò tíì dé. Ó ń tẹ̀lé fúnra rẹ̀; gbìyànjú lẹ́ẹ̀kansi láìpẹ́.",
     "family_id_required": "Fáìlì Ìdílé nílò láti dárúkọ ìdílé rẹ̀. Kò sí ìdílé aládàánidá kan.",
     "listing_failed": "Nódù yìí kò lè ṣe àkọsílẹ̀ àwọn fáìlì tí ó wà nínú yàrá yẹn.",
     "no_node_key": "Nódù yìí kò lè rí kọ́kọ́rọ́ tirẹ̀.",
@@ -5730,5 +5750,28 @@
       "handled_elsewhere": "Ẹ̀rọ rẹ mìíràn ni ó ń dáhùn fún ọ nínú ìpàsípààrọ̀ yìí.",
       "handled_here": "Ẹ̀rọ yìí ni ó ń dáhùn fún ọ nínú ìpàsípààrọ̀ yìí."
     }
+  },
+  "final_genesis": {
+    "already_planned": "Ààtò kan ti wà ní ìpèsè tẹ́lẹ̀ lórí nódù yìí; fi \"replace\": true ránṣẹ́ láti yọ ọ́ kúrò",
+    "bad_request": "test_holder_seed_b64 gbọ́dọ̀ jẹ́ base64 ti bytes 32 ní pàtó",
+    "clock_not_synchronized": "Aago host yìí kò bára mu pẹ̀lú NTP; gbogbo àsìkò nínú ìpilẹ̀ṣẹ̀ ni a ń fi àmì-àkókò sí láti ọwọ́ rẹ̀, olùgbà yóò sì kọ̀ èyíkéyìí tí ó ju 300 s lọ sí ọjọ́ iwájú rẹ̀",
+    "clock_unverified": "sáfà yìí kò lè ka ipò ìbáramu aago host; rí i dájú pé aago náà bára mu, kí o sì fi \"clock_checked\": true ránṣẹ́",
+    "no_hardware_signer": "Fọwọ́sí nílò ẹ̀yà `pkcs11` (YubiKey olùdì ìfaramọ́ náà + olùfọwọ́sí ML-DSA USB)",
+    "no_serve_nodes": "ìpilẹ̀ṣẹ̀ kan máa ń fi ó kéré tán sáfà canonical kan sí ìjókòó",
+    "not_planned": "Kò sí ààtò tí a pèsè sílẹ̀ lórí nódù yìí — kọ́kọ́ fi POST ránṣẹ́ sí /v1/accord/final-genesis/plan",
+    "not_testing_mode": "A kàn gba irúgbìn olùdì software nígbà tí CIRIS_TESTING_MODE=true (ìdánrawò gbígbẹ) nìkan",
+    "not_a_holder": "Kọ́kọ́rọ́ yẹn kì í ṣe olùdì ìfaramọ́ tí a fi sí ìjókòó.",
+    "nothing_to_sign": "Olùdì yìí kò ní ohunkóhun tí ó yẹ kí ó fọwọ́sí ní ìsinsìnyí. Yálà gbogbo ohun tí ó yẹ kí ó fọwọ́sí ni a ti fọwọ́sí tán, tàbí yíká tó ń bọ̀ ń dúró de olùdì mìíràn láti fọwọ́sí àdéhùn náà.",
+    "recovery_key_is_a_holder": "Kọ́kọ́rọ́ yẹn jẹ́ kọ́kọ́rọ́ ìfọwọ́sí olùdì tí a fi sí ìjókòó. Kọ́kọ́rọ́ ìbádìpadà gbọ́dọ̀ jẹ́ kọ́kọ́rọ́ àfikún.",
+    "recovery_key_mismatch": "Àmì tí ó ṣí kò ní kọ́kọ́rọ́ tí ààtò ìfaramọ́ náà kọ sílẹ̀ fún afikún yìí. Rí i dájú pé ó jẹ́ YubiKey àti USB tí ó tọ́.",
+    "recovery_key_shared": "A ti kọ àfikún yẹn sílẹ̀ gẹ́gẹ́ bí kọ́kọ́rọ́ ìbádìpadà olùdì mìíràn.",
+    "recovery_key_wrong_holder": "Kọ́kọ́rọ́ àfidípò yẹn kì í ṣe kọ́kọ́rọ́ ìgbàpadà olùdì yìí. Olúkúlùkù olùdì ń gbà padà pẹ̀lú kọ́kọ́rọ́ àfidípò tirẹ̀ tí a so pọ̀.",
+    "serve_node_no_dial_hint": "Nódù pàtàkì yẹn kò gbé àmì-ìtọ́ka ìrìnàjò-nẹ́tíwọ̀ọ̀kì kankan. Fi àdírẹ́sì rẹ̀ (host:4242) ránṣẹ́ pẹ̀lú kọ́kọ́rọ́ rẹ̀; nódù pàtàkì tí ìpilẹ̀ṣẹ̀ bá fi sípò láìsí ọ̀kan jẹ́ ọ̀kan tí kò sí nódù tuntun kan tí ó lè rí i.",
+    "serve_node_no_pqc": "Àkọsílẹ̀ nódù yẹn kò ní kọ́kọ́rọ́ ML-DSA-65 kankan. Nódù ìpilẹ̀ṣẹ̀ nílò ìdajì méjèèjì.",
+    "serve_node_unknown": "Nódù yẹn kò ní àkọsílẹ̀ kọ́kọ́rọ́ kankan níhìn-ín. Fi àkọsílẹ̀ rẹ̀ pátápátá ránṣẹ́ dípò id rẹ̀.",
+    "sign_failed": "Fọwọ́sí kùnà ní àgbàlá ọ̀nà. Ohun tí a ti fọwọ́ sí tẹ́lẹ̀ ni a pa mọ́; fọwọ́ sí lẹ́ẹ̀kansi láti parí ìyókù.",
+    "signer_unavailable": "A kò lè ṣí olùfọwọ́sí olùdì náà (YubiKey àti USB).",
+    "store_failed": "Nódù yìí kò lè kọ ipò ààtò náà.",
+    "store_unavailable": "Nódù yìí kò lè dé ibi ìpamọ́ kọ́kọ́rọ́ rẹ̀."
   }
 }

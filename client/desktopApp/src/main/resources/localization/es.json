@@ -19,7 +19,8 @@
       "refused": "El sustrato rechazó esta concesión. No está admitida y no se otorgó ninguna autoridad.",
       "sign_failed": "La clave del titular del acuerdo no produjo ninguna firma. No se cambió nada.",
       "unknown_duty": "Ese no es un deber que esta malla reconozca. Otorgarlo aparecería como autoridad aquí y sería rechazado en todas las puertas."
-    }
+    },
+    "genesis_superseded": "la re-emisión de proponer/cofirmar 2-de-3 queda retirada; la génesis es una única ceremonia que firman los tres titulares en /v1/accord/final-genesis (planificar, firmar, finalizar)"
   },
   "adapters": {
     "navigation": {
@@ -3031,6 +3032,14 @@
     "trust_root_accepted_no": "No: este nodo la conoce, pero no la considera confiable",
     "trust_root_accepted_yes": "Sí: la aceptación de este nodo la alcanza",
     "trust_root_banner_label": "El nodo dice",
+    "trust_root_bundle_title": "La semilla sobre la que funciona este nodo",
+    "trust_root_bundle_not_in_force": "Este nodo aún no está funcionando con su semilla, así que no tiene semilla que mostrar para comparar.",
+    "trust_root_bundle_fingerprint_label": "Huella digital",
+    "trust_root_bundle_charter_root_label": "Raíz de la carta",
+    "trust_root_state_not_adopted_held": "Raíz más nueva no adoptada: la raíz anterior permanece en vigor (tramo {leg})",
+    "trust_root_state_not_adopted": "Raíz no adoptada: la raíz de este binario fue rechazada y no se mantiene ninguna raíz anterior (tramo {leg})",
+    "trust_root_import_not_yet_accepted": "Importada, aún no aceptada",
+    "trust_root_import_not_yet_accepted_why": "Los registros de la raíz están en este nodo, pero este nodo aún no confía en ella. O bien aún no tiene los registros de génesis de la raíz, y la aceptación se reintenta en el próximo inicio o importación, o su aceptación no se pudo escribir.",
     "trust_root_bounded_label": "Vigente hasta",
     "trust_root_bounded_none": "Nada en ella caduca solo por el tiempo",
     "trust_root_confirm_fact_signs": "Quién firma",
@@ -3093,6 +3102,8 @@
     "trust_root_refused_no_root": "No se nombró ninguna raíz.",
     "trust_root_refused_other": "El nodo lo rechazó ({id}).",
     "trust_root_refused_withdraw_failed": "El nodo no pudo retirar su aceptación.",
+    "trust_root_refused_bundle_unlabelled": "Esta semilla es anterior a la génesis final. No se instaló nada.",
+    "trust_root_refused_bundle_unlabelled_body": "Sus registros de confianza no llevan etiquetas que indiquen para qué sirve cada uno — se emitieron antes de que los registros llevaran etiqueta. Este nodo la instalaría como ninguna carta en absoluto, así que la rechazó. Importa en su lugar una semilla de versión 3 de la génesis final.",
     "trust_root_roots_title": "Raíces que conoce este nodo",
     "trust_root_state_divergent": "Alterado: el tramo {leg} está presente y es incorrecto",
     "trust_root_state_entrenched": "Arraigado: toda comprobación que necesita una raíz puede pasar",
@@ -3252,6 +3263,10 @@
     "files_bytes_not_granted": "Este dispositivo no puede abrirlo",
     "files_bytes_unreadable": "Abierto, pero no es texto legible",
     "files_bytes_unopened": "No se puede abrir aquí",
+    "files_bytes_awaiting_key": "Esperando la clave de este archivo",
+    "files_awaiting_key_body": "Sus bytes ya están en este dispositivo, pero la clave que los abre aún no ha llegado. Llega por su cuenta; no pasa nada.",
+    "files_awaiting_key_check_again": "Comprobar de nuevo",
+    "files_custody_awaiting_key": "La clave de este archivo aún no ha llegado a este dispositivo, así que no puede indicar dónde está el archivo. Llega por su cuenta; comprueba de nuevo en breve.",
     "files_room": "Sala {room}",
     "files_choose_room": "¿A qué sala añadirlo?",
     "files_uploading": "Añadiendo {name}…",
@@ -3346,6 +3361,8 @@
     "chat_empty_room": "Aún no hay mensajes. Lo que envías aquí es una atestación firmada para todos los integrantes de la lista de esta sala — sus miembros pueden leerlo, y nadie más.",
     "chat_unopened_not_fetched": "Este mensaje aún no ha llegado a este dispositivo.",
     "chat_unopened_not_granted": "Este mensaje se selló antes de que este dispositivo pudiera leer aquí, así que no se abrirá en él.",
+    "chat_unopened_awaiting_key": "Este mensaje ya está aquí, pero la clave que lo abre aún no ha llegado a este dispositivo. Llega por su cuenta.",
+    "chat_unopened_withdrawn": "Su autor retiró este mensaje.",
     "chat_unopened_evicted": "El contenido de este mensaje ya no se conserva en este dispositivo.",
     "chat_unopened_seal_mismatch": "El sello de este mensaje no coincide, así que no se abrió.",
     "chat_unopened_malformed_row": "Este mensaje no se pudo leer: la fila tiene un formato incorrecto.",
@@ -5294,7 +5311,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Play Integrity valida la autenticidad de la app",
   "trust_root": {
-    "no_root": "¿qué raíz? la ruta debe indicar el root_key_id cuya confianza se va a revocar"
+    "no_root": "¿qué raíz? la ruta debe indicar el root_key_id cuya confianza se va a revocar",
+    "bundle_unlabelled": "este paquete se emitió antes de que las filas de raíz de confianza llevaran sus etiquetas de función (trust:charter:v1); en este nodo se instalaría como ninguna carta en absoluto. Importa en su lugar un paquete de la génesis final (FSD/FINAL_GENESIS.md). Nada cambió en este nodo.",
+    "bundle_not_in_force": "Este nodo aún no está funcionando con el paquete que lleva, así que no sirve ninguno."
   },
   "trust_running": "Ejecutando",
   "trust_verify_desc": "Estado y detalles de verificación",
@@ -5472,6 +5491,7 @@
     "too_large_for_whole_read": "Este archivo es demasiado grande para leerse de una sola vez. Debe transmitirse en flujo.",
     "withdraw_failed": "El archivo no pudo retirarse. Inténtalo de nuevo.",
     "withdrawn": "Su autor retiró este archivo. Los bytes ya no se sirven en ningún lugar.",
+    "awaiting_key": "Sus bytes ya están aquí, pero la clave de este dispositivo para ellos aún no ha llegado. Llega por su cuenta; inténtalo de nuevo en breve.",
     "community_id_required": "Un archivo de comunidad debe indicar su sala.",
     "family_id_required": "Un archivo de familia debe indicar su familia. No hay una familia predeterminada.",
     "listing_failed": "Este nodo no pudo listar los archivos de esa sala.",
@@ -5730,5 +5750,28 @@
       "handled_elsewhere": "Otro de tus dispositivos está respondiendo por ti en este intercambio.",
       "handled_here": "Este dispositivo está respondiendo por ti en este intercambio."
     }
+  },
+  "final_genesis": {
+    "already_planned": "ya hay una ceremonia planificada en este nodo; pasa \"replace\": true para descartarla",
+    "bad_request": "test_holder_seed_b64 debe ser base64 de exactamente 32 bytes",
+    "clock_not_synchronized": "el reloj de este host no está sincronizado por NTP; cada instante de la génesis se marca con él, y un receptor rechaza cualquiera que esté más de 300 s en su futuro",
+    "clock_unverified": "este servidor no puede leer el estado de sincronización del reloj del host; confirma que el reloj está sincronizado y pasa \"clock_checked\": true",
+    "no_hardware_signer": "firmar requiere la característica `pkcs11` (la YubiKey del titular + el firmante USB ML-DSA)",
+    "no_serve_nodes": "una génesis incorpora al menos un nodo canónico",
+    "not_planned": "no hay ninguna ceremonia planificada en este nodo — primero haz POST a /v1/accord/final-genesis/plan",
+    "not_testing_mode": "una semilla de titular de software solo se acepta con CIRIS_TESTING_MODE=true (la ejecución de prueba)",
+    "not_a_holder": "Esa clave no es la de un titular de accord investido.",
+    "nothing_to_sign": "Este titular no debe nada firmable en este momento. O bien todo lo que debía ya está firmado, o la siguiente ronda espera a que otro titular firme la carta.",
+    "recovery_key_is_a_holder": "Esa clave es la clave de firma de un titular investido. Una clave de recuperación debe ser un repuesto.",
+    "recovery_key_mismatch": "El token que se abrió no contiene la clave que la ceremonia de accord registró para este repuesto. Comprueba que sean la YubiKey y el USB correctos.",
+    "recovery_key_shared": "Ese repuesto ya está registrado como la clave de recuperación de otro titular.",
+    "recovery_key_wrong_holder": "Ese repuesto no es la clave de recuperación de este titular. Cada titular se recupera con su propio repuesto emparejado.",
+    "serve_node_no_dial_hint": "Ese nodo canónico no lleva ninguna pista de transporte. Pasa su dirección (host:4242) junto con su clave; un nodo canónico que la génesis asienta sin ella es uno que ningún nodo nuevo puede encontrar.",
+    "serve_node_no_pqc": "El registro de ese nodo no lleva ninguna clave ML-DSA-65. Un nodo de génesis necesita ambas mitades.",
+    "serve_node_unknown": "Ese nodo no tiene ningún registro de clave aquí. Pasa su registro completo en lugar de su id.",
+    "sign_failed": "La firma falló a mitad de camino. Lo que ya estaba firmado se conserva; firma de nuevo para finalizar el resto.",
+    "signer_unavailable": "No se pudo abrir el firmante del titular (YubiKey y USB).",
+    "store_failed": "Este nodo no pudo escribir el estado de la ceremonia.",
+    "store_unavailable": "Este nodo no pudo acceder a su almacén de claves."
   }
 }

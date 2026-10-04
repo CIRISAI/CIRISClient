@@ -176,6 +176,28 @@ class FilesViewModelTest {
     }
 
     @Test
+    fun aFileWhoseKeyHasNotArrivedIsAWaitingStateAndCheckAgainOpensIt() {
+        // ciris-server 0.5.220 (persist v53 #969): the bytes are here, this
+        // device's per-epoch key is not yet — byte state `awaiting_key`, and a
+        // read is `409 drive.awaiting_key`. Named "Waiting for this file's
+        // key", never NotOpened (the error-ish "couldn't open") and never HERE.
+        assertEquals(ByteState.AWAITING_KEY, ByteState.of("awaiting_key"))
+        val drive = FakeDrive(openError = NodeRefusal("drive.awaiting_key", "the bytes are here, but this device's key for them has not arrived yet", 409))
+        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val row = entry("k", "self", cohort = "self", bytes = "awaiting_key")
+        assertEquals(ByteState.AWAITING_KEY, row.byteState)
+        vm.openFile(row)
+        val waiting = assertIs<OpenState.AwaitingKey>(vm.open.value)
+        assertEquals("k", waiting.entry.attestationId)
+        assertEquals(409, waiting.refusal.statusCode)
+        // The key arrives; asking again opens the file.
+        drive.openError = null
+        vm.openFile(waiting.entry)
+        assertIs<OpenState.Opened>(vm.open.value)
+        assertEquals(2, drive.fileAsks.size)
+    }
+
+    @Test
     fun anOpenedFileCarriesItsBytes() {
         val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF)
         vm.openFile(entry("x", "self", cohort = "self"))

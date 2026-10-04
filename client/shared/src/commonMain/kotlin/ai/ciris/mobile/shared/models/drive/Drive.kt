@@ -23,6 +23,14 @@ enum class ByteState {
     /** This device holds no grant for these bytes (403). A different truth from NOT_FETCHED. */
     NOT_GRANTED,
 
+    /**
+     * The bytes are HERE but this device's per-epoch key for them has not
+     * arrived yet (ciris-server 0.5.220, persist v53 `ChunkKeyNotYetGranted`;
+     * a read answers `409 drive.awaiting_key`). A wait, never a denial: the
+     * key follows on its own, so the client names it and offers to ask again.
+     */
+    AWAITING_KEY,
+
     /** The bytes OPENED and are not UTF-8 text: the one note-only fact (0.5.217 `read_notes`, `src/drive.rs:2945`). Not "can't be opened" — they were. */
     UNREADABLE,
 
@@ -35,6 +43,7 @@ enum class ByteState {
             "here" -> HERE
             "not_fetched" -> NOT_FETCHED
             "not_granted" -> NOT_GRANTED
+            "awaiting_key" -> AWAITING_KEY
             "unreadable" -> UNREADABLE
             else -> UNOPENED
         }

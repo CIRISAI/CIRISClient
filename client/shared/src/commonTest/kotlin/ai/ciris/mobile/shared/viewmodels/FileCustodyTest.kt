@@ -304,6 +304,36 @@ class FileCustodyViewModelTest {
     }
 
     @Test
+    fun aKeyNotYetHereIsAWaitWithCheckAgainNotAnError() {
+        // ciris-server 0.5.220: the custody route's byte door answers
+        // `409 drive.awaiting_key` while this device's per-epoch key has not
+        // arrived. A named wait; asking again is the remedy.
+        var keyArrived = false
+        val drive = CustodyDrive {
+            if (!keyArrived) throw NodeRefusal("drive.awaiting_key", "the bytes are here, but this device's key for them has not arrived yet", 409)
+            FileCustody(devicesTotal = 1)
+        }
+        val vm = FileCustodyViewModel(drive)
+        vm.open(target)
+        val waiting = assertIs<CustodyState.AwaitingKey>(vm.state.value)
+        assertEquals(target, waiting.target)
+        keyArrived = true
+        vm.checkAgain()
+        assertIs<CustodyState.Ready>(vm.state.value)
+        assertEquals(2, drive.asked.size, "check again asks the same file again")
+        assertEquals(drive.asked[0], drive.asked[1])
+    }
+
+    @Test
+    fun checkAgainOutsideTheWaitAsksNothing() {
+        val drive = CustodyDrive { FileCustody(devicesTotal = 1) }
+        val vm = FileCustodyViewModel(drive)
+        vm.checkAgain()
+        assertEquals<CustodyState>(CustodyState.Closed, vm.state.value)
+        assertTrue(drive.asked.isEmpty())
+    }
+
+    @Test
     fun aTransportFailureIsAnErrorNeverEmpty() {
         val vm = FileCustodyViewModel(CustodyDrive { throw IllegalStateException("connection refused") })
         vm.open(target)
