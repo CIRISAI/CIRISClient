@@ -118,6 +118,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from testing.gate.console import utf8_console
 
+from testing.gate.node_env import node_env
+
 #: The flow-level key a flow sets to ask for this fixture (`fixture: two_node`).
 FIXTURE = "two_node"
 
@@ -337,7 +339,7 @@ class PeerNode:
         else:
             kwargs["start_new_session"] = True
         self.proc = subprocess.Popen(self.spec.serve_command(), stdout=self._log_handle,
-                                     stderr=subprocess.STDOUT, **kwargs)
+                                     stderr=subprocess.STDOUT, env=node_env(), **kwargs)
         self.pidfile.write_text(f"{self.proc.pid}\n{self.spec.home}\n", encoding="utf-8")
         wait_healthy(self.spec.read_url, timeout, self.proc, self.log)
 
