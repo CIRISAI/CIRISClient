@@ -38,6 +38,8 @@ import ai.ciris.mobile.shared.ui.components.ViewerAuthority
 import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
 import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.viewmodels.AccordViewModel
+import ai.ciris.mobile.shared.viewmodels.FinalGenesisPhase
+import ai.ciris.mobile.shared.viewmodels.FinalGenesisViewModel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -112,7 +114,10 @@ private sealed interface AccordSheet {
     data class AddCanonical(val replace: CanonicalServerDto?) : AccordSheet
     /** Batch-bless the substrate CI workers (default-populated one-click card). */
     data object BlessCiWorkers : AccordSheet
-    /** Re-mint the EXISTING trust root into a portable genesis (FSD/MESH_GENESIS.md). */
+    /**
+     * Re-mint the EXISTING trust root: the 3-of-3 final genesis on 0.5.220+
+     * (FSD/FINAL_GENESIS.md), the 2-of-3 portable seed before it (FSD/MESH_GENESIS.md).
+     */
     data object RemintTrustRoot : AccordSheet
     data object Drill : AccordSheet
     data object Halt : AccordSheet
@@ -130,6 +135,11 @@ private sealed interface AccordSheet {
 @Composable
 fun AccordScreen(
     viewModel: AccordViewModel,
+    /**
+     * The re-mint: the 3-of-3 FINAL GENESIS on a node that serves
+     * `/v1/accord/final-genesis` (0.5.220+), the 2-of-3 sheet on one that does not.
+     */
+    finalGenesis: FinalGenesisViewModel,
     onBack: () -> Unit,
     /**
      * Open the guided genesis ceremony — reached from the `[+ New]` menu, enabled
@@ -527,7 +537,18 @@ fun AccordScreen(
         is AccordSheet.AddCanonical ->
             AddCanonicalSheet(viewModel, holders, busy, s.replace) { sheet = null }
         is AccordSheet.BlessCiWorkers -> BlessCiWorkersSheet(viewModel, holders, busy) { sheet = null }
-        is AccordSheet.RemintTrustRoot -> RemintTrustRootSheet(viewModel, holders, busy) { sheet = null }
+        is AccordSheet.RemintTrustRoot -> {
+            // Decided by the ROUTE (FinalGenesisViewModel.open → finalGenesisProbe):
+            // a bare 404 on GET /v1/accord/final-genesis is a ≤0.5.219 node, whose
+            // 2-of-3 propose/cosign still works; anything else is the final genesis.
+            val fgPhase by finalGenesis.phase.collectAsState()
+            LaunchedEffect(Unit) { finalGenesis.open() }
+            if (fgPhase == FinalGenesisPhase.Legacy) {
+                RemintTrustRootSheet(viewModel, holders, busy) { sheet = null }
+            } else {
+                FinalGenesisSheet(finalGenesis) { sheet = null }
+            }
+        }
         is AccordSheet.Drill -> DrillSheet(viewModel, holders, busy) { sheet = null }
         is AccordSheet.Halt -> HaltSheet(viewModel, holders, busy) { sheet = null }
         is AccordSheet.Announce -> AnnounceSheet(viewModel, holders, busy) { sheet = null }

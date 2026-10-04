@@ -208,7 +208,11 @@ a non-English holder less than it thinks.
 ## 3. Contracts (who)
 
 Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25), route
-literals in `src/accord.rs` and `src/accord_provision.rs`.
+literals in `src/accord.rs` and `src/accord_provision.rs`. The re-mint rows
+(`genesis/*`, `final-genesis/*`) are verified against CIRISServer `e357f6bf`
+(0.5.220, `FSD/FINAL_GENESIS.md`, `src/final_genesis.rs`) and persist v53.0.1
+`federation/genesis/ceremony.rs` (2026-10-04); their line numbers are that
+tree's.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -240,8 +244,14 @@ literals in `src/accord.rs` and `src/accord_provision.rs`.
 | **a `lifecycle:active` row to render** | `GET /v1/accord/invocations` | CIRISServer | **live — the route serves it, and that makes §2.2 a shipped defect** |
 | admit a node | `POST /v1/accord/admit-node` | `src/accord_provision.rs:3704` | **live**, loopback-only — called from `AccordViewModel.kt:402` (`[+ New]` → admit) |
 | bless the CI build keys | `POST /v1/accord/ci-key/{propose,cosign}` | `src/accord_provision.rs:3729,3733` | **live**, loopback-only — `AccordViewModel.kt:827,874` |
-| re-mint the root into a portable seed | `GET /v1/accord/genesis/remint-source`, `POST /v1/accord/genesis/{propose,cosign}` | `src/accord_provision.rs:3740,3744,3748` | **live**, loopback-only — `AccordViewModel.kt:958,1042,1088`; the `RemintTrustRootSheet` (`AccordScreen.kt:951`) |
-| the seed's fingerprint, and this node's own acceptance of the root it just minted | the propose/cosign response: `fingerprint`, `node_trusts_root`, `trust_edge_error`, `seed_path`, `seed_save_error` | `src/accord_provision.rs:2530-2600` | **live, and read** (`fix/remint-fingerprint`): `GenesisSeedResponse` models all five; `remint_done_fingerprint` / `remint_done_fingerprint_absent`, `remint_node_trusts_root` / `remint_minted_untrusted` + `remint_trust_edge_error`, `remint_seed_path`, `remint_seed_save_error` — §4 |
+| the re-mint pre-fill — holders, canonicals, the family's m-of-n | `GET /v1/accord/genesis/remint-source` | `src/accord_provision.rs:2965` (handler `:2384`; note `:2440` now says all three sign) | **live**, loopback-only — `getGenesisRemintSource` from `AccordViewModel.kt:958` (the 2-of-3 sheet) and `FinalGenesisViewModel.kt:173` (the final genesis: holders and their recovery rows, the serve-node chips) |
+| **which re-mint this node runs** | `GET /v1/accord/final-genesis` | CIRISServer 0.5.220 `src/final_genesis.rs:854` (handler `:568`; unplanned → 404 `final_genesis.not_planned` at `:146`) | **live, called** — `getFinalGenesisStatus` from `FinalGenesisViewModel.kt` `open`/`refresh`/after every sign and refused finish; the sheet polls it every 5 s while a ceremony is planned. Decided by the route, never a version: a **bare** 404 (no body — 0.5.219 has no such route and mounts no fallback) keeps the 2-of-3 `RemintTrustRootSheet`; 404 `final_genesis.not_planned` or 200 is the final genesis; any other refusal (403 off the node's machine) is shown as `final_genesis_unavailable`, never taken for an old node (`finalGenesisProbe`, `FinalGenesisTest.onlyABare404IsAnOldNode`) |
+| what the charter will commit as each holder's recovery key | `GET /v1/accord/final-genesis/recovery-keys` → `{complete, recovery_keys:[{holder_key_id, recovery_key_id, commitment, source}]}` (a holder with nothing on record is `{holder_key_id, recovery_key_id: null}` alone) | CIRISServer `29ca1bcf` (`test/final-genesis-e2e`, for 0.5.220) `src/final_genesis.rs:918` (handler `:877`, merge `effective_recovery_keys` `:123`) | **live, called, readable before a plan** — `getFinalGenesisRecoveryKeys` from `FinalGenesisViewModel.loadRecoveryKeys`, on open and after every token read. Each `final_genesis_recovery_<holder>` row shows the spare's id, a 16-hex prefix of `commitment` (persist's `recovery_commitment`, the exact value the charter carries in `recovery_commitments[holder]`) and its source — `record` *"on record"*, `hardware` *"verified with the token"*. `recovery_key_id: null` draws the row as missing and gates Plan on THAT holder only (`final_genesis_plan_blocked`). ONLY a bare 404 is a 0.5.220 build from before the route: the rows fall back to the A1→A2 pairing, *"on record"*, with no commitment until a token is read. Any other failure (5xx, a 404 with an id, no socket) draws no key the node did not supply: rows read *"not known"*, `final_genesis_recovery_error` + `btn_final_genesis_recovery_retry`, and Plan is held (`final_genesis_plan_blocked_unread`). A failed token read leaves the row as the node said it (a missing key stays missing) and shows the refusal beside it, `final_genesis_recovery_refusal_<holder>` |
+| a holder's recovery key, read off the spare token | `POST /v1/accord/final-genesis/recovery-key` `{holder_key_id, recovery_key_id, mldsa_usb_path, pkcs11:{user_pin?, module_path?}}` → `{holder_key_id, recovery_key:{key_id, pubkey_ed25519_base64, pubkey_ml_dsa_65_base64}, recorded}` | `29ca1bcf` `src/final_genesis.rs:915` (handler `:468`; `recovery_key_mismatch` `:519`) | **live, called** — `verifyFinalGenesisRecoveryKey` from `FinalGenesisViewModel.verifyRecovery`, `btn_final_genesis_verify_<holder>` → `btn_final_genesis_verify_go_<holder>` (USB, PIN and the optional `input_final_genesis_recovery_module_<holder>`). Optional for a holder on record, required for one with nothing on record. The pairing is ENFORCED at 4da726e8 (`check_recovery_keys` `:128`): a seated holder reads only its own spare, so the form names it (`final_genesis_recovery_spare_<holder>`) and the request sends it whatever the node once listed; a wrong pair is 400 `final_genesis.recovery_key_wrong_holder`, one key for two holders 409 `final_genesis.recovery_key_shared` (both also from `plan`), shown by id. The PIN field is a SENSITIVE automation sink (`SensitiveInputs`): `/input` applies it, and neither the acknowledgement nor `/tree` / `/element` carries it. `plan` merges per holder (`effective_recovery_keys`): a key read here overlays the record for that holder only, so checking one spare and not the others still plans — the all-or-nothing file found on this PR is fixed upstream |
+| plan the ceremony (stamp it once) | `POST /v1/accord/final-genesis/plan` `{serve_nodes:[{key_id, transport_hints:[{kind:"ip", destination:"host:port"}]}], clock_checked, replace?}` (CIRISServer e4cbedeb `ServeNodeSpec::WithHints` `:263`; at 814dd7c6 a hint counts only if it is `kind: ip` and its destination parses as Rust `SocketAddr` — `require_dial_hint` → `compose::ip_addrs_from_hints` — else 400 `final_genesis.serve_node_no_dial_hint`) → `{complete, signable_now, owed}` | `src/final_genesis.rs:859` (handler `:288`) | **live, called** — `planFinalGenesis` from `FinalGenesisViewModel.planNow`. Each seated canonical has a drivable `input_final_genesis_dial_<key>`, validated as the server's dialer parses it before Plan enables (`isDialHint`: `a.b.c.d:port` or `[ipv6]:port`, never a hostname; port 1–65535 where Rust also takes `:0`; no IPv6 zone) — `final_genesis_dial_invalid_<key>` otherwise. It is prefilled ONLY from that canonical's `transport_hints` in `remint-source` (`src/accord_provision.rs:2381`; on a node holding the July bake canonical-1 is served with its address), and re-read on every new open — an edit survives only a Retry in the same form. No address is compiled into the client; a canonical with no hint (a fresh canonical-2/-3) starts empty and its address is typed. `successor_keys` and `recovery_keys` are omitted: the node defaults both to the spares on record (`:347-366`). `clock_checked` is `true` only after the `sheet_final_genesis_clock` ConfirmSheet, opened by 412 `final_genesis.clock_unverified`, and only for that ceremony instant — a successful plan and every new Plan press reset it, so "Plan again" asks again; 412 `final_genesis.clock_not_synchronized` is a refusal no confirm overrides. `replace` is sent only on the one request the destructive `sheet_final_genesis_replace` ConfirmSheet approved, opened by 409 `final_genesis.already_planned`, and cleared however that request ends (reached by `btn_final_genesis_replan` over a planned ceremony) |
+| sign everything a holder owes now | `POST /v1/accord/final-genesis/sign` `{key_id, mldsa_usb_path, pkcs11:{user_pin?, module_path?}}` → `{signed, owed, complete?}` | `src/final_genesis.rs:860` (handler `:711`) | **live, called** — `signFinalGenesis` from `FinalGenesisViewModel.sign`, `btn_final_genesis_sign_<holder>` on each holder's card, with the optional PKCS#11 module path `input_final_genesis_module_<holder>` (the hardware-scrub sheet's override, its keys reused); one YubiKey session per round. `complete` is absent on the dry run's software path (`:696`), so it is optional. 409 `final_genesis.nothing_to_sign` is drawn as *"Nothing to sign yet — waiting for B1, C1 to sign the charter"* (`final_genesis_note_<holder>`), not an error. The items are persist's (`ceremony.rs:560-663`): round one `record:<node>`, `row:genesis-charter`, `row:genesis-grant:<node>`, `row:genesis-lifecycle`; round two `family:humanity-accord`, `community:ciris-canonical`, `authz`, opening once no holder owes the charter |
+| assemble, verify, write the bundle | `POST /v1/accord/final-genesis/finish` → `{complete, bundle_path, bundle_sha256, bundle, verified:{quorum_verified, serve_nodes, attestations, community_key_id, founders}}` (`bundle_json` — a string, the file's exact bytes — from CIRISServer e4cbedeb `:968`; the older `bundle` member of 4da726e8 still read as a fallback) | `src/final_genesis.rs:862` (handler `:794`) | **live, called** — `finishFinalGenesis` from `FinalGenesisViewModel.finish`, `btn_final_genesis_finish` (enabled when the status says `complete`). 409 `ceremony_incomplete` names what is owed and re-reads the status; 422 `ceremony_outputs_refused` is persist's `verify_ceremony_outputs` refusing. `bundle_sha256` is `sha256:<hex>` over the file's bytes — `final_genesis_bundle_sha256`, copyable (`btn_final_genesis_copy_sha`). `bundle` is copied (`btn_final_genesis_copy_bundle`) and saved where the platform can (`btn_final_genesis_save_bundle`, `saveFileCopy`; `final_genesis_bundle_save_unavailable` where it cannot) EXACTLY as sent — the raw member, or a string member's contents, never re-serialized. Whether those bytes are the hashed ones is MEASURED (SHA-256 against `bundle_sha256`) and said at `final_genesis_bundle_match`: at 4da726e8 they are not (the server re-serializes the file compact with sorted keys), so the sheet says *"same bundle, not the hashed bytes: the fingerprint is the file at <bundle_path>"*; raised with the server session |
+| the retired 2-of-3 re-mint | `POST /v1/accord/genesis/{propose,cosign}` | `src/accord_provision.rs:2973,2977` → `remint_superseded` (`src/final_genesis.rs:842`) | **410 `accord.genesis_superseded` on 0.5.220**, still **called** on ≤0.5.219 nodes only — `AccordViewModel.kt:1049,1095`, from `RemintTrustRootSheet`, which the sheet router opens only on a bare 404 from the row above. Its response fields (`fingerprint`, `node_trusts_root`, `trust_edge_error`, `seed_path`, `seed_save_error`, `src/accord_provision.rs` before 0.5.220) stay modelled by `GenesisSeedResponse` for those nodes |
 | this node's side of the root — posture, acceptance, adopt, un-trust | `GET /v1/trust-root` · `POST /v1/trust-root/import` · `DELETE /v1/trust-root/{root_key_id}` | `src/trust_root_api.rs:415-419` | **live on this node's own machine, called from `Screen.TrustRoot`, not from this screen** — the leaf behind `btn_accord_open_trust_root`. Its rows, refusal ids, the two ConfirmSheets and the `blocked_by: CIRISServer#652` remote-reach fact are **CSD-105 §3**; this card's part is the door |
 | the family's supersede chain | `GET /v1/accord/family/history` | `src/accord.rs:2645` (handler `:2355`) | **live, called** — `getAccordFamilyHistory` from `AccordViewModel.kt:1137`, on the Accord card itself: `row_family_version_<n>`, `accord_family_history_{loading,empty,error,not_on_this_node}`. Not loopback-gated |
 | change a seat by supersede | `POST /v1/accord/family/change/envelope`, `/v1/accord/family/supersede` | `src/accord.rs:2637,2641` | **live and refuses by design** for the only family it serves: `humanity-accord` answers 409 at `:2306-2315` (CIRISPersist#648). A seat changes by re-mint + import, not here — so the card should not offer it |
@@ -281,8 +291,9 @@ lever *one row*. `DELETE /v1/trust-root/{id}` is that row; `POST
 /v1/trust-root/import` is the "instead or in addition". The server's own
 refusal to supersede the family names the path the card lacks: *"run the
 ceremony again … and adopt the bundle it produces: … POST /v1/trust-root/import on
-each node"* (`src/accord.rs:2311-2313`). This card mints that bundle
-(`RemintTrustRootSheet`), and its trust-root detail now adopts one
+each node"* (`src/accord.rs:2311-2313`). This card mints that bundle — on
+0.5.220 by the 3-of-3 final genesis (`FinalGenesisSheet`, §4), before it by the
+2-of-3 `RemintTrustRootSheet` — and its trust-root detail now adopts one
 (`card_trust_root_import`). The node offers no preview of a seed before
 installing it (the CIRISServer#404 comment), so the import confirm says so
 (`trust_root_import_note`) instead of pretending to a fingerprint check.
@@ -414,9 +425,83 @@ expect:
     supersede_canonical_fact_1: "ciris-canonical-2-x9"
 ```
 
-The re-mint sheet (`[+ New]` → re-mint, `sheet_remint_trust_root`), after the
-second holder's cosign completes the seed and this node's acceptance of the new
-root was written (`node_trusts_root` non-empty):
+**The re-mint (`[+ New]` → re-mint, `mi_new_remint_trust_root`) is two sheets,
+chosen by the node.** On open the sheet asks `GET /v1/accord/final-genesis`: a
+bare 404 is a ≤0.5.219 node and `sheet_remint_trust_root` (the 2-of-3 seed,
+below) opens; anything else is CIRISServer 0.5.220's **final genesis**,
+`sheet_final_genesis` (`FinalGenesisSheet.kt`, `FinalGenesisViewModel.kt`).
+Draft flow: `testing/flows/drafts/csd-067-final-genesis.yaml`.
+
+On a 0.5.220 node with nothing planned and the production roster, each holder's
+recovery key is already filled from the record, with the commitment the charter will carry and an optional check (required only for a holder with nothing on record, which alone holds Plan):
+
+```yaml
+expect:
+  visible: [sheet_final_genesis, final_genesis_recovery_a1, final_genesis_recovery_b1,
+            final_genesis_recovery_c1, btn_final_genesis_verify_a1, btn_final_genesis_plan]
+  absent:  [sheet_remint_trust_root, final_genesis_plan_blocked]
+```
+
+`btn_final_genesis_verify_<holder>` opens `input_final_genesis_recovery_usb_<holder>`,
+`input_final_genesis_recovery_pin_<holder>` and `btn_final_genesis_verify_go_<holder>`;
+a refusal (`final_genesis.recovery_key_mismatch`, `.not_a_holder`,
+`.recovery_key_is_a_holder`, `.recovery_key_shared`, `.signer_unavailable`) is
+drawn by id at `final_genesis_recovery_refusal_<holder>`. The serve nodes are
+chips, `chip_final_genesis_serve_<key>`, the first canonical selected.
+
+`btn_final_genesis_plan` → where the node cannot read its clock-sync state,
+`sheet_final_genesis_clock` with three facts (`final_genesis_clock_fact_{1,2,3}`)
+and `final_genesis_clock_note`; only its confirm sends `clock_checked: true`.
+Over a planned ceremony, `btn_final_genesis_replan` → plan →
+`sheet_final_genesis_replace` (destructive), and only its confirm sends
+`replace: true`. Every other refusal is `final_genesis_error`, by id.
+
+Planned, round one:
+
+```yaml
+expect:
+  visible: [final_genesis_round, final_genesis_round_two_waits,
+            btn_final_genesis_finish, btn_final_genesis_replan]
+  text:
+    final_genesis_round: "1"
+  count: {of: "final_genesis_holder_state_*", eq: 3}
+```
+
+Each holder's card (`final_genesis_holder_<holder>`) shows one chip per item
+(`final_genesis_cell_<holder>_<item>`: signed / sign now / waits for the
+charter), `input_final_genesis_usb_<holder>`, `input_final_genesis_pin_<holder>`, the optional `input_final_genesis_module_<holder>`
+(drivable, masked, never echoed to `/tree`) and `btn_final_genesis_sign_<holder>`,
+enabled only while that holder owes something signable now. After a sign,
+`final_genesis_note_<holder>` says what was signed, or — on
+`final_genesis.nothing_to_sign` — whom the holder is waiting for. Round two
+(`final_genesis_round` = `2`) opens only once all three have signed the charter.
+
+Finished:
+
+```yaml
+expect:
+  visible: [final_genesis_done_title, final_genesis_bundle_sha256, btn_final_genesis_copy_sha,
+            final_genesis_bundle_path, final_genesis_verified_quorum,
+            final_genesis_verified_serve_nodes, final_genesis_verified_attestations,
+            final_genesis_verified_community, final_genesis_verified_founders]
+  text:
+    final_genesis_verified_community: "ciris-canonical"
+    final_genesis_verified_founders: "3"
+```
+
+*Cannot yet assert on a runner:* anything past the plan. Each sign is a FIPS
+YubiKey + USB ML-DSA session; the server's dry-run door
+(`test_holder_seed_b64`, test-anchor builds with `CIRIS_TESTING_MODE=true`) is
+not something the app sends. The states are pinned instead by
+`FinalGenesisViewModelTest` (recovery verify ok / mismatch, clock_unverified →
+confirm → `clock_checked: true`, already_planned → replace, the round-one grid,
+round two opening only after three charters, nothing_to_sign, finish 409
+incomplete, finish's facts, the bare-404 old node) and `FinalGenesisWireTest`
+(each route's body on a real socket).
+
+**The 2-of-3 seed (≤0.5.219 only).** After the second holder's cosign completes
+the seed and this node's acceptance of the new root was written
+(`node_trusts_root` non-empty):
 
 ```yaml
 expect:
@@ -441,8 +526,8 @@ expect:
 ```
 
 *Cannot yet assert on a runner:* any of the three — each needs two FIPS
-YubiKeys touched in turn. The done-state decision is pinned instead by
-`RemintSeedResponseTest` (`remintOutcome`, `genesisSeedDisplay`).
+YubiKeys touched in turn, on a ≤0.5.219 node. The done-state decision is pinned
+instead by `RemintSeedResponseTest` (`remintOutcome`, `genesisSeedDisplay`).
 
 On the card, the family's versions and the door to this node's trust root:
 
@@ -468,6 +553,13 @@ refuses is CSD-105 §4 (`testing/flows/drafts/csd-105-trust-root.yaml`).
 * **The signatures.** The 2-of-3 verification is the node's, against canonical
   bytes this app never assembles. A client fixture asserting quorum would be
   asserting against the wrong machine.
+* **The final genesis past its plan** (§4) — every sign needs a holder's FIPS
+  token, and finish needs all three twice. What the app does is pinned by
+  `FinalGenesisViewModelTest` / `FinalGenesisWireTest`; that the bundle is
+  right is persist's `verify_ceremony_outputs`, run by the node at finish.
+* **A spare's commitment on a 0.5.220 build from before `GET …/recovery-keys`**
+  — the row names the spare and says it is on record; it cannot show what it
+  was never sent.
 * **Acceptance 2 on a runner** — the four arms exist and are pinned at the
   model (`AccordInvocationKindTest`), but no fixture node lists a lifecycle
   row (§4), so the fourth rendering is asserted by the test and not the flow.

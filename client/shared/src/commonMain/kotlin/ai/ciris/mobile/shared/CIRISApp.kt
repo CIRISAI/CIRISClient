@@ -1152,6 +1152,10 @@ fun CIRISApp(
     val accordViewModel: ai.ciris.mobile.shared.viewmodels.AccordViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.AccordViewModel(apiClient)
     }
+    // The final genesis (CIRISServer 0.5.220): the Accord card's re-mint sheet.
+    val finalGenesisViewModel: ai.ciris.mobile.shared.viewmodels.FinalGenesisViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.FinalGenesisViewModel(apiClient)
+    }
     // Trust root (card: Accord › this node's trust root) — CIRISServer#400.
     val trustRootViewModel: ai.ciris.mobile.shared.viewmodels.TrustRootViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.TrustRootViewModel(apiClient)
@@ -4394,6 +4398,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.Accord] Rendering accord screen")
                 AccordScreen(
                     viewModel = accordViewModel,
+                    finalGenesis = finalGenesisViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     // Found-a-new-accord CTA — shown only when no family exists yet.
                     onStartCeremony = { currentScreen = Screen.AccordCeremony },

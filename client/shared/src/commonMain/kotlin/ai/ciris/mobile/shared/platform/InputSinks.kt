@@ -26,9 +26,18 @@ import androidx.compose.runtime.DisposableEffect
  * recomposition with the same tags does nothing.
  */
 @Composable
-fun rememberInputSinks(vararg tags: String) {
-    DisposableEffect(tags.contentHashCode()) {
-        for (t in tags) TestAutomation.registerInputSink(t)
-        onDispose { for (t in tags) TestAutomation.unregisterInputSink(t) }
+fun rememberInputSinks(vararg tags: String, sensitive: Boolean = false) {
+    DisposableEffect(tags.contentHashCode(), sensitive) {
+        for (t in tags) {
+            TestAutomation.registerInputSink(t)
+            // A PIN: applied by /input, never stored or echoed (SensitiveInputs).
+            if (sensitive) SensitiveInputs.mark(t)
+        }
+        onDispose {
+            for (t in tags) {
+                TestAutomation.unregisterInputSink(t)
+                if (sensitive) SensitiveInputs.unmark(t)
+            }
+        }
     }
 }
