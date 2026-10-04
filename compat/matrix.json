@@ -1366,6 +1366,60 @@
       },
       "notes": "SERVER 0.5.218 COMPATIBILITY. Every server-emitted id at v0.5.218 is in the bundle (65 added, 9 re-synced, #142); the localization pin is the v0.5.218 tag. On a 0.5.218 node a direct roster add now answers 202 invited — this release reads it as an invitation (0.5.225 could not decode it on a community add), so 0.5.226 is the minimum client for community adds on a 0.5.218 node. PRs: #141 invitations, #142 strings and claimed-session, #143 pair-room invitations, eviction report, force_self, the 413 too-large state, #145 drive scope (cohort), #146 the QR's size and a driver wait that rides out a failing /tree read, #139 file custody, #144 MEDIA_EDGE.md §8/§9 for agent consumers. Tested: five-platform live QA green on all five legs (Linux, macOS, Windows desktop; Android emulator; iOS simulator), 9 of 9 flows each, against ciris-server v0.5.218 (run 36925651835, #146 at 229d174d). Upstream for 0.5.219: CIRISServer#711.",
       "published": null
+    },
+    {
+      "client_version": "0.5.227",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The 0.5.220 surfaces added here read routes an older node lacks and fall back to that node's behaviour: the trust-root re-mint opens the 2-of-3 sheet on a bare 404 from /v1/accord/final-genesis (<=0.5.219), the served-bundle card is absent on a 404, and the awaiting-key and not-adopted states only appear when a node reports them.",
+      "node_max_tested": "0.5.220",
+      "agent_min_tested": "2.12.1",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait"
+      ],
+      "capabilities_note": "new: the 3-of-3 final genesis (recovery keys from the record with an optional token check, plan with per-node dial hints, two signing rounds, finish with the bundle and its fingerprint), the served-bundle card, waiting for a file's key, imported-not-accepted and root-not-adopted trust-root states; startup waits for a node that is still binding and its health probe, with an error and Retry past the deadline (#149); a desktop-spawned node declares CIRIS_DEVICE_CLASS=laptop; the CC registry is rc6.",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5402
+      },
+      "notes": "SERVER 0.5.220 COMPATIBILITY — THE FINAL GENESIS. Every server-emitted id at v0.5.220 is in the bundle (#156: 22 + 3 from CIRISServer#726); the localization pin is the v0.5.220 tag. PRs: #154 the final-genesis sheet (3-of-3, replaces the retired 2-of-3 re-mint, whose routes answer 410 on 0.5.220), #156 strings, awaiting_key, bundle_unlabelled, bundle_not_in_force, posture banner, imported-not-accepted, served bundle, #151 startup node/health wait (#149), #152 CC registry rc6 (#150), #153/#155 device class laptop. Tested: see the release PR for the five-platform run against ciris-server v0.5.220.",
+      "published": null
     }
   ]
 }

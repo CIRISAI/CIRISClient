@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `main 0.5.220` (`e357f6bf8cb30d2bf7bd57052f19265b48c0f796`) | `feat/server-0.5.220-parity` (0.5.220 merged to server main as #725, not yet tagged; every emitted id reconciled — 22 added, the 19-id `KNOWN_UNLOCALIZED` debt unchanged. Previous: `v0.5.218` `405acc17`, `release/0.5.226`) | 2026-10-04 |
+| `CIRISAI/CIRISServer` | `v0.5.220` (`1dec03165954bcc1a4252d4f65250410cb6be96b`) | `release/0.5.227` (every emitted id reconciled against the tag; #156 added 22 from `e357f6bf` and 3 from #726, which the tag merges. Previous: `main 0.5.220` `e357f6bf`, `feat/server-0.5.220-parity`) | 2026-10-04 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
