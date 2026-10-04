@@ -19,7 +19,8 @@
       "refused": "基盤がこの付与を拒否しました。承認されておらず、権限は付与されていません。",
       "sign_failed": "協定保持者の鍵から署名が生成されませんでした。何も変更されていません。",
       "unknown_duty": "それはこのメッシュが認識している義務ではありません。付与してもここでは権限として表示されますが、すべてのゲートで拒否されます。"
-    }
+    },
+    "genesis_superseded": "2-of-3 の提案・連署による再発行は廃止されました。ジェネシスは、/v1/accord/final-genesis で3名のホルダー全員が署名する単一の儀式です（計画・署名・完了）。"
   },
   "adapters": {
     "navigation": {
@@ -2323,6 +2324,8 @@
     "provision_holder_err_owner": "まずこのノードの所有者としてサインインしてから、プロビジョニングしてください。",
     "provision_holder_err_loopback": "プロビジョニングはノード自身のホスト（localhostのみ）で実行する必要があります。",
     "provision_holder_err_other": "プロビジョニングに失敗しました：{detail}",
+    "trust_root_import_not_yet_accepted": "インポート済み、未受け入れ",
+    "trust_root_import_not_yet_accepted_why": "ルートの記録はこのノード上にありますが、このノードはまだそれを信頼していません。ルートのジェネシス記録をまだ保持していないため、次回の起動時またはインポート時に受け入れが再試行されるか、もしくは受け入れの書き込みに失敗したかのいずれかです。",
     "yubikey_probe_failed": "YubiKeyの状態を読み取れませんでした",
     "yubikey_probe_not_on_this_node": "このノードはYubiKeyの状態を報告しません",
     "yubikey_probe_reason": "理由：{detail}",
@@ -2350,6 +2353,10 @@
     "files_bytes_not_granted": "このデバイスでは開けません",
     "files_bytes_unreadable": "開けましたが、読み取れないテキストです",
     "files_bytes_unopened": "ここでは開けません",
+    "files_bytes_awaiting_key": "このファイルの鍵を待っています",
+    "files_awaiting_key_body": "そのバイト列はこのデバイス上にありますが、それを開く鍵はまだ届いていません。鍵は自動的に届きますので、問題はありません。",
+    "files_awaiting_key_check_again": "再確認",
+    "files_custody_awaiting_key": "このファイルの鍵はまだこのデバイスに届いていないため、ファイルの場所を示せません。鍵は自動的に届きますので、しばらくしてから再確認してください。",
     "files_room": "ルーム {room}",
     "files_choose_room": "どのルームに追加しますか？",
     "files_uploading": "{name} を追加中…",
@@ -3198,6 +3205,12 @@
     "trust_root_accepted_no": "いいえ：このノードは知っていますが、信頼していません",
     "trust_root_accepted_yes": "はい：このノードの受け入れがそこに及んでいます",
     "trust_root_banner_label": "ノードの回答",
+    "trust_root_bundle_title": "このノードが基盤とするシード",
+    "trust_root_bundle_not_in_force": "このノードはまだそのシードで稼働していないため、比較のために提示できるシードがありません。",
+    "trust_root_bundle_fingerprint_label": "フィンガープリント",
+    "trust_root_bundle_charter_root_label": "憲章のルート",
+    "trust_root_state_not_adopted_held": "新しいルートは採用されていません：以前のルートが引き続き有効です（{leg} レグ）",
+    "trust_root_state_not_adopted": "ルートは採用されていません：このバイナリのルートは拒否され、以前のルートも保持されていません（{leg} レグ）",
     "trust_root_bounded_label": "有効期限",
     "trust_root_bounded_none": "時間だけで失効するものはありません",
     "trust_root_confirm_fact_signs": "誰が署名するか",
@@ -3260,6 +3273,8 @@
     "trust_root_refused_no_root": "ルートが指定されていません。",
     "trust_root_refused_other": "ノードが拒否しました（{id}）。",
     "trust_root_refused_withdraw_failed": "ノードは自身の受け入れを取り下げることができませんでした。",
+    "trust_root_refused_bundle_unlabelled": "このシードは最終ジェネシス以前のものです。何もインストールされていません。",
+    "trust_root_refused_bundle_unlabelled_body": "その信頼記録には、それぞれの用途を示すラベルがありません — ラベル付けが導入される前に発行されたためです。このノードがそれをインストールすると、憲章が一切ない状態になってしまうため、拒否しました。代わりに、最終ジェネシスからバージョン3のシードをインポートしてください。",
     "trust_root_roots_title": "このノードが知っているルート",
     "trust_root_state_divergent": "改変：{leg} レグが存在しますが、誤っています",
     "trust_root_state_entrenched": "根付いている：ルートを必要とするすべての検査が合格できます",
@@ -3433,6 +3448,8 @@
     "chat_empty_room": "まだメッセージはありません。ここで送信するものは、このルームの名簿にいる全員に対する署名付きアテステーションです。ルームのメンバーはそれを読むことができますが、それ以外の誰も読むことはできません。",
     "chat_unopened_not_fetched": "このメッセージはまだこのデバイスに届いていません。",
     "chat_unopened_not_granted": "このメッセージは、このデバイスがここで読み取れるようになる前に封印されたため、このデバイスでは開けません。",
+    "chat_unopened_awaiting_key": "このメッセージはここにありますが、それを開く鍵はまだこのデバイスに届いていません。鍵は自動的に届きます。",
+    "chat_unopened_withdrawn": "その作成者が、このメッセージを取り消しました。",
     "chat_unopened_evicted": "このメッセージの内容は、このデバイスにはもう保存されていません。",
     "chat_unopened_seal_mismatch": "このメッセージの封印が一致しないため、開かれませんでした。",
     "chat_unopened_malformed_row": "このメッセージを読み取れませんでした：行の形式が不正です。",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Play Integrityはアプリの真正性を検証します",
   "trust_root": {
-    "no_root": "どのルートですか？信頼を解除する root_key_id をパスで指定する必要があります"
+    "no_root": "どのルートですか？信頼を解除する root_key_id をパスで指定する必要があります",
+    "bundle_unlabelled": "このバンドルは、trust-root の行がジョブラベル（trust:charter:v1）を持つようになる前に発行されたものです。このノードにインストールすると、憲章が一切ない状態になります。代わりに、最終ジェネシス（FSD/FINAL_GENESIS.md）からバンドルをインポートしてください。このノードでは何も変更されていません。",
+    "bundle_not_in_force": "このノードは自身が保持するバンドルでまだ稼働していないため、何も提供していません。"
   },
   "trust_running": "実行中",
   "trust_verify_desc": "検証ステータスと詳細",
@@ -5558,6 +5577,7 @@
     "too_large_for_whole_read": "このファイルは大きすぎて一度に読み取ることができません。ストリーミングで読み取る必要があります。",
     "withdraw_failed": "ファイルを取り下げられませんでした。再試行してください。",
     "withdrawn": "このファイルは作成者によって取り下げられました。バイト列はどこからも提供されなくなりました。",
+    "awaiting_key": "そのバイト列はここにありますが、このデバイス用の鍵はまだ届いていません。鍵は自動的に届きますので、しばらくしてから再試行してください。",
     "store_unavailable": "このノードはファイルストアに接続できませんでした。",
     "too_large": "そのファイルは大きすぎるため、ここには追加できません。",
     "unknown_cohort": "そこはファイルを置ける場所ではありません。「自分のみ」、ファミリー、またはコミュニティを使用してください。",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "このやり取りでは、あなたの別のデバイスが代わりに回答しています。",
       "handled_here": "このやり取りでは、このデバイスがあなたに代わって回答しています。"
     }
+  },
+  "final_genesis": {
+    "already_planned": "このノードでは、すでに儀式が計画されています。それを破棄するには \"replace\": true を渡してください。",
+    "bad_request": "test_holder_seed_b64 は、ちょうど32バイトの base64 である必要があります。",
+    "clock_not_synchronized": "このホストのクロックはNTP同期されていません。ジェネシス内のすべての時刻はこのクロックから刻印され、受信側は未来方向に300秒を超えるものを拒否します。",
+    "clock_unverified": "このサーバーはホストのクロック同期状態を読み取れません。クロックが同期されていることを確認し、\"clock_checked\": true を渡してください。",
+    "no_hardware_signer": "署名には `pkcs11` 機能が必要です（ホルダーの YubiKey と USB の ML-DSA 署名器）。",
+    "no_serve_nodes": "ジェネシスは、少なくとも1つの正規ノードを配置します",
+    "not_planned": "このノードには計画された儀式がありません — まず POST /v1/accord/final-genesis/plan を実行してください。",
+    "not_testing_mode": "ソフトウェアホルダーシードは、CIRIS_TESTING_MODE=true（ドライラン）の場合にのみ受け付けられます。",
+    "not_a_holder": "その鍵は、着席したアコードホルダーではありません。",
+    "nothing_to_sign": "このホルダーには、現在署名すべきものがありません。すべての義務がすでに署名済みか、次のラウンドが他のホルダーによる憲章への署名を待っている状態です。",
+    "recovery_key_is_a_holder": "その鍵は、着席したホルダーの署名鍵です。リカバリーキーはスペアである必要があります。",
+    "recovery_key_mismatch": "開かれたトークンには、アコードの儀式でこのスペア用に記録された鍵が含まれていません。正しい YubiKey と USB であることを確認してください。",
+    "recovery_key_shared": "そのスペアは、すでに別のホルダーのリカバリーキーとして記録されています。",
+    "recovery_key_wrong_holder": "そのスペアは、このホルダーのリカバリーキーではありません。各ホルダーは、自身と対になったスペアでリカバリーします。",
+    "serve_node_no_dial_hint": "そのカノニカルノードにはトランスポートヒントがありません。鍵とともにそのアドレス（host:4242）を渡してください。ジェネシスがトランスポートヒントなしで据えるカノニカルノードは、新しいノードが見つけられないノードです。",
+    "serve_node_no_pqc": "そのノードの記録には ML-DSA-65 鍵が含まれていません。ジェネシスノードには両方の鍵が必要です。",
+    "serve_node_unknown": "そのノードの鍵記録がここにありません。ID の代わりに、完全な記録を渡してください。",
+    "sign_failed": "署名は途中で失敗しました。すでに署名済みの部分は保持されます。残りを完了するには、再度署名してください。",
+    "signer_unavailable": "ホルダーの署名器（YubiKey と USB）を開けませんでした。",
+    "store_failed": "このノードは、儀式の状態を書き込めませんでした。",
+    "store_unavailable": "このノードは、鍵ストアに接続できませんでした。"
   }
 }

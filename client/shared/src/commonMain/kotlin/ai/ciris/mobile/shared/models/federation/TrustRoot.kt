@@ -66,6 +66,67 @@ data class TrustRootImportResult(
     val banner: String? = null,
 )
 
+/**
+ * Installed and NOT accepted: the root is known here and not trusted. Since
+ * ciris-server 0.5.220 this is also how a DEFERRED acceptance reports (the node
+ * does not hold the root's genesis head yet; persist retries at the next boot
+ * or import) — before, that case read `accepted: true`. Never a success.
+ */
+fun importNotYetAccepted(r: TrustRootImportResult): Boolean = r.installed && !r.accepted
+
+/**
+ * `GET /v1/trust-root/bundle` (ciris-server 0.5.220, CIRISServer#726, PUBLIC):
+ * the genesis bundle this node runs on, in the registry's shape. The bundle
+ * itself is read and not kept here — the card shows what a person compares out
+ * of band: the fingerprint and the charter root. `community` is the
+ * `ciris-canonical` birth, null before a v3 bundle.
+ */
+@Serializable
+data class TrustRootBundleDto(
+    @SerialName("bundle_fingerprint")
+    val bundleFingerprint: String? = null,
+    @SerialName("charter_root_key_id")
+    val charterRootKeyId: String? = null,
+    @SerialName("served_by")
+    val servedBy: String? = null,
+    val community: JsonElement? = null,
+)
+
+/** What the card shows of the served bundle; null when the node sent nothing comparable. */
+data class ServedBundleView(val fingerprint: String, val charterRootKeyId: String?, val carriesCommunity: Boolean)
+
+fun servedBundleView(dto: TrustRootBundleDto): ServedBundleView? {
+    val fp = dto.bundleFingerprint?.takeIf { it.isNotBlank() } ?: return null
+    return ServedBundleView(
+        fingerprint = fp,
+        charterRootKeyId = dto.charterRootKeyId?.takeIf { it.isNotBlank() },
+        carriesCommunity = dto.community != null && dto.community !is kotlinx.serialization.json.JsonNull,
+    )
+}
+
+/** CIRISServer#726 (814dd7c6): `GET /v1/trust-root/bundle` on a node not entrenched on its bake. */
+const val TRUST_ROOT_BUNDLE_NOT_IN_FORCE = "trust_root.bundle_not_in_force"
+
+/** What the served-bundle card shows. Exactly one at a time. */
+sealed interface ServedBundleRead {
+    /** No route (bare 404), unreachable, or nothing comparable: no card at all. */
+    data object Absent : ServedBundleRead
+    data class Shown(val view: ServedBundleView) : ServedBundleRead
+    /**
+     * `409 trust_root.bundle_not_in_force`: this node is not running on the
+     * bundle it carries yet, so it serves none. A named state, not an error;
+     * [detail] is the node's words (persist's banner rides inside it).
+     */
+    data class NotInForce(val detail: String?) : ServedBundleRead
+}
+
+fun servedBundleRead(dto: TrustRootBundleDto): ServedBundleRead =
+    servedBundleView(dto)?.let { ServedBundleRead.Shown(it) } ?: ServedBundleRead.Absent
+
+fun servedBundleRead(e: Throwable): ServedBundleRead =
+    if (e is NodeRefusal && e.reasonId == TRUST_ROOT_BUNDLE_NOT_IN_FORCE) ServedBundleRead.NotInForce(e.detail)
+    else ServedBundleRead.Absent
+
 /** `DELETE /v1/trust-root/{root_key_id}` (`trust_root_api.rs:388-396`). */
 @Serializable
 data class TrustRootUntrustResult(
@@ -125,6 +186,19 @@ data class TrustPosture(
     val detail: String?,
     val banner: String?,
     val entrenched: Boolean,
+    /**
+     * CIRISPersist#973 (v53, ciris-server 0.5.220): a `pre_genesis` leg whose
+     * `reason.kind` is `bake_not_adopted` — this binary carries a newer root
+     * the node did NOT adopt. Not "awaiting a ceremony". False on an older node
+     * (no `reason`), which reads as `not_seeded`, persist's own default.
+     */
+    val bakeNotAdopted: Boolean = false,
+    /**
+     * With [bakeNotAdopted]: the node still holds its PREVIOUS verified root on
+     * that leg, and it stays in force. The banner is then persist's "ROOT NOT
+     * ADOPTED", never "NO TRUST ROOT", and the headline must not say "not rooted".
+     */
+    val heldRootInForce: Boolean = false,
 )
 
 private fun JsonElement?.obj(): JsonObject? = this as? JsonObject
@@ -146,6 +220,9 @@ fun trustPosture(posture: JsonElement?, banner: String?, entrenched: Boolean): T
         "unreadable" -> GenesisState.UNREADABLE
         else -> GenesisState.UNKNOWN
     }
+    // persist v53 `AbsentReason`, tagged by `kind`, inside a pre_genesis posture only.
+    val reason = (o?.get("reason") as? JsonObject)
+    val notAdopted = state == GenesisState.PRE_GENESIS && reason.str("kind") == "bake_not_adopted"
     return TrustPosture(
         // `entrenched` is persist's own bool; a token that says entrenched while the
         // bool says not is a disagreement, and it is not rendered green.
@@ -155,6 +232,8 @@ fun trustPosture(posture: JsonElement?, banner: String?, entrenched: Boolean): T
         detail = o.str("detail"),
         banner = banner?.takeIf { it.isNotBlank() },
         entrenched = entrenched,
+        bakeNotAdopted = notAdopted,
+        heldRootInForce = notAdopted && reason.bool("held_root_in_force") == true,
     )
 }
 
@@ -338,6 +417,27 @@ fun trustRootRefusalKey(reasonId: String?): String? = when (reasonId) {
     "trust_root.install_failed" -> "mobile.trust_root_refused_install_failed"
     "trust_root.no_root" -> "mobile.trust_root_refused_no_root"
     "trust_root.withdraw_failed" -> "mobile.trust_root_refused_withdraw_failed"
+    TRUST_ROOT_BUNDLE_UNLABELLED -> "mobile.trust_root_refused_bundle_unlabelled"
+    else -> null
+}
+
+/**
+ * ciris-server 0.5.220 (persist v53, CC 3.2 T4a): `POST /v1/trust-root/import`
+ * refuses an old portable bundle whose trust rows carry no job labels with
+ * `422 trust_root.bundle_unlabelled` — outside the one pinned genesis it would
+ * install as no charter at all. Before 0.5.220 the same bundle answered
+ * `200 installed: true, accepted: false`.
+ */
+const val TRUST_ROOT_BUNDLE_UNLABELLED = "trust_root.bundle_unlabelled"
+
+/**
+ * The client's guidance UNDER a refusal title, when the refusal needs more than
+ * the title to act on; null = show the node's own words. An unlabelled bundle
+ * needs saying what it is and what to import instead (a v3 seed from the final
+ * genesis), in the reader's language — never the node's raw English.
+ */
+fun trustRootRefusalBodyKey(reasonId: String?): String? = when (reasonId) {
+    TRUST_ROOT_BUNDLE_UNLABELLED -> "mobile.trust_root_refused_bundle_unlabelled_body"
     else -> null
 }
 

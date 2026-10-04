@@ -35,6 +35,14 @@ sealed interface CustodyState {
     /** A bare 404 (no id): the route is not on this node — every released node today. A version fact, never an empty card. */
     data class NodeTooOld(val target: CustodyTarget) : CustodyState
 
+    /**
+     * The bytes are on this device and its per-epoch key for them has not
+     * arrived yet (ciris-server 0.5.220: `409 drive.awaiting_key` from the
+     * custody route's byte door). A wait, never an error: the card names it
+     * and offers to ask again.
+     */
+    data class AwaitingKey(val target: CustodyTarget) : CustodyState
+
     /** The node refused by name, or could not answer. Never looks like empty. */
     data class Failed(val target: CustodyTarget, val reasonId: String?, val detail: String?) : CustodyState
 }
@@ -45,6 +53,10 @@ sealed interface CustodyState {
  * the same card over the same route.
  */
 class FileCustodyViewModel(private val api: DriveApi) : ViewModel() {
+    companion object {
+        const val REASON_AWAITING_KEY = "drive.awaiting_key"
+    }
+
     private val _state = MutableStateFlow<CustodyState>(CustodyState.Closed)
     val state: StateFlow<CustodyState> = _state.asStateFlow()
 
@@ -60,6 +72,8 @@ class FileCustodyViewModel(private val api: DriveApi) : ViewModel() {
                 if (e.statusCode == 404 && e.reasonId == null) {
                     PlatformLogger.i("FileCustodyVM", "node predates /v1/files/{id}/custody (bare 404)")
                     CustodyState.NodeTooOld(target)
+                } else if (e.reasonId == REASON_AWAITING_KEY) {
+                    CustodyState.AwaitingKey(target)
                 } else {
                     CustodyState.Failed(target, e.reasonId, e.detail)
                 }
@@ -69,6 +83,11 @@ class FileCustodyViewModel(private val api: DriveApi) : ViewModel() {
             }
             if (mine == request) _state.value = next
         }
+    }
+
+    /** Ask again about the file the card is waiting on. Nothing to ask while closed, loading or answered. */
+    fun checkAgain() {
+        (_state.value as? CustodyState.AwaitingKey)?.let { open(it.target) }
     }
 
     fun close() {

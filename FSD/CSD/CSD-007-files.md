@@ -92,9 +92,9 @@ fields:
     tag: receipt_scope
   - ceg: x_private:byte_state
     use: display-only
-    type: "enum[here,not_fetched,not_granted,unreadable,unopened]"
+    type: "enum[here,not_fetched,not_granted,awaiting_key,unreadable,unopened]"
     example: "here"
-    renders: "the row's third line: On this device / On another device / This device can't open it / Opened, but not readable text / Can't be opened here"
+    renders: "the row's third line: On this device / On another device / This device can't open it / Waiting for this file's key / Opened, but not readable text / Can't be opened here"
     tag: "files_row_*"
 ```
 
@@ -105,7 +105,12 @@ surface (`drive::BYTE_STATES`, `src/drive.rs:193-201`, CIRISServer#644):
 The client names the first three, `unreadable` (the one note-only fact: the
 bytes opened and are not UTF-8 text, `:2945`) as "Opened, but not readable
 text", and renders the rest as "Can't be opened here" with the node's own
-`detail`. `/v1/notes` used to say `open` for
+`detail`. 0.5.220 (persist v53 #969) adds `awaiting_key`: the bytes are on this
+device and its per-epoch key for them has not arrived yet. The row says
+"Waiting for this file's key" (`ByteState.AWAITING_KEY`), and an open answered
+`409 drive.awaiting_key` is `OpenState.AwaitingKey` — `file_awaiting_key`, a
+named wait with `btn_file_check_again`, never `file_not_opened`. The key
+follows on its own; asking again is the whole remedy. `/v1/notes` used to say `open` for
 `here`; `Note.byteState` still maps it, for a 0.5.215/216 node.
 
 **A note is not a file.** `/v1/drive?cohort=self` lists notes too. The client
@@ -207,6 +212,7 @@ node URL works on every agent version, so the client keeps calling it. Rows mark
 | a digest signed into the row; the listing's descriptor (digest, size, renditions, placeholder) | `GET /v1/drive` rows | CIRISEdge `blocked_by: CIRISEdge#638` (`src/drive.rs:170-172`) | blocks `receipt_dimension` on the receipt; the opened file is verified without it |
 | renditions (display / thumb / poster) | the ingest pipeline; `derived_from` index (V149) | CIRISServer `blocked_by: CIRISServer#614`; the node says so itself (`renditions: false`) | Tier A media waits on it, and the sheet says so |
 | a file above the whole-read cap (0.5.218) | `GET /v1/files/{id}` → 413 `drive.too_large_for_whole_read` (above `WHOLE_READ_CAP`, 64 MiB) | CIRISServer (`src/drive.rs::too_large_for_whole_read` @ `53d1ffb5`) | **0.5.218, rendered** as a named state, not an error: `OpenState.TooLarge` → `file_too_large`, "This file is too large to open on this device yet." The bytes are there and open for this viewer; the client reads files whole and has no streaming read (`?raw=1`, which the server serves with `Range`) — not built here. Pinned: `FilesViewModelTest.aFileAboveTheWholeReadCapIsNamedTooLargeNotAFailure` |
+| a file whose key has not arrived (0.5.220) | `GET /v1/drive` row `bytes: "awaiting_key"`; `GET /v1/files/{id}` → 409 `drive.awaiting_key` | CIRISServer `src/drive.rs` (`BYTE_STATES`, `blob_state`: persist `ChunkKeyNotYetGranted`, edge `UnopenedReason::AwaitingKey`; `refuse_state`) @ `e357f6bf` | **rendered** as a named wait, not an error: the row's line "Waiting for this file's key"; the sheet `file_awaiting_key`, "Waiting for this file's key" + "Its bytes are on this device, but the key that opens them hasn't arrived yet. It comes on its own; nothing is wrong.", with `btn_file_check_again` re-opening the file. Pinned: `FilesViewModelTest.aFileWhoseKeyHasNotArrivedIsAWaitingStateAndCheckAgainOpensIt`, `DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409` |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
 reads the id from `error` when it is dotted. The `drive.*` ids are localized.

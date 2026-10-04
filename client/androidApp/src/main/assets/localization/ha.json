@@ -19,7 +19,8 @@
       "refused": "Substrate ɗin ya ƙi wannan bayarwar iko. Ba a karɓe ta ba, kuma ba a ba da wani iko ba.",
       "sign_failed": "Maɓallin mai riƙon accord bai samar da sa hannu ba. Ba a canza komai ba.",
       "unknown_duty": "Wannan ba aiki ba ne da wannan mesh ɗin ya sani. Bayar da shi zai bayyana a matsayin iko a nan, kuma za a ƙi shi a kowace ƙofa."
-    }
+    },
+    "genesis_superseded": "Tsarin shirya/haɗa-sa-hannu na 2-of-3 na sake-fitarwa an yi masa ritaya; genesis biki ne guda ɗaya da dukkan masu riƙe uku ke sa hannu a kai a /v1/accord/final-genesis (shirya, sa hannu, kammala)"
   },
   "adapters": {
     "navigation": {
@@ -3168,6 +3169,14 @@
     "trust_root_accepted_no": "A'a: sananne ga wannan kumburi, ba a amince da shi ba",
     "trust_root_accepted_yes": "Eh: karɓar da wannan kumburi ya yi tana kaiwa gare shi",
     "trust_root_banner_label": "Kumburin ya ce",
+    "trust_root_bundle_title": "Irin da wannan kumburi yake gudana a kai",
+    "trust_root_bundle_not_in_force": "Wannan kumburi har yanzu ba ya gudana a kan irinsa ba, don haka ba shi da iri da zai nuna don kwatantawa.",
+    "trust_root_bundle_fingerprint_label": "Alamar yatsa",
+    "trust_root_bundle_charter_root_label": "Tushen kundin kafuwa",
+    "trust_root_state_not_adopted_held": "Ba a karɓi sabon tushen ba: tsohon tushen yana ci gaba da aiki ({leg} leg)",
+    "trust_root_state_not_adopted": "Ba a karɓi tushen ba: an ƙi tushen wannan binary kuma ba a riƙe wani tsohon tushe ba ({leg} leg)",
+    "trust_root_import_not_yet_accepted": "An shigo da shi, ba a karɓa tukuna ba",
+    "trust_root_import_not_yet_accepted_why": "Rikodin tushen suna kan wannan kumburi, amma wannan kumburi bai amince da shi tukuna ba. Ko dai bai riƙe rikodin genesis na tushen tukuna ba, kuma za a sake gwada karɓarsa a lokacin farawa ko shigo da na gaba, ko kuma ba a iya rubuta karɓarsa ba.",
     "trust_root_bounded_label": "Yana riƙe har zuwa",
     "trust_root_bounded_none": "Babu abin da ke ƙarewa a cikinsa sabili da lokaci kaɗai",
     "trust_root_confirm_fact_signs": "Wa ke sa hannu",
@@ -3230,6 +3239,8 @@
     "trust_root_refused_no_root": "Ba a ambaci wani tushe ba.",
     "trust_root_refused_other": "Kumburin ya ƙi ({id}).",
     "trust_root_refused_withdraw_failed": "Kumburin bai iya janye karɓarsa ba.",
+    "trust_root_refused_bundle_unlabelled": "Wannan iri daga kafin genesis na ƙarshe ne. Ba a shigar da komai ba.",
+    "trust_root_refused_bundle_unlabelled_body": "Rikodin amincewarsa ba su ɗauke da lakabi masu bayyana abin da kowanne yake yi ba — an fitar da su kafin an fara lakaftawar rikodi. Wannan kumburi zai shigar da shi a matsayin babu charter kwata-kwata, don haka ya ƙi shi. Maimakon haka, shigo da iri na version 3 daga genesis na ƙarshe.",
     "trust_root_roots_title": "Tushen da wannan kumburi ya sani",
     "trust_root_state_divergent": "An canza: gaɓar {leg} tana nan amma ba daidai ba ce",
     "trust_root_state_entrenched": "An kafu: kowace dubawa da take buƙatar tushe za ta iya wucewa",
@@ -3389,6 +3400,10 @@
     "files_bytes_not_granted": "Wannan na'ura ba za ta iya buɗe shi ba",
     "files_bytes_unreadable": "An buɗe, amma ba rubutu mai karantuwa ba",
     "files_bytes_unopened": "Ba za a iya buɗe shi a nan ba",
+    "files_bytes_awaiting_key": "Ana jiran maɓallin wannan fayil",
+    "files_awaiting_key_body": "Bytes nasa suna kan wannan na'urar, amma maɓallin da zai buɗe su bai isa ba tukuna. Yana zuwa da kansa; babu wata matsala.",
+    "files_awaiting_key_check_again": "Sake dubawa",
+    "files_custody_awaiting_key": "Maɓallin wannan fayil bai isa wannan na'urar ba tukuna, don haka ba zai iya faɗin inda fayil yake ba. Yana zuwa da kansa; sake dubawa nan da ƴan lokaci.",
     "files_room": "Ɗaki {room}",
     "files_choose_room": "Za ku ƙara shi a wanne ɗaki?",
     "files_uploading": "Ana ƙara {name}…",
@@ -3448,6 +3463,8 @@
     "chat_empty_room": "Babu saƙonni tukuna. Abin da ka aika a nan shaida ce da aka sa wa hannu ga kowa a jerin membobin wannan ɗaki — membobinta ne kaɗai za su iya karanta ta, ba wani kuma.",
     "chat_unopened_not_fetched": "Wannan saƙo bai isa wannan na'ura tukuna ba.",
     "chat_unopened_not_granted": "An rufe wannan saƙo kafin wannan na'ura ta iya karantawa a nan, don haka ba zai buɗe a kanta ba.",
+    "chat_unopened_awaiting_key": "Wannan saƙon yana nan, amma maɓallin da zai buɗe shi bai isa wannan na'urar ba tukuna. Yana zuwa da kansa.",
+    "chat_unopened_withdrawn": "Marubucinsa ya janye wannan saƙon.",
     "chat_unopened_evicted": "Ba a ƙara riƙe abin cikin wannan saƙo a wannan na'ura ba.",
     "chat_unopened_seal_mismatch": "Hatimin wannan saƙo bai dace ba, don haka ba a buɗe shi ba.",
     "chat_unopened_malformed_row": "Ba a iya karanta wannan saƙo ba: layin ya lalace.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Google yana tabbatar",
   "trust_root": {
-    "no_root": "wane tushe ne? dole ne hanyar ta ƙayyade root_key_id ɗin da za a janye amincewa da shi"
+    "no_root": "wane tushe ne? dole ne hanyar ta ƙayyade root_key_id ɗin da za a janye amincewa da shi",
+    "bundle_unlabelled": "Wannan bundle an fitar da shi kafin layukan trust-root su ɗauke da lakabin aikinsu (trust:charter:v1); a kan wannan kumburi zai shigar a matsayin babu charter kwata-kwata. Maimakon haka, shigo da bundle daga genesis na ƙarshe (FSD/FINAL_GENESIS.md). Babu wani abu da ya canza a kan wannan kumburi.",
+    "bundle_not_in_force": "Wannan kumburi har yanzu ba ya gudana a kan fakitin da yake ɗauke da shi ba, don haka ba ya bayar da ko ɗaya."
   },
   "trust_running": "Ana Gudanawa...",
   "trust_verify_desc": "Tabbatar da asalin app",
@@ -5576,6 +5595,7 @@
     "too_large_for_whole_read": "Wannan fayil ya girma sosai don a karanta shi gaba ɗaya. Dole ne a yi streaming nasa.",
     "withdraw_failed": "Ba a iya janye fayil ba. Sake gwadawa.",
     "withdrawn": "Marubucinsa ya janye wannan fayil. Ba a ƙara bayar da bytes a ko'ina ba.",
+    "awaiting_key": "Bytes nasa suna nan, amma maɓallin wannan na'urar dominsu bai isa ba tukuna. Yana biye da kansa; sake gwadawa nan da ƴan lokaci.",
     "not_a_member": "Ba ku cikin mambobin wannan ɗakin ba."
   },
   "notes": {
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Wata daga cikin na'urorinku tana amsawa a madadinku a cikin wannan musanya.",
       "handled_here": "Wannan na'ura tana amsawa a madadinku a cikin wannan musanya."
     }
+  },
+  "final_genesis": {
+    "already_planned": "Biki na riga an shirya shi a kan wannan kumburi; aika \"replace\": true domin a watsar da shi",
+    "bad_request": "test_holder_seed_b64 dole ne ya kasance base64 na bytes 32 daidai",
+    "clock_not_synchronized": "Agogon wannan na'urar bai daidaita da NTP ba; ana ɗora tambarin lokaci ga kowane lokaci a cikin genesis daga wannan agogon, kuma mai karɓa yana ƙin duk wanda ya zarce sakanni 300 gaba da lokacinsa.",
+    "clock_unverified": "Wannan sabar ba ta iya karanta yanayin daidaiton agogon na'urar mai-masauki ba; tabbatar agogon ya daidaita sannan ka aika \"clock_checked\": true",
+    "no_hardware_signer": "Sa hannu yana buƙatar fasalin `pkcs11` (YubiKey na mai riƙe + na'urar sa hannu ta ML-DSA ta USB)",
+    "no_serve_nodes": "Genesis yana zaunar da aƙalla kumburi ɗaya na canonical",
+    "not_planned": "Babu biki da aka shirya a kan wannan kumburi — fara POST /v1/accord/final-genesis/plan",
+    "not_testing_mode": "Ana karɓar iri na mai riƙe na software kawai idan CIRIS_TESTING_MODE=true (gwajin bushe)",
+    "not_a_holder": "Wannan maɓallin ba na mai riƙe da yarjejeniya da aka zaunar da shi ba ne.",
+    "nothing_to_sign": "Wannan mai riƙe ba ya bin bashin wani abu mai sa-hannu yanzu. Ko dai an sa hannu a kan duk abin da yake bin bashi, ko kuma zagayen gaba yana jiran wani mai riƙe ya sa hannu kan charter.",
+    "recovery_key_is_a_holder": "Wannan maɓallin maɓallin sa-hannu na mai riƙe da aka zaunar da shi ne. Maɓallin dawowa dole ne ya kasance na ajiya.",
+    "recovery_key_mismatch": "Alamar shiga da ta buɗe ba ta ɗauke da maɓallin da bikin yarjejeniya ya rubuta domin wannan ajiya ba. Tabbatar cewa YubiKey da USB daidai ne.",
+    "recovery_key_shared": "An rigaya an rubuta wannan ajiyar a matsayin maɓallin dawowa na wani mai riƙe daban.",
+    "recovery_key_wrong_holder": "Wannan madadin ba maɓallin dawowa na wannan mai riƙe ba ne. Kowane mai riƙe yana dawowa da madadin nasa na musamman.",
+    "serve_node_no_dial_hint": "Wannan kumburin canonical ba shi da alamar hanyar sadarwa. Aika adireshinsa (host:4242) tare da maɓallinsa; kumburin canonical da genesis ta zaunar ba tare da shi ba, babu sabon kumburin da zai iya gano shi.",
+    "serve_node_no_pqc": "Rikodin wannan kumburi ba ya ɗauke da maɓallin ML-DSA-65 ba. Kumburin genesis yana buƙatar sassan biyu.",
+    "serve_node_unknown": "Wannan kumburi ba shi da rikodin maɓalli a nan. Aika cikakken rikodinsa maimakon id ɗinsa.",
+    "sign_failed": "Sa hannu ya kasa a tsakiyar hanya. Abin da aka riga aka sa hannu a kai yana nan; sake sa hannu domin kammala sauran.",
+    "signer_unavailable": "Ba a iya buɗe na'urar sa-hannun mai riƙe (YubiKey da USB) ba.",
+    "store_failed": "Wannan kumburi bai iya rubuta yanayin bikin ba.",
+    "store_unavailable": "Wannan kumburi bai iya isa ga ma'ajiyar maɓallansa ba."
   }
 }

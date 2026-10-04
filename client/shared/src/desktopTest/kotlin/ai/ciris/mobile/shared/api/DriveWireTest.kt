@@ -232,4 +232,39 @@ class DriveWireTest {
             node.server.stop(0)
         }
     }
+
+    /**
+     * ciris-server 0.5.220 (persist v53 #969): a file whose bytes arrived before
+     * this device's per-epoch key. The listing row says `bytes: "awaiting_key"`;
+     * the byte read and the custody route answer `409` with the drive's
+     * refusal body (`src/drive.rs::refuse_state`, @ e357f6bf). The client must
+     * carry the id through, not just the status — 409 is also `not_fetched`.
+     */
+    @Test
+    fun aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409() {
+        val refusalBody = """{"error":"drive.awaiting_key","reason_id":"drive.awaiting_key","detail":"the bytes are here, but this device's key for them has not arrived yet — it follows on its own; ask again shortly"}"""
+        val node = Recorder(
+            mapOf(
+                "/v1/drive" to (200 to """{"rooms":[{"cohort":"self","room":"me"}],"entries":[{"cohort":"self","room_id":"me","attestation_id":"att-k","author_key_id":"me","asserted_at":"2026-10-03T00:00:00Z","filename":"k.pdf","media_type":"application/pdf","bytes":"awaiting_key","detail":"the bytes are here, but this device's key for them has not arrived yet — it follows on its own; ask again shortly","withdrawn":false,"custody":null}]}"""),
+                "/v1/files/att-k" to (409 to refusalBody),
+                "/v1/files/att-k/custody" to (409 to refusalBody),
+            ),
+            404 to "",
+        )
+        try {
+            val drive = ClientDrive(CIRISApiClient(node.url)) { node.url }
+            runBlocking {
+                val row = drive.readDrive(cohort = "self").entries.single()
+                assertEquals(ai.ciris.mobile.shared.models.drive.ByteState.AWAITING_KEY, row.byteState)
+                val read = assertFailsWith<NodeRefusal> { drive.readFile("att-k", "self", null) }
+                assertEquals(409, read.statusCode)
+                assertEquals("drive.awaiting_key", read.reasonId)
+                val custody = assertFailsWith<NodeRefusal> { drive.readCustody("att-k", "self", null) }
+                assertEquals(409, custody.statusCode)
+                assertEquals("drive.awaiting_key", custody.reasonId)
+            }
+        } finally {
+            node.server.stop(0)
+        }
+    }
 }

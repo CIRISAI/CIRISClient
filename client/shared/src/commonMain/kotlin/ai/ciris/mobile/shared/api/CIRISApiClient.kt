@@ -6010,6 +6010,32 @@ class CIRISApiClient(
     }
 
     /**
+     * `GET {nodeUrl}/v1/trust-root/bundle` — the genesis bundle this node runs
+     * on (ciris-server 0.5.220, CIRISServer#726). PUBLIC: no loopback gate, no
+     * session. A node without the route answers a bare 404 ([NodeRefusal]).
+     */
+    suspend fun getTrustRootBundle(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.TrustRootBundleDto {
+        val method = "getTrustRootBundle"
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$nodeUrl/v1/trust-root/bundle")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(
+                ai.ciris.mobile.shared.models.federation.TrustRootBundleDto.serializer(),
+                raw,
+            )
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
      * `POST {nodeUrl}/v1/trust-root/import` — install AND accept a portable seed.
      * [bundle] rides verbatim; [allegianceFrom] is the source node's read-API base
      * URL, optional (`trust_root_api.rs:207-212`).

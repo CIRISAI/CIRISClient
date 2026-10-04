@@ -19,7 +19,8 @@
       "refused": "The substrate refused this conferral. It is not admitted, and no authority was granted.",
       "sign_failed": "The accord holder's key did not produce a signature. Nothing was changed.",
       "unknown_duty": "That is not a duty this mesh recognises. Granting it would show as authority here and be refused at every gate."
-    }
+    },
+    "genesis_superseded": "the 2-of-3 propose/cosign re-mint is retired; the genesis is one ceremony signed by all three holders at /v1/accord/final-genesis (plan, sign, finish)"
   },
   "adapters": {
     "navigation": {
@@ -1582,6 +1583,8 @@
     "chat_empty_room": "No messages yet. What you send here is a signed attestation to everyone on this room's roster — its members can read it, and nobody else.",
     "chat_unopened_not_fetched": "This message hasn't reached this device yet.",
     "chat_unopened_not_granted": "This message was sealed before this device could read here, so it won't open on it.",
+    "chat_unopened_awaiting_key": "This message is here, but the key that opens it hasn't reached this device yet. It comes on its own.",
+    "chat_unopened_withdrawn": "Its author withdrew this message.",
     "chat_unopened_evicted": "This message's content is no longer held on this device.",
     "chat_unopened_seal_mismatch": "This message's seal doesn't match, so it was not opened.",
     "chat_unopened_malformed_row": "This message couldn't be read: the row is malformed.",
@@ -3220,6 +3223,14 @@
     "trust_root_accepted_no": "No: known to this node, not trusted",
     "trust_root_accepted_yes": "Yes: this node's acceptance reaches it",
     "trust_root_banner_label": "The node says",
+    "trust_root_bundle_title": "The seed this node runs on",
+    "trust_root_bundle_not_in_force": "This node isn't running on its seed yet, so it has no seed to show for comparison.",
+    "trust_root_bundle_fingerprint_label": "Fingerprint",
+    "trust_root_bundle_charter_root_label": "Charter root",
+    "trust_root_state_not_adopted_held": "Newer root not adopted: the previous root stays in force ({leg} leg)",
+    "trust_root_state_not_adopted": "Root not adopted: this binary's root was refused and no earlier root is held ({leg} leg)",
+    "trust_root_import_not_yet_accepted": "Imported, not yet accepted",
+    "trust_root_import_not_yet_accepted_why": "The root's records are on this node, but this node does not trust it yet. Either it does not hold the root's genesis records yet, and the acceptance is tried again at the next start or import, or its acceptance could not be written.",
     "trust_root_bounded_label": "Holds until",
     "trust_root_bounded_none": "Nothing in it expires on time alone",
     "trust_root_confirm_fact_signs": "Who signs",
@@ -3282,6 +3293,8 @@
     "trust_root_refused_no_root": "No root was named.",
     "trust_root_refused_other": "The node refused ({id}).",
     "trust_root_refused_withdraw_failed": "The node could not withdraw its acceptance.",
+    "trust_root_refused_bundle_unlabelled": "This seed is from before the final genesis. Nothing was installed.",
+    "trust_root_refused_bundle_unlabelled_body": "Its trust records carry no labels saying what each one is for — they were minted before records were labelled. This node would install it as no charter at all, so it refused it. Import a version 3 seed from the final genesis instead.",
     "trust_root_roots_title": "Roots this node knows",
     "trust_root_state_divergent": "Altered: the {leg} leg is present and wrong",
     "trust_root_state_entrenched": "Rooted: every check that needs a root can pass",
@@ -3462,6 +3475,10 @@
     "files_bytes_not_granted": "This device can't open it",
     "files_bytes_unreadable": "Opened, but not readable text",
     "files_bytes_unopened": "Can't be opened here",
+    "files_bytes_awaiting_key": "Waiting for this file's key",
+    "files_awaiting_key_body": "Its bytes are on this device, but the key that opens them hasn't arrived yet. It comes on its own; nothing is wrong.",
+    "files_awaiting_key_check_again": "Check again",
+    "files_custody_awaiting_key": "This file's key hasn't reached this device yet, so it can't say where the file is. It comes on its own; check again shortly.",
     "files_room": "Room {room}",
     "files_choose_room": "Add it to which room?",
     "files_uploading": "Adding {name}…",
@@ -5444,7 +5461,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Play Integrity validates app authenticity",
   "trust_root": {
-    "no_root": "which root? the path must name the root_key_id to un-trust"
+    "no_root": "which root? the path must name the root_key_id to un-trust",
+    "bundle_unlabelled": "this bundle was minted before the trust-root rows carried their job labels (trust:charter:v1); on this node it would install as no charter at all. Import a bundle from the final genesis (FSD/FINAL_GENESIS.md) instead. Nothing on this node changed.",
+    "bundle_not_in_force": "This node isn't running on the bundle it carries yet, so it serves none."
   },
   "trust_running": "Running",
   "trust_verify_desc": "Verification status and details",
@@ -5594,7 +5613,8 @@
     "seal_mismatch": "The bytes didn't open under this file's record. The record and the bytes disagree.",
     "too_large_for_whole_read": "This file is too large to read in one piece. It has to be streamed.",
     "withdraw_failed": "The file couldn't be withdrawn. Try again.",
-    "withdrawn": "Its author withdrew this file. The bytes are no longer served anywhere."
+    "withdrawn": "Its author withdrew this file. The bytes are no longer served anywhere.",
+    "awaiting_key": "Its bytes are here, but this device's key for them hasn't arrived yet. It follows on its own; try again shortly."
   },
   "notes": {
     "author_signer_unavailable": "This node can't sign as you right now, so the note wasn't written.",
@@ -5817,5 +5837,28 @@
     "outcome_rejected": "Declined",
     "outcome_deferred": "Deferred",
     "outcome_expired": "Expired"
+  },
+  "final_genesis": {
+    "already_planned": "a ceremony is already planned on this node; pass \"replace\": true to discard it",
+    "bad_request": "test_holder_seed_b64 must be base64 of exactly 32 bytes",
+    "clock_not_synchronized": "this host's clock is not NTP-synchronized; every instant in the genesis is stamped from it, and a receiver refuses one more than 300 s in its future",
+    "clock_unverified": "this server cannot read the host's clock-sync state; confirm the clock is synchronized and pass \"clock_checked\": true",
+    "no_hardware_signer": "signing needs the `pkcs11` feature (the holder's YubiKey + USB ML-DSA signer)",
+    "no_serve_nodes": "a genesis seats at least one canonical",
+    "not_planned": "no ceremony is planned on this node — POST /v1/accord/final-genesis/plan first",
+    "not_testing_mode": "a software holder seed is accepted only with CIRIS_TESTING_MODE=true (the dry run)",
+    "not_a_holder": "That key isn't a seated accord holder.",
+    "nothing_to_sign": "This holder owes nothing signable right now. Either everything it owes is signed, or the next round waits on another holder signing the charter.",
+    "recovery_key_is_a_holder": "That key is a seated holder's signing key. A recovery key must be a spare.",
+    "recovery_key_mismatch": "The token that opened doesn't hold the key the accord ceremony recorded for this spare. Check it's the right YubiKey and USB.",
+    "recovery_key_shared": "That spare is already recorded as another holder's recovery key.",
+    "recovery_key_wrong_holder": "That spare isn't this holder's recovery key. Each holder recovers with its own paired spare.",
+    "serve_node_no_dial_hint": "That canonical node carries no transport hint. Pass its address (host:4242) with its key; a canonical node the genesis seats without one is one no new node can find.",
+    "serve_node_no_pqc": "That node's record carries no ML-DSA-65 key. A genesis node needs both halves.",
+    "serve_node_unknown": "That node has no key record here. Pass its full record instead of its id.",
+    "sign_failed": "Signing failed partway. What was already signed is kept; sign again to finish the rest.",
+    "signer_unavailable": "The holder's signer (YubiKey and USB) couldn't be opened.",
+    "store_failed": "This node couldn't write the ceremony's state.",
+    "store_unavailable": "This node couldn't reach its key store."
   }
 }

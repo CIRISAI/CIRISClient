@@ -19,7 +19,8 @@
       "refused": "Le substrat a refusé cette attribution. Elle n'est pas admise et aucune autorité n'a été accordée.",
       "sign_failed": "La clé du détenteur d'accord n'a produit aucune signature. Rien n'a été modifié.",
       "unknown_duty": "Ce n'est pas un devoir reconnu par ce maillage. L'accorder apparaîtrait ici comme une autorité, mais serait refusé à chaque porte."
-    }
+    },
+    "genesis_superseded": "la ré-émission par proposition/cosignature à 2 sur 3 est retirée ; la genèse est une cérémonie unique signée par les trois détenteurs à /v1/accord/final-genesis (plan, sign, finish)"
   },
   "adapters": {
     "navigation": {
@@ -3146,6 +3147,14 @@
     "trust_root_accepted_no": "Non : connue de ce nœud, non approuvée",
     "trust_root_accepted_yes": "Oui : l'acceptation de ce nœud l'atteint",
     "trust_root_banner_label": "Le nœud indique",
+    "trust_root_bundle_title": "La graine sur laquelle ce nœud fonctionne",
+    "trust_root_bundle_not_in_force": "Ce nœud n'est pas encore en cours d'exécution sur sa graine ; il n'a donc aucune graine à présenter pour comparaison.",
+    "trust_root_bundle_fingerprint_label": "Empreinte",
+    "trust_root_bundle_charter_root_label": "Racine de la charte",
+    "trust_root_state_not_adopted_held": "Racine plus récente non adoptée : la racine précédente reste en vigueur ({leg} leg)",
+    "trust_root_state_not_adopted": "Racine non adoptée : la racine de ce binaire a été refusée et aucune racine antérieure n'est détenue ({leg} leg)",
+    "trust_root_import_not_yet_accepted": "Importée, pas encore acceptée",
+    "trust_root_import_not_yet_accepted_why": "Les enregistrements de la racine sont présents sur ce nœud, mais ce nœud ne lui fait pas encore confiance. Soit il ne détient pas encore les enregistrements de genèse de la racine, et l'acceptation est retentée au prochain démarrage ou import, soit son acceptation n'a pas pu être inscrite.",
     "trust_root_bounded_label": "Valable jusqu'à",
     "trust_root_bounded_none": "Rien n'y expire uniquement en raison du temps",
     "trust_root_confirm_fact_signs": "Qui signe",
@@ -3208,6 +3217,8 @@
     "trust_root_refused_no_root": "Aucune racine n'a été nommée.",
     "trust_root_refused_other": "Le nœud a refusé ({id}).",
     "trust_root_refused_withdraw_failed": "Le nœud n'a pas pu retirer son acceptation.",
+    "trust_root_refused_bundle_unlabelled": "Cette graine date d'avant la genèse finale. Rien n'a été installé.",
+    "trust_root_refused_bundle_unlabelled_body": "Ses enregistrements de confiance ne portent aucune étiquette indiquant leur usage — ils ont été émis avant que les enregistrements ne soient étiquetés. Ce nœud l'installerait comme une absence totale de charte, il l'a donc refusé. Importez plutôt une graine en version 3 issue de la genèse finale.",
     "trust_root_roots_title": "Racines connues de ce nœud",
     "trust_root_state_divergent": "Altéré : le volet {leg} est présent et incorrect",
     "trust_root_state_entrenched": "Enraciné : chaque vérification nécessitant une racine peut réussir",
@@ -3367,6 +3378,10 @@
     "files_bytes_not_granted": "Cet appareil ne peut pas l'ouvrir",
     "files_bytes_unreadable": "Ouvert, mais texte illisible",
     "files_bytes_unopened": "Ne peut pas être ouvert ici",
+    "files_bytes_awaiting_key": "En attente de la clé de ce fichier",
+    "files_awaiting_key_body": "Ses octets sont présents sur cet appareil, mais la clé qui permet de les ouvrir n'est pas encore arrivée. Elle arrive automatiquement ; rien n'est anormal.",
+    "files_awaiting_key_check_again": "Vérifier à nouveau",
+    "files_custody_awaiting_key": "La clé de ce fichier n'a pas encore atteint cet appareil, cet appareil ne peut donc pas indiquer où se trouve le fichier. Elle arrive automatiquement ; vérifiez à nouveau dans quelques instants.",
     "files_room": "Salle {room}",
     "files_choose_room": "Dans quelle salle l'ajouter ?",
     "files_uploading": "Ajout de {name}…",
@@ -3461,6 +3476,8 @@
     "chat_empty_room": "Aucun message pour l'instant. Ce que vous envoyez ici est une attestation signée destinée à tous ceux qui figurent sur la liste de cette pièce — ses membres peuvent la lire, et personne d'autre.",
     "chat_unopened_not_fetched": "Ce message n'est pas encore parvenu à cet appareil.",
     "chat_unopened_not_granted": "Ce message a été scellé avant que cet appareil ne soit autorisé à lire ici ; il ne s'ouvrira donc pas sur cet appareil.",
+    "chat_unopened_awaiting_key": "Ce message est bien présent, mais la clé qui permet de l'ouvrir n'a pas encore atteint cet appareil. Elle arrive automatiquement.",
+    "chat_unopened_withdrawn": "Son auteur a retiré ce message.",
     "chat_unopened_evicted": "Le contenu de ce message n'est plus conservé sur cet appareil.",
     "chat_unopened_seal_mismatch": "Le sceau de ce message ne correspond pas, il n'a donc pas été ouvert.",
     "chat_unopened_malformed_row": "Ce message n'a pas pu être lu : la ligne est mal formée.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Intégrité Play",
   "trust_play_validates": "Google Play valide l'authenticité de l'application",
   "trust_root": {
-    "no_root": "quelle racine ? le chemin doit nommer le root_key_id dont la confiance doit être révoquée"
+    "no_root": "quelle racine ? le chemin doit nommer le root_key_id dont la confiance doit être révoquée",
+    "bundle_unlabelled": "ce paquet a été émis avant que les lignes de racine de confiance ne portent leurs étiquettes de fonction (trust:charter:v1) ; sur ce nœud, il s'installerait comme une absence totale de charte. Importez plutôt un paquet issu de la genèse finale (FSD/FINAL_GENESIS.md). Rien n'a changé sur ce nœud.",
+    "bundle_not_in_force": "Ce nœud n'est pas encore en cours d'exécution sur le paquet qu'il porte ; il n'en sert donc aucun."
   },
   "trust_running": "Exécution en cours...",
   "trust_verify_desc": "Vérifier l'intégrité et l'authenticité de votre agent",
@@ -5576,7 +5595,8 @@
     "seal_mismatch": "Les octets ne se sont pas ouverts sous l'enregistrement de ce fichier. L'enregistrement et les octets sont en désaccord.",
     "too_large_for_whole_read": "Ce fichier est trop volumineux pour être lu en une seule fois. Il doit être diffusé en flux continu.",
     "withdraw_failed": "Le fichier n'a pas pu être retiré. Réessayez.",
-    "withdrawn": "Son auteur a retiré ce fichier. Les octets ne sont plus servis nulle part."
+    "withdrawn": "Son auteur a retiré ce fichier. Les octets ne sont plus servis nulle part.",
+    "awaiting_key": "Ses octets sont déjà présents, mais la clé de cet appareil pour eux n'est pas encore arrivée. Elle arrive automatiquement ; réessayez dans quelques instants."
   },
   "notes": {
     "author_signer_unavailable": "Ce nœud ne peut pas signer en votre nom pour le moment, la note n'a donc pas été écrite.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Un autre de vos appareils répond à votre place dans cet échange.",
       "handled_here": "Cet appareil répond à votre place dans cet échange."
     }
+  },
+  "final_genesis": {
+    "already_planned": "une cérémonie est déjà planifiée sur ce nœud ; transmettez \"replace\": true pour la supprimer",
+    "bad_request": "test_holder_seed_b64 doit être du base64 représentant exactement 32 octets",
+    "clock_not_synchronized": "l'horloge de cet hôte n'est pas synchronisée par NTP ; chaque instant de la genèse en est horodaté, et un destinataire refuse tout horodatage de plus de 300 s dans son futur",
+    "clock_unverified": "ce serveur ne peut pas lire l'état de synchronisation de l'horloge de l'hôte ; confirmez que l'horloge est synchronisée et transmettez \"clock_checked\": true",
+    "no_hardware_signer": "la signature nécessite la fonctionnalité `pkcs11` (la YubiKey du détenteur + le signataire ML-DSA sur USB)",
+    "no_serve_nodes": "une genèse établit au moins un nœud canonique",
+    "not_planned": "aucune cérémonie n'est planifiée sur ce nœud — envoyez d'abord un POST sur /v1/accord/final-genesis/plan",
+    "not_testing_mode": "une graine logicielle de détenteur n'est acceptée qu'avec CIRIS_TESTING_MODE=true (l'essai à blanc)",
+    "not_a_holder": "Cette clé n'est pas celle d'un détenteur de l'accord en exercice.",
+    "nothing_to_sign": "Ce détenteur ne doit rien de signable pour le moment. Soit tout ce qu'il devait est déjà signé, soit le prochain tour attend qu'un autre détenteur signe la charte.",
+    "recovery_key_is_a_holder": "Cette clé est la clé de signature d'un détenteur en exercice. Une clé de récupération doit être une clé de secours.",
+    "recovery_key_mismatch": "Le jeton qui s'est ouvert ne contient pas la clé que la cérémonie de l'accord a enregistrée pour cette clé de secours. Vérifiez qu'il s'agit de la bonne YubiKey et du bon USB.",
+    "recovery_key_shared": "Cette clé de secours est déjà enregistrée comme clé de récupération d'un autre détenteur.",
+    "recovery_key_wrong_holder": "Cette clé de secours n'est pas la clé de récupération de ce détenteur. Chaque détenteur récupère avec sa propre clé de secours appairée.",
+    "serve_node_no_dial_hint": "Ce nœud canonique ne porte aucun indice de transport. Transmettez son adresse (host:4242) avec sa clé ; un nœud canonique que la genèse installe sans indice de transport est un nœud qu'aucun nouveau nœud ne peut trouver.",
+    "serve_node_no_pqc": "L'enregistrement de ce nœud ne comporte aucune clé ML-DSA-65. Un nœud de genèse a besoin des deux moitiés.",
+    "serve_node_unknown": "Ce nœud n'a aucun enregistrement de clé ici. Transmettez son enregistrement complet plutôt que son identifiant.",
+    "sign_failed": "La signature a échoué en cours de route. Ce qui était déjà signé est conservé ; signez à nouveau pour terminer le reste.",
+    "signer_unavailable": "Le signataire du détenteur (YubiKey et USB) n'a pas pu être ouvert.",
+    "store_failed": "Ce nœud n'a pas pu écrire l'état de la cérémonie.",
+    "store_unavailable": "Ce nœud n'a pas pu joindre son magasin de clés."
   }
 }

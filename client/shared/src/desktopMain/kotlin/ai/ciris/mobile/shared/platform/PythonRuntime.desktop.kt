@@ -492,6 +492,15 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
             "--key-id", "ciris-client",
         )
             .redirectErrorStream(true)  // Merge stderr into stdout
+            .also { pb ->
+                // A node this app starts on a desktop is a LAPTOP, not a server:
+                // from ciris-server 0.5.220 (persist v53) a person's self and
+                // family content replicates by `device_class`, and a node that
+                // falls through to `server` stops receiving their notes and
+                // files. The server's own desktop launcher sets the same value.
+                pb.environment()["CIRIS_DEVICE_CLASS"] =
+                    NodeDeviceClass.forDesktopSpawn(pb.environment()["CIRIS_DEVICE_CLASS"])
+            }
             .start()
         println("[PythonRuntime.desktop] Started ciris-server (PID: ${_serverProcess?.pid()})")
         startStdoutReader()
@@ -765,3 +774,21 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 }
 
 actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
+
+/**
+ * The `device_class` this app gives a node it starts on a desktop. ciris-server
+ * 0.5.220 resolves a node's class as: `CIRIS_DEVICE_CLASS` if valid, else
+ * `phone` on an Android/iOS build, else `server` — and replication of a
+ * person's self and family content skips server-class nodes. So an UNSET
+ * class becomes `laptop`; a value the user set is passed through untouched.
+ * The server alone decides what is valid: a second, committed copy of its
+ * class list here would drift the day the server's changes (Codex, #153).
+ */
+internal object NodeDeviceClass {
+    const val DESKTOP = "laptop"
+
+    // Normalized (trimmed, lowercased) but not validated: the server reads the
+    // canonical spelling only and falls back to `server` on anything else.
+    fun forDesktopSpawn(current: String?): String =
+        current?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: DESKTOP
+}

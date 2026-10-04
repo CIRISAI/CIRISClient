@@ -19,7 +19,8 @@
       "refused": "기반 계층이 이 권한 부여를 거부했습니다. 승인되지 않았으며 어떤 권한도 부여되지 않았습니다.",
       "sign_failed": "어코드 보유자의 키가 서명을 생성하지 못했습니다. 변경된 것은 없습니다.",
       "unknown_duty": "이 메시가 인식하는 의무가 아닙니다. 이를 부여하면 여기서는 권한처럼 보이지만 모든 관문에서 거부됩니다."
-    }
+    },
+    "genesis_superseded": "2-of-3 제안/공동서명 재발행 방식은 폐지되었으며, 제네시스는 /v1/accord/final-genesis에서 세 홀더 전원이 서명하는 단 하나의 의식입니다(계획, 서명, 완료)."
   },
   "adapters": {
     "navigation": {
@@ -2424,6 +2425,8 @@
     "provision_holder_err_owner": "먼저 이 노드의 소유자로 로그인한 다음 프로비저닝하십시오.",
     "provision_holder_err_loopback": "프로비저닝은 노드 자체 호스트에서만 실행할 수 있습니다(localhost 전용).",
     "provision_holder_err_other": "프로비저닝 실패: {detail}",
+    "trust_root_import_not_yet_accepted": "가져왔지만 아직 수용되지 않음",
+    "trust_root_import_not_yet_accepted_why": "루트의 기록은 이 노드에 있지만, 이 노드는 아직 이를 신뢰하지 않습니다. 이 노드가 루트의 제네시스 기록을 아직 보유하지 않아 다음 시작 또는 가져오기 시 수용이 다시 시도되거나, 수용이 기록되지 못한 것입니다.",
     "yubikey_probe_failed": "YUBIKEY 상태를 읽을 수 없음",
     "yubikey_probe_not_on_this_node": "이 노드는 YUBIKEY 상태를 보고하지 않음",
     "yubikey_probe_reason": "이유: {detail}",
@@ -3214,6 +3217,12 @@
     "trust_root_accepted_no": "아니오: 이 노드에 알려져 있지만 신뢰되지 않음",
     "trust_root_accepted_yes": "예: 이 노드의 수용이 이에 도달함",
     "trust_root_banner_label": "노드가 알려온 내용",
+    "trust_root_bundle_title": "이 노드가 기반으로 실행되는 시드",
+    "trust_root_bundle_not_in_force": "이 노드는 아직 자신의 시드로 실행되고 있지 않아, 비교를 위해 보여줄 시드가 없습니다.",
+    "trust_root_bundle_fingerprint_label": "지문",
+    "trust_root_bundle_charter_root_label": "헌장 루트",
+    "trust_root_state_not_adopted_held": "새 루트가 채택되지 않음: 이전 루트가 계속 유효합니다 ({leg} 레그)",
+    "trust_root_state_not_adopted": "루트가 채택되지 않음: 이 바이너리의 루트가 거부되었고 이전 루트도 없습니다 ({leg} 레그)",
     "trust_root_bounded_none": "그 안의 어떤 것도 시간만으로는 만료되지 않습니다",
     "trust_root_confirm_fact_signs": "누가 서명하는가",
     "trust_root_confirm_fact_what": "무엇이 변경되는가",
@@ -3275,6 +3284,8 @@
     "trust_root_refused_no_root": "루트가 명명되지 않았습니다.",
     "trust_root_refused_other": "노드가 거부했습니다({id}).",
     "trust_root_refused_withdraw_failed": "노드가 자신의 수용을 철회할 수 없었습니다.",
+    "trust_root_refused_bundle_unlabelled": "이 시드는 최종 제네시스 이전의 것입니다. 설치된 것은 없습니다.",
+    "trust_root_refused_bundle_unlabelled_body": "이 신뢰 기록에는 각 항목의 용도를 나타내는 레이블이 없습니다 — 기록에 레이블이 붙기 전에 발행되었기 때문입니다. 이 노드가 이를 설치하면 헌장이 전혀 없는 것으로 처리되므로, 설치를 거부했습니다. 대신 최종 제네시스에서 버전 3 시드를 가져오세요.",
     "trust_root_roots_title": "이 노드가 알고 있는 루트",
     "trust_root_state_divergent": "변조됨: {leg} 레그가 존재하지만 잘못되었습니다",
     "trust_root_state_entrenched": "뿌리내림: 루트가 필요한 모든 확인이 통과할 수 있습니다",
@@ -3434,6 +3445,10 @@
     "files_bytes_not_granted": "이 기기에서는 열 수 없음",
     "files_bytes_unreadable": "열렸지만 읽을 수 있는 텍스트가 아닙니다",
     "files_bytes_unopened": "여기서 열 수 없음",
+    "files_bytes_awaiting_key": "이 파일의 키를 기다리는 중",
+    "files_awaiting_key_body": "이 파일의 바이트는 이 기기에 있지만, 이를 여는 키가 아직 도착하지 않았습니다. 키는 스스로 도착하니, 문제가 있는 것은 아닙니다.",
+    "files_awaiting_key_check_again": "다시 확인",
+    "files_custody_awaiting_key": "이 파일의 키가 아직 이 기기에 도착하지 않아, 파일이 어디에 있는지 알 수 없습니다. 키는 스스로 도착하니, 잠시 후 다시 확인하세요.",
     "files_room": "{room} 방",
     "files_choose_room": "어느 방에 추가할까요?",
     "files_uploading": "{name} 추가 중…",
@@ -3550,6 +3565,8 @@
     "chat_empty_room": "아직 메시지가 없습니다. 여기서 보내는 것은 이 방의 명부에 있는 모든 사람에게 보내는 서명된 증명입니다 — 방의 구성원만 읽을 수 있으며, 그 외에는 아무도 읽을 수 없습니다.",
     "chat_unopened_not_fetched": "이 메시지는 아직 이 기기에 도착하지 않았습니다.",
     "chat_unopened_not_granted": "이 메시지는 이 기기가 여기서 읽을 수 있게 되기 전에 봉인되었으므로, 이 기기에서는 열리지 않습니다.",
+    "chat_unopened_awaiting_key": "이 메시지는 여기 있지만, 이를 여는 키가 아직 이 기기에 도착하지 않았습니다. 키는 스스로 도착합니다.",
+    "chat_unopened_withdrawn": "작성자가 이 메시지를 철회했습니다.",
     "chat_unopened_evicted": "이 메시지의 내용은 더 이상 이 기기에 보관되어 있지 않습니다.",
     "chat_unopened_seal_mismatch": "이 메시지의 봉인이 일치하지 않아 열리지 않았습니다.",
     "chat_unopened_malformed_row": "이 메시지를 읽을 수 없습니다: 행 형식이 잘못되었습니다.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Play Integrity가 앱 진위 여부를 검증합니다",
   "trust_root": {
-    "no_root": "어떤 루트인가요? 신뢰를 해제할 root_key_id를 경로에 지정해야 합니다"
+    "no_root": "어떤 루트인가요? 신뢰를 해제할 root_key_id를 경로에 지정해야 합니다",
+    "bundle_unlabelled": "이 번들은 신뢰 루트 행에 작업 레이블(trust:charter:v1)이 붙기 전에 발행되었습니다; 이 노드에서는 헌장이 전혀 없는 것으로 설치됩니다. 대신 최종 제네시스(FSD/FINAL_GENESIS.md)에서 번들을 가져오세요. 이 노드에서는 아무것도 바뀌지 않았습니다.",
+    "bundle_not_in_force": "이 노드는 아직 자신이 보유한 번들로 실행되고 있지 않아, 어떤 번들도 제공하지 않습니다."
   },
   "trust_running": "실행 중",
   "trust_verify_desc": "검증 상태 및 세부정보",
@@ -5563,6 +5582,7 @@
     "too_large_for_whole_read": "이 파일은 한 번에 읽기에는 너무 큽니다. 스트리밍으로 읽어야 합니다.",
     "withdraw_failed": "파일을 철회할 수 없었습니다. 다시 시도하세요.",
     "withdrawn": "작성자가 이 파일을 철회했습니다. 바이트는 더 이상 어디에서도 제공되지 않습니다.",
+    "awaiting_key": "이 파일의 바이트는 이 기기에 있지만, 이를 여는 이 기기의 키가 아직 도착하지 않았습니다. 키는 자동으로 도착하니 잠시 후 다시 시도하세요.",
     "store_unavailable": "이 노드가 파일 저장소에 접근하지 못했습니다.",
     "too_large": "그 파일은 여기에 추가하기에 너무 큽니다.",
     "unknown_cohort": "그곳은 파일을 둘 수 있는 위치가 아닙니다. 나만, 패밀리 또는 커뮤니티를 사용하세요.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "본인의 다른 기기가 이 교환에서 대신 응답하고 있습니다.",
       "handled_here": "이 기기가 이 교환에서 본인을 대신해 응답하고 있습니다."
     }
+  },
+  "final_genesis": {
+    "already_planned": "이 노드에는 이미 계획된 의식이 있습니다; 이를 폐기하려면 \"replace\": true를 전달하세요.",
+    "bad_request": "test_holder_seed_b64는 정확히 32바이트의 base64여야 합니다.",
+    "clock_not_synchronized": "이 호스트의 시계가 NTP와 동기화되어 있지 않습니다; 제네시스의 모든 시각은 이 시계에서 타임스탬프가 찍히며, 수신자는 자신의 현재보다 300초 넘게 앞선 시각은 거부합니다.",
+    "clock_unverified": "이 서버는 호스트의 시계 동기화 상태를 읽을 수 없습니다; 시계가 동기화되어 있음을 확인한 뒤 \"clock_checked\": true를 전달하세요.",
+    "no_hardware_signer": "서명에는 `pkcs11` 기능이 필요합니다(홀더의 YubiKey + USB ML-DSA 서명 장치).",
+    "no_serve_nodes": "제네시스는 최소 하나의 정규 서버를 자리에 앉힙니다",
+    "not_planned": "이 노드에는 계획된 의식이 없습니다 — 먼저 POST /v1/accord/final-genesis/plan을 호출하세요.",
+    "not_testing_mode": "소프트웨어 홀더 시드는 CIRIS_TESTING_MODE=true(드라이런)에서만 허용됩니다.",
+    "not_a_holder": "그 키는 등재된 어코드 홀더가 아닙니다.",
+    "nothing_to_sign": "이 홀더는 현재 서명할 것이 없습니다. 이미 이 홀더가 해야 할 서명이 모두 완료되었거나, 다음 라운드가 다른 홀더의 헌장 서명을 기다리고 있는 것입니다.",
+    "recovery_key_is_a_holder": "그 키는 등재된 홀더의 서명 키입니다. 복구 키는 예비 키여야 합니다.",
+    "recovery_key_mismatch": "열린 토큰에는 어코드 의식이 이 예비 키용으로 기록한 키가 들어 있지 않습니다. 올바른 YubiKey와 USB인지 확인하세요.",
+    "recovery_key_shared": "그 예비 키는 이미 다른 홀더의 복구 키로 기록되어 있습니다.",
+    "recovery_key_wrong_holder": "그 스페어는 이 홀더의 복구 키가 아닙니다. 각 홀더는 자신과 짝지어진 스페어로 복구합니다.",
+    "serve_node_no_dial_hint": "그 캐노니컬 노드에는 전송 힌트가 없습니다. 키와 함께 그 주소(host:4242)를 전달하세요; 제네시스가 전송 힌트 없이 자리 잡게 한 캐노니컬 노드는 어떤 새 노드도 찾을 수 없는 노드입니다.",
+    "serve_node_no_pqc": "그 노드의 기록에는 ML-DSA-65 키가 없습니다. 제네시스 노드에는 두 절반이 모두 필요합니다.",
+    "serve_node_unknown": "그 노드에는 이곳에 키 기록이 없습니다. id 대신 전체 기록을 전달하세요.",
+    "sign_failed": "서명이 중간에 실패했습니다. 이미 서명된 부분은 유지되며, 나머지를 완료하려면 다시 서명하세요.",
+    "signer_unavailable": "홀더의 서명기(YubiKey 및 USB)를 열 수 없습니다.",
+    "store_failed": "이 노드가 의식의 상태를 기록할 수 없었습니다.",
+    "store_unavailable": "이 노드가 키 저장소에 접근할 수 없었습니다."
   }
 }

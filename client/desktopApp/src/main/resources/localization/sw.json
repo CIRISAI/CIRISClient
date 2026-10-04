@@ -19,7 +19,8 @@
       "refused": "Msingi ulikataa utoaji huu. Haujakubaliwa, na hakuna mamlaka iliyotolewa.",
       "sign_failed": "Ufunguo wa mwenye makubaliano haukutoa saini. Hakuna kilichobadilishwa.",
       "unknown_duty": "Hilo si jukumu ambalo mtandao huu unalitambua. Kulitoa kungeonekana kama mamlaka hapa na kungekataliwa katika kila lango."
-    }
+    },
+    "genesis_superseded": "utaratibu wa 2-kati-ya-3 wa kupendekeza/kusaini-pamoja wa kutoa-tena umestaafishwa; mwanzo wa mwisho ni sherehe moja inayotiwa saini na washikilizi wote watatu wa accord katika /v1/accord/final-genesis (panga, tia saini, maliza)"
   },
   "adapters": {
     "navigation": {
@@ -2327,6 +2328,8 @@
     "provision_holder_err_owner": "Ingia kama mmiliki kwenye nodi hii kwanza, kisha uandae.",
     "provision_holder_err_loopback": "Uandaaji unapaswa kufanywa kwenye mwenyeji wa nodi yenyewe (localhost pekee).",
     "provision_holder_err_other": "Uandaaji umeshindikana: {detail}",
+    "trust_root_import_not_yet_accepted": "Imeingizwa, bado haijakubaliwa",
+    "trust_root_import_not_yet_accepted_why": "Rekodi za mzizi zipo kwenye nodi hii, lakini nodi hii bado haiuamini. Ama bado haina rekodi za mwanzo za mzizi huo, na kukubali kutajaribiwa tena itakapowashwa au kuingizwa tena, ama kukubali kwake hakukuweza kuandikwa.",
     "yubikey_probe_failed": "IMESHINDIKANA KUSOMA HALI YA YUBIKEY",
     "yubikey_probe_not_on_this_node": "Nodi hii haitoi taarifa ya hali ya YubiKey",
     "yubikey_probe_reason": "Sababu: {detail}",
@@ -3117,6 +3120,12 @@
     "trust_root_accepted_no": "Hapana: inajulikana na nodi hii, haiaminiwi",
     "trust_root_accepted_yes": "Ndiyo: kukubali kwa nodi hii kunaifikia",
     "trust_root_banner_label": "Nodi inasema",
+    "trust_root_bundle_title": "Mbegu ambayo nodi hii inaendeshwa nayo",
+    "trust_root_bundle_not_in_force": "Nodi hii bado haifanyi kazi kwenye mbegu yake, hivyo haina mbegu ya kuonyesha kwa ulinganisho.",
+    "trust_root_bundle_fingerprint_label": "Alama ya kidole",
+    "trust_root_bundle_charter_root_label": "Mzizi wa katiba",
+    "trust_root_state_not_adopted_held": "Mzizi mpya zaidi haujapokelewa: mzizi wa awali unabaki kutumika ({leg} leg)",
+    "trust_root_state_not_adopted": "Mzizi haujapokelewa: mzizi wa programu hii ulikataliwa na hakuna mzizi wa awali unaoshikiliwa (sehemu ya {leg})",
     "trust_root_bounded_label": "Inadumu hadi",
     "trust_root_bounded_none": "Hakuna chochote ndani yake kinachoisha muda kwa wakati pekee",
     "trust_root_confirm_fact_signs": "Nani anatia saini",
@@ -3178,6 +3187,8 @@
     "trust_root_refused_no_root": "Hakuna mzizi uliotajwa.",
     "trust_root_refused_other": "Nodi ilikataa ({id}).",
     "trust_root_refused_withdraw_failed": "Nodi haikuweza kujitoa kukubali kwake.",
+    "trust_root_refused_bundle_unlabelled": "Mbegu hii ni ya kabla ya mwanzo wa mwisho. Hakuna kilichosakinishwa.",
+    "trust_root_refused_bundle_unlabelled_body": "Rekodi zake za uaminifu hazibebi lebo zinazosema kila moja ni kwa ajili ya nini — zilitolewa kabla rekodi kuwekewa lebo. Nodi hii ingeisakinisha kama bila katiba kabisa, kwa hivyo ilikataa. Badala yake, leta mbegu ya toleo la 3 kutoka mwanzo wa mwisho.",
     "trust_root_roots_title": "Mizizi ambayo nodi hii inaijua",
     "trust_root_state_divergent": "Imebadilishwa: sehemu ya {leg} ipo lakini si sahihi",
     "trust_root_state_entrenched": "Imekita mizizi: kila ukaguzi unaohitaji mzizi unaweza kufaulu",
@@ -3337,6 +3348,10 @@
     "files_bytes_not_granted": "Kifaa hiki hakiwezi kulifungua",
     "files_bytes_unreadable": "Imefunguliwa, lakini si maandishi yanayosomeka",
     "files_bytes_unopened": "Haliwezi kufunguliwa hapa",
+    "files_bytes_awaiting_key": "Inasubiri ufunguo wa faili hii",
+    "files_awaiting_key_body": "Baiti zake zipo kwenye kifaa hiki, lakini ufunguo unaozifungua haujafika bado. Unakuja wenyewe; hakuna tatizo.",
+    "files_awaiting_key_check_again": "Angalia tena",
+    "files_custody_awaiting_key": "Ufunguo wa faili hii haujafika kwenye kifaa hiki bado, kwa hivyo haiwezi kusema faili iko wapi. Unakuja wenyewe; angalia tena baada ya muda mfupi.",
     "files_room": "Chumba {room}",
     "files_choose_room": "Ongeza kwenye chumba gani?",
     "files_uploading": "Inaongeza {name}…",
@@ -3431,6 +3446,8 @@
     "chat_empty_room": "Hakuna jumbe bado. Unachotuma hapa ni ushuhuda uliotiwa saini kwa kila mtu aliye kwenye orodha ya wanachama wa chumba hiki — wanachama wake wanaweza kuisoma, wala hakuna mtu mwingine.",
     "chat_unopened_not_fetched": "Jumbe hii haijafika kwenye kifaa hiki bado.",
     "chat_unopened_not_granted": "Jumbe hii ilifungwa kabla kifaa hiki kuweza kusoma hapa, hivyo haitafunguka kwenye kifaa hiki.",
+    "chat_unopened_awaiting_key": "Ujumbe huu upo hapa, lakini ufunguo unaoufungua haujafika kwenye kifaa hiki bado. Unakuja wenyewe.",
+    "chat_unopened_withdrawn": "Mwandishi wake aliuondoa ujumbe huu.",
     "chat_unopened_evicted": "Maudhui ya jumbe hii hayapo tena kwenye kifaa hiki.",
     "chat_unopened_seal_mismatch": "Muhuri wa jumbe hii haulingani, hivyo haikufunguliwa.",
     "chat_unopened_malformed_row": "Jumbe hii haikuweza kusomwa: safu hii si sahihi.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Uadilifu wa Mchezo",
   "trust_play_validates": "Play Integrity inathibitisha uhalali wa programu",
   "trust_root": {
-    "no_root": "mzizi upi? njia lazima itaje root_key_id ili kuondoa imani"
+    "no_root": "mzizi upi? njia lazima itaje root_key_id ili kuondoa imani",
+    "bundle_unlabelled": "kifurushi hiki kilitolewa kabla safu za trust-root kubeba lebo zao za kazi (trust:charter:v1); kwenye nodi hii kingesakinishwa kama bila katiba kabisa. Badala yake, leta kifurushi kutoka mwanzo wa mwisho (FSD/FINAL_GENESIS.md). Hakuna kilichobadilika kwenye nodi hii.",
+    "bundle_not_in_force": "Nodi hii bado haifanyi kazi kwenye kifurushi inachokibeba, hivyo haitoi chochote."
   },
   "trust_running": "Inafanya Kazi",
   "trust_verify_desc": "Thibitisha kuwa programu ni halali na haijaingiliwa",
@@ -5555,6 +5574,7 @@
     "too_large_for_whole_read": "Faili hii ni kubwa mno kusomwa kama kipande kimoja. Inahitaji kutiririshwa.",
     "withdraw_failed": "Faili haikuweza kuondolewa. Jaribu tena.",
     "withdrawn": "Mwandishi wake aliondoa faili hii. Baiti hazitolewi tena popote.",
+    "awaiting_key": "Baiti zake zipo hapa, lakini ufunguo wa kifaa hiki kwa ajili yao haujafika bado. Unafuata wenyewe; jaribu tena baada ya muda mfupi.",
     "family_id_required": "Faili la familia linahitaji kutaja familia yake. Hakuna familia chaguo-msingi.",
     "listing_failed": "Nodi hii haikuweza kuorodhesha faili katika chumba hicho.",
     "no_node_key": "Nodi hii haikuweza kupata ufunguo wake yenyewe.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Kifaa kingine chako kinajibu kwa niaba yako katika mazungumzo haya.",
       "handled_here": "Kifaa hiki kinajibu kwa niaba yako katika mazungumzo haya."
     }
+  },
+  "final_genesis": {
+    "already_planned": "sherehe imepangwa tayari kwenye nodi hii; tuma \"replace\": true ili kuifuta",
+    "bad_request": "test_holder_seed_b64 lazima iwe base64 ya baiti 32 hasa",
+    "clock_not_synchronized": "saa ya mwenyeji huyu haijasawazishwa kwa NTP; kila wakati katika mwanzo wa mwisho unatiwa muhuri kutoka kwayo, na mpokeaji hukataa wakati wowote ulio zaidi ya sekunde 300 mbele ya wakati wake ujao",
+    "clock_unverified": "seva hii haiwezi kusoma hali ya usawazishaji wa saa ya mwenyeji; thibitisha kuwa saa imesawazishwa kisha tuma \"clock_checked\": true",
+    "no_hardware_signer": "kutia saini kunahitaji kipengele cha `pkcs11` (YubiKey ya mshikilizi + kitia-saini cha ML-DSA cha USB)",
+    "no_serve_nodes": "mwanzo huweka angalau seva kuu moja",
+    "not_planned": "hakuna sherehe iliyopangwa kwenye nodi hii — tuma POST /v1/accord/final-genesis/plan kwanza",
+    "not_testing_mode": "mbegu ya mshikilizi wa programu inakubaliwa tu ikiwa CIRIS_TESTING_MODE=true (zoezi la majaribio)",
+    "not_a_holder": "Ufunguo huo si mshikilizi wa accord aliyewekwa.",
+    "nothing_to_sign": "Mshikilizi huyu hadai chochote kinachoweza kutiwa saini kwa sasa. Ama kila analodai limetiwa saini, au mzunguko unaofuata unasubiri mshikilizi mwingine kutia saini katiba.",
+    "recovery_key_is_a_holder": "Ufunguo huo ni ufunguo wa kutia saini wa mshikilizi aliyewekwa. Ufunguo wa kurejesha lazima uwe wa akiba.",
+    "recovery_key_mismatch": "Tokeni iliyofunguka haibebi ufunguo ambao sherehe ya accord ilirekodi kwa ajili ya akiba hii. Hakikisha ni YubiKey na USB sahihi.",
+    "recovery_key_shared": "Akiba hiyo tayari imerekodiwa kama ufunguo wa kurejesha wa mshikilizi mwingine.",
+    "recovery_key_wrong_holder": "Hiyo nakala ya akiba si ufunguo wa kurejesha wa mshikilizi huyu. Kila mshikilizi hurejesha kwa nakala yake ya akiba iliyooanishwa.",
+    "serve_node_no_dial_hint": "Nodi hiyo rasmi haibebi kidokezo cha usafirishaji. Tuma anwani yake (host:4242) pamoja na ufunguo wake; nodi rasmi ambayo mwanzo wa mwisho huiweka bila kidokezo hicho ni nodi ambayo hakuna nodi mpya inayoweza kuipata.",
+    "serve_node_no_pqc": "Rekodi ya nodi hiyo haibebi ufunguo wa ML-DSA-65. Nodi ya mwanzo wa mwisho inahitaji nusu zote mbili.",
+    "serve_node_unknown": "Nodi hiyo haina rekodi ya ufunguo hapa. Tuma rekodi yake kamili badala ya kitambulisho chake.",
+    "sign_failed": "Kutia saini kumeshindikana katikati. Kilichotiwa saini tayari kimehifadhiwa; tia saini tena ili kumaliza yaliyobaki.",
+    "signer_unavailable": "Kitia-saini cha mshikilizi (YubiKey na USB) hakikuweza kufunguliwa.",
+    "store_failed": "Nodi hii haikuweza kuandika hali ya sherehe.",
+    "store_unavailable": "Nodi hii haikuweza kufikia hifadhi yake ya funguo."
   }
 }

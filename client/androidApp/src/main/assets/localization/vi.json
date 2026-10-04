@@ -19,7 +19,8 @@
       "refused": "Nền tảng đã từ chối lần trao nhiệm vụ này. Nó không được thu nhận, và không có thẩm quyền nào được cấp.",
       "sign_failed": "Khóa của người giữ accord không tạo ra được chữ ký. Không có gì bị thay đổi.",
       "unknown_duty": "Đó không phải là nhiệm vụ mà mạng lưới này công nhận. Cấp nó sẽ hiển thị như một thẩm quyền ở đây nhưng sẽ bị từ chối tại mọi cổng."
-    }
+    },
+    "genesis_superseded": "việc phát hành lại theo kiểu đề xuất/đồng ký 2-trong-3 đã bị loại bỏ; khởi nguyên là một nghi thức duy nhất được cả ba người giữ ký tại /v1/accord/final-genesis (plan, sign, finish)"
   },
   "adapters": {
     "navigation": {
@@ -3091,6 +3092,14 @@
     "trust_root_accepted_no": "Không: được nút này biết đến, nhưng không được tin cậy",
     "trust_root_accepted_yes": "Có: sự chấp nhận của nút này đạt tới nó",
     "trust_root_banner_label": "Nút cho biết",
+    "trust_root_bundle_title": "Hạt giống mà nút này đang chạy trên đó",
+    "trust_root_bundle_not_in_force": "Nút này chưa chạy trên hạt giống của nó, nên nó không có hạt giống để đưa ra so sánh.",
+    "trust_root_bundle_fingerprint_label": "Vân tay",
+    "trust_root_bundle_charter_root_label": "Gốc điều lệ",
+    "trust_root_state_not_adopted_held": "Gốc mới hơn chưa được áp dụng: gốc trước đó vẫn còn hiệu lực ({leg} leg)",
+    "trust_root_state_not_adopted": "Gốc chưa được áp dụng: gốc của bản nhị phân này đã bị từ chối và không có gốc trước đó được giữ ({leg} leg)",
+    "trust_root_import_not_yet_accepted": "Đã nhập, chưa được chấp nhận",
+    "trust_root_import_not_yet_accepted_why": "Các bản ghi của gốc đã có trên nút này, nhưng nút này chưa tin cậy nó. Hoặc là nút chưa giữ các bản ghi khởi nguyên của gốc, và việc chấp nhận sẽ được thử lại vào lần khởi động hoặc nhập tiếp theo, hoặc là việc chấp nhận của nó không thể được ghi lại.",
     "trust_root_bounded_label": "Có hiệu lực đến",
     "trust_root_bounded_none": "Không có gì trong đó hết hạn chỉ vì thời gian",
     "trust_root_confirm_fact_signs": "Ai ký",
@@ -3153,6 +3162,8 @@
     "trust_root_refused_no_root": "Không có gốc nào được nêu tên.",
     "trust_root_refused_other": "Nút đã từ chối ({id}).",
     "trust_root_refused_withdraw_failed": "Nút không thể rút lại sự chấp nhận của nó.",
+    "trust_root_refused_bundle_unlabelled": "Hạt giống này có từ trước khởi nguyên cuối cùng. Không có gì được cài đặt.",
+    "trust_root_refused_bundle_unlabelled_body": "Các bản ghi tin cậy của nó không mang nhãn cho biết mỗi bản ghi dùng để làm gì — chúng được phát hành trước khi các bản ghi được gắn nhãn. Nút này sẽ cài đặt nó như thể không có điều lệ nào cả, nên nó đã từ chối. Hãy nhập một hạt giống phiên bản 3 từ khởi nguyên cuối cùng thay vào đó.",
     "trust_root_roots_title": "Các gốc mà nút này biết",
     "trust_root_state_divergent": "Đã bị thay đổi: nhánh {leg} có mặt nhưng sai",
     "trust_root_state_entrenched": "Đã đặt gốc: mọi kiểm tra cần đến gốc đều có thể đạt",
@@ -3312,6 +3323,10 @@
     "files_bytes_not_granted": "Thiết bị này không thể mở tệp này",
     "files_bytes_unreadable": "Đã mở, nhưng không phải là văn bản đọc được",
     "files_bytes_unopened": "Không thể mở ở đây",
+    "files_bytes_awaiting_key": "Đang chờ khóa của tệp này",
+    "files_awaiting_key_body": "Các byte của nó đã có trên thiết bị này, nhưng khóa mở chúng vẫn chưa đến. Khóa sẽ tự đến; không có gì sai cả.",
+    "files_awaiting_key_check_again": "Kiểm tra lại",
+    "files_custody_awaiting_key": "Khóa của tệp này vẫn chưa đến thiết bị này, nên không thể biết tệp đang ở đâu. Khóa sẽ tự đến; hãy kiểm tra lại sau một chút.",
     "files_room": "Phòng {room}",
     "files_choose_room": "Thêm vào phòng nào?",
     "files_uploading": "Đang thêm {name}…",
@@ -3433,6 +3448,8 @@
     "chat_empty_room": "Chưa có tin nhắn nào. Những gì bạn gửi ở đây là một chứng thực có chữ ký gửi đến mọi người trong danh sách thành viên của phòng này — các thành viên của phòng có thể đọc nó, và không ai khác.",
     "chat_unopened_not_fetched": "Tin nhắn này chưa đến được thiết bị này.",
     "chat_unopened_not_granted": "Tin nhắn này đã được niêm phong trước khi thiết bị này có thể đọc ở đây, nên nó sẽ không mở được trên thiết bị này.",
+    "chat_unopened_awaiting_key": "Tin nhắn này đã có ở đây, nhưng khóa mở nó vẫn chưa đến thiết bị này. Khóa sẽ tự đến.",
+    "chat_unopened_withdrawn": "Tác giả đã rút lại tin nhắn này.",
     "chat_unopened_evicted": "Nội dung của tin nhắn này không còn được lưu trên thiết bị này.",
     "chat_unopened_seal_mismatch": "Niêm phong của tin nhắn này không khớp, nên nó đã không được mở.",
     "chat_unopened_malformed_row": "Không thể đọc tin nhắn này: hàng dữ liệu bị sai định dạng.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Tính Toàn Vẹn Play",
   "trust_play_validates": "Play Xác Thực",
   "trust_root": {
-    "no_root": "gốc nào? đường dẫn phải nêu rõ root_key_id cần hủy tin cậy"
+    "no_root": "gốc nào? đường dẫn phải nêu rõ root_key_id cần hủy tin cậy",
+    "bundle_unlabelled": "gói này được phát hành trước khi các hàng trust-root mang nhãn công việc của chúng (trust:charter:v1); trên nút này nó sẽ được cài đặt như thể không có điều lệ nào cả. Hãy nhập một gói từ khởi nguyên cuối cùng (FSD/FINAL_GENESIS.md) thay vào đó. Không có gì trên nút này thay đổi.",
+    "bundle_not_in_force": "Nút này chưa chạy trên gói mà nó đang mang, nên nó không phục vụ gói nào."
   },
   "trust_running": "Đang Chạy",
   "trust_verify_desc": "Mô Tả Xác Minh",
@@ -5565,6 +5584,7 @@
     "too_large_for_whole_read": "Tệp này quá lớn để đọc trong một lần. Nó phải được truyền theo luồng.",
     "withdraw_failed": "Không thể rút lại tệp. Hãy thử lại.",
     "withdrawn": "Tác giả của tệp này đã rút lại nó. Các byte không còn được cung cấp ở bất kỳ đâu nữa.",
+    "awaiting_key": "Các byte của nó đã có ở đây, nhưng khóa của thiết bị này cho chúng vẫn chưa đến. Khóa sẽ tự đến; hãy thử lại sau một chút.",
     "store_unavailable": "Nút này không thể truy cập kho tệp của nó.",
     "too_large": "Tệp đó quá lớn để thêm vào đây.",
     "unknown_cohort": "Đó không phải là nơi có thể lưu tệp. Hãy dùng Chỉ tôi, một gia đình hoặc một cộng đồng.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Một thiết bị khác của bạn đang trả lời thay cho bạn trong trao đổi này.",
       "handled_here": "Thiết bị này đang trả lời thay cho bạn trong trao đổi này."
     }
+  },
+  "final_genesis": {
+    "already_planned": "một nghi thức đã được lên kế hoạch trên nút này; hãy truyền \"replace\": true để bỏ nó đi",
+    "bad_request": "test_holder_seed_b64 phải là base64 của đúng 32 byte",
+    "clock_not_synchronized": "đồng hồ của máy chủ này chưa được đồng bộ NTP; mọi thời điểm trong khởi nguyên đều được đóng dấu thời gian từ đồng hồ đó, và bên nhận sẽ từ chối bất kỳ thời điểm nào đi trước đồng hồ của nó quá 300 giây",
+    "clock_unverified": "máy chủ này không đọc được trạng thái đồng bộ đồng hồ của host; khi đã chắc chắn đồng hồ được đồng bộ, truyền \"clock_checked\": true",
+    "no_hardware_signer": "việc ký cần tính năng `pkcs11` (YubiKey của người giữ + bộ ký ML-DSA qua USB)",
+    "no_serve_nodes": "một khởi nguyên an vị ít nhất một máy chủ chính tắc",
+    "not_planned": "không có nghi thức nào được lên kế hoạch trên nút này — hãy POST /v1/accord/final-genesis/plan trước",
+    "not_testing_mode": "hạt giống người giữ phần mềm chỉ được chấp nhận khi CIRIS_TESTING_MODE=true (chạy thử)",
+    "not_a_holder": "Khóa đó không phải là một người giữ accord đã được an vị.",
+    "nothing_to_sign": "Người giữ này hiện không còn gì cần ký. Hoặc mọi thứ họ cần ký đã được ký xong, hoặc vòng tiếp theo đang chờ một người giữ khác ký điều lệ.",
+    "recovery_key_is_a_holder": "Khóa đó là khóa ký của một người giữ đã được an vị. Khóa khôi phục phải là một khóa dự phòng.",
+    "recovery_key_mismatch": "Token vừa được mở không chứa khóa mà nghi thức accord đã ghi nhận cho khóa dự phòng này. Hãy kiểm tra đó có đúng là YubiKey và USB không.",
+    "recovery_key_shared": "Khóa dự phòng đó đã được ghi nhận là khóa khôi phục của một người giữ khác.",
+    "recovery_key_wrong_holder": "Khóa dự phòng đó không phải là khóa khôi phục của người giữ này. Mỗi người giữ khôi phục bằng khóa dự phòng được ghép riêng của chính mình.",
+    "serve_node_no_dial_hint": "Nút canonical đó không mang gợi ý giao vận nào. Hãy truyền địa chỉ của nó (host:4242) cùng với khóa của nó; một nút canonical mà nghi thức khởi nguyên sắp đặt mà thiếu gợi ý đó là một nút mà không nút mới nào có thể tìm ra.",
+    "serve_node_no_pqc": "Bản ghi của nút đó không có khóa ML-DSA-65. Một nút khởi nguyên cần cả hai nửa.",
+    "serve_node_unknown": "Nút đó không có bản ghi khóa ở đây. Hãy truyền bản ghi đầy đủ của nó thay vì id.",
+    "sign_failed": "Việc ký đã thất bại giữa chừng. Những gì đã được ký sẽ được giữ lại; hãy ký lại để hoàn tất phần còn lại.",
+    "signer_unavailable": "Không thể mở bộ ký của người giữ (YubiKey và USB).",
+    "store_failed": "Nút này không thể ghi trạng thái của nghi thức.",
+    "store_unavailable": "Nút này không thể truy cập kho khóa của nó."
   }
 }

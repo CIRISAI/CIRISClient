@@ -19,7 +19,8 @@
       "refused": "Das Substrat hat diese Übertragung abgelehnt. Sie ist nicht zugelassen, und es wurde keine Befugnis erteilt.",
       "sign_failed": "Der Schlüssel des Accord-Inhabers hat keine Signatur erzeugt. Es wurde nichts geändert.",
       "unknown_duty": "Das ist keine Pflicht, die dieses Mesh kennt. Sie zu erteilen, würde hier als Befugnis erscheinen und an jedem Tor abgelehnt werden."
-    }
+    },
+    "genesis_superseded": "Das 2-von-3-Verfahren aus Vorschlag und Mitzeichnung zur Neuausstellung ist eingestellt; die Genesis ist eine einzige Zeremonie, die von allen drei Inhabern unter /v1/accord/final-genesis signiert wird (planen, signieren, abschließen)"
   },
   "adapters": {
     "navigation": {
@@ -3205,6 +3206,14 @@
     "trust_root_accepted_no": "Nein: dem Knoten bekannt, aber nicht vertraut",
     "trust_root_accepted_yes": "Ja: die Annahme dieses Knotens erreicht sie",
     "trust_root_banner_label": "Der Knoten sagt",
+    "trust_root_bundle_title": "Der Seed, auf dem dieser Knoten läuft",
+    "trust_root_bundle_not_in_force": "Dieser Knoten läuft noch nicht auf seinem Seed, daher hat er keinen Seed, den er zum Vergleich zeigen könnte.",
+    "trust_root_bundle_fingerprint_label": "Fingerabdruck",
+    "trust_root_bundle_charter_root_label": "Charta-Wurzel",
+    "trust_root_state_not_adopted_held": "Neuere Wurzel nicht übernommen: Die vorherige Wurzel bleibt in Kraft ({leg}-Zweig)",
+    "trust_root_state_not_adopted": "Wurzel nicht übernommen: Die Wurzel dieser Binärdatei wurde abgelehnt, und es wird keine frühere Wurzel gehalten ({leg}-Zweig)",
+    "trust_root_import_not_yet_accepted": "Importiert, noch nicht angenommen",
+    "trust_root_import_not_yet_accepted_why": "Die Datensätze der Wurzel befinden sich auf diesem Knoten, aber dieser Knoten vertraut ihr noch nicht. Entweder besitzt er die Genesis-Datensätze der Wurzel noch nicht, und die Annahme wird beim nächsten Start oder Import erneut versucht, oder ihre Annahme konnte nicht geschrieben werden.",
     "trust_root_bounded_label": "Gültig bis",
     "trust_root_bounded_none": "Nichts darin läuft allein aufgrund der Zeit ab",
     "trust_root_confirm_fact_signs": "Wer signiert",
@@ -3267,6 +3276,8 @@
     "trust_root_refused_no_root": "Es wurde keine Wurzel genannt.",
     "trust_root_refused_other": "Der Knoten hat abgelehnt ({id}).",
     "trust_root_refused_withdraw_failed": "Der Knoten konnte seine Annahme nicht zurückziehen.",
+    "trust_root_refused_bundle_unlabelled": "Dieser Seed stammt von vor der finalen Genesis. Es wurde nichts installiert.",
+    "trust_root_refused_bundle_unlabelled_body": "Die Vertrauenseinträge dieses Seeds tragen keine Kennzeichnungen, die angeben, wofür sie jeweils bestimmt sind — sie wurden ausgestellt, bevor Einträge gekennzeichnet wurden. Dieser Knoten würde ihn als gar keine Charta installieren, daher lehnte er ihn ab. Importieren Sie stattdessen einen Version-3-Seed aus der finalen Genesis.",
     "trust_root_roots_title": "Wurzeln, die dieser Knoten kennt",
     "trust_root_state_divergent": "Verändert: der {leg}-Zweig ist vorhanden und falsch",
     "trust_root_state_entrenched": "Verwurzelt: jede Prüfung, die eine Wurzel benötigt, kann bestehen",
@@ -3450,6 +3461,10 @@
     "files_bytes_not_granted": "Dieses Gerät kann sie nicht öffnen",
     "files_bytes_unreadable": "Geöffnet, aber kein lesbarer Text",
     "files_bytes_unopened": "Kann hier nicht geöffnet werden",
+    "files_bytes_awaiting_key": "Warte auf den Schlüssel dieser Datei...",
+    "files_awaiting_key_body": "Die Bytes dieser Datei befinden sich auf diesem Gerät, aber der Schlüssel, der sie öffnet, ist noch nicht angekommen. Er kommt von selbst; es liegt kein Fehler vor.",
+    "files_awaiting_key_check_again": "Erneut prüfen",
+    "files_custody_awaiting_key": "Der Schlüssel dieser Datei hat dieses Gerät noch nicht erreicht, daher kann es nicht sagen, wo sich die Datei befindet. Er kommt von selbst; prüfen Sie es in Kürze erneut.",
     "files_room": "Raum {room}",
     "files_choose_room": "Zu welchem Raum hinzufügen?",
     "files_uploading": "{name} wird hinzugefügt…",
@@ -3547,6 +3562,8 @@
     "chat_empty_room": "Noch keine Nachrichten. Was Sie hier senden, ist eine signierte Attestierung an alle auf der Mitgliederliste dieses Raums — seine Mitglieder können sie lesen, und niemand sonst.",
     "chat_unopened_not_fetched": "Diese Nachricht hat dieses Gerät noch nicht erreicht.",
     "chat_unopened_not_granted": "Diese Nachricht wurde versiegelt, bevor dieses Gerät hier lesen konnte, daher lässt sie sich auf ihm nicht öffnen.",
+    "chat_unopened_awaiting_key": "Diese Nachricht ist hier, aber der Schlüssel, der sie öffnet, hat dieses Gerät noch nicht erreicht. Er kommt von selbst.",
+    "chat_unopened_withdrawn": "Der Autor dieser Nachricht hat sie zurückgezogen.",
     "chat_unopened_evicted": "Der Inhalt dieser Nachricht wird auf diesem Gerät nicht mehr gespeichert.",
     "chat_unopened_seal_mismatch": "Die Versiegelung dieser Nachricht stimmt nicht, daher wurde sie nicht geöffnet.",
     "chat_unopened_malformed_row": "Diese Nachricht konnte nicht gelesen werden: Die Zeile ist fehlerhaft.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Validiert App-Integrität und Geräteumgebung",
   "trust_root": {
-    "no_root": "Welcher Root? Der Pfad muss die root_key_id angeben, deren Vertrauen entzogen werden soll"
+    "no_root": "Welcher Root? Der Pfad muss die root_key_id angeben, deren Vertrauen entzogen werden soll",
+    "bundle_unlabelled": "Dieses Bundle wurde ausgestellt, bevor die Vertrauenswurzel-Zeilen ihre Aufgabenkennzeichnungen trugen (trust:charter:v1); auf diesem Knoten würde es als gar keine Charta installiert werden. Importieren Sie stattdessen ein Bundle aus der finalen Genesis (FSD/FINAL_GENESIS.md). Auf diesem Knoten wurde nichts geändert.",
+    "bundle_not_in_force": "Dieser Knoten läuft noch nicht auf dem Bundle, das er trägt, daher stellt er keines bereit."
   },
   "trust_running": "Wird ausgeführt",
   "trust_verify_desc": "Überprüft Ihre CIRIS-Installation",
@@ -5558,6 +5577,7 @@
     "too_large_for_whole_read": "Diese Datei ist zu groß, um in einem Stück gelesen zu werden. Sie muss gestreamt werden.",
     "withdraw_failed": "Die Datei konnte nicht zurückgezogen werden. Versuchen Sie es erneut.",
     "withdrawn": "Der Autor hat diese Datei zurückgezogen. Die Bytes werden nirgendwo mehr bereitgestellt.",
+    "awaiting_key": "Die Bytes dieser Datei sind hier, aber der Schlüssel dieses Geräts dafür ist noch nicht angekommen. Er kommt von selbst nach; versuchen Sie es in Kürze erneut.",
     "store_unavailable": "Dieser Knoten konnte seinen Dateispeicher nicht erreichen.",
     "too_large": "Diese Datei ist zu groß, um hier hinzugefügt zu werden.",
     "unknown_cohort": "Das ist kein Ort, an dem Dateien abgelegt werden können. Verwenden Sie Nur ich, eine Familie oder eine Community.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Ein anderes Ihrer Geräte antwortet in diesem Austausch für Sie.",
       "handled_here": "Dieses Gerät antwortet in diesem Austausch für Sie."
     }
+  },
+  "final_genesis": {
+    "already_planned": "Auf diesem Knoten ist bereits eine Zeremonie geplant; übergeben Sie \"replace\": true, um sie zu verwerfen",
+    "bad_request": "test_holder_seed_b64 muss Base64 von genau 32 Bytes sein",
+    "clock_not_synchronized": "Die Uhr dieses Hosts ist nicht NTP-synchronisiert; jeder Zeitpunkt in der Genesis wird von ihr abgeleitet, und ein Empfänger lehnt einen Zeitpunkt ab, der mehr als 300 s in seiner Zukunft liegt",
+    "clock_unverified": "Dieser Server kann den Uhr-Synchronisierungsstatus des Hosts nicht lesen; bestätigen Sie, dass die Uhr synchronisiert ist, und übergeben Sie \"clock_checked\": true",
+    "no_hardware_signer": "Das Signieren erfordert die Funktion `pkcs11` (der YubiKey des Inhabers + USB-ML-DSA-Signer)",
+    "no_serve_nodes": "Eine Genesis setzt mindestens einen kanonischen Knoten ein",
+    "not_planned": "Auf diesem Knoten ist keine Zeremonie geplant — senden Sie zuerst POST /v1/accord/final-genesis/plan",
+    "not_testing_mode": "Ein Software-Inhaber-Seed wird nur mit CIRIS_TESTING_MODE=true akzeptiert (der Testlauf)",
+    "not_a_holder": "Dieser Schlüssel ist kein eingesetzter Accord-Inhaber.",
+    "nothing_to_sign": "Dieser Inhaber schuldet derzeit nichts Signierbares. Entweder ist alles, was er schuldet, bereits signiert, oder die nächste Runde wartet darauf, dass ein anderer Inhaber die Charta signiert.",
+    "recovery_key_is_a_holder": "Dieser Schlüssel ist der Signierschlüssel eines eingesetzten Inhabers. Ein Wiederherstellungsschlüssel muss ein Ersatzschlüssel sein.",
+    "recovery_key_mismatch": "Das geöffnete Token enthält nicht den Schlüssel, den die Accord-Zeremonie für diesen Ersatzschlüssel aufgezeichnet hat. Prüfen Sie, ob es der richtige YubiKey und USB ist.",
+    "recovery_key_shared": "Dieser Ersatzschlüssel ist bereits als Wiederherstellungsschlüssel eines anderen Inhabers verzeichnet.",
+    "recovery_key_wrong_holder": "Dieser Ersatzschlüssel ist nicht der Wiederherstellungsschlüssel dieses Inhabers. Jeder Inhaber stellt mit seinem eigenen gepaarten Ersatzschlüssel wieder her.",
+    "serve_node_no_dial_hint": "Dieser kanonische Knoten enthält keinen Transporthinweis. Übergeben Sie seine Adresse (host:4242) mit seinem Schlüssel; ein kanonischer Knoten, den die Genesis ohne einen solchen einsetzt, kann von keinem neuen Knoten gefunden werden.",
+    "serve_node_no_pqc": "Der Datensatz dieses Knotens enthält keinen ML-DSA-65-Schlüssel. Ein Genesis-Knoten benötigt beide Hälften.",
+    "serve_node_unknown": "Für diesen Knoten liegt hier kein Schlüsseldatensatz vor. Übergeben Sie seinen vollständigen Datensatz anstelle seiner ID.",
+    "sign_failed": "Das Signieren ist auf halbem Weg fehlgeschlagen. Was bereits signiert wurde, bleibt erhalten; signieren Sie erneut, um den Rest abzuschließen.",
+    "signer_unavailable": "Der Signer des Inhabers (YubiKey und USB) konnte nicht geöffnet werden.",
+    "store_failed": "Dieser Knoten konnte den Zustand der Zeremonie nicht schreiben.",
+    "store_unavailable": "Dieser Knoten konnte seinen Schlüsselspeicher nicht erreichen."
   }
 }

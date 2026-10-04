@@ -19,7 +19,8 @@
       "refused": "O substrato recusou esta outorga. Ela não foi admitida e nenhuma autoridade foi concedida.",
       "sign_failed": "A chave do titular do acordo não produziu uma assinatura. Nada foi alterado.",
       "unknown_duty": "Esse não é um dever que esta malha reconhece. Concedê-lo apareceria como autoridade aqui e seria recusado em todos os portões."
-    }
+    },
+    "genesis_superseded": "a reemissão 2-de-3 (propor/coassinar) foi retirada; a gênese é uma única cerimônia assinada pelos três titulares em /v1/accord/final-genesis (planejar, assinar, concluir)"
   },
   "adapters": {
     "navigation": {
@@ -2328,6 +2329,8 @@
     "provision_holder_err_owner": "Entre como proprietário neste nó primeiro e depois provisione.",
     "provision_holder_err_loopback": "O provisionamento precisa ser executado no próprio host do nó (somente localhost).",
     "provision_holder_err_other": "O provisionamento falhou: {detail}",
+    "trust_root_import_not_yet_accepted": "Importada, ainda não aceita",
+    "trust_root_import_not_yet_accepted_why": "Os registros da raiz estão neste nó, mas este nó ainda não confia nela. Ou ele ainda não possui os registros de gênese da raiz, e a aceitação é tentada novamente na próxima inicialização ou importação, ou sua aceitação não pôde ser registrada.",
     "yubikey_probe_failed": "NÃO FOI POSSÍVEL LER O STATUS DA YUBIKEY",
     "yubikey_probe_not_on_this_node": "ESTE NÓ NÃO INFORMA O STATUS DA YUBIKEY",
     "yubikey_probe_reason": "Motivo: {detail}",
@@ -3118,6 +3121,12 @@
     "trust_root_accepted_no": "Não: este nó conhece esta raiz, mas não confia nela",
     "trust_root_accepted_yes": "Sim: a aceitação deste nó a alcança",
     "trust_root_banner_label": "O nó diz",
+    "trust_root_bundle_title": "A semente na qual este nó se baseia",
+    "trust_root_bundle_not_in_force": "Este nó ainda não está executando sobre sua semente, portanto não tem semente para mostrar para comparação.",
+    "trust_root_bundle_fingerprint_label": "Impressão digital",
+    "trust_root_bundle_charter_root_label": "Raiz da carta",
+    "trust_root_state_not_adopted_held": "Raiz mais nova não adotada: a raiz anterior continua em vigor (trecho {leg})",
+    "trust_root_state_not_adopted": "Raiz não adotada: a raiz deste binário foi recusada e nenhuma raiz anterior está mantida (trecho {leg})",
     "trust_root_bounded_label": "Válida até",
     "trust_root_bounded_none": "Nada nela expira apenas por tempo",
     "trust_root_confirm_fact_signs": "Quem assina",
@@ -3180,6 +3189,8 @@
     "trust_root_refused_no_root": "Nenhuma raiz foi nomeada.",
     "trust_root_refused_other": "O nó recusou ({id}).",
     "trust_root_refused_withdraw_failed": "O nó não conseguiu retirar sua aceitação.",
+    "trust_root_refused_bundle_unlabelled": "Esta semente é de antes da gênese final. Nada foi instalado.",
+    "trust_root_refused_bundle_unlabelled_body": "Seus registros de confiança não carregam rótulos dizendo para que cada um serve — eles foram emitidos antes de os registros serem rotulados. Este nó a instalaria como nenhuma carta, então ele a recusou. Em vez disso, importe uma semente versão 3 da gênese final.",
     "trust_root_roots_title": "Raízes que este nó conhece",
     "trust_root_state_divergent": "Alterada: o trecho {leg} está presente e incorreto",
     "trust_root_state_entrenched": "Enraizada: toda verificação que precisa de uma raiz pode passar",
@@ -3339,6 +3350,10 @@
     "files_bytes_not_granted": "Este dispositivo não pode abri-lo",
     "files_bytes_unreadable": "Aberto, mas não é texto legível",
     "files_bytes_unopened": "Não pode ser aberto aqui",
+    "files_bytes_awaiting_key": "Aguardando a chave deste arquivo",
+    "files_awaiting_key_body": "Os bytes deste arquivo estão neste dispositivo, mas a chave que os abre ainda não chegou. Ela chega por conta própria; não há nada de errado.",
+    "files_awaiting_key_check_again": "Verificar novamente",
+    "files_custody_awaiting_key": "A chave deste arquivo ainda não chegou a este dispositivo, portanto este dispositivo não pode dizer onde o arquivo está. Ela chega por conta própria; verifique novamente em breve.",
     "files_room": "Sala {room}",
     "files_choose_room": "Adicionar a qual sala?",
     "files_uploading": "Adicionando {name}…",
@@ -3433,6 +3448,8 @@
     "chat_empty_room": "Ainda não há mensagens. O que você envia aqui é uma atestação assinada para todos no quadro de membros desta sala — seus membros podem lê-la, e mais ninguém.",
     "chat_unopened_not_fetched": "Esta mensagem ainda não chegou a este dispositivo.",
     "chat_unopened_not_granted": "Esta mensagem foi selada antes que este dispositivo pudesse ler aqui, portanto ela não vai abrir nele.",
+    "chat_unopened_awaiting_key": "Esta mensagem está aqui, mas a chave que a abre ainda não chegou a este dispositivo. Ela chega por conta própria.",
+    "chat_unopened_withdrawn": "O autor desta mensagem a retirou.",
     "chat_unopened_evicted": "O conteúdo desta mensagem não está mais armazenado neste dispositivo.",
     "chat_unopened_seal_mismatch": "O selo desta mensagem não corresponde, portanto ela não foi aberta.",
     "chat_unopened_malformed_row": "Esta mensagem não pôde ser lida: a linha está malformada.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Integridade do Play",
   "trust_play_validates": "O Play Integrity valida a autenticidade do app",
   "trust_root": {
-    "no_root": "qual raiz? o caminho deve indicar o root_key_id cuja confiança será removida"
+    "no_root": "qual raiz? o caminho deve indicar o root_key_id cuja confiança será removida",
+    "bundle_unlabelled": "este pacote foi emitido antes de as linhas da raiz de confiança trazerem seus rótulos de função (trust:charter:v1); neste nó ele seria instalado como nenhuma carta. Em vez disso, importe um pacote da gênese final (FSD/FINAL_GENESIS.md). Nada mudou neste nó.",
+    "bundle_not_in_force": "Este nó ainda não está executando o bundle que carrega, portanto não serve nenhum."
   },
   "trust_running": "Executando...",
   "trust_verify_desc": "Verificação completa do sistema",
@@ -5576,7 +5595,8 @@
     "seal_mismatch": "Os bytes não abriram sob o registro deste arquivo. O registro e os bytes estão em desacordo.",
     "too_large_for_whole_read": "Este arquivo é grande demais para ser lido em uma única peça. Ele precisa ser transmitido em fluxo.",
     "withdraw_failed": "O arquivo não pôde ser retirado. Tente novamente.",
-    "withdrawn": "Seu autor retirou este arquivo. Os bytes não são mais servidos em lugar nenhum."
+    "withdrawn": "Seu autor retirou este arquivo. Os bytes não são mais servidos em lugar nenhum.",
+    "awaiting_key": "Os bytes dele estão aqui, mas a chave deste dispositivo para eles ainda não chegou. Ela chega por conta própria; tente novamente em breve."
   },
   "notes": {
     "author_signer_unavailable": "Este nó não consegue assinar como você agora, portanto a nota não foi escrita.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Outro dos seus dispositivos está respondendo por você nesta troca.",
       "handled_here": "Este dispositivo está respondendo por você nesta troca."
     }
+  },
+  "final_genesis": {
+    "already_planned": "já existe uma cerimônia planejada neste nó; passe \"replace\": true para descartá-la",
+    "bad_request": "test_holder_seed_b64 deve ser base64 de exatamente 32 bytes",
+    "clock_not_synchronized": "o relógio deste host não está sincronizado via NTP; cada instante da gênese é registrado a partir dele, e um receptor recusa qualquer um que esteja mais de 300 s no futuro",
+    "clock_unverified": "este servidor não consegue ler o estado de sincronização do relógio do host; confirme que o relógio está sincronizado e passe \"clock_checked\": true",
+    "no_hardware_signer": "assinar requer o recurso `pkcs11` (a YubiKey do titular + o assinador ML-DSA via USB)",
+    "no_serve_nodes": "uma gênese assenta pelo menos um nó canônico",
+    "not_planned": "nenhuma cerimônia está planejada neste nó — primeiro faça POST em /v1/accord/final-genesis/plan",
+    "not_testing_mode": "uma semente de titular em software só é aceita com CIRIS_TESTING_MODE=true (a simulação)",
+    "not_a_holder": "Essa chave não é um titular empossado do acordo.",
+    "nothing_to_sign": "Este titular não deve nada assinável agora. Ou tudo o que ele deve já está assinado, ou a próxima rodada espera que outro titular assine a carta.",
+    "recovery_key_is_a_holder": "Essa chave é a chave de assinatura de um titular empossado. Uma chave de recuperação deve ser uma reserva.",
+    "recovery_key_mismatch": "O token que foi aberto não contém a chave que a cerimônia do acordo registrou para esta reserva. Verifique se é a YubiKey e o USB corretos.",
+    "recovery_key_shared": "Essa reserva já está registrada como chave de recuperação de outro titular.",
+    "recovery_key_wrong_holder": "Essa reserva não é a chave de recuperação deste titular. Cada titular recupera com sua própria reserva pareada.",
+    "serve_node_no_dial_hint": "Esse nó canônico não carrega nenhuma dica de transporte. Passe o endereço dele (host:4242) com a chave dele; um nó canônico que a gênese estabelece sem ela é um que nenhum nó novo pode encontrar.",
+    "serve_node_no_pqc": "O registro desse nó não contém nenhuma chave ML-DSA-65. Um nó de gênese precisa das duas metades.",
+    "serve_node_unknown": "Esse nó não tem registro de chave aqui. Passe o registro completo dele em vez do id.",
+    "sign_failed": "A assinatura falhou no meio do processo. O que já foi assinado é mantido; assine novamente para concluir o restante.",
+    "signer_unavailable": "O assinador do titular (YubiKey e USB) não pôde ser aberto.",
+    "store_failed": "Este nó não conseguiu gravar o estado da cerimônia.",
+    "store_unavailable": "Este nó não conseguiu acessar seu armazenamento de chaves."
   }
 }

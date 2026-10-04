@@ -7,6 +7,8 @@ import ai.ciris.mobile.shared.models.federation.TrustRootImportResult
 import ai.ciris.mobile.shared.models.federation.TrustRootListingDto
 import ai.ciris.mobile.shared.models.federation.TrustRootUntrustResult
 import ai.ciris.mobile.shared.models.federation.TrustRootView
+import ai.ciris.mobile.shared.models.federation.ServedBundleRead
+import ai.ciris.mobile.shared.models.federation.servedBundleRead
 import ai.ciris.mobile.shared.models.federation.UntrustConsequence
 import ai.ciris.mobile.shared.models.federation.seedCharterRoot
 import ai.ciris.mobile.shared.models.federation.trustPosture
@@ -105,8 +107,26 @@ class TrustRootViewModel(
     private val _untrustStage = MutableStateFlow<UntrustStage>(UntrustStage.Idle)
     val untrustStage: StateFlow<UntrustStage> = _untrustStage.asStateFlow()
 
+    /**
+     * The bundle this node runs on (`GET /v1/trust-root/bundle`, 0.5.220,
+     * public): its fingerprint and charter root, for the out-of-band compare.
+     * Absent on a node without the route (bare 404) or when it could not be
+     * read — no card, never an error over the listing; `409
+     * trust_root.bundle_not_in_force` is its own named state.
+     */
+    private val _servedBundle = MutableStateFlow<ServedBundleRead>(ServedBundleRead.Absent)
+    val servedBundle: StateFlow<ServedBundleRead> = _servedBundle.asStateFlow()
+
     fun refresh() {
         _read.value = TrustRootRead.Loading
+        viewModelScope.launch {
+            _servedBundle.value = try {
+                servedBundleRead(apiClient.getTrustRootBundle())
+            } catch (e: Exception) {
+                PlatformLogger.i(TAG, "[refresh] served bundle: ${e.message}")
+                servedBundleRead(e)
+            }
+        }
         viewModelScope.launch {
             _read.value = try {
                 loaded(apiClient.getTrustRoots())

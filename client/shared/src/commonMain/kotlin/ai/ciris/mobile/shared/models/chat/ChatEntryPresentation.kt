@@ -99,13 +99,14 @@ private fun presentationOfMessage(entry: CegChatMessage): Presentation = when {
 
 /**
  * Every word a row's `unopened_reason` can carry — `contacts_chat.rs::UNOPENED_REASONS`
- * (0.5.218, CIRISServer#602), verbatim. Each has a sentence of its own in the
+ * (0.5.218, CIRISServer#602; 0.5.220 adds `awaiting_key` and documents the
+ * already-reachable `withdrawn`), verbatim. Each has a sentence of its own in the
  * bundle (`mobile.chat_unopened_<token>`); a token this list does not know lands
  * on `mobile.chat_unopened_other`, WITH its detail, so an arm edge adds later
  * reaches a person as a sentence and never as a bare token.
  */
 val UNOPENED_TOKENS: List<String> = listOf(
-    "not_fetched", "not_granted", "evicted", "seal_mismatch", "malformed_row", "not_text", "substrate",
+    "not_fetched", "not_granted", "awaiting_key", "evicted", "withdrawn", "seal_mismatch", "malformed_row", "not_text", "substrate",
 )
 
 /**

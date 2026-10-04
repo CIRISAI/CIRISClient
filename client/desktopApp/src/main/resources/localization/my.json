@@ -19,7 +19,8 @@
       "refused": "အောက်ခံစနစ်က ဤအပ်နှင်းမှုကို ငြင်းပယ်လိုက်သည်။ ၎င်းကို လက်ခံခြင်းမရှိသဖြင့် မည်သည့်အခွင့်အာဏာမျှ ပေးအပ်ခြင်းမရှိပါ။",
       "sign_failed": "accord ကိုင်ဆောင်သူ၏ သော့မှ လက်မှတ်တစ်ခု မထုတ်ပေးခဲ့ပါ။ မည်သည့်အရာမျှ ပြောင်းလဲခြင်းမရှိပါ။",
       "unknown_duty": "ထိုအရာသည် ဤ mesh အသိအမှတ်ပြုသော တာဝန် မဟုတ်ပါ။ ၎င်းကို ပေးအပ်ပါက ဤနေရာတွင် အခွင့်အာဏာအဖြစ် ပြသနေမည်ဖြစ်ပြီး တံခါးပေါက်တိုင်းတွင် ငြင်းပယ်ခံရမည်။"
-    }
+    },
+    "genesis_superseded": "2-of-3 propose/cosign re-mint ကို ရုပ်သိမ်းပြီးပါပြီ; genesis သည် holder သုံးဦးစလုံးက /v1/accord/final-genesis တွင် (plan, sign, finish) အဆင့်များဖြင့် လက်မှတ်ရေးထိုးသည့် အခမ်းအနား တစ်ခုတည်း ဖြစ်သည်"
   },
   "adapters": {
     "navigation": {
@@ -3126,6 +3127,14 @@
     "trust_root_accepted_no": "မဟုတ်ပါ: ဤ node သိသော်လည်း မယုံကြည်ပါ",
     "trust_root_accepted_yes": "ဟုတ်ကဲ့: ဤ node ၏ လက်ခံမှုသည် ၎င်းထံ ရောက်သည်",
     "trust_root_banner_label": "node က ဆိုသည်",
+    "trust_root_bundle_title": "ဤ node လည်ပတ်နေသော seed",
+    "trust_root_bundle_not_in_force": "ဤ node သည် ၎င်း၏ seed အပေါ် run မလုပ်သေးသောကြောင့်၊ နှိုင်းယှဉ်ရန် ပြသနိုင်သော seed မရှိပါ။",
+    "trust_root_bundle_fingerprint_label": "Fingerprint",
+    "trust_root_bundle_charter_root_label": "Charter root",
+    "trust_root_state_not_adopted_held": "Root အသစ်ကို လက်ခံသုံးစွဲခြင်း မရှိပါ: ယခင် root က အတည်ဖြစ်နေဆဲဖြစ်သည် ({leg} leg)",
+    "trust_root_state_not_adopted": "Root ကို လက်ခံသုံးစွဲခြင်း မရှိပါ: ဤ binary ၏ root ကို ငြင်းပယ်ခဲ့ပြီး ယခင် root ကို ကိုင်ဆောင်ထားခြင်း မရှိပါ ({leg} leg)",
+    "trust_root_import_not_yet_accepted": "တင်သွင်းပြီးပြီ၊ လက်ခံမှု မရသေးပါ",
+    "trust_root_import_not_yet_accepted_why": "root ၏ မှတ်တမ်းများ ဤ node ပေါ်တွင် ရှိသော်လည်း၊ ဤ node သည် ၎င်းကို မယုံကြည်သေးပါ။ ၎င်းသည် root ၏ genesis မှတ်တမ်းများကို မရရှိသေးခြင်း ဖြစ်နိုင်ပြီး၊ လက်ခံမှုကို နောက်ထပ် စတင်ချိန် သို့မဟုတ် တင်သွင်းချိန်တွင် ထပ်မံ ကြိုးစားမည်ဖြစ်သည်၊ သို့မဟုတ် ၎င်း၏ လက်ခံမှုကို ရေးသွင်း၍ မရခဲ့ခြင်း ဖြစ်နိုင်သည်။",
     "trust_root_bounded_label": "အကျုံးဝင်သည့်ကာလ",
     "trust_root_bounded_none": "၎င်းတွင် အချိန်တစ်ခုတည်းဖြင့် သက်တမ်းကုန်မည့်အရာ မရှိပါ",
     "trust_root_confirm_fact_signs": "မည်သူ လက်မှတ်ရေးထိုးမည်",
@@ -3188,6 +3197,8 @@
     "trust_root_refused_no_root": "root အမည် မဖော်ပြထားပါ။",
     "trust_root_refused_other": "node က ငြင်းပယ်ခဲ့သည် ({id})။",
     "trust_root_refused_withdraw_failed": "node သည် ၎င်း၏ လက်ခံမှုကို ရုပ်သိမ်း၍ မရခဲ့ပါ။",
+    "trust_root_refused_bundle_unlabelled": "ဤ seed သည် final genesis မတိုင်မီကာလမှ ဖြစ်သည်။ မည်သည့်အရာမျှ install မလုပ်ခဲ့ပါ။",
+    "trust_root_refused_bundle_unlabelled_body": "၎င်း၏ ယုံကြည်မှု မှတ်တမ်းများတွင် တစ်ခုစီ မည်သည့်အတွက်ဖြစ်သည်ကို ပြောပြသော label များ မပါဝင်ပါ — မှတ်တမ်းများကို label တပ်ခြင်းမပြုမီ ၎င်းတို့ကို ထုတ်ပေးခဲ့ခြင်းဖြစ်သည်။ ဤ node သည် ၎င်းကို charter လုံးဝ မရှိသကဲ့သို့ install လုပ်မည်ဖြစ်သောကြောင့် ငြင်းပယ်ခဲ့ပါသည်။ ယင်းအစား final genesis မှ version 3 seed ကို import လုပ်ပါ။",
     "trust_root_roots_title": "ဤ node သိသော root များ",
     "trust_root_state_divergent": "ပြောင်းလဲထားသည်: {leg} leg ရှိနေသော်လည်း မှားနေသည်",
     "trust_root_state_entrenched": "အမြစ်တွယ်ပြီး: root တစ်ခု လိုအပ်သော စစ်ဆေးမှု တိုင်း အောင်မြင်နိုင်သည်",
@@ -3365,6 +3376,10 @@
     "files_bytes_not_granted": "ဤစက်သည် ၎င်းကို ဖွင့်၍ မရပါ",
     "files_bytes_unreadable": "ဖွင့်ထားသော်လည်း စာသားအဖြစ် ဖတ်၍ မရနိုင်ပါ",
     "files_bytes_unopened": "ဤနေရာတွင် ဖွင့်၍ မရပါ",
+    "files_bytes_awaiting_key": "ဤဖိုင်၏ key ကို စောင့်ဆိုင်းနေသည်",
+    "files_awaiting_key_body": "၎င်း၏ bytes များ ဤစက်ပေါ်တွင် ရှိသော်လည်း၊ ၎င်းတို့ကို ဖွင့်ပေးမည့် key မရောက်ရှိသေးပါ။ ၎င်းသည် အလိုအလျောက် ရောက်လာမည်ဖြစ်သည်; မည်သည့်အရာမျှ မှားယွင်းနေခြင်း မဟုတ်ပါ။",
+    "files_awaiting_key_check_again": "ထပ်မံ စစ်ဆေးပါ",
+    "files_custody_awaiting_key": "ဤဖိုင်၏ key သည် ဤစက်သို့ မရောက်ရှိသေးသဖြင့်၊ ဖိုင်ရှိနေသည့်နေရာကို ပြောပြ၍ မရပါ။ ၎င်းသည် အလိုအလျောက် ရောက်လာမည်ဖြစ်သည်; မကြာမီ ထပ်မံ စစ်ဆေးပါ။",
     "files_room": "အခန်း {room}",
     "files_choose_room": "မည်သည့် အခန်း သို့ ထည့်မလဲ?",
     "files_uploading": "{name} ကို ထည့်နေသည်…",
@@ -3435,6 +3450,8 @@
     "chat_empty_room": "မက်ဆေ့ချ် မရှိသေးပါ။ ဤနေရာတွင် သင်ပို့သမျှသည် ဤအခန်း၏ အဖွဲ့ဝင်စာရင်းရှိ လူတိုင်းထံ လက်မှတ်ရေးထိုးထားသော attestation ဖြစ်သည် — ၎င်းကို အဖွဲ့ဝင်များသာ ဖတ်နိုင်ပြီး အခြားမည်သူမျှ မဖတ်နိုင်ပါ။",
     "chat_unopened_not_fetched": "ဤမက်ဆေ့ချ်သည် ဤစက်ထံ မရောက်ရှိသေးပါ။",
     "chat_unopened_not_granted": "ဤမက်ဆေ့ချ်သည် ဤစက်က ဤနေရာတွင် မဖတ်နိုင်မီ seal လုပ်ခဲ့သဖြင့်၊ ဤစက်ပေါ်တွင် ဖွင့်၍ မရပါ။",
+    "chat_unopened_awaiting_key": "ဤစာကို ဤတွင် ရရှိထားသော်လည်း၊ ၎င်းကို ဖွင့်ပေးမည့် key သည် ဤစက်သို့ မရောက်ရှိသေးပါ။ ၎င်းသည် အလိုအလျောက် ရောက်လာမည်ဖြစ်သည်။",
+    "chat_unopened_withdrawn": "၎င်း၏ စာရေးသူက ဤစာကို ရုပ်သိမ်းလိုက်ပါသည်။",
     "chat_unopened_evicted": "ဤမက်ဆေ့ချ်၏ အကြောင်းအရာကို ဤစက်ပေါ်တွင် နောက်ထပ် သိမ်းဆည်းမထားတော့ပါ။",
     "chat_unopened_seal_mismatch": "ဤမက်ဆေ့ချ်၏ seal မကိုက်ညီသဖြင့် ၎င်းကို မဖွင့်ခဲ့ပါ။",
     "chat_unopened_malformed_row": "ဤမက်ဆေ့ချ်ကို ဖတ်၍ မရပါ- အတန်းသည် ပုံစံမှားယွင်းနေသည်။",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "ကစား သမာဓိ",
   "trust_play_validates": "ကစား သမာဓိ validates app authenticity",
   "trust_root": {
-    "no_root": "ဘယ် root လဲ? ယုံကြည်မှုဖျက်သိမ်းရန် လမ်းကြောင်းတွင် root_key_id ကို ဖော်ပြရပါမည်"
+    "no_root": "ဘယ် root လဲ? ယုံကြည်မှုဖျက်သိမ်းရန် လမ်းကြောင်းတွင် root_key_id ကို ဖော်ပြရပါမည်",
+    "bundle_unlabelled": "ဤ bundle ကို trust-root rows များတွင် job label (trust:charter:v1) မပါမီ ထုတ်ပေးခဲ့ခြင်းဖြစ်သည်; ဤ node ပေါ်တွင် ၎င်းသည် charter လုံးဝ မရှိသကဲ့သို့ install ဖြစ်လာမည်။ ယင်းအစား final genesis (FSD/FINAL_GENESIS.md) မှ bundle တစ်ခုကို import လုပ်ပါ။ ဤ node ပေါ်တွင် မည်သည့်အရာမျှ ပြောင်းလဲမသွားပါ။",
+    "bundle_not_in_force": "ဤ node သည် ၎င်း သယ်ဆောင်ထားသော bundle အပေါ် run မလုပ်သေးသောကြောင့်၊ မည်သည့် bundle ကိုမျှ ဆောင်ရွက်ပေးခြင်း မရှိပါ။"
   },
   "trust_running": "Attestation စစ်ဆေးမှုများ လုပ်ဆောင်နေသည်...",
   "trust_verify_desc": "CIRISVerify သည် လိုက်လျောညီထွေမှု Ratchet နှင့် CIRIS Scoring အတွက် အေးဂျင့် အထောက်အထားကို cryptographic attestation ဖြင့် ပံ့ပိုးသည်",
@@ -5576,7 +5595,8 @@
     "seal_mismatch": "bytes များသည် ဤဖိုင်၏ record အောက်တွင် ဖွင့်၍ မရပါ။ record နှင့် bytes များ မကိုက်ညီပါ။",
     "too_large_for_whole_read": "ဤဖိုင်သည် တစ်ကြိမ်တည်း ဖတ်ရန် ကြီးလွန်းသည်။ ၎င်းကို stream လုပ်ရပါမည်။",
     "withdraw_failed": "ဖိုင်ကို ရုပ်သိမ်း၍ မရပါ။ ထပ်ကြိုးစားပါ။",
-    "withdrawn": "၎င်း၏ ဖိုင်ရေးသူသည် ဤဖိုင်ကို ရုပ်သိမ်းခဲ့သည်။ bytes များကို မည်သည့်နေရာတွင်မျှ ဆက်လက် မပေးဆောင်တော့ပါ။"
+    "withdrawn": "၎င်း၏ ဖိုင်ရေးသူသည် ဤဖိုင်ကို ရုပ်သိမ်းခဲ့သည်။ bytes များကို မည်သည့်နေရာတွင်မျှ ဆက်လက် မပေးဆောင်တော့ပါ။",
+    "awaiting_key": "၎င်း၏ bytes များ ဤတွင် ရှိနေသော်လည်း၊ ဤစက်အတွက် ၎င်းတို့၏ key မရောက်ရှိသေးပါ။ ၎င်းသည် အလိုအလျောက် ရောက်လာမည်ဖြစ်သည်; မကြာမီ ထပ်ကြိုးစားပါ။"
   },
   "notes": {
     "author_signer_unavailable": "ဤ node သည် ယခုအချိန်တွင် သင့်အတွက် လက်မှတ်ရေးထိုး၍ မရသဖြင့် မှတ်စုကို မရေးသွင်းခဲ့ပါ။",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "သင့် အခြား device တစ်ခုသည် ဤ exchange တွင် သင့်အတွက် ဖြေကြားနေသည်။",
       "handled_here": "ဤ device သည် ဤ exchange တွင် သင့်အတွက် ဖြေကြားနေသည်။"
     }
+  },
+  "final_genesis": {
+    "already_planned": "အခမ်းအနားတစ်ခု ဤ node ပေါ်တွင် စီစဉ်ထားပြီးသားဖြစ်သည်; ၎င်းကို ဖျက်သိမ်းရန် \"replace\": true ကို ပေးပို့ပါ",
+    "bad_request": "test_holder_seed_b64 သည် bytes ၃၂ ခုအတိအကျ၏ base64 ဖြစ်ရမည်",
+    "clock_not_synchronized": "ဤ host ၏ နာရီသည် NTP-synchronized မဖြစ်ပါ; genesis အတွင်းရှိ အခိုက်အတန့် တိုင်းကို ၎င်းမှ အချိန်တံဆိပ်ခတ်ထားသည်၊ ၎င်း၏ အနာဂတ်တွင် 300 s ထက်ပို၍ ကြိုတင်နေသော အချိန်တစ်ခုကို receiver က ငြင်းပယ်သည်",
+    "clock_unverified": "ဤ server သည် host ၏ clock-sync အခြေအနေကို ဖတ်၍မရပါ; နာရီ synchronized ဖြစ်ကြောင်း အတည်ပြု၍ \"clock_checked\": true ကို ပေးပို့ပါ",
+    "no_hardware_signer": "လက်မှတ်ရေးထိုးရန် `pkcs11` feature လိုအပ်သည် (holder ၏ YubiKey + USB ML-DSA signer)",
+    "no_serve_nodes": "genesis တစ်ခုတွင် canonical အနည်းဆုံး တစ်ခု နေရာချထားရမည်",
+    "not_planned": "ဤ node ပေါ်တွင် အခမ်းအနားတစ်ခုမျှ စီစဉ်ထားခြင်း မရှိပါ — ဦးစွာ POST /v1/accord/final-genesis/plan ကို လုပ်ပါ",
+    "not_testing_mode": "software holder seed ကို CIRIS_TESTING_MODE=true (dry run) ဖြင့်သာ လက်ခံသည်",
+    "not_a_holder": "ထို key သည် ခန့်အပ်ထားသော accord holder မဟုတ်ပါ။",
+    "nothing_to_sign": "ဤ holder တွင် ယခုအချိန်၌ လက်မှတ်ထိုးရန် ကျေးကြွင်းနေသည့် မည်သည့်အရာမျှ မရှိပါ။ ၎င်းကျေးကြွင်းနေသမျှအားလုံး လက်မှတ်ထိုးပြီးဖြစ်သည် သို့မဟုတ် နောက်အကြိမ်သည် အခြား holder တစ်ဦးက charter ကို လက်မှတ်ထိုးရန် စောင့်နေသည်။",
+    "recovery_key_is_a_holder": "ထို key သည် ခန့်အပ်ထားသော holder တစ်ဦး၏ လက်မှတ်ရေးထိုးသော key ဖြစ်သည်။ recovery key သည် အပိုတစ်ခု ဖြစ်ရမည်။",
+    "recovery_key_mismatch": "ဖွင့်ခဲ့သော token သည် ဤအပိုအတွက် accord အခမ်းအနားက မှတ်တမ်းတင်ထားသော key ကို မကိုင်ဆောင်ပါ။ မှန်ကန်သော YubiKey နှင့် USB ဟုတ်မဟုတ် စစ်ဆေးပါ။",
+    "recovery_key_shared": "ထိုအပိုသည် အခြား holder တစ်ဦး၏ recovery key အဖြစ် မှတ်တမ်းတင်ထားပြီးဖြစ်သည်။",
+    "recovery_key_wrong_holder": "ထို spare သည် ဤ holder ၏ recovery key မဟုတ်ပါ။ Holder တစ်ဦးစီသည် မိမိ၏ တွဲဖက် spare ဖြင့် ပြန်လည်ရယူသည်။",
+    "serve_node_no_dial_hint": "ထို canonical node တွင် transport hint မပါရှိပါ။ ၎င်း၏ key နှင့်အတူ ၎င်း၏ လိပ်စာ (host:4242) ကို ပေးပို့ပါ; genesis က transport hint မပါဘဲ နေရာချထားသော canonical node ကို node အသစ်တစ်ခုမျှ ရှာမတွေ့နိုင်ပါ။",
+    "serve_node_no_pqc": "ထို node ၏ မှတ်တမ်းတွင် ML-DSA-65 key မပါဝင်ပါ။ genesis node တွင် တစ်ဝက်စီ နှစ်ဖက်လုံး လိုအပ်သည်။",
+    "serve_node_unknown": "ထို node တွင် ဤနေရာတွင် key မှတ်တမ်း မရှိပါ။ ၎င်း၏ id အစား ပြည့်စုံသော မှတ်တမ်းကို ပေးပို့ပါ။",
+    "sign_failed": "လက်မှတ်ရေးထိုးမှု တစ်ဝက်တစ်ပျက် မအောင်မြင်ခဲ့ပါ။ လက်မှတ်ရေးထိုးထားပြီးသားကို ထိန်းသိမ်းထားမည်; ကျန်သည့်အရာများ ပြီးမြောက်ရန် ထပ်မံ လက်မှတ်ရေးထိုးပါ။",
+    "signer_unavailable": "holder ၏ signer (YubiKey နှင့် USB) ကို ဖွင့်၍ မရပါ။",
+    "store_failed": "ဤ node သည် အခမ်းအနား၏ အခြေအနေကို ရေးသွင်း၍ မရခဲ့ပါ။",
+    "store_unavailable": "ဤ node သည် ၎င်း၏ key store ကို ချိတ်ဆက်၍ မရခဲ့ပါ။"
   }
 }

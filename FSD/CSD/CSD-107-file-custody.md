@@ -160,7 +160,7 @@ flows branch changes that); this follows the existing disabled pattern
 populated: {tag: card_file_custody, renders: "the summary, a row per device, Held here, Copies, the footnotes, and btn_custody_close"}
 empty:     {tag: custody_empty, renders: "'This node named none of your devices for this file.' — `devices_total` 0 and no rows"}
 loading:   {tag: custody_loading, renders: "the card frame with a progress affordance; no summary and no rows"}
-error:     {tag: custody_error, renders: "'Couldn't find out where this file is.' with the node's reason by id. A device with the row and not the bytes is NOT this state: it answers 200 with its own `holds: none` and `custody.no_copy_here`, and renders as a populated card with access, size and can-open unknown (§7). A bare 404 from a node without the route is its own tag, custody_node_too_old: 'This node is running {version}, which can't say which of your devices a file is on. That needs a newer ciris-server.' — the version fact, as CSD-092's NodeTooOld"}
+error:     {tag: custody_error, renders: "'Couldn't find out where this file is.' with the node's reason by id. A device with the row and not the bytes is NOT this state: it answers 200 with its own `holds: none` and `custody.no_copy_here`, and renders as a populated card with access, size and can-open unknown (§7). A bare 404 from a node without the route is its own tag, custody_node_too_old: 'This node is running {version}, which can't say which of your devices a file is on. That needs a newer ciris-server.' — the version fact, as CSD-092's NodeTooOld. A device that holds the bytes and not yet its per-epoch key (ciris-server 0.5.220, `409 drive.awaiting_key`) is NOT this state either: custody_awaiting_key, 'This file's key hasn't reached this device yet, so it can't say where the file is. It comes on its own; check again shortly.' with btn_custody_check_again, a wait in the neutral tone, never the error"}
 ```
 
 ## 3. Contracts (who)
@@ -187,6 +187,15 @@ bytes is NOT refused: it answers 200 with its own entry `holds: "none"` +
 with `custody.no_copy_here` in `why`. Byte reads there still answer
 `409 drive.not_fetched`, which is not this card's concern.
 
+**A key not yet here (ciris-server 0.5.220).** Persist v53 (#969) seals a
+self/family file's chunks under per-epoch keys, and a device can hold the
+bytes before its key arrives. The custody door then answers through the same
+`refuse_state` as the byte read: `409 drive.awaiting_key` (`src/drive.rs` @
+`e357f6bf`). The card renders it as `CustodyState.AwaitingKey` — a named wait
+with "Check again" (`FileCustodyViewModel.checkAgain`, which re-asks the same
+target), never `custody_error`. Pinned: `FileCustodyViewModelTest.aKeyNotYetHereIsAWaitWithCheckAgainNotAnError`,
+`DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409`.
+
 **The host rule, mirrored from the drive.** The brief said to mirror how the
 client calls `GET /v1/files/{id}/meta`. It does not call it: CSD-007 §3 lists
 `/meta` as "live, not called". So this mirrors the per-file drive reads it does
@@ -206,7 +215,7 @@ per-file `FileQuery` every `/v1/files/{id}/…` handler takes — `cohort`
 | the receipt time | `received.at` | CIRISPersist v52 | `null` until then; the row says "Received it" with no time, never a blank or an epoch |
 | the drive row's hint | `GET /v1/drive` rows gain `custody: {devices_total, received_on}` (`received_on: null` for inline) | CIRISServer#704 §1.2 | **not rendered** on the drive row this cut (optional in the brief); the card is the answer. When it is, a null `received_on` is "unknown", never 0 |
 | receipts for inline files | `receipts_supported: false` for files of 1 MiB or less | CIRISPersist v52 / CIRISEdge v38 | the card says unknown, never "not on" |
-| copies of self and family files | `copies_observable: false` | CC 5.2 (no `holds_bytes` row below community) | by design; the card says they can't be counted |
+| copies of self and family files | `copies_observable: false` through 0.5.219; **`true` from 0.5.220** (persist v53 S2: every device files its own `custody:ack:v1`, so `custody.copies_unobservable_by_design` no longer fires) | CC 5.2 (no `holds_bytes` row below community); CC 6.1.5.3 | read off the wire, never assumed from the cohort (`custodyCopies`): a 0.5.219 node's card says they can't be counted, a 0.5.220 node's counts them |
 | copy to a device / remove from a device | none yet | CIRISServer (next cut) | shown disabled, "coming next"; Remove will refuse the last copy of an unwithdrawn file |
 
 **`why[]`: ids, localized, with the node's detail as small print.** At #704

@@ -19,7 +19,8 @@
       "refused": "Substrat menolak penganugerahan ini. Ia tidak diterima, dan tidak ada wewenang yang diberikan.",
       "sign_failed": "Kunci pemegang accord tidak menghasilkan tanda tangan. Tidak ada yang diubah.",
       "unknown_duty": "Itu bukan tugas yang dikenali oleh mesh ini. Memberikannya akan tampak sebagai wewenang di sini dan akan ditolak di setiap gerbang."
-    }
+    },
+    "genesis_superseded": "proses propose/cosign re-mint 2-dari-3 sudah dihentikan; genesis kini adalah satu upacara yang ditandatangani oleh ketiga pemegang di /v1/accord/final-genesis (plan, sign, finish)"
   },
   "adapters": {
     "navigation": {
@@ -2332,6 +2333,8 @@
     "startup_waiting_brain": "Memeriksa apakah node ini memiliki agen… {seconds}dtk",
     "startup_brain_unreachable_title": "Tidak dapat memastikan apakah node ini memiliki agen",
     "startup_brain_unreachable_body": "{url} tidak memberikan jawaban yang dapat digunakan selama {seconds} detik, sehingga penyiapan belum dapat menentukan langkah-langkahnya. Coba lagi untuk menanyakan ulang.",
+    "trust_root_import_not_yet_accepted": "Diimpor, belum diterima",
+    "trust_root_import_not_yet_accepted_why": "Catatan-catatan akar tersebut sudah ada pada node ini, tetapi node ini belum mempercayainya. Entah node ini belum memiliki catatan genesis akar tersebut, sehingga penerimaannya akan dicoba lagi pada permulaan atau impor berikutnya, atau penerimaannya tidak dapat dicatat.",
     "yubikey_probe_failed": "STATUS YUBIKEY TIDAK DAPAT DIBACA",
     "yubikey_probe_not_on_this_node": "NODE INI TIDAK MELAPORKAN STATUS YUBIKEY",
     "yubikey_probe_reason": "Alasan: {detail}",
@@ -3118,6 +3121,12 @@
     "trust_root_accepted_no": "Tidak: diketahui oleh node ini, tidak dipercaya",
     "trust_root_accepted_yes": "Ya: penerimaan node ini mencapainya",
     "trust_root_banner_label": "Pernyataan node",
+    "trust_root_bundle_title": "Seed tempat node ini berjalan",
+    "trust_root_bundle_not_in_force": "Node ini belum berjalan pada seed-nya, sehingga tidak memiliki seed yang dapat ditampilkan untuk perbandingan.",
+    "trust_root_bundle_fingerprint_label": "Sidik jari",
+    "trust_root_bundle_charter_root_label": "Akar piagam",
+    "trust_root_state_not_adopted_held": "Akar yang lebih baru tidak diadopsi: akar sebelumnya tetap berlaku (leg {leg})",
+    "trust_root_state_not_adopted": "Akar tidak diadopsi: akar milik binary ini ditolak dan tidak ada akar sebelumnya yang dipegang (leg {leg})",
     "trust_root_bounded_label": "Berlaku hingga",
     "trust_root_bounded_none": "Tidak ada yang di dalamnya kedaluwarsa hanya berdasarkan waktu",
     "trust_root_confirm_fact_signs": "Siapa yang menandatangani",
@@ -3180,6 +3189,8 @@
     "trust_root_refused_no_root": "Tidak ada akar yang disebutkan.",
     "trust_root_refused_other": "Node menolak ({id}).",
     "trust_root_refused_withdraw_failed": "Node tidak dapat mencabut penerimaannya.",
+    "trust_root_refused_bundle_unlabelled": "Seed ini berasal dari sebelum final genesis. Tidak ada yang dipasang.",
+    "trust_root_refused_bundle_unlabelled_body": "Catatan kepercayaannya tidak memiliki label yang menyatakan untuk apa masing-masing digunakan — catatan tersebut diterbitkan sebelum pelabelan diberlakukan. Node ini akan memasangnya sebagai tanpa charter sama sekali, sehingga node ini menolaknya. Impor seed versi 3 dari final genesis sebagai gantinya.",
     "trust_root_roots_title": "Akar yang diketahui node ini",
     "trust_root_state_divergent": "Berubah: leg {leg} ada tetapi salah",
     "trust_root_state_entrenched": "Berakar: setiap pemeriksaan yang memerlukan akar dapat lolos",
@@ -3339,6 +3350,10 @@
     "files_bytes_not_granted": "Perangkat ini tidak dapat membukanya",
     "files_bytes_unreadable": "Terbuka, tetapi bukan teks yang dapat dibaca",
     "files_bytes_unopened": "Tidak dapat dibuka di sini",
+    "files_bytes_awaiting_key": "Menunggu kunci berkas ini",
+    "files_awaiting_key_body": "Byte-nya sudah ada di perangkat ini, tetapi kunci yang membukanya belum tiba. Kunci itu akan datang dengan sendirinya; tidak ada yang salah.",
+    "files_awaiting_key_check_again": "Periksa lagi",
+    "files_custody_awaiting_key": "Kunci berkas ini belum sampai ke perangkat ini, sehingga tidak dapat mengetahui letak berkas tersebut. Kunci itu akan datang dengan sendirinya; periksa lagi sebentar lagi.",
     "files_room": "Ruang {room}",
     "files_choose_room": "Tambahkan ke ruang mana?",
     "files_uploading": "Menambahkan {name}…",
@@ -3433,6 +3448,8 @@
     "chat_empty_room": "Belum ada pesan. Apa yang Anda kirim di sini adalah atestasi bertanda tangan kepada semua orang dalam daftar anggota ruangan ini — anggotanya dapat membacanya, dan tidak ada orang lain.",
     "chat_unopened_not_fetched": "Pesan ini belum tiba di perangkat ini.",
     "chat_unopened_not_granted": "Pesan ini disegel sebelum perangkat ini dapat membacanya di sini, sehingga tidak akan terbuka di perangkat ini.",
+    "chat_unopened_awaiting_key": "Pesan ini sudah ada di sini, tetapi kunci yang membukanya belum sampai ke perangkat ini. Kunci itu akan datang dengan sendirinya.",
+    "chat_unopened_withdrawn": "Penulisnya menarik kembali pesan ini.",
     "chat_unopened_evicted": "Konten pesan ini tidak lagi tersimpan di perangkat ini.",
     "chat_unopened_seal_mismatch": "Segel pesan ini tidak cocok, sehingga tidak dibuka.",
     "chat_unopened_malformed_row": "Pesan ini tidak dapat dibaca: baris datanya tidak valid.",
@@ -5381,7 +5398,9 @@
   "trust_play_integrity": "Play Integrity",
   "trust_play_validates": "Play Integrity memvalidasi keaslian aplikasi",
   "trust_root": {
-    "no_root": "root yang mana? path harus menyebutkan root_key_id yang ingin dicabut kepercayaannya"
+    "no_root": "root yang mana? path harus menyebutkan root_key_id yang ingin dicabut kepercayaannya",
+    "bundle_unlabelled": "bundel ini diterbitkan sebelum baris trust-root membawa label tugasnya (trust:charter:v1); pada node ini, bundel tersebut akan terpasang sebagai tanpa charter sama sekali. Impor bundel dari final genesis (FSD/FINAL_GENESIS.md) sebagai gantinya. Tidak ada yang berubah pada node ini.",
+    "bundle_not_in_force": "Node ini belum berjalan pada bundle yang dibawanya, sehingga tidak melayani satu pun di dalamnya."
   },
   "trust_running": "Berjalan",
   "trust_verify_desc": "Status dan detail verifikasi",
@@ -5576,7 +5595,8 @@
     "seal_mismatch": "Bita-bita tersebut tidak dapat dibuka berdasarkan catatan berkas ini. Catatan dan bita-bitanya tidak sesuai.",
     "too_large_for_whole_read": "Berkas ini terlalu besar untuk dibaca dalam satu bagian. Berkas ini harus dialirkan (streaming).",
     "withdraw_failed": "Berkas tidak dapat ditarik. Coba lagi.",
-    "withdrawn": "Penulisnya telah menarik berkas ini. Bita-bitanya tidak lagi disajikan di mana pun."
+    "withdrawn": "Penulisnya telah menarik berkas ini. Bita-bitanya tidak lagi disajikan di mana pun.",
+    "awaiting_key": "Byte-nya sudah ada di sini, tetapi kunci perangkat ini untuknya belum tiba. Kunci itu akan menyusul dengan sendirinya; coba lagi sebentar lagi."
   },
   "notes": {
     "author_signer_unavailable": "Node ini tidak dapat menandatangani sebagai Anda saat ini, sehingga catatan tidak ditulis.",
@@ -5817,5 +5837,28 @@
       "handled_elsewhere": "Perangkat lain Anda sedang menjawab untuk Anda dalam pertukaran ini.",
       "handled_here": "Perangkat ini sedang menjawab untuk Anda dalam pertukaran ini."
     }
+  },
+  "final_genesis": {
+    "already_planned": "sebuah upacara sudah direncanakan pada node ini; sertakan \"replace\": true untuk membatalkannya",
+    "bad_request": "test_holder_seed_b64 harus berupa base64 dari tepat 32 byte",
+    "clock_not_synchronized": "jam host ini tidak tersinkronisasi NTP; setiap saat dalam genesis diberi cap waktu darinya, dan penerima menolak waktu yang lebih dari 300 detik ke depan",
+    "clock_unverified": "server ini tidak dapat membaca status sinkronisasi jam host; pastikan jam sudah tersinkronisasi dan sertakan \"clock_checked\": true",
+    "no_hardware_signer": "penandatanganan memerlukan fitur `pkcs11` (YubiKey pemegang + penanda tangan ML-DSA USB)",
+    "no_serve_nodes": "genesis menempatkan setidaknya satu server kanonis",
+    "not_planned": "tidak ada upacara yang direncanakan pada node ini — lakukan POST ke /v1/accord/final-genesis/plan terlebih dahulu",
+    "not_testing_mode": "seed pemegang perangkat lunak hanya diterima dengan CIRIS_TESTING_MODE=true (uji coba kering)",
+    "not_a_holder": "Kunci itu bukan pemegang accord yang terdaftar.",
+    "nothing_to_sign": "Pemegang ini tidak memiliki apa pun yang perlu ditandatangani saat ini. Entah semua yang menjadi kewajibannya sudah ditandatangani, atau putaran berikutnya menunggu pemegang lain menandatangani charter.",
+    "recovery_key_is_a_holder": "Kunci itu adalah kunci tanda tangan milik pemegang yang terdaftar. Kunci pemulihan harus berupa cadangan.",
+    "recovery_key_mismatch": "Token yang terbuka tidak menyimpan kunci yang dicatat oleh upacara accord untuk cadangan ini. Pastikan itu adalah YubiKey dan USB yang benar.",
+    "recovery_key_shared": "Cadangan itu sudah tercatat sebagai kunci pemulihan milik pemegang lain.",
+    "recovery_key_wrong_holder": "Cadangan itu bukan kunci pemulihan pemegang ini. Setiap pemegang memulihkan dengan kunci cadangan pasangannya sendiri.",
+    "serve_node_no_dial_hint": "Node kanonik itu tidak membawa petunjuk transport. Sertakan alamatnya (host:4242) beserta kuncinya; node kanonik yang didudukkan oleh genesis tanpa petunjuk tersebut adalah node yang tidak dapat ditemukan oleh node baru mana pun.",
+    "serve_node_no_pqc": "Catatan node itu tidak memiliki kunci ML-DSA-65. Node genesis memerlukan kedua paruhnya.",
+    "serve_node_unknown": "Node itu tidak memiliki catatan kunci di sini. Sertakan catatan lengkapnya, bukan id-nya.",
+    "sign_failed": "Penandatanganan gagal di tengah proses. Apa yang sudah ditandatangani tetap disimpan; tandatangani lagi untuk menyelesaikan sisanya.",
+    "signer_unavailable": "Penanda tangan milik pemegang (YubiKey dan USB) tidak dapat dibuka.",
+    "store_failed": "Node ini tidak dapat menulis status upacara.",
+    "store_unavailable": "Node ini tidak dapat mengakses penyimpanan kuncinya."
   }
 }
