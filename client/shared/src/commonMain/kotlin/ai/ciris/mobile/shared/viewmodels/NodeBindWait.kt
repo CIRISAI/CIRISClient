@@ -68,3 +68,67 @@ object NodeBindWait {
     /** The deadline for this device: never shorter than the startup budget it already has. */
     fun deadlineSeconds(): Int = maxOf(DEADLINE_SECONDS, StartupBudget.seconds())
 }
+
+/**
+ * Whether [e] is the node not being up YET — a refused, reset or timed-out
+ * connection — rather than an answer. A [ai.ciris.mobile.shared.api.NodeRefusal]
+ * is always an answer. Read from class names and messages along the cause
+ * chain, because common code cannot name `java.net.ConnectException`.
+ */
+fun looksUnreachable(e: Throwable): Boolean {
+    var c: Throwable? = e
+    var depth = 0
+    while (c != null && depth < 8) {
+        if (c is ai.ciris.mobile.shared.api.NodeRefusal) return false
+        val name = c::class.simpleName.orEmpty()
+        val msg = c.message.orEmpty().lowercase()
+        if ("Connect" in name || "Timeout" in name || "UnresolvedAddress" in name ||
+            "refused" in msg || "connection reset" in msg || "failed to connect" in msg || "timed out" in msg
+        ) return true
+        c = c.cause
+        depth++
+    }
+    return false
+}
+
+/**
+ * A screen's FIRST read of the node, with the startup path's patience
+ * (CIRISClient#149/#151): while [block] fails because the node is not up yet,
+ * say so through [onWait] ([NodeWait.Waiting]) and ask again on [NodeBindWait]'s
+ * backoff; past the deadline, report [NodeWait.TimedOut] and return null. Any
+ * other failure — an answer, a refusal — is rethrown at once: only absence is
+ * waited out.
+ */
+suspend fun <T> awaitNodeFirstRead(
+    nodeUrl: String,
+    onWait: (NodeWait) -> Unit,
+    deadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
+    now: () -> Long = { ai.ciris.mobile.shared.platform.currentTimeMillis() },
+    pause: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) },
+    block: suspend () -> T,
+): T? {
+    val started = now()
+    var attempt = 0
+    while (true) {
+        try {
+            val v = block()
+            onWait(NodeWait.Idle)
+            return v
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Throwable) {
+            if (!looksUnreachable(e)) {
+                onWait(NodeWait.Idle)
+                throw e
+            }
+            val elapsed = ((now() - started) / 1000).toInt()
+            if (elapsed >= deadlineSeconds) {
+                onWait(NodeWait.TimedOut(nodeUrl, elapsed, e.message))
+                return null
+            }
+            onWait(NodeWait.Waiting(elapsed, attempt + 1))
+            pause(NodeBindWait.delayFor(attempt))
+            attempt++
+        }
+    }
+}

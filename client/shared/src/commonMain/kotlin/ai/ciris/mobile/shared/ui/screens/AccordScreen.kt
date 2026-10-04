@@ -311,6 +311,18 @@ fun AccordScreen(
             // ── Messages ─────────────────────────────────────────────────────
             notice?.let { msg -> Banner(msg, error = false, tag = "accord_notice") }
             error?.let { msg -> Banner(msg, error = true, tag = "accord_error") }
+            // The first load waits for the node like startup does (#149/#151):
+            // a waiting line, then an error with Retry — never a lone "connection refused".
+            val nodeWait by viewModel.nodeWait.collectAsState()
+            StartupWaitBlock(
+                state = nodeWait,
+                tags = StartupWaitTags("accord_waiting_node", "accord_node_unreachable", "btn_accord_node_retry"),
+                drawWaitingLine = true,
+                waiting = { s -> localizedString("mobile.accord_waiting_node", mapOf("seconds" to s)) },
+                title = { localizedString("mobile.accord_node_unreachable_title") },
+                body = { url, s -> localizedString("mobile.accord_node_unreachable_body", mapOf("url" to url, "seconds" to s)) },
+                onRetry = { viewModel.retryFirstLoad() },
+            )
 
             // ── Co-scrub export (after Propose / Cosign) ─────────────────────
             //    Surface the returned partial so the operator can hand it to the next

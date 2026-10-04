@@ -8,7 +8,16 @@ import ai.ciris.mobile.shared.models.federation.FinalGenesisRefusal
 import ai.ciris.mobile.shared.models.federation.GenesisCell
 import ai.ciris.mobile.shared.models.federation.HolderGenesisState
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
+import ai.ciris.mobile.shared.models.federation.DEFAULT_PIV_SLOT
+import ai.ciris.mobile.shared.models.federation.genesisItemLabel
 import ai.ciris.mobile.shared.models.federation.isDialHint
+import ai.ciris.mobile.shared.models.federation.pinTriesWarning
+import ai.ciris.mobile.shared.models.federation.seedBlobName
+import ai.ciris.mobile.shared.models.federation.seedBlobPath
+import ai.ciris.mobile.shared.platform.DirectoryPickerDialog
+import ai.ciris.mobile.shared.platform.DirectoryPickerPurpose
+import ai.ciris.mobile.shared.platform.getFileSize
+import ai.ciris.mobile.shared.viewmodels.NodeWait
 import ai.ciris.mobile.shared.models.federation.shortCommitment
 import ai.ciris.mobile.shared.viewmodels.recoveryCommitmentShown
 import ai.ciris.mobile.shared.platform.TestAutomation
@@ -97,6 +106,7 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
     val replanning by vm.replanning.collectAsState()
     val refusal by vm.refusal.collectAsState()
     val confirm by vm.confirm.collectAsState()
+    val nodeWait by vm.nodeWait.collectAsState()
 
     // The node drives the grid: re-read while a ceremony is planned, so the
     // other holders' signatures appear here without anyone pressing anything.
@@ -136,8 +146,13 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
                     Spacer(Modifier.height(10.dp))
                 }
                 when (val p = phase) {
-                    FinalGenesisPhase.Probing, FinalGenesisPhase.Legacy ->
+                    FinalGenesisPhase.Probing, FinalGenesisPhase.Legacy -> {
                         StateBlock(ListState.Loading, tag = "final_genesis_loading")
+                        (nodeWait as? NodeWait.Waiting)?.let { w ->
+                            val line = localizedString("mobile.final_genesis_waiting_node", "seconds", w.elapsedSeconds.toString())
+                            Text(line, style = type.body, color = t.dim, modifier = Modifier.testable("final_genesis_waiting_node", line))
+                        }
+                    }
                     is FinalGenesisPhase.Unavailable -> {
                         RefusalBlock(p.refusal, tag = "final_genesis_unavailable")
                         Spacer(Modifier.height(8.dp))
@@ -297,6 +312,104 @@ private fun ModulePathField(tag: String, value: String, onValueChange: (String) 
     )
 }
 
+/** What a holder types for one token session: the USB directory, the PIN, the PIV slot, the module. */
+private class TokenInputs(usb: String = "", pin: String = "", slot: String = DEFAULT_PIV_SLOT, module: String = "") {
+    var usb by mutableStateOf(usb)
+    var pin by mutableStateOf(pin)
+    var slot by mutableStateOf(slot)
+    var module by mutableStateOf(module)
+}
+
+/**
+ * The inputs one YubiKey + USB session needs, with what a person at the
+ * console needs to know (Eric, live, 0.5.227): which holder's token to insert,
+ * a folder picker for the USB key — and whether `<holder>.mldsa65.seed.blob`
+ * is in the folder picked — the PIN named as the YubiKey PIV PIN, the PIV slot
+ * (usually 9c), and a PIN-tries warning from the node's last refusal, large and
+ * next to the PIN, not in the refusal's small print.
+ */
+@Composable
+private fun TokenForm(
+    holder: String,
+    inputs: TokenInputs,
+    usbTag: String,
+    pinTag: String,
+    slotTag: String,
+    moduleTag: String,
+    browseTag: String,
+    tagSuffix: String,
+    pinWarning: String?,
+) {
+    val t = CirisTheme.tokens
+    val type = CirisTheme.type
+    var picker by remember(usbTag) { mutableStateOf(false) }
+    Text(
+        localizedString("mobile.final_genesis_insert_tokens", "holder", holder),
+        style = type.title,
+        color = t.ink,
+        modifier = Modifier.testable("final_genesis_insert_$tagSuffix"),
+    )
+    Spacer(Modifier.height(6.dp))
+    Text(localizedString("mobile.final_genesis_usb_label", "file", seedBlobName(holder)), style = type.label, color = t.mute)
+    Spacer(Modifier.height(4.dp))
+    CirisTextField(
+        tag = usbTag,
+        value = inputs.usb,
+        onValueChange = { inputs.usb = it },
+        placeholder = localizedString("mobile.final_genesis_usb_hint"),
+        mono = true,
+    )
+    CirisTextButton(
+        localizedString("mobile.final_genesis_usb_browse"),
+        tag = browseTag,
+        onClick = { picker = true },
+    )
+    DirectoryPickerDialog(
+        show = picker,
+        purpose = DirectoryPickerPurpose.UsbCustody,
+        onDirectoryPicked = {
+            inputs.usb = it
+            picker = false
+        },
+        onDismiss = { picker = false },
+    )
+    // A cheap look for the holder's blob in the folder (a size read; no file is opened).
+    if (inputs.usb.isNotBlank()) {
+        val found = remember(inputs.usb, holder) { getFileSize(seedBlobPath(inputs.usb, holder)) > 0L }
+        Text(
+            localizedString(
+                if (found) "mobile.final_genesis_blob_found" else "mobile.final_genesis_blob_missing",
+                "file",
+                seedBlobName(holder),
+            ),
+            style = type.body,
+            color = if (found) t.ok else t.danger,
+            modifier = Modifier.testable("final_genesis_blob_$tagSuffix", if (found) "found" else "missing"),
+        )
+    }
+    Spacer(Modifier.height(6.dp))
+    Text(localizedString("mobile.final_genesis_pin_label"), style = type.label, color = t.mute)
+    Spacer(Modifier.height(4.dp))
+    PinField(tag = pinTag, value = inputs.pin, onValueChange = { inputs.pin = it })
+    pinWarning?.let { w ->
+        Spacer(Modifier.height(4.dp))
+        Text(w, style = type.title, color = t.danger, modifier = Modifier.testable("final_genesis_pin_warning_$tagSuffix", w))
+    }
+    Spacer(Modifier.height(6.dp))
+    Text(localizedString("mobile.final_genesis_slot_label"), style = type.label, color = t.mute)
+    Spacer(Modifier.height(4.dp))
+    CirisTextField(
+        tag = slotTag,
+        value = inputs.slot,
+        onValueChange = { inputs.slot = it },
+        placeholder = localizedString("mobile.final_genesis_slot_hint"),
+        mono = true,
+    )
+    Text(localizedString("mobile.final_genesis_slot_hint"), style = type.body, color = t.dim)
+    Spacer(Modifier.height(6.dp))
+    ModulePathField(tag = moduleTag, value = inputs.module, onValueChange = { inputs.module = it })
+}
+
 // ── 1 + 2: recovery keys and the plan ───────────────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -433,9 +546,7 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
     val type = CirisTheme.type
     val slug = genesisSlug(holder)
     var open by remember(holder) { mutableStateOf(false) }
-    var usb by remember(holder) { mutableStateOf("") }
-    var pin by remember(holder) { mutableStateOf("") }
-    var module by remember(holder) { mutableStateOf("") }
+    val inputs = remember(holder) { TokenInputs() }
 
     // The fingerprint is the charter's own commitment (`GET …/recovery-keys`);
     // on a node from before that route there is none until a token is read.
@@ -490,26 +601,27 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
             )
         }
         Spacer(Modifier.height(6.dp))
-        CirisTextField(
-            tag = "input_final_genesis_recovery_usb_$slug",
-            value = usb,
-            onValueChange = { usb = it },
-            placeholder = localizedString("mobile.final_genesis_usb_hint"),
-            mono = true,
+        // The spare is read as its own token: insert the spare's YubiKey and USB.
+        TokenForm(
+            holder = vm.spareFor(holder) ?: holder,
+            inputs = inputs,
+            usbTag = "input_final_genesis_recovery_usb_$slug",
+            pinTag = "input_final_genesis_recovery_pin_$slug",
+            slotTag = "input_final_genesis_recovery_slot_$slug",
+            moduleTag = "input_final_genesis_recovery_module_$slug",
+            browseTag = "btn_final_genesis_recovery_browse_$slug",
+            tagSuffix = "recovery_$slug",
+            pinWarning = pinTriesWarning(failure?.detail),
         )
         Spacer(Modifier.height(6.dp))
-        PinField(tag = "input_final_genesis_recovery_pin_$slug", value = pin, onValueChange = { pin = it })
-        Spacer(Modifier.height(6.dp))
-        ModulePathField(tag = "input_final_genesis_recovery_module_$slug", value = module, onValueChange = { module = it })
-        Spacer(Modifier.height(6.dp))
-        val ready = usb.isNotBlank() && !busy && row !is RecoveryRow.Verifying
+        val ready = inputs.usb.isNotBlank() && !busy && row !is RecoveryRow.Verifying
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CirisButton(
                 localizedString("mobile.final_genesis_recovery_read"),
                 tag = "btn_final_genesis_verify_go_$slug",
                 onClick = {
-                    vm.verifyRecovery(holder, usb, pin.ifBlank { null }, module.ifBlank { null })
-                    pin = ""
+                    vm.verifyRecovery(holder, inputs.usb, inputs.pin.ifBlank { null }, inputs.module.ifBlank { null }, inputs.slot.ifBlank { null })
+                    inputs.pin = ""
                     open = false
                 },
                 enabled = ready,
@@ -517,7 +629,7 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
             CirisTextButton(
                 localizedString("mobile.confirm_cancel"),
                 tag = "btn_final_genesis_verify_cancel_$slug",
-                onClick = { open = false; pin = "" },
+                onClick = { open = false; inputs.pin = "" },
             )
         }
     }
@@ -581,9 +693,7 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val slug = genesisSlug(holder)
-    var usb by remember(holder) { mutableStateOf("") }
-    var pin by remember(holder) { mutableStateOf("") }
-    var module by remember(holder) { mutableStateOf("") }
+    val inputs = remember(holder) { TokenInputs() }
     val state = grid.holderState(holder)
 
     CardShell(tag = "final_genesis_holder_$slug") {
@@ -610,12 +720,16 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
                 GenesisCell.WAITING -> localizedString("mobile.final_genesis_cell_waiting")
             }
             Row(modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    localizedString("mobile.final_genesis_cell_round", mapOf("round" to FinalGenesisItems.round(item).toString(), "item" to item)),
-                    style = type.signed,
-                    color = t.dim,
-                    modifier = Modifier.weight(1f),
-                )
+                val plain = genesisItemLabel(item)?.let { (key, params) -> localizedString(key, params) } ?: item
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        localizedString("mobile.final_genesis_cell_round", mapOf("round" to FinalGenesisItems.round(item).toString(), "item" to plain)),
+                        style = type.body,
+                        color = t.ink,
+                        modifier = Modifier.testable("final_genesis_item_${slug}_${genesisSlug(item)}", plain),
+                    )
+                    Text(item, style = type.signed, color = t.mute)
+                }
                 Chip(
                     ChipSpec(
                         label = cellText,
@@ -648,25 +762,25 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
         }
         if (state != HolderGenesisState.Done) {
             Spacer(Modifier.height(8.dp))
-            CirisTextField(
-                tag = "input_final_genesis_usb_$slug",
-                value = usb,
-                onValueChange = { usb = it },
-                placeholder = localizedString("mobile.final_genesis_usb_hint"),
-                mono = true,
+            TokenForm(
+                holder = holder,
+                inputs = inputs,
+                usbTag = "input_final_genesis_usb_$slug",
+                pinTag = "input_final_genesis_pin_$slug",
+                slotTag = "input_final_genesis_slot_$slug",
+                moduleTag = "input_final_genesis_module_$slug",
+                browseTag = "btn_final_genesis_browse_$slug",
+                tagSuffix = slug,
+                pinWarning = (note as? HolderSignNote.Refused)?.refusal?.detail?.let { pinTriesWarning(it) },
             )
-            Spacer(Modifier.height(6.dp))
-            PinField(tag = "input_final_genesis_pin_$slug", value = pin, onValueChange = { pin = it })
-            Spacer(Modifier.height(6.dp))
-            ModulePathField(tag = "input_final_genesis_module_$slug", value = module, onValueChange = { module = it })
             Spacer(Modifier.height(8.dp))
-            val ready = state == HolderGenesisState.SignNow && usb.isNotBlank() && !busy
+            val ready = state == HolderGenesisState.SignNow && inputs.usb.isNotBlank() && !busy
             CirisButton(
                 localizedString("mobile.final_genesis_sign", "holder", holder),
                 tag = "btn_final_genesis_sign_$slug",
                 onClick = {
-                    vm.sign(holder, usb, pin.ifBlank { null }, module.ifBlank { null })
-                    pin = ""
+                    vm.sign(holder, inputs.usb, inputs.pin.ifBlank { null }, inputs.module.ifBlank { null }, inputs.slot.ifBlank { null })
+                    inputs.pin = ""
                 },
                 enabled = ready,
                 modifier = Modifier.fillMaxWidth(),

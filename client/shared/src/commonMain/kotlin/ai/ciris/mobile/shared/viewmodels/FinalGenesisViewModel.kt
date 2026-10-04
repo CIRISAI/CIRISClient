@@ -92,7 +92,13 @@ sealed interface HolderSignNote {
 class FinalGenesisViewModel(
     private val apiClient: CIRISApiClient,
     private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
+    /** How long the sheet's first probe waits for a node that is not up yet (#149/#151). */
+    private val nodeWaitDeadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
 ) : ViewModel() {
+
+    private val _nodeWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+    /** The first probe's wait for the node: Waiting while it is not up yet. */
+    val nodeWait: StateFlow<NodeWait> = _nodeWait.asStateFlow()
 
     companion object {
         private const val TAG = "FinalGenesisVM"
@@ -187,8 +193,8 @@ class FinalGenesisViewModel(
         // A new display: the dial hints are what the node serves NOW. An edit
         // survives only a Retry inside the same form (Codex on #154).
         _dialHints.value = emptyMap()
-        probe()
-        if (_phase.value != FinalGenesisPhase.Legacy) loadSource()
+        probe(first = true)
+        if (_phase.value != FinalGenesisPhase.Legacy && _phase.value !is FinalGenesisPhase.Unavailable) loadSource()
     }
 
     /**
@@ -208,11 +214,27 @@ class FinalGenesisViewModel(
      */
     private var stateEpoch = 0L
 
-    private suspend fun probe() = probeMutex.withLock {
+    private suspend fun probe(first: Boolean = false) = probeMutex.withLock {
         val started = stateEpoch
         val apply: () -> Unit = try {
-            val status = apiClient.getFinalGenesisStatus(nodeUrl());
-            { planned(status) }
+            // The sheet's FIRST read waits out a node that is not up yet.
+            val status = if (first) {
+                awaitNodeFirstRead(nodeUrl(), onWait = { _nodeWait.value = it }, deadlineSeconds = nodeWaitDeadlineSeconds) {
+                    apiClient.getFinalGenesisStatus(nodeUrl())
+                }
+            } else {
+                apiClient.getFinalGenesisStatus(nodeUrl())
+            }
+            if (status == null) {
+                val waited = _nodeWait.value as? NodeWait.TimedOut
+                ({
+                    _phase.value = FinalGenesisPhase.Unavailable(
+                        FinalGenesisRefusal("mobile.final_genesis_node_unreachable", waited?.detail, 0),
+                    )
+                })
+            } else {
+                ({ planned(status) })
+            }
         } catch (e: NodeRefusal) {
             when (finalGenesisProbe(e.statusCode, e.reasonId, e.body)) {
                 FinalGenesisProbe.LEGACY -> ({ _phase.value = FinalGenesisPhase.Legacy })
@@ -369,7 +391,7 @@ class FinalGenesisViewModel(
      * Read [holder]'s spare off its token: optional when the key is on record,
      * required when the node has none (`recovery_key_id: null`).
      */
-    fun verifyRecovery(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
+    fun verifyRecovery(holder: String, usbPath: String, pin: String?, modulePath: String? = null, pivSlot: String? = null): Job =
         exclusive {
             val spare = spareFor(holder) ?: return@exclusive
             val prior = _recovery.value[holder]
@@ -382,7 +404,7 @@ class FinalGenesisViewModel(
                 _recoveryFailures.value = _recoveryFailures.value + (holder to r)
             }
             try {
-                val res = apiClient.verifyFinalGenesisRecoveryKey(holder, spare, usbPath, pin, modulePath, nodeUrl())
+                val res = apiClient.verifyFinalGenesisRecoveryKey(holder, spare, usbPath, pin, modulePath, nodeUrl(), pivSlot)
                 setRecovery(holder, RecoveryRow.Verified(res.recoveryKey.keyId, null, res.recoveryKey))
                 // The node's own account of what it will commit to, commitment included.
                 if (recoveryRoute != false) loadRecoveryKeys()
@@ -482,11 +504,11 @@ class FinalGenesisViewModel(
     }
 
     /** One YubiKey session signs everything [holder] owes now. */
-    fun sign(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
+    fun sign(holder: String, usbPath: String, pin: String?, modulePath: String? = null, pivSlot: String? = null): Job =
         exclusive {
             setNote(holder, HolderSignNote.Signing)
             try {
-                val res = apiClient.signFinalGenesis(holder, usbPath, pin, modulePath, nodeUrl())
+                val res = apiClient.signFinalGenesis(holder, usbPath, pin, modulePath, nodeUrl(), pivSlot)
                 setNote(holder, HolderSignNote.Signed(res.signed))
                 // The answer names what is owed; signable_now needs the status.
                 probe()
