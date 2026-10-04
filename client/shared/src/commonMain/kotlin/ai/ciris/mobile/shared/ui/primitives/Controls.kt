@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.primitives
 
+import ai.ciris.mobile.shared.platform.SensitiveInputs
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
@@ -111,7 +112,7 @@ fun rememberTextInputDriver(
             TestAutomation.clearTextInputRequest()
         }
     }
-    LaunchedEffect(value) { TestAutomation.setInputValue(tag, value) }
+    LaunchedEffect(value) { if (!SensitiveInputs.isSensitive(tag)) TestAutomation.setInputValue(tag, value) }
 }
 
 /**

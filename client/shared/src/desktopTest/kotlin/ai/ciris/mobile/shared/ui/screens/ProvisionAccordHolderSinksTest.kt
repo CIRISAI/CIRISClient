@@ -26,11 +26,18 @@ class ProvisionAccordHolderSinksTest {
     @Test
     fun theThreeFieldsDeclareSinksAndDispatchThem() {
         val src = File(commonMain(), "ai/ciris/mobile/shared/ui/screens/ProvisionAccordHolderScreen.kt").readText()
-        val declared = Regex("""rememberInputSinks\(([^)]*)\)""").find(src)?.groupValues?.get(1) ?: ""
+        // Every declaration, not the first: the PIN is declared on its own, as a
+        // SENSITIVE sink, so /input applies it and nothing echoes it.
+        val calls = Regex("""rememberInputSinks\(([^)]*)\)""").findAll(src).map { it.groupValues[1] }.toList()
+        val declared = calls.joinToString(" ")
         for (tag in listOf("input_provision_holder_key_id", "input_provision_holder_usb_path", "input_provision_holder_pin")) {
             assertTrue("\"$tag\"" in declared, "$tag has no declared input sink (rememberInputSinks)")
             assertTrue(Regex("\"$tag\"\\s*->").containsMatchIn(src), "$tag is declared but never dispatched")
         }
+        assertTrue(
+            calls.any { "\"input_provision_holder_pin\"" in it && "sensitive = true" in it },
+            "the PIN sink must be sensitive: $calls",
+        )
     }
 
     /**

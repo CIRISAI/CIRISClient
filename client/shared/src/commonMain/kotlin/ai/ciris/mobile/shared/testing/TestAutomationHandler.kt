@@ -61,7 +61,8 @@ object TestAutomationHandler {
     /** Stamp an element with what automation can actually do to it. */
     private fun withDrivability(e: ElementInfo): ElementInfo {
         val ta = ai.ciris.mobile.shared.platform.TestAutomation
-        val held = ta.inputValue(e.testTag)
+        // A sensitive field (a PIN) is present and drivable, and holds nothing here.
+        val held = if (ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(e.testTag)) null else ta.inputValue(e.testTag)
         return e.copy(
             canClick = ta.hasClickHandler(e.testTag),
             canInput = ta.hasInputSink(e.testTag),
@@ -312,13 +313,15 @@ object TestAutomationHandler {
 
         // Record what the field now holds, so /element and /tree can be read
         // back. Without this a consumer had no witness but a screenshot.
-        ta.setInputValue(request.testTag, request.text)
+        // A sensitive field (a PIN) is acknowledged without being stored or echoed.
+        val sensitive = ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)
+        if (!sensitive) ta.setInputValue(request.testTag, request.text)
 
         return ActionResponse(
             success = true,
             element = request.testTag,
             action = "input",
-            text = request.text
+            text = if (sensitive) null else request.text
         )
     }
 

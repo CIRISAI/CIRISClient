@@ -71,11 +71,21 @@ class FinalGenesisTest {
     }
 
     @Test
-    fun theFingerprintIsSha256OfThePublicBytesInFours() {
-        // SHA-256("abc") = ba7816bf 8f01cfea …
-        assertEquals("ba78 16bf 8f01 cfea", shortKeyFingerprint("YWJj"))
-        assertNull(shortKeyFingerprint("not base64!"))
-        assertNull(shortKeyFingerprint(""))
+    fun aBundleMatchesItsFingerprintOnlyByteForByte() {
+        // SHA-256("abc")
+        val abc = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        assertTrue(bundleMatchesSha256("abc", "sha256:$abc"))
+        assertTrue(bundleMatchesSha256("abc", abc.uppercase()))
+        assertFalse(bundleMatchesSha256("abc ", "sha256:$abc"))
+    }
+
+    @Test
+    fun theBundleMemberIsFoundAndAStringMemberIsUnquoted() {
+        assertEquals("""{"a" : [1,"}"]}""", rawJsonMember("""{"x":"{","bundle":{"a" : [1,"}"]},"y":2}""", "bundle"))
+        assertEquals("line1\nline2", finalGenesisBundleText("""{"bundle":"line1\nline2"}"""))
+        assertNull(finalGenesisBundleText("""{"bundle":null}"""))
+        assertNull(finalGenesisBundleText("""{"other":1}"""))
+        assertNull(rawJsonMember("[1]", "bundle"))
     }
 
     @Test

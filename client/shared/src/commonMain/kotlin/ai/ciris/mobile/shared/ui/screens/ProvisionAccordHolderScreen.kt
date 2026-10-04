@@ -99,7 +99,9 @@ fun ProvisionAccordHolderScreen(
     // 2026-09-29 and failed its third step on a form a person can type into.
     // Declared beside the dispatch, as SetupScreen does, so the two cannot
     // drift apart (check_ui_drivable.py fails a dispatched tag with no sink).
-    rememberInputSinks("input_provision_holder_key_id", "input_provision_holder_usb_path", "input_provision_holder_pin")
+    rememberInputSinks("input_provision_holder_key_id", "input_provision_holder_usb_path")
+    // The PIN is applied by /input and never stored or echoed (SensitiveInputs).
+    rememberInputSinks("input_provision_holder_pin", sensitive = true)
     val textInputRequest by TestAutomation.textInputRequests.collectAsState()
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->

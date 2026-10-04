@@ -9,8 +9,9 @@ import ai.ciris.mobile.shared.models.federation.GenesisCell
 import ai.ciris.mobile.shared.models.federation.HolderGenesisState
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
 import ai.ciris.mobile.shared.models.federation.shortCommitment
-import ai.ciris.mobile.shared.models.federation.shortKeyFingerprint
+import ai.ciris.mobile.shared.viewmodels.recoveryCommitmentShown
 import ai.ciris.mobile.shared.platform.TestAutomation
+import ai.ciris.mobile.shared.platform.saveFileCopy
 import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
@@ -229,15 +230,16 @@ private fun SectionTitle(text: String) {
 }
 
 /**
- * A PKCS#11 PIN field: `/input`-drivable (it declares its sink and applies the
- * request addressed to it) and NEVER reported — no `setInputValue`, no text on
- * its `/tree` element, masked on screen.
+ * A PKCS#11 PIN field: `/input`-drivable (it declares a SENSITIVE sink and
+ * applies the request addressed to it) and NEVER reported — the automation
+ * layer neither stores nor echoes it ([ai.ciris.mobile.shared.platform.SensitiveInputs]),
+ * no text on its `/tree` element, masked on screen.
  */
 @Composable
 private fun PinField(tag: String, value: String, onValueChange: (String) -> Unit, enabled: Boolean = true) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
-    if (enabled) rememberInputSinks(tag)
+    if (enabled) rememberInputSinks(tag, sensitive = true)
     val request by TestAutomation.textInputRequests.collectAsState()
     LaunchedEffect(request, enabled) {
         val r = request ?: return@LaunchedEffect
@@ -311,7 +313,16 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     val failures by vm.recoveryFailures.collectAsState()
     val holders = source?.holders.orEmpty()
 
-    sourceRefusal?.let { RefusalBlock(it, tag = "final_genesis_source_error"); Spacer(Modifier.height(8.dp)) }
+    sourceRefusal?.let {
+        RefusalBlock(it, tag = "final_genesis_source_error")
+        CirisTextButton(
+            localizedString("mobile.final_genesis_retry"),
+            tag = "btn_final_genesis_source_retry",
+            onClick = { vm.retrySource() },
+            enabled = !busy,
+        )
+        Spacer(Modifier.height(8.dp))
+    }
 
     SectionTitle(localizedString("mobile.final_genesis_holders_title"))
     Text(localizedString("mobile.final_genesis_recovery_desc"), style = type.body, color = t.dim)
@@ -372,7 +383,8 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
         )
         Spacer(Modifier.height(6.dp))
     }
-    val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty() && !recoveryUnavailable
+    val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty() && !recoveryUnavailable &&
+        sourceRefusal == null && source != null
     CirisButton(
         localizedString(if (busy) "mobile.final_genesis_plan_busy" else "mobile.final_genesis_plan"),
         tag = "btn_final_genesis_plan",
@@ -401,14 +413,11 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
             } ?: localizedString("mobile.final_genesis_recovery_on_record", "key", row.recoveryKeyId)
             ) to Tone.INK
         is RecoveryRow.Verifying -> localizedString("mobile.final_genesis_recovery_verifying", "key", row.recoveryKeyId) to Tone.DIM
-        is RecoveryRow.Verified -> localizedString(
-            "mobile.final_genesis_recovery_verified",
-            mapOf(
-                "key" to row.recoveryKeyId,
-                "fingerprint" to (shortCommitment(row.commitment)
-                    ?: row.key?.let { shortKeyFingerprint(it.pubkeyEd25519Base64) } ?: "—"),
-            ),
-        ) to Tone.OK
+        is RecoveryRow.Verified -> (
+            recoveryCommitmentShown(row)?.let { c ->
+                localizedString("mobile.final_genesis_recovery_verified", mapOf("key" to row.recoveryKeyId, "fingerprint" to c))
+            } ?: localizedString("mobile.final_genesis_recovery_verified_pending", "key", row.recoveryKeyId)
+            ) to Tone.OK
         RecoveryRow.Unread -> localizedString("mobile.final_genesis_recovery_unread") to Tone.DANGER
         is RecoveryRow.Missing -> localizedString(
             if (row.spare != null) "mobile.final_genesis_recovery_missing" else "mobile.final_genesis_recovery_missing_unknown",
@@ -437,6 +446,16 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
     }
     if (canVerify && open) {
         Text(localizedString("mobile.final_genesis_recovery_verify_desc"), style = type.body, color = t.dim)
+        // The node accepts only the holder's own spare; the form names it, and the
+        // read sends it — there is nothing to choose.
+        vm.spareFor(holder)?.let { spare ->
+            Text(
+                localizedString("mobile.final_genesis_recovery_spare", "key", spare),
+                style = type.body,
+                color = t.ink,
+                modifier = Modifier.testable("final_genesis_recovery_spare_$slug", spare),
+            )
+        }
         Spacer(Modifier.height(6.dp))
         CirisTextField(
             tag = "input_final_genesis_recovery_usb_$slug",
@@ -652,6 +671,51 @@ private fun FinishedSection(r: FinalGenesisFinishDto) {
         onClick = { clipboard.setText(AnnotatedString(r.bundleSha256)) },
     )
     FieldRow(label = localizedString("mobile.final_genesis_done_path"), value = r.bundlePath, mono = true, tag = "final_genesis_bundle_path")
+    // The bundle itself, as the node sent it (never re-serialized here). Whether
+    // its bytes are the ones the fingerprint names is MEASURED, and said.
+    r.bundleText?.let { bundle ->
+        var saved by remember(bundle) { mutableStateOf<String?>(null) }
+        var saveFailed by remember(bundle) { mutableStateOf(false) }
+        val matches = r.bundleMatchesFingerprint == true
+        val note = if (matches) {
+            localizedString("mobile.final_genesis_done_bundle_matches")
+        } else {
+            localizedString("mobile.final_genesis_done_bundle_differs", "path", r.bundlePath)
+        }
+        Text(
+            note,
+            style = type.body,
+            color = if (matches) t.ok else t.dim,
+            modifier = Modifier.testable("final_genesis_bundle_match", if (matches) "matches" else "differs"),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CirisTextButton(
+                localizedString("mobile.final_genesis_done_copy_bundle"),
+                tag = "btn_final_genesis_copy_bundle",
+                onClick = { clipboard.setText(AnnotatedString(bundle)) },
+            )
+            // Save where the platform can write a file the person can find
+            // (`saveFileCopy`); where it cannot (web), it answers null and the
+            // sheet says so — Copy is then the way out.
+            CirisTextButton(
+                localizedString("mobile.final_genesis_done_save_bundle"),
+                tag = "btn_final_genesis_save_bundle",
+                onClick = {
+                    val at = saveFileCopy("canonical_seed.json", "application/json", bundle.encodeToByteArray())
+                    saved = at
+                    saveFailed = at == null
+                },
+            )
+        }
+        saved?.let {
+            Text(localizedString("mobile.final_genesis_done_saved_at", "path", it), style = type.body, color = t.dim,
+                modifier = Modifier.testable("final_genesis_bundle_saved", it))
+        }
+        if (saveFailed) {
+            Text(localizedString("mobile.final_genesis_done_save_unavailable"), style = type.body, color = t.danger,
+                modifier = Modifier.testable("final_genesis_bundle_save_unavailable"))
+        }
+    }
     val v = r.verified
     FieldRow(label = localizedString("mobile.final_genesis_done_quorum"), value = v.quorumVerified.toString(), tag = "final_genesis_verified_quorum")
     FieldRow(

@@ -668,4 +668,156 @@ class FinalGenesisViewModelTest {
         assertTrue(vm.planHeld())
         assertEquals("something.else", vm.recoveryRefusal.value?.reasonId)
     }
+
+    // ── CIRISServer 4da726e8 (PR #726): the pairing is enforced ──────────────
+
+    @Test
+    fun aHolderIsVerifiedOnlyWithItsOwnSpareWhateverTheNodeListed() = runBlocking<Unit> {
+        // A node that recorded B2 for A1 before the pairing was enforced lists it;
+        // the read must still name A1's own spare, A2 (src/final_genesis.rs:115-160).
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(rks(
+                rk("A1", "B2", cB, "hardware"), rk("B1", "B2", cB, "record"), rk("C1", "C2", cC, "record"),
+            )),
+            "POST /v1/accord/final-genesis/recovery-key" to listOf(400 to refusal(
+                "final_genesis.recovery_key_wrong_holder", "A1 recovers with A2 (the accord pairing), not B2",
+            )),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals("A2", vm.spareFor("A1"))
+        vm.verifyRecovery("A1", "/media/a2", "1").join()
+        assertEquals("A2", n.bodiesOf("POST /v1/accord/final-genesis/recovery-key").single()["recovery_key_id"]!!.jsonPrimitive.content)
+        assertEquals("final_genesis.recovery_key_wrong_holder", vm.recoveryFailures.value["A1"]?.reasonId)
+    }
+
+    @Test
+    fun planRefusesAWrongPairOrASharedKeyById() = runBlocking<Unit> {
+        for ((id, code) in listOf("final_genesis.recovery_key_wrong_holder" to 400, "final_genesis.recovery_key_shared" to 409)) {
+            val n = node(mapOf(
+                "GET /v1/accord/final-genesis" to listOf(notPlanned),
+                "GET /v1/accord/genesis/remint-source" to listOf(source),
+                "POST /v1/accord/final-genesis/plan" to listOf(code to refusal(id, "B2 is named as the recovery key of both A1 and B1")),
+            ))
+            val vm = vm(n)
+            vm.open().join()
+            vm.plan().join()
+            assertEquals(id, vm.refusal.value?.reasonId)
+            assertNull(vm.confirm.value)
+        }
+    }
+
+    // ── finish returns the bundle (4da726e8 :917) ─────────────────────────────
+
+    private val prettyBundle = "{\n  \"version\": 3,\n  \"family_key_id\": \"humanity-accord\",\n  \"holders\": []\n}"
+    private fun sha(s: String) = ai.ciris.mobile.shared.platform.util.Sha256.hex(s.encodeToByteArray())
+    private fun finishBody(bundleJsonValue: String, hashOf: String) =
+        """{"complete":true,"bundle_path":"/h/final-genesis/canonical_seed.json","bundle_sha256":"sha256:${sha(hashOf)}",""" +
+            """"bundle":$bundleJsonValue,"verified":{"quorum_verified":3,"serve_nodes":["ciris-canonical-1"],"attestations":[],"community_key_id":"ciris-canonical","founders":3}}"""
+
+    @Test
+    fun aBundleSentAsTheFilesStringIsCopiedVerbatimAndMatchesTheFingerprint() = runBlocking<Unit> {
+        val asString = Json.encodeToString(kotlinx.serialization.json.JsonPrimitive.serializer(), kotlinx.serialization.json.JsonPrimitive(prettyBundle))
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to status(emptyMap(), complete = true)),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/finish" to listOf(200 to finishBody(asString, prettyBundle)),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.finish().join()
+        val done = assertIs<FinalGenesisPhase.Finished>(vm.phase.value).result
+        assertEquals(prettyBundle, done.bundleText, "the copy is the file's bytes")
+        assertEquals(true, done.bundleMatchesFingerprint)
+    }
+
+    @Test
+    fun aReserializedBundleObjectIsCopiedAsSentAndSaidNotToBeTheHashedBytes() = runBlocking<Unit> {
+        // What 4da726e8 sends: the file parsed and re-serialized compact, keys sorted.
+        val reserialized = """{"family_key_id":"humanity-accord","holders":[],"version":3}"""
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to status(emptyMap(), complete = true)),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/finish" to listOf(200 to finishBody(reserialized, prettyBundle)),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.finish().join()
+        val done = assertIs<FinalGenesisPhase.Finished>(vm.phase.value).result
+        assertEquals(reserialized, done.bundleText, "byte for byte as the node sent it, never re-serialized here")
+        assertEquals(false, done.bundleMatchesFingerprint)
+    }
+
+    // ── Codex, third round on #154 (15:11) ───────────────────────────────────
+
+    @Test
+    fun aFailedSourceRefreshHoldsPlanInsteadOfSubmittingTheOldRoster() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(
+                source,
+                503 to refusal("final_genesis.store_unavailable", "list_canonical_servers: store down"),
+                source,
+            ),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.open().join()
+        assertEquals("final_genesis.store_unavailable", vm.sourceRefusal.value?.reasonId)
+        vm.plan().join()
+        assertFalse("POST /v1/accord/final-genesis/plan" in n.seen, "the cached canonicals are not what the node lists now")
+        assertTrue(vm.planHeld())
+        vm.retrySource().join()
+        assertNull(vm.sourceRefusal.value)
+        vm.plan().join()
+        assertIs<FinalGenesisPhase.Planned>(vm.phase.value)
+    }
+
+    @Test
+    fun aNewCeremonyDoesNotInheritTheLastOnesItems() = runBlocking<Unit> {
+        // Ceremony one seats canonical-1; after it finished, ceremony two seats canonical-2.
+        val c2 = listOf("record:ciris-canonical-2", "row:genesis-charter", "row:genesis-grant:ciris-canonical-2", "row:genesis-lifecycle")
+        val second = status((c2 + r2).associateWith { all })
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan, 200 to status(emptyMap(), complete = true), 200 to second),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/finish" to listOf(200 to finishBody("null", prettyBundle)),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertTrue("record:ciris-canonical-1" in vm.grid()!!.items)
+        vm.refresh().join()
+        vm.finish().join()
+        vm.open().join()
+        val items = vm.grid()!!.items
+        assertFalse("record:ciris-canonical-1" in items, "ceremony one's record is not ceremony two's: $items")
+        assertEquals(7, items.size)
+    }
+
+    @Test
+    fun passingThroughNotPlannedForgetsTheItems() = runBlocking<Unit> {
+        val c2 = listOf("record:ciris-canonical-2", "row:genesis-charter", "row:genesis-grant:ciris-canonical-2", "row:genesis-lifecycle")
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan, notPlanned, 200 to status((c2 + r2).associateWith { all })),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.refresh().join()
+        assertEquals(FinalGenesisPhase.NotPlanned, vm.phase.value)
+        vm.refresh().join()
+        assertFalse("record:ciris-canonical-1" in vm.grid()!!.items)
+    }
+
+    @Test
+    fun noCommitmentIsShownThatTheNodeDidNotReport() {
+        val key = ai.ciris.mobile.shared.models.federation.CommittedKeyDto("A2", "YWJj", "z")
+        assertNull(recoveryCommitmentShown(RecoveryRow.Verified("A2", null, key)), "an Ed25519-only hash is not the charter's commitment")
+        assertNull(recoveryCommitmentShown(RecoveryRow.OnRecord("A2")))
+        assertEquals("3f2a 9c01 77de 0b4e", recoveryCommitmentShown(RecoveryRow.Verified("A2", cA, key)))
+        assertEquals("3f2a 9c01 77de 0b4e", recoveryCommitmentShown(RecoveryRow.OnRecord("A2", cA)))
+    }
 }

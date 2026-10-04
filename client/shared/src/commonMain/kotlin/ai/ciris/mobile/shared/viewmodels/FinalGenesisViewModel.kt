@@ -17,6 +17,7 @@ import ai.ciris.mobile.shared.models.federation.RemintSourceDto
 import ai.ciris.mobile.shared.models.federation.finalGenesisGrid
 import ai.ciris.mobile.shared.models.federation.finalGenesisProbe
 import ai.ciris.mobile.shared.models.federation.planConfirmFor
+import ai.ciris.mobile.shared.models.federation.shortCommitment
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -168,7 +169,11 @@ class FinalGenesisViewModel(
     fun open(): Job = viewModelScope.launch {
         // The view model outlives the sheet: a finished result belongs to the
         // display that produced it, and a new sheet shows what the node says now.
-        if (_phase.value is FinalGenesisPhase.Finished) _phase.value = FinalGenesisPhase.Probing
+        if (_phase.value is FinalGenesisPhase.Finished) {
+            _phase.value = FinalGenesisPhase.Probing
+            // A finished ceremony's items are not the next one's.
+            known.clear()
+        }
         _refusal.value = null
         _recoveryFailures.value = emptyMap()
         probe()
@@ -186,6 +191,8 @@ class FinalGenesisViewModel(
             when (finalGenesisProbe(e.statusCode, e.reasonId)) {
                 FinalGenesisProbe.LEGACY -> _phase.value = FinalGenesisPhase.Legacy
                 FinalGenesisProbe.NOT_PLANNED -> {
+                    // No ceremony on the node: whatever is planned next is a new one.
+                    known.clear()
                     // A finished ceremony stays finished on screen; a node that
                     // lost its state is a different fact, shown as not planned.
                     if (_phase.value !is FinalGenesisPhase.Finished) _phase.value = FinalGenesisPhase.NotPlanned
@@ -270,20 +277,28 @@ class FinalGenesisViewModel(
         }
     }
 
+    /** Re-read the re-mint source after it failed. */
+    fun retrySource(): Job = viewModelScope.launch { loadSource() }
+
     /** Re-read `GET …/recovery-keys` after it failed. */
     fun retryRecoveryKeys(): Job = viewModelScope.launch { loadRecoveryKeys() }
 
     private fun fallbackRow(holder: String): RecoveryRow =
         RECOVERY_PAIRING[holder]?.let { RecoveryRow.OnRecord(it) } ?: RecoveryRow.NoneRecorded
 
-    /** The spare id a holder's token opens as: the node's answer first, else the pairing. */
-    private fun spareOf(holder: String): String? = when (val row = _recovery.value[holder]) {
+    /**
+     * The spare [holder]'s token must open as. For A1/B1/C1 it is the pairing,
+     * full stop: the node refuses any other pair (4da726e8 `check_recovery_keys`),
+     * so a key it listed under the wrong holder is never the one to read. Other
+     * rosters use the id the node lists.
+     */
+    fun spareFor(holder: String): String? = RECOVERY_PAIRING[holder] ?: when (val row = _recovery.value[holder]) {
         is RecoveryRow.OnRecord -> row.recoveryKeyId
         is RecoveryRow.Verified -> row.recoveryKeyId
         is RecoveryRow.Verifying -> row.recoveryKeyId
         is RecoveryRow.Missing -> row.spare
         else -> null
-    } ?: RECOVERY_PAIRING[holder]
+    }
 
     fun toggleServeNode(keyId: String) {
         _serveNodes.value = if (keyId in _serveNodes.value) _serveNodes.value - keyId else _serveNodes.value + keyId
@@ -295,7 +310,7 @@ class FinalGenesisViewModel(
      */
     fun verifyRecovery(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
         viewModelScope.launch {
-            val spare = spareOf(holder) ?: return@launch
+            val spare = spareFor(holder) ?: return@launch
             val prior = _recovery.value[holder]
             setRecovery(holder, RecoveryRow.Verifying(spare))
             _recoveryFailures.value = _recoveryFailures.value - holder
@@ -335,7 +350,11 @@ class FinalGenesisViewModel(
     }
 
     /** Plan waits on the node's recovery keys: unread, or missing for a holder. */
-    fun planHeld(): Boolean = _recoveryUnavailable.value || _planBlockedBy.value.isNotEmpty()
+    fun planHeld(): Boolean =
+        _recoveryUnavailable.value || _planBlockedBy.value.isNotEmpty() ||
+            // A failed refresh of the source leaves a roster and canonicals the
+            // node may no longer list; nothing is planned from them.
+            _sourceRefusal.value != null || _source.value == null
 
     /** The operator confirmed this host's clock is NTP-synchronized. */
     fun confirmClock(): Job {
@@ -448,4 +467,16 @@ class FinalGenesisViewModel(
     /** Items, in bundle order, for a holder's round — what the grid's columns read. */
     fun itemsOfRound(round: Int): List<String> =
         grid()?.items.orEmpty().filter { FinalGenesisItems.round(it) == round }
+}
+
+/**
+ * The commitment a recovery row shows: the node's own `recovery_commitment`,
+ * prefix only, and NOTHING when the node did not report one. A hash computed
+ * here over the Ed25519 half alone looked like the charter's commitment and was
+ * not (Codex on #154); there is no look-alike.
+ */
+fun recoveryCommitmentShown(row: RecoveryRow): String? = when (row) {
+    is RecoveryRow.OnRecord -> shortCommitment(row.commitment)
+    is RecoveryRow.Verified -> shortCommitment(row.commitment)
+    else -> null
 }

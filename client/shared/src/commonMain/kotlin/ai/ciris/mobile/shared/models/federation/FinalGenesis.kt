@@ -4,8 +4,6 @@ import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.platform.util.Sha256
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlin.io.encoding.Base64
-import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * **The final genesis** — CIRISServer 0.5.220 `FSD/FINAL_GENESIS.md`, routes in
@@ -103,7 +101,110 @@ data class FinalGenesisFinishDto(
     @SerialName("bundle_sha256")
     val bundleSha256: String = "",
     val verified: FinalGenesisVerifiedDto = FinalGenesisVerifiedDto(),
-)
+    /**
+     * The `bundle` member EXACTLY as the node sent it (CIRISServer 4da726e8
+     * `:917`): the raw text of the member, or a string member's contents.
+     * Never decoded and re-encoded here — what is copied is what came off the
+     * wire. Filled by the client from the body ([finalGenesisBundleText]).
+     */
+    @kotlinx.serialization.Transient
+    val bundleText: String? = null,
+) {
+    /**
+     * Whether [bundleText]'s bytes are the ones [bundleSha256] names —
+     * MEASURED, not assumed: 4da726e8 re-serializes the file (compact, keys
+     * sorted) into `bundle`, so the copy is the same bundle but not the hashed
+     * bytes, and the fingerprint is the file at [bundlePath]. Null with no bundle.
+     */
+    val bundleMatchesFingerprint: Boolean?
+        get() = bundleText?.let { bundleMatchesSha256(it, bundleSha256) }
+}
+
+/** SHA-256 over [text]'s UTF-8 bytes against a `sha256:<hex>` (or bare hex) fingerprint. */
+fun bundleMatchesSha256(text: String, fingerprint: String): Boolean =
+    Sha256.hex(text.encodeToByteArray()) == fingerprint.trim().removePrefix("sha256:").lowercase()
+
+/**
+ * The raw text of [key]'s value in the top-level JSON object [raw], byte for
+ * byte — whitespace, key order and escapes as sent — or null when the member
+ * is absent or the body is not an object. A small scanner, not a parser: it
+ * only finds where the value starts and ends.
+ */
+fun rawJsonMember(raw: String, key: String): String? {
+    var i = 0
+    fun ws() { while (i < raw.length && raw[i].isWhitespace()) i++ }
+    fun stringEnd(start: Int): Int {
+        var j = start + 1
+        while (j < raw.length) {
+            when (raw[j]) {
+                '\\' -> j += 2
+                '"' -> return j + 1
+                else -> j++
+            }
+        }
+        return -1
+    }
+    fun valueEnd(start: Int): Int {
+        if (start >= raw.length) return -1
+        return when (raw[start]) {
+            '"' -> stringEnd(start)
+            '{', '[' -> {
+                var depth = 0
+                var j = start
+                while (j < raw.length) {
+                    when (raw[j]) {
+                        '"' -> { j = stringEnd(j); if (j < 0) return -1; continue }
+                        '{', '[' -> depth++
+                        '}', ']' -> { depth--; if (depth == 0) return j + 1 }
+                    }
+                    j++
+                }
+                -1
+            }
+            else -> {
+                var j = start
+                while (j < raw.length && raw[j] != ',' && raw[j] != '}' && raw[j] != ']' && !raw[j].isWhitespace()) j++
+                j
+            }
+        }
+    }
+    ws()
+    if (i >= raw.length || raw[i] != '{') return null
+    i++
+    while (true) {
+        ws()
+        if (i >= raw.length || raw[i] == '}') return null
+        if (raw[i] != '"') return null
+        val kEnd = stringEnd(i)
+        if (kEnd < 0) return null
+        val name = raw.substring(i + 1, kEnd - 1)
+        i = kEnd
+        ws()
+        if (i >= raw.length || raw[i] != ':') return null
+        i++
+        ws()
+        val vEnd = valueEnd(i)
+        if (vEnd < 0) return null
+        if (name == key) return raw.substring(i, vEnd)
+        i = vEnd
+        ws()
+        if (i < raw.length && raw[i] == ',') i++
+    }
+}
+
+/**
+ * The bundle text to copy from a finish body: a string member's contents (the
+ * file's bytes, if the node sends them so), otherwise the member's raw text.
+ * `null` member or none → null.
+ */
+fun finalGenesisBundleText(body: String): String? {
+    val member = rawJsonMember(body, "bundle") ?: return null
+    if (member == "null") return null
+    if (member.startsWith('"')) {
+        return (kotlinx.serialization.json.Json.parseToJsonElement(member) as? kotlinx.serialization.json.JsonPrimitive)?.content
+    }
+    return member
+}
 
 /**
  * One holder's recovery key as the node will commit to it — an entry of
@@ -188,26 +289,15 @@ fun planConfirmFor(reasonId: String?): PlanConfirm? = when (reasonId) {
 }
 
 /**
- * The maintainer's pairing (server `RECOVERY_PAIRING`, `src/final_genesis.rs:104`):
- * each seated holder recovers with its own spare. `POST …/recovery-key` needs
- * the spare's id. A node with `GET …/recovery-keys` names it per holder (and
- * that answer wins); a 0.5.220 node from before that route answers a bare 404,
- * and then this table is all the client has. A holder outside it (a
- * test-anchor roster) has no recorded recovery key.
+ * The maintainer's pairing (server `RECOVERY_PAIRING`, `src/final_genesis.rs:111`
+ * at 4da726e8), ENFORCED by the node (`check_recovery_keys` `:128`): a seated
+ * holder recovers only with its own spare, and `POST …/recovery-key` with any
+ * other pair is 400 `final_genesis.recovery_key_wrong_holder` before a token
+ * opens. So for these holders the pairing — not whatever a node once listed —
+ * names the token to read. A holder outside it (a test-anchor roster) uses the
+ * id the node lists, if any.
  */
 val RECOVERY_PAIRING: Map<String, String> = mapOf("A1" to "A2", "B1" to "B2", "C1" to "C2")
-
-/** A short, comparable fingerprint of a key: the first 16 hex of SHA-256 over the Ed25519 public bytes, in fours. */
-@OptIn(ExperimentalEncodingApi::class)
-fun shortKeyFingerprint(pubkeyEd25519Base64: String): String? {
-    val bytes = try {
-        Base64.decode(pubkeyEd25519Base64.trim())
-    } catch (_: IllegalArgumentException) {
-        return null
-    }
-    if (bytes.isEmpty()) return null
-    return Sha256.hex(bytes).take(16).chunked(4).joinToString(" ")
-}
 
 /** The two rounds of signing. Round two opens once every holder has signed the charter. */
 object FinalGenesisItems {

@@ -499,11 +499,12 @@ class TestAutomationServer(
                     // Give UI time to process the request
                     delay(100)
 
+                    // A sensitive field (a PIN) is acknowledged, never echoed.
                     call.respond(ActionResponse(
                         success = true,
                         element = element.testTag,
                         action = "input",
-                        text = request.text
+                        text = if (ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)) null else request.text
                     ))
                 }
 
@@ -715,7 +716,7 @@ class TestAutomationServer(
                                     success = true,
                                     element = request.testTag,
                                     action = "input",
-                                    text = request.text
+                                    text = if (ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)) null else request.text
                                 )
                             }
                         }

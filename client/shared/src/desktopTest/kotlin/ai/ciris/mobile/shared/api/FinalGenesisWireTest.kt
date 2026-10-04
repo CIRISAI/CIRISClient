@@ -163,4 +163,23 @@ class FinalGenesisWireTest {
         assertEquals(404, e.statusCode)
         assertNull(e.reasonId)
     }
+
+    @Test
+    fun theBundleIsTakenFromTheBodyByteForByte() = runBlocking<Unit> {
+        // Odd spacing, unsorted keys, an escaped quote and a brace inside a string:
+        // a re-serialization would change every one of them.
+        val bundle = """{ "version" :3,"b":"a \"}\" here","a":[1 ,2],  "z":{"y":null} }"""
+        val n = node(200, """{"complete":true,"bundle_path":"/p","bundle_sha256":"sha256:00","bundle": $bundle ,"verified":{"quorum_verified":3,"serve_nodes":[],"attestations":[],"community_key_id":"ciris-canonical","founders":3}}""")
+        val r = client.finishFinalGenesis(n.url)
+        assertEquals(bundle, r.bundleText)
+        assertEquals(false, r.bundleMatchesFingerprint)
+    }
+
+    @Test
+    fun aFinishWithoutABundleHasNothingToCopy() = runBlocking<Unit> {
+        val n = node(200, """{"complete":true,"bundle_path":"/p","bundle_sha256":"sha256:00","verified":{"quorum_verified":3,"serve_nodes":[],"attestations":[],"community_key_id":"ciris-canonical","founders":3}}""")
+        val r = client.finishFinalGenesis(n.url)
+        assertNull(r.bundleText)
+        assertNull(r.bundleMatchesFingerprint)
+    }
 }

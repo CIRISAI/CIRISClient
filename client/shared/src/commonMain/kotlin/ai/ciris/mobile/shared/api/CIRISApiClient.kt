@@ -5273,15 +5273,16 @@ class CIRISApiClient(
                 token?.let { header("Authorization", "Bearer $it") }
             }
             val raw = response.bodyAsText()
-            if (!response.status.isSuccess()) {
-                throw RuntimeException("remint source failed: ${response.status}: ${raw.take(220)}")
-            }
+            // A refusal keeps its id, so the final-genesis sheet can say which.
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
             val parsed = jsonConfig.decodeFromString(
                 ai.ciris.mobile.shared.models.federation.RemintSourceDto.serializer(),
                 raw,
             )
             logInfo(method, "remint source holders=${parsed.holders.size} canonicals=${parsed.canonicals.size} quorum=${parsed.quorum}")
             parsed
+        } catch (e: NodeRefusal) {
+            throw e
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl")
             throw RuntimeException(e.message ?: "remint source failed", e)
@@ -5559,7 +5560,9 @@ class CIRISApiClient(
             "finishFinalGenesis", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/finish",
             buildJsonObject { }, requestTimeoutMillis = ceremonyTimeoutMillis,
         )
+        // `bundle` is taken from the body as sent, never through the decoder.
         return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto.serializer(), raw)
+            .copy(bundleText = ai.ciris.mobile.shared.models.federation.finalGenesisBundleText(raw))
     }
 
     /**
