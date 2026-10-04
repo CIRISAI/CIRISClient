@@ -787,6 +787,8 @@ actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
 internal object NodeDeviceClass {
     const val DESKTOP = "laptop"
 
+    // Normalized (trimmed, lowercased) but not validated: the server reads the
+    // canonical spelling only and falls back to `server` on anything else.
     fun forDesktopSpawn(current: String?): String =
-        current?.takeIf { it.isNotBlank() } ?: DESKTOP
+        current?.trim()?.lowercase()?.takeIf { it.isNotEmpty() } ?: DESKTOP
 }
