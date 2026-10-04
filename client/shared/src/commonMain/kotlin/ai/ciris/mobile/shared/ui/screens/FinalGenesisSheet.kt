@@ -307,6 +307,8 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     val busy by vm.busy.collectAsState()
     val blockedBy by vm.planBlockedBy.collectAsState()
     val recoveryRefusal by vm.recoveryRefusal.collectAsState()
+    val recoveryUnavailable by vm.recoveryUnavailable.collectAsState()
+    val failures by vm.recoveryFailures.collectAsState()
     val holders = source?.holders.orEmpty()
 
     sourceRefusal?.let { RefusalBlock(it, tag = "final_genesis_source_error"); Spacer(Modifier.height(8.dp)) }
@@ -315,9 +317,18 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     Text(localizedString("mobile.final_genesis_recovery_desc"), style = type.body, color = t.dim)
     Spacer(Modifier.height(6.dp))
     if (holders.isEmpty() && sourceRefusal == null) StateBlock(ListState.Loading, tag = "final_genesis_holders_loading")
-    recoveryRefusal?.let { RefusalBlock(it, tag = "final_genesis_recovery_error"); Spacer(Modifier.height(6.dp)) }
+    recoveryRefusal?.let {
+        RefusalBlock(it, tag = "final_genesis_recovery_error")
+        CirisTextButton(
+            localizedString("mobile.final_genesis_retry"),
+            tag = "btn_final_genesis_recovery_retry",
+            onClick = { vm.retryRecoveryKeys() },
+            enabled = !busy,
+        )
+        Spacer(Modifier.height(6.dp))
+    }
     for (h in holders) {
-        RecoveryRowView(vm, h.keyId, recovery[h.keyId], busy)
+        RecoveryRowView(vm, h.keyId, recovery[h.keyId], failures[h.keyId], busy)
     }
 
     Spacer(Modifier.height(14.dp))
@@ -352,7 +363,16 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
         )
         Spacer(Modifier.height(6.dp))
     }
-    val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty()
+    if (recoveryUnavailable) {
+        Text(
+            localizedString("mobile.final_genesis_plan_blocked_unread"),
+            style = type.body,
+            color = t.danger,
+            modifier = Modifier.testable("final_genesis_plan_blocked_unread"),
+        )
+        Spacer(Modifier.height(6.dp))
+    }
+    val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty() && !recoveryUnavailable
     CirisButton(
         localizedString(if (busy) "mobile.final_genesis_plan_busy" else "mobile.final_genesis_plan"),
         tag = "btn_final_genesis_plan",
@@ -363,7 +383,7 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
 }
 
 @Composable
-private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: RecoveryRow?, busy: Boolean) {
+private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: RecoveryRow?, failure: FinalGenesisRefusal?, busy: Boolean) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val slug = genesisSlug(holder)
@@ -389,7 +409,7 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
                     ?: row.key?.let { shortKeyFingerprint(it.pubkeyEd25519Base64) } ?: "—"),
             ),
         ) to Tone.OK
-        is RecoveryRow.Refused -> localizedString("mobile.final_genesis_recovery_on_record", "key", row.recoveryKeyId) to Tone.INK
+        RecoveryRow.Unread -> localizedString("mobile.final_genesis_recovery_unread") to Tone.DANGER
         is RecoveryRow.Missing -> localizedString(
             if (row.spare != null) "mobile.final_genesis_recovery_missing" else "mobile.final_genesis_recovery_missing_unknown",
             "key",
@@ -404,8 +424,9 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: Reco
         tone = tone,
         tag = "final_genesis_recovery_$slug",
     )
-    (row as? RecoveryRow.Refused)?.let { RefusalBlock(it.refusal, tag = "final_genesis_recovery_refusal_$slug") }
-    val canVerify = row is RecoveryRow.OnRecord || row is RecoveryRow.Refused || row is RecoveryRow.Verified ||
+    // A failed read sits beside the row; the row keeps what the node said.
+    failure?.let { RefusalBlock(it, tag = "final_genesis_recovery_refusal_$slug") }
+    val canVerify = row is RecoveryRow.OnRecord || row is RecoveryRow.Verified ||
         (row is RecoveryRow.Missing && row.spare != null)
     if (canVerify && !open) {
         CirisTextButton(
