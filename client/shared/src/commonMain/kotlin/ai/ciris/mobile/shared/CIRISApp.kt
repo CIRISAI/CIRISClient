@@ -499,10 +499,10 @@ fun CIRISApp(
     var addFederationIdReturnScreen by remember { mutableStateOf<Screen>(Screen.ManageNodes) }
     var fedIdCatchupPrompted by remember { mutableStateOf(false) }
 
-    // Track screen changes for test automation
-    LaunchedEffect(currentScreen) {
-        TestAutomation.setCurrentScreen(currentScreen::class.simpleName ?: "unknown")
-    }
+    // `/screen` is reported from INSIDE the screen host (ReportComposedScreen in
+    // mainScreenContent), not from here. A LaunchedEffect on `currentScreen`
+    // reported the navigation intent, which said Setup while StartupScreen was
+    // composed (CIRISClient#149).
 
     // Publish the node-vs-agent gate to test automation.
     //
@@ -1306,10 +1306,104 @@ fun CIRISApp(
         )
     }
 
-    LaunchedEffect(phase) {
+    /**
+     * One attempt at the gate probe: read the node's `/v1/system/health`, derive
+     * the three-state probe and COMMIT it. Throws when there is nothing to commit,
+     * and the message names what failed. That message is what the splash's
+     * error shows (CIRISClient#149).
+     */
+    suspend fun probeGateOnce() {
+        val nh = apiClient.getNodeHealth(CIRISApiClient.LOCAL_NODE_URL)
+        nodeVersion = nh.version
+        val p = ai.ciris.mobile.shared.models.clientModeFrom(
+            nh.cognitiveState, nh.serviceCount,
+            nh.agentFolded, nh.agentReachable,
+            brainUnconfigured,
+            role = nh.role,
+        )
+        if (p.undetermined) {
+            throw IllegalStateException(
+                "the agent is folded into this node but not answering yet " +
+                    "(folded=${nh.agentFolded}, reachable=${nh.agentReachable})",
+            )
+        }
+        commitGate(p, nh)
+    }
+
+    /**
+     * Retry the gate probe in the BACKGROUND until it resolves (CIRISClient#149).
+     *
+     * Setup holds on StartupScreen until the gate says whether there is an
+     * agent, so a gate left unset is a Setup that never composes. That happened
+     * two ways: a probe that threw was logged and abandoned, and an undetermined
+     * one was retried for 60 s and then dropped. Both now go through
+     * [StartupViewModel.awaitBrainProbe]. It uses the node bind's backoff and
+     * deadline, puts a waiting line on the splash, and past the deadline shows
+     * an error naming the failure, with Retry.
+     *
+     * It stays off the startup path, because nothing in routing needs the
+     * answer (CIRISClient#48: 62 s of nothing to touch when it was inline). It
+     * is launched on `coroutineScope` so a phase change does not cancel it.
+     */
+    var gateProbeJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    fun launchGateProbe(why: String) {
+        gateProbeJob?.cancel()
+        val target = CIRISApiClient.LOCAL_NODE_URL.trimEnd('/') + "/v1/system/health"
+        platformLog(TAG, "[INFO][gate] $why — retrying $target IN BACKGROUND; startup continues with the gate unset")
+        gateProbeJob = coroutineScope.launch {
+            startupViewModel.awaitBrainProbe(target = target, probe = { probeGateOnce() })
+        }
+    }
+
+    // The gate-probe error's Retry (CIRISClient#149).
+    val brainProbeRetries by startupViewModel.brainProbeRetries.collectAsState()
+    LaunchedEffect(brainProbeRetries) {
+        if (brainProbeRetries > 0) launchGateProbe("Retry pressed")
+    }
+
+    // Bumped by the node-wait Retry; a key here so Retry re-runs this check (CIRISClient#149).
+    val nodeWaitRetries by startupViewModel.nodeWaitRetries.collectAsState()
+
+    LaunchedEffect(phase, nodeWaitRetries) {
         if (phase == StartupPhase.READY && !checkingFirstRun) {
             checkingFirstRun = true
             platformLog(TAG, "[INFO] Startup READY, checking first-run status...")
+
+            // ─── WAIT FOR THE NODE TO ANSWER BEFORE ASKING IT ANYTHING ──────
+            // (CIRISClient#149). Every read below goes to this device's node: the
+            // gate probe, the ownership probe and the wizard's own hold. The node
+            // binds seconds into its boot, and on a with-AI first run READY means
+            // the AGENT answered, which says nothing about the node. CIRISAgent
+            // run 37010300145 asked :4243 0.6 s before it bound. The refusal read
+            // as FRESH, the gate probe threw so `brainPresent` stayed null, Setup
+            // held on StartupScreen forever, and the timer had already stopped.
+            //
+            // WHY WAIT, AND NOT PROCEED ON THE AGENT'S firstRun=true. The agent's
+            // `setup_required` says whether ITS .env exists. Whether this is a
+            // first run is the NODE's answer, and the two disagree in practice
+            // (CIRISAgent#1061: brain unconfigured, node owned, and re-entering
+            // the wizard re-claims an owned node). The wizard needs the node
+            // anyway: it claims it on COMPLETE and holds on the gate probe that
+            // reads it, so proceeding would move the strand into the wizard. A
+            // node-only client has no agent answer to fall back on at all. A short
+            // wait for the authority beats a fast guess without it.
+            //
+            // Skipped during the post-setup hold, which waits for the node's
+            // REBIND on its own, longer clock, and under Home Assistant ingress,
+            // where this app does not run the node.
+            if (!reconfiguring && !isHAAddonMode) {
+                val waitUrl = CIRISApiClient.LOCAL_NODE_URL
+                val bound = startupViewModel.awaitNodeBound(
+                    nodeUrl = waitUrl,
+                    answers = { isNodeReachable(CIRISApiClient.reconcileLocalNode { isNodeReachable(it) }) },
+                )
+                if (!bound) {
+                    // The error state with Retry is on screen (StartupScreen reads
+                    // nodeWait). Clear the latch so Retry's re-run gets past it.
+                    checkingFirstRun = false
+                    return@LaunchedEffect
+                }
+            }
 
             // ─── Derive the ONE node-vs-agent gate (server now reachable) ────
             // Probe the NODE ONCE for its version (the mismatch banner) and its
@@ -1319,130 +1413,52 @@ fun CIRISApp(
             // CIRISApiClient.getNodeHealth). The brain's /v1/system/health is
             // probed second and may upgrade the gate: AGENT iff either surface
             // reports a cognitive_state / a non-empty service map.
+            // Is the brain configured at all? A brain with no config runs 10 of
+            // its 22 services to serve the wizard and reports cognitive_state
+            // "SETUP" — which reads as an agent to a health probe, and is not
+            // one. Only the brain can answer this, so ask before deciding.
+            // Unreachable/failed probe => false, i.e. no downgrade: the gate
+            // keeps its previous behaviour rather than guessing NODE. Asked
+            // FIRST so every gate attempt below, inline or retried, reads it.
+            brainUnconfigured = runCatching {
+                val s = apiClient.getSetupStatus().data
+                s.setup_required && !s.has_env_file
+            }.getOrDefault(false)
+            // THE LIVE NODE ADDRESS, NOT THE PARAMETER (CIRISClient#52):
+            // probeGateOnce reads CIRISApiClient.LOCAL_NODE_URL, the live answer,
+            // never the frozen `nodeBaseUrl` composable parameter.
+            //
+            // NODE VENDOR DRIFT #16: the folded-brain THREE-state probe
+            // (CIRISServer#390) is inside probeGateOnce. "No brain", "brain
+            // answering" and "brain attached but not answering yet" are three
+            // different facts, and the third is a RETRY SIGNAL, not a verdict:
+            // the fold boots the brain on a daemon thread AFTER the node composes.
+            //
+            // ONE inline attempt, so a gate that resolves now is committed before
+            // routing. Anything else (a throw, or undetermined) goes to the
+            // background retry, which the user does not wait on (CIRISClient#48)
+            // but which no longer gives up silently (CIRISClient#149): Setup holds
+            // on this gate, so an abandoned probe was a Setup that never composed.
+            //
+            // WHY THE FOLD IS UNREACHABLE AT ALL on a run-without-AI install is
+            // not this repo's to fix (evidence/blocked_upstream.tsv). There the
+            // retry ends in its error after the deadline. Nobody sees it, because
+            // that client is on Login, not on the splash.
             try {
-                // `val` since the fold retry moved off this path (CIRISClient#48):
-                // the only thing that used to reassign these was the inline retry
-                // loop, and it now owns its own copies.
-                // THE LIVE NODE ADDRESS, NOT THE PARAMETER (CIRISClient#52).
-                //
-                // `nodeBaseUrl` is a composable parameter: resolved once when
-                // CIRISApp was called, and frozen. LOCAL_NODE_URL is the live
-                // answer — the operator's if they named one, and updated by the
-                // run-without-AI hand-off otherwise. a55ac98 introduced exactly
-                // this resolution for #48 but placed it ~3500 lines below here,
-                // so this probe and the reconfigure hold kept reading the frozen
-                // one and asking the AGENT's port whether the NODE was up.
-                val liveNodeUrl = CIRISApiClient.LOCAL_NODE_URL
-                val nodeHealth = apiClient.getNodeHealth(liveNodeUrl)
-                nodeVersion = nodeHealth.version
-                // Is the brain configured at all? A brain with no config runs 10 of
-                // its 22 services to serve the wizard and reports cognitive_state
-                // "SETUP" — which reads as an agent to a health probe, and is not
-                // one. Only the brain can answer this, so ask before deciding.
-                // Unreachable/failed probe => false, i.e. no downgrade: the gate
-                // keeps its previous behaviour rather than guessing NODE.
-                brainUnconfigured = runCatching {
-                    val s = apiClient.getSetupStatus().data
-                    s.setup_required && !s.has_env_file
-                }.getOrDefault(false)
-                // NODE VENDOR DRIFT #16 (restored after the 2.9.28 re-vendor
-                // dropped it): the folded-brain THREE-state probe (CIRISServer#390).
-                // "No brain", "brain answering" and "brain attached but not
-                // answering yet" are three different facts; the re-vendor collapsed
-                // the third into the first, which latches NODE against a brain we
-                // KNOW exists.
-                val probe = ai.ciris.mobile.shared.models.clientModeFrom(
-                    nodeHealth.cognitiveState, nodeHealth.serviceCount,
-                    nodeHealth.agentFolded, nodeHealth.agentReachable,
-                    brainUnconfigured,
-                    role = nodeHealth.role,
-                )
-                // UNDETERMINED is a RETRY SIGNAL, not a verdict: the fold boots the
-                // brain on a daemon thread AFTER the node composes, so a probe at
-                // READY can legitimately see folded=true/reachable=false.
-                //
-                // THE RETRY IS NOT SOMETHING THE USER WAITS ON (CIRISClient#48).
-                //
-                // It used to run inline, right here, ahead of the reconfigure hold and
-                // of every routing decision below it — so a node that reported a fold
-                // it could not reach held the whole app on the startup spinner for the
-                // budget's full 60 seconds before Login was drivable at all. Measured
-                // on Android as 62 s of nothing to touch.
-                //
-                // Nothing in the routing below needs the answer. `clientMode == null`
-                // is a state this file already defines and every consumer already
-                // handles — it means "not probed yet", and the surfaces light up when
-                // it lands. So the retry moves to its own coroutine and the startup
-                // path carries straight on.
-                //
-                // Launched on `coroutineScope`, NOT this LaunchedEffect: the comment on
-                // the reconfigure hold below records that any setPhase() cancels this
-                // block mid-poll. Tying the retry to the composition instead means a
-                // phase change no longer kills a probe that was about to answer.
-                //
-                // WHY THE FOLD IS UNREACHABLE AT ALL on a run-without-AI install is not
-                // this repo's to fix: the node reports `agent.folded=true` for a brain
-                // that will never answer, and nothing the client can see contradicts it
-                // — `/v1/setup/status` carries no `run_without_ai`. Recorded in
-                // evidence/blocked_upstream.tsv. This change makes the wrong answer
-                // cost nothing rather than pretending to know better.
-                if (probe.undetermined) {
-                    val maxModePolls = ai.ciris.mobile.shared.ui.components.StartupBudget.seconds()
-                    platformLog(TAG, "[INFO][gate] brain folded but not answering yet — retrying up to ${maxModePolls}s IN BACKGROUND; startup continues with the gate unset")
-                    coroutineScope.launch {
-                        var bgProbe = probe
-                        var bgHealth = nodeHealth
-                        var modePolls = 0
-                        while (bgProbe.undetermined && modePolls < maxModePolls) {
-                            kotlinx.coroutines.delay(1000)
-                            modePolls++
-                            runCatching { apiClient.getNodeHealth(CIRISApiClient.LOCAL_NODE_URL) }.onSuccess { nh ->
-                                bgHealth = nh
-                                nodeVersion = nh.version
-                                bgProbe = ai.ciris.mobile.shared.models.clientModeFrom(
-                                    nh.cognitiveState, nh.serviceCount,
-                                    nh.agentFolded, nh.agentReachable,
-                                    brainUnconfigured,
-                                    role = nh.role,
-                                )
-                            }
-                        }
-                        if (bgProbe.undetermined) {
-                            platformLog(TAG, "[WARN][gate] brain folded but unreachable for the whole ${maxModePolls}s budget — leaving clientMode unset")
-                        } else {
-                            commitGate(bgProbe, bgHealth)
-                            platformLog(TAG, "[INFO][gate] resolved in background after ${modePolls}s → ${bgProbe.mode}")
-                        }
-                    }
-                }
-                if (probe.undetermined) {
-                    // Leave the gate UNSET rather than latch NODE against a brain we
-                    // KNOW exists — a node switch or the next launch can still
-                    // resolve it. Guessing here is what made a real agent render as
-                    // a bare node for the rest of the session.
-                    //
-                    // The bounded retry launched above may still resolve it and commit
-                    // through the SAME `commitGate` this branch's else-arm uses; until
-                    // it does, `clientMode` stays null and nothing waits on it.
-                    platformLog(TAG, "[INFO][gate] gate unset for now — the background retry owns it; startup continues")
-                } else {
-                    commitGate(probe, nodeHealth)
-                }
+                probeGateOnce()
+                // Resolved inline: a retry still running from an earlier pass is moot.
+                gateProbeJob?.cancel()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                // Probe failed. This does NOT set the gate — but it does not clear a
-                // previously-committed one either, so SAY WHICH IT IS. The comment
-                // here used to read "leave the gate unset", which was true only on a
-                // first probe; on a re-probe the gate keeps whatever the last backend
-                // answered, and that silence is what let a stale AGENT survive the
-                // post-setup hand-off for a whole release (CIRISClient#48). The
-                // hand-off now clears the gate before this can run, so an unset gate
-                // is the expected case — and if it is ever NOT unset here, the log
-                // says so rather than leaving the next reader to infer it.
+                // The gate is NOT set here, but a previously committed one is not
+                // cleared either, so SAY WHICH IT IS (CIRISClient#48).
                 platformLog(
                     TAG,
                     "[WARN][gate] clientMode probe failed: ${e.message?.take(80)} " +
                         "— gate stays ${clientMode ?: "unset"}",
                 )
+                launchGateProbe("first gate probe unresolved")
             }
 
             // ─── Post-setup RECONFIGURING hold ──────────────────────────────
@@ -1592,6 +1608,9 @@ fun CIRISApp(
             if (isFirstRun == null) {
                 // Server unreachable after all retries - show error
                 platformLog(TAG, "[ERROR] Backend unreachable, cannot determine setup status")
+                // Clear the latch so the error's Retry (which restarts startup and
+                // reaches READY again) re-runs this check instead of skipping it.
+                checkingFirstRun = false
                 startupViewModel.onErrorDetected("Backend unreachable. Please restart the app.")
                 return@LaunchedEffect
             } else if (isFirstRun == true) {
@@ -1901,6 +1920,8 @@ fun CIRISApp(
 
             val mainScreenContent: @Composable (androidx.compose.ui.Modifier) -> Unit = { contentModifier ->
                 androidx.compose.foundation.layout.Box(modifier = contentModifier) {
+            // What is COMPOSED, reported from inside the content (CIRISClient#149).
+            ReportComposedScreen(composedScreen(currentScreen, brainPresent))
             when (currentScreen) {
             Screen.Startup -> {
                 StartupScreen(viewModel = startupViewModel)
@@ -2734,7 +2755,9 @@ fun CIRISApp(
                 //
                 // Waiting is safe — the probe is bounded by the startup budget
                 // and StartupScreen is what the user is already looking at.
-                if (brainPresent == null) {
+                // The rule lives in composedScreen() so `/screen` reports this
+                // hold as Startup, which is what is on screen (CIRISClient#149).
+                if (composedScreen(currentScreen, brainPresent) is Screen.Startup) {
                     platformLog(TAG, "[INFO][Screen.Setup] holding — brainPresent not yet probed")
                     StartupScreen(viewModel = startupViewModel)
                     return@Box

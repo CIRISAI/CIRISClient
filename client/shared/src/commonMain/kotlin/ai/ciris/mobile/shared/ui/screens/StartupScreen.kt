@@ -11,8 +11,15 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISSignet
 import ai.ciris.mobile.shared.ui.theme.CIRISColors
+import ai.ciris.mobile.shared.viewmodels.NodeWait
 import ai.ciris.mobile.shared.viewmodels.StartupPhase
 import ai.ciris.mobile.shared.viewmodels.StartupViewModel
+import ai.ciris.mobile.shared.ui.primitives.CirisButton
+import ai.ciris.mobile.shared.ui.primitives.ListState
+import ai.ciris.mobile.shared.ui.primitives.StateBlock
+import ai.ciris.mobile.shared.ui.theme.CirisShape
+import ai.ciris.mobile.shared.ui.theme.CirisTheme
+import androidx.compose.ui.draw.clip
 import ai.ciris.mobile.shared.ui.components.DebugLogsBlock
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.LinearEasing
@@ -77,6 +84,8 @@ fun StartupScreen(
     // keeps the current 22-light behavior. Verify/prep/boot steps apply to both.
     val clientMode by viewModel.clientMode.collectAsState()
     val showServiceLights = clientMode?.isNode != true
+    val nodeWait by viewModel.nodeWait.collectAsState()
+    val brainWait by viewModel.brainWait.collectAsState()
 
     // Language rotation for startup screen when no explicit language selection
     val localization = LocalLocalization.current
@@ -328,6 +337,11 @@ fun StartupScreen(
                 }
             }
 
+            // Waiting for, or given up on, THIS device's node (CIRISClient#149).
+            NodeWaitBlock(nodeWait = nodeWait, onRetry = viewModel::retryNodeWait)
+            // Waiting for, or given up on, the gate probe Setup holds on (CIRISClient#149).
+            BrainWaitBlock(brainWait = brainWait, onRetry = viewModel::retryBrainProbe)
+
             // Error section with debug info (appears on error)
             // Retry button is shown FIRST (above the fold), then error details below
             errorMessage?.let { error ->
@@ -408,6 +422,131 @@ fun StartupScreen(
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+/** Test tags for the node wait (CIRISClient#149). */
+object StartupNodeTags {
+    /** While waiting: carries the "Waiting for the node to start" line as text. */
+    const val WAITING = "startup_waiting_node"
+    /** Past the deadline: the error StateBlock. */
+    const val UNREACHABLE = "startup_node_unreachable"
+    /** Its Retry. */
+    const val RETRY = "btn_startup_node_retry"
+}
+
+/** Test tags for the gate-probe wait that Setup holds on (CIRISClient#149). */
+object StartupBrainTags {
+    /** While waiting: the visible "checking whether this node has an agent" line. */
+    const val WAITING = "startup_waiting_brain"
+    /** Past the deadline: the error StateBlock, naming the failure. */
+    const val UNREACHABLE = "startup_brain_unreachable"
+    /** Its Retry. */
+    const val RETRY = "btn_startup_brain_retry"
+}
+
+/** The tags one startup wait renders with. */
+internal class StartupWaitTags(
+    val waiting: String,
+    val unreachable: String,
+    val retry: String,
+)
+
+/**
+ * The node wait on the splash (CIRISClient#149). Its waiting words are already
+ * the splash's status line, so the waiting marker only puts them on `/tree`.
+ *
+ * The strings are resolved here as literal calls, not as keys stored in a
+ * table, so `check_localization_sync.py`'s reference-coverage can see them.
+ */
+@Composable
+internal fun NodeWaitBlock(nodeWait: NodeWait, onRetry: () -> Unit) =
+    StartupWaitBlock(
+        state = nodeWait,
+        tags = StartupWaitTags(StartupNodeTags.WAITING, StartupNodeTags.UNREACHABLE, StartupNodeTags.RETRY),
+        drawWaitingLine = false,
+        waiting = { s -> localizedString("mobile.startup_waiting_node", mapOf("seconds" to s)) },
+        title = { localizedString("mobile.startup_node_unreachable_title") },
+        body = { url, s -> localizedString("mobile.startup_node_unreachable_body", mapOf("url" to url, "seconds" to s)) },
+        onRetry = onRetry,
+    )
+
+/**
+ * The gate-probe wait on the splash, which Setup's hold shows (CIRISClient#149).
+ * It runs beside the first-run check, which owns the status line, so it draws
+ * its own waiting line.
+ */
+@Composable
+internal fun BrainWaitBlock(brainWait: NodeWait, onRetry: () -> Unit) =
+    StartupWaitBlock(
+        state = brainWait,
+        tags = StartupWaitTags(StartupBrainTags.WAITING, StartupBrainTags.UNREACHABLE, StartupBrainTags.RETRY),
+        drawWaitingLine = true,
+        waiting = { s -> localizedString("mobile.startup_waiting_brain", mapOf("seconds" to s)) },
+        title = { localizedString("mobile.startup_brain_unreachable_title") },
+        body = { url, s -> localizedString("mobile.startup_brain_unreachable_body", mapOf("url" to url, "seconds" to s)) },
+        onRetry = onRetry,
+    )
+
+/**
+ * One startup wait on the splash (CIRISClient#149).
+ *
+ * WAITING is a drivable line that carries the words, so a harness can tell
+ * "still waiting for X" apart from a splash that has stopped. TIMED OUT is the
+ * locked-spec error state: it names what was asked and, when there is one, the
+ * last failure, and it has a Retry. Both sit on a raised card so they read on
+ * the splash's dark field whichever ground the theme resolves.
+ */
+@Composable
+internal fun StartupWaitBlock(
+    state: NodeWait,
+    tags: StartupWaitTags,
+    drawWaitingLine: Boolean,
+    waiting: @Composable (seconds: String) -> String,
+    title: @Composable () -> String,
+    body: @Composable (url: String, seconds: String) -> String,
+    onRetry: () -> Unit,
+) {
+    val t = CirisTheme.tokens
+    when (state) {
+        NodeWait.Idle -> Unit
+        is NodeWait.Waiting -> {
+            val line = waiting(state.elapsedSeconds.toString())
+            if (drawWaitingLine) {
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    Modifier
+                        .clip(CirisShape.card)
+                        .background(t.raised)
+                        .testable(tags.waiting, line)
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                ) {
+                    Text(line, style = CirisTheme.type.body, color = t.dim, textAlign = TextAlign.Center)
+                }
+            } else {
+                Box(Modifier.testable(tags.waiting, line))
+            }
+        }
+        is NodeWait.TimedOut -> {
+            Spacer(Modifier.height(16.dp))
+            Box(Modifier.widthIn(max = 480.dp).clip(CirisShape.card).background(t.raised)) {
+                StateBlock(
+                    ListState.Error(
+                        title = title(),
+                        body = body(state.nodeUrl, state.waitedSeconds.toString()),
+                        detail = state.detail,
+                    ),
+                    tag = tags.unreachable,
+                    action = {
+                        CirisButton(
+                            label = localizedString("mobile.startup_retry"),
+                            tag = tags.retry,
+                            onClick = onRetry,
+                        )
+                    },
+                )
             }
         }
     }

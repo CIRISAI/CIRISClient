@@ -117,17 +117,7 @@ class StartupViewModel(
 
             // Start elapsed time counter
             // Timer runs until: (phase is READY or ERROR) AND keepTimerAlive is false
-            launch {
-                while (isActive) {
-                    val shouldStop = (_phase.value == StartupPhase.READY || _phase.value == StartupPhase.ERROR) && !_keepTimerAlive.value
-                    if (shouldStop) {
-                        PlatformLogger.d(TAG, "[TIMER] Stopping timer: phase=${_phase.value}, keepTimerAlive=${_keepTimerAlive.value}")
-                        break
-                    }
-                    _elapsedSeconds.value = ((Clock.System.now().toEpochMilliseconds() - startTime) / 1000).toInt()
-                    delay(100)  // Update more frequently for smoother display
-                }
-            }
+            launchElapsedTimer()
 
             // Execute startup sequence
             try {
@@ -142,6 +132,214 @@ class StartupViewModel(
                 _phase.value = StartupPhase.ERROR
             }
         }
+    }
+
+    private var timerJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * The elapsed-time counter. Runs until (phase is READY or ERROR) AND
+     * keepTimerAlive is false. Restartable, because a node-wait Retry
+     * (CIRISClient#149) resumes waiting after the counter has stopped.
+     */
+    private fun launchElapsedTimer() {
+        if (timerJob?.isActive == true) return
+        timerJob = viewModelScope.launch {
+            while (isActive) {
+                val shouldStop = (_phase.value == StartupPhase.READY || _phase.value == StartupPhase.ERROR) && !_keepTimerAlive.value
+                if (shouldStop) {
+                    PlatformLogger.d(TAG, "[TIMER] Stopping timer: phase=${_phase.value}, keepTimerAlive=${_keepTimerAlive.value}")
+                    break
+                }
+                _elapsedSeconds.value = ((Clock.System.now().toEpochMilliseconds() - startTime) / 1000).toInt()
+                delay(100)  // Update more frequently for smoother display
+            }
+        }
+    }
+
+    // ─── Waiting for THIS device's node to bind (CIRISClient#149) ───────────
+    private val _nodeWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+
+    /** Where startup stands on the local node. See [awaitNodeBound]. */
+    val nodeWait: StateFlow<NodeWait> = _nodeWait.asStateFlow()
+
+    private val _nodeWaitRetries = MutableStateFlow(0)
+
+    /** Bumped by [retryNodeWait]; the first-run check is keyed on it so Retry re-runs it. */
+    val nodeWaitRetries: StateFlow<Int> = _nodeWaitRetries.asStateFlow()
+
+    /**
+     * Wait for the local node to ANSWER before anything reads it.
+     *
+     * A refused read in the node's first seconds of boot means the node is not
+     * up yet. Until CIRISClient#149 the first-run check treated that refusal as
+     * an answer. The ownership probe degraded to FRESH. The gate probe threw, so
+     * the wizard held on an unprobed brain. The timer stopped with no retry and
+     * no message.
+     *
+     * Now a refusal is asked again on the [NodeBindWait] backoff until the node
+     * answers or the deadline passes. While it waits, the splash says it is
+     * waiting for the node and the timer keeps counting. Past the deadline,
+     * [nodeWait] becomes [NodeWait.TimedOut], which the screen renders as an
+     * error with Retry.
+     *
+     * @param nodeUrl the address being asked, for the log and the error's body.
+     * @param answers one read of the node: true when it answered, false when it
+     *   refused or was unreachable. A throw counts as a refusal.
+     * @param deadlineSeconds how long a cold boot may take ([NodeBindWait.deadlineSeconds]).
+     * @param nowMs a monotonic clock in ms, injected so a test runs on virtual time.
+     * @return true once the node answered, false when the deadline passed.
+     */
+    suspend fun awaitNodeBound(
+        nodeUrl: String,
+        answers: suspend () -> Boolean,
+        deadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
+        nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    ): Boolean {
+        val start = nowMs()
+        val deadlineMs = deadlineSeconds * 1000L
+        var refused = 0
+        while (true) {
+            val answered = try {
+                answers()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                false
+            }
+            val elapsed = nowMs() - start
+            if (answered) {
+                if (refused > 0) {
+                    PlatformLogger.i(TAG, "[NODE] $nodeUrl answered after $refused refused read(s), ${elapsed}ms")
+                }
+                _nodeWait.value = NodeWait.Idle
+                return true
+            }
+            refused++
+            if (elapsed >= deadlineMs) {
+                PlatformLogger.e(TAG, "[NODE] $nodeUrl did not answer in ${deadlineSeconds}s ($refused reads refused) — error with Retry")
+                _nodeWait.value = NodeWait.TimedOut(nodeUrl, deadlineSeconds)
+                setKeepTimerAlive(false)
+                return false
+            }
+            if (refused == 1) {
+                PlatformLogger.i(TAG, "[NODE] $nodeUrl refused — the node is still binding; asking again for up to ${deadlineSeconds}s")
+                setKeepTimerAlive(true)
+            }
+            val seconds = (elapsed / 1000).toInt()
+            _nodeWait.value = NodeWait.Waiting(elapsedSeconds = seconds, attempt = refused)
+            setStatus(LocalizationHelper.getString("mobile.startup_waiting_node", mapOf("seconds" to seconds.toString())))
+            delay(NodeBindWait.delayFor(refused - 1).coerceAtMost(deadlineMs - elapsed).coerceAtLeast(1L))
+        }
+    }
+
+    /**
+     * Retry after [NodeWait.TimedOut]. This does not restart the runtime: the
+     * agent, if there is one, is up, and only the node failed to answer. The
+     * first-run check is keyed on [nodeWaitRetries], so bumping it runs the check
+     * again, and the check begins with this wait.
+     */
+    fun retryNodeWait() {
+        PlatformLogger.i(TAG, "[NODE] Retry — waiting for the node again")
+        _nodeWait.value = NodeWait.Idle
+        setKeepTimerAlive(true)
+        launchElapsedTimer()
+        _nodeWaitRetries.value = _nodeWaitRetries.value + 1
+    }
+
+    // ─── Waiting for the gate probe Setup holds on (CIRISClient#149) ────────
+    private val _brainWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+
+    /** Where startup stands on the gate probe. See [awaitBrainProbe]. */
+    val brainWait: StateFlow<NodeWait> = _brainWait.asStateFlow()
+
+    private val _brainProbeRetries = MutableStateFlow(0)
+
+    /** Bumped by [retryBrainProbe]; the gate probe is relaunched on it. */
+    val brainProbeRetries: StateFlow<Int> = _brainProbeRetries.asStateFlow()
+
+    /**
+     * Retry the gate probe until it RESOLVES, on the same backoff and deadline
+     * as the node bind.
+     *
+     * Setup will not compose the wizard until the gate probe has said whether
+     * this node has an agent (`brainPresent`). The probe used to run once
+     * inline: a throw left the gate unset with only a log line, and an
+     * undetermined answer was retried for 60 s in the background and then
+     * dropped. Either way Setup held on StartupScreen indefinitely, which is
+     * the same failure as #149 coming from a node that does answer.
+     *
+     * While it waits, [brainWait] is [NodeWait.Waiting], which the splash
+     * shows as a line on `/tree`. Past the deadline, [brainWait] is
+     * [NodeWait.TimedOut] carrying the last failure, which the splash shows
+     * as an error with Retry.
+     *
+     * This does NOT touch the startup timer or the status line. It runs in
+     * the background, beside the first-run check, which owns both.
+     *
+     * @param target the address probed, for the log and the error's body.
+     * @param probe one attempt. Returns once the gate is resolved and
+     *   committed. Throws on failure, and the message names what failed.
+     * @return true once resolved, false when the deadline passed.
+     */
+    suspend fun awaitBrainProbe(
+        target: String,
+        probe: suspend () -> Unit,
+        deadlineSeconds: Int = NodeBindWait.deadlineSeconds(),
+        nowMs: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    ): Boolean = try {
+        brainProbeLoop(target, probe, deadlineSeconds, nowMs)
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        // Superseded (a newer probe, or the composition left): do not leave a
+        // stale "waiting" line behind.
+        if (_brainWait.value is NodeWait.Waiting) _brainWait.value = NodeWait.Idle
+        throw e
+    }
+
+    private suspend fun brainProbeLoop(
+        target: String,
+        probe: suspend () -> Unit,
+        deadlineSeconds: Int,
+        nowMs: () -> Long,
+    ): Boolean {
+        val start = nowMs()
+        val deadlineMs = deadlineSeconds * 1000L
+        var failed = 0
+        while (true) {
+            val failure: String? = try {
+                probe()
+                null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                e.message?.take(200) ?: e::class.simpleName ?: "unknown failure"
+            }
+            val elapsed = nowMs() - start
+            if (failure == null) {
+                if (failed > 0) {
+                    PlatformLogger.i(TAG, "[GATE] $target resolved after $failed failed probe(s), ${elapsed}ms")
+                }
+                _brainWait.value = NodeWait.Idle
+                return true
+            }
+            failed++
+            if (elapsed >= deadlineMs) {
+                PlatformLogger.e(TAG, "[GATE] $target unresolved after ${deadlineSeconds}s ($failed probes): $failure — error with Retry")
+                _brainWait.value = NodeWait.TimedOut(target, deadlineSeconds, detail = failure)
+                return false
+            }
+            if (failed == 1) {
+                PlatformLogger.i(TAG, "[GATE] $target: $failure — retrying for up to ${deadlineSeconds}s")
+            }
+            _brainWait.value = NodeWait.Waiting(elapsedSeconds = (elapsed / 1000).toInt(), attempt = failed)
+            delay(NodeBindWait.delayFor(failed - 1).coerceAtMost(deadlineMs - elapsed).coerceAtLeast(1L))
+        }
+    }
+
+    /** Retry after the gate probe's [NodeWait.TimedOut]: clears it and relaunches the probe. */
+    fun retryBrainProbe() {
+        PlatformLogger.i(TAG, "[GATE] Retry — probing the gate again")
+        _brainWait.value = NodeWait.Idle
+        _brainProbeRetries.value = _brainProbeRetries.value + 1
     }
 
     /**
@@ -740,6 +938,8 @@ class StartupViewModel(
         _phase1StepsCompleted = 0
         _phase2StepsCompleted = 0
         _hasError.value = false
+        _nodeWait.value = NodeWait.Idle
+        _brainWait.value = NodeWait.Idle
         startCIRIS()
     }
 
