@@ -169,3 +169,23 @@ def test_the_watchdog_still_reports_the_command_exit_code(tmp_path):
     bad = subprocess.run(["bash", str(WATCHDOG), "5", "1", "t", "--", "sh", "-c", "exit 3"],
                          capture_output=True, text=True)
     assert bad.returncode == 3, "a watchdog that swallows the exit code is a new way to report green"
+
+
+def _run_watchdog(windows: str, sleep_s: int) -> "subprocess.CompletedProcess[str]":
+    import os, subprocess
+    env = dict(os.environ, WATCHDOG_STILL_WINDOWS=windows)
+    return subprocess.run(["bash", str(WATCHDOG), "1", "1", "probe", "--", "sleep", str(sleep_s)],
+                          capture_output=True, text=True, env=env, timeout=60)
+
+
+def test_a_process_still_for_fewer_windows_than_the_limit_is_not_killed():
+    """A paging link advances no CPU for a while and then moves again: one or
+    two still heartbeats must not kill it (0.5.227, LLVMContextDispose)."""
+    r = _run_watchdog("10", 4)
+    assert "Treating as hung" not in r.stdout + r.stderr, r.stdout
+
+
+def test_a_process_still_for_the_full_count_is_treated_as_hung():
+    r = _run_watchdog("3", 30)
+    assert "Treating as hung" in r.stdout + r.stderr, r.stdout
+    assert "3 heartbeats in a row" in r.stdout + r.stderr, r.stdout
