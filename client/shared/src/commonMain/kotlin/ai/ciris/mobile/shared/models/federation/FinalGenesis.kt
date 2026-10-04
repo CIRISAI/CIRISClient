@@ -193,12 +193,14 @@ fun rawJsonMember(raw: String, key: String): String? {
 }
 
 /**
- * The bundle text to copy from a finish body: a string member's contents (the
- * file's bytes, if the node sends them so), otherwise the member's raw text.
- * `null` member or none → null.
+ * The bundle text to copy from a finish body. `bundle_json` first (CIRISServer
+ * e4cbedeb `:968`): a string holding the file's exact bytes, the ones
+ * `bundle_sha256` covers. Else the older `bundle` member (4da726e8): a string
+ * member's contents, or the member's raw text as sent. Neither → null.
  */
 fun finalGenesisBundleText(body: String): String? {
-    val member = rawJsonMember(body, "bundle") ?: return null
+    val member = rawJsonMember(body, "bundle_json")?.takeIf { it != "null" }
+        ?: rawJsonMember(body, "bundle") ?: return null
     if (member == "null") return null
     if (member.startsWith('"')) {
         return (kotlinx.serialization.json.Json.parseToJsonElement(member) as? kotlinx.serialization.json.JsonPrimitive)?.content
@@ -243,6 +245,65 @@ object RecoveryKeySource {
 /** A commitment's first 16 hex, in fours — what a holder reads aloud. */
 fun shortCommitment(commitment: String?): String? =
     commitment?.trim()?.removePrefix("sha256:")?.takeIf { it.isNotEmpty() }?.take(16)?.chunked(4)?.joinToString(" ")
+
+/**
+ * One canonical the plan seats and where peers dial it — CIRISServer e4cbedeb
+ * `ServeNodeSpec::WithHints` (`src/final_genesis.rs:263`). A bare id is refused
+ * `final_genesis.serve_node_no_dial_hint`: a canonical seated without an
+ * address is one no fresh node can find.
+ */
+data class PlanServeNode(val keyId: String, val destination: String)
+
+/**
+ * The July bake's canonical-1 and where it is dialled: persist v53.0.1
+ * `src/federation/genesis/canonical_seed.json` (`produced_at`
+ * 2026-08-14T14:48:31Z; the record's `valid_from` 2026-07-31), serve node
+ * `ciris-canonical-1-d7bdeu223k`, `transport_hints` `[{kind: ip, destination:
+ * 108.61.242.236:4242}]`. Used ONLY as the editable prefill for that key when
+ * `remint-source` lists it with no transport hint; the node's own hint always
+ * wins, and no other canonical gets an address the operator did not type.
+ */
+object JulyBakeCanonical1 {
+    const val KEY_ID = "ciris-canonical-1-d7bdeu223k"
+    const val DIAL = "108.61.242.236:4242"
+}
+
+/**
+ * The address a serve node's field starts with: the node's own hint for it
+ * (an `ip` one first), else — for the July bake's canonical-1 only — its baked
+ * address, else nothing.
+ */
+fun initialDialHint(keyId: String, hints: List<TransportHintDto>?): String =
+    hints.orEmpty().let { h -> (h.firstOrNull { it.kind == "ip" } ?: h.firstOrNull())?.destination?.trim() }
+        ?.takeIf { it.isNotEmpty() }
+        ?: if (keyId == JulyBakeCanonical1.KEY_ID) JulyBakeCanonical1.DIAL else ""
+
+/**
+ * `host:port`: a hostname or IPv4 address (letters, digits, dots, hyphens) or a
+ * bracketed IPv6 address, a colon, and a port 1–65535. No spaces, no scheme.
+ */
+fun isDialHint(text: String): Boolean {
+    val t = text.trim()
+    if (t.isEmpty() || t.any { it.isWhitespace() }) return false
+    val host: String
+    val port: String
+    if (t.startsWith("[")) {
+        val end = t.indexOf("]:")
+        if (end < 0) return false
+        host = t.substring(1, end)
+        port = t.substring(end + 2)
+        if (host.isEmpty() || !host.all { it.isLetterOrDigit() || it == ':' || it == '.' }) return false
+    } else {
+        val i = t.lastIndexOf(':')
+        if (i <= 0) return false
+        host = t.substring(0, i)
+        port = t.substring(i + 1)
+        if (!host.all { it.isLetterOrDigit() || it == '.' || it == '-' }) return false
+        if (host.startsWith('.') || host.startsWith('-') || host.endsWith('.') || host.endsWith('-')) return false
+    }
+    if (port.isEmpty() || !port.all { it.isDigit() } || port.length > 5) return false
+    return port.toInt() in 1..65535
+}
 
 /** A refusal reduced to what the sheet renders: the id (localized by id), the node's English, the status. */
 data class FinalGenesisRefusal(val reasonId: String?, val detail: String?, val statusCode: Int) {

@@ -84,7 +84,7 @@ class FinalGenesisViewModelTest {
         """{"key_id":"B1","identity_type":"accord_holder","pubkey_ed25519_base64":"AQ==","pubkey_ml_dsa_65_base64":"x"},""" +
         """{"key_id":"C1","identity_type":"accord_holder","pubkey_ed25519_base64":"Ag==","pubkey_ml_dsa_65_base64":"x"}],""" +
         """"canonicals":[{"key_id":"ciris-canonical-1","identity_type":"canonical,node","pubkey_ed25519_base64":"Aw==",""" +
-        """"pubkey_ml_dsa_65_base64":"y","scrub_key_id":"A1","transport_hints":null,"confers_infra_serve":true}],""" +
+        """"pubkey_ml_dsa_65_base64":"y","scrub_key_id":"A1","transport_hints":[{"kind":"ip","destination":"203.0.113.7:4242"}],"confers_infra_serve":true}],""" +
         """"quorum":"2/3","quorum_m":2,"quorum_n":3,"note":"all three sign"}"""
 
     private val r1 = listOf("record:ciris-canonical-1", "row:genesis-charter", "row:genesis-grant:ciris-canonical-1", "row:genesis-lifecycle")
@@ -205,7 +205,7 @@ class FinalGenesisViewModelTest {
         assertNull(vm.confirm.value)
         val plans = n.bodiesOf("POST /v1/accord/final-genesis/plan")
         assertEquals(listOf(false, true), plans.map { it["clock_checked"]!!.jsonPrimitive.boolean })
-        assertEquals(listOf("ciris-canonical-1"), plans[1]["serve_nodes"]!!.jsonArray.map { it.jsonPrimitive.content })
+        assertEquals(listOf("ciris-canonical-1"), plans[1]["serve_nodes"]!!.jsonArray.map { (it as JsonObject)["key_id"]!!.jsonPrimitive.content })
         assertIs<FinalGenesisPhase.Planned>(vm.phase.value)
     }
 
@@ -819,5 +819,136 @@ class FinalGenesisViewModelTest {
         assertNull(recoveryCommitmentShown(RecoveryRow.OnRecord("A2")))
         assertEquals("3f2a 9c01 77de 0b4e", recoveryCommitmentShown(RecoveryRow.Verified("A2", cA, key)))
         assertEquals("3f2a 9c01 77de 0b4e", recoveryCommitmentShown(RecoveryRow.OnRecord("A2", cA)))
+    }
+
+    // ── CIRISServer e4cbedeb: a dial hint per serve node ─────────────────────
+
+    @Test
+    fun theDialHintIsPrefilledFromTheNodesRecordAndRidesThePlan() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals("203.0.113.7:4242", vm.dialHints.value["ciris-canonical-1"], "from remint-source's transport_hints")
+        vm.plan().join()
+        val node0 = n.bodiesOf("POST /v1/accord/final-genesis/plan").single()["serve_nodes"]!!.jsonArray[0] as JsonObject
+        assertEquals("ciris-canonical-1", node0["key_id"]!!.jsonPrimitive.content)
+        val hint = node0["transport_hints"]!!.jsonArray.single() as JsonObject
+        assertEquals("ip", hint["kind"]!!.jsonPrimitive.content)
+        assertEquals("203.0.113.7:4242", hint["destination"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun planIsHeldUntilEverySeatedCanonicalHasAValidHostAndPort() = runBlocking<Unit> {
+        val noHints = source.second.replace(""""transport_hints":[{"kind":"ip","destination":"203.0.113.7:4242"}]""", """"transport_hints":null""")
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(200 to noHints),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals("", vm.dialHints.value["ciris-canonical-1"].orEmpty(), "nothing invented when the node has no hint")
+        assertTrue(vm.planHeld())
+        for (bad in listOf("108.61.242.236", ":4242", "host:0", "host:99999", "two words:4242", "[::1]")) {
+            vm.setDialHint("ciris-canonical-1", bad)
+            assertTrue(vm.planHeld(), "'$bad' is not host:port")
+        }
+        vm.plan().join()
+        assertFalse("POST /v1/accord/final-genesis/plan" in n.seen)
+        vm.setDialHint("ciris-canonical-1", "198.51.100.4:4242")
+        assertFalse(vm.planHeld())
+        vm.plan().join()
+        val hint = (n.bodiesOf("POST /v1/accord/final-genesis/plan").single()["serve_nodes"]!!.jsonArray[0] as JsonObject)["transport_hints"]!!.jsonArray.single() as JsonObject
+        assertEquals("198.51.100.4:4242", hint["destination"]!!.jsonPrimitive.content)
+    }
+
+    @Test
+    fun theNewDialHintRefusalRendersById() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/plan" to listOf(400 to refusal("final_genesis.serve_node_no_dial_hint", "ciris-canonical-1 carries no transport hint")),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.plan().join()
+        assertEquals("final_genesis.serve_node_no_dial_hint", vm.refusal.value?.reasonId)
+    }
+
+    @Test
+    fun aBundleJsonStringOnFinishMatchesTheFingerprint() = runBlocking<Unit> {
+        val asString = Json.encodeToString(kotlinx.serialization.json.JsonPrimitive.serializer(), kotlinx.serialization.json.JsonPrimitive(prettyBundle))
+        val body = """{"complete":true,"bundle_path":"/h/final-genesis/canonical_seed.json","bundle_sha256":"sha256:${sha(prettyBundle)}",""" +
+            """"bundle_json":$asString,"verified":{"quorum_verified":3,"serve_nodes":["ciris-canonical-1"],"attestations":[],"community_key_id":"ciris-canonical","founders":3}}"""
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to status(emptyMap(), complete = true)),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/finish" to listOf(200 to body),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.finish().join()
+        val done = assertIs<FinalGenesisPhase.Finished>(vm.phase.value).result
+        assertEquals(prettyBundle, done.bundleText)
+        assertEquals(true, done.bundleMatchesFingerprint)
+    }
+
+    /** remint-source with these canonicals: key id → its transport_hints JSON (or "null"). */
+    private fun sourceWith(vararg canonicals: Pair<String, String>) = 200 to source.second.replace(
+        source.second.substring(source.second.indexOf("\"canonicals\":["), source.second.indexOf("],\"quorum\"") + 1),
+        "\"canonicals\":[" + canonicals.joinToString(",") { (id, hints) ->
+            """{"key_id":"$id","identity_type":"canonical,node","pubkey_ed25519_base64":"Aw==","pubkey_ml_dsa_65_base64":"y",""" +
+                """"scrub_key_id":"A1","transport_hints":$hints,"confers_infra_serve":true}"""
+        } + "]",
+    )
+
+    @Test
+    fun canonicalOneOfTheJulyBakeFallsBackToItsBakedAddressOnlyWhenTheNodeGivesNone() = runBlocking<Unit> {
+        for (hints in listOf("null", "[]")) {
+            val n = node(mapOf(
+                "GET /v1/accord/final-genesis" to listOf(notPlanned),
+                "GET /v1/accord/genesis/remint-source" to listOf(sourceWith("ciris-canonical-1-d7bdeu223k" to hints)),
+            ))
+            val vm = vm(n)
+            vm.open().join()
+            assertEquals("108.61.242.236:4242", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"], "hints=$hints")
+            assertFalse(vm.planHeld())
+        }
+        // The node's own hint wins over the baked one.
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(sourceWith(
+                "ciris-canonical-1-d7bdeu223k" to """[{"kind":"ip","destination":"198.51.100.9:4242"}]""",
+            )),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals("198.51.100.9:4242", vm.dialHints.value["ciris-canonical-1-d7bdeu223k"])
+    }
+
+    @Test
+    fun aFreshCanonicalStartsEmptyAndHoldsPlanUntilTyped() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(sourceWith(
+                "ciris-canonical-1-d7bdeu223k" to """[{"kind":"ip","destination":"108.61.242.236:4242"}]""",
+                "ciris-canonical-2" to "null",
+            )),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals("", vm.dialHints.value["ciris-canonical-2"].orEmpty(), "a fresh key is in no directory: nothing to prefill")
+        vm.toggleServeNode("ciris-canonical-2")
+        assertTrue(vm.planHeld(), "canonical-2 is seated with no address")
+        vm.setDialHint("ciris-canonical-2", "canon2.example.net:4242")
+        assertFalse(vm.planHeld())
+        vm.plan().join()
+        val nodes = n.bodiesOf("POST /v1/accord/final-genesis/plan").single()["serve_nodes"]!!.jsonArray
+        assertEquals(2, nodes.size)
     }
 }

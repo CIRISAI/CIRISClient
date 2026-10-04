@@ -16,6 +16,9 @@ import ai.ciris.mobile.shared.models.federation.RecoveryKeySource
 import ai.ciris.mobile.shared.models.federation.RemintSourceDto
 import ai.ciris.mobile.shared.models.federation.finalGenesisGrid
 import ai.ciris.mobile.shared.models.federation.finalGenesisProbe
+import ai.ciris.mobile.shared.models.federation.PlanServeNode
+import ai.ciris.mobile.shared.models.federation.initialDialHint
+import ai.ciris.mobile.shared.models.federation.isDialHint
 import ai.ciris.mobile.shared.models.federation.planConfirmFor
 import ai.ciris.mobile.shared.models.federation.shortCommitment
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -106,6 +109,10 @@ class FinalGenesisViewModel(
     private val _serveNodes = MutableStateFlow<Set<String>>(emptySet())
     /** The canonicals the plan seats. Defaults to the first the node lists. */
     val serveNodes: StateFlow<Set<String>> = _serveNodes.asStateFlow()
+
+    private val _dialHints = MutableStateFlow<Map<String, String>>(emptyMap())
+    /** canonical key id → the `host:port` the plan seats it at; editable, prefilled by [initialDialHint]. */
+    val dialHints: StateFlow<Map<String, String>> = _dialHints.asStateFlow()
 
     private val _recovery = MutableStateFlow<Map<String, RecoveryRow>>(emptyMap())
     val recovery: StateFlow<Map<String, RecoveryRow>> = _recovery.asStateFlow()
@@ -222,6 +229,10 @@ class FinalGenesisViewModel(
             if (_serveNodes.value.isEmpty()) {
                 src.canonicals.firstOrNull()?.let { _serveNodes.value = setOf(it.keyId) }
             }
+            // Prefill each canonical's address once; what the operator typed stays.
+            _dialHints.value = src.canonicals.associate { c ->
+                c.keyId to (_dialHints.value[c.keyId] ?: initialDialHint(c.keyId, c.transportHints))
+            }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[loadSource] ${e.message}")
             _sourceRefusal.value = (e as? NodeRefusal)?.let { FinalGenesisRefusal.of(it) }
@@ -300,6 +311,14 @@ class FinalGenesisViewModel(
         else -> null
     }
 
+    fun setDialHint(keyId: String, value: String) {
+        _dialHints.value = _dialHints.value + (keyId to value)
+    }
+
+    /** The seated canonicals whose address is not a valid `host:port`. */
+    fun serveNodesWithoutDialHint(): List<String> =
+        _serveNodes.value.filter { !isDialHint(_dialHints.value[it].orEmpty()) }.sorted()
+
     fun toggleServeNode(keyId: String) {
         _serveNodes.value = if (keyId in _serveNodes.value) _serveNodes.value - keyId else _serveNodes.value + keyId
     }
@@ -354,7 +373,9 @@ class FinalGenesisViewModel(
         _recoveryUnavailable.value || _planBlockedBy.value.isNotEmpty() ||
             // A failed refresh of the source leaves a roster and canonicals the
             // node may no longer list; nothing is planned from them.
-            _sourceRefusal.value != null || _source.value == null
+            _sourceRefusal.value != null || _source.value == null ||
+            // Every seated canonical needs the address peers dial it at.
+            serveNodesWithoutDialHint().isNotEmpty()
 
     /** The operator confirmed this host's clock is NTP-synchronized. */
     fun confirmClock(): Job {
@@ -394,7 +415,7 @@ class FinalGenesisViewModel(
         _refusal.value = null
         try {
             val status = apiClient.planFinalGenesis(
-                serveNodes = _serveNodes.value.toList(),
+                serveNodes = _serveNodes.value.sorted().map { PlanServeNode(it, _dialHints.value[it].orEmpty()) },
                 clockChecked = _clockChecked.value,
                 replace = replace,
                 nodeUrl = nodeUrl(),

@@ -82,16 +82,31 @@ class FinalGenesisWireTest {
     }
 
     @Test
-    fun planSendsServeNodesAndTheClockAnswerAndReplaceOnlyWhenConfirmed() = runBlocking<Unit> {
+    fun planSendsEachServeNodeWithItsDialHintAndReplaceOnlyWhenConfirmed() = runBlocking<Unit> {
+        // CIRISServer e4cbedeb `ServeNodeSpec::WithHints` (src/final_genesis.rs:263): a
+        // bare id is 400 final_genesis.serve_node_no_dial_hint.
         val ok = """{"complete":false,"signable_now":[],"owed":{}}"""
         val n = node(200, ok)
-        client.planFinalGenesis(listOf("ciris-canonical-1"), clockChecked = false, replace = false, nodeUrl = n.url)
-        client.planFinalGenesis(listOf("ciris-canonical-1", "ciris-canonical-2"), clockChecked = true, replace = true, nodeUrl = n.url)
+        client.planFinalGenesis(
+            listOf(ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-1", " 203.0.113.7:4242 ")),
+            clockChecked = false, replace = false, nodeUrl = n.url,
+        )
+        client.planFinalGenesis(
+            listOf(
+                ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-1", "203.0.113.7:4242"),
+                ai.ciris.mobile.shared.models.federation.PlanServeNode("ciris-canonical-2", "canon2.example.net:4242"),
+            ),
+            clockChecked = true, replace = true, nodeUrl = n.url,
+        )
         assertEquals(List(2) { "POST /v1/accord/final-genesis/plan" }, n.seen)
         // successor_keys / recovery_keys are omitted: the node defaults both to the spares on record.
-        assertEquals(parse("""{"serve_nodes":["ciris-canonical-1"],"clock_checked":false}"""), n.json(0))
         assertEquals(
-            parse("""{"serve_nodes":["ciris-canonical-1","ciris-canonical-2"],"clock_checked":true,"replace":true}"""),
+            parse("""{"serve_nodes":[{"key_id":"ciris-canonical-1","transport_hints":[{"kind":"ip","destination":"203.0.113.7:4242"}]}],"clock_checked":false}"""),
+            n.json(0),
+        )
+        assertEquals(
+            parse("""{"serve_nodes":[{"key_id":"ciris-canonical-1","transport_hints":[{"kind":"ip","destination":"203.0.113.7:4242"}]},""" +
+                """{"key_id":"ciris-canonical-2","transport_hints":[{"kind":"ip","destination":"canon2.example.net:4242"}]}],"clock_checked":true,"replace":true}"""),
             n.json(1),
         )
     }
@@ -181,5 +196,18 @@ class FinalGenesisWireTest {
         val r = client.finishFinalGenesis(n.url)
         assertNull(r.bundleText)
         assertNull(r.bundleMatchesFingerprint)
+    }
+
+    @Test
+    fun bundleJsonIsCopiedAsItsStringAndHashesToTheFingerprint() = runBlocking<Unit> {
+        // e4cbedeb `:968`: `bundle_json` is the file's bytes as a JSON string.
+        val file = "{\n  \"version\": 3,\n  \"family_key_id\": \"humanity-accord\"\n}"
+        val sha = ai.ciris.mobile.shared.platform.util.Sha256.hex(file.encodeToByteArray())
+        val asString = Json.encodeToString(kotlinx.serialization.json.JsonPrimitive.serializer(), kotlinx.serialization.json.JsonPrimitive(file))
+        val n = node(200, """{"complete":true,"bundle_path":"/p","bundle_sha256":"sha256:$sha","bundle_json":$asString,""" +
+            """"verified":{"quorum_verified":3,"serve_nodes":[],"attestations":[],"community_key_id":"ciris-canonical","founders":3}}""")
+        val r = client.finishFinalGenesis(n.url)
+        assertEquals(file, r.bundleText)
+        assertEquals(true, r.bundleMatchesFingerprint)
     }
 }

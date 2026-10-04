@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.models.federation.FinalGenesisRefusal
 import ai.ciris.mobile.shared.models.federation.GenesisCell
 import ai.ciris.mobile.shared.models.federation.HolderGenesisState
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
+import ai.ciris.mobile.shared.models.federation.isDialHint
 import ai.ciris.mobile.shared.models.federation.shortCommitment
 import ai.ciris.mobile.shared.viewmodels.recoveryCommitmentShown
 import ai.ciris.mobile.shared.platform.TestAutomation
@@ -308,6 +309,7 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     val serveNodes by vm.serveNodes.collectAsState()
     val busy by vm.busy.collectAsState()
     val blockedBy by vm.planBlockedBy.collectAsState()
+    val dialHints by vm.dialHints.collectAsState()
     val recoveryRefusal by vm.recoveryRefusal.collectAsState()
     val recoveryUnavailable by vm.recoveryUnavailable.collectAsState()
     val failures by vm.recoveryFailures.collectAsState()
@@ -363,6 +365,35 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
             )
         }
     }
+    // Where peers dial each seated canonical (CIRISServer e4cbedeb: a bare id is
+    // serve_node_no_dial_hint). Prefilled from the node's record, else — for the
+    // July bake's canonical-1 only — its baked address; editable either way.
+    for (keyId in serveNodes.sorted()) {
+        val slug = genesisSlug(keyId)
+        val value = dialHints[keyId].orEmpty()
+        Spacer(Modifier.height(8.dp))
+        Text(
+            localizedString("mobile.final_genesis_dial_label", "key", keyId),
+            style = type.label,
+            color = t.mute,
+        )
+        Spacer(Modifier.height(4.dp))
+        CirisTextField(
+            tag = "input_final_genesis_dial_$slug",
+            value = value,
+            onValueChange = { vm.setDialHint(keyId, it) },
+            placeholder = localizedString("mobile.final_genesis_dial_hint"),
+            mono = true,
+        )
+        if (!isDialHint(value)) {
+            Text(
+                localizedString(if (value.isBlank()) "mobile.final_genesis_dial_missing" else "mobile.final_genesis_dial_invalid"),
+                style = type.body,
+                color = t.danger,
+                modifier = Modifier.testable("final_genesis_dial_invalid_$slug"),
+            )
+        }
+    }
     Spacer(Modifier.height(12.dp))
     // Gated on the holders the node has NO recovery key for — and only those.
     if (blockedBy.isNotEmpty()) {
@@ -384,6 +415,7 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
         Spacer(Modifier.height(6.dp))
     }
     val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty() && !recoveryUnavailable &&
+        serveNodes.all { isDialHint(dialHints[it].orEmpty()) } &&
         sourceRefusal == null && source != null
     CirisButton(
         localizedString(if (busy) "mobile.final_genesis_plan_busy" else "mobile.final_genesis_plan"),

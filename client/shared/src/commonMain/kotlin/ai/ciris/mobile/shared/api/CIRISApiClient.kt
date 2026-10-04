@@ -5502,19 +5502,30 @@ class CIRISApiClient(
 
     /**
      * `POST /v1/accord/final-genesis/plan` — stamp the ceremony ONCE on the node.
-     * [serveNodes] are key ids the node already holds records for. Successor and
+     * [serveNodes] are key ids the node already holds records for, each with the
+     * `host:port` peers dial it at. Successor and
      * recovery keys are omitted on purpose: the node defaults both to the spares
      * on record. [clockChecked] only after the operator confirmed NTP;
      * [replace] only after the operator confirmed discarding a planned ceremony.
      */
     suspend fun planFinalGenesis(
-        serveNodes: List<String>,
+        serveNodes: List<ai.ciris.mobile.shared.models.federation.PlanServeNode>,
         clockChecked: Boolean,
         replace: Boolean,
         nodeUrl: String = LOCAL_NODE_URL,
     ): ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto {
         val body = buildJsonObject {
-            put("serve_nodes", kotlinx.serialization.json.JsonArray(serveNodes.map { JsonPrimitive(it.trim()) }))
+            // Each with the address peers dial it at (CIRISServer e4cbedeb
+            // `ServeNodeSpec::WithHints`): a bare id is serve_node_no_dial_hint.
+            put("serve_nodes", kotlinx.serialization.json.JsonArray(serveNodes.map { n ->
+                buildJsonObject {
+                    put("key_id", JsonPrimitive(n.keyId.trim()))
+                    put("transport_hints", kotlinx.serialization.json.JsonArray(listOf(buildJsonObject {
+                        put("kind", JsonPrimitive("ip"))
+                        put("destination", JsonPrimitive(n.destination.trim()))
+                    })))
+                }
+            }))
             put("clock_checked", JsonPrimitive(clockChecked))
             if (replace) put("replace", JsonPrimitive(true))
         }
