@@ -1,0 +1,159 @@
+csd: CSD-067
+flow: csd_067_final_genesis
+title: The re-mint opens the 3-of-3 final genesis on a 0.5.220 node and walks it as far as software can
+description: >-
+  CSD-067 §4, the re-mint sheet on CIRISServer 0.5.220 (FSD/FINAL_GENESIS.md).
+  The sheet asks GET /v1/accord/final-genesis which re-mint the node runs: a
+  bare 404 (≤0.5.219) keeps the 2-of-3 `sheet_remint_trust_root`; anything
+  else is `sheet_final_genesis`. This flow drives the 0.5.220 sheet: recovery
+  keys on record, the plan, the grid, and the inputs a holder types. It never
+  signs — a sign is a FIPS YubiKey + USB ML-DSA session per holder, which no
+  platform runner has, and the dry run's software holders are not reachable
+  from the app (the `test_holder_seed_b64` door is a test-anchor build with
+  CIRIS_TESTING_MODE=true, and the client never sends it).
+# Floor: no release carries FinalGenesisSheet.kt (feat/final-genesis).
+# Fixture a real run needs: a 0.5.220 node on the runner's own host (every
+# route is loopback-only), started with no `<home>/final-genesis/state.json`
+# (the not-planned leg) and at least one canonical in
+# GET /v1/accord/genesis/remint-source. The `_a1` steps additionally need the
+# production roster (A1/B1/C1, whose spares A2/B2/C2 are on record); a
+# test-anchor roster names other holders and gets "no recovery key recorded",
+# so those steps are optional and skip on it. Planning WRITES the node's
+# ceremony state; use a scratch node, never ~/ciris.
+# Interpolated tags (`final_genesis_recovery_$slug`, `input_final_genesis_usb_$slug`,
+# `final_genesis_holder_state_$slug`, the ConfirmSheet's `sheet_$tagPrefix`) are
+# the blind spot drafts/README.md records: the literal-grep check sees their
+# heads, not their tails.
+client: "unreleased"
+
+steps:
+  - step_id: on_the_accord
+    title: The Accord card offers the re-mint
+    requires:
+      screen: Accord
+    expect:
+      visible: [btn_accord_new]
+
+  - step_id: the_final_genesis_opens
+    title: On a 0.5.220 node the re-mint is the final genesis, not the 2-of-3 seed
+    do:
+      - click: btn_accord_new
+      - click: mi_new_remint_trust_root
+    expect:
+      visible: [sheet_final_genesis, btn_final_genesis_close]
+      absent: [sheet_remint_trust_root, final_genesis_unavailable]
+
+  - step_id: recovery_keys_are_on_record
+    title: Each holder's recovery key is already filled from the record, and verifying it is optional
+    description: >-
+      The spares A2/B2/C2 are on record on the node; the row says which, and
+      the plan button is live before any token is read.
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [final_genesis_recovery_a1]
+    expect:
+      visible:
+        - final_genesis_recovery_a1
+        - final_genesis_recovery_b1
+        - final_genesis_recovery_c1
+        - btn_final_genesis_verify_a1
+        - btn_final_genesis_plan
+      text:
+        final_genesis_recovery_a1: "A2"
+      absent: [final_genesis_recovery_partial]
+
+  - step_id: a_spare_token_can_be_described
+    title: The verify form takes a USB path and a PIN, and is not pressed
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [btn_final_genesis_verify_a1]
+    do:
+      - click: btn_final_genesis_verify_a1
+      - input: {input_final_genesis_recovery_usb_a1: "/media/spare-a2"}
+      - input: {input_final_genesis_recovery_pin_a1: "000000"}
+    expect:
+      visible: [btn_final_genesis_verify_go_a1, btn_final_genesis_verify_cancel_a1]
+
+  - step_id: the_plan_lands_on_the_grid
+    title: Planning stamps the ceremony and the grid shows round one for every holder
+    description: >-
+      On a host where the node can read NTP state (Linux timedatectl) and the
+      clock is synchronized, plan goes straight through; elsewhere the node
+      answers final_genesis.clock_unverified and the next step's confirm opens
+      instead. A node that already holds a plan answers it on open, and this
+      step's expectation holds from there.
+    requires:
+      screen: Accord
+      visible: [btn_final_genesis_plan]
+    do:
+      - click: btn_final_genesis_plan
+    expect:
+      visible: [sheet_final_genesis]
+      absent: [final_genesis_unavailable]
+
+  - step_id: the_clock_is_confirmed_by_a_person
+    title: Where the node cannot read its clock, a three-fact confirm asks before clock_checked is sent
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [sheet_final_genesis_clock]
+    expect:
+      visible:
+        - final_genesis_clock_fact_1
+        - final_genesis_clock_fact_2
+        - final_genesis_clock_fact_3
+        - final_genesis_clock_note
+        - btn_final_genesis_clock_confirm
+        - btn_final_genesis_clock_cancel
+
+  - step_id: round_one_for_three_holders
+    title: Three holders, round one signable, round two waiting on the charter
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [final_genesis_round]
+    expect:
+      visible: [final_genesis_round, final_genesis_round_two_waits, btn_final_genesis_finish, btn_final_genesis_replan]
+      text:
+        final_genesis_round: "1"
+      count: {of: "final_genesis_holder_state_*", eq: 3}
+
+  - step_id: a_holder_can_type_their_token
+    title: A holder's USB path and PIN are enterable; Sign is not pressed
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [input_final_genesis_usb_a1]
+    do:
+      - input: {input_final_genesis_usb_a1: "/media/holder-a1"}
+      - input: {input_final_genesis_pin_a1: "000000"}
+    expect:
+      visible: [btn_final_genesis_sign_a1]
+
+  - step_id: a_finished_genesis
+    title: A finished ceremony shows its fingerprint, its path and what the node verified
+    description: >-
+      Optional, and honestly so: reaching it needs all three holders' FIPS
+      tokens, twice each. The sha256 is the out-of-band comparison CC 3.2 T5
+      makes first-class.
+    optional_step: true
+    requires:
+      screen: Accord
+      visible: [final_genesis_done_title]
+    expect:
+      visible:
+        - final_genesis_bundle_sha256
+        - btn_final_genesis_copy_sha
+        - final_genesis_bundle_path
+        - final_genesis_verified_quorum
+        - final_genesis_verified_serve_nodes
+        - final_genesis_verified_attestations
+        - final_genesis_verified_community
+        - final_genesis_verified_founders
+      text:
+        final_genesis_bundle_sha256: "sha256:"
+        final_genesis_verified_quorum: "3"
+        final_genesis_verified_community: "ciris-canonical"
+        final_genesis_verified_founders: "3"

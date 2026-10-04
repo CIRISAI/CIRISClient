@@ -61,7 +61,13 @@ class NodeRefusal(
             // "detail":"…"}`). An `error` that is a dotted token with no spaces
             // is an id, not a sentence.
             val errorField = obj.str("error")
-            val errorIsId = errorField != null && ID_TOKEN.matches(errorField)
+            // An `error` that repeats `reason_id` is the id too, dotted or not:
+            // persist's ceremony refusals (`ceremony_incomplete`) pass through
+            // the final-genesis routes as `{error: id, reason_id: id, detail}`,
+            // and reading that `error` as English put the id where the node's
+            // sentence belongs.
+            val errorIsId = errorField != null &&
+                (ID_TOKEN.matches(errorField) || errorField == obj.str("reason_id"))
             return NodeRefusal(
                 reasonId = obj.str("reason_id") ?: nested.str("reason_id") ?: nested.str("code")
                     ?: errorField.takeIf { errorIsId },

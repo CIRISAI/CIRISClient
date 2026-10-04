@@ -1107,6 +1107,9 @@ class CIRISApiClient(
     /** Timeout for touch-gated YubiKey ceremony calls (3 touches × human latency). */
     private val ceremonyTimeoutMillis: Long = 180_000
 
+    /** A final-genesis sign is one touch per item a holder owes (round one: 3 rows + a record and a grant per serve node). */
+    private val finalGenesisSignTimeoutMillis: Long = 600_000
+
     /**
      * Decode the ``{"data": <T>}`` envelope used by every federation
      * route. Tolerates an unwrapped ``<T>`` for resilience the same way
@@ -5429,6 +5432,121 @@ class CIRISApiClient(
         } finally {
             client.close()
         }
+    }
+
+    // ── The final genesis (CIRISServer 0.5.220, FSD/FINAL_GENESIS.md) ─────────
+    //
+    // One ceremony, all three holders, loopback-only. Every refusal is a
+    // [NodeRefusal] whose `reason_id` the sheet localizes by id. The PIN rides
+    // the body to the node's own loopback and is never logged: [familyCall]
+    // logs the verb and path, and a refusal logs the node's answer, which never
+    // echoes the request.
+
+    /** The `pkcs11` object every holder-token route reads (`ProvisionPkcs11`, all fields optional). */
+    private fun finalGenesisPkcs11(userPin: String?, modulePath: String?): JsonObject = buildJsonObject {
+        userPin?.takeIf { it.isNotBlank() }?.let { put("user_pin", JsonPrimitive(it)) }
+        modulePath?.takeIf { it.isNotBlank() }?.let { put("module_path", JsonPrimitive(it.trim())) }
+    }
+
+    /**
+     * `GET /v1/accord/final-genesis` — what is owed, by whom, and what can be
+     * signed now. Unplanned → 404 `final_genesis.not_planned`; a node without
+     * the route (≤0.5.219) → a bare 404 with no id. Both throw [NodeRefusal].
+     */
+    suspend fun getFinalGenesisStatus(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto {
+        val raw = familyCall("getFinalGenesisStatus", HttpMethod.Get, nodeUrl, "/v1/accord/final-genesis")
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/recovery-key` — OPTIONAL: read a holder's
+     * spare off its token and check it is the key the accord ceremony recorded
+     * (`final_genesis.recovery_key_mismatch` when not). Signs nothing.
+     */
+    suspend fun verifyFinalGenesisRecoveryKey(
+        holderKeyId: String,
+        recoveryKeyId: String,
+        mldsaUsbPath: String,
+        userPin: String? = null,
+        modulePath: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.RecoveryKeyResponseDto {
+        val body = buildJsonObject {
+            put("holder_key_id", JsonPrimitive(holderKeyId.trim()))
+            put("recovery_key_id", JsonPrimitive(recoveryKeyId.trim()))
+            put("mldsa_usb_path", JsonPrimitive(mldsaUsbPath.trim()))
+            put("pkcs11", finalGenesisPkcs11(userPin, modulePath))
+        }
+        val raw = familyCall(
+            "verifyFinalGenesisRecoveryKey", HttpMethod.Post, nodeUrl,
+            "/v1/accord/final-genesis/recovery-key", body, requestTimeoutMillis = ceremonyTimeoutMillis,
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.RecoveryKeyResponseDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/plan` — stamp the ceremony ONCE on the node.
+     * [serveNodes] are key ids the node already holds records for. Successor and
+     * recovery keys are omitted on purpose: the node defaults both to the spares
+     * on record. [clockChecked] only after the operator confirmed NTP;
+     * [replace] only after the operator confirmed discarding a planned ceremony.
+     */
+    suspend fun planFinalGenesis(
+        serveNodes: List<String>,
+        clockChecked: Boolean,
+        replace: Boolean,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto {
+        val body = buildJsonObject {
+            put("serve_nodes", kotlinx.serialization.json.JsonArray(serveNodes.map { JsonPrimitive(it.trim()) }))
+            put("clock_checked", JsonPrimitive(clockChecked))
+            if (replace) put("replace", JsonPrimitive(true))
+        }
+        val raw = familyCall("planFinalGenesis", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/plan", body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/sign` — ONE YubiKey + USB session signs
+     * everything [keyId] owes now (round one: three rows and one record and one
+     * grant per serve node; round two: three). Each item is a touch, so the wait
+     * is long. 409 `final_genesis.nothing_to_sign` when that holder owes nothing
+     * signable yet.
+     */
+    suspend fun signFinalGenesis(
+        keyId: String,
+        mldsaUsbPath: String,
+        userPin: String? = null,
+        modulePath: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisSignResponseDto {
+        val body = buildJsonObject {
+            put("key_id", JsonPrimitive(keyId.trim()))
+            put("mldsa_usb_path", JsonPrimitive(mldsaUsbPath.trim()))
+            put("pkcs11", finalGenesisPkcs11(userPin, modulePath))
+        }
+        val raw = familyCall(
+            "signFinalGenesis", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/sign", body,
+            requestTimeoutMillis = finalGenesisSignTimeoutMillis,
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisSignResponseDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/finish` — assemble, verify (the doors a
+     * booting node runs) and write the bundle. 409 `ceremony_incomplete` names
+     * what is still owed.
+     */
+    suspend fun finishFinalGenesis(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto {
+        val raw = familyCall(
+            "finishFinalGenesis", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/finish",
+            buildJsonObject { }, requestTimeoutMillis = ceremonyTimeoutMillis,
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto.serializer(), raw)
     }
 
     /**
@@ -14617,9 +14735,10 @@ class CIRISApiClient(
         path: String,
         body: JsonObject? = null,
         query: Map<String, String> = emptyMap(),
+        requestTimeoutMillis: Long = 30_000,
     ): String {
         logInfo(method, "${verb.value} $nodeUrl$path")
-        val client = federationHttpClient()
+        val client = federationHttpClient(requestTimeoutMillis)
         return try {
             val response = client.request("$nodeUrl$path") {
                 this.method = verb

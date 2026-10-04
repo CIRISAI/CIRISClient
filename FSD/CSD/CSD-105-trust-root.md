@@ -127,7 +127,7 @@ fields:
     use: display-only
     type: unconfirmed
     blocked_by: CIRISServer#693
-    example: "head 9f3a… · 3 of 3 witnesses · newest cosign 2026-09-20"
+    example: "head 9f3a… · no witnesses — the final genesis charters witness_quorum 0 (FSD/FINAL_GENESIS.md); a later 2-of-3 act may add them"
     renders: "the root's current lineage head and the witness quorum over it — what CC 3.2 T4a says a consumer MUST hold before attaching; no route serves it"
     tag: "proposed:row_trust_root_head_${root}"
   - ceg: x_private:seed_fingerprint
