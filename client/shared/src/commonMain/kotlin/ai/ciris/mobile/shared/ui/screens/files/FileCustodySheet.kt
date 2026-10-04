@@ -61,6 +61,8 @@ object CustodyTags {
     const val LOADING = "custody_loading"
     const val ERROR = "custody_error"
     const val TOO_OLD = "custody_node_too_old"
+    const val AWAITING_KEY = "custody_awaiting_key"
+    const val CHECK_AGAIN = "btn_custody_check_again"
     const val EMPTY = "custody_empty"
     const val SUMMARY = "text_custody_summary"
     const val HELD_HERE = "custody_held_here"
@@ -94,7 +96,7 @@ object CustodyTags {
 fun FileCustodyHost(custody: FileCustodyViewModel, nodeVersion: String?) {
     val state by custody.state.collectAsState()
     DisposableEffect(custody) { onDispose { custody.close() } }
-    FileCustodySheet(state, nodeVersion, onDismiss = { custody.close() })
+    FileCustodySheet(state, nodeVersion, onDismiss = { custody.close() }, onCheckAgain = { custody.checkAgain() })
 }
 
 /** A device's tag key: its key id, or its position when the node sent none. */
@@ -112,7 +114,7 @@ internal fun custodyDeviceKey(device: CustodyDevice, index: Int): String = devic
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FileCustodySheet(state: CustodyState, nodeVersion: String?, onDismiss: () -> Unit) {
+fun FileCustodySheet(state: CustodyState, nodeVersion: String?, onDismiss: () -> Unit, onCheckAgain: () -> Unit = {}) {
     if (state is CustodyState.Closed) return
     val t = CirisTheme.tokens
     ModalBottomSheet(
@@ -130,13 +132,13 @@ fun FileCustodySheet(state: CustodyState, nodeVersion: String?, onDismiss: () ->
                 .padding(horizontal = 16.dp, vertical = 14.dp)
                 .navigationBarsPadding(),
         ) {
-            FileCustodyCard(state, nodeVersion, onDismiss)
+            FileCustodyCard(state, nodeVersion, onDismiss, onCheckAgain)
         }
     }
 }
 
 @Composable
-private fun FileCustodyCard(state: CustodyState, nodeVersion: String?, onDismiss: () -> Unit) {
+private fun FileCustodyCard(state: CustodyState, nodeVersion: String?, onDismiss: () -> Unit, onCheckAgain: () -> Unit) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val target: CustodyTarget = when (state) {
@@ -145,6 +147,7 @@ private fun FileCustodyCard(state: CustodyState, nodeVersion: String?, onDismiss
         is CustodyState.Ready -> state.target
         is CustodyState.NodeTooOld -> state.target
         is CustodyState.Failed -> state.target
+        is CustodyState.AwaitingKey -> state.target
     }
     CardShell(tag = if (state is CustodyState.Ready) CustodyTags.CARD else null, accent = t.brand) {
         Text(localizedString("mobile.files_custody_title"), style = type.title, color = t.ink)
@@ -174,6 +177,19 @@ private fun FileCustodyCard(state: CustodyState, nodeVersion: String?, onDismiss
                 ),
                 tag = CustodyTags.ERROR,
                 inline = true,
+            )
+            // A wait, not an error: the key follows on its own (0.5.220, `409 drive.awaiting_key`).
+            is CustodyState.AwaitingKey -> StateBlock(
+                ListState.Empty(localizedString("mobile.files_custody_awaiting_key"), glyph = GlyphName.KEY),
+                tag = CustodyTags.AWAITING_KEY,
+                inline = true,
+                action = {
+                    CirisTextButton(
+                        localizedString("mobile.files_awaiting_key_check_again"),
+                        tag = CustodyTags.CHECK_AGAIN,
+                        onClick = onCheckAgain,
+                    )
+                },
             )
             is CustodyState.Ready -> Populated(state.custody)
         }

@@ -6,8 +6,13 @@ import ai.ciris.mobile.shared.models.federation.GenesisState
 import ai.ciris.mobile.shared.models.federation.RootKindView
 import ai.ciris.mobile.shared.models.federation.TrustPosture
 import ai.ciris.mobile.shared.models.federation.TrustRootFailure
+import ai.ciris.mobile.shared.models.federation.ServedBundleRead
+import ai.ciris.mobile.shared.models.federation.ServedBundleView
 import ai.ciris.mobile.shared.models.federation.TrustRootView
+import ai.ciris.mobile.shared.models.federation.importNotYetAccepted
 import ai.ciris.mobile.shared.models.federation.UntrustConsequence
+import ai.ciris.mobile.shared.models.federation.TRUST_ROOT_BUNDLE_UNLABELLED
+import ai.ciris.mobile.shared.models.federation.trustRootRefusalBodyKey
 import ai.ciris.mobile.shared.models.federation.trustRootRefusalKey
 import ai.ciris.mobile.shared.platform.FilePickerDialog
 import ai.ciris.mobile.shared.platform.testable
@@ -89,6 +94,7 @@ fun TrustRootScreen(
     val read by viewModel.read.collectAsState()
     val importStage by viewModel.importStage.collectAsState()
     val untrustStage by viewModel.untrustStage.collectAsState()
+    val servedBundle by viewModel.servedBundle.collectAsState()
 
     var seedText by remember { mutableStateOf("") }
     var allegianceFrom by remember { mutableStateOf("") }
@@ -146,6 +152,7 @@ fun TrustRootScreen(
                 is TrustRootRead.Failed -> TrustRootFailureBlock(r.failure, tagPrefix = "trust_root", readFailure = true)
                 is TrustRootRead.Loaded -> {
                     PostureCard(r.posture)
+                    ServedBundleBlock(servedBundle)
                     Text(localizedString("mobile.trust_root_roots_title"), style = type.title, color = t.ink)
                     if (r.roots.isEmpty()) {
                         StateBlock(ListState.Empty(localizedString("mobile.trust_root_empty"), glyph = GlyphName.ROOT), tag = "trust_root_empty", inline = true)
@@ -283,14 +290,19 @@ internal fun TrustRootFailureBlock(failure: TrustRootFailure, tagPrefix: String,
         )
         is TrustRootFailure.Refused -> {
             val key = trustRootRefusalKey(failure.reasonId)
+            val bodyKey = trustRootRefusalBodyKey(failure.reasonId)
             StateBlock(
                 ListState.Error(
                     title = key?.let { localizedString(it) }
                         ?: localizedString("mobile.trust_root_refused_other", "id", failure.reasonId ?: "—"),
-                    body = failure.detail,
-                    detail = failure.reasonId,
+                    body = bodyKey?.let { localizedString(it) } ?: failure.detail,
+                    // With guidance in the body, the node's own words go beneath it:
+                    // since CIRISServer#726 the unlabelled-bundle detail names the row.
+                    detail = if (bodyKey != null) failure.detail ?: failure.reasonId else failure.reasonId,
                 ),
-                tag = "${tagPrefix}_error",
+                // A refusal with its own guidance is its own tag, so a flow can
+                // assert the guidance and not just "an error".
+                tag = if (failure.reasonId == TRUST_ROOT_BUNDLE_UNLABELLED) "${tagPrefix}_bundle_unlabelled" else "${tagPrefix}_error",
                 inline = true,
             )
         }
@@ -302,6 +314,46 @@ internal fun TrustRootFailureBlock(failure: TrustRootFailure, tagPrefix: String,
             ),
             tag = "${tagPrefix}_error",
             inline = true,
+        )
+    }
+}
+
+/**
+ * The bundle this node runs on (0.5.220 `GET /v1/trust-root/bundle`): what a
+ * person compares out of band with the people who made it. Read-only; absent
+ * on a node without the route.
+ */
+@Composable
+private fun ServedBundleBlock(read: ServedBundleRead) {
+    when (read) {
+        ServedBundleRead.Absent -> Unit
+        is ServedBundleRead.Shown -> ServedBundleCard(read.view)
+        // 409 `trust_root.bundle_not_in_force` (CIRISServer#726): a fact about
+        // this node's posture, not a failure — named, in the neutral tone.
+        is ServedBundleRead.NotInForce -> StateBlock(
+            ListState.Empty(localizedString("mobile.trust_root_bundle_not_in_force"), glyph = GlyphName.ROOT),
+            tag = "trust_root_bundle_not_in_force",
+            inline = true,
+        )
+    }
+}
+
+@Composable
+private fun ServedBundleCard(b: ServedBundleView) {
+    CardShell(tag = "card_trust_root_served_bundle") {
+        Text(localizedString("mobile.trust_root_bundle_title"), style = CirisTheme.type.title, color = CirisTheme.tokens.ink)
+        FieldRow(
+            label = localizedString("mobile.trust_root_bundle_fingerprint_label"),
+            value = b.fingerprint,
+            mono = true,
+            tag = "txt_trust_root_bundle_fingerprint",
+        )
+        FieldRow(
+            label = localizedString("mobile.trust_root_bundle_charter_root_label"),
+            value = b.charterRootKeyId ?: localizedString("mobile.trust_root_unknown"),
+            mono = b.charterRootKeyId != null,
+            tag = "txt_trust_root_bundle_charter_root",
+            divider = false,
         )
     }
 }
@@ -325,7 +377,15 @@ private fun PostureCard(p: TrustPosture) {
     }
     val (text, tone) = when (p.state) {
         GenesisState.ENTRENCHED -> localizedString("mobile.trust_root_state_entrenched") to Tone.OK
-        GenesisState.PRE_GENESIS -> localizedString("mobile.trust_root_state_pre_genesis", "leg", leg) to Tone.BRAND
+        // persist v53 (#973): a newer root this binary carries was not adopted.
+        // With the previous root still in force the node is NOT unrooted — the
+        // headline says so, and the node's own banner ("ROOT NOT ADOPTED …")
+        // rides beneath it as given.
+        GenesisState.PRE_GENESIS -> when {
+            p.heldRootInForce -> localizedString("mobile.trust_root_state_not_adopted_held", "leg", leg) to Tone.BRAND
+            p.bakeNotAdopted -> localizedString("mobile.trust_root_state_not_adopted", "leg", leg) to Tone.BRAND
+            else -> localizedString("mobile.trust_root_state_pre_genesis", "leg", leg) to Tone.BRAND
+        }
         GenesisState.DIVERGENT -> localizedString("mobile.trust_root_state_divergent", "leg", leg) to Tone.DANGER
         else -> localizedString("mobile.trust_root_state_unknown", "state", p.token.ifBlank { "—" }) to Tone.DIM
     }
@@ -528,12 +588,21 @@ private fun ImportResult(stage: ImportStage) {
                 tag = "txt_trust_root_import_accepted",
                 divider = false,
             )
-            if (stage.result.installed && !stage.result.accepted) {
-                Text(
-                    localizedString("mobile.trust_root_import_partial"),
-                    style = type.body,
-                    color = t.danger,
-                    modifier = Modifier.testable("txt_trust_root_import_partial"),
+            if (importNotYetAccepted(stage.result)) {
+                // Imported, NOT trusted — a named state with its why, never a
+                // success. On 0.5.220 this is also what a deferred acceptance
+                // reports (the node does not hold the root's head yet; persist
+                // retries at the next boot or import), so it no longer claims
+                // that adopting again cannot help.
+                Spacer(Modifier.height(8.dp))
+                StateBlock(
+                    ListState.Error(
+                        title = localizedString("mobile.trust_root_import_not_yet_accepted"),
+                        body = localizedString("mobile.trust_root_import_not_yet_accepted_why"),
+                        detail = stage.result.banner,
+                    ),
+                    tag = "trust_root_import_not_yet_accepted",
+                    inline = true,
                 )
             }
         }

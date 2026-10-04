@@ -19,7 +19,8 @@
       "refused": "底层 substrate 拒绝了此授权。它未被接纳，也未授予任何权限。",
       "sign_failed": "该协定持有者的密钥未能生成签名。未做任何更改。",
       "unknown_duty": "这不是本网格所识别的职责。授予它在此处会显示为一种权限，但在每一道闸门都会被拒绝。"
-    }
+    },
+    "genesis_superseded": "2-of-3 提议/联署式重铸机制已停用；创世现为由全部三位持有者在 /v1/accord/final-genesis 共同签署的单一仪式（计划、签署、完成）。"
   },
   "adapters": {
     "navigation": {
@@ -1535,6 +1536,10 @@
     "files_bytes_not_granted": "此设备无法打开它",
     "files_bytes_unreadable": "已打开，但不是可读文本",
     "files_bytes_unopened": "无法在此打开",
+    "files_bytes_awaiting_key": "正在等待此文件的密钥",
+    "files_awaiting_key_body": "其字节已在本设备上，但解密它们所需的密钥尚未到达。密钥会自行送达；一切正常。",
+    "files_awaiting_key_check_again": "再次检查",
+    "files_custody_awaiting_key": "此文件的密钥尚未到达本设备，因此无法说明该文件的位置。密钥会自行送达；请稍后再次检查。",
     "files_room": "房间 {room}",
     "files_choose_room": "将其添加到哪个房间？",
     "files_uploading": "正在添加 {name}……",
@@ -3210,6 +3215,8 @@
     "chat_empty_room": "暂无消息。您在此发送的内容是向此聊天室名册上所有人发出的签名认证记录——只有其成员可以读取，其他任何人都不能。",
     "chat_unopened_not_fetched": "此消息尚未送达此设备。",
     "chat_unopened_not_granted": "此消息在此设备能够读取之前就已被封存，因此无法在此设备上打开。",
+    "chat_unopened_awaiting_key": "此消息已送达，但解密它所需的密钥尚未到达本设备。密钥会自行送达。",
+    "chat_unopened_withdrawn": "其作者已撤回此消息。",
     "chat_unopened_evicted": "此消息的内容已不再保存在此设备上。",
     "chat_unopened_seal_mismatch": "此消息的封印不匹配，因此未被打开。",
     "chat_unopened_malformed_row": "此消息无法读取：该行数据格式有误。",
@@ -3783,6 +3790,14 @@
     "trust_root_accepted_no": "否：本节点已知晓，但未信任",
     "trust_root_accepted_yes": "是：本节点的接受已作用于它",
     "trust_root_banner_label": "节点表示",
+    "trust_root_bundle_title": "本节点运行所依据的种子",
+    "trust_root_bundle_not_in_force": "此节点尚未以其种子运行，因此没有可供核对的种子可展示。",
+    "trust_root_bundle_fingerprint_label": "指纹",
+    "trust_root_bundle_charter_root_label": "章程根",
+    "trust_root_state_not_adopted_held": "更新的根未被采用：此前的根继续生效（{leg} 阶段）",
+    "trust_root_state_not_adopted": "根未被采用：此二进制的根已被拒绝，且未持有任何更早的根（{leg} 阶段）",
+    "trust_root_import_not_yet_accepted": "已导入，尚未接受",
+    "trust_root_import_not_yet_accepted_why": "该根的记录已在本节点上，但本节点尚未信任它。可能是本节点尚未持有该根的创世记录，接受操作会在下一次启动或导入时重试；也可能是其接受状态未能写入。",
     "trust_root_bounded_label": "有效至",
     "trust_root_bounded_none": "其中没有任何内容仅因时间而过期",
     "trust_root_confirm_fact_signs": "由谁签名",
@@ -3845,6 +3860,8 @@
     "trust_root_refused_no_root": "未指名任何根。",
     "trust_root_refused_other": "节点拒绝了此操作（{id}）。",
     "trust_root_refused_withdraw_failed": "节点无法撤回其接受。",
+    "trust_root_refused_bundle_unlabelled": "此种子产生于最终创世之前。未安装任何内容。",
+    "trust_root_refused_bundle_unlabelled_body": "其信任记录未带有说明各自用途的标签——它们是在记录被加上标签之前铸造的。此节点若安装它，将等同于完全没有章程，因此拒绝了它。请改为导入来自最终创世的第 3 版种子。",
     "trust_root_roots_title": "本节点已知的根",
     "trust_root_state_divergent": "已被更改：{leg} 分支存在但有误",
     "trust_root_state_entrenched": "已扎根：所有需要根的检查均可通过",
@@ -5294,7 +5311,9 @@
   "trust_play_integrity": "Play完整性",
   "trust_play_validates": "Play验证设备完整性",
   "trust_root": {
-    "no_root": "哪个根？路径中必须指明要取消信任的 root_key_id"
+    "no_root": "哪个根？路径中必须指明要取消信任的 root_key_id",
+    "bundle_unlabelled": "此捆绑包是在信任根行带有其用途标签（trust:charter:v1）之前铸造的；在此节点上安装它将等同于完全没有章程。请改为从最终创世（FSD/FINAL_GENESIS.md）导入捆绑包。此节点上没有任何内容发生变化。",
+    "bundle_not_in_force": "此节点尚未以其携带的信任包运行，因此当前不以任何信任包为依据行事。"
   },
   "trust_running": "运行中",
   "trust_verify_desc": "验证系统完整性和安全配置",
@@ -5489,7 +5508,8 @@
     "seal_mismatch": "这些字节无法在此文件记录下打开。记录与字节内容不一致。",
     "too_large_for_whole_read": "此文件过大，无法整块读取，必须以流式方式读取。",
     "withdraw_failed": "文件撤回失败。请重试。",
-    "withdrawn": "其作者已撤回此文件。这些字节已不再在任何地方提供。"
+    "withdrawn": "其作者已撤回此文件。这些字节已不再在任何地方提供。",
+    "awaiting_key": "其字节已在此，但本设备用于解密它们的密钥尚未到达。它会自行送达；请稍后重试。"
   },
   "notes": {
     "author_signer_unavailable": "此节点当前无法以您的身份签名，因此笔记未能写入。",
@@ -5730,5 +5750,28 @@
       "handled_elsewhere": "在此次交流中，您的另一台设备正代您回复。",
       "handled_here": "在此次交流中，此设备正代您回复。"
     }
+  },
+  "final_genesis": {
+    "already_planned": "此节点上已有一场计划中的仪式；传入 \"replace\": true 可放弃该计划",
+    "bad_request": "test_holder_seed_b64 必须是恰好 32 字节的 base64 编码",
+    "clock_not_synchronized": "此主机的时钟未经 NTP 同步；创世中的每一个时间点都以此时钟打上时间戳，而接收方会拒绝任何超前其自身时间 300 秒以上的时间戳。",
+    "clock_unverified": "此服务器无法读取主机的时钟同步状态；请确认时钟已同步，并传入 \"clock_checked\": true",
+    "no_hardware_signer": "签署需要 `pkcs11` 功能（持有者的 YubiKey + USB ML-DSA 签名器）",
+    "no_serve_nodes": "一次创世至少要为一台规范服务器设席",
+    "not_planned": "此节点上没有计划中的仪式 — 请先 POST /v1/accord/final-genesis/plan",
+    "not_testing_mode": "仅在 CIRIS_TESTING_MODE=true（演练模式）下才接受软件持有者种子",
+    "not_a_holder": "该密钥并非已就位的协约持有者。",
+    "nothing_to_sign": "此持有者目前没有任何需要签署的内容。它所应签署的一切均已完成签署，或者下一轮正等待另一位持有者签署章程。",
+    "recovery_key_is_a_holder": "该密钥是某位已就位持有者的签名密钥。恢复密钥必须是备用密钥。",
+    "recovery_key_mismatch": "已打开的令牌中未持有协约仪式为此备用密钥记录的密钥。请检查是否为正确的 YubiKey 和 USB。",
+    "recovery_key_shared": "该备用密钥已被记录为另一位持有者的恢复密钥。",
+    "recovery_key_wrong_holder": "该备用密钥并非此持有者的恢复密钥。每位持有者都使用自己配对的备用密钥进行恢复。",
+    "serve_node_no_dial_hint": "该规范节点未携带传输提示。请将其地址（host:4242）与密钥一并传入；若创世在没有传输提示的情况下为某规范节点安排席位，新节点将无法找到它。",
+    "serve_node_no_pqc": "该节点的记录中没有 ML-DSA-65 密钥。创世节点需要两个密钥半份。",
+    "serve_node_unknown": "该节点在此处没有密钥记录。请传入其完整记录，而非仅传入其 id。",
+    "sign_failed": "签署在中途失败。已完成签署的部分会被保留；请再次签署以完成剩余部分。",
+    "signer_unavailable": "无法打开持有者的签名器（YubiKey 和 USB）。",
+    "store_failed": "此节点无法写入该仪式的状态。",
+    "store_unavailable": "此节点无法访问其密钥存储。"
   }
 }

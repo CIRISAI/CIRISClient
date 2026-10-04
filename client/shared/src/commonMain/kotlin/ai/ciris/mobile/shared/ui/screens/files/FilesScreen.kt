@@ -88,6 +88,8 @@ object FilesTags {
     const val DIGEST_VERIFIED = "file_digest_verified"
     const val DIGEST_NOT_SENT = "file_digest_not_sent"
     const val POLICY_BUILTIN = "file_policy_builtin"
+    const val AWAITING_KEY = "file_awaiting_key"
+    const val CHECK_AGAIN = "btn_file_check_again"
     fun row(attestationId: String) = "files_row_$attestationId"
     fun room(roomId: String) = "files_room_$roomId"
     fun pickRoom(roomId: String) = "btn_files_room_$roomId"
@@ -109,6 +111,7 @@ internal fun byteStateText(state: ByteState): String = when (state) {
     ByteState.HERE -> localizedString("mobile.files_bytes_here")
     ByteState.NOT_FETCHED -> localizedString("mobile.files_bytes_not_fetched")
     ByteState.NOT_GRANTED -> localizedString("mobile.files_bytes_not_granted")
+    ByteState.AWAITING_KEY -> localizedString("mobile.files_bytes_awaiting_key")
     ByteState.UNREADABLE -> localizedString("mobile.files_bytes_unreadable")
     ByteState.UNOPENED -> localizedString("mobile.files_bytes_unopened")
 }
@@ -363,7 +366,7 @@ fun FilesScreen(
         }
     }
 
-    if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() })
+    if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() }, onCheckAgain = { viewModel.openFile(it) })
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
     custody?.let { FileCustodyHost(it, nodeVersion) }
 }
@@ -452,7 +455,7 @@ private fun DigestLine(check: DigestCheck) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit) {
+private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit, onCheckAgain: (DriveEntry) -> Unit) {
     val t = CirisTheme.tokens
     var savedTo by remember(open) { mutableStateOf<String?>(null) }
     var saveFailed by remember(open) { mutableStateOf(false) }
@@ -488,6 +491,27 @@ private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit
                         ),
                         tag = "file_too_large", inline = true,
                     )
+                }
+                is OpenState.AwaitingKey -> {
+                    // The bytes are here; this device's key for them is not yet
+                    // (0.5.220, `409 drive.awaiting_key`). A named wait, not an
+                    // error — the key follows on its own, so the one act is to ask again.
+                    Text(open.entry.filename ?: localizedString("mobile.files_untitled"), style = CirisTheme.type.title, color = t.ink)
+                    StateBlock(
+                        ListState.Empty(
+                            message = localizedString("mobile.files_bytes_awaiting_key"),
+                            glyph = GlyphName.KEY,
+                        ),
+                        tag = FilesTags.AWAITING_KEY, inline = true,
+                        action = {
+                            CirisTextButton(
+                                localizedString("mobile.files_awaiting_key_check_again"),
+                                tag = FilesTags.CHECK_AGAIN,
+                                onClick = { onCheckAgain(open.entry) },
+                            )
+                        },
+                    )
+                    Text(localizedString("mobile.files_awaiting_key_body"), style = CirisTheme.type.body, color = t.dim)
                 }
                 is OpenState.Unreadable -> {
                     // The bytes are not what the node said it sent. Not empty,
