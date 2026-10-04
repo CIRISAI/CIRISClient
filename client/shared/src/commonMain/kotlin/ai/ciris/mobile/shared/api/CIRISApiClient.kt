@@ -5461,6 +5461,19 @@ class CIRISApiClient(
     }
 
     /**
+     * `GET /v1/accord/final-genesis/recovery-keys` — each holder's recovery key
+     * as the node will commit to it (id, commitment, `record` | `hardware`),
+     * readable before a plan. A 0.5.220 node from before this route answers a
+     * bare 404 ([NodeRefusal] with no id).
+     */
+    suspend fun getFinalGenesisRecoveryKeys(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.RecoveryKeysDto {
+        val raw = familyCall("getFinalGenesisRecoveryKeys", HttpMethod.Get, nodeUrl, "/v1/accord/final-genesis/recovery-keys")
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.RecoveryKeysDto.serializer(), raw)
+    }
+
+    /**
      * `POST /v1/accord/final-genesis/recovery-key` — OPTIONAL: read a holder's
      * spare off its token and check it is the key the accord ceremony recorded
      * (`final_genesis.recovery_key_mismatch` when not). Signs nothing.

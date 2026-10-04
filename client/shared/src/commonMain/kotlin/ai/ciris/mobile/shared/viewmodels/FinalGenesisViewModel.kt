@@ -12,6 +12,7 @@ import ai.ciris.mobile.shared.models.federation.FinalGenesisRefusal
 import ai.ciris.mobile.shared.models.federation.FinalGenesisStatusDto
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
 import ai.ciris.mobile.shared.models.federation.RECOVERY_PAIRING
+import ai.ciris.mobile.shared.models.federation.RecoveryKeySource
 import ai.ciris.mobile.shared.models.federation.RemintSourceDto
 import ai.ciris.mobile.shared.models.federation.finalGenesisGrid
 import ai.ciris.mobile.shared.models.federation.finalGenesisProbe
@@ -41,15 +42,23 @@ sealed interface FinalGenesisPhase {
     data class Unavailable(val refusal: FinalGenesisRefusal) : FinalGenesisPhase
 }
 
-/** One holder's recovery-key row. The key is on record before anyone touches a token. */
+/**
+ * One holder's recovery-key row. [commitment] is the string the charter will
+ * carry (`GET …/recovery-keys`); null on a node from before that route.
+ */
 sealed interface RecoveryRow {
-    /** On record on the node; nothing read here. */
-    data class OnRecord(val recoveryKeyId: String) : RecoveryRow
+    /** On the accord ceremony's record (`source: record`); nothing read here. */
+    data class OnRecord(val recoveryKeyId: String, val commitment: String? = null) : RecoveryRow
     data class Verifying(val recoveryKeyId: String) : RecoveryRow
-    /** Read off the spare token and matched the record. */
-    data class Verified(val key: CommittedKeyDto) : RecoveryRow
+    /** Read off the spare token on this node (`source: hardware`). [key] when this session read it. */
+    data class Verified(val recoveryKeyId: String, val commitment: String? = null, val key: CommittedKeyDto? = null) : RecoveryRow
     data class Refused(val recoveryKeyId: String, val refusal: FinalGenesisRefusal) : RecoveryRow
-    /** The holder has no recorded spare (outside the A1/B1/C1 pairing). */
+    /**
+     * Nothing on record (`recovery_key_id: null`): the spare must be read off
+     * its token before a plan. [spare] is the id to read, when the pairing knows it.
+     */
+    data class Missing(val spare: String?) : RecoveryRow
+    /** A node without the route, and a holder outside the A1/B1/C1 pairing. */
     data object NoneRecorded : RecoveryRow
 }
 
@@ -95,6 +104,17 @@ class FinalGenesisViewModel(
 
     private val _recovery = MutableStateFlow<Map<String, RecoveryRow>>(emptyMap())
     val recovery: StateFlow<Map<String, RecoveryRow>> = _recovery.asStateFlow()
+
+    private val _planBlockedBy = MutableStateFlow<List<String>>(emptyList())
+    /** Holders the node has no recovery key for — Plan waits on these, and only these. */
+    val planBlockedBy: StateFlow<List<String>> = _planBlockedBy.asStateFlow()
+
+    private val _recoveryRefusal = MutableStateFlow<FinalGenesisRefusal?>(null)
+    /** `GET …/recovery-keys` refused (anything but a bare 404, which is an older 0.5.220). */
+    val recoveryRefusal: StateFlow<FinalGenesisRefusal?> = _recoveryRefusal.asStateFlow()
+
+    /** Whether this node serves `GET …/recovery-keys`; null until asked. */
+    private var recoveryRoute: Boolean? = null
 
     private val _confirm = MutableStateFlow<PlanConfirm?>(null)
     /** A ConfirmSheet the node's answer asked for — the clock, or replacing a plan. */
@@ -176,30 +196,84 @@ class FinalGenesisViewModel(
             if (_serveNodes.value.isEmpty()) {
                 src.canonicals.firstOrNull()?.let { _serveNodes.value = setOf(it.keyId) }
             }
-            _recovery.value = src.holders.associate { h ->
-                h.keyId to (_recovery.value[h.keyId]
-                    ?: RECOVERY_PAIRING[h.keyId]?.let { RecoveryRow.OnRecord(it) }
-                    ?: RecoveryRow.NoneRecorded)
-            }
         } catch (e: Exception) {
             PlatformLogger.w(TAG, "[loadSource] ${e.message}")
             _sourceRefusal.value = (e as? NodeRefusal)?.let { FinalGenesisRefusal.of(it) }
                 ?: FinalGenesisRefusal.transport(e)
         }
+        loadRecoveryKeys()
     }
+
+    /**
+     * Each holder's recovery key as the node will commit to it. A bare 404 is a
+     * 0.5.220 node from before `GET …/recovery-keys`: the rows fall back to the
+     * pairing, "on record", with no commitment to show.
+     */
+    private suspend fun loadRecoveryKeys() {
+        val holders = _source.value?.holders.orEmpty().map { it.keyId }
+        try {
+            val res = apiClient.getFinalGenesisRecoveryKeys(nodeUrl())
+            recoveryRoute = true
+            _recoveryRefusal.value = null
+            val byHolder = res.recoveryKeys.associateBy { it.holderKeyId }
+            _recovery.value = (holders + byHolder.keys).distinct().associateWith { h ->
+                val entry = byHolder[h]
+                when {
+                    entry == null -> fallbackRow(h)
+                    entry.recoveryKeyId == null -> RecoveryRow.Missing(RECOVERY_PAIRING[h])
+                    entry.source == RecoveryKeySource.HARDWARE -> RecoveryRow.Verified(
+                        entry.recoveryKeyId,
+                        entry.commitment,
+                        (_recovery.value[h] as? RecoveryRow.Verified)?.key,
+                    )
+                    else -> RecoveryRow.OnRecord(entry.recoveryKeyId, entry.commitment)
+                }
+            }
+            _planBlockedBy.value = res.recoveryKeys.filter { it.recoveryKeyId == null }.map { it.holderKeyId }
+        } catch (e: Exception) {
+            val refusal = e as? NodeRefusal
+            if (refusal != null && refusal.statusCode == 404 && refusal.reasonId == null) {
+                recoveryRoute = false
+                _recoveryRefusal.value = null
+            } else {
+                PlatformLogger.w(TAG, "[loadRecoveryKeys] ${e.message}")
+                _recoveryRefusal.value = refusal?.let { FinalGenesisRefusal.of(it) } ?: FinalGenesisRefusal.transport(e)
+            }
+            _planBlockedBy.value = emptyList()
+            _recovery.value = holders.associateWith { h -> _recovery.value[h] ?: fallbackRow(h) }
+        }
+    }
+
+    private fun fallbackRow(holder: String): RecoveryRow =
+        RECOVERY_PAIRING[holder]?.let { RecoveryRow.OnRecord(it) } ?: RecoveryRow.NoneRecorded
+
+    /** The spare id a holder's token opens as: the node's answer first, else the pairing. */
+    private fun spareOf(holder: String): String? = when (val row = _recovery.value[holder]) {
+        is RecoveryRow.OnRecord -> row.recoveryKeyId
+        is RecoveryRow.Verified -> row.recoveryKeyId
+        is RecoveryRow.Verifying -> row.recoveryKeyId
+        is RecoveryRow.Refused -> row.recoveryKeyId
+        is RecoveryRow.Missing -> row.spare
+        else -> null
+    } ?: RECOVERY_PAIRING[holder]
 
     fun toggleServeNode(keyId: String) {
         _serveNodes.value = if (keyId in _serveNodes.value) _serveNodes.value - keyId else _serveNodes.value + keyId
     }
 
-    /** OPTIONAL: read [holder]'s spare off its token and check it against the record. */
+    /**
+     * Read [holder]'s spare off its token: optional when the key is on record,
+     * required when the node has none (`recovery_key_id: null`).
+     */
     fun verifyRecovery(holder: String, usbPath: String, pin: String?, modulePath: String? = null): Job =
         viewModelScope.launch {
-            val spare = RECOVERY_PAIRING[holder] ?: return@launch
+            val spare = spareOf(holder) ?: return@launch
             setRecovery(holder, RecoveryRow.Verifying(spare))
             try {
                 val res = apiClient.verifyFinalGenesisRecoveryKey(holder, spare, usbPath, pin, modulePath, nodeUrl())
-                setRecovery(holder, RecoveryRow.Verified(res.recoveryKey))
+                setRecovery(holder, RecoveryRow.Verified(res.recoveryKey.keyId, null, res.recoveryKey))
+                // The node's own account of what it will commit to, commitment included.
+                if (recoveryRoute != false) loadRecoveryKeys()
             } catch (e: NodeRefusal) {
                 setRecovery(holder, RecoveryRow.Refused(spare, FinalGenesisRefusal.of(e)))
             } catch (e: Exception) {
@@ -211,8 +285,16 @@ class FinalGenesisViewModel(
         _recovery.value = _recovery.value + (holder to row)
     }
 
-    /** Plan with what has been confirmed so far. */
-    fun plan(): Job = viewModelScope.launch { planNow() }
+    /**
+     * A new plan (the Plan button, first time or "Plan again"). Neither confirm
+     * carries over: the clock confirm is for one ceremony instant, and a
+     * replace is approved for one request.
+     */
+    fun plan(): Job {
+        _clockChecked.value = false
+        replaceConfirmed = false
+        return viewModelScope.launch { planNow() }
+    }
 
     /** The operator confirmed this host's clock is NTP-synchronized. */
     fun confirmClock(): Job {
@@ -230,6 +312,7 @@ class FinalGenesisViewModel(
 
     fun dismissConfirm() {
         _confirm.value = null
+        replaceConfirmed = false
     }
 
     fun startReplan() {
@@ -238,13 +321,15 @@ class FinalGenesisViewModel(
 
     fun cancelReplan() {
         _replanning.value = false
+        replaceConfirmed = false
     }
 
-    /** Once confirmed, a replace stays asked for until a plan lands (a clock confirm may come between). */
+    /** Set by [confirmReplace] for the ONE request it approves; cleared when that request ends, whatever it ends in. */
     private var replaceConfirmed = false
 
     private suspend fun planNow() {
         val replace = replaceConfirmed
+        replaceConfirmed = false
         _busy.value = true
         _refusal.value = null
         try {
@@ -255,7 +340,8 @@ class FinalGenesisViewModel(
                 nodeUrl = nodeUrl(),
             )
             if (replace) known.clear()
-            replaceConfirmed = false
+            // The instant is stamped; the next plan is a new instant and asks again.
+            _clockChecked.value = false
             _replanning.value = false
             _notes.value = emptyMap()
             planned(status)

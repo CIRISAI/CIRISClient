@@ -154,7 +154,8 @@ class FinalGenesisViewModelTest {
         vm.open().join()
         vm.verifyRecovery("A1", "/media/a2", "123456").join()
         val row = assertIs<RecoveryRow.Verified>(vm.recovery.value["A1"])
-        assertEquals("A2", row.key.keyId)
+        assertEquals("A2", row.recoveryKeyId)
+        assertEquals("A2", row.key?.keyId)
         val body = n.bodiesOf("POST /v1/accord/final-genesis/recovery-key").single()
         assertEquals("A2", body["recovery_key_id"]!!.jsonPrimitive.content, "A1's spare is A2")
         assertTrue(vm.phase.value == FinalGenesisPhase.NotPlanned, "verifying never gates or changes the phase")
@@ -402,5 +403,173 @@ class FinalGenesisViewModelTest {
         vm.refresh().join()
         assertIs<FinalGenesisPhase.Finished>(vm.phase.value)
         assertEquals(1, FinalGenesisItems.round("record:x"))
+    }
+
+    // ── GET …/recovery-keys (CIRISServer 29ca1bcf `recovery_keys`, src/final_genesis.rs:877) ──
+
+    private val cA = "3f2a9c0177de0b4e55aa66bb77cc88dd99ee00ff11223344556677889900aabb"
+    private val cB = "b0b0b0b0c1c1c1c1d2d2d2d2e3e3e3e3f4f4f4f4a5a5a5a5b6b6b6b6c7c7c7c7"
+    private val cC = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+    private fun rk(holder: String, spare: String?, commitment: String?, source: String?) =
+        if (spare == null) """{"holder_key_id":"$holder","recovery_key_id":null}"""
+        else """{"holder_key_id":"$holder","recovery_key_id":"$spare","commitment":"$commitment","source":"$source"}"""
+    private fun rks(vararg rows: String) =
+        200 to """{"complete":${rows.none { it.contains("null") }},"recovery_keys":[${rows.joinToString(",")}]}"""
+
+    @Test
+    fun recordedKeysShowTheirCommitmentAndDoNotBlockPlan() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(rks(
+                rk("A1", "A2", cA, "record"), rk("B1", "B2", cB, "record"), rk("C1", "C2", cC, "record"),
+            )),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals(RecoveryRow.OnRecord("A2", cA), vm.recovery.value["A1"])
+        assertEquals(RecoveryRow.OnRecord("C2", cC), vm.recovery.value["C1"])
+        assertEquals(emptyList(), vm.planBlockedBy.value)
+        assertNull(vm.recoveryRefusal.value)
+    }
+
+    @Test
+    fun aKeyReadOffItsTokenIsShownAsVerifiedWithItsCommitment() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(rks(
+                rk("A1", "A2", cA, "hardware"), rk("B1", "B2", cB, "record"), rk("C1", "C2", cC, "record"),
+            )),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals(RecoveryRow.Verified("A2", cA, null), vm.recovery.value["A1"])
+        assertEquals(RecoveryRow.OnRecord("B2", cB), vm.recovery.value["B1"])
+    }
+
+    @Test
+    fun aHolderWithNothingOnRecordBlocksPlanUntilItsTokenIsRead() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(
+                rks(rk("A1", "A2", cA, "record"), rk("B1", "B2", cB, "record"), rk("C1", null, null, null)),
+                rks(rk("A1", "A2", cA, "record"), rk("B1", "B2", cB, "record"), rk("C1", "C2", cC, "hardware")),
+            ),
+            "POST /v1/accord/final-genesis/recovery-key" to listOf(200 to
+                """{"holder_key_id":"C1","recovery_key":{"key_id":"C2","pubkey_ed25519_base64":"AQ==","pubkey_ml_dsa_65_base64":"z"},"recorded":["C1"]}"""),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertEquals(RecoveryRow.Missing("C2"), vm.recovery.value["C1"])
+        assertEquals(listOf("C1"), vm.planBlockedBy.value, "only the holder with nothing on record holds Plan")
+        assertIs<RecoveryRow.OnRecord>(vm.recovery.value["A1"])
+        vm.verifyRecovery("C1", "/media/c2", "1").join()
+        assertEquals("C2", n.bodiesOf("POST /v1/accord/final-genesis/recovery-key").single()["recovery_key_id"]!!.jsonPrimitive.content)
+        assertEquals(emptyList(), vm.planBlockedBy.value)
+        val row = assertIs<RecoveryRow.Verified>(vm.recovery.value["C1"])
+        assertEquals(cC, row.commitment)
+        assertEquals("C2", row.key?.keyId)
+    }
+
+    @Test
+    fun aBare404OnRecoveryKeysIsAnEarlier0_5_220AndFallsBackToTheRecord() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        assertTrue("GET /v1/accord/final-genesis/recovery-keys" in n.seen)
+        assertEquals(RecoveryRow.OnRecord("A2"), vm.recovery.value["A1"])
+        assertEquals(emptyList(), vm.planBlockedBy.value)
+        assertNull(vm.recoveryRefusal.value, "a bare 404 is an older node, not a refusal")
+    }
+
+    @Test
+    fun aPlanAfterVerifyingOneSpareSendsNoRecoveryKeysAndPlans() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "GET /v1/accord/final-genesis/recovery-keys" to listOf(rks(
+                rk("A1", "A2", cA, "hardware"), rk("B1", "B2", cB, "record"), rk("C1", "C2", cC, "record"),
+            )),
+            "POST /v1/accord/final-genesis/plan" to listOf(200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.plan().join()
+        assertIs<FinalGenesisPhase.Planned>(vm.phase.value)
+        val body = n.bodiesOf("POST /v1/accord/final-genesis/plan").single()
+        assertFalse("recovery_keys" in body, "the node merges hardware over record per holder")
+        assertNull(vm.refusal.value)
+    }
+
+    // ── Codex P1s on #154 ────────────────────────────────────────────────────
+
+    @Test
+    fun aReplanAfterASuccessfulPlanAsksForTheClockAgain() = runBlocking<Unit> {
+        val unverified = 412 to refusal("final_genesis.clock_unverified", "confirm the clock")
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(notPlanned),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/plan" to listOf(unverified, 200 to freshPlan, unverified, 200 to freshPlan),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.plan().join()
+        vm.confirmClock().join()
+        assertIs<FinalGenesisPhase.Planned>(vm.phase.value)
+        assertFalse(vm.clockChecked.value, "the confirm was for that ceremony instant")
+        vm.startReplan()
+        vm.plan().join()
+        assertEquals(PlanConfirm.CLOCK, vm.confirm.value, "a new plan asks again")
+        val plans = n.bodiesOf("POST /v1/accord/final-genesis/plan")
+        assertEquals(listOf(false, true, false), plans.map { it["clock_checked"]!!.jsonPrimitive.boolean })
+    }
+
+    @Test
+    fun aReplaceThatFailedIsNotSentWithTheNextPlan() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/plan" to listOf(
+                409 to refusal("final_genesis.already_planned", "a ceremony is already planned"),
+                400 to refusal("final_genesis.serve_node_unknown", "ciris-canonical-1 has no key record on this node"),
+                409 to refusal("final_genesis.already_planned", "a ceremony is already planned"),
+            ),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.startReplan()
+        vm.plan().join()
+        vm.confirmReplace().join()
+        assertEquals("final_genesis.serve_node_unknown", vm.refusal.value?.reasonId)
+        vm.cancelReplan()
+        vm.startReplan()
+        vm.plan().join()
+        val plans = n.bodiesOf("POST /v1/accord/final-genesis/plan")
+        assertEquals(listOf(false, true, false), plans.map { "replace" in it }, "replace rides only the request its confirm approved")
+        assertEquals(PlanConfirm.REPLACE, vm.confirm.value)
+    }
+
+    @Test
+    fun theModulePathReachesTheWireOnVerifyAndSign() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis" to listOf(200 to freshPlan),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/recovery-key" to listOf(200 to
+                """{"holder_key_id":"A1","recovery_key":{"key_id":"A2","pubkey_ed25519_base64":"AA==","pubkey_ml_dsa_65_base64":"z"},"recorded":["A1"]}"""),
+            "POST /v1/accord/final-genesis/sign" to listOf(200 to """{"signed":["row:genesis-charter"],"owed":{},"complete":false}"""),
+        ))
+        val vm = vm(n)
+        vm.open().join()
+        vm.verifyRecovery("A1", "/media/a2", "1", "/opt/yubico/lib/libykcs11.dylib").join()
+        vm.sign("A1", "/media/a1", "1", "/opt/yubico/lib/libykcs11.dylib").join()
+        for (route in listOf("POST /v1/accord/final-genesis/recovery-key", "POST /v1/accord/final-genesis/sign")) {
+            val pkcs11 = n.bodiesOf(route).single()["pkcs11"] as JsonObject
+            assertEquals("/opt/yubico/lib/libykcs11.dylib", pkcs11["module_path"]!!.jsonPrimitive.content, route)
+        }
     }
 }

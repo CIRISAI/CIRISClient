@@ -137,4 +137,30 @@ class FinalGenesisWireTest {
         assertEquals("ceremony_incomplete", e.reasonId)
         assertEquals("authz is owed by A1, B1, C1", e.detail)
     }
+
+    @Test
+    fun recoveryKeysDecodeRecordHardwareAndANullId() = runBlocking<Unit> {
+        // The body CIRISServer 29ca1bcf's `recovery_keys` writes (src/final_genesis.rs:877-908):
+        // a holder with nothing on record is `{holder_key_id, recovery_key_id: null}` and nothing else.
+        val n = node(200, """{"complete":false,"recovery_keys":[""" +
+            """{"holder_key_id":"A1","recovery_key_id":"A2","commitment":"3f2a","source":"hardware"},""" +
+            """{"holder_key_id":"B1","recovery_key_id":"B2","commitment":"b0b0","source":"record"},""" +
+            """{"holder_key_id":"C1","recovery_key_id":null}]}""")
+        val r = client.getFinalGenesisRecoveryKeys(n.url)
+        assertEquals(listOf("GET /v1/accord/final-genesis/recovery-keys"), n.seen)
+        assertEquals("", n.bodies.single())
+        assertEquals(false, r.complete)
+        assertEquals(listOf("hardware", "record", null), r.recoveryKeys.map { it.source })
+        assertEquals(listOf("A2", "B2", null), r.recoveryKeys.map { it.recoveryKeyId })
+        assertEquals("3f2a", r.recoveryKeys[0].commitment)
+        assertNull(r.recoveryKeys[2].commitment)
+    }
+
+    @Test
+    fun anEarlier0_5_220AnswersRecoveryKeysWithABare404() = runBlocking<Unit> {
+        val n = node(404, "")
+        val e = assertFailsWith<NodeRefusal> { client.getFinalGenesisRecoveryKeys(n.url) }
+        assertEquals(404, e.statusCode)
+        assertNull(e.reasonId)
+    }
 }

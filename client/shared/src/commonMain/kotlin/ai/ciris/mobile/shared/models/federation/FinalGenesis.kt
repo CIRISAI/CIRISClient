@@ -105,6 +105,44 @@ data class FinalGenesisFinishDto(
     val verified: FinalGenesisVerifiedDto = FinalGenesisVerifiedDto(),
 )
 
+/**
+ * One holder's recovery key as the node will commit to it — an entry of
+ * `GET /v1/accord/final-genesis/recovery-keys` (CIRISServer 0.5.220, the
+ * per-holder merge fix). [recoveryKeyId] is null when the node has nothing on
+ * record for the holder: that holder's spare must be read off its token before
+ * a plan. [commitment] is persist's `recovery_commitment(key)`, the exact
+ * string the charter carries in `recovery_commitments[holder]`.
+ */
+@Serializable
+data class RecoveryKeyEntryDto(
+    @SerialName("holder_key_id")
+    val holderKeyId: String,
+    @SerialName("recovery_key_id")
+    val recoveryKeyId: String? = null,
+    val commitment: String? = null,
+    /** `record` (the accord ceremony's record) or `hardware` (read off the spare token on this node). */
+    val source: String? = null,
+)
+
+/** `GET /v1/accord/final-genesis/recovery-keys` — readable before a plan. */
+@Serializable
+data class RecoveryKeysDto(
+    /** True when every holder has a recovery key. */
+    val complete: Boolean = false,
+    @SerialName("recovery_keys")
+    val recoveryKeys: List<RecoveryKeyEntryDto> = emptyList(),
+)
+
+/** Where a recovery key came from, as the node names it. */
+object RecoveryKeySource {
+    const val RECORD = "record"
+    const val HARDWARE = "hardware"
+}
+
+/** A commitment's first 16 hex, in fours — what a holder reads aloud. */
+fun shortCommitment(commitment: String?): String? =
+    commitment?.trim()?.removePrefix("sha256:")?.takeIf { it.isNotEmpty() }?.take(16)?.chunked(4)?.joinToString(" ")
+
 /** A refusal reduced to what the sheet renders: the id (localized by id), the node's English, the status. */
 data class FinalGenesisRefusal(val reasonId: String?, val detail: String?, val statusCode: Int) {
     companion object {
@@ -151,11 +189,11 @@ fun planConfirmFor(reasonId: String?): PlanConfirm? = when (reasonId) {
 
 /**
  * The maintainer's pairing (server `RECOVERY_PAIRING`, `src/final_genesis.rs:104`):
- * each seated holder recovers with its own spare. The spares' public keys are ON
- * RECORD on the node (`genesis/accord_ceremony_keys.json`) and `plan` uses them
- * by default; no route SERVES them, so the client knows the pairing and not the
- * keys until a token is read (`POST …/recovery-key`). A holder outside this
- * table (a test-anchor roster) has no recorded recovery key.
+ * each seated holder recovers with its own spare. `POST …/recovery-key` needs
+ * the spare's id. A node with `GET …/recovery-keys` names it per holder (and
+ * that answer wins); a 0.5.220 node from before that route answers a bare 404,
+ * and then this table is all the client has. A holder outside it (a
+ * test-anchor roster) has no recorded recovery key.
  */
 val RECOVERY_PAIRING: Map<String, String> = mapOf("A1" to "A2", "B1" to "B2", "C1" to "C2")
 
@@ -270,11 +308,4 @@ fun finalGenesisGrid(
         charterOwedBy = charterOwedBy,
         complete = status.complete,
     )
-}
-
-/** Recovery verification is all-or-none on a 0.5.220 node — see [recoveryVerifyIsPartial]. */
-fun recoveryVerifyIsPartial(verified: Collection<String>, holders: Collection<String>): Boolean {
-    val pairable = holders.filter { it in RECOVERY_PAIRING }
-    val done = verified.count { it in pairable }
-    return done in 1 until pairable.size
 }

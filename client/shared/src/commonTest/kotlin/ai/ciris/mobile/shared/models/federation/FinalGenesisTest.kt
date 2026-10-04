@@ -63,13 +63,11 @@ class FinalGenesisTest {
     }
 
     @Test
-    fun verifyingSomeButNotAllSparesIsFlagged() {
-        val holders = listOf("A1", "B1", "C1")
-        assertFalse(recoveryVerifyIsPartial(emptyList(), holders))
-        assertTrue(recoveryVerifyIsPartial(listOf("A1"), holders))
-        assertTrue(recoveryVerifyIsPartial(listOf("A1", "C1"), holders))
-        assertFalse(recoveryVerifyIsPartial(holders, holders))
-        assertFalse(recoveryVerifyIsPartial(emptyList(), listOf("test-holder-1")), "a roster with no recorded spares has nothing to verify")
+    fun aCommitmentReadsAsItsFirstSixteenHexInFours() {
+        assertEquals("3f2a 9c01 77de 0b4e", shortCommitment("3f2a9c0177de0b4e55aa66bb77cc88dd99ee00ff11223344556677889900aabb"))
+        assertEquals("3f2a 9c01", shortCommitment("sha256:3f2a9c01"))
+        assertNull(shortCommitment(null))
+        assertNull(shortCommitment(" "))
     }
 
     @Test

@@ -8,7 +8,7 @@ import ai.ciris.mobile.shared.models.federation.FinalGenesisRefusal
 import ai.ciris.mobile.shared.models.federation.GenesisCell
 import ai.ciris.mobile.shared.models.federation.HolderGenesisState
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
-import ai.ciris.mobile.shared.models.federation.recoveryVerifyIsPartial
+import ai.ciris.mobile.shared.models.federation.shortCommitment
 import ai.ciris.mobile.shared.models.federation.shortKeyFingerprint
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.rememberInputSinks
@@ -274,6 +274,25 @@ private fun PinField(tag: String, value: String, onValueChange: (String) -> Unit
     )
 }
 
+/**
+ * The PKCS#11 module path, optional — the same advanced override the
+ * hardware-scrub sheet offers (`AttestationSheets.kt`, its keys reused): blank
+ * is omitted and the node picks the OS default; a holder whose `ykcs11` lives
+ * elsewhere (macOS, Windows) sets it here. Drivable by construction.
+ */
+@Composable
+private fun ModulePathField(tag: String, value: String, onValueChange: (String) -> Unit) {
+    Text(localizedString("mobile.accord_scrub_module_label"), style = CirisTheme.type.label, color = CirisTheme.tokens.mute)
+    Spacer(Modifier.height(4.dp))
+    CirisTextField(
+        tag = tag,
+        value = value,
+        onValueChange = onValueChange,
+        placeholder = localizedString("mobile.accord_scrub_module_hint"),
+        mono = true,
+    )
+}
+
 // ── 1 + 2: recovery keys and the plan ───────────────────────────────────────
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -286,6 +305,8 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     val recovery by vm.recovery.collectAsState()
     val serveNodes by vm.serveNodes.collectAsState()
     val busy by vm.busy.collectAsState()
+    val blockedBy by vm.planBlockedBy.collectAsState()
+    val recoveryRefusal by vm.recoveryRefusal.collectAsState()
     val holders = source?.holders.orEmpty()
 
     sourceRefusal?.let { RefusalBlock(it, tag = "final_genesis_source_error"); Spacer(Modifier.height(8.dp)) }
@@ -294,18 +315,9 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
     Text(localizedString("mobile.final_genesis_recovery_desc"), style = type.body, color = t.dim)
     Spacer(Modifier.height(6.dp))
     if (holders.isEmpty() && sourceRefusal == null) StateBlock(ListState.Loading, tag = "final_genesis_holders_loading")
+    recoveryRefusal?.let { RefusalBlock(it, tag = "final_genesis_recovery_error"); Spacer(Modifier.height(6.dp)) }
     for (h in holders) {
-        RecoveryRowView(vm, h.keyId, h.pubkeyEd25519Base64, recovery[h.keyId], busy)
-    }
-    val verified = recovery.filterValues { it is RecoveryRow.Verified }.keys
-    if (recoveryVerifyIsPartial(verified, holders.map { it.keyId })) {
-        Spacer(Modifier.height(4.dp))
-        Text(
-            localizedString("mobile.final_genesis_recovery_partial"),
-            style = type.body,
-            color = t.danger,
-            modifier = Modifier.testable("final_genesis_recovery_partial"),
-        )
+        RecoveryRowView(vm, h.keyId, recovery[h.keyId], busy)
     }
 
     Spacer(Modifier.height(14.dp))
@@ -330,7 +342,17 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
         }
     }
     Spacer(Modifier.height(12.dp))
-    val canPlan = serveNodes.isNotEmpty() && !busy
+    // Gated on the holders the node has NO recovery key for — and only those.
+    if (blockedBy.isNotEmpty()) {
+        Text(
+            localizedString("mobile.final_genesis_plan_blocked", "who", blockedBy.joinToString(", ")),
+            style = type.body,
+            color = t.danger,
+            modifier = Modifier.testable("final_genesis_plan_blocked"),
+        )
+        Spacer(Modifier.height(6.dp))
+    }
+    val canPlan = serveNodes.isNotEmpty() && !busy && blockedBy.isEmpty()
     CirisButton(
         localizedString(if (busy) "mobile.final_genesis_plan_busy" else "mobile.final_genesis_plan"),
         tag = "btn_final_genesis_plan",
@@ -341,36 +363,50 @@ private fun PlanSection(vm: FinalGenesisViewModel) {
 }
 
 @Composable
-private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, holderPubkey: String, row: RecoveryRow?, busy: Boolean) {
+private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, row: RecoveryRow?, busy: Boolean) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val slug = genesisSlug(holder)
     var open by remember(holder) { mutableStateOf(false) }
     var usb by remember(holder) { mutableStateOf("") }
     var pin by remember(holder) { mutableStateOf("") }
+    var module by remember(holder) { mutableStateOf("") }
 
+    // The fingerprint is the charter's own commitment (`GET …/recovery-keys`);
+    // on a node from before that route there is none until a token is read.
     val (value, tone) = when (row) {
-        is RecoveryRow.OnRecord -> localizedString("mobile.final_genesis_recovery_on_record", "key", row.recoveryKeyId) to Tone.INK
+        is RecoveryRow.OnRecord -> (
+            shortCommitment(row.commitment)?.let { c ->
+                localizedString("mobile.final_genesis_recovery_record", mapOf("key" to row.recoveryKeyId, "fingerprint" to c))
+            } ?: localizedString("mobile.final_genesis_recovery_on_record", "key", row.recoveryKeyId)
+            ) to Tone.INK
         is RecoveryRow.Verifying -> localizedString("mobile.final_genesis_recovery_verifying", "key", row.recoveryKeyId) to Tone.DIM
         is RecoveryRow.Verified -> localizedString(
             "mobile.final_genesis_recovery_verified",
-            mapOf("key" to row.key.keyId, "fingerprint" to (shortKeyFingerprint(row.key.pubkeyEd25519Base64) ?: "—")),
+            mapOf(
+                "key" to row.recoveryKeyId,
+                "fingerprint" to (shortCommitment(row.commitment)
+                    ?: row.key?.let { shortKeyFingerprint(it.pubkeyEd25519Base64) } ?: "—"),
+            ),
         ) to Tone.OK
         is RecoveryRow.Refused -> localizedString("mobile.final_genesis_recovery_on_record", "key", row.recoveryKeyId) to Tone.INK
+        is RecoveryRow.Missing -> localizedString(
+            if (row.spare != null) "mobile.final_genesis_recovery_missing" else "mobile.final_genesis_recovery_missing_unknown",
+            "key",
+            row.spare.orEmpty(),
+        ) to Tone.DANGER
         RecoveryRow.NoneRecorded, null -> localizedString("mobile.final_genesis_recovery_none") to Tone.DANGER
     }
     FieldRow(
-        label = localizedString(
-            "mobile.final_genesis_holder_label",
-            mapOf("holder" to holder, "fingerprint" to (shortKeyFingerprint(holderPubkey) ?: "—")),
-        ),
+        label = holder,
         value = value,
         mono = true,
         tone = tone,
         tag = "final_genesis_recovery_$slug",
     )
     (row as? RecoveryRow.Refused)?.let { RefusalBlock(it.refusal, tag = "final_genesis_recovery_refusal_$slug") }
-    val canVerify = row is RecoveryRow.OnRecord || row is RecoveryRow.Refused || row is RecoveryRow.Verified
+    val canVerify = row is RecoveryRow.OnRecord || row is RecoveryRow.Refused || row is RecoveryRow.Verified ||
+        (row is RecoveryRow.Missing && row.spare != null)
     if (canVerify && !open) {
         CirisTextButton(
             localizedString("mobile.final_genesis_recovery_verify"),
@@ -391,13 +427,15 @@ private fun RecoveryRowView(vm: FinalGenesisViewModel, holder: String, holderPub
         Spacer(Modifier.height(6.dp))
         PinField(tag = "input_final_genesis_recovery_pin_$slug", value = pin, onValueChange = { pin = it })
         Spacer(Modifier.height(6.dp))
+        ModulePathField(tag = "input_final_genesis_recovery_module_$slug", value = module, onValueChange = { module = it })
+        Spacer(Modifier.height(6.dp))
         val ready = usb.isNotBlank() && !busy && row !is RecoveryRow.Verifying
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             CirisButton(
                 localizedString("mobile.final_genesis_recovery_read"),
                 tag = "btn_final_genesis_verify_go_$slug",
                 onClick = {
-                    vm.verifyRecovery(holder, usb, pin.ifBlank { null })
+                    vm.verifyRecovery(holder, usb, pin.ifBlank { null }, module.ifBlank { null })
                     pin = ""
                     open = false
                 },
@@ -472,6 +510,7 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
     val slug = genesisSlug(holder)
     var usb by remember(holder) { mutableStateOf("") }
     var pin by remember(holder) { mutableStateOf("") }
+    var module by remember(holder) { mutableStateOf("") }
     val state = grid.holderState(holder)
 
     CardShell(tag = "final_genesis_holder_$slug") {
@@ -545,13 +584,15 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
             )
             Spacer(Modifier.height(6.dp))
             PinField(tag = "input_final_genesis_pin_$slug", value = pin, onValueChange = { pin = it })
+            Spacer(Modifier.height(6.dp))
+            ModulePathField(tag = "input_final_genesis_module_$slug", value = module, onValueChange = { module = it })
             Spacer(Modifier.height(8.dp))
             val ready = state == HolderGenesisState.SignNow && usb.isNotBlank() && !busy
             CirisButton(
                 localizedString("mobile.final_genesis_sign", "holder", holder),
                 tag = "btn_final_genesis_sign_$slug",
                 onClick = {
-                    vm.sign(holder, usb, pin.ifBlank { null })
+                    vm.sign(holder, usb, pin.ifBlank { null }, module.ifBlank { null })
                     pin = ""
                 },
                 enabled = ready,

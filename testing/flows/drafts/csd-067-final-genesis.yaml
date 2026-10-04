@@ -61,7 +61,7 @@ steps:
         - btn_final_genesis_plan
       text:
         final_genesis_recovery_a1: "A2"
-      absent: [final_genesis_recovery_partial]
+      absent: [final_genesis_plan_blocked]
 
   - step_id: a_spare_token_can_be_described
     title: The verify form takes a USB path and a PIN, and is not pressed
