@@ -151,6 +151,9 @@ cmd_pid=$!
 cmd_pgid=$(ps -o pgid= -p "$cmd_pid" 2>/dev/null | tr -d ' ')
 cmd_pgid=${cmd_pgid:-$cmd_pid}
 last_cpu=$(cpu_seconds "$cmd_pid")
+still=0
+still_windows="${WATCHDOG_STILL_WINDOWS:-3}"
+case "$still_windows" in ''|*[!0-9]*|0) still_windows=3 ;; esac
 
 (
   while kill -0 "$cmd_pid" 2>/dev/null; do
@@ -169,8 +172,16 @@ last_cpu=$(cpu_seconds "$cmd_pid")
     # a busy process on a contended box advanced only 1s per 2s of wall clock
     # in testing, so any positive threshold re-introduces the guess this check
     # exists to remove.
-    if [ "$quiet" -ge "$idle" ] && [ "$cpu_moved" -le 0 ]; then
-      echo "::error::$label produced NO OUTPUT for ${quiet}s AND consumed no CPU in the last ${heartbeat}s (elapsed $(elapsed)). Treating as hung."
+    # THREE STILL WINDOWS IN A ROW, NOT ONE. A process waiting on page-ins
+    # also advances no CPU: the 0.5.227 iOS link was killed at 70 min inside
+    # LLVMContextDispose — freeing the LLVM context, its native memory outside
+    # the JVM heap — after a single still window on a 14 GB runner, where
+    # 0.5.226's identical link had finished at 2 h 23 min. A wedged process
+    # stays still; a paging one moves again. `WATCHDOG_STILL_WINDOWS`
+    # overrides the count.
+    if [ "$cpu_moved" -le 0 ]; then still=$(( still + 1 )); else still=0; fi
+    if [ "$quiet" -ge "$idle" ] && [ "$still" -ge "$still_windows" ]; then
+      echo "::error::$label produced NO OUTPUT for ${quiet}s AND consumed no CPU for ${still} heartbeats in a row ($(( still * heartbeat ))s; elapsed $(elapsed)). Treating as hung."
       echo "── last 30 lines ──"; tail -n 30 "$log"
       echo "── JVM stacks ──"
       for p in $(pgrep -f 'java|GradleDaemon' 2>/dev/null); do
@@ -182,7 +193,11 @@ last_cpu=$(cpu_seconds "$cmd_pid")
     if [ "$quiet" -ge "$idle" ]; then
       # The case that used to be a kill. Say it plainly, because a silent build
       # that IS working is exactly what a reader needs told.
-      echo "[watchdog] $label quiet ${quiet}s but burning CPU (+${cpu_moved}s) — working, not wedged"
+      if [ "$cpu_moved" -le 0 ]; then
+        echo "[watchdog] $label quiet ${quiet}s and still for ${still}/${still_windows} heartbeats — paging or wedged; waiting"
+      else
+        echo "[watchdog] $label quiet ${quiet}s but burning CPU (+${cpu_moved}s) — working, not wedged"
+      fi
     fi
     echo "[watchdog] $label alive — elapsed $(elapsed), quiet ${quiet}s, cpu +${cpu_moved}s, last: ${last:-<nothing yet>}"
   done
