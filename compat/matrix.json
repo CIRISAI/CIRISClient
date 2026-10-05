@@ -1420,6 +1420,61 @@
       },
       "notes": "SERVER 0.5.220 COMPATIBILITY — THE FINAL GENESIS. Every server-emitted id at v0.5.220 is in the bundle (#156: 22 + 3 from CIRISServer#726); the localization pin is the v0.5.220 tag. PRs: #154 the final-genesis sheet (3-of-3, replaces the retired 2-of-3 re-mint, whose routes answer 410 on 0.5.220), #156 strings, awaiting_key, bundle_unlabelled, bundle_not_in_force, posture banner, imported-not-accepted, served bundle, #151 startup node/health wait (#149), #152 CC registry rc6 (#150), #153/#155 device class laptop. Tested: five-platform live QA green on all five legs (Linux, macOS, Windows desktop; Android emulator; iOS simulator), 9 of 9 flows each, against ciris-server v0.5.220 (run 37227181003). The harness's nodes now declare CIRIS_DEVICE_CLASS=laptop (#158): from 0.5.220 an undeclared node is a server and cannot seal a person's self content.",
       "published": null
+    },
+    {
+      "client_version": "0.5.228",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The ceremony-UX additions read the same final-genesis routes as 0.5.227 and fall back the same way on <=0.5.219 nodes; the Accord page's wait is client-side.",
+      "node_max_tested": "0.5.221",
+      "agent_min_tested": "2.12.1",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker"
+      ],
+      "capabilities_note": "new: the final-genesis sheet as run at the live ceremony — a folder picker for each holder's USB key with a seed-blob check, the YubiKey PIV PIN and slot (default 9c) with the node's PIN-tries text, plain-word item labels, and the Accord page and sheet waiting for a node that is still binding (#159); drive.device_class_not_personal which ciris-server 0.5.221 emits (#728). CI: the iOS link heap is 8 GB and the watchdog needs three still heartbeats (#160).",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5423
+      },
+      "notes": "THE CEREMONY FIXES. What Eric hit live running the final genesis on 0.5.227 (#159), shipped translated. Tested: see the release PR for the five-platform run against ciris-server v0.5.221.",
+      "published": null
     }
   ]
 }
