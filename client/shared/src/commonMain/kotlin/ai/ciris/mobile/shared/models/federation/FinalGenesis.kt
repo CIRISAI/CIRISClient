@@ -490,3 +490,48 @@ fun finalGenesisGrid(
         complete = status.complete,
     )
 }
+
+/**
+ * The file a holder's USB key carries for [holder]: `<holder>.mldsa65.seed.blob`
+ * at the root of the mounted directory (`mldsa_usb_path`), e.g.
+ * `/media/<user>/<LABEL>/A1.mldsa65.seed.blob`.
+ */
+fun seedBlobName(holder: String): String = "$holder.mldsa65.seed.blob"
+
+/** [dir] joined with [holder]'s seed blob, whatever separator the picker returned. */
+fun seedBlobPath(dir: String, holder: String): String =
+    dir.trim().trimEnd('/', '\\') + "/" + seedBlobName(holder)
+
+/** The PIV slot the holder key lives in, unless the operator says otherwise. */
+const val DEFAULT_PIV_SLOT = "9c"
+
+/**
+ * A grid item in plain words: the localized key and its parameters, or null
+ * for an id this client does not name (shown raw). The raw id is always shown
+ * too, small, under the words.
+ */
+fun genesisItemLabel(item: String): Pair<String, Map<String, String>>? = when {
+    item == FinalGenesisItems.AUTHZ -> "mobile.final_genesis_item_authz" to emptyMap()
+    item.startsWith("record:") -> "mobile.final_genesis_item_record" to mapOf("node" to item.removePrefix("record:"))
+    item == FinalGenesisItems.CHARTER -> "mobile.final_genesis_item_charter" to emptyMap()
+    item.startsWith("row:genesis-grant:") -> "mobile.final_genesis_item_grant" to mapOf("node" to item.removePrefix("row:genesis-grant:"))
+    item == FinalGenesisItems.LIFECYCLE -> "mobile.final_genesis_item_lifecycle" to emptyMap()
+    item == "family:humanity-accord" -> "mobile.final_genesis_item_family" to emptyMap()
+    item == "community:ciris-canonical" -> "mobile.final_genesis_item_community" to emptyMap()
+    else -> null
+}
+
+/**
+ * The PIN-tries part of a signer refusal, when the node said it
+ * (CIRISServer `accord_provision.rs`: "2 of 3 PIN attempts remain.", "WARNING:
+ * 1 of 3 PIN attempts left — …", "This token's PIN is now LOCKED — …", "This
+ * token has 2 of 3 PIN attempts left."), from its start to the end of the
+ * detail. Null when the detail says nothing about tries.
+ */
+fun pinTriesWarning(detail: String?): String? {
+    val d = detail ?: return null
+    val m = Regex(
+        """WARNING: \d+ of \d+ PIN attempts? left|This token's PIN is now LOCKED|This token has \d+ of \d+ PIN attempts? left|\d+ of \d+ PIN attempts? remains?""",
+    ).find(d) ?: return null
+    return d.substring(m.range.first).trim()
+}

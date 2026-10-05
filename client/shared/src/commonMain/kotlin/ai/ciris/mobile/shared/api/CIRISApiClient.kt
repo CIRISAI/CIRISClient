@@ -5444,8 +5444,9 @@ class CIRISApiClient(
     // echoes the request.
 
     /** The `pkcs11` object every holder-token route reads (`ProvisionPkcs11`, all fields optional). */
-    private fun finalGenesisPkcs11(userPin: String?, modulePath: String?): JsonObject = buildJsonObject {
+    private fun finalGenesisPkcs11(userPin: String?, modulePath: String?, pivSlot: String? = null): JsonObject = buildJsonObject {
         userPin?.takeIf { it.isNotBlank() }?.let { put("user_pin", JsonPrimitive(it)) }
+        pivSlot?.takeIf { it.isNotBlank() }?.let { put("piv_slot", JsonPrimitive(it.trim())) }
         modulePath?.takeIf { it.isNotBlank() }?.let { put("module_path", JsonPrimitive(it.trim())) }
     }
 
@@ -5486,12 +5487,13 @@ class CIRISApiClient(
         userPin: String? = null,
         modulePath: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
+        pivSlot: String? = null,
     ): ai.ciris.mobile.shared.models.federation.RecoveryKeyResponseDto {
         val body = buildJsonObject {
             put("holder_key_id", JsonPrimitive(holderKeyId.trim()))
             put("recovery_key_id", JsonPrimitive(recoveryKeyId.trim()))
             put("mldsa_usb_path", JsonPrimitive(mldsaUsbPath.trim()))
-            put("pkcs11", finalGenesisPkcs11(userPin, modulePath))
+            put("pkcs11", finalGenesisPkcs11(userPin, modulePath, pivSlot))
         }
         val raw = familyCall(
             "verifyFinalGenesisRecoveryKey", HttpMethod.Post, nodeUrl,
@@ -5546,11 +5548,12 @@ class CIRISApiClient(
         userPin: String? = null,
         modulePath: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
+        pivSlot: String? = null,
     ): ai.ciris.mobile.shared.models.federation.FinalGenesisSignResponseDto {
         val body = buildJsonObject {
             put("key_id", JsonPrimitive(keyId.trim()))
             put("mldsa_usb_path", JsonPrimitive(mldsaUsbPath.trim()))
-            put("pkcs11", finalGenesisPkcs11(userPin, modulePath))
+            put("pkcs11", finalGenesisPkcs11(userPin, modulePath, pivSlot))
         }
         val raw = familyCall(
             "signFinalGenesis", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/sign", body,

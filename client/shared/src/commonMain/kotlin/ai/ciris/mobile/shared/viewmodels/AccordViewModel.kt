@@ -77,8 +77,41 @@ class AccordViewModel(
     private val _notice = MutableStateFlow<String?>(null)
     val notice: StateFlow<String?> = _notice.asStateFlow()
 
+    /**
+     * The first load's wait for the node (CIRISClient#149/#151 for this card):
+     * the card opened before the node's read API was up and sat on "connection
+     * refused". Waiting, then an error with Retry ([retryFirstLoad]).
+     */
+    private val _nodeWait = MutableStateFlow<NodeWait>(NodeWait.Idle)
+    val nodeWait: StateFlow<NodeWait> = _nodeWait.asStateFlow()
+
     init {
-        refresh()
+        firstLoad()
+    }
+
+    /** The first load: a node that is not up yet is waited for, on the startup backoff. */
+    private fun firstLoad() {
+        _loading.value = true
+        viewModelScope.launch {
+            try {
+                val done = awaitNodeFirstRead(
+                    nodeUrl = CIRISApiClient.LOCAL_NODE_URL,
+                    onWait = { _nodeWait.value = it },
+                ) { loadOnce() }
+                if (done != null) _error.value = null
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[firstLoad] ${e.message}")
+                _error.value = "Couldn't load the accord: ${e.message}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    /** Retry after the first load timed out waiting for the node. */
+    fun retryFirstLoad() {
+        _nodeWait.value = NodeWait.Idle
+        firstLoad()
     }
 
     /** Reload the accord family, holder roster, and pending invocations. */
@@ -86,6 +119,21 @@ class AccordViewModel(
         _loading.value = true
         viewModelScope.launch {
             try {
+                loadOnce()
+                _error.value = null
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[refresh] ${e.message}")
+                _error.value = "Couldn't load the accord: ${e.message}"
+            } finally {
+                _loading.value = false
+            }
+        }
+    }
+
+    /** One read of the card's surfaces; the family/holders/invocations reads throw. */
+    private suspend fun loadOnce() {
+        run {
+            run {
                 _family.value = apiClient.getAccordFamily()
                 val holders = apiClient.getAccordHolders()
                 _holders.value = holders.holders
@@ -130,12 +178,6 @@ class AccordViewModel(
                     PlatformLogger.w(TAG, "[refresh] pending-coscrubs: ${e.message}")
                     emptyList()
                 }
-                _error.value = null
-            } catch (e: Exception) {
-                PlatformLogger.w(TAG, "[refresh] ${e.message}")
-                _error.value = "Couldn't load the accord: ${e.message}"
-            } finally {
-                _loading.value = false
             }
         }
     }
