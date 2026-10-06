@@ -37,6 +37,15 @@ class BackendSupervisor(
     private val policy: RevivePolicy = RevivePolicy(),
     private val now: () -> Long,
     private val log: (String) -> Unit = {},
+    /**
+     * Does THIS INSTALL have a local backend to revive right now? Distinct from
+     * [LocalBackendController.canRevive], which is a permanent property of the
+     * platform: an iOS install that chose Run without AI can still write
+     * `.restart_signal`, it just has no agent that should be running
+     * (CIRISClient#138). Asked at the moment of decision, because the answer
+     * changes mid-session when the person makes that choice.
+     */
+    private val mayRevive: () -> Boolean = { true },
 ) {
 
     private val _state = MutableStateFlow<BackendState>(BackendState.Thawing(0, policy.thawBudgetMs))
@@ -193,6 +202,10 @@ class BackendSupervisor(
     private suspend fun maybeRevive(t: Long) {
         if (!controller.canRevive) {
             log("platform cannot revive a local backend — reporting only")
+            return
+        }
+        if (!mayRevive()) {
+            log("this install has no local backend to revive (run without AI) — reporting only")
             return
         }
         if (!foregrounded) {
