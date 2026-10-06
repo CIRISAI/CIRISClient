@@ -2,6 +2,10 @@
 
 package ai.ciris.mobile.shared.backend
 
+import ai.ciris.mobile.shared.platform.AGENT_ENDPOINT
+import ai.ciris.mobile.shared.platform.ActiveBackend
+import ai.ciris.mobile.shared.platform.BackendEndpoint
+import ai.ciris.mobile.shared.platform.LOOPBACK_HOST
 import kotlinx.cinterop.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.*
@@ -90,14 +94,34 @@ object IosBackendBridge {
     private var everReported = false
 
     /**
-     * The node this app is currently talking to. Defaults to the embedded one;
-     * CIRISApp calls [setNodeUrl] when the user connects elsewhere, at which
-     * point [ownershipOf] stops calling it ours and the supervisor will observe
-     * without ever restarting it.
+     * An address someone set explicitly with [setNodeUrl]. Nothing in this
+     * repo calls it today; when something does, [ownershipOf] decides whether
+     * that node is ours to restart.
      */
-    private var nodeUrl: String = "http://127.0.0.1:8080"
+    private var nodeUrlOverride: String? = null
 
-    fun setNodeUrl(url: String) { nodeUrl = url }
+    fun setNodeUrl(url: String) { nodeUrlOverride = url }
+
+    /**
+     * WHICH BACKEND THIS INSTALL RUNS, READ AT EVERY PROBE (CIRISClient#138).
+     *
+     * This was a hard-coded `http://127.0.0.1:8080`. After Run without AI the
+     * agent on :8080 stops on purpose and the node on :4243 is the server, so
+     * the supervisor probed a port that would never answer again, called the
+     * deliberate stop a death, wrote `.restart_signal`, and the Swift host held
+     * "Resuming… Please wait…" over a working app for the rest of the session.
+     *
+     * [ActiveBackend] holds the person's recorded choice and is what
+     * `PythonRuntime.ios.serverUrl` already follows; Android and desktop
+     * already probe the address the client actually uses. Read per probe, not
+     * captured, because the choice is made mid-session.
+     */
+    private val endpoint: BackendEndpoint get() = ActiveBackend.endpoint
+
+    private val nodeUrl: String get() = nodeUrlOverride ?: endpoint.baseUrl(LOOPBACK_HOST)
+
+    private val healthPath: String
+        get() = if (nodeUrlOverride != null) AGENT_ENDPOINT.healthPath else endpoint.healthPath
 
     /**
      * Owned here rather than injected, so Swift has exactly one symbol to
@@ -106,13 +130,15 @@ object IosBackendBridge {
      */
     val supervisor: BackendSupervisor by lazy {
         BackendSupervisor(
-            probe = { iosProbe(nodeUrl) },
+            probe = { iosProbe(nodeUrl, healthPath) },
             controller = IosBackendController(),
             ownership = { ownershipOf(nodeUrl) },
             now = {
                 (NSDate().timeIntervalSince1970 * 1000.0).toLong()
             },
             log = { NSLog("[backend] $it") },
+            // No agent to bring back after Run without AI — see EmbeddedBackendDecision.
+            mayRevive = { mayReviveEmbeddedBackend(endpoint) },
         )
     }
 
@@ -122,12 +148,18 @@ object IosBackendBridge {
      * and the overlay is polled by SwiftUI anyway.
      */
     val isRecovering: Boolean
-        get() = supervisor.state.value.let {
-            it is BackendState.Thawing || it is BackendState.Reviving
-        }
+        get() = overlay == HostOverlay.RESUMING
 
     val hasGivenUp: Boolean
-        get() = supervisor.state.value is BackendState.GaveUp
+        get() = overlay == HostOverlay.RESTART_REQUIRED
+
+    /**
+     * The one decision both getters read, so "Resuming…" and "restart
+     * required" cannot disagree about whether this install has an agent at all.
+     * The rule is [hostOverlayFor], in common code under test.
+     */
+    private val overlay: HostOverlay
+        get() = hostOverlayFor(endpoint, supervisor.state.value)
 
     /** Attempts so far, for the overlay's "tried N times". */
     val attemptCount: Int
@@ -205,9 +237,13 @@ object IosBackendBridge {
  * because the numeric values are stable ABI and read unambiguously next to the
  * outcome they map to.
  */
-suspend fun iosProbe(serverUrl: String, timeoutSeconds: Double = 2.0): ProbeOutcome =
+suspend fun iosProbe(
+    serverUrl: String,
+    healthPath: String = AGENT_ENDPOINT.healthPath,
+    timeoutSeconds: Double = 2.0,
+): ProbeOutcome =
     suspendCancellableCoroutine { cont ->
-        val nsUrl = NSURL.URLWithString("$serverUrl/v1/system/health")
+        val nsUrl = NSURL.URLWithString("$serverUrl$healthPath")
         if (nsUrl == null) {
             cont.resume(ProbeOutcome.TRANSPORT)
             return@suspendCancellableCoroutine
