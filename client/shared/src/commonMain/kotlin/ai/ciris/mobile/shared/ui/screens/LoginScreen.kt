@@ -399,17 +399,7 @@ fun LoginScreen(
                     // the owner hint: "a new account would be refused here".
                     if (errorMessage == null && !observerBlocked) {
                         newIdentityOutcome?.let { o ->
-                            val line = when {
-                                o.isRefused -> o.reasonId
-                                    ?.let { id -> localizedString(id).takeIf { it != id } }
-                                    ?: o.remedy
-                                    ?: localizedString("mobile.login_new_account_refused")
-                                o.outcome == "admitted_as_observer" ->
-                                    localizedString("mobile.login_new_account_observer")
-                                o.outcome == "claims_this_node" ->
-                                    localizedString("mobile.login_new_account_claims")
-                                else -> null
-                            }
+                            val line = preAttemptLineKey(o)?.let { localizedString(it) }
                             line?.let {
                                 Text(
                                     text = it,
@@ -1143,4 +1133,22 @@ private fun FederationIdentitySection(
             modifier = Modifier.padding(top = 4.dp),
         )
     }
+}
+
+/**
+ * The line shown under the sign-in buttons BEFORE any attempt, from
+ * `GET /v1/auth/signin-state`'s `new_identity` outcome. That outcome is the
+ * node's answer for a NEW, unknown identity: the endpoint cannot know who is
+ * about to sign in. So a refusal is said hypothetically ("an account it has
+ * never seen would be refused here"), never with the outcome's `reason_id` —
+ * `auth.oauth.no_local_identity` is the sentence for a sign-in that already
+ * happened and was refused, and showing it up front told the node's own owner
+ * their account was refused before they had tried (CIRISClient#174). The
+ * reason id is still rendered when a real attempt is refused.
+ */
+internal fun preAttemptLineKey(o: ai.ciris.mobile.shared.models.NewIdentityOutcome): String? = when {
+    o.isRefused -> "mobile.login_new_account_refused"
+    o.outcome == "admitted_as_observer" -> "mobile.login_new_account_observer"
+    o.outcome == "claims_this_node" -> "mobile.login_new_account_claims"
+    else -> null
 }
