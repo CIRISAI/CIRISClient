@@ -5,7 +5,11 @@
 the Constitutional card as one document and can no longer, because they are two
 cards in one tab with two different jobs · **Leaf**: CSD-105 (this node's trust
 root, `Screen.TrustRoot`), split out at the accord review because it is its own
-screen and the route checker keys a card by the routes its screen calls
+screen and the route checker keys a card by the routes its screen calls ·
+**Leaf (sketched)**: CSD-108 (Steward purge, the proposed `Screen.StewardPurge`,
+entered by the proposed `btn_accord_open_steward_purge`). It reuses this card's
+co-scrub (propose → byte-identical partial → cosign → pending) to collect the
+root's cosigned `takedown_notice` (CIRISPersist#1046, CIRISConstitution#165)
 
 ```yaml csd:stage
 stage: building

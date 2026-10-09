@@ -2,6 +2,13 @@
 
 **CSD**: CSD-065 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1 (S2/G1)
 **Flow**: unwritten — every tag in §2.3 is real as of the 2026-09-27 review, so it can be
+**Extended by**: CSD-108 (Steward purge). Tier 3 (Descend) is the key purge
+that exists today: a previewed selection hash, a quorum of 2, and `evict_actor`
+for each target (moving onto `purge_rows` by actor, CIRISPersist#1046).
+CSD-108 generalises it to four selection kinds under the
+GLOBAL trust root's `takedown` duty. It is a separate card under Accord, not a
+fifth rung, because a community's `slash` and the root's `takedown` are two
+authorities (CSD-108 §1.1).
 
 ```yaml csd:stage
 stage: building
@@ -281,7 +288,7 @@ literals in `src/`.
 | tier 1 — release | `POST /v1/admin/un-throttle` | `src/admin_ops.rs:4266` | **live** — `AdminLadder.kt:490` |
 | tier 2 — quarantine | `POST /v1/admin/quarantine` | `src/admin_ops.rs:4268` | **live** — `AdminLadder.kt:498` |
 | tier 2 — release | `POST /v1/admin/un-quarantine` | `src/admin_ops.rs:4272` | **live** — `AdminLadder.kt:506` |
-| tier 3 — descend | `POST /v1/admin/descend` | `src/admin_ops.rs:4275` | **live** — `AdminLadder.kt:515`; quorum 2, no inverse |
+| tier 3 — descend | `POST /v1/admin/descend` | `src/admin_ops.rs:4275` | **live** — `AdminLadder.kt:515`; quorum 2, no inverse. Its payload leg calls `Engine::evict_actor` per target today. **Moving onto `purge_rows` by actor** (CIRISPersist#1046, answer 5; v54.1.0), with `evict_actor` still the bytes-plane primitive underneath. The route, its community `slash` authority and this rung are unchanged. The generic, trust-root form of the same door is CSD-108 |
 | tier 4 — de-admit | `POST /v1/admin/deadmit` | `src/admin_ops.rs:4276` | **live** — `AdminLadder.kt:525` |
 | tier 4 — re-admit | `POST /v1/admin/re-admit` | `src/admin_ops.rs:4277` | **live** — `AdminLadder.kt:533` |
 | tier 4 — refuse writes | `POST /v1/admin/refuse-writes` | `src/admin_ops.rs:4280` | **live** — `AdminLadder.kt:541` |

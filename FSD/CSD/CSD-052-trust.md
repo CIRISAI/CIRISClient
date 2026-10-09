@@ -142,6 +142,37 @@ honestly on a bare node; only the mobile device-attestation flow is agent-gated,
 and the 5-second poll is dropped on a node because a substrate attestation is
 static (`TrustPage.kt:96-101`).
 
+### A superseded manifest (design note, from CIRISPersist#1029)
+
+**What happened.** Persist registered CanonicalBuild manifests that carried the
+wrong wheel hash: 20 rows across aarch64-linux and windows, for 53.0.1 through
+53.1.8. Before CIRISVerify 20.1.0, a v29 wheel passed as v53.1.8. The fix
+re-posts the corrected rows. CIRISRegistry upserts on
+`(project, version, target)` and keeps no history, so the re-post replaces the
+bad row silently. CIRISRegistry#144 asks for append-only history and a
+`superseded: [{previous_binary_hash, previous_manifest_hash, superseded_at}]`
+member on the manifest reads. CC 3.1.2.1 calls such a rebuild a `supersedes`.
+
+**How the Level 4 row (`provenance:build_manifest:{target}`) should read once
+that member exists:**
+
+* **The current manifest passes.** The row is green as usual. Under it, in
+  the neutral tone: "Manifest re-registered {superseded_at}. It replaces one
+  that carried the wrong hash (CIRISPersist#1029)." This is a fact about the
+  registry's history, not a warning about this install.
+* **This install matches only the superseded hash.** This is never green. The
+  row reads "Matches a superseded manifest, not the current one" in the danger
+  tone. That is the rollback case 20.1.0 closes on the verifier side.
+* **A verdict computed before the supersede.** Any cached or reported Level 4
+  result older than `superseded_at` reads "Checked against a manifest since
+  replaced. Re-run." It is never shown as a pass or a fail.
+
+**What the card does today.** Nothing: the node's `verify-status` carries no
+manifest identity, and the registry carries no history. So this is a design
+note, not a `shows:` row. The same three readings apply to CSD-087's lookup
+when its `build:registered:{target}` record grows the member. **It is not a
+purge.** The re-post is the registry's own row, and CSD-108 §7 says so.
+
 ## 4. Flow (how)
 
 Unwritten — every value-bearing tag is `proposed:`. A flow over today's tags
