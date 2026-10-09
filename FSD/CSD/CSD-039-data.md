@@ -3,6 +3,10 @@
 **CSD**: CSD-039 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
 **Flow**: the erasure half is staged at `testing/flows/drafts/csd-039-data-erasure.yaml`
 (`client: unreleased`); the sharing half is unwritten — its tags are the contract the flow will drive
+**Not to be confused with**: CSD-108 (Steward purge). Erasure here is the
+subject's consent act (`withdraws`, CC 3.3.1). A steward purge is the trust
+root's tombstone over rows that never belonged (CIRISConstitution#165), and
+neither card uses the other's words
 
 ```yaml csd:stage
 stage: building

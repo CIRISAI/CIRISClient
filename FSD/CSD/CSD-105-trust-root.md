@@ -7,6 +7,11 @@ levers. It is its own `Screen`, so the route checker keys it by its own routes a
 CSD-067 could not cite them for it (CSD.md §4.1: a citation counts on the screen
 or a sibling, and a leaf that renders a different composable is neither)
 **Flow**: `testing/flows/drafts/csd-105-trust-root.yaml` — draft, `client: "unreleased"`
+**Sibling leaf**: CSD-108 (Steward purge), another leaf of Accord. This card acts
+on THIS node's acceptance of a root. CSD-108 acts on the canonical's corpus,
+under that root's cosigned `takedown_notice`, and its tombstones replicate. Only
+the loopback-refusal rendering is shared (`purge_loopback_only` follows
+`trust_root_loopback_only`).
 
 ```yaml csd:stage
 stage: building

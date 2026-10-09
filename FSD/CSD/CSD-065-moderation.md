@@ -2,6 +2,12 @@
 
 **CSD**: CSD-065 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1 (S2/G1)
 **Flow**: unwritten — every tag in §2.3 is real as of the 2026-09-27 review, so it can be
+**Extended by**: CSD-108 (Steward purge). Tier 3 (Descend) is the key purge
+that exists today: a previewed selection hash, a quorum of 2, and `evict_actor`
+for each target. CSD-108 generalises it to four selection kinds under the
+GLOBAL trust root's `takedown` duty. It is a separate card under Accord, not a
+fifth rung, because a community's `slash` and the root's `takedown` are two
+authorities (CSD-108 §1.1).
 
 ```yaml csd:stage
 stage: building
