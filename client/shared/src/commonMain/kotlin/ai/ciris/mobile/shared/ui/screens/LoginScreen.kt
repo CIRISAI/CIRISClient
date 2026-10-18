@@ -833,7 +833,7 @@ private fun LocalLoginForm(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .testableClickable("btn_login_submit") { onSubmit() }
+                .testableClickable("btn_login_submit", enabled = username.isNotBlank() && password.isNotBlank()) { onSubmit() }
         ) {
             Text(
                 text = loginText,
