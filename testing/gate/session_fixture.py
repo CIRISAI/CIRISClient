@@ -420,6 +420,18 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             f"within 30s (on {drv.screen()!r}); on screen: {sorted(_tags(drv))}"
         )
 
+    # The wizard's first question (CIRISServer 0.5.231, CSD-093): a new CIRIS
+    # ID or this device added to an existing one. Nothing below it renders
+    # until it is answered. This fixture makes the node's FIRST owner, so it is
+    # always the new-ID path. A client from before the question shows the
+    # fields directly, so the click is conditional.
+    if "btn_setup_new_identity" in _tags(drv):
+        try:
+            _reach(drv, "btn_setup_new_identity", lambda: drv.click("btn_setup_new_identity"))
+        except DriverError as e:
+            raise SessionUnavailable(f"wizard: btn_setup_new_identity would not take a click ({e})") from e
+        time.sleep(1.0)
+
     for tag, value in (("input_username", username),
                        ("input_password", password),
                        ("input_password_confirm", password),

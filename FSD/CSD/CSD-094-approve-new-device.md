@@ -1,33 +1,34 @@
 # CSD-094 — Approve a new device (the device you already have)
 
-**CSD**: CSD-094 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.218 client brief (the second-device flow, CIRISServer#678)
-**Pairs with**: CSD-093 (Show approval code, on the new device) · CSD-037 (My Identity, the page this card sits on)
-**Flow**: unwritten. The tags below are the contract the card agents build to
+**CSD**: CSD-094 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177). Rewritten from the 0.5.218 sketch (scan the new device's QR and drive `claim-remote` at it over HTTP), which the server replaced with a peer-to-peer join request the new device sends to this one
+**Pairs with**: CSD-093 (Add this device to an existing CIRIS ID, on the new device) · CSD-037 (My Identity, the page this card sits on)
+**Flow**: `testing/flows/drafts/csd-094-approve-new-device.yaml` (floor `unreleased`)
+**Card**: `ui/screens/AddDeviceScreens.kt` (`ApproveDeviceCard`, `AddDeviceTags`), placed on `ui/screens/IdentityManagementScreen.kt` above the roster's older "add a key" card; `viewmodels/ApproveDeviceViewModel.kt`; wire `api/AddDeviceApi.kt` (`DeviceRequestsApi`) + `CIRISApiClient.{open,list,approve,deny}DeviceRequest(s)`; tests `ApproveDeviceViewModelTest` (commonTest), `AddDeviceWireTest.theApprovingDevicesCallsCarryItsOwnerSession` (desktopTest)
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
+`building`, not `testable`: built, every §3 row answered at CIRISServer
+**v0.5.231**, no client release carries it yet (floor `unreleased`).
+
 ## 1. Mission (why)
 
-**From a device they already use, a person can make a new device theirs: scan
-the code it shows, see which device they are about to approve, approve it, and
-then see it in the list of their devices. The card says plainly what does not
-follow the device yet.**
+**From a device they already use, a person can let a new device join their
+CIRIS ID: open the window for new requests, see which device is asking and a
+six-digit code its own screen also shows, and approve it or deny it, each
+after a confirm that says what the act does.**
 
 Serves **Integrity** through CC 3.4.5: `ownership:*` is owner-only, and the
-owner's signature *is* the claim. The person's signing key stays on this device
-(the brief: "the person's signing key stays on the first device"), so this is
-the only device that can make the claim, and it makes it with no crypto in the
-app: `POST /v1/setup/claim-remote` asks this device's own node to sign the
-owner-binding and deliver it to the new one (`src/claim_remote.rs:1-21`). And
-it serves CC 3.3.6. The point of the flow is that the new device becomes
-another occurrence of the same self, not a second person.
-
-It lives in **My things › Devices & keys › My Identity** (decided), next to the
-device roster, because approving a device adds to the person's own identity.
-It is not in any circle.
+owner's signature *is* the claim. The person's key stays on this device;
+approving signs the owner-binding to the new node and the new device's
+occurrence under the person's self, records both, and re-wraps the self files'
+keys to it (`sign_and_record`, `src/add_device.rs:1098-1241`). It serves CC
+3.3.6: the new device becomes another occurrence of the same self, not a second
+person. And it serves the matching code's one job (N1): the code is derived
+HERE from the requester's key and challenge, so a person comparing two screens
+can tell their device from an impostor that copied the challenge.
 
 ## 2. Surface (what)
 
@@ -36,183 +37,159 @@ surface: identity-management
 screen: IdentityManagement
 ```
 
-A card, `proposed:card_approve_device`, below the roster (CSD-037) on the page
-`nav_map` derives as `btn_my_things -> nav_instrument_devices_keys ->
-nav_epistemic_identity_management`.
+**Where it lives, decided by routes.** The page `nav_map` derives as
+`btn_my_things -> nav_instrument_devices_keys -> nav_epistemic_identity_management`
+(My things › Devices & keys › My Identity) already holds the person's devices:
+the roster (`GET /v1/self/occurrences`, CSD-037) and the older "add a key a
+device already made" card (`POST /v1/self/occurrence`). No screen called
+`/v1/self/device-requests` before this card, so it is not a duplicate; it is
+the 0.5.231 door to the same roster. It sits directly above the older card,
+and that card is renamed by what the person holds ("Add a key a device already
+made", `mobile.identity_add_key_title`) so the two are not two buttons called
+"Add a device" (§6 of the 0.5.218 sketch recommended exactly this).
 
-**Two ways in, always both.** `proposed:btn_scan_approval_code` opens the
-`QrScanAction` primitive. `proposed:input_approval_code` takes a pasted
-approval code or a bare node code, and `proposed:input_approval_pin` appears
-when what was pasted carries no PIN, for a PIN read off the other screen. A
-scan fills the fields and does not approve: the next screen names the device,
-and approving is a separate tap.
+**The window gates NEW requests only.** `POST /v1/self/device-requests/open`
+opens it (10 minutes by default, 30 at most). While open, the card says
+"Accepting new requests: 9:42" and counts down locally between polls. When it
+closes, the node refuses new joins (`add_device.not_accepting` on the new
+device) but every request already held stays listed and approvable, each with
+its own "Request expires in m:ss" (REQUEST_TTL 15 min − `requested_secs_ago`),
+and "Accept new requests again" reopens the window. The card polls
+`GET /v1/self/device-requests` every 3 s while visible, awaited and never
+overlapping.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
-  - ceg: x_private:approval_payload
-    use: read
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "nothing by itself: the scanned or pasted approval code, decoded into the node code, PIN and address that CSD-093 put in it. The format is shared with CSD-093; its address member waits on CIRISServer#678's design answer (HTTP to the target, or the mesh — CSD-093 §3), and one commonTest pins both sides once it is given"
-    tag: "proposed:input_approval_code"
-    blocked_by: CIRISServer#678
-  - ceg: x_private:claim_pin
-    use: emit
-    type: string
-    example: "7F3K-Q9MZ"
-    renders: "a PIN field shown only when the pasted code carried none, masked after entry. Held in memory for the one request and then dropped: not saved, not logged"
-    tag: "proposed:input_approval_pin"
-  - ceg: x_private:node_code
+  - ceg: x_private:add_device_window
     use: display-only
-    type: string
-    example: "CIRIS-V1-7QK2-…"
-    renders: "before approving: 'Approve {alias or key id} as your device?' The name comes from decoding the node code on this device (NodeCodeCodec: key id + alias hint); nothing is fetched to say it"
-    tag: "proposed:text_approve_device_target"
-  - ceg: x_private:cohort_scope
-    use: emit
-    type: "enum[self]"
-    example: "self"
-    renders: "not a choice. 'Who can see it: just you' as a fact on the confirm step. A device of yours is `self` (CC 3.3.6); making it reachable is a separate act (CSD-037)"
-    tag: "proposed:text_approve_device_scope"
+    type: int
+    example: 582
+    renders: "'Accepting new requests: 9:42' while `window_secs_left` is a number; 'Not accepting new requests. Requests already listed can still be approved.' when it is null (the node clears it on close), with 'Accept new requests' (`btn_approve_device_open`, 'Accept new requests again' once it has been open)"
+    tag: text_approve_device_window
     assert:
-      one_of: {"proposed:text_approve_device_scope": [self]}
-  - ceg: "ownership:{relation}:{target_kind}:{version}"
-    bind: {relation: responsible_party, target_kind: node, version: v1}
+      one_of: {text_approve_device_window: [open, closed]}
+  - ceg: x_private:device_label
     use: display-only
     type: string
-    example: "eric-moore-v1"
-    renders: "'Approved. {device} is now yours.' Shown only when the response's `identity_key_id` is this person's own; any other value is shown as a failure, since a claim made for someone else is the one thing this card must never report as success"
-    tag: "proposed:text_approve_device_done"
+    example: "S23 Phone"
+    renders: "'Consent to claim S23 Phone?' per request, from the request's `label` (the name the new device's wizard sent; 'Unnamed device' when empty)"
+    tag: "approve_device_request_*"
+  - ceg: x_private:device_class
+    use: display-only
+    type: string
+    example: "phone"
+    renders: "'Device type: Phone' under the label, from the request's `device_class` as sent: Phone / Laptop / Server where the bundle has a word, else the server's token unchanged, else no line. Also in the confirm's Device fact ('S23 Phone · Phone'). Since `b3e05e27` the class is the requesting host's (`host_device_class()`, `src/backend.rs:157`); v0.5.231 always sent `laptop`"
+    tag: "text_approve_device_class_*"
+  - ceg: x_private:match_code
+    use: display-only
+    type: string
+    example: "482 913"
+    renders: "'Matching code. It must be the same on the new device:' and the six digits large. Derived by this node (N1)"
+    tag: "text_approve_device_code_*"
+  - ceg: x_private:add_device_request_expiry
+    use: display-only
+    type: int
+    example: 780
+    renders: "'Request expires in 13:00' — 900 − `requested_secs_ago`, aged locally between polls; a request at 0 leaves the list"
+    tag: "text_approve_device_expires_*"
+  - ceg: x_private:add_device_approve
+    use: emit
+    type: bool
+    example: true
+    renders: "the owner's consent; the node, not this client, signs the `ownership:` binding (CC 3.4.5). 'Approve' (`btn_approve_device_<id>`) raises a ConfirmSheet with three facts: Device (the label), Matching code (mono), Approving ('Makes it another device of your CIRIS ID, with its own key, and lets it open your private files.'). Confirm → `POST …/{id}/approve`; then 'Approved. S23 Phone can finish setting up now.'"
+    tag: text_approve_device_outcome
+  - ceg: x_private:add_device_deny
+    use: emit
+    type: bool
+    example: true
+    renders: "'Deny' (`btn_deny_device_<id>`) raises the same sheet, destructive, with Denying ('Refuses the request. The new device is told, and nothing is shared with it.'). Confirm → `POST …/{id}/deny`"
+    tag: "btn_deny_device_*"
   - ceg: x_private:refusal_reason_id
     use: display-only
-    type: "enum[claim.bad_request,claim.no_identity,claim.signer_unavailable,claim.node_code_invalid,claim.cohort_invalid,claim.binding_unsigned,claim.no_route,claim.password_not_forwarded,claim.target_unreachable,claim.target_refused]"
-    example: "claim.target_unreachable"
-    renders: "the reason by id (0.5.218, `src/claim_remote.rs:624-700`): 'That code is damaged' (`node_code_invalid`); 'Couldn't reach that device. Are both on the same network?' (`target_unreachable`, 502; `no_route`, 400 — a code with no hint and no `target_url`); and for `target_refused` the TARGET's own `reason_id` is carried beside it as `target_reason_id` (`:665-668`), which is how 'That PIN doesn't match. Check it on the other device' is told apart from any other refusal the new device makes. On `main` (0.5.217) the same failures are prose, and the client maps them by status until 0.5.218 ships. Bundle keys for the ten ids are not in `en.json` yet (CIRISClient#78)"
-    tag: "proposed:approve_device_refusal"
+    type: "enum[add_device.request_unknown,add_device.approve_failed]"
+    example: "add_device.request_unknown"
+    renders: "the refusal by id, the node's English beneath: `request_unknown` (404, the request expired or was decided elsewhere), `approve_failed` (500, signing or recording failed)"
+    tag: approve_device_refusal
 ```
-
-**What the confirmation must say, and must not.** Under "Approved": "New files
-and chats will reach both devices. Things from before today won't open there
-yet. It stays private until you make it reachable." Each clause is a stated
-limit from the brief (§6). None of it is written as a promise with a date.
 
 ```yaml csd:states
-populated: {tag: "proposed:card_approve_device", renders: "the heading 'Approve a new device', one line ('Open CIRIS on the new device and choose Use an existing identity'), Scan and the paste field"}
-empty:     {tag: "proposed:card_approve_device", renders: "the card has no empty state of its own: before a code is scanned or pasted it IS the populated card. The roster's empty state is CSD-037's"}
-loading:   {tag: "proposed:approve_device_busy", renders: "'Approving {device}…' with a progress affordance and no other control: the claim is one request and it either lands or refuses"}
-error:     {tag: "proposed:approve_device_refusal", renders: "the refusal inline on the card, in the error tone, with the fields kept so the person can fix the PIN rather than rescan"}
+populated: {tag: card_approve_device, renders: "the window line, and one row per pending request with its label, match code, expiry, Approve and Deny"}
+empty:     {tag: approve_device_empty, renders: "'No device is asking to join.' under the window line — with the window closed too, since Accept new requests is the way on"}
+loading:   {tag: card_approve_device, renders: "the card frame and the window control before the first list answers; no rows and no empty line until the node has said"}
+error:     {tag: approve_device_refusal, renders: "the refusal by id inline on the card, the list kept"}
 ```
+
+A node older than 0.5.231 answers the list with a bare 404: the card says
+"This node is too old to add devices this way" (`approve_device_too_old`) and
+offers nothing.
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `main` @ `046e1b39` (2026-09-25) through `gh api`.
-No 0.5.218 code is pushed to any branch or PR yet, so anything "0.5.218" below
-is taken from the maintainer's brief and is not readable source.
+Verified against CIRISServer **v0.5.231** `src/add_device.rs`. Every route is
+owner-session gated (`require_owner_session`), with the bearer, on the node
+the card is showing: `ClientDeviceRequests` reads the ACTIVE node's URL on
+every call (`effectiveNodeUrl`, as contacts do), because the view model
+outlives a node-profile switch and a URL captured at construction approved on
+the previous node (Codex, PR #189; `AddDeviceWireTest.afterANodeSwitchTheApprovalGoesToTheNewNode`).
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| approve | `POST /v1/setup/claim-remote {node_code, claim_pin, cohort_scope, target_url?}` on this device's own node | CIRISServer | **live**: `src/claim_remote.rs:1241-1244`, handler `:386-519`. Owner-gated once owned (`SYSTEM_ADMIN`, `require_verb(ClaimRemote)`), loopback-only via the setup-route guard. The client already has `client.claimRemote(...)` (`SetupViewModel.kt:1203`) |
-| the response | `{wa_id, identity_key_id, cohort_scope, role, owner_binding_attestation_id, …, local_directory_updated}`: the target's `SetupRootResponse` (`src/auth/bootstrap.rs:708-733`) plus a local flag (`claim_remote.rs:819-834`) | CIRISServer | live. On `main` **it also carries the new node's freshly minted owner session** (CIRISServer#393). **0.5.218 drops it** on the way through (`without_session`, `src/claim_remote.rs:605-613` on `origin/integ/0.5.218`: `access_token`, `token_type`, `expires_in`, `user_id` removed) — the §6 ask, answered. This client must still not keep, store or log it while it talks to a 0.5.217 node |
-| refusals | `main`: `400` bad node code / cohort / no address, `502` unreachable, the target's status for a bad PIN, all as `{"error": "claim-remote failed: …"}` prose (`claim_remote.rs:504-517`). **0.5.218**: one named id per way a claim can fail — `claim.bad_request`, `claim.no_identity`, `claim.signer_unavailable`, `claim.node_code_invalid`, `claim.cohort_invalid`, `claim.binding_unsigned`, `claim.no_route`, `claim.password_not_forwarded`, `claim.target_unreachable`, `claim.target_refused` with the target's `reason_id` beside it (`:438-519`, `:624-700`) | CIRISServer | the ask for ids is **answered on `integ/0.5.218`**, unreleased. `en.json` keys for the ten: CIRISClient#78 |
-| reaching the new device | `target_url` in the claim body overrides the node code's `transport_hint`; with neither, 0.5.218 falls back to the approving node's own loopback ONLY when the code names that node itself, and refuses `claim.no_route` for another device's code (`:484-519`) | CIRISServer | **released on `main` @ `53d1ffb5`**. The client now sends `target_url` = the address it reached and identity-pinned the target at (`NodeSwitcherViewModel.claimAdmin` → `claimRemote(targetUrl = profile.baseUrl)`, pinned by `ClaimedSessionWireTest.theApprovingDeviceNamesTheTargetsAddress`), so a hintless code no longer meets `claim.no_route` on the node-switcher path; the 0.5.218 ids classify (`ClaimFailure`: `claim.target_unreachable`/`claim.no_route` → unreachable, `claim.node_code_invalid` → bad code, `auth.claim.already_claimed` → already claimed). The new device's session stays on it and is collected there (CSD-093 §3, `POST /v1/setup/claimed-session`). For this card's QR, **the open design question remains** (#678): a desktop or phone target publishes no hint and may not be reachable over HTTP, so the approval code must carry an address the approving node can use, or the path must ride the mesh. `blocked_by` on `x_private:approval_payload` |
-| the new device in the roster | the roster is `GET /v1/self/occurrences` (CSD-037). On `main`, claim-remote writes an owner-binding and a bootstrap peer, **not** an `identity_occurrence` (`claim_remote.rs:704-720`); the new node shows up in `GET /v1/setup/owned-nodes` | CIRISServer | **unconfirmed** which list shows an approved device after 0.5.218: `integ/0.5.218`'s claim-remote still writes no occurrence. Until it is answered, the flow asserts the confirmation, not a roster row |
-| link now, not at restart | 0.5.218: after a successful claim the approving node's reconciler is nudged and the target joins the owner's device set at once — "no consent grant, no reboot" (`src/claim_remote.rs:564-575`) | CIRISServer | **built, unreleased** (#678, point 2) |
-| old private files open on the new device | re-wrap of the self key for the new node at claim time | CIRISServer #678 · CIRISPersist#916 | **not built** on `integ/0.5.218` (no re-wrap in `claim_remote.rs`); a stated limit |
-| make the new device reachable, from here | `POST /v1/self/nodes/{node_key_id}/announce` on the approving side: handler `announce_node`, `src/self_devices.rs:338-423`, mounted at `:860-863`, on `integ/0.5.218` @ `dad7f385`; refusals `self.announce_not_your_node`, `self.announce_refused` | CIRISServer #678 | **built on `integ/0.5.218`, unreleased, not wired in the client** (this row said "not built"; that was wrong). No release carries it, so the floor stays `unreleased`. The new device cannot announce itself: the person's key is here |
-| scanning | `QrScanAction` | CIRISClient | **live** (PR #99): `ui/primitives/QrScanAction.kt`, already filling CSD-005's add field |
+| open the window | `POST /v1/self/device-requests/open {seconds?}` → `{open: true, seconds}` | CIRISServer `open_window`, `:940-969`; default/max `:53-54`; route `:1265-1268` | **live**, wired: `ApproveDeviceViewModel.open` → `CIRISApiClient.openDeviceRequests`. The body is `{}` (the node's default); an empty body is also accepted (`:948-952`) |
+| the pending requests and the window | `GET /v1/self/device-requests` → `{requests: [{request_id, label, device_class, match_code, node_key_id, requested_secs_ago}], window_secs_left}` | CIRISServer `list_requests`, `:972-1000`; `sweep` `:184-201`; route `:1261-1264` | **live**, polled by the card. `window_secs_left` is null once closed (`sweep` clears it, `:197-199`); held requests survive until REQUEST_TTL (`:49`, `:187-188`) |
+| approve | `POST /v1/self/device-requests/{id}/approve` → `{approved, match_code, node_key_id, occurrence_key_id, self_dek_granted}` | CIRISServer `approve`, `:1033-1094`; `sign_and_record` `:1098-1241`; route `:1269-1272` | **live**, behind the ConfirmSheet. 404 `add_device.request_unknown`, 500 `add_device.approve_failed` |
+| deny | `POST /v1/self/device-requests/{id}/deny` → `{denied: true}` | CIRISServer `deny`, `:1003-1030`; route `:1273-1276` | **live**, behind the ConfirmSheet. 404 `add_device.request_unknown`. A decided request frees its slot at once (N3) |
+| the new device in the roster | `GET /v1/self/occurrences` (CSD-037) | CIRISServer | live; approval records the occurrence here (`put_identity_occurrence`, `:1194-1197`), so the roster shows it on its next read |
 
 ## 4. Flow (how)
 
-Two nodes, one person. On device B, run CSD-093 up to the approval code. On
-device A (signed in), open My things › Devices & keys › My Identity.
+Two nodes, one person. On device A (signed in), open My things › Devices &
+keys › My Identity.
 
 ```yaml
 expect:
-  visible: ["proposed:card_approve_device", "proposed:btn_scan_approval_code", "proposed:input_approval_code"]
+  visible: [card_approve_device, btn_approve_device_open]
 ```
 
-Paste B's approval code into `proposed:input_approval_code`.
+Accept new requests. On device B, run CSD-093 up to the match code. A's card
+lists B's request with the same code; approve it through the confirm:
 
 ```yaml
 expect:
-  visible: ["proposed:text_approve_device_target", "proposed:text_approve_device_scope", "proposed:btn_approve_device"]
-  absent: ["proposed:input_approval_pin"]
-```
-
-Click `proposed:btn_approve_device`.
-
-```yaml
-expect:
-  visible: ["proposed:text_approve_device_done"]
-  text: {"proposed:text_approve_device_done": "is now yours"}
-  absent: ["proposed:approve_device_refusal"]
-```
-
-B leaves its approval screen for Login by itself (CSD-093 §4).
-
-Paste a bare node code, type a wrong PIN into `proposed:input_approval_pin`,
-approve:
-
-```yaml
-expect:
-  visible: ["proposed:approve_device_refusal"]
-  text: {"proposed:approve_device_refusal": "doesn't match"}
+  visible: [text_approve_device_outcome]
+  one_of: {text_approve_device_outcome: [approved]}
 ```
 
 ## 5. QA plan
 
-**Platforms.** The card on all five; the pair on desktop + desktop (two homes,
-never sharing `~/ciris`), because the target must be reachable over HTTP from
-A's node.
+**Unit and wire (green on this branch).** `ApproveDeviceViewModelTest`
+(commonTest, 11 cases): opening the window and re-reading the list; the list
+with its match codes; after the window closes, a held request still listed
+and approvable (red on a planted "hide requests when the window is closed");
+each request's own 15-minute countdown, aged locally and never negative;
+approve and deny each through the confirm, with nothing sent before it;
+dismissing sends nothing; a refusal by id; a bare 404 as the version fact; the row showing the class the list sends (`phone`), and `deviceClassKey`/`deviceClassDisplay`'s words and fallbacks.
+`AddDeviceWireTest.theApprovingDevicesCallsCarryItsOwnerSession`: every owner
+route carries the bearer, a closed window still lists the request, approve
+sends `{}`, deny's refusal arrives by id.
 
-**The PIN.** A `commonTest` against a recording API client asserts that the PIN
-appears in exactly one request, the loopback `claim-remote` to this device's own
-node, and in no log line. The owner session in the response is asserted to be
-dropped. Both are shown red on a planted defect first.
-
-**Not tested here.** The camera (QrScanAction's double stands in). History on
-the new device is not built; linking without a restart and announcing it from
-here are built on `integ/0.5.218` but unreleased (and announce is unwired), so
-there is nothing to test yet, and the confirmation text asserts the
-limits instead. Re-admission after a restart (CIRISEdge#676 / CIRISPersist#911).
+**A real run** is CSD-093 §5's: two nodes, A claimed and signed in on this
+client, B first-run. Here the roles invert (this client is A), so the fixture
+must drive B's `POST /v1/setup/add-device` by API with A's long-form fedID and
+then wait for A's approval. `two_node.py` stands up a CLAIMED peer; B needs an
+UNCLAIMED one, with a mesh transport, whose loopback the fixture can reach.
 
 ## 6. Delta — card vs API vs CC
 
-* **Stated limits, not promises (brief, CIRISServer#678).**
-  * Things written before the approval do not open on the new device yet: old
-    private files wait on the approving side re-wrapping their keys at claim
-    time (#678), and old chats and community messages wait on CIRISPersist#916.
-  * The two devices sync only once linked, and today that happens at the next
-    restart. #678 makes the approval link them at once.
-  * The new device cannot announce itself, because the person's key is on this
-    one. The per-device "make this device reachable" on the approving side is
-    built on `integ/0.5.218` (`POST /v1/self/nodes/{node_key_id}/announce`,
-    §3) and unreleased. Until a release carries it and this card calls it, the
-    new device stays private.
-  * A device that restarts loses its place in the self room and is not
-    re-admitted by itself (CIRISEdge#676 / CIRISPersist#911).
-  * Revoking a lost device reaches the person's other devices only once #646
-    lands. CIRISServer#700 (open, unreleased) is the fix in flight: it makes
-    `release` and `occurrence/revoke` one signed act that withdraws the owner
-    binding, writes a signed occurrence revocation that replicates, and kicks
-    replication (CSD-037 §3).
-* **Two ways to add a device on one page.** CSD-037's "Add a device"
-  (`input_identity_device_code` → `POST /v1/self/occurrence`, a fedcode the new
-  device minted for itself) and this card do different things under similar
-  words. The occurrence path is the one that runs persist's
-  `rekey_self_occurrence_add` (#678, point 1), which is why its devices can read
-  old self files. Approval is the claim path. **Recommendation (CIRISClient):**
-  name them by what the person holds: "Approve a new device" (it shows a code)
-  and "Add a key you already made" for the occurrence path. Do not put a guard
-  behind two ambiguous buttons.
-* **API vs CC.** CC 3.3.6 says a second device of one self is an
-  `identity_occurrence`. On `main` the claim path makes it an owned *node* and
-  no occurrence, so "the device appears in the roster" is exactly the open
-  question in §3. It is not a client bug to paper over.
-* **The session in the response — answered.** On `main` the target mints its
-  owner session and hands it back through this device (CIRISServer#393): a
-  credential for the other device passing through this one. 0.5.218 strips it
-  from a remote claim's result (`without_session`, `src/claim_remote.rs:605`),
-  which is what this card asked for. Against a 0.5.217 node the client still
-  drops it, and the §5 unit test still asserts that.
+* **Where the server source differs from the FSD.** The list row carries
+  `node_key_id` and `requested_secs_ago`, not `requested_at` (FSD §4); the
+  window is `window_secs_left` (null when closed). `device_class` is always
+  `laptop` at v0.5.231 (`:491`). Fixed at `b3e05e27`: the request carries the host's class (`src/add_device.rs:497`), and the card shows it (`text_approve_device_class_<id>`, `deviceClassDisplay`).
+* **Stated limits.** A request the new device sent while this node's window
+  was closed is refused, not queued (N2), so "Accept new requests" comes first.
+  The new device must receive the approval within 15 minutes of it being
+  given (DECIDED_TTL, `:51`); after that it reads `expired` (`b3e05e27`;
+  `failed`/"Unknown" on v0.5.231) and the person starts again (open the window, send a new request).
+* **CC.** CC 3.4.5 and 3.3.6 hold as §1 says. The self-DEK re-wrap is the
+  owner's act and runs at approval; if it fails it is retried by `self_rewrap`
+  and the approval still lands (`:1199-1210`).

@@ -17,6 +17,24 @@ description: >-
 client: ">=0.5.224"
 
 steps:
+  - step_id: choose_a_new_identity
+    title: The wizard's first question is answered, a new CIRIS ID (CSD-093)
+    description: >-
+      From the client release that carries "Add a device" (CIRISServer 0.5.231),
+      the YOU step asks first whether this is a new CIRIS ID or this device joins
+      an existing one, and renders nothing else until it is answered. This flow
+      is the new-ID path. Optional, so a client from before the question still
+      runs the rest of the flow unchanged.
+    optional_step: true
+    requires:
+      screen: Setup
+      visible: [btn_setup_new_identity, btn_setup_add_this_device]
+    do:
+      - click: btn_setup_new_identity
+    expect:
+      screen: Setup
+      visible: [input_username, age_band_adult]
+
   - step_id: step_you_with_both_options
     title: 'Step You offers both ways to run, and starts at three dots'
     description: >-

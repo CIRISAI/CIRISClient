@@ -3141,6 +3141,139 @@ class CIRISApiClient(
         }
     }
 
+    // ─── ADD A DEVICE (CIRISServer 0.5.231, FSD/ADD_DEVICE.md; CSD-093 / CSD-094) ───
+
+    /**
+     * One add-device call: [method] `nodeUrl + path`, an optional JSON [body],
+     * the client's bearer when [withSession]. A non-2xx is a [NodeRefusal] —
+     * `{error, reason_id}` with an `add_device.*` id, or no id at all for a
+     * bare 404 from a node older than 0.5.231.
+     */
+    private suspend fun addDeviceCall(
+        method: String,
+        verb: HttpMethod,
+        nodeUrl: String,
+        path: String,
+        body: String?,
+        withSession: Boolean,
+    ): String {
+        logInfo(method, "${verb.value} $nodeUrl$path")
+        val client = federationHttpClient()
+        return try {
+            val response = client.request("$nodeUrl$path") {
+                this.method = verb
+                if (withSession) accessToken?.let { header("Authorization", "Bearer $it") }
+                if (body != null) {
+                    contentType(ContentType.Application.Json)
+                    setBody(body ?: "{}")
+                }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            raw
+        } catch (e: NodeRefusal) {
+            throw e
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST /v1/setup/add-device {contact, label}` on THIS device's own node —
+     * ask the person's other device to add this one (loopback, first run, no
+     * session). 202 → `{state: "requested", match_code, target_node, …}`.
+     */
+    suspend fun addDeviceStart(
+        contact: String,
+        label: String?,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
+        val body = jsonConfig.encodeToString(
+            ai.ciris.mobile.shared.models.federation.AddDeviceStartRequest.serializer(),
+            ai.ciris.mobile.shared.models.federation.AddDeviceStartRequest(
+                contact = contact.trim(),
+                label = label?.trim()?.ifBlank { null },
+            ),
+        )
+        val raw = addDeviceCall("addDeviceStart", HttpMethod.Post, nodeUrl, "/v1/setup/add-device", body, withSession = false)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
+    }
+
+    /** `GET /v1/setup/add-device` — where this device's request stands. */
+    suspend fun addDeviceStatus(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
+        val raw = addDeviceCall("addDeviceStatus", HttpMethod.Get, nodeUrl, "/v1/setup/add-device", null, withSession = false)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
+    }
+
+    /**
+     * `POST /v1/setup/add-device/complete` — apply the held, verified approval
+     * at the end of first run. 409 `add_device.not_approved`, 502
+     * `add_device.apply_failed`.
+     */
+    suspend fun addDeviceComplete(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
+        val raw = addDeviceCall("addDeviceComplete", HttpMethod.Post, nodeUrl, "/v1/setup/add-device/complete", "{}", withSession = false)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
+    }
+
+    /**
+     * `DELETE /v1/setup/add-device` — cancel this device's request: the node
+     * withdraws it from the other device (which drops a pending one, or undoes
+     * an approval it gave) and discards anything it held. A node at 0.5.231 or
+     * older has no such method: a bare 404 (or 405) with no `reason_id`.
+     */
+    suspend fun addDeviceCancel(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
+        val raw = addDeviceCall("addDeviceCancel", HttpMethod.Delete, nodeUrl, "/v1/setup/add-device", null, withSession = false)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
+    }
+
+    /** `POST /v1/self/device-requests/open {seconds?}` — the owner opens "Add a device". */
+    suspend fun openDeviceRequests(
+        seconds: Long? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.OpenDeviceRequestsResponse {
+        val body = jsonConfig.encodeToString(
+            ai.ciris.mobile.shared.models.federation.OpenDeviceRequestsBody.serializer(),
+            ai.ciris.mobile.shared.models.federation.OpenDeviceRequestsBody(seconds),
+        )
+        val raw = addDeviceCall("openDeviceRequests", HttpMethod.Post, nodeUrl, "/v1/self/device-requests/open", body, withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.OpenDeviceRequestsResponse.serializer())
+    }
+
+    /** `GET /v1/self/device-requests` — the requests waiting for the owner, and the window. */
+    suspend fun listDeviceRequests(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.DeviceJoinRequests {
+        val raw = addDeviceCall("listDeviceRequests", HttpMethod.Get, nodeUrl, "/v1/self/device-requests", null, withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.DeviceJoinRequests.serializer())
+    }
+
+    /** `POST /v1/self/device-requests/{id}/approve` — the owner's consent. */
+    suspend fun approveDeviceRequest(
+        requestId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.ApproveDeviceResponse {
+        val raw = addDeviceCall("approveDeviceRequest", HttpMethod.Post, nodeUrl, "/v1/self/device-requests/${requestId.encodeURLPathPart()}/approve", "{}", withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.ApproveDeviceResponse.serializer())
+    }
+
+    /** `POST /v1/self/device-requests/{id}/deny` — refuse; frees the slot. */
+    suspend fun denyDeviceRequest(
+        requestId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.DenyDeviceResponse {
+        val raw = addDeviceCall("denyDeviceRequest", HttpMethod.Post, nodeUrl, "/v1/self/device-requests/${requestId.encodeURLPathPart()}/deny", "{}", withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.DenyDeviceResponse.serializer())
+    }
+
     /**
      * **Upgrade an existing (already-owned) node to a fed-ID owner-binding** —
      * `POST {localNodeUrl}/v1/self/upgrade-owner`. The WAs-need-fed-IDs migration:
