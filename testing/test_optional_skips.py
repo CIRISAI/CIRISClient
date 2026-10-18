@@ -86,9 +86,13 @@ def test_the_board_detail_carries_the_per_flow_breakdown():
 
 def test_the_committed_baseline_parses_and_covers_every_leg():
     base = osk.load_baseline()
-    assert set(base) == {"linux", "macos", "windows", "android", "ios"}, sorted(base)
-    flows = {p.stem.replace("-", "_") for p in (REPO / "testing" / "flows").glob("*.yaml")}
+    ai = {"linux-ai", "android-ai", "windows-ai"}
+    assert set(base) == {"linux", "macos", "windows", "android", "ios"} | ai, sorted(base)
+    node_flows = {p.stem.replace("-", "_") for p in (REPO / "testing" / "flows").glob("*.yaml")}
+    # The with-AI legs run testing/flows/agent/ (five-platform-live-qa.yml).
+    agent_flows = {p.stem.replace("-", "_") for p in (REPO / "testing" / "flows" / "agent").glob("*.yaml")}
     for leg, rows in base.items():
+        flows = agent_flows if leg in ai else node_flows
         assert set(rows) <= flows, f"{leg}: baseline names flows that do not exist: {set(rows) - flows}"
         assert rows, f"{leg}: an empty row would make every count a rise"
 
@@ -173,3 +177,22 @@ def test_the_board_line_names_the_server_version_and_the_skip_count(tmp_path, ca
     assert board.startswith("ios: PASS"), board
     assert "server v0.5.231" in board and "optional skips 4" in board, board
     assert "embedded node 0.5.219" in board and "Agent" in board, board
+
+
+def test_a_with_ai_board_names_the_one_agent_and_the_node_it_folds_in(tmp_path, capsys):
+    """The release gate's board: the agent version beside the server version,
+    and the agent's own pinned node — never the run's server claimed for it."""
+    from testing.gate import run_platform
+
+    class Args:
+        report = tmp_path / "reports" / "linux-ai.json"
+        platform = "desktop"
+
+    rep = run_platform.Report(platform="desktop", ok=True, node_version="v0.5.231",
+                              embedded_node_version="0.5.229", agent_version="2.16.2")
+    rep.add("flows", True, "2 pass")
+    run_platform._finish(Args, rep)
+    board = capsys.readouterr().out.strip().splitlines()[-1]
+    assert board.startswith("linux-ai: PASS"), board
+    assert "server v0.5.231" in board and "agent ciris-agent 2.16.2 (with AI)" in board, board
+    assert "agent's node 0.5.229" in board and "embedded node" not in board, board

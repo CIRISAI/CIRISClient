@@ -10,6 +10,9 @@
     "csd_101_household_members": 2,
     "people": 0
   },
+  "android-ai": {
+    "csd_010_interact_chat": 0
+  },
   "ios": {
     "csd_005_people": 1,
     "csd_006_receipt": 1,
@@ -32,6 +35,9 @@
     "csd_101_household_members": 2,
     "people": 0
   },
+  "linux-ai": {
+    "csd_010_interact_chat": 0
+  },
   "macos": {
     "csd_005_people": 1,
     "csd_006_receipt": 1,
@@ -53,5 +59,8 @@
     "csd_092_share_contact_code": 3,
     "csd_101_household_members": 2,
     "people": 0
+  },
+  "windows-ai": {
+    "csd_010_interact_chat": 0
   }
 }
