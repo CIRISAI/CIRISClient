@@ -1,0 +1,22 @@
+number	status	title	source	note
+001	retired	Delegation (read-only preamble)	CSD-055 §6	Folded into CSD-055 on 2026-09-27; the canonical CSD-001 is CIRISAgent's.
+034	retired	Network map	CSD-046	Folded into CSD-046: the map called the same routes and drew the same peer set. A geo map is a new card with a new route.
+111	reserved	Steward shutdown dialogue	#179	agent / decisions
+112	reserved	Identity record and drift review	#179	agent / rules
+113	reserved	Retirement floor	#179	agent / record
+114	reserved	Upgrade offer	#179	agent / rules
+115	reserved	Steward bond, tier and intent	#179	My things / agent rules
+116	reserved	Principles and order	#179	agent / rules
+117	reserved	The judges are judged	#179	someone-i-trust
+118	reserved	Never allowed, and the operator's declaration	#179	this-node; setup (extends CSD-014)
+119	reserved	Guardian bond and help channel	#179	family / safety
+120	reserved	Affiliation (found, charter, dissolve)	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+121	reserved	Members and roles	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+122	reserved	Licensure	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+123	reserved	Partners	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+124	reserved	Authority delegations	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold); extends CSD-055
+125	reserved	Grants	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+126	reserved	Affiliation keys	#206	Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold)
+127	reserved	First contact, and leaving a root	#179	global-commons
+128	reserved	The protected reporter channel	#179	local-community / safety
+900-999	test	Test fixtures	testing/	Used by testing/test_flows.py and test_flow_fixtures.py; never a real card.
