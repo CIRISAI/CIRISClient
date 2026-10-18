@@ -307,14 +307,28 @@ def summary(outcomes: Sequence[FlowOutcome]) -> str:
     return ", ".join(f"{n} {s}" for s, n in counts.items() if n) or "no flows"
 
 
-def sign_in(drv, username: str, password: str) -> str:
-    """Reuse the session if the client has one; make one if it does not."""
+def sign_in(drv, username: str, password: str, llm: Any = None) -> str:
+    """Reuse the session if the client has one; make one if it does not.
+    `llm` (session_fixture.LlmChoice) makes it the with-AI wizard."""
     from testing.gate import session_fixture  # noqa: PLC0415
 
     screen = drv.screen()
     if screen not in SIGNED_OUT:
         return screen
-    session_fixture.run_setup(drv, username, password)
+    session_fixture.run_setup(drv, username, password, llm=llm)
+    if llm is not None:
+        # CONFIGURED, THE BRAIN IS THE AGENT. Before the wizard ClientMode
+        # honestly says NODE (an unconfigured brain); after it, a client that
+        # still says NODE has not attached to the agent it just set up, and
+        # every agent flow would fail for that reason under its own name.
+        landed = session_fixture.log_in(drv, username, password)
+        try:
+            drv.wait_for_client_mode("AGENT", timeout=180)
+        except Exception as e:  # noqa: BLE001 — DriverError, said as a session failure
+            raise session_fixture.SessionUnavailable(
+                f"the with-AI wizard finished and the client signed in (on {landed!r}), but it "
+                f"never attached to the agent: {e}") from None
+        return drv.screen()
     return session_fixture.log_in(drv, username, password)
 
 
@@ -332,7 +346,8 @@ def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optiona
             client_version: Optional[str] = None, username: str = "qaadmin",
             password: str = "QaAdmin!2345", establish_session: bool = True,
             helper: Any = None, navigate_to_start: bool = True,
-            fixtures: Optional[Callable[[str], Any]] = None) -> List[FlowOutcome]:
+            fixtures: Optional[Callable[[str], Any]] = None,
+            llm: Any = None) -> List[FlowOutcome]:
     """Run every flow against one live client. Signs in once, only if some flow
     will actually run.
 
@@ -347,7 +362,7 @@ def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optiona
     helper = helper or SyncFlowHelper(drv)
     runnable = [s for s in specs if not check_client_floor(s.client_floor, client_version)]
     if runnable and establish_session and drv is not None:
-        landed = sign_in(drv, username, password)
+        landed = sign_in(drv, username, password, llm=llm)
         print(f"  session: signed in, on {landed!r}")
 
     hops, flow_only = None, frozenset()

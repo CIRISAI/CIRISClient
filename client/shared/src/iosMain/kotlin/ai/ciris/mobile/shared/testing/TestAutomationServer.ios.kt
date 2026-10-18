@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import platform.Foundation.NSLog
 import platform.posix.*
 import kotlin.native.concurrent.Worker
+import ai.ciris.mobile.shared.platform.nsLogVerbatim
 
 // Network byte order conversion (big-endian)
 private fun htons(value: UShort): UShort {
@@ -61,7 +62,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
             try {
                 runBlocking { startServer() }
             } catch (e: Throwable) {
-                NSLog("[TestAutomation.ios] Server error: ${e.message}")
+                nsLogVerbatim("[TestAutomation.ios] Server error: ${e.message}")
             }
         })
     }
@@ -103,7 +104,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
             addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK.toUInt())
 
             if (bind(serverSocket, addr.ptr.reinterpret(), sizeOf<sockaddr_in>().toUInt()) < 0) {
-                NSLog("[TestAutomation.ios] Failed to bind to port $port")
+                nsLogVerbatim("[TestAutomation.ios] Failed to bind to port $port")
                 close(serverSocket)
                 return
             }
@@ -115,7 +116,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
             return
         }
 
-        NSLog("[TestAutomation.ios] Server started on http://localhost:$port")
+        nsLogVerbatim("[TestAutomation.ios] Server started on http://localhost:$port")
 
         while (running) {
             val clientSocket = accept(serverSocket, null, null)
@@ -129,7 +130,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                 try {
                     handleConnection(clientSocket)
                 } catch (e: Exception) {
-                    NSLog("[TestAutomation.ios] Connection error: ${e.message}")
+                    nsLogVerbatim("[TestAutomation.ios] Connection error: ${e.message}")
                 } finally {
                     close(clientSocket)
                 }
@@ -331,7 +332,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                     NSLog("[TestAutomation.ios] Server already started; ignoring")
                     return
                 }
-                NSLog("[TestAutomation.ios] Test mode enabled, starting server on port $port")
+                nsLogVerbatim("[TestAutomation.ios] Test mode enabled, starting server on port $port")
                 instance = IOSTestAutomationServer(port).also { it.start() }
             }
         }

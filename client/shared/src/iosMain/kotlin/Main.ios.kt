@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.platform.StoreKitProduct
 import ai.ciris.mobile.shared.platform.StoreKitPurchaseResult
 import ai.ciris.mobile.shared.platform.StoreKitProductBridge
 import ai.ciris.mobile.shared.platform.StoreKitPurchaseResultBridge
+import ai.ciris.mobile.shared.platform.nsLogVerbatim
 
 /**
  * iOS entry point for the CIRIS app.
@@ -44,14 +45,14 @@ fun MainViewControllerWithAuth(
             forceAccountChooser: Boolean,
             onResult: (NativeSignInResult) -> Unit,
         ) {
-            NSLog("[Main.ios][INFO] onGoogleSignInRequested called (forceAccountChooser=$forceAccountChooser) - invoking Swift onAppleSignInRequested")
+            nsLogVerbatim("[Main.ios][INFO] onGoogleSignInRequested called (forceAccountChooser=$forceAccountChooser) - invoking Swift onAppleSignInRequested")
             // 2.9.2 — forceAccountChooser is honored by the Swift side
             // (ASAuthorizationAppleIDProvider does not cache the
             // selection across calls, so the platform behavior is
             // already correct; the flag is wired through for parity
             // with Android and any future Google-on-iOS path).
             onAppleSignInRequested { bridgeResult ->
-                NSLog("[Main.ios][INFO] Got bridgeResult from Swift: type=${bridgeResult.type}")
+                nsLogVerbatim("[Main.ios][INFO] Got bridgeResult from Swift: type=${bridgeResult.type}")
                 onResult(bridgeResult.toNativeResult())
             }
         }
@@ -59,7 +60,7 @@ fun MainViewControllerWithAuth(
         override fun onSilentSignInRequested(onResult: (NativeSignInResult) -> Unit) {
             NSLog("[Main.ios][INFO] onSilentSignInRequested called - invoking Swift onSilentSignInRequested")
             onSilentSignInRequested { bridgeResult ->
-                NSLog("[Main.ios][INFO] Got silent bridgeResult from Swift: type=${bridgeResult.type}")
+                nsLogVerbatim("[Main.ios][INFO] Got silent bridgeResult from Swift: type=${bridgeResult.type}")
                 onResult(bridgeResult.toNativeResult())
             }
         }
@@ -105,14 +106,14 @@ fun MainViewControllerWithAuthAndStore(
             forceAccountChooser: Boolean,
             onResult: (NativeSignInResult) -> Unit,
         ) {
-            NSLog("[Main.ios][INFO] onGoogleSignInRequested called (forceAccountChooser=$forceAccountChooser) - invoking Swift onAppleSignInRequested")
+            nsLogVerbatim("[Main.ios][INFO] onGoogleSignInRequested called (forceAccountChooser=$forceAccountChooser) - invoking Swift onAppleSignInRequested")
             // 2.9.2 — forceAccountChooser is honored by the Swift side
             // (ASAuthorizationAppleIDProvider does not cache the
             // selection across calls, so the platform behavior is
             // already correct; the flag is wired through for parity
             // with Android and any future Google-on-iOS path).
             onAppleSignInRequested { bridgeResult ->
-                NSLog("[Main.ios][INFO] Got bridgeResult from Swift: type=${bridgeResult.type}")
+                nsLogVerbatim("[Main.ios][INFO] Got bridgeResult from Swift: type=${bridgeResult.type}")
                 onResult(bridgeResult.toNativeResult())
             }
         }
@@ -120,7 +121,7 @@ fun MainViewControllerWithAuthAndStore(
         override fun onSilentSignInRequested(onResult: (NativeSignInResult) -> Unit) {
             NSLog("[Main.ios][INFO] onSilentSignInRequested called - invoking Swift onSilentSignInRequested")
             onSilentSignInRequested { bridgeResult ->
-                NSLog("[Main.ios][INFO] Got silent bridgeResult from Swift: type=${bridgeResult.type}")
+                nsLogVerbatim("[Main.ios][INFO] Got silent bridgeResult from Swift: type=${bridgeResult.type}")
                 onResult(bridgeResult.toNativeResult())
             }
         }
@@ -133,7 +134,7 @@ fun MainViewControllerWithAuthAndStore(
 
     val purchaseLauncher = object : PurchaseLauncher {
         override fun launchPurchase(productId: String) {
-            NSLog("[Main.ios][INFO] launchPurchase called for $productId (no auth token)")
+            nsLogVerbatim("[Main.ios][INFO] launchPurchase called for $productId (no auth token)")
             purchaseResultCallback?.onResult(
                 PurchaseResultType.Error(
                     "Authentication required for purchase",
@@ -143,10 +144,10 @@ fun MainViewControllerWithAuthAndStore(
         }
 
         override fun launchPurchaseWithAuth(productId: String, authToken: String) {
-            NSLog("[Main.ios][INFO] launchPurchaseWithAuth called for $productId")
+            nsLogVerbatim("[Main.ios][INFO] launchPurchaseWithAuth called for $productId")
             currentAuthToken = authToken
             onPurchase(productId, authToken) { bridgeResult ->
-                NSLog("[Main.ios][INFO] Got purchase result from Swift: type=${bridgeResult.type}")
+                nsLogVerbatim("[Main.ios][INFO] Got purchase result from Swift: type=${bridgeResult.type}")
                 val result = when (val storeKitResult = bridgeResult.toResult()) {
                     is StoreKitPurchaseResult.Success -> PurchaseResultType.Success(
                         creditsAdded = storeKitResult.creditsAdded,
@@ -178,7 +179,7 @@ fun MainViewControllerWithAuthAndStore(
         override fun loadProducts(onResult: (List<ProductInfo>) -> Unit) {
             NSLog("[Main.ios][INFO] loadProducts called")
             onLoadProducts { bridgeProducts ->
-                NSLog("[Main.ios][INFO] Got ${bridgeProducts.size} products from Swift")
+                nsLogVerbatim("[Main.ios][INFO] Got ${bridgeProducts.size} products from Swift")
                 val products = bridgeProducts.map { bp ->
                     ProductInfo(
                         id = bp.id,
@@ -206,14 +207,14 @@ fun MainViewControllerWithAuthAndStore(
             override fun onDeviceAttestationRequested(onResult: (DeviceAttestationResult) -> Unit) {
                 NSLog("[Main.ios][INFO] Device attestation requested - invoking Swift App Attest")
                 onDeviceAttestationRequested { bridgeResult ->
-                    NSLog("[Main.ios][INFO] Got App Attest result: type=${bridgeResult.type}")
+                    nsLogVerbatim("[Main.ios][INFO] Got App Attest result: type=${bridgeResult.type}")
                     onResult(bridgeResult.toResult())
                 }
             }
         }
     } else null
 
-    NSLog("[Main.ios][INFO] Callbacks created successfully (attestation=${if (attestationCallback != null) "PRESENT" else "NULL"})")
+    nsLogVerbatim("[Main.ios][INFO] Callbacks created successfully (attestation=${if (attestationCallback != null) "PRESENT" else "NULL"})")
 
     return ComposeUIViewController {
         NSLog("[Main.ios][INFO] ComposeUIViewController content lambda executing with auth, store, and attestation callbacks")

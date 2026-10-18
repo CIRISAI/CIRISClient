@@ -407,3 +407,4 @@ def test_the_android_leg_asks_its_node_for_the_pin(monkeypatch):
     plan = run_platform.plan_for(args)
     assert asked == ["http://127.0.0.1:4243"]
     assert "hand-over-claim-pin" in plan.names()
+

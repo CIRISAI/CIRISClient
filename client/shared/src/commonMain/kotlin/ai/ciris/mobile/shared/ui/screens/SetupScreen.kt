@@ -201,7 +201,10 @@ fun SetupScreen(
     // The tags the dispatch below handles. Registration lives HERE, on the
     // line after the collector, so it cannot be forgotten separately —
     // check_ui_drivable.py fails the build if a dispatched tag is missing.
-    rememberInputSinks("input_api_key", "input_device_name", "input_fedid_label", "input_llm_base_url", "input_llm_model_text", "input_password", "input_password_confirm", "input_public_api_email", "input_username", "quick_input_api_key", "quick_input_llm_base_url", "quick_input_llm_model_text")
+    rememberInputSinks("input_device_name", "input_fedid_label", "input_llm_base_url", "input_llm_model_text", "input_password", "input_password_confirm", "input_public_api_email", "input_username", "quick_input_llm_base_url", "quick_input_llm_model_text")
+    // The provider key: applied by /input, never stored or echoed on /tree
+    // (SensitiveInputs). The with-AI gate types a real one (SetupApiKeySinkTest).
+    rememberInputSinks("input_api_key", "quick_input_api_key", sensitive = true)
     // Handle incoming text input requests
     LaunchedEffect(textInputRequest) {
         textInputRequest?.let { request ->
