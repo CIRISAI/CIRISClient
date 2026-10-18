@@ -4088,7 +4088,17 @@
     "approve_device_class": "Type d'appareil : {class}",
     "device_class_phone": "Téléphone",
     "device_class_laptop": "Ordinateur portable",
-    "device_class_server": "Serveur"
+    "device_class_server": "Serveur",
+    "setup_path_locked": "Une demande à destination de votre autre appareil est toujours ouverte. Annulez-la ci-dessous avant de configurer un nouveau CIRIS ID à la place.",
+    "add_device_cancel": "Annuler cette demande",
+    "add_device_cancel_title": "Annuler cette demande ?",
+    "add_device_cancel_fact_here": "Sur cet appareil",
+    "add_device_cancel_here": "Arrête l'attente et oublie la demande, afin que vous puissiez choisir à nouveau.",
+    "add_device_cancel_fact_other": "Sur votre autre appareil",
+    "add_device_cancel_other": "Elle ne peut pas être retirée depuis ici. Votre autre appareil continue de l'afficher jusqu'à son expiration après 15 minutes, donc ne l'approuvez pas là-bas.",
+    "add_device_cancel_fact_next": "Une approbation déjà reçue",
+    "add_device_cancel_next": "Reste inutilisée sur le nœud de cet appareil. Rien ne rejoint tant que vous n'envoyez pas une nouvelle demande et ne terminez la configuration.",
+    "add_device_cancel_confirm": "Annuler la demande"
   },
   "moderation": {
     "ladder": {

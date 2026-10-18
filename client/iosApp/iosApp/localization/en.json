@@ -4160,7 +4160,17 @@
     "approve_device_class": "Device type: {class}",
     "device_class_phone": "Phone",
     "device_class_laptop": "Laptop",
-    "device_class_server": "Server"
+    "device_class_server": "Server",
+    "setup_path_locked": "A request to your other device is still open. Cancel it below before setting up a new CIRIS ID instead.",
+    "add_device_cancel": "Cancel this request",
+    "add_device_cancel_title": "Cancel this request?",
+    "add_device_cancel_fact_here": "On this device",
+    "add_device_cancel_here": "Stops waiting and forgets the request, so you can choose again.",
+    "add_device_cancel_fact_other": "On your other device",
+    "add_device_cancel_other": "It can't be withdrawn from here. Your other device keeps listing it until it expires after 15 minutes, so don't approve it there.",
+    "add_device_cancel_fact_next": "An approval already received",
+    "add_device_cancel_next": "Stays on this device's node unused. Nothing joins unless you send a request again and finish setup.",
+    "add_device_cancel_confirm": "Cancel the request"
   },
   "moderation": {
     "ladder": {

@@ -137,6 +137,20 @@ fun hasAiStep(hasAgent: Boolean, runWithoutAi: Boolean): Boolean = hasAgent && !
 fun shouldHoldForReconfigure(reconfiguring: Boolean, hasSession: Boolean): Boolean =
     reconfiguring && !hasSession
 
+/**
+ * Should COMPLETE hand off to the app by itself? Not while the claim is in
+ * flight, not while the add-device path waits for the other device, and on
+ * the add-device path only once the claim applied with no error.
+ */
+fun shouldAutoFinishSetup(claim: NodeOwnershipClaimState, addDevicePath: Boolean): Boolean {
+    if (claim.inProgress || claim.awaitingApproval) return false
+    // The add-device path leaves COMPLETE only on an APPLIED claim. A
+    // recoverable `apply_failed` used to auto-exit two seconds later, before
+    // Retry could work (Codex, PR #189). The new-ID path keeps its own rule.
+    if (addDevicePath) return claim.claimed && claim.error == null
+    return true
+}
+
 fun nextSetupStep(current: SetupStep, hasAiStep: Boolean): SetupStep = when (current) {
     SetupStep.YOU -> SetupStep.JOIN_FEDERATION
     SetupStep.JOIN_FEDERATION -> if (hasAiStep) SetupStep.AI else SetupStep.COMPLETE
@@ -638,7 +652,23 @@ data class AddDeviceSetupState(
      * so on a node without an agent a password here would be stored nowhere.
      */
     val accountNeeded: Boolean = false,
-)
+    /** The "Cancel this request" confirm is up. */
+    val confirmingCancel: Boolean = false,
+) {
+    /**
+     * A request is live (being sent, waiting, approved and held, or applied),
+     * so the first question is LOCKED: switching to a new CIRIS ID now would
+     * mint and self-claim a SECOND identity over a live join (Codex, PR #189).
+     * The way out is "Cancel this request", which unlocks it — except once
+     * `applied`, when this node already belongs to the existing identity.
+     */
+    val pathLocked: Boolean
+        get() = phase == AddDevicePhase.SENDING || phase.inFlight
+
+    /** Cancel is offered while a request is live and not yet applied. */
+    val cancellable: Boolean
+        get() = phase == AddDevicePhase.REQUESTED || phase == AddDevicePhase.APPROVED
+}
 
 /**
  * Form state for the setup wizard.
@@ -1050,6 +1080,23 @@ data class SetupFormState(
     }
 
     /**
+     * Why the local account blocks Next, or null. One author for both paths
+     * that ask it: the new-ID path, and the add-device path with an agent.
+     */
+    private fun localAccountError(): String? = when {
+        username.isEmpty() -> LocalizationHelper.getString("setup_validation_username_required")
+        // Reject 'admin' client-side (the backend reserves it — see
+        // api/routes/setup/models.py) so the user gets an inline error
+        // now instead of a 422 at completeSetup after the whole wizard.
+        username.trim().lowercase() == "admin" ->
+            LocalizationHelper.getString("setup_validation_username_reserved")
+        userPassword.isEmpty() -> LocalizationHelper.getString("setup_validation_password_required")
+        userPassword.length < 8 -> LocalizationHelper.getString("setup_validation_password_length")
+        userPassword != userPasswordConfirm -> LocalizationHelper.getString("setup_validation_password_mismatch")
+        else -> null
+    }
+
+    /**
      * The add-device path's YOU step: the request is out (or already approved)
      * and, with an agent, the local account is filled. NO fedID name and no age
      * band: the identity is the existing one and its age is already recorded on
@@ -1089,7 +1136,14 @@ data class SetupFormState(
         SetupStep.YOU -> if (identityPath == null) {
             LocalizationHelper.getString("mobile.setup_path_required")
         } else if (identityPath == IdentityPath.EXISTING) {
-            if (!addDevice.phase.inFlight) LocalizationHelper.getString("mobile.add_device_send_first") else null
+            // The request first, then (with an agent) the local account: Next
+            // is disabled for either, and a disabled Next must say why (Codex,
+            // PR #189).
+            when {
+                !addDevice.phase.inFlight -> LocalizationHelper.getString("mobile.add_device_send_first")
+                addDevice.accountNeeded && showLocalUserFields() -> localAccountError()
+                else -> null
+            }
         } else {
             val fedIdError = if (federationIdentity.minted || federationIdentity.admitted) {
                 null
@@ -1103,22 +1157,7 @@ data class SetupFormState(
                     else -> null
                 }
             }
-            val accountError = if (showLocalUserFields()) {
-                when {
-                    username.isEmpty() -> LocalizationHelper.getString("setup_validation_username_required")
-                    // Reject 'admin' client-side (the backend reserves it — see
-                    // api/routes/setup/models.py) so the user gets an inline error
-                    // now instead of a 422 at completeSetup after the whole wizard.
-                    username.trim().lowercase() == "admin" ->
-                        LocalizationHelper.getString("setup_validation_username_reserved")
-                    userPassword.isEmpty() -> LocalizationHelper.getString("setup_validation_password_required")
-                    userPassword.length < 8 -> LocalizationHelper.getString("setup_validation_password_length")
-                    userPassword != userPasswordConfirm -> LocalizationHelper.getString("setup_validation_password_mismatch")
-                    else -> null
-                }
-            } else {
-                null
-            }
+            val accountError = if (showLocalUserFields()) localAccountError() else null
             val stewardshipError = if (isMinorBand() && !minorStewardship.requested) {
                 LocalizationHelper.getString("setup_validation_minor_steward_required")
             } else {

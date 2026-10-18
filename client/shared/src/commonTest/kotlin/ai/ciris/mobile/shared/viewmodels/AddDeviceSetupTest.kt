@@ -454,6 +454,129 @@ class AddDeviceSetupTest {
         assertTrue(s.ownershipClaim.awaitingApproval)
     }
 
+    // ── Codex on PR #189 ─────────────────────────────────────────────────────
+
+    @Test
+    fun theCollectedSessionIsHandedToTheAppOnce() = runBlocking {
+        // Finding 2: the grant reached only the API client, so the app's own
+        // session never had it and a paired node-only device landed on Login.
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
+        val vm = vm(node)
+        assertNull(vm.takeCollectedSession(), "nothing collected yet")
+        vm.asked()
+        vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
+        vm.claimLocalNodeOwnership(claimPinProvider = { "7F3K-Q9MZ" })
+        vm.until("settled") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+
+        val handed = vm.takeCollectedSession()
+        assertEquals("tok-owner", handed?.accessToken, "the host takes the session claimed-session answered")
+        assertEquals("SYSTEM_ADMIN", handed?.role)
+        assertNull(vm.takeCollectedSession(), "taken once: a credential is not left lying in the model")
+    }
+
+    @Test
+    fun noSessionIsHandedWhenNoneWasCollected() = runBlocking {
+        val node = ScriptedNode().apply { sessionAnswer = { throw refusal(404, "auth.claim.no_pending_session") } }
+        node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
+        vm.claimLocalNodeOwnership(claimPinProvider = { "7F3K-Q9MZ" })
+        vm.until("settled") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+        assertNull(vm.takeCollectedSession(), "a refused collection hands nothing; the exit is Login")
+    }
+
+    @Test
+    fun aLiveRequestLocksTheFirstQuestionUntilCancelled() = runBlocking {
+        // Finding 3: NEW over a live request would mint and self-claim a second identity.
+        val node = ScriptedNode()
+        val vm = vm(node)
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.EXISTING, vm.state.value.identityPath, "refused while requested")
+        assertTrue(vm.state.value.addDevice.pathLocked)
+
+        vm.confirmCancelAddDevice()
+        assertEquals(AddDevicePhase.REQUESTED, vm.state.value.addDevice.phase, "no cancel without the confirm")
+
+        vm.askCancelAddDevice()
+        assertTrue(vm.state.value.addDevice.confirmingCancel)
+        vm.dismissCancelAddDevice()
+        assertEquals(AddDevicePhase.REQUESTED, vm.state.value.addDevice.phase, "dismissing keeps the request")
+
+        vm.askCancelAddDevice()
+        vm.confirmCancelAddDevice()
+        val s = vm.state.value.addDevice
+        assertEquals(AddDevicePhase.IDLE, s.phase)
+        assertNull(s.matchCode)
+        assertFalse(s.pathLocked)
+        val polls = node.calls.count { it == "status" }
+        kotlinx.coroutines.delay(60)
+        assertEquals(polls, node.calls.count { it == "status" }, "cancelling stops the poll")
+
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.NEW, vm.state.value.identityPath, "allowed once cancelled")
+    }
+
+    @Test
+    fun anApprovedRequestLocksTooAndAnAppliedOneCannotBeCancelled() = runBlocking {
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.EXISTING, vm.state.value.identityPath, "refused while approved and held")
+
+        vm.claimLocalNodeOwnership(claimPinProvider = { "7F3K-Q9MZ" })
+        vm.until("applied") { it.addDevice.phase == AddDevicePhase.APPLIED && !it.ownershipClaim.inProgress }
+        vm.askCancelAddDevice()
+        assertFalse(vm.state.value.addDevice.confirmingCancel, "applied: this node already belongs to the existing identity")
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.EXISTING, vm.state.value.identityPath)
+    }
+
+    @Test
+    fun withAnAgentADisabledNextSaysTheAccountIsMissing() = runBlocking {
+        // Finding 4: request in flight, account blank → Next disabled with no reason.
+        val node = ScriptedNode()
+        val vm = vm(node, hasAgent = true)
+        vm.asked()
+        val s = vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        assertFalse(s.canProceedFromCurrentStep())
+        assertEquals(
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString("setup_validation_username_required"),
+            s.getStepValidationError(),
+        )
+        vm.setUsername("qaadmin")
+        vm.setUserPassword("hunter2hunter2")
+        vm.setUserPasswordConfirm("hunter2hunter3")
+        assertEquals(
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString("setup_validation_password_mismatch"),
+            vm.state.value.getStepValidationError(),
+        )
+        vm.setUserPasswordConfirm("hunter2hunter2")
+        assertTrue(vm.state.value.canProceedFromCurrentStep())
+        assertNull(vm.state.value.getStepValidationError())
+    }
+
+    @Test
+    fun completeLeavesByItselfOnlyOnAnAppliedClaim() {
+        // Finding 5: a recoverable apply_failed auto-exited before Retry could work.
+        val failed = NodeOwnershipClaimState(error = "setup/root answered 409", errorReasonId = "add_device.apply_failed", errorRecoverable = true)
+        assertFalse(shouldAutoFinishSetup(failed, addDevicePath = true), "apply_failed stays for Retry")
+        assertFalse(shouldAutoFinishSetup(NodeOwnershipClaimState(inProgress = true), addDevicePath = true))
+        assertFalse(shouldAutoFinishSetup(NodeOwnershipClaimState(awaitingApproval = true), addDevicePath = true))
+        assertFalse(shouldAutoFinishSetup(NodeOwnershipClaimState(), addDevicePath = true), "nothing applied yet")
+        assertTrue(shouldAutoFinishSetup(NodeOwnershipClaimState(claimed = true, role = "SYSTEM_ADMIN"), addDevicePath = true))
+        // The new-ID path keeps its rule: it leaves once the claim settles.
+        assertTrue(shouldAutoFinishSetup(failed, addDevicePath = false))
+        assertFalse(shouldAutoFinishSetup(NodeOwnershipClaimState(inProgress = true), addDevicePath = false))
+    }
+
     // ── Restart-resume and old nodes ─────────────────────────────────────────
 
     @Test

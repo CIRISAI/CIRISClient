@@ -4088,7 +4088,17 @@
     "approve_device_class": "ਡਿਵਾਈਸ ਦੀ ਕਿਸਮ: {class}",
     "device_class_phone": "ਫ਼ੋਨ",
     "device_class_laptop": "ਲੈਪਟਾਪ",
-    "device_class_server": "ਸਰਵਰ"
+    "device_class_server": "ਸਰਵਰ",
+    "setup_path_locked": "ਤੁਹਾਡੇ ਦੂਜੇ ਡਿਵਾਈਸ ਨੂੰ ਭੇਜੀ ਗਈ ਬੇਨਤੀ ਹਾਲੇ ਵੀ ਖੁੱਲ੍ਹੀ ਹੈ। ਇਸਦੀ ਥਾਂ ਨਵੀਂ CIRIS ID ਸੈੱਟ ਅੱਪ ਕਰਨ ਤੋਂ ਪਹਿਲਾਂ ਹੇਠਾਂ ਇਸਨੂੰ ਰੱਦ ਕਰੋ।",
+    "add_device_cancel": "ਇਸ ਬੇਨਤੀ ਨੂੰ ਰੱਦ ਕਰੋ",
+    "add_device_cancel_title": "ਇਸ ਬੇਨਤੀ ਨੂੰ ਰੱਦ ਕਰਨਾ ਹੈ?",
+    "add_device_cancel_fact_here": "ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ",
+    "add_device_cancel_here": "ਉਡੀਕ ਕਰਨਾ ਬੰਦ ਕਰਦਾ ਹੈ ਅਤੇ ਬੇਨਤੀ ਨੂੰ ਭੁੱਲ ਜਾਂਦਾ ਹੈ, ਤਾਂ ਜੋ ਤੁਸੀਂ ਦੁਬਾਰਾ ਚੁਣ ਸਕੋ।",
+    "add_device_cancel_fact_other": "ਤੁਹਾਡੇ ਦੂਜੇ ਡਿਵਾਈਸ ਉੱਤੇ",
+    "add_device_cancel_other": "ਇਸਨੂੰ ਇੱਥੋਂ ਵਾਪਸ ਨਹੀਂ ਲਿਆ ਜਾ ਸਕਦਾ। ਤੁਹਾਡਾ ਦੂਜਾ ਡਿਵਾਈਸ ਇਸਨੂੰ 15 ਮਿੰਟਾਂ ਬਾਅਦ ਸਮਾਂ ਸਮਾਪਤ ਹੋਣ ਤੱਕ ਸੂਚੀ ਵਿੱਚ ਰੱਖਦਾ ਹੈ, ਇਸ ਲਈ ਉੱਥੇ ਇਸਨੂੰ ਮਨਜ਼ੂਰ ਨਾ ਕਰੋ।",
+    "add_device_cancel_fact_next": "ਪਹਿਲਾਂ ਤੋਂ ਪ੍ਰਾਪਤ ਹੋਈ ਮਨਜ਼ੂਰੀ",
+    "add_device_cancel_next": "ਇਸ ਡਿਵਾਈਸ ਦੇ ਨੋਡ ਉੱਤੇ ਬਿਨਾਂ ਵਰਤੇ ਰਹਿੰਦੀ ਹੈ। ਜਦੋਂ ਤੱਕ ਤੁਸੀਂ ਦੁਬਾਰਾ ਬੇਨਤੀ ਨਹੀਂ ਭੇਜਦੇ ਅਤੇ ਸੈੱਟਅੱਪ ਪੂਰਾ ਨਹੀਂ ਕਰਦੇ, ਕੁਝ ਵੀ ਸ਼ਾਮਲ ਨਹੀਂ ਹੁੰਦਾ।",
+    "add_device_cancel_confirm": "ਬੇਨਤੀ ਰੱਦ ਕਰੋ"
   },
   "moderation": {
     "ladder": {

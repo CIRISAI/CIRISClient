@@ -64,6 +64,7 @@ object AddDeviceTags {
     const val PATH_NEW = "btn_setup_new_identity"
     const val PATH_EXISTING = "btn_setup_add_this_device"
     const val PATH_EXISTING_TOO_OLD = "txt_setup_add_device_too_old"
+    const val PATH_LOCKED = "txt_setup_identity_path_locked"
 
     // The new device (Setup's YOU step on the add-device path, and COMPLETE).
     const val CARD = "card_add_this_device"
@@ -76,6 +77,8 @@ object AddDeviceTags {
     const val OWNER = "text_add_device_owner"
     const val REFUSAL = "add_device_refusal"
     const val NEW_REQUEST = "btn_add_device_new_request"
+    const val CANCEL = "btn_add_device_cancel"
+    const val CANCEL_CONFIRM_PREFIX = "confirm_add_device_cancel"
     const val WAITING = "setup_add_device_waiting"
     const val WAITING_RETRY = "btn_add_device_finish_retry"
 
@@ -148,6 +151,8 @@ fun IdentityPathChoice(
     availability: AddDeviceAvailability,
     onChoose: (IdentityPath) -> Unit,
     modifier: Modifier = Modifier,
+    /** A request is live: the other answer is disabled until it is cancelled (Codex, PR #189). */
+    locked: Boolean = false,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -157,7 +162,7 @@ fun IdentityPathChoice(
             title = localizedString("mobile.setup_path_new"),
             body = localizedString("mobile.setup_path_new_desc"),
             selected = path == IdentityPath.NEW,
-            enabled = true,
+            enabled = !locked || path == IdentityPath.NEW,
             tag = AddDeviceTags.PATH_NEW,
             onClick = { onChoose(IdentityPath.NEW) },
         )
@@ -166,13 +171,17 @@ fun IdentityPathChoice(
             title = localizedString("mobile.setup_path_existing"),
             body = localizedString("mobile.setup_path_existing_desc"),
             selected = path == IdentityPath.EXISTING,
-            enabled = !tooOld,
+            enabled = !tooOld && (!locked || path == IdentityPath.EXISTING),
             tag = AddDeviceTags.PATH_EXISTING,
             onClick = { onChoose(IdentityPath.EXISTING) },
         )
         if (tooOld) {
             val why = localizedString("mobile.add_device_node_too_old")
             Text(why, style = type.body, color = t.dim, modifier = Modifier.testable(AddDeviceTags.PATH_EXISTING_TOO_OLD, why))
+        }
+        if (locked) {
+            val why = localizedString("mobile.setup_path_locked")
+            Text(why, style = type.body, color = t.dim, modifier = Modifier.testable(AddDeviceTags.PATH_LOCKED, why))
         }
     }
 }
@@ -218,6 +227,9 @@ fun AddThisDeviceSection(
     onContact: (String) -> Unit,
     onSend: () -> Unit,
     modifier: Modifier = Modifier,
+    onAskCancel: () -> Unit = {},
+    onConfirmCancel: () -> Unit = {},
+    onDismissCancel: () -> Unit = {},
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -284,6 +296,30 @@ fun AddThisDeviceSection(
             }
             else -> AddDeviceProgressBlock(state = state, onNewRequest = onSend)
         }
+        if (state.cancellable) {
+            Spacer(Modifier.height(8.dp))
+            CirisTextButton(
+                label = localizedString("mobile.add_device_cancel"),
+                tag = AddDeviceTags.CANCEL,
+                danger = true,
+                onClick = onAskCancel,
+            )
+        }
+    }
+    if (state.confirmingCancel) {
+        ConfirmSheet(
+            title = localizedString("mobile.add_device_cancel_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_here"), localizedString("mobile.add_device_cancel_here")),
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_other"), localizedString("mobile.add_device_cancel_other")),
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_next"), localizedString("mobile.add_device_cancel_next")),
+            ),
+            confirmLabel = localizedString("mobile.add_device_cancel_confirm"),
+            onConfirm = onConfirmCancel,
+            onDismiss = onDismissCancel,
+            destructive = true,
+            tagPrefix = AddDeviceTags.CANCEL_CONFIRM_PREFIX,
+        )
     }
 }
 

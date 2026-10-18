@@ -788,6 +788,7 @@ private fun YouStep(
             path = state.identityPath,
             availability = state.addDevice.availability,
             onChoose = { viewModel.chooseIdentityPath(it) },
+            locked = state.identityPath == IdentityPath.EXISTING && state.addDevice.pathLocked,
         )
         Spacer(modifier = Modifier.height(24.dp))
         when (state.identityPath) {
@@ -818,6 +819,9 @@ private fun YouStep(
                     onDeviceName = { viewModel.setDeviceName(it) },
                     onContact = { viewModel.setAddDeviceContact(it) },
                     onSend = { viewModel.sendAddDeviceRequest() },
+                    onAskCancel = { viewModel.askCancelAddDevice() },
+                    onConfirmCancel = { viewModel.confirmCancelAddDevice() },
+                    onDismissCancel = { viewModel.dismissCancelAddDevice() },
                 )
                 if (state.addDevice.accountNeeded) {
                     Spacer(modifier = Modifier.height(24.dp))
@@ -3294,8 +3298,10 @@ private fun CompleteStep(
     // error), then auto-complete. Bounded so a hung claim never traps the user.
     // NOT while the add-device path waits for the other device: nothing is
     // claimed yet, and leaving would strand an unowned node.
-    LaunchedEffect(ownershipClaim.inProgress, ownershipClaim.awaitingApproval) {
-        if (!ownershipClaim.inProgress && !ownershipClaim.awaitingApproval) {
+    // And on the add-device path only once the claim APPLIED: a recoverable
+    // `apply_failed` stays here for Retry (Codex, PR #189).
+    LaunchedEffect(ownershipClaim.inProgress, ownershipClaim.awaitingApproval, ownershipClaim.claimed, ownershipClaim.error) {
+        if (ai.ciris.mobile.shared.viewmodels.shouldAutoFinishSetup(ownershipClaim, addDevicePath = addDevice != null)) {
             kotlinx.coroutines.delay(2000)
             onSetupComplete()
         }

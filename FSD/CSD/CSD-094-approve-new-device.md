@@ -127,8 +127,11 @@ offers nothing.
 ## 3. Contracts (who)
 
 Verified against CIRISServer **v0.5.231** `src/add_device.rs`. Every route is
-owner-session gated (`require_owner_session`), on the node this client is
-signed in to (`nodeBaseUrl`), with the bearer.
+owner-session gated (`require_owner_session`), with the bearer, on the node
+the card is showing: `ClientDeviceRequests` reads the ACTIVE node's URL on
+every call (`effectiveNodeUrl`, as contacts do), because the view model
+outlives a node-profile switch and a URL captured at construction approved on
+the previous node (Codex, PR #189; `AddDeviceWireTest.afterANodeSwitchTheApprovalGoesToTheNewNode`).
 
 | value | endpoint | owner | state |
 |---|---|---|---|

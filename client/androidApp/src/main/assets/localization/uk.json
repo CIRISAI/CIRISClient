@@ -4088,7 +4088,17 @@
     "approve_device_class": "Тип пристрою: {class}",
     "device_class_phone": "Телефон",
     "device_class_laptop": "Ноутбук",
-    "device_class_server": "Сервер"
+    "device_class_server": "Сервер",
+    "setup_path_locked": "Запит до вашого іншого пристрою ще відкритий. Скасуйте його нижче, перш ніж натомість налаштовувати новий CIRIS ID.",
+    "add_device_cancel": "Скасувати цей запит",
+    "add_device_cancel_title": "Скасувати цей запит?",
+    "add_device_cancel_fact_here": "На цьому пристрої",
+    "add_device_cancel_here": "Припиняє очікування та забуває запит, тож ви можете вибрати знову.",
+    "add_device_cancel_fact_other": "На іншому пристрої",
+    "add_device_cancel_other": "Це не можна скасувати звідси. Ваш інший пристрій продовжуватиме показувати його, доки термін дії не мине через 15 хвилин, тож не схвалюйте його там.",
+    "add_device_cancel_fact_next": "Схвалення вже отримано",
+    "add_device_cancel_next": "Залишається невикористаним на вузлі цього пристрою. Нічого не приєднається, якщо ви не надішлете запит знову і не завершите налаштування.",
+    "add_device_cancel_confirm": "Скасувати запит"
   },
   "moderation": {
     "ladder": {

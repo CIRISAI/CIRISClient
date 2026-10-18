@@ -4088,7 +4088,17 @@
     "approve_device_class": "Cihaz türü: {class}",
     "device_class_phone": "Telefon",
     "device_class_laptop": "Dizüstü bilgisayar",
-    "device_class_server": "Sunucu"
+    "device_class_server": "Sunucu",
+    "setup_path_locked": "Diğer cihazınıza gönderilen bir istek hâlâ açık. Bunun yerine yeni bir CIRIS ID kurmadan önce aşağıdan iptal edin.",
+    "add_device_cancel": "Bu isteği iptal et",
+    "add_device_cancel_title": "Bu istek iptal edilsin mi?",
+    "add_device_cancel_fact_here": "Bu cihazda",
+    "add_device_cancel_here": "Beklemeyi durdurur ve isteği unutur, böylece yeniden seçim yapabilirsiniz.",
+    "add_device_cancel_fact_other": "Diğer cihazınızda",
+    "add_device_cancel_other": "Buradan geri çekilemez. Diğer cihazınız, 15 dakika sonra süresi dolana kadar bunu listelemeye devam eder, bu yüzden orada onaylamayın.",
+    "add_device_cancel_fact_next": "Zaten alınan bir onay",
+    "add_device_cancel_next": "Bu cihazın düğümünde kullanılmadan kalır. Yeniden bir istek gönderip kurulumu tamamlamadıkça hiçbir şey katılmaz.",
+    "add_device_cancel_confirm": "İsteği iptal et"
   },
   "moderation": {
     "ladder": {

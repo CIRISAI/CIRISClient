@@ -4088,7 +4088,17 @@
     "approve_device_class": "Jenis perangkat: {class}",
     "device_class_phone": "Ponsel",
     "device_class_laptop": "Laptop",
-    "device_class_server": "Server"
+    "device_class_server": "Server",
+    "setup_path_locked": "Permintaan ke perangkat lain Anda masih terbuka. Batalkan di bawah ini sebelum menyiapkan CIRIS ID baru sebagai gantinya.",
+    "add_device_cancel": "Batalkan permintaan ini",
+    "add_device_cancel_title": "Batalkan permintaan ini?",
+    "add_device_cancel_fact_here": "Pada perangkat ini",
+    "add_device_cancel_here": "Berhenti menunggu dan melupakan permintaan ini, sehingga Anda dapat memilih lagi.",
+    "add_device_cancel_fact_other": "Pada perangkat lain Anda",
+    "add_device_cancel_other": "Permintaan ini tidak dapat dicabut dari sini. Perangkat lain Anda akan terus menampilkannya sampai kedaluwarsa setelah 15 menit, jadi jangan setujui di sana.",
+    "add_device_cancel_fact_next": "Persetujuan yang sudah diterima",
+    "add_device_cancel_next": "Tetap berada di node perangkat ini tanpa digunakan. Tidak ada yang bergabung kecuali Anda mengirim permintaan lagi dan menyelesaikan penyiapan.",
+    "add_device_cancel_confirm": "Batalkan permintaan"
   },
   "moderation": {
     "ladder": {

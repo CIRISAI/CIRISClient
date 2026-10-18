@@ -57,13 +57,24 @@ interface DeviceRequestsApi {
     suspend fun deny(requestId: String): DenyDeviceResponse
 }
 
-/** [DeviceRequestsApi] over the real client, on the node this device is signed in to. */
+/**
+ * [DeviceRequestsApi] over the real client, on the node the card is showing.
+ *
+ * The node is a PROVIDER, read on every call: the app's view model outlives a
+ * node-profile switch, and a URL captured at construction sent open/list/
+ * approve/deny to the PREVIOUS node while the card showed the new one (Codex,
+ * PR #189). Approving a device on the wrong node is an act on the wrong
+ * identity, so the URL is never cached here.
+ */
 class ClientDeviceRequests(
     private val client: CIRISApiClient,
-    private val nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL,
+    private val nodeUrl: () -> String,
 ) : DeviceRequestsApi {
-    override suspend fun open(seconds: Long?) = client.openDeviceRequests(seconds, nodeBaseUrl)
-    override suspend fun list() = client.listDeviceRequests(nodeBaseUrl)
-    override suspend fun approve(requestId: String) = client.approveDeviceRequest(requestId, nodeBaseUrl)
-    override suspend fun deny(requestId: String) = client.denyDeviceRequest(requestId, nodeBaseUrl)
+    /** A fixed node: tests, and a client that cannot switch. */
+    constructor(client: CIRISApiClient, nodeBaseUrl: String = CIRISApiClient.LOCAL_NODE_URL) : this(client, { nodeBaseUrl })
+
+    override suspend fun open(seconds: Long?) = client.openDeviceRequests(seconds, nodeUrl())
+    override suspend fun list() = client.listDeviceRequests(nodeUrl())
+    override suspend fun approve(requestId: String) = client.approveDeviceRequest(requestId, nodeUrl())
+    override suspend fun deny(requestId: String) = client.denyDeviceRequest(requestId, nodeUrl())
 }

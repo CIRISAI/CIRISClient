@@ -43,7 +43,7 @@ surface: null
 screen: Setup
 flow_only: true
 entry: "Setup's YOU step on a first-run node (reached as in CSD-082: Login `btn_local_login`, Startup under the HA addon, or ServerConnection after a node switch). The first question renders first: `btn_setup_new_identity` (the CSD-082/083 path, unchanged) or `btn_setup_add_this_device` (this card)"
-exit: "Signed in, with the owner session `POST /v1/setup/claimed-session` collects once `POST /v1/setup/add-device/complete` applied the other device's approval; on an agent build the agent's own setup-complete runs after both. Login when no session could be collected (no PIN on this device, or the node refused it)"
+exit: "Signed in, with the owner session `POST /v1/setup/claimed-session` collects once `POST /v1/setup/add-device/complete` applied the other device's approval, handed to the app at setup's exit (`SetupViewModel.takeCollectedSession` → CIRISApp persists it like any sign-in, Codex PR #189); on an agent build the agent's own setup-complete runs after both. Login when no session could be collected (no PIN on this device, or the node refused it)"
 ```
 
 **Where it lives, decided from the code.** Setup's YOU step, behind the first
@@ -69,6 +69,26 @@ the agent's own setup-complete creates its local user from them.
 **The rest of the wizard runs as usual** (consent, and with an agent the AI
 step) while the person approves on the other device. Next on YOU opens as soon
 as the request is out (`requested`), not when it is approved.
+
+**A live request locks the first question** (Codex, PR #189). While the
+request is being sent, waiting, or approved and held, "Set up a new CIRIS ID"
+is disabled with 'A request to your other device is still open. Cancel it
+below…' (`txt_setup_identity_path_locked`), and `chooseIdentityPath` refuses
+the switch for a driver that ignores the disabled control: the final step
+would otherwise mint and self-claim a SECOND identity over a live join. The
+way out is **Cancel this request** (`btn_add_device_cancel`), behind a
+ConfirmSheet (`confirm_add_device_cancel`) whose three facts say what it can
+and cannot do. CIRISServer has no route to withdraw a join request or discard
+a held approval (the router at `b3e05e27` mounts only `POST`/`GET
+/v1/setup/add-device` and `POST …/complete`), so cancel stops polling and
+forgets the request on this device only: the other device keeps listing it
+until its 15 minutes run out, and an approval already verified stays held on
+this node, unused. Once `applied` there is no cancel: the node already belongs
+to the existing identity.
+
+**A disabled Next always says why.** With an agent the add-device path still
+asks the local account; once the request is out, a blank or mismatched account
+is the reason shown (the same messages as the new-ID path).
 
 **The claim lands at the same point in first run** for a new or an existing
 fedID: the wizard's final step. `claimLocalNodeOwnership` branches on the path,
@@ -139,8 +159,9 @@ error:     {tag: add_device_refusal, renders: "the refusal by id with the node's
 **COMPLETE on this path** has one more state, `setup_add_device_waiting`:
 `add-device/complete` answered 409 `add_device.not_approved`, so the rest of the
 wizard is done and the other device has not approved yet. It is not an error
-and does not auto-leave (CompleteStep's two-second hand-off is held while it
-shows). It shows the match code and state line, polls, and finishes by itself
+and does not auto-leave. On this path COMPLETE hands off by itself only once
+the claim APPLIED with no error (`shouldAutoFinishSetup`): a recoverable
+`apply_failed` stays on COMPLETE for Retry (Codex, PR #189). It shows the match code and state line, polls, and finishes by itself
 when `approved` arrives (`retryAddDeviceFinish`); 'Check again'
 (`btn_add_device_finish_retry`) does the same by hand. **No countdown here**:
 once approved, the approval is held on this node with no expiry and restored
@@ -231,7 +252,7 @@ collects the session.
 ## 5. QA plan
 
 **Unit and wire (green on this branch).** `AddDeviceSetupTest` (commonTest,
-24 cases): the first question and no default; the add-device path asks no
+30 cases): the first question and no default; the add-device path asks no
 fedID name and no age; the request's contact and label; each refusal by id
 (`not_accepting`, `unknown_identity`, `no_device`, `unreachable`,
 `already_owned`, `no_transport`) and not_accepting → Try again; polling to
@@ -246,7 +267,7 @@ not-approved holds the agent until the approval arrives; restart-resume from
 `approved` and from `requested`; `idle` leaves the question open; a bare 404
 disables the option. `AddDeviceWireTest` (desktopTest, a real socket) repeats
 the request, a refusal, the bare 404, the with-agent order and the 409 on the
-wire. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
+wire. The Codex round on PR #189 adds: the collected session handed to the app once (and nothing handed when none was collected); a live request locking the first question until a confirmed cancel, which also stops the poll; an applied request offering no cancel; the account reason on a disabled Next with an agent; COMPLETE leaving by itself only on an applied claim. Each was red on its planted defect first. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
 removed, `not_approved` treated as an error, "send a new request" refused
 after `expired`, and a closed window hiding held requests (CSD-094) each
 failed at least one test.

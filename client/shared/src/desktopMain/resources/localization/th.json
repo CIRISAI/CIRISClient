@@ -4088,7 +4088,17 @@
     "approve_device_class": "ประเภทอุปกรณ์: {class}",
     "device_class_phone": "โทรศัพท์",
     "device_class_laptop": "แล็ปท็อป",
-    "device_class_server": "เซิร์ฟเวอร์"
+    "device_class_server": "เซิร์ฟเวอร์",
+    "setup_path_locked": "คำขอไปยังอุปกรณ์อื่นของคุณยังคงเปิดอยู่ ให้ยกเลิกด้านล่างนี้ก่อนตั้งค่า CIRIS ID ใหม่แทน",
+    "add_device_cancel": "ยกเลิกคำขอนี้",
+    "add_device_cancel_title": "ยกเลิกคำขอนี้หรือไม่?",
+    "add_device_cancel_fact_here": "บนอุปกรณ์นี้",
+    "add_device_cancel_here": "หยุดการรอและลืมคำขอนี้ เพื่อให้คุณสามารถเลือกใหม่ได้อีกครั้ง",
+    "add_device_cancel_fact_other": "บนอุปกรณ์อื่นของคุณ",
+    "add_device_cancel_other": "ไม่สามารถเพิกถอนได้จากที่นี่ อุปกรณ์อื่นของคุณจะยังคงแสดงรายการนี้ไว้จนกว่าจะหมดอายุภายใน 15 นาที ดังนั้นอย่าอนุมัติที่นั่น",
+    "add_device_cancel_fact_next": "การอนุมัติที่ได้รับแล้ว",
+    "add_device_cancel_next": "จะยังคงอยู่บนโหนดของอุปกรณ์นี้โดยไม่ถูกใช้งาน จะไม่มีสิ่งใดเข้าร่วมเว้นแต่คุณจะส่งคำขออีกครั้งและทำการตั้งค่าให้เสร็จสมบูรณ์",
+    "add_device_cancel_confirm": "ยกเลิกคำขอ"
   },
   "moderation": {
     "ladder": {

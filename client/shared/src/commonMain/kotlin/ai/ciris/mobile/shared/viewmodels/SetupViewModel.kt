@@ -1572,7 +1572,50 @@ class SetupViewModel(
         if (path == IdentityPath.EXISTING &&
             _state.value.addDevice.availability == AddDeviceAvailability.NODE_TOO_OLD
         ) return
+        // A live request locks the answer (Codex, PR #189): NEW now would mint
+        // and self-claim a second identity over it. Cancel first.
+        if (path != _state.value.identityPath && _state.value.addDevice.pathLocked) {
+            PlatformLogger.i(TAG, "[addDevice] path switch refused: a request is live (${_state.value.addDevice.phase})")
+            return
+        }
         _state.value = _state.value.copy(identityPath = path)
+    }
+
+    /** Raise the "Cancel this request" confirm. Nothing is abandoned until [confirmCancelAddDevice]. */
+    fun askCancelAddDevice() {
+        if (!_state.value.addDevice.cancellable) return
+        updateAddDevice { it.copy(confirmingCancel = true) }
+    }
+
+    fun dismissCancelAddDevice() {
+        updateAddDevice { it.copy(confirmingCancel = false) }
+    }
+
+    /**
+     * **Abandon this device's request, locally.** CIRISServer (at
+     * `fix/client-copy-0.5.232` `b3e05e27`) has no route to withdraw a join
+     * request or discard a held approval: the router mounts only
+     * `POST`/`GET /v1/setup/add-device` and `POST …/complete`
+     * (`src/add_device.rs` `router`). So this stops polling and forgets the
+     * request HERE, and the confirm says what it cannot do: the other device
+     * keeps listing the request until its 15 minutes run out, and an approval
+     * this node already verified stays held on it, unused. The first question
+     * is unlocked again.
+     */
+    fun confirmCancelAddDevice() {
+        val s = _state.value.addDevice
+        if (!s.confirmingCancel || !s.cancellable) {
+            dismissCancelAddDevice()
+            return
+        }
+        addDevicePollJob?.cancel()
+        PlatformLogger.i(TAG, "[addDevice] request abandoned locally (was ${s.phase}); no server route withdraws it")
+        updateAddDevice {
+            it.copy(
+                phase = AddDevicePhase.IDLE, matchCode = null, ownerKeyId = null, detail = null,
+                refusalReasonId = null, refusalStatus = null, confirmingCancel = false,
+            )
+        }
     }
 
     /** The fedID as typed, pasted or scanned. One handler for all three (a scan fills the field, it never sends). */
@@ -1827,6 +1870,7 @@ class SetupViewModel(
                     ownerLoginOk = true
                     role = grant.role
                     _claimedSession.value = ClaimedSessionState.Collected(grant.role)
+                    collectedGrant = grant
                     PlatformLogger.i(TAG, "[ORDER] claimed_session collected (role=${grant.role})")
                 } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
                     PlatformLogger.w(TAG, "[ORDER] claimed_session refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
@@ -1934,6 +1978,26 @@ class SetupViewModel(
     }
 
     // ========== Second device: collect the session the approval left here ==========
+
+    /**
+     * The owner session the add-device path collected, waiting for the host to
+     * take it at setup's exit. Not in [state]: it is a credential, and
+     * [SetupFormState] is serializable and logged.
+     */
+    private var collectedGrant: ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant? = null
+
+    /**
+     * **The setup → app session hand-off for the add-device path** (Codex,
+     * PR #189). The grant `claimed-session` answered was applied to the API
+     * client only, so the app's own session (its `currentAccessToken` and
+     * the persisted token) never had it; and with no local account on a node
+     * without an agent, the host's password fallback had nothing to sign in
+     * with. A paired device landed on Login holding a session it had just
+     * collected. The host takes it here, once, and persists it the way every
+     * other sign-in is persisted. Null when nothing was collected.
+     */
+    fun takeCollectedSession(): ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant? =
+        collectedGrant.also { collectedGrant = null }
 
     private val _claimedSession = MutableStateFlow<ClaimedSessionState>(ClaimedSessionState.Idle)
 
@@ -3404,6 +3468,7 @@ class SetupViewModel(
      */
     fun resetState() {
         addDevicePollJob?.cancel()
+        collectedGrant = null
         _state.value = initialState()
     }
 

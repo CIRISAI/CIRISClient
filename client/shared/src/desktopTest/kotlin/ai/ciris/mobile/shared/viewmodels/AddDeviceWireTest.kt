@@ -243,6 +243,42 @@ class AddDeviceWireTest {
     }
 
     @Test
+    fun afterANodeSwitchTheApprovalGoesToTheNewNode() = runBlocking {
+        // Codex on PR #189: a URL captured at construction sent approve to the
+        // PREVIOUS node while the card showed the new one.
+        fun owner() = Node(
+            mutableMapOf(
+                "GET /v1/self/device-requests" to {
+                    200 to """{"requests":[{"request_id":"r1","label":"S23 Phone","device_class":"phone","match_code":"482913","node_key_id":"b","requested_secs_ago":5}],"window_secs_left":300}"""
+                },
+                "POST /v1/self/device-requests/r1/approve" to { 200 to """{"approved":true,"match_code":"482913"}""" },
+            ),
+        )
+        val first = owner()
+        val second = owner()
+        try {
+            val api = CIRISApiClient(first.url, null)
+            api.setAccessToken("tok-owner")
+            var active = first.url
+            val vm = ApproveDeviceViewModel(ClientDeviceRequests(api) { active })
+            vm.refreshNow()
+            assertEquals(1, first.seen.size)
+
+            active = second.url // the operator switched node profiles
+            vm.refreshNow()
+            vm.askApprove(vm.state.value.requests.single())
+            vm.confirm()
+            withContext(Dispatchers.Default) { withTimeout(10_000) { vm.state.first { it.outcome != null } } }
+
+            assertTrue(second.paths().contains("POST /v1/self/device-requests/r1/approve"), "approved on the node the card shows")
+            assertTrue(first.paths().none { it.endsWith("/approve") }, "nothing reaches the previous node")
+        } finally {
+            first.server.stop(0)
+            second.server.stop(0)
+        }
+    }
+
+    @Test
     fun theApprovingDevicesCallsCarryItsOwnerSession() = runBlocking {
         val node = Node(
             mutableMapOf(

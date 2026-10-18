@@ -4088,7 +4088,17 @@
     "approve_device_class": "Loại thiết bị: {class}",
     "device_class_phone": "Điện thoại",
     "device_class_laptop": "Máy tính xách tay",
-    "device_class_server": "Máy chủ"
+    "device_class_server": "Máy chủ",
+    "setup_path_locked": "Một yêu cầu gửi đến thiết bị khác của bạn vẫn đang mở. Hãy hủy yêu cầu đó bên dưới trước khi thiết lập một CIRIS ID mới thay thế.",
+    "add_device_cancel": "Hủy yêu cầu này",
+    "add_device_cancel_title": "Hủy yêu cầu này?",
+    "add_device_cancel_fact_here": "Trên thiết bị này",
+    "add_device_cancel_here": "Dừng chờ và quên yêu cầu này, để bạn có thể chọn lại.",
+    "add_device_cancel_fact_other": "Trên thiết bị khác của bạn",
+    "add_device_cancel_other": "Yêu cầu này không thể bị rút lại từ đây. Thiết bị khác của bạn sẽ tiếp tục hiển thị nó cho đến khi hết hạn sau 15 phút, vì vậy đừng chấp thuận nó ở đó.",
+    "add_device_cancel_fact_next": "Một sự chấp thuận đã nhận được",
+    "add_device_cancel_next": "Vẫn nằm trên nút của thiết bị này mà không được dùng đến. Sẽ không có gì tham gia trừ khi bạn gửi lại yêu cầu và hoàn tất thiết lập.",
+    "add_device_cancel_confirm": "Hủy yêu cầu"
   },
   "moderation": {
     "ladder": {

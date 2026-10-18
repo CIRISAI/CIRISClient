@@ -4094,7 +4094,17 @@
     "approve_device_class": "نوع دستگاه: {class}",
     "device_class_phone": "تلفن",
     "device_class_laptop": "لپ‌تاپ",
-    "device_class_server": "سرور"
+    "device_class_server": "سرور",
+    "setup_path_locked": "درخواستی به دستگاه دیگرتان هنوز باز است. پیش از راه‌اندازی یک شناسهٔ CIRIS جدید، آن را در زیر لغو کنید.",
+    "add_device_cancel": "لغو این درخواست",
+    "add_device_cancel_title": "این درخواست لغو شود؟",
+    "add_device_cancel_fact_here": "روی این دستگاه",
+    "add_device_cancel_here": "منتظر ماندن را متوقف می‌کند و درخواست را فراموش می‌کند، تا بتوانید دوباره انتخاب کنید.",
+    "add_device_cancel_fact_other": "روی دستگاه دیگرتان",
+    "add_device_cancel_other": "نمی‌توان آن را از اینجا پس گرفت. دستگاه دیگرتان آن را تا انقضا پس از ۱۵ دقیقه فهرست می‌کند، پس آن را آنجا تأیید نکنید.",
+    "add_device_cancel_fact_next": "تأییدی که از پیش دریافت شده است",
+    "add_device_cancel_next": "روی گرهٔ این دستگاه بدون استفاده باقی می‌ماند. هیچ‌چیز نمی‌پیوندد مگر اینکه دوباره درخواستی ارسال کنید و راه‌اندازی را به پایان برسانید.",
+    "add_device_cancel_confirm": "لغو درخواست"
   },
   "moderation": {
     "ladder": {

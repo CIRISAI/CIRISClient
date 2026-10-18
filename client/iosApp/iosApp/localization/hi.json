@@ -4088,7 +4088,17 @@
     "approve_device_class": "डिवाइस प्रकार: {class}",
     "device_class_phone": "फ़ोन",
     "device_class_laptop": "लैपटॉप",
-    "device_class_server": "सर्वर"
+    "device_class_server": "सर्वर",
+    "setup_path_locked": "आपके दूसरे डिवाइस को भेजा गया अनुरोध अभी भी खुला है। इसके बजाय नई CIRIS ID सेटअप करने से पहले नीचे इसे रद्द करें।",
+    "add_device_cancel": "इस अनुरोध को रद्द करें",
+    "add_device_cancel_title": "इस अनुरोध को रद्द करें?",
+    "add_device_cancel_fact_here": "इस डिवाइस पर",
+    "add_device_cancel_here": "प्रतीक्षा बंद कर देता है और अनुरोध को भूल जाता है, ताकि आप फिर से चुन सकें।",
+    "add_device_cancel_fact_other": "आपके दूसरे डिवाइस पर",
+    "add_device_cancel_other": "इसे यहाँ से वापस नहीं लिया जा सकता। आपका दूसरा डिवाइस इसे तब तक सूचीबद्ध करता रहेगा जब तक यह 15 मिनट बाद समाप्त न हो जाए, इसलिए वहाँ इसे स्वीकृत न करें।",
+    "add_device_cancel_fact_next": "एक स्वीकृति पहले ही मिल चुकी है",
+    "add_device_cancel_next": "इस डिवाइस के नोड पर अप्रयुक्त रहता है। जब तक आप फिर से अनुरोध नहीं भेजते और सेटअप पूरा नहीं करते, तब तक कुछ भी नहीं जुड़ता।",
+    "add_device_cancel_confirm": "अनुरोध रद्द करें"
   },
   "moderation": {
     "ladder": {
