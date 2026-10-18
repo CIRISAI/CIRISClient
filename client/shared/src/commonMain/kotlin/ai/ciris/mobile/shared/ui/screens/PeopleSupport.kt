@@ -31,6 +31,18 @@ object PeopleTags {
     const val EMPTY = "contacts_empty"
     /** `freshly_emitted: false` — the person was already a contact (CSD-005). */
     const val ADD_ALREADY = "contacts_add_already"
+    /** The card's line after a 2xx WITH a `reason_id`: not added, waiting for their key (CIRISClient#188). */
+    const val ADD_PENDING = "contacts_add_pending"
+
+    // ── A pending code (CIRISClient#188): its own row, never a contact row ──
+    /** The row for a code the node accepted but could not complete; `<id>` is the key it named. */
+    fun pending(id: String) = "contacts_pending_$id"
+    /** Ask the node again, now. */
+    fun pendingRetry(id: String) = "btn_contacts_pending_retry_$id"
+    /** Forget the code. Nothing on the node changes — it never wrote a row. */
+    fun pendingForget(id: String) = "btn_contacts_pending_forget_$id"
+    /** The row's status line: still asking / stopped / refused by id. */
+    fun pendingStatus(id: String) = "contacts_pending_status_$id"
     /** QrScanAction beside [ADD_KEY]; it fills the field and never submits (CSD-005). */
     const val SCAN = "btn_scan_contact_code"
 

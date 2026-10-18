@@ -17,7 +17,11 @@ description: >-
 # NOT asserted: the removal end to end and a code pasted from another node,
 # which need ciris-server 0.5.218 (unreleased); the camera half of the scan;
 # the desktop "paste instead" sentence (`btn_scan_contact_code_status`, built as
-# `${tag}_status`, invisible to testing/test_flows.py's literal grep).
+# `${tag}_status`, invisible to testing/test_flows.py's literal grep); the
+# pending row for a 202 `contacts.awaiting_key_body` (contacts_pending_*,
+# CIRISClient#188) — the fixture waits for the peer's key to cross BEFORE it
+# adds, so no leg sees a 202; it is pinned on a real socket in
+# PendingContactWireTest and in PendingContactTest instead (CSD-005 §5).
 client: ">=0.5.225"
 # The populated list needs a contact: the two-node fixture adds the peer's owner
 # (testing/gate/two_node.py), and ${PEER_KEY_ID} is the key it is held under.
@@ -128,12 +132,30 @@ steps:
       visible: [contacts_list]
       absent: [contacts_empty]
 
+  - step_id: add_contact_is_still_offered_with_a_contact_listed
+    title: With a contact already listed, Add contact is in the header
+    description: >-
+      CIRISClient#187: the add card is forced open only over an EMPTY list, and
+      once one contact existed there was no Add contact anywhere (0.5.228). The
+      header's labelled action is the entry point that does not depend on the
+      list — asserted here with the fixture's contact present, which is the
+      common shape (the canonical appears as a contact on every trace-sending
+      node, CIRISServer#775).
+    requires:
+      screen: Contacts
+      visible: [contacts_list]
+    expect:
+      state: populated
+      count: {of: "contacts_row_*", min: 1}
+      visible: [btn_contacts_add_open]
+      absent: [card_contacts_add, contacts_empty]
+
   - step_id: the_add_card_opens_for_a_pasted_code
-    title: Add a contact takes a pasted code
+    title: Add contact opens the card over the populated list, and it takes a pasted code
     do:
       - click: btn_contacts_add_open
     expect:
-      visible: [card_contacts_add, input_contacts_add_key, btn_contacts_add_submit]
+      visible: [card_contacts_add, input_contacts_add_key, btn_contacts_add_submit, contacts_list]
 
   - step_id: a_scan_is_offered_where_there_is_a_camera
     title: Where the device has a camera, the card offers a scan that never submits
