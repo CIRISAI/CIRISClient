@@ -140,11 +140,38 @@ The defect is on the other side — **the empty panel has no tag at all**, so
 "the agent has never spoken to me" and "the transcript failed to compose" are
 the same observation to the gate.
 
+### 2.1 The agent is busy (SHED)
+
+While a resource is at CRITICAL pressure the agent closes admission:
+`POST /v1/agent/interact` (and `/message`) answer `503`, `Retry-After: 30`, and
+`{"detail": {"error": "resource_shed", "reason": "RESOURCE_SHED", "resources":
+[...], "retry_after_seconds": 30}}` (`routes/agent.py` `_raise_if_shed`,
+v2.16.2-stable). It is runtime self-protection, not an agent decision, so it is
+never rendered with DEFER or REJECT wording.
+
+**Resending cannot duplicate.** The refusal happens in
+`base_observer.handle_incoming_message` *before credit is charged and before
+any task exists* (`base_observer.py:957-966`), so a shed message was not
+admitted. The client therefore waits out `Retry-After` (delta-seconds or an
+HTTP-date) and sends the SAME request again — `AgentShed.sendWithShedRetry`,
+bounded at 3 sends and 120 s of waiting, every wait at least 1 s. A
+`Retry-After` past the budget gives up at once rather than waiting. Any other
+503 (handler missing, credit provider down) stays an error.
+
+```yaml
+busy:     {tag: chat_shed_notice, renders: "'The agent is busy — retrying in Ns' (mobile.interact_shed_retrying), counting down from Retry-After; the user's bubble stays, no error row"}
+gave_up:  {tag: chat_shed_notice, renders: "'The agent is still busy, so your message was not sent…' (mobile.interact_shed_gave_up) with chat_shed_retry and chat_shed_dismiss; the unsent bubble is withdrawn and the text and attachments are back in input_message"}
+```
+
+`InteractShedTest` drives both against a real socket; `AgentShedWireTest`
+proves the wait honours `Retry-After` in both forms and that a non-SHED 503 is
+not resent.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| send a message | `POST /v1/agent/interact` | CIRISAgent (`routes/agent.py:841`) | live — `AgentApi.kt:215`, called at `CIRISApiClient.kt:770` |
+| send a message | `POST /v1/agent/interact` | CIRISAgent (`routes/agent.py:1186` on v2.16.2-stable) | live — `AgentApi.kt:215`, called at `CIRISApiClient.kt:771`. **A SHED 503 is a named, retryable state** (agent 2.15+, CIRISAgent#1242, CIRISClient#173): see §2.1 |
 | the transcript | `GET /v1/agent/history` | CIRISAgent (`routes/agent.py:981`) | live — `AgentApi.kt:113`; `nodeSkip`-guarded at `CIRISApiClient.kt:798`, so a bare node returns an empty list rather than 404ing |
 | the reasoning timeline | `GET /v1/system/runtime/reasoning-stream` (SSE) | CIRISAgent (`routes/system_extensions.py:922`) | live, but **not** a `trace:complete:v1` envelope — see §2 |
 | the cognitive state | `GET /v1/system/health` | CIRISAgent, merged by the node (`CIRISServer src/health.rs:589`) | live — the one route both hosts answer |
