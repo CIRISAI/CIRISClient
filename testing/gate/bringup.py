@@ -87,6 +87,22 @@ NODE_API_PORT = 4243
 #: harness has. Read once at startup — see invariant 1.
 ANDROID_TEST_SENTINEL = "/data/local/tmp/ciris_test_mode"
 
+#: The trace run kind every harness run declares (CIRISClient#182). Only a run
+#: outside a harness is `production`; mirrors CIRISAgent's
+#: tools/qa_runner/run_kind.py so a trace says the same thing whichever runner
+#: drove it. Android reads it as a system property (`am start` cannot set an
+#: environment, as above); CirisVerify.setup hands it to the embedded Python.
+RUN_KIND_ENV_VAR = "CIRIS_TRACE_RUN_KIND"
+ANDROID_RUN_KIND_PROP = "debug.ciris.trace_run_kind"
+
+
+def forwarded_run_kind() -> str:
+    """The kind to label this run's traces: an inherited declaration wins (a
+    harness that drives this one said what it is), except `production`, which a
+    harness run never is."""
+    inherited = os.environ.get(RUN_KIND_ENV_VAR, "").strip().lower()
+    return inherited if inherited and inherited != "production" else "qa"
+
 
 #: Where the Android app reads the node's one-time claim PIN: `CIRIS_HOME` is
 #: `filesDir/ciris` (CirisVerify.setup) and PythonRuntime.android's
@@ -232,6 +248,8 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             Step("wait-for-device", adb + ["wait-for-device"]),
             # INVARIANT 1: armed before launch, because it is read once at startup.
             Step("arm-test-mode", adb + ["shell", "touch", ANDROID_TEST_SENTINEL]),
+            # Read once at startup too, by CirisVerify.setup (CIRISClient#182).
+            Step("declare-run-kind", adb + ["shell", "setprop", ANDROID_RUN_KIND_PROP, forwarded_run_kind()]),
             # A running app makes `install` hang on some devices (see client/CLAUDE.md).
             Step("force-stop", adb + ["shell", "am", "force-stop", package], optional=True),
             # INVARIANT 3: installed before anything is forwarded.
@@ -287,6 +305,8 @@ def android_teardown(package: str, serial: str | None = None,
         steps=[
             Step("stop-app", adb + ["shell", "am", "force-stop", package], optional=True),
             Step("disarm-test-mode", adb + ["shell", "rm", "-f", ANDROID_TEST_SENTINEL], optional=True),
+            # Same reason: a leftover kind labels a later non-harness run `qa`.
+            Step("clear-run-kind", adb + ["shell", "setprop", ANDROID_RUN_KIND_PROP, "''"], optional=True),
             # The node deletes ITS file when the claim consumes the PIN; the copy
             # handed to the device would outlive it and be offered to the next
             # first run — a stale PIN, which is CIRISClient#49 planted by the gate.
@@ -375,7 +395,12 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             # app would have come up with no server to drive.
             Step("launch", [
                 "xcrun", "simctl", "launch", udid, bundle_id,
-            ], env={"SIMCTL_CHILD_CIRIS_TEST_MODE": "true"}),
+            ], env={
+                "SIMCTL_CHILD_CIRIS_TEST_MODE": "true",
+                # The embedded Python reads the process environment, so the
+                # run kind crosses the same boundary the same way (#182).
+                f"SIMCTL_CHILD_{RUN_KIND_ENV_VAR}": forwarded_run_kind(),
+            }),
         ],
     )
 

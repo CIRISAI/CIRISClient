@@ -115,6 +115,10 @@ env:
   # cannot set the environment of the process it launches — see bringup.py's
   # ANDROID_TEST_SENTINEL), which is why that leg does not depend on this.
   CIRIS_TEST_MODE: "true"
+  # Every trace a harness run produces is `qa`; only a run outside a harness is
+  # `production` (CIRISClient#182). Desktop inherits this; bringup.py forwards
+  # it to iOS (SIMCTL_CHILD_) and Android (setprop debug.ciris.trace_run_kind).
+  CIRIS_TRACE_RUN_KIND: "qa"
 
 jobs:
   linux-android:

@@ -386,3 +386,9 @@ def test_the_android_leg_gets_a_fresh_node_when_the_fixture_seeded_the_shared_on
     assert names.index("A fresh node for the Android leg") < names.index("Android emulator")
     assert names.index("Linux desktop") < names.index("A fresh node for the Android leg")
 
+
+
+def test_the_workflow_labels_every_trace_qa(wf):
+    # CIRISClient#182: desktop and the iOS host inherit this; only a run outside
+    # a harness is `production`.
+    assert wf["env"].get("CIRIS_TRACE_RUN_KIND") == "qa"
