@@ -4155,7 +4155,12 @@
     "identity_revoke_self_offer": "Revoke it anyway…",
     "identity_revoked": "Revoked {device}.",
     "identity_revoked_self": "This device was revoked. It no longer acts as you.",
-    "files_too_large_to_open": "This file is too large to open on this device yet."
+    "files_too_large_to_open": "This file is too large to open on this device yet.",
+    "add_device_expired_elsewhere": "Your other device no longer holds this request: it waited too long for an answer, or its approval wasn't collected in time. On your other device choose Accept new requests again, then send a new request from here.",
+    "approve_device_class": "Device type: {class}",
+    "device_class_phone": "Phone",
+    "device_class_laptop": "Laptop",
+    "device_class_server": "Server"
   },
   "moderation": {
     "ladder": {

@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `fix/client-copy-0.5.232` (`f2bbb63f5bc4d9ba091590bcf9acd6d1b015a387`) — branch (unmerged), the copy the next server release carries; v0.5.231 + two literals (`add_device.mint_failed`, `contacts.awaiting_key_body`). Re-pin to the server's tag once that release ships. | `feat/server-0.5.231-parity` (every emitted id reconciled: the 13 `add_device.*` refusals of #786/#791 added, the #776 person-facing `contacts.*` rewrites re-synced, the rc7 halt copy and the 0.5.223 `durable_queue_depth` / 0.5.225 `halt-status` / 0.5.222 `affiliations` shapes read. Previous: `v0.5.221` `25d3b643`, `release/0.5.228`) | 2026-10-18 |
+| `CIRISAI/CIRISServer` | `fix/client-copy-0.5.232` (`b3e05e27f3f7abd8329a4ee407afab93c2811ac5`) — branch (unmerged), the copy the next server release carries; v0.5.231 + two literals (`add_device.mint_failed`, `contacts.awaiting_key_body`) + the add-device answers to CIRISClient#189 (`expired` when the other device no longer holds the request, the host's `device_class`, `FSD/ADD_DEVICE.md` §4.2). Re-pin to the server's tag once that release ships. | `feat/add-device` (#189: the new `expired` detail and `device_class` read; no new server ids at this head). Before it, `feat/server-0.5.231-parity` at `f2bbb63f` (every emitted id reconciled: the 13 `add_device.*` refusals of #786/#791 added, the #776 person-facing `contacts.*` rewrites re-synced, the rc7 halt copy and the 0.5.223 `durable_queue_depth` / 0.5.225 `halt-status` / 0.5.222 `affiliations` shapes read. Previous: `v0.5.221` `25d3b643`, `release/0.5.228`) | 2026-10-18 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `f274d0004acdd949d788e8fa802bb4b2d492d92eeab04d708667c923d541465f`
+**state digest:** `4f60973ac8edcbb8ade163f10f7fb283c7b00f79382356207832e0c4c3b38643`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

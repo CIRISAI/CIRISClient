@@ -4083,7 +4083,12 @@
     "identity_revoke_self_offer": "Vẫn thu hồi…",
     "identity_revoked": "Đã thu hồi {device}.",
     "identity_revoked_self": "Thiết bị này đã bị thu hồi. Nó không còn hành động như bạn nữa.",
-    "files_too_large_to_open": "Tệp này quá lớn để mở trên thiết bị này lúc này."
+    "files_too_large_to_open": "Tệp này quá lớn để mở trên thiết bị này lúc này.",
+    "add_device_expired_elsewhere": "Thiết bị khác của bạn không còn giữ yêu cầu này nữa: nó đã chờ câu trả lời quá lâu, hoặc sự chấp thuận của nó không được thu thập kịp thời. Trên thiết bị khác của bạn, hãy chọn Chấp nhận yêu cầu mới lại, rồi gửi một yêu cầu mới từ đây.",
+    "approve_device_class": "Loại thiết bị: {class}",
+    "device_class_phone": "Điện thoại",
+    "device_class_laptop": "Máy tính xách tay",
+    "device_class_server": "Máy chủ"
   },
   "moderation": {
     "ladder": {

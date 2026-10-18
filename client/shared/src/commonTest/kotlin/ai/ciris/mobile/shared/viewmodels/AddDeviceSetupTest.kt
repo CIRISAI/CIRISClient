@@ -247,6 +247,48 @@ class AddDeviceSetupTest {
     }
 
     @Test
+    fun theOtherDeviceNoLongerHoldingTheRequestIsExpiredWithItsOwnSentence() = runBlocking {
+        // fix/client-copy-0.5.232 (b3e05e27) src/add_device.rs:649-655: the
+        // approving device answered Unknown (its 15 minutes, or an approval not
+        // collected within 15), and B says `expired` with this detail.
+        val gone = "your other device no longer holds this request — send a new one"
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("expired", detail = gone) }
+        val vm = vm(node)
+        vm.asked()
+        val s = vm.until("expired") { it.addDevice.phase == AddDevicePhase.EXPIRED }
+        assertEquals(gone, s.addDevice.detail, "the detail picks the 'no longer holds it' sentence on screen")
+        assertTrue(s.addDevice.phase.needsNewRequest)
+
+        node.startAnswer = { progress("requested", code = "135790") }
+        node.statusFallback = { progress("requested", code = "135790") }
+        vm.sendAddDeviceRequest()
+        val again = vm.until("requested again") { it.addDevice.phase == AddDevicePhase.REQUESTED && it.addDevice.matchCode == "135790" }
+        assertNull(again.addDevice.detail, "a new request clears the old answer")
+    }
+
+    @Test
+    fun anOlderNodesFailedUnknownReadsAsExpired() = runBlocking {
+        // v0.5.231 said the same thing as `failed` with detail "Unknown" (:639-645).
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("failed", detail = "Unknown") }
+        val vm = vm(node)
+        vm.asked()
+        val s = vm.until("expired") { it.addDevice.phase == AddDevicePhase.EXPIRED }
+        assertEquals("Unknown", s.addDevice.detail)
+    }
+
+    @Test
+    fun aRealFailureStaysAFailure() = runBlocking {
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("failed", detail = "the owner-binding does not verify") }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("failed") { it.addDevice.phase == AddDevicePhase.FAILED }
+        Unit
+    }
+
+    @Test
     fun anIdleAnswerForASentRequestIsALostRequestNotAFreshStart() = runBlocking {
         val node = ScriptedNode()
         node.statusAnswers += { progress("idle") }

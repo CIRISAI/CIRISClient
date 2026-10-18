@@ -70,6 +70,28 @@ fun ApproveDeviceUiState.requestExpiresInSecs(request: DeviceJoinRequest, nowMs:
     return (ADD_DEVICE_REQUEST_TTL_SECS - age).coerceAtLeast(0)
 }
 
+/**
+ * The bundle key naming a request's `device_class`, or null for a class this
+ * client has no word for (the screen then shows the server's token as-is,
+ * never a guess). Since `fix/client-copy-0.5.232` (`b3e05e27`) the class is
+ * the requesting HOST's (`host_device_class()`: phone on mobile, laptop under
+ * the desktop launcher, server headless); v0.5.231 always sent `laptop`.
+ */
+fun deviceClassKey(deviceClass: String): String? = when (deviceClass.trim().lowercase()) {
+    "phone" -> "mobile.device_class_phone"
+    "laptop" -> "mobile.device_class_laptop"
+    "server" -> "mobile.device_class_server"
+    else -> null
+}
+
+/**
+ * What a request's row says for its `device_class`: the bundle's word via
+ * [words] when [deviceClassKey] knows the class, else the server's token as
+ * sent (never a guess), else nothing (no row line at all).
+ */
+fun deviceClassDisplay(deviceClass: String, words: (key: String) -> String): String? =
+    deviceClassKey(deviceClass)?.let(words) ?: deviceClass.trim().ifBlank { null }
+
 /** `m:ss` for a countdown. */
 fun formatCountdown(secs: Long): String {
     val s = secs.coerceAtLeast(0)

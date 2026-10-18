@@ -236,6 +236,9 @@ class SetupViewModel(
         /** `POST /v1/setup/add-device/complete` before the other device approved (409, `src/add_device.rs:812-820`). */
         const val ADD_DEVICE_NOT_APPROVED = "add_device.not_approved"
 
+        /** v0.5.231's `failed` detail when the other device no longer held the request (`format!("{other:?}")` of `JoinAnswer::Unknown`). */
+        const val OLDER_NODE_GONE_DETAIL = "Unknown"
+
         /** Canonical backend provider id for on-device Gemma 4 inference. */
         const val LOCAL_ON_DEVICE_PROVIDER_ID = "mobile_local"
 
@@ -1598,7 +1601,7 @@ class SetupViewModel(
             try {
                 val p = api.status()
                 updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
-                val phase = serverPhase(p.state, previous = AddDevicePhase.IDLE)
+                val phase = serverPhase(p, previous = AddDevicePhase.IDLE)
                 if (phase != AddDevicePhase.IDLE) {
                     PlatformLogger.i(TAG, "[addDevice] resuming a request from before this wizard: state=${p.state}")
                     _state.value = _state.value.copy(identityPath = IdentityPath.EXISTING)
@@ -1643,7 +1646,7 @@ class SetupViewModel(
             try {
                 val p = api.start(contact, s.deviceName.trim().ifBlank { null })
                 updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
-                applyProgress(p, serverPhase(p.state, previous = AddDevicePhase.SENDING))
+                applyProgress(p, serverPhase(p, previous = AddDevicePhase.SENDING))
                 PlatformLogger.i(TAG, "[ORDER] add_device_requested state=${p.state} target=${p.targetNode}")
                 if (_state.value.addDevice.phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
             } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
@@ -1685,7 +1688,7 @@ class SetupViewModel(
                     PlatformLogger.w(TAG, "[addDevice] status poll failed (retrying): ${e.message}")
                     continue
                 }
-                val phase = serverPhase(p.state, previous = _state.value.addDevice.phase)
+                val phase = serverPhase(p, previous = _state.value.addDevice.phase)
                 applyProgress(p, phase)
                 if (phase != AddDevicePhase.REQUESTED) {
                     PlatformLogger.i(TAG, "[ORDER] add_device_answered state=${p.state} owner=${p.ownerKeyId ?: "<none>"}")
@@ -1711,15 +1714,21 @@ class SetupViewModel(
      * The server's state string, as a phase. `idle` for a request this wizard
      * had already sent is [AddDevicePhase.INTERRUPTED]: the node restarted
      * before the other device answered, and only a verified approval survives
-     * a restart. An unknown string is a failure, never a silent `requested`.
+     * a restart (CIRISServer `FSD/ADD_DEVICE.md` §4.2). An unknown string is a
+     * failure, never a silent `requested`.
+     *
+     * `failed` with `detail: "Unknown"` is the OLDER-NODE fallback (v0.5.231):
+     * the other device no longer held the request, which `fix/client-copy-0.5.232`
+     * (`b3e05e27`) answers as `expired` with its own detail. Both read as
+     * [AddDevicePhase.EXPIRED], so the person sees one sentence for one fact.
      */
-    private fun serverPhase(state: String, previous: AddDevicePhase): AddDevicePhase = when (state) {
+    private fun serverPhase(p: ai.ciris.mobile.shared.models.federation.AddDeviceProgress, previous: AddDevicePhase): AddDevicePhase = when (p.state) {
         "requested" -> AddDevicePhase.REQUESTED
         "approved" -> AddDevicePhase.APPROVED
         "applied" -> AddDevicePhase.APPLIED
         "denied" -> AddDevicePhase.DENIED
         "expired" -> AddDevicePhase.EXPIRED
-        "failed" -> AddDevicePhase.FAILED
+        "failed" -> if (p.detail?.trim() == OLDER_NODE_GONE_DETAIL) AddDevicePhase.EXPIRED else AddDevicePhase.FAILED
         "idle" -> if (previous == AddDevicePhase.REQUESTED || previous == AddDevicePhase.SENDING) {
             AddDevicePhase.INTERRUPTED
         } else {

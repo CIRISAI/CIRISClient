@@ -22,6 +22,7 @@ import ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel
 import ai.ciris.mobile.shared.viewmodels.DeviceRequestOutcome
 import ai.ciris.mobile.shared.viewmodels.DeviceRequestRefusal
 import ai.ciris.mobile.shared.viewmodels.IdentityPath
+import ai.ciris.mobile.shared.viewmodels.deviceClassDisplay
 import ai.ciris.mobile.shared.viewmodels.formatCountdown
 import ai.ciris.mobile.shared.viewmodels.requestExpiresInSecs
 import ai.ciris.mobile.shared.viewmodels.windowSecsLeftAt
@@ -89,6 +90,7 @@ object AddDeviceTags {
     fun requestRow(id: String) = "approve_device_request_$id"
     fun requestCode(id: String) = "text_approve_device_code_$id"
     fun requestExpires(id: String) = "text_approve_device_expires_$id"
+    fun requestClass(id: String) = "text_approve_device_class_$id"
     fun approve(id: String) = "btn_approve_device_$id"
     fun deny(id: String) = "btn_deny_device_$id"
     const val CONFIRM_PREFIX = "confirm_device_request"
@@ -305,7 +307,10 @@ fun AddDeviceProgressBlock(state: AddDeviceSetupState, onNewRequest: () -> Unit)
         AddDevicePhase.APPROVED -> "mobile.add_device_approved" to t.ok
         AddDevicePhase.APPLIED -> "mobile.add_device_applied" to t.ok
         AddDevicePhase.DENIED -> "mobile.add_device_denied" to t.danger
-        AddDevicePhase.EXPIRED -> "mobile.add_device_expired" to t.danger
+        // With a detail, the OTHER device no longer holds the request (its 15
+        // minutes ran out, or an approval went uncollected for 15). Without
+        // one, this device's own 15 minutes ran out.
+        AddDevicePhase.EXPIRED -> (if (state.detail != null) "mobile.add_device_expired_elsewhere" else "mobile.add_device_expired") to t.danger
         AddDevicePhase.FAILED -> "mobile.add_device_failed" to t.danger
         AddDevicePhase.INTERRUPTED -> "mobile.add_device_interrupted" to t.danger
         else -> "mobile.add_device_sending" to t.dim
@@ -463,7 +468,7 @@ fun ApproveDeviceCard(viewModel: ApproveDeviceViewModel, modifier: Modifier = Mo
         ConfirmSheet(
             title = localizedString(if (c.approve) "mobile.approve_device_confirm_title" else "mobile.deny_device_confirm_title", "label", label),
             facts = listOf(
-                ConfirmFact(localizedString("mobile.approve_device_fact_device"), label),
+                ConfirmFact(localizedString("mobile.approve_device_fact_device"), deviceClassText(c.request.deviceClass)?.let { "$label · $it" } ?: label),
                 ConfirmFact(localizedString("mobile.approve_device_fact_code"), c.request.matchCode, mono = true),
                 ConfirmFact(
                     localizedString(if (c.approve) "mobile.approve_device_fact_effect" else "mobile.deny_device_fact_effect"),
@@ -494,6 +499,13 @@ private fun RequestRow(req: DeviceJoinRequest, expiresIn: Long, busy: Boolean, v
             .testable(AddDeviceTags.requestRow(req.requestId), label),
     ) {
         Text(localizedString("mobile.approve_device_consent", "label", label), style = type.body.copy(fontWeight = FontWeight.SemiBold), color = t.ink)
+        deviceClassText(req.deviceClass)?.let { cls ->
+            Text(
+                localizedString("mobile.approve_device_class", "class", cls),
+                style = type.label, color = t.dim,
+                modifier = Modifier.testable(AddDeviceTags.requestClass(req.requestId), req.deviceClass),
+            )
+        }
         Spacer(Modifier.height(6.dp))
         Text(localizedString("mobile.approve_device_match"), style = type.label, color = t.dim)
         MatchCode(req.matchCode, AddDeviceTags.requestCode(req.requestId))
@@ -516,6 +528,24 @@ private fun RequestRow(req: DeviceJoinRequest, expiresIn: Long, busy: Boolean, v
                 danger = true,
                 onClick = { viewModel.askDeny(req) },
             )
+        }
+    }
+}
+
+/**
+ * The words for a request's `device_class`: the bundle's when this client has
+ * them, else the server's token as sent (never a guess), else nothing.
+ */
+@Composable
+private fun deviceClassText(deviceClass: String): String? {
+    val phone = localizedString("mobile.device_class_phone")
+    val laptop = localizedString("mobile.device_class_laptop")
+    val server = localizedString("mobile.device_class_server")
+    return deviceClassDisplay(deviceClass) { key ->
+        when (key) {
+            "mobile.device_class_phone" -> phone
+            "mobile.device_class_laptop" -> laptop
+            else -> server
         }
     }
 }

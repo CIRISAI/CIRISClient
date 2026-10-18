@@ -75,6 +75,12 @@ fields:
     example: "S23 Phone"
     renders: "'Consent to claim S23 Phone?' per request, from the request's `label` (the name the new device's wizard sent; 'Unnamed device' when empty)"
     tag: "approve_device_request_*"
+  - ceg: x_private:device_class
+    use: display-only
+    type: string
+    example: "phone"
+    renders: "'Device type: Phone' under the label, from the request's `device_class` as sent: Phone / Laptop / Server where the bundle has a word, else the server's token unchanged, else no line. Also in the confirm's Device fact ('S23 Phone · Phone'). Since `b3e05e27` the class is the requesting host's (`host_device_class()`, `src/backend.rs:157`); v0.5.231 always sent `laptop`"
+    tag: "text_approve_device_class_*"
   - ceg: x_private:match_code
     use: display-only
     type: string
@@ -154,12 +160,12 @@ expect:
 ## 5. QA plan
 
 **Unit and wire (green on this branch).** `ApproveDeviceViewModelTest`
-(commonTest, 9 cases): opening the window and re-reading the list; the list
+(commonTest, 11 cases): opening the window and re-reading the list; the list
 with its match codes; after the window closes, a held request still listed
 and approvable (red on a planted "hide requests when the window is closed");
 each request's own 15-minute countdown, aged locally and never negative;
 approve and deny each through the confirm, with nothing sent before it;
-dismissing sends nothing; a refusal by id; a bare 404 as the version fact.
+dismissing sends nothing; a refusal by id; a bare 404 as the version fact; the row showing the class the list sends (`phone`), and `deviceClassKey`/`deviceClassDisplay`'s words and fallbacks.
 `AddDeviceWireTest.theApprovingDevicesCallsCarryItsOwnerSession`: every owner
 route carries the bearer, a closed window still lists the request, approve
 sends `{}`, deny's refusal arrives by id.
@@ -175,12 +181,12 @@ UNCLAIMED one, with a mesh transport, whose loopback the fixture can reach.
 * **Where the server source differs from the FSD.** The list row carries
   `node_key_id` and `requested_secs_ago`, not `requested_at` (FSD §4); the
   window is `window_secs_left` (null when closed). `device_class` is always
-  `laptop` from today's new devices (`:491`), so the card does not render it.
+  `laptop` at v0.5.231 (`:491`). Fixed at `b3e05e27`: the request carries the host's class (`src/add_device.rs:497`), and the card shows it (`text_approve_device_class_<id>`, `deviceClassDisplay`).
 * **Stated limits.** A request the new device sent while this node's window
   was closed is refused, not queued (N2), so "Accept new requests" comes first.
   The new device must receive the approval within 15 minutes of it being
-  given (DECIDED_TTL, `:51`); after that it reads `failed`/`expired` and the
-  person starts again (open the window, send a new request).
+  given (DECIDED_TTL, `:51`); after that it reads `expired` (`b3e05e27`;
+  `failed`/"Unknown" on v0.5.231) and the person starts again (open the window, send a new request).
 * **CC.** CC 3.4.5 and 3.3.6 hold as §1 says. The self-DEK re-wrap is the
   owner's act and runs at approval; if it fails it is retried by `self_rewrap`
   and the approval still lands (`:1199-1210`).

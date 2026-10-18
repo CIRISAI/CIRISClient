@@ -4089,7 +4089,12 @@
     "identity_revoke_self_offer": "به هر حال باطل شود…",
     "identity_revoked": "{device} باطل شد.",
     "identity_revoked_self": "این دستگاه باطل شد. دیگر به‌جای شما عمل نمی‌کند.",
-    "files_too_large_to_open": "این فایل برای باز شدن روی این دستگاه هنوز بسیار بزرگ است."
+    "files_too_large_to_open": "این فایل برای باز شدن روی این دستگاه هنوز بسیار بزرگ است.",
+    "add_device_expired_elsewhere": "دستگاه دیگر شما دیگر این درخواست را در خود ندارد: یا بیش از حد منتظر پاسخ ماند، یا تأیید آن به‌موقع دریافت نشد. در دستگاه دیگرتان دوباره «پذیرش درخواست‌های جدید» را انتخاب کنید، سپس درخواست جدیدی را از اینجا ارسال کنید.",
+    "approve_device_class": "نوع دستگاه: {class}",
+    "device_class_phone": "تلفن",
+    "device_class_laptop": "لپ‌تاپ",
+    "device_class_server": "سرور"
   },
   "moderation": {
     "ladder": {

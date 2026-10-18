@@ -4083,7 +4083,12 @@
     "identity_revoke_self_offer": "Cabut saja…",
     "identity_revoked": "{device} telah dicabut.",
     "identity_revoked_self": "Perangkat ini telah dicabut. Perangkat ini tidak lagi bertindak sebagai Anda.",
-    "files_too_large_to_open": "Berkas ini masih terlalu besar untuk dibuka di perangkat ini."
+    "files_too_large_to_open": "Berkas ini masih terlalu besar untuk dibuka di perangkat ini.",
+    "add_device_expired_elsewhere": "Perangkat lain Anda tidak lagi menyimpan permintaan ini: permintaan menunggu terlalu lama untuk dijawab, atau persetujuannya tidak terkumpul tepat waktu. Pada perangkat lain Anda, pilih Terima permintaan baru lagi, lalu kirim permintaan baru dari sini.",
+    "approve_device_class": "Jenis perangkat: {class}",
+    "device_class_phone": "Ponsel",
+    "device_class_laptop": "Laptop",
+    "device_class_server": "Server"
   },
   "moderation": {
     "ladder": {

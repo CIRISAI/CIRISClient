@@ -4083,7 +4083,12 @@
     "identity_revoke_self_offer": "फिर भी रद्द करें…",
     "identity_revoked": "{device} रद्द किया गया।",
     "identity_revoked_self": "यह डिवाइस रद्द कर दिया गया था। यह अब आपके रूप में कार्य नहीं करता।",
-    "files_too_large_to_open": "यह फ़ाइल अभी इस डिवाइस पर खोलने के लिए बहुत बड़ी है।"
+    "files_too_large_to_open": "यह फ़ाइल अभी इस डिवाइस पर खोलने के लिए बहुत बड़ी है।",
+    "add_device_expired_elsewhere": "आपका दूसरा डिवाइस अब इस अनुरोध को नहीं रखता: या तो यह उत्तर के लिए बहुत लंबा इंतज़ार कर चुका, या इसकी स्वीकृति समय पर एकत्र नहीं हो सकी। अपने दूसरे डिवाइस पर 'नए अनुरोध स्वीकार करें' फिर से चुनें, फिर यहाँ से नया अनुरोध भेजें।",
+    "approve_device_class": "डिवाइस प्रकार: {class}",
+    "device_class_phone": "फ़ोन",
+    "device_class_laptop": "लैपटॉप",
+    "device_class_server": "सर्वर"
   },
   "moderation": {
     "ladder": {

@@ -112,7 +112,7 @@ fields:
     use: display-only
     type: "enum[requested,approved,applied,denied,expired,failed,interrupted]"
     example: "requested"
-    renders: "one line per state: 'Waiting for your other device to approve this one. You can carry on with setup in the meantime.' / 'Approved and checked on this device. It joins when setup finishes.' / 'This device has joined your CIRIS ID.' / 'Your other device declined this request. Nothing was added.' / 'This request ran out of time. On your other device choose Accept new requests again, then send a new request from here.' / 'The approval could not be checked on this device, so nothing was applied.' + the node's `detail` / 'This device restarted before your other device answered, so the request was lost.' The last four carry 'Send a new request' (`btn_add_device_new_request`)"
+    renders: "one line per state: 'Waiting for your other device to approve this one. You can carry on with setup in the meantime.' / 'Approved and checked on this device. It joins when setup finishes.' / 'This device has joined your CIRIS ID.' / 'Your other device declined this request. Nothing was added.' / 'This request ran out of time. On your other device choose Accept new requests again, then send a new request from here.' (this device's own 15 minutes) or, when `expired` carries a detail, 'Your other device no longer holds this request: it waited too long for an answer, or its approval wasn't collected in time. …' (the other device's 15 minutes, `b3e05e27` `src/add_device.rs:649-655`; on a v0.5.231 node the same fact arrives as `failed` + `detail: Unknown` and is read as this) / 'The approval could not be checked on this device, so nothing was applied.' + the node's `detail` / 'This device restarted before your other device answered, so the request was lost.' The last four carry 'Send a new request' (`btn_add_device_new_request`)"
     tag: text_add_device_status
   - ceg: "ownership:{relation}:{target_kind}:{version}"
     bind: {relation: responsible_party, target_kind: node, version: v1}
@@ -177,6 +177,8 @@ after `add-device/complete`.
 
 ### Restart-resume
 
+The server documents this behaviour as the client implements it: CIRISServer `FSD/ADD_DEVICE.md` §4.2 "Restarts" (at `fix/client-copy-0.5.232` `b3e05e27`, `FSD/ADD_DEVICE.md:130`), which also tabulates the HTTP status of every refusal and says the claim carries no owner password.
+
 On opening the wizard, `probeAddDevice` asks `GET /v1/setup/add-device` once:
 
 * `approved` (a verified approval held across a node reboot, `restore_pending`
@@ -229,7 +231,7 @@ collects the session.
 ## 5. QA plan
 
 **Unit and wire (green on this branch).** `AddDeviceSetupTest` (commonTest,
-21 cases): the first question and no default; the add-device path asks no
+24 cases): the first question and no default; the add-device path asks no
 fedID name and no age; the request's contact and label; each refusal by id
 (`not_accepting`, `unknown_identity`, `no_device`, `unreachable`,
 `already_owned`, `no_transport`) and not_accepting → Try again; polling to
@@ -244,7 +246,7 @@ not-approved holds the agent until the approval arrives; restart-resume from
 `approved` and from `requested`; `idle` leaves the question open; a bare 404
 disables the option. `AddDeviceWireTest` (desktopTest, a real socket) repeats
 the request, a refusal, the bare 404, the with-agent order and the 409 on the
-wire. Shown red on planted defects before being believed: a settle-await
+wire. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
 removed, `not_approved` treated as an error, "send a new request" refused
 after `expired`, and a closed window hiding held requests (CSD-094) each
 failed at least one test.
@@ -267,7 +269,7 @@ CIRISEdge#683).
 
 ## 6. Delta — card vs API vs CC
 
-* **Where the server source differs from the FSD.** (a) `GET` starts at
+* **Where the server source differed from the FSD, and what became of it.** All six were answered on CIRISServer `fix/client-copy-0.5.232` at `b3e05e27` (this client's pin, `client/VENDORING.md`): (a), (b) and (e) are now documented in `FSD/ADD_DEVICE.md` §4/§4.2; (c) is fixed: the other device no longer holding the request is now `expired` with the detail "your other device no longer holds this request — send a new one" (`src/add_device.rs:649-655`), and the client keeps the `failed`/"Unknown" reading only as the v0.5.231 fallback; (d) is fixed: the request carries `host_device_class()` (`src/add_device.rs:497`, `src/backend.rs:157`), phone on mobile, which CSD-094's rows now show. As found at v0.5.231: (a) `GET` starts at
   `idle`, not in the FSD's state list (`:344`). (b) A request that has not
   been approved does not survive a node reboot (only the verified approval
   does), so "restart mid-wizard is safe" holds for the approval, not for the

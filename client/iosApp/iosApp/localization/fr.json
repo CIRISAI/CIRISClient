@@ -4083,7 +4083,12 @@
     "identity_revoke_self_offer": "Révoquer quand même…",
     "identity_revoked": "{device} a été révoqué.",
     "identity_revoked_self": "Cet appareil a été révoqué. Il n'agit plus en votre nom.",
-    "files_too_large_to_open": "Ce fichier est trop volumineux pour être ouvert sur cet appareil pour l'instant."
+    "files_too_large_to_open": "Ce fichier est trop volumineux pour être ouvert sur cet appareil pour l'instant.",
+    "add_device_expired_elsewhere": "Votre autre appareil ne détient plus cette demande : elle a attendu trop longtemps une réponse, ou son approbation n'a pas été collectée à temps. Sur votre autre appareil, choisissez à nouveau Accepter les nouvelles demandes, puis envoyez une nouvelle demande depuis ici.",
+    "approve_device_class": "Type d'appareil : {class}",
+    "device_class_phone": "Téléphone",
+    "device_class_laptop": "Ordinateur portable",
+    "device_class_server": "Serveur"
   },
   "moderation": {
     "ladder": {

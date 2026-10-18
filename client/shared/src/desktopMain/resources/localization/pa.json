@@ -4083,7 +4083,12 @@
     "identity_revoke_self_offer": "ਫਿਰ ਵੀ ਰੱਦ ਕਰੋ…",
     "identity_revoked": "{device} ਨੂੰ ਰੱਦ ਕਰ ਦਿੱਤਾ ਗਿਆ।",
     "identity_revoked_self": "ਇਹ ਡਿਵਾਈਸ ਰੱਦ ਕਰ ਦਿੱਤੀ ਗਈ ਸੀ। ਇਹ ਹੁਣ ਤੁਹਾਡੇ ਵਜੋਂ ਕੰਮ ਨਹੀਂ ਕਰਦੀ।",
-    "files_too_large_to_open": "ਇਹ ਫ਼ਾਈਲ ਇਸ ਡਿਵਾਈਸ 'ਤੇ ਹਾਲੇ ਖੋਲ੍ਹਣ ਲਈ ਬਹੁਤ ਵੱਡੀ ਹੈ।"
+    "files_too_large_to_open": "ਇਹ ਫ਼ਾਈਲ ਇਸ ਡਿਵਾਈਸ 'ਤੇ ਹਾਲੇ ਖੋਲ੍ਹਣ ਲਈ ਬਹੁਤ ਵੱਡੀ ਹੈ।",
+    "add_device_expired_elsewhere": "ਤੁਹਾਡੀ ਦੂਜੀ ਡਿਵਾਈਸ ਕੋਲ ਹੁਣ ਇਹ ਬੇਨਤੀ ਨਹੀਂ ਹੈ: ਇਸਨੇ ਜਵਾਬ ਲਈ ਬਹੁਤ ਲੰਮਾ ਇੰਤਜ਼ਾਰ ਕੀਤਾ, ਜਾਂ ਇਸਦੀ ਮਨਜ਼ੂਰੀ ਸਮੇਂ ਸਿਰ ਇਕੱਠੀ ਨਹੀਂ ਕੀਤੀ ਗਈ। ਆਪਣੇ ਦੂਜੇ ਡਿਵਾਈਸ ਉੱਤੇ Accept new requests ਦੁਬਾਰਾ ਚੁਣੋ, ਫਿਰ ਇੱਥੋਂ ਇੱਕ ਨਵੀਂ ਬੇਨਤੀ ਭੇਜੋ।",
+    "approve_device_class": "ਡਿਵਾਈਸ ਦੀ ਕਿਸਮ: {class}",
+    "device_class_phone": "ਫ਼ੋਨ",
+    "device_class_laptop": "ਲੈਪਟਾਪ",
+    "device_class_server": "ਸਰਵਰ"
   },
   "moderation": {
     "ladder": {

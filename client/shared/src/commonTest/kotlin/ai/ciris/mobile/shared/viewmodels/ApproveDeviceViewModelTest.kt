@@ -213,6 +213,34 @@ class ApproveDeviceViewModelTest {
     }
 
     @Test
+    fun theRowShowsTheDeviceClassTheListSends() = runBlocking {
+        // fix/client-copy-0.5.232 (b3e05e27) sends the requesting HOST's class
+        // (`host_device_class()`): phone on mobile. v0.5.231 always sent laptop.
+        val fromPhone = phone.copy(deviceClass = "phone")
+        val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(fromPhone), windowSecsLeft = 300) }
+        val vm = ApproveDeviceViewModel(node, clock = { now })
+        vm.refreshNow()
+        val req = vm.state.value.requests.single()
+        assertEquals("phone", req.deviceClass, "carried as sent, not assumed")
+        val words = mapOf(
+            "mobile.device_class_phone" to "Phone",
+            "mobile.device_class_laptop" to "Laptop",
+            "mobile.device_class_server" to "Server",
+        )
+        assertEquals("Phone", deviceClassDisplay(req.deviceClass) { words.getValue(it) })
+    }
+
+    @Test
+    fun deviceClassWordsAndFallbacks() {
+        assertEquals("mobile.device_class_phone", deviceClassKey("phone"))
+        assertEquals("mobile.device_class_laptop", deviceClassKey(" Laptop "))
+        assertEquals("mobile.device_class_server", deviceClassKey("server"))
+        assertNull(deviceClassKey("tablet"), "no word for it: the screen shows the token, never a guess")
+        assertEquals("tablet", deviceClassDisplay("tablet") { error("no key for tablet") })
+        assertNull(deviceClassDisplay("  ") { error("blank asks for nothing") }, "a blank class shows no line")
+    }
+
+    @Test
     fun aNodeOlderThan0_5_231SaysSoAndOffersNothing() = runBlocking {
         val node = OwnerNode().apply { listAnswer = { throw NodeRefusal(null, null, 404) } }
         val vm = ApproveDeviceViewModel(node, clock = { now })
