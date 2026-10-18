@@ -6,6 +6,10 @@ import ai.ciris.mobile.shared.api.AccordSettingsData
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.LensDeletionResult
 import ai.ciris.mobile.shared.api.LensIdentifierData
+import ai.ciris.mobile.shared.api.ResetAccountResult
+import ai.ciris.mobile.shared.api.WipeSigningKeyResult
+import ai.ciris.mobile.shared.auth.WipedNode
+import ai.ciris.mobile.shared.auth.forgetWipedNode
 import ai.ciris.mobile.shared.platform.AppRestarter
 import ai.ciris.mobile.shared.platform.EnvFileUpdater
 import ai.ciris.mobile.shared.platform.PlatformLogger
@@ -56,7 +60,29 @@ class DataManagementViewModel(
     readLensIdentifier: (suspend () -> LensIdentifierData)? = null,
     /** `GET /v1/my-data/accord-settings`. */
     readAccordSettings: (suspend () -> AccordSettingsData)? = null,
+    /**
+     * Forget the wiped node in the node switcher (CIRISClient#87). `CIRISApp`
+     * passes [NodeSwitcherViewModel.forgetWipedNode]; the default does nothing.
+     */
+    private val forgetNodeProfiles: (WipedNode) -> Unit = {},
+    /** The wiped node's `key_id`, read BEFORE the wipe. Its public NodeCode by default. */
+    readNodeKeyId: (suspend () -> String?)? = null,
+    /** Delete the persisted session token. [SecureStorage.deleteAccessToken] by default. */
+    deleteStoredToken: (suspend () -> Result<Unit>)? = null,
+    /** `POST /v1/system/data/wipe-signing-key`. The client's by default. */
+    callWipeSigningKey: (suspend () -> WipeSigningKeyResult)? = null,
+    /** `POST /v1/system/data/reset-account`. The client's by default. */
+    callResetAccount: (suspend () -> ResetAccountResult)? = null,
 ) : ViewModel() {
+
+    private val nodeKeyIdReader: suspend () -> String? =
+        readNodeKeyId ?: { runCatching { apiClient.getNodeCode().keyId }.getOrNull() }
+    private val storedTokenDeleter: suspend () -> Result<Unit> =
+        deleteStoredToken ?: { secureStorage.deleteAccessToken() }
+    private val wipeSigningKeyCall: suspend () -> WipeSigningKeyResult =
+        callWipeSigningKey ?: { apiClient.wipeSigningKey(reason = "User requested complete identity wipe from Data Management") }
+    private val resetAccountCall: suspend () -> ResetAccountResult =
+        callResetAccount ?: { apiClient.resetAccount(reason = "User requested reset from Data Management") }
 
     private val lensIdentifierReader: suspend () -> LensIdentifierData =
         readLensIdentifier ?: { apiClient.getLensIdentifier() }
@@ -274,7 +300,8 @@ class DataManagementViewModel(
             try {
                 // Call the admin-protected API endpoint
                 logInfo(method, "Calling /v1/system/data/reset-account API...")
-                val result = apiClient.resetAccount(reason = "User requested reset from Data Management")
+                val target = wipeTarget(identityDestroyed = false)
+                val result = resetAccountCall()
 
                 if (!result.success) {
                     logError(method, "API reset failed: ${result.message}")
@@ -284,6 +311,7 @@ class DataManagementViewModel(
                 }
 
                 logInfo(method, "API reset succeeded, signingKeyPreserved=${result.signingKeyPreserved}")
+                forgetWiped(target)
                 _resetSuccess.value = true
 
                 // Invoke callback for any cleanup before restart
@@ -309,6 +337,34 @@ class DataManagementViewModel(
                 _isResetting.value = false
             }
         }
+    }
+
+    /**
+     * The node about to be wiped, identified BEFORE the wipe — afterwards its
+     * key_id is gone (wipe-signing-key) and it may already be exiting. A failed
+     * identity read leaves `keyId` null: nothing is then matched by key.
+     */
+    private suspend fun wipeTarget(identityDestroyed: Boolean): WipedNode =
+        WipedNode(
+            baseUrl = apiClient.baseUrl,
+            keyId = runCatching { nodeKeyIdReader() }.getOrNull()?.takeIf { it.isNotBlank() },
+            identityDestroyed = identityDestroyed,
+        )
+
+    /**
+     * CIRISClient#87: the server cleared the node's home, not this app's secure
+     * storage. Forget the session token (stored and live) and the switcher's
+     * profile(s) for THAT node, before [onSuccess] and before a mobile restart,
+     * so nothing is merged back on the next launch. The same call on every
+     * platform; non-fatal — the wipe already happened.
+     */
+    private suspend fun forgetWiped(target: WipedNode) {
+        forgetWipedNode(
+            target,
+            deleteStoredToken = storedTokenDeleter,
+            clearLiveToken = { apiClient.clearAccessToken() },
+            forgetProfiles = forgetNodeProfiles,
+        )
     }
 
     /**
@@ -338,7 +394,8 @@ class DataManagementViewModel(
             try {
                 // Call the admin-protected API endpoint
                 logWarn(method, "Calling /v1/system/data/wipe-signing-key API...")
-                val result = apiClient.wipeSigningKey(reason = "User requested complete identity wipe from Data Management")
+                val target = wipeTarget(identityDestroyed = true)
+                val result = wipeSigningKeyCall()
 
                 if (!result.success) {
                     logError(method, "API wipe failed: ${result.message}")
@@ -348,6 +405,7 @@ class DataManagementViewModel(
                 }
 
                 logWarn(method, "API wipe succeeded, walletAccessDestroyed=${result.walletAccessDestroyed}")
+                forgetWiped(target)
                 _wipeSigningKeySuccess.value = true
 
                 // Invoke callback for any cleanup before restart

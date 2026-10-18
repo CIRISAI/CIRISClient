@@ -1350,7 +1350,11 @@ fun CIRISApp(
         EnvironmentInfoViewModel(apiClient)
     }
     val dataManagementViewModel: DataManagementViewModel = viewModel {
-        DataManagementViewModel(apiClient, secureStorage, envFileUpdater)
+        DataManagementViewModel(
+            apiClient, secureStorage, envFileUpdater,
+            // CIRISClient#87: a successful wipe forgets the wiped node here too.
+            forgetNodeProfiles = nodeSwitcherViewModel::forgetWipedNode,
+        )
     }
     val networkViewModel: NetworkViewModel = viewModel {
         NetworkViewModel(apiClient)
@@ -4825,6 +4829,9 @@ fun CIRISApp(
                         PlatformLogger.i(TAG, "[Screen.DataManagement] Reset triggered, restarting via Startup")
                         // Clear stale ViewModel state so old messages don't survive the wipe
                         interactViewModel.resetState()
+                        // The VM already deleted the stored + live token (CIRISClient#87);
+                        // this composable's copy must not outlive them on any platform.
+                        currentAccessToken = null
                         if (ai.ciris.mobile.shared.platform.isDesktop()) {
                             // Desktop: kill the Python server via HTTP then let startup relaunch it fresh
                             PlatformLogger.i(TAG, "[Screen.DataManagement] Desktop: killing Python server via local-shutdown API")
