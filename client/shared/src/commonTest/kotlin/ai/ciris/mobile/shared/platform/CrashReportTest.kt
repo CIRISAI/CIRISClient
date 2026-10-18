@@ -55,6 +55,30 @@ class CrashReportTest {
         val report = CrashReport.format(SelfCaused("loop"))
         assertTrue(report.startsWith("UNHANDLED SelfCaused: loop\n"), report)
         assertFalse(report.contains("CAUSED BY"), report)
+        // Kotlin/Native's stackTraceToString() follows the loop until the heap
+        // is gone (OutOfMemoryError on iosSimulatorArm64, PR #200's first run),
+        // so a cyclic graph never reaches it. The JVM stops on its own, which is
+        // why desktop alone could not show this.
+        assertTrue(report.contains(CrashReport.STACK_OMITTED_CYCLE), report)
+    }
+
+    @Test
+    fun a_cycle_through_the_suppressed_list_is_caught_too() {
+        val outer = IllegalStateException("outer")
+        val inner = RuntimeException("inner")
+        outer.addSuppressed(inner)
+        inner.addSuppressed(outer)
+        val report = CrashReport.format(outer)
+        assertTrue(report.contains("SUPPRESSED RuntimeException: inner"), report)
+        assertTrue(report.contains(CrashReport.STACK_OMITTED_CYCLE), report)
+    }
+
+    @Test
+    fun an_acyclic_report_still_carries_the_full_stack() {
+        val t = IllegalStateException("outer", IllegalArgumentException("root cause"))
+        val report = CrashReport.format(t)
+        assertFalse(report.contains(CrashReport.STACK_OMITTED_CYCLE), report)
+        assertTrue(report.contains(t.stackTraceToString()), report)
     }
 
     @Test

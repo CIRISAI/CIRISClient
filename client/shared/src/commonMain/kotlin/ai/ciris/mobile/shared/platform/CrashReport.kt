@@ -41,7 +41,33 @@ object CrashReport {
         for (s in throwable.suppressedExceptions) {
             append("SUPPRESSED ").append(describe(s)).append('\n')
         }
-        append(throwable.stackTraceToString())
+        // Kotlin/Native's stackTraceToString() walks causes and suppressed
+        // with no visited set: a loop runs it out of heap (OutOfMemoryError on
+        // iosSimulatorArm64, PR #200), inside the hook, before abort(). The
+        // JVM stops on its own; this has to hold on both.
+        append(if (loops(throwable)) STACK_OMITTED_CYCLE else throwable.stackTraceToString())
+    }
+
+    /**
+     * True when the graph of causes and suppressed throwables reachable from
+     * [root] revisits a throwable on its own path, or is too large to trust
+     * ([MAX_GRAPH] nodes) — either way, too risky to dump.
+     */
+    private fun loops(root: Throwable): Boolean {
+        val onPath = mutableSetOf<Throwable>()
+        val done = mutableSetOf<Throwable>()
+        fun visit(t: Throwable): Boolean {
+            if (t in onPath) return true
+            if (t in done) return false
+            if (onPath.size + done.size >= MAX_GRAPH) return true
+            onPath += t
+            val next = listOfNotNull(t.cause) + t.suppressedExceptions
+            if (next.any { visit(it) }) return true
+            onPath -= t
+            done += t
+            return false
+        }
+        return visit(root)
     }
 
     /**
@@ -75,4 +101,9 @@ object CrashReport {
         "${t::class.simpleName ?: "Throwable"}: ${t.message}"
 
     private const val MAX_CAUSES = 16
+    private const val MAX_GRAPH = 256
+
+    /** Stands where the stack would be when the cause graph loops (see [format]). */
+    const val STACK_OMITTED_CYCLE =
+        "STACK OMITTED: the cause/suppressed chain loops back on itself, and Kotlin/Native's stackTraceToString() does not stop on a loop"
 }
