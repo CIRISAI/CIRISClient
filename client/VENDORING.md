@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `fix/client-copy-0.5.232` (`b11aef95dd1e62c06054d28c5d11d766dd323e81`) — branch (unmerged), the copy the next server release carries; v0.5.231 + two literals (`add_device.mint_failed`, `contacts.awaiting_key_body`) + the add-device answers to CIRISClient#189 (`expired` when the other device no longer holds the request, the host's `device_class`, `FSD/ADD_DEVICE.md` §4.2; `f9d25729`: `DELETE /v1/setup/add-device` withdraws a request or undoes an approval; `b11aef95`: five person-facing `contacts.*` rewrites). Re-pin to the server's tag once that release ships. | `feat/add-device` (#189: the new `expired` detail, `device_class` and `DELETE /v1/setup/add-device` read; no new server ids at `b3e05e27`, `f9d25729` or `b11aef95`; the five `contacts.*` rewrites of `b11aef95` set verbatim). Before it, `feat/server-0.5.231-parity` at `f2bbb63f` (every emitted id reconciled: the 13 `add_device.*` refusals of #786/#791 added, the #776 person-facing `contacts.*` rewrites re-synced, the rc7 halt copy and the 0.5.223 `durable_queue_depth` / 0.5.225 `halt-status` / 0.5.222 `affiliations` shapes read. Previous: `v0.5.221` `25d3b643`, `release/0.5.228`) | 2026-10-18 |
+| `CIRISAI/CIRISServer` | `fix/client-copy-0.5.232` (`f2bbb63f5bc4d9ba091590bcf9acd6d1b015a387`) — branch (unmerged), the copy the next server release carries; v0.5.231 + two literals (`add_device.mint_failed`, `contacts.awaiting_key_body`). Re-pin to the server's tag once that release ships. | `feat/server-0.5.231-parity` (every emitted id reconciled: the 13 `add_device.*` refusals of #786/#791 added, the #776 person-facing `contacts.*` rewrites re-synced, the rc7 halt copy and the 0.5.223 `durable_queue_depth` / 0.5.225 `halt-status` / 0.5.222 `affiliations` shapes read. Previous: `v0.5.221` `25d3b643`, `release/0.5.228`) | 2026-10-18 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `69c2160fb8ae574a27d2308ade3f6867e6b9d93f204d84ea765810586e243d5f`
+**state digest:** `5bdfa33897bbc9f64d1349eaabd9bdae15f8291db09069c920511a14b6881228`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

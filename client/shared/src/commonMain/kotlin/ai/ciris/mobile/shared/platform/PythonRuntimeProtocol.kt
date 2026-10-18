@@ -1,7 +1,5 @@
 package ai.ciris.mobile.shared.platform
 
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.MutableStateFlow
 import ai.ciris.mobile.shared.models.capability.BackendOwnership
 
 /**
@@ -117,44 +115,20 @@ interface PythonRuntimeProtocol {
     }
 
     /**
-     * The one-time CLAIM PIN the LOCAL node prints to its console on a fresh,
-     * unclaimed boot (the "OWNERSHIP UNCLAIMED" banner), captured from the node's
-     * stdout. `null` until a banner is seen (or on platforms that do not launch a
-     * local node). The first-run setup flow reads this to self-claim ownership of
-     * the local node on COMPLETE.
+     * ONE read of the node's one-time CLAIM PIN from its durable 0600 file — the
+     * path the node declares as `claim_pin_file` in `GET /v1/setup/status`, else
+     * `<CIRIS_HOME>/claim_pin`. `null` when the file is absent/empty/unreadable
+     * or on platforms that do not drive a local node.
      *
-     * Console-only by design — the PIN is NEVER served over HTTP, so capturing it
-     * from the process the app itself launched is the only client-side path.
-     *
-     * Default: a constant empty flow (platforms that drive a local node override).
-     */
-    val localClaimPin: StateFlow<String?>
-        get() = EMPTY_CLAIM_PIN
-
-    /**
-     * Read the node's one-time CLAIM PIN from its DURABLE `<CIRIS_HOME>/claim_pin`
-     * file (0600), ON DEMAND. This is the race-free, canonical source: unlike the
-     * [localClaimPin] stdout banner, the file persists until ownership is claimed,
-     * so reading it at claim time (well after boot) always sees it — whereas the
-     * banner/file-at-boot capture can miss it because the node writes `claim_pin`
-     * a few seconds AFTER the health endpoint answers (observed on iOS). Same-
-     * process file access is first-run operator-level access — the same secret the
-     * console banner shows — so this preserves the console-only-over-HTTP guarantee
-     * (setup/root still verifies the PIN before granting ownership). Returns `null`
-     * when the file is absent/empty or on platforms that do not drive a local node.
+     * The FILE is the only source (CIRISClient#184: "the claim PIN is a file on
+     * disk, never the log"). Since ciris-server 0.5.227 the boot banner names the
+     * file instead of printing the PIN, so no platform parses any log for it —
+     * and the NodeCode is read over HTTP (`GET /v1/federation/node-code`), not
+     * from the banner either. Single-shot on purpose: the bounded wait for a
+     * file that appears a few seconds after health answers is
+     * [ClaimPinFile.await], in one place for every platform. Same-uid file
+     * access is first-run operator-level access, and `setup/root` still
+     * verifies the PIN before granting ownership.
      */
     suspend fun readLocalClaimPin(): String? = null
-
-    /**
-     * THIS node's own NodeCode, if the node printed it alongside the unclaimed
-     * banner. May be `null` even when [localClaimPin] is set — in that case the
-     * NodeCode is fetched at claim time via `GET /v1/federation/node-code`.
-     */
-    val localNodeCode: StateFlow<String?>
-        get() = EMPTY_NODE_CODE
-
-    companion object {
-        private val EMPTY_CLAIM_PIN: StateFlow<String?> = MutableStateFlow(null)
-        private val EMPTY_NODE_CODE: StateFlow<String?> = MutableStateFlow(null)
-    }
 }

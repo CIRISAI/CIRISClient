@@ -179,11 +179,12 @@ fun SetupScreen(
      */
     hasAgent: Boolean = false,
     onBackToLogin: (() -> Unit)? = null,  // Optional callback to return to login screen
-    // The one-time ownership CLAIM PIN / NodeCode captured from the LOCAL node's
-    // boot banner (PythonRuntime.localClaimPin / .localNodeCode). Used on setup
-    // COMPLETE to self-claim ownership of the local node for the just-created user.
-    // SUSPEND providers so the consumer can AWAIT the PIN (the banner can land
-    // just after COMPLETE fires) instead of snapshotting a possibly-null value.
+    // The one-time ownership CLAIM PIN, read from the LOCAL node's claim_pin
+    // FILE (ClaimPinFile.await over readLocalClaimPin — never a log banner,
+    // CIRISClient#184). Used on setup COMPLETE to self-claim ownership of the
+    // local node for the just-created user. SUSPEND providers so the consumer
+    // can AWAIT the file (the node writes it a few seconds after health
+    // answers) instead of snapshotting a possibly-null value.
     // Default null providers → claim is skipped with an honest error (no local
     // node launched on this platform, so nothing to capture).
     claimPinProvider: suspend () -> String? = { null },
@@ -3366,7 +3367,7 @@ private fun CompleteStep(
 
         // LOCAL-node ownership self-claim status. Success → this node is now
         // OWNED by the just-created user. Failure → honest reason (e.g. the
-        // console-only claim PIN was not captured); the node can still be claimed
+        // node's claim_pin file never appeared); the node can still be claimed
         // later from the Network surface.
         when {
             ownershipClaim.inProgress -> {

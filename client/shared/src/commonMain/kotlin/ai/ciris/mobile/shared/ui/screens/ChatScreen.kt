@@ -26,6 +26,9 @@ import ai.ciris.mobile.shared.ui.components.ViewerAuthority
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import ai.ciris.mobile.shared.viewmodels.UserChatViewModel
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
+import ai.ciris.mobile.shared.ui.shell.composerImePadding
+import ai.ciris.mobile.shared.ui.shell.imeOpen
+import androidx.compose.foundation.layout.consumeWindowInsets
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.primitives.ListState
 import ai.ciris.mobile.shared.ui.primitives.StateBlock
@@ -170,7 +173,10 @@ fun ChatScreen(
     // The transcript is OLDEST FIRST, so the newest row is the last one — that
     // is what a reader entering a conversation wants under their thumb.
     val listState = rememberLazyListState()
-    LaunchedEffect(messages.size) {
+    // The keyboard coming up shrinks the transcript from below; bring the
+    // newest message back above the composer when it does (CIRISClient#186).
+    val keyboardUp = imeOpen()
+    LaunchedEffect(messages.size, keyboardUp) {
         if (messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex)
     }
 
@@ -242,7 +248,12 @@ fun ChatScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(paddingValues),
+                .padding(paddingValues)
+                // The composer sits above the soft keyboard (CIRISClient#186):
+                // this screen's content pads by it, not the app. The Scaffold's
+                // own bottom inset is consumed first so the two do not stack.
+                .consumeWindowInsets(paddingValues)
+                .composerImePadding(),
         ) {
             // ── The typed refusal ─────────────────────────────────────────────
             if (refusalReasonId != null || refusalDetail != null) {

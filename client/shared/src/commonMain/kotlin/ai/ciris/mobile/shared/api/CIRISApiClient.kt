@@ -793,6 +793,16 @@ class CIRISApiClient(
             logDebug(method, "Response received: status=${response.status}, success=${response.success}")
 
             if (!response.success) {
+                // A SHED 503 (agent 2.15+, CIRISClient#173) is a named,
+                // retryable state, not an error: the message was refused
+                // before any task existed. Any other 503 stays an error.
+                if (response.status == 503) {
+                    val raw = response.response
+                    AgentShed.fromResponse(503, raw.headers["Retry-After"], runCatching { raw.bodyAsText() }.getOrNull())?.let { shed ->
+                        logWarn(method, "Agent is shedding new work (RESOURCE_SHED ${shed.resources}); retry after ${shed.retryAfterSeconds}s")
+                        throw shed
+                    }
+                }
                 logError(method, "API returned non-success status: ${response.status}")
                 throw RuntimeException("API error: HTTP ${response.status}")
             }

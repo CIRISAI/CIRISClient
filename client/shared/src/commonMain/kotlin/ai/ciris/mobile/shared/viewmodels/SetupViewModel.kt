@@ -1076,20 +1076,19 @@ class SetupViewModel(
      * POSTs the signed artifact to its own `/v1/setup/root`. The substrate does
      * all crypto; the app only supplies {node_code, claim_pin}.
      *
-     * The one-time claim PIN is captured ASYNCHRONOUSLY from the node's boot
-     * banner (console stream + boot-log FILE fallback) by PythonRuntime. Because
-     * the banner can land slightly after this COMPLETE step fires, we take a
-     * SUSPEND provider ([claimPinProvider]) rather than a one-shot snapshot and
-     * AWAIT the PIN (bounded timeout) inside the coroutine below. Only after the
-     * wait times out do we treat the PIN as "not captured" — and even then we do
-     * NOT block the flow (the node simply stays unclaimed until the user claims
-     * it from the network surface).
+     * The one-time claim PIN is the node's claim_pin FILE, never a log line
+     * (CIRISClient#184). The node writes it a few seconds after health answers,
+     * so COMPLETE can fire first: we take a SUSPEND provider ([claimPinProvider],
+     * [ai.ciris.mobile.shared.platform.ClaimPinFile.await] over the platform's
+     * single read) rather than a snapshot. A null after that bounded wait is the
+     * named outcome [ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT]
+     * — the node is already claimed (the PIN is consumed on claim) or the file
+     * is not readable by this user — and we do NOT block the flow.
      *
-     * @param claimPinProvider suspends until the one-time claim PIN is available
-     *        (PythonRuntime.localClaimPin, awaited with a bounded timeout by the
-     *        provider), or returns null/blank if it was never seen.
-     * @param nodeCodeProvider resolves the node's own NodeCode if it was captured
-     *        from the banner; when null/blank we fetch it via
+     * @param claimPinProvider suspends until the claim_pin file yields a PIN, or
+     *        returns null/blank when it never appeared in the bounded window.
+     * @param nodeCodeProvider an already-known NodeCode, if any; when null/blank
+     *        (the default — nothing parses a banner for it) we fetch it via
      *        `GET /v1/federation/node-code`.
      * @param cohortScope the cohort scope to claim under (`self` by default — a
      *        first-run desktop install is the founder's own node).
@@ -1138,7 +1137,7 @@ class SetupViewModel(
         // few seconds (the banner may land just after this COMPLETE step fires),
         // and the COMPLETE screen renders this in-progress state during the wait.
         _state.value = _state.value.copy(
-            ownershipClaim = _state.value.ownershipClaim.copy(inProgress = true, error = null)
+            ownershipClaim = _state.value.ownershipClaim.copy(inProgress = true, error = null, errorId = null)
         )
         viewModelScope.launch {
             // THE FED-ID FIRST, THE PIN SECOND (CIRISClient#68). The mint used
@@ -1194,22 +1193,20 @@ class SetupViewModel(
                 return@launch
             }
 
-            // WAIT for the one-time PIN. The provider suspends until PythonRuntime
-            // latches it from the node's boot banner (console stream OR boot-log
-            // FILE fallback), with a bounded timeout. A still-null/blank result
-            // after the wait means it was genuinely never captured — only THEN do
-            // we surface the honest "not captured" error (no one-shot snapshot).
+            // WAIT for the claim_pin FILE (bounded, in the provider). A
+            // still-null/blank result means the file never appeared: named, not
+            // "go read a console" — no console carries the PIN (CIRISClient#184).
             val claimPin = claimPinProvider()
             if (claimPin.isNullOrBlank()) {
-                PlatformLogger.w(TAG, "claimLocalNodeOwnership: claim PIN not captured after wait — leaving node unclaimed")
-                PlatformLogger.w(TAG, "[ORDER] claim_settled claimed=false (PIN not captured)")
+                PlatformLogger.w(TAG, "claimLocalNodeOwnership: claim_pin file never appeared — leaving node unclaimed")
+                PlatformLogger.w(TAG, "[ORDER] claim_settled claimed=false (" + ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT + ")")
                 _state.value = _state.value.copy(
                     ownershipClaim = _state.value.ownershipClaim.copy(
                         inProgress = false,
                         claimed = false,
-                        error = "claim PIN not captured — this node's one-time ownership " +
-                            "PIN was not seen on its console. You can claim ownership later " +
-                            "from the Network surface using the PIN printed on the node.",
+                        errorId = ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT,
+                        error = ai.ciris.mobile.shared.localization.LocalizationHelper
+                            .getString("mobile.setup_claim_pin_file_absent"),
                         // NODE VENDOR DRIFT #14 (restored after the 2.9.28
                         // re-vendor dropped it): the message itself says "later",
                         // so the panel must not say "not recoverable by retrying".

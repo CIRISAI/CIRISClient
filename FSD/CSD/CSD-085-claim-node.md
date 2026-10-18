@@ -18,8 +18,11 @@ rules are visible rather than described:
   one responsible steward at any time (CC 3.2, single-owner invariant).
 * The **owner signs its own owner-binding**, and a node with no genesis owner is
   **unowned, not a first-come landgrab target** (CC 3.2). That is what the
-  one-time claim PIN is: proof of physical custody, read off the node's own
-  console, which never travels over HTTP.
+  one-time claim PIN is: proof of physical custody, read from the node's own
+  0600 `claim_pin` file, which never travels over HTTP. Since ciris-server
+  0.5.227 the boot banner names that file instead of printing the PIN, so the
+  PIN is in no log (operator ruling: "the claim PIN is a file on disk, never
+  the log"; CIRISClient#184).
 * `ownership:*` is owner-only, because "a third party asserting your responsible
   party is a **seizure by attestation**" (CC 3.4.5). **The app performs no
   crypto.** It hands `{node_code, claim_pin, cohort_scope}` to the *local* node;
@@ -30,7 +33,7 @@ rules are visible rather than described:
 **The precondition is asked first, on entry.** The claim is signed by this
 device's own node, so without that node running there is nothing to type a
 NodeCode into — and the operator should learn that before making a trip to the
-target node's console, not after (`ClaimNodeScreen.kt:90-96`,
+target node for its PIN file, not after (`ClaimNodeScreen.kt:90-96`,
 `docs/FSD-remote-first-run-claim.md` A2).
 
 ## 2. Surface (what)
@@ -135,7 +138,7 @@ fields:
     use: emit
     type: string
     example: "XXXX-XXXX"
-    renders: "the one-time PIN field. The PIN is read off the target node's console by a human; it never travels over HTTP by design"
+    renders: "the one-time PIN field. A human reads the PIN from the target node's claim_pin file (its banner names the file, never the PIN); it never travels over HTTP by design"
     tag: field_claim_node_pin
   - ceg: x_private:owner_display_name
     use: emit
@@ -262,7 +265,7 @@ means **the only constitutional act in the first-run path has no automated
 coverage at all**.
 
 Also untested: the claim itself needs a second, unclaimed node and a PIN read
-from its console, which no fixture provides; `testing/gate/node_fixture.py`
+from its `claim_pin` file, which no fixture provides; `testing/gate/node_fixture.py`
 starts one node.
 
 **The ask, in order.** (1) `CirisTextField` for all three fields — drivable by

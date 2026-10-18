@@ -56,7 +56,7 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
  *
  * The founder reaches a node and becomes its SYSTEM_ADMIN by entering the
  * node's **NodeCode** (`CIRIS-V1-…`, pasted or scanned) and the one-time
- * **claim PIN** the operator reads off the node's console. This screen is a
+ * **claim PIN** from the node's `claim_pin` file (CIRISClient#184). This screen is a
  * pure Compose consumer of the already-built [NodeSwitcherViewModel]: it does
  * NOT reinvent any of the connect/pin/claim logic. On submit it runs
  *
@@ -91,7 +91,7 @@ fun ClaimNodeScreen(
     // ASK THE PRECONDITION FIRST. The claim is signed by this device's OWN node
     // (the app does no crypto), so without it running there is nothing to type a
     // NodeCode and a one-time PIN into. Checking on entry means the operator
-    // learns that before making a trip to the target node's console, rather than
+    // learns that before making a trip to the target node for its PIN file, rather than
     // after -- see docs/FSD-remote-first-run-claim.md A2.
     androidx.compose.runtime.LaunchedEffect(Unit) { viewModel.checkLocalSigner() }
     val signerMissing = bootstrap.localSignerReady == false
@@ -178,7 +178,7 @@ fun ClaimNodeScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            // ── Claim PIN field (one-time PIN from the node's console) ─────────
+            // ── Claim PIN field (one-time PIN from the node's claim_pin file) ─────────
             rememberTextInputDriver("field_claim_node_pin", pinInput, enabled = !inFlight) { pinInput = it }
             OutlinedTextField(
                 value = pinInput,

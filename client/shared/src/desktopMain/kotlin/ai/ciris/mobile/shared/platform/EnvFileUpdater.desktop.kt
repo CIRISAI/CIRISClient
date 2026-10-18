@@ -5,12 +5,19 @@ import java.io.File
 /**
  * Desktop EnvFileUpdater implementation.
  * Reads/writes .env files in the CIRIS home directory.
+ *
+ * @param home the CIRIS home to read and write — `CIRIS_HOME`, else `~/ciris`.
+ *   Injectable so the token write-through and the refresh-signal handling can
+ *   be exercised against a temp directory (CIRISClient#172); production goes
+ *   through [createEnvFileUpdater] and never names one.
  */
-actual class EnvFileUpdater {
+actual class EnvFileUpdater(home: File? = null) {
     private val cirisHome: File by lazy {
-        val home = System.getenv("CIRIS_HOME")
-            ?: "${System.getProperty("user.home")}/ciris"  // ~/ciris not ~/.ciris
-        File(home).also { it.mkdirs() }
+        val dir = home ?: File(
+            System.getenv("CIRIS_HOME")
+                ?: "${System.getProperty("user.home")}/ciris",  // ~/ciris not ~/.ciris
+        )
+        dir.also { it.mkdirs() }
     }
 
     private val envFile: File get() = File(cirisHome, TokenHandshake.ENV_FILE)

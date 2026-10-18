@@ -551,8 +551,14 @@ data class NodeOwnershipClaimState(
     val role: String? = null,
     /** The claimed `wa_id` on success. */
     val waId: String? = null,
-    /** Human-readable failure reason (e.g. "claim PIN not captured"). */
+    /** Human-readable failure reason, localized where the client authors it. */
     val error: String? = null,
+    /**
+     * The stable name of a client-side failure, when there is one
+     * (`claim.pin_file_absent`: the node's claim_pin file never appeared,
+     * CIRISClient#184). Tests and automation key on this, never on [error].
+     */
+    val errorId: String? = null,
     /**
      * NODE VENDOR DRIFT #14 (restored after the 2.9.28 re-vendor dropped it):
      * is [error] worth RETRYING? Set where the failure happens, because that is
