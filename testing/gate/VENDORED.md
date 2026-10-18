@@ -28,14 +28,16 @@ prevent. So the split is deliberate and recorded rather than left to inference.
 | here | upstream | how |
 |---|---|---|
 | `platform_procs.py` | `tools/qa_runner/platform_procs.py` | verbatim — port ownership, Windows `netstat` / POSIX `lsof` |
-| `build_qa_gallery.py` | `tools/dev/build_qa_gallery.py` | verbatim — the screenshot gallery |
+| `build_qa_gallery.py` | `tools/dev/build_qa_gallery.py` | **adapted** — reads this repo's `reports/<leg>.json` (run_platform's Report) rather than the agent's `chat-*.json`, and carries the server version and optional-skip count per row (CIRISClient#166, #168) |
 | `platforms.py` | `tools/qa_runner/modules/web_ui/platforms.py` | **adapted** — capture transplants, bring-up could not. See below |
 | `candidate_artifacts.py` | `tools/fetch_client_artifacts.py` | **the seam**, adapted — see below |
 | `flow_spec.py` | `tools/qa_runner/modules/web_ui/flow_spec.py` | **extended** — the CSD/3 §3 predicates added; everything else verbatim. See below |
 | `flow_helper.py` | — | **ours.** The async surface `FlowRunner` drives, over this repo's sync driver |
 
-`platform_procs.py` and `build_qa_gallery.py` are stdlib-only and reference
-nothing of CIRISAgent's, which is why they transplant untouched.
+`platform_procs.py` is stdlib-only and references nothing of CIRISAgent's,
+which is why it transplants untouched. `build_qa_gallery.py` was, until it
+turned out to read a report shape this repo never writes (run 39023854089:
+five green legs, five "did not run" tiles).
 
 ### `flow_spec.py` — the one that could be taken whole, and why it was extended
 

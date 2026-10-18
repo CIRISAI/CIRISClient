@@ -419,7 +419,9 @@ def run_all(specs: Sequence[FlowSpec], drv, *, platform=None, artifacts: Optiona
                     print(f" fixture {name}: teardown failed: {e}")
     print(f"\n flows: {summary(outcomes)}")
     for o in outcomes:
-        print(f"  [{o.status:^12}] {o.flow} ({o.csd}): {o.detail}")
+        skipped = sum(1 for st in o.steps if st.get("status") == "skipped")
+        tail = f" · {skipped} optional step(s) skipped" if skipped else ""
+        print(f"  [{o.status:^12}] {o.flow} ({o.csd}): {o.detail}{tail}")
     return outcomes
 
 

@@ -3,6 +3,8 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.api.models.DocumentPayload
 import ai.ciris.api.models.ImagePayload
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.AgentShed
+import ai.ciris.mobile.shared.api.AgentShedGaveUp
 import ai.ciris.mobile.shared.api.SystemWarning
 import ai.ciris.mobile.shared.api.ReasoningEvent
 import ai.ciris.mobile.shared.localization.LocalizationHelper
@@ -96,8 +98,17 @@ data class CreditStatus(
      * and every send was blocked with a "buy credits" message against a
      * 398-credit account (CIRISClient#59). This is that conclusion, on the
      * screen where the person is stuck.
+     *
+     * And distinct from the SESSION. This was `authExpired` and rendered the
+     * "your session is no longer valid" banner, whose button signed the
+     * person out — for a Google token that had passed its hour while their
+     * own agent was answering them (CIRISClient#171). It is a credits state:
+     * sends through the hosted proxy pause, and the fix is a fresh provider
+     * sign-in that leaves the session alone.
      */
-    val authExpired: Boolean = false,
+    val billingCredentialStale: Boolean = false,
+    /** That refresh is in flight — on desktop the browser is open and the node is being polled. */
+    val billingCredentialRefreshing: Boolean = false,
     val hasCredit: Boolean = false,
     val creditsRemaining: Int = 0,
     val freeUsesRemaining: Int = 0,
@@ -170,6 +181,20 @@ fun WalletStatus.badgeState(): WalletBadgeState = when {
     !hasWallet -> WalletBadgeState.NO_WALLET
     balance != "0.00" && balance != "0" -> WalletBadgeState.FUNDED
     else -> WalletBadgeState.EMPTY
+}
+
+/**
+ * Chat's view of a SHED 503 (CIRISClient#173). Runtime self-protection, never
+ * DEFER/REJECT wording: those are the agent's decisions, this is not one.
+ */
+sealed class ChatShedState {
+    data object None : ChatShedState()
+
+    /** Counting down to send [nextAttempt] of [maxAttempts]. */
+    data class Waiting(val secondsRemaining: Int, val nextAttempt: Int, val maxAttempts: Int) : ChatShedState()
+
+    /** The bounded resend stopped after [attempts] sheds; the text is back in the composer. */
+    data class GaveUp(val attempts: Int) : ChatShedState()
 }
 
 class InteractViewModel(
@@ -307,6 +332,17 @@ class InteractViewModel(
     private val _processingStatus = MutableStateFlow("")
     val processingStatus: StateFlow<String> = _processingStatus.asStateFlow()
 
+    /**
+     * The agent is shedding new work (503 RESOURCE_SHED, CIRISClient#173):
+     * a countdown to the automatic resend, or the resend gave up and the
+     * user's text is back in the composer with Retry offered.
+     */
+    private val _shedState = MutableStateFlow<ChatShedState>(ChatShedState.None)
+    val shedState: StateFlow<ChatShedState> = _shedState.asStateFlow()
+
+    /** The wait between shed resends; tests replace it to run the countdown without a clock. */
+    internal var shedSleep: suspend (Long) -> Unit = { delay(it) }
+
     private val _authError = MutableStateFlow<String?>(null)
     val authError: StateFlow<String?> = _authError.asStateFlow()
 
@@ -363,14 +399,39 @@ class InteractViewModel(
     private val _creditStatus = MutableStateFlow(CreditStatus())
     val creditStatus: StateFlow<CreditStatus> = _creditStatus.asStateFlow()
 
-    /** TokenManager said a person must sign in again. Carry it to the send path. */
-    fun onAuthExpired() {
-        _creditStatus.value = _creditStatus.value.copy(authExpired = true)
+    /**
+     * The SESSION is no longer valid — TokenManager's conclusion about the
+     * CIRIS access token, which only Login renews. Rendered as the session
+     * banner; the 3-strikes 401 path in [fetchMessages] is the other way a
+     * dead session is noticed, and it navigates to Login outright.
+     */
+    private val _sessionExpired = MutableStateFlow(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired.asStateFlow()
+
+    fun onSessionExpired() {
+        _sessionExpired.value = true
     }
 
-    /** A fresh credential arrived. A later successful credit load clears it too. */
-    fun onAuthRestored() {
-        _creditStatus.value = _creditStatus.value.copy(authExpired = false)
+    fun onSessionRestored() {
+        _sessionExpired.value = false
+    }
+
+    /** The BILLING credential needs a person. Carry it to the send path — credits, not session. */
+    fun onBillingCredentialStale() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialStale = true)
+    }
+
+    /** A fresh billing credential arrived. A later successful credit load clears it too. */
+    fun onBillingCredentialRefreshed() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialStale = false)
+    }
+
+    fun onBillingRefreshStarted() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialRefreshing = true)
+    }
+
+    fun onBillingRefreshFinished() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialRefreshing = false)
     }
 
     // Trust status for shield display
@@ -826,17 +887,35 @@ class InteractViewModel(
             logDebug(method, "Already sending, ignoring")
             return
         }
+        _shedState.value = ChatShedState.None
 
         // Pre-flight credit check - only when using CIRIS proxy
         val currentCredits = _creditStatus.value
-        if (_llmHealth.value.isCirisProxy && currentCredits.authExpired) {
-            // NOT "no credits". The account may be full; the token is stale and
-            // only a sign-in fixes it. The purchase message sent people to the
-            // Buy button for a problem money cannot solve (CIRISClient#59).
-            logWarn(method, "Billing credential expired - blocking send until sign-in")
+        if (_llmHealth.value.isCirisProxy && _sessionExpired.value) {
+            logWarn(method, "Session expired - blocking send until sign-in")
             _messages.value = (_messages.value + ChatMessage(
                 id = generateMessageId(),
                 text = LocalizationHelper.getString("auth.session_expired"),
+                type = MessageType.SYSTEM,
+                timestamp = Clock.System.now(),
+            )).takeLast(50)
+            return
+        }
+        if (_llmHealth.value.isCirisProxy && currentCredits.billingCredentialStale) {
+            // NOT "no credits". The account may be full; the token is stale and
+            // only a sign-in fixes it. The purchase message sent people to the
+            // Buy button for a problem money cannot solve (CIRISClient#59).
+            // And NOT "session expired": the sentence names the credential
+            // that lapsed and the sign-in that renews it (CIRISClient#171).
+            // Only when the hosted proxy is the LLM — with a BYOK key nothing
+            // about chat depends on billing.
+            logWarn(method, "Billing credential stale - blocking proxy send until a fresh provider sign-in")
+            _messages.value = (_messages.value + ChatMessage(
+                id = generateMessageId(),
+                text = LocalizationHelper.getString(
+                    "mobile.billing_credential_stale",
+                    mapOf("provider" to if (ai.ciris.mobile.shared.platform.isIOS()) "Apple" else "Google"),
+                ),
                 type = MessageType.SYSTEM,
                 timestamp = Clock.System.now(),
             )).takeLast(50)
@@ -902,11 +981,44 @@ class InteractViewModel(
                 _messages.value = (_messages.value + userMessage).takeLast(50)
 
                 logDebug(method, "Calling apiClient.sendMessage with ${imagePayloads?.size ?: 0} images, ${documentPayloads?.size ?: 0} documents")
-                val response = apiClient.sendMessage(
-                    message = if (text.isNotEmpty()) text else "Please review the attached file(s).",
-                    images = imagePayloads,
-                    documents = documentPayloads
-                )
+                // A SHED 503 is refused before any task exists (CIRISAgent
+                // base_observer), so resending the SAME request cannot
+                // duplicate it. Bounded: AgentShed.MAX_ATTEMPTS sends and
+                // MAX_TOTAL_WAIT_SECONDS of waiting.
+                val response = try {
+                    AgentShed.sendWithShedRetry(
+                        onWait = { wait ->
+                            if (wait != null) {
+                                _shedState.value = ChatShedState.Waiting(wait.secondsRemaining, wait.nextAttempt, wait.maxAttempts)
+                                _processingStatus.value = LocalizationHelper.getString(
+                                    "mobile.interact_shed_retrying",
+                                    mapOf("seconds" to wait.secondsRemaining.toString()),
+                                )
+                            } else {
+                                _shedState.value = ChatShedState.None
+                                _processingStatus.value = LocalizationHelper.getString("mobile.processing_sending")
+                            }
+                        },
+                        sleep = shedSleep,
+                    ) {
+                        apiClient.sendMessage(
+                            message = if (text.isNotEmpty()) text else "Please review the attached file(s).",
+                            images = imagePayloads,
+                            documents = documentPayloads
+                        )
+                    }
+                } catch (gaveUp: AgentShedGaveUp) {
+                    // Never admitted, so nothing to reconcile: take the
+                    // optimistic bubble back and return the text and files to
+                    // the composer, where Retry sends them again.
+                    logWarn(method, "Agent still shedding after ${gaveUp.attempts} attempts; keeping the user's message")
+                    _messages.value = _messages.value.filterNot { it.id == localMessageId }
+                    if (_inputText.value.isEmpty()) _inputText.value = text
+                    if (_attachedFiles.value.isEmpty()) _attachedFiles.value = files
+                    _processingStatus.value = ""
+                    _shedState.value = ChatShedState.GaveUp(gaveUp.attempts)
+                    return@launch
+                }
                 logInfo(method, "Message sent successfully: messageId=${response.message_id}")
 
                 // Reconcile the optimistic user message's ID to the server's
@@ -992,6 +1104,17 @@ class InteractViewModel(
                 _isSending.value = false
             }
         }
+    }
+
+    /** Retry after the shed resend gave up: the kept text and files go again. */
+    fun retryAfterShed() {
+        _shedState.value = ChatShedState.None
+        sendMessage()
+    }
+
+    /** Close the gave-up notice; the kept text stays in the composer. */
+    fun dismissShedNotice() {
+        _shedState.value = ChatShedState.None
     }
 
     /**

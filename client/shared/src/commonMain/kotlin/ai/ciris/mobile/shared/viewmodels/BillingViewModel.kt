@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.PurchaseError
 import ai.ciris.mobile.shared.PurchaseResultType
 import ai.ciris.mobile.shared.api.CIRISApiClientProtocol
 import ai.ciris.mobile.shared.api.CreditStatusData
+import ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome
 import ai.ciris.mobile.shared.auth.TokenManager
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.ui.screens.CreditProduct
@@ -35,7 +36,9 @@ import kotlinx.coroutines.launch
  */
 class BillingViewModel(
     private val apiClient: CIRISApiClientProtocol,
-    baseUrl: String = "http://127.0.0.1:8080"
+    baseUrl: String = "http://127.0.0.1:8080",
+    /** The sign-in provider billing rides on, for the sentences that name it: Google, or Apple on iOS. */
+    private val providerDisplayName: String = "Google",
 ) : ViewModel() {
 
     companion object {
@@ -117,26 +120,88 @@ class BillingViewModel(
     private val _creditStatus = MutableStateFlow<CreditStatusData?>(null)
 
     /**
-     * The billing credential is stale and only a sign-in renews it.
-     *
-     * Not an error message and not a balance. handleBalanceError set -1 and a
-     * generic string; the screen rendered "0 credits" and a Buy button for a
-     * problem money cannot fix (CIRISClient#59). This is the state the Billing
-     * screen renders instead.
+     * The SESSION is no longer valid — TokenManager's own conclusion about
+     * the CIRIS access token, which only Login renews. Rendered as the
+     * session banner whose button goes to Login (CIRISClient#59).
      */
-    private val _authExpired = MutableStateFlow(false)
-    val authExpired: StateFlow<Boolean> = _authExpired.asStateFlow()
+    private val _sessionExpired = MutableStateFlow(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired.asStateFlow()
 
-    fun onAuthExpired() {
-        _authExpired.value = true
+    fun onSessionExpired() {
+        _sessionExpired.value = true
         _errorMessage.value =
             ai.ciris.mobile.shared.localization.LocalizationHelper.getString("auth.session_expired")
     }
 
-    fun onAuthRestored() {
-        _authExpired.value = false
+    fun onSessionRestored() {
+        _sessionExpired.value = false
         _errorMessage.value = null
     }
+
+    /**
+     * The BILLING credential is stale and only a fresh provider sign-in
+     * renews it — a credits state, not a session one (CIRISClient#171).
+     *
+     * Not an error message and not a balance. handleBalanceError set -1 and a
+     * generic string; the screen rendered "0 credits" and a Buy button for a
+     * problem money cannot fix (CIRISClient#59). Then it was the SESSION
+     * banner, whose button signed the person out of an agent that was
+     * answering them, for a Google token that had passed its hour. This is
+     * the state the Billing screen renders instead: credits paused, with the
+     * refresh that fixes it, and the session untouched.
+     */
+    private val _billingCredentialStale = MutableStateFlow(false)
+    val billingCredentialStale: StateFlow<Boolean> = _billingCredentialStale.asStateFlow()
+
+    /** A refresh is in flight — on desktop, the browser is open and the node is being polled. */
+    private val _billingRefreshInProgress = MutableStateFlow(false)
+    val billingRefreshInProgress: StateFlow<Boolean> = _billingRefreshInProgress.asStateFlow()
+
+    fun onBillingCredentialStale() {
+        _billingCredentialStale.value = true
+        _errorMessage.value = L.getString("mobile.billing_credential_stale", mapOf("provider" to providerDisplayName))
+    }
+
+    fun onBillingCredentialRefreshed() {
+        _billingCredentialStale.value = false
+        _errorMessage.value = null
+    }
+
+    fun onBillingRefreshStarted() {
+        _billingRefreshInProgress.value = true
+        _errorMessage.value = null
+    }
+
+    /**
+     * The refresh ended. [BillingCredentialRefreshOutcome.Refreshed] retires
+     * the stale state and re-reads the balance; every other outcome says
+     * WHICH way it did not complete, by localisation id — the node's own
+     * `reason_id` for a refusal, the existing browser-sign-in timeout
+     * sentence, a named "this node is too old" for a hand-off without an
+     * id_token — and leaves credits paused.
+     */
+    fun onBillingRefreshFinished(outcome: BillingCredentialRefreshOutcome) {
+        val method = "onBillingRefreshFinished"
+        _billingRefreshInProgress.value = false
+        logInfo(method, "outcome=${outcome::class.simpleName}")
+        when (outcome) {
+            BillingCredentialRefreshOutcome.Refreshed -> {
+                onBillingCredentialRefreshed()
+                loadBalance()
+            }
+            is BillingCredentialRefreshOutcome.Refused -> _errorMessage.value = L.getString(outcome.reasonId)
+            is BillingCredentialRefreshOutcome.TimedOut -> _errorMessage.value = L.getString("auth.browser_signin.timed_out")
+            BillingCredentialRefreshOutcome.Cancelled -> _errorMessage.value = null
+            BillingCredentialRefreshOutcome.NodeTooOld -> _errorMessage.value = L.getString("mobile.billing_refresh_node_too_old")
+            is BillingCredentialRefreshOutcome.WriteFailed ->
+                _errorMessage.value = L.getString("mobile.billing_refresh_write_failed", mapOf("detail" to outcome.detail))
+            is BillingCredentialRefreshOutcome.Failed ->
+                _errorMessage.value = L.getString("mobile.billing_refresh_failed", mapOf("detail" to outcome.detail))
+        }
+    }
+
+    private val L get() = ai.ciris.mobile.shared.localization.LocalizationHelper
+
     val creditStatus: StateFlow<CreditStatusData?> = _creditStatus.asStateFlow()
 
     // Purchase in progress
@@ -210,8 +275,8 @@ class BillingViewModel(
                     val isAuthError = isAuthFailure(e)
 
                     if (isAuthError && attempt < maxAttempts) {
-                        logWarn(method, "Auth error on attempt $attempt, triggering token refresh + retry")
-                        TokenManager.shared?.on401Error()
+                        logWarn(method, "Auth error on attempt $attempt, triggering billing token refresh + retry")
+                        TokenManager.shared?.onBillingCredentialRejected()
                         delay(2000)
                         continue // Retry
                     }
@@ -219,8 +284,12 @@ class BillingViewModel(
                         // RETRIES EXHAUSTED ON AUTH. Refresh did not produce a usable
                         // token — on desktop it cannot, there is no silent path — so
                         // say that, rather than "failed to load balance", which the
-                        // screen rendered as an empty wallet (CIRISClient#59).
-                        onAuthExpired()
+                        // screen rendered as an empty wallet (CIRISClient#59). And
+                        // say it as a CREDITS state: this 401 is the agent's
+                        // `billing_auth_expired` (routes/billing.py), the Google
+                        // token at the hosted proxy — not the person's session with
+                        // their own agent (CIRISClient#171).
+                        onBillingCredentialStale()
                         _isLoading.value = false
                         return@launch
                     }
@@ -335,8 +404,8 @@ class BillingViewModel(
             logWarn(method, "Silent balance load failed: ${e.message}")
 
             if (isAuthFailure(e)) {
-                logWarn(method, "Auth error in silent poll, triggering token refresh")
-                TokenManager.shared?.on401Error()
+                logWarn(method, "Auth error in silent poll, triggering billing token refresh")
+                TokenManager.shared?.onBillingCredentialRejected()
             }
             // Don't update error state for silent polls
         }
@@ -447,7 +516,7 @@ class BillingViewModel(
                 when (errorType) {
                     is PurchaseError.TokenExpired, is PurchaseError.AuthRequired -> {
                         logWarn(method, "Auth error during purchase: ${result.message}")
-                        TokenManager.shared?.on401Error()
+                        TokenManager.shared?.onBillingCredentialRejected()
                         _isPurchasing.value = false
                         _errorMessage.value = errorType.toUserMessage()
                     }
