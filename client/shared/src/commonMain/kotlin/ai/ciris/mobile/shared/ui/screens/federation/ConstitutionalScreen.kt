@@ -223,7 +223,10 @@ fun ConstitutionalScreen(
                                         .testable("txt_killswitch_halted"),
                                 )
                             }
-                        } else if (haltStatus == null) {
+                        } else if (haltStatus?.halted == null) {
+                            // haltStatus itself null (not read yet / read failed) OR
+                            // `halted: null` — the node has a latch it cannot read
+                            // (CIRISServer 0.5.225). Both are "unknown", never "disarmed".
                             // NOT KNOWING IS NOT THE SAME AS BEING SAFE.
                             //
                             // `haltStatus` is null on first render and after any

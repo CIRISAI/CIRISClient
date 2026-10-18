@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.221` (`25d3b643e7ccee612048b27c37843d0a33cc8603`) | `release/0.5.228` (every emitted id reconciled against the tag, incl. `drive.device_class_not_personal` from #728. Previous: `v0.5.220` `1dec0316`, `release/0.5.227`) | 2026-10-05 |
+| `CIRISAI/CIRISServer` | `fix/client-copy-0.5.232` (`f2bbb63f5bc4d9ba091590bcf9acd6d1b015a387`) — branch (unmerged), the copy the next server release carries; v0.5.231 + two literals (`add_device.mint_failed`, `contacts.awaiting_key_body`). Re-pin to the server's tag once that release ships. | `feat/server-0.5.231-parity` (every emitted id reconciled: the 13 `add_device.*` refusals of #786/#791 added, the #776 person-facing `contacts.*` rewrites re-synced, the rc7 halt copy and the 0.5.223 `durable_queue_depth` / 0.5.225 `halt-status` / 0.5.222 `affiliations` shapes read. Previous: `v0.5.221` `25d3b643`, `release/0.5.228`) | 2026-10-18 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `da282d9a7501a4aa051e5d2f16401022a91d9c03834cb127d431a904c8790dd8`
+**state digest:** `6ab589600e7ac323c6c971620e2c3f5b67552ee23e2465eae9414c39bea48015`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

@@ -2,6 +2,12 @@ package ai.ciris.mobile.shared.models.federation
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNull
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.doubleOrNull
+import kotlinx.serialization.json.longOrNull
 
 /**
  * Edge metrics snapshot returned by ``GET /v1/federation/metrics``.
@@ -34,8 +40,22 @@ data class FederationMetricsResponse(
     val sendFailuresTotal: Map<String, Long> = emptyMap(),
     @SerialName("verify_failures_total")
     val verifyFailuresTotal: Map<String, Long> = emptyMap(),
+    /**
+     * The durable outbound queue's depth. Two wire shapes, and the client must
+     * read both: through CIRISServer 0.5.222 a per-class MAP of counters edge
+     * kept beside the queue; since 0.5.223 (CIRISEdge#845, persist v54
+     * `outbound_counts`) ONE number — the rows actually RESIDENT in the queue
+     * (pending / sending / awaiting_ack) — or `null` when the queue could not
+     * be counted ("never 0, which would read as drained"). Typed as a
+     * [JsonElement] because a `Map<String, Long>` failed to decode the number
+     * and took the whole metrics read down with it. Read it through
+     * [getQueueDepth].
+     */
     @SerialName("durable_queue_depth")
-    val durableQueueDepth: Map<String, Long> = emptyMap(),
+    val durableQueueDepth: JsonElement? = null,
+    /** Cumulative enqueues per delivery class (0.5.223+; the old map's successor). */
+    @SerialName("durable_enqueued_total")
+    val durableEnqueuedTotal: Map<String, Long>? = null,
     @SerialName("transport_bytes_in_total")
     val transportBytesInTotal: Map<String, Long> = emptyMap(),
     @SerialName("transport_bytes_out_total")
@@ -88,8 +108,23 @@ data class FederationMetricsResponse(
     /** Total verify failures across all reasons. */
     fun getVerifyFailures(): Long = verifyFailuresTotal.values.sum()
 
-    /** Total queue depth across all queue kinds. */
-    fun getQueueDepth(): Long = durableQueueDepth.values.sum()
+    /**
+     * Rows in the durable queue, or null when the node did not say or could
+     * not count them — a depth nobody read is not 0 (CSD-049).
+     */
+    fun getQueueDepth(): Long? = when (val d = durableQueueDepth) {
+        null, JsonNull -> null
+        is JsonPrimitive -> d.longOrNull
+        is JsonObject -> d.values.sumOf { (it as? JsonPrimitive)?.longOrNull ?: 0L }
+        else -> null
+    }
+
+    /** [durableQueueDepth] as a family map: the per-class map as served, or `resident` → n. */
+    private fun queueDepthFamily(): Map<String, Double> = when (val d = durableQueueDepth) {
+        is JsonObject -> d.mapNotNull { (k, v) -> (v as? JsonPrimitive)?.doubleOrNull?.let { k to it } }.toMap()
+        is JsonPrimitive -> d.doubleOrNull?.let { mapOf("resident" to it) } ?: emptyMap()
+        else -> emptyMap()
+    }
 
     /** Total inbound transport bytes across all transports. */
     fun getBytesIn(): Long = transportBytesInTotal.values.sum()
@@ -121,7 +156,7 @@ data class FederationMetricsResponse(
         FAMILY_ENVELOPES_RECEIVED to envelopesReceivedTotal.mapValues { it.value.toDouble() },
         FAMILY_SEND_FAILURES to sendFailuresTotal.mapValues { it.value.toDouble() },
         FAMILY_VERIFY_FAILURES to verifyFailuresTotal.mapValues { it.value.toDouble() },
-        FAMILY_DURABLE_QUEUE_DEPTH to durableQueueDepth.mapValues { it.value.toDouble() },
+        FAMILY_DURABLE_QUEUE_DEPTH to queueDepthFamily(),
         FAMILY_TRANSPORT_BYTES_IN to transportBytesInTotal.mapValues { it.value.toDouble() },
         FAMILY_TRANSPORT_BYTES_OUT to transportBytesOutTotal.mapValues { it.value.toDouble() },
         FAMILY_PEER_REACHABILITY_RATIO to peerReachabilityRatio,

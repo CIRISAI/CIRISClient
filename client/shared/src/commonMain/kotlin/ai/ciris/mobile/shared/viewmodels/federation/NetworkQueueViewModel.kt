@@ -19,8 +19,9 @@ import kotlinx.coroutines.launch
  * because durable queue depth can change between thoughts) and exposes
  * the aggregate counters the queue screen renders:
  *
- *  - [queueDepth] — sum across all queue kinds in
- *    ``durable_queue_depth``
+ *  - [queueDepth] — rows resident in the durable queue
+ *    (``durable_queue_depth``: one number since CIRISServer 0.5.223, a
+ *    per-class map before; null when the node could not count it)
  *  - [envelopesSent] / [envelopesReceived] — session totals across all
  *    envelope kinds
  *  - [sendFailures] / [verifyFailures] — total failure counters; non-zero

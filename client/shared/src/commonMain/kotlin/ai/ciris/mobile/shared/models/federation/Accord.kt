@@ -208,13 +208,24 @@ data class AccordHaltRecordDto(
  * kill-switch (the disk halt latch, CC 4.2.1 / 4.2.3). [halted] drives the
  * unmissable ACTIVE-HALT banner on the Trust Root card; [record] names the halting
  * invocation when present. Read-only — the app never writes or clears the latch.
+ *
+ * Since CIRISServer 0.5.225 (the kill switch, CC 4.2 rc7/rc8) [halted] is computed
+ * on every read from the latch's FUSE, and is JSON `null` when the latch exists but
+ * cannot be read ([error] names why). Null is NOT "not halted": a non-nullable
+ * Boolean here made that body fail to decode, so the screen kept whatever it had
+ * last shown — "disarmed" included. [lapsed] is a latch whose fuse ran out with no
+ * majority confirmation (history, not a halt); [halt] is the server's summary of
+ * the standing latch (`fuse_secs`, `lapses_at`, `confirmed`, …), kept raw.
  */
 @Serializable
 data class AccordHaltStatusResponse(
-    val halted: Boolean = false,
+    val halted: Boolean? = false,
+    val lapsed: Boolean = false,
+    val halt: kotlinx.serialization.json.JsonObject? = null,
     @SerialName("latch_path")
     val latchPath: String? = null,
     val record: AccordHaltRecordDto? = null,
+    val error: String? = null,
 )
 
 /** ``POST /v1/accord/announce`` response — a single-holder announce was posted. */
