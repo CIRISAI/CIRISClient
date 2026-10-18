@@ -257,6 +257,29 @@ class NodeSwitcherViewModel(
     }
 
     /**
+     * Forget [wiped] after a Data Management wipe (CIRISClient#87). The rule is
+     * [ai.ciris.mobile.shared.auth.profilesAfterWipe] — by identity, not by URL
+     * alone, so every other node stays. Applied to the session-added nodes too,
+     * so a later [reload] cannot merge the dead node (or its token) back.
+     */
+    fun forgetWipedNode(wiped: ai.ciris.mobile.shared.auth.WipedNode) {
+        val keptSession = ai.ciris.mobile.shared.auth.profilesAfterWipe(sessionProfiles, wiped)
+        sessionProfiles.clear()
+        sessionProfiles.addAll(keptSession)
+        val kept = ai.ciris.mobile.shared.auth.profilesAfterWipe(_profiles.value, wiped)
+        _profiles.value = if (kept.any { it.isLocal }) kept else listOf(localNodeProfile(null)) + kept
+        // Same selection rule as [reload]: keep it if it survived, else local.
+        val current = _activeProfileId.value
+        _activeProfileId.value = _profiles.value.firstOrNull { it.id == current }?.id
+            ?: _profiles.value.firstOrNull { it.isLocal }?.id
+        PlatformLogger.i(
+            TAG,
+            "[forgetWipedNode] key=${wiped.keyId ?: "<unknown>"} @ ${wiped.baseUrl} — " +
+                "node list now ${_profiles.value.size}: " + _profiles.value.joinToString { it.name },
+        )
+    }
+
+    /**
      * Rename a node in place for this session (in-memory; reverts on the next live
      * [reload] for graph-derived nodes). Used by the Manage Nodes CRUD surface.
      */
