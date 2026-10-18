@@ -1,0 +1,112 @@
+name: Start the CIRIS agent (with AI)
+description: >
+  Install the run's ONE `ciris-agent==<version>` into its own venv and start it
+  headless, first-run, on the agent's port — the with-AI legs' backend
+  (CIRISClient#166's release gate). Waits until the agent serves.
+
+# WHAT THIS STANDS UP, AND WHAT IT DOES NOT.
+#
+#   :8080  the agent's API (`ciris-agent --adapter api --port 8080`, i.e. the
+#          headless server mode of `ciris_engine.cli`). First run — the home has
+#          no .env — so it serves the setup wizard's routes and nothing has an
+#          LLM yet; the CLIENT's wizard configures it with the real key.
+#   :4243  the agent's OWN node. ciris-agent pins an exact ciris-server
+#          (2.16.2 -> 0.5.229) and folds it into its process. So a with-AI leg
+#          starts NO standalone node: one would hold :4242/:4243 first and the
+#          agent would die on "Edge transport ports are held by another
+#          process" (CIRISAgent#1101/#1102). The board says whose node it is.
+#
+# THE HEALTH QUESTION IS THE AGENT'S. `/v1/system/health` answers 200 with
+# `initialization_complete: true` and `cognitive_state: SETUP` before the
+# wizard runs — status `critical`, because no LLM is registered yet. Waiting for
+# "healthy" here would wait for the step whose job is to make it healthy
+# (CIRISAgent tools/qa_runner/modules/web_ui/server_manager.py says the same).
+#
+# A LAPTOP, NOT A SERVER. `--adapter` puts ciris_engine.cli in server mode,
+# which declares CIRIS_DEVICE_CLASS=server unless one is already set — and a
+# server-class node is given no keys for a person's self content (see
+# .github/actions/ciris-node). The person's device on this leg is a laptop.
+#
+# THE RUN KIND IS QA. Every harness-started agent labels its traces `qa`
+# (CIRISClient#182, CIRISAgent#1245); a real model on a real key must never
+# file a CI run as production.
+
+inputs:
+  version:
+    description: The ciris-agent PyPI version (from testing/gate/agent_version.py), e.g. 2.16.2.
+    required: true
+  home:
+    description: The agent's CIRIS_HOME. The client under test must be given the SAME one.
+    required: true
+  log:
+    description: Where the agent's stdout/stderr go. Collected by the leg's artifact upload.
+    required: false
+    default: agent.log
+  venv:
+    description: Where the agent's venv lives (reused when it already holds this version).
+    required: false
+    default: ""
+  timeout_seconds:
+    description: How long to wait for the agent to serve before failing the leg.
+    required: false
+    default: "240"
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        CIRIS_AGENT_VERSION: ${{ inputs.version }}
+        CIRIS_AGENT_HOME: ${{ inputs.home }}
+        CIRIS_AGENT_LOG: ${{ inputs.log }}
+        CIRIS_AGENT_VENV: ${{ inputs.venv }}
+        CIRIS_AGENT_TIMEOUT: ${{ inputs.timeout_seconds }}
+      run: |
+        set -euo pipefail
+        [ -n "$CIRIS_AGENT_VERSION" ] || { echo "::error::no agent version — the server job's agent resolver did not run"; exit 1; }
+        venv="${CIRIS_AGENT_VENV:-${RUNNER_TEMP}/ciris-agent-venv}"
+        case "$(uname -s)" in MINGW*|MSYS*|CYGWIN*) py="$venv/Scripts/python.exe" ;; *) py="$venv/bin/python" ;; esac
+        if [ ! -x "$py" ] || ! "$py" -c "import importlib.metadata as m, sys; sys.exit(m.version('ciris-agent') != '$CIRIS_AGENT_VERSION')" 2>/dev/null; then
+          python -m venv "$venv"
+          "$py" -m pip install --quiet --upgrade pip
+          "$py" -m pip install --quiet "ciris-agent==$CIRIS_AGENT_VERSION"
+        fi
+        "$py" - <<'PY'
+        import importlib.metadata as m
+        print("installed: ciris-agent", m.version("ciris-agent"), "| ciris-server", m.version("ciris-server"))
+        PY
+
+        mkdir -p "$CIRIS_AGENT_HOME"
+        # A FIRST RUN HAS NO RECORDED ANSWER: a home reused from a node-only
+        # pass would carry CIRIS_RUN_WITHOUT_AI and the process would become a
+        # bare node (ciris_engine/node_only.py). This home is fresh per leg;
+        # say so if it is not.
+        [ -f "$CIRIS_AGENT_HOME/.env" ] && { echo "::error::$CIRIS_AGENT_HOME/.env exists — a with-AI leg starts from a first run"; exit 1; }
+        echo "agent home (CIRIS_HOME): $CIRIS_AGENT_HOME"
+
+        CIRIS_HOME="$CIRIS_AGENT_HOME" CIRIS_DEVICE_CLASS=laptop CIRIS_TRACE_RUN_KIND=qa PYTHONUNBUFFERED=1 \
+          "$py" -m ciris_engine.cli --adapter api --port 8080 > "$CIRIS_AGENT_LOG" 2>&1 &
+        pid=$!
+        echo "agent pid $pid"
+
+        url="http://127.0.0.1:8080/v1/system/health"
+        for _ in $(seq 1 $(( CIRIS_AGENT_TIMEOUT / 3 ))); do
+          if ! kill -0 "$pid" 2>/dev/null; then
+            echo "::error::ciris-agent exited before it began serving"
+            tail -60 "$CIRIS_AGENT_LOG" || true
+            exit 1
+          fi
+          body=$(curl -s -m 5 "$url" 2>/dev/null || true)
+          if [ -n "$body" ] && printf '%s' "$body" | "$py" -c "import json,sys; d=json.load(sys.stdin); d=d.get('data',d); sys.exit(0 if d.get('initialization_complete') else 1)" 2>/dev/null; then
+            echo "agent is serving at $url"
+            printf '%s' "$body" | "$py" -c "import json,sys; d=json.load(sys.stdin); d=d.get('data',d); print({k: d.get(k) for k in ('status','cognitive_state','initialization_complete','version')})" || true
+            # The node the agent folds in; reported, not required here — the
+            # walk's `state` step judges what the client found.
+            curl -s -m 5 http://127.0.0.1:4243/health >/dev/null 2>&1 && echo "its node answers :4243/health" || echo "its node does not answer :4243/health yet"
+            exit 0
+          fi
+          sleep 3
+        done
+        echo "::error::the agent never served $url within ${CIRIS_AGENT_TIMEOUT}s"
+        tail -60 "$CIRIS_AGENT_LOG" || true
+        exit 1

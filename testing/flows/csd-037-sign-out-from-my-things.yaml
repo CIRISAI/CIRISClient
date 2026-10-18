@@ -1,0 +1,70 @@
+csd: CSD-037
+flow: csd_037_sign_out_from_my_things
+title: A node-only install signs out from My things, confirms, and signs back in
+description: >-
+  CSD-037 §3, CIRISClient#51: a run-without-AI install has no agent Settings,
+  so before 0.5.229 it had no sign-out a person could find (the only one was
+  three levels deep). `btn_my_things_sign_out` is in the My things sheet on
+  every install; it opens a ConfirmSheet (`sheet_sign_out`, three facts) and
+  only the confirm signs out — through SignOut.now(), the ONE sign-out — and
+  lands on Login. The flow then signs back in the way the third fact says,
+  so it leaves the session as it found it for the flows after it. Driven on
+  the node-only legs, which is the install #51 is about.
+  NOT asserted: that the node revoked the token (CSD-022 §3's logout route) —
+  the client's half is pinned by SignOutOnEveryInstallTest.
+client: ">0.5.228"
+cleanup:
+  - click: btn_sign_out_cancel
+    when: sheet_sign_out
+
+steps:
+  - step_id: my_things_offers_sign_out
+    title: My things, on a node-only install, offers Sign out
+    requires:
+      screen: Contacts
+    do:
+      - click: btn_my_things
+      - wait: btn_my_things_sign_out
+        wait_ms: 5000
+    expect:
+      visible: [btn_my_things_sign_out]
+
+  - step_id: the_row_asks_first
+    title: The row opens a confirm with its three facts, and signs nothing out yet
+    do:
+      - click: btn_my_things_sign_out
+      - wait: sheet_sign_out
+        wait_ms: 5000
+    expect:
+      visible: [sheet_sign_out, sign_out_fact_1, sign_out_fact_2, sign_out_fact_3,
+                btn_sign_out_confirm, btn_sign_out_cancel]
+      absent: [btn_local_login, btn_login_submit]
+
+  - step_id: confirming_signs_out_to_login
+    title: Confirm signs out and lands on Login
+    do:
+      - click: btn_sign_out_confirm
+      - wait: btn_local_login
+        wait_ms: 5000
+    expect:
+      screen: Login
+      visible: [btn_local_login]
+      absent: [sheet_sign_out]
+
+  - step_id: signing_back_in_the_same_way
+    title: Signing back in the same way lands on the node home again
+    description: >-
+      The harness's own owner (run_platform's --username/--password defaults,
+      which the matrix never overrides). This is the third fact, driven.
+    do:
+      - click: btn_local_login
+      - wait: input_username
+        wait_ms: 5000
+      - input: {input_username: "qaadmin"}
+      - input: {input_password: "QaAdmin!2345"}
+      - click: btn_login_submit
+      - wait: btn_my_things
+        wait_ms: 15000
+    expect:
+      screen: Contacts
+      absent: [btn_local_login, btn_login_submit]

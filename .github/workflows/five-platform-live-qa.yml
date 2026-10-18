@@ -102,6 +102,32 @@ on:
         required: false
         default: ""
         type: string
+      # THE RELEASE GATE (CIRISClient#166): the node-only matrix below, PLUS
+      # with-AI legs that install the run's ONE ciris-agent, drive the wizard
+      # through the AI step with the ANTHROPIC_API_KEY secret, and talk to a
+      # real model. Off (the default, and always on `schedule`), nothing about
+      # the node-only matrix changes: the with-AI jobs do not run, and the
+      # inputs below are read by nothing.
+      with_ai:
+        description: "Also run the with-AI legs (Linux and Windows desktops) against ciris-agent with a real model"
+        required: false
+        default: false
+        type: boolean
+      agent_version:
+        description: "with_ai: the ciris-agent to install (2.16.2 or v2.16.2-stable); empty = CIRISAgent's latest release"
+        required: false
+        default: ""
+        type: string
+      llm_model:
+        description: "with_ai: the Anthropic model the wizard picks from the live list (never substituted)"
+        required: false
+        default: "claude-sonnet-5-5"
+        type: string
+      candidate_version:
+        description: "The version this candidate releases as, for flows' `client: >X` floors (e.g. 0.5.229 before VERSION is bumped); empty = VERSION"
+        required: false
+        default: ""
+        type: string
   # Nightly, not per-push: it boots an emulator and a simulator, which is too
   # slow and too costly to gate every commit. A nightly failure lands before the
   # next tag, which is the moment that matters.
@@ -117,6 +143,12 @@ permissions:
 
 env:
   CIRIS_AGENT_ROOT: ${{ github.workspace }}/.agent
+  # EVERY HARNESS RUN IS A QA RUN (CIRISClient#182). The with-AI legs talk to
+  # a real model through a real agent, and its traces must say `qa`, never
+  # `production`. Workflow-level so no leg can be the one that forgot; the
+  # desktop client and the pip-installed agent inherit it, the Android and iOS
+  # bring-ups forward it (testing/gate/bringup.py).
+  CIRIS_TRACE_RUN_KIND: qa
   # THE APP SERVES /health ON 9091 ONLY IN TEST MODE, AND NOTHING SET IT.
   #
   # `TestAutomationServer.isTestModeEnabled()` reads CIRIS_TEST_MODE and the
@@ -148,6 +180,11 @@ jobs:
       source: ${{ steps.pick.outputs.source }}
       pin: ${{ steps.pick.outputs.pin }}
       pin_label: ${{ steps.pick.outputs.pin_label }}
+      # The with-AI legs' ONE agent (empty unless with_ai): the PyPI version
+      # they install and the ciris-server that agent pins and folds in.
+      agent_tag: ${{ steps.agent.outputs.agent_tag }}
+      agent_pypi: ${{ steps.agent.outputs.agent_pypi }}
+      agent_server: ${{ steps.agent.outputs.agent_server }}
     steps:
       - uses: actions/checkout@v4
       - name: Resolve the run's server version
@@ -158,6 +195,19 @@ jobs:
           set -euo pipefail
           python3 -m testing.gate.server_version --override "${{ inputs.server_version }}" --github-output "$GITHUB_OUTPUT" --json
           echo "::notice::every leg runs against CIRISServer $(grep '^version=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2) ($(grep '^source=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2))"
+
+      # THE ONE PLACE THE AGENT VERSION IS DECIDED, beside the server's and for
+      # the same reason: "pip install ciris-agent" on three runners is three
+      # reads of a moving target. Only when asked for.
+      - name: Resolve the run's agent version (with AI only)
+        id: agent
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.with_ai }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m testing.gate.agent_version --override "${{ inputs.agent_version }}" --github-output "$GITHUB_OUTPUT" --json
+          echo "::notice::every with-AI leg runs ciris-agent $(grep '^agent_pypi=' "$GITHUB_OUTPUT" | cut -d= -f2) ($(grep '^agent_tag=' "$GITHUB_OUTPUT" | cut -d= -f2)), whose node is ciris-server $(grep '^agent_server=' "$GITHUB_OUTPUT" | cut -d= -f2)"
 
   linux-android:
     name: linux desktop + android emulator
@@ -289,7 +339,7 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
             --node-version "${{ needs.server.outputs.version }}" \
-            --shots shots --report reports/linux.json --flows testing/flows \
+            --shots shots --report reports/linux.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-linux"
 
       # THE ANDROID LEG SHARES THIS NODE, AND THE FIXTURE CHANGED IT. A
@@ -379,7 +429,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ needs.server.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ needs.server.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # THE PEER DIES WITH THE JOB, WHATEVER KILLED IT. The runner's `finally`
       # and its SIGTERM handler cover a failed flow and a cancelled step; this
@@ -463,7 +513,7 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ needs.server.outputs.version }}" \
-            --shots shots --report reports/macos.json --flows testing/flows \
+            --shots shots --report reports/macos.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-macos"
 
       # ── THE iOS BUNDLE, MATERIALIZED THE WAY THE AGENT'S GATE DOES IT ──────
@@ -752,6 +802,7 @@ jobs:
           print(best["udid"] if best else "")')
           test -n "$UDID" || { echo "::error::no available iPhone simulator on this runner"; xcrun simctl list devices available; exit 1; }
           echo "simulator: $UDID"
+          echo "IOS_UDID=$UDID" >> "$GITHUB_ENV"
           xcrun simctl boot "$UDID" || true
           xcrun simctl bootstatus "$UDID" -b
           # The macOS leg's peer, if its runner was killed before `finally`:
@@ -764,7 +815,7 @@ jobs:
           python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
             --node-version "${{ needs.server.outputs.version }}" \
             --embedded-node-version "${{ steps.agent.outputs.embedded }}" \
-            --shots shots --report reports/ios.json --flows testing/flows \
+            --shots shots --report reports/ios.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-ios" || rc=$?
 
           # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
@@ -816,6 +867,30 @@ jobs:
           fi
           exit $rc
 
+      # #50'S RECORD, WHATEVER HAPPENED ABOVE. PR #200 makes the iOS client
+      # write `Documents/ciris/logs/kotlin_crash.log` BEFORE it logs a crash,
+      # so that file is the one account of #50's SIGABRT at the wizard's AI
+      # step. The capture inside the step above runs only when the step gets
+      # that far; a crash that kills the walk early, or a step that dies under
+      # `set -e`, would leave it behind. So it is collected again here, under
+      # always(), from the app's data container — present or said absent.
+      - name: Collect the iOS crash record (kotlin_crash.log, CIRISClient#50)
+        if: always()
+        run: |
+          set +e
+          mkdir -p ios-logs
+          udid="${IOS_UDID:-booted}"
+          box=$(xcrun simctl get_app_container "$udid" ai.ciris.mobile data 2>/dev/null)
+          f="$box/Documents/ciris/logs/kotlin_crash.log"
+          if [ -n "$box" ] && [ -f "$f" ]; then
+            cp "$f" ios-logs/kotlin_crash.log
+            echo "::warning::the iOS app wrote a crash record ($(wc -l < "$f") lines) — ios-logs/kotlin_crash.log"
+            tail -60 "$f"
+          else
+            echo "no kotlin_crash.log in ${box:-<no data container for ai.ciris.mobile on $udid>}/Documents/ciris/logs — the app recorded no crash"
+          fi
+          exit 0
+
       - name: Tear down the two-node peers
         if: always()
         run: |
@@ -833,6 +908,7 @@ jobs:
             node.log
             *-app.log
             ios-logs/
+            ios-logs/kotlin_crash.log
             ${{ runner.temp }}/two-node-*/peer.log
             ${{ runner.temp }}/two-node-*/values.json
             client/iosApp/app_packages_native_sim/MANIFEST.txt
@@ -877,7 +953,7 @@ jobs:
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ needs.server.outputs.version }}" \
-            --shots shots --report reports/windows.json --flows testing/flows \
+            --shots shots --report reports/windows.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-windows"
 
       - name: Tear down the two-node peer
@@ -897,13 +973,192 @@ jobs:
             ${{ runner.temp }}/two-node-*/peer.log
             ${{ runner.temp }}/two-node-*/values.json
 
+  # ── WITH AI: THE RELEASE GATE (CIRISClient#166) ────────────────────────────
+  #
+  # The node-only legs above answer "can automation drive the candidate against
+  # a bare node?". These answer the question a with-AI user asks: install the
+  # LATEST agent, set it up through the real wizard with a real model key,
+  # type a message, get an answer. They run only on a dispatch with
+  # `with_ai: true`, and nothing above reads their inputs, so the node-only
+  # matrix is exactly what it was when `with_ai` is false.
+  #
+  # ONE AGENT PER RUN. The `server` job resolves it (testing/gate/agent_version
+  # .py: the input, or CIRISAgent's latest release, checked against PyPI); each
+  # with-AI leg installs exactly that `ciris-agent==` into a venv and starts it
+  # headless (.github/actions/ciris-agent). The agent folds in its OWN pinned
+  # ciris-server and binds :4243 itself, so these legs start no standalone node
+  # — the board names that node as the agent's (`--node-version v<its pin>`),
+  # not the run's server, which these legs do not run.
+  #
+  # THE KEY. `secrets.ANTHROPIC_API_KEY` reaches exactly one process per leg —
+  # the harness, as an environment variable read by NAME (--llm-key-env); it is
+  # masked in the log, typed into a sensitive sink the client never echoes
+  # (SetupApiKeySinkTest), and every file an upload would carry is scanned for
+  # it first (testing/gate/secret_scan.py) — a hit is overwritten and fails the
+  # leg. The agent's .env, which holds the key by design, is never uploaded.
+  #
+  # NOT REACHABLE IN CI, SAID ONCE HERE: a Google sign-in (the hosted proxy's
+  # free credits, the billing token #171/#172 renew, purchases); a forced
+  # RESOURCE_SHED (#173 — the agent has no test hook); macOS desktop with AI
+  # (the macOS runner's iOS leg is already the with-AI bundle).
+  # NO ANDROID WITH AI, AND WHY (run 39155407162). This repo's APK is the NODE
+  # client: MainActivity pins `apiBaseUrl` and `nodeBaseUrl` to :4243
+  # (CIRISBuild.HAS_AGENT == false) and the app resolves NODE_ONLY
+  # ("[BACKEND] serving on :4243/health"). With the runner's agent reversed to
+  # the emulator's :8080, the wizard still OFFERED "with an AI assistant" — the
+  # brain is visible through the node's fold — and then every brain route went
+  # to :4243 and 404'd: `[listModels] API returned error status: 404 Not Found`
+  # five times, so the AI step can never finish. A with-AI Android leg needs an
+  # APK that addresses a brain; the with-AI phone is CIRISAgent's build, whose
+  # gate drives it.
+  linux-ai:
+    name: linux desktop, with AI
+    needs: [server]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.with_ai && (inputs.platforms == 'all' || contains(inputs.platforms, 'linux')) }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/apt
+        with:
+          packages: xvfb xauth
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: The flow runner's one dependency
+        run: python3 -m pip install --quiet pyyaml
+
+      - name: Build the candidate
+        run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
+
+      - name: Resolve the artifact
+        id: art
+        run: echo "jar=$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" >> "$GITHUB_OUTPUT"
+
+      - name: Start the agent (the run's ONE ciris-agent, first run)
+        uses: ./.github/actions/ciris-agent
+        with:
+          version: ${{ needs.server.outputs.agent_pypi }}
+          home: ${{ runner.temp }}/ciris-ai-linux
+          log: agent-linux.log
+
+      # THE CLIENT SHARES THE AGENT'S HOME: it reads the claim PIN file the
+      # node declares and writes the .env the agent reads (the billing token
+      # hand-off), as a desktop install does under the launcher.
+      - name: Linux desktop, with AI
+        env:
+          CIRIS_HOME: ${{ runner.temp }}/ciris-ai-linux
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 -m testing.gate.run_platform --platform desktop --xvfb \
+            --jar "${{ steps.art.outputs.jar }}" \
+            --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
+            --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY \
+            --node-version "v${{ needs.server.outputs.agent_server }}" \
+            --shots shots --report reports/linux-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
+
+      # BEFORE THE UPLOAD, EVERY TIME. Copies the agent's own logs (never its
+      # .env) beside the leg's evidence, then scans all of it for the key.
+      - name: No artifact carries the provider key
+        if: always()
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p agent-logs/linux
+          cp -R "$RUNNER_TEMP/ciris-ai-linux/logs/." agent-logs/linux/ 2>/dev/null || true
+          python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
+            shots reports agent-logs agent-linux.log $(ls *-app.log 2>/dev/null)
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-linux-ai
+          path: |
+            shots/
+            reports/
+            agent-logs/
+            agent-linux.log
+            *-app.log
+
+  windows-ai:
+    name: windows desktop, with AI
+    needs: [server]
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.with_ai && (inputs.platforms == 'all' || contains(inputs.platforms, 'windows')) }}
+    runs-on: windows-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Build the candidate
+        shell: bash
+        run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
+
+      - name: Start the agent (the run's ONE ciris-agent, first run)
+        uses: ./.github/actions/ciris-agent
+        with:
+          version: ${{ needs.server.outputs.agent_pypi }}
+          home: ${{ runner.temp }}/ciris-ai-windows
+          log: agent-windows.log
+
+      - name: Windows desktop, with AI
+        shell: bash
+        env:
+          CIRIS_HOME: ${{ runner.temp }}/ciris-ai-windows
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 -m testing.gate.run_platform --platform desktop \
+            --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
+            --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
+            --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY \
+            --node-version "v${{ needs.server.outputs.agent_server }}" \
+            --shots shots --report reports/windows-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
+
+      - name: No artifact carries the provider key
+        if: always()
+        shell: bash
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          mkdir -p agent-logs/windows
+          cp -R "$RUNNER_TEMP/ciris-ai-windows/logs/." agent-logs/windows/ 2>/dev/null || true
+          python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
+            shots reports agent-logs agent-windows.log $(ls *-app.log 2>/dev/null)
+
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-qa-windows-ai
+          path: |
+            shots/
+            reports/
+            agent-logs/
+            agent-windows.log
+            *-app.log
+
   gallery:
     name: screenshot gallery
     # ALWAYS, and needs all three: the RED run is the one worth looking at, and
     # a gallery that only builds on success is a gallery you can never use to
     # diagnose anything.
     if: always()
-    needs: [server, linux-android, macos-ios, windows]
+    needs: [server, linux-android, macos-ios, windows, linux-ai, windows-ai]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

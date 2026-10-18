@@ -1,0 +1,39 @@
+csd: CSD-056
+flow: csd_056_billing_without_google
+title: Credits on a BYOK agent with no Google sign-in — no credential banner, no session banner
+description: >-
+  CSD-056 §2, CIRISClient#171/#172, as far as CI can reach. The with-AI legs
+  configure the agent BYOK (an Anthropic key) and sign in locally — no Google
+  sign-in, so no billing token exists to go stale and none can be renewed.
+  What #171 separated is asserted: the Billing card renders with its own
+  controls and shows NEITHER the billing-credential banner
+  (`btn_billing_refresh_signin`, "Credits need a fresh Google sign-in") NOR a
+  session-expired banner, and Interact on a BYOK chat never offers the billing
+  re-sign-in (`btn_interact_refresh_billing_signin` shows only when the hosted
+  proxy is the LLM). NOT reachable in CI: the stale-token state itself, the
+  desktop browser renewal (#172), and any purchase — each needs a real Google
+  account; BillingCredentialRefreshTest / TokenManagerCredentialSplitTest /
+  BillingViewModelTest pin them against fakes.
+client: ">0.5.228"
+
+steps:
+  - step_id: the_card_renders_without_a_google_token
+    title: Billing opens and shows its own controls, not a credential banner
+    requires:
+      screen: Billing
+    do:
+      - wait: btn_billing_refresh
+        wait_ms: 10000
+    expect:
+      screen: Billing
+      visible: [btn_billing_refresh]
+      absent: [btn_billing_refresh_signin]
+
+  - step_id: refreshing_stays_on_the_card
+    title: Refresh re-reads credits and still raises no banner a BYOK agent should not have
+    do:
+      - click: btn_billing_refresh
+    expect:
+      screen: Billing
+      visible: [btn_billing_refresh]
+      absent: [btn_billing_refresh_signin]
