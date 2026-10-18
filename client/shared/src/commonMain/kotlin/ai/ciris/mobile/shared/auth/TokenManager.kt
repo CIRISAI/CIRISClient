@@ -23,6 +23,15 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  * 3. Periodically refreshes tokens (every 45 minutes)
  * 4. Handles 401 errors by triggering token refresh
  *
+ * It keeps TWO conclusions apart (CIRISClient#171): [needsInteractiveLogin]
+ * is about the session, [billingCredentialStale] is about the token the
+ * agent spends at the hosted proxy. On desktop there is no silent path at
+ * all — the node's OAuth exchange discards Google's refresh_token
+ * (CIRISServer `src/auth/oauth.rs`, exchange_google reads only access_token
+ * and id_token) — so both end in a person signing in again, but through
+ * different doors: the session's is Login, billing's is a browser hand-off
+ * that leaves the session alone (`BillingCredentialRefresh.kt`).
+ *
  * Ported from android/app/.../auth/TokenRefreshManager.kt
  */
 class TokenManager(
@@ -80,8 +89,31 @@ class TokenManager(
     private val _tokenState = MutableStateFlow(TokenState.UNKNOWN)
     val tokenState: StateFlow<TokenState> = _tokenState.asStateFlow()
 
+    /**
+     * The SESSION needs a person: the CIRIS access token could not be renewed
+     * silently. Raised by [on401Error] and the startup check, never by billing.
+     */
     private val _needsInteractiveLogin = MutableStateFlow(false)
     val needsInteractiveLogin: StateFlow<Boolean> = _needsInteractiveLogin.asStateFlow()
+
+    /**
+     * The BILLING credential needs a person: the provider ID token the agent
+     * sends to the hosted proxy is stale and there is no silent path to a new
+     * one. Raised by [onBillingCredentialRejected], the periodic refresh and
+     * [ensureValidToken]; retired by any fresh token.
+     *
+     * Two credentials, two flags (CIRISClient#171). They were one: the agent's
+     * `.token_refresh_needed` — a billing 401, `billing_auth_expired` — came
+     * in through [on401Error], landed on [needsInteractiveLogin], and the
+     * client told a person whose own agent was answering them that their
+     * session was no longer valid. The session was fine; the Google token
+     * issued at setup had passed its hour.
+     */
+    private val _billingCredentialStale = MutableStateFlow(false)
+    val billingCredentialStale: StateFlow<Boolean> = _billingCredentialStale.asStateFlow()
+
+    /** Which credential a refresh is on behalf of — decides which flag a failure raises. */
+    private enum class CredentialUse { SESSION, BILLING }
 
     // Callback for silent sign-in
     private var silentSignInCallback: (suspend () -> SilentSignInResult)? = null
@@ -147,19 +179,19 @@ class TokenManager(
 
         if (remainingSeconds == null) {
             logWarn(method, "Could not parse token expiry - treating as expired")
-            return attemptSilentRefresh()
+            return attemptSilentRefresh(CredentialUse.SESSION)
         }
 
         if (remainingSeconds <= 0) {
             logInfo(method, "Token is EXPIRED - attempting silent refresh")
             _tokenState.value = TokenState.EXPIRED
-            return attemptSilentRefresh()
+            return attemptSilentRefresh(CredentialUse.SESSION)
         }
 
         if (remainingSeconds < MIN_TOKEN_VALIDITY_SECONDS) {
             logInfo(method, "Token expires soon (${remainingSeconds}s) - proactive refresh")
             _tokenState.value = TokenState.EXPIRING_SOON
-            return attemptSilentRefresh()
+            return attemptSilentRefresh(CredentialUse.SESSION)
         }
 
         // Token is valid
@@ -176,18 +208,23 @@ class TokenManager(
 
     /**
      * Attempt silent sign-in to refresh the token.
+     *
+     * The SAME mechanism serves both credentials — a fresh provider ID token
+     * renews the session (by exchange) and the billing token (by `.env`) — so
+     * success clears both flags. Only FAILURE is per-credential: it raises the
+     * flag for the [use] that asked, and leaves the other alone.
      */
-    private suspend fun attemptSilentRefresh(): Boolean {
+    private suspend fun attemptSilentRefresh(use: CredentialUse): Boolean {
         val method = "attemptSilentRefresh"
         val callback = silentSignInCallback
 
         if (callback == null) {
-            logWarn(method, "No silent sign-in callback set - interactive login required")
-            _needsInteractiveLogin.value = true
+            logWarn(method, "No silent sign-in callback set - a person must sign in again (for: $use)")
+            needsPerson(use)
             return false
         }
 
-        logInfo(method, "Attempting silent sign-in...")
+        logInfo(method, "Attempting silent sign-in (for: $use)...")
         _tokenState.value = TokenState.REFRESHING
 
         return try {
@@ -198,28 +235,37 @@ class TokenManager(
                     // now collected and rendered (CIRISClient#59), so it must also
                     // be cleared, or the banner outlives the problem.
                     _needsInteractiveLogin.value = false
+                    _billingCredentialStale.value = false
                     currentProvider = result.provider
                     handleNewToken(result.idToken, result.provider)
                     true
                 }
                 is SilentSignInResult.NeedsInteractiveLogin -> {
-                    logInfo(method, "Silent sign-in requires interactive login (code: ${result.errorCode})")
+                    logInfo(method, "Silent sign-in requires interactive login (code: ${result.errorCode}, for: $use)")
                     _tokenState.value = TokenState.NEEDS_INTERACTIVE
-                    _needsInteractiveLogin.value = true
+                    needsPerson(use)
                     false
                 }
                 is SilentSignInResult.Error -> {
-                    logError(method, "Silent sign-in failed: ${result.message}")
+                    logError(method, "Silent sign-in failed: ${result.message} (for: $use)")
                     _tokenState.value = TokenState.ERROR
-                    _needsInteractiveLogin.value = true
+                    needsPerson(use)
                     false
                 }
             }
         } catch (e: Exception) {
-            logError(method, "Silent sign-in exception: ${e::class.simpleName}: ${e.message}")
+            logError(method, "Silent sign-in exception: ${e::class.simpleName}: ${e.message} (for: $use)")
             _tokenState.value = TokenState.ERROR
-            _needsInteractiveLogin.value = true
+            needsPerson(use)
             false
+        }
+    }
+
+    /** Raise the flag for the credential that could not be renewed — and only that one. */
+    private fun needsPerson(use: CredentialUse) {
+        when (use) {
+            CredentialUse.SESSION -> _needsInteractiveLogin.value = true
+            CredentialUse.BILLING -> _billingCredentialStale.value = true
         }
     }
 
@@ -236,6 +282,7 @@ class TokenManager(
         _currentToken.value = idToken
         _tokenState.value = TokenState.VALID
         _needsInteractiveLogin.value = false
+        _billingCredentialStale.value = false
 
         // Log token diagnostics
         val expiry = getTokenExpiry(idToken)
@@ -250,8 +297,12 @@ class TokenManager(
     }
 
     /**
-     * Handle a 401 error from an API call.
-     * Triggers token refresh.
+     * Handle a 401 from the SESSION — the CIRIS access token was rejected by
+     * the node or agent the person is signed in to. Triggers a silent refresh;
+     * if none is possible, [needsInteractiveLogin] is raised.
+     *
+     * NOT for billing. The agent's `.token_refresh_needed` and the credits
+     * route's `billing_auth_expired` go through [onBillingCredentialRejected].
      */
     fun on401Error() {
         val method = "on401Error"
@@ -259,7 +310,26 @@ class TokenManager(
         _tokenState.value = TokenState.EXPIRED
 
         scope.launch {
-            attemptSilentRefresh()
+            attemptSilentRefresh(CredentialUse.SESSION)
+        }
+    }
+
+    /**
+     * The hosted proxy rejected the BILLING credential (the agent wrote
+     * `.token_refresh_needed`, or `GET /v1/api/billing/credits` answered 401
+     * `billing_auth_expired`). Same silent refresh as a session 401 — a fresh
+     * ID token fixes both — but when no silent path exists this raises
+     * [billingCredentialStale], a credits state, and never
+     * [needsInteractiveLogin]: the person is still signed in to their agent
+     * (CIRISClient#171).
+     */
+    fun onBillingCredentialRejected() {
+        val method = "onBillingCredentialRejected"
+        logWarn(method, "billing credential rejected - triggering token refresh")
+        _tokenState.value = TokenState.EXPIRED
+
+        scope.launch {
+            attemptSilentRefresh(CredentialUse.BILLING)
         }
     }
 
@@ -286,8 +356,8 @@ class TokenManager(
             logInfo(method, "No token available, attempting silent refresh...")
         }
 
-        // Attempt silent refresh
-        val refreshed = attemptSilentRefresh()
+        // Attempt silent refresh. A purchase is a billing use of the token.
+        val refreshed = attemptSilentRefresh(CredentialUse.BILLING)
         if (refreshed) {
             val newToken = _currentToken.value
             logInfo(method, "Silent refresh succeeded, token available=${newToken != null}")
@@ -311,7 +381,9 @@ class TokenManager(
             while (isActive) {
                 delay(REFRESH_INTERVAL_MS)
                 logInfo(method, "Periodic refresh triggered")
-                attemptSilentRefresh()
+                // The hourly clock is the provider ID token's — the credential
+                // billing spends. The session has its own 401 path.
+                attemptSilentRefresh(CredentialUse.BILLING)
             }
         }
     }
