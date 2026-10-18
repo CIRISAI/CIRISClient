@@ -345,7 +345,10 @@ fun ClaimNodeScreen(
                 Spacer(Modifier.height(16.dp))
                 ResultCard(
                     title = localizedString("mobile.claim_node_claim_failed"),
-                    body = bootstrap.claimError!!,
+                    // By id where the client owns the sentence (#184), so it
+                    // follows a language change; the view model's text otherwise.
+                    body = bootstrap.claimFailure?.messageKey?.let { localizedString(it) }
+                        ?: bootstrap.claimError!!,
                     success = false,
                 )
             }

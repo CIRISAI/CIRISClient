@@ -6,7 +6,7 @@ package ai.ciris.mobile.shared.models
  * Claiming a remote node is the act that binds a responsible party to it, and
  * it fails in ways that need DIFFERENT NEXT ACTIONS from the operator:
  *
- *   - the PIN was wrong                 -> re-read it from the node's console
+ *   - the PIN was wrong                 -> re-read it from the node's claim_pin file
  *   - the node is already claimed       -> nothing to do; it has an owner
  *   - the node could not be reached     -> a network/address problem, not a secret
  *   - the NodeCode itself is malformed  -> re-scan or re-paste the code
@@ -49,6 +49,18 @@ enum class ClaimFailure {
     /** Re-entering the PIN or retrying can plausibly succeed. */
     val isRetryable: Boolean
         get() = this == PIN_REJECTED || this == UNREACHABLE || this == BAD_NODE_CODE
+
+    /**
+     * The bundle key that explains this failure, where the client owns the
+     * sentence (CIRISClient#184: the PIN is the node's claim_pin FILE, never a
+     * console). Null where the screen still renders the view model's text.
+     */
+    val messageKey: String?
+        get() = when (this) {
+            PIN_REJECTED -> "mobile.claim_node_err_pin_rejected"
+            ALREADY_CLAIMED -> "mobile.claim_node_err_already_claimed"
+            else -> null
+        }
 }
 
 /**

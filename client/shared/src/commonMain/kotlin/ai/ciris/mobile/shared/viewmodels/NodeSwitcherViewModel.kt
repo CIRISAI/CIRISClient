@@ -749,7 +749,9 @@ class NodeSwitcherViewModel(
         }
         if (claimPin.isBlank()) {
             _bootstrap.value = _bootstrap.value.copy(
-                claimError = "Enter the one-time PIN shown on the node's console to claim it.",
+                // The PIN is the node's claim_pin FILE; no console carries it (#184).
+                claimError = ai.ciris.mobile.shared.localization.LocalizationHelper
+                    .getString("mobile.claim_node_err_pin_blank"),
             )
             return
         }
@@ -823,10 +825,12 @@ class NodeSwitcherViewModel(
                     // than being flattened into a guess.
                     claimErrorDetail = e.message,
                     claimError = when (failure) {
-                        ai.ciris.mobile.shared.models.ClaimFailure.PIN_REJECTED ->
-                            "The node rejected the PIN — check the one-time PIN on the node's console and try again."
+                        // By id, through the bundle (#184): the PIN is a file,
+                        // never a console, and an owned node has none at all.
+                        ai.ciris.mobile.shared.models.ClaimFailure.PIN_REJECTED,
                         ai.ciris.mobile.shared.models.ClaimFailure.ALREADY_CLAIMED ->
-                            "This node already has an owner — there is nothing to claim. It prints a one-time PIN only while unclaimed."
+                            ai.ciris.mobile.shared.localization.LocalizationHelper
+                                .getString(failure.messageKey!!)
                         ai.ciris.mobile.shared.models.ClaimFailure.UNREACHABLE ->
                             "Could not reach that node to claim it — check the address in its NodeCode and that the node is running."
                         ai.ciris.mobile.shared.models.ClaimFailure.BAD_NODE_CODE ->
