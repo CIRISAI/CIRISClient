@@ -96,8 +96,17 @@ data class CreditStatus(
      * and every send was blocked with a "buy credits" message against a
      * 398-credit account (CIRISClient#59). This is that conclusion, on the
      * screen where the person is stuck.
+     *
+     * And distinct from the SESSION. This was `authExpired` and rendered the
+     * "your session is no longer valid" banner, whose button signed the
+     * person out — for a Google token that had passed its hour while their
+     * own agent was answering them (CIRISClient#171). It is a credits state:
+     * sends through the hosted proxy pause, and the fix is a fresh provider
+     * sign-in that leaves the session alone.
      */
-    val authExpired: Boolean = false,
+    val billingCredentialStale: Boolean = false,
+    /** That refresh is in flight — on desktop the browser is open and the node is being polled. */
+    val billingCredentialRefreshing: Boolean = false,
     val hasCredit: Boolean = false,
     val creditsRemaining: Int = 0,
     val freeUsesRemaining: Int = 0,
@@ -363,14 +372,39 @@ class InteractViewModel(
     private val _creditStatus = MutableStateFlow(CreditStatus())
     val creditStatus: StateFlow<CreditStatus> = _creditStatus.asStateFlow()
 
-    /** TokenManager said a person must sign in again. Carry it to the send path. */
-    fun onAuthExpired() {
-        _creditStatus.value = _creditStatus.value.copy(authExpired = true)
+    /**
+     * The SESSION is no longer valid — TokenManager's conclusion about the
+     * CIRIS access token, which only Login renews. Rendered as the session
+     * banner; the 3-strikes 401 path in [fetchMessages] is the other way a
+     * dead session is noticed, and it navigates to Login outright.
+     */
+    private val _sessionExpired = MutableStateFlow(false)
+    val sessionExpired: StateFlow<Boolean> = _sessionExpired.asStateFlow()
+
+    fun onSessionExpired() {
+        _sessionExpired.value = true
     }
 
-    /** A fresh credential arrived. A later successful credit load clears it too. */
-    fun onAuthRestored() {
-        _creditStatus.value = _creditStatus.value.copy(authExpired = false)
+    fun onSessionRestored() {
+        _sessionExpired.value = false
+    }
+
+    /** The BILLING credential needs a person. Carry it to the send path — credits, not session. */
+    fun onBillingCredentialStale() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialStale = true)
+    }
+
+    /** A fresh billing credential arrived. A later successful credit load clears it too. */
+    fun onBillingCredentialRefreshed() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialStale = false)
+    }
+
+    fun onBillingRefreshStarted() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialRefreshing = true)
+    }
+
+    fun onBillingRefreshFinished() {
+        _creditStatus.value = _creditStatus.value.copy(billingCredentialRefreshing = false)
     }
 
     // Trust status for shield display
@@ -829,14 +863,31 @@ class InteractViewModel(
 
         // Pre-flight credit check - only when using CIRIS proxy
         val currentCredits = _creditStatus.value
-        if (_llmHealth.value.isCirisProxy && currentCredits.authExpired) {
-            // NOT "no credits". The account may be full; the token is stale and
-            // only a sign-in fixes it. The purchase message sent people to the
-            // Buy button for a problem money cannot solve (CIRISClient#59).
-            logWarn(method, "Billing credential expired - blocking send until sign-in")
+        if (_llmHealth.value.isCirisProxy && _sessionExpired.value) {
+            logWarn(method, "Session expired - blocking send until sign-in")
             _messages.value = (_messages.value + ChatMessage(
                 id = generateMessageId(),
                 text = LocalizationHelper.getString("auth.session_expired"),
+                type = MessageType.SYSTEM,
+                timestamp = Clock.System.now(),
+            )).takeLast(50)
+            return
+        }
+        if (_llmHealth.value.isCirisProxy && currentCredits.billingCredentialStale) {
+            // NOT "no credits". The account may be full; the token is stale and
+            // only a sign-in fixes it. The purchase message sent people to the
+            // Buy button for a problem money cannot solve (CIRISClient#59).
+            // And NOT "session expired": the sentence names the credential
+            // that lapsed and the sign-in that renews it (CIRISClient#171).
+            // Only when the hosted proxy is the LLM — with a BYOK key nothing
+            // about chat depends on billing.
+            logWarn(method, "Billing credential stale - blocking proxy send until a fresh provider sign-in")
+            _messages.value = (_messages.value + ChatMessage(
+                id = generateMessageId(),
+                text = LocalizationHelper.getString(
+                    "mobile.billing_credential_stale",
+                    mapOf("provider" to if (ai.ciris.mobile.shared.platform.isIOS()) "Apple" else "Google"),
+                ),
                 type = MessageType.SYSTEM,
                 timestamp = Clock.System.now(),
             )).takeLast(50)
