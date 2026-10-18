@@ -131,10 +131,14 @@ android {
                 // android_24 wheels. The published AAR is unaffected
                 // (:shared:fatReleaseAar bundles no Python).
                 //
-                // Hand-bumping a second source of the server version is the
-                // defect CIRISClient#166 removes: one server version per run,
-                // derived from the pin, used by every leg and this install.
-                install "ciris-server==0.5.231"
+                // ON THE MATRIX THIS IS NOT A SECOND SOURCE (CIRISClient#166).
+                // five-platform-live-qa.yml resolves ONE server version per
+                // run (testing/gate/server_version.py) and hands it in as
+                // `-PcirisServerVersion=<x.y.z>`, so the node the APK embeds is
+                // the release every leg downloads and talks to. The literal
+                // below is the default for a build with no property — a
+                // developer's local build — and is still bumped by hand.
+                install "ciris-server==${project.findProperty('cirisServerVersion') ?: '0.5.231'}"
                 // ciris-lens-core is REQUIRED by the accord_metrics adapter
                 // (CIRISAgent#866 LensCore fold) — the fourth substrate leg.
                 // Its Android wheels are committed to wheels/ like the other
