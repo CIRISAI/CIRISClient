@@ -82,6 +82,11 @@ CLIENT_TEST_PORT = 9091
 #: itself — every desktop leg reports clientMode=NODE at :4243.
 NODE_API_PORT = 4243
 
+#: The agent's API port. Only a with-AI leg forwards it: the client finds a
+#: brain by probing :8080 (`syncBackendFrom`), and on a bare-node leg nothing
+#: may answer there (BackendSyncAgentBranchTest pins "nothing on :8080 → stay").
+AGENT_API_PORT = 8080
+
 #: Android's test-mode switch. A file, not an env var: `am start` cannot set the
 #: environment of the process it launches, so the sentinel is the only handle a
 #: harness has. Read once at startup — see invariant 1.
@@ -191,7 +196,7 @@ ANDROID_ACTIVITY = "ai.ciris.mobile.MainActivity"
 
 def android_plan(apk: Path, package: str, serial: str | None = None,
                  host_port: int = 19091, activity: str = ANDROID_ACTIVITY,
-                 claim_pin: str | None = None) -> Plan:
+                 claim_pin: str | None = None, reverse_agent: bool = False) -> Plan:
     """Emulator on this runner, node on the host, client reaching back to it.
 
     The node runs on the HOST and the app reaches it through `adb reverse`, so
@@ -239,6 +244,11 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
             *handover,
             # INVARIANT 2: the node is reachable before the app probes it.
             Step("reverse-node", adb + ["reverse", f"tcp:{NODE_API_PORT}", f"tcp:{NODE_API_PORT}"]),
+            # WITH AI: the runner's agent is the emulator's localhost:8080, the
+            # same way its node is localhost:4243 — so the client probes a brain
+            # where a phone's own agent would answer, and finds this one.
+            *([Step("reverse-agent", adb + ["reverse", f"tcp:{AGENT_API_PORT}", f"tcp:{AGENT_API_PORT}"])]
+              if reverse_agent else []),
             Step("forward-automation", adb + ["forward", f"tcp:{host_port}", f"tcp:{CLIENT_TEST_PORT}"]),
             Step("launch", adb + ["shell", "am", "start", "-W", "-n", f"{package}/{activity}"]),
             # A LAUNCH THAT RETURNED 0 IS NOT A PROCESS.
@@ -274,7 +284,7 @@ def android_plan(apk: Path, package: str, serial: str | None = None,
 
 
 def android_teardown(package: str, serial: str | None = None,
-                     host_port: int = 19091) -> Plan:
+                     host_port: int = 19091, reverse_agent: bool = False) -> Plan:
     """Leave nothing behind that would make the NEXT run lie.
 
     The sentinel especially: a leftover `ciris_test_mode` file puts a later
@@ -294,6 +304,8 @@ def android_teardown(package: str, serial: str | None = None,
                  adb + ["shell", f"run-as {package} rm -f {_android_pin_path(package)}"], optional=True),
             Step("remove-forward", adb + ["forward", "--remove", f"tcp:{host_port}"], optional=True),
             Step("remove-reverse", adb + ["reverse", "--remove", f"tcp:{NODE_API_PORT}"], optional=True),
+            *([Step("remove-reverse-agent", adb + ["reverse", "--remove", f"tcp:{AGENT_API_PORT}"],
+                    optional=True)] if reverse_agent else []),
         ],
     )
 

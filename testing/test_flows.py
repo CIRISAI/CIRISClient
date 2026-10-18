@@ -24,6 +24,9 @@ from testing.gate.flow_spec import FlowSpec, SpecError
 
 REPO = Path(__file__).resolve().parents[1]
 FLOWS = REPO / "testing" / "flows"
+#: The with-AI legs' flows (five-platform-live-qa.yml `--flows testing/flows/agent`):
+#: held to the same load and tag checks as the ones every leg runs.
+AGENT_FLOWS = FLOWS / "agent"
 
 CSD_TEXT = """\
 # CSD-900 — a test surface
@@ -225,6 +228,9 @@ def test_every_flow_in_the_repo_loads_against_its_real_csd():
     specs = run_flows.load_flows([FLOWS])
     assert specs, "testing/flows is empty — the matrix would run nothing and pass"
     assert all(s.csd is not None for s in specs)
+    agent = run_flows.load_flows([AGENT_FLOWS])
+    assert agent, "testing/flows/agent is empty — the with-AI legs would run nothing and pass"
+    assert all(s.csd is not None for s in agent)
 
 
 def _client_tag_strings() -> tuple[set[str], set[str]]:
@@ -238,13 +244,65 @@ def _client_tag_strings() -> tuple[set[str], set[str]]:
     src = REPO / "client" / "shared" / "src" / "commonMain"
     literals: set[str] = set()
     prefixes: set[str] = set()
-    for kt in src.rglob("*.kt"):
-        for body, end in re.findall(r'"([a-z][a-z0-9_]*)(["$])', kt.read_text(encoding="utf-8")):
+    texts = [kt.read_text(encoding="utf-8") for kt in src.rglob("*.kt")]
+    for text in texts:
+        for body, end in re.findall(r'"([a-z][a-z0-9_]*)(["$])', text):
             if end == '"':
                 literals.add(body)
             elif "_" in body.rstrip("_"):
                 prefixes.add(body)
+    _add_tag_prefix_tags(texts, literals, prefixes)
+    _add_transcript_tags(src, prefixes)
     return literals, prefixes
+
+
+def _add_transcript_tags(src, prefixes: set[str]) -> None:
+    """Interact's rows are `"msg_${role}_$ordinal"` (ChatTranscriptTags.kt),
+    the role from `transcriptRole`'s exhaustive `when`. Each role is a
+    two-segment prefix (`msg_agent_`) — the roles the client has, and no other."""
+    f = src / "kotlin" / "ai" / "ciris" / "mobile" / "shared" / "ui" / "screens" / "ChatTranscriptTags.kt"
+    text = f.read_text(encoding="utf-8")
+    body = re.search(r"fun transcriptRole\([^)]*\)[^{]*=\s*when[^{]*\{(.*?)\n\}", text, re.S)
+    assert body, f"{f}: transcriptRole's `when` not found — the msg_<role>_<n> rule moved"
+    roles = re.findall(r'->\s*"([a-z]+)"', body.group(1))
+    assert roles, f"{f}: transcriptRole names no roles"
+    if '"msg_${role}_$ordinal"' in text:
+        prefixes.update(f"msg_{r}_" for r in roles)
+
+
+#: A composable that builds its tags from its caller's `tagPrefix`
+#: (ConfirmSheet: `"btn_${tagPrefix}_confirm"`), and the callers' values.
+_TAG_PREFIX_PARAM = re.compile(r"\btagPrefix:\s*String(?:\s*=\s*\"([a-z][a-z0-9_]*)\")?")
+_TAG_PREFIX_ARG = re.compile(r'\btagPrefix\s*=\s*"([a-z][a-z0-9_]*)"')
+_TAG_PREFIX_TEMPLATE = re.compile(r'"([a-z_]*\$\{?tagPrefix\}?[^"\\]*)"')
+
+
+def _add_tag_prefix_tags(texts: list[str], literals: set[str], prefixes: set[str]) -> None:
+    """The tags a `tagPrefix` template builds for each prefix a caller passes.
+
+    The interpolated HEAD is what the literal read above cannot see
+    (testing/flows/drafts/README.md, "the blind spot"). Expanded only for the
+    prefixes the source actually passes (and declared defaults), so a template
+    vouches for `btn_wallet_send_confirm` and not for any `btn_*_confirm`. A
+    template with a second interpolation (`"${tagPrefix}_fact_${i + 1}"`) is
+    a PREFIX, by the two-segment rule above."""
+    templates: set[str] = set()
+    values: set[str] = set()
+    for text in texts:
+        decl = list(_TAG_PREFIX_PARAM.finditer(text))
+        if decl:
+            templates.update(_TAG_PREFIX_TEMPLATE.findall(text))
+            values.update(m.group(1) for m in decl if m.group(1))
+        values.update(_TAG_PREFIX_ARG.findall(text))
+    for tpl in templates:
+        for v in values:
+            tag = tpl.replace("${tagPrefix}", v).replace("$tagPrefix", v)
+            if "$" not in tag:
+                literals.add(tag)
+            else:
+                head = tag.split("$", 1)[0]
+                if "_" in head.rstrip("_"):
+                    prefixes.add(head)
 
 
 def client_carries(tag: str, literals: set[str], prefixes: set[str]) -> bool:
@@ -267,6 +325,14 @@ def client_carries(tag: str, literals: set[str], prefixes: set[str]) -> bool:
     ("btn_receipt_${PEER_KEY_ID}", True),    # "btn_receipt_$keyId"  PeopleSupport.kt
     ("chat_msg_${MESSAGE_ATTESTATION_ID}", True),
     ("btn_no_such_${PEER_KEY_ID}", False),  # a fixture value vouches for nothing either
+    # A tag whose HEAD is the caller's `tagPrefix` (drafts/README's blind spot):
+    ("btn_wallet_send_confirm", True),   # "btn_${tagPrefix}_confirm" ConfirmSheet × tagPrefix = "wallet_send"
+    ("sheet_stop", True),                # "sheet_$tagPrefix"         ConfirmSheet × tagPrefix = "stop"
+    ("skill_remove_fact_2", True),       # "${tagPrefix}_fact_${i + 1}"
+    ("btn_no_such_prefix_confirm", False),  # a template vouches only for prefixes a caller passes
+    ("msg_agent_0", True),               # "msg_${role}_$ordinal" ChatTranscriptTags.kt
+    ("msg_error_0", True),
+    ("msg_wizard_0", False),             # not a role transcriptRole has
 ])
 def test_the_client_tag_check_sees_interpolated_tags_and_nothing_else(tag, carried):
     assert client_carries(tag, *_client_tag_strings()) is carried
@@ -277,7 +343,7 @@ def test_every_tag_a_seeded_flow_names_exists_in_the_client():
     found' on every leg. Checked here, at the keyboard, rather than there."""
     literals, prefixes = _client_tag_strings()
     missing = []
-    for spec in run_flows.load_flows([FLOWS]):
+    for spec in run_flows.load_flows([FLOWS, AGENT_FLOWS]):
         missing += [f"{spec.flow}/cleanup: {a.target}" for a in spec.cleanup
                     if not client_carries(a.target, literals, prefixes)]
         for step in spec.steps:
@@ -704,7 +770,9 @@ def test_every_leg_of_the_matrix_runs_the_flows():
             for call in re.findall(r"testing\.gate\.run_platform[^;\n]*", body):
                 legs += 1
                 assert "--flows testing/flows" in call, f"a leg runs the smoke walk without flows: {call}"
-    assert legs == 5, f"expected five run_platform legs, found {legs}"
+    # Five node-only legs, and the three with-AI legs a `with_ai` dispatch adds
+    # (linux, android, windows — they run testing/flows/agent).
+    assert legs == 8, f"expected eight run_platform legs (5 node-only + 3 with AI), found {legs}"
 
 
 # ── run_platform: flows ride the smoke walk, never ahead of it ──────────────

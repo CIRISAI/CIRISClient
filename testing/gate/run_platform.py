@@ -68,6 +68,10 @@ class Report:
     #: is NOT the run's version. The board says both; it never claims the run's
     #: version for a node the leg did not run (CIRISClient#166).
     embedded_node_version: str = ""
+    #: With-AI legs only: the `ciris-agent==` this leg installed (the run's ONE
+    #: agent version, testing/gate/agent_version.py). Its node is the agent's
+    #: own pinned ciris-server, recorded as `embedded_node_version`.
+    agent_version: str = ""
     steps: list[StepResult] = field(default_factory=list)
     #: One entry per CSD flow (run_flows.FlowOutcome), when `--flows` was given.
     flows: list[dict] = field(default_factory=list)
@@ -84,7 +88,8 @@ def plan_for(args) -> bringup.Plan:
         # (bringup.android_plan) — None when the node is already owned.
         pin = bringup.node_claim_pin(args.node_url)
         return bringup.android_plan(Path(args.apk), args.package, serial=args.serial,
-                                    activity=args.activity, claim_pin=pin)
+                                    activity=args.activity, claim_pin=pin,
+                                    reverse_agent=bool(getattr(args, "with_ai", False)))
     if args.platform == "ios":
         if not args.app:
             raise bringup.CannotRun("--app is required for ios")
@@ -98,15 +103,17 @@ def plan_for(args) -> bringup.Plan:
 
 def teardown_for(args) -> bringup.Plan | None:
     if args.platform == "android":
-        return bringup.android_teardown(args.package, serial=args.serial)
+        return bringup.android_teardown(args.package, serial=args.serial,
+                                        reverse_agent=bool(getattr(args, "with_ai", False)))
     if args.platform == "ios":
         return bringup.ios_teardown(args.bundle_id, udid=args.udid)
     return None
 
 
 
-def state_problems(mode: str, node_url: str) -> list[str]:
-    """What is wrong with `/state` for a client driven against a BARE node.
+def state_problems(mode: str, node_url: str, with_ai: bool = False) -> list[str]:
+    """What is wrong with `/state` for a client driven against a BARE node —
+    or, on a with-AI leg, against a running agent.
 
     Split out of [walk] so it is testable without a device — the assertions this
     gate makes are exactly the ones worth having a red path for, and one needing
@@ -118,6 +125,14 @@ def state_problems(mode: str, node_url: str) -> list[str]:
     would punish the client for being honest.
     """
     problems: list[str] = []
+    if with_ai:
+        # THE OTHER FACE OF #48. A brain answers :8080 on this leg; a client
+        # that settles on NODE has missed it, and every agent flow after this
+        # would fail for that reason under its own name. `unset` is accepted
+        # for the reason above: not probed yet is not wrong.
+        if mode.upper() == "NODE":
+            problems.append("clientMode=NODE with an agent running (the probe never found :8080)")
+        return problems
     if mode.upper() == "AGENT":
         problems.append("clientMode=AGENT against a bare node (no brain is folded here)")
     if node_url and ":8080" in node_url:
@@ -125,7 +140,7 @@ def state_problems(mode: str, node_url: str) -> list[str]:
     return problems
 
 def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
-         args_timeout: float = 120.0) -> None:
+         args_timeout: float = 120.0, with_ai: bool = False) -> None:
     """The smallest walk that would have caught every defect of the last month.
 
     Deliberately not a product tour. Each assertion here maps to a real
@@ -220,7 +235,17 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
     state = drv.state()
     mode = str(state.get("clientMode", "unset"))
     node_url = str(state.get("nodeUrl", ""))
-    problems = state_problems(mode, node_url)
+    if with_ai and mode.upper() != "AGENT":
+        # The probe may land a beat after the first screen; give it the time
+        # the walk gives the screen, then judge.
+        try:
+            drv.wait_for_client_mode("AGENT", timeout=args_timeout)
+        except DriverError:
+            pass
+        state = drv.state()
+        mode = str(state.get("clientMode", "unset"))
+        node_url = str(state.get("nodeUrl", ""))
+    problems = state_problems(mode, node_url, with_ai=with_ai)
     detail = f"clientMode={mode} node={node_url}"
     rep.add("state", not problems, detail if not problems else f"{detail} — {'; '.join(problems)}")
 
@@ -265,6 +290,19 @@ def main() -> int:
                     help="iOS: the ciris-server the simulator app EMBEDS (CIRISAgent's pin), which is "
                          "the node the client actually talks to there; recorded beside --node-version")
     ap.add_argument("--timeout", type=float, default=120.0)
+    # WITH AI (the release gate, CIRISClient#166). The leg runs a pip-installed
+    # `ciris-agent==<the run's version>` instead of a bare node; the wizard
+    # answers "with an AI assistant" and is given a real provider key. The key
+    # is read from the environment by NAME — never a command-line value.
+    ap.add_argument("--with-ai", action="store_true",
+                    help="drive the with-AI wizard against a running agent (see --llm-*)")
+    ap.add_argument("--agent-version", default="",
+                    help="with-AI: the ciris-agent version this leg installed, for the board")
+    ap.add_argument("--llm-provider", default="anthropic")
+    ap.add_argument("--llm-model", default="claude-sonnet-5-5",
+                    help="the model to pick from the provider's live list; never substituted")
+    ap.add_argument("--llm-key-env", default="ANTHROPIC_API_KEY",
+                    help="the environment variable that holds the provider key")
     ap.add_argument("--flows", action="append",
                     help="after the smoke walk, run these CSD flows (a file or a directory; "
                          "repeatable) against the same app — see testing/flows/README.md")
@@ -279,7 +317,18 @@ def main() -> int:
     args = ap.parse_args()
 
     rep = Report(platform=args.platform, node_version=args.node_version,
-                 embedded_node_version=args.embedded_node_version)
+                 embedded_node_version=args.embedded_node_version,
+                 agent_version=args.agent_version if args.with_ai else "")
+    llm = None
+    if args.with_ai:
+        from testing.gate.session_fixture import LlmChoice, SessionUnavailable
+        try:
+            llm = LlmChoice.from_env(args.llm_provider, args.llm_model, args.llm_key_env)
+        except SessionUnavailable as e:
+            rep.add("with-ai", False, str(e))
+            return _finish(args, rep)
+        rep.add("with-ai", True, f"provider {llm.provider}, model {llm.model}, key from ${args.llm_key_env}")
+    args.llm = llm
     args.shots.mkdir(parents=True, exist_ok=True)
 
     from testing.gate.platforms import build_platform
@@ -307,7 +356,7 @@ def main() -> int:
         drv = TestAutomationServer(base_url=plan.test_url)
         # PROVEN, NOT ASSUMED.
         drv.wait_for_server(timeout=args.timeout)
-        walk(drv, rep, args.shots, platform, args_timeout=args.timeout)
+        walk(drv, rep, args.shots, platform, args_timeout=args.timeout, with_ai=args.with_ai)
         if specs is not None:
             flows(drv, rep, specs, args, platform)
         rep.ok = all(s.ok for s in rep.steps)
@@ -357,9 +406,12 @@ def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None
                                      artifacts=args.shots / f"flows-{leg}",
                                      client_version=version, username=args.username,
                                      password=args.password,
-                                     fixtures=run_flows.fixture_factory(args, leg=leg))
+                                     fixtures=run_flows.fixture_factory(args, leg=leg),
+                                     llm=getattr(args, "llm", None))
     except SessionUnavailable as e:
-        rep.add("flows", False, f"no session to run them in: {e}")
+        llm = getattr(args, "llm", None)
+        why = llm.scrub(str(e)) if llm is not None else str(e)
+        rep.add("flows", False, f"no session to run them in: {why}")
         return
     rep.flows = [asdict(o) for o in outcomes]
     rep.add("flows", run_flows.leg_ok(outcomes), run_flows.summary(outcomes))
@@ -397,7 +449,14 @@ def board_line(leg: str, rep: Report) -> str:
     from testing.gate import optional_skips  # noqa: PLC0415
     parts = [f"{leg}: {'PASS' if rep.ok else 'FAIL'}",
              f"server {rep.node_version or 'unknown'}"]
-    if rep.embedded_node_version:
+    if rep.agent_version:
+        # With AI: the brain is the run's ONE agent, and the node the client
+        # talks to is the one that agent pins and folds in — not the run's
+        # server, which is this leg's two-node peer.
+        parts.append(f"agent ciris-agent {rep.agent_version} (with AI)")
+        if rep.embedded_node_version:
+            parts.append(f"agent's node {rep.embedded_node_version} (its pin; the run's server is the peer)")
+    elif rep.embedded_node_version:
         parts.append(f"embedded node {rep.embedded_node_version} (the Agent's pin; the client "
                      f"talks to this one, the run's server is its peer)")
     now, _ = optional_skips.counts_for(rep.flows)

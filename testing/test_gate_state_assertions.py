@@ -80,3 +80,15 @@ def test_an_absent_node_url_is_not_read_as_the_agent_port():
     # Absent means "the client did not say", which is not evidence of :8080.
     # Reading an empty string as a failure is the distinct-zeroes mistake.
     assert state_problems("NODE", "") == []
+
+
+# ── with AI (the release gate): the other face of #48 ───────────────────────
+
+def test_a_with_ai_leg_whose_client_settles_on_NODE_has_missed_the_agent():
+    problems = state_problems("NODE", NODE_URL, with_ai=True)
+    assert problems and "never found :8080" in problems[0]
+
+
+@pytest.mark.parametrize("mode", ["AGENT", "unset", ""])
+def test_a_with_ai_leg_accepts_agent_and_not_yet_probed(mode):
+    assert state_problems(mode, AGENT_URL, with_ai=True) == []

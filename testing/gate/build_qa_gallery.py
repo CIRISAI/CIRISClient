@@ -46,6 +46,11 @@ PRETTY = {
     "windows": "Windows",
     "android": "Android",
     "ios": "iOS",
+    # The with-AI legs (a `with_ai` dispatch only): tiled after the five
+    # when their reports are present, and never "did not run" otherwise.
+    "linux-ai": "Linux, with AI",
+    "android-ai": "Android, with AI",
+    "windows-ai": "Windows, with AI",
 }
 
 
@@ -83,7 +88,7 @@ def _shot_for(root: Path, leg: str, report: Optional[dict]) -> Optional[Path]:
 def _tiles(root: Path) -> List[Tile]:
     reports = _find_reports(root)
     tiles: List[Tile] = []
-    for leg in EXPECTED:
+    for leg in EXPECTED + sorted(k for k in reports if k not in EXPECTED):
         rep = reports.get(leg)
         image = _shot_for(root, leg, rep)
         if rep is None:
@@ -93,8 +98,9 @@ def _tiles(root: Path) -> List[Tile]:
         failed = [s for s in rep.get("steps", []) if not s.get("ok")]
         flows_step = next((s for s in rep.get("steps", []) if s.get("name") == "flows"), None)
         skips, _ = optional_skips.counts_for(rep.get("flows", []))
+        agent = str(rep.get("agent_version", ""))
         if passed:
-            detail = f"walk OK · flows {flows_step.get('detail', '?') if flows_step else 'not run'}"
+            detail = (f"ciris-agent {agent} · " if agent else "") + f"walk OK · flows {flows_step.get('detail', '?') if flows_step else 'not run'}"
             if not image:
                 detail += " · no screenshot captured"
         else:
@@ -134,14 +140,14 @@ def _render(tiles: List[Tile], run_url: str = "", server: str = "", source: str 
             badge, cls = "DID NOT RUN", "absent"
 
         if t.image and t.image.exists():
-            img = f'<img src="data:image/png;base64,{_embed(t.image)}" alt="{html.escape(PRETTY[t.platform])} screen">'
+            img = f'<img src="data:image/png;base64,{_embed(t.image)}" alt="{html.escape(PRETTY.get(t.platform, t.platform))} screen">'
         else:
             img = '<div class="noshot">no screenshot</div>'
 
         cards.append(
             f"""      <figure class="card {cls}">
         <figcaption>
-          <span class="name">{html.escape(PRETTY[t.platform])}</span>
+          <span class="name">{html.escape(PRETTY.get(t.platform, t.platform))}</span>
           <span class="badge {cls}">{badge}</span>
         </figcaption>
         {img}
@@ -215,7 +221,7 @@ def _summary(tiles: List[Tile], server: str = "", source: str = "") -> str:
     for t in tiles:
         result = "PASS" if t.passed is True else "FAIL" if t.passed is False else "did not run"
         shot = "yes" if (t.image and t.image.exists()) else "—"
-        lines.append(f"| {PRETTY[t.platform]} | {result} | {_server_cell(t)} | {_skips_cell(t)} | {shot} |")
+        lines.append(f"| {PRETTY.get(t.platform, t.platform)} | {result} | {_server_cell(t)} | {_skips_cell(t)} | {shot} |")
     lines += [
         "",
         "_Optional skips are `SKIP (optional)` steps per flow, judged on each leg against "
