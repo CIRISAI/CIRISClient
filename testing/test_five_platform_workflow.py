@@ -215,12 +215,16 @@ def test_the_gallery_step_calls_the_script_as_written(wf):
     --shots` — the script takes the artifacts directory positionally, and the
     step passed it as a flag, so the gallery never built on any run."""
     body = "\n".join(str(s.get("run", "")) for s in wf["jobs"]["gallery"]["steps"])
-    call = re.search(r"build_qa_gallery\.py\s+([^\n|]*)", body)
+    # `-m testing.gate.build_qa_gallery`: it imports testing.gate.optional_skips
+    # now, which a script invocation (sys.path[0] = testing/gate) cannot find.
+    call = re.search(r"build_qa_gallery(?:\.py)?\s+([^\n|]*)", body)
     assert call, "no build_qa_gallery.py call in the gallery job"
-    argv = call.group(1).replace("\\", " ").split()
+    import shlex
+    argv = shlex.split(call.group(1).replace("\\", " "))
     from testing.gate import build_qa_gallery
     ns = build_qa_gallery.parser().parse_args(argv)
     assert str(ns.root) == "collected" and str(ns.out) == "gallery.html"
+    assert ns.server_version and ns.server_source, "the gallery is not told the run's server version"
 
 
 def test_the_gate_is_not_wired_to_every_push(wf):
@@ -386,3 +390,97 @@ def test_the_android_leg_gets_a_fresh_node_when_the_fixture_seeded_the_shared_on
     assert names.index("A fresh node for the Android leg") < names.index("Android emulator")
     assert names.index("Linux desktop") < names.index("A fresh node for the Android leg")
 
+
+
+# ── one server version per run (CIRISClient#166) ────────────────────────────
+
+BUILD_WF = WF.parent / "build.yml"
+
+#: What the legs USED to do, each on its own: the CLIENT's version as a server
+#: tag (never a release — the client leads), and "latest" (a moving target that
+#: three legs read at three different minutes: run 39023854089 drove two legs
+#: against v0.5.228 and three against v0.5.229).
+_OWN_LOOKUPS = ("v$(cat VERSION)", "gh release view", "releases/latest")
+
+#: The one source. A leg reads it; nothing else computes a version.
+SERVER_JOB = "server"
+SERVER_REF = "${{ needs.server.outputs.version }}"
+
+
+def _commands(wf: dict) -> list[tuple[str, str]]:
+    """(job, line) for every executing line — `run:` and emulator `script:` —
+    with shell comments dropped, so a comment EXPLAINING the old lookup is not
+    reported as the lookup (this file's own lesson, three times over)."""
+    out = []
+    for job, body in wf["jobs"].items():
+        for step in body.get("steps", []):
+            for text in (step.get("run"), (step.get("with") or {}).get("script")):
+                if not text:
+                    continue
+                joined = re.sub(r"\\\n\s*", " ", str(text))
+                out += [(job, ln.strip()) for ln in joined.splitlines()
+                        if ln.strip() and not ln.strip().startswith("#")]
+    return out
+
+
+def test_the_workflow_has_exactly_one_server_version_source(wf):
+    resolvers = [(job, ln) for job, ln in _commands(wf) if "testing.gate.server_version" in ln]
+    assert len(resolvers) == 1, f"the server version must be resolved exactly once: {resolvers}"
+    assert resolvers[0][0] == SERVER_JOB, f"the resolver runs in {resolvers[0][0]!r}, not {SERVER_JOB!r}"
+    own = [(job, ln) for job, ln in _commands(wf) if any(p in ln for p in _OWN_LOOKUPS)]
+    assert not own, f"a leg still picks its own server version: {own}"
+    outputs = wf["jobs"][SERVER_JOB].get("outputs") or {}
+    assert "version" in outputs and "pypi" in outputs, f"{SERVER_JOB} exposes {sorted(outputs)}"
+
+
+@pytest.mark.parametrize("leg", LEGS)
+def test_every_leg_reads_the_one_server_version(wf, leg):
+    job = wf["jobs"][leg]
+    needs = job.get("needs") or []
+    assert SERVER_JOB in ([needs] if isinstance(needs, str) else needs), f"{leg} does not wait for {SERVER_JOB}"
+    calls = _run_platform_calls(job)
+    assert calls, f"{leg} never invokes the runner"
+    for call in calls:
+        assert f'--node-version "{SERVER_REF}"' in call, f"{leg} boards a version it did not resolve: {call}"
+    body = "\n".join(ln for _, ln in _commands(wf) if _ == leg)
+    downloads = [ln for ln in body.splitlines() if "gh release download" in ln and "CIRISServer" in ln]
+    assert downloads, f"{leg} downloads no server binary"
+    for ln in downloads:
+        assert SERVER_REF in ln, f"{leg} downloads a version other than the run's: {ln}"
+
+
+def test_the_android_install_resolves_the_run_s_server_version(wf):
+    """`androidApp/build.gradle` pins `ciris-server==` from PyPI; on the matrix
+    that pin is the run's version, handed in as a Gradle property, so the APK's
+    embedded node and the node the legs talk to are the same release."""
+    gradle = [ln for job, ln in _commands(wf) if job == "linux-android" and "assembleDebug" in ln]
+    assert gradle, "the Android leg builds no APK"
+    assert any("-PcirisServerVersion=${{ needs.server.outputs.pypi }}" in ln for ln in gradle), gradle
+
+
+def test_the_ios_leg_records_the_embedded_node_it_did_not_choose(wf):
+    """The simulator app embeds CIRISAgent's pinned ciris-server, not the run's;
+    the board says both rather than claiming the run's version for it."""
+    [call] = [c for c in _run_platform_calls(wf["jobs"]["macos-ios"]) if "--platform ios" in c]
+    assert "--embedded-node-version" in call, call
+    body = "\n".join(ln for job, ln in _commands(wf) if job == "macos-ios")
+    assert "embedded=" in body, "the iOS substrate step does not export the agent's pin for the board"
+
+
+def test_the_dispatch_input_feeds_the_one_source_and_nothing_else(wf):
+    on = wf.get("on") or wf.get(True)
+    inputs = on["workflow_dispatch"]["inputs"]
+    assert "server_version" in inputs, "no way to run the matrix against a named release"
+    resolver = [ln for job, ln in _commands(wf) if "testing.gate.server_version" in ln]
+    assert "inputs.server_version" in resolver[0], resolver
+    elsewhere = [(job, ln) for job, ln in _commands(wf) if "inputs.server_version" in ln and job != SERVER_JOB]
+    assert not elsewhere, f"the input is read outside the one source: {elsewhere}"
+
+
+def test_build_yml_s_e2e_walk_uses_the_same_resolver():
+    """build.yml:709 had the same CLIENT-version lookup with the same fallback."""
+    bwf = yaml.safe_load(BUILD_WF.read_text(encoding="utf-8"))
+    cmds = _commands(bwf)
+    assert any("testing.gate.server_version" in ln for _, ln in cmds), "build.yml picks its own server"
+    own = [(job, ln) for job, ln in cmds if any(p in ln for p in _OWN_LOOKUPS)]
+    assert not own, f"build.yml still looks a server version up on its own: {own}"

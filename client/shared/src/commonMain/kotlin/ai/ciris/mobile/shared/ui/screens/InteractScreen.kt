@@ -70,7 +70,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.testTag
 import ai.ciris.mobile.shared.platform.FilePickerDialog
 import ai.ciris.mobile.shared.platform.PickedFile
-import ai.ciris.mobile.shared.platform.platformImePadding
+import ai.ciris.mobile.shared.ui.shell.composerImePadding
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
@@ -418,7 +418,10 @@ fun InteractScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .platformImePadding()
+                // The composer sits above the soft keyboard (CIRISClient#186) —
+                // the same inset ChatScreen pads by, and the one a headless
+                // test can put in front of it.
+                .composerImePadding()
         ) {
             // Enhanced status bar with LLM health, credits, and trust shield
             EnhancedStatusBar(
@@ -1872,9 +1875,11 @@ private fun ChatMessageList(
         }
     }
 
-    // Auto-scroll to latest message - trigger on size OR last message change
+    // Auto-scroll to latest message - trigger on size OR last message change,
+    // and when the keyboard comes up over the transcript (CIRISClient#186).
     val lastMessageKey = messages.lastOrNull()?.let { "${it.id}_${it.timestamp}" } ?: ""
-    LaunchedEffect(messages.size, lastMessageKey) {
+    val keyboardUp = ai.ciris.mobile.shared.ui.shell.imeOpen()
+    LaunchedEffect(messages.size, lastMessageKey, keyboardUp) {
         if (messages.isNotEmpty()) {
             listState.animateScrollToItem(0)
         }
