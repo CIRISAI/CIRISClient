@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.api.ClientContactsApi
 import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
 import com.sun.net.httpserver.HttpServer
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -69,7 +70,11 @@ class PendingContactWireTest {
         val url get() = "http://127.0.0.1:${server.address.port}"
     }
 
-    private fun vmOver(client: CIRISApiClient, nodeUrl: String): ContactsViewModel {
+    private fun vmOver(
+        client: CIRISApiClient,
+        nodeUrl: String,
+        holdFirstWait: CompletableDeferred<Unit>? = null,
+    ): ContactsViewModel {
         val real = ClientContactsApi(client)
         val api = object : ContactsApi by real {
             override suspend fun listPeers() = FederationPeerListResponse()
@@ -77,7 +82,15 @@ class PendingContactWireTest {
         // The real backoff is seconds; the schedule is pinned in
         // PendingContactTest. Here the waits are shortened so the loop runs
         // over the socket in test time, and recorded so the test sees them.
-        return ContactsViewModel(client, { nodeUrl }, api, pendingWait = { ms -> waits += ms; delay(10) })
+        // [holdFirstWait] parks the first backoff until the test has looked:
+        // at 10 ms a step, 202 -> 202 -> 201 can finish between two 20 ms
+        // polls, the pending row comes and goes unseen, and the wait for it
+        // times out (PR #200's gradle job, PendingContactWireTest.kt:89).
+        return ContactsViewModel(client, { nodeUrl }, api, pendingWait = { ms ->
+            waits += ms
+            holdFirstWait?.await()
+            delay(10)
+        })
     }
 
     private val waits = CopyOnWriteArrayList<Long>()
@@ -126,12 +139,14 @@ class PendingContactWireTest {
     @Test
     fun thePendingCodeIsPostedAgainUntilTheNodeAnswers201AndOnlyThenIsItAdded() {
         val node = ScriptedNode(listOf(awaiting, awaiting, added))
+        val looked = CompletableDeferred<Unit>()
         try {
             runBlocking {
-                val vm = vmOver(CIRISApiClient(node.url), node.url)
+                val vm = vmOver(CIRISApiClient(node.url), node.url, holdFirstWait = looked)
                 vm.addContact("CIRIS-V3-BOB-CODE")
                 awaitThat("the pending row") { vm.pendingContacts.value.isNotEmpty() }
                 assertNull(vm.justAdded.value)
+                looked.complete(Unit)
 
                 awaitThat("the re-POSTs to reach the 201") { vm.addOutcome.value == AddContactOutcome.ADDED }
                 assertEquals(3, node.posts.get(), "202, 202, 201: three POSTs of the same code")
