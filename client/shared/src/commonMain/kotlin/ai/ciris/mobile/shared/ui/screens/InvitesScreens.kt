@@ -77,7 +77,7 @@ fun InvitationsInbox(
             StateBlock(ListState.Error(title = inviteRefusalText(it)), tag = InviteTags.INBOX_REFUSAL, inline = true)
         }
         answered?.let { a ->
-            if (a.invite.groupKind == kind) {
+            if (hubKindOf(a.invite) == kind) {
                 val text = localizedString(if (a.accepted) "mobile.invites_notice_accepted" else "mobile.invites_notice_declined")
                 Text(text, style = type.body, color = t.ok, modifier = Modifier.testable(InviteTags.INBOX_NOTICE, text))
             }

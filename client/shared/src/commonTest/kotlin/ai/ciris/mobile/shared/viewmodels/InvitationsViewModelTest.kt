@@ -209,6 +209,17 @@ class InvitationsViewModelTest {
     }
 
     @Test
+    fun anAffiliationsScopedInvitationLandsOnTheAffiliationsHub() {
+        // CIRISServer 0.5.222+ files an affiliation's invitation under its own
+        // scope: `group_kind: "affiliations"`, no `tier`. It is a community-hub row.
+        val c = InboxInvite.KIND_COMMUNITY
+        val rows = listOf(inboxRow("aff", InboxInvite.KIND_AFFILIATIONS), inboxRow("com", c))
+        assertEquals(setOf("aff", "com"), inboxFor(rows, c, "affiliations").map { it.proposalId }.toSet())
+        assertEquals(setOf("com"), inboxFor(rows, c, "community").map { it.proposalId }.toSet())
+        assertEquals(emptyList(), inboxFor(rows, InboxInvite.KIND_FAMILY).map { it.proposalId })
+    }
+
+    @Test
     fun anIdLess404IsTheRouteMissingAndAnIdIsNot() {
         assertTrue(isInviteRouteMissing(NodeRefusal(null, null, 404)))
         assertFalse(isInviteRouteMissing(NodeRefusal("family.not_found", "x", 404)))

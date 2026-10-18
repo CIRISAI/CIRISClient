@@ -96,8 +96,19 @@ private fun stateOrder(state: String): Int = when (state) {
  * two-person chat is answered by opening it (CSD-091), not here.
  */
 fun inboxFor(invites: List<InboxInvite>, kind: String, hubTier: String? = null): List<InboxInvite> =
-    invites.filter { !it.isPairRoom && it.groupKind == kind && tierMatches(it, hubTier) }
+    invites.filter { !it.isPairRoom && hubKindOf(it) == kind && tierMatches(it, hubTier) }
         .sortedByDescending { it.proposedAt.orEmpty() }
+
+/**
+ * The hub kind a row belongs to. Since CIRISServer 0.5.222 (persist v54 /
+ * edge v41.0.1, CC 4.4.3.2.8) an affiliation's invitation is filed under its
+ * own scope and `group_kind` says `affiliations` — the community machinery at
+ * its own tier. Matched literally, those rows belonged to no hub and the
+ * invitation was never shown; they are community-hub rows of tier
+ * `affiliations`.
+ */
+fun hubKindOf(invite: InboxInvite): String =
+    if (invite.groupKind == InboxInvite.KIND_AFFILIATIONS) InboxInvite.KIND_COMMUNITY else invite.groupKind
 
 /**
  * A row's `tier` (0.5.219+) places it on one community hub. A row without one
@@ -105,8 +116,11 @@ fun inboxFor(invites: List<InboxInvite>, kind: String, hubTier: String? = null):
  * client cannot tell which circle it belongs to, and hiding it would hide an
  * invitation the person has to answer.
  */
-private fun tierMatches(invite: InboxInvite, hubTier: String?): Boolean =
-    hubTier == null || invite.tier == null || invite.tier == hubTier
+private fun tierMatches(invite: InboxInvite, hubTier: String?): Boolean {
+    val tier = invite.tier
+        ?: InboxInvite.KIND_AFFILIATIONS.takeIf { invite.groupKind == InboxInvite.KIND_AFFILIATIONS }
+    return hubTier == null || tier == null || tier == hubTier
+}
 
 /** May this person withdraw it? Only its proposer, and only while nobody has answered. */
 fun canWithdraw(invite: GroupInvite, me: String?): Boolean =
