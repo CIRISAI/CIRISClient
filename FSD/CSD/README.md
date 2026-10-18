@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**80 cards** — 1 envisioned · 6 sketched · 65 building · 8 testable. **18 reserved**, **2 retired**.
+**80 cards** — 1 envisioned · 4 sketched · 67 building · 8 testable. **18 reserved**, **2 retired**.
 
 ## Cards
 
@@ -87,8 +87,8 @@ reserved. **A retired number is never reused.**
 | [CSD-090](CSD-090-duty-conferral.md) | Duty Conferral (two holders hand someone the authority to moderate) | `building` | `testing/flows/drafts/csd-090-duty-conferral.yaml` |
 | [CSD-091](CSD-091-user-chat.md) | User chat (one room, two people, every message an attestation) | `building` | `testing/flows/drafts/csd-091-user-chat.yaml` |
 | [CSD-092](CSD-092-share-contact-code.md) | Share my contact code (a card on People) | `testable` | `testing/flows/csd-092-share-contact-code.yaml` |
-| [CSD-093](CSD-093-show-approval-code.md) | Show approval code (the new device, first run) | `sketched` | none yet |
-| [CSD-094](CSD-094-approve-new-device.md) | Approve a new device (the device you already have) | `sketched` | none yet |
+| [CSD-093](CSD-093-show-approval-code.md) | Add this device to an existing CIRIS ID (the new device, first run) | `building` | `testing/flows/drafts/csd-093-add-this-device.yaml` |
+| [CSD-094](CSD-094-approve-new-device.md) | Approve a new device (the device you already have) | `building` | `testing/flows/drafts/csd-094-approve-new-device.yaml` |
 | [CSD-100](CSD-100-household.md) | The household (the Family hub, on Family › Rules) | `building` | `testing/flows/drafts/csd-100-household.yaml` |
 | [CSD-101](CSD-101-household-members.md) | Household members (the roster, on Family › People) | `testable` | `testing/flows/csd-101-household-members.yaml` |
 | [CSD-102](CSD-102-communities.md) | Communities and affiliations: the community itself (Rules) | `building` | `testing/flows/drafts/csd-102-communities.yaml` |
