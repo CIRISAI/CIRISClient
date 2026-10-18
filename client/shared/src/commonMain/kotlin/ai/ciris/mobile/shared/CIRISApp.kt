@@ -811,6 +811,21 @@ fun CIRISApp(
     val settingsViewModel: SettingsViewModel = viewModel {
         SettingsViewModel(secureStorage, apiClient, envFileUpdater)
     }
+    // THE sign-out (CIRISClient#51): every control that signs out runs
+    // signOut.now() — Settings', My Identity's, the desktop menu's, and My
+    // things' (through its confirm). The token going null is what resets
+    // consent, contacts and chat state below; see auth/SignOut.kt.
+    val signOut = remember {
+        ai.ciris.mobile.shared.auth.SignOut(
+            stopChat = { interactViewModel.resetState() },
+            logout = { done -> settingsViewModel.logout(done) },
+            toLogin = {
+                PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
+                currentAccessToken = null
+                currentScreen = Screen.Login
+            },
+        )
+    }
     val llmSettingsViewModel: LLMSettingsViewModel = viewModel {
         LLMSettingsViewModel(apiClient)
     }
@@ -3023,15 +3038,7 @@ fun CIRISApp(
                                 onHelpClick = { currentScreen = Screen.Help },
                                 onLogoutClick = {
                                     PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from nav bar")
-                                    // Cancel InteractViewModel polling first — otherwise it keeps polling
-                                    // against the about-to-be-revoked token, fires a 401, and
-                                    // TokenManager.on401Error races the user's next Sign-In tap → bounce.
-                                    interactViewModel.resetState()
-                                    settingsViewModel.logout {
-                                        PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                                        currentAccessToken = null
-                                        currentScreen = Screen.Login
-                                    }
+                                    signOut.now()
                                 },
                                 darkMode = isDarkMode,
                                 // Theme picker
@@ -3136,14 +3143,7 @@ fun CIRISApp(
                     onNavigateBack = { currentScreen = homeTarget },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
-                        // Cancel InteractViewModel polling before token revocation — see
-                        // matching guard in nav-bar onLogoutClick for rationale.
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     onResetSetup = {
                         PlatformLogger.i("CIRISApp", "[onResetSetup] Setup reset — restarting runtime via signal")
@@ -4369,11 +4369,7 @@ fun CIRISApp(
                     // same path Settings' onLogout takes, not a second one.
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     signInMethod = settingsViewModel.signInMethod.collectAsState().value,
                 )
@@ -5311,8 +5307,11 @@ fun CIRISApp(
                     onBrightness = { settingsViewModel.setBrightnessPreference(it) },
                     onInstrument = { inst -> showMyThings = false; currentScreen = Screen.Instrument(inst.id) },
                     onDismiss = { showMyThings = false },
+                    // Every install mode can sign out from the avatar (CIRISClient#51).
+                    onSignOut = { showMyThings = false; signOut.ask() },
                 )
             }
+            ai.ciris.mobile.shared.ui.shell.SignOutConfirm(signOut)
             if (showStop) {
                 ai.ciris.mobile.shared.ui.shell.StopSheet(
                     hasAgent = hasAgentNow,
