@@ -109,7 +109,7 @@ on:
       # the node-only matrix changes: the with-AI jobs do not run, and the
       # inputs below are read by nothing.
       with_ai:
-        description: "Also run the with-AI legs (Linux desktop + Android, Windows desktop) against ciris-agent with a real model"
+        description: "Also run the with-AI legs (Linux and Windows desktops) against ciris-agent with a real model"
         required: false
         default: false
         type: boolean
@@ -1001,21 +1001,24 @@ jobs:
   # free credits, the billing token #171/#172 renew, purchases); a forced
   # RESOURCE_SHED (#173 — the agent has no test hook); macOS desktop with AI
   # (the macOS runner's iOS leg is already the with-AI bundle).
-  linux-android-ai:
-    name: linux desktop + android emulator, with AI
+  # NO ANDROID WITH AI, AND WHY (run 39155407162). This repo's APK is the NODE
+  # client: MainActivity pins `apiBaseUrl` and `nodeBaseUrl` to :4243
+  # (CIRISBuild.HAS_AGENT == false) and the app resolves NODE_ONLY
+  # ("[BACKEND] serving on :4243/health"). With the runner's agent reversed to
+  # the emulator's :8080, the wizard still OFFERED "with an AI assistant" — the
+  # brain is visible through the node's fold — and then every brain route went
+  # to :4243 and 404'd: `[listModels] API returned error status: 404 Not Found`
+  # five times, so the AI step can never finish. A with-AI Android leg needs an
+  # APK that addresses a brain; the with-AI phone is CIRISAgent's build, whose
+  # gate drives it.
+  linux-ai:
+    name: linux desktop, with AI
     needs: [server]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.with_ai && (inputs.platforms == 'all' || contains(inputs.platforms, 'linux') || contains(inputs.platforms, 'android')) }}
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.with_ai && (inputs.platforms == 'all' || contains(inputs.platforms, 'linux')) }}
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 75
     steps:
       - uses: actions/checkout@v4
-
-      # The Android build stages a Python runtime from a CIRISAgent checkout,
-      # exactly as the node-only leg does (client/VENDORING.md §2).
-      - uses: actions/checkout@v4
-        with:
-          repository: CIRISAI/CIRISAgent
-          path: .agent
 
       - uses: ./.github/actions/apt
         with:
@@ -1026,14 +1029,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # Chaquopy's 3.10, by path and WITHOUT taking PATH: the agent and the
-      # harness run on the 3.12 below.
-      - uses: actions/setup-python@v5
-        id: py310
-        with:
-          python-version: '3.10'
-          update-environment: false
-
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -1041,32 +1036,12 @@ jobs:
       - name: The flow runner's one dependency
         run: python3 -m pip install --quiet pyyaml
 
-      - name: Rehydrate the Android wheels (§2 never-vendor, staged not carried)
-        run: |
-          set -euo pipefail
-          src=.agent/apps/android/wheels
-          test -d "$src" || { echo "::error::$src is absent — CIRISAgent's layout moved"; exit 1; }
-          mkdir -p client/androidApp/wheels
-          cp "$src"/*.whl client/androidApp/wheels/
-          count=$(find client/androidApp/wheels -maxdepth 1 -name '*.whl' | wc -l | tr -d ' ')
-          test "$count" -gt 0 || { echo "::error::staged no wheels"; exit 1; }
-          echo "staged $count wheel(s) from $src"
-
       - name: Build the candidate
-        run: |
-          set -euo pipefail
-          cd client
-          ./gradlew :desktopApp:packageUberJarForCurrentOS :androidApp:assembleDebug \
-            -PcirisAgentRoot="$CIRIS_AGENT_ROOT" \
-            -PcirisServerVersion=${{ needs.server.outputs.pypi }} \
-            -PchaquopyBuildPython="${{ steps.py310.outputs.python-path }}" --console=plain
+        run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
 
-      - name: Resolve the artifacts
+      - name: Resolve the artifact
         id: art
-        run: |
-          set -euo pipefail
-          echo "jar=$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" >> "$GITHUB_OUTPUT"
-          echo "apk=$(python3 -m testing.gate.candidate_artifacts --kind android_apk | tail -1)" >> "$GITHUB_OUTPUT"
+        run: echo "jar=$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" >> "$GITHUB_OUTPUT"
 
       - name: Start the agent (the run's ONE ciris-agent, first run)
         uses: ./.github/actions/ciris-agent
@@ -1090,85 +1065,28 @@ jobs:
             --node-version "v${{ needs.server.outputs.agent_server }}" \
             --shots shots --report reports/linux-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
 
-      # A FRESH AGENT FOR THE ANDROID LEG, on a fresh home: the desktop leg
-      # claimed and configured the first one, and the Android client's own
-      # wizard is the thing under test. Free the ports by listener first — the
-      # agent's Rust transport outlives a polite stop (CIRISAgent#1102).
-      - name: Stop the desktop leg's agent
-        if: always()
-        run: |
-          for port in 8080 4242 4243; do
-            pids=$(sudo lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
-            [ -n "$pids" ] && { echo "stopping :$port ($pids)"; sudo kill $pids || true; }
-          done
-          sleep 3
-          for port in 8080 4242 4243; do
-            pids=$(sudo lsof -ti "tcp:$port" -sTCP:LISTEN 2>/dev/null || true)
-            [ -n "$pids" ] && { echo "still held :$port — SIGKILL"; sudo kill -9 $pids || true; }
-          done
-          sleep 2
-
-      - name: A fresh agent for the Android leg
-        if: ${{ !cancelled() && steps.art.outcome == 'success' }}
-        uses: ./.github/actions/ciris-agent
-        with:
-          version: ${{ needs.server.outputs.agent_pypi }}
-          home: ${{ runner.temp }}/ciris-ai-android
-          log: agent-android.log
-
-      - name: Enable KVM
-        if: ${{ !cancelled() && steps.art.outcome == 'success' }}
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
-            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-
-      # The emulator's localhost:8080 and :4243 are the runner's agent and its
-      # node (`adb reverse`, bringup.android_plan(reverse_agent=True)).
-      - name: Android emulator, with AI
-        if: ${{ !cancelled() && steps.art.outcome == 'success' }}
-        uses: reactivecircus/android-emulator-runner@v2
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        with:
-          api-level: 30
-          arch: x86_64
-          target: default
-          profile: pixel_2
-          cores: 2
-          ram-size: 4096M
-          disable-animations: true
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          # ONE LINE, NO CONTINUATIONS — see the node-only leg's note.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY --node-version "v${{ needs.server.outputs.agent_server }}" --shots shots --report reports/android-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}; rc=$?; adb logcat -d > logcat-ai.txt 2>&1; exit $rc
-
-      # BEFORE THE UPLOAD, EVERY TIME. Copies the agents' own logs (never
-      # their .env) beside the leg's evidence, then scans all of it for the key.
+      # BEFORE THE UPLOAD, EVERY TIME. Copies the agent's own logs (never its
+      # .env) beside the leg's evidence, then scans all of it for the key.
       - name: No artifact carries the provider key
         if: always()
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
-          for leg in linux android; do
-            mkdir -p "agent-logs/$leg"
-            cp -R "$RUNNER_TEMP/ciris-ai-$leg/logs/." "agent-logs/$leg/" 2>/dev/null || true
-          done
+          mkdir -p agent-logs/linux
+          cp -R "$RUNNER_TEMP/ciris-ai-linux/logs/." agent-logs/linux/ 2>/dev/null || true
           python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
-            shots reports agent-logs agent-linux.log agent-android.log logcat-ai.txt $(ls *-app.log 2>/dev/null)
+            shots reports agent-logs agent-linux.log $(ls *-app.log 2>/dev/null)
 
       - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: live-qa-linux-android-ai
+          name: live-qa-linux-ai
           path: |
             shots/
             reports/
             agent-logs/
             agent-linux.log
-            agent-android.log
             *-app.log
-            logcat-ai.txt
 
   windows-ai:
     name: windows desktop, with AI
@@ -1240,7 +1158,7 @@ jobs:
     # a gallery that only builds on success is a gallery you can never use to
     # diagnose anything.
     if: always()
-    needs: [server, linux-android, macos-ios, windows, linux-android-ai, windows-ai]
+    needs: [server, linux-android, macos-ios, windows, linux-ai, windows-ai]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

@@ -88,8 +88,7 @@ def plan_for(args) -> bringup.Plan:
         # (bringup.android_plan) — None when the node is already owned.
         pin = bringup.node_claim_pin(args.node_url)
         return bringup.android_plan(Path(args.apk), args.package, serial=args.serial,
-                                    activity=args.activity, claim_pin=pin,
-                                    reverse_agent=bool(getattr(args, "with_ai", False)))
+                                    activity=args.activity, claim_pin=pin)
     if args.platform == "ios":
         if not args.app:
             raise bringup.CannotRun("--app is required for ios")
@@ -103,8 +102,7 @@ def plan_for(args) -> bringup.Plan:
 
 def teardown_for(args) -> bringup.Plan | None:
     if args.platform == "android":
-        return bringup.android_teardown(args.package, serial=args.serial,
-                                        reverse_agent=bool(getattr(args, "with_ai", False)))
+        return bringup.android_teardown(args.package, serial=args.serial)
     if args.platform == "ios":
         return bringup.ios_teardown(args.bundle_id, udid=args.udid)
     return None

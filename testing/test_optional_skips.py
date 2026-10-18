@@ -86,7 +86,7 @@ def test_the_board_detail_carries_the_per_flow_breakdown():
 
 def test_the_committed_baseline_parses_and_covers_every_leg():
     base = osk.load_baseline()
-    ai = {"linux-ai", "android-ai", "windows-ai"}
+    ai = {"linux-ai", "windows-ai"}
     assert set(base) == {"linux", "macos", "windows", "android", "ios"} | ai, sorted(base)
     node_flows = {p.stem.replace("-", "_") for p in (REPO / "testing" / "flows").glob("*.yaml")}
     # The with-AI legs run testing/flows/agent/ (five-platform-live-qa.yml).

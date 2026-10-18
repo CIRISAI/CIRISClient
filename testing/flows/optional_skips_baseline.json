@@ -10,10 +10,6 @@
     "csd_101_household_members": 2,
     "people": 0
   },
-  "android-ai": {
-    "csd_010_interact_chat": 0,
-    "csd_056_billing_without_google": 0
-  },
   "ios": {
     "csd_005_people": 1,
     "csd_006_receipt": 1,

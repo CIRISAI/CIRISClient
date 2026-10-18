@@ -14,7 +14,7 @@ from testing.test_five_platform_workflow import (
     LEGS, NODE_ACTION, SERVER_JOB, WF, _commands, _run_platform_calls,
 )
 
-AI_LEGS = ("linux-android-ai", "windows-ai")
+AI_LEGS = ("linux-ai", "windows-ai")
 AGENT_ACTION = NODE_ACTION.parent.parent / "ciris-agent" / "action.yml"
 
 

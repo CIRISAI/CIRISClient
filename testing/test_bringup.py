@@ -408,17 +408,3 @@ def test_the_android_leg_asks_its_node_for_the_pin(monkeypatch):
     assert asked == ["http://127.0.0.1:4243"]
     assert "hand-over-claim-pin" in plan.names()
 
-
-def test_a_with_ai_android_leg_reaches_the_runner_s_agent_and_a_node_leg_does_not():
-    """The client finds a brain by probing localhost:8080; only a with-AI leg
-    may put one there (a bare-node leg must find nothing — #48)."""
-    node_only = [s.name for s in android_plan(APK, PKG).steps]
-    assert "reverse-agent" not in node_only
-    with_ai = android_plan(APK, PKG, reverse_agent=True)
-    names = [s.name for s in with_ai.steps]
-    assert names.index("reverse-node") < names.index("reverse-agent") < names.index("launch")
-    step = next(s for s in with_ai.steps if s.name == "reverse-agent")
-    assert step.cmd[-2:] == ["tcp:8080", "tcp:8080"]
-    td = [s.name for s in bringup.android_teardown(PKG, reverse_agent=True).steps]
-    assert "remove-reverse-agent" in td
-    assert "remove-reverse-agent" not in [s.name for s in bringup.android_teardown(PKG).steps]

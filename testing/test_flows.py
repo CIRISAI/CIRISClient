@@ -770,9 +770,9 @@ def test_every_leg_of_the_matrix_runs_the_flows():
             for call in re.findall(r"testing\.gate\.run_platform[^;\n]*", body):
                 legs += 1
                 assert "--flows testing/flows" in call, f"a leg runs the smoke walk without flows: {call}"
-    # Five node-only legs, and the three with-AI legs a `with_ai` dispatch adds
-    # (linux, android, windows — they run testing/flows/agent).
-    assert legs == 8, f"expected eight run_platform legs (5 node-only + 3 with AI), found {legs}"
+    # Five node-only legs, and the two with-AI desktops a `with_ai` dispatch
+    # adds (they run testing/flows/agent; no Android with AI — see the workflow).
+    assert legs == 7, f"expected seven run_platform legs (5 node-only + 2 with AI), found {legs}"
 
 
 # ── run_platform: flows ride the smoke walk, never ahead of it ──────────────

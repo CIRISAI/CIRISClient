@@ -49,7 +49,6 @@ PRETTY = {
     # The with-AI legs (a `with_ai` dispatch only): tiled after the five
     # when their reports are present, and never "did not run" otherwise.
     "linux-ai": "Linux, with AI",
-    "android-ai": "Android, with AI",
     "windows-ai": "Windows, with AI",
 }
 
