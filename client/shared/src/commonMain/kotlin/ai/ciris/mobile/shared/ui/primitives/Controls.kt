@@ -5,11 +5,15 @@ import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.rememberInputSinks
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableWithHandler
+import ai.ciris.mobile.shared.ui.glyphs.Glyph
+import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.theme.CirisShape
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedTextField
@@ -66,8 +70,15 @@ fun CirisTextButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     danger: Boolean = false,
+    /**
+     * A glyph before the label, for a header action that must read as an
+     * action: a bare glyph in a top bar is furniture to most people (the
+     * People header's add-contact glyph went unfound, CIRISClient#187).
+     */
+    glyph: GlyphName? = null,
 ) {
     val t = CirisTheme.tokens
+    val tint = if (!enabled) t.mute else if (danger) t.danger else t.brand
     TextButton(
         onClick = onClick,
         enabled = enabled,
@@ -78,6 +89,10 @@ fun CirisTextButton(
         ),
         modifier = modifier.testableWithHandler(tag, enabled = enabled) { if (enabled) onClick() },
     ) {
+        if (glyph != null) {
+            Glyph(glyph, tint = tint, size = 18.dp)
+            Spacer(Modifier.width(6.dp))
+        }
         Text(label, style = CirisTheme.type.body)
     }
 }

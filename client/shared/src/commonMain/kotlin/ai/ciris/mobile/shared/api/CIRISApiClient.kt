@@ -1857,7 +1857,18 @@ class CIRISApiClient(
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
             val decoded = jsonConfig.decodeFromString(AddContactResponse.serializer(), raw)
-            logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
+                .copy(httpStatus = response.status.value)
+            if (decoded.pending) {
+                // A typed NOT-YET (202 `contacts.awaiting_key_body`, …): nothing
+                // was written. Logged as pending, never as "added" (CIRISClient#188).
+                logInfo(
+                    method,
+                    "contact PENDING status=${response.status.value} reason_id=${decoded.reasonId} " +
+                        "converges_on_its_own=${decoded.convergesOnItsOwn} key_id=${decoded.keyId.take(16)}…",
+                )
+            } else {
+                logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
+            }
             decoded
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
