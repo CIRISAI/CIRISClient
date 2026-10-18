@@ -14,12 +14,20 @@ import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.chat.pairRooms
 import ai.ciris.mobile.shared.models.federation.InboxInvite
+import ai.ciris.mobile.shared.models.federation.AddContactResponse
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
+import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * Drives the **Contacts** screen, which serves two different questions from two
@@ -50,6 +58,9 @@ import kotlinx.coroutines.launch
  *   app-scoped model lives.
  * @param api every contact/code call this view model makes; a fake in tests.
  * @param withdraw the removal call; a fake in tests.
+ * @param pendingWait how the pending re-POST loop waits out a backoff step;
+ *   `delay` by default, a recorder in tests (so a test sees the schedule and
+ *   waits for none of it).
  */
 class ContactsViewModel(
     apiClient: CIRISApiClient,
@@ -58,6 +69,7 @@ class ContactsViewModel(
     private val withdraw: ConsentWithdrawApi = ClientConsentWithdraw(apiClient),
     /** The list read. [api]'s by default; a test's fake counts re-reads. */
     private val readContacts: suspend () -> ContactListResponse = { api.listContacts(nodeUrl()) },
+    private val pendingWait: suspend (ms: Long) -> Unit = { delay(it) },
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "ContactsVM"
@@ -210,6 +222,24 @@ class ContactsViewModel(
     private val _addOutcome = MutableStateFlow<AddContactOutcome?>(null)
     val addOutcome: StateFlow<AddContactOutcome?> = _addOutcome.asStateFlow()
 
+    // ── Pending contacts (CIRISClient#188) ───────────────────────────────────
+
+    /**
+     * Codes the node accepted but could not complete (a 2xx with a
+     * `reason_id`): kept here, shown as rows of their own, and POSTed again.
+     * See [PendingContact]. Every entry; [pendingContacts] is the searched view.
+     */
+    private val _allPending = MutableStateFlow<List<PendingContact>>(emptyList())
+
+    private val _pendingContacts = MutableStateFlow<List<PendingContact>>(emptyList())
+    val pendingContacts: StateFlow<List<PendingContact>> = _pendingContacts.asStateFlow()
+
+    /** The re-POST loop per pending code; cancelled when the entry leaves. */
+    private val pendingJobs = mutableMapOf<String, Job>()
+
+    /** Bumped by every published list read; a pending loop waiting out a backoff wakes on it. */
+    private val listGeneration = MutableStateFlow(0L)
+
     // ── Share my contact code (CSD-092) ──────────────────────────────────────
 
     private val _contactCode = MutableStateFlow<ContactCodeState>(ContactCodeState.Closed)
@@ -287,10 +317,20 @@ class ContactsViewModel(
                 _routeUnsupported.value = false
                 _allContacts.value = sortedContacts(resp.contacts)
                 listNodeUrl = url
+                // A pending code whose key is NOW in the list completed without
+                // us: ciris-server 0.5.231 finishes a v3 contact itself when the
+                // key body arrives (`pending_contacts`, CIRISServer#777). The
+                // list is the fact; the row leaves. The rest are asked again —
+                // a refresh is the person's own "try now" (CIRISClient#188).
+                settlePendingAgainst(_allContacts.value)
                 applySearch()
                 // Which of these people asked to talk: read once the rows
                 // exist, because an invitation is shown ON a contact's row.
                 refreshPairInvites(epoch, url)
+                // Wake every pending loop (see [waitOrListRead]): a refresh is
+                // the person's own "ask now". A signal, not a call into the add
+                // path — the list read must not be where a POST starts.
+                listGeneration.value += 1
             } catch (e: NodeRefusal) {
                 // A late refusal from the node switched away from is not a fact
                 // about the node on screen: publishing its bare 404 as
@@ -461,6 +501,16 @@ class ContactsViewModel(
         _pairInvites.value = emptyMap()
         _declineRefusal.value = null
         _removal.value = null
+        // A pending code was pasted on the node that answered 202; POSTing it
+        // at another node would add the contact THERE. Dropped, like the list.
+        dropPending()
+    }
+
+    private fun dropPending() {
+        pendingJobs.values.forEach { it.cancel() }
+        pendingJobs.clear()
+        _allPending.value = emptyList()
+        _pendingContacts.value = emptyList()
     }
 
     /** Update the search query and refilter both lists locally. */
@@ -479,6 +529,14 @@ class ContactsViewModel(
      * list is refreshed and [justAdded] carries the contact so the screen can
      * offer to open the chat; [addOutcome] says whether they were already one.
      *
+     * A 2xx WITH a `reason_id` is neither (CIRISClient#188): the node accepted
+     * the code and wrote nothing — a v3 code names a key this node does not
+     * hold yet (202 `contacts.awaiting_key_body`). The code is kept as a
+     * [PendingContact], [addOutcome] is [AddContactOutcome.PENDING], [justAdded]
+     * stays null (there is no contact to open a chat with), and
+     * [startPendingLoop] POSTs the same code again on a bounded backoff until
+     * the node answers without a `reason_id` or refuses.
+     *
      * Refusals land in [addRefusalReasonId] + [addError] rather than the shared
      * [error] channel, so a failed add does not blank the list the user is
      * looking at.
@@ -487,40 +545,22 @@ class ContactsViewModel(
         val trimmed = keyId.trim()
         if (trimmed.isEmpty()) return
         val epoch = sessionEpoch
+        val url = nodeUrl()
         viewModelScope.launch {
             _addBusy.value = true
             _addRefusalReasonId.value = null
             _addError.value = null
             _addOutcome.value = null
             try {
-                val added = api.addContact(nodeUrl(), trimmed)
+                val added = api.addContact(url, trimmed)
                 if (epoch != sessionEpoch) return@launch
-                PlatformLogger.i(
-                    tag,
-                    "[addContact] ${trimmed.take(16)}… wrote_row=${added.freshlyEmitted} " +
-                        "superseded=${added.supersededAttestationId?.take(16) ?: "none"} " +
-                        "prefixes=${added.consentPrefixes.joinToString(",")}",
-                )
-                // CIRISServer#458: a contact whose grant does not cover `chat:`
-                // is added, green, and unable to receive a single message. Record
-                // it so the row can SAY so — silence here is how #458 hid.
-                _chatIneligible.value = if (added.chatEligible) {
-                    _chatIneligible.value - added.keyId
+                if (added.pending) {
+                    recordPending(trimmed, added)
+                    _addOutcome.value = AddContactOutcome.PENDING
+                    startPendingLoop(trimmed, immediate = false)
                 } else {
-                    PlatformLogger.w(
-                        tag,
-                        "[addContact] ${added.keyId.take(16)}… grant does NOT cover chat: " +
-                            "(prefixes=${added.consentPrefixes.joinToString(",")})",
-                    )
-                    _chatIneligible.value + added.keyId
+                    publishAdded(trimmed, added)
                 }
-                refreshContacts()
-                _addOutcome.value = if (added.freshlyEmitted) AddContactOutcome.ADDED else AddContactOutcome.ALREADY
-                _justAdded.value = Contact(
-                    keyId = added.keyId,
-                    chatCommunityId = added.chatCommunityId,
-                    occurrenceKeyIds = added.occurrenceKeyIds,
-                )
             } catch (e: NodeRefusal) {
                 if (epoch != sessionEpoch) return@launch
                 _addRefusalReasonId.value = e.reasonId
@@ -537,6 +577,183 @@ class ContactsViewModel(
                 if (epoch == sessionEpoch) _addBusy.value = false
             }
         }
+    }
+
+    /**
+     * The node answered WITHOUT a `reason_id`: a grant row stands (written now,
+     * or already standing). The one place "added" is said, for the first paste
+     * and for a pending code's re-POST alike.
+     */
+    private fun publishAdded(code: String, added: AddContactResponse) {
+        PlatformLogger.i(
+            tag,
+            "[addContact] ${code.take(16)}… wrote_row=${added.freshlyEmitted} " +
+                "superseded=${added.supersededAttestationId?.take(16) ?: "none"} " +
+                "prefixes=${added.consentPrefixes.joinToString(",")}",
+        )
+        // CIRISServer#458: a contact whose grant does not cover `chat:`
+        // is added, green, and unable to receive a single message. Record
+        // it so the row can SAY so — silence here is how #458 hid.
+        _chatIneligible.value = if (added.chatEligible) {
+            _chatIneligible.value - added.keyId
+        } else {
+            PlatformLogger.w(
+                tag,
+                "[addContact] ${added.keyId.take(16)}… grant does NOT cover chat: " +
+                    "(prefixes=${added.consentPrefixes.joinToString(",")})",
+            )
+            _chatIneligible.value + added.keyId
+        }
+        removePending(code)
+        refreshContacts()
+        _addOutcome.value = if (added.freshlyEmitted) AddContactOutcome.ADDED else AddContactOutcome.ALREADY
+        _justAdded.value = Contact(
+            keyId = added.keyId,
+            chatCommunityId = added.chatCommunityId,
+            occurrenceKeyIds = added.occurrenceKeyIds,
+        )
+    }
+
+    // ── Pending contacts: keep the code, ask again (CIRISClient#188) ─────────
+
+    /** Record (or refresh) the pending entry for [code] from the node's not-yet. */
+    private fun recordPending(code: String, answer: AddContactResponse) {
+        val reason = answer.reasonId ?: return
+        PlatformLogger.i(
+            tag,
+            "[addContact] ${code.take(16)}… PENDING reason_id=$reason status=${answer.httpStatus} " +
+                "converges_on_its_own=${answer.convergesOnItsOwn} key_id=${answer.keyId.take(16)}… wrote_row=false",
+        )
+        val existing = _allPending.value.firstOrNull { it.code == code }
+        val entry = PendingContact(
+            code = code,
+            keyId = answer.keyId.ifBlank { existing?.keyId.orEmpty() },
+            fedId = answer.fedId ?: existing?.fedId,
+            reasonId = reason,
+            detail = answer.error,
+            convergesOnItsOwn = answer.convergesOnItsOwn,
+            attempts = (existing?.attempts ?: 0) + 1,
+        )
+        _allPending.value = _allPending.value.filterNot { it.code == code } + entry
+        applySearch()
+    }
+
+    private fun updatePending(code: String, change: (PendingContact) -> PendingContact) {
+        _allPending.value = _allPending.value.map { if (it.code == code) change(it) else it }
+        applySearch()
+    }
+
+    private fun removePending(code: String) {
+        pendingJobs.remove(code)?.cancel()
+        if (_allPending.value.none { it.code == code }) return
+        _allPending.value = _allPending.value.filterNot { it.code == code }
+        applySearch()
+    }
+
+    /** Drop every pending entry whose key the list now holds: the node completed it. */
+    private fun settlePendingAgainst(listed: List<Contact>) {
+        val keys = listed.map { it.keyId }.toSet()
+        val done = _allPending.value.filter { p ->
+            (p.keyId.isNotBlank() && p.keyId in keys) || (p.fedId != null && p.fedId in keys)
+        }
+        done.forEach {
+            PlatformLogger.i(tag, "[pending] ${it.code.take(16)}… is in the list now — completed by the node; row dropped")
+            removePending(it.code)
+        }
+    }
+
+    /**
+     * POST [code] again until the node answers without a `reason_id` (added)
+     * or refuses. One loop per code; starting it again replaces the last.
+     *
+     * Bounded two ways: each wait is [pendingRetryDelayMs] (2 s doubling to a
+     * 60 s cap), and after [PENDING_MAX_ATTEMPTS] POSTs the row says it has
+     * stopped and the loop waits for the person — a list refresh wakes it with
+     * the count reset ([waitOrListRead]); Try again restarts it. A refresh
+     * during a backoff wait ends the wait early, so "re-POST on each refresh"
+     * holds without the list read ever calling the add path. A transport
+     * failure counts as an attempt and the loop goes on; a [NodeRefusal] ends
+     * it and is kept on the row. On ciris-server 0.5.231 the node completes
+     * the contact itself when the key arrives and [settlePendingAgainst] drops
+     * the row at the next list read; this loop is what makes the older node
+     * (0.5.221) and a restarted newer one converge too.
+     */
+    private fun startPendingLoop(code: String, immediate: Boolean) {
+        pendingJobs.remove(code)?.cancel()
+        val epoch = sessionEpoch
+        val url = nodeUrl()
+        pendingJobs[code] = viewModelScope.launch {
+            var first = immediate
+            while (true) {
+                val entry = _allPending.value.firstOrNull { it.code == code } ?: return@launch
+                if (entry.refusal != null) return@launch
+                val gen = listGeneration.value
+                if (entry.attempts >= PENDING_MAX_ATTEMPTS) {
+                    if (!entry.exhausted) {
+                        PlatformLogger.w(tag, "[pending] ${code.take(16)}… still pending after ${entry.attempts} asks; stopping until a refresh")
+                        updatePending(code) { it.copy(exhausted = true) }
+                    }
+                    // Stopped. Only the person's own refresh starts it over.
+                    listGeneration.first { it != gen }
+                    if (!current(epoch, url)) return@launch
+                    updatePending(code) { it.copy(exhausted = false, attempts = 0) }
+                    first = true
+                    continue
+                }
+                if (!first) waitOrListRead(pendingRetryDelayMs(entry.attempts), gen)
+                first = false
+                if (!current(epoch, url)) return@launch
+                if (_allPending.value.none { it.code == code }) return@launch
+                try {
+                    val answer = api.addContact(url, code)
+                    if (!current(epoch, url)) return@launch
+                    if (answer.pending) {
+                        recordPending(code, answer)
+                        continue
+                    }
+                    publishAdded(code, answer)
+                    return@launch
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: NodeRefusal) {
+                    if (!current(epoch, url)) return@launch
+                    PlatformLogger.w(tag, "[pending] ${code.take(16)}… refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}; not asking again")
+                    updatePending(code) {
+                        it.copy(attempts = it.attempts + 1, refusal = NodeRefusalFact(e.reasonId, e.detail, e.statusCode))
+                    }
+                    return@launch
+                } catch (e: Exception) {
+                    if (!current(epoch, url)) return@launch
+                    PlatformLogger.w(tag, "[pending] ${code.take(16)}… ask failed: ${e.message}; will ask again")
+                    updatePending(code) { it.copy(attempts = it.attempts + 1) }
+                }
+            }
+        }
+    }
+
+    /** Wait out [ms] of backoff, or less: a list read published meanwhile ([listGeneration] moved past [gen]) ends it. */
+    private suspend fun waitOrListRead(ms: Long, gen: Long) = coroutineScope {
+        val wait = async { pendingWait(ms) }
+        val read = async { listGeneration.first { it != gen } }
+        select<Unit> {
+            wait.onAwait { }
+            read.onAwait { }
+        }
+        wait.cancel()
+        read.cancel()
+    }
+
+    /** Try again, now — from the row, or after the loop stopped. Clears a refusal and starts over. */
+    fun retryPending(code: String) {
+        if (_allPending.value.none { it.code == code }) return
+        updatePending(code) { it.copy(exhausted = false, refusal = null, attempts = 0) }
+        startPendingLoop(code, immediate = true)
+    }
+
+    /** Forget a pending code. Nothing on the node changes: it never wrote a row. */
+    fun forgetPending(code: String) {
+        removePending(code)
+        if (_addOutcome.value == AddContactOutcome.PENDING && _allPending.value.isEmpty()) _addOutcome.value = null
     }
 
     // ── Remove a contact (CIRISServer#657) ───────────────────────────────────
@@ -812,6 +1029,13 @@ class ContactsViewModel(
                     (c.pubkeyEd25519Base64?.lowercase()?.contains(q) == true)
             }
         }
+        _pendingContacts.value = if (q.isEmpty()) {
+            _allPending.value
+        } else {
+            _allPending.value.filter { p ->
+                p.keyId.lowercase().contains(q) || (p.fedId?.lowercase()?.contains(q) == true)
+            }
+        }
         PlatformLogger.d(
             tag,
             "applySearch q=${q.take(20)} → ${_peers.value.size}/${_allPeers.value.size} peers, " +
@@ -822,6 +1046,23 @@ class ContactsViewModel(
     companion object {
         /** A device named for a contact code is not announced (CC 2.6.8 constraint 2). */
         const val NODE_NOT_ANNOUNCED = "self.node_not_announced"
+
+        /** The pending re-POST loop: first wait, the cap each wait doubles up to, and how many asks before it stops. */
+        const val PENDING_BACKOFF_BASE_MS = 2_000L
+        const val PENDING_BACKOFF_CAP_MS = 60_000L
+        const val PENDING_MAX_ATTEMPTS = 20
+
+        /**
+         * The wait before the next ask, given how many have been made: 2 s,
+         * 4 s, 8 s, 16 s, 32 s, then 60 s. Twenty asks is ~15 minutes — long
+         * enough for a key body to cross the mesh (the node's own pass runs
+         * every 10 s for 24 h), short enough that a code the mesh will never
+         * answer does not ask forever.
+         */
+        fun pendingRetryDelayMs(attemptsSoFar: Int): Long {
+            val step = (attemptsSoFar - 1).coerceIn(0, 30)
+            return (PENDING_BACKOFF_BASE_MS shl step).coerceAtMost(PENDING_BACKOFF_CAP_MS)
+        }
 
         /**
          * Canonical peers first; within each group sort trusted > unknown >
@@ -885,6 +1126,7 @@ class ContactsViewModel(
         _addError.value = null
         _justAdded.value = null
         _addOutcome.value = null
+        dropPending()
         dropContactCode()
         _removing.value = null
         _removal.value = null
