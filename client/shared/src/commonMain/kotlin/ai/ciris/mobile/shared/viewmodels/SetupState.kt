@@ -559,6 +559,85 @@ data class NodeOwnershipClaimState(
      * failure here is surfaced (not fatal). Null when not attempted / succeeded.
      */
     val announceNotice: String? = null,
+    /**
+     * Add-device path only: `add-device/complete` answered 409
+     * `add_device.not_approved` (the other device has not approved this one
+     * yet). Not an error and not a claim: COMPLETE holds on "waiting for your
+     * other device" and finishes by itself once the approval arrives.
+     */
+    val awaitingApproval: Boolean = false,
+    /** The node's id for [error] when it gave one (`add_device.apply_failed`), so COMPLETE renders it by id. */
+    val errorReasonId: String? = null,
+)
+
+/**
+ * **The wizard's first question** (CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` §1,
+ * Eric's ruling): set up a NEW CIRIS ID, or add this device to an EXISTING one.
+ * Null until answered: Next stays disabled, because the two paths ask different
+ * things and a default would quietly mint a second identity for someone who
+ * already has one, which is the failure CSD-093 exists to prevent.
+ */
+@Serializable
+enum class IdentityPath { NEW, EXISTING }
+
+/** Can this node add a device at all? Learned from `GET /v1/setup/add-device`. */
+@Serializable
+enum class AddDeviceAvailability {
+    /** Not asked yet. The choice is offered; sending the request is the real test. */
+    UNKNOWN,
+    /** The node answered the route. */
+    AVAILABLE,
+    /** A bare 404: the node predates 0.5.231 and has no add-device plane. */
+    NODE_TOO_OLD,
+}
+
+/**
+ * Where THIS device's request stands, as the wizard renders it. The server's
+ * states (`requested | approved | applied | denied | expired | failed`) plus the
+ * client's own: [SENDING] (the POST is in flight), [REFUSED] (the POST was
+ * refused, by id) and [INTERRUPTED] (the node answers `idle` for a request this
+ * wizard had sent: the node restarted before the other device answered, and an
+ * unapproved request does not survive a restart; only a VERIFIED approval does,
+ * `src/add_device.rs:692-713`).
+ */
+@Serializable
+enum class AddDevicePhase {
+    IDLE, SENDING, REQUESTED, APPROVED, APPLIED, DENIED, EXPIRED, FAILED, REFUSED, INTERRUPTED;
+
+    /** The request is out and alive: the rest of the wizard may run while the other device answers. */
+    val inFlight: Boolean get() = this == REQUESTED || this == APPROVED || this == APPLIED
+
+    /** Over, and not approved: the only way on is a new request (fresh keys on the node). */
+    val needsNewRequest: Boolean get() = this == DENIED || this == EXPIRED || this == FAILED || this == INTERRUPTED
+}
+
+/**
+ * The add-device path's state (CSD-093). Holds nothing secret: the match code
+ * is shown on both screens by design, and the claim PIN never enters it.
+ */
+@Serializable
+data class AddDeviceSetupState(
+    val availability: AddDeviceAvailability = AddDeviceAvailability.UNKNOWN,
+    /** The fedID as typed, pasted or scanned (QR text, long form or short form). The node resolves it. */
+    val contact: String = "",
+    val phase: AddDevicePhase = AddDevicePhase.IDLE,
+    /** Six digits both screens show (derived by the OTHER device, N1). */
+    val matchCode: String? = null,
+    /** The identity being joined, once the approval verified. */
+    val ownerKeyId: String? = null,
+    /** The node's `detail` for `failed`, or its English for a refusal. */
+    val detail: String? = null,
+    /** The refusal's id (`add_device.*`), when [phase] is [AddDevicePhase.REFUSED]. */
+    val refusalReasonId: String? = null,
+    val refusalStatus: Int? = null,
+    /**
+     * Does the add-device path still ask for a local account? Only with an
+     * agent: the agent's own `/v1/setup/complete` creates its local user from
+     * it. The node's claim on this path is the other device's binding, applied
+     * through `setup/root` with no owner password (`src/add_device.rs:883-893`),
+     * so on a node without an agent a password here would be stored nowhere.
+     */
+    val accountNeeded: Boolean = false,
 )
 
 /**
@@ -594,6 +673,12 @@ data class SetupFormState(
 
     // LOCAL-node ownership self-claim state (driven on setup COMPLETE)
     val ownershipClaim: NodeOwnershipClaimState = NodeOwnershipClaimState(),
+
+    /** The first question: a new CIRIS ID, or this device added to an existing one. Null = not answered. */
+    val identityPath: IdentityPath? = null,
+
+    /** The add-device path (CSD-093); untouched on the new-ID path. */
+    val addDevice: AddDeviceSetupState = AddDeviceSetupState(),
 
     // Google/Apple OAuth state
     //
@@ -931,7 +1016,10 @@ data class SetupFormState(
         // have generated a stewardship request first — that last one is
         // fail-secure (CC 0.5.1 §2580): an under-18 founder must not self-claim.
         // The age question must be ANSWERED; "prefer not to say" is an answer.
-        SetupStep.YOU -> {
+        SetupStep.YOU -> when (identityPath) {
+            null -> false
+            IdentityPath.EXISTING -> canProceedAddingThisDevice()
+            IdentityPath.NEW -> {
             // Age now leads the YOU step and is REQUIRED — it also seeds the fed-ID
             // and the minor-stewardship gate, so nothing below it can be judged
             // until it's answered.
@@ -948,6 +1036,7 @@ data class SetupFormState(
             }
             val stewardshipOk = !isMinorBand() || minorStewardship.requested
             ageOk && fedIdOk && accountOk && stewardshipOk
+            }
         }
 
         // Announce, be-scored and location have stated defaults and declining
@@ -958,6 +1047,21 @@ data class SetupFormState(
         SetupStep.AI -> hasUsableLlmChoice()
 
         SetupStep.COMPLETE -> true
+    }
+
+    /**
+     * The add-device path's YOU step: the request is out (or already approved)
+     * and, with an agent, the local account is filled. NO fedID name and no age
+     * band: the identity is the existing one and its age is already recorded on
+     * it; the server names it (`owner_key_id`) once the approval verifies.
+     */
+    private fun canProceedAddingThisDevice(): Boolean {
+        val accountOk = if (addDevice.accountNeeded && showLocalUserFields()) {
+            username.isNotEmpty() && userPassword.length >= 8 && userPassword == userPasswordConfirm
+        } else {
+            true
+        }
+        return addDevice.phase.inFlight && accountOk
     }
 
     /**
@@ -982,7 +1086,11 @@ data class SetupFormState(
      * Get validation error for current step — the reason Next is disabled.
      */
     fun getStepValidationError(): String? = when (currentStep) {
-        SetupStep.YOU -> {
+        SetupStep.YOU -> if (identityPath == null) {
+            LocalizationHelper.getString("mobile.setup_path_required")
+        } else if (identityPath == IdentityPath.EXISTING) {
+            if (!addDevice.phase.inFlight) LocalizationHelper.getString("mobile.add_device_send_first") else null
+        } else {
             val fedIdError = if (federationIdentity.minted || federationIdentity.admitted) {
                 null
             } else {

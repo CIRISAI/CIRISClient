@@ -1,35 +1,40 @@
-# CSD-093 — Show approval code (the new device, first run)
+# CSD-093 — Add this device to an existing CIRIS ID (the new device, first run)
 
-**CSD**: CSD-093 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.218 client brief (the second-device flow, CIRISServer#678)
-**Pairs with**: CSD-094 (Approve a new device, on the device you already have). This card is the half that shows; that one is the half that scans
-**Flow**: unwritten. The tags below are the contract the card agents build to
+**CSD**: CSD-093 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177), Eric's wizard ruling relayed by the CIRISServer session (2026-10-18). Rewritten from the 0.5.218 sketch (a QR of this node's code and claim PIN for the other device to scan), which the server replaced with a peer-to-peer join request
+**Pairs with**: CSD-094 (Approve a new device, on the device the person already has). This card asks; that one consents
+**Flow**: `testing/flows/drafts/csd-093-add-this-device.yaml` (floor `unreleased`)
+**Card**: `ui/screens/AddDeviceScreens.kt` (`IdentityPathChoice`, `AddThisDeviceSection`, `AddDeviceProgressBlock`, `AddDeviceWaiting`, `AddDeviceTags`), wired into `ui/screens/SetupScreen.kt` (`YouStep`, `CompleteStep`); state `viewmodels/SetupState.kt` (`IdentityPath`, `AddDeviceSetupState`, `AddDevicePhase`); behaviour `viewmodels/SetupViewModel.kt` (the add-device section, `completeAddDevice`, `finishAgentSetup`); wire `api/AddDeviceApi.kt` + `CIRISApiClient.addDevice*`; tests `AddDeviceSetupTest` (commonTest), `AddDeviceWireTest` (desktopTest, a real socket)
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
+
+`building`, not `testable`: the card is built and every §3 row is answered at
+CIRISServer **v0.5.231**, but no client release carries it, so the flow's floor
+stays `unreleased`. It moves to `testable` with the first client release that
+ships this branch, once the two-node run in §5 has gone green on one leg.
 
 ## 1. Mission (why)
 
 **Someone who already has CIRIS on one device can set up another as the same
-person, without making a second identity: the new device shows a code, the
-device they already hold approves it, and the one secret involved never
-leaves this device's screen except by being looked at.**
+person: the new device's first question is "new CIRIS ID, or add this device to
+one you have?", and on the second path it never mints an identity, never asks
+for a fedID name, and joins only after the other device consents to a code both
+screens show.**
 
-Today a new device's first run has three ways to get an identity: mint a new
-one, associate an existing key id, or import a keyset from a folder
-(`SetupScreen.kt:2337-2450`). None of them is "I already have this on my
-phone". Minting a second identity for the same person is the failure this
-card exists to prevent. CC 3.3.6 (`identity_occurrence`) is how one self lives
-on several devices; a second fed-ID is a second person as far as the
-federation is concerned.
+Minting a second identity for the same person is the failure this card exists
+to prevent. CC 3.3.6 (`identity_occurrence`) is how one self lives on several
+devices; a second fedID is a second person as far as the federation is
+concerned. So the choice is the wizard's FIRST step, with neither answer
+preselected (`identityPath: null` keeps Next shut): a default would quietly be
+the wrong answer for exactly the person this card serves.
 
 Serves **Autonomy** and **Integrity** through CC 3.4.5: `ownership:*` is
-owner-only, and "a third party asserting your responsible party is a seizure by
-attestation". The claim that makes this node yours is signed by *you*, on the
-device that holds your key (CSD-094). This device only proves it is the device
-being claimed, and it proves that with the one-time claim PIN the node printed
-for exactly this purpose.
+owner-only. The binding that makes this node the person's is signed on the
+device that holds their key (CSD-094), and this device only proves it is the
+device being claimed, with the one-time claim PIN its own node printed. No key
+material crosses in either direction (`FSD/ADD_DEVICE.md` N6).
 
 ## 2. Surface (what)
 
@@ -37,177 +42,253 @@ for exactly this purpose.
 surface: null
 screen: Setup
 flow_only: true
-entry: "Setup's YOU step on a first-run node (reached as in CSD-082: Login `btn_local_login`, Startup under the HA addon, or ServerConnection after a node switch), then `proposed:btn_setup_use_existing_identity` (Use an existing identity) → Show approval code"
-exit: "Once `GET /v1/setup/status` reports `is_first_run: false` (the device you already have claimed this node): signed in, on a 0.5.218+ node, with the session `POST /v1/setup/claimed-session` collects; Login on an older node or when no session is waiting. Cancel returns to the YOU step with nothing written"
+entry: "Setup's YOU step on a first-run node (reached as in CSD-082: Login `btn_local_login`, Startup under the HA addon, or ServerConnection after a node switch). The first question renders first: `btn_setup_new_identity` (the CSD-082/083 path, unchanged) or `btn_setup_add_this_device` (this card)"
+exit: "Signed in, with the owner session `POST /v1/setup/claimed-session` collects once `POST /v1/setup/add-device/complete` applied the other device's approval; on an agent build the agent's own setup-complete runs after both. Login when no session could be collected (no PIN on this device, or the node refused it)"
 ```
 
-**Where it lives, decided from the code.** A branch of `Screen.Setup`'s YOU
-step, next to the three identity choices already there. It is not a new
-Screen. It is not `Screen.ClaimNode` either: CSD-085 records that ClaimNode is
-only ever reached in-shell, after sign-in, and drives the *claiming* side. A
-first-run device has no session and no identity yet, which is exactly the
-Setup wizard's situation (CSD-082 §2). Setup is `FLOW_ONLY` (`screen_atlas.py`),
-so this is `flow_only: true` with Setup's entry and a different exit.
+**Where it lives, decided from the code.** Setup's YOU step, behind the first
+question. It is not a new Screen and not `Screen.ClaimNode`: a first-run device
+has no session and no identity, which is exactly the Setup wizard's situation
+(CSD-082 §2). Setup is `FLOW_ONLY` (`screen_atlas.py`), so this is
+`flow_only: true` with Setup's entry and a different exit.
 
-Choosing this branch **replaces** the wizard's automated self-claim. That claim
-(`SetupViewModel.claimLocalNodeOwnership`, `SetupViewModel.kt:1162-1208`) reads
-the same PIN and sends it to the local node in `POST /v1/setup/claim-remote` to
-make this node its own owner's. On this branch there is no local owner to claim
-for, and the PIN is for the other device. So the branch must not mint, must not
-self-claim, and must not complete setup on its own.
+**What the add-device path asks, and what it does not.** It asks this
+device's name (optional, `input_add_device_name`, sent as the request's
+`label` so the approver sees "S23 Phone") and the person's fedID the way
+*Share my ID* shows it: the QR (`btn_add_device_scan`, the `QrScanAction`
+primitive feeding the same handler as the paste field, so a scan fills and
+never sends), the long form or the short form (`input_add_device_contact`; the
+node resolves all three, `ciris_edge::contact::resolve_contact`). It does NOT
+ask a fedID name (`input_fedid_label` is absent on this path), nor an age band
+(the age is the identity's, already recorded where it was minted), and on a
+node without an agent nor a local account (the claim on this path is applied
+through `setup/root` with no owner password, `src/add_device.rs:883-893`, so a
+password here would be stored nowhere). With an agent the account fields stay:
+the agent's own setup-complete creates its local user from them.
+
+**The rest of the wizard runs as usual** (consent, and with an agent the AI
+step) while the person approves on the other device. Next on YOU opens as soon
+as the request is out (`requested`), not when it is approved.
+
+**The claim lands at the same point in first run** for a new or an existing
+fedID: the wizard's final step. `claimLocalNodeOwnership` branches on the path,
+so on this path the final step is `add-device/complete` → `claimed-session` →
+the node's options (announce, the trace consent, the device name) with the
+session it collected; with an agent, `finishAgentSetup` holds the agent's
+setup-complete until all of that settles.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
 fields:
-  - ceg: x_private:approval_payload
-    use: display-only
-    type: unconfirmed
-    example: "unconfirmed"
-    renders: "one QR, drawn by QrCode(value, contentDescription, tag), carrying this node's code, its one-time claim PIN, and an address the other device can reach it at. The payload format is the client's to define and CSD-094's scanner must read the same one — but WHAT ADDRESS goes in it is CIRISServer#678's design answer that is still pending: 0.5.218's claim-remote honours `target_url` over the node code's `transport_hint` and refuses to fall back to its own loopback for another device's code (`src/claim_remote.rs:484-499`), so the QR must carry a URL the approving node can reach, and whether a phone behind a carrier NAT can offer one, or the second-device path will ride the mesh instead, is not decided"
-    tag: "proposed:qr_approval_code"
-    blocked_by: CIRISServer#678
-  - ceg: x_private:node_code
+  - ceg: x_private:identity_path
+    use: emit
+    type: "enum[new,existing]"
+    example: "existing"
+    renders: "the first question, two options and neither preselected: 'Set up a new CIRIS ID' (`btn_setup_new_identity`) and 'Add this device to an existing CIRIS ID' (`btn_setup_add_this_device`). Nothing else on YOU renders until one is chosen. On a node older than 0.5.231 (a bare 404 on `GET /v1/setup/add-device`) the second is shown disabled with the reason (`txt_setup_add_device_too_old`)"
+    tag: setup_identity_path
+    assert:
+      one_of: {setup_identity_path: [NEW, EXISTING]}
+  - ceg: x_private:device_label
+    use: emit
+    type: string
+    example: "S23 Phone"
+    renders: "'Name this device (optional)', placeholder 'e.g. S23 Phone, 2023 Laptop'. Sent as `label`; the only naming question on this path"
+    tag: input_add_device_name
+  - ceg: x_private:add_device_contact
+    use: emit
+    type: string
+    example: "CIRIS-V3-…"
+    renders: "'Your CIRIS ID' with 'On your other device, open Share my ID. Scan its QR code, or paste the long or short form here.' The scan fills this field and does not send; `btn_add_device_send` sends"
+    tag: input_add_device_contact
+  - ceg: x_private:match_code
     use: display-only
     type: string
-    example: "CIRIS-V1-7QK2-…"
-    renders: "'This device' and its node code in mono, grouped in fours, for anyone who cannot scan"
-    tag: "proposed:text_approval_node_code"
-  - ceg: x_private:claim_pin
+    example: "482 913"
+    renders: "while `requested`: 'Check that this number matches the one on your other device:' and the six digits large, grouped in threes. Derived by the OTHER device from this device's key and challenge (N1), so a copied challenge shows a different code. Not shown after approval: by then it is history"
+    tag: text_add_device_match_code
+    assert:
+      matches: {text_add_device_match_code: "^[0-9]{6}$"}
+  - ceg: x_private:add_device_state
     use: display-only
-    type: string
-    example: "7F3K-Q9MZ"
-    renders: "'Approval PIN: 7F3K-Q9MZ' in large mono, readable across a table, with 'Type this on your other device if it can't scan.' It is shown on this screen and nowhere else: no Copy button, no share sheet, no log line"
-    tag: "proposed:text_approval_pin"
+    type: "enum[requested,approved,applied,denied,expired,failed,interrupted]"
+    example: "requested"
+    renders: "one line per state: 'Waiting for your other device to approve this one. You can carry on with setup in the meantime.' / 'Approved and checked on this device. It joins when setup finishes.' / 'This device has joined your CIRIS ID.' / 'Your other device declined this request. Nothing was added.' / 'This request ran out of time. On your other device choose Accept new requests again, then send a new request from here.' / 'The approval could not be checked on this device, so nothing was applied.' + the node's `detail` / 'This device restarted before your other device answered, so the request was lost.' The last four carry 'Send a new request' (`btn_add_device_new_request`)"
+    tag: text_add_device_status
   - ceg: "ownership:{relation}:{target_kind}:{version}"
     bind: {relation: responsible_party, target_kind: node, version: v1}
     use: display-only
-    type: bool
-    example: false
-    renders: "while false: 'Waiting for your other device to approve this one…'. When the node reports it is owned, 'Approved. Sign in to finish.' and the wizard goes to Login. The client shows the claim; it cannot make it (CC 3.4.5)"
-    tag: "proposed:text_approval_waiting"
+    type: string
+    example: "eric-moore-v1"
+    renders: "'Joining eric-moore-v1' once `owner_key_id` arrives with `approved`: the identity is SHOWN, never asked for. The client shows the claim; it cannot make it (CC 3.4.5)"
+    tag: text_add_device_owner
+  - ceg: x_private:refusal_reason_id
+    use: display-only
+    type: "enum[add_device.not_accepting,add_device.unknown_identity,add_device.no_device,add_device.unreachable,add_device.already_owned,add_device.no_transport,add_device.mint_failed,add_device.rng,add_device.unexpected,add_device.not_approved,add_device.apply_failed]"
+    example: "add_device.not_accepting"
+    renders: "the refusal by id, the node's English beneath; 'Try again' resends. `not_accepting` is the common one: 'your other device is not accepting new devices — open Add a device on it, then try again'. The ids are the server's (`FSD/ADD_DEVICE.md` §4.1); their bundle keys arrive with the server-parity branch (`feat/server-0.5.231-parity`), and until then the English shows"
+    tag: add_device_refusal
 ```
 
 ```yaml csd:states
-populated: {tag: "proposed:card_approval_code", renders: "the QR, the node code, the PIN and the waiting line, with `proposed:btn_approval_code_cancel`"}
-empty:     {tag: "proposed:approval_code_no_pin", renders: "'This device has no approval PIN.' Either the node is already claimed (then: 'This device already belongs to someone. Sign in instead.') or the PIN has not been seen yet (`GET /v1/setup/status` has no `claim_pin_file`). No QR is drawn without a PIN: half a code would fail at the other device with a worse message"}
-loading:   {tag: "proposed:approval_code_loading", renders: "reading this node's code and PIN: the card frame with a progress affordance and no sentence"}
-error:     {tag: "proposed:approval_code_error", renders: "'Could not read this device's code.' with the node's reason, and Try again. Distinct from `empty`: the node did not answer, which is not the same as the node having no PIN"}
+populated: {tag: card_add_this_device, renders: "the name and fedID fields, the scan action and Send request; once sent, the match code and the state line"}
+empty:     {tag: setup_identity_path, renders: "the first question unanswered: two options, nothing preselected, Next disabled with 'Choose first: set up a new CIRIS ID, or add this device to one you already have.'"}
+loading:   {tag: btn_add_device_send, renders: "'Asking your other device…' on the disabled send button while `POST /v1/setup/add-device` is in flight (the node makes one first-contact round trip to the other device, up to 20 s)"}
+error:     {tag: add_device_refusal, renders: "the refusal by id with the node's English, and Try again. Distinct from `denied`/`expired`/`failed`, which are answers about a request that WAS sent and say 'Send a new request'"}
 ```
+
+**COMPLETE on this path** has one more state, `setup_add_device_waiting`:
+`add-device/complete` answered 409 `add_device.not_approved`, so the rest of the
+wizard is done and the other device has not approved yet. It is not an error
+and does not auto-leave (CompleteStep's two-second hand-off is held while it
+shows). It shows the match code and state line, polls, and finishes by itself
+when `approved` arrives (`retryAddDeviceFinish`); 'Check again'
+(`btn_add_device_finish_retry`) does the same by hand. **No countdown here**:
+once approved, the approval is held on this node with no expiry and restored
+on reboot (`<home>/add_device_pending.json`, `src/add_device.rs:676-713`), and
+`complete` never contacts the other device, so its window closing or going
+offline no longer matters. `add_device.apply_failed` (502) renders in the
+existing `setup_ownership_error` panel by id, recoverable: the node keeps what
+it held, so Retry re-applies it.
 
 ## 3. Contracts (who)
 
+Verified against CIRISServer **v0.5.231** (tag, tarball via `gh api`), `src/add_device.rs`
+unless named. Every call is to THIS device's own node over loopback, with no
+session (`require_loopback`, `:1257`).
+
 | value | endpoint | owner | state |
 |---|---|---|---|
-| this node's code | `GET /v1/federation/node-code` (`client.getNodeCode`, `SetupViewModel.kt:1197`), or the code captured from the boot banner | CIRISServer | live |
-| the claim PIN | the node's own `<home>/claim_pin` file (0600), located by `claim_pin_file` in `GET /v1/setup/status` (`src/auth/bootstrap.rs:1418`) and read by `readLocalClaimPin()` (`CIRISApp.kt:2663`); the boot-banner capture is the fallback | CIRISServer (writes) · CIRISClient (reads a local file) | live; the same provider the self-claim uses |
-| "you've been approved" | `GET /v1/setup/status` → `is_first_run` flips to `false` once `/v1/setup/root` has accepted the claim (`bootstrap.rs:1413-1436`) | CIRISServer | live; the card polls it |
-| this device's owner session, once approved | `POST /v1/setup/claimed-session {claim_pin}` on this device's OWN node (`src/auth/bootstrap.rs` `claimed_session`, mounted loopback-only beside `setup/status`; CIRISServer `main` @ `53d1ffb5`, the 0.5.218 merge). When another device made the claim, `setup/root` answers `session_pickup: "local"` with no token and holds the session here for 15 minutes. Answers: `200` the `/v1/auth/login` shape (`access_token, token_type, expires_in, role, user_id`); `401 auth.claim.pin_invalid`; `404 auth.claim.no_pending_session` (nothing held, the window passed, or already collected) | CIRISServer | **wired in the client; the card that calls it is not built.** `CIRISApiClient.collectClaimedSession` → `SetupViewModel.collectClaimedSession` → `ClaimedSessionState` (`Collected` applies the session as the self-claim does and hands it to the host to persist; `Refused` by id; `no_pending_session` goes to Login). A **bare** 404 is a node older than 0.5.218 (`NodeTooOld`): its claim gave the session to the approver, so the old ending, Login, stands. Tests: `ClaimedSessionTest` (commonTest), `ClaimedSessionWireTest` (desktopTest) |
-| an address the other device can reach | the node code's `transport_hint`, or `target_url` in the claim body; 0.5.218 makes `target_url` override the hint and REFUSES to fall back to the approving node's own loopback for a code that names another device (`src/claim_remote.rs:484-499` on `origin/integ/0.5.218`: "falling back for it would POST another device's claim to ourselves") | CIRISServer | **readable, and the flow still cannot work without an answer**: a desktop or phone node's code carries no hint, so the QR must carry `target_url`, and whether a phone behind a carrier NAT can be reached over HTTP at all — or the second-device path will ride the mesh — is the design answer pending on CIRISServer#678 (open). `blocked_by` on the payload field above |
-| the QR payload format (node code + PIN + address) | none: a client-side format that CSD-093 writes and CSD-094 reads | CIRISClient | **blocked** on the row above: the address member is the open half. Proposed as one URI carrying `node_code`, `claim_pin` and `target_url`; to be pinned by a shared unit test in `commonTest` before either card is `building` |
-| the QR | `QrCode(value, contentDescription, tag)` | CIRISClient | **live** (PR #99): `ui/primitives/QrCode.kt`, already drawing CSD-092's code |
+| ask the other device | `POST /v1/setup/add-device {contact, label?}` → 202 `JoinProgress` `{state:"requested", match_code, target_node, occurrence_key_id}` | CIRISServer `start`, `:388-555`; route `:1248-1251` | **live**, wired: `CIRISApiClient.addDeviceStart` ← `SetupViewModel.sendAddDeviceRequest`. Refusals `{error, reason_id}` (`src/auth/refusal.rs:52`): 409 `already_owned` (`:389-395`), 503 `no_transport` (`:396-402`), 404 `unknown_identity` (`:409-415`), 404 `no_device` (`:422-428`), 500 `mint_failed` / `rng`, 502 `unreachable` (`:506-512`), 409 `not_accepting` (`:518-523`), 502 `unexpected` (`:525-527`) |
+| where the request stands | `GET /v1/setup/add-device` → `{state, match_code, target_node, occurrence_key_id, owner_key_id, detail}` | CIRISServer `status`, `:923-929`; shape `JoinProgress` `:323-337` | **live**, polled every 2.5 s, awaited, one at a time, until it leaves `requested` (`startAddDevicePolling`). States `requested \| approved \| applied \| denied \| expired \| failed`, plus `idle` (`:344`), the server's starting value, which the FSD's table omits |
+| apply the approval at the end of first run | `POST /v1/setup/add-device/complete` → 200 `{state:"applied", owner_key_id, …}` | CIRISServer `complete`, `:812-841`; `apply` `:883-919` | **live**, wired in `completeAddDevice` through `claimLocalNodeOwnership`. 409 `add_device.not_approved` (`:814-820`) → waiting; 502 `add_device.apply_failed` (`:835-838`) → recoverable error by id. Skipped when the phase is already `applied` (a retry after the session step), because the node clears what it held and would answer `not_approved` |
+| this device's owner session | `POST /v1/setup/claimed-session {claim_pin}` | CIRISServer `src/auth/bootstrap.rs:1471-1479`, mounted `:1734-1737` | **live**, the same route CSD-093 wired at 0.5.218, now reached from `completeAddDevice` after `complete` answers `applied`. The PIN is read from this node's own `claim_pin` file (`readLocalClaimPin`, the same provider the self-claim uses) and sent nowhere else |
+| the agent's setup-complete (agent builds) | `POST /v1/setup/complete` | CIRISAgent | live; runs only after the two rows above settle (`finishAgentSetup` → `claimThenComplete`). See the hand-off in §6 |
 
-### The PIN contract (asserted, not just intended)
+### The PIN contract
 
-**No request this client makes carries the claim PIN off this device.** On
-this branch the client reads the PIN from a local file and draws it; the only
-way it leaves the device is by someone looking at the screen or scanning the
-QR. The branch makes no `claim-remote`, no `setup/root`, no `setup/complete`,
-and logs nothing that contains it (`DebugBundle.kt:123-136` already redacts it
-from debug bundles, and that stays true). **One request carries it, to this
-device's own node and nowhere else:** `POST /v1/setup/claimed-session`, after
-the approval, which is how 0.5.218 hands this device its owner session (the
-PIN is the gate, the route is loopback-only on the node, and the held session
-is collected once). `collectClaimedSession` logs the URL, never the PIN.
+**No request this card makes carries the claim PIN off this device.** One
+request carries it, to this device's own node: `claimed-session`, after the
+claim was applied. The new device never shows the PIN on this path (the
+0.5.218 sketch drew it in a QR; that design is retired: the other device
+signs, this node verifies offline and applies through its own `setup/root`
+with its own PIN, `:883-893`). `collectClaimedSession` logs the URL, never the
+PIN. `AddDeviceWireTest` asserts the PIN reaches `claimed-session` and only
+after `add-device/complete`.
 
-How it is asserted: a `commonTest` drives this branch against a recording API
-client and fails if any request's URL, headers or body contains the PIN string,
-except the `claimed-session` body sent to the local node.
-That is a unit-level assertion because the flow DSL has no predicate over
-requests (CSD.md §5); it is still a contract, and it must be shown to fail on a
-planted leak before it is believed (AGENTS.md).
+### Restart-resume
 
-**What the contract does not cover, stated so no one reads more into it.** The
-PIN does cross the network once, and not from this client: the approving node
-sends it to *this* node's `POST /v1/setup/root` (`claim_remote.rs:253-268`),
-which is how this node checks it. That hop goes back to the node that issued the
-PIN, and it is the server's protocol, not a request this card makes. On the
-approving device the PIN also travels over loopback to that device's own node,
-in the `claim-remote` body (CSD-094).
+On opening the wizard, `probeAddDevice` asks `GET /v1/setup/add-device` once:
+
+* `approved` (a verified approval held across a node reboot, `restore_pending`
+  `:692-713`) or `applied`: the wizard resumes the add-device path at that
+  state. `requested` (the app restarted, the node did not): it resumes and
+  keeps polling.
+* `idle`: nothing outstanding; the first question is asked.
+* a bare 404: a node older than 0.5.231; "Add this device" is disabled with
+  the reason and the new-ID path is unchanged.
+
+**Only a VERIFIED approval survives a node reboot.** The request itself lives
+in the node's memory (`progress()`, `:340-347`) and in a spawned poll task
+(`:540-551`); a reboot before the other device answers loses it, and GET then
+answers `idle`. The wizard reads `idle` for a request it had sent as
+`interrupted` ("send a new request"), never as a fresh start.
 
 ## 4. Flow (how)
 
-On a first-run node, reach Setup's YOU step; click
-`proposed:btn_setup_use_existing_identity`.
-
-```yaml
-expect:
-  state: populated
-  visible: ["proposed:card_approval_code", "proposed:qr_approval_code", "proposed:text_approval_node_code", "proposed:text_approval_pin", "proposed:text_approval_waiting"]
-  matches: {"proposed:text_approval_pin": "^[A-Z0-9]{4}-[A-Z0-9]{4}$"}
-  absent: [input_fedid_label]
-```
-
-On a second, already-set-up device, approve this one (CSD-094). This device
-notices by itself:
-
-```yaml
-expect:
-  screen: Login
-```
-
-Cancel instead: `proposed:btn_approval_code_cancel` returns to the YOU step,
-and `input_fedid_label` is visible again. Nothing was minted or claimed.
-
-On a node that is already claimed:
+On a first-run node, reach Setup's YOU step.
 
 ```yaml
 expect:
   state: empty
-  visible: ["proposed:approval_code_no_pin"]
-  absent: ["proposed:qr_approval_code"]
+  visible: [btn_setup_new_identity, btn_setup_add_this_device]
+  absent: [input_fedid_label, input_add_device_contact]
 ```
+
+Choose `btn_setup_add_this_device`, name the device, paste the other device's
+long-form fedID, Send.
+
+```yaml
+expect:
+  state: populated
+  visible: [card_add_this_device, text_add_device_match_code, text_add_device_status]
+  matches: {text_add_device_match_code: "^[0-9]{6}$"}
+  absent: [input_fedid_label, age_band_adult]
+```
+
+The other device approves (CSD-094). This device notices by itself:
+
+```yaml
+expect:
+  visible: [text_add_device_owner]
+  text: {text_add_device_status: "approved"}
+```
+
+Next through the rest of the wizard; the final step applies the claim and
+collects the session.
 
 ## 5. QA plan
 
-**Platforms.** The card on all five. The pair (this card plus CSD-094) needs two
-nodes where the approving one can reach this one over HTTP, so desktop + desktop
-on one host (two homes, per the one-home rule) is the cheapest pair.
+**Unit and wire (green on this branch).** `AddDeviceSetupTest` (commonTest,
+21 cases): the first question and no default; the add-device path asks no
+fedID name and no age; the request's contact and label; each refusal by id
+(`not_accepting`, `unknown_identity`, `no_device`, `unreachable`,
+`already_owned`, `no_transport`) and not_accepting → Try again; polling to
+`approved` with `owner_key_id`, never overlapping, stopping when answered;
+`denied`/`expired`/`failed` → a new request, and `expired` → Send a new
+request → a second `start`; `idle` after a sent request → interrupted;
+`complete` 409 → waiting, no session; `complete` → `claimed-session` in that
+order with the session applied; `apply_failed` recoverable by id; a retry
+after the claim landed does not apply twice; the path never mints; with an
+agent, `complete` → `claimed-session` → the agent's setup-complete, and
+not-approved holds the agent until the approval arrives; restart-resume from
+`approved` and from `requested`; `idle` leaves the question open; a bare 404
+disables the option. `AddDeviceWireTest` (desktopTest, a real socket) repeats
+the request, a refusal, the bare 404, the with-agent order and the 409 on the
+wire. Shown red on planted defects before being believed: a settle-await
+removed, `not_approved` treated as an error, "send a new request" refused
+after `expired`, and a closed window hiding held requests (CSD-094) each
+failed at least one test.
 
-**The PIN.** The recording-client unit test above, red on a planted leak first.
-Gallery screenshots of this step show a PIN. That is acceptable only because the
-PIN is one-time and dead once the node is claimed; a shot of an *unclaimed*
-node's PIN is a live secret, so gallery runs claim the node before the run ends.
+**A real two-device run, and what it needs.** `testing/flows/drafts/csd-093-add-this-device.yaml`.
+The other device must be a CLAIMED node with an owner fedID and a mesh
+transport, and this leg's node must be first-run and able to reach it.
+`testing/gate/two_node.py` stands up a claimed peer, but today it also peers it
+with the leg's node using the leg's owner credentials, which a first-run leg
+does not have. A real run needs a two_node mode that: (1) claims the peer only,
+(2) opens its window with the peer's owner session
+(`POST /v1/self/device-requests/open`), (3) exports the peer owner's long-form
+fedID (`${PEER_FEDCODE}`) to the flow, and (4) approves the pending request
+from the peer's side by API while the flow waits on this device. Until then
+the flow stays a draft.
 
-**Not tested here.** The camera scan on the other device (QrScanAction's test
-double, CSD-094). Reachability across NAT: a phone behind a carrier NAT is not
-reachable by the approving node at all, and this card cannot fix that (§6).
+**Not tested here.** The camera (QrScanAction's double stands in). NAT
+traversal between the two devices (edge's first contact on the opaque plane,
+CIRISEdge#683).
 
 ## 6. Delta — card vs API vs CC
 
-* **Card vs API: reachability is the open question.** `claim-remote` reaches
-  the target through the node code's `transport_hint` or an explicit
-  `target_url`. Desktop and phone nodes publish no hint, and a phone may not be
-  reachable over HTTP from anywhere. The flow works on one LAN with `target_url`
-  in the QR and is unproven elsewhere. **Ask (CIRISServer, on CIRISClient#78):**
-  say whether 0.5.218's second-device path is HTTP-to-target like first-run
-  claim, or rides the mesh; the QR's contents depend on it.
-* **Known limits of the 0.5.218 path, stated as limits (CIRISServer#678).**
-  The brief's 2026-09-25 update says three of the four 0.5.218 branches are
-  built and #678 (link at claim, re-wrap old private files, announce the new
-  device from the first) is **still building**. So these are the limits of
-  what will ship, not of a draft.
-  Files and chats written before the approval do not open on this device yet
-  (no re-wrap of the self key on claim-remote; CIRISPersist#916). The two
-  devices do not sync until a restart (the claim only adds a bootstrap peer).
-  This device stays private until the other one makes it reachable. The card's
-  "Approved" line must not promise that history is here.
-* **CC.** The design keeps CC 3.4.5 intact: this device signs nothing and
-  claims nothing, and the owner-binding is made by the key holder on the
-  approving device. CC 3.3.6 is where this should end: the new device as an
-  `identity_occurrence` of the same self. On `main`, claim-remote writes an
-  owner-binding and no occurrence, which CSD-094 §6 records.
-* **The wizard's own completion.** CSD-082 ends on Login because completion
-  restarts the node. This branch never reaches COMPLETE: the AI step and the
-  join question are the approving person's to answer later, on a device that is
-  signed in. That is a deliberate narrowing, and it means an agent on this node
-  is configured after sign-in, not during setup.
+* **Where the server source differs from the FSD.** (a) `GET` starts at
+  `idle`, not in the FSD's state list (`:344`). (b) A request that has not
+  been approved does not survive a node reboot (only the verified approval
+  does), so "restart mid-wizard is safe" holds for the approval, not for the
+  request; the wizard says "interrupted". (c) If the other device forgets the
+  request (its own 15 minutes ran out, or it restarted), the poll gets
+  `Unknown` and B's state is `failed` with `detail: "Unknown"`
+  (`:639-645`), not `expired`; `expired` is B's own 15-minute deadline
+  (`:582`, `:649`). (d) `device_class` is always `laptop`
+  (`DEVICE_CLASS_LAPTOP`, `:491`), whatever the device is. (e) `mint_failed` and
+  `rng` are 500, `unexpected` 502; the FSD lists them without statuses.
+* **The agent hand-off.** On an agent build, setup-complete (CIRISAgent,
+  cirisagent-d5) reloads the runtime, which kills the session the add-device
+  calls ride. The client now runs `add-device/complete` → `claimed-session`
+  → the node options → THEN `POST /v1/setup/complete`, the same E9 ≺ E10
+  order the self-claim uses. The agent's setup-complete is unchanged; it should
+  not assume the node was self-claimed with the account's password (on this
+  path the binding came from the other device and carries no owner password).
+* **Account on node-only builds.** The add-device path asks no password on a
+  node without an agent, because nothing would store it. Signing in again later
+  on such a device is by the fedID (self-login), not a password.
+* **CC.** CC 3.4.5 holds: this device signs nothing that claims anything; the
+  owner-binding and the occurrence are signed on the approving device. CC 3.3.6
+  holds: the new device becomes an `identity_occurrence` of the same self
+  (`put_identity_occurrence`, `:907-911`), not a second identity.

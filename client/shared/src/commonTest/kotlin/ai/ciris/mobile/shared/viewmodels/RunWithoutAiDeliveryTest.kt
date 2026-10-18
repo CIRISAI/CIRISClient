@@ -46,6 +46,7 @@ class RunWithoutAiDeliveryTest {
      * default and must be answered (either way) like the age band.
      */
     private fun SetupViewModel.satisfyScreenOne() {
+        chooseIdentityPath(IdentityPath.NEW)
         setAgeRange(AgeBand.ADULT)
         setUsername("qaadmin")
         setUserPassword("hunter2hunter2")

@@ -43,6 +43,7 @@ class FinalStepOnceTest {
 
     private fun nodeClientAtFinalStep(): SetupViewModel {
         val vm = SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = false)
+        vm.chooseIdentityPath(IdentityPath.NEW)
         vm.setAgeRange(AgeBand.ADULT)
         vm.setUsername("qaadmin")
         vm.setUserPassword("hunter2hunter2")

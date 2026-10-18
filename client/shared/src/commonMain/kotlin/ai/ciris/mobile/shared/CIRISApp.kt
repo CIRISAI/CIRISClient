@@ -1021,6 +1021,14 @@ fun CIRISApp(
         // answers on a different port.
         ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel(apiClient, nodeBaseUrl)
     }
+    // "Add a device" on the device the person already has (CSD-094, CIRISServer
+    // 0.5.231 `/v1/self/device-requests`): the owner's routes on the node this
+    // client is signed in to.
+    val approveDeviceViewModel: ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel(
+            ai.ciris.mobile.shared.api.ClientDeviceRequests(apiClient, nodeBaseUrl),
+        )
+    }
     // Removing a contact is a NODE route signed with the person's pen. On a
     // with-AI install apiClient.baseUrl is the agent, which does not proxy it
     // (CIRISAgent#1213), so the model is handed the node — the active one, read
@@ -4358,6 +4366,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.IdentityManagement] Rendering identity management screen")
                 IdentityManagementScreen(
                     viewModel = identityManagementViewModel,
+                    approveDeviceViewModel = approveDeviceViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     // The repair route for a subject-blind fedID (CIRISServer#490).
                     // The card only offers it when the node named one AND it
