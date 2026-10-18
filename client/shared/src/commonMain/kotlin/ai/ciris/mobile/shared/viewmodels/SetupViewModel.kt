@@ -60,6 +60,10 @@ class SetupViewModel(
     private val addDeviceApiOverride: ai.ciris.mobile.shared.api.AddDeviceSetupApi? = null,
     /** How long to wait between `GET /v1/setup/add-device` polls (the node itself asks its peer every 3 s). */
     private val addDevicePollMs: Long = 2_500,
+    /** How long between re-sends while the other device is unreachable (CIRISServer#792). */
+    private val addDeviceRetryMs: Long = 10_000,
+    /** How long to keep re-sending before showing the refusal with a manual Retry. */
+    private val addDeviceRetryWindowMs: Long = 5 * 60_000,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(initialState())
@@ -238,6 +242,12 @@ class SetupViewModel(
 
         /** v0.5.231's `failed` detail when the other device no longer held the request (`format!("{other:?}")` of `JoinAnswer::Unknown`). */
         const val OLDER_NODE_GONE_DETAIL = "Unknown"
+
+        /** 502 while the other device cannot be reached (retried, CIRISServer#792). */
+        const val ADD_DEVICE_UNREACHABLE = "add_device.unreachable"
+
+        /** 409 on DELETE once the claim was applied: nothing left to cancel. */
+        const val ADD_DEVICE_ALREADY_OWNED = "add_device.already_owned"
 
         /** Canonical backend provider id for on-device Gemma 4 inference. */
         const val LOCAL_ON_DEVICE_PROVIDER_ID = "mobile_local"
@@ -1554,6 +1564,9 @@ class SetupViewModel(
 
     private var addDevicePollJob: Job? = null
 
+    /** The re-send loop while the other device is unreachable (CIRISServer#792). */
+    private var addDeviceRetryJob: Job? = null
+
     private fun addDeviceApi(): ai.ciris.mobile.shared.api.AddDeviceSetupApi? =
         addDeviceApiOverride
             ?: (apiClient as? CIRISApiClient)?.let { ai.ciris.mobile.shared.api.ClientAddDeviceSetup(it) }
@@ -1584,7 +1597,15 @@ class SetupViewModel(
     /** Raise the "Cancel this request" confirm. Nothing is abandoned until [confirmCancelAddDevice]. */
     fun askCancelAddDevice() {
         if (!_state.value.addDevice.cancellable) return
-        updateAddDevice { it.copy(confirmingCancel = true) }
+        // Nothing has reached the other device while re-sending to it, so
+        // stopping is not an outward act and needs no confirm.
+        if (_state.value.addDevice.phase == AddDevicePhase.RETRYING) {
+            addDeviceRetryJob?.cancel()
+            PlatformLogger.i(TAG, "[addDevice] stopped re-sending to an unreachable device")
+            updateAddDevice { it.cleared(AddDeviceCancelOutcome.STOPPED_RETRYING) }
+            return
+        }
+        updateAddDevice { it.copy(confirmingCancel = true, cancelError = null) }
     }
 
     fun dismissCancelAddDevice() {
@@ -1592,31 +1613,79 @@ class SetupViewModel(
     }
 
     /**
-     * **Abandon this device's request, locally.** CIRISServer (at
-     * `fix/client-copy-0.5.232` `b3e05e27`) has no route to withdraw a join
-     * request or discard a held approval: the router mounts only
-     * `POST`/`GET /v1/setup/add-device` and `POST …/complete`
-     * (`src/add_device.rs` `router`). So this stops polling and forgets the
-     * request HERE, and the confirm says what it cannot do: the other device
-     * keeps listing the request until its 15 minutes run out, and an approval
-     * this node already verified stays held on it, unused. The first question
-     * is unlocked again.
+     * **Cancel this device's request** — `DELETE /v1/setup/add-device`
+     * (CIRISServer `fix/client-copy-0.5.232` `f9d25729`). The node retires its
+     * poll, discards a held approval and the request's unused keys, and
+     * withdraws it from the other device: a pending request leaves the owner's
+     * list in about 3 s, an APPROVED one is undone there (the occurrence
+     * revoked, the owner-binding withdrawn) in about 8 s. It works after a
+     * restart. Then the first question is unlocked again.
+     *
+     *  * 200 → [AddDeviceCancelOutcome.WITHDRAWN].
+     *  * 409 `add_device.already_owned` → the claim was already applied, so
+     *    there is nothing to cancel: [AddDeviceCancelOutcome.ALREADY_APPLIED],
+     *    and the path stays locked.
+     *  * a bare 404 or 405 (no `reason_id`): a node at 0.5.231 or older has no
+     *    DELETE (axum answers 405 for a known path with another method) →
+     *    forgotten HERE only, [AddDeviceCancelOutcome.LOCAL_ONLY], with the
+     *    honest wording: the other device keeps listing it until it expires,
+     *    and an approval already held stays on this node unused.
+     *  * anything else → the request stays live and the reason is shown.
+     *
+     * While re-sending to an unreachable device ([AddDevicePhase.RETRYING]) no
+     * request has reached the other device, so stopping the loop is the cancel.
      */
     fun confirmCancelAddDevice() {
         val s = _state.value.addDevice
-        if (!s.confirmingCancel || !s.cancellable) {
+        if (!s.confirmingCancel || !s.cancellable || s.cancelling) {
             dismissCancelAddDevice()
             return
         }
-        addDevicePollJob?.cancel()
-        PlatformLogger.i(TAG, "[addDevice] request abandoned locally (was ${s.phase}); no server route withdraws it")
-        updateAddDevice {
-            it.copy(
-                phase = AddDevicePhase.IDLE, matchCode = null, ownerKeyId = null, detail = null,
-                refusalReasonId = null, refusalStatus = null, confirmingCancel = false,
-            )
+        if (s.phase == AddDevicePhase.RETRYING) {
+            addDeviceRetryJob?.cancel()
+            PlatformLogger.i(TAG, "[addDevice] stopped re-sending to an unreachable device")
+            updateAddDevice { it.cleared(AddDeviceCancelOutcome.STOPPED_RETRYING) }
+            return
+        }
+        val api = addDeviceApi() ?: return
+        updateAddDevice { it.copy(confirmingCancel = false, cancelling = true, cancelError = null, cancelOutcome = null) }
+        viewModelScope.launch {
+            try {
+                api.cancel()
+                addDevicePollJob?.cancel()
+                PlatformLogger.i(TAG, "[addDevice] request cancelled on the node (was ${s.phase}); withdrawn from the other device")
+                updateAddDevice { it.cleared(AddDeviceCancelOutcome.WITHDRAWN) }
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                when {
+                    e.reasonId == ADD_DEVICE_ALREADY_OWNED -> {
+                        PlatformLogger.i(TAG, "[addDevice] cancel refused: the claim was already applied")
+                        addDevicePollJob?.cancel()
+                        updateAddDevice {
+                            it.copy(cancelling = false, phase = AddDevicePhase.APPLIED, cancelOutcome = AddDeviceCancelOutcome.ALREADY_APPLIED)
+                        }
+                    }
+                    e.reasonId == null && (e.statusCode == 404 || e.statusCode == 405) -> {
+                        addDevicePollJob?.cancel()
+                        PlatformLogger.i(TAG, "[addDevice] node has no DELETE (${e.statusCode}): request abandoned locally (was ${s.phase})")
+                        updateAddDevice { it.cleared(AddDeviceCancelOutcome.LOCAL_ONLY) }
+                    }
+                    else -> {
+                        PlatformLogger.w(TAG, "[addDevice] cancel refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                        updateAddDevice { it.copy(cancelling = false, cancelError = e.detail ?: e.reasonId ?: "cancel answered ${e.statusCode}") }
+                    }
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[addDevice] cancel failed: ${e.message}")
+                updateAddDevice { it.copy(cancelling = false, cancelError = e.message ?: e::class.simpleName) }
+            }
         }
     }
+
+    private fun AddDeviceSetupState.cleared(outcome: AddDeviceCancelOutcome) = copy(
+        phase = AddDevicePhase.IDLE, matchCode = null, ownerKeyId = null, detail = null,
+        refusalReasonId = null, refusalStatus = null, confirmingCancel = false,
+        cancelling = false, cancelOutcome = outcome, cancelError = null,
+    )
 
     /** The fedID as typed, pasted or scanned. One handler for all three (a scan fills the field, it never sends). */
     fun setAddDeviceContact(value: String) {
@@ -1672,6 +1741,13 @@ class SetupViewModel(
      *
      * Also "Send a new request" after a denial, an expiry or a failure: the
      * node mints fresh device keys for every request.
+     *
+     * **`add_device.unreachable` is retried** (CIRISServer#792): when this
+     * device boots a few minutes after the owner's, the first-contact link can
+     * take 2+ minutes to come up. The request is re-sent every
+     * [addDeviceRetryMs] for [addDeviceRetryWindowMs] in [AddDevicePhase.RETRYING]
+     * ("Can't reach your other device yet — still trying", Cancel available);
+     * after that the refusal shows with a manual Try again.
      */
     fun sendAddDeviceRequest() {
         val api = addDeviceApi() ?: return
@@ -1679,36 +1755,64 @@ class SetupViewModel(
         val contact = s.addDevice.contact.trim()
         if (contact.isEmpty() || s.addDevice.phase == AddDevicePhase.SENDING) return
         addDevicePollJob?.cancel()
+        addDeviceRetryJob?.cancel()
+        val label = s.deviceName.trim().ifBlank { null }
         updateAddDevice {
             it.copy(
                 phase = AddDevicePhase.SENDING, matchCode = null, ownerKeyId = null, detail = null,
-                refusalReasonId = null, refusalStatus = null,
+                refusalReasonId = null, refusalStatus = null, cancelOutcome = null, cancelError = null,
             )
         }
-        viewModelScope.launch {
-            try {
-                val p = api.start(contact, s.deviceName.trim().ifBlank { null })
-                updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
-                applyProgress(p, serverPhase(p, previous = AddDevicePhase.SENDING))
-                PlatformLogger.i(TAG, "[ORDER] add_device_requested state=${p.state} target=${p.targetNode}")
-                if (_state.value.addDevice.phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
-            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
-                val tooOld = e.statusCode == 404 && e.reasonId == null
-                PlatformLogger.w(TAG, "[addDevice] request refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
-                updateAddDevice {
-                    it.copy(
-                        phase = AddDevicePhase.REFUSED,
-                        refusalReasonId = e.reasonId,
-                        refusalStatus = e.statusCode,
-                        detail = e.detail,
-                        availability = if (tooOld) AddDeviceAvailability.NODE_TOO_OLD else it.availability,
-                    )
+        addDeviceRetryJob = viewModelScope.launch {
+            var announced = false
+            var waited = 0L
+            while (isActive) {
+                val retryNow = try {
+                    val p = api.start(contact, label)
+                    updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
+                    applyProgress(p, serverPhase(p, previous = AddDevicePhase.SENDING))
+                    PlatformLogger.i(TAG, "[ORDER] add_device_requested state=${p.state} target=${p.targetNode}")
+                    if (_state.value.addDevice.phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
+                    false
+                } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                    val tooOld = e.statusCode == 404 && e.reasonId == null
+                    val unreachable = e.reasonId == ADD_DEVICE_UNREACHABLE
+                    if (unreachable && waited < addDeviceRetryWindowMs) {
+                        if (!announced) PlatformLogger.i(TAG, "[addDevice] other device unreachable — re-sending every ${addDeviceRetryMs}ms for up to ${addDeviceRetryWindowMs}ms")
+                        announced = true
+                        updateAddDevice {
+                            it.copy(
+                                phase = AddDevicePhase.RETRYING,
+                                refusalReasonId = e.reasonId, refusalStatus = e.statusCode, detail = e.detail,
+                                availability = AddDeviceAvailability.AVAILABLE,
+                            )
+                        }
+                        true
+                    } else {
+                        PlatformLogger.w(TAG, "[addDevice] request refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}" +
+                            if (unreachable) " (still unreachable after ${waited}ms)" else "")
+                        updateAddDevice {
+                            it.copy(
+                                phase = AddDevicePhase.REFUSED,
+                                refusalReasonId = e.reasonId,
+                                refusalStatus = e.statusCode,
+                                detail = e.detail,
+                                availability = if (tooOld) AddDeviceAvailability.NODE_TOO_OLD else it.availability,
+                            )
+                        }
+                        false
+                    }
+                } catch (e: Exception) {
+                    PlatformLogger.w(TAG, "[addDevice] request failed: ${e.message}")
+                    updateAddDevice {
+                        it.copy(phase = AddDevicePhase.REFUSED, refusalReasonId = null, refusalStatus = null, detail = e.message)
+                    }
+                    false
                 }
-            } catch (e: Exception) {
-                PlatformLogger.w(TAG, "[addDevice] request failed: ${e.message}")
-                updateAddDevice {
-                    it.copy(phase = AddDevicePhase.REFUSED, refusalReasonId = null, refusalStatus = null, detail = e.message)
-                }
+                if (!retryNow) break
+                delay(addDeviceRetryMs)
+                waited += addDeviceRetryMs
+                if (_state.value.addDevice.phase != AddDevicePhase.RETRYING) break
             }
         }
     }
@@ -3468,6 +3572,7 @@ class SetupViewModel(
      */
     fun resetState() {
         addDevicePollJob?.cancel()
+        addDeviceRetryJob?.cancel()
         collectedGrant = null
         _state.value = initialState()
     }

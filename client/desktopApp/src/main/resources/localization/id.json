@@ -4098,7 +4098,17 @@
     "add_device_cancel_other": "Permintaan ini tidak dapat dicabut dari sini. Perangkat lain Anda akan terus menampilkannya sampai kedaluwarsa setelah 15 menit, jadi jangan setujui di sana.",
     "add_device_cancel_fact_next": "Persetujuan yang sudah diterima",
     "add_device_cancel_next": "Tetap berada di node perangkat ini tanpa digunakan. Tidak ada yang bergabung kecuali Anda mengirim permintaan lagi dan menyelesaikan penyiapan.",
-    "add_device_cancel_confirm": "Batalkan permintaan"
+    "add_device_cancel_confirm": "Batalkan permintaan",
+    "add_device_unreachable_retrying": "Belum dapat menjangkau perangkat lain Anda — masih mencoba. Ini bisa memakan waktu beberapa menit setelah perangkat tersebut dinyalakan.",
+    "add_device_cancelling": "Membatalkan…",
+    "add_device_cancel_failed": "Permintaan tidak dapat dibatalkan.",
+    "add_device_cancelled": "Permintaan dibatalkan. Perangkat lain Anda telah diberi tahu untuk mengabaikannya.",
+    "add_device_cancelled_local": "Dibatalkan hanya pada perangkat ini: node perangkat ini terlalu lama untuk mencabut permintaan.",
+    "add_device_cancel_already_applied": "Perangkat ini sudah bergabung dengan CIRIS ID Anda, sehingga tidak ada permintaan yang tersisa untuk dibatalkan.",
+    "add_device_stopped_retrying": "Berhenti mencoba. Tidak ada permintaan yang sampai ke perangkat lain Anda.",
+    "add_device_withdraw_here": "Menghentikan penantian, dan membuang kunci permintaan ini beserta persetujuan apa pun yang sudah diterima.",
+    "add_device_withdraw_other": "Perangkat tersebut diberi tahu untuk mengabaikan permintaan ini, atau membatalkan persetujuannya jika sudah diberikan. Jika tidak dapat dijangkau, permintaan akan kedaluwarsa di sana setelah 15 menit.",
+    "add_device_withdraw_held": "Tidak ada yang bergabung. Anda dapat memilih lagi, atau mengirim permintaan baru."
   },
   "moderation": {
     "ladder": {

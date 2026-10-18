@@ -1327,6 +1327,12 @@
     "adapter_unable_load": "Impossible de charger les types d'adaptateur",
     "adapter_url_label": "URL",
     "adapter_waiting_auth": "En attente de l'authentification...",
+    "add_device_cancelled_local": "Annulée sur cet appareil uniquement : le nœud de cet appareil est trop ancien pour retirer la demande.",
+    "add_device_cancel_already_applied": "Cet appareil a déjà rejoint votre CIRIS ID, il n'y a donc plus de demande à annuler.",
+    "add_device_stopped_retrying": "Tentatives arrêtées. Aucune demande n'a atteint votre autre appareil.",
+    "add_device_withdraw_here": "Arrête l'attente, et supprime les clés de cette demande ainsi que toute approbation déjà reçue.",
+    "add_device_withdraw_other": "Il est informé d'abandonner la demande, ou d'annuler son approbation s'il en a déjà donné une. S'il ne peut pas être joint, la demande y expire après 15 minutes.",
+    "add_device_withdraw_held": "Rien ne rejoint. Vous pouvez choisir à nouveau, ou envoyer une nouvelle demande.",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",
@@ -4098,7 +4104,11 @@
     "add_device_cancel_other": "Elle ne peut pas être retirée depuis ici. Votre autre appareil continue de l'afficher jusqu'à son expiration après 15 minutes, donc ne l'approuvez pas là-bas.",
     "add_device_cancel_fact_next": "Une approbation déjà reçue",
     "add_device_cancel_next": "Reste inutilisée sur le nœud de cet appareil. Rien ne rejoint tant que vous n'envoyez pas une nouvelle demande et ne terminez la configuration.",
-    "add_device_cancel_confirm": "Annuler la demande"
+    "add_device_cancel_confirm": "Annuler la demande",
+    "add_device_unreachable_retrying": "Impossible de joindre votre autre appareil pour l'instant — nouvelle tentative en cours. Cela peut prendre quelques minutes après son démarrage.",
+    "add_device_cancelling": "Annulation…",
+    "add_device_cancel_failed": "La demande n'a pas pu être annulée.",
+    "add_device_cancelled": "Demande annulée. Votre autre appareil a été prévenu de l'abandonner."
   },
   "moderation": {
     "ladder": {

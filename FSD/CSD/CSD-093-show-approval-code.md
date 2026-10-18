@@ -77,14 +77,40 @@ below…' (`txt_setup_identity_path_locked`), and `chooseIdentityPath` refuses
 the switch for a driver that ignores the disabled control: the final step
 would otherwise mint and self-claim a SECOND identity over a live join. The
 way out is **Cancel this request** (`btn_add_device_cancel`), behind a
-ConfirmSheet (`confirm_add_device_cancel`) whose three facts say what it can
-and cannot do. CIRISServer has no route to withdraw a join request or discard
-a held approval (the router at `b3e05e27` mounts only `POST`/`GET
-/v1/setup/add-device` and `POST …/complete`), so cancel stops polling and
-forgets the request on this device only: the other device keeps listing it
-until its 15 minutes run out, and an approval already verified stays held on
-this node, unused. Once `applied` there is no cancel: the node already belongs
-to the existing identity.
+ConfirmSheet (`confirm_add_device_cancel`), in both `requested` and
+`approved`. It is `DELETE /v1/setup/add-device` (CIRISServer
+`fix/client-copy-0.5.232` `f9d25729`, `cancel` `src/add_device.rs:811-871`,
+mounted `:1480`): the node retires its poll, discards a held approval and
+`add_device_pending.json`, removes the request's unused keys, and sends a
+`Withdraw` to the other device (`:283-312`), which drops a pending request
+(about 3 s) or undoes an approval it gave, revoking the occurrence and
+withdrawing the owner-binding (`undo_approval`, `:753-794`; about 8 s). It
+works after a restart. The confirm's facts say exactly that. Outcomes
+(`text_add_device_cancel_outcome`):
+
+* 200 `{state:"idle", detail:"cancelled"}`: "Request cancelled. Your other
+  device has been told to drop it." The first question unlocks.
+* 409 `add_device.already_owned` (`:813-819`): the claim was already applied,
+  so "there is no request left to cancel"; the path stays locked.
+* a bare 404 or 405 with no `reason_id`: a node at 0.5.231 or older has no
+  DELETE (axum answers 405 for a path it knows under other methods). The
+  request is forgotten on this device only, with the old honest wording: the
+  other device keeps listing it until its 15 minutes run out, and an approval
+  already verified stays held on this node, unused.
+* anything else: the request stays live and the reason shows
+  (`add_device_cancel_error`).
+
+Once `applied` there is no cancel: the node already belongs to the existing
+identity.
+
+**`add_device.unreachable` is retried** (CIRISServer#792). When this device
+boots a few minutes after the owner's, the first-contact link can take 2+
+minutes to come up and the request answers 502 meanwhile. The wizard re-sends
+it every 10 s for up to 5 minutes in a `retrying` state ("Can't reach your
+other device yet — still trying.", `text_add_device_status` = `retrying`),
+with the path locked and Cancel available. Cancelling there needs no confirm
+and asks the node nothing, because no request reached the other device. After
+the bound, the refusal shows by id with Try again.
 
 **A disabled Next always says why.** With an agent the add-device path still
 asks the local account; once the request is out, a blank or mismatched account
@@ -130,7 +156,7 @@ fields:
       matches: {text_add_device_match_code: "^[0-9]{6}$"}
   - ceg: x_private:add_device_state
     use: display-only
-    type: "enum[requested,approved,applied,denied,expired,failed,interrupted]"
+    type: "enum[requested,approved,applied,denied,expired,failed,interrupted,retrying]"
     example: "requested"
     renders: "one line per state: 'Waiting for your other device to approve this one. You can carry on with setup in the meantime.' / 'Approved and checked on this device. It joins when setup finishes.' / 'This device has joined your CIRIS ID.' / 'Your other device declined this request. Nothing was added.' / 'This request ran out of time. On your other device choose Accept new requests again, then send a new request from here.' (this device's own 15 minutes) or, when `expired` carries a detail, 'Your other device no longer holds this request: it waited too long for an answer, or its approval wasn't collected in time. …' (the other device's 15 minutes, `b3e05e27` `src/add_device.rs:649-655`; on a v0.5.231 node the same fact arrives as `failed` + `detail: Unknown` and is read as this) / 'The approval could not be checked on this device, so nothing was applied.' + the node's `detail` / 'This device restarted before your other device answered, so the request was lost.' The last four carry 'Send a new request' (`btn_add_device_new_request`)"
     tag: text_add_device_status
@@ -182,6 +208,7 @@ session (`require_loopback`, `:1257`).
 | ask the other device | `POST /v1/setup/add-device {contact, label?}` → 202 `JoinProgress` `{state:"requested", match_code, target_node, occurrence_key_id}` | CIRISServer `start`, `:388-555`; route `:1248-1251` | **live**, wired: `CIRISApiClient.addDeviceStart` ← `SetupViewModel.sendAddDeviceRequest`. Refusals `{error, reason_id}` (`src/auth/refusal.rs:52`): 409 `already_owned` (`:389-395`), 503 `no_transport` (`:396-402`), 404 `unknown_identity` (`:409-415`), 404 `no_device` (`:422-428`), 500 `mint_failed` / `rng`, 502 `unreachable` (`:506-512`), 409 `not_accepting` (`:518-523`), 502 `unexpected` (`:525-527`) |
 | where the request stands | `GET /v1/setup/add-device` → `{state, match_code, target_node, occurrence_key_id, owner_key_id, detail}` | CIRISServer `status`, `:923-929`; shape `JoinProgress` `:323-337` | **live**, polled every 2.5 s, awaited, one at a time, until it leaves `requested` (`startAddDevicePolling`). States `requested \| approved \| applied \| denied \| expired \| failed`, plus `idle` (`:344`), the server's starting value, which the FSD's table omits |
 | apply the approval at the end of first run | `POST /v1/setup/add-device/complete` → 200 `{state:"applied", owner_key_id, …}` | CIRISServer `complete`, `:812-841`; `apply` `:883-919` | **live**, wired in `completeAddDevice` through `claimLocalNodeOwnership`. 409 `add_device.not_approved` (`:814-820`) → waiting; 502 `add_device.apply_failed` (`:835-838`) → recoverable error by id. Skipped when the phase is already `applied` (a retry after the session step), because the node clears what it held and would answer `not_approved` |
+| cancel this request | `DELETE /v1/setup/add-device` → 200 `{state:"idle", detail:"cancelled"}` | CIRISServer `cancel`, `fix/client-copy-0.5.232` `f9d25729` `:811-871`; route `:1480`; the withdraw to the other device `:283-312`, `undo_approval` `:753-794` | **live at the pin**, wired: `CIRISApiClient.addDeviceCancel` ← `SetupViewModel.confirmCancelAddDevice`, behind the ConfirmSheet. 409 `add_device.already_owned` (`:813-819`) → nothing to cancel. A bare 404/405 (a 0.5.231 node, no DELETE) → the local-only cancel |
 | this device's owner session | `POST /v1/setup/claimed-session {claim_pin}` | CIRISServer `src/auth/bootstrap.rs:1471-1479`, mounted `:1734-1737` | **live**, the same route CSD-093 wired at 0.5.218, now reached from `completeAddDevice` after `complete` answers `applied`. The PIN is read from this node's own `claim_pin` file (`readLocalClaimPin`, the same provider the self-claim uses) and sent nowhere else |
 | the agent's setup-complete (agent builds) | `POST /v1/setup/complete` | CIRISAgent | live; runs only after the two rows above settle (`finishAgentSetup` → `claimThenComplete`). See the hand-off in §6 |
 
@@ -252,7 +279,7 @@ collects the session.
 ## 5. QA plan
 
 **Unit and wire (green on this branch).** `AddDeviceSetupTest` (commonTest,
-30 cases): the first question and no default; the add-device path asks no
+38 cases): the first question and no default; the add-device path asks no
 fedID name and no age; the request's contact and label; each refusal by id
 (`not_accepting`, `unknown_identity`, `no_device`, `unreachable`,
 `already_owned`, `no_transport`) and not_accepting → Try again; polling to
@@ -267,7 +294,7 @@ not-approved holds the agent until the approval arrives; restart-resume from
 `approved` and from `requested`; `idle` leaves the question open; a bare 404
 disables the option. `AddDeviceWireTest` (desktopTest, a real socket) repeats
 the request, a refusal, the bare 404, the with-agent order and the 409 on the
-wire. The Codex round on PR #189 adds: the collected session handed to the app once (and nothing handed when none was collected); a live request locking the first question until a confirmed cancel, which also stops the poll; an applied request offering no cancel; the account reason on a disabled Next with an agent; COMPLETE leaving by itself only on an applied claim. Each was red on its planted defect first. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
+wire. The `f9d25729` round adds: cancel through DELETE in `requested` and in `approved` (withdrawn, nothing applied, the path unlocked), 409 `already_owned` → nothing to cancel, a bare 404/405 → the local cancel, a refused cancel keeping the request live, `unreachable` re-sent until the other device answers, the re-send bound with a manual Retry after it, and Cancel while re-sending asking the node nothing; `AddDeviceWireTest` repeats DELETE's 200, 409 and 404 on a real socket. Each was red on its planted defect (the node never asked; no re-send) first. The Codex round on PR #189 adds: the collected session handed to the app once (and nothing handed when none was collected); a live request locking the first question until a confirmed cancel, which also stops the poll; an applied request offering no cancel; the account reason on a disabled Next with an agent; COMPLETE leaving by itself only on an applied claim. Each was red on its planted defect first. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
 removed, `not_approved` treated as an error, "send a new request" refused
 after `expired`, and a closed window hiding held requests (CSD-094) each
 failed at least one test.

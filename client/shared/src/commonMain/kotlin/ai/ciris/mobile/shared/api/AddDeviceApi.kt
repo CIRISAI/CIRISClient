@@ -27,6 +27,14 @@ interface AddDeviceSetupApi {
 
     /** `POST /v1/setup/claimed-session {claim_pin}` — the owner session, once `complete` applied the claim. */
     suspend fun collectSession(claimPin: String): ClaimedSessionGrant
+
+    /**
+     * `DELETE /v1/setup/add-device` (CIRISServer `fix/client-copy-0.5.232`
+     * `f9d25729`): retire the poll, discard a held approval and the request's
+     * unused keys, and withdraw it from the other device. 200 `{state:"idle",
+     * detail:"cancelled"}`; 409 `add_device.already_owned` once applied.
+     */
+    suspend fun cancel(): AddDeviceProgress
 }
 
 /** [AddDeviceSetupApi] over the real client, on the LOCAL node. */
@@ -37,6 +45,7 @@ class ClientAddDeviceSetup(private val client: CIRISApiClient) : AddDeviceSetupA
     override suspend fun complete() = client.addDeviceComplete(CIRISApiClient.LOCAL_NODE_URL)
     override suspend fun collectSession(claimPin: String) =
         client.collectClaimedSession(claimPin, CIRISApiClient.LOCAL_NODE_URL)
+    override suspend fun cancel() = client.addDeviceCancel(CIRISApiClient.LOCAL_NODE_URL)
 }
 
 /**

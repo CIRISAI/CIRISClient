@@ -4098,7 +4098,17 @@
     "add_device_cancel_other": "Buradan geri çekilemez. Diğer cihazınız, 15 dakika sonra süresi dolana kadar bunu listelemeye devam eder, bu yüzden orada onaylamayın.",
     "add_device_cancel_fact_next": "Zaten alınan bir onay",
     "add_device_cancel_next": "Bu cihazın düğümünde kullanılmadan kalır. Yeniden bir istek gönderip kurulumu tamamlamadıkça hiçbir şey katılmaz.",
-    "add_device_cancel_confirm": "İsteği iptal et"
+    "add_device_cancel_confirm": "İsteği iptal et",
+    "add_device_unreachable_retrying": "Diğer cihazınıza henüz ulaşılamıyor — denemeye devam ediliyor. Cihaz açıldıktan sonra bu birkaç dakika sürebilir.",
+    "add_device_cancelling": "İptal ediliyor…",
+    "add_device_cancel_failed": "İstek iptal edilemedi.",
+    "add_device_cancelled": "İstek iptal edildi. Diğer cihazınıza isteği bırakması bildirildi.",
+    "add_device_cancelled_local": "Yalnızca bu cihazda iptal edildi: bu cihazın düğümü isteği geri çekemeyecek kadar eski.",
+    "add_device_cancel_already_applied": "Bu cihaz CIRIS ID'nize zaten katıldı, bu yüzden iptal edilecek bir istek kalmadı.",
+    "add_device_stopped_retrying": "Deneme durduruldu. Diğer cihazınıza hiçbir istek ulaşmadı.",
+    "add_device_withdraw_here": "Beklemeyi durdurur; bu isteğin anahtarlarını ve daha önce alınmış onayı siler.",
+    "add_device_withdraw_other": "Diğer cihaza isteği bırakması, ya da zaten onay verdiyse onayını geri alması bildirilir. Ulaşılamazsa istek orada 15 dakika sonra sona erer.",
+    "add_device_withdraw_held": "Hiçbir şey katılmaz. Yeniden seçebilir ya da yeni bir istek gönderebilirsiniz."
   },
   "moderation": {
     "ladder": {

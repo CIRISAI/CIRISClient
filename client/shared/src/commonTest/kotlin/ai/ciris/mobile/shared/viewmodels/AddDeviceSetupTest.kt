@@ -83,6 +83,13 @@ class AddDeviceSetupTest {
             lastPin = claimPin
             return sessionAnswer(claimPin)
         }
+
+        var cancelAnswer: () -> AddDeviceProgress = { progress("idle", detail = "cancelled") }
+
+        override suspend fun cancel(): AddDeviceProgress {
+            calls += "cancel"
+            return cancelAnswer()
+        }
     }
 
     private companion object {
@@ -97,7 +104,12 @@ class AddDeviceSetupTest {
     }
 
     private fun vm(node: ScriptedNode, hasAgent: Boolean = false) =
-        track(SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = hasAgent, addDeviceApiOverride = node, addDevicePollMs = 5))
+        track(
+            SetupViewModel(
+                FakeCIRISApiClientForBilling(), hasAgent = hasAgent, addDeviceApiOverride = node, addDevicePollMs = 5,
+                addDeviceRetryMs = 5, addDeviceRetryWindowMs = 40,
+            ),
+        )
 
     private suspend fun SetupViewModel.until(what: String, pred: (SetupFormState) -> Boolean): SetupFormState =
         withContext(Dispatchers.Default) {
@@ -575,6 +587,157 @@ class AddDeviceSetupTest {
         // The new-ID path keeps its rule: it leaves once the claim settles.
         assertTrue(shouldAutoFinishSetup(failed, addDevicePath = false))
         assertFalse(shouldAutoFinishSetup(NodeOwnershipClaimState(inProgress = true), addDevicePath = false))
+    }
+
+    // ── Cancel through DELETE /v1/setup/add-device (CIRISServer f9d25729) ────
+
+    private suspend fun SetupViewModel.cancelled(): SetupFormState {
+        askCancelAddDevice()
+        assertTrue(state.value.addDevice.confirmingCancel, "a cancel is confirmed first")
+        confirmCancelAddDevice()
+        return until("cancel settled") { !it.addDevice.cancelling && it.addDevice.cancelOutcome != null }
+    }
+
+    @Test
+    fun cancellingARequestedOneWithdrawsItOnTheNode() = runBlocking {
+        val node = ScriptedNode()
+        val vm = vm(node)
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        val s = vm.cancelled()
+
+        assertEquals(AddDeviceCancelOutcome.WITHDRAWN, s.addDevice.cancelOutcome)
+        assertEquals(AddDevicePhase.IDLE, s.addDevice.phase)
+        assertEquals(1, node.calls.count { it == "cancel" }, "the node is told, so it withdraws from the other device")
+        assertFalse(s.addDevice.pathLocked)
+        val polls = node.calls.count { it == "status" }
+        kotlinx.coroutines.delay(60)
+        assertEquals(polls, node.calls.count { it == "status" }, "the poll stops")
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.NEW, vm.state.value.identityPath)
+    }
+
+    @Test
+    fun cancellingAnApprovedOneWithdrawsItTooAndNothingIsApplied() = runBlocking {
+        val node = ScriptedNode()
+        node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
+
+        val s = vm.cancelled()
+
+        assertEquals(AddDeviceCancelOutcome.WITHDRAWN, s.addDevice.cancelOutcome)
+        assertNull(s.addDevice.ownerKeyId)
+        assertFalse("complete" in node.calls)
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.NEW, vm.state.value.identityPath, "the node discarded the held approval, so a new ID is safe")
+    }
+
+    @Test
+    fun aCancelAfterTheClaimAppliedSaysThereIsNothingToCancel() = runBlocking {
+        val node = ScriptedNode().apply { cancelAnswer = { throw refusal(409, "add_device.already_owned") } }
+        node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
+
+        val s = vm.cancelled()
+
+        assertEquals(AddDeviceCancelOutcome.ALREADY_APPLIED, s.addDevice.cancelOutcome)
+        assertEquals(AddDevicePhase.APPLIED, s.addDevice.phase)
+        assertTrue(s.addDevice.pathLocked, "the node already belongs to the identity")
+        vm.chooseIdentityPath(IdentityPath.NEW)
+        assertEquals(IdentityPath.EXISTING, vm.state.value.identityPath)
+    }
+
+    @Test
+    fun anOlderNodeWithNoDeleteFallsBackToTheLocalCancel() = runBlocking {
+        for (status in listOf(404, 405)) {
+            val node = ScriptedNode().apply { cancelAnswer = { throw refusal(status, null) } }
+            val vm = vm(node)
+            vm.asked()
+            vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+            val s = vm.cancelled()
+            assertEquals(AddDeviceCancelOutcome.LOCAL_ONLY, s.addDevice.cancelOutcome, "bare $status")
+            assertEquals(AddDevicePhase.IDLE, s.addDevice.phase)
+            assertFalse(s.addDevice.pathLocked)
+        }
+    }
+
+    @Test
+    fun aRefusedCancelKeepsTheRequestLive() = runBlocking {
+        val node = ScriptedNode().apply { cancelAnswer = { throw refusal(500, "add_device.unexpected") } }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        vm.askCancelAddDevice()
+        vm.confirmCancelAddDevice()
+        val s = vm.until("refused") { it.addDevice.cancelError != null && !it.addDevice.cancelling }
+        assertEquals(AddDevicePhase.REQUESTED, s.addDevice.phase)
+        assertTrue(s.addDevice.pathLocked)
+    }
+
+    // ── add_device.unreachable is retried, bounded (CIRISServer#792) ────────
+
+    @Test
+    fun unreachableIsResentUntilTheOtherDeviceAnswers() = runBlocking {
+        var tries = 0
+        val node = ScriptedNode().apply {
+            startAnswer = {
+                tries++
+                if (tries <= 3) throw refusal(502, "add_device.unreachable")
+                progress("requested", code = "246810")
+            }
+        }
+        val vm = vm(node)
+        vm.asked()
+        vm.until("retrying") { it.addDevice.phase == AddDevicePhase.RETRYING }
+        assertTrue(vm.state.value.addDevice.cancellable, "Cancel is available while it keeps trying")
+        assertTrue(vm.state.value.addDevice.pathLocked)
+        val s = vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        assertEquals("246810", s.addDevice.matchCode)
+        assertEquals(4, tries)
+        assertNull(s.addDevice.refusalReasonId)
+    }
+
+    @Test
+    fun unreachableStopsAtItsBoundAndOffersAManualRetry() = runBlocking {
+        val node = ScriptedNode().apply { startAnswer = { throw refusal(502, "add_device.unreachable") } }
+        val vm = vm(node) // retry every 5 ms for 40 ms
+        vm.asked()
+        val s = vm.until("refused") { it.addDevice.phase == AddDevicePhase.REFUSED }
+        assertEquals("add_device.unreachable", s.addDevice.refusalReasonId)
+        val tries = node.calls.count { it == "start" }
+        assertTrue(tries in 2..10, "bounded: $tries sends over a 40 ms window at 5 ms")
+        kotlinx.coroutines.delay(60)
+        assertEquals(tries, node.calls.count { it == "start" }, "nothing more after the bound")
+
+        vm.sendAddDeviceRequest() // the manual Retry
+        vm.until("retrying again") { it.addDevice.phase == AddDevicePhase.RETRYING }
+        Unit
+    }
+
+    @Test
+    fun cancellingWhileRetryingStopsWithoutAskingTheNode() = runBlocking {
+        val node = ScriptedNode().apply { startAnswer = { throw refusal(502, "add_device.unreachable") } }
+        val vm = track(
+            SetupViewModel(
+                FakeCIRISApiClientForBilling(), addDeviceApiOverride = node, addDevicePollMs = 5,
+                addDeviceRetryMs = 5, addDeviceRetryWindowMs = 60_000,
+            ),
+        )
+        vm.asked()
+        vm.until("retrying") { it.addDevice.phase == AddDevicePhase.RETRYING }
+        vm.askCancelAddDevice()
+        val s = vm.state.value.addDevice
+        assertEquals(AddDeviceCancelOutcome.STOPPED_RETRYING, s.cancelOutcome)
+        assertEquals(AddDevicePhase.IDLE, s.phase)
+        assertFalse("cancel" in node.calls, "no request reached the other device, so there is nothing to withdraw")
+        val tries = node.calls.count { it == "start" }
+        kotlinx.coroutines.delay(60)
+        assertEquals(tries, node.calls.count { it == "start" }, "the re-send loop stops")
     }
 
     // ── Restart-resume and old nodes ─────────────────────────────────────────

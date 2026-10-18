@@ -79,6 +79,8 @@ object AddDeviceTags {
     const val NEW_REQUEST = "btn_add_device_new_request"
     const val CANCEL = "btn_add_device_cancel"
     const val CANCEL_CONFIRM_PREFIX = "confirm_add_device_cancel"
+    const val CANCEL_OUTCOME = "text_add_device_cancel_outcome"
+    const val CANCEL_ERROR = "add_device_cancel_error"
     const val WAITING = "setup_add_device_waiting"
     const val WAITING_RETRY = "btn_add_device_finish_retry"
 
@@ -299,20 +301,39 @@ fun AddThisDeviceSection(
         if (state.cancellable) {
             Spacer(Modifier.height(8.dp))
             CirisTextButton(
-                label = localizedString("mobile.add_device_cancel"),
+                label = localizedString(if (state.cancelling) "mobile.add_device_cancelling" else "mobile.add_device_cancel"),
                 tag = AddDeviceTags.CANCEL,
                 danger = true,
+                enabled = !state.cancelling,
                 onClick = onAskCancel,
             )
+        }
+        state.cancelError?.let { why ->
+            RefusalBlock(reasonId = null, detail = why, fallbackTitle = localizedString("mobile.add_device_cancel_failed"), tag = AddDeviceTags.CANCEL_ERROR)
+        }
+        state.cancelOutcome?.let { outcome ->
+            val key = when (outcome) {
+                ai.ciris.mobile.shared.viewmodels.AddDeviceCancelOutcome.WITHDRAWN -> "mobile.add_device_cancelled"
+                ai.ciris.mobile.shared.viewmodels.AddDeviceCancelOutcome.LOCAL_ONLY -> "mobile.add_device_cancelled_local"
+                ai.ciris.mobile.shared.viewmodels.AddDeviceCancelOutcome.ALREADY_APPLIED -> "mobile.add_device_cancel_already_applied"
+                ai.ciris.mobile.shared.viewmodels.AddDeviceCancelOutcome.STOPPED_RETRYING -> "mobile.add_device_stopped_retrying"
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(localizedString(key), style = type.body, color = t.dim, modifier = Modifier.testable(AddDeviceTags.CANCEL_OUTCOME, outcome.name.lowercase()))
+            if (outcome == ai.ciris.mobile.shared.viewmodels.AddDeviceCancelOutcome.LOCAL_ONLY) {
+                // A node at 0.5.231 or older cannot withdraw it: say what stays where.
+                Text(localizedString("mobile.add_device_cancel_other"), style = type.label, color = t.dim)
+                Text(localizedString("mobile.add_device_cancel_next"), style = type.label, color = t.dim)
+            }
         }
     }
     if (state.confirmingCancel) {
         ConfirmSheet(
             title = localizedString("mobile.add_device_cancel_title"),
             facts = listOf(
-                ConfirmFact(localizedString("mobile.add_device_cancel_fact_here"), localizedString("mobile.add_device_cancel_here")),
-                ConfirmFact(localizedString("mobile.add_device_cancel_fact_other"), localizedString("mobile.add_device_cancel_other")),
-                ConfirmFact(localizedString("mobile.add_device_cancel_fact_next"), localizedString("mobile.add_device_cancel_next")),
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_here"), localizedString("mobile.add_device_withdraw_here")),
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_other"), localizedString("mobile.add_device_withdraw_other")),
+                ConfirmFact(localizedString("mobile.add_device_cancel_fact_next"), localizedString("mobile.add_device_withdraw_held")),
             ),
             confirmLabel = localizedString("mobile.add_device_cancel_confirm"),
             onConfirm = onConfirmCancel,
@@ -349,6 +370,8 @@ fun AddDeviceProgressBlock(state: AddDeviceSetupState, onNewRequest: () -> Unit)
         AddDevicePhase.EXPIRED -> (if (state.detail != null) "mobile.add_device_expired_elsewhere" else "mobile.add_device_expired") to t.danger
         AddDevicePhase.FAILED -> "mobile.add_device_failed" to t.danger
         AddDevicePhase.INTERRUPTED -> "mobile.add_device_interrupted" to t.danger
+        // CIRISServer#792: the link to the other device can take minutes to come up.
+        AddDevicePhase.RETRYING -> "mobile.add_device_unreachable_retrying" to t.dim
         else -> "mobile.add_device_sending" to t.dim
     }
     val line = localizedString(key)

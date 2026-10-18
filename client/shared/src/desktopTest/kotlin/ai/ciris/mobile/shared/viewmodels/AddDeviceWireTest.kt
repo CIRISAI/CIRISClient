@@ -242,6 +242,74 @@ class AddDeviceWireTest {
         }
     }
 
+    /** A wizard with a live request on [node]; returns it once `requested`. */
+    private suspend fun requestedOn(node: Node): SetupViewModel {
+        val (_, vm) = wizard(node)
+        vm.chooseIdentityPath(IdentityPath.EXISTING)
+        vm.setAddDeviceContact("CIRIS-V3-LONG")
+        vm.sendAddDeviceRequest()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        return vm
+    }
+
+    private fun liveRoutes(delete: (() -> Pair<Int, String>)?) = mutableMapOf<String, () -> Pair<Int, String>>(
+        "POST /v1/setup/add-device" to { 202 to """{"state":"requested","match_code":"482913"}""" },
+        "GET /v1/setup/add-device" to { 200 to """{"state":"requested","match_code":"482913"}""" },
+    ).apply { if (delete != null) put("DELETE /v1/setup/add-device", delete) }
+
+    private suspend fun SetupViewModel.cancelOnTheWire(): SetupFormState {
+        askCancelAddDevice()
+        confirmCancelAddDevice()
+        return until("cancel settled") { !it.addDevice.cancelling && it.addDevice.cancelOutcome != null }
+    }
+
+    @Test
+    fun cancelIsADeleteOnThisDevicesNodeAnswering200() = runBlocking {
+        val node = Node(liveRoutes { 200 to """{"state":"idle","detail":"cancelled"}""" })
+        try {
+            val vm = requestedOn(node)
+            val s = vm.cancelOnTheWire()
+            assertEquals(AddDeviceCancelOutcome.WITHDRAWN, s.addDevice.cancelOutcome)
+            assertEquals(AddDevicePhase.IDLE, s.addDevice.phase)
+            val del = node.seen.single { it.method == "DELETE" }
+            assertEquals("/v1/setup/add-device", del.path)
+            assertNull(del.auth, "first run: no session")
+        } finally {
+            node.server.stop(0)
+        }
+    }
+
+    @Test
+    fun cancelAfterTheClaimAppliedIs409AlreadyOwned() = runBlocking {
+        val node = Node(liveRoutes { 409 to refusal("add_device.already_owned", "this device already has an owner") })
+        try {
+            val vm = requestedOn(node)
+            val s = vm.cancelOnTheWire()
+            assertEquals(AddDeviceCancelOutcome.ALREADY_APPLIED, s.addDevice.cancelOutcome)
+            assertEquals(AddDevicePhase.APPLIED, s.addDevice.phase)
+        } finally {
+            node.server.stop(0)
+        }
+    }
+
+    @Test
+    fun aNodeWithoutDeleteFallsBackToTheLocalCancel() = runBlocking {
+        // Unrouted here is a bare 404, the shape the coordinator named for a
+        // 0.5.231 node. (A real axum router answers 405 for a known path with
+        // another method; the view model treats both the same, see
+        // AddDeviceSetupTest.anOlderNodeWithNoDeleteFallsBackToTheLocalCancel.)
+        val node = Node(liveRoutes(delete = null))
+        try {
+            val vm = requestedOn(node)
+            val s = vm.cancelOnTheWire()
+            assertEquals(AddDeviceCancelOutcome.LOCAL_ONLY, s.addDevice.cancelOutcome)
+            assertEquals(AddDevicePhase.IDLE, s.addDevice.phase)
+            assertTrue(node.seen.any { it.method == "DELETE" }, "it asked first")
+        } finally {
+            node.server.stop(0)
+        }
+    }
+
     @Test
     fun afterANodeSwitchTheApprovalGoesToTheNewNode() = runBlocking {
         // Codex on PR #189: a URL captured at construction sent approve to the

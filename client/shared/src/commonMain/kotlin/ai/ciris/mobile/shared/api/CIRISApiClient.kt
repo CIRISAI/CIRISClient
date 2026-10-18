@@ -3201,6 +3201,19 @@ class CIRISApiClient(
         return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
     }
 
+    /**
+     * `DELETE /v1/setup/add-device` — cancel this device's request: the node
+     * withdraws it from the other device (which drops a pending one, or undoes
+     * an approval it gave) and discards anything it held. A node at 0.5.231 or
+     * older has no such method: a bare 404 (or 405) with no `reason_id`.
+     */
+    suspend fun addDeviceCancel(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
+        val raw = addDeviceCall("addDeviceCancel", HttpMethod.Delete, nodeUrl, "/v1/setup/add-device", null, withSession = false)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
+    }
+
     /** `POST /v1/self/device-requests/open {seconds?}` — the owner opens "Add a device". */
     suspend fun openDeviceRequests(
         seconds: Long? = null,

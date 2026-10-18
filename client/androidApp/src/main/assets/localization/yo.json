@@ -4098,7 +4098,17 @@
     "data_receipts_check_button": "Yẹ̀wò ìbuwọ́lù náà",
     "data_receipt_unreadable": "Èyí kì í ṣe ìwé-ẹ̀rí tí app yìí lè kà",
     "data_receipt_verdict_label": "Ìbuwọ́lù",
-    "data_receipt_valid": "Ó yẹ̀wò: kọ́kọ́rọ́ aṣojú yìí ló fọwọ́ sí i"
+    "data_receipt_valid": "Ó yẹ̀wò: kọ́kọ́rọ́ aṣojú yìí ló fọwọ́ sí i",
+    "add_device_unreachable_retrying": "A kò tíì lè dé ọ̀dọ̀ ẹ̀rọ rẹ mìíràn — a ṣì ń gbìyànjú. Èyí lè gba ìṣẹ́jú díẹ̀ lẹ́yìn tí ó bá bẹ̀rẹ̀ iṣẹ́.",
+    "add_device_cancelling": "Ń fagilé…",
+    "add_device_cancel_failed": "A kò lè fagilé ìbéèrè náà.",
+    "add_device_cancelled": "A ti fagilé ìbéèrè náà. A ti sọ fún ẹ̀rọ rẹ mìíràn pé kí ó pa á tì.",
+    "add_device_cancelled_local": "A fagilé e lórí ẹ̀rọ yìí nìkan: nódù ẹ̀rọ yìí ti pẹ́ jù láti yọ ìbéèrè náà kúrò.",
+    "add_device_cancel_already_applied": "Ẹ̀rọ yìí ti darapọ̀ mọ́ CIRIS ID rẹ tẹ́lẹ̀, nítorí náà kò sí ìbéèrè kankan tí ó kù láti fagilé.",
+    "add_device_stopped_retrying": "A ti dáwọ́ ìgbìyànjú dúró. Kò sí ìbéèrè tí ó dé ọ̀dọ̀ ẹ̀rọ rẹ mìíràn.",
+    "add_device_withdraw_here": "Ó dáwọ́ ìdúró dúró, ó sì pa àwọn kọ́kọ́rọ́ ìbéèrè yìí rẹ́ pẹ̀lú ìfọwọ́sí èyíkéyìí tí a ti gbà.",
+    "add_device_withdraw_other": "A ó sọ fún un pé kí ó pa ìbéèrè náà tì, tàbí kí ó yí ìfọwọ́sí rẹ̀ padà bí ó bá ti fọwọ́sí i. Bí a kò bá lè dé ọ̀dọ̀ rẹ̀, ìbéèrè náà yóò parí níbẹ̀ lẹ́yìn ìṣẹ́jú 15.",
+    "add_device_withdraw_held": "Kò sí ohun tí yóò darapọ̀. O lè yàn lẹ́ẹ̀kan síi, tàbí fi ìbéèrè tuntun ránṣẹ́."
   },
   "moderation": {
     "ladder": {

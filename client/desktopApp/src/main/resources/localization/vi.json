@@ -4098,7 +4098,17 @@
     "add_device_cancel_other": "Yêu cầu này không thể bị rút lại từ đây. Thiết bị khác của bạn sẽ tiếp tục hiển thị nó cho đến khi hết hạn sau 15 phút, vì vậy đừng chấp thuận nó ở đó.",
     "add_device_cancel_fact_next": "Một sự chấp thuận đã nhận được",
     "add_device_cancel_next": "Vẫn nằm trên nút của thiết bị này mà không được dùng đến. Sẽ không có gì tham gia trừ khi bạn gửi lại yêu cầu và hoàn tất thiết lập.",
-    "add_device_cancel_confirm": "Hủy yêu cầu"
+    "add_device_cancel_confirm": "Hủy yêu cầu",
+    "add_device_unreachable_retrying": "Chưa thể kết nối với thiết bị khác của bạn — vẫn đang thử. Việc này có thể mất vài phút sau khi thiết bị đó khởi động.",
+    "add_device_cancelling": "Đang hủy…",
+    "add_device_cancel_failed": "Không thể hủy yêu cầu.",
+    "add_device_cancelled": "Đã hủy yêu cầu. Thiết bị khác của bạn đã được báo để bỏ yêu cầu này.",
+    "add_device_cancelled_local": "Chỉ hủy trên thiết bị này: nút của thiết bị này quá cũ để rút lại yêu cầu.",
+    "add_device_cancel_already_applied": "Thiết bị này đã tham gia CIRIS ID của bạn, nên không còn yêu cầu nào để hủy.",
+    "add_device_stopped_retrying": "Đã ngừng thử. Không có yêu cầu nào đến được thiết bị khác của bạn.",
+    "add_device_withdraw_here": "Ngừng chờ, đồng thời xóa các khóa của yêu cầu này và mọi chấp thuận đã nhận.",
+    "add_device_withdraw_other": "Thiết bị đó được báo để bỏ yêu cầu, hoặc hoàn tác chấp thuận nếu đã chấp thuận. Nếu không liên lạc được, yêu cầu sẽ hết hạn ở đó sau 15 phút.",
+    "add_device_withdraw_held": "Không có gì tham gia. Bạn có thể chọn lại, hoặc gửi một yêu cầu mới."
   },
   "moderation": {
     "ladder": {

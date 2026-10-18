@@ -4170,7 +4170,17 @@
     "add_device_cancel_other": "It can't be withdrawn from here. Your other device keeps listing it until it expires after 15 minutes, so don't approve it there.",
     "add_device_cancel_fact_next": "An approval already received",
     "add_device_cancel_next": "Stays on this device's node unused. Nothing joins unless you send a request again and finish setup.",
-    "add_device_cancel_confirm": "Cancel the request"
+    "add_device_cancel_confirm": "Cancel the request",
+    "add_device_unreachable_retrying": "Can't reach your other device yet — still trying. This can take a few minutes after it starts up.",
+    "add_device_cancelling": "Cancelling…",
+    "add_device_cancel_failed": "The request could not be cancelled.",
+    "add_device_cancelled": "Request cancelled. Your other device has been told to drop it.",
+    "add_device_cancelled_local": "Cancelled on this device only: this device's node is too old to withdraw the request.",
+    "add_device_cancel_already_applied": "This device has already joined your CIRIS ID, so there is no request left to cancel.",
+    "add_device_stopped_retrying": "Stopped trying. No request reached your other device.",
+    "add_device_withdraw_here": "Stops waiting, and discards this request's keys and any approval already received.",
+    "add_device_withdraw_other": "It is told to drop the request, or to undo its approval if it already gave one. If it can't be reached, the request expires there after 15 minutes.",
+    "add_device_withdraw_held": "Nothing joins. You can choose again, or send a new request."
   },
   "moderation": {
     "ladder": {

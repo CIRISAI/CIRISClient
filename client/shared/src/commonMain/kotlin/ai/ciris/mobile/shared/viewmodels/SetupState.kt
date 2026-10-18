@@ -616,7 +616,15 @@ enum class AddDeviceAvailability {
  */
 @Serializable
 enum class AddDevicePhase {
-    IDLE, SENDING, REQUESTED, APPROVED, APPLIED, DENIED, EXPIRED, FAILED, REFUSED, INTERRUPTED;
+    IDLE, SENDING, REQUESTED, APPROVED, APPLIED, DENIED, EXPIRED, FAILED, REFUSED, INTERRUPTED,
+
+    /**
+     * `add_device.unreachable` (502) while the other device's link comes up:
+     * it can last 2+ minutes when this device boots a few minutes after the
+     * owner's (CIRISServer#792). The wizard re-sends every ~10 s for ~5 min,
+     * saying so, with Cancel available; then the refusal and a manual Retry.
+     */
+    RETRYING;
 
     /** The request is out and alive: the rest of the wizard may run while the other device answers. */
     val inFlight: Boolean get() = this == REQUESTED || this == APPROVED || this == APPLIED
@@ -654,6 +662,12 @@ data class AddDeviceSetupState(
     val accountNeeded: Boolean = false,
     /** The "Cancel this request" confirm is up. */
     val confirmingCancel: Boolean = false,
+    /** `DELETE /v1/setup/add-device` is in flight. */
+    val cancelling: Boolean = false,
+    /** How the last cancel ended, for the line shown after it. */
+    val cancelOutcome: AddDeviceCancelOutcome? = null,
+    /** The node's English when a cancel was refused for another reason (the request stays live). */
+    val cancelError: String? = null,
 ) {
     /**
      * A request is live (being sent, waiting, approved and held, or applied),
@@ -663,11 +677,24 @@ data class AddDeviceSetupState(
      * `applied`, when this node already belongs to the existing identity.
      */
     val pathLocked: Boolean
-        get() = phase == AddDevicePhase.SENDING || phase.inFlight
+        get() = phase == AddDevicePhase.SENDING || phase == AddDevicePhase.RETRYING || phase.inFlight
 
-    /** Cancel is offered while a request is live and not yet applied. */
+    /** Cancel is offered while a request is live and not yet applied, and while re-sending to an unreachable device. */
     val cancellable: Boolean
-        get() = phase == AddDevicePhase.REQUESTED || phase == AddDevicePhase.APPROVED
+        get() = phase == AddDevicePhase.REQUESTED || phase == AddDevicePhase.APPROVED || phase == AddDevicePhase.RETRYING
+}
+
+/** How "Cancel this request" ended. */
+@Serializable
+enum class AddDeviceCancelOutcome {
+    /** `DELETE /v1/setup/add-device` answered 200: the other device was told to drop (or undo) it. */
+    WITHDRAWN,
+    /** A node at 0.5.231 or older has no DELETE (bare 404/405): forgotten here only. */
+    LOCAL_ONLY,
+    /** 409 `add_device.already_owned`: the claim was already applied, so there was nothing to cancel. */
+    ALREADY_APPLIED,
+    /** Re-sending to an unreachable device was stopped; no request had reached it. */
+    STOPPED_RETRYING,
 }
 
 /**

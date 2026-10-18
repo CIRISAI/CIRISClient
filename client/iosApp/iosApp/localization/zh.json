@@ -4098,7 +4098,17 @@
     "constitutional_holders_count": "{n} 位已注册的协约持有者（{m}-of-{n} 阈值）",
     "constitutional_holders_none": "没有已注册的协约持有者",
     "constitutional_reserved_desc": "只有经认证的 accord_holder 身份才能发出 accord:* 命名空间的证明。任何伪造章程性声明的尝试都会被节点验证以失败关闭（fail-closed）的方式拒绝。",
-    "accord_family_version_by_quorum": "由之前席位的法定多数更改"
+    "accord_family_version_by_quorum": "由之前席位的法定多数更改",
+    "add_device_unreachable_retrying": "暂时无法连接到您的其他设备——仍在尝试。该设备启动后，这可能需要几分钟。",
+    "add_device_cancelling": "正在取消……",
+    "add_device_cancel_failed": "无法取消该请求。",
+    "add_device_cancelled": "请求已取消。已通知您的其他设备放弃该请求。",
+    "add_device_cancelled_local": "仅在此设备上取消：此设备的节点版本过旧，无法撤回该请求。",
+    "add_device_cancel_already_applied": "此设备已加入您的 CIRIS ID，因此没有可取消的请求。",
+    "add_device_stopped_retrying": "已停止尝试。没有任何请求到达您的其他设备。",
+    "add_device_withdraw_here": "停止等待，并丢弃此请求的密钥以及已收到的批准。",
+    "add_device_withdraw_other": "该设备会被告知放弃此请求；如果它已批准，则撤销其批准。如果无法联系到它，该请求将在 15 分钟后在那里过期。",
+    "add_device_withdraw_held": "不会有任何设备加入。您可以重新选择，或发送新请求。"
   },
   "moderation": {
     "ladder": {
