@@ -2771,45 +2771,21 @@ fun CIRISApp(
                     hasAgent = setupHasAgent,
                     viewModel = setupViewModel,
                     apiClient = apiClient,
-                    // Provide the one-time ownership CLAIM PIN / NodeCode captured
-                    // from the LOCAL node's boot banner so the setup flow can
-                    // self-claim ownership of this node on COMPLETE. PythonRuntime
-                    // latches these asynchronously from the node's boot output
-                    // (console stream + boot-log FILE fallback), so the banner can
-                    // arrive slightly AFTER the COMPLETE step fires. AWAIT the PIN
-                    // with a bounded timeout rather than snapshotting a value that
-                    // may still be null at the instant COMPLETE runs.
+                    // The one-time ownership CLAIM PIN, from the node's FILE and
+                    // nowhere else (CIRISClient#184: "the claim PIN is a file on
+                    // disk, never the log"). The node writes claim_pin ~3 s after
+                    // health answers, so COMPLETE can arrive first: a bounded poll
+                    // of the file, then `null`, which the claim names
+                    // (ClaimPinFile.PIN_FILE_ABSENT). No banner fallback — since
+                    // ciris-server 0.5.227 no log carries the PIN, and a log tail
+                    // outlives the boot that wrote it (CIRISClient#49: Android sent
+                    // a previous boot's PIN after a reset). The NodeCode is fetched
+                    // over HTTP in claimLocalNodeOwnership.
                     claimPinProvider = {
-                        // THE FILE FIRST, THEN THE BANNER (CIRISClient#49).
-                        //
-                        // <home>/claim_pin is the node's own 0600 file and the
-                        // source of truth — the node even names it as
-                        // `claim_pin_file` in its setup status. The banner
-                        // snapshot is a LOG TAIL, and a log outlives the boot
-                        // that wrote it: after a factory reset Android latched
-                        // the PREVIOUS boot's PIN, sent it, and got 401
-                        // auth.claim.pin_invalid followed by a 409 on announce.
-                        // Ordering the file first makes the stale-tail window
-                        // unreachable on every platform rather than only where
-                        // it was observed.
-                        //
-                        // The banner remains the fallback for the narrow case
-                        // it was added for: the node writes claim_pin a few
-                        // seconds AFTER health answers, so a very early claim
-                        // can still find no file.
-                        pythonRuntimeProtocol.readLocalClaimPin()
-                            ?: pythonRuntimeProtocol.localClaimPin.value
-                            ?: withTimeoutOrNull(20_000L) {
-                                pythonRuntimeProtocol.localClaimPin
-                                    .filterNotNull()
-                                    .first { it.isNotBlank() }
-                            }
+                        ai.ciris.mobile.shared.platform.ClaimPinFile.await {
+                            pythonRuntimeProtocol.readLocalClaimPin()
+                        }
                     },
-                    // NodeCode may legitimately never come via the banner (the app
-                    // then fetches it over HTTP in claimLocalNodeOwnership), so we
-                    // only take a snapshot here — no wait — to avoid a needless
-                    // stall on the common banner-omits-NodeCode path.
-                    nodeCodeProvider = { pythonRuntimeProtocol.localNodeCode.value },
                     onSetupComplete = {
                         platformLog(TAG, "[INFO] onSetupComplete called - exchanging tokens...")
                         // THE HAND-OFF MOMENT (CIRISClient#43). A run-without-AI

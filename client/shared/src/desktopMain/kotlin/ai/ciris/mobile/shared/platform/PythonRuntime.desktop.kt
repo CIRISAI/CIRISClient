@@ -11,10 +11,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.withContext
-import kotlinx.coroutines.flow.MutableStateFlow
 import ai.ciris.mobile.shared.models.capability.BackendOwnership
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.io.BufferedReader
 import kotlinx.coroutines.runBlocking
 
@@ -58,19 +55,6 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
     private var _initialized = false
     private var _serverStarted = false
     private var _outputLineCallback: ((String) -> Unit)? = null
-
-    // ── First-run ownership claim PIN / NodeCode, captured from node stdout ──
-    // The local ciris-server prints an "OWNERSHIP UNCLAIMED" banner on a fresh,
-    // unclaimed boot (see CIRISServer/src/auth/bootstrap.rs
-    // `announce_ownership_unclaimed`). The banner carries the PUBLIC NodeCode and
-    // the one-time CLAIM PIN. The PIN is CONSOLE-ONLY (never served over HTTP), so
-    // the only client-side way to obtain it is to scrape the stdout of the process
-    // we ourselves launched. The setup flow reads these to self-claim ownership of
-    // this local node on COMPLETE.
-    private val _localClaimPin = MutableStateFlow<String?>(null)
-    private val _localNodeCode = MutableStateFlow<String?>(null)
-    override val localClaimPin: StateFlow<String?> get() = _localClaimPin.asStateFlow()
-    override val localNodeCode: StateFlow<String?> get() = _localNodeCode.asStateFlow()
 
     // Server process we launched (null if server was already running)
     private var _serverProcess: Process? = null
@@ -152,14 +136,9 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
             if (health.getOrNull() == true) {
                 println("[PythonRuntime.desktop] Server is healthy!")
                 _serverStarted = true
-                // The one-time CLAIM PIN is console-only (never over HTTP). We capture
-                // it from the node's stdout banner WHEN WE LAUNCH the node — but if the
-                // node was already running (we didn't own its stdout), fall back to its
-                // durable `<home>/claim_pin` file (0600). Local-FS access to the node's
-                // home IS first-run operator-level access, so this is a legitimate
-                // capture of the same secret — NOT a weakening (setup/root still
-                // verifies the PIN). Only fills if the stdout capture missed it.
-                readClaimPinFromFileIfMissing()
+                // No PIN capture here: the claim PIN is read from the node's file
+                // at claim time (readLocalClaimPin + ClaimPinFile.await), never
+                // latched from stdout (CIRISClient#184).
                 return@runCatching serverUrl
             }
             delay(1000)
@@ -168,96 +147,22 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
     }
 
     /**
-     * **The claim PIN, from the node's durable file — the PRIMARY path.**
+     * **ONE read of the claim PIN from the node's file** — the only source
+     * (CIRISClient#184: "the claim PIN is a file on disk, never the log").
      *
-     * NODE VENDOR DRIFT #15 (restored after the 2.9.28 re-vendor dropped it):
-     * the METHOD NAME is upstream's ([PythonRuntimeProtocol.readLocalClaimPin] —
-     * the vendor renamed our `claimPin()` and iOS now implements the same
-     * member, so we adopt it rather than restore a signature commonMain no
-     * longer declares). The BODY is ours: the node-declared path (#395), the
-     * bounded retry, and the diagnostic that says WHY no PIN was found.
-     *
-     * Not a fallback. The stdout banner only reaches us when this process
-     * launched the node, which is FALSE in the shipped wheel: the Python
-     * launcher starts the node and then spawns this UI, so the banner capture
-     * never runs and first-run claim failed with "claim PIN not captured" while
-     * the PIN sat readable at `<home>/claim_pin`.
-     *
-     * Retries for a bounded window because at first run the node writes the file
-     * during boot — absent a moment after launch means NOT YET, not never. Each
-     * attempt re-reads, so a PIN that appears late is still found. (Upstream's
-     * single-shot read returns `null` in exactly that window, which is the race
-     * this loop exists to close.)
-     *
-     * Prefers whatever the banner already captured (identical value, no I/O),
-     * then the file. Still never over HTTP: a 0600 read inside the node's own
-     * home is first-run operator-level access, and `setup/root` verifies the PIN
-     * regardless.
+     * The node's own answer first (`claim_pin_file` from `GET /v1/setup/status`,
+     * CIRISServer#395), the environment guess second — kept only for a server too
+     * old to declare the path, because it is the source that was wrong whenever
+     * app and node resolved home differently. Single-shot: the bounded wait for a
+     * file the node writes a few seconds after health answers is
+     * [ClaimPinFile.await]. Read fresh every call — no latch, so a reset that
+     * re-armed the node is read as it is now, never as a previous boot left it.
+     * Still never over HTTP: only the PATH crosses the wire.
      */
     override suspend fun readLocalClaimPin(): String? {
-        _localClaimPin.value?.let { return it }
-        repeat(20) { attempt ->
-            readClaimPinFromFileIfMissing()
-            _localClaimPin.value?.let {
-                println("[PythonRuntime.desktop] claim PIN resolved (attempt ${attempt + 1})")
-                return it
-            }
-            kotlinx.coroutines.delay(500)
-        }
-        println(
-            "[PythonRuntime.desktop] claim PIN NOT resolvable: no boot banner and no readable " +
-                "PIN file after 10s (asked the node: ${declaredClaimPinFile() ?: "<no path declared>"}; " +
-                "guessed: ${java.io.File(nodeHomeDir(), "claim_pin").path}) — the node may be " +
-                "claimed already (the PIN is consumed on claim), or the file is not readable by " +
-                "this user (it is 0600 in the node's home; the wizard must run as the same user " +
-                "that started the node)."
-        )
-        return null
-    }
-
-    /**
-     * **Ask the node where it wrote the PIN file** (`GET /v1/setup/status` →
-     * `claim_pin_file`) — CIRISServer#395.
-     *
-     * NODE VENDOR DRIFT #15 (restored after the 2.9.28 re-vendor dropped it):
-     * upstream has no such endpoint, so the vendored file went back to guessing
-     * the path from the APP's environment only.
-     *
-     * The node is the only party that KNOWS its home: it was told at startup.
-     * Every client-side derivation ([nodeHomeDir]) reads the APP's environment
-     * instead, so any topology where the two differ — a launcher passing
-     * `--home`, a container, systemd, sudo — pointed the read at a path the node
-     * never wrote.
-     *
-     * Only the PATH crosses the wire; the PIN never does. The proof of operator
-     * presence is still the same-uid read of a 0600 file, which is why saying
-     * where it is costs nothing.
-     *
-     * `null` on an old server, a claimed node (PIN consumed), or any error — the
-     * caller falls back to the environment guess.
-     */
-    private suspend fun declaredClaimPinFile(): String? = runCatching {
-        val body = httpClient.get("$serverUrl/v1/setup/status").bodyAsText()
-        // Deliberately a narrow scrape rather than a full model bind: this runs on
-        // the first-run path against a server that may be mid-boot, and a strict
-        // decode failure here must not cost us the PIN.
-        Regex("\"claim_pin_file\"\\s*:\\s*\"([^\"]+)\"")
-            .find(body)
-            ?.groupValues
-            ?.get(1)
-    }.getOrNull()
-
-    /**
-     * Read the node's durable `<home>/claim_pin` (0600) into the flow. No-op if
-     * already captured or the file is absent/empty. Called by [readLocalClaimPin].
-     */
-    private suspend fun readClaimPinFromFileIfMissing() {
-        if (_localClaimPin.value != null) return
-        // The node's OWN answer first, the environment guess second. The guess is
-        // kept only for a server too old to declare the path — it is the source
-        // that was wrong whenever app and node resolved home differently (#395).
+        val declared = declaredClaimPinFile()
         val candidates = listOfNotNull(
-            declaredClaimPinFile()?.let { java.io.File(it) to "declared by the node" },
+            declared?.let { java.io.File(it) to "declared by the node" },
             java.io.File(nodeHomeDir(), "claim_pin") to "guessed from this app's environment",
         )
         for ((pinFile, provenance) in candidates) {
@@ -265,16 +170,37 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 if (pinFile.canRead()) {
                     val pin = pinFile.readText().trim()
                     if (pin.isNotEmpty()) {
-                        _localClaimPin.value = pin
-                        println("[PythonRuntime.desktop] Captured CLAIM PIN from ${pinFile.path} ($provenance).")
-                        return
+                        println("[PythonRuntime.desktop] Read CLAIM PIN from ${pinFile.path} ($provenance).")
+                        return pin
                     }
                 }
             }.onFailure {
                 println("[PythonRuntime.desktop] claim_pin read failed at ${pinFile.path} ($provenance): ${it.message}")
             }
         }
+        println(
+            "[PythonRuntime.desktop] claim PIN file not readable yet (declared: ${declared ?: "<no path declared>"}; " +
+                "guessed: ${java.io.File(nodeHomeDir(), "claim_pin").path})"
+        )
+        return null
     }
+
+    /**
+     * **Ask the node where it wrote the PIN file** (`GET /v1/setup/status` →
+     * `claim_pin_file`) — CIRISServer#395. The node is the only party that KNOWS
+     * its home; every client-side derivation ([nodeHomeDir]) reads the APP's
+     * environment instead. `null` on an old server, a claimed node (PIN
+     * consumed), or any error — the caller falls back to the environment guess.
+     */
+    private suspend fun declaredClaimPinFile(): String? = runCatching {
+        val body = httpClient.get("$serverUrl/v1/setup/status").bodyAsText()
+        // A narrow scrape rather than a full model bind: this runs on the
+        // first-run path against a server that may be mid-boot.
+        Regex("\"claim_pin_file\"\\s*:\\s*\"([^\"]+)\"")
+            .find(body)
+            ?.groupValues
+            ?.get(1)
+    }.getOrNull()
 
     /**
      * State of an existing server process.
@@ -566,12 +492,9 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 var line: String?
                 while (reader.readLine().also { line = it } != null) {
                     val l = line ?: continue
-                    // Always print to console for debugging
+                    // Always print to console for debugging. Nothing is parsed out
+                    // of it for ownership: the claim PIN is a file (CIRISClient#184).
                     println("[CIRIS] $l")
-                    // Capture the first-run ownership claim PIN / NodeCode from the
-                    // node's "OWNERSHIP UNCLAIMED" banner so the setup flow can
-                    // self-claim this local node on COMPLETE.
-                    parseOwnershipBanner(l)
                     // Forward to callback for UI processing
                     _outputLineCallback?.invoke(l)
                 }
@@ -579,50 +502,6 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
                 println("[PythonRuntime.desktop] Stdout reader stopped: ${e.message}")
             }
         }
-    }
-
-    /**
-     * Parse one stdout line from the node's "OWNERSHIP UNCLAIMED" banner and, when
-     * found, latch the one-time CLAIM PIN and/or the NodeCode into the StateFlows
-     * the setup flow reads.
-     *
-     * Matches the banner emitted by CIRISServer/src/auth/bootstrap.rs
-     * `announce_ownership_unclaimed`, e.g. (one token per line, inside a box):
-     *
-     *     ║    NodeCode : CIRIS-V1-AAAA-BBBB-CCCC-...
-     *     ║    CLAIM PIN: 7F3K-Q9MZ   (one-time; console-only — NEVER over HTTP)
-     *
-     * The PIN is 8 Crockford-base32 chars (alphabet 0-9 A-Z minus I/L/O/U)
-     * rendered XXXX-XXXX. The NodeCode is a `CIRIS-V1-...` string. Both are
-     * captured leniently (the surrounding box-drawing chars / trailing notes are
-     * ignored). Idempotent: only the first match per token is latched.
-     */
-    private fun parseOwnershipBanner(line: String) {
-        if (_localClaimPin.value == null && line.contains("CLAIM PIN", ignoreCase = true)) {
-            // Take the text after the "CLAIM PIN:" label, then the first
-            // XXXX-XXXX Crockford-base32 token on it.
-            val after = line.substringAfter(":", "").substringAfter("CLAIM PIN", "")
-            val pin = CLAIM_PIN_REGEX.find(after.ifBlank { line })?.value
-            if (pin != null) {
-                println("[PythonRuntime.desktop] Captured one-time CLAIM PIN from node banner (console-only).")
-                _localClaimPin.value = pin
-            }
-        }
-        if (_localNodeCode.value == null && line.contains("NodeCode", ignoreCase = true)) {
-            val code = NODE_CODE_REGEX.find(line)?.value
-            if (code != null) {
-                println("[PythonRuntime.desktop] Captured NodeCode from node banner: ${code.take(24)}…")
-                _localNodeCode.value = code
-            }
-        }
-    }
-
-    private companion object {
-        /** One-time claim PIN: two dash-separated groups of 4 Crockford-base32
-         *  chars (alphabet 0-9 A-Z minus I, L, O, U), as rendered by the node. */
-        val CLAIM_PIN_REGEX = Regex("[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}")
-        /** NodeCode handle the node prints: `CIRIS-V1-...` (dashes/alnum). */
-        val NODE_CODE_REGEX = Regex("CIRIS-V1-[0-9A-Za-z\\-]+")
     }
 
     private fun findExecutable(name: String): String? {

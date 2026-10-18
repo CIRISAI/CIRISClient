@@ -6,9 +6,6 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import java.net.HttpURLConnection
 import java.net.URL
 import org.json.JSONObject
@@ -194,88 +191,14 @@ actual class PythonRuntime : PythonRuntimeProtocol {
         @Volatile
         private var _outputLineCallback: ((String) -> Unit)? = null
 
-        // ── First-run ownership claim PIN / NodeCode, captured from the local
-        // node's console banner via the logcat stream. The PIN is CONSOLE-ONLY
-        // (never served over HTTP); the logcat reader in MainActivity is the
-        // Android equivalent of owning the launched process's stdout. Companion
-        // (JVM-static) so the capture survives activity recreation, like the
-        // rest of the logcat-derived state above.
-        private val _localClaimPin = MutableStateFlow<String?>(null)
-        private val _localNodeCode = MutableStateFlow<String?>(null)
-
-        /** One-time claim PIN: two dash-separated groups of 4 Crockford-base32
-         *  chars (alphabet 0-9 A-Z minus I, L, O, U), as rendered by the node. */
-        private val CLAIM_PIN_REGEX = Regex("[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}")
-
-        /** NodeCode handle the node prints: `CIRIS-V1-...` (dashes/alnum). */
-        private val NODE_CODE_REGEX = Regex("CIRIS-V1-[0-9A-Za-z\\-]+")
-
-        /**
-         * Parse one console/log line for the node's "OWNERSHIP UNCLAIMED" banner
-         * and, when found, latch the one-time CLAIM PIN and/or the NodeCode into
-         * the StateFlows the setup flow reads. Idempotent — first match wins.
-         *
-         * The gate is deliberately WIDE: the banner's exact wording lives in the
-         * ciris-server wheel (not visible here), so we trigger on any of the
-         * banner's marker words ("CLAIM PIN", "OWNERSHIP", "UNCLAIMED") and
-         * extract the value by its strict shape (CLAIM_PIN_REGEX / NODE_CODE_REGEX)
-         * rather than trusting one exact label. Both regexes are highly specific
-         * (Crockford-base32 XXXX-XXXX; `CIRIS-V1-…`), so extract-by-shape from an
-         * ownership-context line carries negligible false-positive risk.
-         */
-        private fun parseOwnershipBanner(line: String) {
-            val ownershipContext = line.contains("CLAIM PIN", ignoreCase = true) ||
-                line.contains("OWNERSHIP", ignoreCase = true) ||
-                line.contains("UNCLAIMED", ignoreCase = true)
-            if (_localClaimPin.value == null && ownershipContext) {
-                // Prefer the token AFTER a "CLAIM PIN" label when the banner uses
-                // it; otherwise scan the whole line (the banner may label the PIN
-                // differently than the literal "CLAIM PIN").
-                val labelled = line.substringAfter("CLAIM PIN", "")
-                val pin = CLAIM_PIN_REGEX.find(labelled.ifBlank { line })?.value
-                if (pin != null) {
-                    Log.i(TAG, "Captured one-time CLAIM PIN from node ownership banner.")
-                    _localClaimPin.value = pin
-                }
-            }
-            if (_localNodeCode.value == null && (ownershipContext || line.contains("NodeCode", ignoreCase = true))) {
-                val code = NODE_CODE_REGEX.find(line)?.value
-                if (code != null) {
-                    Log.i(TAG, "Captured NodeCode from node banner: ${code.take(24)}…")
-                    _localNodeCode.value = code
-                }
-            }
-        }
-
-        /**
-         * FILE-based fallback for the ownership banner. The node writes its boot
-         * banner to log FILES under `$CIRIS_HOME/logs`, and MainActivity's logcat
-         * reader filters to `python.stdout/stderr` + `CIRISVerify` only — so the
-         * banner (and the one-time CLAIM PIN) can be latched from neither the
-         * console callback nor logcat. The MainActivity file-tail feeds boot-log
-         * lines through here so capture no longer depends on logcat at all.
-         * Reuses [parseOwnershipBanner] so the regexes/format stay in ONE place.
-         */
-        fun scanFileLineForOwnership(line: String) {
-            parseOwnershipBanner(line)
-        }
-
-        /**
-         * True once the one-time ownership CLAIM PIN has been latched (from either
-         * the logcat stream or the file-tail fallback). Lets the file-tail loop in
-         * MainActivity stop early once capture succeeds.
-         */
-        fun isClaimPinCaptured(): Boolean = _localClaimPin.value != null
-
         /**
          * Forward a line from logcat to the output callback.
          * Called from MainActivity's logcat reader.
          */
         fun forwardLogLine(line: String) {
-            // Capture the first-run ownership claim PIN / NodeCode from the
-            // node's "OWNERSHIP UNCLAIMED" banner so the setup flow can
-            // self-claim this local node on COMPLETE.
-            parseOwnershipBanner(line)
+            // Nothing is parsed out of the log for ownership: the claim PIN is
+            // the node's claim_pin FILE, read by readLocalClaimPin(), and the
+            // NodeCode comes over HTTP (CIRISClient#184).
             _outputLineCallback?.invoke(line)
         }
 
@@ -286,12 +209,6 @@ actual class PythonRuntime : PythonRuntimeProtocol {
             _outputLineCallback = callback
         }
     }
-
-    // Ownership claim PIN / NodeCode, latched by the companion's logcat-line
-    // parser (parseOwnershipBanner). Instance overrides expose the shared
-    // (JVM-static) flows through the PythonRuntimeProtocol surface.
-    override val localClaimPin: StateFlow<String?> get() = _localClaimPin.asStateFlow()
-    override val localNodeCode: StateFlow<String?> get() = _localNodeCode.asStateFlow()
 
     private var pythonInitialized = false
     private var serverStarted = false
@@ -427,9 +344,12 @@ actual class PythonRuntime : PythonRuntimeProtocol {
     }
 
     /**
-     * The CLAIM PIN from `<CIRIS_HOME>/claim_pin`, the node's own 0600 file.
+     * The CLAIM PIN from `<CIRIS_HOME>/claim_pin`, the node's own 0600 file —
+     * one read; [ClaimPinFile.await] is the bounded wait around it.
      *
-     * THE FILE IS THE SOURCE OF TRUTH, NOT THE LOG BANNER (CIRISClient#49).
+     * THE FILE IS THE ONLY SOURCE (CIRISClient#49, #184). The in-process node
+     * runs with this app's CIRIS_HOME, so the path it declares as
+     * `claim_pin_file` is this one.
      * Android had no override, so it fell back to the protocol's `null` and the
      * only PIN it could offer came from tailing `latest.log` — which after a
      * factory reset still held the PREVIOUS boot's banner. The stale PIN was
