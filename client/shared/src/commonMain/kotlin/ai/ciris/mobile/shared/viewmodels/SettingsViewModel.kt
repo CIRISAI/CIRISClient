@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.auth.asSessionStore
+import ai.ciris.mobile.shared.auth.clearSession
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.LocationResultData
 import ai.ciris.mobile.shared.ui.theme.BrightnessPreference
@@ -730,20 +732,13 @@ class SettingsViewModel(
 
         viewModelScope.launch {
             try {
-                // Clear access token
-                logDebug(method, "Clearing access token from secure storage")
-                secureStorage.deleteAccessToken().getOrThrow()
-                logInfo(method, "Access token cleared")
-
-                // Clear refresh token if exists
-                logDebug(method, "Clearing refresh token")
-                secureStorage.delete("refresh_token")
-
-                // Clear user info
-                logDebug(method, "Clearing user info")
-                secureStorage.delete("user_id")
-                secureStorage.delete("user_email")
-                secureStorage.delete(ai.ciris.mobile.shared.models.SignInMethod.STORAGE_KEY)
+                // The session leaves secure storage: the access token (a
+                // failure throws), then the refresh token, user info and the
+                // recorded sign-in method (CIRISClient#51 — one list, in
+                // auth/SignOut.kt, that a test reads).
+                logDebug(method, "Clearing the session from secure storage")
+                clearSession(secureStorage.asSessionStore())
+                logInfo(method, "Session cleared")
                 _signInMethod.value = null
 
                 // Call logout API (revokes token server-side)

@@ -811,6 +811,21 @@ fun CIRISApp(
     val settingsViewModel: SettingsViewModel = viewModel {
         SettingsViewModel(secureStorage, apiClient, envFileUpdater)
     }
+    // THE sign-out (CIRISClient#51): every control that signs out runs
+    // signOut.now() — Settings', My Identity's, the desktop menu's, and My
+    // things' (through its confirm). The token going null is what resets
+    // consent, contacts and chat state below; see auth/SignOut.kt.
+    val signOut = remember {
+        ai.ciris.mobile.shared.auth.SignOut(
+            stopChat = { interactViewModel.resetState() },
+            logout = { done -> settingsViewModel.logout(done) },
+            toLogin = {
+                PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
+                currentAccessToken = null
+                currentScreen = Screen.Login
+            },
+        )
+    }
     val llmSettingsViewModel: LLMSettingsViewModel = viewModel {
         LLMSettingsViewModel(apiClient)
     }
@@ -3023,15 +3038,7 @@ fun CIRISApp(
                                 onHelpClick = { currentScreen = Screen.Help },
                                 onLogoutClick = {
                                     PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from nav bar")
-                                    // Cancel InteractViewModel polling first — otherwise it keeps polling
-                                    // against the about-to-be-revoked token, fires a 401, and
-                                    // TokenManager.on401Error races the user's next Sign-In tap → bounce.
-                                    interactViewModel.resetState()
-                                    settingsViewModel.logout {
-                                        PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                                        currentAccessToken = null
-                                        currentScreen = Screen.Login
-                                    }
+                                    signOut.now()
                                 },
                                 darkMode = isDarkMode,
                                 // Theme picker
@@ -3136,14 +3143,7 @@ fun CIRISApp(
                     onNavigateBack = { currentScreen = homeTarget },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
-                        // Cancel InteractViewModel polling before token revocation — see
-                        // matching guard in nav-bar onLogoutClick for rationale.
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     onResetSetup = {
                         PlatformLogger.i("CIRISApp", "[onResetSetup] Setup reset — restarting runtime via signal")
@@ -4369,11 +4369,7 @@ fun CIRISApp(
                     // same path Settings' onLogout takes, not a second one.
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     signInMethod = settingsViewModel.signInMethod.collectAsState().value,
                 )
@@ -5256,6 +5252,8 @@ fun CIRISApp(
                     circle = circleNow,
                     tab = tabNow,
                     hasAgent = hasAgentNow,
+                    // A chat's composer owns the bottom edge on a phone (CIRISClient#186).
+                    hostsComposer = screenHostsComposer(currentScreen),
                     onBack = shellBack?.let { target -> { currentScreen = target } },
                     onCircle = { c -> openTab(c, tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES) },
                     onTab = { t -> openTab(circleNow, t) },
@@ -5309,8 +5307,11 @@ fun CIRISApp(
                     onBrightness = { settingsViewModel.setBrightnessPreference(it) },
                     onInstrument = { inst -> showMyThings = false; currentScreen = Screen.Instrument(inst.id) },
                     onDismiss = { showMyThings = false },
+                    // Every install mode can sign out from the avatar (CIRISClient#51).
+                    onSignOut = { showMyThings = false; signOut.ask() },
                 )
             }
+            ai.ciris.mobile.shared.ui.shell.SignOutConfirm(signOut)
             if (showStop) {
                 ai.ciris.mobile.shared.ui.shell.StopSheet(
                     hasAgent = hasAgentNow,
@@ -6297,6 +6298,14 @@ private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
     val siblings = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circle, placement.tab, hasAgent)
     return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
 }
+
+/**
+ * The screens whose composer owns the bottom edge: Interact and a user/pair
+ * chat. On a phone the shell hides its circle bar for them (CIRISClient#186).
+ * By screen, not by surface — a chat is a leaf of the surface it was opened
+ * from (Contacts, a circle's Chats tab), and that surface is no chat.
+ */
+internal fun screenHostsComposer(s: Screen): Boolean = s == Screen.Interact || s is Screen.UserChat
 
 internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
