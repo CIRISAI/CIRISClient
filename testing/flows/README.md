@@ -289,3 +289,23 @@ dest)" check, and the joiner's KeyPackage never replicates, in 480 s of
 waiting. CIRISServer's own chat ladder is green only on a `test-anchor` build
 with a test trust root, which a leg's released binary is not. A flow naming
 `${MESSAGE_ATTESTATION_ID}` therefore fails on the matrix today, saying so.
+
+## Optional steps are counted, and the count is ratcheted
+
+A step with `optional_step: true` is **skipped**, not failed, when its
+`requires` do not hold — a camera on a platform with none, a row a node release
+has not shipped. The runner prints `SKIP (optional)` and the leg stays green,
+which is exactly why the count is watched (CIRISClient#168):
+
+- every leg's board line and the gallery row say `optional skips N (flow n, …)`;
+- `optional_skips_baseline.json` here records `{leg: {flow: count}}` from the
+  last recorded run, and run_platform's `optional-skips` step judges each leg
+  against it — a flow that skips **more** is a RISE and reddens the leg; a flow
+  that skips **fewer** (a node release turned a skip into a pass) is STALE and
+  reddens it too, until the baseline is re-recorded, like `check_csd_routes.py`;
+- re-record from a run's downloaded artifacts:
+  `python3 -m testing.gate.optional_skips <artifacts dir> --baseline`, and say
+  in the commit which flow's debt moved and why.
+
+Only flows that ran (`pass` / `fail`) are judged; a `refused` or `cannot-start`
+flow is already on the board under its own verdict.

@@ -8,9 +8,15 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome
+import ai.ciris.mobile.shared.auth.BrowserSignInResult
 import ai.ciris.mobile.shared.auth.SilentSignInResult
 import ai.ciris.mobile.shared.auth.TokenManager
 import ai.ciris.mobile.shared.auth.TokenState
+import ai.ciris.mobile.shared.auth.adoptBillingIdToken
+import ai.ciris.mobile.shared.auth.collectBrowserSignIn
+import ai.ciris.mobile.shared.auth.newAppNonce
+import ai.ciris.mobile.shared.auth.refreshBillingCredentialFromBrowser
 import ai.ciris.mobile.shared.platform.EnvFileUpdater
 import ai.ciris.mobile.shared.platform.PythonRuntime
 import ai.ciris.mobile.shared.platform.PythonRuntimeProtocol
@@ -752,12 +758,19 @@ fun CIRISApp(
     // twice — half of the 127 "interactive login required" lines in
     // CIRISClient#59 were the same signal counted again.
     // Polls every 10 seconds (matches old Android TokenRefreshManager)
+    //
+    // AND AS A BILLING SIGNAL (CIRISClient#171). The agent writes this file
+    // when the HOSTED PROXY rejects the provider ID token (`token_handshake.py
+    // request_token_refresh`, reason "billing 401" / "proxy 401"). It says
+    // nothing about the person's session with their own agent, and routing
+    // it through on401Error() — the SESSION path — is how a Google token
+    // that had passed its hour became "Your session is no longer valid".
     LaunchedEffect(Unit) {
         while (true) {
             kotlinx.coroutines.delay(10_000)
             if (envFileUpdater.checkTokenRefreshSignal()) {
-                PlatformLogger.i(TAG, "Token refresh signal detected from Python - triggering silent refresh")
-                tokenManager.on401Error()
+                PlatformLogger.i(TAG, "[TOKEN_HANDSHAKE] agent asked for a fresh billing token - triggering refresh")
+                tokenManager.onBillingCredentialRejected()
             }
         }
     }
@@ -811,14 +824,32 @@ fun CIRISApp(
     val settingsViewModel: SettingsViewModel = viewModel {
         SettingsViewModel(secureStorage, apiClient, envFileUpdater)
     }
+    // THE sign-out (CIRISClient#51): every control that signs out runs
+    // signOut.now() — Settings', My Identity's, the desktop menu's, and My
+    // things' (through its confirm). The token going null is what resets
+    // consent, contacts and chat state below; see auth/SignOut.kt.
+    val signOut = remember {
+        ai.ciris.mobile.shared.auth.SignOut(
+            stopChat = { interactViewModel.resetState() },
+            logout = { done -> settingsViewModel.logout(done) },
+            toLogin = {
+                PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
+                currentAccessToken = null
+                currentScreen = Screen.Login
+            },
+        )
+    }
     val llmSettingsViewModel: LLMSettingsViewModel = viewModel {
         LLMSettingsViewModel(apiClient)
     }
     val telemetryViewModel: TelemetryViewModel = viewModel {
         TelemetryViewModel(apiClient)
     }
+    // The sign-in provider billing rides on. Desktop and Android sign in with
+    // Google; iOS with Apple. Names the credential in the credits sentences.
+    val billingProvider = if (isIOS()) "Apple" else "Google"
     val billingViewModel: BillingViewModel = viewModel {
-        BillingViewModel(apiClient, apiBaseUrl)
+        BillingViewModel(apiClient, apiBaseUrl, billingProvider)
     }
 
     // THE ANSWER NOBODY COLLECTED (CIRISClient#59). TokenManager reaches the
@@ -827,15 +858,98 @@ fun CIRISApp(
     // that a person had to sign in again died in a WARN line 127 times while
     // the wallet showed 0 credits for 25 hours against a balance of 398. Here
     // it goes to the two surfaces the person is actually looking at.
+    //
+    // TWO ANSWERS NOW (CIRISClient#171). needsInteractiveLogin is about the
+    // SESSION and keeps its banner and its door (Login). billingCredentialStale
+    // is about the token the agent spends at the hosted proxy; it renders as a
+    // credits state with its own door, and never touches the session.
     LaunchedEffect(tokenManager) {
         tokenManager.needsInteractiveLogin.collect { needed ->
             if (needed) {
                 platformLog(TAG, "[WARN][auth] session expired and no silent path — surfacing sign-in on Interact and Billing")
-                interactViewModel.onAuthExpired()
-                billingViewModel.onAuthExpired()
+                interactViewModel.onSessionExpired()
+                billingViewModel.onSessionExpired()
             } else {
-                interactViewModel.onAuthRestored()
-                billingViewModel.onAuthRestored()
+                interactViewModel.onSessionRestored()
+                billingViewModel.onSessionRestored()
+            }
+        }
+    }
+    LaunchedEffect(tokenManager) {
+        tokenManager.billingCredentialStale.collect { stale ->
+            if (stale) {
+                platformLog(TAG, "[WARN][billing] billing credential stale and no silent path — credits paused until a fresh $billingProvider sign-in")
+                interactViewModel.onBillingCredentialStale()
+                billingViewModel.onBillingCredentialStale()
+            } else {
+                interactViewModel.onBillingCredentialRefreshed()
+                billingViewModel.onBillingCredentialRefreshed()
+            }
+        }
+    }
+
+    // THE DOOR FOR CREDITS (CIRISClient#172). Renew the billing credential
+    // without touching the session. Android/iOS: the native picker, and the
+    // TokenManager callback does the rest (exchange + .env, as the silent path
+    // does). Desktop: the browser hand-off, whose id_token goes straight to
+    // .env — the node discards Google's refresh_token, so there is no silent
+    // path to build on (BillingCredentialRefresh.kt). One run at a time.
+    var billingRefreshRunning by remember { mutableStateOf(false) }
+    val refreshBillingCredential: () -> Unit = {
+        if (billingRefreshRunning) {
+            platformLog(TAG, "[INFO][billing] refresh already in flight — ignoring second tap")
+        } else {
+            billingRefreshRunning = true
+            coroutineScope.launch {
+                interactViewModel.onBillingRefreshStarted()
+                billingViewModel.onBillingRefreshStarted()
+                val outcome: BillingCredentialRefreshOutcome = try {
+                    if (googleSignInCallback != null) {
+                        platformLog(TAG, "[INFO][billing] native $billingProvider sign-in for a fresh billing token")
+                        kotlinx.coroutines.suspendCancellableCoroutine { continuation ->
+                            googleSignInCallback.onGoogleSignInRequested(forceAccountChooser = false) { result ->
+                                val mapped = when (result) {
+                                    is NativeSignInResult.Success -> {
+                                        // onTokenRefreshed exchanges it and writes .env, as on the silent path.
+                                        tokenManager.handleNewToken(result.idToken, result.provider)
+                                        BillingCredentialRefreshOutcome.Refreshed
+                                    }
+                                    NativeSignInResult.Cancelled -> BillingCredentialRefreshOutcome.Cancelled
+                                    is NativeSignInResult.Error -> BillingCredentialRefreshOutcome.Failed(result.message)
+                                }
+                                continuation.resumeWith(Result.success(mapped))
+                            }
+                        }
+                    } else {
+                        val nonce = newAppNonce()
+                        val signInUrl = apiClient.oauthBrowserLoginUrl("google", nonce, nodeBaseUrl)
+                        platformLog(TAG, "[INFO][billing] opening browser for a fresh billing token: $signInUrl")
+                        openUrlInBrowser(signInUrl)
+                        refreshBillingCredentialFromBrowser(
+                            signIn = {
+                                collectBrowserSignIn(
+                                    poll = { n, allowUnbound -> apiClient.pollOAuthHandoff(n, nodeBaseUrl, allowUnbound = allowUnbound) },
+                                    nonce = nonce,
+                                    log = { platformLog(TAG, "[INFO][billing] $it") },
+                                )
+                            },
+                            envFileUpdater = envFileUpdater,
+                            tokenManager = tokenManager,
+                            log = { platformLog(TAG, "[INFO][billing] $it") },
+                        )
+                    }
+                } catch (e: Exception) {
+                    platformLog(TAG, "[ERROR][billing] refresh threw ${e::class.simpleName}: ${e.message}")
+                    BillingCredentialRefreshOutcome.Failed(e.message ?: e::class.simpleName ?: "unknown")
+                }
+                if (outcome is BillingCredentialRefreshOutcome.Refreshed) {
+                    // ResourceMonitor re-reads .env within ~1s of .config_reload;
+                    // give it the same 1.5s every other write-through waits.
+                    delay(1500)
+                }
+                interactViewModel.onBillingRefreshFinished()
+                billingViewModel.onBillingRefreshFinished(outcome)
+                billingRefreshRunning = false
             }
         }
     }
@@ -2230,10 +2344,7 @@ fun CIRISApp(
                         isLoginLoading = true
                         loginErrorMessage = null
                         loginStatusMessage = LocalizationHelper.getString("auth.browser_signin.waiting")
-                        val nonce = buildString {
-                            val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
-                            repeat(32) { append(alphabet[kotlin.random.Random.nextInt(alphabet.length)]) }
-                        }
+                        val nonce = newAppNonce()
                         val signInUrl = apiClient.oauthBrowserLoginUrl("google", nonce, nodeBaseUrl)
                         // Log the URL we hand the browser. A sign-in completed in
                         // some OTHER tab — one opened earlier at the plain
@@ -2244,64 +2355,42 @@ fun CIRISApp(
                         platformLog(TAG, "[INFO][onGoogleSignIn] opening browser: $signInUrl")
                         openUrlInBrowser(signInUrl)
                         coroutineScope.launch {
-                            // ~3 minutes: long enough for a real sign-in with a
-                            // password manager and 2FA, short enough that an
-                            // abandoned attempt does not spin forever.
-                            var token: ai.ciris.mobile.shared.models.OAuthHandoff? = null
-                            // The node's own reason for refusing, when it gives one. A
-                            // 410 with `reason_id` is the server saying STOP, and the
-                            // old loop polled through three of them: collectOAuthHandoff
-                            // cast the typed Failed to null, and null read as "not
-                            // yet" (CIRISClient#57).
-                            var refusal: String? = null
-                            var attempts = 0
-                            while (token == null && refusal == null && attempts < 90) {
-                                kotlinx.coroutines.delay(2000)
-                                attempts++
-                                // After ~20s our own tab has had its chance;
-                                // accept a sign-in that completed in a stray
-                                // tab rather than spin while the node holds a
-                                // perfectly good session.
-                                when (val poll = apiClient.pollOAuthHandoff(
-                                    nonce,
-                                    nodeBaseUrl,
-                                    allowUnbound = attempts > 10,
-                                )) {
-                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Ready ->
-                                        token = poll.handoff
-                                    is ai.ciris.mobile.shared.models.OAuthHandoffPoll.Failed ->
-                                        refusal = poll.reasonId ?: "auth.oauth.flow_expired"
-                                    ai.ciris.mobile.shared.models.OAuthHandoffPoll.Pending -> Unit
-                                }
-                                // Heartbeat every ~20s: "still waiting" must be
-                                // visible, or a stalled flow looks like a crashed one.
-                                if (token == null && attempts % 10 == 0) {
-                                    platformLog(TAG, "[INFO][onGoogleSignIn] still waiting for the browser (${attempts * 2}s)")
-                                }
-                            }
+                            // ONE LOOP, SHARED WITH THE BILLING REFRESH
+                            // (BrowserSignIn.kt): ~3 minutes of polling, 204 is
+                            // NOT YET, a `reason_id` is STOP (CIRISClient#57), a
+                            // stray tab is accepted after ~20s.
+                            val result = collectBrowserSignIn(
+                                poll = { n, allowUnbound -> apiClient.pollOAuthHandoff(n, nodeBaseUrl, allowUnbound = allowUnbound) },
+                                nonce = nonce,
+                                log = { platformLog(TAG, "[INFO][onGoogleSignIn] $it") },
+                            )
                             isLoginLoading = false
                             loginStatusMessage = null
-                            val collected = token
-                            if (refusal != null) {
-                                // THE REASON, IN THE APP. The node's reason_id is a
-                                // localisation key ("auth.oauth.flow_expired" is in
-                                // en.json verbatim), so the message the person only
-                                // ever saw in a browser tab they may have closed is now
-                                // on the screen they are looking at — including the
-                                // recovery instruction that would have ended the
-                                // incident before it reached Reset (CIRISClient#57).
-                                loginErrorMessage = LocalizationHelper.getString(refusal)
-                                platformLog(TAG, "[WARN][onGoogleSignIn] node refused the hand-off: $refusal")
-                                return@launch
+                            val collected = when (result) {
+                                is BrowserSignInResult.Refused -> {
+                                    // THE REASON, IN THE APP. The node's reason_id is a
+                                    // localisation key ("auth.oauth.flow_expired" is in
+                                    // en.json verbatim), so the message the person only
+                                    // ever saw in a browser tab they may have closed is now
+                                    // on the screen they are looking at — including the
+                                    // recovery instruction that would have ended the
+                                    // incident before it reached Reset (CIRISClient#57).
+                                    loginErrorMessage = LocalizationHelper.getString(result.reasonId)
+                                    platformLog(TAG, "[WARN][onGoogleSignIn] node refused the hand-off: ${result.reasonId}")
+                                    return@launch
+                                }
+                                is BrowserSignInResult.TimedOut -> {
+                                    // Say WHICH failure this is. "Sign-in failed" would
+                                    // cover both "you closed the tab" and "the node is
+                                    // broken", and only one of those is the user's to fix.
+                                    loginErrorMessage =
+                                        LocalizationHelper.getString("auth.browser_signin.timed_out")
+                                    platformLog(TAG, "[WARN][onGoogleSignIn] no hand-off after ${result.waitedSeconds}s. If you signed in successfully, the browser tab was probably an OLD one opened without ?app_nonce= — close stray CIRIS sign-in tabs and use the button again.")
+                                    return@launch
+                                }
+                                is BrowserSignInResult.Collected -> result.handoff
                             }
-                            if (collected == null) {
-                                // Say WHICH failure this is. "Sign-in failed" would
-                                // cover both "you closed the tab" and "the node is
-                                // broken", and only one of those is the user's to fix.
-                                loginErrorMessage =
-                                    LocalizationHelper.getString("auth.browser_signin.timed_out")
-                                platformLog(TAG, "[WARN][onGoogleSignIn] no hand-off after ${attempts * 2}s. If you signed in successfully, the browser tab was probably an OLD one opened without ?app_nonce= — close stray CIRIS sign-in tabs and use the button again.")
-                            } else {
+                            run {
                                 platformLog(TAG, "[INFO][onGoogleSignIn] desktop browser sign-in collected a session")
                                 currentAccessToken = collected.accessToken
                                 apiClient.setAccessToken(collected.accessToken)
@@ -2331,6 +2420,21 @@ fun CIRISApp(
                                     )
                                     currentScreen = Screen.Setup
                                 } else {
+                                    // THE TOKEN "SIGN IN AGAIN" WAS SUPPOSED TO FIX
+                                    // (CIRISClient#172). The hand-off carries the
+                                    // provider's id_token — the very credential the
+                                    // agent spends at the hosted proxy — and this
+                                    // path collected it and dropped it, so a desktop
+                                    // re-sign-in left .env exactly as stale as it
+                                    // found it. Now it is written through.
+                                    val idToken = collected.idToken
+                                    if (!idToken.isNullOrBlank()) {
+                                        adoptBillingIdToken(idToken, collected.provider, envFileUpdater, tokenManager)
+                                            .onSuccess { platformLog(TAG, "[INFO][onGoogleSignIn] fresh id_token written to .env for billing") }
+                                            .onFailure { e -> platformLog(TAG, "[ERROR][onGoogleSignIn] could not write id_token to .env: ${e.message}") }
+                                    } else {
+                                        platformLog(TAG, "[WARN][onGoogleSignIn] hand-off carried no id_token (node predates ciris-server 0.5.177) — billing token not refreshed")
+                                    }
                                     handOffToInteract(interactViewModel, billing = null, adapters = null)
                                     currentScreen = homeTarget
                                 }
@@ -2775,45 +2879,21 @@ fun CIRISApp(
                     hasAgent = setupHasAgent,
                     viewModel = setupViewModel,
                     apiClient = apiClient,
-                    // Provide the one-time ownership CLAIM PIN / NodeCode captured
-                    // from the LOCAL node's boot banner so the setup flow can
-                    // self-claim ownership of this node on COMPLETE. PythonRuntime
-                    // latches these asynchronously from the node's boot output
-                    // (console stream + boot-log FILE fallback), so the banner can
-                    // arrive slightly AFTER the COMPLETE step fires. AWAIT the PIN
-                    // with a bounded timeout rather than snapshotting a value that
-                    // may still be null at the instant COMPLETE runs.
+                    // The one-time ownership CLAIM PIN, from the node's FILE and
+                    // nowhere else (CIRISClient#184: "the claim PIN is a file on
+                    // disk, never the log"). The node writes claim_pin ~3 s after
+                    // health answers, so COMPLETE can arrive first: a bounded poll
+                    // of the file, then `null`, which the claim names
+                    // (ClaimPinFile.PIN_FILE_ABSENT). No banner fallback — since
+                    // ciris-server 0.5.227 no log carries the PIN, and a log tail
+                    // outlives the boot that wrote it (CIRISClient#49: Android sent
+                    // a previous boot's PIN after a reset). The NodeCode is fetched
+                    // over HTTP in claimLocalNodeOwnership.
                     claimPinProvider = {
-                        // THE FILE FIRST, THEN THE BANNER (CIRISClient#49).
-                        //
-                        // <home>/claim_pin is the node's own 0600 file and the
-                        // source of truth — the node even names it as
-                        // `claim_pin_file` in its setup status. The banner
-                        // snapshot is a LOG TAIL, and a log outlives the boot
-                        // that wrote it: after a factory reset Android latched
-                        // the PREVIOUS boot's PIN, sent it, and got 401
-                        // auth.claim.pin_invalid followed by a 409 on announce.
-                        // Ordering the file first makes the stale-tail window
-                        // unreachable on every platform rather than only where
-                        // it was observed.
-                        //
-                        // The banner remains the fallback for the narrow case
-                        // it was added for: the node writes claim_pin a few
-                        // seconds AFTER health answers, so a very early claim
-                        // can still find no file.
-                        pythonRuntimeProtocol.readLocalClaimPin()
-                            ?: pythonRuntimeProtocol.localClaimPin.value
-                            ?: withTimeoutOrNull(20_000L) {
-                                pythonRuntimeProtocol.localClaimPin
-                                    .filterNotNull()
-                                    .first { it.isNotBlank() }
-                            }
+                        ai.ciris.mobile.shared.platform.ClaimPinFile.await {
+                            pythonRuntimeProtocol.readLocalClaimPin()
+                        }
                     },
-                    // NodeCode may legitimately never come via the banner (the app
-                    // then fetches it over HTTP in claimLocalNodeOwnership), so we
-                    // only take a snapshot here — no wait — to avoid a needless
-                    // stall on the common banner-omits-NodeCode path.
-                    nodeCodeProvider = { pythonRuntimeProtocol.localNodeCode.value },
                     onSetupComplete = {
                         platformLog(TAG, "[INFO] onSetupComplete called - exchanging tokens...")
                         // THE HAND-OFF MOMENT (CIRISClient#43). A run-without-AI
@@ -3027,15 +3107,7 @@ fun CIRISApp(
                                 onHelpClick = { currentScreen = Screen.Help },
                                 onLogoutClick = {
                                     PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from nav bar")
-                                    // Cancel InteractViewModel polling first — otherwise it keeps polling
-                                    // against the about-to-be-revoked token, fires a 401, and
-                                    // TokenManager.on401Error races the user's next Sign-In tap → bounce.
-                                    interactViewModel.resetState()
-                                    settingsViewModel.logout {
-                                        PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                                        currentAccessToken = null
-                                        currentScreen = Screen.Login
-                                    }
+                                    signOut.now()
                                 },
                                 darkMode = isDarkMode,
                                 // Theme picker
@@ -3054,6 +3126,7 @@ fun CIRISApp(
                         viewModel = interactViewModel,
                         moderationViewModel = moderationViewModel,
                         onNavigateBack = { /* Already at root */ },
+                        onRefreshBillingCredential = refreshBillingCredential,
                         onSessionExpired = {
                             if (reconfiguring) {
                                 // During the post-setup node reload the token is
@@ -3140,14 +3213,7 @@ fun CIRISApp(
                     onNavigateBack = { currentScreen = homeTarget },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
-                        // Cancel InteractViewModel polling before token revocation — see
-                        // matching guard in nav-bar onLogoutClick for rationale.
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            PlatformLogger.i("CIRISApp", "[onLogout] Logout complete, navigating to Login")
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     onResetSetup = {
                         PlatformLogger.i("CIRISApp", "[onResetSetup] Setup reset — restarting runtime via signal")
@@ -3206,7 +3272,9 @@ fun CIRISApp(
                 val products by billingViewModel.products.collectAsState()
                 val isBillingLoading by billingViewModel.isLoading.collectAsState()
                 val billingError by billingViewModel.errorMessage.collectAsState()
-                val billingAuthExpired by billingViewModel.authExpired.collectAsState()
+                val billingSessionExpired by billingViewModel.sessionExpired.collectAsState()
+                val billingCredentialStale by billingViewModel.billingCredentialStale.collectAsState()
+                val billingRefreshInProgress by billingViewModel.billingRefreshInProgress.collectAsState()
                 val billingSuccess by billingViewModel.successMessage.collectAsState()
                 val isByokMode by billingViewModel.isByokMode.collectAsState()
 
@@ -3283,17 +3351,22 @@ fun CIRISApp(
                     onDismissError = {
                         billingViewModel.clearError()
                     },
-                    authExpired = billingAuthExpired,
+                    sessionExpired = billingSessionExpired,
                     // The same door Interact's 401 path has always opened: drop
                     // the session and go to Login, where the browser sign-in
-                    // that mints a fresh token starts (CIRISClient#59).
+                    // that mints a fresh token starts (CIRISClient#59). For the
+                    // SESSION only — a stale billing token takes the door below.
                     onSignInAgain = {
-                        platformLog(TAG, "[INFO][Billing] sign in again — billing credential expired")
+                        platformLog(TAG, "[INFO][Billing] sign in again — session expired")
                         interactViewModel.resetState()
                         currentAccessToken = null
                         coroutineScope.launch { secureStorage.deleteAccessToken() }
                         currentScreen = Screen.Login
                     },
+                    billingCredentialStale = billingCredentialStale,
+                    billingRefreshInProgress = billingRefreshInProgress,
+                    onRefreshBillingCredential = refreshBillingCredential,
+                    billingProvider = billingProvider,
                 )
             }
 
@@ -4373,11 +4446,7 @@ fun CIRISApp(
                     // same path Settings' onLogout takes, not a second one.
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout from My Identity")
-                        interactViewModel.resetState()
-                        settingsViewModel.logout {
-                            currentAccessToken = null
-                            currentScreen = Screen.Login
-                        }
+                        signOut.now()
                     },
                     signInMethod = settingsViewModel.signInMethod.collectAsState().value,
                 )
@@ -5263,6 +5332,8 @@ fun CIRISApp(
                     circle = circleNow,
                     tab = tabNow,
                     hasAgent = hasAgentNow,
+                    // A chat's composer owns the bottom edge on a phone (CIRISClient#186).
+                    hostsComposer = screenHostsComposer(currentScreen),
                     onBack = shellBack?.let { target -> { currentScreen = target } },
                     onCircle = { c -> openTab(c, tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES) },
                     onTab = { t -> openTab(circleNow, t) },
@@ -5316,8 +5387,11 @@ fun CIRISApp(
                     onBrightness = { settingsViewModel.setBrightnessPreference(it) },
                     onInstrument = { inst -> showMyThings = false; currentScreen = Screen.Instrument(inst.id) },
                     onDismiss = { showMyThings = false },
+                    // Every install mode can sign out from the avatar (CIRISClient#51).
+                    onSignOut = { showMyThings = false; signOut.ask() },
                 )
             }
+            ai.ciris.mobile.shared.ui.shell.SignOutConfirm(signOut)
             if (showStop) {
                 ai.ciris.mobile.shared.ui.shell.StopSheet(
                     hasAgent = hasAgentNow,
@@ -6304,6 +6378,14 @@ private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
     val siblings = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circle, placement.tab, hasAgent)
     return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
 }
+
+/**
+ * The screens whose composer owns the bottom edge: Interact and a user/pair
+ * chat. On a phone the shell hides its circle bar for them (CIRISClient#186).
+ * By screen, not by surface — a chat is a leaf of the surface it was opened
+ * from (Contacts, a circle's Chats tab), and that surface is no chat.
+ */
+internal fun screenHostsComposer(s: Screen): Boolean = s == Screen.Interact || s is Screen.UserChat
 
 internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact

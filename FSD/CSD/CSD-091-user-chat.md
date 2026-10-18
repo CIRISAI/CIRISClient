@@ -316,6 +316,18 @@ not produce. A single-node suite can open a room, watch it sit in
 `awaiting_peer`, and assert that the note renders and the send is refused — which
 is most of what this card claims and none of what a conversation is.
 
+**On a phone the composer owns the bottom edge (CIRISClient#186).** Below
+the 900 dp rail the shell hides its circle bar (`shell_bottom_bar`) on this
+screen — `screenHostsComposer` in `CIRISApp.kt` names Interact and a user/pair
+chat — and keeps the top bar and the one back. The screen's own content pads by
+the soft keyboard (`composerImePadding`, `ui/shell/ComposerInsets.kt`), not the
+whole app, and the transcript scrolls to its newest message when the keyboard
+opens. At rail width nothing changes. Pinned headless at 360 x 640 dp with a
+300 dp keyboard: `ChatComposerOnPhoneTest`. **Not verified on a device:** iOS
+does not compile on the Linux box this was written on, and Compose iOS's default
+`OnFocusBehavior.FocusableAboveKeyboard` pans the view only when the focused
+field would still be covered; with the inset applied it should not be.
+
 **`input_chat_body` is drivable.** The composer registers
 `rememberTextInputDriver("input_chat_body", …)` beside the `OutlinedTextField`
 (`ChatScreen.kt`), so `/input` types into the draft the ViewModel owns. An

@@ -19,12 +19,17 @@ import ai.ciris.mobile.shared.platform.testableClickable
 /**
  * "Your session is no longer valid" — with the one action that fixes it.
  *
- * The state behind this (`authExpired`) is TokenManager's own conclusion that a
- * person has to sign in again, which for 25 hours reached a WARN line and no
- * screen (CIRISClient#59). Rendering the sentence made that honest; this makes
- * it actionable. On desktop there is no silent path — the token came from a
- * browser sign-in and only another browser sign-in renews it — so the button
- * goes to Login, where that flow starts.
+ * The state behind this (`sessionExpired`) is TokenManager's own conclusion
+ * that a person has to sign in again, which for 25 hours reached a WARN line
+ * and no screen (CIRISClient#59). Rendering the sentence made that honest; this
+ * makes it actionable. On desktop there is no silent path — the token came
+ * from a browser sign-in and only another browser sign-in renews it — so the
+ * button goes to Login, where that flow starts.
+ *
+ * FOR THE SESSION ONLY (CIRISClient#171). A stale BILLING credential — the
+ * agent's `billing_auth_expired`, the Google token at the hosted proxy — is
+ * [BillingCredentialBanner], whose button renews that token and leaves the
+ * session alone. It used to be this banner, and this button signed people out.
  *
  * Shared by Interact and Billing so the two surfaces the person is stuck on
  * say the same thing and offer the same door. [tag] differs per surface so a

@@ -1,0 +1,57 @@
+{
+  "android": {
+    "csd_005_people": 0,
+    "csd_006_receipt": 1,
+    "csd_008_notes_to_self": 0,
+    "csd_047_network_content": 0,
+    "csd_057_wallet": 3,
+    "csd_068_provision_accord_holder": 0,
+    "csd_092_share_contact_code": 3,
+    "csd_101_household_members": 2,
+    "people": 0
+  },
+  "ios": {
+    "csd_005_people": 1,
+    "csd_006_receipt": 1,
+    "csd_008_notes_to_self": 0,
+    "csd_047_network_content": 0,
+    "csd_057_wallet": 3,
+    "csd_068_provision_accord_holder": 0,
+    "csd_092_share_contact_code": 3,
+    "csd_101_household_members": 2,
+    "people": 0
+  },
+  "linux": {
+    "csd_005_people": 1,
+    "csd_006_receipt": 1,
+    "csd_008_notes_to_self": 0,
+    "csd_047_network_content": 0,
+    "csd_057_wallet": 3,
+    "csd_068_provision_accord_holder": 0,
+    "csd_092_share_contact_code": 3,
+    "csd_101_household_members": 2,
+    "people": 0
+  },
+  "macos": {
+    "csd_005_people": 1,
+    "csd_006_receipt": 1,
+    "csd_008_notes_to_self": 0,
+    "csd_047_network_content": 0,
+    "csd_057_wallet": 3,
+    "csd_068_provision_accord_holder": 0,
+    "csd_092_share_contact_code": 3,
+    "csd_101_household_members": 2,
+    "people": 0
+  },
+  "windows": {
+    "csd_005_people": 1,
+    "csd_006_receipt": 1,
+    "csd_008_notes_to_self": 0,
+    "csd_047_network_content": 0,
+    "csd_057_wallet": 3,
+    "csd_068_provision_accord_holder": 0,
+    "csd_092_share_contact_code": 3,
+    "csd_101_household_members": 2,
+    "people": 0
+  }
+}

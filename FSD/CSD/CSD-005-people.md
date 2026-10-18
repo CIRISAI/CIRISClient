@@ -92,10 +92,16 @@ fields:
     tag: input_contacts_add_key
   - ceg: x_private:contact_add_outcome
     use: display-only
-    type: "enum[added,already,refused]"
+    type: "enum[added,already,pending,refused]"
     example: "already"
-    renders: "'Added {who}.' on a fresh grant; 'Already in your contacts.' when the node returns freshly_emitted: false (the same person twice is a no-op, not an error); the refusal block otherwise"
+    renders: "'Added {who}.' on a fresh grant; 'Already in your contacts.' when the node returns freshly_emitted: false (the same person twice is a no-op, not an error); 'pending' on ANY 2xx that carries a reason_id (202 contacts.awaiting_key_body: a v3 code names a key this node does not hold yet; also contacts.unreachable / contacts.awaiting_consent) — nothing was written, the card's line (contacts_add_pending) says {who} is not a contact yet and offers no Open chat, and the code becomes a pending row (CIRISClient#188); the refusal block otherwise"
     tag: contacts_add_already
+  - ceg: x_private:pending_contact
+    use: display-only
+    type: string
+    example: "bob-x"
+    renders: "a row of its own ABOVE the contacts, never a contact row: 'Waiting for {who}'s key' ({who} is the fed_id the 202 resolved, else the key it named), the node's sentence for the not-yet under it by reason_id, and a status line (contacts_pending_status_*: 'Asked {count} time(s); asks again on its own' / 'Stopped asking for now' / 'Not added: {why}' after a refusal by id). No receipt — no grant was signed — and no Chat chip: POST /v1/chat to a non-contact is chat.not_a_contact. Try again (btn_contacts_pending_retry_*) asks now; Forget (btn_contacts_pending_forget_*) drops the code and changes nothing on the node. The code is POSTed again on a bounded backoff (2 s doubling to 60 s, 20 asks, then it waits for a refresh) until the node answers without a reason_id, the key turns up in GET /v1/contacts on its own (ciris-server 0.5.231 completes it itself), or the node refuses"
+    tag: "contacts_pending_*"
   - ceg: x_private:pair_room_invitation
     use: display-only
     type: string
@@ -136,9 +142,22 @@ grant-less row cannot know it. Fixed here, red first
 (`aContactReceiptWithoutAGrantSaysWhatItKnowsAndWhatItDoesNot`). A member the
 grant carries but leaves empty is likewise `NotSent`.
 
+**Add contact is reachable whatever the list holds (CIRISClient#187).** The
+header carries a LABELLED action, `btn_contacts_add_open` ("Add contact", with
+the invite glyph), in browse mode on every list — empty, populated, or holding
+only pending rows. It toggles the add card. Over an empty, unsearched list the
+card is forced open as well (the flows depend on that); over a populated list
+it is what opens it. Before this the header had the same tag on a bare,
+dim glyph, and a person on desktop could not find it: once one contact exists
+there was "no Add contact anywhere" (0.5.228, two installs) — and since the
+canonical shows up as a contact on every trace-sending node (CIRISServer#775)
+the empty-list case is the rare one. The card also stays up while the last
+add's outcome is showing, so a first add from the forced card no longer
+vanishes with its "Open chat" the moment the list stops being empty.
+
 ```yaml csd:states
 populated: {tag: contacts_list}
-empty:     {tag: contacts_empty, renders: "No contacts yet (or: No contacts match “q”) — but over an EMPTY, UNSEARCHED list the add card (card_contacts_add) is shown INSTEAD, because that list has exactly one useful next move"}
+empty:     {tag: contacts_empty, renders: "No contacts yet (or: No contacts match “q”) — but over an EMPTY, UNSEARCHED list with nothing pending the add card (card_contacts_add) is shown INSTEAD, because that list has exactly one useful next move; a list holding only pending rows is populated, not empty"}
 loading:   {tag: contacts_loading, renders: "the frame with a progress affordance and NO sentence"}
 error:     {tag: contacts_error, renders: "the list-level error banner; and contacts_unsupported for the node-too-old state: This node doesn't have contacts yet — This node is running {version}. Contacts and chat need ciris-server 0.5.185 or newer …"}
 ```
@@ -156,6 +175,9 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 | add a contact | `POST /v1/contacts` | CIRISServer | live; returns `consent_prefixes` |
 | add by contact code | `POST /v1/contacts` with the code in `key_id` | CIRISServer | **live**: `AddContactRequest.key_id` takes a fed-ID **or** a fedcode and also accepts the aliases `code` and `contact` (`src/contacts_chat.rs:1732-1742` @ `046e1b39`). The client sends `key_id` (`CIRISApiClient.kt:1490`), so no client change is needed to send a code |
 | adding the same person twice | same route; `freshly_emitted: false` | CIRISServer | **live**: the standing grant already covers every prefix, so nothing is written (`contacts_chat.rs:1775-1778`). The card reads it as `proposed:contacts_add_already` |
+| a code whose key this node does not hold yet | same route; **202** `{reason_id: contacts.awaiting_key_body, key_id, fed_id, converges_on_its_own: true}`, built by `refuse_with(StatusCode::ACCEPTED, …)` — nothing written | CIRISServer (`src/contacts_chat.rs:2499-2512` @ `f2bbb63`) · CIRISClient (the pending row) | **live, both halves.** The client read any 2xx as added (`CIRISApiClient.addContact` decoded the body as a contact; the log said `contact added freshly_emitted=false`, `listContacts` returned 0, `POST /v1/chat` failed 403 `chat.not_a_contact` — CIRISClient#188). Now `AddContactResponse.pending` is "carries a `reason_id`", `AddContactOutcome.PENDING` never shows "added", the code is kept as a `PendingContact` row and POSTed again on a bounded backoff (`ContactsViewModel.startPendingLoop`: 2 s doubling to 60 s, 20 asks, a list refresh wakes or restarts it) until the node answers without a `reason_id` or refuses. **What the node does meanwhile depends on its version:** 0.5.221 (client 0.5.228's pin) wrote nothing and never finished the contact — the re-POST IS the contract there; since **0.5.231** (`pending_contacts`, `contacts_chat.rs:5257` @ `f2bbb63`, CIRISServer#777 still open on the tracker) the node holds the pasted code in memory for 24 h and re-runs the add itself every 10 s once the key is in its directory, so the contact completes with no second request — but a node restart drops that table, so the client's loop stays as the fallback. A pending whose key appears in `GET /v1/contacts` is dropped at the next list read (`settlePendingAgainst`); pinned by `PendingContactTest` and, on a real socket, `PendingContactWireTest` (202 → row → re-POST → 201 → added) |
+| the person-facing copy of the contact refusals (CIRISClient#188 §2, CIRISServer#776) | the bundle's `contacts.*` entries, rendered by `reason_id` | CIRISClient (bundle) · CIRISServer (the English the node emits) | **partly blocked.** `contacts.unknown_fed_id` ("Admit the key first (peering) — an announced-but-unadmitted bookmark…"), `unreachable`, `awaiting_consent`, `consent_not_granted`, `code_commitment_mismatch` and `unresolvable` are plain now (re-synced with the server's #776 rewrite in PR #190; pinned by `ContactCodeWireTest.theFedIdRefusalAndThePendingRowSpeakPlainly`). `contacts.awaiting_key_body` ("…fetched from the mesh…"), `key_pull_unavailable`, `malformed_code`, `prior_rung_incomplete` and `self_contact` are still the server's operator sentence at the pin, and `check_localization_sync.py`'s `server-id-text` REQUIRES the bundle's English to equal what the server emits (a locale translated from a sentence the node does not say is the failure that check exists for) — so they change on the server first and re-sync here, `evidence/blocked_upstream.tsv` row 776. The pending row's own lines (`mobile.contacts_pending_*`, `mobile.contacts_add_pending`) are this repo's and are plain |
+| the add entry point on a populated list (CIRISClient#187) | — (`btn_contacts_add_open`, header) | **CIRISClient** | **live** — a labelled text action (`CirisTextButton` with the invite glyph) in place of the bare dim glyph; same tag, same toggle. Driven with one contact present by `csd-005-people.yaml::add_contact_is_still_offered_with_a_contact_listed` |
 | "That isn't a person's code" | refusal `contacts.unresolvable` (400) | CIRISServer (id) · CIRISClient (copy) | the id is **live** (`contacts_chat.rs:529`); the bundle's copy is still "That identifier does not resolve to a contact." (`en.json:644`). **Ask (CIRISClient card):** "That isn't a person's code. Ask them for their contact code: People › Share my contact code." |
 | a code that does not decode | refusal `contacts.malformed_code` (400) | CIRISServer | live (`contacts_chat.rs:520`); bundle key present |
 | a fed-ID this directory does not know | refusal `contacts.unknown_fed_id` (404) | CIRISServer | live; the bundle's copy says "Admit the key first (peering)". With codes available, the node's own detail is the better steer: "If they handed you a CODE, paste that instead" (`contacts_chat.rs:488-491`). **Ask (CIRISClient card):** point at the contact code, as for `unresolvable` |
@@ -193,6 +215,16 @@ On a node older than 0.5.217 (no `grant` on the row) the last line is instead
 `receipt_scope`: the sheet says what the node did not send rather than filling
 it in.
 
+With a contact already listed, the add entry point is still there: the header's
+`btn_contacts_add_open` is visible over the populated list, and clicking it
+opens the add card (CIRISClient#187).
+
+```yaml
+expect:
+  visible: [contacts_list, btn_contacts_add_open]
+  count: {of: "contacts_row_*", min: 1}
+```
+
 Add by contact code: open `btn_contacts_add_open`, paste a person's contact
 code (CSD-092) into `input_contacts_add_key`, click `btn_contacts_add_submit`.
 
@@ -201,6 +233,20 @@ expect:
   visible: [btn_contacts_add_open_chat]
   absent: [contacts_add_refusal]
 ```
+
+Paste a code whose key this node does not hold yet (the node answers 202
+`contacts.awaiting_key_body`): nothing is added and nothing says it was.
+
+```yaml
+expect:
+  visible: [contacts_add_pending]
+  absent: [btn_contacts_add_open_chat, contacts_add_refusal, contacts_add_already]
+  count: {of: "contacts_pending_*", min: 1}
+```
+
+The row stays until the node answers the re-POST without a `reason_id`, the key
+shows up in the list on its own, or the person forgets it; it never carries a
+`btn_contacts_chat_*` chip.
 
 Submit the same code again: nothing new is written and nothing is refused.
 
@@ -240,6 +286,8 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 five-platform gate leans on; no tag it drives has changed.
 
 **An invitation to talk is pinned below the flow** (0.5.218): showing one needs a second person who opened a chat with the leg's person first, which the two-node fixture does not stage yet, so the row flag, the matching by room id, the 0.5.217 404 and the decline are pinned in `PairRoomInvitationTest` and on the wire in `Server218ChatEvictWireTest`. Not run on any leg.
+
+**The pending row is pinned below the flow too** (CIRISClient#188): a 202 needs a v3 code whose key body the leg's node does not hold, and the two-node fixture waits for the peer's key to cross BEFORE it adds (that is the point of the fixture), so the 202 → pending → re-POST → 201 path is pinned on a real socket in `PendingContactWireTest` (the server's exact 202 body shape) and the never-"added" rule, the backoff schedule, the bound, the refusal arm, the drop-on-list-read and the session clear in `PendingContactTest`. The header action with a contact present IS driven on the matrix (`add_contact_is_still_offered_with_a_contact_listed`).
 
 **Not tested here.** The long-press gesture (no `/long-press` endpoint); the
 hamburger is the drivable equivalent. The camera half of the scan: it needs the

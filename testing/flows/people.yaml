@@ -30,10 +30,12 @@ steps:
     expect:
       screen: Contacts
       visible: [input_contacts_search, card_contacts_add, input_contacts_add_key,
-                btn_contacts_add_submit, btn_contacts_refresh]
+                btn_contacts_add_submit, btn_contacts_refresh, btn_contacts_add_open]
       # The add card stands in for the empty block over an EMPTY, UNSEARCHED
-      # list; and a node that answered is neither loading, nor in error, nor
-      # too old for contacts.
+      # list — and the header's Add contact is there too, as on every list
+      # (CIRISClient#187: csd-005-people.yaml asserts it with a contact
+      # present); and a node that answered is neither loading, nor in error,
+      # nor too old for contacts.
       absent: [contacts_empty, contacts_list, contacts_loading, contacts_error,
                contacts_unsupported]
 

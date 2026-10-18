@@ -131,10 +131,11 @@ error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_set
 CIRISClient#41 (closed) was exactly that: the flag was dropped between the YOU
 screen and the completion request and the agent always saw `false`.
 
-**The hand-off is where this pass breaks, and it breaks per platform.** Only
-ONE of these is still open: **#51** — a run-without-AI install has no logout
-affordance at all (no Agent group ⇒ no Settings ⇒ no `btn_logout`, so Login and
-factory reset are unreachable). **#43, #47 and #48 are CLOSED** and were listed
+**The hand-off is where this pass breaks, and it breaks per platform.** None
+of these is still open. **#51** (a run-without-AI install had no logout
+affordance: no Agent group ⇒ no Settings ⇒ no `btn_logout`, so Login and factory
+reset were unreachable) is closed by My Identity's `btn_logout` and My things'
+`btn_my_things_sign_out`, both the one sign-out (CSD-037 §3). **#43, #47 and #48 are CLOSED** and were listed
 here as open: #43 (the client stayed on `:8080` after the hand-off and never
 moved to `:4243`), #47 (a `waitForServices` timeout thrown on the main thread
 killed the app — Android FATAL EXCEPTION, iOS SIGABRT), #48 (`checkFirstRunStatus`
