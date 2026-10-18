@@ -86,10 +86,14 @@ class ClaimPinFileTest {
         val node = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/") { ex ->
                 ex.requestBody.use { it.readBytes() }
-                val (status, body) = if (ex.requestURI.path == "/v1/self/identity") {
-                    200 to """{"key_id":"owner-abc123","fedcode":"CIRIS-V2-TEST","identity_type":"user"}"""
-                } else {
-                    404 to ""
+                // An UNCLAIMED node (CIRISClient#184 item 3 asks it): no
+                // owner-binding, no ROOT. An owned node is OwnedNodeClaimTest's.
+                val (status, body) = when (ex.requestURI.path) {
+                    "/v1/self/identity" ->
+                        200 to """{"key_id":"owner-abc123","fedcode":"CIRIS-V2-TEST","identity_type":"user"}"""
+                    "/v1/setup/owned-nodes" -> 200 to """{"owner":null,"nodes":[]}"""
+                    "/v1/setup/status" -> 200 to """{"data":{"is_first_run":true,"setup_required":true,"config_exists":false}}"""
+                    else -> 404 to ""
                 }
                 val bytes = body.toByteArray()
                 ex.responseHeaders.add("Content-Type", "application/json")

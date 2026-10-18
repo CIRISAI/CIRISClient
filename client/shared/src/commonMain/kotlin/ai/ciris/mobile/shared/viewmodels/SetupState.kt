@@ -560,6 +560,15 @@ data class NodeOwnershipClaimState(
      */
     val errorRecoverable: Boolean = false,
     /**
+     * The node ALREADY HAS AN OWNER, so the way in is signing in as that owner,
+     * not a claim (CIRISClient#184 item 3). Set with
+     * [ai.ciris.mobile.shared.models.OwnedNodeClaim.ALREADY_CLAIMED] and
+     * [ai.ciris.mobile.shared.models.OwnedNodeClaim.OWNER_UPGRADE]; the
+     * COMPLETE step then offers "Sign in as the owner" instead of finishing a
+     * setup that would re-claim an owned node.
+     */
+    val ownerSignIn: Boolean = false,
+    /**
      * Non-fatal soft notice from the optional federation-announce opt-in. The
      * claim itself already succeeded; the announce can be retried later, so a
      * failure here is surfaced (not fatal). Null when not attempted / succeeded.

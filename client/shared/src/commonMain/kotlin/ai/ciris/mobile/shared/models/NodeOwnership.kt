@@ -63,3 +63,69 @@ fun nodeOwnershipFrom(ownerBinding: String?, nodeSetupRequired: Boolean?): NodeO
     nodeSetupRequired == false -> NodeOwnership.LEGACY_OWNED
     else -> NodeOwnership.FRESH
 }
+
+/**
+ * What the node said when asked which [NodeOwnership] state it is in, for a
+ * claim that could not go ahead (CIRISClient#184 item 3). Read from the same
+ * two loopback routes as the startup router, and kept three-valued: a route
+ * the node does not have is a version fact ([RouteAbsent]), and a probe that
+ * got no answer ([Unknown]) is not evidence that the node is fresh.
+ */
+sealed interface NodeOwnershipProbe {
+    /** Both reads answered (or the owner-binding read alone was decisive). */
+    data class Known(val state: NodeOwnership) : NodeOwnershipProbe
+
+    /** `GET /v1/setup/owned-nodes` answered a bare 404: a node older than the route. */
+    object RouteAbsent : NodeOwnershipProbe
+
+    /** No usable answer (unreachable, a non-404 refusal, an unreadable body). */
+    data class Unknown(val reason: String) : NodeOwnershipProbe
+}
+
+/**
+ * The named outcomes of a self-claim on a node that turned out NOT to be
+ * claimable by PIN (CIRISClient#184 item 3). An owned node has no claim PIN to
+ * read — the node consumes it on the first claim (ciris-server 0.5.231
+ * `src/auth/bootstrap.rs:1653` `setup_status`: `claim_pin_file` is `None` once
+ * claimed) — so the remedy is signing in as the owner, never "read a console".
+ */
+object OwnedNodeClaim {
+    /** Owner-binding present: sign in as the owner (`mobile.setup_claim_already_claimed`). */
+    const val ALREADY_CLAIMED = "claim.node_already_claimed"
+
+    /**
+     * ROOT WaCert present, owner-binding absent: sign in as the owner, then the
+     * Add Federation ID catch-up mints (`POST /v1/self/identity`) and re-roots
+     * (`POST /v1/self/upgrade-owner`) — `mobile.setup_claim_owner_upgrade`.
+     */
+    const val OWNER_UPGRADE = "claim.node_owner_upgrade"
+
+    /** `owned-nodes` is a bare 404: the node cannot say who owns it (`mobile.setup_claim_node_too_old`). */
+    const val NODE_TOO_OLD = "claim.node_too_old"
+
+    /**
+     * The named outcome for [probe], or null when the node is FRESH or did not
+     * answer — the caller then keeps the failure it already had.
+     */
+    fun outcomeFor(probe: NodeOwnershipProbe): String? = when (probe) {
+        is NodeOwnershipProbe.Known -> when (probe.state) {
+            NodeOwnership.CLAIMED -> ALREADY_CLAIMED
+            NodeOwnership.LEGACY_OWNED -> OWNER_UPGRADE
+            NodeOwnership.FRESH -> null
+        }
+        NodeOwnershipProbe.RouteAbsent -> NODE_TOO_OLD
+        is NodeOwnershipProbe.Unknown -> null
+    }
+
+    /** The en.json key whose text explains [outcomeId], or null for an id this object does not own. */
+    fun messageKey(outcomeId: String?): String? = when (outcomeId) {
+        ALREADY_CLAIMED -> "mobile.setup_claim_already_claimed"
+        OWNER_UPGRADE -> "mobile.setup_claim_owner_upgrade"
+        NODE_TOO_OLD -> "mobile.setup_claim_node_too_old"
+        else -> null
+    }
+
+    /** True when [outcomeId] is entered by signing in as the node's existing owner. */
+    fun needsOwnerSignIn(outcomeId: String?): Boolean =
+        outcomeId == ALREADY_CLAIMED || outcomeId == OWNER_UPGRADE
+}

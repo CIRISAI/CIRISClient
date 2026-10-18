@@ -3047,7 +3047,23 @@ fun CIRISApp(
                         platformLog(TAG, "[INFO] Back to login from setup wizard")
                         setupViewModel.resetState()  // Clear any partial setup state
                         currentScreen = Screen.Login
-                    }
+                    },
+                    // THE NODE ALREADY HAS AN OWNER (CIRISClient#184 item 3). No
+                    // claim PIN exists to read, and the wizard's setup session is
+                    // not the owner's. Leave first-run for the owner's sign-in:
+                    // a CONFIGURED login (isFirstRun=false). For a legacy-owned
+                    // node the fed-id-catchup effect then auto-presents Add
+                    // Federation ID, which mints (POST /v1/self/identity) and
+                    // re-roots (POST /v1/self/upgrade-owner) on the owner session.
+                    onOwnerSignIn = {
+                        val outcome = setupViewModel.state.value.ownershipClaim.errorId
+                        platformLog(TAG, "[INFO] Setup → owner sign-in ($outcome): the node already has an owner")
+                        setupViewModel.resetState()
+                        currentAccessToken = null
+                        isFirstRun = false
+                        fedIdCatchupPrompted = false
+                        currentScreen = Screen.Login
+                    },
                 )
             }
 
