@@ -15,6 +15,14 @@ visibly absent. Every expected platform gets a tile whether or not it produced a
 image, because the interesting failure — the one this whole gate exists for — is
 a platform that quietly did not run. That is how v2.9.42 shipped with no APK: not
 a red tick, an absent artifact.
+
+LOCAL DELTA (was vendored verbatim from CIRISAgent tools/dev/build_qa_gallery.py).
+It read `chat-*.json` reports and `shots/<platform>.png` — the AGENT's runner's
+output. This repo's legs write `reports/<leg>.json` (testing/gate/run_platform.py's
+Report) and `shots/<platform>-screen.png`, so on run 39023854089 — every leg green
+— the gallery said "did not run" five times. It reads this repo's reports now,
+and each row carries what CIRISClient#166 and #168 asked the gallery to say: the
+server version the leg ran against, and how many optional steps it skipped.
 """
 
 from __future__ import annotations
@@ -27,7 +35,9 @@ import sys
 from pathlib import Path
 from typing import Dict, List, NamedTuple, Optional
 
-#: Every platform the gate covers. A tile is rendered for each, present or not.
+from testing.gate import optional_skips
+
+#: Every leg the gate covers. A tile is rendered for each, present or not.
 EXPECTED = ["linux", "macos", "windows", "android", "ios"]
 
 PRETTY = {
@@ -44,73 +54,53 @@ class Tile(NamedTuple):
     image: Optional[Path]
     passed: Optional[bool]
     detail: str
+    server: str = ""          # the node the leg ran against (run_platform --node-version)
+    embedded: str = ""        # iOS: the node the app embeds (the Agent's pin)
+    skips: Optional[Dict[str, int]] = None   # optional skips per flow, for flows that ran
 
 
-def _find_shots(root: Path) -> Dict[str, Path]:
-    """Map platform -> screenshot, wherever the artifact download put it."""
-    shots: Dict[str, Path] = {}
-    for png in root.rglob("shots/*.png"):
-        shots[png.stem] = png
-    return shots
+def _find_reports(root: Path) -> Dict[str, dict]:
+    """{leg: run_platform report}, keyed by the file's stem (`reports/linux.json`)."""
+    return optional_skips.reports_in(root)
 
 
-def _find_reports(root: Path) -> Dict[str, bool]:
-    """Map platform -> passed, from the chat-*.json reports."""
-    results: Dict[str, bool] = {}
-    for report in root.rglob("chat-*.json"):
-        platform = report.stem.replace("chat-", "")
-        try:
-            data = json.loads(report.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            continue
-        # Reports differ in shape across commands; accept the common spellings
-        # rather than pinning one and silently reading None.
-        passed = data.get("success")
-        if passed is None:
-            passed = data.get("passed")
-        if passed is None and isinstance(data.get("results"), list):
-            passed = all(r.get("success") for r in data["results"])
-        if passed is not None:
-            # Carry the trace rung too. It is currently REPORTED rather than
-            # enforced (upstream KEX/replication revamp), so it is deliberately
-            # not part of `success` — but a tile that says only "interact OK"
-            # implies a rung nobody checked, which is the exact vacuous-pass
-            # shape this gallery exists to make visible.
-            results[platform] = (bool(passed), data.get("traces"))
-    return results
+def _shot_for(root: Path, leg: str, report: Optional[dict]) -> Optional[Path]:
+    """The leg's smoke-walk screenshot: run_platform's `screenshot` step names
+    it (`shots/<platform>-screen.png`), and it sits beside the report's
+    `reports/` directory in the same artifact. Three desktops write the same
+    file name, so the artifact directory — not the name — says which leg."""
+    if report is None:
+        return None
+    shot = next((s.get("shot") for s in report.get("steps", []) if s.get("name") == "screenshot" and s.get("shot")), None)
+    name = Path(str(shot).replace("\\", "/")).name if shot else f"{report.get('platform', leg)}-screen.png"
+    for rep_file in root.rglob(f"reports/{leg}.json"):
+        candidate = rep_file.parent.parent / "shots" / name
+        if candidate.exists():
+            return candidate
+    return None
 
 
 def _tiles(root: Path) -> List[Tile]:
-    shots = _find_shots(root)
     reports = _find_reports(root)
     tiles: List[Tile] = []
-    for platform in EXPECTED:
-        image = shots.get(platform)
-        entry = reports.get(platform)
-        passed, traces = entry if entry is not None else (None, None)
-        if passed is None and image is None:
-            detail = "did not run"
-        elif passed is None:
-            detail = "ran, no report parsed"
-        elif passed:
-            detail = "interact OK" if image else "interact OK (no screenshot captured)"
-            # The trace rung is REPORTED, not enforced (upstream KEX/replication
-            # revamp). A tile reading only "interact OK" would imply a rung nobody
-            # checked — the vacuous-pass shape this gallery exists to expose.
-            if traces is False:
-                detail += " · traces not confirmed (not enforced)"
-            elif traces is True:
-                detail += " · traces reached canonical"
-            else:
-                # null — the substrate exposes no replication counter at all
-                # (CIRISServer#518). Distinct from False on purpose: "we looked
-                # and it had not delivered" and "we cannot see" are different
-                # facts, and printing the first for the second is how this
-                # claimed a delivery it never observed.
-                detail += " · traces not observable on this substrate"
+    for leg in EXPECTED:
+        rep = reports.get(leg)
+        image = _shot_for(root, leg, rep)
+        if rep is None:
+            tiles.append(Tile(leg, image, None, "did not run"))
+            continue
+        passed = bool(rep.get("ok"))
+        failed = [s for s in rep.get("steps", []) if not s.get("ok")]
+        flows_step = next((s for s in rep.get("steps", []) if s.get("name") == "flows"), None)
+        skips, _ = optional_skips.counts_for(rep.get("flows", []))
+        if passed:
+            detail = f"walk OK · flows {flows_step.get('detail', '?') if flows_step else 'not run'}"
+            if not image:
+                detail += " · no screenshot captured"
         else:
-            detail = "FAILED"
-        tiles.append(Tile(platform, image, passed, detail))
+            detail = "FAILED: " + "; ".join(f"{s.get('name')}: {str(s.get('detail', ''))[:160]}" for s in failed)
+        tiles.append(Tile(leg, image, passed, detail, server=str(rep.get("node_version", "")),
+                          embedded=str(rep.get("embedded_node_version", "")), skips=skips))
     return tiles
 
 
@@ -118,7 +108,22 @@ def _embed(path: Path) -> str:
     return base64.b64encode(path.read_bytes()).decode("ascii")
 
 
-def _render(tiles: List[Tile], run_url: str = "") -> str:
+def _server_cell(t: Tile) -> str:
+    if t.passed is None:
+        return "—"
+    s = t.server or "unknown"
+    if t.embedded:
+        s += f" (peer); embeds {t.embedded} — the Agent's pin"
+    return s
+
+
+def _skips_cell(t: Tile) -> str:
+    if t.skips is None:
+        return "—"
+    return optional_skips.describe(t.skips)
+
+
+def _render(tiles: List[Tile], run_url: str = "", server: str = "", source: str = "") -> str:
     cards = []
     for t in tiles:
         if t.passed is True:
@@ -129,7 +134,7 @@ def _render(tiles: List[Tile], run_url: str = "") -> str:
             badge, cls = "DID NOT RUN", "absent"
 
         if t.image and t.image.exists():
-            img = f'<img src="data:image/png;base64,{_embed(t.image)}" alt="{html.escape(PRETTY[t.platform])} interact screen">'
+            img = f'<img src="data:image/png;base64,{_embed(t.image)}" alt="{html.escape(PRETTY[t.platform])} screen">'
         else:
             img = '<div class="noshot">no screenshot</div>'
 
@@ -141,11 +146,13 @@ def _render(tiles: List[Tile], run_url: str = "") -> str:
         </figcaption>
         {img}
         <p class="detail">{html.escape(t.detail)}</p>
+        <p class="detail">server {html.escape(_server_cell(t))} &middot; optional skips {html.escape(_skips_cell(t))}</p>
       </figure>"""
         )
 
     passed = sum(1 for t in tiles if t.passed is True)
     ran = sum(1 for t in tiles if t.passed is not None)
+    head = f" &middot; server {html.escape(server)} ({html.escape(source)})" if server else ""
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -186,8 +193,8 @@ def _render(tiles: List[Tile], run_url: str = "") -> str:
 <body>
 <header>
   <h1>Five-Platform Live QA</h1>
-  <p class="sub">{passed}/{len(tiles)} passed &middot; {ran}/{len(tiles)} ran &middot;
-     each tile is the Interact screen after a real message got a real reply.{run_url}</p>
+  <p class="sub">{passed}/{len(tiles)} passed &middot; {ran}/{len(tiles)} ran{head} &middot;
+     each tile is the entry screen after the smoke walk, then the CSD flows.{run_url}</p>
 </header>
 <div class="grid">
 {chr(10).join(cards)}
@@ -197,21 +204,24 @@ def _render(tiles: List[Tile], run_url: str = "") -> str:
 """
 
 
-def _summary(tiles: List[Tile]) -> str:
-    lines = [
-        "## Five-Platform Live QA",
-        "",
-        "| Platform | Result | Screenshot |",
-        "|---|---|---|",
+def _summary(tiles: List[Tile], server: str = "", source: str = "") -> str:
+    lines = ["## Five-Platform Live QA", ""]
+    if server:
+        lines += [f"One server version for every leg: **{server}** ({source}).", ""]
+    lines += [
+        "| Platform | Result | Server | Optional skips | Screenshot |",
+        "|---|---|---|---|---|",
     ]
     for t in tiles:
         result = "PASS" if t.passed is True else "FAIL" if t.passed is False else "did not run"
         shot = "yes" if (t.image and t.image.exists()) else "—"
-        lines.append(f"| {PRETTY[t.platform]} | {result} | {shot} |")
+        lines.append(f"| {PRETTY[t.platform]} | {result} | {_server_cell(t)} | {_skips_cell(t)} | {shot} |")
     lines += [
         "",
-        "_Download the **five-platform-gallery** artifact and open `index.html` "
-        "to see all five side by side — GitHub cannot render artifact images inline._",
+        "_Optional skips are `SKIP (optional)` steps per flow, judged on each leg against "
+        "`testing/flows/optional_skips_baseline.json` (CIRISClient#168). Download the "
+        "**live-qa-gallery** artifact and open `gallery.html` to see all five side by side — "
+        "GitHub cannot render artifact images inline._",
     ]
     return "\n".join(lines) + "\n"
 
@@ -223,6 +233,8 @@ def parser() -> argparse.ArgumentParser:
     ap.add_argument("root", type=Path, help="Directory the artifacts were downloaded into")
     ap.add_argument("--out", type=Path, required=True, help="Where to write index.html")
     ap.add_argument("--summary", type=Path, default=None, help="Append a table here (GITHUB_STEP_SUMMARY)")
+    ap.add_argument("--server-version", default="", help="the run's one server version (the `server` job)")
+    ap.add_argument("--server-source", default="", help="pin | input | latest-fallback")
     return ap
 
 
@@ -235,9 +247,9 @@ def main() -> int:
 
     tiles = _tiles(args.root)
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    args.out.write_text(_render(tiles), encoding="utf-8")
+    args.out.write_text(_render(tiles, server=args.server_version, source=args.server_source), encoding="utf-8")
 
-    table = _summary(tiles)
+    table = _summary(tiles, args.server_version, args.server_source)
     print(table)
     if args.summary:
         try:

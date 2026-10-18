@@ -35,6 +35,7 @@ import ai.ciris.mobile.shared.viewmodels.AddContactOutcome
 import ai.ciris.mobile.shared.viewmodels.ContactCodeState
 import ai.ciris.mobile.shared.viewmodels.ContactRemoval
 import ai.ciris.mobile.shared.viewmodels.ContactsViewModel
+import ai.ciris.mobile.shared.viewmodels.PendingContact
 import ai.ciris.mobile.shared.ui.primitives.ConfirmFact
 import ai.ciris.mobile.shared.ui.primitives.ConfirmSheet
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
@@ -131,12 +132,19 @@ fun ContactsScreen(
 
     // The add card is ALWAYS presented over an empty contact list — that is the
     // "land on Add a Contact" rule. Over a non-empty list it is opt-in so the
-    // conversations stay the first thing on screen.
+    // conversations stay the first thing on screen — opened from the header's
+    // labelled "Add contact" action, which is on screen in BOTH cases
+    // (CIRISClient#187: a bare glyph there was never found, and once the
+    // canonical shows up as a contact, CIRISServer#775, the list is never
+    // empty). It also stays up while the last add's outcome is still showing:
+    // a first add from the forced card used to vanish with its "Open chat"
+    // the moment the list stopped being empty.
+    val pendingContacts by viewModel.pendingContacts.collectAsState()
     var addExpanded by remember { mutableStateOf(false) }
     var addKeyId by remember { mutableStateOf("") }
-    val listIsEmpty = contacts.isEmpty() && searchQuery.isBlank()
+    val listIsEmpty = contacts.isEmpty() && pendingContacts.isEmpty() && searchQuery.isBlank()
     val showAddCard = !pickerMode && !routeUnsupported &&
-        (addExpanded || (contactsLoaded && listIsEmpty))
+        (addExpanded || (contactsLoaded && listIsEmpty) || justAdded != null || addOutcome == AddContactOutcome.PENDING)
 
     // The receipt sheet: one at a time, opened from a row's hamburger or long-press.
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
@@ -203,12 +211,16 @@ fun ContactsScreen(
                         ) {
                             Glyph(GlyphName.SHARE_OUT, tint = if (codeOpen) t.brand else t.dim, contentDescription = localizedString("mobile.contact_code_title"))
                         }
-                        IconButton(
+                        // Labelled, not a bare glyph: the one add entry point
+                        // that is reachable whatever the list holds (#187). A
+                        // toggle — it closes the card too — and the flows'
+                        // cleanup relies on that.
+                        CirisTextButton(
+                            label = localizedString("mobile.contacts_add_open"),
+                            tag = PeopleTags.ADD_OPEN,
+                            glyph = GlyphName.INVITE,
                             onClick = { addExpanded = !addExpanded },
-                            modifier = Modifier.testableWithHandler(PeopleTags.ADD_OPEN) { addExpanded = !addExpanded },
-                        ) {
-                            Glyph(GlyphName.INVITE, tint = t.dim, contentDescription = localizedString("mobile.contacts_add_title"))
-                        }
+                        )
                     }
                     IconButton(
                         onClick = { viewModel.refresh() },
@@ -293,6 +305,7 @@ fun ContactsScreen(
                     refusalDetail = addError,
                     justAdded = justAdded,
                     addOutcome = addOutcome,
+                    pendingWho = pendingContacts.lastOrNull()?.let { pendingWho(it) },
                     onSubmit = { viewModel.addContact(addKeyId) },
                     onOpenChat = {
                         justAdded?.let { c ->
@@ -328,7 +341,9 @@ fun ContactsScreen(
             }
 
             // ── Loading ───────────────────────────────────────────────────────
-            val listEmptyNow = if (pickerMode) peers.isEmpty() else contacts.isEmpty()
+            // A pending code is a row (never a contact), so a list of only
+            // pending rows is not empty.
+            val listEmptyNow = if (pickerMode) peers.isEmpty() else contacts.isEmpty() && pendingContacts.isEmpty()
             if (loading && listEmptyNow) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     StateBlock(ListState.Loading, tag = PeopleTags.LOADING)
@@ -373,6 +388,16 @@ fun ContactsScreen(
                         PeerRow(peer = peer, onPick = { onPeerPicked?.invoke(peer) })
                     }
                 } else {
+                    // Codes still waiting for their key come first: they are
+                    // what the person just did, and a row that says "waiting"
+                    // is the whole answer to "where did my contact go" (#188).
+                    items(pendingContacts, key = { "pending:" + it.code }) { pending ->
+                        PendingRow(
+                            pending = pending,
+                            onRetry = { viewModel.retryPending(pending.code) },
+                            onForget = { viewModel.forgetPending(pending.code) },
+                        )
+                    }
                     items(contacts, key = { it.keyId }) { contact ->
                         ContactRow(
                             contact = contact,
@@ -556,6 +581,8 @@ private fun AddContactCard(
     refusalDetail: String?,
     justAdded: Contact?,
     addOutcome: AddContactOutcome?,
+    /** Whom the last add is waiting on, when [addOutcome] is [AddContactOutcome.PENDING]. */
+    pendingWho: String?,
     onSubmit: () -> Unit,
     onOpenChat: () -> Unit,
     onDismissAdded: () -> Unit,
@@ -610,6 +637,19 @@ private fun AddContactCard(
             )
         }
 
+        // ── Pending: accepted, NOT added (CIRISClient#188) ────────────────────
+        // A 2xx with a reason_id wrote no row. Said in the ordinary tone, not
+        // the error one (nothing went wrong), and with no "Open chat": there
+        // is no contact to open one with. The row below the card carries on.
+        if (addOutcome == AddContactOutcome.PENDING && justAdded == null) {
+            Spacer(Modifier.height(8.dp))
+            val line = localizedString("mobile.contacts_add_pending", "who", pendingWho ?: "")
+            Text(line, style = type.body, color = t.dim, modifier = Modifier.testable(PeopleTags.ADD_PENDING, line))
+            Row {
+                CirisTextButton(localizedString("common_close"), tag = PeopleTags.ADD_DISMISS, onClick = onDismissAdded)
+            }
+        }
+
         // ── Success ───────────────────────────────────────────────────────────
         justAdded?.let { added ->
             Spacer(Modifier.height(8.dp))
@@ -642,6 +682,68 @@ private fun AddContactCard(
 // ═════════════════════════════════════════════════════════════════════════════
 // Rows
 // ═════════════════════════════════════════════════════════════════════════════
+
+/** Whom a pending row names: the fed-ID the node resolved, else the key it named, shortened. */
+internal fun pendingWho(p: PendingContact): String =
+    p.fedId?.takeIf { it.isNotBlank() } ?: shortKey(p.who, head = 12, tail = 0)
+
+/**
+ * A code the node accepted but could not complete yet (CIRISClient#188): "Waiting
+ * for {who}'s key", the node's own sentence for the not-yet under it (by
+ * `reason_id`, like every refusal), and what the loop is doing. No receipt — no
+ * grant was signed, so there is nothing to show a receipt OF — and no Chat chip:
+ * `POST /v1/chat` to a non-contact is `chat.not_a_contact`. Try again asks now;
+ * Forget drops the code and changes nothing on the node.
+ */
+@Composable
+private fun PendingRow(
+    pending: PendingContact,
+    onRetry: () -> Unit,
+    onForget: () -> Unit,
+) {
+    val t = CirisTheme.tokens
+    val id = pending.rowId
+    val who = pendingWho(pending)
+    // The node's sentence for this not-yet, by id; its English if the bundle has no entry.
+    val detail = localizedString(pending.reasonId).takeIf { it != pending.reasonId } ?: pending.detail ?: ""
+    val refusal = pending.refusal
+    val status = when {
+        refusal != null -> localizedString(
+            "mobile.contacts_pending_refused", "why",
+            refusal.reasonId?.let { rid -> localizedString(rid).takeIf { it != rid } } ?: refusal.detail ?: refusal.reasonId ?: "",
+        )
+        pending.exhausted -> localizedString("mobile.contacts_pending_stopped")
+        else -> localizedString("mobile.contacts_pending_asking", "count", pending.attempts.toString())
+    }
+    ItemRow(
+        glyph = GlyphName.KEY,
+        glyphTint = t.tone(if (refusal != null) Tone.DANGER else Tone.DIM),
+        title = localizedString("mobile.contacts_pending_title", "who", who),
+        meta = shortKey(pending.who, head = 16, tail = 0),
+        secondary = detail,
+        flags = listOf(RowFlag(status, tag = PeopleTags.pendingStatus(id), tone = if (refusal != null) Tone.DANGER else Tone.DIM)),
+        trailing = {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Chip(ChipSpec(
+                    label = localizedString("mobile.contacts_pending_retry"),
+                    tag = PeopleTags.pendingRetry(id),
+                    kind = ChipKind.CHOICE,
+                    tone = Tone.BRAND,
+                    onClick = onRetry,
+                ))
+                Chip(ChipSpec(
+                    label = localizedString("mobile.contacts_pending_forget"),
+                    tag = PeopleTags.pendingForget(id),
+                    kind = ChipKind.CHOICE,
+                    tone = Tone.DIM,
+                    onClick = onForget,
+                ))
+            }
+        },
+        tag = PeopleTags.pending(id),
+        onClick = null,
+    )
+}
 
 @Composable
 private fun ContactRow(

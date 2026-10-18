@@ -209,6 +209,15 @@ jobs:
             python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
           done
 
+      - name: The CSD roster is current; no card on a reserved or retired number
+        # Numbers were reserved in issue text (#179) and another repo (#206)
+        # and retired inside the card that absorbed them, so nothing said which
+        # were taken. FSD/CSD/README.md is generated from the cards plus
+        # FSD/CSD/numbers.tsv; --self-test plants each defect first.
+        run: |
+          python3 packaging/gen_csd_roster.py --self-test
+          python3 packaging/gen_csd_roster.py --check
+
       - name: Every route a screen calls is cited by its CSD; no new duplicate mutations
         # Cards were proposed for things that already existed under another
         # name. Routes, not names, say whether two cards are one. Ratchet:
@@ -704,28 +713,22 @@ jobs:
         id: node
         env:
           GH_TOKEN: ${{ github.token }}
+        # THE SAME ONE SOURCE AS THE FIVE-PLATFORM GATE (CIRISClient#166).
+        # This step used to try `v$(cat VERSION)` — the CLIENT's version, which
+        # leads the server's by design and so never named a release — and fall
+        # back to "latest", a moving target. testing/gate/server_version.py
+        # resolves the compat pin's release tag (or the latest release with a
+        # ::warning:: when the pin is a branch commit), and that is the node
+        # the walk runs against and the version the report carries.
         run: |
           set -euo pipefail
-          want="v$(cat VERSION)"
-          asset_for() { echo "ciris-server-$1-x86_64-unknown-linux-gnu.tar.gz"; }
+          python3 -m testing.gate.server_version --github-output "$GITHUB_OUTPUT" --json
+          used=$(grep '^version=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2)
           mkdir -p node
-          # The pinned version first. Client and server versions are gated to
-          # move together, so that is the pairing this tree claims to work with.
-          if gh release download "$want" -R CIRISAI/CIRISServer \
-               -p "$(asset_for "$want")" -D node 2>/dev/null; then
-            used="$want"
-          else
-            # NOT a silent fallback. The client can legitimately cut a version
-            # before the server tags the matching one, and testing against no
-            # node at all would be worse -- but which node ran is a fact the
-            # report has to carry, not a detail the log buries.
-            used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
-            echo "::notice::CIRISServer $want is not released yet; the walk ran against $used"
-            gh release download "$used" -R CIRISAI/CIRISServer -p "$(asset_for "$used")" -D node
-          fi
+          gh release download "$used" -R CIRISAI/CIRISServer \
+            -p "ciris-server-$used-x86_64-unknown-linux-gnu.tar.gz" -D node
           tar xzf node/ciris-server-*.tar.gz -C node
           chmod +x node/ciris-server
-          echo "version=$used" >> "$GITHUB_OUTPUT"
           echo "Client $(cat VERSION) walking against node $used"
 
       - name: Walk the matrix

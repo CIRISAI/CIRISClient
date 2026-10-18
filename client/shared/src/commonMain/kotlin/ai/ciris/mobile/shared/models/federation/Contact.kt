@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.models.federation
 import kotlinx.datetime.Instant
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * **A contact** — a federation identity this node has emitted a
@@ -131,10 +132,47 @@ data class AddContactRequest(
 /** ``POST /v1/contacts`` → the emitted (or already-standing) consent grant. */
 @Serializable
 data class AddContactResponse(
+    /**
+     * The key the contact is held under. Defaulted, not required: a typed
+     * NOT-YET (see [reasonId]) is built by `refuse_with` and carries whatever
+     * the stall knew, and a 202 that failed to DECODE would render as a
+     * generic error over a state the node described precisely.
+     */
     @SerialName("key_id")
-    val keyId: String,
+    val keyId: String = "",
     @SerialName("consent_attestation_id")
     val consentAttestationId: String = "",
+    /**
+     * **A 2xx that carries a `reason_id` is a typed NOT-YET, never an add**
+     * (CIRISClient#188; CIRISServer `auth/refusal.rs::answer_class`). `POST
+     * /v1/contacts` answers 202 `contacts.awaiting_key_body` for a v3 code
+     * whose key body the node does not hold yet, 202 `contacts.unreachable` /
+     * `contacts.awaiting_consent` for a contact still converging — each built by
+     * `refuse_with(StatusCode::ACCEPTED, …)`, writing nothing. The success body
+     * (`AddContactResponse` in `contacts_chat.rs`) has no `reason_id`, so its
+     * presence is the one test; the HTTP status is kept beside it ([httpStatus])
+     * for the log line.
+     */
+    @SerialName("reason_id")
+    val reasonId: String? = null,
+    /** The node's English for a not-yet — the detail line under the localized id. */
+    val error: String? = null,
+    /** The person's federation id, on a not-yet that resolved the code (`fed_id`). */
+    @SerialName("fed_id")
+    val fedId: String? = null,
+    /**
+     * The node's cue that the state resolves without another request (the key
+     * body arrives on the mesh's own cadence). Since ciris-server 0.5.231 the
+     * node also COMPLETES the contact itself when it does (`pending_contacts`,
+     * CIRISServer#777) — in memory, for 24 h, dropped by a restart — so the
+     * client's re-POST is a fallback on that node and the contract on an older
+     * one (0.5.221, which shipped with client 0.5.228, never completed it).
+     */
+    @SerialName("converges_on_its_own")
+    val convergesOnItsOwn: Boolean = false,
+    /** The HTTP status that carried this body; not on the wire. 0 when unknown (a fake). */
+    @Transient
+    val httpStatus: Int = 0,
     /**
      * A grant row was WRITTEN — first grant OR a widening of a narrower standing
      * one (CIRISServer#458). `false` is the true no-op: the standing grant already
@@ -179,8 +217,19 @@ data class AddContactResponse(
     val chatEligible: Boolean
         get() = consentPrefixes.isEmpty() || consentPrefixes.any { it.startsWith(CHAT_PREFIX) }
 
+    /**
+     * Nothing was written: the node answered a not-yet (see [reasonId]). A
+     * screen that reads this as "added" shows an empty list under an "added"
+     * line and a chat that fails `chat.not_a_contact` (CIRISClient#188).
+     */
+    val pending: Boolean
+        get() = reasonId != null
+
     companion object {
         /** The attestation-prefix the chat plane replicates under. */
         const val CHAT_PREFIX = "chat:"
+
+        /** The not-yet a v3 code answers until the node holds the key body it names. */
+        const val AWAITING_KEY_BODY = "contacts.awaiting_key_body"
     }
 }

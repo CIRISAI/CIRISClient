@@ -73,6 +73,19 @@
 #   * the gallery job runs on failure — the red run is the one worth looking at
 #   * every leg has a timeout — a hung emulator must not burn six hours
 #   * a platform that cannot run FAILS; it never skips quietly
+#   * ONE SERVER VERSION PER RUN (CIRISClient#166). The `server` job resolves
+#     it once — the compat pin's release tag, or the latest release WITH A
+#     WARNING when the pin is a branch commit, or the `server_version` input —
+#     and every leg reads `needs.server.outputs.version`: the binary it
+#     downloads, the `ciris-server==` the Android build installs, the version
+#     on its board line and in the gallery. Run 39023854089 drove two legs
+#     against v0.5.228 and three against v0.5.229, because each picked its
+#     own. The iOS simulator app embeds CIRISAgent's pinned node and cannot be
+#     handed the run's; its board says both (`--embedded-node-version`).
+#   * OPTIONAL SKIPS ARE COUNTED AND RATCHETED (CIRISClient#168). Each leg's
+#     board carries its `SKIP (optional)` count per flow and judges it against
+#     testing/flows/optional_skips_baseline.json: a rise is red, a fall is
+#     STALE until re-recorded (testing/gate/optional_skips.py).
 
 name: Five-Platform Live QA
 
@@ -83,6 +96,11 @@ on:
         description: "Subset to run (space-separated: linux windows android ios), or 'all'"
         required: false
         default: "all"
+        type: string
+      server_version:
+        description: "CIRISServer release tag every leg runs against (vX.Y.Z); empty = the compat pin (client/VENDORING.md §1), or the latest release with a warning when the pin is not a released tag"
+        required: false
+        default: ""
         type: string
   # Nightly, not per-push: it boots an emulator and a simulator, which is too
   # slow and too costly to gate every commit. A nightly failure lands before the
@@ -121,8 +139,33 @@ env:
   CIRIS_TRACE_RUN_KIND: "qa"
 
 jobs:
+  # THE ONE PLACE THE SERVER VERSION IS DECIDED. Every leg `needs:` this job
+  # and reads its outputs; no leg looks a version up on its own
+  # (testing/test_five_platform_workflow.py asserts exactly one source).
+  server:
+    name: one server version for every leg
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      version: ${{ steps.pick.outputs.version }}
+      pypi: ${{ steps.pick.outputs.pypi }}
+      source: ${{ steps.pick.outputs.source }}
+      pin: ${{ steps.pick.outputs.pin }}
+      pin_label: ${{ steps.pick.outputs.pin_label }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Resolve the run's server version
+        id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 -m testing.gate.server_version --override "${{ inputs.server_version }}" --github-output "$GITHUB_OUTPUT" --json
+          echo "::notice::every leg runs against CIRISServer $(grep '^version=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2) ($(grep '^source=' "$GITHUB_OUTPUT" | tail -1 | cut -d= -f2))"
+
   linux-android:
     name: linux desktop + android emulator
+    needs: [server]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'linux') || contains(inputs.platforms, 'android') }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -162,26 +205,17 @@ jobs:
       - name: The flow runner's one dependency
         run: python3 -m pip install --quiet pyyaml
 
+      # THE RUN'S VERSION, NOT THIS LEG'S. Resolved once by the `server` job.
       - name: The node this client will be a client of
-        id: node
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          want="v$(cat VERSION)"
           mkdir -p node
-          asset="ciris-server-$want-x86_64-unknown-linux-gnu.tar.gz"
-          if gh release download "$want" -R CIRISAI/CIRISServer -p "$asset" -D node 2>/dev/null; then
-            used="$want"
-          else
-            used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
-            echo "::notice::CIRISServer $want is not released; running against $used"
-            gh release download "$used" -R CIRISAI/CIRISServer \
-              -p "ciris-server-$used-x86_64-unknown-linux-gnu.tar.gz" -D node
-          fi
+          gh release download "${{ needs.server.outputs.version }}" -R CIRISAI/CIRISServer -p "ciris-server-${{ needs.server.outputs.version }}-x86_64-unknown-linux-gnu.tar.gz" -D node
           tar xzf node/ciris-server-*.tar.gz -C node
           chmod +x node/ciris-server
-          echo "version=$used" >> "$GITHUB_OUTPUT"
+          echo "server ${{ needs.server.outputs.version }} (${{ needs.server.outputs.source }})"
 
       # REHYDRATE THE ANDROID WHEELS. `client/androidApp/wheels/` is a §2
       # never-vendor class — 86 MB of other repos' release artifacts that this
@@ -227,8 +261,11 @@ jobs:
         run: |
           set -euo pipefail
           cd client
+          # -PcirisServerVersion: the APK's embedded `ciris-server==` is the
+          # run's release, not a hand-bumped literal (androidApp/build.gradle).
           ./gradlew :desktopApp:packageUberJarForCurrentOS :androidApp:assembleDebug \
             -PcirisAgentRoot="$CIRIS_AGENT_ROOT" \
+            -PcirisServerVersion=${{ needs.server.outputs.pypi }} \
             -PchaquopyBuildPython="${{ steps.py310.outputs.python-path }}" --console=plain
 
       # THE CANDIDATE, NOT WHATEVER IS ON DISK. This asserts the artifact
@@ -255,7 +292,7 @@ jobs:
         run: |
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
-            --node-version "${{ steps.node.outputs.version }}" \
+            --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/linux.json --flows testing/flows \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-linux"
 
@@ -346,7 +383,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ steps.node.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ needs.server.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # THE PEER DIES WITH THE JOB, WHATEVER KILLED IT. The runner's `finally`
       # and its SIGTERM handler cover a failed flow and a cancelled step; this
@@ -376,6 +413,7 @@ jobs:
 
   macos-ios:
     name: macos desktop + ios simulator
+    needs: [server]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'macos') || contains(inputs.platforms, 'ios') }}
     # macos-15, NOT macos-14. `client/iosApp/iosApp.xcodeproj` is
     # `objectVersion = 77` -- the Xcode 16 project format -- and macos-14 ships
@@ -406,19 +444,17 @@ jobs:
       - name: The flow runner's one dependency
         run: python3 -m pip install --quiet pyyaml
 
+      # THE RUN'S VERSION, NOT THIS LEG'S. Resolved once by the `server` job.
       - name: The node this client will be a client of
-        id: node
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
           mkdir -p node
-          gh release download "$used" -R CIRISAI/CIRISServer \
-            -p "ciris-server-$used-aarch64-apple-darwin.tar.gz" -D node
+          gh release download "${{ needs.server.outputs.version }}" -R CIRISAI/CIRISServer -p "ciris-server-${{ needs.server.outputs.version }}-aarch64-apple-darwin.tar.gz" -D node
           tar xzf node/ciris-server-*.tar.gz -C node
           chmod +x node/ciris-server
-          echo "version=$used" >> "$GITHUB_OUTPUT"
+          echo "server ${{ needs.server.outputs.version }} (${{ needs.server.outputs.source }})"
 
       - name: Build the candidate
         run: cd client && ./gradlew :desktopApp:packageUberJarForCurrentOS --console=plain
@@ -430,7 +466,7 @@ jobs:
         run: |
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
-            --node-version "${{ steps.node.outputs.version }}" \
+            --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/macos.json --flows testing/flows \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-macos"
 
@@ -473,6 +509,7 @@ jobs:
           path: .agent
 
       - name: Refresh the agent's iOS substrate to its pin, then take the bundle
+        id: agent
         env:
           GH_TOKEN: ${{ github.token }}
           PY_TAG: "3.10-b14"
@@ -482,6 +519,13 @@ jobs:
           IOS=client/iosApp
           S=$(grep -oE "^ciris-server[>=<!~ ]*[0-9]+\.[0-9]+\.[0-9]+" .agent/requirements.txt | grep -oE "[0-9]+\.[0-9]+\.[0-9]+" | head -1)
           [ -n "$S" ] || { echo "::error::no ciris-server pin in .agent/requirements.txt"; exit 1; }
+          # THE iOS APP EMBEDS THIS NODE, NOT THE RUN'S. The simulator client
+          # talks to the ciris-server inside its own bundle, which is whatever
+          # CIRISAgent's requirements.txt pins; the run's server version
+          # (`server` job) is the peer this leg stands up and the binary it
+          # downloaded. Both go on the board; neither is claimed for the other.
+          echo "embedded=$S" >> "$GITHUB_OUTPUT"
+          echo "::notice::iOS embeds the Agent's pinned ciris-server $S; the run's server version is ${{ needs.server.outputs.version }} (its two-node peer)"
           echo "agent pins ciris-server $S"
           ( cd .agent && python3 tools/update_substrate_libs.py --platform ios --lib server "$S" )
 
@@ -722,7 +766,8 @@ jobs:
           # embeds is 127.0.0.1:4243 from here too — the fixture's --node-url
           # default — and the peer on 5242/5243 does not collide with it.
           python3 -m testing.gate.run_platform --platform ios --app "$app" --udid "$UDID" \
-            --node-version "${{ steps.node.outputs.version }}" \
+            --node-version "${{ needs.server.outputs.version }}" \
+            --embedded-node-version "${{ steps.agent.outputs.embedded }}" \
             --shots shots --report reports/ios.json --flows testing/flows \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-ios" || rc=$?
 
@@ -799,6 +844,7 @@ jobs:
 
   windows:
     name: windows desktop
+    needs: [server]
     if: ${{ github.event_name != 'workflow_dispatch' || inputs.platforms == 'all' || contains(inputs.platforms, 'windows') }}
     runs-on: windows-latest
     timeout-minutes: 60
@@ -809,19 +855,17 @@ jobs:
           distribution: temurin
           java-version: '17'
 
+      # THE RUN'S VERSION, NOT THIS LEG'S. Resolved once by the `server` job.
       - name: The node this client will be a client of
-        id: node
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          used=$(gh release view -R CIRISAI/CIRISServer --json tagName -q .tagName)
           mkdir -p node
-          gh release download "$used" -R CIRISAI/CIRISServer \
-            -p "ciris-server-$used-x86_64-pc-windows-msvc.tar.gz" -D node
+          gh release download "${{ needs.server.outputs.version }}" -R CIRISAI/CIRISServer -p "ciris-server-${{ needs.server.outputs.version }}-x86_64-pc-windows-msvc.tar.gz" -D node
           tar xzf node/ciris-server-*.tar.gz -C node
-          echo "version=$used" >> "$GITHUB_OUTPUT"
+          echo "server ${{ needs.server.outputs.version }} (${{ needs.server.outputs.source }})"
 
       - name: Build the candidate
         shell: bash
@@ -836,7 +880,7 @@ jobs:
           python3 -m pip install --quiet pyyaml
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
-            --node-version "${{ steps.node.outputs.version }}" \
+            --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/windows.json --flows testing/flows \
             --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-windows"
 
@@ -863,7 +907,7 @@ jobs:
     # a gallery that only builds on success is a gallery you can never use to
     # diagnose anything.
     if: always()
-    needs: [linux-android, macos-ios, windows]
+    needs: [server, linux-android, macos-ios, windows]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -875,8 +919,11 @@ jobs:
           path: collected
       - name: Build the gallery
         run: |
-          python3 testing/gate/build_qa_gallery.py collected --out gallery.html --summary "$GITHUB_STEP_SUMMARY" || \
+          python3 -m testing.gate.build_qa_gallery collected --out gallery.html --summary "$GITHUB_STEP_SUMMARY" --server-version "${{ needs.server.outputs.version }}" --server-source "${{ needs.server.outputs.source }}" || \
             echo "::warning::gallery build failed; the raw artifacts are still attached"
+          # The ratchet over every leg at once, for the reader: the legs
+          # already judged themselves (run_platform's optional-skips step).
+          python3 -m testing.gate.optional_skips collected || true
       - uses: actions/upload-artifact@v4
         with:
           name: live-qa-gallery

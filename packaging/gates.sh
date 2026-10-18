@@ -50,6 +50,9 @@ python3 client/tools/gen_glyphs.py --check
 for f in FSD/CSD/CSD-*.md; do
     python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
 done
+# The CSD roster is current, and no card sits on a reserved or retired number.
+python3 packaging/gen_csd_roster.py --self-test
+python3 packaging/gen_csd_roster.py --check
 # Every route a screen calls is cited in a CSD on that screen, and no two
 # screens newly share a mutating route (the same card under two names).
 python3 packaging/check_csd_routes.py --self-test

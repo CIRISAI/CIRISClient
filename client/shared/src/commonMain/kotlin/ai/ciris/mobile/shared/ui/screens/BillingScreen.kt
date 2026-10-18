@@ -12,6 +12,7 @@ import ai.ciris.mobile.shared.ui.icons.*
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.nav.LocalIsCompactWindow
 import androidx.compose.material3.*
+import ai.ciris.mobile.shared.ui.components.BillingCredentialBanner
 import ai.ciris.mobile.shared.ui.components.SessionExpiredBanner
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -46,9 +47,18 @@ fun BillingScreen(
     onRefresh: () -> Unit,
     onNavigateBack: () -> Unit,
     onDismissError: () -> Unit = {},
-    /** The billing credential is stale and only a sign-in renews it (CIRISClient#59). */
-    authExpired: Boolean = false,
+    /** The SESSION is no longer valid and only Login renews it (CIRISClient#59). */
+    sessionExpired: Boolean = false,
     onSignInAgain: () -> Unit = {},
+    /**
+     * The BILLING credential is stale and only a fresh provider sign-in renews
+     * it — a credits state, not a session one (CIRISClient#171, #172).
+     */
+    billingCredentialStale: Boolean = false,
+    billingRefreshInProgress: Boolean = false,
+    onRefreshBillingCredential: () -> Unit = {},
+    /** The sign-in provider billing rides on — Google, or Apple on iOS — for the sentences that name it. */
+    billingProvider: String = "Google",
     modifier: Modifier = Modifier
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
@@ -113,10 +123,22 @@ fun BillingScreen(
                 // as 0 for 25 hours against 398 real credits — so the banner
                 // outranks it, and the button is the only fix money cannot
                 // buy (CIRISClient#59).
-                if (authExpired) {
+                if (sessionExpired) {
                     SessionExpiredBanner(
                         onSignInAgain = onSignInAgain,
                         tag = "btn_billing_sign_in_again",
+                    )
+                }
+                // THE CREDITS STATE, NOT THE SESSION ONE (CIRISClient#171).
+                // The agent's 401 here is `billing_auth_expired`: the provider
+                // token it spends at the hosted proxy lapsed. The person is
+                // still signed in; the button renews the token and nothing else.
+                if (billingCredentialStale) {
+                    BillingCredentialBanner(
+                        onRefresh = onRefreshBillingCredential,
+                        refreshing = billingRefreshInProgress,
+                        tag = "btn_billing_refresh_signin",
+                        provider = billingProvider,
                     )
                 }
 

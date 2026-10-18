@@ -240,7 +240,7 @@ class RealNode:
         Bounded retry, not a single read: the node writes this file DURING boot,
         and health goes green before it lands -- a single read a moment after
         startup returns None for a PIN that is about to exist. This is the same
-        race `PythonRuntime.readLocalClaimPin` retries 20 times to close, and a
+        race `ClaimPinFile.await` (30 s of 500 ms re-reads) closes in the client, and a
         fixture that reads once reproduces the bug rather than testing around it.
         """
         f = self.home / "claim_pin"

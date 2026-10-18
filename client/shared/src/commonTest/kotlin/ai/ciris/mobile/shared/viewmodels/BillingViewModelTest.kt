@@ -132,7 +132,7 @@ class BillingViewModelTest {
     }
 
     @Test
-    fun loadBalance_401Error_retryAlsoFails_signalsAuthExpired() = runTest {
+    fun loadBalance_401Error_retryAlsoFails_isABillingStateNotASessionOne() = runTest {
         // Both calls throw 401 — the refresh produced no usable token.
         val apiClient = FakeCIRISApiClientForBilling(
             getCreditsException = Exception("HTTP 401 Unauthorized")
@@ -143,20 +143,93 @@ class BillingViewModelTest {
         advanceTimeBy(5000) // Past both attempt + retry delay
         advanceUntilIdle()
 
-        // THIS USED TO ASSERT THE BUG. The old contract showed the raw
-        // exception text — "HTTP 401 Unauthorized" — as the wallet's error,
-        // which the screen rendered as an empty balance with a Buy button for
-        // 25 hours against 398 real credits (CIRISClient#59). An exhausted
-        // auth retry is not a balance failure; it is a stale credential that
-        // only a person can renew. So the contract is the expired state, and
-        // the message is the one that tells them what to do about it.
-        assertTrue(viewModel.authExpired.value, "exhausted auth retry must flag the session as expired")
+        // THIS USED TO ASSERT THE BUG, TWICE. First the raw exception text was
+        // the wallet's error and the screen rendered an empty balance with a
+        // Buy button (CIRISClient#59). Then the fix said "Your session is no
+        // longer valid" — but the agent's 401 here is `billing_auth_expired`
+        // (routes/billing.py): the GOOGLE token the agent sends to the hosted
+        // proxy is stale, not the person's session with their own agent, and
+        // the banner's button signed them out of an agent that was answering
+        // them (CIRISClient#171). So the contract is the BILLING state, with
+        // the sentence that names what expired and what renews it.
+        assertTrue(viewModel.billingCredentialStale.value, "exhausted auth retry means the billing credential is stale")
+        assertFalse(viewModel.sessionExpired.value, "the session is not in question")
         assertNotNull(viewModel.errorMessage.value)
+        assertEquals(
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString(
+                "mobile.billing_credential_stale", mapOf("provider" to "Google"),
+            ),
+            viewModel.errorMessage.value,
+            "the error names the billing credential, not the session",
+        )
+        assertNotEquals(
+            ai.ciris.mobile.shared.localization.LocalizationHelper.getString("auth.session_expired"),
+            viewModel.errorMessage.value,
+            "a billing 401 must never read as a session failure",
+        )
+    }
+
+    @Test
+    fun sessionExpired_isTheSessionState_andLeavesCreditsAlone() = runTest {
+        val viewModel = createViewModel()
+
+        viewModel.onSessionExpired()
+
+        assertTrue(viewModel.sessionExpired.value)
+        assertFalse(viewModel.billingCredentialStale.value)
         assertEquals(
             ai.ciris.mobile.shared.localization.LocalizationHelper.getString("auth.session_expired"),
             viewModel.errorMessage.value,
-            "the error is the sign-in-again sentence, not an HTTP code",
         )
+    }
+
+    @Test
+    fun aRefreshedCredential_clearsTheBillingState_andReloads() = runTest {
+        val apiClient = FakeCIRISApiClientForBilling(
+            getCreditsException = Exception("HTTP 401 Unauthorized")
+        )
+        val viewModel = createViewModel(apiClient)
+        viewModel.loadBalance()
+        advanceTimeBy(5000)
+        advanceUntilIdle()
+        assertTrue(viewModel.billingCredentialStale.value)
+
+        // The hand-off landed and .env was rewritten; the agent now answers.
+        apiClient.getCreditsException = null
+        apiClient.creditStatus = CreditStatusData(
+            hasCredit = true, creditsRemaining = 398, freeUsesRemaining = 0,
+            dailyFreeUsesRemaining = 0, totalUses = 10, planName = "basic", purchaseRequired = false,
+        )
+        viewModel.onBillingRefreshStarted()
+        assertTrue(viewModel.billingRefreshInProgress.value)
+        viewModel.onBillingRefreshFinished(ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome.Refreshed)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.billingRefreshInProgress.value)
+        assertFalse(viewModel.billingCredentialStale.value, "the stale state is retired")
+        assertNull(viewModel.errorMessage.value)
+        assertEquals(398, viewModel.currentBalance.value, "the balance is re-read after the refresh")
+    }
+
+    @Test
+    fun aRefreshThatCannotComplete_saysWhichWay_andStaysStale() = runTest {
+        val viewModel = createViewModel()
+        viewModel.onBillingCredentialStale()
+        val L = ai.ciris.mobile.shared.localization.LocalizationHelper
+
+        viewModel.onBillingRefreshFinished(ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome.NodeTooOld)
+        assertEquals(L.getString("mobile.billing_refresh_node_too_old"), viewModel.errorMessage.value)
+        assertTrue(viewModel.billingCredentialStale.value)
+
+        viewModel.onBillingRefreshFinished(ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome.Refused("auth.oauth.flow_expired"))
+        assertEquals(L.getString("auth.oauth.flow_expired"), viewModel.errorMessage.value, "the node's reason, by id")
+
+        viewModel.onBillingRefreshFinished(ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome.TimedOut(180))
+        assertEquals(L.getString("auth.browser_signin.timed_out"), viewModel.errorMessage.value)
+
+        viewModel.onBillingRefreshFinished(ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome.Cancelled)
+        assertNull(viewModel.errorMessage.value, "a person who closed the picker needs no lecture")
+        assertTrue(viewModel.billingCredentialStale.value, "but credits are still paused")
     }
 
     @Test
@@ -173,7 +246,8 @@ class BillingViewModelTest {
         advanceTimeBy(5000)
         advanceUntilIdle()
 
-        assertFalse(viewModel.authExpired.value, "a 503 must not be read as a stale credential")
+        assertFalse(viewModel.billingCredentialStale.value, "a 503 must not be read as a stale credential")
+        assertFalse(viewModel.sessionExpired.value)
         assertNotNull(viewModel.errorMessage.value)
         assertTrue(viewModel.errorMessage.value!!.contains("503"))
     }

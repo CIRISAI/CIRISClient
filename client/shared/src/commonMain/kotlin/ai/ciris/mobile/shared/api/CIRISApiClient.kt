@@ -793,6 +793,16 @@ class CIRISApiClient(
             logDebug(method, "Response received: status=${response.status}, success=${response.success}")
 
             if (!response.success) {
+                // A SHED 503 (agent 2.15+, CIRISClient#173) is a named,
+                // retryable state, not an error: the message was refused
+                // before any task existed. Any other 503 stays an error.
+                if (response.status == 503) {
+                    val raw = response.response
+                    AgentShed.fromResponse(503, raw.headers["Retry-After"], runCatching { raw.bodyAsText() }.getOrNull())?.let { shed ->
+                        logWarn(method, "Agent is shedding new work (RESOURCE_SHED ${shed.resources}); retry after ${shed.retryAfterSeconds}s")
+                        throw shed
+                    }
+                }
                 logError(method, "API returned non-success status: ${response.status}")
                 throw RuntimeException("API error: HTTP ${response.status}")
             }
@@ -1857,7 +1867,18 @@ class CIRISApiClient(
             val raw = response.bodyAsText()
             if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
             val decoded = jsonConfig.decodeFromString(AddContactResponse.serializer(), raw)
-            logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
+                .copy(httpStatus = response.status.value)
+            if (decoded.pending) {
+                // A typed NOT-YET (202 `contacts.awaiting_key_body`, …): nothing
+                // was written. Logged as pending, never as "added" (CIRISClient#188).
+                logInfo(
+                    method,
+                    "contact PENDING status=${response.status.value} reason_id=${decoded.reasonId} " +
+                        "converges_on_its_own=${decoded.convergesOnItsOwn} key_id=${decoded.keyId.take(16)}…",
+                )
+            } else {
+                logInfo(method, "contact added freshly_emitted=${decoded.freshlyEmitted} community=${decoded.chatCommunityId.take(20)}…")
+            }
             decoded
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
