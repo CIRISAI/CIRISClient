@@ -42,6 +42,13 @@ REMOTE_AGENT = "remote-agent"
 REMOTE_UNDETERMINED = "remote-undetermined"
 ALL_CORNERS = (LOCAL_NODE, REMOTE_NODE, REMOTE_AGENT, REMOTE_UNDETERMINED)
 
+# How long a settled screen gets to register its elements. The first frame
+# composes before registerElement runs (PR #192: the tree was read 0.01 s after
+# Login settled and came back empty); a screen that never registers anything is
+# still CIRISClient#7 and still fails once this runs out.
+REGISTRATION_GRACE_S = 10.0
+REGISTRATION_POLL_S = 0.5
+
 # Where startup is allowed to land. Setup on a fresh home, Login once claimed.
 TERMINAL_SCREENS = {"Login", "Setup", "Startup"}
 
@@ -112,7 +119,13 @@ def startup_completes(ctx: Context) -> None:
 
 @case("elements_are_registered", ALL_CORNERS, "an empty tree on a populated screen is CIRISClient#7")
 def elements_are_registered(ctx: Context) -> None:
+    import time
+
+    deadline = time.monotonic() + REGISTRATION_GRACE_S
     tags = ctx.app.tags()
+    while not tags and time.monotonic() < deadline:
+        time.sleep(REGISTRATION_POLL_S)
+        tags = ctx.app.tags()
     if not tags:
         raise AssertionError(
             f"no elements registered with the automation server on screen "
