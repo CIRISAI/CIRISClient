@@ -606,12 +606,15 @@ class ContactsViewModel(
         }
         removePending(code)
         refreshContacts()
-        _addOutcome.value = if (added.freshlyEmitted) AddContactOutcome.ADDED else AddContactOutcome.ALREADY
+        // The contact first, the outcome second: whoever reacts to ADDED (the
+        // card's "Open chat", a test) reads justAdded on that same change, and
+        // in the other order it is still null (PendingContactWireTest, PR #200).
         _justAdded.value = Contact(
             keyId = added.keyId,
             chatCommunityId = added.chatCommunityId,
             occurrenceKeyIds = added.occurrenceKeyIds,
         )
+        _addOutcome.value = if (added.freshlyEmitted) AddContactOutcome.ADDED else AddContactOutcome.ALREADY
     }
 
     // ── Pending contacts: keep the code, ask again (CIRISClient#188) ─────────
