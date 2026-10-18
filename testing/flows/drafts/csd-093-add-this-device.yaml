@@ -1,0 +1,82 @@
+csd: CSD-093
+flow: csd_093_add_this_device
+title: A first-run device joins an existing CIRIS ID — asked first, never minted, joined on the other device's consent
+description: >-
+  CSD-093 §4, driven. The wizard's first question, then the add-device path:
+  the device's name and the person's fedID (the long form here; the QR and the
+  short form go through the same field), the match code both screens show, and
+  the join once the other device approves. The claim lands at the wizard's
+  final step: add-device/complete, then claimed-session.
+# Floor: every tag below is a literal in ui/screens/AddDeviceScreens.kt
+# (AddDeviceTags) on feat/add-device, which no client release carries yet.
+#
+# WHAT A REAL RUN NEEDS (CSD-093 §5). This leg's node must be FIRST-RUN and the
+# other device a CLAIMED node with an owner fedID and a mesh transport the
+# first-run node can reach. testing/gate/two_node.py stands up a claimed peer,
+# but it also peers it with the leg's node using the leg's owner credentials,
+# which a first-run leg does not have. The fixture needs a mode that claims the
+# peer only, opens its window (POST /v1/self/device-requests/open with the
+# peer's owner session), exports ${PEER_FEDCODE} (the peer owner's long-form
+# fedID) and ${PEER_OWNER_KEY_ID}, and approves the pending request by API
+# while `approved_on_the_other_device` waits. Until it does, ${PEER_FEDCODE}
+# is unresolved and the second step fails naming it, which is the point.
+client: unreleased
+fixture: two_node
+
+steps:
+  - step_id: the_first_question
+    title: YOU asks first, with neither answer preselected
+    description: >-
+      A default would be the wrong answer for exactly the person this card
+      serves: the new-ID path mints a second identity for someone who has one.
+    requires:
+      screen: Setup
+    expect:
+      state: empty
+      visible: [setup_identity_path, btn_setup_new_identity, btn_setup_add_this_device]
+      absent: [input_fedid_label, input_add_device_contact, input_username]
+
+  - step_id: choose_add_this_device
+    title: The add-device path asks the device's name and the fedID, and no fedID name
+    do:
+      - click: btn_setup_add_this_device
+      - input: {input_add_device_name: "flow phone"}
+      - input: {input_add_device_contact: "${PEER_FEDCODE}"}
+    expect:
+      screen: Setup
+      visible: [card_add_this_device, input_add_device_name, input_add_device_contact, btn_add_device_send]
+      absent: [input_fedid_label, age_band_adult]
+
+  - step_id: send_the_request
+    title: Sending shows the match code and the waiting line
+    do:
+      - click: btn_add_device_send
+      - wait: text_add_device_match_code
+        wait_ms: 30000
+    expect:
+      state: populated
+      visible: [text_add_device_match_code, text_add_device_status]
+      matches: {text_add_device_match_code: "^[0-9]{6}$"}
+      one_of: {text_add_device_status: [requested]}
+
+  - step_id: approved_on_the_other_device
+    title: The other device approves; this one shows the identity it is joining
+    description: >-
+      The fixture approves the pending request on the peer. The poll here is
+      every 2.5 s and the node's own poll of its peer every 3 s.
+    do:
+      - wait: text_add_device_owner
+        wait_ms: 60000
+    expect:
+      visible: [text_add_device_owner]
+      one_of: {text_add_device_status: [approved]}
+      matches: {text_add_device_owner: "${PEER_OWNER_KEY_ID}"}
+
+  - step_id: the_rest_of_the_wizard
+    title: Next runs the rest of the wizard while the claim waits for the end
+    do:
+      - click: btn_next
+      - click: trace_consent_no
+      - click: btn_next
+    expect:
+      visible: [setup_ownership_claimed]

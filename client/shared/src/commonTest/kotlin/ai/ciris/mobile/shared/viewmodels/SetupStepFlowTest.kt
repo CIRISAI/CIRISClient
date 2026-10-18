@@ -192,6 +192,8 @@ class SetupStepValidationTest {
     /** A YOU screen with every blocking field satisfied, age included. */
     private fun filledOutYouScreen() = SetupFormState(
         currentStep = SetupStep.YOU,
+        // The first question (CIRISServer 0.5.231): this baseline is the new-ID path.
+        identityPath = IdentityPath.NEW,
         username = "founder",
         userPassword = "correct-horse",
         userPasswordConfirm = "correct-horse",

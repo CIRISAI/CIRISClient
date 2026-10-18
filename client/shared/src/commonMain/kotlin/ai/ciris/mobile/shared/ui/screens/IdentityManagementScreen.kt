@@ -88,6 +88,12 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 @Composable
 fun IdentityManagementScreen(
     viewModel: IdentityManagementViewModel,
+    /**
+     * "Add a device" (CSD-094, CIRISServer 0.5.231): the window, the requests
+     * and their approval. Required for the reason [onOpenRepair] is: a card
+     * that silently did nothing would be the dead control this screen forbids.
+     */
+    approveDeviceViewModel: ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel,
     onBack: () -> Unit,
     /**
      * Open the node's repair route for a subject-blind identity
@@ -494,6 +500,15 @@ fun IdentityManagementScreen(
                 onDismiss = { viewModel.cancelRelease() },
             )
 
+            // ── Add a device: approve a NEW device that asks to join (CSD-094) ──
+            //
+            // The 0.5.231 path: the new device's wizard asks, this device sees
+            // the request and its matching code, and approving signs it in as
+            // another occurrence of this identity. The card below is the older
+            // path for a key a device already made for itself.
+            Spacer(Modifier.height(20.dp))
+            ApproveDeviceCard(viewModel = approveDeviceViewModel)
+
             // ── Add a device (on the primary) ─────────────────────────────────
             Spacer(Modifier.height(20.dp))
             Surface(
@@ -503,7 +518,7 @@ fun IdentityManagementScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
                     Text(
-                        localizedString("mobile.identity_add_title"),
+                        localizedString("mobile.identity_add_key_title"),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                     )

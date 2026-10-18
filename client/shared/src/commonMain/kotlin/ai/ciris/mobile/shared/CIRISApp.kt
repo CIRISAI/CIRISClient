@@ -1140,6 +1140,15 @@ fun CIRISApp(
     // (CIRISAgent#1213), so the model is handed the node — the active one, read
     // at call time, since a switch can move it while this model lives.
     val contactsNodeUrl = androidx.compose.runtime.rememberUpdatedState(effectiveNodeUrl)
+    // "Add a device" on the device the person already has (CSD-094, CIRISServer
+    // 0.5.231 `/v1/self/device-requests`): the owner's routes on the ACTIVE
+    // node, read at call time like contacts, because this model outlives a
+    // node-profile switch (Codex, PR #189).
+    val approveDeviceViewModel: ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel(
+            ai.ciris.mobile.shared.api.ClientDeviceRequests(apiClient) { contactsNodeUrl.value },
+        )
+    }
     val contactsViewModel: ContactsViewModel = viewModel {
         // The node URL as a provider: the contact code, the add and the removal go
         // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
@@ -3017,7 +3026,28 @@ fun CIRISApp(
                                         currentAccessToken = cirisToken
                                         apiClient.logTokenState()
                                     } else {
-                                        PlatformLogger.w(TAG, " No password set for local user, skipping auto-login")
+                                        // THE ADD-DEVICE PATH (CSD-093): this device joined an
+                                        // existing CIRIS ID, the wizard collected the owner
+                                        // session claimed-session held for it, and on a node
+                                        // without an agent there is no password to fall back
+                                        // to. Take that session here and persist it like any
+                                        // other sign-in, or the paired device lands on Login
+                                        // (Codex, PR #189).
+                                        val handed = setupViewModel.takeCollectedSession()
+                                        if (handed != null) {
+                                            PlatformLogger.i(TAG, " Signed in with the session the add-device claim left for this device (role=${handed.role})")
+                                            withContext(Dispatchers.Default) {
+                                                secureStorage.saveAccessToken(handed.accessToken)
+                                                    .onSuccess { PlatformLogger.i(TAG, " Token saved to secure storage") }
+                                                    .onFailure { e -> PlatformLogger.w(TAG, " Failed to save token to secure storage: ${e.message}") }
+                                            }
+                                            apiClient.setAccessToken(handed.accessToken)
+                                            onTokenUpdated?.invoke(handed.accessToken)
+                                            currentAccessToken = handed.accessToken
+                                            apiClient.logTokenState()
+                                        } else {
+                                            PlatformLogger.w(TAG, " No password set for local user, skipping auto-login")
+                                        }
                                     }
                                 }
                             } catch (e: Exception) {
@@ -4451,6 +4481,7 @@ fun CIRISApp(
                 PlatformLogger.d(TAG, "[Screen.IdentityManagement] Rendering identity management screen")
                 IdentityManagementScreen(
                     viewModel = identityManagementViewModel,
+                    approveDeviceViewModel = approveDeviceViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     // The repair route for a subject-blind fedID (CIRISServer#490).
                     // The card only offers it when the node named one AND it

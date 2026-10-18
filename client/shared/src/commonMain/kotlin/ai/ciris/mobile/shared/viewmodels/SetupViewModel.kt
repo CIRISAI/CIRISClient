@@ -53,9 +53,23 @@ class SetupViewModel(
      * configure an LLM.
      */
     private val hasAgent: Boolean = false,
+    /**
+     * The add-device calls (CSD-093). Null = the real client's, on the LOCAL
+     * node; tests inject a fake.
+     */
+    private val addDeviceApiOverride: ai.ciris.mobile.shared.api.AddDeviceSetupApi? = null,
+    /** How long to wait between `GET /v1/setup/add-device` polls (the node itself asks its peer every 3 s). */
+    private val addDevicePollMs: Long = 2_500,
+    /** How long between re-sends while the other device is unreachable (CIRISServer#792). */
+    private val addDeviceRetryMs: Long = 10_000,
+    /** How long to keep re-sending before showing the refusal with a manual Retry. */
+    private val addDeviceRetryWindowMs: Long = 5 * 60_000,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(SetupFormState())
+    private val _state = MutableStateFlow(initialState())
+
+    /** The wizard's starting state. The add-device path asks for a local account only with an agent. */
+    private fun initialState() = SetupFormState(addDevice = AddDeviceSetupState(accountNeeded = hasAgent))
     val state: StateFlow<SetupFormState> = _state.asStateFlow()
 
     // OAuth poll job for adapter wizard
@@ -222,6 +236,18 @@ class SetupViewModel(
          * "this device" (e.g. the My Identity device roster / node switcher).
          */
         const val PREF_DEVICE_NAME = "device_friendly_name"
+
+        /** `POST /v1/setup/add-device/complete` before the other device approved (409, `src/add_device.rs:812-820`). */
+        const val ADD_DEVICE_NOT_APPROVED = "add_device.not_approved"
+
+        /** v0.5.231's `failed` detail when the other device no longer held the request (`format!("{other:?}")` of `JoinAnswer::Unknown`). */
+        const val OLDER_NODE_GONE_DETAIL = "Unknown"
+
+        /** 502 while the other device cannot be reached (retried, CIRISServer#792). */
+        const val ADD_DEVICE_UNREACHABLE = "add_device.unreachable"
+
+        /** 409 on DELETE once the claim was applied: nothing left to cancel. */
+        const val ADD_DEVICE_ALREADY_OWNED = "add_device.already_owned"
 
         /** Canonical backend provider id for on-device Gemma 4 inference. */
         const val LOCAL_ON_DEVICE_PROVIDER_ID = "mobile_local"
@@ -1108,6 +1134,16 @@ class SetupViewModel(
         nodeCodeProvider: suspend () -> String? = { null },
         cohortScope: String = "self",
     ) {
+        // ADD-A-DEVICE (CIRISServer 0.5.231): this device joins an EXISTING
+        // identity. Nothing is minted and nothing self-claims: the claim is the
+        // other device's approval, held on this node, applied HERE at the same
+        // point in first run a new identity's claim lands. Before the minor gate
+        // on purpose: that gate stops a minor SELF-claiming, and this claim is
+        // signed by the identity's owner on the device that holds the key.
+        if (_state.value.identityPath == IdentityPath.EXISTING) {
+            completeAddDevice(claimPinProvider)
+            return
+        }
         // FAIL-SECURE under-18 gate (CC 0.5.1 §2580): a minor MUST NOT self-claim
         // ownership. The account stays steward-less (cannot operate) until a live
         // adult steward accepts the `delegates_to(adult → minor)` out-of-band. Do
@@ -1404,108 +1440,7 @@ class SetupViewModel(
                         }
                     }
 
-                    // OPTIONAL federation opt-in: if the user toggled "Announce
-                    // yourself to the federation" ON, promote the owner-binding
-                    // self→FEDERATION and enable the node's identity announce. The
-                    // claim already succeeded, so this is NON-FATAL — on failure we
-                    // surface a soft notice and let the user retry later; it never
-                    // blocks COMPLETE. Takes effect on the node's next boot.
-                    if (ownerLoginOk && _state.value.announcesThisDevice()) {
-                        try {
-                            PlatformLogger.i(TAG, "[ORDER] announce begin (session=$sessionKind)")
-                            val ann = client.announceOwnership(localNodeUrl = CIRISApiClient.LOCAL_NODE_URL)
-                            PlatformLogger.i(
-                                TAG,
-                                "[ORDER] announced to federation " +
-                                    "(owner=${ann.owner} cohort=${ann.cohortScope} session=$sessionKind); " +
-                                    "takes effect ${ann.announceTakesEffect ?: "next boot"}",
-                            )
-                            _state.value = _state.value.copy(
-                                ownershipClaim = _state.value.ownershipClaim.copy(announceNotice = null)
-                            )
-                        } catch (e: Exception) {
-                            PlatformLogger.w(TAG, "[ORDER] announce FAILED (non-fatal, session=$sessionKind): ${e.message}")
-                            _state.value = _state.value.copy(
-                                ownershipClaim = _state.value.ownershipClaim.copy(
-                                    announceNotice = "You're set up, but announcing to the " +
-                                        "federation didn't complete: ${e.message ?: "unknown error"}. " +
-                                        "You can turn it on later.",
-                                )
-                            )
-                        }
-                    }
-
-                    // EXPLICIT trace-sharing consent (ciris-server explicit-consent
-                    // cut): consent:replication is NO LONGER auto-authored at node
-                    // boot — when the user opted into "Send traces to CIRIS L3C",
-                    // the wizard must POST /v1/federation/consent once, after the
-                    // owner claim (the route is owner-gated). Without this call the
-                    // node reports nothing to the canonical — sealed traces never
-                    // replicate (runbook §1/§3). NON-FATAL like announce: a failure
-                    // never blocks COMPLETE; the Manage Consent card can retry.
-                    if (ownerLoginOk && _state.value.accordMetricsConsent) {
-                        try {
-                            PlatformLogger.i(TAG, "[ORDER] federation_consent begin (session=$sessionKind)")
-                            // `analyze` is the owner's OWN answer from the
-                            // consent screen, not a constant. The substrate
-                            // marks the be-scored dimension required:false with
-                            // named costs; sending true regardless granted a
-                            // dimension the user was never asked about.
-                            val consentRaw = client.authorFederationConsent(
-                                analyze = _state.value.traceAnalyze,
-                                localNodeUrl = CIRISApiClient.LOCAL_NODE_URL,
-                            )
-                            PlatformLogger.i(
-                                TAG,
-                                "[ORDER] federation_consent authored (scope=" +
-                                    "${FederationConsentScopes.describe(FederationConsentScopes.TO_CANONICAL)} " +
-                                    "analyze=${_state.value.traceAnalyze} " +
-                                    "session=$sessionKind): ${consentRaw.take(200)}",
-                            )
-                        } catch (e: Exception) {
-                            PlatformLogger.w(
-                                TAG,
-                                "[ORDER] federation_consent FAILED (non-fatal, session=$sessionKind): " +
-                                    "${e.message} — traces will NOT replicate until consent is " +
-                                    "authored (retry via Manage Consent)",
-                            )
-                        }
-                    } else {
-                        // A SILENT skip here is indistinguishable from success and
-                        // costs a whole debugging cycle: the node seals traces, keeps
-                        // them at (cohort_scope=self, tier=local) forever because no
-                        // grant covers `trace:`, converges to its consent peer, and
-                        // reports healthy. A live run skipped this step and the saga
-                        // still verified CONFORMANT, because the step was not in the
-                        // edge list — so nothing anywhere said the word "skipped".
-                        //
-                        // Name which conjunct failed. Emitted under the same [ORDER]
-                        // key as the success path so the saga sees the step either way.
-                        PlatformLogger.w(
-                            TAG,
-                            "[ORDER] federation_consent SKIPPED (session=$sessionKind): " +
-                                "owner_login=$ownerLoginOk trace_opt_in=${_state.value.accordMetricsConsent} " +
-                                "announce_on=${_state.value.announceOwnership} — " +
-                                "traces will seal locally and NEVER replicate to the canonical " +
-                                "(no grant covers trace:; rows strand at self/local). " +
-                                "Fix: enable Data & Privacy → Send traces, which authors the grant.",
-                        )
-                    }
-
-                    // Persist the OPTIONAL friendly device name (e.g. "Mac mini")
-                    // the user typed in the fed-ID step as a CLIENT-SIDE preference
-                    // so the UI can label "this device". Best-effort; never blocks.
-                    // TODO(0.5.60): persist device name to the occurrence once the
-                    // server has a label field on the wizard's mint/claim request.
-                    val deviceName = _state.value.deviceName.trim()
-                    if (deviceName.isNotBlank()) {
-                        try {
-                            createSecureStorage().save(PREF_DEVICE_NAME, deviceName)
-                            PlatformLogger.i(TAG, "claimLocalNodeOwnership: device name '$deviceName' saved (client-side pref)")
-                        } catch (e: Exception) {
-                            PlatformLogger.w(TAG, "claimLocalNodeOwnership: failed to persist device name: ${e.message}")
-                        }
-                    }
+                    applyNodeOptionsAfterClaim(client, sessionKind, ownerLoginOk)
 
                     // [ORDER] E9 claim_settled: every :4243 session-consuming saga
                     // step above is now terminal. ONLY here may SetupScreen's
@@ -1553,7 +1488,668 @@ class SetupViewModel(
         }
     }
 
+    /**
+     * The node's own options, once there is an owner session: announce, the
+     * trace-replication consent, and the device's friendly name. Shared by the
+     * self-claim (new CIRIS ID) and the add-device path, because both leave
+     * the wizard holding an owner session on a node it just bound, and the
+     * options the person answered belong to THIS node either way.
+     * Every step is non-fatal and logs under the same `[ORDER]` keys.
+     */
+    private suspend fun applyNodeOptionsAfterClaim(
+        client: CIRISApiClient,
+        sessionKind: String,
+        ownerLoginOk: Boolean,
+    ) {
+        // OPTIONAL federation opt-in: if the user toggled "Announce
+        // yourself to the federation" ON, promote the owner-binding
+        // self→FEDERATION and enable the node's identity announce. The
+        // claim already succeeded, so this is NON-FATAL — on failure we
+        // surface a soft notice and let the user retry later; it never
+        // blocks COMPLETE. Takes effect on the node's next boot.
+        if (ownerLoginOk && _state.value.announcesThisDevice()) {
+            try {
+                PlatformLogger.i(TAG, "[ORDER] announce begin (session=$sessionKind)")
+                val ann = client.announceOwnership(localNodeUrl = CIRISApiClient.LOCAL_NODE_URL)
+                PlatformLogger.i(
+                    TAG,
+                    "[ORDER] announced to federation " +
+                        "(owner=${ann.owner} cohort=${ann.cohortScope} session=$sessionKind); " +
+                        "takes effect ${ann.announceTakesEffect ?: "next boot"}",
+                )
+                _state.value = _state.value.copy(
+                    ownershipClaim = _state.value.ownershipClaim.copy(announceNotice = null)
+                )
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[ORDER] announce FAILED (non-fatal, session=$sessionKind): ${e.message}")
+                _state.value = _state.value.copy(
+                    ownershipClaim = _state.value.ownershipClaim.copy(
+                        announceNotice = "You're set up, but announcing to the " +
+                            "federation didn't complete: ${e.message ?: "unknown error"}. " +
+                            "You can turn it on later.",
+                    )
+                )
+            }
+        }
+
+        // EXPLICIT trace-sharing consent (ciris-server explicit-consent
+        // cut): consent:replication is NO LONGER auto-authored at node
+        // boot — when the user opted into "Send traces to CIRIS L3C",
+        // the wizard must POST /v1/federation/consent once, after the
+        // owner claim (the route is owner-gated). Without this call the
+        // node reports nothing to the canonical — sealed traces never
+        // replicate (runbook §1/§3). NON-FATAL like announce: a failure
+        // never blocks COMPLETE; the Manage Consent card can retry.
+        if (ownerLoginOk && _state.value.accordMetricsConsent) {
+            try {
+                PlatformLogger.i(TAG, "[ORDER] federation_consent begin (session=$sessionKind)")
+                // `analyze` is the owner's OWN answer from the
+                // consent screen, not a constant. The substrate
+                // marks the be-scored dimension required:false with
+                // named costs; sending true regardless granted a
+                // dimension the user was never asked about.
+                val consentRaw = client.authorFederationConsent(
+                    analyze = _state.value.traceAnalyze,
+                    localNodeUrl = CIRISApiClient.LOCAL_NODE_URL,
+                )
+                PlatformLogger.i(
+                    TAG,
+                    "[ORDER] federation_consent authored (scope=" +
+                        "${FederationConsentScopes.describe(FederationConsentScopes.TO_CANONICAL)} " +
+                        "analyze=${_state.value.traceAnalyze} " +
+                        "session=$sessionKind): ${consentRaw.take(200)}",
+                )
+            } catch (e: Exception) {
+                PlatformLogger.w(
+                    TAG,
+                    "[ORDER] federation_consent FAILED (non-fatal, session=$sessionKind): " +
+                        "${e.message} — traces will NOT replicate until consent is " +
+                        "authored (retry via Manage Consent)",
+                )
+            }
+        } else {
+            // A SILENT skip here is indistinguishable from success and
+            // costs a whole debugging cycle: the node seals traces, keeps
+            // them at (cohort_scope=self, tier=local) forever because no
+            // grant covers `trace:`, converges to its consent peer, and
+            // reports healthy. A live run skipped this step and the saga
+            // still verified CONFORMANT, because the step was not in the
+            // edge list — so nothing anywhere said the word "skipped".
+            //
+            // Name which conjunct failed. Emitted under the same [ORDER]
+            // key as the success path so the saga sees the step either way.
+            PlatformLogger.w(
+                TAG,
+                "[ORDER] federation_consent SKIPPED (session=$sessionKind): " +
+                    "owner_login=$ownerLoginOk trace_opt_in=${_state.value.accordMetricsConsent} " +
+                    "announce_on=${_state.value.announceOwnership} — " +
+                    "traces will seal locally and NEVER replicate to the canonical " +
+                    "(no grant covers trace:; rows strand at self/local). " +
+                    "Fix: enable Data & Privacy → Send traces, which authors the grant.",
+            )
+        }
+
+        // Persist the OPTIONAL friendly device name (e.g. "Mac mini")
+        // the user typed in the fed-ID step as a CLIENT-SIDE preference
+        // so the UI can label "this device". Best-effort; never blocks.
+        // TODO(0.5.60): persist device name to the occurrence once the
+        // server has a label field on the wizard's mint/claim request.
+        val deviceName = _state.value.deviceName.trim()
+        if (deviceName.isNotBlank()) {
+            try {
+                createSecureStorage().save(PREF_DEVICE_NAME, deviceName)
+                PlatformLogger.i(TAG, "claimLocalNodeOwnership: device name '$deviceName' saved (client-side pref)")
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "claimLocalNodeOwnership: failed to persist device name: ${e.message}")
+            }
+        }
+    }
+
+    // ========== Add a device: the wizard's first question and the NEW device's half ==========
+    //
+    // CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` §1, §2.1; CSD-093. Every call is to
+    // THIS device's own node over loopback, with no session.
+
+    private var addDevicePollJob: Job? = null
+
+    /** The re-send loop while the other device is unreachable (CIRISServer#792). */
+    private var addDeviceRetryJob: Job? = null
+
+    private fun addDeviceApi(): ai.ciris.mobile.shared.api.AddDeviceSetupApi? =
+        addDeviceApiOverride
+            ?: (apiClient as? CIRISApiClient)?.let { ai.ciris.mobile.shared.api.ClientAddDeviceSetup(it) }
+
+    private fun updateAddDevice(f: (AddDeviceSetupState) -> AddDeviceSetupState) {
+        _state.value = _state.value.copy(addDevice = f(_state.value.addDevice))
+    }
+
+    /**
+     * The first question. [IdentityPath.EXISTING] is refused on a node that
+     * predates the add-device plane (a bare 404): the option is shown disabled
+     * with that reason, and this guard is the same rule for a driver that
+     * ignores the disabled control.
+     */
+    fun chooseIdentityPath(path: IdentityPath) {
+        if (path == IdentityPath.EXISTING &&
+            _state.value.addDevice.availability == AddDeviceAvailability.NODE_TOO_OLD
+        ) return
+        // A live request locks the answer (Codex, PR #189): NEW now would mint
+        // and self-claim a second identity over it. Cancel first.
+        if (path != _state.value.identityPath && _state.value.addDevice.pathLocked) {
+            PlatformLogger.i(TAG, "[addDevice] path switch refused: a request is live (${_state.value.addDevice.phase})")
+            return
+        }
+        _state.value = _state.value.copy(identityPath = path)
+    }
+
+    /** Raise the "Cancel this request" confirm. Nothing is abandoned until [confirmCancelAddDevice]. */
+    fun askCancelAddDevice() {
+        if (!_state.value.addDevice.cancellable) return
+        // Nothing has reached the other device while re-sending to it, so
+        // stopping is not an outward act and needs no confirm.
+        if (_state.value.addDevice.phase == AddDevicePhase.RETRYING) {
+            addDeviceRetryJob?.cancel()
+            PlatformLogger.i(TAG, "[addDevice] stopped re-sending to an unreachable device")
+            updateAddDevice { it.cleared(AddDeviceCancelOutcome.STOPPED_RETRYING) }
+            return
+        }
+        updateAddDevice { it.copy(confirmingCancel = true, cancelError = null) }
+    }
+
+    fun dismissCancelAddDevice() {
+        updateAddDevice { it.copy(confirmingCancel = false) }
+    }
+
+    /**
+     * **Cancel this device's request** — `DELETE /v1/setup/add-device`
+     * (CIRISServer `fix/client-copy-0.5.232` `f9d25729`). The node retires its
+     * poll, discards a held approval and the request's unused keys, and
+     * withdraws it from the other device: a pending request leaves the owner's
+     * list in about 3 s, an APPROVED one is undone there (the occurrence
+     * revoked, the owner-binding withdrawn) in about 8 s. It works after a
+     * restart. Then the first question is unlocked again.
+     *
+     *  * 200 → [AddDeviceCancelOutcome.WITHDRAWN].
+     *  * 409 `add_device.already_owned` → the claim was already applied, so
+     *    there is nothing to cancel: [AddDeviceCancelOutcome.ALREADY_APPLIED],
+     *    and the path stays locked.
+     *  * a bare 404 or 405 (no `reason_id`): a node at 0.5.231 or older has no
+     *    DELETE (axum answers 405 for a known path with another method) →
+     *    forgotten HERE only, [AddDeviceCancelOutcome.LOCAL_ONLY], with the
+     *    honest wording: the other device keeps listing it until it expires,
+     *    and an approval already held stays on this node unused.
+     *  * anything else → the request stays live and the reason is shown.
+     *
+     * While re-sending to an unreachable device ([AddDevicePhase.RETRYING]) no
+     * request has reached the other device, so stopping the loop is the cancel.
+     */
+    fun confirmCancelAddDevice() {
+        val s = _state.value.addDevice
+        if (!s.confirmingCancel || !s.cancellable || s.cancelling) {
+            dismissCancelAddDevice()
+            return
+        }
+        if (s.phase == AddDevicePhase.RETRYING) {
+            addDeviceRetryJob?.cancel()
+            PlatformLogger.i(TAG, "[addDevice] stopped re-sending to an unreachable device")
+            updateAddDevice { it.cleared(AddDeviceCancelOutcome.STOPPED_RETRYING) }
+            return
+        }
+        val api = addDeviceApi() ?: return
+        updateAddDevice { it.copy(confirmingCancel = false, cancelling = true, cancelError = null, cancelOutcome = null) }
+        viewModelScope.launch {
+            try {
+                api.cancel()
+                addDevicePollJob?.cancel()
+                PlatformLogger.i(TAG, "[addDevice] request cancelled on the node (was ${s.phase}); withdrawn from the other device")
+                updateAddDevice { it.cleared(AddDeviceCancelOutcome.WITHDRAWN) }
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                when {
+                    e.reasonId == ADD_DEVICE_ALREADY_OWNED -> {
+                        PlatformLogger.i(TAG, "[addDevice] cancel refused: the claim was already applied")
+                        addDevicePollJob?.cancel()
+                        updateAddDevice {
+                            it.copy(cancelling = false, phase = AddDevicePhase.APPLIED, cancelOutcome = AddDeviceCancelOutcome.ALREADY_APPLIED)
+                        }
+                    }
+                    e.reasonId == null && (e.statusCode == 404 || e.statusCode == 405) -> {
+                        addDevicePollJob?.cancel()
+                        PlatformLogger.i(TAG, "[addDevice] node has no DELETE (${e.statusCode}): request abandoned locally (was ${s.phase})")
+                        updateAddDevice { it.cleared(AddDeviceCancelOutcome.LOCAL_ONLY) }
+                    }
+                    else -> {
+                        PlatformLogger.w(TAG, "[addDevice] cancel refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                        updateAddDevice { it.copy(cancelling = false, cancelError = e.detail ?: e.reasonId ?: "cancel answered ${e.statusCode}") }
+                    }
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[addDevice] cancel failed: ${e.message}")
+                updateAddDevice { it.copy(cancelling = false, cancelError = e.message ?: e::class.simpleName) }
+            }
+        }
+    }
+
+    private fun AddDeviceSetupState.cleared(outcome: AddDeviceCancelOutcome) = copy(
+        phase = AddDevicePhase.IDLE, matchCode = null, ownerKeyId = null, detail = null,
+        refusalReasonId = null, refusalStatus = null, confirmingCancel = false,
+        cancelling = false, cancelOutcome = outcome, cancelError = null,
+    )
+
+    /** The fedID as typed, pasted or scanned. One handler for all three (a scan fills the field, it never sends). */
+    fun setAddDeviceContact(value: String) {
+        updateAddDevice { it.copy(contact = value) }
+    }
+
+    /**
+     * Ask this node where an add-device request stands, once, when the wizard
+     * opens — the restart-resume (`FSD/ADD_DEVICE.md` §2.1).
+     *
+     *  * `approved` / `applied` / `requested`: a request from before this
+     *    wizard (the app restarted, or the node rebooted with a VERIFIED
+     *    approval held in `<home>/add_device_pending.json`). The wizard resumes
+     *    the add-device path rather than starting over, and keeps polling a
+     *    `requested` one.
+     *  * `idle`: nothing outstanding; the first question is asked.
+     *  * a bare 404: a node older than 0.5.231; "Add this device" is offered
+     *    disabled with that reason, and the new-ID path is unchanged.
+     *  * the node not answering: nothing is concluded (the request itself is
+     *    the real test).
+     */
+    fun probeAddDevice() {
+        val api = addDeviceApi() ?: return
+        viewModelScope.launch {
+            try {
+                val p = api.status()
+                updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
+                val phase = serverPhase(p, previous = AddDevicePhase.IDLE)
+                if (phase != AddDevicePhase.IDLE) {
+                    PlatformLogger.i(TAG, "[addDevice] resuming a request from before this wizard: state=${p.state}")
+                    _state.value = _state.value.copy(identityPath = IdentityPath.EXISTING)
+                    applyProgress(p, phase)
+                    if (phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
+                }
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                if (e.statusCode == 404 && e.reasonId == null) {
+                    PlatformLogger.i(TAG, "[addDevice] node predates /v1/setup/add-device (bare 404) — new-ID path only")
+                    updateAddDevice { it.copy(availability = AddDeviceAvailability.NODE_TOO_OLD) }
+                    if (_state.value.identityPath == IdentityPath.EXISTING) {
+                        _state.value = _state.value.copy(identityPath = null)
+                    }
+                }
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[addDevice] status probe failed: ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * `POST /v1/setup/add-device {contact, label}`. The label is the device
+     * name ("S23 Phone"), the only naming question on this path. On 202 the
+     * match code is shown and polling starts; a refusal lands by id.
+     *
+     * Also "Send a new request" after a denial, an expiry or a failure: the
+     * node mints fresh device keys for every request.
+     *
+     * **`add_device.unreachable` is retried** (CIRISServer#792): when this
+     * device boots a few minutes after the owner's, the first-contact link can
+     * take 2+ minutes to come up. The request is re-sent every
+     * [addDeviceRetryMs] for [addDeviceRetryWindowMs] in [AddDevicePhase.RETRYING]
+     * ("Can't reach your other device yet — still trying", Cancel available);
+     * after that the refusal shows with a manual Try again.
+     */
+    fun sendAddDeviceRequest() {
+        val api = addDeviceApi() ?: return
+        val s = _state.value
+        val contact = s.addDevice.contact.trim()
+        if (contact.isEmpty() || s.addDevice.phase == AddDevicePhase.SENDING) return
+        addDevicePollJob?.cancel()
+        addDeviceRetryJob?.cancel()
+        val label = s.deviceName.trim().ifBlank { null }
+        updateAddDevice {
+            it.copy(
+                phase = AddDevicePhase.SENDING, matchCode = null, ownerKeyId = null, detail = null,
+                refusalReasonId = null, refusalStatus = null, cancelOutcome = null, cancelError = null,
+            )
+        }
+        addDeviceRetryJob = viewModelScope.launch {
+            var announced = false
+            var waited = 0L
+            while (isActive) {
+                val retryNow = try {
+                    val p = api.start(contact, label)
+                    updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
+                    applyProgress(p, serverPhase(p, previous = AddDevicePhase.SENDING))
+                    PlatformLogger.i(TAG, "[ORDER] add_device_requested state=${p.state} target=${p.targetNode}")
+                    if (_state.value.addDevice.phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
+                    false
+                } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                    val tooOld = e.statusCode == 404 && e.reasonId == null
+                    val unreachable = e.reasonId == ADD_DEVICE_UNREACHABLE
+                    if (unreachable && waited < addDeviceRetryWindowMs) {
+                        if (!announced) PlatformLogger.i(TAG, "[addDevice] other device unreachable — re-sending every ${addDeviceRetryMs}ms for up to ${addDeviceRetryWindowMs}ms")
+                        announced = true
+                        updateAddDevice {
+                            it.copy(
+                                phase = AddDevicePhase.RETRYING,
+                                refusalReasonId = e.reasonId, refusalStatus = e.statusCode, detail = e.detail,
+                                availability = AddDeviceAvailability.AVAILABLE,
+                            )
+                        }
+                        true
+                    } else {
+                        PlatformLogger.w(TAG, "[addDevice] request refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}" +
+                            if (unreachable) " (still unreachable after ${waited}ms)" else "")
+                        updateAddDevice {
+                            it.copy(
+                                phase = AddDevicePhase.REFUSED,
+                                refusalReasonId = e.reasonId,
+                                refusalStatus = e.statusCode,
+                                detail = e.detail,
+                                availability = if (tooOld) AddDeviceAvailability.NODE_TOO_OLD else it.availability,
+                            )
+                        }
+                        false
+                    }
+                } catch (e: Exception) {
+                    PlatformLogger.w(TAG, "[addDevice] request failed: ${e.message}")
+                    updateAddDevice {
+                        it.copy(phase = AddDevicePhase.REFUSED, refusalReasonId = null, refusalStatus = null, detail = e.message)
+                    }
+                    false
+                }
+                if (!retryNow) break
+                delay(addDeviceRetryMs)
+                waited += addDeviceRetryMs
+                if (_state.value.addDevice.phase != AddDevicePhase.RETRYING) break
+            }
+        }
+    }
+
+    /**
+     * Poll `GET /v1/setup/add-device` until the request leaves `requested`.
+     * Awaited and sequential: one call at a time, never overlapping, and a
+     * call that fails is retried on the next tick (the node is first-run and
+     * may be busy). Stops on any other state.
+     */
+    private fun startAddDevicePolling() {
+        if (addDevicePollJob?.isActive == true) return
+        val api = addDeviceApi() ?: return
+        addDevicePollJob = viewModelScope.launch {
+            while (isActive && _state.value.addDevice.phase == AddDevicePhase.REQUESTED) {
+                delay(addDevicePollMs)
+                val p = try {
+                    api.status()
+                } catch (e: Exception) {
+                    PlatformLogger.w(TAG, "[addDevice] status poll failed (retrying): ${e.message}")
+                    continue
+                }
+                val phase = serverPhase(p, previous = _state.value.addDevice.phase)
+                applyProgress(p, phase)
+                if (phase != AddDevicePhase.REQUESTED) {
+                    PlatformLogger.i(TAG, "[ORDER] add_device_answered state=${p.state} owner=${p.ownerKeyId ?: "<none>"}")
+                }
+            }
+        }
+    }
+
+    private fun applyProgress(p: ai.ciris.mobile.shared.models.federation.AddDeviceProgress, phase: AddDevicePhase) {
+        updateAddDevice {
+            it.copy(
+                phase = phase,
+                matchCode = p.matchCode ?: it.matchCode,
+                ownerKeyId = p.ownerKeyId ?: it.ownerKeyId,
+                detail = p.detail,
+                refusalReasonId = null,
+                refusalStatus = null,
+            )
+        }
+    }
+
+    /**
+     * The server's state string, as a phase. `idle` for a request this wizard
+     * had already sent is [AddDevicePhase.INTERRUPTED]: the node restarted
+     * before the other device answered, and only a verified approval survives
+     * a restart (CIRISServer `FSD/ADD_DEVICE.md` §4.2). An unknown string is a
+     * failure, never a silent `requested`.
+     *
+     * `failed` with `detail: "Unknown"` is the OLDER-NODE fallback (v0.5.231):
+     * the other device no longer held the request, which `fix/client-copy-0.5.232`
+     * (`b3e05e27`) answers as `expired` with its own detail. Both read as
+     * [AddDevicePhase.EXPIRED], so the person sees one sentence for one fact.
+     */
+    private fun serverPhase(p: ai.ciris.mobile.shared.models.federation.AddDeviceProgress, previous: AddDevicePhase): AddDevicePhase = when (p.state) {
+        "requested" -> AddDevicePhase.REQUESTED
+        "approved" -> AddDevicePhase.APPROVED
+        "applied" -> AddDevicePhase.APPLIED
+        "denied" -> AddDevicePhase.DENIED
+        "expired" -> AddDevicePhase.EXPIRED
+        "failed" -> if (p.detail?.trim() == OLDER_NODE_GONE_DETAIL) AddDevicePhase.EXPIRED else AddDevicePhase.FAILED
+        "idle" -> if (previous == AddDevicePhase.REQUESTED || previous == AddDevicePhase.SENDING) {
+            AddDevicePhase.INTERRUPTED
+        } else {
+            AddDevicePhase.IDLE
+        }
+        else -> AddDevicePhase.FAILED
+    }
+
+    /**
+     * **The end of first run on the add-device path**: apply the held approval
+     * (`POST /v1/setup/add-device/complete`), THEN collect this device's owner
+     * session (`POST /v1/setup/claimed-session {claim_pin}`), THEN the node's
+     * own options with that session. Reached through [claimLocalNodeOwnership],
+     * so the agent build's order holds by construction: this settles before
+     * [completeSetup] runs the agent's setup-complete (which reloads the
+     * runtime and would kill the session these calls ride).
+     *
+     *  * 409 `add_device.not_approved`: not an error. [NodeOwnershipClaimState.awaitingApproval]
+     *    holds COMPLETE on "waiting for your other device", polling continues,
+     *    and the screen finishes once the approval arrives.
+     *  * 502 `add_device.apply_failed`: a recoverable failure by id (the held
+     *    approval stays on the node, so Retry re-applies it).
+     *  * already `applied` (a retry after the session step failed): `complete`
+     *    is skipped, because the node has cleared what it held and would
+     *    answer `not_approved`.
+     */
+    private fun completeAddDevice(claimPinProvider: suspend () -> String?) {
+        val api = addDeviceApi()
+        if (api == null) {
+            _state.value = _state.value.copy(
+                ownershipClaim = _state.value.ownershipClaim.copy(
+                    inProgress = false,
+                    error = "Local node unavailable: API client does not support it",
+                )
+            )
+            return
+        }
+        _state.value = _state.value.copy(
+            ownershipClaim = _state.value.ownershipClaim.copy(
+                inProgress = true, error = null, errorReasonId = null, awaitingApproval = false,
+            )
+        )
+        viewModelScope.launch {
+            if (_state.value.addDevice.phase != AddDevicePhase.APPLIED) {
+                try {
+                    PlatformLogger.i(TAG, "[ORDER] add_device_complete begin")
+                    val p = api.complete()
+                    applyProgress(p, AddDevicePhase.APPLIED)
+                    PlatformLogger.i(TAG, "[ORDER] add_device_applied owner=${p.ownerKeyId ?: "<none>"}")
+                } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                    if (e.reasonId == ADD_DEVICE_NOT_APPROVED) {
+                        PlatformLogger.i(TAG, "[ORDER] add_device_complete not_approved — waiting for the other device")
+                        _state.value = _state.value.copy(
+                            ownershipClaim = _state.value.ownershipClaim.copy(
+                                inProgress = false, claimed = false, awaitingApproval = true,
+                            )
+                        )
+                        if (_state.value.addDevice.phase == AddDevicePhase.REQUESTED) startAddDevicePolling()
+                    } else {
+                        PlatformLogger.w(TAG, "[ORDER] add_device_complete refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                        _state.value = _state.value.copy(
+                            ownershipClaim = _state.value.ownershipClaim.copy(
+                                inProgress = false, claimed = false,
+                                error = e.detail ?: e.reasonId ?: "add-device/complete answered ${e.statusCode}",
+                                errorReasonId = e.reasonId,
+                                errorRecoverable = true,
+                            )
+                        )
+                    }
+                    return@launch
+                } catch (e: Exception) {
+                    PlatformLogger.w(TAG, "[ORDER] add_device_complete failed: ${e.message}")
+                    _state.value = _state.value.copy(
+                        ownershipClaim = _state.value.ownershipClaim.copy(
+                            inProgress = false, claimed = false,
+                            error = e.message ?: e::class.simpleName, errorRecoverable = true,
+                        )
+                    )
+                    return@launch
+                }
+            }
+
+            // The claim is applied: this node is owned. Collect the session the
+            // node holds for this wizard, with the PIN it printed (never logged).
+            val pin = try { claimPinProvider()?.trim() } catch (e: Exception) { null }
+            var ownerLoginOk = false
+            var role: String? = null
+            if (pin.isNullOrEmpty()) {
+                PlatformLogger.w(TAG, "[ORDER] claimed_session SKIPPED (no claim PIN on this device) — sign in to finish")
+                _claimedSession.value = ClaimedSessionState.NoPin
+            } else {
+                _claimedSession.value = ClaimedSessionState.Collecting
+                try {
+                    val grant = api.collectSession(pin)
+                    apiClient.setAccessToken(grant.accessToken)
+                    ownerLoginOk = true
+                    role = grant.role
+                    _claimedSession.value = ClaimedSessionState.Collected(grant.role)
+                    collectedGrant = grant
+                    PlatformLogger.i(TAG, "[ORDER] claimed_session collected (role=${grant.role})")
+                } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                    PlatformLogger.w(TAG, "[ORDER] claimed_session refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                    _claimedSession.value = ClaimedSessionState.Refused(e.reasonId, e.detail, e.statusCode)
+                } catch (e: Exception) {
+                    PlatformLogger.w(TAG, "[ORDER] claimed_session failed: ${e.message}")
+                    _claimedSession.value = ClaimedSessionState.Failed(e.message ?: e::class.simpleName)
+                }
+            }
+            _state.value = _state.value.copy(
+                ownershipClaim = _state.value.ownershipClaim.copy(
+                    claimed = true, role = role, inProgress = true, awaitingApproval = false,
+                    error = null, errorReasonId = null,
+                )
+            )
+            (apiClient as? CIRISApiClient)?.let { applyNodeOptionsAfterClaim(it, if (ownerLoginOk) "owner" else "none", ownerLoginOk) }
+            _state.value = _state.value.copy(
+                ownershipClaim = _state.value.ownershipClaim.copy(inProgress = false)
+            )
+            PlatformLogger.i(TAG, "[ORDER] claim_settled claimed=true path=add_device login=$ownerLoginOk — safe to complete")
+        }
+    }
+
+    /**
+     * **The agent build's final step: CLAIM, then COMPLETE** — under the
+     * one-press guard (CIRISClient#69). Moved here from the screen so the order
+     * is one function a test can drive.
+     *
+     * The claim needs a live :4243 session, and the agent's setup-complete
+     * ([submit]) reloads the runtime, which kills it. So the claim settles
+     * first: on the new-ID path the self-claim and its owner steps, on the
+     * add-device path `add-device/complete` → `claimed-session` → the node's
+     * options. Only then does [submit] run. A claim that did not happen is not a
+     * success (CIRISClient#68): COMPLETE holds for the person's choice, and on
+     * the add-device path "not approved yet" holds there too.
+     */
+    fun finishAgentSetup(
+        claimPinProvider: suspend () -> String?,
+        nodeCodeProvider: suspend () -> String? = { null },
+        submit: suspend (CompleteSetupRequest) -> SetupCompletionResult,
+    ): Boolean {
+        if (!beginFinalStep()) return false
+        viewModelScope.launch {
+            try {
+                claimThenComplete(claimPinProvider, nodeCodeProvider, submit)
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[ORDER] claim/complete failed: ${e.message}")
+            } finally {
+                endFinalStep()
+            }
+        }
+        return true
+    }
+
+    /**
+     * Add-device path: try the end of first run again — after "not approved
+     * yet" once the approval arrives, or after a recoverable failure. With an
+     * agent, a claim that lands now finishes setup ([submit]); without one,
+     * COMPLETE finishes by itself once the claim settles.
+     */
+    fun retryAddDeviceFinish(
+        claimPinProvider: suspend () -> String?,
+        submit: suspend (CompleteSetupRequest) -> SetupCompletionResult,
+    ): Boolean {
+        if (!beginFinalStep()) return false
+        viewModelScope.launch {
+            try {
+                claimThenComplete(claimPinProvider, { null }, submit, completeWithoutAgent = false)
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[ORDER] add-device retry failed: ${e.message}")
+            } finally {
+                endFinalStep()
+            }
+        }
+        return true
+    }
+
+    private suspend fun claimThenComplete(
+        claimPinProvider: suspend () -> String?,
+        nodeCodeProvider: suspend () -> String?,
+        submit: suspend (CompleteSetupRequest) -> SetupCompletionResult,
+        completeWithoutAgent: Boolean = true,
+    ) {
+        claimLocalNodeOwnership(claimPinProvider = claimPinProvider, nodeCodeProvider = nodeCodeProvider)
+        // Await the claim SETTLING (E9): inProgress stays true through every
+        // post-claim step, so completeSetup's restart cannot race them.
+        val settled = kotlinx.coroutines.withTimeoutOrNull(90_000) {
+            _state.first { !it.ownershipClaim.inProgress }
+        }
+        if (settled == null) {
+            PlatformLogger.w(TAG, "[ORDER] settle_await TIMEOUT (90s) — proceeding; conformance will flag")
+        }
+        val claim = _state.value.ownershipClaim
+        if (!claim.claimed && (claim.error != null || claim.awaitingApproval)) {
+            PlatformLogger.i(TAG, "[ORDER] claim not made (awaiting=${claim.awaitingApproval}) — holding on COMPLETE")
+            if (_state.value.currentStep != SetupStep.COMPLETE) nextStep()
+            return
+        }
+        PlatformLogger.i(TAG, "[ORDER] settle_await released claimed=${claim.claimed} — advancing then completing")
+        if (_state.value.currentStep != SetupStep.COMPLETE) nextStep()
+        if (!hasAgent && !completeWithoutAgent) return
+        PlatformLogger.i(TAG, "[ORDER] complete_setup begin (post-settle)")
+        val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { completeSetup(submit) }
+        PlatformLogger.i(TAG, "completeSetup returned: success=${result.success}, error=${result.error}")
+    }
+
     // ========== Second device: collect the session the approval left here ==========
+
+    /**
+     * The owner session the add-device path collected, waiting for the host to
+     * take it at setup's exit. Not in [state]: it is a credential, and
+     * [SetupFormState] is serializable and logged.
+     */
+    private var collectedGrant: ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant? = null
+
+    /**
+     * **The setup → app session hand-off for the add-device path** (Codex,
+     * PR #189). The grant `claimed-session` answered was applied to the API
+     * client only, so the app's own session (its `currentAccessToken` and
+     * the persisted token) never had it; and with no local account on a node
+     * without an agent, the host's password fallback had nothing to sign in
+     * with. A paired device landed on Login holding a session it had just
+     * collected. The host takes it here, once, and persists it the way every
+     * other sign-in is persisted. Null when nothing was collected.
+     */
+    fun takeCollectedSession(): ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant? =
+        collectedGrant.also { collectedGrant = null }
 
     private val _claimedSession = MutableStateFlow<ClaimedSessionState>(ClaimedSessionState.Idle)
 
@@ -3023,7 +3619,10 @@ class SetupViewModel(
      * Reset all setup state (useful for testing or retry).
      */
     fun resetState() {
-        _state.value = SetupFormState()
+        addDevicePollJob?.cancel()
+        addDeviceRetryJob?.cancel()
+        collectedGrant = null
+        _state.value = initialState()
     }
 
     /**
