@@ -11,7 +11,8 @@
     "people": 0
   },
   "android-ai": {
-    "csd_010_interact_chat": 0
+    "csd_010_interact_chat": 0,
+    "csd_056_billing_without_google": 0
   },
   "ios": {
     "csd_005_people": 1,
@@ -36,7 +37,8 @@
     "people": 0
   },
   "linux-ai": {
-    "csd_010_interact_chat": 0
+    "csd_010_interact_chat": 0,
+    "csd_056_billing_without_google": 0
   },
   "macos": {
     "csd_005_people": 1,
@@ -61,6 +63,7 @@
     "people": 0
   },
   "windows-ai": {
-    "csd_010_interact_chat": 0
+    "csd_010_interact_chat": 0,
+    "csd_056_billing_without_google": 0
   }
 }
