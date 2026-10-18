@@ -42,6 +42,13 @@ class PeopleSupportTest {
         assertEquals("contacts_empty", PeopleTags.EMPTY)
         assertEquals("contacts_loading", PeopleTags.LOADING)
         assertEquals("contacts_error", PeopleTags.ERROR)
+        // A pending code (CIRISClient#188): its own row, its own controls, never a contact row.
+        assertEquals("contacts_add_pending", PeopleTags.ADD_PENDING)
+        assertEquals("contacts_pending_k1", PeopleTags.pending("k1"))
+        assertEquals("contacts_pending_status_k1", PeopleTags.pendingStatus("k1"))
+        assertEquals("btn_contacts_pending_retry_k1", PeopleTags.pendingRetry("k1"))
+        assertEquals("btn_contacts_pending_forget_k1", PeopleTags.pendingForget("k1"))
+        assertNotEquals(PeopleTags.row("k1"), PeopleTags.pending("k1"), "a pending row must never pass for a contact row")
     }
 
     @Test
