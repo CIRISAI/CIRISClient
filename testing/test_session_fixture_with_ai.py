@@ -197,3 +197,23 @@ def test_the_field_report_masks_every_secret_looking_field():
                     _el("input_username", value="qaadmin")]
     rep = sf._field_report(D())
     assert KEY not in rep and "hunter22" not in rep and "'qaadmin'" in rep
+
+
+class _Attaching(_AgentWizard):
+    """Signs in after the wizard; `attaches` says whether the client then
+    reports AGENT (it says NODE before — an unconfigured brain, by design)."""
+
+    def __init__(self, attaches: bool):
+        super().__init__()
+        self.attaches = attaches
+
+    def wait_for_client_mode(self, expected, timeout=90.0):
+        if not (self.attaches and self.on == "Interact"):
+            raise DriverError(f"clientMode never became {expected!r} within {timeout:.0f}s (saw: NODE)")
+
+
+def test_a_with_ai_sign_in_must_end_attached_to_the_agent():
+    from testing.gate import run_flows
+    assert run_flows.sign_in(_Attaching(True), "qaadmin", "pw", llm=_llm()) == "Interact"
+    with pytest.raises(sf.SessionUnavailable, match="never attached to the agent"):
+        run_flows.sign_in(_Attaching(False), "qaadmin", "pw", llm=_llm())

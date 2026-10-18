@@ -126,12 +126,14 @@ def state_problems(mode: str, node_url: str, with_ai: bool = False) -> list[str]
     """
     problems: list[str] = []
     if with_ai:
-        # THE OTHER FACE OF #48. A brain answers :8080 on this leg; a client
-        # that settles on NODE has missed it, and every agent flow after this
-        # would fail for that reason under its own name. `unset` is accepted
-        # for the reason above: not probed yet is not wrong.
-        if mode.upper() == "NODE":
-            problems.append("clientMode=NODE with an agent running (the probe never found :8080)")
+        # BEFORE THE WIZARD, NODE IS THE HONEST ANSWER. A first-run agent is
+        # an UNCONFIGURED brain, and ClientMode.kt maps `brainUnconfigured ->
+        # NODE` on purpose (the agent-only pollers would 503 against SETUP).
+        # Run 39151935379 showed exactly that: clientMode=NODE at Login with
+        # the agent serving SETUP. So nothing is asserted here; the with-AI
+        # assertions are that the wizard OFFERS `opt_run_with_ai` (the client
+        # found the brain) and that the client is AGENT once signed in
+        # (run_flows.sign_in) — both where the state is decided.
         return problems
     if mode.upper() == "AGENT":
         problems.append("clientMode=AGENT against a bare node (no brain is folded here)")
@@ -235,16 +237,6 @@ def walk(drv: TestAutomationServer, rep: Report, shots: Path, platform,
     state = drv.state()
     mode = str(state.get("clientMode", "unset"))
     node_url = str(state.get("nodeUrl", ""))
-    if with_ai and mode.upper() != "AGENT":
-        # The probe may land a beat after the first screen; give it the time
-        # the walk gives the screen, then judge.
-        try:
-            drv.wait_for_client_mode("AGENT", timeout=args_timeout)
-        except DriverError:
-            pass
-        state = drv.state()
-        mode = str(state.get("clientMode", "unset"))
-        node_url = str(state.get("nodeUrl", ""))
     problems = state_problems(mode, node_url, with_ai=with_ai)
     detail = f"clientMode={mode} node={node_url}"
     rep.add("state", not problems, detail if not problems else f"{detail} — {'; '.join(problems)}")

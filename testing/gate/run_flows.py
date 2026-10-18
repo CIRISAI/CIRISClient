@@ -316,6 +316,19 @@ def sign_in(drv, username: str, password: str, llm: Any = None) -> str:
     if screen not in SIGNED_OUT:
         return screen
     session_fixture.run_setup(drv, username, password, llm=llm)
+    if llm is not None:
+        # CONFIGURED, THE BRAIN IS THE AGENT. Before the wizard ClientMode
+        # honestly says NODE (an unconfigured brain); after it, a client that
+        # still says NODE has not attached to the agent it just set up, and
+        # every agent flow would fail for that reason under its own name.
+        landed = session_fixture.log_in(drv, username, password)
+        try:
+            drv.wait_for_client_mode("AGENT", timeout=180)
+        except Exception as e:  # noqa: BLE001 — DriverError, said as a session failure
+            raise session_fixture.SessionUnavailable(
+                f"the with-AI wizard finished and the client signed in (on {landed!r}), but it "
+                f"never attached to the agent: {e}") from None
+        return drv.screen()
     return session_fixture.log_in(drv, username, password)
 
 

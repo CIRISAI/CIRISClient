@@ -575,7 +575,17 @@ def log_in(drv: TestAutomationServer, username: str, password: str,
             drv.input(tag, value)
         except DriverError as e:
             raise SessionUnavailable(f"login: {tag} would not accept input ({e})") from e
-    drv.click("btn_login_submit")
+    # The submit refuses while either field is blank (its handler is disabled
+    # with the button, CIRISClient#69); on iOS the typed values reach the
+    # ViewModel a beat late. "Not yet" is retried, bounded, like Next.
+    for attempt in range(10):
+        try:
+            drv.click("btn_login_submit")
+            break
+        except DriverError as e:
+            if attempt == 9 or not any(w in str(e) for w in DISABLED_ANSWERS):
+                raise SessionUnavailable(f"login: btn_login_submit stayed disabled ({e})") from e
+            time.sleep(1.0)
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:

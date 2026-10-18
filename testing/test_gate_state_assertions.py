@@ -84,11 +84,8 @@ def test_an_absent_node_url_is_not_read_as_the_agent_port():
 
 # ── with AI (the release gate): the other face of #48 ───────────────────────
 
-def test_a_with_ai_leg_whose_client_settles_on_NODE_has_missed_the_agent():
-    problems = state_problems("NODE", NODE_URL, with_ai=True)
-    assert problems and "never found :8080" in problems[0]
-
-
-@pytest.mark.parametrize("mode", ["AGENT", "unset", ""])
-def test_a_with_ai_leg_accepts_agent_and_not_yet_probed(mode):
+@pytest.mark.parametrize("mode", ["NODE", "AGENT", "unset", ""])
+def test_a_with_ai_leg_judges_the_mode_after_the_wizard_not_before(mode):
+    # A first-run agent is an unconfigured brain: ClientMode says NODE, by
+    # design (run 39151935379). The AGENT assertion lives in run_flows.sign_in.
     assert state_problems(mode, AGENT_URL, with_ai=True) == []
