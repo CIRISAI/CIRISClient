@@ -1,0 +1,66 @@
+csd: CSD-010
+flow: csd_010_interact_chat
+title: A message to a real agent gets a real reply, drawn as an agent bubble
+description: >-
+  CSD-010 §4, driven on the with-AI legs only (testing/flows/agent/ — not on a
+  bare node, which has no brain to answer). The wizard configured the agent
+  with a real provider key; this is the round trip that proves the wire:
+  POST /v1/agent/interact, the reply in GET /v1/agent/history, and — the half
+  only this client can show — the reply DRAWN, as `msg_agent_0`
+  (ChatTranscriptTags.kt: per-role ordinals, oldest first). The first step
+  asserts a fresh agent shows no bubble at all, so the reply cannot be a
+  greeting or a stale row passing for an answer. The composer step is
+  CIRISClient#186's question on a phone: with the field focused, the field and
+  Send must still be on screen (a keyboard covering them is "off screen").
+  NOT asserted: the SHED retry (#173) — the agent has no hook to force a
+  RESOURCE_SHED; AgentShedWireTest pins it against a real socket.
+client: ">0.5.228"
+
+steps:
+  - step_id: a_fresh_transcript
+    title: The agent's chat opens on an empty transcript with a composer
+    requires:
+      screen: Interact
+    do:
+      - wait: input_message
+        wait_ms: 5000
+    expect:
+      screen: Interact
+      visible: [input_message, btn_send]
+      absent: [msg_agent_0, msg_user_0, msg_error_0]
+
+  - step_id: the_composer_stays_on_screen_while_typing
+    title: With the field focused, the field and Send are still reachable (CIRISClient#186)
+    do:
+      - click: input_message
+      - input: {input_message: "In one short sentence: what are you?"}
+    expect:
+      screen: Interact
+      visible: [input_message, btn_send]
+
+  - step_id: the_message_is_sent
+    title: Send posts it, and the person's own bubble is drawn
+    do:
+      - click: btn_send
+      - wait: msg_user_0
+        wait_ms: 5000
+    expect:
+      visible: [msg_user_0]
+      absent: [msg_error_0]
+
+  - step_id: a_real_reply
+    title: The agent answers, and the answer is a bubble, not an error row
+    description: >-
+      Up to 4 × 45 s: a real model behind the full agent pipeline (DMAs,
+      consciences) is slower than a mock. An error row (`msg_error_0`) is the
+      failure the screen names — a provider refusal, a dead key — and it is
+      asserted absent, so a red here says which.
+    do:
+      - wait: msg_agent_0
+        wait_ms: 45000
+    expect:
+      state: populated
+      visible: [msg_agent_0, msg_user_0]
+      # A BYOK chat does not depend on billing, so it never offers the billing
+      # re-sign-in (CIRISClient#171: that banner is the hosted proxy's alone).
+      absent: [msg_error_0, btn_interact_refresh_billing_signin]

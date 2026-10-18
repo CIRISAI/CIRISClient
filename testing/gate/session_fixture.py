@@ -47,14 +47,47 @@ own install alone.
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from testing.driver import DriverError, TestAutomationServer  # noqa: E402
+from testing.driver import DriverError, TestAutomationServer, _looks_secret  # noqa: E402
 from testing.gate.console import utf8_console  # noqa: E402
+from testing.gate.secret_scan import redact  # noqa: E402
+
+
+@dataclass(frozen=True)
+class LlmChoice:
+    """What the wizard's AI step is given on a with-AI leg (CIRISClient#166's
+    release gate): a BYOK provider, its key, and the ONE model to pick.
+
+    THE KEY IS NEVER PRINTED. `repr` hides it, every message this module
+    composes passes through `redact`, and the field it is typed into is a
+    sensitive sink (the client never echoes it on /tree). It comes from the
+    environment by NAME (`from_env`) so it is never on a command line either.
+    """
+    provider: str
+    model: str
+    key: str = field(repr=False)
+
+    @classmethod
+    def from_env(cls, provider: str, model: str, env: str) -> "LlmChoice":
+        key = os.environ.get(env, "").strip()
+        if not key:
+            raise SessionUnavailable(f"--with-ai needs the provider key in ${env}, and it is empty")
+        return cls(provider=provider, model=model, key=key)
+
+    def scrub(self, text: str) -> str:
+        return redact(text, [self.key])
+
+
+def model_tag(model_id: str) -> str:
+    """SetupScreen.kt's `menu_model_${id.replace("/", "_").replace(":", "_")}`."""
+    return "menu_model_" + model_id.replace("/", "_").replace(":", "_")
 
 
 class SessionUnavailable(RuntimeError):
@@ -130,7 +163,7 @@ def _field_report(drv: TestAutomationServer) -> str:
     parts = []
     for e in drv.tree():
         val = getattr(e, "input_value", None)
-        if val is not None and "password" in e.test_tag:
+        if val is not None and _looks_secret(e.test_tag):
             val = f"<{len(val)} chars>"
         txt = (e.text or "")[:60]
         parts.append(f"{e.test_tag}[v={val!r} t={txt!r} c={e.can_click} i={e.can_input}]")
@@ -221,6 +254,18 @@ def _advanced(drv: TestAutomationServer, before: tuple, timeout: float, poll: fl
         time.sleep(poll)
 
 
+def _settle_past_setup(drv: TestAutomationServer, timeout: float = 180.0) -> bool:
+    """True once the client is on Login or anywhere signed in — not Setup, and
+    not the blank frame between them."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        cur = drv.screen()
+        if cur and cur not in ("Setup", "unknown", "Startup"):
+            return True
+        time.sleep(1.5)
+    return False
+
+
 def _settle(drv: TestAutomationServer, want: str, timeout: float = 90.0) -> bool:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -254,8 +299,99 @@ def _after_local_login(drv: TestAutomationServer, timeout: float) -> str:
         time.sleep(1.5)
 
 
+#: The AI step's controls (SetupScreen's BYOK form). Their presence is how the
+#: fixture knows the wizard is ON the AI step — the step indicator names it
+#: too, but the form is what has to be filled.
+LLM_FORM = frozenset({"input_llm_provider", "btn_test_connection"})
+
+#: Test Connection runs the client's checkLlmConfig (validate + list models).
+#: On a freshly booted agent the first probe can land before the runtime
+#: answers, so it is retried, bounded, before the step is called broken.
+TEST_CONNECTION_TRIES = 5
+
+
+def _wait_tag(drv: TestAutomationServer, tag: str, timeout: float, poll: float = 0.5) -> bool:
+    deadline = time.monotonic() + timeout
+    while True:
+        if tag in _tags(drv):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(poll)
+
+
+def _llm_verdict(drv: TestAutomationServer, llm: LlmChoice) -> str:
+    texts = [f"{e.test_tag}={(e.text or '').strip()!r}" for e in drv.tree()
+             if e.test_tag in ("txt_llm_state", "txt_llm_verdict") and (e.text or "").strip()]
+    return llm.scrub("; ".join(texts) or "(no verdict on screen)")
+
+
+def configure_llm(drv: TestAutomationServer, llm: LlmChoice) -> str:
+    """Fill the wizard's AI step: provider, key, Test Connection, the ONE model.
+
+    The model is chosen from the LIVE list Test Connection fetches — the
+    provider's own answer that the key works — and the requested model must be
+    in it: taking whatever sorts first reports on a model nobody chose (an
+    OpenRouter run once picked a reasoning-mandatory model that 400'd every
+    call, and the gate said "no reply"). With a real key the live list is the
+    contract; no fallback to the free-text field, which is indistinguishable
+    from a key that never reached the provider. Returns the model tag chosen.
+    """
+    if "btn_switch_to_byok" in _tags(drv):
+        # The free-models card (a Google/Apple sign-in) hides the BYOK form.
+        _reach(drv, "btn_switch_to_byok", lambda: drv.click("btn_switch_to_byok"))
+        time.sleep(1.0)
+    _reach(drv, "input_llm_provider", lambda: drv.click("input_llm_provider"))
+    want = f"menu_provider_{llm.provider}"
+    if not _wait_tag(drv, want, 8.0):
+        offered = sorted(t for t in _tags(drv) if t.startswith("menu_provider_"))
+        raise SessionUnavailable(f"wizard AI step: {want} is not in the provider list {offered}")
+    drv.click(want)
+    # The key field composes a beat after the provider is chosen (the form
+    # recomposes when it leaves the on-device default).
+    if not _wait_tag(drv, "input_api_key", 10.0):
+        raise SessionUnavailable(
+            f"wizard AI step: input_api_key never composed after choosing {llm.provider}; "
+            f"on screen: {sorted(_tags(drv))}")
+    try:
+        # verify=False: a sensitive sink holds no readable value by design.
+        _reach(drv, "input_api_key", lambda: drv.input("input_api_key", llm.key, verify=False))
+    except DriverError as e:
+        raise SessionUnavailable(llm.scrub(f"wizard AI step: input_api_key refused the key ({e})")) from None
+    time.sleep(1.0)
+
+    menu_tag = model_tag(llm.model)
+    for attempt in range(1, TEST_CONNECTION_TRIES + 1):
+        _reach(drv, "btn_test_connection", lambda: drv.click("btn_test_connection"))
+        if _wait_tag(drv, "input_llm_model", 20.0):
+            drv.click("input_llm_model")
+            deadline = time.monotonic() + 10.0
+            menu: list[str] = []
+            while time.monotonic() < deadline:
+                menu = sorted(t for t in _tags(drv) if t.startswith("menu_model_"))
+                if menu:
+                    break
+                time.sleep(0.3)
+            if menu_tag not in menu:
+                raise SessionUnavailable(
+                    f"wizard AI step: {llm.model!r} is not in the live model list "
+                    f"({len(menu)} offered: {menu[:12]}{'…' if len(menu) > 12 else ''}) — refusing "
+                    f"to substitute; pass the model the provider lists")
+            _reach(drv, menu_tag, lambda: drv.click(menu_tag))
+            print(f"  wizard AI step: {llm.provider} / {llm.model} chosen from the live list "
+                  f"(Test Connection attempt {attempt})")
+            return menu_tag
+        print(f"  wizard AI step: no live model list after Test Connection attempt {attempt}: "
+              f"{_llm_verdict(drv, llm)}")
+        time.sleep(4.0)
+    raise SessionUnavailable(
+        f"wizard AI step: Test Connection never produced a live model list in "
+        f"{TEST_CONNECTION_TRIES} attempts — the key did not reach {llm.provider}, or the "
+        f"provider refused it: {_llm_verdict(drv, llm)}")
+
+
 def run_setup(drv: TestAutomationServer, username: str, password: str,
-              device: str = "gate") -> None:
+              device: str = "gate", llm: LlmChoice | None = None) -> None:
     """Drive the first-run wizard until the node has an owner — or find that
     the client already holds the node to be owned, and leave it to `log_in`.
 
@@ -309,13 +445,20 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             raise SessionUnavailable(f"wizard: input_fedid_label would not accept input ({e})") from e
         time.sleep(2.0)
     _reach(drv, "age_band_adult", lambda: drv.click("age_band_adult"))
-    # The legs run against a bare node with no LLM, so answer "run without AI":
-    # it removes the AI step, whose Next waits for a usable LLM choice
-    # (SetupState: AI -> hasUsableLlmChoice). Desktop already defaults there;
-    # iOS asks, and the walk stopped at 'ai' with Next disabled.
-    if "opt_run_without_ai" in _tags(drv):
-        _reach(drv, "opt_run_without_ai", lambda: drv.click("opt_run_without_ai"))
+    # A bare-node leg has no LLM, so it answers "run without AI": that removes
+    # the AI step, whose Next waits for a usable LLM choice (SetupState: AI ->
+    # hasUsableLlmChoice). Desktop already defaults there; iOS asks, and the
+    # walk stopped at 'ai' with Next disabled. A with-AI leg (`llm`) answers
+    # WITH, and fills the AI step below when the wizard reaches it.
+    answer = "opt_run_with_ai" if llm is not None else "opt_run_without_ai"
+    if answer in _tags(drv):
+        _reach(drv, answer, lambda: drv.click(answer))
         time.sleep(1.0)
+    elif llm is not None:
+        raise SessionUnavailable(
+            "a with-AI leg reached the wizard's first step and it offers no `opt_run_with_ai` — "
+            f"the client does not see an agent here; on screen: {sorted(_tags(drv))}")
+    llm_done = False
 
     # Advance until the claim takes over. Bounded: a wizard that stops advancing
     # must say so rather than spin.
@@ -333,6 +476,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             # traceConsentAnswered). A Next clicked in the same instant as the
             # answer raced it on Windows; give the answer a beat to land.
             time.sleep(1.5)
+            tags = _tags(drv)
+        if llm is not None and not llm_done and LLM_FORM <= tags:
+            configure_llm(drv, llm)
+            llm_done = True
+            time.sleep(1.0)
             tags = _tags(drv)
         nxt = "btn_wizard_complete" if "btn_wizard_complete" in tags else "btn_next"
         if nxt not in tags:
@@ -398,9 +546,16 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
                 f"on screen: {sorted(_tags(drv))}"
             )
 
-    # The claim has no button; it completes and the app returns to Login.
+    if llm is not None and not llm_done:
+        raise SessionUnavailable(
+            "a with-AI wizard finished without ever showing the AI step "
+            "(input_llm_provider + btn_test_connection) — the agent was never configured")
+
+    # The claim has no button; it completes and the app returns to Login. An
+    # agent's setup-complete reloads its runtime first, and the client may sign
+    # the new owner straight in: anywhere past Setup is "done".
     _await_claim(drv)
-    if not _settle(drv, "Login", timeout=180):
+    if not _settle_past_setup(drv, timeout=180):
         raise SessionUnavailable(
             f"setup never returned to Login (on {drv.screen()!r}) — the claim did not finish"
         )
@@ -408,7 +563,10 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
 
 def log_in(drv: TestAutomationServer, username: str, password: str,
            timeout: float = 90.0) -> str:
-    """Sign in and return the screen the client lands on."""
+    """Sign in and return the screen the client lands on (at once, when the
+    wizard already signed the owner in)."""
+    if drv.screen() not in ("Login", "Setup"):
+        return drv.screen()
     if "btn_local_login" in _tags(drv):
         drv.click("btn_local_login")
         time.sleep(1.5)
@@ -417,7 +575,17 @@ def log_in(drv: TestAutomationServer, username: str, password: str,
             drv.input(tag, value)
         except DriverError as e:
             raise SessionUnavailable(f"login: {tag} would not accept input ({e})") from e
-    drv.click("btn_login_submit")
+    # The submit refuses while either field is blank (its handler is disabled
+    # with the button, CIRISClient#69); on iOS the typed values reach the
+    # ViewModel a beat late. "Not yet" is retried, bounded, like Next.
+    for attempt in range(10):
+        try:
+            drv.click("btn_login_submit")
+            break
+        except DriverError as e:
+            if attempt == 9 or not any(w in str(e) for w in DISABLED_ANSWERS):
+                raise SessionUnavailable(f"login: btn_login_submit stayed disabled ({e})") from e
+            time.sleep(1.0)
 
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -465,12 +633,13 @@ def _why_login_failed(drv: TestAutomationServer) -> str:
     return f"; the node at {node_url} could not say whether it has an owner"
 
 
-def establish(drv: TestAutomationServer, username: str, password: str) -> str:
+def establish(drv: TestAutomationServer, username: str, password: str,
+              llm: LlmChoice | None = None) -> str:
     """Whatever it takes to get from a cold client to a signed-in one."""
     drv.wait_for_server(timeout=120)
     if drv.wait_for_ui(timeout=120) == 0:
         raise SessionUnavailable("the app started but never composed a UI")
-    run_setup(drv, username, password)
+    run_setup(drv, username, password, llm=llm)
     return log_in(drv, username, password)
 
 

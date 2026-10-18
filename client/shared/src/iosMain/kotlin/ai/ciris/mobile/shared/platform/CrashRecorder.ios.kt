@@ -24,9 +24,10 @@ import platform.Foundation.writeToFile
  * and message. `.ips` files do not record them for Kotlin/Native aborts.
  *
  * This does not catch anything or change what happens next. It records the
- * throwable — class, message, causes, stack — to os_log AND to
- * `Documents/ciris/logs/kotlin_crash.log`, which the five-platform gate
- * already collects with the rest of `Documents/ciris`, and then hands over to
+ * throwable — class, message, causes, suppressed (kotlinx.coroutines puts the
+ * coroutine's context there), stack — to `Documents/ciris/logs/kotlin_crash.log`
+ * FIRST (the five-platform gate collects it with the rest of `Documents/ciris`),
+ * then to os_log, and then hands over to
  * whatever hook was installed before (or to the default, which terminates).
  * The next occurrence arrives with its reason attached.
  */
@@ -39,10 +40,17 @@ object CrashRecorder {
         installed = true
         val previous = setUnhandledExceptionHook(null)
         setUnhandledExceptionHook { throwable ->
-            val report = "UNHANDLED ${throwable::class.qualifiedName}: ${throwable.message}\n" +
-                throwable.stackTraceToString()
-            runCatching { NSLog("[CrashRecorder] %@", report) }
-            runCatching { write(report) }
+            // FILE FIRST, then the log, each guarded (CIRISClient#165). The log
+            // used to come first, as NSLog("[CrashRecorder] %@", report): a
+            // Kotlin String through C varargs reaches %@ as a char*, so
+            // CoreFoundation dereferenced the report's bytes as an object and
+            // the process took SIGSEGV before the file was written. Now the
+            // message IS the format, every % doubled, and no varargs are passed.
+            CrashReport.record(
+                throwable,
+                write = ::write,
+                log = { NSLog(CrashReport.nsLogLiteral("[CrashRecorder] $it")) },
+            )
             previous?.invoke(throwable)
         }
     }
