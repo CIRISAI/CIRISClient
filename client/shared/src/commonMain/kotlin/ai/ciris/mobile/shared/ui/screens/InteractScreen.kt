@@ -213,6 +213,7 @@ fun InteractScreen(
     val walletStatus by viewModel.walletStatus.collectAsState()
     val attachedFiles by viewModel.attachedFiles.collectAsState()
     val attachmentRefused by viewModel.attachmentRefused.collectAsState()
+    val shedState by viewModel.shedState.collectAsState()
     val pipelineState by viewModel.pipelineState.collectAsState()
     val pendingDeferrals by viewModel.pendingDeferrals.collectAsState()
     val systemWarnings by viewModel.systemWarnings.collectAsState()
@@ -709,7 +710,12 @@ fun InteractScreen(
                 )
             }
 
-            // Input bar with agent state icon
+            ai.ciris.mobile.shared.ui.components.AgentShedNotice(
+                state = shedState,
+                onRetry = { viewModel.retryAfterShed() },
+                onDismiss = { viewModel.dismissShedNotice() },
+            )
+
             // Input bar with agent state icon
             // navigationBarsPadding here so input sits above the system nav bar
             ChatInputBarWithBubbles(

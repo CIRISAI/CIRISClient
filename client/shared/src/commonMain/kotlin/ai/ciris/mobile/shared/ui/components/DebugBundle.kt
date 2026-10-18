@@ -131,10 +131,15 @@ object DebugBundle {
         // is a LABELLED BANNER, not a `name=value` (Codex, PR #18).
         //
         // Label AND shape, so an ordinary `XXXX-XXXX` in prose is untouched.
-        // The token is 8 Crockford base32 characters (no I/L/O/U) as XXXX-XXXX,
-        // the same alphabet `PythonRuntime.desktop.CLAIM_PIN_REGEX` parses. The
-        // NodeCode on the neighbouring line is deliberately NOT redacted: it is
-        // a public bootstrap handle and the reader needs it.
+        // The token is 8 Crockford base32 characters (no I/L/O/U) as XXXX-XXXX.
+        // The NodeCode on the neighbouring line is deliberately NOT redacted: it
+        // is a public bootstrap handle and the reader needs it.
+        //
+        // Defence in depth only. Since ciris-server 0.5.227 the banner names the
+        // claim_pin FILE rather than printing the PIN, and the client parses no
+        // log for it (CIRISClient#184) — but an older node, or a log someone
+        // pastes in, can still carry one. This redaction is the ONE place the
+        // client's code may match a PIN in log text (ClaimPinFileTest).
         Regex(
             """(claim\s*pin\s*[:=]\s*)[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}""",
             RegexOption.IGNORE_CASE,

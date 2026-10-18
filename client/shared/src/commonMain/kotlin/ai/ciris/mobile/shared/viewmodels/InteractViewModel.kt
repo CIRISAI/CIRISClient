@@ -3,6 +3,8 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.api.models.DocumentPayload
 import ai.ciris.api.models.ImagePayload
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.AgentShed
+import ai.ciris.mobile.shared.api.AgentShedGaveUp
 import ai.ciris.mobile.shared.api.SystemWarning
 import ai.ciris.mobile.shared.api.ReasoningEvent
 import ai.ciris.mobile.shared.localization.LocalizationHelper
@@ -181,6 +183,20 @@ fun WalletStatus.badgeState(): WalletBadgeState = when {
     else -> WalletBadgeState.EMPTY
 }
 
+/**
+ * Chat's view of a SHED 503 (CIRISClient#173). Runtime self-protection, never
+ * DEFER/REJECT wording: those are the agent's decisions, this is not one.
+ */
+sealed class ChatShedState {
+    data object None : ChatShedState()
+
+    /** Counting down to send [nextAttempt] of [maxAttempts]. */
+    data class Waiting(val secondsRemaining: Int, val nextAttempt: Int, val maxAttempts: Int) : ChatShedState()
+
+    /** The bounded resend stopped after [attempts] sheds; the text is back in the composer. */
+    data class GaveUp(val attempts: Int) : ChatShedState()
+}
+
 class InteractViewModel(
     private val apiClient: CIRISApiClient
 ) : ViewModel() {
@@ -315,6 +331,17 @@ class InteractViewModel(
 
     private val _processingStatus = MutableStateFlow("")
     val processingStatus: StateFlow<String> = _processingStatus.asStateFlow()
+
+    /**
+     * The agent is shedding new work (503 RESOURCE_SHED, CIRISClient#173):
+     * a countdown to the automatic resend, or the resend gave up and the
+     * user's text is back in the composer with Retry offered.
+     */
+    private val _shedState = MutableStateFlow<ChatShedState>(ChatShedState.None)
+    val shedState: StateFlow<ChatShedState> = _shedState.asStateFlow()
+
+    /** The wait between shed resends; tests replace it to run the countdown without a clock. */
+    internal var shedSleep: suspend (Long) -> Unit = { delay(it) }
 
     private val _authError = MutableStateFlow<String?>(null)
     val authError: StateFlow<String?> = _authError.asStateFlow()
@@ -860,6 +887,7 @@ class InteractViewModel(
             logDebug(method, "Already sending, ignoring")
             return
         }
+        _shedState.value = ChatShedState.None
 
         // Pre-flight credit check - only when using CIRIS proxy
         val currentCredits = _creditStatus.value
@@ -953,11 +981,44 @@ class InteractViewModel(
                 _messages.value = (_messages.value + userMessage).takeLast(50)
 
                 logDebug(method, "Calling apiClient.sendMessage with ${imagePayloads?.size ?: 0} images, ${documentPayloads?.size ?: 0} documents")
-                val response = apiClient.sendMessage(
-                    message = if (text.isNotEmpty()) text else "Please review the attached file(s).",
-                    images = imagePayloads,
-                    documents = documentPayloads
-                )
+                // A SHED 503 is refused before any task exists (CIRISAgent
+                // base_observer), so resending the SAME request cannot
+                // duplicate it. Bounded: AgentShed.MAX_ATTEMPTS sends and
+                // MAX_TOTAL_WAIT_SECONDS of waiting.
+                val response = try {
+                    AgentShed.sendWithShedRetry(
+                        onWait = { wait ->
+                            if (wait != null) {
+                                _shedState.value = ChatShedState.Waiting(wait.secondsRemaining, wait.nextAttempt, wait.maxAttempts)
+                                _processingStatus.value = LocalizationHelper.getString(
+                                    "mobile.interact_shed_retrying",
+                                    mapOf("seconds" to wait.secondsRemaining.toString()),
+                                )
+                            } else {
+                                _shedState.value = ChatShedState.None
+                                _processingStatus.value = LocalizationHelper.getString("mobile.processing_sending")
+                            }
+                        },
+                        sleep = shedSleep,
+                    ) {
+                        apiClient.sendMessage(
+                            message = if (text.isNotEmpty()) text else "Please review the attached file(s).",
+                            images = imagePayloads,
+                            documents = documentPayloads
+                        )
+                    }
+                } catch (gaveUp: AgentShedGaveUp) {
+                    // Never admitted, so nothing to reconcile: take the
+                    // optimistic bubble back and return the text and files to
+                    // the composer, where Retry sends them again.
+                    logWarn(method, "Agent still shedding after ${gaveUp.attempts} attempts; keeping the user's message")
+                    _messages.value = _messages.value.filterNot { it.id == localMessageId }
+                    if (_inputText.value.isEmpty()) _inputText.value = text
+                    if (_attachedFiles.value.isEmpty()) _attachedFiles.value = files
+                    _processingStatus.value = ""
+                    _shedState.value = ChatShedState.GaveUp(gaveUp.attempts)
+                    return@launch
+                }
                 logInfo(method, "Message sent successfully: messageId=${response.message_id}")
 
                 // Reconcile the optimistic user message's ID to the server's
@@ -1043,6 +1104,17 @@ class InteractViewModel(
                 _isSending.value = false
             }
         }
+    }
+
+    /** Retry after the shed resend gave up: the kept text and files go again. */
+    fun retryAfterShed() {
+        _shedState.value = ChatShedState.None
+        sendMessage()
+    }
+
+    /** Close the gave-up notice; the kept text stays in the composer. */
+    fun dismissShedNotice() {
+        _shedState.value = ChatShedState.None
     }
 
     /**
