@@ -208,6 +208,33 @@ class ContactCodeWireTest {
         assertTrue("contact code" in copy, "it points at the contact code: $copy")
     }
 
+    /**
+     * CIRISClient#188 §2: the copy a person reads on the add card is plain
+     * words. `contacts.unknown_fed_id` used to say "Admit the key first
+     * (peering) — an announced-but-unadmitted bookmark carries no provenance";
+     * the pending row's own lines are this repo's and must stay plain too.
+     * (`contacts.awaiting_key_body` and a few siblings are still the server's
+     * operator sentence, pinned to it by `server-id-text`; see CSD-005 §3.)
+     */
+    @Test
+    fun theFedIdRefusalAndThePendingRowSpeakPlainly() {
+        val en = en()
+        val banned = listOf("admit", "peering", "bookmark", "provenance", "rung", "announce", "directory", "mesh", "key body")
+        for (key in listOf(
+            "contacts.unknown_fed_id", "contacts.unresolvable", "contacts.unreachable",
+            "contacts.awaiting_consent", "contacts.code_commitment_mismatch",
+            "mobile.contacts_add_pending", "mobile.contacts_pending_title", "mobile.contacts_pending_asking",
+            "mobile.contacts_pending_stopped", "mobile.contacts_pending_refused", "mobile.contacts_add_open",
+        )) {
+            val copy = en.at(key).lowercase()
+            for (word in banned) assertTrue(word !in copy, "$key says '$word': $copy")
+        }
+        assertTrue("contact code" in en.at("contacts.unknown_fed_id"), "it points at the contact code")
+        assertTrue("Waiting for" in en.at("mobile.contacts_pending_title"))
+        assertTrue("{who}" in en.at("mobile.contacts_pending_title"))
+        assertEquals("Add contact", en.at("mobile.contacts_add_open"))
+    }
+
     @Test
     fun theRefusalsTheCardRendersHaveEnglish() {
         val en = en()
