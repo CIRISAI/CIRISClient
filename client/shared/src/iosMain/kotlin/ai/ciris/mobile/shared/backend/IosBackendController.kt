@@ -10,6 +10,7 @@ import kotlinx.cinterop.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import platform.Foundation.*
 import kotlin.coroutines.resume
+import ai.ciris.mobile.shared.platform.nsLogVerbatim
 
 /**
  * iOS's half of the resume/restart contract.
@@ -136,7 +137,7 @@ object IosBackendBridge {
             now = {
                 (NSDate().timeIntervalSince1970 * 1000.0).toLong()
             },
-            log = { NSLog("[backend] $it") },
+            log = { nsLogVerbatim("[backend] $it") },
             // No agent to bring back after Run without AI — see EmbeddedBackendDecision.
             mayRevive = { mayReviveEmbeddedBackend(endpoint) },
         )
