@@ -89,7 +89,7 @@ data class GroupInviteList(
 @Serializable
 data class InboxInvite(
     @SerialName("proposal_id") val proposalId: String,
-    /** `family` or `community`. */
+    /** `family`, `community`, or (0.5.222+) `affiliations`. */
     @SerialName("group_kind") val groupKind: String = "",
     @SerialName("group_id") val groupId: String = "",
     /** Null when this node does not hold the group's record (the invitee is not in it yet). */
@@ -110,6 +110,8 @@ data class InboxInvite(
     companion object {
         const val KIND_FAMILY = "family"
         const val KIND_COMMUNITY = "community"
+        /** An affiliation's invitation (CIRISServer 0.5.222+); see `hubKindOf`. */
+        const val KIND_AFFILIATIONS = "affiliations"
     }
 }
 
