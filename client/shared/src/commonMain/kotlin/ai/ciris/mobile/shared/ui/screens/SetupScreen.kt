@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.api.checkLlmConfig
 import ai.ciris.mobile.shared.ui.components.LlmCheckRow
 import ai.ciris.mobile.shared.ui.components.VerticalScrollbar
 import ai.ciris.mobile.shared.localization.localizedString
+import ai.ciris.mobile.shared.viewmodels.IdentityPath
 import androidx.compose.foundation.layout.imePadding
 import ai.ciris.mobile.shared.models.ConsentDisclosure
 import ai.ciris.mobile.shared.models.ConsentGrantDisclosure
@@ -293,6 +294,11 @@ fun SetupScreen(
         }
     }
 
+    // ADD A DEVICE (CIRISServer 0.5.231): ask this node, once, whether an
+    // add-device request is already outstanding (resume it after a restart) and
+    // whether it has the plane at all (a bare 404 disables "Add this device").
+    LaunchedEffect(Unit) { viewModel.probeAddDevice() }
+
     // Set up the wizard API for adapter configuration
     LaunchedEffect(Unit) {
         viewModel.setWizardApi(object : SetupViewModel.AdapterWizardApi {
@@ -392,6 +398,15 @@ fun SetupScreen(
                         CompleteStep(
                             onSetupComplete,
                             state.ownershipClaim,
+                            addDevice = if (state.identityPath == IdentityPath.EXISTING) state.addDevice else null,
+                            isSubmitting = state.isSubmitting,
+                            onRetryAddDevice = {
+                                viewModel.retryAddDeviceFinish(
+                                    claimPinProvider = claimPinProvider,
+                                    submit = { apiClient.completeSetup(it) },
+                                )
+                            },
+                            onNewAddDeviceRequest = { viewModel.sendAddDeviceRequest() },
                             // NODE VENDOR DRIFT #14: the SAME providers the first
                             // attempt used — a retry that read the PIN differently
                             // would be a second way to claim, not a retry of the
@@ -563,75 +578,21 @@ fun SetupScreen(
                         // config + reload. Doing complete-first left the claim to
                         // hit a dead session → 401 → node stays unclaimed → the
                         // first-run nav loop.
-                        if (!viewModel.beginFinalStep()) {
-                            PlatformLogger.i(TAG, " Final step already running — ignoring the second press (#69)")
-                            return@NavigationButtons
-                        }
+                        // The order lives in ONE function the tests drive:
+                        // SetupViewModel.finishAgentSetup (claim settles, then
+                        // the agent's setup-complete). On the add-device path the
+                        // claim is add-device/complete, then claimed-session.
                         PlatformLogger.i(TAG, " Final step - CLAIM then COMPLETE")
-                        coroutineScope.launch {
-                            try {
-                                // 1) Self-claim ownership on the still-valid session.
-                                PlatformLogger.i(TAG, " Self-claiming local node ownership (pre-complete)")
-                                viewModel.claimLocalNodeOwnership(
-                                    claimPinProvider = claimPinProvider,
-                                    nodeCodeProvider = nodeCodeProvider,
-                                )
-                                // Await the claim SETTLING (E9). Since the settle fix,
-                                // inProgress stays true through the ENTIRE post-claim
-                                // block (owner login → setAgeSelf → announce), so this
-                                // await is the real E9 ≺ E10 gate: completeSetup's
-                                // runtime restart cannot race those :4243 calls.
-                                // Bounded so a stuck claim never traps the wizard.
-                                val settled = kotlinx.coroutines.withTimeoutOrNull(90_000) {
-                                    viewModel.state.first { !it.ownershipClaim.inProgress }
-                                }
-                                if (settled == null) {
-                                    PlatformLogger.w(TAG, "[ORDER] settle_await TIMEOUT (90s) — proceeding; conformance will flag")
-                                }
-                                val claimed = viewModel.state.value.ownershipClaim.claimed
-                                // A CLAIM THAT DID NOT HAPPEN IS NOT A SUCCESS
-                                // (CIRISClient#68). Completing here restarted the
-                                // runtime underneath the "This node could not be
-                                // claimed" panel, so it flashed and vanished and
-                                // setup reported done. Stop on COMPLETE and let the
-                                // person choose: Retry (which finishes setup once
-                                // the claim lands) or Finish without claiming.
-                                if (!claimed && viewModel.state.value.ownershipClaim.error != null) {
-                                    PlatformLogger.i(TAG, "[ORDER] claim failed — holding on COMPLETE for the person's choice")
-                                    viewModel.nextStep()
-                                    return@launch
-                                }
-                                PlatformLogger.i(TAG, "[ORDER] settle_await released claimed=$claimed — advancing then completing")
-
-                                // 2) Advance to COMPLETE NOW — the node is owned,
-                                // so leave the Setup screen immediately (good UX,
-                                // and keeps the wizard under the harness's
-                                // COMPLETE-wait). completeSetup's config-write +
-                                // runtime reload then runs while COMPLETE renders;
-                                // the reload bounces to login, where — now that
-                                // the node is CLAIMED — first-run is false and the
-                                // owner signs in normally (no more nav loop).
-                                viewModel.nextStep()
-
-                                // 3) Complete setup (writes .env + reloads). Runs
-                                // AFTER the claim (session was valid for the claim)
-                                // and after advancing (so it never gates leaving
-                                // Setup). Best-effort — the COMPLETE screen surfaces
-                                // any error.
-                                PlatformLogger.i(TAG, "[ORDER] complete_setup begin (post-settle)")
-                                val result = withContext(Dispatchers.Default) {
-                                    viewModel.completeSetup { request ->
-                                        PlatformLogger.i(TAG, " Calling apiClient.completeSetup with provider=${request.llm_provider}")
-                                        apiClient.completeSetup(request)
-                                    }
-                                }
-                                PlatformLogger.i(TAG, " completeSetup returned: success=${result.success}, error=${result.error}")
-                            } catch (e: Exception) {
-                                PlatformLogger.i(TAG, " EXCEPTION in claim/completeSetup: ${e.message}")
-                                e.printStackTrace()
-                            } finally {
-                                viewModel.endFinalStep()
-                            }
+                        if (!viewModel.finishAgentSetup(
+                                claimPinProvider = claimPinProvider,
+                                nodeCodeProvider = nodeCodeProvider,
+                                submit = { request ->
+                                    PlatformLogger.i(TAG, " Calling apiClient.completeSetup with provider=${request.llm_provider}")
+                                    apiClient.completeSetup(request)
+                                },
+                            )
+                        ) {
+                            PlatformLogger.i(TAG, " Final step already running — ignoring the second press (#69)")
                         }
                     } else {
                         // AUTO-MINT ON NEXT: leaving the fed-ID step without an
@@ -643,7 +604,11 @@ fun SetupScreen(
                         // surfaces on this step; the claim also mints-if-absent as a
                         // backstop. An association-in-progress is left alone.
                         val fed = state.federationIdentity
+                        // Never on the add-device path: it joins an existing
+                        // identity, and minting here is the second identity
+                        // CSD-093 exists to prevent.
                         if (state.currentStep == SetupStep.YOU &&
+                            state.identityPath == IdentityPath.NEW &&
                             !fed.minted && !fed.admitted && !fed.inProgress &&
                             fed.isLabelValid()
                         ) {
@@ -819,15 +784,56 @@ private fun YouStep(
         // Optional fields live at the BOTTOM of their own section rather than
         // between two required ones, so a person filling only what is required
         // never has to skip past something to reach the next thing that blocks.
-        if (hasAgent) {
-            AiPreferenceSection(viewModel = viewModel, state = state)
-            Spacer(modifier = Modifier.height(24.dp))
+        // 0. THE FIRST QUESTION (CIRISServer 0.5.231, FSD/ADD_DEVICE.md §1):
+        //    a new CIRIS ID, or this device added to one the person already
+        //    has. Everything below depends on the answer, so nothing below it
+        //    is shown until it is given.
+        IdentityPathChoice(
+            path = state.identityPath,
+            availability = state.addDevice.availability,
+            onChoose = { viewModel.chooseIdentityPath(it) },
+            locked = state.identityPath == IdentityPath.EXISTING && state.addDevice.pathLocked,
+        )
+        Spacer(modifier = Modifier.height(24.dp))
+        when (state.identityPath) {
+            IdentityPath.NEW -> {
+                if (hasAgent) {
+                    AiPreferenceSection(viewModel = viewModel, state = state)
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                AgeRangeSection(viewModel = viewModel, state = state)
+                Spacer(modifier = Modifier.height(24.dp))
+                AccountSection(viewModel = viewModel, state = state)
+                Spacer(modifier = Modifier.height(24.dp))
+                FederationIdentitySection(viewModel = viewModel, state = state)
+            }
+            // ADD THIS DEVICE: the device's name and the person's fedID, and
+            // NOTHING that names the identity. No age band either: the age is
+            // the identity's, already recorded where it was minted. With an
+            // agent the local account stays, because the agent's own
+            // setup-complete creates its user from it.
+            IdentityPath.EXISTING -> {
+                if (hasAgent) {
+                    AiPreferenceSection(viewModel = viewModel, state = state)
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+                AddThisDeviceSection(
+                    state = state.addDevice,
+                    deviceName = state.deviceName,
+                    onDeviceName = { viewModel.setDeviceName(it) },
+                    onContact = { viewModel.setAddDeviceContact(it) },
+                    onSend = { viewModel.sendAddDeviceRequest() },
+                    onAskCancel = { viewModel.askCancelAddDevice() },
+                    onConfirmCancel = { viewModel.confirmCancelAddDevice() },
+                    onDismissCancel = { viewModel.dismissCancelAddDevice() },
+                )
+                if (state.addDevice.accountNeeded) {
+                    Spacer(modifier = Modifier.height(24.dp))
+                    AccountSection(viewModel = viewModel, state = state)
+                }
+            }
+            null -> Unit
         }
-        AgeRangeSection(viewModel = viewModel, state = state)
-        Spacer(modifier = Modifier.height(24.dp))
-        AccountSection(viewModel = viewModel, state = state)
-        Spacer(modifier = Modifier.height(24.dp))
-        FederationIdentitySection(viewModel = viewModel, state = state)
     }
     VerticalScrollbar(
         scrollState = scrollState,
@@ -3283,15 +3289,49 @@ private fun CompleteStep(
     onRetryClaim: (() -> Unit)? = null,
     /** Complete setup with the node unclaimed — an explicit choice, never a silent default (#68). */
     onFinishUnclaimed: (() -> Unit)? = null,
+    /** The add-device path's state, or null on the new-ID path. */
+    addDevice: ai.ciris.mobile.shared.viewmodels.AddDeviceSetupState? = null,
+    isSubmitting: Boolean = false,
+    /** Add-device path: apply the approval and collect the session again (after "not approved yet"). */
+    onRetryAddDevice: () -> Unit = {},
+    /** Add-device path: a new request after a denial, an expiry or a failure. */
+    onNewAddDeviceRequest: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     // Hold here until the LOCAL-node ownership self-claim settles (success or
     // error), then auto-complete. Bounded so a hung claim never traps the user.
-    LaunchedEffect(ownershipClaim.inProgress) {
-        if (!ownershipClaim.inProgress) {
+    // NOT while the add-device path waits for the other device: nothing is
+    // claimed yet, and leaving would strand an unowned node.
+    // And on the add-device path only once the claim APPLIED: a recoverable
+    // `apply_failed` stays here for Retry (Codex, PR #189).
+    LaunchedEffect(ownershipClaim.inProgress, ownershipClaim.awaitingApproval, ownershipClaim.claimed, ownershipClaim.error) {
+        if (ai.ciris.mobile.shared.viewmodels.shouldAutoFinishSetup(ownershipClaim, addDevicePath = addDevice != null)) {
             kotlinx.coroutines.delay(2000)
             onSetupComplete()
         }
+    }
+    // Add-device path: the approval arrived while COMPLETE waited. Finish by
+    // itself: apply, collect the session, then the agent's setup-complete.
+    LaunchedEffect(ownershipClaim.awaitingApproval, addDevice?.phase) {
+        if (ownershipClaim.awaitingApproval &&
+            addDevice?.phase == ai.ciris.mobile.shared.viewmodels.AddDevicePhase.APPROVED
+        ) {
+            onRetryAddDevice()
+        }
+    }
+    if (ownershipClaim.awaitingApproval && addDevice != null) {
+        Column(
+            modifier = modifier.fillMaxSize().padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            AddDeviceWaiting(
+                state = addDevice,
+                onRetry = onRetryAddDevice,
+                onNewRequest = onNewAddDeviceRequest,
+                retryEnabled = !isSubmitting,
+            )
+        }
+        return
     }
 
     Column(
@@ -3361,7 +3401,12 @@ private fun CompleteStep(
                 // a slow one (CIRISServer#401).
                 ai.ciris.mobile.shared.ui.components.FailurePanel(
                     title = "This node could not be claimed",
-                    detail = ownershipClaim.error ?: "",
+                    // By id when the node named one (`add_device.apply_failed`),
+                    // with its English beneath; the English alone otherwise.
+                    detail = ownershipClaim.errorReasonId
+                        ?.let { id -> localizedString(id).takeIf { it != id && it.isNotBlank() } }
+                        ?.let { localized -> listOfNotNull(localized, ownershipClaim.error).joinToString("\n") }
+                        ?: ownershipClaim.error ?: "",
                     // The kind comes from where the failure HAPPENED, not from
                     // grepping its message here.
                     kind =
@@ -3371,8 +3416,14 @@ private fun CompleteStep(
                             ai.ciris.mobile.shared.ui.components.FailureKind.Unrecoverable
                         },
                     context = "first-run claim",
-                    onRetry = if (ownershipClaim.errorRecoverable) onRetryClaim else null,
-                    modifier = Modifier.testable("setup_ownership_error", text = ownershipClaim.error),
+                    onRetry = if (!ownershipClaim.errorRecoverable) {
+                        null
+                    } else if (addDevice != null) {
+                        onRetryAddDevice
+                    } else {
+                        onRetryClaim
+                    },
+                    modifier = Modifier.testable("setup_ownership_error", text = ownershipClaim.errorReasonId ?: ownershipClaim.error),
                 )
                 if (onFinishUnclaimed != null) {
                     Spacer(modifier = Modifier.height(12.dp))

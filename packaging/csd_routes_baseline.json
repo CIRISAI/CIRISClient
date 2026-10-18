@@ -18,6 +18,7 @@
     "POST /v1/setup/claim-remote :: ClaimNode, Setup",
     "POST /v1/setup/discover-local-llm :: LLMSettings, Setup",
     "POST /v1/setup/list-models :: LLMSettings, Settings",
+    "POST /v1/setup/location :: Settings, Setup",
     "POST /v1/setup/start-local-server :: LLMSettings, Setup",
     "POST /v1/system/adapters/configure/{}/complete :: Adapters, Setup",
     "POST /v1/system/adapters/configure/{}/step :: Adapters, Setup",

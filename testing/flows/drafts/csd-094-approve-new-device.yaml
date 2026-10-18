@@ -1,0 +1,60 @@
+csd: CSD-094
+flow: csd_094_approve_new_device
+title: Approve a new device — the window, the request with its code, and a confirm that names the act
+description: >-
+  CSD-094 §4, driven from the device the person already has. Open the window
+  for new requests, see the new device's request with the six digits its own
+  screen shows, approve it through the ConfirmSheet, and see it go.
+# Floor: every tag below is a literal (or a `$`-headed prefix) in
+# ui/screens/AddDeviceScreens.kt (AddDeviceTags) on feat/add-device, which no
+# client release carries yet. `confirm_device_request_*` comes from
+# ConfirmSheet's interpolated tagPrefix, which the flow tag check cannot see
+# (drafts/README.md, "The blind spot"), so the confirm is driven but its
+# inner tags are not asserted.
+#
+# WHAT A REAL RUN NEEDS (CSD-094 §5). This client is the APPROVING device,
+# signed in on a claimed node. The fixture must stand up a FIRST-RUN peer with
+# a mesh transport, and, once the first step has opened the window, drive the
+# peer's POST /v1/setup/add-device {contact: <this owner's long-form fedID>,
+# label: "flow phone"} by API, exporting ${REQUEST_ID} and ${MATCH_CODE} from
+# this node's GET /v1/self/device-requests. two_node.py stands up a CLAIMED
+# peer today; the unclaimed mode is the missing half.
+client: unreleased
+fixture: two_node
+
+steps:
+  - step_id: on_my_identity
+    title: My Identity carries the card, closed until opened
+    requires:
+      screen: IdentityManagement
+    expect:
+      visible: [card_approve_device, btn_approve_device_open]
+
+  - step_id: open_the_window
+    title: Accept new requests opens the window and counts down
+    do:
+      - click: btn_approve_device_open
+      - wait: text_approve_device_window
+        wait_ms: 5000
+    expect:
+      one_of: {text_approve_device_window: [open]}
+
+  - step_id: the_request_arrives
+    title: The new device's request is listed with the code its own screen shows
+    do:
+      - wait: "approve_device_request_${REQUEST_ID}"
+        wait_ms: 60000
+    expect:
+      visible: ["approve_device_request_${REQUEST_ID}", "text_approve_device_code_${REQUEST_ID}", "text_approve_device_expires_${REQUEST_ID}"]
+      matches: {"text_approve_device_code_${REQUEST_ID}": "^${MATCH_CODE}$"}
+
+  - step_id: approve_through_the_confirm
+    title: Approve raises the confirm; confirming approves
+    do:
+      - click: "btn_approve_device_${REQUEST_ID}"
+      - click: btn_confirm_device_request_confirm
+      - wait: text_approve_device_outcome
+        wait_ms: 20000
+    expect:
+      one_of: {text_approve_device_outcome: [approved]}
+      absent: ["approve_device_request_${REQUEST_ID}", approve_device_refusal]
