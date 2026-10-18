@@ -3,7 +3,10 @@ package ai.ciris.mobile.shared.platform
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
 import com.sun.net.httpserver.HttpServer
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -69,6 +72,13 @@ class ClaimPinFileTest {
 
     private var savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
 
+    // A view model launches on viewModelScope from init and from its acts.
+    // Left running past resetMain(), a call that comes back resumes with no
+    // test Main and throws outside any test; kotlinx-coroutines-test then pins
+    // it on the NEXT runTest (PR #203: PortalConnectTest failed with
+    // UncaughtExceptionsBeforeTest). Every view model made here is cancelled first.
+    private val viewModels = mutableListOf<ViewModel>()
+
     @BeforeTest fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -76,6 +86,8 @@ class ClaimPinFileTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
         Dispatchers.resetMain()
     }
 
@@ -106,7 +118,7 @@ class ClaimPinFileTest {
         try {
             val url = "http://127.0.0.1:${node.address.port}"
             CIRISApiClient.setLocalNodeUrl(url)
-            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false)
+            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false).also { viewModels += it }
             vm.claimLocalNodeOwnership(claimPinProvider = {
                 ClaimPinFile.await(timeoutMs = 300, pollMs = 100, read = readOf(File(dir, "claim_pin")))
             })

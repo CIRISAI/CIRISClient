@@ -3,7 +3,10 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.localization.LocalizationHelper
 import ai.ciris.mobile.shared.models.NodeProfile
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import java.io.File
@@ -26,6 +29,13 @@ class ClaimNodeCopyTest {
 
     private var savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
 
+    // A view model launches on viewModelScope from init and from its acts.
+    // Left running past resetMain(), a call that comes back resumes with no
+    // test Main and throws outside any test; kotlinx-coroutines-test then pins
+    // it on the NEXT runTest (PR #203: PortalConnectTest failed with
+    // UncaughtExceptionsBeforeTest). Every view model made here is cancelled first.
+    private val viewModels = mutableListOf<ViewModel>()
+
     @BeforeTest fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -35,12 +45,14 @@ class ClaimNodeCopyTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
+        viewModels.forEach { it.viewModelScope.cancel() }
+        viewModels.clear()
         Dispatchers.resetMain()
     }
 
     @Test
     fun aBlankPinAsksForTheClaimPinFileNotAConsole() {
-        val vm = NodeSwitcherViewModel(CIRISApiClient(CLOSED, null))
+        val vm = NodeSwitcherViewModel(CIRISApiClient(CLOSED, null)).also { viewModels += it }
         val pinned = NodeProfile(
             id = "n1",
             name = "n1",
