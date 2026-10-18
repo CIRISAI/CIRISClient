@@ -232,6 +232,18 @@ is not specified); the cell visualization's rendering (a canvas, not a tag
 tree); the emergency-stop path, which takes the runtime down and cannot run in
 a suite that has later steps.
 
+**On a phone the composer owns the bottom edge (CIRISClient#186).** Below
+the 900 dp rail the shell hides its circle bar (`shell_bottom_bar`) on this
+screen — `screenHostsComposer` in `CIRISApp.kt` names Interact and a user/pair
+chat — and keeps the top bar and the one back. The screen's own content pads by
+the soft keyboard (`composerImePadding`, `ui/shell/ComposerInsets.kt`), not the
+whole app, and the transcript scrolls to its newest message when the keyboard
+opens. At rail width nothing changes. Pinned headless at 360 x 640 dp with a
+300 dp keyboard: `ChatComposerOnPhoneTest`. **Not verified on a device:** iOS
+does not compile on the Linux box this was written on, and Compose iOS's default
+`OnFocusBehavior.FocusableAboveKeyboard` pans the view only when the focused
+field would still be covered; with the inset applied it should not be.
+
 **Stated limit.** This screen does not show a verifiable trace. It shows that
 reasoning occurred and in what order. Until a route carries `trace:complete:v1`
 the honest sentence is that one, and the CSD says so rather than letting the
