@@ -97,6 +97,15 @@ fun CirclesShell(
      * can stop something" is a false statement about node attestations.
      */
     instrument: Instrument? = null,
+    /**
+     * The hosted screen is a chat whose composer owns the bottom edge
+     * (Interact, a user/pair chat). On a phone the circle bar yields to it
+     * (CIRISClient#186): the bar there sat between the composer and the
+     * keyboard, and the keyboard covered the field. The top bar and the one
+     * back stay, so the circles are a tap away. At rail width nothing changes —
+     * there is room for both.
+     */
+    hostsComposer: Boolean = false,
     rail: @Composable () -> Unit = {},
     content: @Composable () -> Unit,
 ) {
@@ -140,7 +149,9 @@ fun CirclesShell(
             Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                 CompositionLocalProvider(LocalShellCardTitle provides publishedTitle) { content() }
             }
-            BottomBar(circle, inACircle = instrument == null, onCircle = onCircle)
+            // A chat's composer owns the bottom edge on a phone (#186); the
+            // circles are back the moment you leave it, by the back arrow.
+            if (!hostsComposer) BottomBar(circle, inACircle = instrument == null, onCircle = onCircle)
         }
     }
 }

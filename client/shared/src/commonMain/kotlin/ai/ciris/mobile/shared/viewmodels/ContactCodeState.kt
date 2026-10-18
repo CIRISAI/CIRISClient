@@ -95,4 +95,52 @@ enum class AddContactOutcome {
 
     /** `freshly_emitted: false` — the standing grant already covered it. Not an error. */
     ALREADY,
+
+    /**
+     * A 2xx with a `reason_id` (202 `contacts.awaiting_key_body`, …): NOTHING
+     * was written, and the card must not say "added" (CIRISClient#188). The
+     * code is kept as a [PendingContact] and asked again until the node
+     * answers without one.
+     */
+    PENDING,
 }
+
+/**
+ * A code the node accepted but could not complete yet — kept, shown as a row
+ * of its own, and POSTed again (CIRISClient#188).
+ *
+ * Not a [ai.ciris.mobile.shared.models.federation.Contact]: no grant exists,
+ * no chat can open (`chat.not_a_contact`), and the row says so instead of
+ * offering one. It leaves the list three ways — the node answers the re-POST
+ * without a `reason_id` (added), the key turns up in `GET /v1/contacts` on
+ * its own (ciris-server 0.5.231 completes it itself, CIRISServer#777), or the
+ * node refuses it outright ([refusal]) — and the person can forget it.
+ */
+data class PendingContact(
+    /** Exactly what was pasted; the thing to POST again. The row's identity. */
+    val code: String,
+    /** The key the not-yet named (`key_id`), or "" when it named none. */
+    val keyId: String,
+    /** The person's federation id when the code resolved to one (`fed_id`). */
+    val fedId: String?,
+    /** The node's typed not-yet — rendered by id, like every refusal. */
+    val reasonId: String,
+    /** The node's English for it, the detail under the id. */
+    val detail: String?,
+    /** The node's cue that the state resolves without another request. */
+    val convergesOnItsOwn: Boolean,
+    /** How many times the code has been POSTed, the first paste included. */
+    val attempts: Int = 1,
+    /** Set when the loop gave up ([ContactsViewModel.PENDING_MAX_ATTEMPTS]); a refresh or Try again starts it over. */
+    val exhausted: Boolean = false,
+    /** The node refused the re-POST by id; the row says so and stops asking. */
+    val refusal: NodeRefusalFact? = null,
+) {
+    /** Whom the row names: the fed-ID when known, else the key the not-yet named, else the code. */
+    val who: String get() = fedId?.takeIf { it.isNotBlank() } ?: keyId.takeIf { it.isNotBlank() } ?: code
+    /** The row's tag suffix: a key, never the pasted code (which is long and has no reason to be a tag). */
+    val rowId: String get() = keyId.takeIf { it.isNotBlank() } ?: fedId?.takeIf { it.isNotBlank() } ?: code.take(24)
+}
+
+/** A refusal's two facts, kept on a [PendingContact] (the exception itself is not state). */
+data class NodeRefusalFact(val reasonId: String?, val detail: String?, val statusCode: Int)

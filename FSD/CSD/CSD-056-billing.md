@@ -62,13 +62,38 @@ fields:
     example: ["500 credits — $4.99"]
     renders: "one purchasable package per row. NOT from the store: the three rows and their prices are a compiled-in constant (BillingViewModel.kt:47-66), never replaced — see §3"
     tag: "proposed:row_billing_product"
-  - ceg: x_private:auth_expired
+  - ceg: x_private:billing_credential_stale
     use: display-only
     type: bool
     example: false
-    renders: "Your billing sign-in has expired — sign in again. (CIRISClient#59)"
-    tag: "proposed:text_billing_auth_expired"
+    renders: "Credits need a fresh Google sign-in. You are still signed in to this agent; only the token it uses to pay for AI use has expired. — with the Refresh Google sign-in button; NOT the session banner (CIRISClient#171, #172)"
+    tag: "btn_billing_refresh_signin_text"
+  - ceg: x_private:session_expired
+    use: display-only
+    type: bool
+    example: false
+    renders: "Your session is no longer valid. Sign in again to continue. — only when TokenManager's needsInteractiveLogin says the SESSION is dead, never for a billing 401 (CIRISClient#59, #171)"
+    tag: "proposed:text_billing_session_expired"
 ```
+
+**Two credentials, two states, and the card says which is which.** The agent's
+`GET /v1/api/billing/credits` answers 401 `billing_auth_expired` when the
+Google ID token it spends at the hosted proxy has lapsed (`routes/billing.py`,
+`_AUTH_FAILURE_CATEGORIES`). That token lasts an hour and, on desktop, was
+written once at setup and never again (CIRISClient#172: issued 15:17:55Z,
+expired 16:17:55Z, three weeks of `401 token_expired`). The client used to
+route it through `TokenManager.on401Error` — the SESSION path — and render
+`auth.session_expired` with a button that signed the person out of an agent
+that was answering them (#171). Now `TokenManager.billingCredentialStale` is
+its own flag, `BillingViewModel.billingCredentialStale` its own state, and the
+banner above (`BillingCredentialBanner`) is non-blocking and renews the token
+in place: the native picker on Android/iOS; on desktop the browser hand-off
+(`BrowserSignIn.kt`), whose `id_token` is written through `EnvFileUpdater` to
+`CIRIS_BILLING_GOOGLE_ID_TOKEN` with `.config_reload` tripped
+(`BillingCredentialRefresh.kt`, `BillingCredentialRefreshTest`). The session
+token the hand-off also returns is deliberately ignored. A hand-off without an
+`id_token` is the named `mobile.billing_refresh_node_too_old` state
+(ciris-server < 0.5.177), not a generic error.
 
 **Every row is `x_private:` and that is correct, not a shortcut.** There is no
 billing, payment, wallet or currency family in the registry — I checked all 116
@@ -86,11 +111,13 @@ the checker would happily pass, so the prohibition is written here instead: the
 balance is `x_private:credit_balance` and the word on screen should change, not
 the binding. Naming, not machinery.
 
-**FIVE tags exist on the screen**: `btn_billing_back`, `btn_billing_refresh`,
-`txt_billing_version`, and — per product — `item_product_${productId}`
-(`BillingScreen.kt:251`) and `btn_buy_${productId}` (`:289`). So a
+**SEVEN tags exist on the screen**: `btn_billing_back`, `btn_billing_refresh`,
+`txt_billing_version`, — per product — `item_product_${productId}`
+(`BillingScreen.kt:251`) and `btn_buy_${productId}` (`:289`), and the credits
+banner's `btn_billing_refresh_signin` / `btn_billing_refresh_signin_text`
+(`BillingCredentialBanner.kt`; `_waiting` while the browser is open). So a
 `count: {of: "item_product_*", min: 1}` is assertable today with no tagging PR;
-only the VALUE rows above are `proposed:`.
+the other VALUE rows above are `proposed:`.
 
 ```yaml csd:states
 populated: {tag: "proposed:text_billing_balance", renders: "the balance and the purchasable packages"}
@@ -125,6 +152,8 @@ state above.
 | purchasable packages | **a compiled-in constant, not the store** | CIRISClient | live, and **two lists that never meet** — see below |
 | anything on a node | none | — | The node serves no billing route. `getCredits` now RAISES `RouteNotOnThisHost` on a node (`CIRISApiClient.kt:7776`) and the card renders `ReadFailureBlock` (`BillingScreen.kt:123-132`: `billing_not_on_this_node` / `billing_error`), never a synthesised balance |
 | a 503 from the credit service | `GET /v1/api/billing/credits` → 503 `billing_unavailable` (`routes/billing.py:615-623`) | CIRISAgent | **closed 2026-09-27:** the client classed 503 as an auth failure, walked the person through a token refresh and landed them on "session expired" for an outage that was never theirs (`BillingViewModel.kt:211-213, 330-332`); only a 401 is auth now (`isAuthFailure`, `BillingViewModelTest.loadBalance_503_isAnOutageNotAnExpiredSignIn`) |
+| a 401 from the credit service | `GET /v1/api/billing/credits` → 401 `billing_auth_expired` (`routes/billing.py`, `_AUTH_FAILURE_CATEGORIES`); the agent also writes `<CIRIS_HOME>/.token_refresh_needed` (`token_handshake.py`) | CIRISAgent | **closed 2026-10-18 (CIRISClient#171):** this is the BILLING credential — the Google ID token at the hosted proxy — not the session, and it rendered `auth.session_expired` with a sign-out button. Now `TokenManager.onBillingCredentialRejected` → `billingCredentialStale` → `BillingViewModel.onBillingCredentialStale` → the credits banner (`BillingViewModelTest.loadBalance_401Error_retryAlsoFails_isABillingStateNotASessionOne`, `TokenManagerCredentialSplitTest`). The session's `on401Error` / `needsInteractiveLogin` path is untouched |
+| renew the billing credential (desktop) | `GET /v1/auth/oauth/{provider}/login?app_nonce=` in the browser, then `GET /v1/auth/oauth/handoff?app_nonce=&allow_unbound=` on the **node** (CSD-081 row), then `.env` + `.config_reload` | CIRISServer (hand-off) · CIRISAgent (`.env` reader) · CIRISClient (the write) | **live 2026-10-18 (CIRISClient#172):** `refreshBillingCredentialFromBrowser` (`BillingCredentialRefresh.kt`) takes the hand-off's `id_token` (ciris-server 0.5.177+, CIRISServer#434) and writes it to `CIRIS_BILLING_GOOGLE_ID_TOKEN` through `EnvFileUpdater` (`BillingCredentialRefreshTest`). The same write now happens on every existing-user desktop Google sign-in, which used to collect the token and drop it. **No silent path exists:** the node asks Google for `access_type=offline` and discards the `refresh_token` it gets back (`src/auth/oauth.rs` `exchange_google` reads only `access_token` + `id_token`) — `evidence/blocked_upstream.tsv` |
 
 **The prices on screen are not the store's.** `BillingViewModel.DEFAULT_PRODUCTS`
 (`viewmodels/BillingViewModel.kt:47-66` — `credits_100` $9.99/99, `credits_250`

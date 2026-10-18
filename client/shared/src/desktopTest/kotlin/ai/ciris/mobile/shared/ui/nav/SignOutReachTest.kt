@@ -37,7 +37,7 @@ class SignOutReachTest {
             ?: error("the Screen.IdentityManagement render arm did not parse — the test is wrong, not the app")
         val args = arm.groupValues[1]
         assertTrue("onLogout =" in args, "CIRISApp does not pass onLogout to My Identity")
-        assertTrue("settingsViewModel.logout" in args, "My Identity's sign-out is not the logout Settings uses")
+        assertTrue("signOut.now()" in args, "My Identity's sign-out is not the one sign-out (auth/SignOut.kt)")
     }
 
     /**

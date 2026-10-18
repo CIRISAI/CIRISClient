@@ -61,7 +61,13 @@ class Report:
     platform: str
     ok: bool = False
     artifact: str = ""
+    #: The run's ONE server version (testing/gate/server_version.py): the node
+    #: this leg downloaded and talks to, and the two-node peer.
     node_version: str = ""
+    #: iOS only: the simulator app embeds CIRISAgent's pinned ciris-server, which
+    #: is NOT the run's version. The board says both; it never claims the run's
+    #: version for a node the leg did not run (CIRISClient#166).
+    embedded_node_version: str = ""
     steps: list[StepResult] = field(default_factory=list)
     #: One entry per CSD flow (run_flows.FlowOutcome), when `--flows` was given.
     flows: list[dict] = field(default_factory=list)
@@ -252,7 +258,12 @@ def main() -> int:
     ap.add_argument("--xvfb", action="store_true", help="wrap desktop in xvfb-run")
     ap.add_argument("--shots", type=Path, default=Path("shots"))
     ap.add_argument("--report", type=Path)
-    ap.add_argument("--node-version", default="")
+    ap.add_argument("--node-version", default="",
+                    help="the run's server version (testing/gate/server_version.py) — the node this "
+                         "leg talks to and the peer it stands up")
+    ap.add_argument("--embedded-node-version", default="",
+                    help="iOS: the ciris-server the simulator app EMBEDS (CIRISAgent's pin), which is "
+                         "the node the client actually talks to there; recorded beside --node-version")
     ap.add_argument("--timeout", type=float, default=120.0)
     ap.add_argument("--flows", action="append",
                     help="after the smoke walk, run these CSD flows (a file or a directory; "
@@ -267,7 +278,8 @@ def main() -> int:
     add_fixture_args(ap)
     args = ap.parse_args()
 
-    rep = Report(platform=args.platform, node_version=args.node_version)
+    rep = Report(platform=args.platform, node_version=args.node_version,
+                 embedded_node_version=args.embedded_node_version)
     args.shots.mkdir(parents=True, exist_ok=True)
 
     from testing.gate.platforms import build_platform
@@ -351,6 +363,13 @@ def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None
         return
     rep.flows = [asdict(o) for o in outcomes]
     rep.add("flows", run_flows.leg_ok(outcomes), run_flows.summary(outcomes))
+    # THE QUIET PASS, JUDGED HERE, beside the verdict it hides in. An optional
+    # step skipped is a step that did not run; the count per flow is compared
+    # with testing/flows/optional_skips_baseline.json, and a rise OR a fall
+    # reddens the leg (CIRISClient#168 — testing/gate/optional_skips.py).
+    from testing.gate import optional_skips
+    ok, detail = optional_skips.verdict(leg, rep.flows)
+    rep.add("optional-skips", ok, detail)
 
 
 def _finish(args, rep: Report) -> int:
@@ -367,8 +386,23 @@ def _finish(args, rep: Report) -> int:
         args.report.write_text(json.dumps(asdict(rep), indent=2), encoding="utf-8")
     for s in rep.steps:
         print(f"  [{'OK ' if s.ok else 'FAIL'}] {s.name}: {s.detail}")
-    print(f"{args.platform}: {'PASS' if rep.ok else 'FAIL'}")
+    print(board_line(args.report.stem if args.report else args.platform, rep))
     return 0 if rep.ok else 1
+
+
+def board_line(leg: str, rep: Report) -> str:
+    """`linux: PASS · server v0.5.231 · optional skips 10` — the one line a
+    reader scans five of. The server version is the run's (one per run,
+    CIRISClient#166); the skip count is what "0 FAIL" was hiding (#168)."""
+    from testing.gate import optional_skips  # noqa: PLC0415
+    parts = [f"{leg}: {'PASS' if rep.ok else 'FAIL'}",
+             f"server {rep.node_version or 'unknown'}"]
+    if rep.embedded_node_version:
+        parts.append(f"embedded node {rep.embedded_node_version} (the Agent's pin; the client "
+                     f"talks to this one, the run's server is its peer)")
+    now, _ = optional_skips.counts_for(rep.flows)
+    parts.append(f"optional skips {optional_skips.describe(now)}")
+    return " · ".join(parts)
 
 
 if __name__ == "__main__":

@@ -54,6 +54,13 @@ fun MyThingsSheet(
     onBrightness: (BrightnessPreference) -> Unit,
     onInstrument: (Instrument) -> Unit,
     onDismiss: () -> Unit,
+    /**
+     * Sign out of this device — on every build (CIRISClient#51). A
+     * run-without-AI install has no agent Settings, and the avatar is the one
+     * control every screen of every install carries, so the way out lives
+     * here too. It opens the sign-out confirm; it does not sign out itself.
+     */
+    onSignOut: (() -> Unit)? = null,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -86,6 +93,15 @@ fun MyThingsSheet(
                     modifier = Modifier.padding(horizontal = 8.dp),
                 )
             }
+            if (onSignOut != null) {
+                InstrumentRow(
+                    label = localizedString("mobile.identity_sign_out"),
+                    glyph = GlyphName.LOCK,
+                    tag = SIGN_OUT_TAG,
+                    onClick = onSignOut,
+                    modifier = Modifier.padding(horizontal = 8.dp),
+                )
+            }
             Spacer(Modifier.height(10.dp))
             HorizontalDivider(thickness = CirisShape.hairlineWidth, color = t.hairline, modifier = Modifier.padding(horizontal = 18.dp))
             Spacer(Modifier.height(10.dp))
@@ -97,6 +113,9 @@ fun MyThingsSheet(
         }
     }
 }
+
+/** My things' sign-out row. */
+const val SIGN_OUT_TAG = "btn_my_things_sign_out"
 
 /** Light · System · Dark as three chips. The same tags the old rail strip carried. */
 @Composable
