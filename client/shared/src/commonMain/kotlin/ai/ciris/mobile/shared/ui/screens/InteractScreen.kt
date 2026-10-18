@@ -11,6 +11,7 @@ import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.components.emojiToIconOrDefault
 import ai.ciris.mobile.shared.ui.components.emojiBusColor
 import androidx.compose.material3.Icon
+import ai.ciris.mobile.shared.ui.components.BillingCredentialBanner
 import ai.ciris.mobile.shared.ui.components.SessionExpiredBanner
 import androidx.compose.ui.graphics.vector.ImageVector
 import ai.ciris.mobile.shared.models.MessageType
@@ -131,6 +132,8 @@ fun InteractScreen(
     viewModel: InteractViewModel,
     onNavigateBack: () -> Unit,
     onSessionExpired: () -> Unit = {},
+    /** Renew the BILLING credential — a fresh provider sign-in that leaves the session alone (CIRISClient#172). */
+    onRefreshBillingCredential: () -> Unit = {},
     onOpenTrustPage: () -> Unit = {},
     onOpenWalletPage: () -> Unit = {},
     onOpenBilling: () -> Unit = {},
@@ -205,10 +208,12 @@ fun InteractScreen(
     val showLegend by viewModel.showLegend.collectAsState()
     val llmHealth by viewModel.llmHealth.collectAsState()
     val creditStatus by viewModel.creditStatus.collectAsState()
+    val sessionExpired by viewModel.sessionExpired.collectAsState()
     val trustStatus by viewModel.trustStatus.collectAsState()
     val walletStatus by viewModel.walletStatus.collectAsState()
     val attachedFiles by viewModel.attachedFiles.collectAsState()
     val attachmentRefused by viewModel.attachmentRefused.collectAsState()
+    val shedState by viewModel.shedState.collectAsState()
     val pipelineState by viewModel.pipelineState.collectAsState()
     val pendingDeferrals by viewModel.pendingDeferrals.collectAsState()
     val systemWarnings by viewModel.systemWarnings.collectAsState()
@@ -439,18 +444,32 @@ fun InteractScreen(
                 theme = theme
             )
 
-            // THE DOOR, NOT JUST THE SIGN. authExpired is TokenManager's own
-            // conclusion that only a person can renew the credential; the send
+            // THE DOOR, NOT JUST THE SIGN. sessionExpired is TokenManager's own
+            // conclusion that only a person can renew the SESSION; the send
             // path already refuses with the sentence. This is the action the
             // sentence implies, on the surface the person is stuck on, wired to
             // the same sign-in-again the Interact 401 path has always used
             // (CIRISClient#59).
-            if (creditStatus.authExpired) {
+            if (sessionExpired) {
                 SessionExpiredBanner(
                     onSignInAgain = onSessionExpired,
                     tag = "btn_sign_in_again",
                     background = theme.warningBackground,
                     foreground = theme.warningText,
+                )
+            }
+            // A DIFFERENT CREDENTIAL, A DIFFERENT DOOR (CIRISClient#171). The
+            // billing token lapsed; the session did not. This used to be the
+            // banner above, and its button signed the person out. Shown only
+            // when the hosted proxy is the LLM — with a BYOK key nothing about
+            // chat depends on billing, and the Billing screen still says it.
+            if (llmHealth.isCirisProxy && creditStatus.billingCredentialStale) {
+                BillingCredentialBanner(
+                    onRefresh = onRefreshBillingCredential,
+                    refreshing = creditStatus.billingCredentialRefreshing,
+                    tag = "btn_interact_refresh_billing_signin",
+                    provider = if (ai.ciris.mobile.shared.platform.isIOS()) "Apple" else "Google",
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }
 
@@ -691,7 +710,12 @@ fun InteractScreen(
                 )
             }
 
-            // Input bar with agent state icon
+            ai.ciris.mobile.shared.ui.components.AgentShedNotice(
+                state = shedState,
+                onRetry = { viewModel.retryAfterShed() },
+                onDismiss = { viewModel.dismissShedNotice() },
+            )
+
             // Input bar with agent state icon
             // navigationBarsPadding here so input sits above the system nav bar
             ChatInputBarWithBubbles(
