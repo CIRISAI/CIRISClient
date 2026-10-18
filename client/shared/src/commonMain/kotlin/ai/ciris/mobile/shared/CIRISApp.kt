@@ -5256,6 +5256,8 @@ fun CIRISApp(
                     circle = circleNow,
                     tab = tabNow,
                     hasAgent = hasAgentNow,
+                    // A chat's composer owns the bottom edge on a phone (CIRISClient#186).
+                    hostsComposer = screenHostsComposer(currentScreen),
                     onBack = shellBack?.let { target -> { currentScreen = target } },
                     onCircle = { c -> openTab(c, tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES) },
                     onTab = { t -> openTab(circleNow, t) },
@@ -6297,6 +6299,14 @@ private fun placedBackTarget(screen: Screen, hasAgent: Boolean): Screen? {
     val siblings = ai.ciris.mobile.shared.ui.nav.CirclesNav.cards(circle, placement.tab, hasAgent)
     return if (siblings.size > 1) Screen.CircleTab(circle.id, placement.tab.id) else null
 }
+
+/**
+ * The screens whose composer owns the bottom edge: Interact and a user/pair
+ * chat. On a phone the shell hides its circle bar for them (CIRISClient#186).
+ * By screen, not by surface — a chat is a leaf of the surface it was opened
+ * from (Contacts, a circle's Chats tab), and that surface is no chat.
+ */
+internal fun screenHostsComposer(s: Screen): Boolean = s == Screen.Interact || s is Screen.UserChat
 
 internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface? = when (s) {
     Screen.Interact -> ai.ciris.mobile.shared.ui.nav.NavSurface.Interact
