@@ -62,7 +62,11 @@ class AddDeviceWireTest {
         savedLocal = CIRISApiClient.LOCAL_NODE_URL
     }
 
+    /** Every wizard a test made: its poll is stopped before Main is reset, or it leaks into the next test. */
+    private val made = mutableListOf<SetupViewModel>()
+
     @AfterTest fun tearDown() {
+        made.forEach { it.resetState() }
         CIRISApiClient.setLocalNodeUrl(savedLocal)
         Dispatchers.resetMain()
     }
@@ -84,7 +88,7 @@ class AddDeviceWireTest {
     private fun wizard(node: Node, hasAgent: Boolean = false): Pair<CIRISApiClient, SetupViewModel> {
         CIRISApiClient.setLocalNodeUrl(node.url)
         val api = CIRISApiClient(node.url, null)
-        return api to SetupViewModel(api, hasAgent = hasAgent, addDevicePollMs = 20)
+        return api to SetupViewModel(api, hasAgent = hasAgent, addDevicePollMs = 20).also { made += it }
     }
 
     @Test

@@ -33,7 +33,14 @@ import kotlin.test.assertTrue
 class AddDeviceSetupTest {
 
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    /** Every wizard a test made: its poll is stopped before Main is reset, or it leaks into the next test. */
+    private val made = mutableListOf<SetupViewModel>()
+    private fun track(vm: SetupViewModel) = vm.also { made += it }
+
+    @AfterTest fun tearDown() {
+        made.forEach { it.resetState() }
+        Dispatchers.resetMain()
+    }
 
     /** A node that answers from a script and records every call, in order. */
     private class ScriptedNode : AddDeviceSetupApi {
@@ -90,7 +97,7 @@ class AddDeviceSetupTest {
     }
 
     private fun vm(node: ScriptedNode, hasAgent: Boolean = false) =
-        SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = hasAgent, addDeviceApiOverride = node, addDevicePollMs = 5)
+        track(SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = hasAgent, addDeviceApiOverride = node, addDevicePollMs = 5))
 
     private suspend fun SetupViewModel.until(what: String, pred: (SetupFormState) -> Boolean): SetupFormState =
         withContext(Dispatchers.Default) {
@@ -277,7 +284,7 @@ class AddDeviceSetupTest {
             val api = CIRISApiClient("http://127.0.0.1:1", null)
             val node = ScriptedNode()
             node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
-            val vm = SetupViewModel(api, hasAgent = false, addDeviceApiOverride = node, addDevicePollMs = 5)
+            val vm = track(SetupViewModel(api, hasAgent = false, addDeviceApiOverride = node, addDevicePollMs = 5))
             vm.setAnnounceOwnership(false)
             vm.asked()
             vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
@@ -335,7 +342,7 @@ class AddDeviceSetupTest {
         val api = FakeCIRISApiClientForBilling()
         val node = ScriptedNode()
         node.statusAnswers += { progress("approved", owner = "eric-moore-v1") }
-        val vm = SetupViewModel(api, addDeviceApiOverride = node, addDevicePollMs = 5)
+        val vm = track(SetupViewModel(api, addDeviceApiOverride = node, addDevicePollMs = 5))
         vm.asked()
         vm.until("approved") { it.addDevice.phase == AddDevicePhase.APPROVED }
         vm.claimLocalNodeOwnership(claimPinProvider = { "7F3K-Q9MZ" })
