@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Menunggu mereka menerima. Tidak ada yang perlu dicoba ulang: ini selesai saat mereka menerima.",
-    "awaiting_key_body": "kunci yang disebutkan oleh kode ini sedang diambil dari mesh; coba lagi setelah kunci itu tiba dan kontak akan diverifikasi terhadap komitmen kode tersebut",
+    "awaiting_key_body": "kunci yang disebutkan kode ini sedang diambil dari mesh; kontak akan selesai dengan sendirinya setelah kunci itu tiba dan diverifikasi terhadap kode tersebut",
     "code_commitment_mismatch": "Kode ini tidak cocok dengan orang yang disebutkannya, sehingga tidak ditambahkan. Minta mereka mengirim kode kontak mereka lagi.",
     "code_without_pqc_commitment": "Kode ini terlalu lama untuk ditambahkan secara langsung. Minta kode baru dari mereka, atau tambahkan mereka melalui peering.",
     "consent_emit_failed": "Node tidak dapat menerbitkan pemberian persetujuan yang menjadikan ini sebuah kontak. Tidak ada yang diubah.",
@@ -5886,7 +5886,7 @@
     "already_owned": "perangkat ini sudah memiliki pemilik",
     "apply_failed": "persetujuan tidak dapat diterapkan pada perangkat ini",
     "approve_failed": "persetujuan tidak dapat ditandatangani dan dicatat",
-    "mint_failed": "kunci perangkat tidak membawa kunci enkripsi",
+    "mint_failed": "tidak dapat mencetak kunci-kunci perangkat ini",
     "no_device": "kode tersebut tidak menyebutkan perangkat mana pun untuk diminta — buka Bagikan ID Saya di perangkat lain Anda dan gunakan kode QR atau bentuk panjangnya",
     "no_transport": "perangkat ini tidak menjalankan transport mesh, sehingga tidak dapat menjangkau perangkat lain Anda",
     "not_accepting": "perangkat lain Anda tidak menerima perangkat baru — buka Tambah Perangkat di sana, lalu coba lagi",

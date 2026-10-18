@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Ń dúró de wọn láti gbà. Kò sí ohun tí a óò gbìyànjú padà: èyí á parí nígbà tí wọ́n bá gbà.",
-    "awaiting_key_body": "kọ́kọ́rọ́ tí kóòdù yìí dárúkọ ń jẹ́ mímú wá láti ọ̀dọ̀ mesh náà; gbìyànjú lẹ́ẹ̀kansi nígbà tí ó bá ti dé, a óò sì fi olùbásọ̀rọ̀ náà wéra pẹ̀lú ìlérí kóòdù náà",
+    "awaiting_key_body": "kọ́kọ́rọ́ tí kóòdù yìí dárúkọ ń di gbígbà wá láti orí mesh; olùbásọ̀rọ̀ náà á parí fúnra rẹ̀ ní kété tí ó bá dé tí a sì ti fi í ṣàyẹ̀wò pẹ̀lú kóòdù náà",
     "code_commitment_mismatch": "Kóòdù yìí kò bá ẹni tí ó dárúkọ mu, nítorí náà a kò fi kún. Bèèrè lọ́wọ́ wọn kí wọ́n fi kóòdù olùbásọ̀rọ̀ wọn ránṣẹ́ padà.",
     "code_without_pqc_commitment": "Kóòdù yìí ti dàgbà jù láti fi kún taara. Bèèrè lọ́wọ́ wọn fún òmíràn tuntun, tàbí fi wọ́n kún nípasẹ̀ ìsopọ̀ ẹlẹgbẹ́-sí-ẹlẹgbẹ́.",
     "consent_emit_failed": "Nóòdù náà kò lè gbé ìyọ̀ǹda àṣẹ tí ó sọ eléyìí di olùbásọ̀rọ̀ jáde. Kò sí ohun tí ó yí padà.",
@@ -5886,7 +5886,7 @@
     "already_owned": "ẹ̀rọ yìí ti ní olóhun tẹ́lẹ̀",
     "apply_failed": "a kò lè lo ìfọwọ́sí náà lórí ẹ̀rọ yìí",
     "approve_failed": "a kò lè fi ọwọ́ sí ìfọwọ́sí náà kí a sì gbà á sílẹ̀",
-    "mint_failed": "àwọn kọ́kọ́rọ́ ẹ̀rọ kò gbé kọ́kọ́rọ́ ìdáàbòbò kankan",
+    "mint_failed": "a kò lè dá àwọn kọ́kọ́rọ́ ẹ̀rọ yìí jáde",
     "no_device": "kóòdù yẹn kò dárúkọ ẹ̀rọ kankan láti bèèrè lọ́wọ́ rẹ̀ — ṣí \"Pín ID mi\" lórí ẹ̀rọ rẹ mìíràn, kí o sì lo QR rẹ̀ tàbí fọ́ọ̀mù gígùn rẹ̀",
     "no_transport": "ẹ̀rọ yìí kò ní mesh transport tí ń ṣiṣẹ́, nítorí náà kò lè dé ẹ̀rọ rẹ mìíràn",
     "not_accepting": "ẹ̀rọ rẹ mìíràn kò ń gba àwọn ẹ̀rọ tuntun — ṣí \"Fi ẹ̀rọ kún\" lórí rẹ̀, kí o sì tún gbìyànjú",

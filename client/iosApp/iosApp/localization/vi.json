@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Đang chờ họ chấp nhận. Không có gì để thử lại: việc này hoàn tất khi họ chấp nhận.",
-    "awaiting_key_body": "khóa mà mã này nêu tên đang được tải về từ lưới; hãy thử lại khi khóa đến, và liên hệ sẽ được xác minh theo cam kết của mã",
+    "awaiting_key_body": "khóa mà mã này nêu tên đang được tải về từ lưới; liên hệ sẽ tự hoàn tất khi khóa đến và được xác minh đối chiếu với mã",
     "code_commitment_mismatch": "Mã này không khớp với người mà nó nêu tên, nên chưa được thêm vào. Hãy xin họ gửi lại mã liên hệ của họ.",
     "code_without_pqc_commitment": "Mã này quá cũ để thêm trực tiếp. Hãy xin họ một mã mới, hoặc thêm họ qua kết nối ngang hàng.",
     "consent_emit_failed": "Nút không thể phát hành sự chấp thuận biến đây thành một liên hệ. Không có gì bị thay đổi.",
@@ -5886,7 +5886,7 @@
     "already_owned": "thiết bị này đã có chủ sở hữu",
     "apply_failed": "không thể áp dụng sự chấp thuận trên thiết bị này",
     "approve_failed": "không thể ký và ghi lại sự chấp thuận",
-    "mint_failed": "khóa thiết bị không mang khóa mã hóa nào",
+    "mint_failed": "không thể tạo các khóa của thiết bị này",
     "no_device": "mã đó không chỉ định thiết bị nào để hỏi — hãy mở Chia sẻ ID của tôi trên thiết bị khác của bạn và dùng mã QR hoặc dạng dài của nó",
     "no_transport": "thiết bị này không chạy giao vận lưới nào, nên không thể kết nối tới thiết bị khác của bạn",
     "not_accepting": "thiết bị khác của bạn không chấp nhận thiết bị mới — hãy mở Thêm thiết bị trên đó, rồi thử lại",

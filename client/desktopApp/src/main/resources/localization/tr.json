@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Kabul etmelerini bekliyoruz. Yeniden denenecek bir şey yok: bu, onlar kabul ettiğinde tamamlanır.",
-    "awaiting_key_body": "bu kodun adlandırdığı anahtar mesh ağından getiriliyor; anahtar geldiğinde yeniden deneyin, kişi kodun taahhüdüne göre doğrulanacaktır",
+    "awaiting_key_body": "bu kodun adlandırdığı anahtar mesh ağından getiriliyor; anahtar ulaştığında ve kodla doğrulandığında kişi kendiliğinden tamamlanır",
     "code_commitment_mismatch": "Bu kod, adını taşıdığı kişiyle eşleşmiyor, bu yüzden eklenmedi. Kişiden iletişim kodunu tekrar göndermesini isteyin.",
     "code_without_pqc_commitment": "Bu kod doğrudan eklemek için çok eski. Onlardan yeni bir kod isteyin veya eşleştirme yoluyla ekleyin.",
     "consent_emit_failed": "Düğüm, bunu bir kişi kaydı yapan onay iznini yayımlayamadı. Hiçbir şey değiştirilmedi.",
@@ -5886,7 +5886,7 @@
     "already_owned": "bu cihazın zaten bir sahibi var",
     "apply_failed": "onay bu cihaza uygulanamadı",
     "approve_failed": "onay imzalanıp kaydedilemedi",
-    "mint_failed": "cihaz anahtarları şifreleme anahtarı içermiyor",
+    "mint_failed": "bu cihazın anahtarları oluşturulamadı",
     "no_device": "bu kod, sorulacak bir cihaz belirtmiyor — diğer cihazınızda Kimliğimi paylaş'ı açın ve QR kodunu veya uzun biçimini kullanın",
     "no_transport": "bu cihazda çalışan bir mesh taşıyıcısı yok, bu yüzden diğer cihazınıza ulaşamıyor",
     "not_accepting": "diğer cihazınız yeni cihaz kabul etmiyor — üzerinde Cihaz ekle'yi açın, ardından tekrar deneyin",

@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "En attente de leur acceptation. Il n'y a rien à réessayer : ceci se termine lorsqu'ils acceptent.",
-    "awaiting_key_body": "la clé que ce code nomme est en cours de récupération depuis le réseau maillé ; réessayez une fois qu'elle sera arrivée, et le contact sera vérifié par rapport à l'engagement du code",
+    "awaiting_key_body": "la clé que ce code désigne est en cours de récupération depuis le réseau maillé ; le contact se termine automatiquement dès qu'elle arrive et qu'elle est vérifiée par rapport au code",
     "code_commitment_mismatch": "Ce code ne correspond pas à la personne qu'il désigne, il n'a donc pas été ajouté. Demandez-leur de vous renvoyer leur code de contact.",
     "code_without_pqc_commitment": "Ce code est trop ancien pour être ajouté directement. Demandez-leur-en un nouveau, ou ajoutez-les via l'appairage.",
     "consent_emit_failed": "Le nœud n’a pas pu émettre l’octroi de consentement qui fait de cette identité un contact. Rien n’a été modifié.",
@@ -5886,7 +5886,7 @@
     "already_owned": "cet appareil a déjà un propriétaire",
     "apply_failed": "l'approbation n'a pas pu être appliquée sur cet appareil",
     "approve_failed": "l'approbation n'a pas pu être signée et enregistrée",
-    "mint_failed": "les clés de l'appareil ne portent aucune clé de chiffrement",
+    "mint_failed": "les clés de cet appareil n'ont pas pu être générées",
     "no_device": "ce code ne désigne aucun appareil à solliciter — ouvrez « Partager mon ID » sur votre autre appareil et utilisez son QR code ou sa forme longue",
     "no_transport": "cet appareil n'a aucun transport maillé en cours d'exécution, il ne peut donc pas joindre votre autre appareil",
     "not_accepting": "votre autre appareil n'accepte pas de nouveaux appareils — ouvrez « Ajouter un appareil » dessus, puis réessayez",

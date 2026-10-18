@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Warte auf die Annahme durch die andere Person. Ein erneuter Versuch ist nicht nötig: Dies ist abgeschlossen, sobald die andere Person annimmt.",
-    "awaiting_key_body": "der Schlüssel, den dieser Code benennt, wird gerade aus dem Mesh abgerufen; versuchen Sie es erneut, sobald er eingetroffen ist, und der Kontakt wird gegen das Commitment des Codes verifiziert",
+    "awaiting_key_body": "Der Schlüssel, den dieser Code benennt, wird gerade aus dem Mesh abgerufen; der Kontakt wird von selbst abgeschlossen, sobald er eintrifft und gegen den Code verifiziert wurde.",
     "code_commitment_mismatch": "Dieser Code stimmt nicht mit der Person überein, die er benennt, daher wurde er nicht hinzugefügt. Bitten Sie die Person, ihren Kontaktcode erneut zu senden.",
     "code_without_pqc_commitment": "Dieser Code ist zu alt, um ihn direkt hinzuzufügen. Bitten Sie die Person um einen neuen Code, oder fügen Sie sie über Peering hinzu.",
     "consent_emit_failed": "Der Knoten konnte die Einwilligung, die diesen Kontakt begründet, nicht ausstellen. Es wurde nichts geändert.",
@@ -5886,7 +5886,7 @@
     "already_owned": "Dieses Gerät hat bereits einen Eigentümer",
     "apply_failed": "Die Genehmigung konnte auf diesem Gerät nicht angewendet werden",
     "approve_failed": "Die Genehmigung konnte nicht signiert und aufgezeichnet werden",
-    "mint_failed": "Geräteschlüssel enthalten keine Verschlüsselungsschlüssel",
+    "mint_failed": "Die Schlüssel dieses Geräts konnten nicht geprägt werden",
     "no_device": "Dieser Code benennt kein Gerät, das gefragt werden kann — öffnen Sie „Meine ID teilen“ auf Ihrem anderen Gerät und verwenden Sie dessen QR-Code oder Langform",
     "no_transport": "Dieses Gerät hat keinen laufenden Mesh-Transport und kann daher Ihr anderes Gerät nicht erreichen",
     "not_accepting": "Ihr anderes Gerät nimmt derzeit keine neuen Geräte an — öffnen Sie dort „Gerät hinzufügen“ und versuchen Sie es erneut",

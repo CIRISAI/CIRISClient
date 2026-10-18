@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Esperando a que acepten. No hay nada que reintentar: esto termina cuando acepten.",
-    "awaiting_key_body": "la clave que nombra este código se está obteniendo de la malla; inténtalo de nuevo cuando haya llegado y el contacto se verificará contra el compromiso del código",
+    "awaiting_key_body": "la clave que nombra este código se está obteniendo de la malla; el contacto se completa por sí solo en cuanto llegue y se verifique contra el código",
     "code_commitment_mismatch": "Este código no coincide con la persona que nombra, así que no se añadió. Pídeles que te envíen su código de contacto de nuevo.",
     "code_without_pqc_commitment": "Este código es demasiado antiguo para añadirlo directamente. Pídeles uno nuevo, o añádelos mediante emparejamiento.",
     "consent_emit_failed": "El nodo no pudo emitir la concesión de consentimiento que convierte esto en un contacto. No se cambió nada.",
@@ -5886,7 +5886,7 @@
     "already_owned": "este dispositivo ya tiene un propietario",
     "apply_failed": "la aprobación no se pudo aplicar en este dispositivo",
     "approve_failed": "la aprobación no se pudo firmar ni registrar",
-    "mint_failed": "las claves del dispositivo no llevan claves de cifrado",
+    "mint_failed": "no se pudieron acuñar las claves de este dispositivo",
     "no_device": "ese código no nombra ningún dispositivo al que preguntar — abre Compartir mi identidad en tu otro dispositivo y usa su código QR o su forma larga",
     "no_transport": "este dispositivo no tiene transporte de malla en ejecución, así que no puede alcanzar a tu otro dispositivo",
     "not_accepting": "tu otro dispositivo no está aceptando dispositivos nuevos — abre Añadir un dispositivo en él y vuelve a intentarlo",

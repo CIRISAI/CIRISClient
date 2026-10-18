@@ -149,7 +149,7 @@
     "already_owned": "this device already has an owner",
     "apply_failed": "the approval could not be applied on this device",
     "approve_failed": "the approval could not be signed and recorded",
-    "mint_failed": "device keys carry no encryption keys",
+    "mint_failed": "could not mint this device's keys",
     "no_device": "that code names no device to ask — open Share my ID on your other device and use its QR or long form",
     "no_transport": "this device has no mesh transport running, so it cannot reach your other device",
     "not_accepting": "your other device is not accepting new devices — open Add a device on it, then try again",
@@ -701,7 +701,7 @@
   "consent_view_only": "View Only",
   "contacts": {
     "awaiting_consent": "Waiting for them to accept. There is nothing to retry: this finishes when they accept.",
-    "awaiting_key_body": "the key this code names is being fetched from the mesh; retry once it has arrived and the contact will be verified against the code's commitment",
+    "awaiting_key_body": "the key this code names is being fetched from the mesh; the contact completes on its own once it arrives and is verified against the code",
     "code_commitment_mismatch": "This code doesn't match the person it names, so it was not added. Ask them to send their contact code again.",
     "code_without_pqc_commitment": "This code is too old to add directly. Ask them for a new one, or add them through peering.",
     "consent_emit_failed": "The node could not emit the consent grant that makes this a contact. Nothing was changed.",

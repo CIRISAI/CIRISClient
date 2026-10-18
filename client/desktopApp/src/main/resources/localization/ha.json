@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Ana jiran su amince. Babu abin da za a sake gwadawa: wannan zai ƙare lokacin da suka amince.",
-    "awaiting_key_body": "ana samo maɓallin da wannan lambar ta ambata daga mesh; sake gwadawa da zarar ya isa, sannan za a tabbatar da lambar sadarwa bisa alƙawarin da wannan lambar ta ƙunsa",
+    "awaiting_key_body": "ana samo maɓallin da wannan lamba take ambata daga mesh; ƙara mutumin zai kammala da kansa da zarar maɓallin ya isa kuma aka tabbatar da shi da lambar",
     "code_commitment_mismatch": "Wannan lamba ba ta dace da mutumin da take ambata ba, don haka ba a ƙara ta ba. Ku tambaye su su sake aika lambar sadarwarsu.",
     "code_without_pqc_commitment": "Wannan lamba ta tsufa don ƙarawa kai tsaye. Ku tambaye su sabuwar lamba, ko ku ƙara su ta hanyar peering.",
     "consent_emit_failed": "Node ɗin ya kasa fitar da izinin yarda da ke mai da wannan lamba. Ba a canza komai ba.",
@@ -5886,7 +5886,7 @@
     "already_owned": "wannan na'ura tana da mai ita tuni",
     "apply_failed": "an kasa amfani da amincewar a kan wannan na'ura",
     "approve_failed": "an kasa sanya hannu kuma a yi rijistar amincewar",
-    "mint_failed": "maɓallan na'ura ba su ɗauke da maɓallan ɓoyewa ba",
+    "mint_failed": "ba a iya ƙirƙirar maɓallan wannan na'ura ba",
     "no_device": "wannan lambar ba ta ambaci wata na'ura da za a tambaya ba — buɗe Raba ID na a kan sauran na'urarku sannan ku yi amfani da QR ɗinta ko dogon salo",
     "no_transport": "wannan na'ura ba ta da jigilar mesh mai gudana, don haka ba za ta iya isa ga sauran na'urarku ba",
     "not_accepting": "sauran na'urarku ba ta karɓar sabbin na'urori ba — buɗe Ƙara na'ura a kanta, sannan ku sake gwadawa",

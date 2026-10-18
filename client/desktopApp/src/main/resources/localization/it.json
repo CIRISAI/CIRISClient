@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "In attesa che accettino. Non c'è nulla da riprovare: il processo si conclude quando accettano.",
-    "awaiting_key_body": "la chiave indicata da questo codice è in corso di recupero dalla mesh; riprova una volta arrivata e il contatto verrà verificato rispetto all'impegno del codice",
+    "awaiting_key_body": "la chiave indicata da questo codice è in fase di recupero dalla mesh; il contatto si completa da solo una volta che la chiave arriva e viene verificata rispetto al codice",
     "code_commitment_mismatch": "Questo codice non corrisponde alla persona che indica, quindi non è stato aggiunto. Chiedigli di inviarti di nuovo il suo codice di contatto.",
     "code_without_pqc_commitment": "Questo codice è troppo vecchio per essere aggiunto direttamente. Chiedigli un nuovo codice, oppure aggiungilo tramite il peering.",
     "consent_emit_failed": "Il nodo non è riuscito a emettere la concessione di consenso che rende questo un contatto. Nulla è stato modificato.",
@@ -5886,7 +5886,7 @@
     "already_owned": "questo dispositivo ha già un proprietario",
     "apply_failed": "non è stato possibile applicare l'approvazione su questo dispositivo",
     "approve_failed": "non è stato possibile firmare e registrare l'approvazione",
-    "mint_failed": "le chiavi del dispositivo non includono chiavi di cifratura",
+    "mint_failed": "non è stato possibile coniare le chiavi di questo dispositivo",
     "no_device": "quel codice non indica nessun dispositivo da contattare — apri Condividi il mio ID sul tuo altro dispositivo e usa il suo codice QR o la forma estesa",
     "no_transport": "questo dispositivo non ha alcun trasporto mesh in esecuzione, quindi non può raggiungere il tuo altro dispositivo",
     "not_accepting": "il tuo altro dispositivo non sta accettando nuovi dispositivi — apri Aggiungi un dispositivo su di esso, poi riprova",

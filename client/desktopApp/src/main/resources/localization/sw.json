@@ -5494,7 +5494,7 @@
   },
   "contacts": {
     "awaiting_consent": "Inasubiri wakubali. Hakuna la kujaribu tena: hili linakamilika watakapokubali.",
-    "awaiting_key_body": "ufunguo unaotajwa na msimbo huu unachukuliwa kutoka kwenye mtandao; jaribu tena mara tu utakapowasili, na anwani itathibitishwa dhidi ya ahadi ya msimbo huo",
+    "awaiting_key_body": "Ufunguo unaotajwa na msimbo huu unachukuliwa kutoka kwenye mtandao; anwani hii hukamilika yenyewe mara ufunguo huo utakapofika na kuthibitishwa dhidi ya msimbo huo.",
     "code_commitment_mismatch": "Msimbo huu haulingani na mtu anayetajwa, kwa hivyo haukuongezwa. Waombe watume tena msimbo wao wa mawasiliano.",
     "code_without_pqc_commitment": "Msimbo huu ni wa zamani sana kuweza kuongezwa moja kwa moja. Waombe msimbo mpya, au waongeze kupitia peering.",
     "consent_emit_failed": "Nodi haikuweza kutoa idhini inayomfanya huyu kuwa anwani. Hakuna kilichobadilishwa.",
@@ -5886,7 +5886,7 @@
     "already_owned": "kifaa hiki tayari kina mmiliki",
     "apply_failed": "idhini hiyo haikuweza kutumika kwenye kifaa hiki",
     "approve_failed": "idhini hiyo haikuweza kusainiwa na kurekodiwa",
-    "mint_failed": "funguo za kifaa hazina funguo za usimbaji fiche",
+    "mint_failed": "haikuweza kuchapa funguo za kifaa hiki",
     "no_device": "msimbo huo hautaji kifaa chochote cha kuuliza — fungua Shiriki Kitambulisho Changu kwenye kifaa chako kingine na utumie QR yake au muundo wake mrefu",
     "no_transport": "kifaa hiki hakina usafirishaji wa mesh unaoendesha, kwa hivyo hakiwezi kufikia kifaa chako kingine",
     "not_accepting": "kifaa chako kingine hakikubali vifaa vipya kwa sasa — fungua Ongeza Kifaa kwenye hicho, kisha ujaribu tena",
