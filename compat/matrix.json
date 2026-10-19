@@ -1475,6 +1475,69 @@
       },
       "notes": "THE CEREMONY FIXES. What Eric hit live running the final genesis on 0.5.227 (#159), shipped translated. Tested: see the release PR for the five-platform run against ciris-server v0.5.221.",
       "published": null
+    },
+    {
+      "client_version": "0.5.229",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Every route this release adds falls back on an older node: add-device needs 0.5.231 and a bare 404 turns it off; the owned-node claim route reads /v1/setup/owned-nodes and names a node too old when it answers 404; pending contacts re-POST against any node that answers 202.",
+      "node_max_tested": "0.5.231",
+      "agent_min_tested": "2.16.2",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker",
+        "contacts.pending",
+        "setup.add_device",
+        "setup.owned_node_route",
+        "billing.credential_refresh",
+        "agent.shed_retry",
+        "shell.sign_out",
+        "diagnostics.ios_crash_log",
+        "trace.run_kind"
+      ],
+      "capabilities_note": "new: a 202 contacts.awaiting_key_body is a pending contact re-asked on a backoff, never 'added', and Add contact stays reachable with a populated list (#187, #188); add this device from another of your devices (#189); a node that already has an owner routes to owner sign-in or 'already claimed', never to a console (#184); the desktop billing credential's expiry is its own state with a renewal path (#171, #172); the agent's 503 resource_shed is retried with Retry-After (#173); sign out from My things on every install, the bottom bar off the chat screen (#51, #186); the iOS crash hook writes kotlin_crash.log before it logs (#165); every harness run labels traces qa (#182); the identity wipe forgets the node it wiped (interim, #87). UPGRADE NOTE (#162): ciris-server 0.5.221 boots PreGenesis on a home upgraded from an older node; an upgraded home needs ciris-server 0.5.222 or newer. The matrix runs fresh nodes.",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5549
+      },
+      "notes": "THE 0.5.229 BACKLOG RELEASE. The P0/P1 backlog except #50 (iOS SIGABRT entering setup's AI step: not reproduced; the iOS leg runs node-only, and now collects kotlin_crash.log) and #87 (interim fix; the stateless redesign follows). Tested: the five-platform run on the release commit, node-only legs against ciris-server v0.5.231 and the with-AI desktop legs on ciris-agent 2.16.2 (its node 0.5.229) — see the release PR. The localization pin is CIRISServer fix/client-copy-0.5.232 (b11aef95, unreleased): the reworded contact strings that server release carries. Translations: draft / machine_reviewed (#213).",
+      "published": null
     }
   ]
 }
