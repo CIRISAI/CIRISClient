@@ -3,8 +3,8 @@ package ai.ciris.mobile.shared.platform
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
 import ai.ciris.mobile.shared.viewmodels.stopViewModels
-import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -71,8 +71,13 @@ class ClaimPinFileTest {
 
     private var savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
 
-    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
-    private val made = mutableListOf<ViewModel>()
+    // A view model launches on viewModelScope from init and from its acts.
+    // Left running past resetMain(), a call that comes back resumes with no
+    // test Main and throws outside any test; kotlinx-coroutines-test then pins
+    // it on the NEXT runTest (PR #203: PortalConnectTest failed with
+    // UncaughtExceptionsBeforeTest). Every view model made here is stopped, and waited for, first (stopViewModels).
+    private val viewModels = mutableListOf<ViewModel>()
+
     @BeforeTest fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -80,7 +85,8 @@ class ClaimPinFileTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
-        stopViewModels(made)
+        stopViewModels(viewModels)
+        viewModels.clear()
         Dispatchers.resetMain()
     }
 
@@ -91,10 +97,14 @@ class ClaimPinFileTest {
         val node = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/") { ex ->
                 ex.requestBody.use { it.readBytes() }
-                val (status, body) = if (ex.requestURI.path == "/v1/self/identity") {
-                    200 to """{"key_id":"owner-abc123","fedcode":"CIRIS-V2-TEST","identity_type":"user"}"""
-                } else {
-                    404 to ""
+                // An UNCLAIMED node (CIRISClient#184 item 3 asks it): no
+                // owner-binding, no ROOT. An owned node is OwnedNodeClaimTest's.
+                val (status, body) = when (ex.requestURI.path) {
+                    "/v1/self/identity" ->
+                        200 to """{"key_id":"owner-abc123","fedcode":"CIRIS-V2-TEST","identity_type":"user"}"""
+                    "/v1/setup/owned-nodes" -> 200 to """{"owner":null,"nodes":[]}"""
+                    "/v1/setup/status" -> 200 to """{"data":{"is_first_run":true,"setup_required":true,"config_exists":false}}"""
+                    else -> 404 to ""
                 }
                 val bytes = body.toByteArray()
                 ex.responseHeaders.add("Content-Type", "application/json")
@@ -107,7 +117,7 @@ class ClaimPinFileTest {
         try {
             val url = "http://127.0.0.1:${node.address.port}"
             CIRISApiClient.setLocalNodeUrl(url)
-            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false).also { made += it }
+            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false).also { viewModels += it }
             vm.claimLocalNodeOwnership(claimPinProvider = {
                 ClaimPinFile.await(timeoutMs = 300, pollMs = 100, read = readOf(File(dir, "claim_pin")))
             })

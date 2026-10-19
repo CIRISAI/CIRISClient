@@ -241,6 +241,13 @@ expect:
   visible: ["proposed:txt_claim_error"]
 ```
 
+The refusal text is the bundle's, by `ClaimFailure.messageKey`
+(CIRISClient#184): a rejected PIN is `mobile.claim_node_err_pin_rejected`
+("check the PIN in the claim_pin file in the node's home folder"), an owned
+target is `mobile.claim_node_err_already_claimed`, and a blank PIN is
+`mobile.claim_node_err_pin_blank`. None of them names a console — no console
+carries the PIN (`ClaimNodeCopyTest`).
+
 Enter a NodeCode and its live PIN, choose a cohort, submit.
 
 ```yaml

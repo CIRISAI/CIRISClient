@@ -1080,10 +1080,15 @@ class SetupViewModel(
      * (CIRISClient#184). The node writes it a few seconds after health answers,
      * so COMPLETE can fire first: we take a SUSPEND provider ([claimPinProvider],
      * [ai.ciris.mobile.shared.platform.ClaimPinFile.await] over the platform's
-     * single read) rather than a snapshot. A null after that bounded wait is the
-     * named outcome [ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT]
-     * — the node is already claimed (the PIN is consumed on claim) or the file
-     * is not readable by this user — and we do NOT block the flow.
+     * single read) rather than a snapshot. A null after that bounded wait asks
+     * the node which ownership state it is in ([settleOnOwnedNode]): an owned
+     * node (the PIN is consumed on claim; an upgraded node never armed one) is
+     * named [ai.ciris.mobile.shared.models.OwnedNodeClaim.ALREADY_CLAIMED] or
+     * [ai.ciris.mobile.shared.models.OwnedNodeClaim.OWNER_UPGRADE] and routes to
+     * the owner's sign-in; a node too old to say is
+     * [ai.ciris.mobile.shared.models.OwnedNodeClaim.NODE_TOO_OLD]; an unclaimed
+     * one keeps [ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT]
+     * (the file is not readable by this user). None of them blocks the flow.
      *
      * @param claimPinProvider suspends until the claim_pin file yields a PIN, or
      *        returns null/blank when it never appeared in the bounded window.
@@ -1093,6 +1098,37 @@ class SetupViewModel(
      * @param cohortScope the cohort scope to claim under (`self` by default — a
      *        first-run desktop install is the founder's own node).
      */
+    /**
+     * When the self-claim cannot go ahead, ask the node whether it ALREADY HAS
+     * AN OWNER ([CIRISApiClient.probeNodeOwnershipForClaim]) and, if it has —
+     * or cannot say because it predates the route — settle the claim on that
+     * named outcome ([ai.ciris.mobile.shared.models.OwnedNodeClaim]).
+     * CIRISClient#184 item 3.
+     *
+     * Returns false, touching nothing, for a FRESH node or one that gave no
+     * answer: the caller's own failure is then the true one.
+     */
+    private suspend fun settleOnOwnedNode(client: CIRISApiClient, why: String): Boolean {
+        val probe = client.probeNodeOwnershipForClaim(CIRISApiClient.LOCAL_NODE_URL)
+        val outcome = ai.ciris.mobile.shared.models.OwnedNodeClaim.outcomeFor(probe) ?: return false
+        val key = ai.ciris.mobile.shared.models.OwnedNodeClaim.messageKey(outcome) ?: return false
+        val ownerSignIn = ai.ciris.mobile.shared.models.OwnedNodeClaim.needsOwnerSignIn(outcome)
+        PlatformLogger.w(TAG, "[ORDER] claim_settled claimed=false ($outcome; $why; probe=$probe; owner_sign_in=$ownerSignIn)")
+        _state.value = _state.value.copy(
+            ownershipClaim = _state.value.ownershipClaim.copy(
+                inProgress = false,
+                claimed = false,
+                errorId = outcome,
+                error = ai.ciris.mobile.shared.localization.LocalizationHelper.getString(key),
+                // A claim on an owned node is refused every time; the remedy
+                // is the owner's sign-in (or, too old, updating the node).
+                errorRecoverable = false,
+                ownerSignIn = ownerSignIn,
+            )
+        )
+        return true
+    }
+
     fun claimLocalNodeOwnership(
         claimPinProvider: suspend () -> String?,
         nodeCodeProvider: suspend () -> String? = { null },
@@ -1137,7 +1173,12 @@ class SetupViewModel(
         // few seconds (the banner may land just after this COMPLETE step fires),
         // and the COMPLETE screen renders this in-progress state during the wait.
         _state.value = _state.value.copy(
-            ownershipClaim = _state.value.ownershipClaim.copy(inProgress = true, error = null, errorId = null)
+            ownershipClaim = _state.value.ownershipClaim.copy(
+                inProgress = true,
+                error = null,
+                errorId = null,
+                ownerSignIn = false,
+            )
         )
         viewModelScope.launch {
             // THE FED-ID FIRST, THE PIN SECOND (CIRISClient#68). The mint used
@@ -1182,6 +1223,11 @@ class SetupViewModel(
                 }
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "[ORDER] fedid_mint failed before the claim: ${e.message}")
+                // An OWNED node turns the mint away: once a ROOT exists,
+                // POST /v1/self/identity is owner-gated (ciris-server 0.5.231
+                // src/identity.rs:1815) and this is the setup session. That is
+                // not a fed-ID failure, it is a node with an owner — name it.
+                if (settleOnOwnedNode(client, "fedid_mint refused")) return@launch
                 _state.value = _state.value.copy(
                     ownershipClaim = _state.value.ownershipClaim.copy(
                         inProgress = false,
@@ -1198,6 +1244,11 @@ class SetupViewModel(
             // "go read a console" — no console carries the PIN (CIRISClient#184).
             val claimPin = claimPinProvider()
             if (claimPin.isNullOrBlank()) {
+                // ASK THE NODE WHY (CIRISClient#184 item 3). The node consumes
+                // the PIN on its first claim and an upgraded node never armed
+                // one, so on an OWNED node an absent file is the expected shape:
+                // the way in is the owner's sign-in, not a claim.
+                if (settleOnOwnedNode(client, "claim_pin file absent")) return@launch
                 PlatformLogger.w(TAG, "claimLocalNodeOwnership: claim_pin file never appeared — leaving node unclaimed")
                 PlatformLogger.w(TAG, "[ORDER] claim_settled claimed=false (" + ai.ciris.mobile.shared.platform.ClaimPinFile.PIN_FILE_ABSENT + ")")
                 _state.value = _state.value.copy(
