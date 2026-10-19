@@ -271,13 +271,8 @@ def test_the_ios_leg_names_a_gradle_task_that_exists():
     # (the Android wheel step's version regex found 0.5.188 inside the comment
     # saying why the pin left 0.5.188, and a CIRIS_HOME guard passed on a
     # mention). Filter the comments out and assert on what actually executes.
-    job = yaml.safe_load(WF.read_text(encoding="utf-8"))["jobs"]["macos-ios"]
-    commands = [
-        ln.strip()
-        for step in job["steps"]
-        for ln in str(step.get("run", "")).splitlines()
-        if ln.strip() and not ln.strip().startswith("#")
-    ]
+    # The build moved into .github/actions/ios-sim-app (both iOS legs use it).
+    commands = _action_commands(IOS_APP_ACTION)
     gradle = [ln for ln in commands if "XCFramework" in ln]
     assert gradle, "the iOS leg assembles no XCFramework at all"
     assert any("assembleSharedDebugXCFramework" in ln for ln in gradle), (
@@ -298,9 +293,10 @@ def test_no_step_can_leak_its_working_directory():
 
     A subshell or `working-directory:` cannot leak, however the command ends.
     """
-    raw = WF.read_text(encoding="utf-8")
     offenders = [
-        ln.strip() for ln in raw.splitlines()
+        ln.strip()
+        for path in (WF, *sorted(WF.parents[1].glob("actions/*/action.yml")))
+        for ln in path.read_text(encoding="utf-8").splitlines()
         if "cd .." in ln and not ln.strip().startswith("#")
     ]
     assert not offenders, f"a step can leak its cwd on failure: {offenders}"
@@ -468,8 +464,8 @@ def test_the_ios_leg_records_the_embedded_node_it_did_not_choose(wf):
     """The simulator app embeds CIRISAgent's pinned ciris-server, not the run's;
     the board says both rather than claiming the run's version for it."""
     [call] = [c for c in _run_platform_calls(wf["jobs"]["macos-ios"]) if "--platform ios" in c]
-    assert "--embedded-node-version" in call, call
-    body = "\n".join(ln for job, ln in _commands(wf) if job == "macos-ios")
+    assert '--embedded-node-version "${{ steps.ios.outputs.embedded }}"' in call, call
+    body = "\n".join(_action_commands(IOS_APP_ACTION))
     assert "embedded=" in body, "the iOS substrate step does not export the agent's pin for the board"
 
 
@@ -490,3 +486,104 @@ def test_build_yml_s_e2e_walk_uses_the_same_resolver():
     assert any("testing.gate.server_version" in ln for _, ln in cmds), "build.yml picks its own server"
     own = [(job, ln) for job, ln in cmds if any(p in ln for p in _OWN_LOOKUPS)]
     assert not own, f"build.yml still looks a server version up on its own: {own}"
+
+
+# ── iOS with AI (CIRISClient#50) ────────────────────────────────────────────
+#
+# #50 is a SIGABRT as the iOS wizard enters the AI step, and until this leg no
+# CI run of this repo reached that step on iOS: the macos-ios leg answers "run
+# without AI". The simulator app needs no host agent to get there — its
+# embedded runtime IS the agent (Main.ios.kt: apiBaseUrl :8080, the bundle's
+# ciris_engine), so the leg builds the same app at the run's agent tag and
+# answers WITH.
+
+IOS_AI = "ios-ai"
+IOS_APP_ACTION = NODE_ACTION.parent.parent / "ios-sim-app" / "action.yml"
+
+
+def _action_commands(path: pathlib.Path) -> list[str]:
+    """Executing lines of a composite action, comments dropped."""
+    act = yaml.safe_load(path.read_text(encoding="utf-8"))
+    out = []
+    for step in act["runs"]["steps"]:
+        joined = re.sub(r"\\\n\s*", " ", str(step.get("run", "")))
+        out += [ln.strip() for ln in joined.splitlines() if ln.strip() and not ln.strip().startswith("#")]
+    return out
+
+
+def test_both_ios_legs_build_the_app_through_one_action(wf):
+    """ONE bring-up for the simulator app. The substrate recipe is 250 lines
+    that took a dozen runs to get right; a second copy for the with-AI leg
+    would be a second thing to keep right."""
+    assert IOS_APP_ACTION.is_file(), "no .github/actions/ios-sim-app"
+    for leg in ("macos-ios", IOS_AI):
+        uses = [s for s in wf["jobs"][leg]["steps"] if s.get("uses") == "./.github/actions/ios-sim-app"]
+        assert len(uses) == 1, f"{leg} does not build the simulator app through the shared action"
+    xcodebuilds = [(job, ln) for job, ln in _commands(wf) if ln.startswith("xcodebuild")]
+    assert not xcodebuilds, f"a leg builds the iOS app outside the action: {xcodebuilds}"
+
+
+def test_the_ios_ai_leg_runs_only_when_a_with_ai_dispatch_asks_for_ios(wf):
+    job = wf["jobs"][IOS_AI]
+    cond = str(job.get("if", ""))
+    assert "github.event_name == 'workflow_dispatch'" in cond and "inputs.with_ai" in cond, cond
+    assert "contains(inputs.platforms, 'ios')" in cond and "inputs.platforms == 'all'" in cond, cond
+    assert str(job["runs-on"]).startswith("macos-15"), job["runs-on"]
+    assert job.get("timeout-minutes"), "ios-ai has no timeout"
+    needs = job.get("needs") or []
+    assert SERVER_JOB in ([needs] if isinstance(needs, str) else needs)
+
+
+def test_the_ios_ai_leg_embeds_the_run_s_one_agent_and_starts_no_host_backend(wf):
+    """The run's agent is resolved once (`server`); on iOS it is EMBEDDED, so
+    the bundle's engine is checked out at that tag. A host agent or node would
+    hold :8080/:4243 on the loopback the simulator shares and the embedded one
+    would die on 'Address already in use'."""
+    steps = wf["jobs"][IOS_AI]["steps"]
+    [build] = [s for s in steps if s.get("uses") == "./.github/actions/ios-sim-app"]
+    assert build["with"]["agent-ref"] == "${{ needs.server.outputs.agent_tag }}", build
+    for action in ("./.github/actions/ciris-agent", "./.github/actions/ciris-node"):
+        assert not [s for s in steps if s.get("uses") == action], f"ios-ai starts {action}"
+    act = yaml.safe_load(IOS_APP_ACTION.read_text(encoding="utf-8"))
+    [checkout] = [s for s in act["runs"]["steps"]
+                  if "actions/checkout" in str(s.get("uses", "")) and (s.get("with") or {}).get("repository") == "CIRISAI/CIRISAgent"]
+    assert checkout["with"]["ref"] == "${{ inputs.agent-ref }}", checkout
+
+
+def test_the_ios_ai_leg_drives_the_with_ai_wizard(wf):
+    calls = _run_platform_calls(wf["jobs"][IOS_AI])
+    assert len(calls) == 1, calls
+    [call] = calls
+    for want in ("--platform ios", "--with-ai", "--flows testing/flows/agent",
+                 '--agent-version "${{ needs.server.outputs.agent_pypi }}"',
+                 '--node-version "v${{ needs.server.outputs.agent_server }}"',
+                 "--embedded-node-version", "--llm-key-env ANTHROPIC_API_KEY",
+                 "--report reports/ios-ai.json"):
+        assert want in call, f"ios-ai: {want!r} not in {call}"
+
+
+def test_the_ios_ai_leg_keeps_the_key_out_and_the_crash_record_in(wf):
+    """Key via env: only; the crash record and the app's logs are collected
+    under always(), scanned for the key under always(), then uploaded under
+    always() — and the app's data container (its .env holds the key) is not."""
+    steps = wf["jobs"][IOS_AI]["steps"]
+    for s in steps:
+        if "ANTHROPIC_API_KEY" in yaml.dump(s.get("env") or {}):
+            assert s["env"]["ANTHROPIC_API_KEY"] == "${{ secrets.ANTHROPIC_API_KEY }}", s
+    idx = lambda pred: next(i for i, s in enumerate(steps) if pred(s))  # noqa: E731
+    collect = idx(lambda s: "Documents/ciris/logs/kotlin_crash.log" in str(s.get("run", "")))
+    scan = idx(lambda s: "testing.gate.secret_scan" in str(s.get("run", "")))
+    upload = idx(lambda s: "upload-artifact" in str(s.get("uses", "")))
+    assert collect < scan < upload, (collect, scan, upload)
+    for i in (collect, scan, upload):
+        assert str(steps[i].get("if", "")).strip() == "always()", steps[i].get("name")
+    assert "ios-ai-logs" in steps[scan]["run"], "the scan does not cover the collected app logs"
+    paths = steps[upload]["with"]["path"]
+    assert "ios-ai-logs/kotlin_crash.log" in paths and "ios-ai-logs/" in paths, paths
+    assert ".env" not in paths and "Documents" not in paths, paths
+    run = steps[collect]["run"]
+    assert '-name "*.log*"' in run, "the app's own logs (kmp_app.log, ciris-server.log.*) are not collected"
+
+
+def test_the_gallery_waits_for_the_ios_ai_leg(wf):
+    assert IOS_AI in wf["jobs"]["gallery"]["needs"]
