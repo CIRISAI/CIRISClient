@@ -44,6 +44,8 @@ python3 packaging/check_vendoring.py
 python3 compat/validate.py
 python3 packaging/check_pins.py
 python3 client/tools/check_row_layout.py
+python3 client/tools/check_test_vm_stop.py --self-test
+python3 client/tools/check_test_vm_stop.py
 python3 client/tools/check_colour_literals.py
 python3 client/tools/gen_dimension_table.py --check
 python3 client/tools/gen_glyphs.py --check
