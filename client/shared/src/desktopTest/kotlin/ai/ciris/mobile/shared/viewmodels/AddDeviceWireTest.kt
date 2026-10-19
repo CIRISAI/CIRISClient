@@ -67,6 +67,7 @@ class AddDeviceWireTest {
 
     @AfterTest fun tearDown() {
         made.forEach { it.resetState() }
+        stopViewModels(made)
         CIRISApiClient.setLocalNodeUrl(savedLocal)
         Dispatchers.resetMain()
     }
