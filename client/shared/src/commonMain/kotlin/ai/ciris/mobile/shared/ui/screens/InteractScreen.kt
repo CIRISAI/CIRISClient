@@ -2489,7 +2489,7 @@ private fun formatTimestamp(timestamp: Instant): String {
  */
 @Composable
 @Suppress("UNUSED_PARAMETER") // bubbleEmojis handled by BubbleOverlay
-private fun ChatInputBarWithBubbles(
+internal fun ChatInputBarWithBubbles(
     text: String,
     onTextChange: (String) -> Unit,
     onSend: () -> Unit,
@@ -2507,6 +2507,10 @@ private fun ChatInputBarWithBubbles(
     modifier: Modifier = Modifier
 ) {
     val hasContent = text.isNotBlank() || attachedFiles.isNotEmpty()
+    // The screen's requester when it passes one (it refocuses after a send),
+    // else this bar's own: the automation click needs one either way.
+    val ownFocus = remember { FocusRequester() }
+    val fieldFocus = focusRequester ?: ownFocus
 
     Surface(
         color = theme.inputBackground,
@@ -2559,16 +2563,15 @@ private fun ChatInputBarWithBubbles(
                 OutlinedTextField(
                     value = text,
                     onValueChange = onTextChange,
+                    // A CLICK FOCUSES IT, ON EVERY PLATFORM. A plain `testable()`
+                    // registered no handler; desktop's /click hid that behind a
+                    // coordinate click, and iOS answered "No click handler for:
+                    // input_message" (PR #215, run 39296309752). Typing still
+                    // reaches it through the sink above (rememberInputSinks).
                     modifier = Modifier
                         .weight(1f)
-                        .testable("input_message")
-                        .let { mod ->
-                            if (focusRequester != null) {
-                                mod.focusRequester(focusRequester)
-                            } else {
-                                mod
-                            }
-                        }
+                        .focusRequester(fieldFocus)
+                        .testableWithHandler("input_message", enabled = enabled) { fieldFocus.requestFocus() }
                         .onFocusChanged { focusState ->
                             if (focusState.isFocused) {
                                 onFocused()

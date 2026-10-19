@@ -770,9 +770,10 @@ def test_every_leg_of_the_matrix_runs_the_flows():
             for call in re.findall(r"testing\.gate\.run_platform[^;\n]*", body):
                 legs += 1
                 assert "--flows testing/flows" in call, f"a leg runs the smoke walk without flows: {call}"
-    # Five node-only legs, and the two with-AI desktops a `with_ai` dispatch
-    # adds (they run testing/flows/agent; no Android with AI — see the workflow).
-    assert legs == 7, f"expected seven run_platform legs (5 node-only + 2 with AI), found {legs}"
+    # Five node-only legs, and the three with-AI legs a `with_ai` dispatch adds
+    # — two desktops and the iOS simulator (CIRISClient#50) — which run
+    # testing/flows/agent; no Android with AI — see the workflow.
+    assert legs == 8, f"expected eight run_platform legs (5 node-only + 3 with AI), found {legs}"
 
 
 # ── run_platform: flows ride the smoke walk, never ahead of it ──────────────
@@ -1011,3 +1012,38 @@ def test_navigate_prefers_the_target_row_when_a_tab_lists_several():
                                          hop_timeout=0.1, arrive_timeout=0.1))
     assert got is None, got
     assert h.clicked[-1] == "nav_epistemic_contacts"
+
+
+# ── a phone chat hides the circle bar (CIRISClient#186) ─────────────────────
+
+def _phone_chat() -> FakeHelper:
+    """iOS with AI, run 39288568414: setup signs the owner straight into
+    Interact, and on a phone a chat's composer owns the bottom edge, so the
+    circle bar is not composed (CirclesShell: `if (!hostsComposer) BottomBar`).
+    "The circles are back the moment you leave it, by the back arrow."""
+    h = FakeHelper("Interact", {"btn_nav_back": "", "tab_chats": "", "input_message": ""})
+    shell = ["circle_agent", "tab_chats", "nav_epistemic_interact"]
+    h.leads = {
+        "btn_nav_back": ("CircleTab", shell),
+        "circle_agent": ("CircleTab", shell),
+        "tab_chats": ("CircleTab", shell),
+        "nav_epistemic_interact": ("Interact", ["btn_nav_back", "tab_chats", "input_message"]),
+    }
+    return h
+
+
+def test_a_circle_hop_hidden_behind_a_phone_chat_is_surfaced_by_the_back_arrow():
+    h = _phone_chat()
+    got = asyncio.run(run_flows.navigate(h, "Interact", ["circle_agent", "tab_chats", "nav_epistemic_interact"],
+                                         hop_timeout=0.3, arrive_timeout=0.1))
+    assert got is None, got
+    assert h.calls.index("click btn_nav_back") < h.calls.index("click circle_agent")
+
+
+def test_no_back_arrow_means_the_missing_circle_is_still_named():
+    h = _phone_chat()
+    del h.els["btn_nav_back"]
+    got = asyncio.run(run_flows.navigate(h, "Interact", ["circle_agent", "tab_chats", "nav_epistemic_interact"],
+                                         hop_timeout=0.3, arrive_timeout=0.1))
+    assert got and "hop tag 'circle_agent' never appeared" in got, got
+    assert not [c for c in h.calls if c.startswith("click")], h.calls
