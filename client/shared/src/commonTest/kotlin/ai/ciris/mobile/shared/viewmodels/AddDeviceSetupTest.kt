@@ -39,6 +39,7 @@ class AddDeviceSetupTest {
 
     @AfterTest fun tearDown() {
         made.forEach { it.resetState() }
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 

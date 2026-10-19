@@ -408,3 +408,42 @@ def test_the_android_leg_asks_its_node_for_the_pin(monkeypatch):
     assert asked == ["http://127.0.0.1:4243"]
     assert "hand-over-claim-pin" in plan.names()
 
+
+# ---- CIRISClient#182: every harness run labels its traces --------------------
+#
+# Only a run outside a harness counts as `production`. The day a promoted flow
+# configures a real LLM, a gate run that forwards test mode but not the run kind
+# files every one of its traces as production.
+
+
+def test_android_declares_the_run_kind_before_launching():
+    p = android_plan(APK, PKG)
+    declare = p.steps[p.index_of("declare-run-kind")]
+    assert declare.cmd[-4:] == ["shell", "setprop", bringup.ANDROID_RUN_KIND_PROP, "qa"]
+    assert bringup.ANDROID_RUN_KIND_PROP == "debug.ciris.trace_run_kind"
+    assert p.index_of("declare-run-kind") < p.index_of("launch")
+
+
+def test_android_teardown_clears_the_run_kind():
+    # A leftover property labels a later NON-harness run as qa.
+    t = android_teardown(PKG)
+    clear = t.steps[t.index_of("clear-run-kind")]
+    assert clear.optional
+    assert clear.cmd[-4:] == ["shell", "setprop", bringup.ANDROID_RUN_KIND_PROP, "''"]
+
+
+def test_ios_launch_carries_the_run_kind_across_simctl():
+    p = ios_simulator_plan(APP, BID)
+    launch = p.steps[p.index_of("launch")]
+    assert launch.env.get("SIMCTL_CHILD_CIRIS_TRACE_RUN_KIND") == "qa"
+
+
+def test_the_run_kind_follows_an_inherited_declaration(monkeypatch):
+    # A harness that declared its own kind (CIRISAgent's runner) is not overridden.
+    monkeypatch.setenv("CIRIS_TRACE_RUN_KIND", "benchmark")
+    assert bringup.forwarded_run_kind() == "benchmark"
+    monkeypatch.setenv("CIRIS_TRACE_RUN_KIND", "production")
+    assert bringup.forwarded_run_kind() == "qa", "a harness run is never production"
+    monkeypatch.delenv("CIRIS_TRACE_RUN_KIND")
+    assert bringup.forwarded_run_kind() == "qa"
+
