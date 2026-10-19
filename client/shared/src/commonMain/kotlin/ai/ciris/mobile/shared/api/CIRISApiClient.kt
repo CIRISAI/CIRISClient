@@ -3009,6 +3009,65 @@ class CIRISApiClient(
     }
 
     /**
+     * **Which ownership state is this node in?** — for a self-claim that could
+     * not go ahead (CIRISClient#184 item 3). Never throws.
+     *
+     * The two node-side signals ciris-server 0.5.231 serves for this, both
+     * loopback reads needing no session:
+     *
+     * 1. `GET /v1/setup/owned-nodes` → `owner` (`src/auth/bootstrap.rs:1619`):
+     *    the CEG owner-binding, the predicate every owner-gated route consults.
+     *    A non-blank owner is decisive — [NodeOwnership.CLAIMED].
+     * 2. `GET /v1/setup/status` → `setup_required` (`src/auth/bootstrap.rs:1653`,
+     *    `is_first_run` at `:349` — "no ROOT WaCert"). `false` with no binding is
+     *    [NodeOwnership.LEGACY_OWNED]; `true` is [NodeOwnership.FRESH].
+     *
+     * A BARE 404 on `owned-nodes` (no `reason_id`) is a node older than the
+     * route: [NodeOwnershipProbe.RouteAbsent]. Anything else that is not an
+     * answer is [NodeOwnershipProbe.Unknown], never a guess of FRESH.
+     */
+    suspend fun probeNodeOwnershipForClaim(nodeUrl: String = LOCAL_NODE_URL): NodeOwnershipProbe {
+        val method = "probeNodeOwnershipForClaim"
+        val client = federationHttpClient(requestTimeoutMillis = 10_000)
+        return try {
+            val owned = client.get("$nodeUrl/v1/setup/owned-nodes")
+            val ownedBody = owned.bodyAsText()
+            if (!owned.status.isSuccess()) {
+                val refusal = NodeRefusal.fromBody(owned.status.value, ownedBody)
+                return if (owned.status.value == 404 && refusal.reasonId == null) {
+                    logInfo(method, "owned-nodes is a bare 404 at $nodeUrl — node predates the route")
+                    NodeOwnershipProbe.RouteAbsent
+                } else {
+                    NodeOwnershipProbe.Unknown("owned-nodes ${owned.status.value} ${refusal.reasonId ?: ""}".trim())
+                }
+            }
+            val owner = jsonConfig.decodeFromString(OwnedNodesDto.serializer(), ownedBody).owner
+            if (!owner.isNullOrBlank()) {
+                logInfo(method, "CLAIMED (owner=$owner)")
+                return NodeOwnershipProbe.Known(NodeOwnership.CLAIMED)
+            }
+            val status = client.get("$nodeUrl/v1/setup/status")
+            if (!status.status.isSuccess()) {
+                return NodeOwnershipProbe.Unknown("setup/status ${status.status.value}")
+            }
+            // A narrow read: the generated setup model is the BRAIN's, and this is the node.
+            val setupRequired = Regex("\"setup_required\"\\s*:\\s*(true|false)")
+                .find(status.bodyAsText())?.groupValues?.get(1)?.toBooleanStrictOrNull()
+                ?: return NodeOwnershipProbe.Unknown("setup/status carried no setup_required")
+            val state = nodeOwnershipFrom(ownerBinding = null, nodeSetupRequired = setupRequired)
+            logInfo(method, "$state (owner_binding=<none>, setup_required=$setupRequired)")
+            NodeOwnershipProbe.Known(state)
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            logWarn(method, "ownership probe got no answer from $nodeUrl: ${e.message}")
+            NodeOwnershipProbe.Unknown(e.message ?: e::class.simpleName ?: "exception")
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
      * Drive the LOCAL node to claim a remote/target node on the owner's behalf —
      * `POST {localNodeUrl}/v1/setup/claim-remote`.
      *

@@ -189,6 +189,12 @@ fun SetupScreen(
     // node launched on this platform, so nothing to capture).
     claimPinProvider: suspend () -> String? = { null },
     nodeCodeProvider: suspend () -> String? = { null },
+    /**
+     * The local node turned out to HAVE AN OWNER already (CIRISClient#184
+     * item 3): leave the wizard for that owner's sign-in. Null keeps the
+     * named state as a failure panel with no way on but Finish.
+     */
+    onOwnerSignIn: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val state by viewModel.state.collectAsState()
@@ -451,6 +457,7 @@ fun SetupScreen(
                                     }
                                 }
                             },
+                            onOwnerSignIn = onOwnerSignIn,
                         )
                 }
             }
@@ -3289,6 +3296,13 @@ private fun CompleteStep(
     onRetryClaim: (() -> Unit)? = null,
     /** Complete setup with the node unclaimed — an explicit choice, never a silent default (#68). */
     onFinishUnclaimed: (() -> Unit)? = null,
+    /**
+     * The node already has an owner (CIRISClient#184 item 3): leave the wizard
+     * for the owner's sign-in. A legacy-owned node is then re-rooted on a
+     * fed-ID by the Add Federation ID catch-up (`POST /v1/self/identity` →
+     * `POST /v1/self/upgrade-owner`), which login auto-presents.
+     */
+    onOwnerSignIn: (() -> Unit)? = null,
     /** The add-device path's state, or null on the new-ID path. */
     addDevice: ai.ciris.mobile.shared.viewmodels.AddDeviceSetupState? = null,
     isSubmitting: Boolean = false,
@@ -3304,8 +3318,13 @@ private fun CompleteStep(
     // claimed yet, and leaving would strand an unowned node.
     // And on the add-device path only once the claim APPLIED: a recoverable
     // `apply_failed` stays here for Retry (Codex, PR #189).
-    LaunchedEffect(ownershipClaim.inProgress, ownershipClaim.awaitingApproval, ownershipClaim.claimed, ownershipClaim.error) {
-        if (ai.ciris.mobile.shared.viewmodels.shouldAutoFinishSetup(ownershipClaim, addDevicePath = addDevice != null)) {
+    // NOT on an owned node either (CIRISClient#184 item 3): completing would run
+    // a first-run finish against a node that has an owner. The sign-in button
+    // below is the way on.
+    LaunchedEffect(ownershipClaim.inProgress, ownershipClaim.awaitingApproval, ownershipClaim.claimed, ownershipClaim.error, ownershipClaim.ownerSignIn) {
+        if (ai.ciris.mobile.shared.viewmodels.shouldAutoFinishSetup(ownershipClaim, addDevicePath = addDevice != null) &&
+            !(ownershipClaim.ownerSignIn && onOwnerSignIn != null)
+        ) {
             kotlinx.coroutines.delay(2000)
             onSetupComplete()
         }
@@ -3392,6 +3411,35 @@ private fun CompleteStep(
                     modifier = Modifier.testable("setup_ownership_claimed"),
                 )
             }
+            ownershipClaim.ownerSignIn && onOwnerSignIn != null -> {
+                // A NAMED STATE, not a failure (CIRISClient#184 item 3): the
+                // node has an owner, so there is no PIN to read and nothing
+                // to retry. Rendered by its id, never from the wire.
+                val bodyKey = ai.ciris.mobile.shared.models.OwnedNodeClaim.messageKey(ownershipClaim.errorId)
+                Text(
+                    text = localizedString("mobile.setup_claim_owned_title"),
+                    color = SetupColors.TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = bodyKey?.let { localizedString(it) } ?: (ownershipClaim.error ?: ""),
+                    color = SetupColors.TextSecondary,
+                    fontSize = 14.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.testable("setup_ownership_owned", text = ownershipClaim.errorId),
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onOwnerSignIn,
+                    modifier = Modifier.testableClickable("btn_setup_owner_sign_in") { onOwnerSignIn() },
+                    colors = ButtonDefaults.buttonColors(containerColor = SetupColors.Primary),
+                ) {
+                    Text(localizedString("mobile.setup_owner_sign_in"))
+                }
+            }
             ownershipClaim.error != null -> {
                 // NODE VENDOR DRIFT #14 (restored after the 2.9.28 re-vendor
                 // dropped it): a refused claim is UNRECOVERABLE by retrying — the
@@ -3401,11 +3449,15 @@ private fun CompleteStep(
                 // a slow one (CIRISServer#401).
                 ai.ciris.mobile.shared.ui.components.FailurePanel(
                     title = "This node could not be claimed",
-                    // By id when the node named one (`add_device.apply_failed`),
-                    // with its English beneath; the English alone otherwise.
-                    detail = ownershipClaim.errorReasonId
-                        ?.let { id -> localizedString(id).takeIf { it != id && it.isNotBlank() } }
-                        ?.let { localized -> listOfNotNull(localized, ownershipClaim.error).joinToString("\n") }
+                    // A client-named outcome renders by its id (too old, or an
+                    // owned node with no sign-in host). Otherwise by the node's
+                    // id when it named one (`add_device.apply_failed`), with its
+                    // English beneath; the English alone otherwise.
+                    detail = ai.ciris.mobile.shared.models.OwnedNodeClaim.messageKey(ownershipClaim.errorId)
+                        ?.let { localizedString(it) }
+                        ?: ownershipClaim.errorReasonId
+                            ?.let { id -> localizedString(id).takeIf { it != id && it.isNotBlank() } }
+                            ?.let { localized -> listOfNotNull(localized, ownershipClaim.error).joinToString("\n") }
                         ?: ownershipClaim.error ?: "",
                     // The kind comes from where the failure HAPPENED, not from
                     // grepping its message here.
@@ -3442,7 +3494,7 @@ private fun CompleteStep(
         // NODE VENDOR DRIFT #14: the spinner belongs to work still in flight.
         // Leaving it turning under a failure is what made a dead setup read as a
         // slow one.
-        if (ownershipClaim.error == null) {
+        if (ownershipClaim.error == null && !ownershipClaim.ownerSignIn) {
             CircularProgressIndicator(color = SetupColors.Primary)
         }
     }
