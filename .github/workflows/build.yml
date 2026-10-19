@@ -181,6 +181,18 @@ jobs:
         # to click them via the coordinate fallback.
         run: python3 client/tools/check_row_layout.py
 
+      - name: A test that builds a view model stops it before resetting Main
+        # A view-model coroutine parked in `delay` finishes cancelling only when
+        # it is next resumed on Dispatchers.Main; after resetMain() there is no
+        # Main, so it throws OUTSIDE any test and kotlinx-coroutines-test pins
+        # it on the NEXT runTest as UncaughtExceptionsBeforeTest -- in an
+        # innocent file, on a slow runner only (PR #203, #211). A HARD ZERO:
+        # stopViewModels() (cancel AND join) before resetMain(), or the
+        # `// lint: test-scheduler-main` marker on a StandardTestDispatcher Main.
+        run: |
+          python3 client/tools/check_test_vm_stop.py --self-test
+          python3 client/tools/check_test_vm_stop.py
+
       - name: No colour literal outside the theme file
         # The sixteen tokens are resolved per ground and read by name; a
         # component never names a hex (design handoff, "Design tokens"). The

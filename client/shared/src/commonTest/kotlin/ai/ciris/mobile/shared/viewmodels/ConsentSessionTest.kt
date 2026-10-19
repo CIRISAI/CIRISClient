@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.models.AgentRead
 import ai.ciris.mobile.shared.models.PartnershipHistoryDto
 import ai.ciris.mobile.shared.models.PartnershipOptionsDto
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -29,8 +30,10 @@ import kotlin.test.assertTrue
  */
 class ConsentSessionTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private val previousOwner = ConsentScreenData(
         hasConsent = true,
@@ -40,7 +43,7 @@ class ConsentSessionTest {
         auditEntries = listOf(ConsentAuditEntryData("e1", "2026-09-01T00:00:00Z", "temporary", "partnered", "alice", null)),
     )
 
-    private fun vm() = ConsentViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), initialData = previousOwner)
+    private fun vm() = ConsentViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), initialData = previousOwner).also { made += it }
 
     @Test
     fun aSessionEndForgetsThePreviousOwnersRecord() {
@@ -78,7 +81,7 @@ class ConsentSessionTest {
             readRecord = { record.await() },
             readQueue = { queue.await() },
             readHistory = { history.await() },
-        )
+        ).also { made += it }
         vm.startPolling()
         vm.togglePartnershipHistory("alice")
         vm.sessionChanged(authenticated = false)
@@ -112,7 +115,7 @@ class ConsentSessionTest {
             readQueue = {
                 ConsentViewModel.PartnershipQueueRead(AgentRead.Failed(ReadFailure.Failed("x")), PartnershipQueue.AdminOnly)
             },
-        )
+        ).also { made += it }
         vm.startPolling()
         vm.resetSession()
         record.completeExceptionally(RuntimeException("503"))

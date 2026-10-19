@@ -270,6 +270,7 @@ Two things to know:
 | `packaging/check_vendoring.py` | has anything under `client/` drifted from upstream without a row in `VENDORING.md` §3? | seconds |
 | `packaging/check_wheel_size.py` | does each wheel fit under 104,857,600 bytes? | seconds |
 | `python -m readiness` | the build-readiness gates below | seconds |
+| `client/tools/check_test_vm_stop.py` | does every test that builds a view model and resets `Dispatchers.Main` call `stopViewModels(...)` (cancel AND join) first, or carry `// lint: test-scheduler-main` because its Main is a `StandardTestDispatcher`? A hard zero; `--self-test` plants the defect | seconds |
 | `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline (933 in 46 files at landing) that can only fall | seconds |
 | `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry (CC v1.0-rc6, 158 families) + glosses + renderer overrides generate, does the registry hash to its own `registry_sha256`, and does every emitted localization key resolve? | seconds |
 | `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |

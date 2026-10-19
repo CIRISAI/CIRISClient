@@ -21,6 +21,7 @@ import ai.ciris.mobile.shared.models.federation.RevokeGrantResponse
 import ai.ciris.mobile.shared.models.federation.SignedKeyRecord
 import ai.ciris.mobile.shared.models.federation.WithdrawnGrant
 import ai.ciris.mobile.shared.ui.screens.revokeNote
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -123,8 +124,10 @@ private fun agentClient() = CIRISApiClient(baseUrl = AGENT_URL)
 
 class WithdrawConsentTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     // ── People: remove a contact ──────────────────────────────────────────
 
@@ -135,7 +138,7 @@ class WithdrawConsentTest {
         api = FakeContactsApi(),
         withdraw = fake,
         readContacts = { listReads += 1; ContactListResponse(listOf(Contact(PERSON)), 1) },
-    )
+    ).also { made += it }
 
     @Test
     fun remainingGrantsAreNeverReadAsRemoved() {
@@ -216,7 +219,7 @@ class WithdrawConsentTest {
     @Test
     fun aRemovalIsBoundToTheNodeThatSuppliedTheList() {
         val fake = FakeWithdraw()
-        val c = SwitchableContacts(fake)
+        val c = SwitchableContacts(fake).also { made += it.vm }
         assertEquals("$PERSON@$NODE_URL", c.vm.contacts.value.single().keyId)
 
         // The operator switches nodes; the list on screen is still NODE_URL's,
@@ -235,7 +238,7 @@ class WithdrawConsentTest {
 
     @Test
     fun aNodeSwitchDropsTheOldNodesListAndReReadsFromTheNew() {
-        val c = SwitchableContacts(FakeWithdraw())
+        val c = SwitchableContacts(FakeWithdraw()).also { made += it.vm }
         assertEquals(listOf(NODE_URL), c.reads)
         c.vm.nodeChanged()
         assertEquals(listOf(NODE_URL), c.reads, "the same node is not re-read on a composition that changed nothing")
@@ -262,7 +265,7 @@ class WithdrawConsentTest {
                 node = OTHER_NODE_URL
                 ContactListResponse(listOf(Contact("$PERSON@$from")), 1)
             },
-        )
+        ).also { made += it }
         assertTrue(vm.contacts.value.isEmpty(), "published ${vm.contacts.value.map { it.keyId }} from a node no longer active")
     }
 
@@ -282,7 +285,7 @@ class WithdrawConsentTest {
                 node = OTHER_NODE_URL
                 throw NodeRefusal(null, null, 404)
             },
-        )
+        ).also { made += it }
         assertFalse(vm.routeUnsupported.value, "node A's bare 404 was published as node B's")
         assertNull(vm.error.value)
         assertFalse(vm.contactsLoaded.value, "a read of another node does not count as this node having answered")
@@ -304,7 +307,7 @@ class WithdrawConsentTest {
             }),
             withdraw = FakeWithdraw(),
             readContacts = { ContactListResponse(listOf(Contact(PERSON)), 1) },
-        )
+        ).also { made += it }
         assertNull(vm.error.value, "node A's peer-read failure was published as node B's")
     }
 
@@ -350,7 +353,7 @@ class WithdrawConsentTest {
         withdraw = fake,
         peering = peering,
         initialState = initial,
-    )
+    ).also { made += it }
 
     /** A card that has just reported a complete withdrawal, a refusal AND a still-active grant. */
     private val afterARevoke = ConsentObjectsState(

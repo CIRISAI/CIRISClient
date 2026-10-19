@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.models.federation.pinTriesWarning
 import ai.ciris.mobile.shared.models.federation.seedBlobName
 import ai.ciris.mobile.shared.models.federation.seedBlobPath
 import ai.ciris.mobile.shared.platform.getFileSize
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -36,8 +37,10 @@ import kotlin.test.assertTrue
  */
 class FinalGenesisCeremonyUxTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain(); servers.forEach { it.stop(0) } }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain(); servers.forEach { it.stop(0) } }
     private val servers = mutableListOf<HttpServer>()
 
     // ── 1. The USB key folder ────────────────────────────────────────────────
@@ -146,11 +149,11 @@ class FinalGenesisCeremonyUxTest {
             "GET /v1/accord/final-genesis" to (404 to """{"error":"final_genesis.not_planned","reason_id":"final_genesis.not_planned","detail":"no ceremony"}"""),
         ))
         var reads = 0
-        val vm = FinalGenesisViewModel(client(), nodeUrl = { if (reads++ < 2) dead else live })
+        val vm = FinalGenesisViewModel(client(), nodeUrl = { if (reads++ < 2) dead else live }).also { made += it }
         vm.open().join()
         assertEquals(FinalGenesisPhase.NotPlanned, vm.phase.value, "the refused reads were waited out")
 
-        val never = FinalGenesisViewModel(client(), nodeUrl = { dead }, nodeWaitDeadlineSeconds = 0)
+        val never = FinalGenesisViewModel(client(), nodeUrl = { dead }, nodeWaitDeadlineSeconds = 0).also { made += it }
         never.open().join()
         val p = assertIs<FinalGenesisPhase.Unavailable>(never.phase.value)
         assertEquals("mobile.final_genesis_node_unreachable", p.refusal.reasonId, "an error the sheet's Retry answers")

@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.models.federation.CreateDelegationResponse
 import ai.ciris.mobile.shared.models.federation.DelegationConstraints
 import ai.ciris.mobile.shared.models.federation.DelegationDto
 import ai.ciris.mobile.shared.models.federation.DelegationsResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -50,10 +51,12 @@ private class FakeGrants(
 
 class DelegationsViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun vm(api: FakeGrants) = DelegationsViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), api)
+    private fun vm(api: FakeGrants) = DelegationsViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), api).also { made += it }
     private val grant = DelegationDto(clientId = "wa-agent-7c31", scope = "owner:act-on-behalf", attestationId = "att-1")
 
     @Test

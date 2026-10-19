@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -33,8 +34,10 @@ class ClaimedSessionTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     /** Port 1 on loopback: never a real node. The collector is injected, so nothing is sent. */
     private fun client() = CIRISApiClient("http://127.0.0.1:1", null)
@@ -49,7 +52,7 @@ class ClaimedSessionTest {
     @Test
     fun aCollectedSessionIsAppliedAndHandedToTheHost() = runBlocking {
         val api = client()
-        val vm = SetupViewModel(api)
+        val vm = SetupViewModel(api).also { made += it }
         var pinSent: String? = null
         var persisted: String? = null
 
@@ -71,7 +74,7 @@ class ClaimedSessionTest {
     @Test
     fun aWrongPinIsARefusalByIdAndKeepsTheCardOpen() = runBlocking {
         val api = client()
-        val vm = SetupViewModel(api)
+        val vm = SetupViewModel(api).also { made += it }
 
         vm.collectClaimedSession(
             claimPinProvider = { "AAAA-BBBB" },
@@ -90,7 +93,7 @@ class ClaimedSessionTest {
 
     @Test
     fun nothingWaitingIsARefusalThatSendsThePersonToSignIn() = runBlocking {
-        val vm = SetupViewModel(client())
+        val vm = SetupViewModel(client()).also { made += it }
 
         vm.collectClaimedSession(
             claimPinProvider = { "AAAA-BBBB" },
@@ -111,7 +114,7 @@ class ClaimedSessionTest {
     @Test
     fun aBare404IsANodeOlderThan0_5_218() = runBlocking {
         val api = client()
-        val vm = SetupViewModel(api)
+        val vm = SetupViewModel(api).also { made += it }
 
         vm.collectClaimedSession(
             claimPinProvider = { "AAAA-BBBB" },
@@ -124,7 +127,7 @@ class ClaimedSessionTest {
 
     @Test
     fun noPinMeansNothingIsAsked() = runBlocking {
-        val vm = SetupViewModel(client())
+        val vm = SetupViewModel(client()).also { made += it }
         var asked = false
 
         vm.collectClaimedSession(claimPinProvider = { null }, collector = { asked = true; error("unreachable") })
@@ -135,7 +138,7 @@ class ClaimedSessionTest {
 
     @Test
     fun aNodeThatDoesNotAnswerIsAFailureNotARefusal() = runBlocking {
-        val vm = SetupViewModel(client())
+        val vm = SetupViewModel(client()).also { made += it }
 
         vm.collectClaimedSession(
             claimPinProvider = { "AAAA-BBBB" },

@@ -9,6 +9,7 @@ import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -65,8 +66,10 @@ private class ScriptedNode(val script: MutableList<() -> AddContactResponse>) : 
  */
 class PendingContactTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     /** Every wait the loop asked for, in order; none is actually waited. */
     private val waits = mutableListOf<Long>()
@@ -74,7 +77,7 @@ class PendingContactTest {
     private fun vm(node: ScriptedNode) = ContactsViewModel(
         CIRISApiClient(baseUrl = NODE), { NODE }, node,
         pendingWait = { ms -> waits += ms },
-    )
+    ).also { made += it }
 
     @Test
     fun a202IsPendingNotAddedAndOffersNoChat() {

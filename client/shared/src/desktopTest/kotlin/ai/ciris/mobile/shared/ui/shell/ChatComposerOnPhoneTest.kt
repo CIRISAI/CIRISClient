@@ -16,6 +16,7 @@ import ai.ciris.mobile.shared.ui.screens.ChatScreen
 import ai.ciris.mobile.shared.ui.theme.LayoutBand
 import ai.ciris.mobile.shared.ui.theme.LocalLayoutBand
 import ai.ciris.mobile.shared.viewmodels.UserChatViewModel
+import ai.ciris.mobile.shared.viewmodels.stopViewModels
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.use
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -60,6 +62,8 @@ class ChatComposerOnPhoneTest {
     private val heightPx = (640 * density).toInt()
     private val dispatcher = UnconfinedTestDispatcher()
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun arm() {
         Dispatchers.setMain(dispatcher)
@@ -81,6 +85,7 @@ class ChatComposerOnPhoneTest {
             onClear = {},
             isEnabled = { false },
         )
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
@@ -103,7 +108,7 @@ class ChatComposerOnPhoneTest {
     @Composable
     private fun Chat() {
         val vm = androidx.compose.runtime.remember {
-            UserChatViewModel(CIRISApiClient(baseUrl = "http://agent.invalid:8080"), { "http://node.invalid:4243" }, OneRoom)
+            UserChatViewModel(CIRISApiClient(baseUrl = "http://agent.invalid:8080"), { "http://node.invalid:4243" }, OneRoom).also { made += it }
         }
         ChatScreen(viewModel = vm, contactKeyId = null, communityId = "room-1", contactLabel = "Room", onBack = {}, memberCount = 3)
     }

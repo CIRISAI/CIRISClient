@@ -9,6 +9,7 @@ import ai.ciris.mobile.shared.auth.profilesAfterWipe
 import ai.ciris.mobile.shared.models.NodeProfile
 import ai.ciris.mobile.shared.platform.EnvFileUpdater
 import ai.ciris.mobile.shared.platform.SecureStorage
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -33,6 +34,8 @@ class WipeForgetsNodeTest {
     private var savedLocalUrl = CIRISApiClient.LOCAL_NODE_URL
     private var savedExplicit = CIRISApiClient.localNodeUrlIsExplicit
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() {
         Dispatchers.setMain(dispatcher)
         savedLocalUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -44,6 +47,7 @@ class WipeForgetsNodeTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedLocalUrl, explicit = savedExplicit)
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
@@ -115,7 +119,7 @@ class WipeForgetsNodeTest {
             readNodeKeyId = { order += "identity"; WIPED_KEY },
             deleteStoredToken = { storedDeleted = true; Result.success(Unit) },
             callWipeSigningKey = { order += "wipe"; WipeSigningKeyResult(true, "wiped", walletAccessDestroyed = true) },
-        )
+        ).also { made += it }
         vm.wipeSigningKey()
         assertEquals(listOf("identity", "wipe"), order, "the key_id is read BEFORE the wipe destroys it")
         assertTrue(storedDeleted, "the persisted session token must not survive the wipe")
@@ -135,7 +139,7 @@ class WipeForgetsNodeTest {
             readNodeKeyId = { WIPED_KEY },
             deleteStoredToken = { storedDeleted = true; Result.success(Unit) },
             callWipeSigningKey = { WipeSigningKeyResult(false, "API error: HTTP 403", walletAccessDestroyed = false) },
-        )
+        ).also { made += it }
         vm.wipeSigningKey()
         assertNull(forgotten)
         assertEquals(false, storedDeleted)
@@ -152,7 +156,7 @@ class WipeForgetsNodeTest {
             readNodeKeyId = { WIPED_KEY },
             deleteStoredToken = { Result.success(Unit) },
             callResetAccount = { ResetAccountResult(true, "reset", signingKeyPreserved = true) },
-        )
+        ).also { made += it }
         vm.factoryReset()
         assertEquals(WipedNode(WIPED_URL, WIPED_KEY, identityDestroyed = false), forgotten)
         assertNull(api.getAccessToken())
@@ -162,7 +166,7 @@ class WipeForgetsNodeTest {
 
     @Test
     fun theSwitcherForgetsTheWipedNodeAndAReloadDoesNotMergeItBack() = runBlocking {
-        val vm = NodeSwitcherViewModel(CIRISApiClient(baseUrl = DEAD_LOCAL))
+        val vm = NodeSwitcherViewModel(CIRISApiClient(baseUrl = DEAD_LOCAL)).also { made += it }
         vm.importNodeListJson(
             """{"nodes":[
                 {"keyId":"$WIPED_KEY","name":"Node A","baseUrl":"$WIPED_URL"},

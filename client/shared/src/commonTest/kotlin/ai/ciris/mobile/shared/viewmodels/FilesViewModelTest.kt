@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.models.drive.NoteListing
 import ai.ciris.mobile.shared.models.drive.OpenedFile
 import ai.ciris.mobile.shared.models.drive.PolicySource
 import ai.ciris.mobile.shared.platform.PickedFile
+import androidx.lifecycle.ViewModel
 import kotlin.io.encoding.ExperimentalEncodingApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.serialization.json.Json
@@ -98,8 +99,10 @@ private fun entry(id: String, room: String, cohort: String = "community", bytes:
 @OptIn(ExperimentalEncodingApi::class)
 class FilesViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     @Test
     fun anUnknownByteTokenIsNeverHere() {
@@ -116,7 +119,7 @@ class FilesViewModelTest {
             entry("a", "room-2"), entry("b", "room-1"), entry("c", "room-1", at = "2026-09-24T11:00:00Z"),
             entry("mine", "self", cohort = "self"),
         )))
-        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY).also { it.refresh() }
+        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY).also { made += it }.also { it.refresh() }
         val listed = assertIs<FilesState.Listed>(vm.state.value)
         assertEquals(listOf("room-1", "room-2"), listed.groups.map { it.roomId })
         assertEquals(listOf("c", "b"), listed.groups[0].entries.map { it.attestationId }, "newest first within a room")
@@ -128,35 +131,35 @@ class FilesViewModelTest {
         // The node lists notes in the self drive; Files must not show them as "Untitled".
         val note = DriveEntry("self", "me", "n", "author", "2026-09-24T10:00:00Z", null, "text/plain; charset=utf-8", "here", "")
         val txt = entry("named", "me", cohort = "self")
-        val vm = FilesViewModel(FakeDrive(listing = DriveListing(entries = listOf(note, txt))), FilesCohort.SELF).also { it.refresh() }
+        val vm = FilesViewModel(FakeDrive(listing = DriveListing(entries = listOf(note, txt))), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals(listOf("named"), assertIs<FilesState.Listed>(vm.state.value).groups.flatMap { g -> g.entries.map { it.attestationId } })
 
-        val onlyNotes = FilesViewModel(FakeDrive(listing = DriveListing(entries = listOf(note))), FilesCohort.SELF).also { it.refresh() }
+        val onlyNotes = FilesViewModel(FakeDrive(listing = DriveListing(entries = listOf(note))), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals(FilesState.Empty, onlyNotes.state.value)
     }
 
     @Test
     fun noRowsIsEmptyNotAnError() {
-        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF).also { it.refresh() }
+        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals(FilesState.Empty, vm.state.value)
     }
 
     @Test
     fun aNodeWithoutTheRouteIsTooOldAndARefusalIsARefusal() {
-        val old = FilesViewModel(FakeDrive(listingError = NodeRefusal(null, null, 404)), FilesCohort.SELF).also { it.refresh() }
+        val old = FilesViewModel(FakeDrive(listingError = NodeRefusal(null, null, 404)), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals(FilesState.NodeTooOld, old.state.value)
 
         val refused = FilesViewModel(
             FakeDrive(listingError = NodeRefusal("drive.owner_session_required", "sign in", 403)),
             FilesCohort.SELF,
-        ).also { it.refresh() }
+        ).also { made += it }.also { it.refresh() }
         assertEquals("drive.owner_session_required", assertIs<FilesState.Refused>(refused.state.value).refusal.reasonId)
     }
 
     @Test
     fun bytesOnAnotherDeviceAreAnAnswerNotAFailure() {
         val drive = FakeDrive(openError = NodeRefusal("drive.not_fetched", "on another device", 409))
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         vm.openFile(entry("x", "self", cohort = "self", bytes = "not_fetched"))
         val notOpened = assertIs<OpenState.NotOpened>(vm.open.value)
         assertEquals("drive.not_fetched", notOpened.refusal?.reasonId)
@@ -168,7 +171,7 @@ class FilesViewModelTest {
         // `drive.too_large_for_whole_read`. The bytes are there; this client
         // has no streaming read, so it is a named state — not "could not open".
         val drive = FakeDrive(openError = NodeRefusal("drive.too_large_for_whole_read", "this file is 70000000 bytes", 413))
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         vm.openFile(entry("big", "self", cohort = "self"))
         val tooLarge = assertIs<OpenState.TooLarge>(vm.open.value)
         assertEquals("big", tooLarge.entry.attestationId)
@@ -183,7 +186,7 @@ class FilesViewModelTest {
         // key", never NotOpened (the error-ish "couldn't open") and never HERE.
         assertEquals(ByteState.AWAITING_KEY, ByteState.of("awaiting_key"))
         val drive = FakeDrive(openError = NodeRefusal("drive.awaiting_key", "the bytes are here, but this device's key for them has not arrived yet", 409))
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         val row = entry("k", "self", cohort = "self", bytes = "awaiting_key")
         assertEquals(ByteState.AWAITING_KEY, row.byteState)
         vm.openFile(row)
@@ -199,7 +202,7 @@ class FilesViewModelTest {
 
     @Test
     fun anOpenedFileCarriesItsBytes() {
-        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF)
+        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF).also { made += it }
         vm.openFile(entry("x", "self", cohort = "self"))
         val opened = assertIs<OpenState.Opened>(vm.open.value)
         assertEquals("hello", opened.bytes.decodeToString())
@@ -213,7 +216,7 @@ class FilesViewModelTest {
     @Test
     fun bytesThatDoNotMatchTheNodesDigestAreNotOpened() {
         val wrong = "0".repeat(64)
-        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(wrong)), FilesCohort.SELF)
+        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(wrong)), FilesCohort.SELF).also { made += it }
         vm.openFile(entry("x", "self", cohort = "self"))
         assertFalse(vm.open.value is OpenState.Opened, "bytes whose digest is not the one the node sent were handed to the renderer")
         assertFalse(vm.open.value is OpenState.Closed, "a digest mismatch vanished instead of being said")
@@ -224,7 +227,7 @@ class FilesViewModelTest {
 
     @Test
     fun bytesThatMatchTheNodesDigestOpenVerified() {
-        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(HELLO_SHA256)), FilesCohort.SELF)
+        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(HELLO_SHA256)), FilesCohort.SELF).also { made += it }
         vm.openFile(entry("x", "self", cohort = "self"))
         val opened = assertIs<OpenState.Opened>(vm.open.value)
         assertEquals(DigestCheck.Verified(HELLO_SHA256), opened.digest)
@@ -234,7 +237,7 @@ class FilesViewModelTest {
     @Test
     fun aNodeThatSendsNoDigestOpensTheFileAndSaysNothingWasVerified() {
         // Pre-0.5.217: the limit is stated, never dressed as a verification.
-        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(null)), FilesCohort.SELF)
+        val vm = FilesViewModel(FakeDrive(fileJson = helloJson(null)), FilesCohort.SELF).also { made += it }
         vm.openFile(entry("x", "self", cohort = "self"))
         assertEquals(DigestCheck.NotSent, assertIs<OpenState.Opened>(vm.open.value).digest)
     }
@@ -244,7 +247,7 @@ class FilesViewModelTest {
     @Test
     fun theNodesPolicyIsReadOnceAndNarrowsTheBuiltInTable() {
         val drive = FakeDrive(policy = MediaPolicy(tierA = mapOf("text/plain" to 1_000_000L, "image/png" to 999L), inlineMaxBytes = 512L * 1024, renditions = false))
-        val vm = FilesViewModel(drive, FilesCohort.SELF).also { it.refresh(); it.refresh() }
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }.also { it.refresh(); it.refresh() }
         assertEquals(1, drive.policyReads, "the policy is one read per model, not one per refresh")
         val fromNode = assertIs<PolicySource.FromNode>(vm.policy.value)
         assertEquals(1_000_000L, fromNode.policy.tierA["text/plain"], "the node's lower cap wins")
@@ -257,7 +260,7 @@ class FilesViewModelTest {
     fun theNodesOwnCapGatesAnUploadInsteadOfTheConstant() {
         // The write door refuses over `whole_read_max_bytes` (src/drive.rs:728); `inline_max_bytes` is a storage fact.
         val drive = FakeDrive(policy = MediaPolicy(tierA = emptyMap(), inlineMaxBytes = 1L * 1024 * 1024, wholeReadMaxBytes = 64L * 1024 * 1024))
-        val vm = FilesViewModel(drive, FilesCohort.SELF).also { it.refresh() }
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }.also { it.refresh() }
         vm.addFile(PickedFile("mid.bin", "application/octet-stream", "", 8L * 1024 * 1024))
         assertIs<AddState.Written>(vm.add.value, "8 MiB is over the compiled-in 1 MiB but under what this node takes whole")
         assertEquals(1, drive.writes.size)
@@ -268,14 +271,14 @@ class FilesViewModelTest {
         assertEquals(1, drive.writes.size, "refused before upload")
 
         val narrower = FakeDrive(policy = MediaPolicy(tierA = emptyMap(), wholeReadMaxBytes = 512L * 1024))
-        val small = FilesViewModel(narrower, FilesCohort.SELF).also { it.refresh() }
+        val small = FilesViewModel(narrower, FilesCohort.SELF).also { made += it }.also { it.refresh() }
         small.addFile(PickedFile("mid.bin", "application/octet-stream", "", 600L * 1024))
         assertIs<AddState.TooLarge>(small.add.value, "a node that takes less than the constant is obeyed too")
     }
 
     @Test
     fun aNodeWithoutThePolicyRouteLeavesTheBuiltInTableAndSaysWhy() {
-        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF).also { it.refresh() }
+        val vm = FilesViewModel(FakeDrive(), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals("not_on_this_node", assertIs<PolicySource.BuiltIn>(vm.policy.value).reason)
         assertEquals(MediaPolicy.RECOMMENDED, vm.policy.value.policy)
     }
@@ -285,7 +288,7 @@ class FilesViewModelTest {
     @Test
     fun aFamilyTabWithNoHouseholdAsksNothingAndIsNotEmpty() {
         val drive = FakeDrive()
-        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { it.refresh(null) }
+        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { made += it }.also { it.refresh(null) }
         assertEquals(FilesState.NoRoom, vm.state.value, "no household picked is its own state, not 'no files'")
         assertEquals(0, drive.driveReads, "with no room there is nothing to ask the node")
     }
@@ -293,7 +296,7 @@ class FilesViewModelTest {
     @Test
     fun aFamilyTabListsThePickedHouseholdsRoomAndAddsThere() {
         val drive = FakeDrive(listing = DriveListing(entries = listOf(entry("f", "fam-1", cohort = "family"))))
-        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { it.refresh("fam-1") }
+        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { made += it }.also { it.refresh("fam-1") }
         assertEquals("family" to "fam-1", drive.driveAsks.last(), "GET /v1/drive?cohort=family&room_id=<household>")
         assertEquals(listOf("f"), assertIs<FilesState.Listed>(vm.state.value).groups.single().entries.map { it.attestationId })
 
@@ -308,7 +311,7 @@ class FilesViewModelTest {
         // reads as `self` (`Cohort::parse`) and answers `404 drive.not_in_room`.
         val household = entry("f", "fam-1", cohort = "family")
         val drive = FakeDrive(listing = DriveListing(entries = listOf(household)))
-        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { it.refresh("fam-1") }
+        val vm = FilesViewModel(drive, FilesCohort.FAMILY).also { made += it }.also { it.refresh("fam-1") }
         vm.openFile(assertIs<FilesState.Listed>(vm.state.value).groups.single().entries.single())
         assertEquals(Triple("f", "family", "fam-1"), drive.fileAsks.single(), "the household's scope, as the listing named it")
         assertIs<OpenState.Opened>(vm.open.value)
@@ -317,8 +320,8 @@ class FilesViewModelTest {
     @Test
     fun everyCohortOpensWithItsOwnScope() {
         val drive = FakeDrive()
-        FilesViewModel(drive, FilesCohort.SELF).openFile(entry("s", "owner-room", cohort = "self"))
-        FilesViewModel(drive, FilesCohort.COMMUNITY).openFile(entry("c", "room-9", cohort = "community"))
+        FilesViewModel(drive, FilesCohort.SELF).also { made += it }.openFile(entry("s", "owner-room", cohort = "self"))
+        FilesViewModel(drive, FilesCohort.COMMUNITY).also { made += it }.openFile(entry("c", "room-9", cohort = "community"))
         assertEquals(
             listOf<Triple<String, String, String?>>(Triple("s", "self", "owner-room"), Triple("c", "community", "room-9")),
             drive.fileAsks,
@@ -338,7 +341,7 @@ class FilesViewModelTest {
                 DriveListing(entries = listOf(entry("c2", "room-2")), resume = null),
             )
         }
-        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY).also { it.refresh() }
+        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY).also { made += it }.also { it.refresh() }
         assertEquals(List<Pair<String?, String?>>(3) { null to null }, drive.driveAsks, "no cohort, no room: the whole drive")
         assertEquals(listOf(null, "cur-1", "cur-2"), drive.driveAfters)
         val listed = assertIs<FilesState.Listed>(vm.state.value)
@@ -348,7 +351,7 @@ class FilesViewModelTest {
     @Test
     fun aPickTheDeviceRefusedIsSaidNotDropped() {
         val drive = FakeDrive()
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         vm.refuseTooLarge("film.mov", 50L * 1024 * 1024, PickedFile.MAX_FILE_SIZE_BYTES)
         val tooLarge = assertIs<AddState.TooLarge>(vm.add.value)
         assertEquals(PickedFile.MAX_FILE_SIZE_BYTES, tooLarge.limitBytes)
@@ -357,14 +360,14 @@ class FilesViewModelTest {
 
     @Test
     fun aHouseholdWithNoFilesIsEmptyNotNoRoom() {
-        val vm = FilesViewModel(FakeDrive(), FilesCohort.FAMILY).also { it.refresh("fam-1") }
+        val vm = FilesViewModel(FakeDrive(), FilesCohort.FAMILY).also { made += it }.also { it.refresh("fam-1") }
         assertEquals(FilesState.Empty, vm.state.value)
     }
 
     @Test
     fun aFileOverTheEdgeCapIsRefusedBeforeUpload() {
         val drive = FakeDrive()
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         vm.addFile(PickedFile("big.bin", "application/octet-stream", "", FileWrite.MAX_INLINE_BYTES + 1))
         assertIs<AddState.TooLarge>(vm.add.value)
         assertTrue(drive.writes.isEmpty(), "a file the edge will refuse was uploaded anyway")
@@ -373,11 +376,11 @@ class FilesViewModelTest {
     @Test
     fun aSelfWriteNamesNoRoomAndACommunityWriteNamesOne() {
         val drive = FakeDrive()
-        FilesViewModel(drive, FilesCohort.SELF).addFile(PickedFile("a.txt", "text/plain", "aGk=", 2), roomId = "ignored")
+        FilesViewModel(drive, FilesCohort.SELF).also { made += it }.addFile(PickedFile("a.txt", "text/plain", "aGk=", 2), roomId = "ignored")
         assertEquals("self", drive.writes.last().cohort)
         assertNull(drive.writes.last().roomId, "the self room IS the owner; naming one is a different request")
 
-        FilesViewModel(drive, FilesCohort.COMMUNITY).addFile(PickedFile("b.txt", "text/plain", "aGk=", 2), roomId = "room-1")
+        FilesViewModel(drive, FilesCohort.COMMUNITY).also { made += it }.addFile(PickedFile("b.txt", "text/plain", "aGk=", 2), roomId = "room-1")
         assertEquals("community", drive.writes.last().cohort)
         assertEquals("room-1", drive.writes.last().roomId)
     }
@@ -391,7 +394,7 @@ class FilesViewModelTest {
     @Test
     fun anUploadDeclaresTheSniffedTypeNotThePickersLabel() {
         val drive = FakeDrive()
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         // A PNG header, base64: the picker said nothing.
         val png = byteArrayOf(0x89.toByte(), 'P'.code.toByte(), 'N'.code.toByte(), 'G'.code.toByte(), 0x0D, 0x0A, 0x1A, 0x0A, 0, 0, 0, 0x0D)
         vm.addFile(PickedFile("shot", "", kotlin.io.encoding.Base64.encode(png), png.size.toLong()))
@@ -413,7 +416,7 @@ class FilesViewModelTest {
     @Test
     fun aWriteReportsWhetherItReachedAnyone() {
         val drive = FakeDrive(written = FileWritten("att", addressed = false, cohort = "self", room = "self", tier = "Local", crossed = false))
-        val vm = FilesViewModel(drive, FilesCohort.SELF)
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
         vm.addFile(PickedFile("a.txt", "text/plain", "aGk=", 2))
         val written = assertIs<AddState.Written>(vm.add.value)
         assertEquals(false, written.result.crossed, "crossed=false means the file reached nobody; it must reach the UI as such")
@@ -423,13 +426,15 @@ class FilesViewModelTest {
 
 class NotesViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     @Test
     fun aBlankNoteIsNotSent() {
         val drive = FakeDrive()
-        val vm = NotesViewModel(drive)
+        val vm = NotesViewModel(drive).also { made += it }
         assertEquals(false, vm.write("   "))
         assertTrue(drive.noteWrites.isEmpty())
     }
@@ -437,7 +442,7 @@ class NotesViewModelTest {
     @Test
     fun aNoteIsWrittenTrimmedAndTheListRereads() {
         val drive = FakeDrive()
-        val vm = NotesViewModel(drive).also { it.refresh() }
+        val vm = NotesViewModel(drive).also { made += it }.also { it.refresh() }
         assertEquals(NotesState.Empty, vm.state.value)
         assertTrue(vm.write("  buy milk  "))
         assertEquals(listOf("buy milk"), drive.noteWrites)

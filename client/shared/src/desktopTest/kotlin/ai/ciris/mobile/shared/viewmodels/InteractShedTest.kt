@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.MessageType
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -61,8 +62,10 @@ class InteractShedTest {
         val url get() = "http://127.0.0.1:${server.address.port}"
     }
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() = Dispatchers.setMain(Dispatchers.Unconfined)
-    @AfterTest fun tearDown() = Dispatchers.resetMain()
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private suspend fun InteractViewModel.settled() = withContext(Dispatchers.Default) {
         withTimeout(15_000) { isSending.first { !it } }
@@ -72,7 +75,7 @@ class InteractShedTest {
     fun theCountdownIsNamedAndTheSameMessageIsAnsweredOnceItElapses() = runBlocking {
         val agent = Agent(sheds = 1, retryAfter = 3)
         try {
-            val vm = InteractViewModel(CIRISApiClient(agent.url, "tok"))
+            val vm = InteractViewModel(CIRISApiClient(agent.url, "tok")).also { made += it }
             val seen = CopyOnWriteArrayList<ChatShedState>()
             vm.shedSleep = { seen += vm.shedState.value }
             vm.onInputTextChanged("are you there?")
@@ -101,7 +104,7 @@ class InteractShedTest {
     fun threeShedsGiveUpWithTheTextKeptAndRetrySendsItAgain() = runBlocking {
         val agent = Agent(sheds = 3, retryAfter = 1)
         try {
-            val vm = InteractViewModel(CIRISApiClient(agent.url, "tok"))
+            val vm = InteractViewModel(CIRISApiClient(agent.url, "tok")).also { made += it }
             vm.shedSleep = {}
             vm.onInputTextChanged("keep me")
             vm.sendMessage()

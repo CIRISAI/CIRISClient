@@ -29,6 +29,7 @@ class SetupReviewGapsTest {
     @BeforeTest
     fun setup() = Dispatchers.setMain(testDispatcher)
 
+    // lint: test-scheduler-main -- Main is a StandardTestDispatcher: a cancelled view model's resume queues on its scheduler and never runs, so nothing leaks, and stopViewModels() would wait forever.
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
 

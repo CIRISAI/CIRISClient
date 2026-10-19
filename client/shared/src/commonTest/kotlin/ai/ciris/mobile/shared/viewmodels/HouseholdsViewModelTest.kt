@@ -19,6 +19,7 @@ import ai.ciris.mobile.shared.ui.screens.InviteSupport
 import ai.ciris.mobile.shared.ui.screens.MEMBERSHIP_CONSENT_REQUIRED
 import ai.ciris.mobile.shared.ui.screens.ProtocolChoice
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -126,17 +127,19 @@ private class FakeHouseholds(
 
 class HouseholdsViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     /** Loaded as the roster loads it: the households, then the selected one's invitations. */
-    private fun loaded(api: FakeHouseholds): HouseholdsViewModel = HouseholdsViewModel(api).also { it.load(); it.loadInvites() }
+    private fun loaded(api: FakeHouseholds): HouseholdsViewModel = HouseholdsViewModel(api).also { made += it }.also { it.load(); it.loadInvites() }
 
     @Test
     fun readingTheHouseholdsAloneNeverAsksAboutInvitations() {
         // Files reads the household list through this view model (load only).
         val api = FakeHouseholds()
-        val vm = HouseholdsViewModel(api).also { it.load() }
+        val vm = HouseholdsViewModel(api).also { made += it }.also { it.load() }
         assertEquals(0, api.invitesReads)
         assertEquals(GroupInvitesRead.NotAsked, vm.invites.value)
         assertEquals(InviteSupport.UNKNOWN, vm.inviteSupport.value)

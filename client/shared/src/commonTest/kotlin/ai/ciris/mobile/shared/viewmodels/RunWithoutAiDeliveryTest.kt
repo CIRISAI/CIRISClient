@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.models.SetupMode
 import ai.ciris.mobile.shared.models.safety.AgeBand
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -34,11 +35,13 @@ class RunWithoutAiDeliveryTest {
 
     private val dispatcher = UnconfinedTestDispatcher()
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     /** An agent build: the only configuration where the question is asked. */
-    private fun vm() = SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = true)
+    private fun vm() = SetupViewModel(FakeCIRISApiClientForBilling(), hasAgent = true).also { made += it }
 
     /**
      * Everything screens 1 and 2 block on, so nextStep() is allowed to advance.

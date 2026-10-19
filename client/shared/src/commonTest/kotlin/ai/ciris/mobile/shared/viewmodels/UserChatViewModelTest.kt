@@ -9,6 +9,7 @@ import ai.ciris.mobile.shared.models.chat.ChatTranscript
 import ai.ciris.mobile.shared.models.chat.PairPhase
 import ai.ciris.mobile.shared.models.chat.pairPhase
 import ai.ciris.mobile.shared.models.chat.SendChatMessageResult
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -70,11 +71,13 @@ private class FakeChat(
  */
 class UserChatViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     /** The real client with the AGENT at its api base, as on a with-AI install; the fake answers every call. */
-    private fun vm(chat: FakeChat) = UserChatViewModel(CIRISApiClient(baseUrl = AGENT_URL), { NODE_URL }, chat)
+    private fun vm(chat: FakeChat) = UserChatViewModel(CIRISApiClient(baseUrl = AGENT_URL), { NODE_URL }, chat).also { made += it }
 
     @Test
     fun aPairRoomIsOpenedThroughPostChatAtTheNodeAndReadFromTheSameNode() {
@@ -141,7 +144,7 @@ class UserChatViewModelTest {
         val nodeB = "http://node-b.invalid:4243"
         var active = nodeA
         val chat = FakeChat(onOpen = { active = nodeB })
-        val vm = UserChatViewModel(CIRISApiClient(baseUrl = AGENT_URL), { active }, chat)
+        val vm = UserChatViewModel(CIRISApiClient(baseUrl = AGENT_URL), { active }, chat).also { made += it }
         vm.enter(PAIR, "peer-1")
         assertEquals(listOf(nodeA to "peer-1"), chat.openCalls)
         assertEquals(listOf(nodeA to PAIR), chat.transcriptCalls, "the transcript is read where the room was opened")

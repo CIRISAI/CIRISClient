@@ -130,10 +130,6 @@ class NodeSwitcherViewModel(
     val activeProfile: NodeProfile?
         get() = _profiles.value.firstOrNull { it.id == _activeProfileId.value }
 
-    init {
-        viewModelScope.launch { reload() }
-    }
-
     /**
      * Reload the node list LIVE. **CEG-native, no client cache:** the list is the
      * set of nodes this fed ID owns — the local node's `delegates_to(user → node)`
@@ -881,6 +877,18 @@ class NodeSwitcherViewModel(
             PlatformLogger.i(TAG, "[claimAdmin] local signer ready=$ready")
             _bootstrap.value = _bootstrap.value.copy(localSignerReady = ready)
         }
+    }
+
+    // LAST in the class, on purpose. `reload()` writes `_ownerHasFedId`, which is
+    // declared far below where this block used to sit, and initializers run in
+    // text order. On an immediate or unconfined Main the launch runs inside the
+    // constructor, so a fast failed read (a refused connection resuming on the
+    // engine's thread) could reach that write before the field existed: an NPE
+    // thrown outside any test, pinned on the next runTest as
+    // UncaughtExceptionsBeforeTest (WipeForgetsNodeTest -> WiseAuthorityViewModelTest,
+    // 2-core run). Here, every property is initialized first.
+    init {
+        viewModelScope.launch { reload() }
     }
 }
 
