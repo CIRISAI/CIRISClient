@@ -3585,7 +3585,7 @@
     "identity_this_device_title": "Este dispositivo",
     "sign_out_title": "Sair deste dispositivo?",
     "sign_out_fact_ends": "O que é encerrado",
-    "sign_out_ends": "A sessão deste dispositivo com este nó. O nó a revoga, e este dispositivo a esquece.",
+    "sign_out_ends": "A sessão deste dispositivo com este nó é encerrada. O nó a revoga, e este dispositivo a esquece.",
     "sign_out_fact_stays": "O que fica neste dispositivo",
     "sign_out_stays": "Suas configurações de idioma e de exibição, e os nós que você adicionou. O nó mantém sua identidade, seus contatos, suas conversas e seus arquivos.",
     "sign_out_fact_back": "Como entrar de novo",

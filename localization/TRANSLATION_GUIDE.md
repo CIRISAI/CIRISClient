@@ -143,6 +143,11 @@ so a lesson learned here reaches the models that would otherwise repeat it.
   shipped anchors is wrong even when it is defensible, because the anchors are
   what users are already reading. Say so if you think the corpus is wrong;
   do not quietly diverge from it.
+- **Check the glossary before calling a term wrong.** A reviewer rejected
+  Turkish "token" for "Token" and asked for "jeton", claiming the shipped
+  strings use it; the tr glossary says "Token → Token" and every shipped
+  Turkish string writes "token'ı". Before flagging terminology, the glossary
+  row and the anchors are the evidence, not a guess at what the corpus says.
 
 ## 4. Writing them in
 
