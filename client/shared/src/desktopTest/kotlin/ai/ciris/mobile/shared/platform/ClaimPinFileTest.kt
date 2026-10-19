@@ -2,11 +2,10 @@ package ai.ciris.mobile.shared.platform
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
+import ai.ciris.mobile.shared.viewmodels.stopViewModels
 import com.sun.net.httpserver.HttpServer
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.resetMain
@@ -76,7 +75,7 @@ class ClaimPinFileTest {
     // Left running past resetMain(), a call that comes back resumes with no
     // test Main and throws outside any test; kotlinx-coroutines-test then pins
     // it on the NEXT runTest (PR #203: PortalConnectTest failed with
-    // UncaughtExceptionsBeforeTest). Every view model made here is cancelled first.
+    // UncaughtExceptionsBeforeTest). Every view model made here is stopped, and waited for, first (stopViewModels).
     private val viewModels = mutableListOf<ViewModel>()
 
     @BeforeTest fun setUp() {
@@ -86,7 +85,7 @@ class ClaimPinFileTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
-        viewModels.forEach { it.viewModelScope.cancel() }
+        stopViewModels(viewModels)
         viewModels.clear()
         Dispatchers.resetMain()
     }

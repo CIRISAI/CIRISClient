@@ -4,9 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.localization.LocalizationHelper
 import ai.ciris.mobile.shared.models.NodeProfile
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import java.io.File
@@ -33,7 +31,7 @@ class ClaimNodeCopyTest {
     // Left running past resetMain(), a call that comes back resumes with no
     // test Main and throws outside any test; kotlinx-coroutines-test then pins
     // it on the NEXT runTest (PR #203: PortalConnectTest failed with
-    // UncaughtExceptionsBeforeTest). Every view model made here is cancelled first.
+    // UncaughtExceptionsBeforeTest). Every view model made here is stopped, and waited for, first (stopViewModels).
     private val viewModels = mutableListOf<ViewModel>()
 
     @BeforeTest fun setUp() {
@@ -45,7 +43,7 @@ class ClaimNodeCopyTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
-        viewModels.forEach { it.viewModelScope.cancel() }
+        stopViewModels(viewModels)
         viewModels.clear()
         Dispatchers.resetMain()
     }
