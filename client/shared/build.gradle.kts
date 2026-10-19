@@ -562,3 +562,16 @@ val fatReleaseAar by tasks.registering {
         logger.lifecycle("[fat-aar] wrote ${dst.name} (${dst.length()} bytes)")
     }
 }
+
+// A test that fails with UncaughtExceptionsBeforeTest is reporting an exception
+// thrown OUTSIDE it, by a coroutine an earlier test left running, and the cause
+// rides along as a suppressed exception. The default short format drops it: CI
+// said only "UncaughtExceptionsBeforeTest at BillingViewModelTest.kt:100" (PR
+// #203), and finding the add-device poll took a local stress run. FULL keeps it.
+tasks.withType<Test>().configureEach {
+    testLogging {
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showCauses = true
+        showStackTraces = true
+    }
+}

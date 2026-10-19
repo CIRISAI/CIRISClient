@@ -43,7 +43,12 @@ import kotlin.test.fail
 class PendingContactWireTest {
 
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    /** Every view model a test made: its pending loop is stopped before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ContactsViewModel>()
+    @AfterTest fun tearDown() {
+        stopViewModels(made)
+        Dispatchers.resetMain()
+    }
 
     /** A node whose `POST /v1/contacts` answers a SCRIPT, one entry per call, the last one repeating. */
     private class ScriptedNode(script: List<Pair<Int, String>>, listBody: String = """{"contacts":[],"total":0}""") {
@@ -90,7 +95,7 @@ class PendingContactWireTest {
             waits += ms
             holdFirstWait?.await()
             delay(10)
-        })
+        }).also { made += it }
     }
 
     private val waits = CopyOnWriteArrayList<Long>()
