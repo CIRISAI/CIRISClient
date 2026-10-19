@@ -170,6 +170,29 @@ async def _hop_landed(helper, tag: str, timeout: float, poll: float = 0.25) -> O
         await asyncio.sleep(poll)
 
 
+async def _surface_circles(helper, tag: str, tries: int = 3) -> None:
+    """Bring the circle bar back when a phone chat has put it away.
+
+    On a phone, a chat's composer owns the bottom edge and the circle bar is
+    not composed (CirclesShell: `if (!hostsComposer) BottomBar`, CIRISClient
+    #186); "the circles are back the moment you leave it, by the back arrow".
+    A with-AI setup signs the owner straight into Interact, so every flow's
+    first circle hop found nothing to click (iOS, run 39288568414). Press
+    `btn_nav_back` until the circle shows, bounded; with no back arrow, leave
+    it to the caller to name the missing hop.
+    """
+    for _ in range(tries):
+        if await helper.wait_for_element(tag, timeout=3000):
+            return
+        if "btn_nav_back" not in {e.test_tag for e in await helper.get_elements()}:
+            return
+        print(f"   {tag} is not on screen and a back arrow is: pressing btn_nav_back "
+              f"(a phone chat hides the circle bar, #186)")
+        if not await helper.click("btn_nav_back", timeout=5000):
+            return
+        await asyncio.sleep(0.5)
+
+
 async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: float = 20.0,
                    arrive_timeout: float = 20.0) -> Optional[str]:
     """Walk `chain` (nav_map's derived hop) to `screen`. None on arrival, else
@@ -184,6 +207,8 @@ async def navigate(helper, screen: str, chain: Sequence[str], *, hop_timeout: fl
     """
     for i, tag in enumerate(chain, 1):
         where = f"hop {i} of {len(chain)} ({' -> '.join(chain)})"
+        if tag.startswith("circle_"):
+            await _surface_circles(helper, tag)
         if not await helper.wait_for_element(tag, timeout=int(hop_timeout * 1000)):
             return (f"navigation to Screen.{screen}: hop tag {tag!r} never appeared, {where}; "
                     f"on {await helper.get_screen()!r}; on screen and drivable now: "
