@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.models.federation.FinalGenesisItems
 import ai.ciris.mobile.shared.models.federation.GenesisCell
 import ai.ciris.mobile.shared.models.federation.HolderGenesisState
 import ai.ciris.mobile.shared.models.federation.PlanConfirm
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
@@ -34,8 +35,11 @@ import kotlin.test.assertTrue
  */
 class FinalGenesisViewModelTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
     @AfterTest fun tearDown() {
+        stopViewModels(made)
         Dispatchers.resetMain()
         nodes.forEach { it.server.stop(0) }
     }
@@ -86,7 +90,7 @@ class FinalGenesisViewModelTest {
     private fun vm(n: Node) = FinalGenesisViewModel(
         CIRISApiClient(baseUrl = "http://127.0.0.1:9").also { it.setAccessToken("owner") },
         nodeUrl = { n.url },
-    )
+    ).also { made += it }
 
     // ── the bytes ────────────────────────────────────────────────────────────
 

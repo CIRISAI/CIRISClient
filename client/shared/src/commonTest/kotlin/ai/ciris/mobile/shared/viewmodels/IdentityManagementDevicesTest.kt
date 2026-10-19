@@ -15,6 +15,7 @@ import ai.ciris.mobile.shared.models.federation.EvictionReport
 import ai.ciris.mobile.shared.ui.screens.evictPartKey
 import ai.ciris.mobile.shared.models.federation.SelfOccurrence
 import ai.ciris.mobile.shared.models.federation.SelfOccurrencesResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -100,10 +101,12 @@ private fun deadClient() = CIRISApiClient(baseUrl = "http://127.0.0.1:9")
 
 class IdentityManagementDevicesTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun vm(devices: FakeDevices) = IdentityManagementViewModel(deadClient(), "http://127.0.0.1:9", devices)
+    private fun vm(devices: FakeDevices) = IdentityManagementViewModel(deadClient(), "http://127.0.0.1:9", devices).also { made += it }
 
     // ── The wire ──────────────────────────────────────────────────────────
 

@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -37,6 +38,8 @@ class FedIdBeforePinTest {
     // serving 127.0.0.1:4243 on the machine running it — and minted a real
     // user identity on a developer's live node. Pin the global to a port
     // nothing listens on for the duration, and put it back after.
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() {
         Dispatchers.setMain(dispatcher)
         savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -44,13 +47,14 @@ class FedIdBeforePinTest {
     }
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
     @Test
     fun theFedIdIsMintedBeforeThePinIsAwaited() = runBlocking {
         // Nothing listens on port 1: the mint's request is refused at once.
-        val vm = SetupViewModel(CIRISApiClient(CLOSED, null), hasAgent = true)
+        val vm = SetupViewModel(CIRISApiClient(CLOSED, null), hasAgent = true).also { made += it }
         var pinAsked = false
 
         vm.claimLocalNodeOwnership(claimPinProvider = { pinAsked = true; null })

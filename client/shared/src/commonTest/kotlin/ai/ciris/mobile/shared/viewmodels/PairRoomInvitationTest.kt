@@ -13,6 +13,7 @@ import ai.ciris.mobile.shared.models.federation.Contact
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -73,10 +74,12 @@ private fun pairInvite(id: String, room: String) = InboxInvite(
  */
 class PairRoomInvitationTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun vm(node: FakeInboxNode) = ContactsViewModel(CIRISApiClient(baseUrl = "http://agent.invalid:8080"), { NODE }, node)
+    private fun vm(node: FakeInboxNode) = ContactsViewModel(CIRISApiClient(baseUrl = "http://agent.invalid:8080"), { NODE }, node).also { made += it }
 
     @Test
     fun aPairRoomInvitationLandsOnTheContactWhoseRoomItIs() {

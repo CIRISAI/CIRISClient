@@ -11,6 +11,7 @@ import ai.ciris.mobile.shared.models.federation.ContactCodeNode
 import ai.ciris.mobile.shared.models.federation.ContactCodeResponse
 import ai.ciris.mobile.shared.models.federation.ContactListResponse
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -88,13 +89,15 @@ private fun agentFrontedClient() = CIRISApiClient(baseUrl = AGENT_URL)
 
 class ContactCodeViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private fun vm(api: FakeContacts, client: CIRISApiClient = agentFrontedClient()) =
         // The app hands the VM a provider that follows the ACTIVE node (CIRISApp's
         // effectiveNodeUrl); here the same rule, from the client's mode.
-        ContactsViewModel(client, { contactsNodeUrl(client.isNodeMode(), client.baseUrl, NODE_URL) }, api)
+        ContactsViewModel(client, { contactsNodeUrl(client.isNodeMode(), client.baseUrl, NODE_URL) }, api).also { made += it }
 
     // ── GET /v1/contacts is a NODE route, like the rest of People ─────────
 
@@ -114,7 +117,7 @@ class ContactCodeViewModelTest {
     fun aNodeSwitchClosesTheOldNodesCode() {
         val api = FakeContacts()
         var node = NODE_URL
-        val vm = ContactsViewModel(agentFrontedClient(), { node }, api)
+        val vm = ContactsViewModel(agentFrontedClient(), { node }, api).also { made += it }
         vm.openContactCode()
         assertIs<ContactCodeState.Ready>(vm.contactCode.value)
 
@@ -129,7 +132,7 @@ class ContactCodeViewModelTest {
         val gate = CompletableDeferred<Unit>()
         val api = FakeContacts(codeGate = gate)
         var node = NODE_URL
-        val vm = ContactsViewModel(agentFrontedClient(), { node }, api)
+        val vm = ContactsViewModel(agentFrontedClient(), { node }, api).also { made += it }
         vm.openContactCode()
         assertEquals(ContactCodeState.Loading, vm.contactCode.value)
 

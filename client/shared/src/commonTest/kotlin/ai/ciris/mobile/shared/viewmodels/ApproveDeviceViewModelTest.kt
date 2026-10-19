@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.models.federation.DenyDeviceResponse
 import ai.ciris.mobile.shared.models.federation.DeviceJoinRequest
 import ai.ciris.mobile.shared.models.federation.DeviceJoinRequests
 import ai.ciris.mobile.shared.models.federation.OpenDeviceRequestsResponse
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -33,8 +34,10 @@ import kotlin.test.assertTrue
  */
 class ApproveDeviceViewModelTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private class OwnerNode : DeviceRequestsApi {
         val calls = mutableListOf<String>()
@@ -85,7 +88,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun openingTheWindowAsksTheNodeAndReReadsTheList() = runBlocking {
         val node = OwnerNode()
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
 
         vm.open()
 
@@ -98,7 +101,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun theListShowsEachRequestWithItsMatchCode() = runBlocking {
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 300) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
 
         vm.refreshNow()
 
@@ -113,7 +116,7 @@ class ApproveDeviceViewModelTest {
         // The node clears window_secs_left once it closes (`sweep`), and keeps
         // the request until REQUEST_TTL: the window gates NEW joins only.
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 5) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         now += 10_000
         assertNull(vm.state.value.windowSecsLeftAt(now), "the local countdown closes the window")
@@ -136,7 +139,7 @@ class ApproveDeviceViewModelTest {
     fun eachRequestCountsDownItsOwnFifteenMinutes() = runBlocking {
         val old = phone.copy(requestId = "req-old", requestedSecsAgo = 890)
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone, old), windowSecsLeft = null) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         val s = vm.state.value
 
@@ -152,7 +155,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun approveGoesThroughTheConfirmAndNothingIsSentBeforeIt() = runBlocking {
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 300) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
 
         vm.askApprove(phone)
@@ -172,7 +175,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun denyGoesThroughTheConfirmToo() = runBlocking {
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 300) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
 
         vm.askDeny(phone)
@@ -188,7 +191,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun dismissingTheConfirmSendsNothing() = runBlocking {
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 300) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         vm.askApprove(phone)
         vm.dismissConfirm()
@@ -203,7 +206,7 @@ class ApproveDeviceViewModelTest {
             listing = DeviceJoinRequests(listOf(phone), windowSecsLeft = 300)
             approveAnswer = { throw NodeRefusal("add_device.request_unknown", "no such pending request", 404) }
         }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         vm.askApprove(phone)
         vm.confirm()
@@ -218,7 +221,7 @@ class ApproveDeviceViewModelTest {
         // (`host_device_class()`): phone on mobile. v0.5.231 always sent laptop.
         val fromPhone = phone.copy(deviceClass = "phone")
         val node = OwnerNode().apply { listing = DeviceJoinRequests(listOf(fromPhone), windowSecsLeft = 300) }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         val req = vm.state.value.requests.single()
         assertEquals("phone", req.deviceClass, "carried as sent, not assumed")
@@ -243,7 +246,7 @@ class ApproveDeviceViewModelTest {
     @Test
     fun aNodeOlderThan0_5_231SaysSoAndOffersNothing() = runBlocking {
         val node = OwnerNode().apply { listAnswer = { throw NodeRefusal(null, null, 404) } }
-        val vm = ApproveDeviceViewModel(node, clock = { now })
+        val vm = ApproveDeviceViewModel(node, clock = { now }).also { made += it }
         vm.refreshNow()
         val s = vm.state.value
         assertTrue(s.nodeTooOld)

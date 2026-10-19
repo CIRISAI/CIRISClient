@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -36,11 +37,13 @@ import kotlin.test.fail
 @OptIn(ExperimentalCoroutinesApi::class)
 class CommunitiesViewModelTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
 
     @AfterTest
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private class Served(val method: String, val path: String, val body: String)
 
@@ -97,7 +100,7 @@ class CommunitiesViewModelTest {
         val (node, _) = serving(emptyMap())
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }.also { made += it }
                 vm.refresh()
                 awaitThat("the list read settles") { vm.rooms.value is CommunityListRead.Failed }
                 val failed = assertIs<CommunityListRead.Failed>(vm.rooms.value)
@@ -113,7 +116,7 @@ class CommunitiesViewModelTest {
         ))
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }.also { made += it }
                 vm.refresh()
                 awaitThat("the list read settles") { vm.rooms.value is CommunityListRead.Failed }
                 val refused = assertIs<CommunityReadFailure.Refused>((vm.rooms.value as CommunityListRead.Failed).failure)
@@ -129,7 +132,7 @@ class CommunitiesViewModelTest {
         try {
             runBlocking {
                 // The client's base URL is the AGENT; the view model is told the node.
-                val vm = CommunitiesViewModel(CIRISApiClient(agent.url()), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient(agent.url()), "community") { node.url() }.also { made += it }
                 vm.refresh()
                 awaitThat("rooms load") { vm.rooms.value is CommunityListRead.Loaded }
                 assertTrue(nodeLog.any { it.path == "/v1/communities" })
@@ -148,7 +151,7 @@ class CommunitiesViewModelTest {
         ))
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }.also { made += it }
                 vm.addMember("chat:room:v1:abc", "k-cy")
                 awaitThat("the add settles") { !vm.busy.value && (vm.pending.value.isNotEmpty() || vm.refusal.value != null) }
                 assertNull(vm.refusal.value, "quorum_pending is not a refusal")
@@ -179,7 +182,7 @@ class CommunitiesViewModelTest {
         ))
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient(node.url()), "community") { node.url() }.also { made += it }
                 vm.select("chat:room:v1:gone")
                 awaitThat("the detail settles") { vm.detail.value !is CommunityDetailRead.Loading && vm.detail.value !is CommunityDetailRead.NotAsked }
                 assertEquals(CommunityDetailRead.NotFound, vm.detail.value)

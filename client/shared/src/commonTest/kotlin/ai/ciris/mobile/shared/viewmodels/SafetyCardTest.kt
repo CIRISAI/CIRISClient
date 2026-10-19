@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.models.safety.WatchlistListResponse
 import ai.ciris.mobile.shared.models.safety.WatchlistMode
 import ai.ciris.mobile.shared.models.safety.WatchlistResponse
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -72,10 +73,12 @@ private class FakeSafety(
  */
 class SafetyCardTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun vm(fake: FakeSafety) = SafetyViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), api = fake)
+    private fun vm(fake: FakeSafety) = SafetyViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), api = fake).also { made += it }
 
     // ── The posture is the PERSON's, not the node's ────────────────────────
 

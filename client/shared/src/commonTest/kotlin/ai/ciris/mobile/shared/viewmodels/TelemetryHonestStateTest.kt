@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.api.TelemetryApi
 import ai.ciris.mobile.shared.models.ExportDestination
 import ai.ciris.mobile.shared.models.TelemetryResponse
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -51,10 +52,12 @@ private class FakeTelemetry(
  */
 class TelemetryHonestStateTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun vm(fake: FakeTelemetry) = TelemetryViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), reads = fake)
+    private fun vm(fake: FakeTelemetry) = TelemetryViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), reads = fake).also { made += it }
 
     @Test
     fun a_failed_read_draws_no_metrics() {

@@ -5,6 +5,7 @@ import ai.ciris.mobile.shared.api.RouteNotOnThisHost
 import ai.ciris.mobile.shared.models.federation.YubiKeyProbe
 import ai.ciris.mobile.shared.models.federation.YubiKeyStatus
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -21,11 +22,13 @@ import kotlin.test.assertIs
  */
 class ProvisionAccordHolderYubiKeyTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private fun vm(read: suspend () -> YubiKeyStatus) =
-        ProvisionAccordHolderViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), readYubiKeyStatus = read)
+        ProvisionAccordHolderViewModel(CIRISApiClient(baseUrl = "http://127.0.0.1:9"), readYubiKeyStatus = read).also { made += it }
 
     @Test
     fun aFailedYubiKeyProbeIsAFailureWithItsReasonNotCheckingForever() {

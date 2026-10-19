@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.federation.CommunityChangeOutcome
 import ai.ciris.mobile.shared.ui.screens.HouseholdAct
 import ai.ciris.mobile.shared.ui.screens.InviteSupport
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -40,11 +41,13 @@ import kotlin.test.fail
 @OptIn(ExperimentalCoroutinesApi::class)
 class MembershipInvitesWireTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
 
     @AfterTest
-    fun tearDown() { Dispatchers.resetMain() }
+    fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private class Served(val method: String, val path: String, val body: String)
 
@@ -225,7 +228,7 @@ class MembershipInvitesWireTest {
         val (node, _) = serving(emptyMap())
         try {
             runBlocking {
-                val vm = InvitationsViewModel(ClientMembershipInvites(CIRISApiClient("http://127.0.0.1:1"), node.url()))
+                val vm = InvitationsViewModel(ClientMembershipInvites(CIRISApiClient("http://127.0.0.1:1"), node.url())).also { made += it }
                 vm.load()
                 awaitThat("the inbox settles") { vm.inbox.value != InboxRead.Loading && vm.inbox.value != InboxRead.NotAsked }
                 assertEquals(InboxRead.NotOnThisNode, vm.inbox.value)
@@ -243,7 +246,7 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val vm = InvitationsViewModel(ClientMembershipInvites(CIRISApiClient("http://127.0.0.1:1"), node.url()))
+                val vm = InvitationsViewModel(ClientMembershipInvites(CIRISApiClient("http://127.0.0.1:1"), node.url())).also { made += it }
                 vm.load()
                 awaitThat("the inbox loads") { vm.inbox.value is InboxRead.Loaded }
                 val row = (vm.inbox.value as InboxRead.Loaded).invites.first()
@@ -264,7 +267,7 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val vm = HouseholdsViewModel(ClientHouseholds(CIRISApiClient("http://127.0.0.1:1"), node.url()))
+                val vm = HouseholdsViewModel(ClientHouseholds(CIRISApiClient("http://127.0.0.1:1"), node.url())).also { made += it }
                 vm.load()
                 awaitThat("the households load") { vm.selected() != null }
                 vm.loadInvites()
@@ -288,7 +291,7 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val vm = HouseholdsViewModel(ClientHouseholds(CIRISApiClient("http://127.0.0.1:1"), node.url()))
+                val vm = HouseholdsViewModel(ClientHouseholds(CIRISApiClient("http://127.0.0.1:1"), node.url())).also { made += it }
                 vm.load()
                 awaitThat("the households load") { vm.selected() != null }
                 vm.loadInvites()
@@ -310,7 +313,7 @@ class MembershipInvitesWireTest {
         val (node, log) = serving(emptyMap())
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }.also { made += it }
                 vm.loadInvites(room)
                 awaitThat("the room's invites settle") { vm.inviteSupport.value != InviteSupport.UNKNOWN }
                 assertEquals(InviteSupport.LEGACY, vm.inviteSupport.value)
@@ -330,7 +333,7 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }.also { made += it }
                 vm.addMember(room, "k-cy")
                 awaitThat("the add settles and the route is re-read") {
                     vm.refusal.value != null && vm.inviteSupport.value == InviteSupport.INVITES
@@ -374,13 +377,13 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val a = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with219.url() }
+                val a = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with219.url() }.also { made += it }
                 a.loadInvites(room)
                 awaitThat("0.5.219 list") { a.invites.value[room] is GroupInvitesRead.Loaded }
                 assertEquals("k-me", (a.invites.value[room] as GroupInvitesRead.Loaded).viewerKeyId)
                 assertTrue(log219.none { it.path == "/v1/setup/owned-nodes" }, "viewer_key_id makes the owner read unnecessary")
 
-                val b = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with218.url() }
+                val b = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { with218.url() }.also { made += it }
                 b.loadInvites(room)
                 awaitThat("0.5.218 list") { b.invites.value[room] is GroupInvitesRead.Loaded }
                 assertEquals("k-me", b.myKeyId.value, "without viewer_key_id the owner comes from owned-nodes")
@@ -398,7 +401,7 @@ class MembershipInvitesWireTest {
         ))
         try {
             runBlocking {
-                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }
+                val vm = CommunitiesViewModel(CIRISApiClient("http://127.0.0.1:1"), "community") { node.url() }.also { made += it }
                 vm.invite(room, "k-cy")
                 awaitThat("the invite lands") { vm.invites.value[room] is GroupInvitesRead.Loaded }
                 assertEquals(CommunitiesViewModel.NOTICE_INVITED, vm.inviteNotice.value)

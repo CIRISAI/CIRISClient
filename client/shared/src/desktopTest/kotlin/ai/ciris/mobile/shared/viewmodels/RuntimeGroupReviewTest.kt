@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.parseConfigListBody
 import ai.ciris.mobile.shared.localization.LocalizationHelper
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -43,11 +44,13 @@ import kotlin.test.fail
 @OptIn(ExperimentalCoroutinesApi::class)
 class RuntimeGroupReviewTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() = Dispatchers.setMain(Dispatchers.Unconfined)
 
     @AfterTest
-    fun tearDown() = Dispatchers.resetMain()
+    fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     data class Seen(val method: String, val path: String, val query: String?, val body: String)
 
@@ -89,7 +92,7 @@ class RuntimeGroupReviewTest {
         "POST /v1/system/runtime/step" to (200 to """{"data":{"success":true,"message":"Processed","processor_state":"paused",
             "cognitive_state":"WORK","queue_depth":2,"step_point":"perform_dmas","processing_time_ms":412.7,"tokens_used":null}}"""),
     ))) { client ->
-        val vm = RuntimeViewModel(client)
+        val vm = RuntimeViewModel(client).also { made += it }
         vm.singleStep()
         awaitThat("step recorded") { vm.runtimeData.value.lastStepResult != null || vm.error.value != null }
         assertNull(vm.error.value)
@@ -101,7 +104,7 @@ class RuntimeGroupReviewTest {
     fun runtime_a_resume_the_agent_declined_is_not_reported_done() = using(Stub(mapOf(
         "POST /v1/system/runtime/resume" to (200 to """{"data":{"success":false,"message":"Not paused","processor_state":"unknown"}}"""),
     ))) { client ->
-        val vm = RuntimeViewModel(client)
+        val vm = RuntimeViewModel(client).also { made += it }
         vm.resumeRuntime()
         awaitThat("resume settled") { vm.error.value != null || vm.statusMessage.value != null }
         assertNotEquals("Runtime resumed", vm.statusMessage.value)
@@ -110,7 +113,7 @@ class RuntimeGroupReviewTest {
 
     @Test
     fun runtime_offers_no_control_before_the_agent_says_yes() {
-        val vm = RuntimeViewModel(CIRISApiClient("http://127.0.0.1:9"))
+        val vm = RuntimeViewModel(CIRISApiClient("http://127.0.0.1:9")).also { made += it }
         assertFalse(vm.isAdmin.value, "no control offered on a guess")
         assertFalse(vm.adminRefused.value)
     }
@@ -118,7 +121,7 @@ class RuntimeGroupReviewTest {
     @Test
     fun runtime_a_403_is_the_admin_card_not_a_broken_read() = using(Stub(mapOf(),
         fallback = 403 to """{"detail":"Insufficient permissions. Requires admin role or higher."}""")) { client ->
-        val vm = RuntimeViewModel(client)
+        val vm = RuntimeViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("refusal") { vm.adminRefused.value }
         assertFalse(vm.isAdmin.value)
@@ -132,7 +135,7 @@ class RuntimeGroupReviewTest {
     fun system_on_a_bare_node_asks_no_agent_route_and_claims_no_state() {
         val stub = Stub(mapOf("/v1/system/health" to (200 to """{"data":{"status":"healthy"}}""")))
         using(stub) { client ->
-            val vm = SystemViewModel(client)
+            val vm = SystemViewModel(client).also { made += it }
             vm.loadSystemData()
             awaitThat("health read") { vm.systemData.value.health != null }
             delay(300)
@@ -151,7 +154,7 @@ class RuntimeGroupReviewTest {
             "/v1/agent/channels" to (500 to """{"detail":"boom"}"""),
         ))
         using(stub) { client ->
-            val vm = SystemViewModel(client)
+            val vm = SystemViewModel(client).also { made += it }
             vm.setAgentAttached(true)
             vm.loadSystemData()
             awaitThat("agent half read") { vm.systemData.value.agentAttached && vm.systemData.value.health != null }
@@ -167,7 +170,7 @@ class RuntimeGroupReviewTest {
     fun sessions_a_403_says_admin_only() = using(Stub(mapOf(
         "POST /v1/system/state/transition" to (403 to """{"detail":"Insufficient permissions."}"""),
     ))) { client ->
-        val vm = SessionsViewModel(client)
+        val vm = SessionsViewModel(client).also { made += it }
         vm.initiateSession("DREAM")
         awaitThat("transition settled") { vm.errorMessage.value != null }
         assertEquals(LocalizationHelper.getString("mobile.sessions_error_forbidden"), vm.errorMessage.value)
@@ -178,7 +181,7 @@ class RuntimeGroupReviewTest {
         "POST /v1/system/state/transition" to (200 to """{"data":{"success":true,"message":"ok","current_state":"dream","previous_state":"work"}}"""),
         "/v1/system/health" to (200 to health),
     ))) { client ->
-        val vm = SessionsViewModel(client)
+        val vm = SessionsViewModel(client).also { made += it }
         vm.initiateSession("DREAM")
         awaitThat("re-read") { vm.currentState.value.state != null }
         assertEquals("WORK", vm.currentState.value.state, "the reading is the health read, not the request's echo")
@@ -188,7 +191,7 @@ class RuntimeGroupReviewTest {
     fun sessions_setup_is_not_a_state_you_return_to_work_from() = using(Stub(mapOf(
         "/v1/system/health" to (200 to """{"data":{"status":"healthy","cognitive_state":"setup"}}"""),
     ))) { client ->
-        val vm = SessionsViewModel(client)
+        val vm = SessionsViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("read") { vm.currentState.value.state != null }
         assertFalse(vm.canReturnToWork())
@@ -241,7 +244,7 @@ class RuntimeGroupReviewTest {
         val agent = Stub(emptyMap(), fallback = 500 to "{}")
         try {
             runBlocking {
-                val vm = TransportViewModel(agent.client(), nodeUrl = { node.url })
+                val vm = TransportViewModel(agent.client(), nodeUrl = { node.url }).also { made += it }
                 vm.loadRadioConfig()
                 awaitThat("read back") { vm.state.value.radioConfigRead }
                 assertTrue(vm.state.value.radioEnabled)
@@ -268,7 +271,7 @@ class RuntimeGroupReviewTest {
         val agent = Stub(emptyMap(), fallback = 500 to "{}")
         try {
             runBlocking {
-                val vm = ConfigViewModel(agent.client(), nodeUrl = { node.url })
+                val vm = ConfigViewModel(agent.client(), nodeUrl = { node.url }).also { made += it }
                 vm.loadConfigs()
                 awaitThat("read") { vm.configData.value != null || vm.error.value != null }
                 assertNull(vm.error.value)
@@ -293,7 +296,7 @@ class RuntimeGroupReviewTest {
     fun environment_a_failed_items_read_is_not_no_items_and_a_bare_node_is_not_asked_for_enrichment() {
         val stub = Stub(mapOf("POST /v1/memory/query" to (500 to """{"error":"boom"}""")))
         using(stub) { client ->
-            val vm = EnvironmentInfoViewModel(client)
+            val vm = EnvironmentInfoViewModel(client).also { made += it }
             vm.startPolling()
             awaitThat("load settled") { !vm.state.value.isLoading && stub.paths().isNotEmpty() && vm.state.value.itemsFailure != null }
             assertIs<ReadFailure.Failed>(vm.state.value.itemsFailure)

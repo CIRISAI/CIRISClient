@@ -6,6 +6,7 @@ import ai.ciris.mobile.shared.api.RouteNotOnThisHost
 import ai.ciris.mobile.shared.models.ClientMode
 import ai.ciris.mobile.shared.ui.screens.BALANCE_NOT_ON_THIS_NODE
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +48,8 @@ import kotlin.test.fail
 @OptIn(ExperimentalCoroutinesApi::class)
 class HonestStatesTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() {
         // viewModelScope runs on Main; Unconfined lets the real HTTP call
@@ -56,6 +59,7 @@ class HonestStatesTest {
 
     @AfterTest
     fun tearDown() {
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
@@ -96,7 +100,7 @@ class HonestStatesTest {
 
     @Test
     fun runtime_a_failed_read_is_not_WORK_with_an_empty_queue() = withServer(serving()) { client ->
-        val vm = RuntimeViewModel(client)
+        val vm = RuntimeViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("runtime read failure") { vm.runtimeData.value.readFailure != null }
         val data = vm.runtimeData.value
@@ -114,7 +118,7 @@ class HonestStatesTest {
 
     @Test
     fun runtime_a_404_is_this_node_not_a_broken_agent() = withServer(serving(fallback = 404 to "{}")) { client ->
-        val vm = RuntimeViewModel(client)
+        val vm = RuntimeViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("runtime read failure") { vm.runtimeData.value.readFailure != null }
         assertIs<ReadFailure.NotOnThisNode>(vm.runtimeData.value.readFailure)
@@ -166,7 +170,7 @@ class HonestStatesTest {
         }
         assertEquals(setOf(true, false), providers.map { it.healthy }.toSet())
 
-        val vm = ServicesViewModel(client)
+        val vm = ServicesViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("services reading") { vm.servicesData.value.hasReading }
         val data = vm.servicesData.value
@@ -176,7 +180,7 @@ class HonestStatesTest {
 
     @Test
     fun services_a_404_is_not_No_Services_Found() = withServer(serving(fallback = 404 to "{}")) { client ->
-        val vm = ServicesViewModel(client)
+        val vm = ServicesViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("services read failure") { vm.servicesData.value.readFailure != null }
         assertFalse(vm.servicesData.value.hasReading)
@@ -185,7 +189,7 @@ class HonestStatesTest {
 
     @Test
     fun services_reset_claims_no_reset() = withServer(serving()) { client ->
-        val vm = ServicesViewModel(client)
+        val vm = ServicesViewModel(client).also { made += it }
         vm.resetCircuitBreakers(null)
         assertNull(vm.statusMessage.value, "no status may say a reset happened")
         assertTrue(vm.error.value != null, "the refusal is said")
@@ -195,7 +199,7 @@ class HonestStatesTest {
 
     @Test
     fun scheduler_a_500_is_not_No_Scheduled_Tasks() = withServer(serving()) { client ->
-        val vm = SchedulerViewModel(client)
+        val vm = SchedulerViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("scheduler refresh") { !vm.state.value.isRefreshing && vm.state.value.tasksFailure != null }
         val state = vm.state.value
@@ -209,7 +213,7 @@ class HonestStatesTest {
 
     @Test
     fun sessions_is_not_seeded_WORK() = withServer(serving()) { client ->
-        val vm = SessionsViewModel(client)
+        val vm = SessionsViewModel(client).also { made += it }
         assertNull(vm.currentState.value.state, "nothing was read yet; it was seeded \"WORK\"")
         vm.refresh()
         awaitThat("sessions read failure") { vm.currentState.value.failure != null }
@@ -221,7 +225,7 @@ class HonestStatesTest {
 
     @Test
     fun config_a_failed_read_is_not_a_search_miss() = withServer(serving()) { client ->
-        val vm = ConfigViewModel(client)
+        val vm = ConfigViewModel(client).also { made += it }
         vm.loadConfigs()
         awaitThat("config read failure") { vm.configData.value.readFailure != null }
         assertIs<ReadFailure.Failed>(vm.configData.value.readFailure)
@@ -240,7 +244,7 @@ class HonestStatesTest {
             )
         )
     ) { client ->
-        val vm = ConsentViewModel(client)
+        val vm = ConsentViewModel(client).also { made += it }
         vm.loadConsentData()
         awaitThat("consent read failure") { vm.consentData.value.readFailure != null }
         assertIs<ReadFailure.NotOnThisNode>(
@@ -256,7 +260,7 @@ class HonestStatesTest {
         client.setClientMode(ClientMode.NODE)
         assertFailsWith<RouteNotOnThisHost> { client.getAuditEntries() }
 
-        val vm = AuditViewModel(client)
+        val vm = AuditViewModel(client).also { made += it }
         vm.refresh()
         awaitThat("audit read failure") { vm.state.value.readFailure != null }
         assertIs<ReadFailure.NotOnThisNode>(vm.state.value.readFailure, "not 'try adjusting your filters'")
@@ -269,7 +273,7 @@ class HonestStatesTest {
         client.setClientMode(ClientMode.NODE)
         assertFailsWith<RouteNotOnThisHost> { client.getCredits() }
 
-        val vm = BillingViewModel(client)
+        val vm = BillingViewModel(client).also { made += it }
         vm.loadBalance()
         awaitThat("billing settles") { vm.currentBalance.value == BALANCE_NOT_ON_THIS_NODE }
         assertTrue(vm.products.value.isEmpty(), "nothing to buy on a node with no billing")

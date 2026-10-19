@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ClientContactsApi
 import ai.ciris.mobile.shared.api.ContactsApi
 import ai.ciris.mobile.shared.models.federation.FederationPeerListResponse
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
@@ -37,8 +38,10 @@ import kotlin.test.fail
  */
 class ContactCodeWireTest {
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() { Dispatchers.setMain(Dispatchers.Unconfined) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private class Recorder(routes: Map<String, Pair<Int, String>>, fallback: Pair<Int, String>) {
         // Copy-on-write: the test thread iterates this while the server thread
@@ -70,7 +73,7 @@ class ContactCodeWireTest {
         val api = object : ContactsApi by real {
             override suspend fun listPeers() = FederationPeerListResponse()
         }
-        return ContactsViewModel(client, { nodeUrl }, api)
+        return ContactsViewModel(client, { nodeUrl }, api).also { made += it }
     }
 
     /** Only a timeout is "timed out": an exception from [condition] is its own failure and is reported as such. */

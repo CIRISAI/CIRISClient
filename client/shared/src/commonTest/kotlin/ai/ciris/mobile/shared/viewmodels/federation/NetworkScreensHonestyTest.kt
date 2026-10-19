@@ -8,6 +8,8 @@ import ai.ciris.mobile.shared.models.federation.FederationMetricsResponse
 import ai.ciris.mobile.shared.models.federation.peerCountReading
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
 import ai.ciris.mobile.shared.viewmodels.BaseFederationViewModel
+import ai.ciris.mobile.shared.viewmodels.stopViewModels
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -37,8 +39,10 @@ private class ProbeVm : BaseFederationViewModel(deadClient()) {
  */
 class NetworkScreensHonestyTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -51,7 +55,7 @@ class NetworkScreensHonestyTest {
             transportBytesInTotal = mapOf("tcp" to 10L),
             peerReachabilityRatio = mapOf("peer-a:tcp" to 1.0, "peer-b:tcp" to 0.5),
         )
-        val rows = NetworkInterfacesViewModel(deadClient()).collateTransports(snapshot)
+        val rows = NetworkInterfacesViewModel(deadClient()).also { made += it }.collateTransports(snapshot)
         assertEquals(listOf("tcp"), rows.map { it.id }, "one row per medium, not one per peer")
         assertEquals(2, rows.single().peerCount)
         assertEquals(0.75, rows.single().reachRatio)
@@ -82,7 +86,7 @@ class NetworkScreensHonestyTest {
 
     @Test
     fun queueCountersAreNotReadUntilAReadArrives() {
-        val vm = NetworkQueueViewModel(deadClient())
+        val vm = NetworkQueueViewModel(deadClient()).also { made += it }
         assertNull(vm.queueDepth, "a counter nobody read is not 0")
         assertNull(vm.envelopesSent)
         assertNull(vm.sendFailures)
@@ -108,7 +112,7 @@ class NetworkScreensHonestyTest {
 
     @Test
     fun aFailedPrimaryReadIsRecordedAndASuccessClearsIt() = runTest {
-        val vm = ProbeVm()
+        val vm = ProbeVm().also { made += it }
         assertNull(vm.read { throw RouteNotOnThisHost("/v1/x") })
         assertIs<ReadFailure.NotOnThisNode>(vm.readFailure.value)
         assertNull(vm.read { throw RuntimeException("boom: 503") })

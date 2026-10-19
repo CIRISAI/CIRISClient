@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.CatalogueSource
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -37,6 +38,8 @@ class ModerationCatalogueTest {
 
     private val hits = CopyOnWriteArrayList<String>()
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
@@ -44,6 +47,7 @@ class ModerationCatalogueTest {
 
     @AfterTest
     fun tearDown() {
+        stopViewModels(made)
         Dispatchers.resetMain()
         CIRISApiClient.setLocalNodeUrl(CIRISApiClient.DEFAULT_LOCAL_NODE_URL)
     }
@@ -107,7 +111,7 @@ class ModerationCatalogueTest {
     fun the_ladder_renders_the_served_scope_and_a_served_op_it_never_saw() = withNode(
         serving(mapOf("/v1/operations" to (200 to catalogue), "/v1/admin/self" to (200 to selfStanding("[]")))),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("catalogue read") { vm.state.value.catalogueSource == CatalogueSource.Node }
         val s = vm.state.value
@@ -121,7 +125,7 @@ class ModerationCatalogueTest {
     fun a_node_without_the_catalogue_keeps_the_compiled_ladder_and_says_so() = withNode(
         serving(mapOf("/v1/operations" to (404 to "{}"), "/v1/admin/self" to (200 to selfStanding("[]")))),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("catalogue fallback") { vm.state.value.catalogueSource !is CatalogueSource.NotLoaded }
         assertIs<CatalogueSource.NotOnThisNode>(vm.state.value.catalogueSource)
@@ -132,7 +136,7 @@ class ModerationCatalogueTest {
     fun a_failed_catalogue_read_is_not_an_absent_route() = withNode(
         serving(mapOf("/v1/admin/self" to (200 to selfStanding("[]")))),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("catalogue failure") { vm.state.value.catalogueSource !is CatalogueSource.NotLoaded }
         assertIs<CatalogueSource.Unreadable>(vm.state.value.catalogueSource)
@@ -149,7 +153,7 @@ class ModerationCatalogueTest {
             ),
         ),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("delegations read") { vm.state.value.nodeDelegations is NodeDelegations.Read }
         // Annotate needs `review`: exactly one row carries it, so it is prefilled.
@@ -171,7 +175,7 @@ class ModerationCatalogueTest {
             ),
         ),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.setDelegationId("mine")
         vm.load()
         awaitThat("delegations read") { vm.state.value.nodeDelegations is NodeDelegations.Read }
@@ -182,7 +186,7 @@ class ModerationCatalogueTest {
     fun a_node_before_0_5_218_returns_no_delegations_and_that_is_its_own_state() = withNode(
         serving(mapOf("/v1/operations" to (404 to "{}"), "/v1/admin/self" to (200 to selfStanding(null)))),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("delegations state") { vm.state.value.nodeDelegations !is NodeDelegations.NotLoaded }
         assertIs<NodeDelegations.NotReturned>(vm.state.value.nodeDelegations)
@@ -193,7 +197,7 @@ class ModerationCatalogueTest {
     fun a_refused_standing_read_is_unreadable_not_empty() = withNode(
         serving(mapOf("/v1/operations" to (404 to "{}"), "/v1/admin/self" to (403 to """{"refused":true,"refusal":"session_absent"}"""))),
     ) { client ->
-        val vm = AdminLadderViewModel(client)
+        val vm = AdminLadderViewModel(client).also { made += it }
         vm.load()
         awaitThat("delegations state") { vm.state.value.nodeDelegations !is NodeDelegations.NotLoaded }
         assertIs<NodeDelegations.Unreadable>(vm.state.value.nodeDelegations)
@@ -203,7 +207,7 @@ class ModerationCatalogueTest {
 
     @Test
     fun a_failed_named_moderator_read_is_a_failure_not_a_blank_verdict() = withNode(serving()) { client ->
-        val vm = SafetyViewModel(client)
+        val vm = SafetyViewModel(client).also { made += it }
         vm.setCommunityKeyId("wa-comm-1")
         vm.loadNamedModerator()
         awaitThat("named-moderator failure") { vm.state.value.namedModeratorFailure != null }
@@ -215,7 +219,7 @@ class ModerationCatalogueTest {
 
     @Test
     fun a_node_without_the_named_moderator_route_says_so() = withNode(serving(fallback = 404 to "{}")) { client ->
-        val vm = SafetyViewModel(client)
+        val vm = SafetyViewModel(client).also { made += it }
         vm.setCommunityKeyId("wa-comm-1")
         vm.loadNamedModerator()
         awaitThat("named-moderator failure") { vm.state.value.namedModeratorFailure != null }
@@ -226,7 +230,7 @@ class ModerationCatalogueTest {
     fun a_new_community_drops_the_last_verdict() = withNode(
         serving(mapOf("/v1/safety/named-moderator/wa-comm-1" to (200 to """{"community_key_id":"wa-comm-1","existence":{"verdict":"operate","moderator_present":true},"fails_secure":true}"""))),
     ) { client ->
-        val vm = SafetyViewModel(client)
+        val vm = SafetyViewModel(client).also { made += it }
         vm.setCommunityKeyId("wa-comm-1")
         vm.loadNamedModerator()
         awaitThat("verdict") { vm.state.value.namedModeratorVerdict != null }
@@ -244,7 +248,7 @@ class ModerationCatalogueTest {
     fun the_duty_menu_offers_every_served_duty_and_the_accord_cannot_tick_the_walled_ones() = withNode(
         serving(mapOf("/v1/vocabulary" to (200 to vocabulary), "/v1/operations" to (200 to catalogue))),
     ) { client ->
-        val vm = DutyConferralViewModel(client)
+        val vm = DutyConferralViewModel(client).also { made += it }
         vm.loadCatalogues()
         assertEquals(CatalogueSource.Node, vm.dutySource.value)
         assertEquals(DutyConferralViewModel.ALL_DUTIES + listOf("license", "grant"), vm.dutyMenu.value)
@@ -263,7 +267,7 @@ class ModerationCatalogueTest {
     fun a_node_without_the_vocabulary_keeps_the_compiled_menu_and_says_so() = withNode(
         serving(fallback = 404 to "{}"),
     ) { client ->
-        val vm = DutyConferralViewModel(client)
+        val vm = DutyConferralViewModel(client).also { made += it }
         vm.loadCatalogues()
         assertIs<CatalogueSource.NotOnThisNode>(vm.dutySource.value)
         assertEquals(DutyConferralViewModel.ALL_DUTIES, vm.dutyMenu.value)
@@ -273,7 +277,7 @@ class ModerationCatalogueTest {
 
     @Test
     fun a_failed_vocabulary_read_is_not_an_empty_menu() = withNode(serving()) { client ->
-        val vm = DutyConferralViewModel(client)
+        val vm = DutyConferralViewModel(client).also { made += it }
         vm.loadCatalogues()
         assertIs<CatalogueSource.Unreadable>(vm.dutySource.value)
         assertEquals(DutyConferralViewModel.ALL_DUTIES, vm.dutyMenu.value)
@@ -283,7 +287,7 @@ class ModerationCatalogueTest {
     fun no_accord_family_is_empty_not_error() = withNode(
         serving(mapOf("/v1/accord/family" to (404 to "{}")), fallback = 404 to "{}"),
     ) { client ->
-        val vm = DutyConferralViewModel(client)
+        val vm = DutyConferralViewModel(client).also { made += it }
         vm.load()
         awaitThat("family read") { vm.sourceAbsent.value || vm.sourceError.value != null }
         assertTrue(vm.sourceAbsent.value)
@@ -304,7 +308,7 @@ class ModerationCatalogueTest {
             fallback = 404 to "{}",
         ),
     ) { client ->
-        val vm = ModerationViewModel(client)
+        val vm = ModerationViewModel(client).also { made += it }
         vm.submit("msg-42", ModerationAction.REPORT, "spam")
         awaitThat("proposal outcome") { !vm.state.value.isSubmitting }
         val s = vm.state.value
@@ -323,7 +327,7 @@ class ModerationCatalogueTest {
             ),
         ),
     ) { client ->
-        val vm = ModerationViewModel(client)
+        val vm = ModerationViewModel(client).also { made += it }
         vm.submit("msg-42", ModerationAction.REPORT, null)
         awaitThat("proposal outcome") { !vm.state.value.isSubmitting }
         assertTrue(vm.state.value.refusedAsMinor)
@@ -341,7 +345,7 @@ class ModerationCatalogueTest {
             ),
         ),
     ) { client ->
-        val vm = ModerationViewModel(client)
+        val vm = ModerationViewModel(client).also { made += it }
         vm.submit("msg-42", ModerationAction.QUESTION, null)
         awaitThat("proposal outcome") { !vm.state.value.isSubmitting }
         assertTrue(vm.state.value.isDone)

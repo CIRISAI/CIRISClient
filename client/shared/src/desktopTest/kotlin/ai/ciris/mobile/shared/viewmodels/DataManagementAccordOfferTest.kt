@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.platform.EnvFileUpdater
 import ai.ciris.mobile.shared.platform.SecureStorage
 import ai.ciris.mobile.shared.ui.screens.ReadFailure
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -22,8 +23,10 @@ import kotlin.test.assertNotEquals
  */
 class DataManagementAccordOfferTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     @Test
     fun aRefreshThatFailedBeforeTheAccordReadDoesNotOfferEnable() {
@@ -34,7 +37,7 @@ class DataManagementAccordOfferTest {
             EnvFileUpdater(),
             readLensIdentifier = { throw RuntimeException("API error: HTTP 503 Service Unavailable") },
             readAccordSettings = { accordAsked = true; throw IllegalStateException("never reached") },
-        )
+        ).also { made += it }
         vm.refresh()
         assertEquals(false, accordAsked)
         val offer = accordOfferOf(vm.accordSettings.value, vm.accordFailure.value)

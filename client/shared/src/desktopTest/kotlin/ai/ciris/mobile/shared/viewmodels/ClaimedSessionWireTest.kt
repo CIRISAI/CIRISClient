@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -57,6 +58,8 @@ class ClaimedSessionWireTest {
 
     private var savedLocal = CIRISApiClient.LOCAL_NODE_URL
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         savedLocal = CIRISApiClient.LOCAL_NODE_URL
@@ -64,6 +67,7 @@ class ClaimedSessionWireTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedLocal)
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
@@ -85,7 +89,7 @@ class ClaimedSessionWireTest {
             // The wizard's node is the LOCAL node; the default collector reads it.
             CIRISApiClient.setLocalNodeUrl(node.url)
             val api = CIRISApiClient(node.url, null)
-            val vm = SetupViewModel(api)
+            val vm = SetupViewModel(api).also { made += it }
 
             vm.collectClaimedSession(claimPinProvider = { "7F3K-Q9MZ" })
 
@@ -112,7 +116,7 @@ class ClaimedSessionWireTest {
         )
         try {
             CIRISApiClient.setLocalNodeUrl(node.url)
-            val vm = SetupViewModel(CIRISApiClient(node.url, null))
+            val vm = SetupViewModel(CIRISApiClient(node.url, null)).also { made += it }
 
             vm.collectClaimedSession(claimPinProvider = { "AAAA-BBBB" })
 
@@ -131,7 +135,7 @@ class ClaimedSessionWireTest {
         try {
             CIRISApiClient.setLocalNodeUrl(node.url)
             val api = CIRISApiClient(node.url, null)
-            val vm = SetupViewModel(api)
+            val vm = SetupViewModel(api).also { made += it }
 
             vm.collectClaimedSession(claimPinProvider = { "AAAA-BBBB" })
 

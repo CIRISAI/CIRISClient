@@ -2,6 +2,8 @@ package ai.ciris.mobile.shared.platform
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
+import ai.ciris.mobile.shared.viewmodels.stopViewModels
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -69,6 +71,8 @@ class ClaimPinFileTest {
 
     private var savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
         savedNodeUrl = CIRISApiClient.LOCAL_NODE_URL
@@ -76,6 +80,7 @@ class ClaimPinFileTest {
 
     @AfterTest fun tearDown() {
         CIRISApiClient.setLocalNodeUrl(savedNodeUrl)
+        stopViewModels(made)
         Dispatchers.resetMain()
     }
 
@@ -102,7 +107,7 @@ class ClaimPinFileTest {
         try {
             val url = "http://127.0.0.1:${node.address.port}"
             CIRISApiClient.setLocalNodeUrl(url)
-            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false)
+            val vm = SetupViewModel(CIRISApiClient(url, "setup-tok"), hasAgent = false).also { made += it }
             vm.claimLocalNodeOwnership(claimPinProvider = {
                 ClaimPinFile.await(timeoutMs = 300, pollMs = 100, read = readOf(File(dir, "claim_pin")))
             })

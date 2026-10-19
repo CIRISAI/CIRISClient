@@ -18,6 +18,7 @@ import ai.ciris.mobile.shared.ui.screens.rosterInvites
 import ai.ciris.mobile.shared.ui.screens.routeOf
 import ai.ciris.mobile.shared.ui.screens.viewerOf
 import ai.ciris.mobile.shared.ui.screens.withdrawShown
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -59,10 +60,12 @@ private class FakeInbox(
 
 class InvitationsViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
-    private fun loaded(api: FakeInbox) = InvitationsViewModel(api).also { it.load() }
+    private fun loaded(api: FakeInbox) = InvitationsViewModel(api).also { made += it }.also { it.load() }
 
     @Test
     fun theInboxIsReadAndTheNodeCarriesInvitations() {

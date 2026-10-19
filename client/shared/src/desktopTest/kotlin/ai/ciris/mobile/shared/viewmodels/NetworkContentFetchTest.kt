@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
 import ai.ciris.mobile.shared.viewmodels.federation.NetworkContentViewModel
+import androidx.lifecycle.ViewModel
 import com.sun.net.httpserver.HttpServer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -33,6 +34,8 @@ class NetworkContentFetchTest {
 
     private val hits = CopyOnWriteArrayList<String>()
 
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest
     fun setUp() {
         Dispatchers.setMain(Dispatchers.Unconfined)
@@ -40,6 +43,7 @@ class NetworkContentFetchTest {
 
     @AfterTest
     fun tearDown() {
+        stopViewModels(made)
         Dispatchers.resetMain()
         CIRISApiClient.setLocalNodeUrl(CIRISApiClient.DEFAULT_LOCAL_NODE_URL)
     }
@@ -78,7 +82,7 @@ class NetworkContentFetchTest {
         CIRISApiClient.setLocalNodeUrl(url)
         try {
             runBlocking {
-                val vm = NetworkContentViewModel(CIRISApiClient(url))
+                val vm = NetworkContentViewModel(CIRISApiClient(url)).also { made += it }
                 vm.selectPeer(peer)
                 vm.setContentId(cid)
                 vm.fetch()

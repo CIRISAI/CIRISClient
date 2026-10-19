@@ -28,6 +28,7 @@ import ai.ciris.mobile.shared.models.drive.custodySummary
 import ai.ciris.mobile.shared.models.drive.custodyWhyKey
 import ai.ciris.mobile.shared.models.drive.isFileContentType
 import ai.ciris.mobile.shared.ui.screens.chatCustodyTarget
+import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
@@ -270,21 +271,23 @@ private class CustodyDrive(var answer: () -> FileCustody) : DriveApi {
 
 class FileCustodyViewModelTest {
     private val dispatcher = UnconfinedTestDispatcher()
+    /** Every view model a test makes: stopped AND joined before Main is reset (see [stopViewModels]). */
+    private val made = mutableListOf<ViewModel>()
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
-    @AfterTest fun tearDown() { Dispatchers.resetMain() }
+    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain() }
 
     private val target = CustodyTarget("att-1", "family", "fam-1", "a.txt")
 
     @Test
     fun aBare404IsTheVersionFactNotAnError() {
-        val vm = FileCustodyViewModel(CustodyDrive { throw NodeRefusal(null, null, 404) })
+        val vm = FileCustodyViewModel(CustodyDrive { throw NodeRefusal(null, null, 404) }).also { made += it }
         vm.open(target)
         assertIs<CustodyState.NodeTooOld>(vm.state.value)
     }
 
     @Test
     fun a404WithAnIdIsARefusalByName() {
-        val vm = FileCustodyViewModel(CustodyDrive { throw NodeRefusal("drive.not_in_room", "no such file", 404) })
+        val vm = FileCustodyViewModel(CustodyDrive { throw NodeRefusal("drive.not_in_room", "no such file", 404) }).also { made += it }
         vm.open(target)
         val failed = assertIs<CustodyState.Failed>(vm.state.value)
         assertEquals("drive.not_in_room", failed.reasonId)
@@ -293,7 +296,7 @@ class FileCustodyViewModelTest {
     @Test
     fun anAnswerIsReadyAndTheQueryCarriesCohortAndRoom() {
         val drive = CustodyDrive { FileCustody(devicesTotal = 1) }
-        val vm = FileCustodyViewModel(drive)
+        val vm = FileCustodyViewModel(drive).also { made += it }
         vm.open(target)
         assertIs<CustodyState.Ready>(vm.state.value)
         assertEquals(listOf<Triple<String, String, String?>>(Triple("att-1", "family", "fam-1")), drive.asked)
@@ -313,7 +316,7 @@ class FileCustodyViewModelTest {
             if (!keyArrived) throw NodeRefusal("drive.awaiting_key", "the bytes are here, but this device's key for them has not arrived yet", 409)
             FileCustody(devicesTotal = 1)
         }
-        val vm = FileCustodyViewModel(drive)
+        val vm = FileCustodyViewModel(drive).also { made += it }
         vm.open(target)
         val waiting = assertIs<CustodyState.AwaitingKey>(vm.state.value)
         assertEquals(target, waiting.target)
@@ -327,7 +330,7 @@ class FileCustodyViewModelTest {
     @Test
     fun checkAgainOutsideTheWaitAsksNothing() {
         val drive = CustodyDrive { FileCustody(devicesTotal = 1) }
-        val vm = FileCustodyViewModel(drive)
+        val vm = FileCustodyViewModel(drive).also { made += it }
         vm.checkAgain()
         assertEquals<CustodyState>(CustodyState.Closed, vm.state.value)
         assertTrue(drive.asked.isEmpty())
@@ -335,7 +338,7 @@ class FileCustodyViewModelTest {
 
     @Test
     fun aTransportFailureIsAnErrorNeverEmpty() {
-        val vm = FileCustodyViewModel(CustodyDrive { throw IllegalStateException("connection refused") })
+        val vm = FileCustodyViewModel(CustodyDrive { throw IllegalStateException("connection refused") }).also { made += it }
         vm.open(target)
         val failed = assertIs<CustodyState.Failed>(vm.state.value)
         assertNull(failed.reasonId)
