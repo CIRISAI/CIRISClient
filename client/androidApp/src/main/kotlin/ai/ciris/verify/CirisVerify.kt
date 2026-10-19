@@ -2,6 +2,7 @@ package ai.ciris.verify
 
 import android.content.Context
 import android.util.Log
+import ai.ciris.mobile.shared.platform.TraceRunKind
 import java.io.File
 
 /**
@@ -26,6 +27,31 @@ class CirisVerify {
          * Call this from Application.onCreate() to ensure paths are set before
          * any native code runs.
          */
+        /**
+         * `setprop debug.ciris.trace_run_kind qa` (testing/gate/bringup.py) becomes
+         * CIRIS_TRACE_RUN_KIND for the embedded Python. Read with `getprop`, the
+         * public channel: SystemProperties is hidden API. An install with no
+         * property, or an environment that already declares a kind, is left alone.
+         */
+        private fun declareTraceRunKind() {
+            if (!System.getenv(TraceRunKind.ENV_VAR).isNullOrBlank()) return
+            val declared = try {
+                val proc = ProcessBuilder("getprop", TraceRunKind.ANDROID_PROP)
+                    .redirectErrorStream(true).start()
+                proc.inputStream.bufferedReader().use { it.readText() }.also { proc.waitFor() }
+            } catch (e: Exception) {
+                Log.w(TAG, "getprop ${TraceRunKind.ANDROID_PROP} failed: ${e.message}")
+                null
+            }
+            val kind = TraceRunKind.fromDeclared(declared) ?: return
+            try {
+                android.system.Os.setenv(TraceRunKind.ENV_VAR, kind, true)
+                Log.i(TAG, "Set ${TraceRunKind.ENV_VAR}=$kind from ${TraceRunKind.ANDROID_PROP}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set ${TraceRunKind.ENV_VAR}: ${e.message}")
+            }
+        }
+
         @JvmStatic
         fun setup(context: Context) {
             if (initialized) {
@@ -71,6 +97,10 @@ class CirisVerify {
                     Log.e(TAG, "Failed to set env via Os.setenv reflection: ${e2.message}")
                 }
             }
+
+            // The trace run kind a harness declared (CIRISClient#182). Without it
+            // every gate run's traces would be labelled production.
+            declareTraceRunKind()
 
             // Also set in Java's env map for any Java code that checks
             try {
