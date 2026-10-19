@@ -1979,7 +1979,7 @@
     "interact_send": "पाठवा",
     "interact_sender_ciris": "CIRIS",
     "interact_sender_you": "You",
-    "interact_shed_gave_up": "एजंट अजूनही व्यस्त आहे, त्यामुळे तुमचा संदेश पाठवला गेला नाही. तुमचा मजकूर खाली ठेवलेला आहे — तो पुन्हा पाठवण्यासाठी पुन्हा प्रयत्न करा दाबा.",
+    "interact_shed_gave_up": "एजंट अजूनही व्यस्त आहे, त्यामुळे तुमचा संदेश पाठवला गेला नाही. तुमचा मजकूर खाली ठेवला आहे — तो पुन्हा पाठवण्यासाठी 'पुन्हा प्रयत्न करा' टॅप करा.",
     "interact_shed_retrying": "एजंट व्यस्त आहे — {seconds} सेकंदांत पुन्हा प्रयत्न केला जाईल",
     "interact_showing_messages": "Showing last {count} संदेश",
     "interact_shutdown": "बंद",

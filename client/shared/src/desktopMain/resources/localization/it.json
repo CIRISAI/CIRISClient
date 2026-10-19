@@ -5607,7 +5607,7 @@
   },
   "contacts": {
     "awaiting_consent": "In attesa che accettino. Non c'è nulla da riprovare: il processo si conclude quando accettano.",
-    "awaiting_key_body": "Stiamo ancora recuperando la chiave di questa persona. Verrà aggiunta non appena arriva — di solito entro un minuto.",
+    "awaiting_key_body": "La chiave di questa persona è ancora in arrivo. Verrà aggiunta ai contatti appena arriva — di solito entro un minuto.",
     "code_commitment_mismatch": "Questo codice non corrisponde alla persona che indica, quindi non è stato aggiunto. Chiedigli di inviarti di nuovo il suo codice di contatto.",
     "code_without_pqc_commitment": "Questo codice è troppo vecchio per essere aggiunto direttamente. Chiedigli un nuovo codice, oppure aggiungilo tramite il peering.",
     "consent_emit_failed": "Il nodo non è riuscito a emettere la concessione di consenso che rende questo un contatto. Nulla è stato modificato.",

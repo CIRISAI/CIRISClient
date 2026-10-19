@@ -2008,7 +2008,7 @@
     "interact_sender_ciris": "CIRIS",
     "interact_sender_you": "أنت",
     "interact_shed_gave_up": "عامل هنوز مشغول است، بنابراین پیام شما ارسال نشد. متن شما در پایین نگه داشته شده است — برای ارسال دوباره، «تلاش دوباره» را بزنید.",
-    "interact_shed_retrying": "عامل مشغول است — تلاش دوباره تا {seconds} ثانیه دیگر",
+    "interact_shed_retrying": "عامل مشغول است — تا {seconds} ثانیهٔ دیگر دوباره تلاش می‌شود",
     "interact_showing_messages": "عرض آخر {count} رسائل",
     "interact_shutdown": "خاموش کردن",
     "interact_state_dream": "حلم",

@@ -3727,7 +3727,7 @@
     "identity_this_device_title": "이 기기",
     "sign_out_title": "이 기기에서 로그아웃할까요?",
     "sign_out_fact_ends": "로그아웃되는 것",
-    "sign_out_ends": "이 노드와 이 기기의 세션입니다. 노드가 세션을 취소하고, 이 기기는 세션을 잊습니다.",
+    "sign_out_ends": "이 노드와 이 기기의 세션입니다. 노드가 이를 취소하고, 이 기기는 이를 잊습니다.",
     "sign_out_fact_stays": "이 기기에 남는 것",
     "sign_out_stays": "언어 및 표시 설정, 그리고 추가한 노드입니다. 노드는 정체성, 연락처, 채팅, 파일을 보관합니다.",
     "sign_out_fact_back": "다시 로그인하는 방법",
