@@ -91,7 +91,7 @@ under "No longer waiting", with how it ended. The roster that follows decides
 this: an added key on it, or an evicted key off it, is "done". Otherwise the
 change's last decision gives the cancel or refusal reason. With no such
 decision it reads "no longer waiting, and your devices do not show it, so it
-was cancelled or withdrawn". The node's settle row is not on this route, so the
+was cancelled or withdrawn". A CLOSED entry is looked at again on every read and becomes "done" once the roster shows it: the roster can lag the open set by a moment (T10 on #802). The node's settle row is not on this route, so the
 client never claims more than this.
 
 **Polling.** The card reads every 5 s while a change is pending and every 30 s
@@ -234,14 +234,14 @@ waiting" as done, and C's approval is delivered by `resume_when_landed`.
 ## 5. QA plan
 
 **Unit and wire (green on this branch).** `SelfRosterViewModelTest`
-(commonTest, 8 cases):
+(commonTest, 10 cases):
 * polling stands down while an answer is in flight, and the answer re-reads
   once, after itself. Red on a planted "no stand-down": `[list, assent:p1, list, list]`;
 * a second tap signs once;
 * a change this device proposed (by a 202 proposal id, or by a held revoke's
   target) offers no answer and is not counted on the badge;
 * a 409 own-proposal is learned;
-* settled history: LANDED by the roster, CLOSED, or REFUSED with its reason,
+* settled history: LANDED by the roster or by a landing decision, CLOSED (upgraded to LANDED when a lagging roster catches up; red before the fix: `expected:<LANDED> but was:<CLOSED>`), or REFUSED with its reason,
   never repeated;
 * a bare 404 is the version fact;
 * the signature arithmetic.

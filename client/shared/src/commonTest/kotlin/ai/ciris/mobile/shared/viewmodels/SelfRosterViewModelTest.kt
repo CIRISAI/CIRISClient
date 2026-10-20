@@ -170,6 +170,55 @@ class SelfRosterViewModelTest {
         assertEquals(3, vm.state.value.history.size, "history is not repeated")
     }
 
+    /**
+     * T10 on CIRISServer#802 @ e1201b69: the read right after a settling assent
+     * saw the evict gone from the open set while the roster still listed its
+     * target (sub-second lag), filed it CLOSED, and never looked again.
+     */
+    @Test
+    fun aClosedChangeIsUpgradedToLandedWhenTheRosterCatchesUp() = runBlocking {
+        val node = Node()
+        node.listing = node.listing.copy(
+            roster = listOf("owner", "key-a", "key-x"),
+            proposals = listOf(standing("ev", kind = "evict", target = "key-x")),
+        )
+        // The answer settles it without saying how; the node's roster lags.
+        node.answer = { id, _ ->
+            node.listing = node.listing.copy(proposals = emptyList())
+            RosterAnswerResponse(id, "assent", "att-$id", settled = true, proposal = null)
+        }
+        val vm = SelfRosterViewModel(node).also { made += it }
+        vm.refreshNow()
+        vm.askAssent(vm.state.value.proposals.single())
+        withContext(Dispatchers.Default) { withTimeout(10_000) { vm.confirm().join() } }
+        assertEquals(RosterSettledHow.CLOSED, vm.state.value.history.single().how, "the lagging roster cannot show it yet")
+        node.listing = node.listing.copy(roster = listOf("owner", "key-a"))
+        vm.refreshNow()
+        assertEquals(RosterSettledHow.LANDED, vm.state.value.history.single().how)
+    }
+
+    @Test
+    fun aSettlingAnswerWhoseDecisionLandsIsLandedAtOnce() = runBlocking {
+        val node = Node()
+        node.listing = node.listing.copy(
+            roster = listOf("owner", "key-a", "key-x"),
+            proposals = listOf(standing("ev", kind = "evict", target = "key-x")),
+        )
+        node.answer = { id, _ ->
+            node.listing = node.listing.copy(proposals = emptyList())
+            RosterAnswerResponse(
+                id, "assent", "att-$id", settled = true,
+                proposal = standing(id, kind = "evict", target = "key-x", outcome = "lands", needs = null)
+                    .let { it.copy(decision = it.decision.copy(path = "quorum")) },
+            )
+        }
+        val vm = SelfRosterViewModel(node).also { made += it }
+        vm.refreshNow()
+        vm.askAssent(vm.state.value.proposals.single())
+        withContext(Dispatchers.Default) { withTimeout(10_000) { vm.confirm().join() } }
+        assertEquals(RosterSettledHow.LANDED, vm.state.value.history.single().how)
+    }
+
     @Test
     fun aBareFourOhFourIsTheVersionFact() = runBlocking {
         val node = object : SelfRosterApi {

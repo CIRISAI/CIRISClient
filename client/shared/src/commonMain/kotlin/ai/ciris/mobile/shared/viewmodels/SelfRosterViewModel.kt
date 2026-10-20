@@ -115,15 +115,17 @@ fun RosterStanding.signaturesNeeded(rosterSize: Int): Int =
     decision.needs?.takeIf { decision.outcome == "pending" }?.let { signaturesSoFar() + it }
         ?: (rosterSize / 2 + 1)
 
-/** How [p] reads against the roster that followed it. */
+/** Whether [roster] shows [p] done: an added key on it, an evicted key off it. */
+internal fun rosterShows(p: RosterProposal, roster: List<String>): Boolean = when (p.kind) {
+    "add" -> p.target in roster
+    "evict" -> p.target !in roster
+    else -> false
+}
+
+/** How [p] reads against the roster that followed it, or its last decision when that says it lands. */
 internal fun settledHow(p: RosterProposal, last: RosterStanding?, roster: List<String>): RosterSettled {
-    val landed = when (p.kind) {
-        "add" -> p.target in roster
-        "evict" -> p.target !in roster
-        else -> false
-    }
     return when {
-        landed -> RosterSettled(p, RosterSettledHow.LANDED)
+        rosterShows(p, roster) || last?.decision?.outcome == "lands" -> RosterSettled(p, RosterSettledHow.LANDED)
         last?.decision?.outcome == "cancelled" -> RosterSettled(p, RosterSettledHow.CANCELLED, last.decision.reason)
         last?.decision?.outcome == "refused" -> RosterSettled(p, RosterSettledHow.REFUSED, last.decision.reason)
         else -> RosterSettled(p, RosterSettledHow.CLOSED)
@@ -194,7 +196,12 @@ class SelfRosterViewModel(
                     proposals = r.proposals,
                     fetchedAtMs = at,
                     ownProposals = s.ownProposals + ownByTarget,
-                    history = gone + s.history,
+                    // A change filed CLOSED is looked at again on every read: the node's
+                    // roster can lag the open set by a moment (T10, CIRISServer#802), so
+                    // the read that saw it leave may not show it landed yet.
+                    history = gone + s.history.map { h ->
+                        if (h.how == RosterSettledHow.CLOSED && rosterShows(h.proposal, r.roster)) h.copy(how = RosterSettledHow.LANDED, reason = null) else h
+                    },
                 )
             }
         } catch (e: CancellationException) {
@@ -266,14 +273,13 @@ class SelfRosterViewModel(
                     working = null,
                     answered = s.answered + (id to c.assent),
                     lastAnswer = RosterAnswerOutcome(id, c.assent, r.settled, r.answerAttestationId),
-                    proposals = if (after != null) s.proposals.map { if (it.proposal.id == id) after else it }
+                    proposals = if (after != null && !r.settled) s.proposals.map { if (it.proposal.id == id) after else it }
                     else s.proposals.filterNot { it.proposal.id == id },
+                    // Settled: a decision that lands is LANDED at once; otherwise the
+                    // roster this card holds decides, and a CLOSED entry is looked at
+                    // again on every read until the roster shows it (see read()).
                     history = if (r.settled && s.history.none { it.proposal.id == id }) {
-                        listOf(settledHow(c.standing.proposal, c.standing, s.roster).let {
-                            // The roster this card holds predates the answer: a settle after an
-                            // assent that the stale roster cannot show reads as closed, not landed.
-                            if (it.how == RosterSettledHow.LANDED || !c.assent) it else RosterSettled(it.proposal, RosterSettledHow.CLOSED)
-                        }) + s.history
+                        listOf(settledHow(c.standing.proposal, after ?: c.standing, s.roster)) + s.history
                     } else s.history,
                 )
             } catch (e: CancellationException) {
