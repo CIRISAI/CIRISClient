@@ -148,6 +148,7 @@
   "add_device": {
     "owner_route_pending": "your other device's address has not reached this one yet — try again in a moment. If your other device is not announced, it cannot be reached this way: use the pairing QR or the same local network",
     "roster_change_held": "adding a third device is held as a proposal: your devices must agree before it is added",
+    "approval_held": "this device already holds your other device's approval — finish setting it up, or cancel and ask again",
     "already_owned": "this device already has an owner",
     "apply_failed": "the approval could not be applied on this device",
     "approve_failed": "the approval could not be signed and recorded",
