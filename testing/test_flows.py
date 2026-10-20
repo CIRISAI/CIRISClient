@@ -347,7 +347,7 @@ def test_every_tag_a_seeded_flow_names_exists_in_the_client():
         missing += [f"{spec.flow}/cleanup: {a.target}" for a in spec.cleanup
                     if not client_carries(a.target, literals, prefixes)]
         for step in spec.steps:
-            tags = [a.target for a in step.do]
+            tags = [a.target for a in step.do if a.kind != "attach"]  # attach names a file, not a tag
             for cond in (step.requires, step.expect):
                 tags += cond.visible + cond.absent + list(cond.text)
                 if cond.state:

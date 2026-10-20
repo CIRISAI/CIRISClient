@@ -1,0 +1,60 @@
+csd: CSD-010
+flow: csd_010_interact_files
+title: A PDF, a DOCX and a PNG on the paperclip reach the agent, and its reply quotes the documents
+description: >-
+  CIRISClient#217, driven on the with-AI legs only. Runs AFTER
+  csd_010_interact_chat on the same agent (files sort after chat), so this
+  flow's message is the person's second (`msg_user_1`) and its answer the
+  agent's second (`msg_agent_1`). `attach:` builds each file in memory
+  (testing/gate/attachment_fixtures.py, vendored from CIRISAgent
+  tools/qa_runner/attachment_fixtures.py @ 380455879) and hands it to the
+  paperclip through /inject-file, so it meets the same policy gate a picked
+  file does. The PDF and the DOCX each carry their OWN code word in their
+  text, and the reply must quote both: a reply quoting one proves only that
+  one reached the model. The PNG is a plain 8x8 swatch with no text (its
+  sentinel is unused); its claim is the chip with no refusal note — the agent
+  accepted it. NOT asserted: what a refusal looks like on a sent chip
+  (InteractAttachmentPolicyTest pins every reason id against a real socket),
+  and the picker itself (a native dialog the harness cannot drive).
+client: ">0.5.229"
+
+steps:
+  - step_id: three_files_on_the_paperclip
+    title: The three files ride the paperclip, and none is refused before send
+    requires:
+      screen: Interact
+      visible: [input_message]
+    do:
+      - attach: {notes.pdf: "CIRIS-ATTACH-217A0F01"}
+      - attach: {notes.docx: "CIRIS-ATTACH-217B0D02"}
+      - attach: {swatch.png: "CIRIS-ATTACH-217C0E03"}
+      - wait: attachment_chip_2
+        wait_ms: 2000
+    expect:
+      visible: [attachment_chip_0, attachment_chip_1, attachment_chip_2]
+      absent: [interact_attachment_unsupported_type, interact_attachment_too_many, interact_attachment_too_large]
+
+  - step_id: the_files_are_sent
+    title: Send carries them, and each is a chip on the sent message
+    do:
+      - input: {input_message: "Quote, exactly, every archive code word in the attached files."}
+      - click: btn_send
+      - wait: msg_user_1
+        wait_ms: 5000
+    expect:
+      visible: [msg_user_1, msg_user_1_attachment_0, msg_user_1_attachment_1, msg_user_1_attachment_2]
+
+  - step_id: the_reply_quotes_both_documents
+    title: The agent read both documents, and no file came back refused
+    description: >-
+      Up to 4 x 45 s, as csd_010_interact_chat's reply. A `_note` under a chip
+      is the agent's refusal (or a cut document) for that file, so each is
+      asserted absent: all three were read whole.
+    do:
+      - wait: msg_agent_1
+        wait_ms: 45000
+    expect:
+      visible: [msg_agent_1]
+      absent: [msg_error_0, msg_user_1_attachment_0_note, msg_user_1_attachment_1_note, msg_user_1_attachment_2_note]
+      matches:
+        msg_agent_1: "(?s)(?=.*CIRIS-ATTACH-217A0F01)(?=.*CIRIS-ATTACH-217B0D02)"

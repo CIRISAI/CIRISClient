@@ -33,6 +33,7 @@ prevent. So the split is deliberate and recorded rather than left to inference.
 | `candidate_artifacts.py` | `tools/fetch_client_artifacts.py` | **the seam**, adapted — see below |
 | `flow_spec.py` | `tools/qa_runner/modules/web_ui/flow_spec.py` | **extended** — the CSD/3 §3 predicates added; everything else verbatim. See below |
 | `flow_helper.py` | — | **ours.** The async surface `FlowRunner` drives, over this repo's sync driver |
+| `attachment_fixtures.py` | `tools/qa_runner/attachment_fixtures.py` @ `380455879` (branch `fix/interact-attachments`) | verbatim below a provenance header — hand-built PDF/DOCX/PNG/text carrying a sentinel, for `flow_spec.py`'s LOCAL DELTA verb `attach:` (CIRISClient#217) |
 
 `platform_procs.py` is stdlib-only and references nothing of CIRISAgent's,
 which is why it transplants untouched. `build_qa_gallery.py` was, until it
