@@ -70,6 +70,13 @@ TEST_KEYS = {"at", "probe"}
 PROBE_KEYS = {"node", "path", "status", "expect"}
 PINNED_FILES = ("requirements.yaml", "topology_vocabulary.json", "topology_vocabulary.pin", "traces.json")
 PIN_ROW = re.compile(r"^\|\s*`([^`]+)`\s*\|\s*`([0-9a-f]{64})`\s*\|\s*$", re.M)
+#: Who may have produced `traces.json` — the same `_DUMP` shape either way:
+#: CIRISServer's release asset (`python -m harness.native trace`, v0.5.232+), or
+#: `vendor_csd4.py --ref` running the same model for a pre-release pin.
+GENERATORS = {
+    "python -m harness.native trace (harness.native.model.traces)",
+    "packaging/vendor_csd4.py (harness.native.model.trace at the pinned commit)",
+}
 STAGES = ["envisioned", "sketched", "building", "testable", "verified", "shipped"]
 
 
@@ -106,9 +113,31 @@ def load_catalogue(root: Path = CATALOGUE_DIR) -> dict:
     if traces["_meta"]["catalogue_version"] != version:
         raise CatalogueError(f"traces.json is catalogue version {traces['_meta']['catalogue_version']}, "
                              f"the vocabulary is {version}")
+    gen = traces["_meta"].get("generator")
+    if gen not in GENERATORS:
+        raise CatalogueError(f"traces.json: generator {gen!r} is neither the server's release asset nor "
+                             f"vendor_csd4.py's own run — known: {sorted(GENERATORS)}")
+    # The vocabulary is the one its pin names (the server's pin to CIRISConstitution).
+    vpin = dict(line.split("=", 1) for line in (root / "topology_vocabulary.pin").read_text(encoding="utf-8").splitlines()
+                if "=" in line and not line.lstrip().startswith("#"))
+    vsha = hashlib.sha256((root / "topology_vocabulary.json").read_bytes()).hexdigest()
+    if vpin.get("sha256") != vsha:
+        raise CatalogueError(f"topology_vocabulary.pin names sha256 {str(vpin.get('sha256'))[:12]}… but the "
+                             f"vocabulary hashes to {vsha[:12]}… — the trace and vocabulary are not one release")
     ids = traces["_meta"]["catalog_ids"]
     if ids != [f"T{i}" for i in range(20)] or sorted(traces["entries"], key=lambda c: int(c[1:])) != ids:
         raise CatalogueError(f"traces.json: the closed catalogue is T0–T19; got {sorted(traces['entries'])}")
+    # `_meta.sources` is the sha256 of each entry file the trace was computed
+    # from: exactly the twenty entries' files, each named for its catalog id.
+    sources = traces["_meta"].get("sources") or {}
+    files = {cid: e.get("file") for cid, e in traces["entries"].items()}
+    if set(sources) != set(files.values()):
+        raise CatalogueError(f"traces.json: _meta.sources are not the entries' files — missing "
+                             f"{sorted(set(files.values()) - set(sources))}, extra {sorted(set(sources) - set(files.values()))}")
+    bad = sorted(cid for cid, f in files.items() if not str(f).startswith(f"{cid}-")
+                 or not re.fullmatch(r"[0-9a-f]{64}", str(sources.get(f, ""))))
+    if bad:
+        raise CatalogueError(f"traces.json: entries {bad} have a file not named for their id or no sha256 in _meta.sources")
     instants: dict[str, list[tuple[str, frozenset]]] = {}
     for cid, e in traces["entries"].items():
         if not e["steps"]:
@@ -117,9 +146,21 @@ def load_catalogue(root: Path = CATALOGUE_DIR) -> dict:
         stray = sorted(set().union(*(st for _, st in seq)) - atoms)
         if stray:
             raise CatalogueError(f"traces.json: {cid} reaches atoms outside the vocabulary: {stray}")
+        unpromised = sorted(set(e.get("promises") or []) - atoms)
+        if unpromised:
+            raise CatalogueError(f"traces.json: {cid} promises atoms outside the vocabulary: {unpromised}")
         instants[cid] = seq
     if not isinstance(reqs, dict) or not reqs:
         raise CatalogueError("requirements.yaml: ZERO entries parsed")
+    # The requirements are the ones this trace was computed for: every entry
+    # they name exists, and every atom they use is in the vocabulary.
+    for csd, spec in reqs.items():
+        if (spec or {}).get("topology") not in instants:
+            raise CatalogueError(f"requirements.yaml: {csd} names topology {(spec or {}).get('topology')!r}, "
+                                 f"not an entry of this trace")
+        stray = sorted({a for t in ((spec or {}).get("tests") or {}).values() for a in (t or {}).get("at", [])} - atoms)
+        if stray:
+            raise CatalogueError(f"requirements.yaml: {csd} uses atoms outside the vocabulary: {stray}")
     return {"version": version, "atoms": atoms, "instants": instants, "entries": traces["entries"],
             "requirements": reqs}
 
@@ -330,6 +371,49 @@ def _plants(clean: str) -> list[tuple[str, str, str]]:
     ]
 
 
+def repin(d: Path, name: str) -> None:
+    """Rewrite `name`'s PIN.md row to its current sha256 — so a plant in a
+    file's CONTENT is caught by the content check, not by the byte pin."""
+    pin = d / "PIN.md"
+    sha = hashlib.sha256((d / name).read_bytes()).hexdigest()
+    pin.write_text(re.sub(rf"^\| `{re.escape(name)}` \| `[0-9a-f]{{64}}` \|$", f"| `{name}` | `{sha}` |",
+                          pin.read_text(encoding="utf-8"), flags=re.M), encoding="utf-8")
+
+
+def _edit_traces(fn) -> "callable":
+    def mutate(d: Path) -> None:
+        t = json.loads((d / "traces.json").read_text(encoding="utf-8"))
+        fn(t)
+        (d / "traces.json").write_text(json.dumps(t, indent=1, sort_keys=True), encoding="utf-8")
+        repin(d, "traces.json")
+    return mutate
+
+
+def catalogue_plants() -> list:
+    """(name, mutate(dir), refusal substring | None for must-load)."""
+    def drop_source(t: dict) -> None:
+        t["_meta"]["sources"].pop(sorted(t["_meta"]["sources"])[0])
+
+    def vocab_pin(d: Path) -> None:
+        p = d / "topology_vocabulary.pin"
+        p.write_text(re.sub(r"sha256=[0-9a-f]{64}", "sha256=" + "0" * 64, p.read_text(encoding="utf-8")))
+        repin(d, "topology_vocabulary.pin")
+
+    return [
+        ("tampered requirements.yaml", lambda d: (d / "requirements.yaml").write_text(
+            (d / "requirements.yaml").read_text() + "\n# edited\n"), "PIN.md pins"),
+        ("PIN.md with zero rows", lambda d: (d / "PIN.md").write_text("# nothing pinned\n"), "parsed ZERO"),
+        ("the server's release-asset generator", _edit_traces(lambda t: t["_meta"].__setitem__(
+            "generator", "python -m harness.native trace (harness.native.model.traces)")), None),
+        ("an unknown generator", _edit_traces(lambda t: t["_meta"].__setitem__("generator", "by hand")),
+         "is neither the server's release asset"),
+        ("traces at another catalogue_version", _edit_traces(lambda t: t["_meta"].__setitem__("catalogue_version", 2)),
+         "traces.json is catalogue version 2"),
+        ("_meta.sources missing an entry file", _edit_traces(drop_source), "are not the entries' files"),
+        ("a vocabulary its pin does not name", vocab_pin, "the trace and vocabulary are not one release"),
+    ]
+
+
 def self_test() -> int:
     cat = load_catalogue()
     clean = FIXTURE.read_text(encoding="utf-8")
@@ -353,12 +437,9 @@ def self_test() -> int:
             print(f"  [{'ok' if ok else 'FAIL'}] planted {name} -> {'red: ' + hit[0] if ok else 'NOT refused by name ' + repr(want) + ': ' + repr(p)}")
             failures += not ok
 
-    # The catalogue itself: a tampered byte and an unparseable pin each refuse.
-    for name, mutate, want in (
-        ("tampered requirements.yaml", lambda d: (d / "requirements.yaml").write_text(
-            (d / "requirements.yaml").read_text() + "\n# edited\n"), "PIN.md pins"),
-        ("PIN.md with zero rows", lambda d: (d / "PIN.md").write_text("# nothing pinned\n"), "parsed ZERO"),
-    ):
+    # The catalogue itself. `None` as the expected refusal means it must LOAD
+    # (the server's release-asset generator string is accepted).
+    for name, mutate, want in catalogue_plants():
         with tempfile.TemporaryDirectory(prefix="csd4-selftest-") as tmp:
             d = Path(tmp)
             for f in (*PINNED_FILES, "PIN.md"):
@@ -366,10 +447,11 @@ def self_test() -> int:
             mutate(d)
             try:
                 load_catalogue(d)
-                ok, msg = False, "loaded"
+                ok, msg = want is None, "loaded"
             except CatalogueError as e:
-                ok, msg = want in str(e), str(e)
-            print(f"  [{'ok' if ok else 'FAIL'}] planted {name} -> {'red: ' if ok else 'NOT refused: '}{msg}")
+                ok, msg = want is not None and want in str(e), str(e)
+            label = ("green: " if want is None else "red: ") if ok else "WRONG: "
+            print(f"  [{'ok' if ok else 'FAIL'}] {'accepted' if want is None else 'planted'} {name} -> {label}{msg}")
             failures += not ok
 
     print(f"check_csd4 --self-test: {'[OK] every plant red, the clean card green' if not failures else f'[FAIL] {failures} case(s)'}")

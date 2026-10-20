@@ -9,16 +9,14 @@ hand-edit — the checker refuses a file whose sha256 is not the one below.
 | repo | `CIRISAI/CIRISServer` |
 | ref | `003871fd` |
 | commit | `003871fd67c1215a0afe7da5a8eb523363562cb2` |
-| status | head of CIRISServer PR #802 (`feat/multi-device-csd4`), OPEN — NOT on CIRISServer main. Re-pin to the merge commit or release tag: `evidence/blocked_upstream.tsv` row `csd4-catalogue-pin`. |
+| status | head of CIRISServer PR #802 (`feat/multi-device-csd4`), OPEN — NOT on CIRISServer main, and no release carries it. Re-pin with `--from-release v0.5.232` once that tag exists (the CIRISServer#802 row in `evidence/blocked_upstream.tsv`). |
 | catalogue_version | `3` |
 | atoms | 110 |
 | vocabulary owner | `CIRISAI/CIRISConstitution` @ `01b47e75b2250742d8f603dae0142ce58cc86c40` (`manifests/topology_vocabulary.json`) |
 
 ## Files
 
-The first three are byte copies of `harness/native/topologies/catalog/` at the commit;
-`traces.json` is the server model's step-by-step trace of T0–T19 at the same
-commit (sources' sha256 in its `_meta.sources`).
+The first three are byte copies of `harness/native/topologies/catalog/` at the commit; `traces.json` is the server model's step-by-step trace of T0–T19 at the same commit, produced by running it (sources' sha256 in its `_meta.sources`). A release pin (`--from-release`) replaces this with assets.
 
 | file | sha256 |
 |---|---|
@@ -29,9 +27,16 @@ commit (sources' sha256 in its `_meta.sources`).
 
 ## Refetch
 
+The default, from a CIRISServer release that carries the catalogue (v0.5.232 on):
+
 ```
-python3 packaging/vendor_csd4.py --ref <commit or tag> --note '<where the commit stands>'
+python3 packaging/vendor_csd4.py --from-release <tag>
 ```
 
-then `python3 packaging/check_csd4.py --self-test` and every card:
+Executes no server code: the `csd4-*` assets are checked against the release's
+`SHA256SUMS`, and their cosign signatures when `cosign` is on PATH. For a commit
+no release carries yet (it runs the server's model from a source tarball):
+`python3 packaging/vendor_csd4.py --ref <commit> --note '<where it stands>'`.
+
+Then `python3 packaging/check_csd4.py --self-test` and every card:
 `for f in FSD/CSD/CSD-*.md; do python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json; done`.
