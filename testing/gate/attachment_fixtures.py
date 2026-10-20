@@ -1,6 +1,8 @@
-# VENDORED from CIRISAgent tools/qa_runner/attachment_fixtures.py @ 380455879
-# (branch fix/interact-attachments), verbatim below this header. CIRISClient#217.
-# Re-sync by diffing against that file; see testing/gate/VENDORED.md.
+# VENDORED from CIRISAgent tools/qa_runner/attachment_fixtures.py @ 221ff4e42
+# (221ff4e427095184c86b67d082f2cdbda2f45c3a, branch fix/interact-attachments), verbatim
+# below this header. CIRISClient#217. Previously @ 380455879 (the sentinel was a
+# "code word", which live models declined to recite). Re-sync by diffing against
+# that file; see testing/gate/VENDORED.md.
 """Real attachment files carrying a known sentinel, built in memory.
 
 Shared by the `attachments` QA module and the unit tests, so both check the
@@ -30,7 +32,9 @@ def new_sentinel() -> str:
 
 
 def sentence(sentinel: str) -> str:
-    return f"The archive code word is {sentinel}."
+    # An ordinary reference, not a "code word": a live agent rightly declines to
+    # recite something framed as a secret (run 39488523205 REJECTed it).
+    return f"This report is filed in the library catalogue under reference {sentinel}."
 
 
 def png(size: int = 8) -> bytes:

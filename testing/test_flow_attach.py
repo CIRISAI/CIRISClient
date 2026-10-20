@@ -125,6 +125,33 @@ def test_the_with_ai_attachment_flow_asks_for_every_sentinel_in_the_reply():
     assert {a.target for a in attached} == {"notes.pdf", "notes.docx", "swatch.png"}
     sentinels = {a.value for a in attached if not a.target.endswith(".png")}
     assert len(sentinels) == 2, "PDF and DOCX each carry their own sentinel, so each is proven separately"
-    reply_patterns = " ".join(p for s in spec.steps for t, p in s.expect.matches.items() if t == "msg_agent_1")
+    reply_patterns = " ".join(p for s in spec.steps for t, p in s.expect.matches.items() if t == "msg_reply_latest")
     for s in sentinels:
         assert s in reply_patterns, f"the reply is never checked for {s}"
+
+
+def _flow_strings(spec):
+    out = []
+    for s in spec.steps:
+        out += [a.target for a in s.do] + [a.value or "" for a in s.do]
+        for c in (s.requires, s.expect):
+            out += list(c.visible) + list(c.absent) + list(c.matches)
+    return out
+
+
+def test_the_flow_names_its_own_exchange_not_an_ordinal():
+    """It may run after another flow on the same agent; `msg_user_1` would then be
+    someone else's message. The reply is `msg_reply_latest`, keyed to this send."""
+    import re
+
+    ordinal = [t for t in _flow_strings(FlowSpec.load(FLOW)) if re.match(r"msg_(user|agent)_\d", t)]
+    assert not ordinal, ordinal
+
+
+def test_the_prompt_asks_for_the_reference_the_fixture_files():
+    """Live models decline to recite a 'code word' (CIRISAgent run 39488523205);
+    the fixture files a library catalogue reference and the prompt asks for it."""
+    assert "library catalogue under reference CIRIS-ATTACH-217A0F01" in fx.sentence("CIRIS-ATTACH-217A0F01")
+    prompts = [a.value for s in FlowSpec.load(FLOW).steps for a in s.do if a.kind == "input"]
+    assert any("library catalogue reference" in p for p in prompts), prompts
+    assert not any("code word" in p for p in prompts)

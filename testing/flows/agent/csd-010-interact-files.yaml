@@ -1,19 +1,24 @@
 csd: CSD-010
 flow: csd_010_interact_files
-title: A PDF, a DOCX and a PNG on the paperclip reach the agent, and its reply quotes the documents
+title: A PDF, a DOCX and a PNG on the paperclip reach the agent, and its reply gives the documents' references
 description: >-
-  CIRISClient#217, driven on the with-AI legs only. Runs AFTER
-  csd_010_interact_chat on the same agent (files sort after chat), so this
-  flow's message is the person's second (`msg_user_1`) and its answer the
-  agent's second (`msg_agent_1`). `attach:` builds each file in memory
-  (testing/gate/attachment_fixtures.py, vendored from CIRISAgent
-  tools/qa_runner/attachment_fixtures.py @ 380455879) and hands it to the
+  CIRISClient#217, driven on the with-AI legs only. `attach:` builds each file
+  in memory (testing/gate/attachment_fixtures.py, vendored from CIRISAgent
+  tools/qa_runner/attachment_fixtures.py @ 221ff4e42) and hands it to the
   paperclip through /inject-file, so it meets the same policy gate a picked
-  file does. The PDF and the DOCX each carry their OWN code word in their
-  text, and the reply must quote both: a reply quoting one proves only that
-  one reached the model. The PNG is a plain 8x8 swatch with no text (its
-  sentinel is unused); its claim is the chip with no refusal note — the agent
-  accepted it. NOT asserted: what a refusal looks like on a sent chip
+  file does. Each document's text files it "in the library catalogue under
+  reference CIRIS-ATTACH-…" — an ordinary reference, not a "code word", which
+  live models declined to recite (CIRISAgent run 39488523205). The PDF and the
+  DOCX carry DIFFERENT references and the reply must give both: a reply with
+  one proves only that one reached the model. The PNG is a plain 8x8 swatch
+  with no text (its sentinel is unused); its claim is the chip with no
+  refusal note — the agent accepted it.
+  NOT ordinal: this flow may run after another on the same agent, so it names
+  its own message as `msg_user_latest` and the reply to THAT message as
+  `msg_reply_latest` — the agent row whose id is `<message_id>_response`
+  (ChatTranscriptTags.latestExchangeTags), which does not exist until this
+  message's reply lands. An earlier flow's reply cannot pass for it.
+  NOT asserted: what a refusal looks like on a sent chip
   (InteractAttachmentPolicyTest pins every reason id against a real socket),
   and the picker itself (a native dialog the harness cannot drive).
 client: ">0.5.229"
@@ -35,26 +40,30 @@ steps:
       absent: [interact_attachment_unsupported_type, interact_attachment_too_many, interact_attachment_too_large]
 
   - step_id: the_files_are_sent
-    title: Send carries them, and each is a chip on the sent message
+    title: Send carries them, and each is a chip on this flow's own sent message
+    description: >-
+      `msg_user_latest` already names an earlier flow's message before the
+      send, so the wait is on the third chip of the newest user row — only
+      this flow's message carries three files.
     do:
-      - input: {input_message: "Quote, exactly, every archive code word in the attached files."}
+      - input: {input_message: "Which library catalogue references do the attached files give? Please include every reference in your reply."}
       - click: btn_send
-      - wait: msg_user_1
+      - wait: msg_user_latest_attachment_2
         wait_ms: 5000
     expect:
-      visible: [msg_user_1, msg_user_1_attachment_0, msg_user_1_attachment_1, msg_user_1_attachment_2]
+      visible: [msg_user_latest, msg_user_latest_attachment_0, msg_user_latest_attachment_1, msg_user_latest_attachment_2]
 
-  - step_id: the_reply_quotes_both_documents
-    title: The agent read both documents, and no file came back refused
+  - step_id: the_reply_gives_both_references
+    title: The reply to this message gives both documents' references, and no file came back refused
     description: >-
       Up to 4 x 45 s, as csd_010_interact_chat's reply. A `_note` under a chip
       is the agent's refusal (or a cut document) for that file, so each is
       asserted absent: all three were read whole.
     do:
-      - wait: msg_agent_1
+      - wait: msg_reply_latest
         wait_ms: 45000
     expect:
-      visible: [msg_agent_1]
-      absent: [msg_error_0, msg_user_1_attachment_0_note, msg_user_1_attachment_1_note, msg_user_1_attachment_2_note]
+      visible: [msg_reply_latest]
+      absent: [msg_user_latest_attachment_0_note, msg_user_latest_attachment_1_note, msg_user_latest_attachment_2_note]
       matches:
-        msg_agent_1: "(?s)(?=.*CIRIS-ATTACH-217A0F01)(?=.*CIRIS-ATTACH-217B0D02)"
+        msg_reply_latest: "(?s)(?=.*CIRIS-ATTACH-217A0F01)(?=.*CIRIS-ATTACH-217B0D02)"
