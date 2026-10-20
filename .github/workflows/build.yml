@@ -221,6 +221,17 @@ jobs:
             python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
           done
 
+      - name: CSD/4 tests agree with the pinned topology catalogue
+        # A card's `csd:tests` block (FSD/CSD4.md §1, CIRISServer#802) names a
+        # catalogue entry and the atoms each test needs at one instant. The
+        # per-card loop above runs it through check_csd_v3; this proves the red
+        # path (topology outside T0–T19, an unknown atom, an unreachable
+        # instant, any card/requirements.yaml disagreement, a tampered pin)
+        # and that packaging/csd4/ still matches packaging/csd4/PIN.md.
+        run: |
+          python3 packaging/check_csd4.py --self-test
+          python3 packaging/check_csd4.py --verify-pin
+
       - name: The CSD roster is current; no card on a reserved or retired number
         # Numbers were reserved in issue text (#179) and another repo (#206)
         # and retired inside the card that absorbed them, so nothing said which
