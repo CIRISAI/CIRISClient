@@ -99,6 +99,30 @@ class AttachmentTypesTest {
         assertTrue(ids.none { it.identifier == "public.image" })
     }
 
+    // --- text documents (the agent reads them from fix/interact-attachments) ---
+
+    private val text = listOf("text/plain", "text/markdown", "text/csv")
+
+    @Test
+    fun textDocumentsHaveExtensionsUtisAndNames() {
+        assertEquals(listOf("txt", "md", "markdown", "csv"), AttachmentTypes.extensionsFor(text))
+        assertEquals(
+            listOf("public.plain-text", "net.daringfireball.markdown", "public.comma-separated-values-text"),
+            AttachmentTypes.iosContentTypes(text).map { it.identifier },
+        )
+        assertEquals("text/plain", AttachmentTypes.mimeTypeForFileName("a.TXT"))
+        assertEquals("text/markdown", AttachmentTypes.mimeTypeForFileName("README.markdown"))
+        assertEquals("text/csv", AttachmentTypes.mimeTypeForFileName("t.csv"))
+    }
+
+    @Test
+    fun androidTextLabelsAreNormalised() {
+        assertEquals("text/markdown", AttachmentTypes.normaliseMediaType("application/octet-stream", "a.md"))
+        assertEquals("text/markdown", AttachmentTypes.normaliseMediaType("text/x-markdown", "a.md"))
+        assertEquals("text/csv", AttachmentTypes.normaliseMediaType("text/comma-separated-values", "a.csv"))
+        assertEquals("text/plain", AttachmentTypes.normaliseMediaType("text/plain; charset=utf-8", "a.txt"))
+    }
+
     @Test
     fun filesAddOnIosIsAnyItem() {
         assertEquals(listOf(AttachmentTypes.UtRef(identifier = "public.item")), AttachmentTypes.iosContentTypes(listOf("*/*")))

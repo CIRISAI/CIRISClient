@@ -41,7 +41,14 @@ fun PickTooLargeNotice(refusal: PickTooLarge, tag: String, onDismiss: () -> Unit
  * (past [PickedFile.MAX_ATTACHMENTS]); `<tag>_dismiss` closes each.
  */
 @Composable
-fun AttachmentRefusalNotice(refusal: AttachmentRefusal, tagPrefix: String, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+fun AttachmentRefusalNotice(
+    refusal: AttachmentRefusal,
+    tagPrefix: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** The types the paperclip takes now — the agent's policy, or the client's own. */
+    allowedTypes: List<String> = PickedFile.ALLOWED_MIME_TYPES,
+) {
     when (refusal) {
         is AttachmentRefusal.TooLarge -> PickTooLargeNotice(refusal.pick, "${tagPrefix}_too_large", onDismiss, modifier)
         is AttachmentRefusal.UnsupportedType -> RefusalNoticeRow(
@@ -49,7 +56,7 @@ fun AttachmentRefusalNotice(refusal: AttachmentRefusal, tagPrefix: String, onDis
                 "mobile.interact_attachment_unsupported_type",
                 mapOf(
                     "name" to refusal.name,
-                    "types" to AttachmentTypes.extensionsFor(PickedFile.ALLOWED_MIME_TYPES).joinToString(", ") { ".$it" },
+                    "types" to AttachmentTypes.extensionsFor(allowedTypes).joinToString(", ") { ".$it" },
                 ),
             ),
             "${tagPrefix}_unsupported_type", onDismiss, modifier,

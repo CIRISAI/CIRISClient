@@ -45,7 +45,17 @@ object AttachmentTypes {
         "json" to "application/json",
         "txt" to "text/plain",
         "md" to "text/markdown",
+        "markdown" to "text/markdown",
         "csv" to "text/csv",
+    )
+
+    /** Labels providers use for a type that has a canonical name. */
+    private val ALIASES = mapOf(
+        "image/jpg" to "image/jpeg",
+        "image/pjpeg" to "image/jpeg",
+        "text/x-markdown" to "text/markdown",
+        "text/comma-separated-values" to "text/csv",
+        "application/csv" to "text/csv",
     )
 
     /** MIME type → the extensions a chooser filter offers for it (only types a caller asks for). */
@@ -57,6 +67,9 @@ object AttachmentTypes {
         "application/pdf" to listOf("pdf"),
         DOCX to listOf("docx"),
         "application/json" to listOf("json"),
+        "text/plain" to listOf("txt"),
+        "text/markdown" to listOf("md", "markdown"),
+        "text/csv" to listOf("csv"),
     )
 
     /** MIME type → the exact Uniform Type Identifier the iOS document picker opens with. */
@@ -69,6 +82,9 @@ object AttachmentTypes {
         "application/pdf" to "com.adobe.pdf",
         DOCX to "org.openxmlformats.wordprocessingml.document",
         "application/json" to "public.json",
+        "text/plain" to "public.plain-text",
+        "text/markdown" to "net.daringfireball.markdown",
+        "text/csv" to "public.comma-separated-values-text",
     )
 
     /** The MIME type a file's name implies, or [OCTET] when it implies none. */
@@ -78,7 +94,7 @@ object AttachmentTypes {
     /** `type/subtype` lower-cased, parameters dropped; `image/jpg` is `image/jpeg`. */
     fun essence(mediaType: String): String {
         val e = mediaType.substringBefore(';').trim().lowercase()
-        return if (e == "image/jpg") "image/jpeg" else e
+        return ALIASES[e] ?: e
     }
 
     /** Whether the chat paperclip may send [mediaType]. */

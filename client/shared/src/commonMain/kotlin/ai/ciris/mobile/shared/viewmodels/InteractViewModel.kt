@@ -20,6 +20,9 @@ import ai.ciris.mobile.shared.models.ChatMessage
 import ai.ciris.mobile.shared.models.MessageType
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.platform.PickedFile
+import ai.ciris.mobile.shared.models.AttachmentPolicy
+import ai.ciris.mobile.shared.models.AttachmentPolicySource
+import ai.ciris.mobile.shared.models.SentAttachment
 import ai.ciris.mobile.shared.platform.AttachmentRefusal
 import ai.ciris.mobile.shared.platform.AttachmentTypes
 import ai.ciris.mobile.shared.platform.TestAutomation
@@ -470,6 +473,43 @@ class InteractViewModel(
         _attachmentRefused.value = AttachmentRefusal.TooLarge(refusal)
     }
 
+    /**
+     * The agent's attachment limits (`GET /v1/agent/attachments/policy`),
+     * read when chat opens; the client's constants until then, and for good
+     * when the agent predates the route (CIRISClient#217).
+     */
+    private val _attachmentPolicy = MutableStateFlow(AttachmentPolicy.CLIENT_FALLBACK)
+    val attachmentPolicy: StateFlow<AttachmentPolicy> = _attachmentPolicy.asStateFlow()
+    private val _attachmentPolicySource = MutableStateFlow(AttachmentPolicySource.FALLBACK_UNAVAILABLE)
+    val attachmentPolicySource: StateFlow<AttachmentPolicySource> = _attachmentPolicySource.asStateFlow()
+
+    /** Read the policy now (chat opening calls [refreshAttachmentPolicy]). */
+    suspend fun loadAttachmentPolicy() {
+        val method = "loadAttachmentPolicy"
+        when (val read = apiClient.getAttachmentPolicy()) {
+            is ai.ciris.mobile.shared.api.AttachmentPolicyRead.Live -> {
+                logInfo(method, "agent policy: images ${read.policy.imageTypes} ≤${read.policy.imageMaxBytes}B ×${read.policy.maxImages}, " +
+                    "documents ${read.policy.documentTypes} ≤${read.policy.documentMaxBytes}B ×${read.policy.maxDocuments}")
+                _attachmentPolicy.value = read.policy
+                _attachmentPolicySource.value = AttachmentPolicySource.AGENT
+            }
+            ai.ciris.mobile.shared.api.AttachmentPolicyRead.AgentTooOld -> {
+                logWarn(method, "agent predates /v1/agent/attachments/policy (404); using the client's limits")
+                _attachmentPolicy.value = AttachmentPolicy.CLIENT_FALLBACK
+                _attachmentPolicySource.value = AttachmentPolicySource.FALLBACK_AGENT_TOO_OLD
+            }
+            is ai.ciris.mobile.shared.api.AttachmentPolicyRead.Failed -> {
+                logWarn(method, "attachment policy unavailable (${read.why}); using the client's limits")
+                _attachmentPolicy.value = AttachmentPolicy.CLIENT_FALLBACK
+                _attachmentPolicySource.value = AttachmentPolicySource.FALLBACK_UNAVAILABLE
+            }
+        }
+    }
+
+    fun refreshAttachmentPolicy() {
+        viewModelScope.launch { loadAttachmentPolicy() }
+    }
+
     fun dismissAttachmentRefusal() {
         _attachmentRefused.value = null
     }
@@ -833,24 +873,57 @@ class InteractViewModel(
     fun addAttachment(file: PickedFile) {
         val method = "addAttachment"
         val current = _attachedFiles.value
-        if (current.size >= PickedFile.MAX_ATTACHMENTS) {
-            logWarn(method, "Max attachments (${PickedFile.MAX_ATTACHMENTS}) reached, refusing ${file.name}")
-            _attachmentRefused.value = AttachmentRefusal.TooMany(file.name)
-            return
-        }
-        if (!AttachmentTypes.isChatAttachable(file.mediaType)) {
-            logWarn(method, "File ${file.name} is ${file.mediaType}, outside the paperclip's types; refusing")
+        val policy = _attachmentPolicy.value
+        // Type first: a type the agent cannot read has no kind to count against.
+        if (!policy.accepts(file.mediaType)) {
+            logWarn(method, "File ${file.name} is ${file.mediaType}, outside the policy's types; refusing")
             _attachmentRefused.value = AttachmentRefusal.UnsupportedType(file.name, file.mediaType)
             return
         }
-        if (file.sizeBytes > PickedFile.MAX_FILE_SIZE_BYTES) {
-            logWarn(method, "File ${file.name} exceeds max size (${file.sizeBytes} > ${PickedFile.MAX_FILE_SIZE_BYTES})")
+        val total = policy.maxTotal
+        if (total != null && current.size >= total) {
+            logWarn(method, "Max attachments ($total) reached, refusing ${file.name}")
+            _attachmentRefused.value = AttachmentRefusal.TooMany(file.name, total)
+            return
+        }
+        val isImage = policy.isImageType(file.mediaType)
+        val sameKind = current.count { policy.isImageType(it.mediaType) == isImage }
+        val maxCount = policy.maxCountFor(file.mediaType)
+        if (sameKind >= maxCount) {
+            logWarn(method, "Max ${if (isImage) "images" else "documents"} ($maxCount) reached, refusing ${file.name}")
+            _attachmentRefused.value = AttachmentRefusal.TooMany(file.name, maxCount)
+            return
+        }
+        val maxBytes = policy.maxBytesFor(file.mediaType)
+        if (file.sizeBytes > maxBytes) {
+            logWarn(method, "File ${file.name} exceeds max size (${file.sizeBytes} > $maxBytes)")
             _attachmentRefused.value =
-                AttachmentRefusal.TooLarge(ai.ciris.mobile.shared.platform.PickTooLarge(file.name, file.sizeBytes))
+                AttachmentRefusal.TooLarge(ai.ciris.mobile.shared.platform.PickTooLarge(file.name, file.sizeBytes, maxBytes))
             return
         }
         logInfo(method, "Adding attachment: ${file.name} (${file.mediaType}, ${file.sizeBytes} bytes)")
         _attachedFiles.value = current + file
+    }
+
+    /**
+     * Pair each sent file with the agent's outcome for it. The agent indexes
+     * within images[] or documents[] — the same split [sendMessage] made with
+     * [PickedFile.isImage] — so (kind, index) names exactly one file.
+     */
+    private fun withOutcomes(
+        files: List<PickedFile>,
+        outcomes: List<ai.ciris.mobile.shared.models.AttachmentOutcome>,
+    ): List<SentAttachment> {
+        var images = 0
+        var documents = 0
+        return files.map { f ->
+            val (kind, index) = if (f.isImage) "image" to images++ else "document" to documents++
+            val outcome = outcomes.firstOrNull { it.kind == kind && it.index == index }
+            if (outcome?.refused == true) {
+                logWarn("sendMessage", "agent refused ${f.name}: ${outcome.reason}")
+            }
+            SentAttachment(f.name, f.mediaType, outcome)
+        }
     }
 
     fun removeAttachment(index: Int) {
@@ -990,7 +1063,8 @@ class InteractViewModel(
                     attachmentCount = files.size,
                     attachmentNames = files.map { it.name },
                     hasImageAttachments = files.any { it.isImage },
-                    hasDocumentAttachments = files.any { it.isDocument }
+                    hasDocumentAttachments = files.any { it.isDocument },
+                    sentAttachments = files.map { SentAttachment(it.name, it.mediaType) },
                 )
                 _messages.value = (_messages.value + userMessage).takeLast(50)
 
@@ -1040,8 +1114,11 @@ class InteractViewModel(
                 // by id at line ~1240) sees server-ID != local-ID and keeps
                 // both copies — the user sees their own message twice, once
                 // with the local placeholder ID and once with the server ID.
+                // ...and put the agent's verdict on each file's chip
+                // (CIRISClient#217): a refused file is never silent.
+                val verdicts = withOutcomes(files, response.attachments)
                 _messages.value = _messages.value.map { msg ->
-                    if (msg.id == localMessageId) msg.copy(id = response.message_id) else msg
+                    if (msg.id == localMessageId) msg.copy(id = response.message_id, sentAttachments = verdicts) else msg
                 }
 
                 // Add agent response to chat
