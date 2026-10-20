@@ -52,6 +52,9 @@ python3 client/tools/gen_glyphs.py --check
 for f in FSD/CSD/CSD-*.md; do
     python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
 done
+# CSD/4: each plant red, the clean card green; the vendored catalogue matches its pin.
+python3 packaging/check_csd4.py --self-test
+python3 packaging/check_csd4.py --verify-pin
 # The CSD roster is current, and no card sits on a reserved or retired number.
 python3 packaging/gen_csd_roster.py --self-test
 python3 packaging/gen_csd_roster.py --check
