@@ -1,0 +1,6572 @@
+{
+ "_meta": {
+  "catalog_ids": [
+   "T0",
+   "T1",
+   "T2",
+   "T3",
+   "T4",
+   "T5",
+   "T6",
+   "T7",
+   "T8",
+   "T9",
+   "T10",
+   "T11",
+   "T12",
+   "T13",
+   "T14",
+   "T15",
+   "T16",
+   "T17",
+   "T18",
+   "T19"
+  ],
+  "catalogue_version": 3,
+  "generator": "packaging/vendor_csd4.py (harness.native.model.trace at the pinned commit)",
+  "sources": {
+   "T0-just-me-offline.yaml": "beef50682515ce31fed500fb9143dea359b9986cb41f3eef9126ef8806840038",
+   "T1-one-person-two-devices.yaml": "4f0a8b4f6d5c6ddfbf557b753d389229f637d989d11986c75ef5d50067a4ca5d",
+   "T10-stolen-device-quorum-evict.yaml": "d77b54a4f5a94e3fa859861156db869ea690eb5e4450cdfef0e93f8cd5fa8e25",
+   "T11-lost-devices-lone-recovery.yaml": "58ed9167fc9ce50fc7b530dfaad9eb658d866e59856c0affd7e090c49b7a8cbb",
+   "T12-root-stall-recovery.yaml": "6cb5aebd56efb129557eeb99aaba1db3bd762b940cae36d361c3797a6715970b",
+   "T13-witnessed-lineage.yaml": "9f4908b93c1983c668ae6b325d9be3e7c5719fcda44dd07280c24e30bf59129f",
+   "T14-consent-end-to-end.yaml": "80c2e2596edcbc5ef1d52cb4429199c2021a5202c11ad76901c638f0971dbb64",
+   "T15-community-ceremony.yaml": "f8e2c6cd5d754720c4e9499fcfbd886f174b47e0ed36ade36c60cfb04daaa590",
+   "T16-agent-retirement.yaml": "16aed4cdc287f1001c255239c43f524c69fb0856510db1c2884549a49b52a607",
+   "T17-takedown-purge.yaml": "ff9df050d70ed20fafe2e12cb2b6d7b28afc0a7e0ab931ec0d9f083cb766cecc",
+   "T18-delegation-ends.yaml": "c26b11d1bcaa007809a9dae27094821c4c2f3f63479e4cbccaac910db897d92a",
+   "T19-holders-under-coercion.yaml": "b5fcca370623a56acbbacd78bd372ba79b20645eb711dff87c3a25ebcc250d39",
+   "T2-pair-room-outsider.yaml": "74c1887b64fedf824ab511a82aa355738b1ff5e876f00e6ec40a6420317b9fd5",
+   "T3-second-device-approval.yaml": "8cf100dcf0a1255ffadc0e846383890b170cd9a71d5e129f029a112065582e7b",
+   "T4-household.yaml": "c314962dd0fa8dd67e8f73561291fe10f379a6843ffb5cb7780d30e3ac5ff160",
+   "T5-community-quorum.yaml": "e57ca85b3a391866a3fe5d9eed6050499bc5ba31d57058d5e8fd6515252ee62f",
+   "T6-affiliation-delegation.yaml": "d46ba6368f9cb99472a57af812c60887bb0002d16fabec2bfe3d4cb0ec4f2712",
+   "T7-agent-steward-wa.yaml": "7813ec9880986ff75467113745c1976ef7df3153f15c18be5fbd61958230af85",
+   "T8-accord-halt.yaml": "908fa85dca44c3341db8d8cd7a24fc15edb296a6078cd14d7335de6118d8ff6f",
+   "T9-two-roots-outsider.yaml": "eaba4f2ab638bc3411b0664c12c3f92bcb09918270a2fa0e18836c40bb8201a0"
+  }
+ },
+ "entries": {
+  "T0": {
+   "buildable_prefix": 5,
+   "file": "T0-just-me-offline.yaml",
+   "initial": [
+    "root.none"
+   ],
+   "promises": [
+    "root.none",
+    "node.unclaimed",
+    "node.claimed",
+    "node.unannounced",
+    "values.ready"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.none"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.none",
+      "self.roster_size.one"
+     ],
+     "id": "person:me"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unannounced",
+      "root.none",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.claimed",
+      "node.unannounced",
+      "root.none",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.claimed",
+      "node.unannounced",
+      "root.none",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Just me, offline \u2014 one person, one node, no root"
+  },
+  "T1": {
+   "buildable_prefix": 15,
+   "file": "T1-one-person-two-devices.yaml",
+   "initial": [],
+   "promises": [
+    "canonical.peered",
+    "node.announced",
+    "peer.direct",
+    "person.multi_device",
+    "room.self.keyed",
+    "note.synced",
+    "session.unified",
+    "file.held",
+    "file.large",
+    "file.custody_received",
+    "file.withdrawn"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "person:one"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "rel[1]:room"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "rel[2]:note"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "session.unified"
+     ],
+     "id": "rel[3]:session"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.held",
+      "file.large",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "session.unified"
+     ],
+     "id": "rel[4]:file"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.custody_received",
+      "file.held",
+      "file.large",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "session.unified"
+     ],
+     "id": "rel[5]:custody"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.large",
+      "file.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "session.unified"
+     ],
+     "id": "rel[6]:withdraw"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.large",
+      "file.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "session.unified"
+     ],
+     "id": "neg[0]:no_wider_self_rows"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.large",
+      "file.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "session.unified"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "file.large",
+      "file.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "note.synced",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "session.unified",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "One person, two devices, self room"
+  },
+  "T10": {
+   "buildable_prefix": 22,
+   "file": "T10-stolen-device-quorum-evict.yaml",
+   "initial": [],
+   "promises": [
+    "key.membership.proposed_add",
+    "key.holder.owner",
+    "key.holder.thief",
+    "key.membership.proposed_evict",
+    "key.membership.evicted",
+    "self.roster_size.three_more"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:join_request"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_approved",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:join_approve"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[3]:join_complete"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[4]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[5]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[6]:join_request"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "device.joined",
+      "key.holder.owner",
+      "key.membership.proposed_add",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[7]:join_approve"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_approved",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[8]:join_assent"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[9]:join_complete"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[10]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[11]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.holder.thief",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[12]:steal"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.holder.thief",
+      "key.membership.proposed_evict",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[13]:evict_propose"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.holder.thief",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[14]:evict_cosign"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.holder.thief",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.holder.thief",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A stolen device \u2014 the owner evicts it by the quorum path"
+  },
+  "T11": {
+   "buildable_prefix": 19,
+   "file": "T11-lost-devices-lone-recovery.yaml",
+   "initial": [],
+   "promises": [
+    "key.membership.proposed_add",
+    "key.holder.lost",
+    "key.membership.evicted",
+    "self.roster_size.one"
+   ],
+   "refused": {
+    "rel[14]:evict_lone": "known red: CIRISServer#794 (a filed product defect; --include-known-red builds through it)",
+    "rel[15]:evict_lone": "known red: CIRISServer#794 (a filed product defect; --include-known-red builds through it)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:join_request"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_approved",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:join_approve"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[3]:join_complete"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[4]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[5]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[6]:join_request"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_requested",
+      "device.joined",
+      "key.holder.owner",
+      "key.membership.proposed_add",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[7]:join_approve"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.join_approved",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "node.unclaimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[8]:join_assent"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[9]:join_complete"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[10]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[11]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[12]:lose"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.three_more"
+     ],
+     "id": "rel[13]:lose"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "rel[14]:evict_lone"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[15]:evict_lone"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "device.joined",
+      "key.holder.lost",
+      "key.holder.owner",
+      "key.membership.evicted",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Two lost devices \u2014 recovery by the lone path over the window"
+  },
+  "T12": {
+   "buildable_prefix": 10,
+   "file": "T12-root-stall-recovery.yaml",
+   "initial": [],
+   "promises": [
+    "root.standing.Stalled",
+    "root.liveness.stalled",
+    "root.liveness.live",
+    "seat.identity_type.human"
+   ],
+   "refused": {
+    "rel[4]:resign": "relation `resign`: route exists, builder branch not written \u2014 POST /v1/accord/family/supersede + /cosign (a founder leaves the seated roster); the witness is persist's hard_case:community_liveness_stalled row, not /v1/trust-root's posture string",
+    "rel[5]:confer": "relation `confer`: route exists, builder branch not written \u2014 POST /v1/accord/family/supersede + /cosign (a conferred human widens the roster: T7 recovery)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:rooted_with"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.stalled",
+      "root.rooted",
+      "root.standing.Stalled",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:resign"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:confer"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A root stalls (a founder resigns below the margin) and recovers by a conferred human"
+  },
+  "T13": {
+   "buildable_prefix": 6,
+   "file": "T13-witnessed-lineage.yaml",
+   "initial": [],
+   "promises": [
+    "root.head.stale",
+    "seat.identity_type.node_bearing"
+   ],
+   "refused": {
+    "rel[1]:lineage_head": "known red: CIRISServer#693 (a filed product defect; --include-known-red builds through it)",
+    "rel[2]:seat_node_bearing": "relation `seat_node_bearing`: a node-bearing seat on a SUCCESSOR family head: the anchor mints one family per mesh, so there is no successor head to seat it on (one root per mesh, as T9)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.head.stale",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:lineage_head"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.head.stale",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "seat.identity_type.node_bearing",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:seat_node_bearing"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.head.stale",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "seat.identity_type.node_bearing",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.head.stale",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "seat.identity_type.node_bearing",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A witnessed lineage \u2014 a stale head refuses attach; a node-bearing seat never counts"
+  },
+  "T14": {
+   "buildable_prefix": 11,
+   "file": "T14-consent-end-to-end.yaml",
+   "initial": [],
+   "promises": [
+    "consent.state.granted",
+    "consent.state.revoked",
+    "consent.state.expired",
+    "consent.decay.identity_severed",
+    "consent.decay.patterns_anonymized",
+    "consent.decay.complete",
+    "consent.community_trust.granted",
+    "consent.community_trust.bounded",
+    "consent.replication.none"
+   ],
+   "refused": {
+    "rel[10]:consent_expire": "known red: CIRISServer#182 (a filed product defect; --include-known-red builds through it)",
+    "rel[11]:consent_decay": "relation `consent_decay`: the agent's consent decay (identity_severed \u2192 patterns_anonymized \u2192 complete, CC 3.3.1) is a self-report of a CIRISAgent process; no agent runs in this harness",
+    "rel[12]:consent_decay": "relation `consent_decay`: the agent's consent decay (identity_severed \u2192 patterns_anonymized \u2192 complete, CC 3.3.1) is a self-report of a CIRISAgent process; no agent runs in this harness",
+    "rel[13]:consent_decay": "relation `consent_decay`: the agent's consent decay (identity_severed \u2192 patterns_anonymized \u2192 complete, CC 3.3.1) is a self-report of a CIRISAgent process; no agent runs in this harness",
+    "rel[5]:community_trust": "known red: CIRISServer#790 (a filed product defect; --include-known-red builds through it)",
+    "rel[6]:community_trust_bound": "known red: CIRISServer#790 (a filed product defect; --include-known-red builds through it)",
+    "rel[7]:consent_grant": "known red: CIRISServer#182 (a filed product defect; --include-known-red builds through it)",
+    "rel[8]:consent_revoke": "known red: CIRISServer#182 (a filed product defect; --include-known-red builds through it)",
+    "rel[9]:consent_grant": "known red: CIRISServer#182 (a filed product defect; --include-known-red builds through it)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:community"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.replication.none",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:replication_withdraw"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.granted",
+      "consent.replication.none",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:community_trust"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.replication.none",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:community_trust_bound"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.replication.none",
+      "consent.state.granted",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:consent_grant"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.replication.none",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:consent_revoke"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.replication.none",
+      "consent.state.granted",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:consent_grant"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[10]:consent_expire"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.decay.identity_severed",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[11]:consent_decay"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.decay.patterns_anonymized",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[12]:consent_decay"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.decay.complete",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[13]:consent_decay"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.decay.complete",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "consent.community_trust.bounded",
+      "consent.decay.complete",
+      "consent.replication.none",
+      "consent.state.expired",
+      "consent.state.revoked",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Consent end to end \u2014 grant, revoke, expiry, decay; replication grant and its withdrawal"
+  },
+  "T15": {
+   "buildable_prefix": 29,
+   "file": "T15-community-ceremony.yaml",
+   "initial": [],
+   "promises": [
+    "member.stage.proposed",
+    "member.stage.accepted_awaiting_group",
+    "member.stage.declined",
+    "member.stage.removed",
+    "member.stage.resigned",
+    "group.moderator.lapsed",
+    "group.moderator.merit_promoted",
+    "group.moderator.fail_secure",
+    "group.federating.no"
+   ],
+   "refused": {
+    "rel[18]:invite": "relation `invite`: route exists, builder branch not written \u2014 POST /v1/communities/{id}/invites (a proposal, not yet accepted)",
+    "rel[19]:accept": "relation `accept`: route exists, builder branch not written \u2014 the invitee's acceptance while the group's quorum is pending",
+    "rel[20]:invite": "relation `invite`: route exists, builder branch not written \u2014 POST /v1/communities/{id}/invites (a proposal, not yet accepted)",
+    "rel[21]:decline": "relation `decline`: route exists, builder branch not written \u2014 POST /v1/self/invites/{proposal_id}/decline",
+    "rel[22]:remove": "relation `remove`: route exists, builder branch not written \u2014 DELETE /v1/communities/{id}/members/{key_id}",
+    "rel[23]:invite": "relation `invite`: route exists, builder branch not written \u2014 POST /v1/communities/{id}/invites (a proposal, not yet accepted)",
+    "rel[24]:invite_window": "known red: CIRISServer#796 (a filed product defect; --include-known-red builds through it)",
+    "rel[25]:leave": "relation `leave`: route exists, builder branch not written \u2014 POST /v1/communities/{id}/leave",
+    "rel[27]:moderator_lapse": "known red: CIRISServer#795 (a filed product defect; --include-known-red builds through it)",
+    "rel[28]:fail_secure": "relation `fail_secure`: route exists, builder branch not written \u2014 POST /v1/safety/moderation with no resolving moderator chain (absence never admits)",
+    "rel[29]:merit_promote": "known red: CIRISServer#795 (a filed product defect; --include-known-red builds through it)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:carol"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:dave"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:erin"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:frank"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:gus"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[10]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[11]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[12]:community"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[13]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.held",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[14]:quorum_change"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[15]:cosign"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "quorum_change.held",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[16]:quorum_change"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[17]:cosign"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.proposed",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[18]:invite"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[19]:accept"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.proposed",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[20]:invite"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[21]:decline"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[22]:remove"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.proposed",
+      "member.stage.removed",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[23]:invite"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[24]:invite_window"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[25]:leave"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "moderator.named",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[26]:moderator"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "group.federating.no",
+      "group.moderator.lapsed",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[27]:moderator_lapse"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "group.federating.no",
+      "group.moderator.fail_secure",
+      "group.moderator.lapsed",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[28]:fail_secure"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "group.federating.no",
+      "group.moderator.fail_secure",
+      "group.moderator.lapsed",
+      "group.moderator.merit_promoted",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[29]:merit_promote"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "group.federating.no",
+      "group.moderator.fail_secure",
+      "group.moderator.lapsed",
+      "group.moderator.merit_promoted",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "group.federating.no",
+      "group.moderator.fail_secure",
+      "group.moderator.lapsed",
+      "group.moderator.merit_promoted",
+      "key.holder.owner",
+      "key.revocation.none",
+      "member.stage.accepted_awaiting_group",
+      "member.stage.declined",
+      "member.stage.removed",
+      "member.stage.resigned",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A community's ceremony \u2014 decline, removal, resignation; a moderator lapses, the room fails secure"
+  },
+  "T16": {
+   "buildable_prefix": 5,
+   "file": "T16-agent-retirement.yaml",
+   "initial": [],
+   "promises": [
+    "agent.bond.unbound",
+    "agent.bond.lapsed",
+    "agent.retirement.decided",
+    "agent.retirement.frozen",
+    "agent.retirement.secrets_destroyed",
+    "agent.retirement.handed_over",
+    "agent.retirement.notified",
+    "agent.retirement.custodian_minted",
+    "agent.retirement.retired",
+    "agent.halt_gate.acting"
+   ],
+   "refused": {
+    "rel[0]:agent_bond": "relation `agent_bond`: the agent's bond to its node (CC 1.13.2): needs a CIRISAgent process",
+    "rel[10]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[1]:agent": "relation `agent`: a CIRISAgent process hard-bound to the node: the server serves no agent routes without one (src/py_adapter.rs proxy_routes); halt_agent drives an EXTERNAL agent",
+    "rel[2]:agent_act": "relation `agent_act`: the agent's halt gate (CC 4.2.1.1): needs a CIRISAgent process",
+    "rel[3]:agent_bond": "relation `agent_bond`: the agent's bond to its node (CC 1.13.2): needs a CIRISAgent process",
+    "rel[4]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[5]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[6]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[7]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[8]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process",
+    "rel[9]:retirement": "relation `retirement`: retirement under the Standard (CC 7.5.5): the agent's own ladder; needs a CIRISAgent process"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:steward"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "agent.bond.unbound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:agent_bond"
+    },
+    {
+     "atoms": [
+      "agent.bond.unbound",
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:agent"
+    },
+    {
+     "atoms": [
+      "agent.bond.unbound",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:agent_act"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:agent_bond"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.decided",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.frozen",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.secrets_destroyed",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.handed_over",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.notified",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.custodian_minted",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.retired",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[10]:retirement"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.retired",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "agent.bond.lapsed",
+      "agent.bound",
+      "agent.halt_gate.acting",
+      "agent.retirement.retired",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "An agent retired under the Standard"
+  },
+  "T17": {
+   "buildable_prefix": 13,
+   "file": "T17-takedown-purge.yaml",
+   "initial": [],
+   "promises": [
+    "row.standing.admitted",
+    "row.standing.tombstoned",
+    "blob.custody.purged",
+    "row.scope.family",
+    "row.scope.community"
+   ],
+   "refused": {
+    "rel[10]:purge": "known red: CIRISServer#756 (a filed product defect; --include-known-red builds through it)",
+    "rel[7]:scoped_file": "relation `scoped_file`: route exists, builder branch not written \u2014 POST /v1/files to a family or community cohort (src/drive.rs)",
+    "rel[8]:scoped_file": "relation `scoped_file`: route exists, builder branch not written \u2014 POST /v1/files to a family or community cohort (src/drive.rs)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "household.formed",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:household"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "contact.reachable",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:community"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.held",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.standing.admitted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:file"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.held",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.family",
+      "row.standing.admitted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:scoped_file"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.held",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.community",
+      "row.scope.family",
+      "row.standing.admitted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:scoped_file"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.withdrawn",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.community",
+      "row.scope.family",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:withdraw"
+    },
+    {
+     "atoms": [
+      "blob.custody.purged",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.withdrawn",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.community",
+      "row.scope.family",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "self.roster_size.one"
+     ],
+     "id": "rel[10]:purge"
+    },
+    {
+     "atoms": [
+      "blob.custody.purged",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.withdrawn",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.community",
+      "row.scope.family",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "blob.custody.purged",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "file.withdrawn",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "row.scope.community",
+      "row.scope.family",
+      "row.standing.admitted",
+      "row.standing.tombstoned",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A takedown and a steward purge \u2014 tombstone, dwell, purge; family and community scope"
+  },
+  "T18": {
+   "buildable_prefix": 10,
+   "file": "T18-delegation-ends.yaml",
+   "initial": [],
+   "promises": [
+    "delegation.link.withdrawn",
+    "delegation.link.expired",
+    "grant.state.held",
+    "guardian.bond.none"
+   ],
+   "refused": {
+    "rel[4]:key_grant": "relation `key_grant`: route exists, builder branch not written \u2014 persist emits key_grant:content:v1 per recipient on a sealed share; no read witnesses it yet",
+    "rel[5]:guardian_bond": "relation `guardian_bond`: the guardian bond (CC 3.4.13): no server route writes it \u2014 family roles are free words (src/family_api.rs), CSD-119 drives the route",
+    "rel[6]:delegation": "relation `delegation`: a delegates_to CHAIN between persons (CC 4.4.3.2.8): POST /v1/auth/device/delegate writes owner\u2192actor only, and sub-delegation is the delegate's own act",
+    "rel[7]:delegation_withdraw": "known red: CIRISServer#751 (a filed product defect; --include-known-red builds through it)",
+    "rel[8]:delegation": "relation `delegation`: a delegates_to CHAIN between persons (CC 4.4.3.2.8): POST /v1/auth/device/delegate writes owner\u2192actor only, and sub-delegation is the delegate's own act",
+    "rel[9]:delegation_expire": "known red: CIRISServer#751 (a filed product defect; --include-known-red builds through it)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:guardian"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:child"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "household.formed",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:household"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bond.none",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "grant.state.held",
+      "guardian.bond.none",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:key_grant"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:guardian_bond"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:delegation"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "delegation.link.withdrawn",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:delegation_withdraw"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "delegation.link.withdrawn",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:delegation"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "delegation.link.expired",
+      "delegation.link.withdrawn",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:delegation_expire"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "delegation.link.expired",
+      "delegation.link.withdrawn",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "delegation.chain",
+      "delegation.link.expired",
+      "delegation.link.withdrawn",
+      "grant.state.held",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Delegation ends \u2014 a withdrawal cascades, a term expires; a key grant held; a guardian bond absent and made"
+  },
+  "T19": {
+   "buildable_prefix": 10,
+   "file": "T19-holders-under-coercion.yaml",
+   "initial": [],
+   "promises": [
+    "root.holder_disposition.honest",
+    "root.holder_disposition.coerced",
+    "root.holder_disposition.censored",
+    "root.holder_disposition.lost",
+    "node.announce.announced",
+    "key.revocation.revoked_after",
+    "key.revocation.revoked_all",
+    "key.revocation.none"
+   ],
+   "refused": {
+    "rel[4]:holder": "relation `holder`: route exists, builder branch not written \u2014 the T8 accord machinery: honest signs, lost never signs, coerced signs an invocation the standing rule refuses, censored signs but its rows are withheld past the window",
+    "rel[5]:holder": "relation `holder`: route exists, builder branch not written \u2014 the T8 accord machinery: honest signs, lost never signs, coerced signs an invocation the standing rule refuses, censored signs but its rows are withheld past the window",
+    "rel[6]:holder": "relation `holder`: route exists, builder branch not written \u2014 the T8 accord machinery: honest signs, lost never signs, coerced signs an invocation the standing rule refuses, censored signs but its rows are withheld past the window",
+    "rel[7]:holder": "relation `holder`: route exists, builder branch not written \u2014 the T8 accord machinery: honest signs, lost never signs, coerced signs an invocation the standing rule refuses, censored signs but its rows are withheld past the window",
+    "rel[8]:deadmit": "relation `deadmit`: route exists, builder branch not written \u2014 POST /v1/admin/deadmit (preview/commit; `after` = revoked_after, omitted = revoked_all)",
+    "rel[9]:deadmit": "relation `deadmit`: route exists, builder branch not written \u2014 POST /v1/admin/deadmit (preview/commit; `after` = revoked_after, omitted = revoked_all)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:rooted_with"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:holder"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:holder"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:holder"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.holder_disposition.lost",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:holder"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "key.revocation.revoked_after",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.holder_disposition.lost",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:deadmit"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "key.revocation.revoked_after",
+      "key.revocation.revoked_all",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.holder_disposition.lost",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:deadmit"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "key.revocation.revoked_after",
+      "key.revocation.revoked_all",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.holder_disposition.lost",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "key.revocation.revoked_after",
+      "key.revocation.revoked_all",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.censored",
+      "root.holder_disposition.coerced",
+      "root.holder_disposition.honest",
+      "root.holder_disposition.lost",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Holders under coercion and censorship \u2014 the standing rule holds; an announced node; revoked_after"
+  },
+  "T2": {
+   "buildable_prefix": 18,
+   "file": "T2-pair-room-outsider.yaml",
+   "initial": [],
+   "promises": [
+    "contact.reachable",
+    "contact.added",
+    "room.pair.keyed",
+    "message.delivered",
+    "person.outsider",
+    "node.unannounced",
+    "negatives.held"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:eve"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:rooted_with"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:contact"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:contact"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "room.pair.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:room"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "message.delivered",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "room.pair.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:message"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "message.delivered",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "room.pair.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "neg[0]:cannot_list_room"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "message.delivered",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "room.pair.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "message.delivered",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unannounced",
+      "peer.direct",
+      "person.outsider",
+      "room.pair.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Two people, pair room, one outsider"
+  },
+  "T3": {
+   "buildable_prefix": 25,
+   "file": "T3-second-device-approval.yaml",
+   "initial": [],
+   "promises": [
+    "contact.via_code",
+    "device.join_requested",
+    "device.join_approved",
+    "device.joined",
+    "person.multi_device",
+    "room.self.keyed",
+    "file.held",
+    "roster.visible",
+    "negatives.held"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:eve"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:contact"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.join_requested",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:join_request"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.join_approved",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "node.unclaimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:join_approve"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:join_complete"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[10]:roster"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[11]:room"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[12]:file"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[13]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[14]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "neg[0]:holds_no_row"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.added",
+      "contact.reachable",
+      "contact.via_code",
+      "device.joined",
+      "file.held",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "roster.visible",
+      "row.standing.admitted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Two people, contact by code, second device by approval"
+  },
+  "T4": {
+   "buildable_prefix": 12,
+   "file": "T4-household.yaml",
+   "initial": [],
+   "promises": [
+    "household.formed",
+    "household.member",
+    "child.member",
+    "guardian.bound",
+    "age.assured",
+    "person.multi_device",
+    "room.self.keyed"
+   ],
+   "refused": {
+    "rel[6]:guardian_bond": "relation `guardian_bond`: the guardian bond (CC 3.4.13): no server route writes it \u2014 family roles are free words (src/family_api.rs), CSD-119 drives the route",
+    "rel[7]:age_assurance": "relation `age_assurance`: POST /v1/safety/age-assurance is authorized by the x-ciris-* HYBRID request signature (src/auth/verify.rs), which this harness has no signer for"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "person:guardian"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:child"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:room"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "household.formed",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:household"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bond.none",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:guardian_bond"
+    },
+    {
+     "atoms": [
+      "age.assured",
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:age_assurance"
+    },
+    {
+     "atoms": [
+      "age.assured",
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "age.assured",
+      "canonical.peered",
+      "child.member",
+      "contact.reachable",
+      "guardian.bound",
+      "household.formed",
+      "household.member",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "person.multi_device",
+      "room.self.keyed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A household \u2014 guardian on two devices, one child"
+  },
+  "T5": {
+   "buildable_prefix": 18,
+   "file": "T5-community-quorum.yaml",
+   "initial": [],
+   "promises": [
+    "community.formed",
+    "community.member",
+    "quorum_change.held",
+    "quorum_change.applied",
+    "moderator.named"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:carol"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:community"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:member"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.held",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:quorum_change"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:cosign"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "moderator.named",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:moderator"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "moderator.named",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "moderator.named",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "quorum_change.applied",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A community \u2014 a held quorum change, a moderator duty"
+  },
+  "T6": {
+   "buildable_prefix": 10,
+   "file": "T6-affiliation-delegation.yaml",
+   "initial": [],
+   "promises": [
+    "community.formed",
+    "community.member",
+    "authority.licensing",
+    "delegation.chain"
+   ],
+   "refused": {
+    "rel[4]:authority": "relation `authority`: a licensing authority affiliation (CSD-120\u2013126, the Registry fold): no server route",
+    "rel[5]:delegation": "relation `delegation`: a delegates_to CHAIN between persons (CC 4.4.3.2.8): POST /v1/auth/device/delegate writes owner\u2192actor only, and sub-delegation is the delegate's own act"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:authority"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:practitioner"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:community"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:member"
+    },
+    {
+     "atoms": [
+      "authority.licensing",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:authority"
+    },
+    {
+     "atoms": [
+      "authority.licensing",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "delegation.chain",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:delegation"
+    },
+    {
+     "atoms": [
+      "authority.licensing",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "delegation.chain",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "authority.licensing",
+      "canonical.peered",
+      "community.formed",
+      "community.member",
+      "contact.reachable",
+      "delegation.chain",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "An affiliation \u2014 licensing authority, delegation chain"
+  },
+  "T7": {
+   "buildable_prefix": 5,
+   "file": "T7-agent-steward-wa.yaml",
+   "initial": [],
+   "promises": [
+    "agent.bound",
+    "steward.bonded",
+    "wa.present"
+   ],
+   "refused": {
+    "rel[0]:agent": "relation `agent`: a CIRISAgent process hard-bound to the node: the server serves no agent routes without one (src/py_adapter.rs proxy_routes); halt_agent drives an EXTERNAL agent",
+    "rel[1]:steward": "relation `steward`: the agent's steward bond (CSD-115): no route yet",
+    "rel[2]:wise_authority": "relation `wise_authority`: a Wise Authority (CIRISAgent `wa`): no server route"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "person:steward"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:agent"
+    },
+    {
+     "atoms": [
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "steward.bonded"
+     ],
+     "id": "rel[1]:steward"
+    },
+    {
+     "atoms": [
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "steward.bonded",
+      "wa.present"
+     ],
+     "id": "rel[2]:wise_authority"
+    },
+    {
+     "atoms": [
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "steward.bonded",
+      "wa.present"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "agent.bound",
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.key",
+      "root.rooted",
+      "self.roster_size.one",
+      "steward.bonded",
+      "values.ready",
+      "wa.present"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "An agent under a steward with a Wise Authority"
+  },
+  "T8": {
+   "buildable_prefix": 15,
+   "file": "T8-accord-halt.yaml",
+   "initial": [],
+   "promises": [
+    "root.infrastructure",
+    "root.rooted",
+    "pair.rooted",
+    "root.halted",
+    "root.halt_confirmed",
+    "root.resumed"
+   ],
+   "refused": {},
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:rooted_with"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.halted",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:halt"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.halt_confirmed",
+      "root.halted",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:confirm"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:resume"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "pair.rooted",
+      "peer.direct",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "A trust root with M-of-N holders \u2014 halt, confirm, resume"
+  },
+  "T9": {
+   "buildable_prefix": 1,
+   "file": "T9-two-roots-outsider.yaml",
+   "initial": [],
+   "promises": [
+    "root.two",
+    "root.key",
+    "root.infrastructure",
+    "party.outside_roots"
+   ],
+   "refused": {
+    "canonical:C2": "a canonical beyond the first (C2): one root per mesh \u2014 mint_accord_root rewrites the mesh's base env, so a second root cannot share it"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.key",
+      "root.rooted"
+     ],
+     "id": "canonical:C1"
+    },
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C2"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "party.outside_roots",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "party.outside_roots",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "node.unclaimed",
+      "party.outside_roots",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:bob"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:zed"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:reachable"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "contact.reachable",
+      "key.holder.owner",
+      "key.revocation.none",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "party.outside_roots",
+      "person.outsider",
+      "root.infrastructure",
+      "root.key",
+      "root.liveness.live",
+      "root.rooted",
+      "root.two",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "Two roots and a party outside both"
+  }
+ }
+}
