@@ -18,17 +18,41 @@ description: >-
   `msg_reply_latest` — the agent row whose id is `<message_id>_response`
   (ChatTranscriptTags.latestExchangeTags), which does not exist until this
   message's reply lands. An earlier flow's reply cannot pass for it.
+  AN OLDER AGENT SKIPS, NAMED, AND COUNTED. The released agent (2.16.2) has
+  no GET /v1/agent/attachments/policy and no per-file outcomes. The first
+  step reads what the client got from that route when chat opened
+  (`interact_attachment_policy`, AttachmentPolicySource.probe) and must see
+  either `live` or the bare-404 words "agent older than the attachments
+  policy route"; every later step is optional and requires `live`, so on an
+  older agent they SKIP with that reason in the line, and the three skips are
+  this flow's row in optional_skips_baseline.json. Any other answer — a failed
+  read (`unavailable`), a read never made (`pending`) — fails the first step:
+  only the 404 is a skip.
   NOT asserted: what a refusal looks like on a sent chip
   (InteractAttachmentPolicyTest pins every reason id against a real socket),
   and the picker itself (a native dialog the harness cannot drive).
 client: ">0.5.229"
 
 steps:
+  - step_id: the_agent_attachments_policy
+    title: The client read the agent's attachment policy, or the agent is older than the route
+    requires:
+      screen: Interact
+    do:
+      - wait: interact_attachment_policy
+        wait_ms: 2500
+    expect:
+      one_of:
+        interact_attachment_policy: ["live", "agent older than the attachments policy route"]
+
   - step_id: three_files_on_the_paperclip
     title: The three files ride the paperclip, and none is refused before send
+    optional_step: true
     requires:
       screen: Interact
       visible: [input_message]
+      one_of:
+        interact_attachment_policy: ["live"]
     do:
       - attach: {notes.pdf: "CIRIS-ATTACH-217A0F01"}
       - attach: {notes.docx: "CIRIS-ATTACH-217B0D02"}
@@ -41,6 +65,10 @@ steps:
 
   - step_id: the_files_are_sent
     title: Send carries them, and each is a chip on this flow's own sent message
+    optional_step: true
+    requires:
+      one_of:
+        interact_attachment_policy: ["live"]
     description: >-
       `msg_user_latest` already names an earlier flow's message before the
       send, so the wait is on the third chip of the newest user row — only
@@ -55,6 +83,10 @@ steps:
 
   - step_id: the_reply_gives_both_references
     title: The reply to this message gives both documents' references, and no file came back refused
+    optional_step: true
+    requires:
+      one_of:
+        interact_attachment_policy: ["live"]
     description: >-
       Up to 4 x 45 s, as csd_010_interact_chat's reply. A `_note` under a chip
       is the agent's refusal (or a cut document) for that file, so each is

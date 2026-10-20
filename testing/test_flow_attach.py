@@ -155,3 +155,58 @@ def test_the_prompt_asks_for_the_reference_the_fixture_files():
     prompts = [a.value for s in FlowSpec.load(FLOW).steps for a in s.do if a.kind == "input"]
     assert any("library catalogue reference" in p for p in prompts), prompts
     assert not any("code word" in p for p in prompts)
+
+
+# ── the honest skip on an agent older than the policy route ─────────────────
+
+TOO_OLD = "agent older than the attachments policy route"
+PROBE = "interact_attachment_policy"
+
+
+def test_the_probe_is_the_first_step_and_admits_only_live_or_the_bare_404():
+    first = FlowSpec.load(FLOW).steps[0]
+    assert not first.optional_step, "the probe itself must never skip"
+    assert first.expect.one_of == {PROBE: ["live", TOO_OLD]}
+
+
+def test_every_later_step_skips_only_when_the_probe_is_not_live():
+    for step in FlowSpec.load(FLOW).steps[1:]:
+        assert step.optional_step, step.step_id
+        assert step.requires.one_of == {PROBE: ["live"]}, step.step_id
+
+
+def test_the_probe_words_are_the_clients():
+    src = (REPO / "client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/AgentAttachments.kt").read_text()
+    assert f'FALLBACK_AGENT_TOO_OLD("{TOO_OLD}")' in src and 'AGENT("live")' in src
+
+
+def _run_probe(probe_text):
+    spec = FlowSpec.load(FLOW)
+    tags = {PROBE: probe_text, "input_message": "", "btn_send": ""}
+    helper = _AttachingHelper("Interact", tags)
+    return asyncio.run(run_flows.run_one(spec, helper, client_version="0.5.230", start_timeout=0)), helper
+
+
+def test_a_bare_404_skips_every_file_step_with_the_named_reason():
+    out, helper = _run_probe(TOO_OLD)
+    assert out.status == run_flows.PASS, out
+    steps = [s["status"] for s in out.steps]
+    assert steps == ["pass", "skipped", "skipped", "skipped"], steps
+    assert all(TOO_OLD in s["detail"] for s in out.steps[1:]), [s["detail"] for s in out.steps[1:]]
+    assert helper.attached == [], "nothing may be attached on an agent that cannot read it"
+
+
+@pytest.mark.parametrize("probe_text", ["unavailable", "pending", ""])
+def test_any_other_policy_answer_fails_the_flow_instead_of_skipping(probe_text):
+    out, helper = _run_probe(probe_text)
+    assert out.status == run_flows.FAIL, out
+    assert [s["status"] for s in out.steps] == ["fail"]
+    assert helper.attached == []
+
+
+def test_the_skips_are_counted_in_the_baseline_on_every_with_ai_leg():
+    import json
+
+    base = json.loads((REPO / "testing/flows/optional_skips_baseline.json").read_text())
+    for leg in ("linux-ai", "windows-ai", "ios-ai"):
+        assert base[leg]["csd_010_interact_files"] == 3, leg
