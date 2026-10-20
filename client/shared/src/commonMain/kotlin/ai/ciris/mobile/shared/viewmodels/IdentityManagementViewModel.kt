@@ -40,6 +40,8 @@ sealed interface ReleaseState {
     data class Working(val node: OwnedNodeDto, val force: Boolean) : ReleaseState
     /** Done. [releasedSelf]: the node released was the one answering, and this session ended with it. */
     data class Released(val nodeKeyId: String, val releasedSelf: Boolean) : ReleaseState
+    /** 0.5.232: the self roster's door HELD the release as a proposal — pending, not done and not failed. */
+    data class Held(val nodeKeyId: String) : ReleaseState
     /** The node refused by name (`self.not_your_node`, `self.release_incomplete`, …). */
     data class Refused(val node: OwnedNodeDto, val refusal: NodeRefusal) : ReleaseState
     /**
@@ -76,6 +78,12 @@ sealed interface RevokeState {
     data class Working(val occurrenceKeyId: String, val force: Boolean) : RevokeState
     /** Done. [releasedSelf]: the device evicted was the one answering. [history]: the node's own sentence. */
     data class Revoked(val occurrenceKeyId: String, val releasedSelf: Boolean, val history: String?) : RevokeState
+    /**
+     * 0.5.232 (CC 3.3.6.3): from a roster of two the self roster's door HOLDS
+     * an eviction as a proposal (`held: true`, `occurrences_held`). The device
+     * stays in the self until it lands (CIRISServer#794) — held, not done.
+     */
+    data class Held(val occurrenceKeyId: String) : RevokeState
     /**
      * Part of the eviction did not finish (`self.evict_incomplete`, 500): the
      * node's report, part by part. What was done stays done; Try again re-runs
@@ -464,7 +472,11 @@ class IdentityManagementViewModel(
         viewModelScope.launch {
             try {
                 val result = devices.revokeOccurrence(keyId, occurrenceKeyId, null, force)
-                _revoke.value = RevokeState.Revoked(occurrenceKeyId, result.releasedSelf, result.history)
+                _revoke.value = if (result.held || result.occurrencesHeld.isNotEmpty()) {
+                    RevokeState.Held(occurrenceKeyId)
+                } else {
+                    RevokeState.Revoked(occurrenceKeyId, result.releasedSelf, result.history)
+                }
                 refreshRoster(keyId)
             } catch (e: NodeRefusal) {
                 PlatformLogger.w(TAG, "[revoke] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode} force=$force")
@@ -700,7 +712,11 @@ class IdentityManagementViewModel(
         viewModelScope.launch {
             try {
                 val result = devices.releaseNode(node.keyId, force)
-                _release.value = ReleaseState.Released(node.keyId, result.releasedSelf)
+                _release.value = if (result.held || result.occurrencesHeld.isNotEmpty()) {
+                    ReleaseState.Held(node.keyId)
+                } else {
+                    ReleaseState.Released(node.keyId, result.releasedSelf)
+                }
                 refreshOwnedNodes()
             } catch (e: NodeRefusal) {
                 PlatformLogger.w(TAG, "[release] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")

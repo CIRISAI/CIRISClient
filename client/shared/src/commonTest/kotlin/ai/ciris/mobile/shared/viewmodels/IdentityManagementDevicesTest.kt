@@ -11,6 +11,7 @@ import ai.ciris.mobile.shared.models.federation.OwnedNodesDto
 import ai.ciris.mobile.shared.models.federation.ReleaseNodeResponse
 import ai.ciris.mobile.shared.models.federation.RevokeOccurrenceResponse
 import ai.ciris.mobile.shared.models.federation.EvictPart
+import ai.ciris.mobile.shared.models.federation.HeldOccurrence
 import ai.ciris.mobile.shared.models.federation.EvictionReport
 import ai.ciris.mobile.shared.ui.screens.evictPartKey
 import ai.ciris.mobile.shared.models.federation.SelfOccurrence
@@ -57,6 +58,12 @@ private class FakeDevices(
     override suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse {
         releases += nodeKeyId to forceSelf
         releaseError(nodeKeyId, forceSelf)?.let { throw it }
+        if (releaseHeld) {
+            return ReleaseNodeResponse(
+                nodeKeyId, released = false, held = true,
+                occurrencesHeld = listOf(HeldOccurrence(nodeKeyId, "self_roster:proposal")),
+            )
+        }
         nodes = nodes.filterNot { it.keyId == nodeKeyId }
         return ReleaseNodeResponse(nodeKeyId, released = true, releasedSelf = nodeKeyId == THIS_NODE)
     }
@@ -65,6 +72,9 @@ private class FakeDevices(
     /** What the node says to a revoke of [occurrenceKeyId] sent with/without force (null = it completes). */
     var revokeError: (occurrenceKeyId: String, force: Boolean) -> NodeRefusal? = { _, _ -> null }
     val revokes = mutableListOf<Triple<String, String, Boolean>>()
+    /** The self roster's door holds the eviction as a proposal (persist v59, CC 3.3.6.3). */
+    var revokeHeld = false
+    var releaseHeld = false
     override suspend fun revokeOccurrence(
         identityKeyId: String,
         occurrenceKeyId: String,
@@ -73,6 +83,14 @@ private class FakeDevices(
     ): RevokeOccurrenceResponse {
         revokes += Triple(identityKeyId, occurrenceKeyId, forceSelf)
         revokeError(occurrenceKeyId, forceSelf)?.let { throw it }
+        if (revokeHeld) {
+            // CIRISServer#798 `src/self_devices.rs:880-893`: from a roster of two the door HOLDS it.
+            return RevokeOccurrenceResponse(
+                identityKeyId = identityKeyId, occurrenceKeyId = occurrenceKeyId, revoked = false, held = true,
+                occurrencesHeld = listOf(HeldOccurrence(occurrenceKeyId, "self_roster:proposal")),
+                history = "Already-shared history stays readable by the evicted device.",
+            )
+        }
         rows = rows.map { if (it.occurrenceKeyId == occurrenceKeyId) it.copy(revoked = true) else it }
         return RevokeOccurrenceResponse(
             identityKeyId = identityKeyId,
@@ -294,6 +312,26 @@ class IdentityManagementDevicesTest {
         val done = assertIs<RevokeState.Revoked>(vm.revoke.value)
         assertEquals(false, done.releasedSelf)
         assertEquals(listOf(true), vm.occurrences.value.map { it.revoked }, "the roster is re-read after an eviction")
+    }
+
+    @Test
+    fun aHeldEvictionIsShownHeldNotDone() {
+        val devices = FakeDevices(rows = listOf(row("laptop-key"))).apply { revokeHeld = true }
+        val vm = vm(devices)
+        vm.askRevoke("laptop-key")
+        vm.confirmRevoke()
+        val held = assertIs<RevokeState.Held>(vm.revoke.value)
+        assertEquals("laptop-key", held.occurrenceKeyId)
+        assertEquals(listOf(false), vm.occurrences.value.map { it.revoked }, "a held device stays in the self until the proposal lands")
+    }
+
+    @Test
+    fun aHeldReleaseIsShownHeldNotReleased() {
+        val devices = FakeDevices().apply { releaseHeld = true }
+        val vm = vm(devices)
+        vm.askRelease(OTHER_NODE)
+        vm.confirmRelease()
+        assertEquals(ReleaseState.Held(OTHER_NODE), vm.release.value)
     }
 
     @Test

@@ -1093,6 +1093,8 @@ private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onRetry: ()
         } else {
             localizedString("mobile.identity_released", "node", truncMid(state.nodeKeyId)) to false
         }
+        // CIRISServer#798: the self roster's door held it as a proposal — pending, not an error.
+        is ReleaseState.Held -> localizedString("mobile.identity_release_held", "node", truncMid(state.nodeKeyId)) to false
         is ReleaseState.NeedsForce -> localizedString("mobile.identity_release_self_body") to true
         is ReleaseState.Refused -> refusalText(state.refusal) to true
         is ReleaseState.Working -> localizedString("mobile.common_loading") to false
@@ -1170,6 +1172,13 @@ private fun RevokeOutcome(state: RevokeState, onForce: () -> Unit, onRetry: () -
             localizedString("mobile.evict_history_note"),
             false,
         )
+        // CIRISServer#798 (CC 3.3.6.3): from a roster of two the eviction is a HELD
+        // proposal — the device stays in your self until it lands. Held, not done.
+        is RevokeState.Held -> Triple(
+            localizedString("mobile.identity_revoke_held", "device", truncMid(state.occurrenceKeyId)),
+            localizedString("mobile.identity_roster_held_body"),
+            false,
+        )
         is RevokeState.NeedsForce -> Triple(
             localizedString("mobile.identity_revoke_self_title"),
             localizedString("mobile.identity_revoke_self_body"),
@@ -1181,7 +1190,11 @@ private fun RevokeOutcome(state: RevokeState, onForce: () -> Unit, onRetry: () -
     CardShell(
         modifier = Modifier.padding(vertical = 8.dp),
         tag = "identity_revoke_outcome",
-        accent = if (isError) t.danger else t.ok,
+        accent = when {
+            isError -> t.danger
+            state is RevokeState.Held -> t.mute
+            else -> t.ok
+        },
     ) {
         Text(
             title,

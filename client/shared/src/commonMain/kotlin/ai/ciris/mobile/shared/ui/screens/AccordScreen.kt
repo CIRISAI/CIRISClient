@@ -119,6 +119,13 @@ private sealed interface AccordSheet {
      * (FSD/FINAL_GENESIS.md), the 2-of-3 portable seed before it (FSD/MESH_GENESIS.md).
      */
     data object RemintTrustRoot : AccordSheet
+    /**
+     * Re-scrub the trust root: the 2-of-3 AMEND of the pinned bundle (CC 5.3.4;
+     * the steward's ruling on CIRISConstitution#172; CIRISServer#798) — the
+     * bundle carried byte for byte, each canonical's transit row added. The
+     * same sheet and view model as the re-mint, in amend mode.
+     */
+    data object RescrubTrustRoot : AccordSheet
     data object Drill : AccordSheet
     data object Halt : AccordSheet
     data object Announce : AccordSheet
@@ -236,6 +243,11 @@ fun AccordScreen(
                                 add(
                                     NewAttestationAction("remint_trust_root", "mobile.accord_new_remint_trust_root") {
                                         sheet = AccordSheet.RemintTrustRoot
+                                    },
+                                )
+                                add(
+                                    NewAttestationAction("rescrub_trust_root", "mobile.accord_new_rescrub_trust_root") {
+                                        sheet = AccordSheet.RescrubTrustRoot
                                     },
                                 )
                                 add(
@@ -560,6 +572,12 @@ fun AccordScreen(
             } else {
                 FinalGenesisSheet(finalGenesis) { sheet = null }
             }
+        }
+        is AccordSheet.RescrubTrustRoot -> {
+            // Decided by the ROUTE: a bare 404 on GET …/final-genesis/amend is a
+            // node older than the amend, named in the sheet (AmendPhase.TooOld).
+            LaunchedEffect(Unit) { finalGenesis.openAmend() }
+            FinalGenesisSheet(finalGenesis, onDismiss = { sheet = null }, amend = true)
         }
         is AccordSheet.Drill -> DrillSheet(viewModel, holders, busy) { sheet = null }
         is AccordSheet.Halt -> HaltSheet(viewModel, holders, busy) { sheet = null }

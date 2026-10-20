@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto
+import ai.ciris.mobile.shared.viewmodels.AmendPhase
 import ai.ciris.mobile.shared.models.federation.FinalGenesisGrid
 import ai.ciris.mobile.shared.models.federation.FinalGenesisItems
 import ai.ciris.mobile.shared.models.federation.FinalGenesisRefusal
@@ -99,7 +100,12 @@ import kotlinx.coroutines.delay
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit) {
+internal fun FinalGenesisSheet(
+    vm: FinalGenesisViewModel,
+    /** Re-scrub: the 2-of-3 AMEND of the pinned bundle (CC 5.3.4, CIRISServer#798) instead of the full ceremony. */
+    amend: Boolean = false,
+    onDismiss: () -> Unit,
+) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val phase by vm.phase.collectAsState()
@@ -107,15 +113,18 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
     val refusal by vm.refusal.collectAsState()
     val confirm by vm.confirm.collectAsState()
     val nodeWait by vm.nodeWait.collectAsState()
+    val amendPhase by vm.amendPhase.collectAsState()
+    val amendRefusal by vm.amendRefusal.collectAsState()
+    val amendConfirmReplace by vm.amendConfirmReplace.collectAsState()
 
     // The node drives the grid: re-read while a ceremony is planned, so the
     // other holders' signatures appear here without anyone pressing anything.
-    val polling = phase is FinalGenesisPhase.Planned
-    LaunchedEffect(polling) {
+    val polling = if (amend) amendPhase is AmendPhase.Planned else phase is FinalGenesisPhase.Planned
+    LaunchedEffect(polling, amend) {
         while (polling) {
             delay(5_000)
             // Awaited: the next poll starts only after this one has landed.
-            vm.refresh().join()
+            if (amend) vm.refreshAmend().join() else vm.refresh().join()
         }
     }
 
@@ -133,14 +142,29 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
                 .statusBarsPadding()
                 .padding(horizontal = 18.dp, vertical = 14.dp).navigationBarsPadding(),
         ) {
-            Text(localizedString("mobile.final_genesis_title"), style = type.title, color = t.ink)
+            Text(
+                localizedString(if (amend) "mobile.final_genesis_amend_title" else "mobile.final_genesis_title"),
+                style = type.title,
+                color = t.ink,
+            )
             Spacer(Modifier.height(4.dp))
             Column(
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = false)
                     .testableVerticalScroll(name = "sheet_final_genesis"),
             ) {
-                Text(localizedString("mobile.final_genesis_desc"), style = type.body, color = t.dim)
+                Text(
+                    localizedString(if (amend) "mobile.final_genesis_amend_desc" else "mobile.final_genesis_desc"),
+                    style = type.body,
+                    color = t.dim,
+                )
                 Spacer(Modifier.height(10.dp))
+                if (amend) {
+                    amendRefusal?.let { r ->
+                        RefusalBlock(r, tag = "final_genesis_amend_error")
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    AmendBody(vm, amendPhase)
+                } else {
                 refusal?.let { r ->
                     RefusalBlock(r, tag = "final_genesis_error")
                     Spacer(Modifier.height(10.dp))
@@ -174,6 +198,7 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
                         vm.grid()?.let { GridSection(vm, it) }
                     }
                     is FinalGenesisPhase.Finished -> FinishedSection(p.result)
+                }
                 }
             }
             Spacer(Modifier.height(12.dp))
@@ -212,6 +237,21 @@ internal fun FinalGenesisSheet(vm: FinalGenesisViewModel, onDismiss: () -> Unit)
         )
         null -> Unit
     }
+    if (amend && amendConfirmReplace) {
+        ConfirmSheet(
+            title = localizedString("mobile.final_genesis_amend_replace_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.final_genesis_replace_fact_discards"), localizedString("mobile.final_genesis_amend_replace_discards")),
+                ConfirmFact(localizedString("mobile.final_genesis_replace_fact_resign"), localizedString("mobile.final_genesis_amend_replace_resign")),
+                ConfirmFact(localizedString("mobile.final_genesis_amend_replace_fact_bundle"), localizedString("mobile.final_genesis_amend_replace_bundle")),
+            ),
+            confirmLabel = localizedString("mobile.final_genesis_replace_confirm"),
+            onConfirm = { vm.confirmAmendReplace() },
+            onDismiss = { vm.dismissAmendReplace() },
+            destructive = true,
+            tagPrefix = "final_genesis_amend_replace",
+        )
+    }
 }
 
 /** A tag-safe suffix: `A1` → `a1`, `record:ciris-canonical-1` → `record_ciris_canonical_1`. */
@@ -228,7 +268,7 @@ internal fun finalGenesisRefusalText(r: FinalGenesisRefusal): String {
 }
 
 @Composable
-private fun RefusalBlock(r: FinalGenesisRefusal, tag: String) {
+internal fun RefusalBlock(r: FinalGenesisRefusal, tag: String) {
     val title = finalGenesisRefusalText(r)
     StateBlock(
         ListState.Error(
@@ -241,7 +281,7 @@ private fun RefusalBlock(r: FinalGenesisRefusal, tag: String) {
 }
 
 @Composable
-private fun SectionTitle(text: String) {
+internal fun SectionTitle(text: String) {
     Text(text.uppercase(), style = CirisTheme.type.label, color = CirisTheme.tokens.mute)
     Spacer(Modifier.height(6.dp))
 }
@@ -313,7 +353,7 @@ private fun ModulePathField(tag: String, value: String, onValueChange: (String) 
 }
 
 /** What a holder types for one token session: the USB directory, the PIN, the PIV slot, the module. */
-private class TokenInputs(usb: String = "", pin: String = "", slot: String = DEFAULT_PIV_SLOT, module: String = "") {
+internal class TokenInputs(usb: String = "", pin: String = "", slot: String = DEFAULT_PIV_SLOT, module: String = "") {
     var usb by mutableStateOf(usb)
     var pin by mutableStateOf(pin)
     var slot by mutableStateOf(slot)
@@ -323,13 +363,13 @@ private class TokenInputs(usb: String = "", pin: String = "", slot: String = DEF
 /**
  * The inputs one YubiKey + USB session needs, with what a person at the
  * console needs to know (Eric, live, 0.5.227): which holder's token to insert,
- * a folder picker for the USB key — and whether `<holder>.mldsa65.seed.blob`
+ * a folder picker for the USB key — and whether `<holder>.ciris-mldsa-usb.json`
  * is in the folder picked — the PIN named as the YubiKey PIV PIN, the PIV slot
  * (usually 9c), and a PIN-tries warning from the node's last refusal, large and
  * next to the PIN, not in the refusal's small print.
  */
 @Composable
-private fun TokenForm(
+internal fun TokenForm(
     holder: String,
     inputs: TokenInputs,
     usbTag: String,
@@ -790,7 +830,7 @@ private fun HolderCard(vm: FinalGenesisViewModel, grid: FinalGenesisGrid, holder
 }
 
 @Composable
-private fun NoteText(text: String, tone: Tone, slug: String) {
+internal fun NoteText(text: String, tone: Tone, slug: String) {
     Spacer(Modifier.height(6.dp))
     Text(text, style = CirisTheme.type.body, color = CirisTheme.tokens.tone(tone), modifier = Modifier.testable("final_genesis_note_$slug", text))
 }
@@ -798,13 +838,25 @@ private fun NoteText(text: String, tone: Tone, slug: String) {
 // ── 4: finished ─────────────────────────────────────────────────────────────
 
 @Composable
-private fun FinishedSection(r: FinalGenesisFinishDto) {
+internal fun FinishedSection(r: FinalGenesisFinishDto) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val clipboard = LocalClipboardManager.current
     Text(localizedString("mobile.final_genesis_done_title"), style = type.title, color = t.ok,
         modifier = Modifier.testable("final_genesis_done_title"))
     Spacer(Modifier.height(6.dp))
+    // The amend's finish (CIRISServer#798): version 4, and the canonicals whose transit pair it seeds.
+    r.version?.let { v ->
+        FieldRow(label = localizedString("mobile.final_genesis_done_version"), value = v.toString(), tag = "final_genesis_done_version")
+    }
+    if (r.mode == "amend" || r.serveTransportDestinations.isNotEmpty()) {
+        FieldRow(
+            label = localizedString("mobile.final_genesis_done_seeded"),
+            value = r.serveTransportDestinations.joinToString(", "),
+            mono = true,
+            tag = "final_genesis_done_seeded",
+        )
+    }
     FieldRow(
         label = localizedString("mobile.final_genesis_done_sha"),
         value = r.bundleSha256,
