@@ -480,7 +480,7 @@ class InteractViewModel(
      */
     private val _attachmentPolicy = MutableStateFlow(AttachmentPolicy.CLIENT_FALLBACK)
     val attachmentPolicy: StateFlow<AttachmentPolicy> = _attachmentPolicy.asStateFlow()
-    private val _attachmentPolicySource = MutableStateFlow(AttachmentPolicySource.FALLBACK_UNAVAILABLE)
+    private val _attachmentPolicySource = MutableStateFlow(AttachmentPolicySource.PENDING)
     val attachmentPolicySource: StateFlow<AttachmentPolicySource> = _attachmentPolicySource.asStateFlow()
 
     /** Read the policy now (chat opening calls [refreshAttachmentPolicy]). */

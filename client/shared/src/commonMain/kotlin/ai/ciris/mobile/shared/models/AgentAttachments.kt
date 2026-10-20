@@ -118,13 +118,22 @@ data class AttachmentPolicy(
 }
 
 /** Where the policy in force came from. */
-enum class AttachmentPolicySource {
+enum class AttachmentPolicySource(
+    /**
+     * The text of the `interact_attachment_policy` automation tag. The with-AI
+     * files flow skips ONLY on [FALLBACK_AGENT_TOO_OLD]'s words (a bare 404);
+     * every other source is a different word, so it fails instead.
+     */
+    val probe: String,
+) {
     /** Read from the agent. */
-    AGENT,
+    AGENT("live"),
     /** The agent answered a bare 404: older than the route. Client constants. */
-    FALLBACK_AGENT_TOO_OLD,
-    /** Not read yet, or the read failed. Client constants. */
-    FALLBACK_UNAVAILABLE,
+    FALLBACK_AGENT_TOO_OLD("agent older than the attachments policy route"),
+    /** The read failed (not a 404). Client constants. */
+    FALLBACK_UNAVAILABLE("unavailable"),
+    /** Not read yet. Client constants. */
+    PENDING("pending"),
 }
 
 /**

@@ -214,6 +214,7 @@ fun InteractScreen(
     val attachedFiles by viewModel.attachedFiles.collectAsState()
     val attachmentRefused by viewModel.attachmentRefused.collectAsState()
     val attachmentPolicy by viewModel.attachmentPolicy.collectAsState()
+    val attachmentPolicySource by viewModel.attachmentPolicySource.collectAsState()
     val shedState by viewModel.shedState.collectAsState()
     val pipelineState by viewModel.pipelineState.collectAsState()
     val pendingDeferrals by viewModel.pendingDeferrals.collectAsState()
@@ -737,6 +738,7 @@ fun InteractScreen(
                 onAttach = { showFilePicker = true },
                 onRemoveAttachment = { viewModel.removeAttachment(it) },
                 canAttachMore = attachmentPolicy.hasRoom(attachedFiles),
+                policyProbe = attachmentPolicySource.probe,
                 theme = theme,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -2528,6 +2530,7 @@ internal fun ChatInputBarWithBubbles(
     onAttach: () -> Unit = {},
     onRemoveAttachment: (Int) -> Unit = {},
     canAttachMore: Boolean = attachedFiles.size < PickedFile.MAX_ATTACHMENTS,
+    policyProbe: String = ai.ciris.mobile.shared.models.AttachmentPolicySource.PENDING.probe,
     theme: InteractTheme = InteractTheme.forLiveBackground(false),
     modifier: Modifier = Modifier
 ) {
@@ -2580,7 +2583,10 @@ internal fun ChatInputBarWithBubbles(
                         imageVector = CIRISIcons.add,
                         contentDescription = localizedString("mobile.interact_attach_file"),
                         tint = if (enabled) theme.textSecondary else theme.inputButtonDisabled,
-                        modifier = Modifier.size(20.dp)
+                        // Read-only automation tag: where the paperclip's limits came
+                        // from (AttachmentPolicySource.probe). The with-AI files flow
+                        // skips only on the bare-404 words (CIRISClient#217).
+                        modifier = Modifier.size(20.dp).testable("interact_attachment_policy", policyProbe)
                     )
                 }
 
