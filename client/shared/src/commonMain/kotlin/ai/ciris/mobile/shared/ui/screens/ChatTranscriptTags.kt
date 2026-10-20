@@ -78,3 +78,23 @@ internal fun transcriptTestTags(messages: List<ChatMessage>): List<String> {
         "msg_${role}_$ordinal"
     }
 }
+
+/**
+ * Extra tags for the newest exchange (CIRISClient#217): message id → tag.
+ * The newest USER row is `msg_user_latest` (its file chips are also
+ * `msg_user_latest_attachment_<i>`), and the AGENT row whose id is
+ * `<that id>_response` — the agent's own id convention for the reply to a
+ * message (routes/agent.py history; InteractViewModel mints the same) — is
+ * `msg_reply_latest`. Matched by id, never by position: until THIS message's
+ * reply lands there is no `msg_reply_latest`, so an earlier reply cannot pass
+ * for it. Added beside the ordinal tag, not instead of it.
+ */
+internal fun latestExchangeTags(messages: List<ChatMessage>): Map<String, String> {
+    val user = messages.lastOrNull { it.type == MessageType.USER } ?: return emptyMap()
+    val replyId = "${user.id}_response"
+    val reply = messages.firstOrNull { it.type == MessageType.AGENT && it.id == replyId }
+    return buildMap {
+        put(user.id, "msg_user_latest")
+        if (reply != null) put(reply.id, "msg_reply_latest")
+    }
+}

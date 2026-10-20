@@ -1845,6 +1845,7 @@ private fun ChatMessageList(
         val taggedRows = remember(messages) {
             messages.zip(transcriptTestTags(messages)).asReversed()
         }
+        val latestTags = remember(messages) { latestExchangeTags(messages) }
 
         LazyColumn(
             state = listState,
@@ -1877,9 +1878,17 @@ private fun ChatMessageList(
                 // only here: reverseLayout plus the auto-scroll below pins the
                 // NEWEST rows on screen, which is what an assertion about a
                 // reply is looking at.
+                // Plus `msg_user_latest` / `msg_reply_latest` for the newest
+                // exchange, matched by id (latestExchangeTags, CIRISClient#217),
+                // so a flow can name its own message and the reply to it.
+                val latest = latestTags[message.id]
                 val row = Modifier.testable(tag, message.text)
+                    .let { if (latest != null) it.testable(latest, message.text) else it }
                 when (message.type) {
-                    MessageType.USER -> UserChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate, rowTag = tag)
+                    MessageType.USER -> UserChatBubble(
+                        message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate,
+                        rowTag = tag, latestTag = latest,
+                    )
                     MessageType.AGENT -> AgentChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
                     MessageType.SYSTEM -> SystemMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
                     MessageType.ERROR -> ErrorMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
@@ -1912,6 +1921,8 @@ private fun UserChatBubble(
     onModerate: ((String) -> Unit)? = null,
     /** The row's transcript tag (`msg_user_<n>`); its file chips are `<rowTag>_attachment_<i>`. */
     rowTag: String = "msg_user",
+    /** `msg_user_latest` when this is the newest user row; its chips then also carry `msg_user_latest_attachment_<i>`. */
+    latestTag: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -1958,6 +1969,7 @@ private fun UserChatBubble(
                     hasDocs = message.hasDocumentAttachments,
                     tintColor = Color(0xFFDBEAFE),
                     chipTagPrefix = "${rowTag}_attachment",
+                    latestChipTagPrefix = latestTag?.let { "${it}_attachment" },
                     sent = message.sentAttachments,
                 )
             }
@@ -2751,6 +2763,7 @@ private fun MessageAttachmentRow(
     tintColor: Color,
     chipTagPrefix: String,
     sent: List<ai.ciris.mobile.shared.models.SentAttachment>,
+    latestChipTagPrefix: String? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -2778,7 +2791,7 @@ private fun MessageAttachmentRow(
             fontWeight = FontWeight.Medium
         )
     }
-    SentAttachmentChips(sent, chipTagPrefix, tintColor)
+    SentAttachmentChips(sent, chipTagPrefix, tintColor, latestChipTagPrefix)
 }
 
 /**
@@ -2786,19 +2799,26 @@ private fun MessageAttachmentRow(
  * it (CIRISClient#217): a refusal is said by its reason id
  * (`mobile.interact_attachment_reason_<id>`), a cut document is marked, and
  * nothing is said for a file the agent read whole. Tags:
- * `msg_user_<n>_attachment_<i>` (the file) and `..._note` (the verdict).
+ * `msg_user_<n>_attachment_<i>` (the file) and `..._note` (the verdict); on the
+ * newest user row also `msg_user_latest_attachment_<i>[_note]`.
  */
 @Composable
-private fun SentAttachmentChips(sent: List<ai.ciris.mobile.shared.models.SentAttachment>, tagPrefix: String, tintColor: Color) {
+private fun SentAttachmentChips(
+    sent: List<ai.ciris.mobile.shared.models.SentAttachment>,
+    tagPrefix: String,
+    tintColor: Color,
+    latestTagPrefix: String? = null,
+) {
     sent.forEachIndexed { i, s ->
         val tag = "${tagPrefix}_$i"
+        val alt = latestTagPrefix?.let { "${it}_$i" }
         Column(modifier = Modifier.padding(top = 2.dp)) {
             Text(
                 text = s.name,
                 fontSize = 11.sp,
                 color = tintColor,
                 fontWeight = FontWeight.Medium,
-                modifier = Modifier.testable(tag, s.name),
+                modifier = Modifier.testable(tag, s.name).let { m -> alt?.let { m.testable(it, s.name) } ?: m },
             )
             val o = s.outcome
             val key = o?.noteKey()
@@ -2815,7 +2835,7 @@ private fun SentAttachmentChips(sent: List<ai.ciris.mobile.shared.models.SentAtt
                     fontSize = 11.sp,
                     color = tintColor,
                     fontWeight = if (o.refused) FontWeight.SemiBold else FontWeight.Normal,
-                    modifier = Modifier.testable("${tag}_note", note),
+                    modifier = Modifier.testable("${tag}_note", note).let { m -> alt?.let { m.testable("${it}_note", note) } ?: m },
                 )
             }
         }
