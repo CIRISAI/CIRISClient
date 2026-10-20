@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
@@ -56,6 +58,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -94,6 +98,11 @@ fun IdentityManagementScreen(
      * that silently did nothing would be the dead control this screen forbids.
      */
     approveDeviceViewModel: ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel,
+    /**
+     * "Changes to your devices" (CSD-095, CIRISServer#794): the roster's held
+     * changes and this device's answers. Required for the same reason.
+     */
+    selfRosterViewModel: ai.ciris.mobile.shared.viewmodels.SelfRosterViewModel,
     onBack: () -> Unit,
     /**
      * Open the node's repair route for a subject-blind identity
@@ -507,7 +516,25 @@ fun IdentityManagementScreen(
             // another occurrence of this identity. The card below is the older
             // path for a key a device already made for itself.
             Spacer(Modifier.height(20.dp))
-            ApproveDeviceCard(viewModel = approveDeviceViewModel)
+            val rosterInView = androidx.compose.runtime.remember { androidx.compose.foundation.relocation.BringIntoViewRequester() }
+            val rosterScope = androidx.compose.runtime.rememberCoroutineScope()
+            val rosterState by selfRosterViewModel.state.collectAsState()
+            ApproveDeviceCard(
+                viewModel = approveDeviceViewModel,
+                onOpenRoster = { rosterScope.launch { rosterInView.bringIntoView() } },
+                heldWindowSecs = rosterState.wSelfSecs,
+            )
+
+            // ── Changes to your devices: the roster's held changes (CSD-095) ──
+            //
+            // From two devices, the approval above and the revoke on the roster
+            // are PROPOSALS the other devices answer here (CC 3.3.6.3).
+            Spacer(Modifier.height(20.dp))
+            SelfRosterCard(
+                viewModel = selfRosterViewModel,
+                labels = occurrences.mapNotNull { o -> o.label?.takeIf { it.isNotBlank() }?.let { o.occurrenceKeyId to it } }.toMap(),
+                modifier = Modifier.bringIntoViewRequester(rosterInView),
+            )
 
             // ── Add a device (on the primary) ─────────────────────────────────
             Spacer(Modifier.height(20.dp))

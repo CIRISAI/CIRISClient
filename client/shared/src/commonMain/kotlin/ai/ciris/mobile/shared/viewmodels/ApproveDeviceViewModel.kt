@@ -28,11 +28,14 @@ sealed interface DeviceRequestOutcome {
     data class Approved(val label: String, val matchCode: String) : DeviceRequestOutcome
     data class Denied(val label: String) : DeviceRequestOutcome
     /**
-     * 409 `add_device.roster_change_held` (CIRISServer#798): from a roster of
-     * two, a THIRD device is a self-roster proposal (CC 3.3.6.3) — held, not
-     * refused. It lands by the roster's quorum (CIRISServer#794).
+     * From a roster of two or more, adding a device is a self-roster proposal
+     * (CC 3.3.6.3) — held, not refused. It lands when another device agrees, or
+     * by the lone path after the window ([ai.ciris.mobile.shared.models.federation.ROSTER_W_SELF_DEFAULT_SECS])
+     * unless the others object. Since CIRISServer#794 the node answers **202**
+     * `{held: true, proposal_id}`; a node on 0.5.232 without #794 answers 409
+     * `add_device.roster_change_held` (CIRISServer#798), with no [proposalId].
      */
-    data class Held(val label: String) : DeviceRequestOutcome
+    data class Held(val label: String, val proposalId: String? = null) : DeviceRequestOutcome
 }
 
 /** The approve answer that is a held proposal, not a failure. */
@@ -112,6 +115,12 @@ fun formatCountdown(secs: Long): String {
 class ApproveDeviceViewModel(
     private val api: DeviceRequestsApi,
     private val clock: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    /**
+     * Told the proposal id when an approval is HELD (CIRISServer#794): THIS
+     * device proposed it, so the roster card (CSD-095) shows it as this
+     * device's and offers no answer to it (`self.roster_own_proposal`).
+     */
+    private val onProposed: (proposalId: String, label: String, target: String?) -> Unit = { _, _, _ -> },
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ApproveDeviceUiState())
@@ -205,7 +214,15 @@ class ApproveDeviceViewModel(
             try {
                 val outcome = if (c.approve) {
                     val r = api.approve(id)
-                    DeviceRequestOutcome.Approved(c.request.label, r.matchCode ?: c.request.matchCode)
+                    // 202 `{approved: false, held: true}` (CIRISServer#794): a 2xx
+                    // that did NOT add the device. Never "Approved".
+                    if (r.held || !r.approved) {
+                        PlatformLogger.i(TAG, "request $id held as self-roster proposal ${r.proposalId ?: "<unnamed>"}")
+                        r.proposalId?.let { onProposed(it, c.request.label, r.occurrenceKeyId) }
+                        DeviceRequestOutcome.Held(c.request.label, r.proposalId)
+                    } else {
+                        DeviceRequestOutcome.Approved(c.request.label, r.matchCode ?: c.request.matchCode)
+                    }
                 } else {
                     api.deny(id)
                     DeviceRequestOutcome.Denied(c.request.label)
@@ -218,7 +235,8 @@ class ApproveDeviceViewModel(
                 )
             } catch (e: NodeRefusal) {
                 if (c.approve && e.reasonId == ADD_DEVICE_ROSTER_CHANGE_HELD) {
-                    PlatformLogger.i(TAG, "request $id held as a self-roster proposal")
+                    // A node on 0.5.232 without CIRISServer#794: the same hold, unnamed.
+                    PlatformLogger.i(TAG, "request $id held as a self-roster proposal (409)")
                     _state.value = _state.value.copy(working = null, outcome = DeviceRequestOutcome.Held(c.request.label))
                 } else {
                     PlatformLogger.w(TAG, "request $id refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")

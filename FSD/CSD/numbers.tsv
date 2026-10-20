@@ -1,6 +1,7 @@
 number	status	title	source	note
 001	retired	Delegation (read-only preamble)	CSD-055 §6	Folded into CSD-055 on 2026-09-27; the canonical CSD-001 is CIRISAgent's.
 034	retired	Network map	CSD-046	Folded into CSD-046: the map called the same routes and drew the same peer set. A geo map is a new card with a new route.
+096	reserved	Session claims: one handler per exchange	CIRISServer#802	server catalogue-v1 placeholder moved off 095; no client card yet
 111	reserved	Steward shutdown dialogue	#179	agent / decisions
 112	reserved	Identity record and drift review	#179	agent / rules
 113	reserved	Retirement floor	#179	agent / record

@@ -93,6 +93,12 @@ object AddDeviceTags {
     const val APPROVE_REFUSAL = "approve_device_refusal"
     const val APPROVE_OUTCOME = "text_approve_device_outcome"
     const val APPROVE_TOO_OLD = "approve_device_too_old"
+    /** The held approval's line: another device must agree (CIRISServer#794). */
+    const val APPROVE_HELD_WINDOW = "text_approve_device_held_window"
+    /** From the held line to the roster card (CSD-095). */
+    const val APPROVE_HELD_OPEN = "btn_approve_device_held_roster"
+    /** The new device's note that a held addition can outlast its 15-minute poll. */
+    const val WAITING_HELD_NOTE = "text_add_device_held_note"
     fun requestRow(id: String) = "approve_device_request_$id"
     fun requestCode(id: String) = "text_approve_device_code_$id"
     fun requestExpires(id: String) = "text_approve_device_expires_$id"
@@ -425,6 +431,14 @@ fun AddDeviceWaiting(
         Text(localizedString("mobile.add_device_waiting_body"), style = type.body, color = t.dim)
         Spacer(Modifier.height(12.dp))
         AddDeviceProgressBlock(state = state, onNewRequest = onNewRequest)
+        if (state.phase == AddDevicePhase.REQUESTED || state.phase == AddDevicePhase.EXPIRED) {
+            // CIRISServer#794: from two devices an addition is HELD for the others to
+            // agree; this device keeps "requested" and its poll ends at 15 minutes, so a
+            // later landing needs a new request from here. Said once, plainly.
+            val note = localizedString("mobile.add_device_held_note")
+            Spacer(Modifier.height(6.dp))
+            Text(note, style = type.label, color = t.dim, modifier = Modifier.testable(AddDeviceTags.WAITING_HELD_NOTE, state.phase.name.lowercase()))
+        }
         if (!state.phase.needsNewRequest) {
             Spacer(Modifier.height(8.dp))
             CirisTextButton(
@@ -449,7 +463,14 @@ fun AddDeviceWaiting(
  * again" reopens it.
  */
 @Composable
-fun ApproveDeviceCard(viewModel: ApproveDeviceViewModel, modifier: Modifier = Modifier) {
+fun ApproveDeviceCard(
+    viewModel: ApproveDeviceViewModel,
+    modifier: Modifier = Modifier,
+    /** Brings the roster card (CSD-095) into view, where the held change is answered. */
+    onOpenRoster: (() -> Unit)? = null,
+    /** The lone path's window, as the roster card last read it (`w_self_secs`). */
+    heldWindowSecs: Long = ai.ciris.mobile.shared.models.federation.ROSTER_W_SELF_DEFAULT_SECS,
+) {
     val state by viewModel.state.collectAsState()
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -518,7 +539,8 @@ fun ApproveDeviceCard(viewModel: ApproveDeviceViewModel, modifier: Modifier = Mo
             val line = when (o) {
                 is DeviceRequestOutcome.Approved -> localizedString("mobile.approve_device_approved", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
                 is DeviceRequestOutcome.Denied -> localizedString("mobile.approve_device_denied", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
-                // 409 add_device.roster_change_held (CIRISServer#798): pending, not failed.
+                // 202 {held: true} (CIRISServer#794), or 409 add_device.roster_change_held on
+                // 0.5.232 without it (CIRISServer#798): pending, not failed.
                 is DeviceRequestOutcome.Held -> localizedString("mobile.approve_device_held", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
             }
             Text(
@@ -534,6 +556,23 @@ fun ApproveDeviceCard(viewModel: ApproveDeviceViewModel, modifier: Modifier = Mo
                     },
                 ),
             )
+            if (o is DeviceRequestOutcome.Held) {
+                val hours = (heldWindowSecs / 3600).coerceAtLeast(1)
+                val window = localizedString("mobile.roster_window_hours", "hours", hours.toString())
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    localizedString("mobile.approve_device_held_window", "window", window),
+                    style = type.label, color = t.dim,
+                    modifier = Modifier.testable(AddDeviceTags.APPROVE_HELD_WINDOW, o.proposalId ?: "unnamed"),
+                )
+                if (onOpenRoster != null) {
+                    CirisTextButton(
+                        label = localizedString("mobile.approve_device_held_open"),
+                        tag = AddDeviceTags.APPROVE_HELD_OPEN,
+                        onClick = onOpenRoster,
+                    )
+                }
+            }
         }
     }
 

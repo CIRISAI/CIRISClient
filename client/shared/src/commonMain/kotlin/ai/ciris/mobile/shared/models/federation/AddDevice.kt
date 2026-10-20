@@ -84,7 +84,15 @@ data class DeviceJoinRequests(
     @SerialName("window_secs_left") val windowSecsLeft: Long? = null,
 )
 
-/** `POST /v1/self/device-requests/{id}/approve` answer (`src/add_device.rs:1076-1085`). */
+/**
+ * `POST /v1/self/device-requests/{id}/approve` answer (`src/add_device.rs:1076-1085`).
+ *
+ * Since CIRISServer#794 (CIRISServer#802 @ `e1201b69`, `src/add_device.rs:1354-1400`)
+ * an approval the self roster HOLDS answers **202** `{approved: false, held: true,
+ * match_code, node_key_id, occurrence_key_id, proposal_id, detail}`: the addition is a
+ * roster proposal, not yet a device. [proposalId] names it on the roster card (CSD-095);
+ * it is null when the node could not read its proposals at that instant.
+ */
 @Serializable
 data class ApproveDeviceResponse(
     val approved: Boolean = false,
@@ -92,6 +100,9 @@ data class ApproveDeviceResponse(
     @SerialName("node_key_id") val nodeKeyId: String? = null,
     @SerialName("occurrence_key_id") val occurrenceKeyId: String? = null,
     @SerialName("self_dek_granted") val selfDekGranted: Int = 0,
+    val held: Boolean = false,
+    @SerialName("proposal_id") val proposalId: String? = null,
+    val detail: String? = null,
 )
 
 /** `POST /v1/self/device-requests/{id}/deny` answer. */

@@ -3369,6 +3369,36 @@ class CIRISApiClient(
     }
 
     /**
+     * `GET /v1/self/roster/proposals` (CIRISServer#794, `src/self_devices.rs:1428-1451`)
+     * — every held change to the owner's own device keys, decided now. Owner
+     * session. A node without #794 answers a bare 404.
+     */
+    suspend fun getRosterProposals(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.RosterProposalsResponse {
+        val raw = addDeviceCall("getRosterProposals", HttpMethod.Get, nodeUrl, "/v1/self/roster/proposals", null, withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.RosterProposalsResponse.serializer())
+    }
+
+    /**
+     * `POST /v1/self/roster/proposals/{id}/assent` or `/object`, body `{}`
+     * (`answer_proposal`, `src/self_devices.rs:1478-1541`): THIS device signs
+     * its answer to a change another of the person's devices proposed.
+     * 404 `self.roster_proposal_unknown`; 409 `self.roster_own_proposal`.
+     */
+    suspend fun answerRosterProposal(
+        proposalId: String,
+        assent: Boolean,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.RosterAnswerResponse {
+        val id = proposalId.encodeURLPathPart()
+        // Two literal paths, not one with the verb spliced in, so each route is citable.
+        val path = if (assent) "/v1/self/roster/proposals/$id/assent" else "/v1/self/roster/proposals/$id/object"
+        val raw = addDeviceCall("answerRosterProposal", HttpMethod.Post, nodeUrl, path, "{}", withSession = true)
+        return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.RosterAnswerResponse.serializer())
+    }
+
+    /**
      * **Upgrade an existing (already-owned) node to a fed-ID owner-binding** —
      * `POST {localNodeUrl}/v1/self/upgrade-owner`. The WAs-need-fed-IDs migration:
      * a node owned the legacy way (a password/OAuth ROOT WA with NO fed-ID) is

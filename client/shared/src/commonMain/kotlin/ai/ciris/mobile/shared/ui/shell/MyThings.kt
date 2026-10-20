@@ -61,6 +61,8 @@ fun MyThingsSheet(
      * here too. It opens the sign-out confirm; it does not sign out itself.
      */
     onSignOut: (() -> Unit)? = null,
+    /** Per instrument id, things waiting for this device (Devices & keys: CSD-095's roster changes). */
+    badges: Map<String, Int> = emptyMap(),
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
@@ -91,6 +93,7 @@ fun MyThingsSheet(
                     tag = i.tag,
                     onClick = { onInstrument(i) },
                     modifier = Modifier.padding(horizontal = 8.dp),
+                    badge = badges[i.id] ?: 0,
                 )
             }
             if (onSignOut != null) {
