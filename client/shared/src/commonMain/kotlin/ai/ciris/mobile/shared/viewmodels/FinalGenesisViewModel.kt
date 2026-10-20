@@ -621,7 +621,11 @@ class FinalGenesisViewModel(
     }
 
     /** Re-read the amend's status (the sheet polls this while planned). */
-    fun refreshAmend(): Job = viewModelScope.launch { probeAmend() }
+    // Stands down while a ceremony action holds the sheet: the dry run's log
+    // (CIRISServer main ffff40e0) shows this GET firing between the finish's
+    // POST and its failed read of a 148,945-byte body.
+    fun refreshAmend(): Job =
+        if (_busy.value) Job().apply { complete() } else viewModelScope.launch { probeAmend() }
 
     private suspend fun probeAmend() {
         try {
@@ -751,7 +755,7 @@ class FinalGenesisViewModel(
     fun finishAmend(): Job = exclusive {
         _amendRefusal.value = null
         try {
-            _amendPhase.value = AmendPhase.Finished(apiClient.finishFinalGenesisAmend(nodeUrl()))
+            _amendPhase.value = AmendPhase.Finished(finishAmendOnce())
         } catch (e: NodeRefusal) {
             _amendRefusal.value = FinalGenesisRefusal.of(e)
             if (e.reasonId == FinalGenesisReason.AMEND_QUORUM_NOT_MET || e.reasonId == FinalGenesisReason.AMEND_NOT_PLANNED) probeAmend()
@@ -759,6 +763,29 @@ class FinalGenesisViewModel(
             _amendRefusal.value = FinalGenesisRefusal.transport(e)
         }
     }
+
+    /**
+     * The finish, off the UI thread, asked at most twice. The dry run's first
+     * finish was assembled and written by the node while the client's read of
+     * its body came back empty ("Content-Length mismatch: expected 148945
+     * bytes, but received 0 bytes", in Ktor's save of the response on the
+     * Swing thread). A repeat answers the same bundle — the node re-assembles
+     * from its stored state — so a TRANSPORT failure is asked once more. A
+     * refusal is the node's answer and is never repeated.
+     */
+    private suspend fun finishAmendOnce(): ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto =
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+            try {
+                apiClient.finishFinalGenesisAmend(nodeUrl())
+            } catch (e: NodeRefusal) {
+                throw e
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[finishAmend] transport failure, asking once more: ${e.message}")
+                apiClient.finishFinalGenesisAmend(nodeUrl())
+            }
+        }
 }
 
 /** Where the re-scrub (the 2-of-3 amend) is, as the node says. */

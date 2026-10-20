@@ -62,7 +62,18 @@ class FinalGenesisAmendViewModelTest {
                         else -> q[0]
                     }
                 }
-                val bytes = body.toByteArray()
+                // TRUNCATE: promise the finish body's length and send none of it —
+                // what the dry run's client saw ("expected 148945 bytes, but
+                // received 0"). SLOW:<body>: answer after 1 s, the finish's
+                // re-verify.
+                if (body == TRUNCATE) {
+                    ex.responseHeaders.add("Content-Type", "application/json")
+                    ex.sendResponseHeaders(status, 148_945)
+                    ex.close()
+                    return@createContext
+                }
+                val text = if (body.startsWith(SLOW)) { Thread.sleep(1_000); body.removePrefix(SLOW) } else body
+                val bytes = text.toByteArray()
                 ex.responseHeaders.add("Content-Type", "application/json")
                 ex.sendResponseHeaders(status, if (bytes.isEmpty()) -1 else bytes.size.toLong())
                 if (bytes.isNotEmpty()) ex.responseBody.use { it.write(bytes) } else ex.close()
@@ -71,6 +82,11 @@ class FinalGenesisAmendViewModelTest {
         }
         val url get() = "http://127.0.0.1:${server.address.port}"
         fun bodiesOf(key: String) = bodies.filter { it.first == key }.map { Json.parseToJsonElement(it.second) as JsonObject }
+    }
+
+    private companion object {
+        const val TRUNCATE = "__TRUNCATE__"
+        const val SLOW = "SLOW:"
     }
 
     private val nodes = mutableListOf<Node>()
@@ -334,5 +350,58 @@ class FinalGenesisAmendViewModelTest {
         vm.setCanonicalUrl(canonical(404, refusal("trust_root.no_transit_row", "x")).url)
         vm.fetchTransitRow().join()
         assertEquals("trust_root.no_transit_row", assertIs<TransitFetch.Refused>(vm.transitFetch.value).refusal.reasonId)
+    }
+
+    // ── the dry run's finish (CIRISServer main ffff40e0, JAR 7f49eaff) ───────
+
+    @Test
+    fun aFinishWhoseBodyNeverArrivesIsAskedOnceMoreAndLands() = runBlocking<Unit> {
+        // The node had finished and a repeat answered whole; finish is
+        // idempotent server-side, so one retry on a TRANSPORT failure is safe.
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis/amend" to listOf(amendStatus(listOf("A1", "B1"))),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/amend/finish" to listOf(200 to TRUNCATE, finished),
+        ))
+        val vm = vm(n)
+        vm.openAmend().join()
+        vm.finishAmend().join()
+        assertEquals(2, n.seen.count { it == "POST /v1/accord/final-genesis/amend/finish" }, n.seen.toString())
+        val phase = vm.amendPhase.value
+        assertTrue(phase is AmendPhase.Finished, "finished on the second ask, not a transport error: $phase / ${vm.amendRefusal.value}")
+        assertNull(vm.amendRefusal.value)
+    }
+
+    @Test
+    fun aRefusedFinishIsNotRetried() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis/amend" to listOf(amendStatus(listOf("A1"))),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/amend/finish" to listOf(409 to refusal("final_genesis.amend_quorum_not_met", "1 of 2 authorizations")),
+        ))
+        val vm = vm(n)
+        vm.openAmend().join()
+        vm.finishAmend().join()
+        assertEquals(1, n.seen.count { it == "POST /v1/accord/final-genesis/amend/finish" }, "a refusal is the node's answer, not a lost body")
+    }
+
+    @Test
+    fun theStatusPollStandsDownWhileAFinishIsInFlight() = runBlocking<Unit> {
+        // The dry run's log: GET …/amend fired between the finish's POST and its
+        // failed read. While a ceremony action holds the sheet, the poll waits.
+        val n = node(mapOf(
+            "GET /v1/accord/final-genesis/amend" to listOf(amendStatus(listOf("A1", "B1"))),
+            "GET /v1/accord/genesis/remint-source" to listOf(source),
+            "POST /v1/accord/final-genesis/amend/finish" to listOf(200 to (SLOW + finished.second)),
+        ))
+        val vm = vm(n)
+        vm.openAmend().join()
+        val before = n.seen.count { it == "GET /v1/accord/final-genesis/amend" }
+        val finish = vm.finishAmend()
+        kotlinx.coroutines.delay(200)
+        vm.refreshAmend().join()
+        finish.join()
+        assertEquals(before, n.seen.count { it == "GET /v1/accord/final-genesis/amend" }, n.seen.toString())
+        assertTrue(vm.amendPhase.value is AmendPhase.Finished)
     }
 }

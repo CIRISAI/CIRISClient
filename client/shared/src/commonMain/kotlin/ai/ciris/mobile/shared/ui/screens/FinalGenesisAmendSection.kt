@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+
 package ai.ciris.mobile.shared.ui.screens
 
 import ai.ciris.mobile.shared.localization.localizedString
@@ -21,6 +23,9 @@ import ai.ciris.mobile.shared.viewmodels.AmendPhase
 import ai.ciris.mobile.shared.viewmodels.FinalGenesisViewModel
 import ai.ciris.mobile.shared.viewmodels.HolderSignNote
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -214,12 +219,19 @@ private fun AmendPlanSection(vm: FinalGenesisViewModel) {
     }
     Spacer(Modifier.height(12.dp))
     val canPlan = !busy && vm.amendRows() != TransitRows.Invalid && fetch != TransitFetch.Fetching
+    // A fetched row grows the block above the button past the sheet's fold;
+    // the next act is Plan, so bring it into view (dry run on ffff40e0: the
+    // harness had to scroll to reach btn_final_genesis_amend_plan).
+    val planInView = remember { BringIntoViewRequester() }
+    LaunchedEffect(fetch is TransitFetch.Fetched) {
+        if (fetch is TransitFetch.Fetched) planInView.bringIntoView()
+    }
     CirisButton(
         localizedString(if (busy) "mobile.final_genesis_plan_busy" else "mobile.final_genesis_amend_plan"),
         tag = "btn_final_genesis_amend_plan",
         onClick = { vm.planAmend() },
         enabled = canPlan,
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().bringIntoViewRequester(planInView),
     )
 }
 
