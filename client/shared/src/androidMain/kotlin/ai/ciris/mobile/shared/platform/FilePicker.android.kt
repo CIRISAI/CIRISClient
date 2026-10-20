@@ -48,7 +48,7 @@ actual fun FilePickerDialog(
 private fun readFileFromUri(context: Context, uri: Uri): Any? {
     return try {
         val contentResolver = context.contentResolver
-        val mimeType = contentResolver.getType(uri) ?: "application/octet-stream"
+        val reportedType = contentResolver.getType(uri)
 
         // Get filename and size
         var fileName = "attachment"
@@ -66,6 +66,10 @@ private fun readFileFromUri(context: Context, uri: Uri): Any? {
             PlatformLogger.w("FilePicker", "File too large: $fileSize bytes")
             return PickTooLarge(fileName, fileSize)
         }
+
+        // The provider's type can be missing or a bare octet-stream; the
+        // name decides then, so a PDF is not sent as an unknown document.
+        val mimeType = AttachmentTypes.normaliseMediaType(reportedType, fileName)
 
         // Read bytes and encode to base64
         val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return null

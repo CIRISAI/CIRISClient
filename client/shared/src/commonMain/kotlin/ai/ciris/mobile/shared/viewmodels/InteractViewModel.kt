@@ -20,6 +20,8 @@ import ai.ciris.mobile.shared.models.ChatMessage
 import ai.ciris.mobile.shared.models.MessageType
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.platform.PickedFile
+import ai.ciris.mobile.shared.platform.AttachmentRefusal
+import ai.ciris.mobile.shared.platform.AttachmentTypes
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
 import androidx.lifecycle.ViewModel
@@ -454,14 +456,18 @@ class InteractViewModel(
     private val _attachedFiles = MutableStateFlow<List<PickedFile>>(emptyList())
     val attachedFiles: StateFlow<List<PickedFile>> = _attachedFiles.asStateFlow()
 
-    /** The last attachment refused for its size, shown until dismissed; never dropped without a word. */
-    private val _attachmentRefused = MutableStateFlow<ai.ciris.mobile.shared.platform.PickTooLarge?>(null)
-    val attachmentRefused: StateFlow<ai.ciris.mobile.shared.platform.PickTooLarge?> = _attachmentRefused.asStateFlow()
+    /**
+     * The last attachment refused — too large, a type the paperclip cannot
+     * send, or one past the count — shown until dismissed; never dropped
+     * without a word (CIRISClient#217).
+     */
+    private val _attachmentRefused = MutableStateFlow<AttachmentRefusal?>(null)
+    val attachmentRefused: StateFlow<AttachmentRefusal?> = _attachmentRefused.asStateFlow()
 
     /** The picker refused [refusal] before reading it; say so in the chat. */
     fun refuseAttachment(refusal: ai.ciris.mobile.shared.platform.PickTooLarge) {
         logWarn("refuseAttachment", "${refusal.name} is ${refusal.sizeBytes} bytes (limit ${refusal.limitBytes})")
-        _attachmentRefused.value = refusal
+        _attachmentRefused.value = AttachmentRefusal.TooLarge(refusal)
     }
 
     fun dismissAttachmentRefusal() {
@@ -821,18 +827,26 @@ class InteractViewModel(
 
     /**
      * Add a file attachment to the current message.
-     * Validates size and count limits before adding.
+     * Re-checks count, type and size before adding — a picker can be talked
+     * past — and every refusal is shown ([attachmentRefused]), not only logged.
      */
     fun addAttachment(file: PickedFile) {
         val method = "addAttachment"
         val current = _attachedFiles.value
         if (current.size >= PickedFile.MAX_ATTACHMENTS) {
-            logWarn(method, "Max attachments (${PickedFile.MAX_ATTACHMENTS}) reached, ignoring ${file.name}")
+            logWarn(method, "Max attachments (${PickedFile.MAX_ATTACHMENTS}) reached, refusing ${file.name}")
+            _attachmentRefused.value = AttachmentRefusal.TooMany(file.name)
+            return
+        }
+        if (!AttachmentTypes.isChatAttachable(file.mediaType)) {
+            logWarn(method, "File ${file.name} is ${file.mediaType}, outside the paperclip's types; refusing")
+            _attachmentRefused.value = AttachmentRefusal.UnsupportedType(file.name, file.mediaType)
             return
         }
         if (file.sizeBytes > PickedFile.MAX_FILE_SIZE_BYTES) {
             logWarn(method, "File ${file.name} exceeds max size (${file.sizeBytes} > ${PickedFile.MAX_FILE_SIZE_BYTES})")
-            _attachmentRefused.value = ai.ciris.mobile.shared.platform.PickTooLarge(file.name, file.sizeBytes)
+            _attachmentRefused.value =
+                AttachmentRefusal.TooLarge(ai.ciris.mobile.shared.platform.PickTooLarge(file.name, file.sizeBytes))
             return
         }
         logInfo(method, "Adding attachment: ${file.name} (${file.mediaType}, ${file.sizeBytes} bytes)")

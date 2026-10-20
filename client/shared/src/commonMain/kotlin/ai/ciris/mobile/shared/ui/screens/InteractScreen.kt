@@ -705,8 +705,8 @@ fun InteractScreen(
         }
 
             attachmentRefused?.let { r ->
-                ai.ciris.mobile.shared.ui.components.PickTooLargeNotice(
-                    r, tag = "interact_attachment_too_large", onDismiss = { viewModel.dismissAttachmentRefusal() },
+                ai.ciris.mobile.shared.ui.components.AttachmentRefusalNotice(
+                    r, tagPrefix = "interact_attachment", onDismiss = { viewModel.dismissAttachmentRefusal() },
                 )
             }
 
