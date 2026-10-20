@@ -505,6 +505,8 @@ fun InstrumentRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
+    /** Things waiting for THIS device under it (e.g. CSD-095's roster changes); 0 draws nothing. */
+    badge: Int = 0,
 ) {
     val t = CirisTheme.tokens
     Row(
@@ -519,6 +521,15 @@ fun InstrumentRow(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Glyph(glyph, tint = if (selected) t.ink else t.dim, size = 18.dp)
-        Text(label, style = CirisTheme.type.body, color = if (selected) t.ink else t.dim, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(label, style = CirisTheme.type.body, color = if (selected) t.ink else t.dim, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        if (badge > 0) {
+            ai.ciris.mobile.shared.ui.primitives.Chip(
+                ai.ciris.mobile.shared.ui.primitives.ChipSpec(
+                    label = badge.toString(),
+                    tag = "badge_$tag",
+                    tone = ai.ciris.mobile.shared.ui.theme.Tone.BRAND,
+                ),
+            )
+        }
     }
 }

@@ -108,6 +108,35 @@ class RosterHeldWireTest {
         assertNull(s.refusal, "held is pending, not a failure")
     }
 
+    /**
+     * CIRISServer#794 (CIRISServer#802 @ `e1201b69`, `src/add_device.rs:1354-1400`):
+     * the held approval is no longer a 409 — it answers **202** `{approved: false,
+     * held: true, match_code, node_key_id, occurrence_key_id, proposal_id, detail}`.
+     * A 2xx with `approved: false` read as "Approved" told the person the device
+     * was in when the roster had only been asked.
+     */
+    @Test
+    fun aHeldApprovalAnswers202AndIsHeldNotApproved() = runBlocking<Unit> {
+        val n = node(mapOf(
+            "GET /v1/self/device-requests" to {
+                Triple(200, """{"requests":[{"request_id":"r3","label":"Tablet","device_class":"phone","match_code":"111222","node_key_id":"ciris-node-c","requested_secs_ago":5}],"window_secs_left":300}""", emptyMap())
+            },
+            "POST /v1/self/device-requests/r3/approve" to {
+                Triple(202, """{"approved":false,"held":true,"match_code":"111222","node_key_id":"ciris-node-c",""" +
+                    """"occurrence_key_id":"fed-owner-c3c3","proposal_id":"prop-add-c","detail":"the self roster holds this addition as a proposal: 1 more approval"}""", emptyMap())
+            },
+        ))
+        val api = CIRISApiClient(n.url, null).also { it.setAccessToken("tok-owner") }
+        val vm = ApproveDeviceViewModel(ClientDeviceRequests(api) { n.url }).also { made += it }
+        vm.refreshNow()
+        vm.askApprove(vm.state.value.requests.single())
+        vm.confirm()
+        val s = withContext(Dispatchers.Default) { withTimeout(10_000) { vm.state.first { it.outcome != null && it.working == null } } }
+        val held = assertIs<DeviceRequestOutcome.Held>(s.outcome, "a 202 held approval is held, never Approved: ${s.outcome}")
+        assertEquals("prop-add-c", held.proposalId)
+        assertNull(s.refusal)
+    }
+
     @Test
     fun aHeldEvictionDecodesAsHeldNotRevoked() = runBlocking<Unit> {
         val n = node(mapOf("POST /v1/self/occurrence/revoke" to {

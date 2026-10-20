@@ -1144,11 +1144,28 @@ fun CIRISApp(
     // 0.5.231 `/v1/self/device-requests`): the owner's routes on the ACTIVE
     // node, read at call time like contacts, because this model outlives a
     // node-profile switch (Codex, PR #189).
+    // "Changes to your devices" (CSD-095, CIRISServer#794): the self roster's
+    // held changes, on the ACTIVE node read at call time like the approvals.
+    val selfRosterViewModel: ai.ciris.mobile.shared.viewmodels.SelfRosterViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.SelfRosterViewModel(
+            ai.ciris.mobile.shared.api.ClientSelfRoster(apiClient) { contactsNodeUrl.value },
+        )
+    }
     val approveDeviceViewModel: ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.ApproveDeviceViewModel(
             ai.ciris.mobile.shared.api.ClientDeviceRequests(apiClient) { contactsNodeUrl.value },
+            // A held approval (202, CIRISServer#794) is THIS device's proposal.
+            onProposed = { id, label, target -> selfRosterViewModel.markProposedHere(id, label, target) },
         )
     }
+    // A revoke held by the roster (occurrences_held) is THIS device's evict proposal.
+    val heldRevoke = identityManagementViewModel.revoke.collectAsState().value
+    LaunchedEffect(heldRevoke) {
+        (heldRevoke as? ai.ciris.mobile.shared.viewmodels.RevokeState.Held)?.let {
+            selfRosterViewModel.markEvictionProposedHere(it.occurrenceKeyId)
+        }
+    }
+    val rosterAwaiting = selfRosterViewModel.state.collectAsState().value.awaitingThisDevice
     val contactsViewModel: ContactsViewModel = viewModel {
         // The node URL as a provider: the contact code, the add and the removal go
         // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
@@ -4482,6 +4499,7 @@ fun CIRISApp(
                 IdentityManagementScreen(
                     viewModel = identityManagementViewModel,
                     approveDeviceViewModel = approveDeviceViewModel,
+                    selfRosterViewModel = selfRosterViewModel,
                     onBack = { currentScreen = Screen.Interact },
                     // The repair route for a subject-blind fedID (CIRISServer#490).
                     // The card only offers it when the node named one AND it
@@ -5208,6 +5226,7 @@ fun CIRISApp(
                     ai.ciris.mobile.shared.ui.shell.InstrumentPage(
                         instrument = inst, hasAgent = clientMode?.isAgent ?: false,
                         onOpen = { surf -> currentScreen = surfaceToScreen(surf) },
+                        badges = mapOf(ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement to rosterAwaiting),
                     )
                 }
             }
@@ -5407,6 +5426,7 @@ fun CIRISApp(
                                 selected = (currentScreen as? Screen.Instrument)?.id == inst.id ||
                                     (activeSurface != null && ai.ciris.mobile.shared.ui.nav.CirclesNav.instrumentOf(activeSurface) == inst),
                                 onClick = { currentScreen = Screen.Instrument(inst.id) },
+                                badge = if (inst.id == "devices-keys") rosterAwaiting else 0,
                             )
                         }
                     },
@@ -5426,6 +5446,9 @@ fun CIRISApp(
                 }
             }
 
+            // The Devices & keys badge (CSD-095) is as fresh as the last read:
+            // opening My things asks again (it stands down during an answer).
+            LaunchedEffect(showMyThings) { if (showMyThings) selfRosterViewModel.refresh() }
             if (showMyThings) {
                 ai.ciris.mobile.shared.ui.shell.MyThingsSheet(
                     hasAgent = hasAgentNow,
@@ -5434,6 +5457,7 @@ fun CIRISApp(
                     onBrightness = { settingsViewModel.setBrightnessPreference(it) },
                     onInstrument = { inst -> showMyThings = false; currentScreen = Screen.Instrument(inst.id) },
                     onDismiss = { showMyThings = false },
+                    badges = mapOf("devices-keys" to rosterAwaiting),
                     // Every install mode can sign out from the avatar (CIRISClient#51).
                     onSignOut = { showMyThings = false; signOut.ask() },
                 )

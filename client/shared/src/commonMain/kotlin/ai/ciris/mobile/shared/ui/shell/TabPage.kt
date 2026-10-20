@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.ui.nav.Instrument
 import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.nav.Tab
 import ai.ciris.mobile.shared.ui.primitives.ItemRow
+import ai.ciris.mobile.shared.ui.primitives.ChipSpec
 import ai.ciris.mobile.shared.ui.primitives.ListState
 import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
@@ -56,8 +57,14 @@ fun TabPage(
 
 /** An instrument under My things: its surfaces as rows. */
 @Composable
-fun InstrumentPage(instrument: Instrument, hasAgent: Boolean, onOpen: (NavSurface) -> Unit) {
-    SurfaceList(instrument.surfaces(hasAgent), tag = "instrument_${instrument.id.replace('-', '_')}", onOpen = onOpen)
+fun InstrumentPage(
+    instrument: Instrument,
+    hasAgent: Boolean,
+    onOpen: (NavSurface) -> Unit,
+    /** Per surface, things waiting for this device (My Identity: CSD-095's roster changes). */
+    badges: Map<NavSurface, Int> = emptyMap(),
+) {
+    SurfaceList(instrument.surfaces(hasAgent), tag = "instrument_${instrument.id.replace('-', '_')}", onOpen = onOpen, badges = badges)
 }
 
 /**
@@ -72,7 +79,7 @@ fun InstrumentPage(instrument: Instrument, hasAgent: Boolean, onOpen: (NavSurfac
  * while sitting one flick below the fold for a person.
  */
 @Composable
-private fun SurfaceList(surfaces: List<NavSurface>, tag: String, onOpen: (NavSurface) -> Unit) {
+private fun SurfaceList(surfaces: List<NavSurface>, tag: String, onOpen: (NavSurface) -> Unit, badges: Map<NavSurface, Int> = emptyMap()) {
     val t = CirisTheme.tokens
     Column(
         modifier = Modifier
@@ -88,6 +95,9 @@ private fun SurfaceList(surfaces: List<NavSurface>, tag: String, onOpen: (NavSur
                 glyphTint = t.dim,
                 title = surfaceLabel(s),
                 tag = CirclesNav.navTag(s),
+                chips = (badges[s] ?: 0).takeIf { it > 0 }?.let { n ->
+                    listOf(ChipSpec(n.toString(), tag = "badge_${CirclesNav.navTag(s)}", tone = ai.ciris.mobile.shared.ui.theme.Tone.BRAND))
+                } ?: emptyList(),
                 onClick = { onOpen(s) },
                 leading = { Icon(s.icon, contentDescription = null, tint = t.dim, modifier = Modifier.size(20.dp)) },
             )
