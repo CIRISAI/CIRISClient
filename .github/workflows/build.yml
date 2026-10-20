@@ -323,6 +323,23 @@ jobs:
         working-directory: client
         run: ./gradlew --no-daemon :shared:desktopTest
 
+      - name: Keep the desktop test results when a test fails
+        # UncaughtExceptionsBeforeTest names only the test that RECEIVED a stray
+        # coroutine exception; the exception itself is reported "in a
+        # platform-dependent manner", which on the JVM means that test's
+        # system-err in the XML report. The log never carries it, so PR #220's
+        # WiseAuthorityViewModelTest:443 failure had no cause to read. Kept on
+        # failure only, a week.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-results
+          path: |
+            client/shared/build/test-results/desktopTest/*.xml
+            client/shared/build/reports/tests/desktopTest/
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Desktop uber-jar
         working-directory: client
         run: |
