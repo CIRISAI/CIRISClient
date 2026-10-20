@@ -47,17 +47,31 @@ class FinalGenesisCeremonyUxTest {
 
     @Test
     fun thePickedFolderIsCheckedForTheHoldersSeedBlob() {
+        // The name ciris-keyring writes and the node opens (CIRISVerify v20.2.0,
+        // src/ciris-keyring/src/usb_wrapped_mldsa65.rs:107-118 blob_path):
+        // `{safe}.ciris-mldsa-usb.json`. The client checked
+        // `<holder>.mldsa65.seed.blob`, a name nothing writes, and showed
+        // "missing" for A1's real USB during the live re-scrub.
         val dir = Files.createTempDirectory("usb-a1").toFile()
         try {
-            assertEquals("A1.mldsa65.seed.blob", seedBlobName("A1"))
-            assertEquals("${dir.path}/A1.mldsa65.seed.blob", seedBlobPath(dir.path + "/", "A1"), "a trailing slash is not doubled")
+            assertEquals("A1.ciris-mldsa-usb.json", seedBlobName("A1"))
+            assertEquals("${dir.path}/A1.ciris-mldsa-usb.json", seedBlobPath(dir.path + "/", "A1"), "a trailing slash is not doubled")
             assertEquals(0L, getFileSize(seedBlobPath(dir.path, "A1")), "missing before the blob is there")
-            java.io.File(dir, "A1.mldsa65.seed.blob").writeBytes(ByteArray(64) { 1 })
+            java.io.File(dir, "A1.ciris-mldsa-usb.json").writeBytes(ByteArray(64) { 1 })
             assertTrue(getFileSize(seedBlobPath(dir.path, "A1")) > 0L, "found once it is")
             assertEquals(0L, getFileSize(seedBlobPath(dir.path, "B1")), "another holder's blob is not this one")
         } finally {
             dir.deleteRecursively()
         }
+    }
+
+    @Test
+    fun theBlobNameSanitizesTheHolderIdTheWayTheKeyringDoes() {
+        // blob_path keeps ASCII alphanumerics, '-' and '_'; every other char is '_'.
+        assertEquals("holder-a_1.ciris-mldsa-usb.json", seedBlobName("holder-a_1"))
+        assertEquals("A_1.ciris-mldsa-usb.json", seedBlobName("A.1"))
+        assertEquals("a_b_c.ciris-mldsa-usb.json", seedBlobName("a/b:c"))
+        assertEquals("_.ciris-mldsa-usb.json", seedBlobName("é"))
     }
 
     // ── 2. The token hints: PIN tries, PIV slot ──────────────────────────────

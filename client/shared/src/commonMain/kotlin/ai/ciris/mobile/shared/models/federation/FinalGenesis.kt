@@ -640,11 +640,20 @@ fun finalGenesisGrid(
 }
 
 /**
- * The file a holder's USB key carries for [holder]: `<holder>.mldsa65.seed.blob`
- * at the root of the mounted directory (`mldsa_usb_path`), e.g.
- * `/media/<user>/<LABEL>/A1.mldsa65.seed.blob`.
+ * The file a holder's USB key carries for [holder]: the USB-wrapped ML-DSA-65
+ * seed ciris-keyring writes and the node opens from `mldsa_usb_path` —
+ * `{safe}.ciris-mldsa-usb.json`, where `safe` keeps ASCII alphanumerics, `-`
+ * and `_` and turns every other character into `_` (CIRISVerify v20.2.0,
+ * `src/ciris-keyring/src/usb_wrapped_mldsa65.rs:107-118`, `blob_path`). E.g.
+ * `/media/<user>/<LABEL>/A1.ciris-mldsa-usb.json`. It said
+ * `<holder>.mldsa65.seed.blob` until the live re-scrub showed A1's real USB as
+ * "missing": a name nothing writes.
  */
-fun seedBlobName(holder: String): String = "$holder.mldsa65.seed.blob"
+fun seedBlobName(holder: String): String {
+    val safe = holder.map { c -> if ((c in 'a'..'z') || (c in 'A'..'Z') || (c in '0'..'9') || c == '-' || c == '_') c else '_' }
+        .joinToString("")
+    return "$safe.ciris-mldsa-usb.json"
+}
 
 /** [dir] joined with [holder]'s seed blob, whatever separator the picker returned. */
 fun seedBlobPath(dir: String, holder: String): String =

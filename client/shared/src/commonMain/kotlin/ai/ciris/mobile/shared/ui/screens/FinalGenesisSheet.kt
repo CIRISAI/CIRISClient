@@ -363,7 +363,7 @@ internal class TokenInputs(usb: String = "", pin: String = "", slot: String = DE
 /**
  * The inputs one YubiKey + USB session needs, with what a person at the
  * console needs to know (Eric, live, 0.5.227): which holder's token to insert,
- * a folder picker for the USB key — and whether `<holder>.mldsa65.seed.blob`
+ * a folder picker for the USB key — and whether `<holder>.ciris-mldsa-usb.json`
  * is in the folder picked — the PIN named as the YubiKey PIV PIN, the PIV slot
  * (usually 9c), and a PIN-tries warning from the node's last refusal, large and
  * next to the PIN, not in the refusal's small print.
