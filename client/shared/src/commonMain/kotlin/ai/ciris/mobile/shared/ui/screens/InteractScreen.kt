@@ -213,6 +213,8 @@ fun InteractScreen(
     val walletStatus by viewModel.walletStatus.collectAsState()
     val attachedFiles by viewModel.attachedFiles.collectAsState()
     val attachmentRefused by viewModel.attachmentRefused.collectAsState()
+    val attachmentPolicy by viewModel.attachmentPolicy.collectAsState()
+    val attachmentPolicySource by viewModel.attachmentPolicySource.collectAsState()
     val shedState by viewModel.shedState.collectAsState()
     val pipelineState by viewModel.pipelineState.collectAsState()
     val pendingDeferrals by viewModel.pendingDeferrals.collectAsState()
@@ -221,6 +223,8 @@ fun InteractScreen(
     // Refresh trust status when screen becomes visible (handles app resume)
     LaunchedEffect(Unit) {
         viewModel.refreshTrustStatus()
+        // The agent's attachment limits drive the paperclip (CIRISClient#217).
+        viewModel.refreshAttachmentPolicy()
     }
 
     // Observe text input requests for test automation
@@ -705,8 +709,9 @@ fun InteractScreen(
         }
 
             attachmentRefused?.let { r ->
-                ai.ciris.mobile.shared.ui.components.PickTooLargeNotice(
-                    r, tag = "interact_attachment_too_large", onDismiss = { viewModel.dismissAttachmentRefusal() },
+                ai.ciris.mobile.shared.ui.components.AttachmentRefusalNotice(
+                    r, tagPrefix = "interact_attachment", allowedTypes = attachmentPolicy.allTypes,
+                    onDismiss = { viewModel.dismissAttachmentRefusal() },
                 )
             }
 
@@ -732,6 +737,8 @@ fun InteractScreen(
                 attachedFiles = attachedFiles,
                 onAttach = { showFilePicker = true },
                 onRemoveAttachment = { viewModel.removeAttachment(it) },
+                canAttachMore = attachmentPolicy.hasRoom(attachedFiles),
+                policyProbe = attachmentPolicySource.probe,
                 theme = theme,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -741,6 +748,9 @@ fun InteractScreen(
             // File picker dialog (platform-specific)
             FilePickerDialog(
                 show = showFilePicker,
+                // The agent's types (its policy), or the client's own when
+                // the agent predates the route (CIRISClient#217).
+                mimeTypes = attachmentPolicy.allTypes,
                 onFilePicked = { file ->
                     viewModel.addAttachment(file)
                     showFilePicker = false
@@ -1837,6 +1847,7 @@ private fun ChatMessageList(
         val taggedRows = remember(messages) {
             messages.zip(transcriptTestTags(messages)).asReversed()
         }
+        val latestTags = remember(messages) { latestExchangeTags(messages) }
 
         LazyColumn(
             state = listState,
@@ -1869,9 +1880,17 @@ private fun ChatMessageList(
                 // only here: reverseLayout plus the auto-scroll below pins the
                 // NEWEST rows on screen, which is what an assertion about a
                 // reply is looking at.
+                // Plus `msg_user_latest` / `msg_reply_latest` for the newest
+                // exchange, matched by id (latestExchangeTags, CIRISClient#217),
+                // so a flow can name its own message and the reply to it.
+                val latest = latestTags[message.id]
                 val row = Modifier.testable(tag, message.text)
+                    .let { if (latest != null) it.testable(latest, message.text) else it }
                 when (message.type) {
-                    MessageType.USER -> UserChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
+                    MessageType.USER -> UserChatBubble(
+                        message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate,
+                        rowTag = tag, latestTag = latest,
+                    )
                     MessageType.AGENT -> AgentChatBubble(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth, onModerate = onModerate)
                     MessageType.SYSTEM -> SystemMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
                     MessageType.ERROR -> ErrorMessage(message, modifier = row, bubbleMaxWidth = bubbleMaxWidth)
@@ -1902,6 +1921,10 @@ private fun UserChatBubble(
     modifier: Modifier = Modifier,
     bubbleMaxWidth: Dp = 280.dp,  // Default for backwards compat
     onModerate: ((String) -> Unit)? = null,
+    /** The row's transcript tag (`msg_user_<n>`); its file chips are `<rowTag>_attachment_<i>`. */
+    rowTag: String = "msg_user",
+    /** `msg_user_latest` when this is the newest user row; its chips then also carry `msg_user_latest_attachment_<i>`. */
+    latestTag: String? = null,
 ) {
     Row(
         modifier = modifier
@@ -1946,7 +1969,10 @@ private fun UserChatBubble(
                     attachmentCount = message.attachmentCount,
                     hasImages = message.hasImageAttachments,
                     hasDocs = message.hasDocumentAttachments,
-                    tintColor = Color(0xFFDBEAFE)
+                    tintColor = Color(0xFFDBEAFE),
+                    chipTagPrefix = "${rowTag}_attachment",
+                    latestChipTagPrefix = latestTag?.let { "${it}_attachment" },
+                    sent = message.sentAttachments,
                 )
             }
 
@@ -2503,6 +2529,8 @@ internal fun ChatInputBarWithBubbles(
     attachedFiles: List<PickedFile> = emptyList(),
     onAttach: () -> Unit = {},
     onRemoveAttachment: (Int) -> Unit = {},
+    canAttachMore: Boolean = attachedFiles.size < PickedFile.MAX_ATTACHMENTS,
+    policyProbe: String = ai.ciris.mobile.shared.models.AttachmentPolicySource.PENDING.probe,
     theme: InteractTheme = InteractTheme.forLiveBackground(false),
     modifier: Modifier = Modifier
 ) {
@@ -2546,7 +2574,7 @@ internal fun ChatInputBarWithBubbles(
                 // Attach file button
                 IconButton(
                     onClick = onAttach,
-                    enabled = enabled && attachedFiles.size < PickedFile.MAX_ATTACHMENTS,
+                    enabled = enabled && canAttachMore,
                     modifier = Modifier
                         .size(36.dp)
                         .testableClickable("btn_attach") { onAttach() }
@@ -2555,7 +2583,10 @@ internal fun ChatInputBarWithBubbles(
                         imageVector = CIRISIcons.add,
                         contentDescription = localizedString("mobile.interact_attach_file"),
                         tint = if (enabled) theme.textSecondary else theme.inputButtonDisabled,
-                        modifier = Modifier.size(20.dp)
+                        // Read-only automation tag: where the paperclip's limits came
+                        // from (AttachmentPolicySource.probe). The with-AI files flow
+                        // skips only on the bare-404 words (CIRISClient#217).
+                        modifier = Modifier.size(20.dp).testable("interact_attachment_policy", policyProbe)
                     )
                 }
 
@@ -2736,6 +2767,9 @@ private fun MessageAttachmentRow(
     hasImages: Boolean,
     hasDocs: Boolean,
     tintColor: Color,
+    chipTagPrefix: String,
+    sent: List<ai.ciris.mobile.shared.models.SentAttachment>,
+    latestChipTagPrefix: String? = null,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -2762,6 +2796,55 @@ private fun MessageAttachmentRow(
             color = tintColor,
             fontWeight = FontWeight.Medium
         )
+    }
+    SentAttachmentChips(sent, chipTagPrefix, tintColor, latestChipTagPrefix)
+}
+
+/**
+ * One chip per file a SENT message carried, with the agent's verdict beside
+ * it (CIRISClient#217): a refusal is said by its reason id
+ * (`mobile.interact_attachment_reason_<id>`), a cut document is marked, and
+ * nothing is said for a file the agent read whole. Tags:
+ * `msg_user_<n>_attachment_<i>` (the file) and `..._note` (the verdict); on the
+ * newest user row also `msg_user_latest_attachment_<i>[_note]`.
+ */
+@Composable
+private fun SentAttachmentChips(
+    sent: List<ai.ciris.mobile.shared.models.SentAttachment>,
+    tagPrefix: String,
+    tintColor: Color,
+    latestTagPrefix: String? = null,
+) {
+    sent.forEachIndexed { i, s ->
+        val tag = "${tagPrefix}_$i"
+        val alt = latestTagPrefix?.let { "${it}_$i" }
+        Column(modifier = Modifier.padding(top = 2.dp)) {
+            Text(
+                text = s.name,
+                fontSize = 11.sp,
+                color = tintColor,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.testable(tag, s.name).let { m -> alt?.let { m.testable(it, s.name) } ?: m },
+            )
+            val o = s.outcome
+            val key = o?.noteKey()
+            if (o != null && key != null) {
+                val note = localizedString(
+                    key,
+                    mapOf(
+                        "limit" to (o.limitBytes?.let { ai.ciris.mobile.shared.ui.screens.files.humanBytes(it) } ?: "?"),
+                        "reason" to (o.reason ?: o.status),
+                    ),
+                )
+                Text(
+                    text = note,
+                    fontSize = 11.sp,
+                    color = tintColor,
+                    fontWeight = if (o.refused) FontWeight.SemiBold else FontWeight.Normal,
+                    modifier = Modifier.testable("${tag}_note", note).let { m -> alt?.let { m.testable("${it}_note", note) } ?: m },
+                )
+            }
+        }
     }
 }
 

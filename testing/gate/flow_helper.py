@@ -221,6 +221,24 @@ class SyncFlowHelper:
                            f"that still fires is CIRISClient#69's shape")
         return False
 
+    async def attach_file(self, name: str, sentinel: str) -> bool:
+        """`attach:` — build `name` carrying `sentinel` (attachment_fixtures,
+        vendored from CIRISAgent) and inject it into the paperclip."""
+        from testing.gate import attachment_fixtures as fx  # noqa: PLC0415
+        from testing.gate.flow_spec import ATTACH_TYPES  # noqa: PLC0415
+
+        ext = name[name.rfind("."):].lower()
+        builders = {".pdf": lambda: fx.pdf(fx.sentence(sentinel)),
+                    ".docx": lambda: fx.docx(fx.sentence(sentinel)),
+                    ".txt": lambda: fx.text(fx.sentence(sentinel)),
+                    ".png": fx.png}
+        try:
+            self._drv.inject_file(name, ATTACH_TYPES[ext], builders[ext]())
+            return True
+        except (DriverError, KeyError) as e:
+            self.last_error = str(e)
+            return False
+
     async def input_text(self, tag: str, text: str) -> bool:
         return self._reach(tag, lambda: self._drv.input(tag, text))
 

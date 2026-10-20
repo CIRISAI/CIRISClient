@@ -807,20 +807,52 @@ class CIRISApiClient(
                 throw RuntimeException("API error: HTTP ${response.status}")
             }
 
-            val body = response.body()
-            logDebug(method, "Response body parsed successfully")
-
-            val data = body.`data` ?: throw RuntimeException("API returned null data")
-            logInfo(method, "Message sent successfully: messageId=${data.messageId}")
-
-            InteractResponse(
-                response = data.response,
-                message_id = data.messageId,
-                reasoning = null
-            )
+            // Read the raw body: the generated model has no `attachments`, and
+            // the per-file verdicts are the point (CIRISClient#217).
+            val parsed = InteractWire.parseInteract(response.response.bodyAsText())
+            val refused = parsed.attachments.count { it.refused }
+            logInfo(method, "Message sent successfully: messageId=${parsed.message_id} outcome=${parsed.outcome} " +
+                "attachments=${parsed.attachments.size} refused=$refused")
+            parsed
         } catch (e: Exception) {
             logException(method, e, "message='${message.take(30)}...', channelId=$channelId, hasToken=${accessToken != null}")
             throw e
+        }
+    }
+
+    /**
+     * `GET /v1/agent/attachments/policy` (same auth as interact): the limits
+     * `/interact` applies to attached files (CIRISClient#217). A bare 404 is an
+     * agent older than the route — [AttachmentPolicyRead.AgentTooOld], and the
+     * caller falls back to the client's constants; it never blocks attaching.
+     */
+    suspend fun getAttachmentPolicy(): AttachmentPolicyRead {
+        val method = "getAttachmentPolicy"
+        val client = io.ktor.client.HttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 10000
+                connectTimeoutMillis = 5000
+            }
+        }
+        return try {
+            val response = client.get("$baseUrl/v1/agent/attachments/policy") {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            val raw = response.bodyAsText()
+            when {
+                response.status.value == 404 -> {
+                    logWarn(method, "404 — the agent predates the attachment policy route; using the client's limits")
+                    AttachmentPolicyRead.AgentTooOld
+                }
+                !response.status.isSuccess() -> AttachmentPolicyRead.Failed("HTTP ${response.status.value}")
+                else -> InteractWire.parsePolicy(raw)?.let { AttachmentPolicyRead.Live(it) }
+                    ?: AttachmentPolicyRead.Failed("no policy in the body")
+            }
+        } catch (e: Exception) {
+            logWarn(method, "policy read failed: ${e::class.simpleName}: ${e.message}")
+            AttachmentPolicyRead.Failed(e.message ?: e::class.simpleName.orEmpty())
+        } finally {
+            client.close()
         }
     }
 

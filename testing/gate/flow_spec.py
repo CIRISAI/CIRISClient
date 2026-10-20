@@ -58,14 +58,26 @@ _COND_KEYS = {
     "screen", "visible", "absent", "text",
     "count", "number", "matches", "one_of", "each", "relation", "state",
 }
-_ACTION_KEYS = {"click", "click_refused", "input", "scroll_to", "wait", "wait_ms", "when"}
+_ACTION_KEYS = {"click", "click_refused", "input", "scroll_to", "wait", "wait_ms", "when", "attach"}
 #: The verbs, one per action. LOCAL DELTA: `click_refused: TAG` clicks a control
 #: the step says is DISABLED and holds only when nothing ran behind it — the
 #: platform refused the click, or no handler answered it. A handler that fires
 #: fails the action (CIRISClient#69); the step's `absent:` judges the effect.
 #: iOS, run 36733112700: a plain `click:` called the refusal of a disabled
 #: submit a failure, on the step whose claim IS that the click does nothing.
-_VERBS = ("click", "click_refused", "input", "scroll_to", "wait")
+_VERBS = ("click", "click_refused", "input", "scroll_to", "wait", "attach")
+#: LOCAL DELTA (CIRISClient#217): `attach: {FILE: SENTINEL}` builds a real file
+#: carrying SENTINEL (attachment_fixtures.py, vendored from CIRISAgent) and
+#: hands it to the chat paperclip through `/inject-file`. FILE's extension picks
+#: the builder; anything else is a load error, so a flow cannot ask for a file
+#: the harness would fail to make on the leg.
+ATTACH_TYPES = {
+    ".pdf": "application/pdf",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".txt": "text/plain",
+    ".png": "image/png",
+}
+_SENTINEL = re.compile(r"^CIRIS-ATTACH-[0-9A-F]{8}$")
 #: LOCAL DELTA (VENDORED.md): `csd` names the CSD a flow tests, so the runner can
 #: read that CSD's `shows:` (for `relation` field ids) and `states:` (for `state:`).
 _FLOW_KEYS = {"flow", "title", "description", "client", "steps", "csd", "fixture", "cleanup"}
@@ -237,6 +249,17 @@ class Action:
                 f"{where}: exactly one of {'/'.join(_VERBS)} per action, got {verbs or 'none'}"
             )
         verb = verbs[0]
+        if verb == "attach":
+            spec = raw["attach"]
+            if not isinstance(spec, dict) or len(spec) != 1:
+                raise SpecError(f"{where}: `attach` takes one {{file: sentinel}} pair")
+            name, sentinel = (str(x) for x in next(iter(spec.items())))
+            ext = name[name.rfind("."):].lower() if "." in name else ""
+            if ext not in ATTACH_TYPES:
+                raise SpecError(f"{where}: `attach` cannot build {name!r}; one of {sorted(ATTACH_TYPES)}")
+            if not _SENTINEL.match(sentinel):
+                raise SpecError(f"{where}: `attach` sentinel {sentinel!r} is not CIRIS-ATTACH-XXXXXXXX (hex)")
+            return cls("attach", name, sentinel, wait_ms, when)
         if verb == "input":
             spec = raw["input"]
             if not isinstance(spec, dict) or len(spec) != 1:
@@ -833,6 +856,9 @@ class FlowRunner:
             if action.kind == "input":
                 ok = await self.helper.input_text(action.target, action.value or "")
                 return None if ok else f"input into {action.target!r} did not succeed{self._why()}"
+            if action.kind == "attach":
+                ok = await self.helper.attach_file(action.target, action.value or "")
+                return None if ok else f"attach {action.target!r} did not succeed{self._why()}"
             if action.kind == "scroll_to":
                 ok = await self.helper.scroll_into_view(action.target)
                 return None if ok else f"could not bring {action.target!r} on screen"

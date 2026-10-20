@@ -74,22 +74,19 @@ private fun chooseFileOnEdt(mimeTypes: List<String>): File? {
 
 // Returns the chosen FILE: reading it is the caller's job, off the EDT (#18).
 private fun showNativeFileChooser(mimeTypes: List<String>): File? {
+    // CIRISClient#217: "All Files" only when the caller asked for any file
+    // (Files › Add passes */*). Otherwise the filter is the whole gate, so a
+    // caller whose types have no known extension gets no chooser rather than
+    // an unfiltered one.
+    val extensions = AttachmentTypes.extensionsFor(mimeTypes)
+    val acceptAll = AttachmentTypes.pickerAcceptsAll(mimeTypes)
+    if (!acceptAll && extensions.isEmpty()) {
+        PlatformLogger.w("FilePicker", "no extension known for $mimeTypes — refusing to open an unfiltered chooser")
+        return null
+    }
     val chooser = JFileChooser().apply {
         dialogTitle = "Select file to attach"
         isMultiSelectionEnabled = false
-
-        // Build extension filters from MIME types
-        val extensions = mutableListOf<String>()
-        for (mime in mimeTypes) {
-            when (mime) {
-                "image/jpeg" -> extensions.addAll(listOf("jpg", "jpeg"))
-                "image/png" -> extensions.add("png")
-                "image/gif" -> extensions.add("gif")
-                "image/webp" -> extensions.add("webp")
-                "application/pdf" -> extensions.add("pdf")
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document" -> extensions.add("docx")
-            }
-        }
 
         if (extensions.isNotEmpty()) {
             fileFilter = FileNameExtensionFilter(
@@ -97,6 +94,7 @@ private fun showNativeFileChooser(mimeTypes: List<String>): File? {
                 *extensions.toTypedArray()
             )
         }
+        isAcceptAllFileFilterUsed = acceptAll
     }
 
     val result = chooser.showOpenDialog(null)
@@ -116,7 +114,7 @@ private fun readDesktopFile(file: File): Any? {
 
         val bytes = file.readBytes()
         val base64 = Base64.encode(bytes)
-        val mediaType = guessMimeType(file.name)
+        val mediaType = AttachmentTypes.mimeTypeForFileName(file.name)
 
         PickedFile(
             name = file.name,
@@ -127,18 +125,5 @@ private fun readDesktopFile(file: File): Any? {
     } catch (e: Exception) {
         println("[FilePicker] Failed to read file: ${e.message}")
         null
-    }
-}
-
-private fun guessMimeType(fileName: String): String {
-    val ext = fileName.substringAfterLast('.', "").lowercase()
-    return when (ext) {
-        "jpg", "jpeg" -> "image/jpeg"
-        "png" -> "image/png"
-        "gif" -> "image/gif"
-        "webp" -> "image/webp"
-        "pdf" -> "application/pdf"
-        "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        else -> "application/octet-stream"
     }
 }

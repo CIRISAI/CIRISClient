@@ -14,10 +14,6 @@ import platform.UIKit.UIApplication
 import platform.UIKit.UIDocumentPickerDelegateProtocol
 import platform.UIKit.UIDocumentPickerViewController
 import platform.UniformTypeIdentifiers.UTType
-import platform.UniformTypeIdentifiers.UTTypeImage
-import platform.UniformTypeIdentifiers.UTTypePDF
-import platform.UniformTypeIdentifiers.UTTypeJPEG
-import platform.UniformTypeIdentifiers.UTTypePNG
 import platform.darwin.NSObject
 import platform.posix.memcpy
 import kotlin.io.encoding.Base64
@@ -39,21 +35,12 @@ actual fun FilePickerDialog(
     LaunchedEffect(show) {
         if (!show) return@LaunchedEffect
 
-        val utTypes = mutableListOf<UTType>()
-        for (mime in mimeTypes) {
-            when {
-                // Any file (Files › Add). UTType has no MIME for the
-                // wildcard, so it resolved to nothing and the picker was
-                // dismissed before it ever appeared.
-                mime == "*/*" -> platform.UniformTypeIdentifiers.UTTypeItem?.let { utTypes.add(it) }
-                mime == "image/jpeg" -> UTTypeJPEG?.let { utTypes.add(it) }
-                mime == "image/png" -> UTTypePNG?.let { utTypes.add(it) }
-                mime.startsWith("image/") -> UTTypeImage?.let { utTypes.add(it) }
-                mime == "application/pdf" -> UTTypePDF?.let { utTypes.add(it) }
-                else -> {
-                    UTType.typeWithMIMEType(mime)?.let { utTypes.add(it) }
-                }
-            }
+        // The mapping is common code (AttachmentTypes.iosContentTypes) so a
+        // test can read it; this only resolves each ref to a UTType. "*/*"
+        // (Files › Add) is public.item — UTType has no MIME for the wildcard.
+        val utTypes = AttachmentTypes.iosContentTypes(mimeTypes).mapNotNull { ref ->
+            ref.identifier?.let { UTType.typeWithIdentifier(it) }
+                ?: ref.mime?.let { UTType.typeWithMIMEType(it) }
         }
 
         val uniqueTypes = utTypes.distinctBy { it.identifier }
@@ -108,7 +95,7 @@ private class FilePickerDelegate(
 
         val bytes = data.toByteArray()
         val base64 = Base64.encode(bytes)
-        val mediaType = guessMimeType(fileName)
+        val mediaType = AttachmentTypes.mimeTypeForFileName(fileName)
 
         onFilePicked(
             PickedFile(
@@ -134,17 +121,4 @@ private fun NSData.toByteArray(): ByteArray {
         memcpy(pinned.addressOf(0), this.bytes, length)
     }
     return bytes
-}
-
-private fun guessMimeType(fileName: String): String {
-    val ext = fileName.substringAfterLast('.', "").lowercase()
-    return when (ext) {
-        "jpg", "jpeg" -> "image/jpeg"
-        "png" -> "image/png"
-        "gif" -> "image/gif"
-        "webp" -> "image/webp"
-        "pdf" -> "application/pdf"
-        "docx" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        else -> "application/octet-stream"
-    }
 }
