@@ -271,8 +271,9 @@ path. The drive tags, in order, are:
 `harness.native run --csd CSD-095`). Catalogue v3 adds the atom
 `key.membership.proposed_add` (CC rc9 `01b47e75`). It has three tests:
 
-```yaml
+```yaml csd:tests
 CSD-095:
+  catalogue_version: 3
   topology: T10
   tests:
     add_held:
@@ -288,10 +289,11 @@ CSD-095:
       probe: {node: A2, path: /v1/self/roster/proposals, status: 200, expect: {proposals.0: null}}
 ```
 
-This copies the server's entry. It is not a typed `csd:` block, because this
-repo's `check_csd_v3.py` reads CSD/4 topology only as a full `csd:topology`
-layer graph. It does not yet read a named topology (`topology: T10`) or a
-`tests:` map, so the entry stays here as prose until it does.
+This is the server's entry, typed (`csd:tests`, CSD4.md §1). `check_csd_v3.py`
+binds it through `packaging/check_csd4.py` (#219). Each atom is checked against
+the pinned catalogue's version-3 vocabulary, every test must be reachable at one
+instant in the server model's trace, and the block must match `requirements.yaml`'s
+CSD-095 entry exactly (`packaging/csd4/`, pinned per PIN.md).
 
 The same T10 mesh also passed this client's code live:
 * at `a09c3c83`/`caf94d07`, a held evict;
