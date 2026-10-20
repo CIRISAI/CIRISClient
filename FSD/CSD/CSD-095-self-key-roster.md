@@ -2,7 +2,7 @@
 
 **CSD**: CSD-095 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer#794 (CC 3.3.6.3), pushed as CIRISServer#802 (`feat/multi-device-csd4` @ `e1201b69`; same code as the `9ffcb65b` the client was built against, the tree differs in one CI comment). The rule, the rows and the executor are persist's (`self_roster`, CIRISPersist v59.0.0)
 **Pairs with**: CSD-094 (Approve a new device: from two devices its approval IS an add proposal) · CSD-037 (My Identity: the revoke on the roster IS an evict proposal) · CSD-093 (the new device, which waits while the add is held)
-**Flow**: unwritten. The quorum path (three keys) can be driven; the lone path cannot until persist's `CIRIS_TEST_W_SELF_SECS` override ships (§5)
+**Flow**: unwritten. The quorum path (three keys) can be driven; the lone path cannot until persist's `W_self` seam ships (CIRISPersist#1111, §5). The server QA runs it on T10 (§5)
 **Card**: `ui/screens/SelfRosterCard.kt` (`SelfRosterCard`, `RosterTags`), placed on `ui/screens/IdentityManagementScreen.kt` directly below the Approve card; `viewmodels/SelfRosterViewModel.kt`; wire `api/SelfRosterApi.kt` + `CIRISApiClient.{getRosterProposals,answerRosterProposal}`; shapes `models/federation/SelfRoster.kt`; tests `SelfRosterViewModelTest` (commonTest), `SelfRosterWireTest`, `RosterHeldWireTest.aHeldApprovalAnswers202AndIsHeldNotApproved` (desktopTest)
 
 ```yaml csd:stage
@@ -264,6 +264,42 @@ path. The drive tags, in order, are:
 4. `btn_self_roster_assent_<id>` → `btn_confirm_roster_answer_confirm`, read `text_self_roster_answer_outcome`;
 5. `btn_self_roster_object_<id>` → `btn_confirm_roster_answer_confirm`;
 6. on the approving device, `btn_approve_device_<id>` → `btn_confirm_device_request_confirm`, read `text_approve_device_outcome = held` and `text_approve_device_held_window`.
+
+**The server's QA runs this card on topology T10** (CIRISServer#802,
+`feat/multi-device-csd4` @ `ea56ec17`,
+`harness/native/topologies/catalog/requirements.yaml:46-67`, through
+`harness.native run --csd CSD-095`). It has two tests, and both pass:
+
+```yaml
+CSD-095:
+  topology: T10
+  tests:
+    evict_held:
+      at: [key.membership.proposed_evict, key.holder.thief, self.roster_size.three_more]
+      probe: {node: A2, path: /v1/self/roster/proposals, status: 200,
+              expect: {proposals.0.proposal.kind: evict, proposals.0.decision.outcome: pending}}
+    evicted_by_quorum:
+      at: [key.membership.evicted, key.holder.thief]
+      probe: {node: A2, path: /v1/self/roster/proposals, status: 200, expect: {proposals.0: null}}
+```
+
+This copies the server's entry. It is not a typed `csd:` block, because this
+repo's `check_csd_v3.py` reads CSD/4 topology only as a full `csd:topology`
+layer graph. It does not yet read a named topology (`topology: T10`) or a
+`tests:` map, so the entry stays here as prose until it does.
+
+The same T10 mesh also passed this client's code live:
+* at `a09c3c83`/`caf94d07`, a held evict;
+* at `caf94d07`, a held ADD (the third device went from `requested` to
+  `approved` in about 6 s, and the history read LANDED on both devices).
+
+**Not in T10 yet.**
+* The lone path is T11 (two devices lost; the person recovers alone after
+  `W_self`). It waits on persist's test-anchor `W_self` seam (CIRISPersist#1111).
+* The held ADDITION waits on a vocabulary atom for it, which has been asked of
+  CIRISConstitution.
+
+One card names one topology (CSD/4 §1), and T10 reaches neither of these.
 
 **The lone path is not drivable yet.** There is no `W_self` test override:
 persist's `CIRIS_TEST_W_SELF_SECS` is in its next cut, so a one-day window

@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**81 cards** — 1 envisioned · 5 sketched · 67 building · 8 testable. **18 reserved**, **2 retired**.
+**81 cards** — 1 envisioned · 5 sketched · 67 building · 8 testable. **19 reserved**, **2 retired**.
 
 ## Cards
 
@@ -108,6 +108,7 @@ this directory yet.
 
 | CSD | Card | Reserved by | Note |
 |---|---|---|---|
+| CSD-096 | Session claims: one handler per exchange | CIRISServer#802 | server catalogue-v1 placeholder moved off 095; no client card yet |
 | CSD-111 | Steward shutdown dialogue | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | agent / decisions |
 | CSD-112 | Identity record and drift review | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | agent / rules |
 | CSD-113 | Retirement floor | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | agent / record |
@@ -140,4 +141,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-128, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 096–099, 109. Numbers above CSD-128 are free too, up to the test range.
+Below CSD-128, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099, 109. Numbers above CSD-128 are free too, up to the test range.
