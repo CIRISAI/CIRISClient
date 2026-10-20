@@ -741,6 +741,70 @@ class AddDeviceSetupTest {
         assertEquals(tries, node.calls.count { it == "start" }, "the re-send loop stops")
     }
 
+    // ── add_device.owner_route_pending: 503 + Retry-After (CIRISServer#798) ──
+
+    private fun routePending(retryAfter: Int?) = NodeRefusal(
+        "add_device.owner_route_pending", "english for add_device.owner_route_pending", 503, retryAfterSeconds = retryAfter,
+    )
+
+    @Test
+    fun ownerRoutePendingIsResentAfterTheNodesRetryAfterNotTheCadence() = runBlocking {
+        val sentAt = mutableListOf<kotlin.time.TimeMark>()
+        val node = ScriptedNode().apply {
+            startAnswer = {
+                sentAt += kotlin.time.TimeSource.Monotonic.markNow()
+                if (sentAt.size == 1) throw routePending(1)
+                progress("requested", code = "135790")
+            }
+        }
+        val vm = track(
+            SetupViewModel(
+                FakeCIRISApiClientForBilling(), addDeviceApiOverride = node, addDevicePollMs = 5,
+                addDeviceRetryMs = 5, addDeviceRetryWindowMs = 60_000,
+            ),
+        )
+        vm.asked()
+        val r = vm.until("retrying") { it.addDevice.phase == AddDevicePhase.RETRYING }
+        assertEquals("add_device.owner_route_pending", r.addDevice.refusalReasonId, "the retrying line is the node's id, which names the unannounced case")
+        assertTrue(r.addDevice.cancellable)
+        val s = vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        assertEquals("135790", s.addDevice.matchCode)
+        assertEquals(2, sentAt.size)
+        val gap = sentAt[0].elapsedNow() - sentAt[1].elapsedNow()
+        assertTrue(gap.inWholeMilliseconds >= 900, "waited the node's Retry-After (1 s), not the 5 ms cadence: $gap")
+    }
+
+    @Test
+    fun aRetryAfterBeyondTheCapIsBounded() = runBlocking {
+        var tries = 0
+        val node = ScriptedNode().apply {
+            startAnswer = {
+                tries++
+                if (tries == 1) throw routePending(3_600)
+                progress("requested", code = "135790")
+            }
+        }
+        val vm = track(
+            SetupViewModel(
+                FakeCIRISApiClientForBilling(), addDeviceApiOverride = node, addDevicePollMs = 5,
+                addDeviceRetryMs = 5, addDeviceRetryWindowMs = 60_000, addDeviceRetryAfterCapMs = 20,
+            ),
+        )
+        vm.asked()
+        vm.until("requested despite an hour's Retry-After") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+        assertEquals(2, tries)
+    }
+
+    @Test
+    fun ownerRoutePendingStopsAtTheRetryWindowWithItsId() = runBlocking {
+        val node = ScriptedNode().apply { startAnswer = { throw routePending(null) } }
+        val vm = vm(node) // every 5 ms for 40 ms
+        vm.asked()
+        val s = vm.until("refused") { it.addDevice.phase == AddDevicePhase.REFUSED }
+        assertEquals("add_device.owner_route_pending", s.addDevice.refusalReasonId)
+        assertEquals(503, s.addDevice.refusalStatus)
+    }
+
     // ── Restart-resume and old nodes ─────────────────────────────────────────
 
     @Test

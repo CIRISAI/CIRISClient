@@ -1575,8 +1575,8 @@ class CIRISApiClient(
      * 401): [NodeRefusal.reasonId] is then null and the caller falls back to the
      * status, which is still a better answer than a parse exception.
      */
-    private fun nodeRefusal(method: String, status: HttpStatusCode, raw: String): NodeRefusal {
-        val refusal = NodeRefusal.fromBody(status.value, raw)
+    private fun nodeRefusal(method: String, status: HttpStatusCode, raw: String, retryAfter: String? = null): NodeRefusal {
+        val refusal = NodeRefusal.fromBody(status.value, raw, NodeRefusal.retryAfterSeconds(retryAfter))
         logError(method, "status=$status reason_id=${refusal.reasonId ?: "<none>"} body=${raw.take(200)}")
         return refusal
     }
@@ -3228,7 +3228,10 @@ class CIRISApiClient(
                 }
             }
             val raw = response.bodyAsText()
-            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            if (!response.status.isSuccess()) {
+                // 503 add_device.owner_route_pending carries Retry-After (CIRISServer#798).
+                throw nodeRefusal(method, response.status, raw, response.headers["Retry-After"])
+            }
             raw
         } catch (e: NodeRefusal) {
             throw e
@@ -5790,6 +5793,116 @@ class CIRISApiClient(
         // `bundle` is taken from the body as sent, never through the decoder.
         return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto.serializer(), raw)
             .copy(bundleText = ai.ciris.mobile.shared.models.federation.finalGenesisBundleText(raw))
+    }
+
+    // ─── The 2-of-3 trust-root AMEND ("re-scrub", CC 5.3.4; CIRISServer#798) ───
+    // Loopback-only, beside final-genesis. The pinned bundle is carried byte for
+    // byte; only each seated canonical's signed transit row is added; any
+    // holders up to the charter's quorum authorize the new digest.
+
+    /**
+     * `GET /v1/accord/final-genesis/amend` — the amend's status. Nothing planned
+     * → 409 `final_genesis.amend_not_planned`; a node older than the routes → a
+     * bare 404. Both throw [NodeRefusal].
+     */
+    suspend fun getFinalGenesisAmendStatus(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto {
+        val raw = familyCall("getFinalGenesisAmendStatus", HttpMethod.Get, nodeUrl, "/v1/accord/final-genesis/amend")
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/amend/plan {pinned_bundle?, serve_transport_destinations?, replace?}`.
+     * [pinnedBundle] null = the bundle this node runs on; [rows] empty = the
+     * node reads each canonical's row from its own directory. Each row is a
+     * signed transport_destination object, sent as given. [replace] only after
+     * the operator confirmed discarding a planned amend.
+     */
+    suspend fun planFinalGenesisAmend(
+        rows: List<JsonObject>,
+        replace: Boolean,
+        pinnedBundle: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto {
+        val body = buildJsonObject {
+            pinnedBundle?.let { put("pinned_bundle", JsonPrimitive(it)) }
+            if (rows.isNotEmpty()) put("serve_transport_destinations", kotlinx.serialization.json.JsonArray(rows))
+            if (replace) put("replace", JsonPrimitive(true))
+        }
+        val raw = familyCall("planFinalGenesisAmend", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/amend/plan", body)
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/amend/sign` — the final-genesis sign body
+     * (`SignRequest`): ONE YubiKey + USB authorization by [keyId] over the
+     * amended digest. Answers the status body.
+     */
+    suspend fun signFinalGenesisAmend(
+        keyId: String,
+        mldsaUsbPath: String,
+        userPin: String? = null,
+        modulePath: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+        pivSlot: String? = null,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto {
+        val body = buildJsonObject {
+            put("key_id", JsonPrimitive(keyId.trim()))
+            put("mldsa_usb_path", JsonPrimitive(mldsaUsbPath.trim()))
+            put("pkcs11", finalGenesisPkcs11(userPin, modulePath, pivSlot))
+        }
+        val raw = familyCall(
+            "signFinalGenesisAmend", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/amend/sign", body,
+            requestTimeoutMillis = ceremonyTimeoutMillis,
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto.serializer(), raw)
+    }
+
+    /**
+     * `POST /v1/accord/final-genesis/amend/finish` — assemble at the quorum,
+     * verify, write the v4 bundle. 409 `final_genesis.amend_quorum_not_met`
+     * below quorum. `bundle_json` is taken from the body as sent.
+     */
+    suspend fun finishFinalGenesisAmend(
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto {
+        val raw = familyCall(
+            "finishFinalGenesisAmend", HttpMethod.Post, nodeUrl, "/v1/accord/final-genesis/amend/finish",
+            buildJsonObject { }, requestTimeoutMillis = ceremonyTimeoutMillis,
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto.serializer(), raw)
+            .copy(bundleText = ai.ciris.mobile.shared.models.federation.finalGenesisBundleText(raw))
+    }
+
+    /**
+     * `GET <canonicalBaseUrl>/v1/trust-root/transit-row` — the CANONICAL's
+     * signed transport_destination row with its transit pair (CIRISServer#798
+     * @ 76e16ccf, `src/trust_root_api.rs:615`, PUBLIC). A different host from
+     * the local node: no bearer is sent. Refusals by id: 404
+     * `trust_root.not_a_serve_node`, 404 `trust_root.no_transit_row`, 500
+     * `trust_root.store_unavailable`; a bare 404 is a node older than the route.
+     */
+    suspend fun fetchCanonicalTransitRow(
+        canonicalBaseUrl: String,
+    ): ai.ciris.mobile.shared.models.federation.CanonicalTransitRow {
+        val method = "fetchCanonicalTransitRow"
+        val base = canonicalBaseUrl.trim().trimEnd('/')
+        logInfo(method, "GET $base/v1/trust-root/transit-row")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get("$base/v1/trust-root/transit-row")
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            val row = kotlinx.serialization.json.Json.parseToJsonElement(raw) as? JsonObject
+                ?: throw NodeRefusal(null, "the transit row is not a JSON object", response.status.value, raw)
+            ai.ciris.mobile.shared.models.federation.canonicalTransitRow(row)
+        } catch (e: Exception) {
+            logException(method, e, "canonical=$base")
+            throw e
+        } finally {
+            client.close()
+        }
     }
 
     /**

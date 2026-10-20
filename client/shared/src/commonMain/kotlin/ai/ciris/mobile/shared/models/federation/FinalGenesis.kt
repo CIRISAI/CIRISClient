@@ -101,6 +101,13 @@ data class FinalGenesisFinishDto(
     @SerialName("bundle_sha256")
     val bundleSha256: String = "",
     val verified: FinalGenesisVerifiedDto = FinalGenesisVerifiedDto(),
+    /** `amend` on the 2-of-3 re-scrub's finish (CIRISServer#798 `src/final_genesis.rs:1574`); absent on the full ceremony's. */
+    val mode: String? = null,
+    /** The bundle's version — 4 from the amend (it seeds each canonical's transit pair); absent on the full ceremony's finish. */
+    val version: Int? = null,
+    /** The canonicals whose signed transit row the bundle seeds (amend only). */
+    @SerialName("serve_transport_destinations")
+    val serveTransportDestinations: List<String> = emptyList(),
     /**
      * The `bundle` member EXACTLY as the node sent it (CIRISServer 4da726e8
      * `:917`): the raw text of the member, or a string member's contents.
@@ -349,6 +356,147 @@ object FinalGenesisReason {
     const val ALREADY_PLANNED = "final_genesis.already_planned"
     const val NOTHING_TO_SIGN = "final_genesis.nothing_to_sign"
     const val CEREMONY_INCOMPLETE = "ceremony_incomplete"
+    /** The amend's status/sign/finish with nothing planned (409, CIRISServer#798 `amend_load`). */
+    const val AMEND_NOT_PLANNED = "final_genesis.amend_not_planned"
+    /** An amend plan over a planned one, without `replace` (409). */
+    const val AMEND_ALREADY_PLANNED = "final_genesis.amend_already_planned"
+    /** Finish below the charter's quorum (409). */
+    const val AMEND_QUORUM_NOT_MET = "final_genesis.amend_quorum_not_met"
+}
+
+// ─── the 2-of-3 amend ("re-scrub", CC 5.3.4; CIRISServer#798) ───────────────
+//
+//   GET  /v1/accord/final-genesis/amend          → [FinalGenesisAmendStatusDto]
+//   POST /v1/accord/final-genesis/amend/plan     → [FinalGenesisAmendStatusDto]
+//   POST /v1/accord/final-genesis/amend/sign     → [FinalGenesisAmendStatusDto]
+//   POST /v1/accord/final-genesis/amend/finish   → [FinalGenesisFinishDto] (mode, version 4)
+//   GET  <canonical>/v1/trust-root/transit-row   → the canonical's signed row (PUBLIC)
+//
+// The steward's ruling on CIRISConstitution#172: the bundle v4 re-mint is an
+// AMEND, not a second genesis — the pinned bundle is carried byte for byte,
+// only each seated canonical's signed transit row is added, and the charter's
+// quorum (2 of 3) authorizes the new digest. No rounds, no recovery keys.
+
+/** `amend_status_body` (CIRISServer#798 `src/final_genesis.rs:1285-1306`). */
+@Serializable
+data class FinalGenesisAmendStatusDto(
+    val mode: String = "",
+    /** The charter's quorum — how many holder authorizations the amend needs. */
+    val needed: Int = 0,
+    /** The holders who have authorized, sorted, deduplicated. */
+    val signed: List<String> = emptyList(),
+    /** The node's own "M of N" (N = [needed]). */
+    val status: String = "",
+    val complete: Boolean = false,
+    /** The canonicals whose signed transit row the amended bundle seeds. */
+    @SerialName("serve_transport_destinations")
+    val serveTransportDestinations: List<String> = emptyList(),
+)
+
+/** What the operator pasted or attached as transit rows, read locally before anything is sent. */
+sealed interface TransitRows {
+    /** Nothing: the node reads each canonical's row from its own directory. */
+    data object Empty : TransitRows
+    data class Rows(val rows: List<kotlinx.serialization.json.JsonObject>) : TransitRows {
+        /** The canonical each row is about (`transport_destination.occurrence_key_id`), or `?`. */
+        val subjects: List<String> get() = rows.map { transitRowSubject(it) ?: "?" }
+    }
+    /** Not JSON objects: nothing is sent. */
+    data object Invalid : TransitRows
+}
+
+/** The canonical a signed transport_destination row is about. */
+fun transitRowSubject(row: kotlinx.serialization.json.JsonObject): String? =
+    ((row["transport_destination"] as? kotlinx.serialization.json.JsonObject)?.get("occurrence_key_id")
+        as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+
+/**
+ * The pasted text as rows: one JSON object, an array of objects, or several of
+ * either one after another (an attached file is appended on a new line).
+ */
+fun parseTransitRows(text: String): TransitRows {
+    if (text.isBlank()) return TransitRows.Empty
+    val values = splitJsonValues(text) ?: return TransitRows.Invalid
+    val rows = mutableListOf<kotlinx.serialization.json.JsonObject>()
+    for (v in values) {
+        val el = try {
+            kotlinx.serialization.json.Json.parseToJsonElement(v)
+        } catch (_: Exception) {
+            return TransitRows.Invalid
+        }
+        when (el) {
+            is kotlinx.serialization.json.JsonObject -> rows += el
+            is kotlinx.serialization.json.JsonArray -> el.forEach { rows += (it as? kotlinx.serialization.json.JsonObject ?: return TransitRows.Invalid) }
+            else -> return TransitRows.Invalid
+        }
+    }
+    return if (rows.isEmpty()) TransitRows.Invalid else TransitRows.Rows(rows)
+}
+
+/** Top-level JSON values one after another (whitespace or commas between), as text; null when one does not close. */
+private fun splitJsonValues(text: String): List<String>? {
+    val out = mutableListOf<String>()
+    var i = 0
+    while (i < text.length) {
+        val c = text[i]
+        if (c.isWhitespace() || c == ',') { i++; continue }
+        if (c != '{' && c != '[') return null
+        var depth = 0
+        var j = i
+        var end = -1
+        while (j < text.length) {
+            when (text[j]) {
+                '"' -> {
+                    j++
+                    while (j < text.length && text[j] != '"') { if (text[j] == '\\') j++; j++ }
+                }
+                '{', '[' -> depth++
+                '}', ']' -> { depth--; if (depth == 0) { end = j + 1; break } }
+            }
+            j++
+        }
+        if (end < 0) return null
+        out += text.substring(i, end)
+        i = end
+    }
+    return out
+}
+
+/**
+ * A canonical's row as `GET /v1/trust-root/transit-row` served it (CIRISServer#798
+ * @ 76e16ccf, `src/trust_root_api.rs:615`): [row] is sent into the plan as-is.
+ * [pairFingerprint] is computed HERE — SHA-256 over the decoded x25519 key then
+ * the ML-KEM-768 key from `signed_envelope.transit_kex_pubkeys`, first 16 hex in
+ * fours — for comparing with the canonical's host; null when the row carries no pair.
+ */
+data class CanonicalTransitRow(
+    val row: kotlinx.serialization.json.JsonObject,
+    val keyId: String?,
+    val pairFingerprint: String?,
+)
+
+@OptIn(kotlin.io.encoding.ExperimentalEncodingApi::class)
+fun canonicalTransitRow(row: kotlinx.serialization.json.JsonObject): CanonicalTransitRow {
+    val pair = ((row["signed_envelope"] as? kotlinx.serialization.json.JsonObject)?.get("transit_kex_pubkeys")
+        as? kotlinx.serialization.json.JsonObject)
+    fun half(k: String): ByteArray? = (pair?.get(k) as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content?.let {
+        try { kotlin.io.encoding.Base64.decode(it.trim()) } catch (_: Exception) { null }
+    }
+    val x = half("x25519_base64")
+    val m = half("ml_kem_768_base64")
+    val fp = if (x != null && m != null) shortCommitment(Sha256.hex(x + m)) else null
+    return CanonicalTransitRow(row, transitRowSubject(row), fp)
+}
+
+/** Where fetching a canonical's transit row stands. */
+sealed interface TransitFetch {
+    data object Idle : TransitFetch
+    data object Fetching : TransitFetch
+    data class Fetched(val row: CanonicalTransitRow) : TransitFetch
+    /** A bare 404: that node is older than `GET /v1/trust-root/transit-row`. */
+    data object TooOld : TransitFetch
+    /** `trust_root.not_a_serve_node`, `.no_transit_row`, `.store_unavailable`, or no answer at all. */
+    data class Refused(val refusal: FinalGenesisRefusal) : TransitFetch
 }
 
 /**

@@ -64,6 +64,11 @@ class SetupViewModel(
     private val addDeviceRetryMs: Long = 10_000,
     /** How long to keep re-sending before showing the refusal with a manual Retry. */
     private val addDeviceRetryWindowMs: Long = 5 * 60_000,
+    /**
+     * The most a node's `Retry-After` may hold one re-send back
+     * (`add_device.owner_route_pending`, CIRISServer#798): honoured, bounded.
+     */
+    private val addDeviceRetryAfterCapMs: Long = 30_000,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(initialState())
@@ -245,6 +250,13 @@ class SetupViewModel(
 
         /** 502 while the other device cannot be reached (retried, CIRISServer#792). */
         const val ADD_DEVICE_UNREACHABLE = "add_device.unreachable"
+
+        /**
+         * 503 + `Retry-After` while the other device's signed route (with its
+         * transit pair) has not reached this node (CIRISServer#798,
+         * `src/add_device.rs:1363`). Retried after the node's Retry-After.
+         */
+        const val ADD_DEVICE_OWNER_ROUTE_PENDING = "add_device.owner_route_pending"
 
         /** 409 on DELETE once the claim was applied: nothing left to cancel. */
         const val ADD_DEVICE_ALREADY_OWNED = "add_device.already_owned"
@@ -1815,6 +1827,8 @@ class SetupViewModel(
             var announced = false
             var waited = 0L
             while (isActive) {
+                // The node's own Retry-After, when it sent one; else the cadence.
+                var nextDelayMs = addDeviceRetryMs
                 val retryNow = try {
                     val p = api.start(contact, label)
                     updateAddDevice { it.copy(availability = AddDeviceAvailability.AVAILABLE) }
@@ -1824,10 +1838,11 @@ class SetupViewModel(
                     false
                 } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
                     val tooOld = e.statusCode == 404 && e.reasonId == null
-                    val unreachable = e.reasonId == ADD_DEVICE_UNREACHABLE
+                    val unreachable = e.reasonId == ADD_DEVICE_UNREACHABLE || e.reasonId == ADD_DEVICE_OWNER_ROUTE_PENDING
                     if (unreachable && waited < addDeviceRetryWindowMs) {
-                        if (!announced) PlatformLogger.i(TAG, "[addDevice] other device unreachable — re-sending every ${addDeviceRetryMs}ms for up to ${addDeviceRetryWindowMs}ms")
+                        if (!announced) PlatformLogger.i(TAG, "[addDevice] ${e.reasonId} — re-sending (Retry-After ${e.retryAfterSeconds ?: "-"}s, else every ${addDeviceRetryMs}ms) for up to ${addDeviceRetryWindowMs}ms")
                         announced = true
+                        e.retryAfterSeconds?.let { nextDelayMs = (it * 1_000L).coerceIn(0L, addDeviceRetryAfterCapMs) }
                         updateAddDevice {
                             it.copy(
                                 phase = AddDevicePhase.RETRYING,
@@ -1858,8 +1873,8 @@ class SetupViewModel(
                     false
                 }
                 if (!retryNow) break
-                delay(addDeviceRetryMs)
-                waited += addDeviceRetryMs
+                delay(nextDelayMs)
+                waited += nextDelayMs
                 if (_state.value.addDevice.phase != AddDevicePhase.RETRYING) break
             }
         }

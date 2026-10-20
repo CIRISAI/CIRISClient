@@ -192,6 +192,22 @@ data class RevokeOccurrenceResponse(
     val releasedSelf: Boolean = false,
     /** 0.5.218: the node's own sentence — already-shared history stays readable to the evicted device. */
     val history: String? = null,
+    /**
+     * 0.5.232 (persist v59, CC 3.3.6.3): the self roster's door HELD the
+     * eviction as a proposal — the device stays in the self until it lands
+     * (CIRISServer#794). `revoked` is false; this is not a failure.
+     */
+    val held: Boolean = false,
+    @SerialName("occurrences_held")
+    val occurrencesHeld: List<HeldOccurrence> = emptyList(),
+)
+
+/** One eviction the self roster's door held: `{occurrence_key_id, door}` (CIRISServer#798 `src/self_devices.rs:465`). */
+@Serializable
+data class HeldOccurrence(
+    @SerialName("occurrence_key_id")
+    val occurrenceKeyId: String = "",
+    val door: String? = null,
 )
 
 /**
@@ -323,4 +339,8 @@ data class ReleaseNodeResponse(
     /** The owner's nodes after the release, as the node re-read them. */
     @SerialName("nodes_owned_by")
     val nodesOwnedBy: List<String> = emptyList(),
+    /** 0.5.232: held by the self roster's door — not released yet, not failed. */
+    val held: Boolean = false,
+    @SerialName("occurrences_held")
+    val occurrencesHeld: List<HeldOccurrence> = emptyList(),
 )

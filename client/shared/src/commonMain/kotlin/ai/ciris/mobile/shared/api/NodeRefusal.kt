@@ -31,6 +31,12 @@ class NodeRefusal(
      * account must reach the screen, not just its headline.
      */
     val body: String? = null,
+    /**
+     * The node's `Retry-After`, in seconds, when it sent one — a 503 that means
+     * "not yet", not "no" (CIRISServer#798: `add_device.owner_route_pending`
+     * answers `Retry-After: 10`). Null when absent or not a delay in seconds.
+     */
+    val retryAfterSeconds: Int? = null,
 ) : RuntimeException(detail ?: reasonId ?: "node refused ($statusCode)") {
     companion object {
         /**
@@ -46,7 +52,7 @@ class NodeRefusal(
          */
         private val ID_TOKEN = Regex("^[a-z0-9_]+(\\.[a-z0-9_]+)+$")
 
-        fun fromBody(statusCode: Int, raw: String): NodeRefusal {
+        fun fromBody(statusCode: Int, raw: String, retryAfterSeconds: Int? = null): NodeRefusal {
             val obj = try {
                 kotlinx.serialization.json.Json.parseToJsonElement(raw) as? kotlinx.serialization.json.JsonObject
             } catch (_: Exception) {
@@ -75,7 +81,16 @@ class NodeRefusal(
                     ?: obj.str("detail"),
                 statusCode = statusCode,
                 body = raw.takeIf { it.isNotBlank() },
+                retryAfterSeconds = retryAfterSeconds,
             )
         }
+
+        /**
+         * A `Retry-After` header as seconds: the delay-seconds form only (what
+         * the node sends). An HTTP-date, a negative or a garbled value is null —
+         * the caller then keeps its own cadence.
+         */
+        fun retryAfterSeconds(header: String?): Int? =
+            header?.trim()?.takeIf { it.isNotEmpty() && it.length <= 6 && it.all { c -> c in '0'..'9' } }?.toInt()
     }
 }

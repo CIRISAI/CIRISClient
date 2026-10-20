@@ -3,7 +3,12 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.federation.CommittedKeyDto
+import ai.ciris.mobile.shared.models.federation.FinalGenesisAmendStatusDto
 import ai.ciris.mobile.shared.models.federation.FinalGenesisFinishDto
+import ai.ciris.mobile.shared.models.federation.TransitFetch
+import ai.ciris.mobile.shared.models.federation.TransitRows
+import ai.ciris.mobile.shared.models.federation.parseTransitRows
+import ai.ciris.mobile.shared.models.federation.transitRowSubject
 import ai.ciris.mobile.shared.models.federation.FinalGenesisGrid
 import ai.ciris.mobile.shared.models.federation.FinalGenesisItems
 import ai.ciris.mobile.shared.models.federation.FinalGenesisProbe
@@ -280,7 +285,7 @@ class FinalGenesisViewModel(
         if (_phase.value !is FinalGenesisPhase.Finished) _phase.value = FinalGenesisPhase.Planned(status)
     }
 
-    private suspend fun loadSource() {
+    private suspend fun loadSource(withRecovery: Boolean = true) {
         try {
             val src = apiClient.getGenesisRemintSource(nodeUrl())
             _source.value = src
@@ -300,7 +305,7 @@ class FinalGenesisViewModel(
             _sourceRefusal.value = (e as? NodeRefusal)?.let { FinalGenesisRefusal.of(it) }
                 ?: FinalGenesisRefusal.transport(e)
         }
-        loadRecoveryKeys()
+        if (withRecovery) loadRecoveryKeys()
     }
 
     /**
@@ -547,6 +552,225 @@ class FinalGenesisViewModel(
     /** Items, in bundle order, for a holder's round — what the grid's columns read. */
     fun itemsOfRound(round: Int): List<String> =
         grid()?.items.orEmpty().filter { FinalGenesisItems.round(it) == round }
+
+    // ─── Re-scrub: the 2-of-3 AMEND (CC 5.3.4; CIRISServer#798) ─────────────
+    //
+    // The steward's ruling on CIRISConstitution#172: the bundle v4 re-mint is an
+    // amend of the pinned bundle — carried byte for byte, each seated canonical's
+    // signed transit row added, authorized by the charter's quorum (2 of 3).
+    // One authorization per holder, any holders, until complete. No rounds, no
+    // recovery keys (the commitments are carried).
+
+    private val _amendPhase = MutableStateFlow<AmendPhase>(AmendPhase.Probing)
+    val amendPhase: StateFlow<AmendPhase> = _amendPhase.asStateFlow()
+
+    private val _amendRowsText = MutableStateFlow("")
+    /** Pasted or attached transit rows — the alternative to [fetchTransitRow]. */
+    val amendRowsText: StateFlow<String> = _amendRowsText.asStateFlow()
+
+    private val _canonicalUrl = MutableStateFlow("")
+    /** The canonical's base URL its transit row is fetched from. */
+    val canonicalUrl: StateFlow<String> = _canonicalUrl.asStateFlow()
+
+    private val _transitFetch = MutableStateFlow<TransitFetch>(TransitFetch.Idle)
+    val transitFetch: StateFlow<TransitFetch> = _transitFetch.asStateFlow()
+
+    private val _amendConfirmReplace = MutableStateFlow(false)
+    /** 409 `final_genesis.amend_already_planned` asked whether to discard the planned amend. */
+    val amendConfirmReplace: StateFlow<Boolean> = _amendConfirmReplace.asStateFlow()
+
+    private val _amendReplanning = MutableStateFlow(false)
+    val amendReplanning: StateFlow<Boolean> = _amendReplanning.asStateFlow()
+
+    private val _amendNotes = MutableStateFlow<Map<String, HolderSignNote>>(emptyMap())
+    val amendNotes: StateFlow<Map<String, HolderSignNote>> = _amendNotes.asStateFlow()
+
+    private val _amendRefusal = MutableStateFlow<FinalGenesisRefusal?>(null)
+    /** The last amend plan/finish/refresh refusal, rendered by id. */
+    val amendRefusal: StateFlow<FinalGenesisRefusal?> = _amendRefusal.asStateFlow()
+
+    /** The holders who may authorize: the re-mint source's roster, plus anyone the node says signed. */
+    fun amendHolders(): List<String> {
+        val signed = (_amendPhase.value as? AmendPhase.Planned)?.status?.signed.orEmpty()
+        return (_source.value?.holders.orEmpty().map { it.keyId } + signed).distinct()
+    }
+
+    fun amendRows(): TransitRows = parseTransitRows(_amendRowsText.value)
+
+    fun setAmendRowsText(text: String) {
+        _amendRowsText.value = text
+    }
+
+    /** Append an attached file's text on its own line (several rows may be attached). */
+    fun attachAmendRows(text: String) {
+        val cur = _amendRowsText.value.trimEnd()
+        _amendRowsText.value = if (cur.isEmpty()) text.trim() else cur + "\n" + text.trim()
+    }
+
+    fun setCanonicalUrl(url: String) {
+        _canonicalUrl.value = url
+    }
+
+    /** Open the re-scrub sheet: the amend's status and the roster. */
+    fun openAmend(): Job = viewModelScope.launch {
+        if (_amendPhase.value is AmendPhase.Finished) _amendPhase.value = AmendPhase.Probing
+        _amendRefusal.value = null
+        _amendReplanning.value = false
+        probeAmend()
+        if (_amendPhase.value != AmendPhase.TooOld) loadSource(withRecovery = false)
+    }
+
+    /** Re-read the amend's status (the sheet polls this while planned). */
+    fun refreshAmend(): Job = viewModelScope.launch { probeAmend() }
+
+    private suspend fun probeAmend() {
+        try {
+            val s = apiClient.getFinalGenesisAmendStatus(nodeUrl())
+            if (_amendPhase.value !is AmendPhase.Finished) _amendPhase.value = AmendPhase.Planned(s)
+        } catch (e: NodeRefusal) {
+            _amendPhase.value = when {
+                e.reasonId == FinalGenesisReason.AMEND_NOT_PLANNED -> AmendPhase.NotPlanned
+                e.statusCode == 404 && e.reasonId == null && e.body.isNullOrBlank() -> AmendPhase.TooOld
+                else -> AmendPhase.Unavailable(FinalGenesisRefusal.of(e))
+            }
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[probeAmend] ${e.message}")
+            _amendPhase.value = AmendPhase.Unavailable(FinalGenesisRefusal.transport(e))
+        }
+    }
+
+    /**
+     * Fetch the canonical's signed transit row (`GET <canonical>/v1/trust-root/transit-row`)
+     * — the expected path. Shown before planning; planned by [planAmend].
+     */
+    fun fetchTransitRow(): Job {
+        val url = _canonicalUrl.value.trim()
+        if (url.isEmpty() || _transitFetch.value == TransitFetch.Fetching) return Job().apply { complete() }
+        _transitFetch.value = TransitFetch.Fetching
+        return viewModelScope.launch {
+            _transitFetch.value = try {
+                TransitFetch.Fetched(apiClient.fetchCanonicalTransitRow(url))
+            } catch (e: NodeRefusal) {
+                if (e.statusCode == 404 && e.reasonId == null && e.body.isNullOrBlank()) TransitFetch.TooOld
+                else TransitFetch.Refused(FinalGenesisRefusal.of(e))
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[fetchTransitRow] ${e.message}")
+                TransitFetch.Refused(FinalGenesisRefusal.transport(e))
+            }
+        }
+    }
+
+    fun clearTransitFetch() {
+        _transitFetch.value = TransitFetch.Idle
+    }
+
+    /** The rows the plan carries: the fetched one, then pasted rows about other canonicals. Null when the paste does not parse. */
+    fun amendPlanRows(): List<kotlinx.serialization.json.JsonObject>? {
+        val fetched = (_transitFetch.value as? TransitFetch.Fetched)?.row
+        val pasted = when (val r = amendRows()) {
+            TransitRows.Empty -> emptyList()
+            is TransitRows.Rows -> r.rows
+            TransitRows.Invalid -> return null
+        }
+        if (fetched == null) return pasted
+        return listOf(fetched.row) + pasted.filter { transitRowSubject(it) == null || transitRowSubject(it) != fetched.keyId }
+    }
+
+    /** Plan the amend. Nothing is sent while the pasted rows do not parse. */
+    fun planAmend(): Job {
+        if (amendPlanRows() == null) return Job().apply { complete() }
+        return exclusive { planAmendNow(replace = false) }
+    }
+
+    /** The operator confirmed discarding the planned amend: this ONE request carries `replace`. */
+    fun confirmAmendReplace(): Job {
+        _amendConfirmReplace.value = false
+        return exclusive { planAmendNow(replace = true) }
+    }
+
+    fun dismissAmendReplace() {
+        _amendConfirmReplace.value = false
+    }
+
+    fun startAmendReplan() {
+        _amendReplanning.value = true
+    }
+
+    fun cancelAmendReplan() {
+        _amendReplanning.value = false
+    }
+
+    private suspend fun planAmendNow(replace: Boolean) {
+        val rows = amendPlanRows() ?: return
+        _amendRefusal.value = null
+        try {
+            val s = apiClient.planFinalGenesisAmend(rows, replace = replace, nodeUrl = nodeUrl())
+            _amendNotes.value = emptyMap()
+            _amendReplanning.value = false
+            _amendPhase.value = AmendPhase.Planned(s)
+        } catch (e: NodeRefusal) {
+            when {
+                e.reasonId == FinalGenesisReason.AMEND_ALREADY_PLANNED && !replace -> _amendConfirmReplace.value = true
+                e.statusCode == 404 && e.reasonId == null && e.body.isNullOrBlank() -> _amendPhase.value = AmendPhase.TooOld
+                else -> _amendRefusal.value = FinalGenesisRefusal.of(e)
+            }
+        } catch (e: Exception) {
+            _amendRefusal.value = FinalGenesisRefusal.transport(e)
+        }
+    }
+
+    /** Whether [holder] may authorize now: planned, not complete, not already signed. */
+    fun amendCanSign(holder: String): Boolean {
+        val s = (_amendPhase.value as? AmendPhase.Planned)?.status ?: return false
+        return !s.complete && holder !in s.signed
+    }
+
+    /** One YubiKey + USB authorization by [holder] over the amended digest. */
+    fun signAmend(holder: String, usbPath: String, pin: String?, modulePath: String? = null, pivSlot: String? = null): Job {
+        if (!amendCanSign(holder.trim())) return Job().apply { complete() }
+        return exclusive {
+            setAmendNote(holder, HolderSignNote.Signing)
+            try {
+                val s = apiClient.signFinalGenesisAmend(holder, usbPath, pin, modulePath, nodeUrl(), pivSlot)
+                setAmendNote(holder, HolderSignNote.Signed(listOf(holder)))
+                _amendPhase.value = AmendPhase.Planned(s)
+            } catch (e: NodeRefusal) {
+                setAmendNote(holder, HolderSignNote.Refused(FinalGenesisRefusal.of(e)))
+                if (e.reasonId == FinalGenesisReason.AMEND_NOT_PLANNED) probeAmend()
+            } catch (e: Exception) {
+                setAmendNote(holder, HolderSignNote.Refused(FinalGenesisRefusal.transport(e)))
+            }
+        }
+    }
+
+    private fun setAmendNote(holder: String, note: HolderSignNote) {
+        _amendNotes.value = _amendNotes.value + (holder to note)
+    }
+
+    /** Assemble at the quorum, verify, write the v4 bundle. */
+    fun finishAmend(): Job = exclusive {
+        _amendRefusal.value = null
+        try {
+            _amendPhase.value = AmendPhase.Finished(apiClient.finishFinalGenesisAmend(nodeUrl()))
+        } catch (e: NodeRefusal) {
+            _amendRefusal.value = FinalGenesisRefusal.of(e)
+            if (e.reasonId == FinalGenesisReason.AMEND_QUORUM_NOT_MET || e.reasonId == FinalGenesisReason.AMEND_NOT_PLANNED) probeAmend()
+        } catch (e: Exception) {
+            _amendRefusal.value = FinalGenesisRefusal.transport(e)
+        }
+    }
+}
+
+/** Where the re-scrub (the 2-of-3 amend) is, as the node says. */
+sealed interface AmendPhase {
+    data object Probing : AmendPhase
+    /** A bare 404 on `GET …/amend`: the node is older than the amend routes (CIRISServer 0.5.232). */
+    data object TooOld : AmendPhase
+    /** 409 `final_genesis.amend_not_planned`. */
+    data object NotPlanned : AmendPhase
+    data class Planned(val status: FinalGenesisAmendStatusDto) : AmendPhase
+    data class Finished(val result: FinalGenesisFinishDto) : AmendPhase
+    data class Unavailable(val refusal: FinalGenesisRefusal) : AmendPhase
 }
 
 /**

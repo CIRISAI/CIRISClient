@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.viewmodels.SetupViewModel
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.DeviceJoinRequest
 import ai.ciris.mobile.shared.platform.testable
@@ -371,7 +372,12 @@ fun AddDeviceProgressBlock(state: AddDeviceSetupState, onNewRequest: () -> Unit)
         AddDevicePhase.FAILED -> "mobile.add_device_failed" to t.danger
         AddDevicePhase.INTERRUPTED -> "mobile.add_device_interrupted" to t.danger
         // CIRISServer#792: the link to the other device can take minutes to come up.
-        AddDevicePhase.RETRYING -> "mobile.add_device_unreachable_retrying" to t.dim
+        // CIRISServer#798: the other device's route has not reached this one yet;
+        // the node's own id names the unannounced case (pairing QR or LAN).
+        AddDevicePhase.RETRYING -> (
+            if (state.refusalReasonId == SetupViewModel.ADD_DEVICE_OWNER_ROUTE_PENDING) SetupViewModel.ADD_DEVICE_OWNER_ROUTE_PENDING
+            else "mobile.add_device_unreachable_retrying"
+            ) to t.dim
         else -> "mobile.add_device_sending" to t.dim
     }
     val line = localizedString(key)
@@ -512,12 +518,21 @@ fun ApproveDeviceCard(viewModel: ApproveDeviceViewModel, modifier: Modifier = Mo
             val line = when (o) {
                 is DeviceRequestOutcome.Approved -> localizedString("mobile.approve_device_approved", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
                 is DeviceRequestOutcome.Denied -> localizedString("mobile.approve_device_denied", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
+                // 409 add_device.roster_change_held (CIRISServer#798): pending, not failed.
+                is DeviceRequestOutcome.Held -> localizedString("mobile.approve_device_held", "label", o.label.ifBlank { localizedString("mobile.approve_device_unnamed") })
             }
             Text(
                 line,
                 style = type.body,
                 color = if (o is DeviceRequestOutcome.Approved) t.ok else t.dim,
-                modifier = Modifier.testable(AddDeviceTags.APPROVE_OUTCOME, if (o is DeviceRequestOutcome.Approved) "approved" else "denied"),
+                modifier = Modifier.testable(
+                    AddDeviceTags.APPROVE_OUTCOME,
+                    when (o) {
+                        is DeviceRequestOutcome.Approved -> "approved"
+                        is DeviceRequestOutcome.Denied -> "denied"
+                        is DeviceRequestOutcome.Held -> "held"
+                    },
+                ),
             )
         }
     }

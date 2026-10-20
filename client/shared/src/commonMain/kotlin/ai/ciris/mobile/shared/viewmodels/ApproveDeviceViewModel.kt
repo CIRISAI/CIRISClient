@@ -27,7 +27,16 @@ data class DeviceRequestConfirm(val request: DeviceJoinRequest, val approve: Boo
 sealed interface DeviceRequestOutcome {
     data class Approved(val label: String, val matchCode: String) : DeviceRequestOutcome
     data class Denied(val label: String) : DeviceRequestOutcome
+    /**
+     * 409 `add_device.roster_change_held` (CIRISServer#798): from a roster of
+     * two, a THIRD device is a self-roster proposal (CC 3.3.6.3) — held, not
+     * refused. It lands by the roster's quorum (CIRISServer#794).
+     */
+    data class Held(val label: String) : DeviceRequestOutcome
 }
+
+/** The approve answer that is a held proposal, not a failure. */
+const val ADD_DEVICE_ROSTER_CHANGE_HELD = "add_device.roster_change_held"
 
 /**
  * The approving device's "Add a device" card (CSD-094), from the owner's
@@ -208,8 +217,13 @@ class ApproveDeviceViewModel(
                     requests = _state.value.requests.filterNot { it.requestId == id },
                 )
             } catch (e: NodeRefusal) {
-                PlatformLogger.w(TAG, "request $id refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
-                _state.value = _state.value.copy(working = null, refusal = DeviceRequestRefusal(e.reasonId, e.detail, e.statusCode))
+                if (c.approve && e.reasonId == ADD_DEVICE_ROSTER_CHANGE_HELD) {
+                    PlatformLogger.i(TAG, "request $id held as a self-roster proposal")
+                    _state.value = _state.value.copy(working = null, outcome = DeviceRequestOutcome.Held(c.request.label))
+                } else {
+                    PlatformLogger.w(TAG, "request $id refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                    _state.value = _state.value.copy(working = null, refusal = DeviceRequestRefusal(e.reasonId, e.detail, e.statusCode))
+                }
             } catch (e: Exception) {
                 _state.value = _state.value.copy(working = null, refusal = DeviceRequestRefusal(null, e.message, 0))
             }
