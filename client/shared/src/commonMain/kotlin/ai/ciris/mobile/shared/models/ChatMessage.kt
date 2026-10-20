@@ -14,6 +14,8 @@ data class ChatMessage(
     val attachmentNames: List<String> = emptyList(),
     val hasImageAttachments: Boolean = false,
     val hasDocumentAttachments: Boolean = false,
+    /** The files a SENT message carried, each with the agent's verdict once it answers (CIRISClient#217). */
+    val sentAttachments: List<SentAttachment> = emptyList(),
     // Action details (populated when type == ACTION)
     val actionDetails: ActionDetails? = null
 )
@@ -97,5 +99,9 @@ data class InteractRequest(
 data class InteractResponse(
     val response: String,
     val reasoning: String? = null,
-    val message_id: String
+    val message_id: String,
+    /** complete | timeout | paused | failed | accord_row_forwarded; null from an agent that predates it. */
+    val outcome: String? = null,
+    /** One verdict per attached file (CIRISClient#217); empty when none attached or the agent predates it. */
+    val attachments: List<AttachmentOutcome> = emptyList(),
 )

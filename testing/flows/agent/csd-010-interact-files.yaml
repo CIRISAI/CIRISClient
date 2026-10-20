@@ -1,0 +1,101 @@
+csd: CSD-010
+flow: csd_010_interact_files
+title: A PDF, a DOCX and a PNG on the paperclip reach the agent, and its reply gives the documents' references
+description: >-
+  CIRISClient#217, driven on the with-AI legs only. `attach:` builds each file
+  in memory (testing/gate/attachment_fixtures.py, vendored from CIRISAgent
+  tools/qa_runner/attachment_fixtures.py @ 221ff4e42) and hands it to the
+  paperclip through /inject-file, so it meets the same policy gate a picked
+  file does. Each document's text files it "in the library catalogue under
+  reference CIRIS-ATTACH-…" — an ordinary reference, not a "code word", which
+  live models declined to recite (CIRISAgent run 39488523205). The PDF and the
+  DOCX carry DIFFERENT references and the reply must give both: a reply with
+  one proves only that one reached the model. The PNG is a plain 8x8 swatch
+  with no text (its sentinel is unused); its claim is the chip with no
+  refusal note — the agent accepted it.
+  NOT ordinal: this flow may run after another on the same agent, so it names
+  its own message as `msg_user_latest` and the reply to THAT message as
+  `msg_reply_latest` — the agent row whose id is `<message_id>_response`
+  (ChatTranscriptTags.latestExchangeTags), which does not exist until this
+  message's reply lands. An earlier flow's reply cannot pass for it.
+  AN OLDER AGENT SKIPS, NAMED, AND COUNTED. The released agent (2.16.2) has
+  no GET /v1/agent/attachments/policy and no per-file outcomes. The first
+  step reads what the client got from that route when chat opened
+  (`interact_attachment_policy`, AttachmentPolicySource.probe) and must see
+  either `live` or the bare-404 words "agent older than the attachments
+  policy route"; every later step is optional and requires `live`, so on an
+  older agent they SKIP with that reason in the line, and the three skips are
+  this flow's row in optional_skips_baseline.json. Any other answer — a failed
+  read (`unavailable`), a read never made (`pending`) — fails the first step:
+  only the 404 is a skip.
+  NOT asserted: what a refusal looks like on a sent chip
+  (InteractAttachmentPolicyTest pins every reason id against a real socket),
+  and the picker itself (a native dialog the harness cannot drive).
+client: ">0.5.229"
+
+steps:
+  - step_id: the_agent_attachments_policy
+    title: The client read the agent's attachment policy, or the agent is older than the route
+    requires:
+      screen: Interact
+    do:
+      - wait: interact_attachment_policy
+        wait_ms: 2500
+    expect:
+      one_of:
+        interact_attachment_policy: ["live", "agent older than the attachments policy route"]
+
+  - step_id: three_files_on_the_paperclip
+    title: The three files ride the paperclip, and none is refused before send
+    optional_step: true
+    requires:
+      screen: Interact
+      visible: [input_message]
+      one_of:
+        interact_attachment_policy: ["live"]
+    do:
+      - attach: {notes.pdf: "CIRIS-ATTACH-217A0F01"}
+      - attach: {notes.docx: "CIRIS-ATTACH-217B0D02"}
+      - attach: {swatch.png: "CIRIS-ATTACH-217C0E03"}
+      - wait: attachment_chip_2
+        wait_ms: 2000
+    expect:
+      visible: [attachment_chip_0, attachment_chip_1, attachment_chip_2]
+      absent: [interact_attachment_unsupported_type, interact_attachment_too_many, interact_attachment_too_large]
+
+  - step_id: the_files_are_sent
+    title: Send carries them, and each is a chip on this flow's own sent message
+    optional_step: true
+    requires:
+      one_of:
+        interact_attachment_policy: ["live"]
+    description: >-
+      `msg_user_latest` already names an earlier flow's message before the
+      send, so the wait is on the third chip of the newest user row — only
+      this flow's message carries three files.
+    do:
+      - input: {input_message: "Which library catalogue references do the attached files give? Please include every reference in your reply."}
+      - click: btn_send
+      - wait: msg_user_latest_attachment_2
+        wait_ms: 5000
+    expect:
+      visible: [msg_user_latest, msg_user_latest_attachment_0, msg_user_latest_attachment_1, msg_user_latest_attachment_2]
+
+  - step_id: the_reply_gives_both_references
+    title: The reply to this message gives both documents' references, and no file came back refused
+    optional_step: true
+    requires:
+      one_of:
+        interact_attachment_policy: ["live"]
+    description: >-
+      Up to 4 x 45 s, as csd_010_interact_chat's reply. A `_note` under a chip
+      is the agent's refusal (or a cut document) for that file, so each is
+      asserted absent: all three were read whole.
+    do:
+      - wait: msg_reply_latest
+        wait_ms: 45000
+    expect:
+      visible: [msg_reply_latest]
+      absent: [msg_user_latest_attachment_0_note, msg_user_latest_attachment_1_note, msg_user_latest_attachment_2_note]
+      matches:
+        msg_reply_latest: "(?s)(?=.*CIRIS-ATTACH-217A0F01)(?=.*CIRIS-ATTACH-217B0D02)"

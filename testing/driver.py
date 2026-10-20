@@ -208,6 +208,17 @@ class TestAutomationServer:
 
     # ---- writes -------------------------------------------------------
 
+    def inject_file(self, filename: str, media_type: str, data: bytes) -> Any:
+        """Hand `data` to the chat paperclip as if picked (`/inject-file` ->
+        `InteractViewModel.addAttachment`, so it meets the same type, count
+        and size gate a picked file does). CIRISClient#217."""
+        import base64  # noqa: PLC0415
+
+        return self._call("POST", "/inject-file", {
+            "filename": filename, "mediaType": media_type,
+            "dataBase64": base64.b64encode(data).decode("ascii"), "sizeBytes": len(data),
+        })
+
     def click(self, test_tag: str) -> Any:
         """Click, and return the app's answer: `action` says whether a
         programmatic handler ran ("click") or desktop fell back to a

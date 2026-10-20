@@ -175,6 +175,10 @@ TOPOLOGY_NEGATIVES = {"cannot_list_room", "holds_no_row", "no_wider_self_rows"}
 #: the server stands. Remove an entry when TOPOLOGY.md on main lists it.
 TOPOLOGY_PENDING: dict[str, str] = {}
 
+#: Non-failing observations from the CSD/4 check (a reselected entry, a state
+#: the builder cannot reach yet). Printed by main; never a failure.
+NOTES: list[str] = []
+
 
 def check_topology(topo: object) -> list[str]:
     """Structural checks on a CSD/4 `csd:topology` block — NOT realizability.
@@ -454,8 +458,24 @@ def check(doc: Path, reg: dict) -> list[str]:
                         f"via {hops[screen][-1]!r} — the surface id and the screen disagree"
                     )
 
-    if "topology" in blocks:
+    if "topology" in blocks and "tests" not in blocks:
         problems.extend(check_topology(blocks["topology"]))
+
+    # CSD/4 (FSD/CSD4.md §1, CIRISServer#802): `csd:tests` names ONE catalogue
+    # entry and the atoms each test needs at one instant. Checked against the
+    # pinned catalogue in packaging/csd4/ by check_csd4 — one implementation,
+    # which also carries the self-test. A card without the block is untouched.
+    if "tests" in blocks:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import check_csd4  # noqa: PLC0415 — only cards carrying the block need the catalogue
+        try:
+            cat = check_csd4.load_catalogue()
+        except check_csd4.CatalogueError as e:
+            problems.append(f"tests: the pinned CSD/4 catalogue is refused — {e}")
+        else:
+            p, n = check_csd4.check_card(doc, text, blocks["tests"], stage, cat, "topology" in blocks)
+            problems.extend(p)
+            NOTES.extend(n)
 
     states = blocks.get("states") or {}
     if states:
@@ -479,6 +499,8 @@ def main(argv: list[str]) -> int:
     problems = check(args.document, reg)
 
     print(f"\n{args.document}  (registry {reg['sha256'][:12]}…)")
+    for n in NOTES:
+        print(f"  [note] {n}")
     if not problems:
         print("  [OK] every typed block validates against the registry")
         return 0

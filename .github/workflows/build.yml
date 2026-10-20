@@ -221,6 +221,17 @@ jobs:
             python3 packaging/check_csd_v3.py "$f" --registry client/ceg/namespace_registry.json
           done
 
+      - name: CSD/4 tests agree with the pinned topology catalogue
+        # A card's `csd:tests` block (FSD/CSD4.md §1, CIRISServer#802) names a
+        # catalogue entry and the atoms each test needs at one instant. The
+        # per-card loop above runs it through check_csd_v3; this proves the red
+        # path (topology outside T0–T19, an unknown atom, an unreachable
+        # instant, any card/requirements.yaml disagreement, a tampered pin)
+        # and that packaging/csd4/ still matches packaging/csd4/PIN.md.
+        run: |
+          python3 packaging/check_csd4.py --self-test
+          python3 packaging/check_csd4.py --verify-pin
+
       - name: The CSD roster is current; no card on a reserved or retired number
         # Numbers were reserved in issue text (#179) and another repo (#206)
         # and retired inside the card that absorbed them, so nothing said which
@@ -311,6 +322,23 @@ jobs:
       - name: Test :shared (desktop target)
         working-directory: client
         run: ./gradlew --no-daemon :shared:desktopTest
+
+      - name: Keep the desktop test results when a test fails
+        # UncaughtExceptionsBeforeTest names only the test that RECEIVED a stray
+        # coroutine exception; the exception itself is reported "in a
+        # platform-dependent manner", which on the JVM means that test's
+        # system-err in the XML report. The log never carries it, so PR #220's
+        # WiseAuthorityViewModelTest:443 failure had no cause to read. Kept on
+        # failure only, a week.
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-test-results
+          path: |
+            client/shared/build/test-results/desktopTest/*.xml
+            client/shared/build/reports/tests/desktopTest/
+          retention-days: 7
+          if-no-files-found: warn
 
       - name: Desktop uber-jar
         working-directory: client
