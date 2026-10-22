@@ -226,17 +226,25 @@ private fun ConfigValue.toDisplayString(): String {
  *
  * All methods include comprehensive error logging for debugging.
  */
-class CIRISApiClient(
-    // Default to the local ciris-server node read API (node base :4242 → API :4243).
-    baseUrl: String = "http://127.0.0.1:4243",
-    private var accessToken: String? = null,
+class CIRISApiClient internal constructor(
+    baseUrl: String,
+    private var accessToken: String?,
     /**
      * The HTTP engine every request of this client uses; null is the platform
      * default. Tests pass an in-process fake agent so the pollers run against
-     * it on virtual time (AgentRateBudgetTest).
+     * it on virtual time (AgentRateBudgetTest). Internal, and on an internal
+     * constructor: a ktor type in the public signature made every caller
+     * outside :shared need ktor on its classpath (androidApp's MainActivity
+     * stopped compiling, gate run 39764738615).
      */
-    internal val engine: io.ktor.client.engine.HttpClientEngine? = null,
+    internal val engine: io.ktor.client.engine.HttpClientEngine?,
 ) : CIRISApiClientProtocol {
+
+    constructor(
+        // Default to the local ciris-server node read API (node base :4242 → API :4243).
+        baseUrl: String = "http://127.0.0.1:4243",
+        accessToken: String? = null,
+    ) : this(baseUrl, accessToken, null)
 
     /**
      * EVERY HttpClient this class makes comes from here (and the generated
