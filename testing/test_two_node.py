@@ -202,6 +202,98 @@ def test_add_contact_says_when_the_binding_never_lands(monkeypatch):
     assert any("reachable_nodes=0" in n and "#699" in n for n in notes), notes
 
 
+ROW = {"record": {"key_id": "b-node", "transit_kex_pair": "PAIR"}, "signature": "S"}
+
+
+class _PeeringNode:
+    """A fake pair of nodes for `peer(a, b)`: b's self-transport-destination
+    answers `routes` in turn (status codes; 200 carries ROW), a's peering
+    answers `transit` as `peer_transit_route`."""
+
+    def __init__(self, routes, transit="admitted"):
+        self.routes, self.transit = list(routes), transit
+        self.gets, self.peering = 0, None
+
+    def __call__(self, method, url, token=None, body=None, timeout=0):
+        if url == "http://b" + tn.TRANSPORT_ROUTE:
+            self.gets += 1
+            status = self.routes.pop(0) if len(self.routes) > 1 else self.routes[0]
+            return status, (ROW if status == 200 else ({} if status == 404 else ""))
+        if url == "http://a/v1/federation/peering":
+            self.peering = body
+            out = {"peer_key_id": body["peer_key_id"], "freshly_emitted": True}
+            if self.transit is not None:
+                out["peer_transit_route"] = self.transit
+            return 200, out
+        return 500, {}
+
+
+def _pair():
+    a = tn.Party("local", "http://a", "t", node_key_id="a-node")
+    b = tn.Party("peer", "http://b", "t", node_key_id="b-node", record={"record": {"key_id": "b-node"}})
+    return a, b
+
+
+def test_peering_waits_out_a_204_then_hands_over_the_transport_row(monkeypatch):
+    """CIRISServer#808: on 0.5.232 two directly peered nodes sealed no link
+    (`link_seal_refused_no_pair`) because peering carried no transit pair. The
+    row is fetched (204 = not published yet, retried) and sent verbatim."""
+    clock, node = _Clock(), _PeeringNode([204, 204, 200])
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", clock)
+    a, b = _pair()
+    notes: list = []
+    tn.peer(a, b, log=lambda m: None, notes=notes)
+    assert node.gets == 3
+    assert node.peering["peer_transport_destination"] == ROW
+    assert node.peering["peer_key_record"] == b.record and node.peering["peer_key_id"] == "b-node"
+    assert notes == []
+
+
+def test_a_204_that_never_ends_is_a_named_unavailable(monkeypatch):
+    clock = _Clock()
+    monkeypatch.setattr(tn, "http", _PeeringNode([204]))
+    monkeypatch.setattr(tn, "time", clock)
+    a, b = _pair()
+    with pytest.raises(tn.FixtureUnavailable, match=r"still answered 204.*#808"):
+        tn.peer(a, b, log=lambda m: None, route_wait=10)
+    assert clock.t <= 12, "bounded"
+
+
+def test_an_older_server_without_the_route_is_peered_as_before_with_a_note(monkeypatch):
+    node = _PeeringNode([404], transit=None)
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", _Clock())
+    a, b = _pair()
+    notes: list = []
+    tn.peer(a, b, log=lambda m: None, notes=notes)
+    assert "peer_transport_destination" not in node.peering
+    assert set(node.peering) == {"peer_key_id", "peer_key_record", "attestation_prefixes"}
+    assert any("#808" in n and "link_seal_refused_no_pair" in n for n in notes), notes
+
+
+def test_an_admitted_route_peers_cleanly(monkeypatch):
+    node = _PeeringNode([200], transit="admitted")
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", _Clock())
+    a, b = _pair()
+    said: list = []
+    tn.peer(a, b, log=said.append, notes=[])
+    assert any("transit_route=admitted" in m for m in said), said
+
+
+@pytest.mark.parametrize("transit", ["refused: the row is not signed by b-node", "absent", None])
+def test_a_route_not_admitted_when_one_was_sent_is_a_named_failure(monkeypatch, transit):
+    """`refused: …`, `absent` (the row was dropped), or no answer at all (a
+    server that ignored the field) — each would leave a fixture that seals no
+    link and exchanges nothing, so each fails by name."""
+    monkeypatch.setattr(tn, "http", _PeeringNode([200], transit=transit))
+    monkeypatch.setattr(tn, "time", _Clock())
+    a, b = _pair()
+    with pytest.raises(tn.FixtureUnavailable, match=r"peer_transit_route=.*#808"):
+        tn.peer(a, b, log=lambda m: None, notes=[])
+
+
 def test_down_kills_the_peer_by_its_pidfile_and_deletes_its_home(tmp_path):
     """The `if: always()` path: another process, only the work dir to go on."""
     home = tmp_path / "home"

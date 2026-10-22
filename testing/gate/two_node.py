@@ -34,7 +34,11 @@ WHAT IS THE SAME AS THE SERVER HARNESS, and why each piece is kept:
     withheld, 0 delivered). Loopback-only, which is fine: the fixture runs on
     the host both nodes serve on.
   * `POST /v1/federation/peering` both ways with the operator's prefix set,
-    handing over each node's `self-key-record`.
+    handing over each node's `self-key-record` AND, on a server that serves it,
+    its `self-transport-destination` (CIRISServer#808, 0.5.233): under the
+    sealed transport (0.5.232) a link seals only to a transit pair the dialer
+    holds, and with no canonical the peering request is the only way it gets
+    there. A server without the route (404) is peered as before, with a note.
   * The owner key crosses by replication, waited for and RECORDED; the room is
     opened by both sides and the message is sent only once the room is keyed.
   * The owner→node BINDING is waited for too, and it is a different, later
@@ -521,13 +525,73 @@ def owner_of(party: Party) -> None:
         party.owner_key_id = name.removeprefix("root:")
 
 
-def peer(a: Party, b: Party, log: Log = _say) -> None:
-    status, body = http("POST", f"{a.url}/v1/federation/peering", a.token, {
-        "peer_key_id": b.node_key_id, "peer_key_record": b.record,
-        "attestation_prefixes": PEER_PREFIXES})
-    if not _ok(status):
+#: CIRISServer#808: the route a node serves its own signed transport row on.
+TRANSPORT_ROUTE = "/v1/federation/self-transport-destination"
+
+
+def transport_destination(party: Party, route_wait: float = 30.0) -> Optional[Any]:
+    """`party`'s signed `transport_destination` row WITH its transit pair, as
+    `GET /v1/federation/self-transport-destination` serves it (unauthenticated,
+    like self-key-record; CIRISServer#808, ciris-server 0.5.233).
+
+    Under the sealed transport (0.5.232, CC 5.3.3.5 E1) a node seals a link only
+    to a pair it holds for the dialed node, and peering carried only the key
+    record — so two directly peered nodes, with no canonical to relay the row,
+    exchanged nothing (`link_seal_refused_no_pair`). The row is handed over in
+    the peering request instead.
+
+    204 = edge has not published the row yet (seconds after boot): re-asked,
+    bounded by `route_wait`. 404 = a server older than the route: None, and the
+    caller peers as before. Anything else is a named refusal."""
+    url = f"{party.url}{TRANSPORT_ROUTE}"
+    started = time.monotonic()
+    while True:
+        status, body = http("GET", url)
+        if status == 200 and body:
+            return body
+        if status == 404:
+            return None
+        if status != 204:
+            raise FixtureUnavailable(f"{party.name}: GET {TRANSPORT_ROUTE} answered {status}: {str(body)[:200]}")
+        if time.monotonic() - started >= route_wait:
+            raise FixtureUnavailable(
+                f"{party.name}: GET {TRANSPORT_ROUTE} still answered 204 after {route_wait:.0f}s - its "
+                f"signed route row with the transit pair was never published, so no peer can seal a "
+                f"link to it (CIRISServer#808)")
+        time.sleep(2.0)
+
+
+def peer(a: Party, b: Party, log: Log = _say, notes: Optional[List[str]] = None,
+         route_wait: float = 30.0) -> None:
+    """`a` consents to replicate to `b`, handing over `b`'s key record and — on
+    a server that serves it (CIRISServer#808) — `b`'s signed transport row, so
+    `a` can seal a link to `b` with no canonical. The answer's
+    `peer_transit_route` must be `admitted` when a row was sent; `absent` or
+    `refused: …` is a named failure, never a fixture that silently exchanges
+    nothing."""
+    row = transport_destination(b, route_wait)
+    req: Dict[str, Any] = {"peer_key_id": b.node_key_id, "peer_key_record": b.record,
+                           "attestation_prefixes": PEER_PREFIXES}
+    if row is not None:
+        req["peer_transport_destination"] = row
+    status, body = http("POST", f"{a.url}/v1/federation/peering", a.token, req)
+    if not _ok(status) or not isinstance(body, dict):
         raise FixtureUnavailable(f"peering {a.name}->{b.name} answered {status}: {str(body)[:300]}")
-    log(f"peering {a.name}->{b.name}: fresh={body.get('freshly_emitted')}")
+    route = body.get("peer_transit_route")
+    if row is None:
+        msg = (f"peering {a.name}->{b.name} without {b.name}'s transport row: {b.name} serves no "
+               f"{TRANSPORT_ROUTE} (a server older than CIRISServer#808, 0.5.233). On 0.5.232 two "
+               f"directly peered nodes cannot seal a link (link_seal_refused_no_pair), so nothing "
+               f"will cross")
+        if notes is not None:
+            notes.append(msg)
+        log(msg)
+    elif route != "admitted":
+        raise FixtureUnavailable(
+            f"peering {a.name}->{b.name}: the node did not admit {b.name}'s transport row "
+            f"(peer_transit_route={route!r}); without it no link to {b.name} can be sealed "
+            f"(CIRISServer#808)")
+    log(f"peering {a.name}->{b.name}: fresh={body.get('freshly_emitted')} transit_route={route}")
 
 
 def knows(host: Party, key_id: str) -> bool:
@@ -636,8 +700,8 @@ def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
     v.peer_owner_key_id, v.peer_node_key_id = remote.owner_key_id, remote.node_key_id
     log(f"local node={local.node_key_id} owner={local.owner_key_id or '?'}; "
         f"peer node={remote.node_key_id} owner={remote.owner_key_id}")
-    peer(local, remote, log)
-    peer(remote, local, log)
+    peer(local, remote, log, v.notes)
+    peer(remote, local, log, v.notes)
 
     status, body = http("GET", f"{remote.url}/v1/self/contact-code", remote.token)
     if _ok(status) and isinstance(body, dict):
