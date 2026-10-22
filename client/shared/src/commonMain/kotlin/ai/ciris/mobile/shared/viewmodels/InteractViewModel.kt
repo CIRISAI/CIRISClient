@@ -510,6 +510,20 @@ class InteractViewModel(
         viewModelScope.launch { loadAttachmentPolicy() }
     }
 
+    /**
+     * The paperclip was tapped. A policy that could not be read (a 429 that
+     * outlasted its retries, a dropped socket) is read again now, so one
+     * chat-open burst does not leave the client's constants in force for the
+     * session. A live policy, or an agent known to be older than the route, is
+     * not re-read. The picker opens either way: attaching never waits on this.
+     */
+    fun onAttachTapped() {
+        if (_attachmentPolicySource.value == AttachmentPolicySource.FALLBACK_UNAVAILABLE) {
+            logInfo("onAttachTapped", "attachment policy was unavailable; reading it again")
+            refreshAttachmentPolicy()
+        }
+    }
+
     fun dismissAttachmentRefusal() {
         _attachmentRefused.value = null
     }

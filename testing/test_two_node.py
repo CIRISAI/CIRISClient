@@ -294,6 +294,100 @@ def test_a_route_not_admitted_when_one_was_sent_is_a_named_failure(monkeypatch, 
         tn.peer(a, b, log=lambda m: None, notes=[])
 
 
+class _PendingNode:
+    """A fake leg's node on ciris-server 0.5.232: the owner key has not crossed
+    (404 `contacts.unknown_fed_id`); the contact CODE answers 202
+    `contacts.awaiting_key_body` — the key body is being pulled from the mesh
+    and the contact lands ON ITS OWN (src/contacts_chat.rs pending_contacts) —
+    until `lands_at` on the fake clock, after which the row is in
+    GET /v1/contacts and the POST answers 201. `lands_at=None`: it never lands."""
+
+    def __init__(self, clock, lands_at):
+        self.clock, self.lands_at = clock, lands_at
+        self.posts, self.gets = [], 0
+
+    @property
+    def landed(self):
+        return self.lands_at is not None and self.clock.t >= self.lands_at
+
+    def __call__(self, method, url, token=None, body=None, timeout=0):
+        if url.endswith("/v1/federation/peers/peer-user"):
+            return 404, {"error": "peer not found"}
+        if url.endswith("/v1/contacts") and method == "GET":
+            self.gets += 1
+            rows = [{"key_id": "peer-user", "contact": True}] if self.landed else []
+            return 200, {"contacts": rows, "total": len(rows)}
+        if url.endswith("/v1/contacts"):
+            self.posts.append(body)
+            if body == {"key_id": "peer-user"}:
+                return 404, {"reason_id": "contacts.unknown_fed_id"}
+            if body == {"key_id": "CODE"}:
+                if self.landed:
+                    return 201, {"key_id": "peer-user", "reachable_nodes": 1}
+                return 202, {"reason_id": "contacts.awaiting_key_body", "key_id": "peer-user",
+                             "fed_id": "peer-user", "converges_on_its_own": True}
+            return 200, {"key_id": body["key_id"], "reachable_nodes": 0}
+        return 500, {}
+
+
+def test_a_pending_code_contact_is_waited_for_until_it_lands(monkeypatch):
+    """ciris-server 0.5.232 (release gate run 39706713027, all three node-only
+    legs): `POST /v1/contacts {code}` answered 202 `contacts.awaiting_key_body`
+    and the fixture took the 202 as an added contact, opened the pair room at
+    once, and got 403 `chat.not_a_contact`. A 202 is "not yet": the fixture
+    waits, bounded, for the row to appear in GET /v1/contacts."""
+    clock = _Clock()
+    node = _PendingNode(clock, lands_at=20)
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", clock)
+    host = tn.Party("local", "http://h", "t")
+    guest = tn.Party("peer", "http://g", "t", owner_key_id="peer-user", node_key_id="peer-node")
+    notes: list = []
+    key, via = tn.add_contact(host, guest, wait=0, notes=notes, code="CODE", log=lambda m: None,
+                              reachable_wait=0, land_wait=60)
+    assert (key, via) == ("peer-user", "code")
+    assert node.landed, f"returned at t={clock.t}s, before the contact landed (t=20s)"
+    assert clock.t <= 30, "and not long after it did"
+    assert any("contacts.awaiting_key_body" in n and "landed" in n for n in notes), notes
+
+
+def test_a_pending_code_contact_that_never_lands_is_named_not_chatted_with(monkeypatch):
+    """Never lands within `land_wait`: the fixture says so BY NAME and falls to
+    the next way in (the peer node, said so) — it never hands back a key the
+    node will answer `chat.not_a_contact` for."""
+    clock = _Clock()
+    node = _PendingNode(clock, lands_at=None)
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", clock)
+    host = tn.Party("local", "http://h", "t")
+    guest = tn.Party("peer", "http://g", "t", owner_key_id="peer-user", node_key_id="peer-node")
+    notes: list = []
+    key, via = tn.add_contact(host, guest, wait=0, notes=notes, code="CODE", log=lambda m: None,
+                              reachable_wait=0, land_wait=60)
+    assert (key, via) == ("peer-node", "node")
+    assert 60 <= clock.t <= 70, "bounded by land_wait"
+    assert any("contacts.awaiting_key_body" in n and "never landed" in n for n in notes), notes
+
+
+def test_a_contact_that_never_lands_anywhere_is_a_named_unavailable(monkeypatch):
+    clock = _Clock()
+
+    def pending_only(method, url, token=None, body=None, timeout=0):
+        if url.endswith("/v1/contacts") and method == "GET":
+            return 200, {"contacts": [], "total": 0}
+        if url.endswith("/v1/contacts"):
+            return 202, {"reason_id": "contacts.awaiting_key_body", "key_id": body["key_id"],
+                         "converges_on_its_own": True}
+        return 404, {}
+
+    monkeypatch.setattr(tn, "http", pending_only)
+    monkeypatch.setattr(tn, "time", clock)
+    host = tn.Party("local", "http://h", "t")
+    guest = tn.Party("peer", "http://g", "t", node_key_id="peer-node")
+    with pytest.raises(tn.FixtureUnavailable, match="contacts.awaiting_key_body"):
+        tn.add_contact(host, guest, wait=0, notes=[], log=lambda m: None, reachable_wait=0, land_wait=30)
+
+
 def test_down_kills_the_peer_by_its_pidfile_and_deletes_its_home(tmp_path):
     """The `if: always()` path: another process, only the work dir to go on."""
     home = tmp_path / "home"

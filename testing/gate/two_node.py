@@ -606,8 +606,53 @@ def _reachable(body: Any) -> int:
         return 0
 
 
+def holds_contact(host: Party, key_id: str) -> bool:
+    """Is `key_id` a row in `host`'s GET /v1/contacts — the list `POST /v1/chat`
+    checks before it answers 403 `chat.not_a_contact`."""
+    status, body = http("GET", f"{host.url}/v1/contacts", host.token)
+    rows = body.get("contacts") if _ok(status) and isinstance(body, dict) else None
+    return any(isinstance(r, dict) and r.get("key_id") == key_id for r in rows or [])
+
+
+def await_landed(host: Party, guest: Party, key: str, body: Dict[str, Any], via: str,
+                 land_wait: float, notes: List[str], log: Log = _say) -> Optional[Tuple[int, Any]]:
+    """A 202 from `POST /v1/contacts` is NOT an added contact. On ciris-server
+    0.5.232 a contact code whose key body this node does not hold yet answers 202
+    `contacts.awaiting_key_body` with `converges_on_its_own: true`: the body is
+    pulled from the mesh and the server's own pending pass (every 10 s) completes
+    the contact when it arrives — CIRISServer src/contacts_chat.rs
+    `add_contact_for_owner` (the 202) and `pending_contacts::pass`. Until then
+    `POST /v1/chat` answers 403 `chat.not_a_contact`, which is what the 0.5.230
+    release gate hit on every node-only leg.
+
+    So: poll GET /v1/contacts for the row every 5 s, re-asking the (idempotent)
+    POST once it is there, for up to `land_wait`. Returns that POST's (status,
+    body), or None — with the reason named in `notes` — if it never landed."""
+    pending = str(body.get("key_id") or key)
+    reason = str(body.get("reason_id") or "202")
+    started, looks = time.monotonic(), 0
+    while time.monotonic() - started < land_wait:
+        time.sleep(5.0)
+        looks += 1
+        if holds_contact(host, pending):
+            notes.append(f"contact {host.name}->{guest.name} via {via} answered 202 {reason}; it "
+                         f"landed after {time.monotonic() - started:.0f}s ({pending} in GET "
+                         f"/v1/contacts, looked {looks}x)")
+            log(notes[-1])
+            # Re-ask once it is held: the add now answers as a held contact,
+            # with the `reachable_nodes` the binding wait reads.
+            status, again = http("POST", f"{host.url}/v1/contacts", host.token, {"key_id": key})
+            return status, {**(again if isinstance(again, dict) else {}), "key_id": pending}
+    notes.append(f"contact {host.name}->{guest.name} via {via} answered 202 {reason} and never "
+                 f"landed in {land_wait:.0f}s ({pending} not in GET /v1/contacts, looked {looks}x) "
+                 f"- a room with it would answer 403 chat.not_a_contact")
+    log(notes[-1])
+    return None
+
+
 def add_contact(host: Party, guest: Party, wait: float, notes: List[str],
-                code: str = "", log: Log = _say, reachable_wait: float = 120.0) -> Tuple[str, str]:
+                code: str = "", log: Log = _say, reachable_wait: float = 120.0,
+                land_wait: float = 60.0) -> Tuple[str, str]:
     """(key the contact is held under, how). The person if their key crossed;
     their contact code if the node serves one; else their NODE, said so.
 
@@ -617,7 +662,13 @@ def add_contact(host: Party, guest: Party, wait: float, notes: List[str],
     `freshly_emitted: false`), so it is re-asked every 5 s for up to
     `reachable_wait` until the count is >= 1; what was waited on, and for how
     long, goes in `notes`. Unreachable is still not a refusal: the contact
-    stands, and the note says the room may key without a grant (#699)."""
+    stands, and the note says the room may key without a grant (#699).
+
+    A 202 that is NOT yet a row in GET /v1/contacts (0.5.232's
+    `contacts.awaiting_key_body` for a contact code) is waited for, bounded by
+    `land_wait` ([await_landed]); one that never lands is named in `notes` and
+    the next way in is tried, so the key handed back is always one the node
+    holds as a contact — never one `POST /v1/chat` answers 403 for."""
     deadline = time.monotonic() + wait
     while guest.owner_key_id and not knows(host, guest.owner_key_id) and time.monotonic() < deadline:
         time.sleep(5.0)
@@ -629,6 +680,12 @@ def add_contact(host: Party, guest: Party, wait: float, notes: List[str],
     tries.append((guest.node_key_id, "node"))
     for key, via in tries:
         status, body = http("POST", f"{host.url}/v1/contacts", host.token, {"key_id": key})
+        if status == 202 and isinstance(body, dict) and not holds_contact(host, str(body.get("key_id") or key)):
+            # Accepted, not added (0.5.232: `contacts.awaiting_key_body`).
+            landed = await_landed(host, guest, key, body, via, land_wait, notes, log)
+            if landed is None:
+                continue
+            status, body = landed
         if _ok(status) and isinstance(body, dict):
             log(f"contact {host.name}->{guest.name} via {via}: {status} key={body.get('key_id')} "
                 f"reachable_nodes={body.get('reachable_nodes')} prefixes={body.get('consent_prefixes')}")
@@ -684,7 +741,7 @@ def open_room(party: Party, with_key: str) -> str:
 
 def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
          owner_wait: float = 90.0, ready_wait: float = 150.0, arrive_wait: float = 120.0,
-         reachable_wait: float = 120.0, log: Log = _say) -> FixtureValues:
+         reachable_wait: float = 120.0, land_wait: float = 60.0, log: Log = _say) -> FixtureValues:
     """The chat scenario between the leg's node (`local`) and the peer (`remote`).
 
     Both announced; peered both ways; each owner adds the other and WAITS for
@@ -711,9 +768,9 @@ def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
                        f"it ships in ciris-server 0.5.218 (CIRISServer#673)")
 
     v.peer_key_id, v.contact_via = add_contact(local, remote, owner_wait, v.notes, v.peer_contact_code, log,
-                                               reachable_wait=reachable_wait)
+                                               reachable_wait=reachable_wait, land_wait=land_wait)
     back_key, back_via = add_contact(remote, local, owner_wait, v.notes, "", log,
-                                     reachable_wait=reachable_wait)
+                                     reachable_wait=reachable_wait, land_wait=land_wait)
     if v.contact_via != "owner":
         v.notes.append(f"the peer's owner key never reached the leg's node within {owner_wait:.0f}s; "
                        f"the contact is held under the peer NODE ({v.peer_key_id})")

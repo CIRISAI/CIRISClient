@@ -835,15 +835,35 @@ class CIRISApiClient(
             }
         }
         return try {
-            val response = client.get("$baseUrl/v1/agent/attachments/policy") {
+            // A 429 IS "WAIT", NOT "UNAVAILABLE" (release gate 39706713027).
+            // The agent's limiter keys on the caller (`auth_127.0.0.1`), and
+            // chat opening fires this read beside status, history, health, SSE,
+            // wallet and trust; on linux-ai and windows-ai every policy read
+            // landed in that burst and was answered 429 retry_after=1. Waiting
+            // it out is what the agent asked for. Bounded, so a limiter that
+            // never relents ends as Failed, which the next paperclip tap re-reads.
+            var attempt = 0
+            var response = client.get("$baseUrl/v1/agent/attachments/policy") {
                 authHeader()?.let { header("Authorization", it) }
             }
-            val raw = response.bodyAsText()
+            var raw = response.bodyAsText()
+            while (response.status.value == 429 && attempt < POLICY_RATE_LIMIT_RETRIES) {
+                attempt++
+                val waitMs = retryAfterMs(response.headers["Retry-After"], raw)
+                logWarn(method, "429 from the agent's rate limiter; retry $attempt/$POLICY_RATE_LIMIT_RETRIES in ${waitMs}ms")
+                kotlinx.coroutines.delay(waitMs)
+                response = client.get("$baseUrl/v1/agent/attachments/policy") {
+                    authHeader()?.let { header("Authorization", it) }
+                }
+                raw = response.bodyAsText()
+            }
             when {
                 response.status.value == 404 -> {
                     logWarn(method, "404 — the agent predates the attachment policy route; using the client's limits")
                     AttachmentPolicyRead.AgentTooOld
                 }
+                response.status.value == 429 ->
+                    AttachmentPolicyRead.Failed("HTTP 429 after ${attempt + 1} attempts (rate limited)")
                 !response.status.isSuccess() -> AttachmentPolicyRead.Failed("HTTP ${response.status.value}")
                 else -> InteractWire.parsePolicy(raw)?.let { AttachmentPolicyRead.Live(it) }
                     ?: AttachmentPolicyRead.Failed("no policy in the body")
@@ -854,6 +874,25 @@ class CIRISApiClient(
         } finally {
             client.close()
         }
+    }
+
+    /** Retries of the policy read after a 429: three reads in all, ~2 s on the agent's retry_after=1. */
+    private val POLICY_RATE_LIMIT_RETRIES = 2
+    private val POLICY_RETRY_AFTER_CAP_MS = 5_000L
+
+    /**
+     * How long a 429 asked us to wait: the `Retry-After` header (seconds), else
+     * the agent's body `retry_after`, else one second; clamped to
+     * [1s, POLICY_RETRY_AFTER_CAP_MS] so a hostile or confused value cannot
+     * stall chat opening.
+     */
+    private fun retryAfterMs(header: String?, body: String): Long {
+        val seconds = header?.trim()?.toLongOrNull()
+            ?: runCatching {
+                Json.parseToJsonElement(body).jsonObject["retry_after"]?.jsonPrimitive?.contentOrNull?.toDoubleOrNull()?.toLong()
+            }.getOrNull()
+            ?: 1L
+        return (seconds * 1000L).coerceIn(1_000L, POLICY_RETRY_AFTER_CAP_MS)
     }
 
     override suspend fun getMessages(limit: Int): List<ChatMessage> {
