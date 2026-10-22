@@ -620,6 +620,28 @@ jobs:
           else
             echo "no kotlin_crash.log in ${box:-<no data container for ai.ciris.mobile on $udid>}/Documents/ciris/logs — the app recorded no crash"
           fi
+          # A NATIVE CRASH LEAVES NO kotlin_crash.log. Release run 39830942607:
+          # the app died `exited due to SIGSEGV | sent by exc handler` 155 ms
+          # after the contact code rendered, and nothing named the frame. The
+          # simulator's own report does; the with-AI leg already keeps it.
+          mkdir -p ios-logs/diagnostic-reports
+          find "$HOME/Library/Logs/DiagnosticReports" -maxdepth 1 -name "iosApp*" -type f -exec cp {} ios-logs/diagnostic-reports/ \; 2>/dev/null
+          echo "crash reports: $(ls ios-logs/diagnostic-reports | wc -l)"
+          for r in ios-logs/diagnostic-reports/*.ips; do
+            [ -f "$r" ] || continue
+            echo "::warning::native crash report $(basename "$r")"
+            python3 - "$r" <<'PY' || true
+          import json, sys
+          raw = open(sys.argv[1]).read().split("\n", 1)
+          body = json.loads(raw[1] if len(raw) > 1 else raw[0])
+          print("exception:", body.get("exception"), "| termination:", body.get("termination", {}).get("indicator"))
+          images = body.get("usedImages", [])
+          t = body.get("threads", [])[body.get("faultingThread", 0)] if body.get("threads") else {}
+          for f in t.get("frames", [])[:25]:
+              img = images[f["imageIndex"]].get("name", "?") if f.get("imageIndex", -1) < len(images) else "?"
+              print(f"  {img:28s} {f.get('symbol', hex(f.get('imageOffset', 0)))}")
+          PY
+          done
           exit 0
 
       - name: Tear down the two-node peers
