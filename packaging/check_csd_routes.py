@@ -1659,8 +1659,10 @@ class PlantedSelfTestViewModel(private val backend: PlantedBackend) {
 def _plant_api(root: Path, text: str) -> None:
     api = root / API_CLIENT
     t = api.read_text()
-    i = t.index("class CIRISApiClient(")
-    i = t.index("\n    suspend fun ", i)
+    # `class CIRISApiClient(` or `class CIRISApiClient internal constructor(`.
+    m = re.search(r"\bclass CIRISApiClient\b[^(]*\(", t)
+    assert m, f"no `class CIRISApiClient` in {api}"
+    i = t.index("\n    suspend fun ", m.start())
     api.write_text(t[:i] + "\n" + text + t[i:])
 
 

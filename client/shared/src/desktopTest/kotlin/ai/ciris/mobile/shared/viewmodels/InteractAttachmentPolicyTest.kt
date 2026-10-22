@@ -68,7 +68,13 @@ class InteractAttachmentPolicyTest {
     private val made = mutableListOf<ViewModel>()
     private val agents = mutableListOf<Agent>()
     @BeforeTest fun setUp() = Dispatchers.setMain(Dispatchers.Unconfined)
-    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain(); agents.forEach { it.server.stop(0) } }
+    // The 429s here mark 127.0.0.1 as a limited host with an empty bucket, and
+    // the governor is process-wide: left in place, every later test that talks
+    // to 127.0.0.1 waits on it (WipeForgetsNodeTest stalled the whole suite).
+    @AfterTest fun tearDown() {
+        stopViewModels(made); Dispatchers.resetMain(); agents.forEach { it.server.stop(0) }
+        kotlinx.coroutines.runBlocking { ai.ciris.mobile.shared.api.AgentRateGovernor.resetForTests() }
+    }
 
     private fun agent(policy: Pair<Int, String>, interact: String = "") = Agent(policy, interact).also { agents += it }
     private fun agent(policy: (Int) -> Pair<Int, String>) = Agent(policy).also { agents += it }
@@ -150,6 +156,40 @@ class InteractAttachmentPolicyTest {
             withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.AGENT } }
         }
         assertEquals(20971520L, vm.attachmentPolicy.value.imageMaxBytes)
+    }
+
+    /**
+     * Gate run 39789325955: the bucket stayed empty for ~14 s after chat
+     * opened, longer than the read's own retries, and nothing tapped the
+     * paperclip before the files flow looked. Chat opening alone must get to
+     * the live policy once the agent answers again.
+     */
+    @Test
+    fun aPolicyLeftUnavailableByChatOpenIsReadAgainWithoutATap() = runBlocking {
+        val limited = java.util.concurrent.atomic.AtomicBoolean(true)
+        val a = agent { _: Int -> if (limited.get()) rateLimited else 200 to agentPolicy }
+        val vm = vm(a).apply { policyRetryDelaysMs = listOf(200L, 200L, 200L, 200L, 200L, 200L, 200L, 200L) }
+        vm.refreshAttachmentPolicy()
+        withContext(Dispatchers.Default) {
+            withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.FALLBACK_UNAVAILABLE } }
+        }
+        limited.set(false)
+        withContext(Dispatchers.Default) {
+            withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.AGENT } }
+        }
+        assertEquals(20971520L, vm.attachmentPolicy.value.imageMaxBytes)
+    }
+
+    @Test
+    fun theBackgroundRereadsAreBounded() = runBlocking {
+        val a = agent { _: Int -> rateLimited }
+        val vm = vm(a).apply { policyRetryDelaysMs = listOf(10L, 10L) }
+        vm.refreshAttachmentPolicy()
+        withContext(Dispatchers.Default) { withTimeout(30_000) { while (true) { kotlinx.coroutines.delay(100); if (a.policyReads.get() >= 9) break } } }
+        kotlinx.coroutines.delay(3_000)
+        assertEquals(AttachmentPolicySource.FALLBACK_UNAVAILABLE, vm.attachmentPolicySource.value)
+        // One read and two re-reads, each with its own bounded 429 retries.
+        assertTrue(a.policyReads.get() <= 12, "re-reads must stop; got ${a.policyReads.get()}")
     }
 
     @Test
