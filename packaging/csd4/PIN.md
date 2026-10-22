@@ -7,8 +7,8 @@ hand-edit — the checker refuses a file whose sha256 is not the one below.
 | pin | value |
 |---|---|
 | repo | `CIRISAI/CIRISServer` |
-| release tag | `v0.5.232` |
-| commit | `01eb6ff25b931dd121373cec5889cef497886236` |
+| release tag | `v0.5.233` |
+| commit | `7bcbee4206fc8d5b2b8db21e32a8424c4eccb185` |
 | assets | `csd4-requirements.yaml`, `csd4-topology_vocabulary.json`, `csd4-topology_vocabulary.pin`, `csd4-traces.json` (+ `SHA256SUMS`) |
 | SHA256SUMS | every asset listed and matching (the sha256s below are the release's) |
 | cosign | NOT verified: `cosign` is not on PATH. Every asset's sha256 matches the release's SHA256SUMS; the signatures (.sig/.pem) were not checked. Re-run with cosign installed to verify. |
