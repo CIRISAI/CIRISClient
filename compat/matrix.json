@@ -1538,6 +1538,74 @@
       },
       "notes": "THE 0.5.229 BACKLOG RELEASE. The P0/P1 backlog except #50 (iOS SIGABRT entering setup's AI step: not reproduced; the iOS leg runs node-only, and now collects kotlin_crash.log) and #87 (interim fix; the stateless redesign follows). Tested: the five-platform run on the release commit, node-only legs against ciris-server v0.5.231 and the with-AI desktop legs on ciris-agent 2.16.2 (its node 0.5.229) — see the release PR. The localization pin is CIRISServer fix/client-copy-0.5.232 (b11aef95, unreleased): the reworded contact strings that server release carries. Translations: draft / machine_reviewed (#213).",
       "published": null
+    },
+    {
+      "client_version": "0.5.230",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Every route this release adds falls back on an older node: the self-roster card and the trust-root amend name a node too old on a bare 404; add-device still reads 0.5.231's 409 roster_change_held as held; the attachment policy falls back to the client's limits on an agent without the route.",
+      "node_max_tested": "0.5.232",
+      "agent_min_tested": "2.16.2",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker",
+        "contacts.pending",
+        "setup.add_device",
+        "setup.owned_node_route",
+        "billing.credential_refresh",
+        "agent.shed_retry",
+        "shell.sign_out",
+        "diagnostics.ios_crash_log",
+        "trace.run_kind",
+        "identity.self_roster",
+        "add_device.held",
+        "accord.trust_root_amend",
+        "chat.attachment_policy",
+        "chat.attachment_outcomes"
+      ],
+      "capabilities_note": "new: the self-key roster card (CSD-095, CIRISServer#794/#802) — held additions and evictions listed with signatures and path, answered by assent/object from another device; a held add-device approval (202 {held, proposal_id}) shown as held, never 'Approved' (#218). The 2-of-3 trust-root amend ('re-scrub', CC 5.3.4) with the canonical's transit row fetched (#216). Chat attachments driven by the agent's /v1/agent/attachments/policy, per-file outcomes rendered by reason id, no accept-all picker, HEIC refused locally, text documents sent (#220, CIRISClient#217). Localization pinned to ciris-server v0.5.232.",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5682
+      },
+      "notes": "THE 0.5.232 RELEASE, for CIRISAgent 2.16.3 to pin. Tested: the five-platform with-AI run on the release commit — see the release PR. Translations: draft / machine_reviewed (hand translations re-evaluated; de/vi add_device.approval_held are draft only). Upgraded homes: ciris-server >= 0.5.222 (#162).",
+      "published": null
     }
   ]
 }
