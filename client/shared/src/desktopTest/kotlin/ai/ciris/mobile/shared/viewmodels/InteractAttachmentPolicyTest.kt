@@ -39,13 +39,19 @@ class InteractAttachmentPolicyTest {
         "document_types":["application/pdf","application/vnd.openxmlformats-officedocument.wordprocessingml.document","text/plain","text/markdown","text/csv"],
         "document_max_bytes":10485760,"max_documents":5,"max_extracted_chars":50000}}"""
 
-    private class Agent(private val policy: Pair<Int, String>, private val interact: String = "") {
+    /**
+     * [policy] answers the policy route, called with how many policy reads came
+     * before this one, so a test can script "429, then 200".
+     */
+    private class Agent(private val policy: (Int) -> Pair<Int, String>, private val interact: String = "") {
+        constructor(policy: Pair<Int, String>, interact: String = "") : this({ _: Int -> policy }, interact)
         val bodies: MutableList<String> = CopyOnWriteArrayList()
+        val policyReads = java.util.concurrent.atomic.AtomicInteger(0)
         val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
             createContext("/") { ex ->
                 val body = ex.requestBody.use { it.readBytes().decodeToString() }
                 val (status, out) = when (ex.requestURI.path) {
-                    "/v1/agent/attachments/policy" -> policy
+                    "/v1/agent/attachments/policy" -> policy(policyReads.getAndIncrement())
                     "/v1/agent/interact" -> { bodies += body; 200 to interact }
                     else -> 404 to """{"detail":"Not Found"}"""
                 }
@@ -65,6 +71,7 @@ class InteractAttachmentPolicyTest {
     @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain(); agents.forEach { it.server.stop(0) } }
 
     private fun agent(policy: Pair<Int, String>, interact: String = "") = Agent(policy, interact).also { agents += it }
+    private fun agent(policy: (Int) -> Pair<Int, String>) = Agent(policy).also { agents += it }
     private fun vm(a: Agent) = InteractViewModel(CIRISApiClient(a.url, "tok")).also { made += it }
     private fun file(name: String, type: String, size: Long = 3) = PickedFile(name, type, "AAAA", size)
 
@@ -95,6 +102,63 @@ class InteractAttachmentPolicyTest {
         // An old agent does not read text documents; the fallback does not offer them.
         vm.addAttachment(file("n.txt", "text/plain"))
         assertEquals(AttachmentRefusal.UnsupportedType("n.txt", "text/plain"), vm.attachmentRefused.value)
+    }
+
+    /**
+     * WHAT ciris-agent 2.16.2 ANSWERS FOR A ROUTE IT DOES NOT HAVE: FastAPI's
+     * `{"detail":"Not Found"}`, not an empty body. Pinned by name so a later
+     * "bare 404 means no body" tightening cannot make the released agent read
+     * as a failure.
+     */
+    @Test
+    fun fastApisNotFoundBodyIsAnAgentOlderThanTheRoute() = runBlocking {
+        val vm = vm(agent(404 to """{"detail":"Not Found"}"""))
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.FALLBACK_AGENT_TOO_OLD, vm.attachmentPolicySource.value)
+    }
+
+    /**
+     * THE AGENT'S RATE LIMITER, VERBATIM (ciris_engine api/middleware/rate_limiter.py,
+     * keyed on `auth_127.0.0.1`). Release gate 39706713027, linux-ai and
+     * windows-ai: `[loadAttachmentPolicy] attachment policy unavailable (HTTP 429)`.
+     * The read fired in chat-open's burst, was told to wait one second, and
+     * was filed as a failure instead.
+     */
+    private val rateLimited = 429 to """{"detail":"Too many requests. Please wait 1 seconds before trying again.","error":"rate_limit_exceeded","retry_after":1,"message":"You're sending requests too quickly. The system will be ready again shortly."}"""
+
+    @Test
+    fun a429IsWaitedOutAndReadAgain() = runBlocking {
+        val a = agent { n: Int -> if (n == 0) rateLimited else 200 to agentPolicy }
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.AGENT, vm.attachmentPolicySource.value, "a 429 means wait, not unavailable")
+        assertEquals(2, a.policyReads.get())
+    }
+
+    @Test
+    fun retriesThatStayRateLimitedAreUnavailableButNotForTheSession() = runBlocking {
+        val limited = java.util.concurrent.atomic.AtomicBoolean(true)
+        val a = agent { _: Int -> if (limited.get()) rateLimited else 200 to agentPolicy }
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.FALLBACK_UNAVAILABLE, vm.attachmentPolicySource.value)
+        assertTrue(a.policyReads.get() in 2..4, "retries must be bounded; got ${a.policyReads.get()}")
+        // The burst passes; the next paperclip tap reads again.
+        limited.set(false)
+        vm.onAttachTapped()
+        withContext(Dispatchers.Default) {
+            withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.AGENT } }
+        }
+        assertEquals(20971520L, vm.attachmentPolicy.value.imageMaxBytes)
+    }
+
+    @Test
+    fun aPaperclipTapDoesNotReReadALivePolicy() = runBlocking {
+        val a = agent(200 to agentPolicy)
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        vm.onAttachTapped()
+        assertEquals(1, a.policyReads.get())
     }
 
     @Test
