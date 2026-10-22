@@ -396,7 +396,7 @@ class TestAutomationServer(
                     // ModalBottomSheet) ARE dispatchable from the main process even
                     // though their layout positions never reach this server's element
                     // map — the popup's layout pass happens in a separate window.
-                    val clicked = TestAutomation.triggerClick(request.testTag)
+                    val clicked = ai.ciris.mobile.shared.platform.UiThreadClick.trigger(request.testTag)
                     if (clicked) {
                         call.respond(ActionResponse(
                             success = true,
@@ -679,7 +679,7 @@ class TestAutomationServer(
                             // the /click route — popup / dialog buttons register handlers
                             // when their modifier composes, even though the popup's layout
                             // pass never delivers a position event back to this server).
-                            val clicked = TestAutomation.triggerClick(request.testTag)
+                            val clicked = ai.ciris.mobile.shared.platform.UiThreadClick.trigger(request.testTag)
                             when {
                                 clicked -> ai.ciris.mobile.shared.testing.ActionResponse(
                                     success = true,
