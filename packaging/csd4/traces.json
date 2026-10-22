@@ -23,7 +23,7 @@
    "T19"
   ],
   "catalogue_version": 3,
-  "generator": "packaging/vendor_csd4.py (harness.native.model.trace at the pinned commit)",
+  "generator": "python -m harness.native trace (harness.native.model.traces)",
   "sources": {
    "T0-just-me-offline.yaml": "beef50682515ce31fed500fb9143dea359b9986cb41f3eef9126ef8806840038",
    "T1-one-person-two-devices.yaml": "4f0a8b4f6d5c6ddfbf557b753d389229f637d989d11986c75ef5d50067a4ca5d",

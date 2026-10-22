@@ -266,7 +266,7 @@ path. The drive tags, in order, are:
 6. on the approving device, `btn_approve_device_<id>` → `btn_confirm_device_request_confirm`, read `text_approve_device_outcome = held` and `text_approve_device_held_window`.
 
 **The server's QA runs this card on topology T10** (CIRISServer#802 @
-`003871fd`, catalogue version 3,
+`v0.5.232` (`01eb6ff2`; the catalogue is a release asset), catalogue version 3,
 `harness/native/topologies/catalog/requirements.yaml:48-74`, through
 `harness.native run --csd CSD-095`). Catalogue v3 adds the atom
 `key.membership.proposed_add` (CC rc9 `01b47e75`). It has three tests:

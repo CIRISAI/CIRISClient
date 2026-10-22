@@ -7,23 +7,25 @@ hand-edit — the checker refuses a file whose sha256 is not the one below.
 | pin | value |
 |---|---|
 | repo | `CIRISAI/CIRISServer` |
-| ref | `003871fd` |
-| commit | `003871fd67c1215a0afe7da5a8eb523363562cb2` |
-| status | head of CIRISServer PR #802 (`feat/multi-device-csd4`), OPEN — NOT on CIRISServer main, and no release carries it. Re-pin with `--from-release v0.5.232` once that tag exists (the CIRISServer#802 row in `evidence/blocked_upstream.tsv`). |
+| release tag | `v0.5.232` |
+| commit | `01eb6ff25b931dd121373cec5889cef497886236` |
+| assets | `csd4-requirements.yaml`, `csd4-topology_vocabulary.json`, `csd4-topology_vocabulary.pin`, `csd4-traces.json` (+ `SHA256SUMS`) |
+| SHA256SUMS | every asset listed and matching (the sha256s below are the release's) |
+| cosign | NOT verified: `cosign` is not on PATH. Every asset's sha256 matches the release's SHA256SUMS; the signatures (.sig/.pem) were not checked. Re-run with cosign installed to verify. |
 | catalogue_version | `3` |
 | atoms | 110 |
 | vocabulary owner | `CIRISAI/CIRISConstitution` @ `01b47e75b2250742d8f603dae0142ce58cc86c40` (`manifests/topology_vocabulary.json`) |
 
 ## Files
 
-The first three are byte copies of `harness/native/topologies/catalog/` at the commit; `traces.json` is the server model's step-by-step trace of T0–T19 at the same commit, produced by running it (sources' sha256 in its `_meta.sources`). A release pin (`--from-release`) replaces this with assets.
+Byte copies of the release assets `csd4-<file>`; no server code was run to produce them.
 
 | file | sha256 |
 |---|---|
 | `requirements.yaml` | `aa38a8c57fbfb41e08c2b75a787ed29eba8ad3f253849986c24010a0f74ac224` |
 | `topology_vocabulary.json` | `b0b220507d08424a8ced6f5390fc2a01a9987123530b0cf620be2d34bfc69afc` |
 | `topology_vocabulary.pin` | `1b7013fc98d31f44a0e6bbf6dd720bfba5fdeb8a455424bd813796ee8bee9a3f` |
-| `traces.json` | `617eeee574e370585489e01c6c2af72a7ce38feae048c758aa2fe6e8ea59712c` |
+| `traces.json` | `431f6ff94c3e4198c574aa68902379a1f12f500d29c7a499382025c1817e9eaa` |
 
 ## Refetch
 
