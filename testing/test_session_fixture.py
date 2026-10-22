@@ -57,6 +57,11 @@ class _SlowWizard:
         # Clicks on `trace_consent_yes` that land but change nothing: the
         # answer's handler was not live yet (Android, run 36762606620).
         self.lose_consent_clicks = 0
+        # Seconds after Setup opens before its controls register (iOS with AI,
+        # gate run 39774629469: the screen said Setup, the tree was empty, and
+        # the first /input was answered 404).
+        self.fields_after = 0.0
+        self.setup_at: float | None = None
         self.on = "Login"
         self.step = "you"
         self.next_at: float | None = None
@@ -107,6 +112,8 @@ class _SlowWizard:
         indicators = [_el("setup_step_indicators"),
                       _el("step_indicator_you", "active" if self.step == "you" else ""),
                       _el("step_indicator_join_federation", "active" if self.step == "join_federation" else "")]
+        if self.step == "you" and self.setup_at is not None and self.clock.t - self.setup_at < self.fields_after:
+            return []  # Setup is the screen, nothing on it has registered yet
         if self.step == "you" and self.next_at is not None:
             return [_el("btn_next")] + indicators  # blank body: the next step is composing
         if self.step == "you":
@@ -124,7 +131,7 @@ class _SlowWizard:
             self.refuse_next -= 1
             raise DriverError(f"POST /click -> HTTP 409: {tag} is disabled: it refuses /click")
         if tag == "btn_local_login":
-            self.on = "Setup"
+            self.on, self.setup_at = "Setup", self.clock.t
         elif tag == "trace_consent_yes":
             if self.lose_consent_clicks > 0:
                 self.lose_consent_clicks -= 1
@@ -140,6 +147,8 @@ class _SlowWizard:
                 self.step, self.claimed_at = "claimed", self.clock.t
 
     def input(self, tag, text):
+        if tag not in {e.test_tag for e in self.tree()}:
+            raise DriverError(f"POST /input -> HTTP 404: Element not found: {tag}")
         self.inputs[tag] = text
 
     def scroll_to(self, tag, direction="down", amount=300):
@@ -151,6 +160,16 @@ def _drive(monkeypatch, advance_after: float, **kw):
     monkeypatch.setattr(sf, "time", clock)
     w = _SlowWizard(clock, advance_after, **kw)
     return clock, w
+
+
+def test_a_wizard_whose_fields_register_late_is_waited_for(monkeypatch):
+    """iOS with AI (gate run 39774629469): Setup was the screen ~1 s before
+    any of its controls registered, and the first /input was a 404. The
+    fixture now waits for a wizard control, bounded, before typing."""
+    clock, w = _drive(monkeypatch, advance_after=0.5)
+    w.fields_after = 5.0
+    sf.run_setup(w, "qaadmin", "QaAdmin!2345")
+    assert w.inputs["input_username"] == "qaadmin"
 
 
 def test_a_slow_step_is_waited_for_not_slept_through(monkeypatch):

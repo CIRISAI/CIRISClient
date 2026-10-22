@@ -210,11 +210,13 @@ class _PeeringNode:
     answers `routes` in turn (status codes; 200 carries ROW), a's peering
     answers `transit` as `peer_transit_route`."""
 
-    def __init__(self, routes, transit="admitted"):
-        self.routes, self.transit = list(routes), transit
+    def __init__(self, routes, transit="admitted", local_route=200):
+        self.routes, self.transit, self.local_route = list(routes), transit, local_route
         self.gets, self.peering = 0, None
 
     def __call__(self, method, url, token=None, body=None, timeout=0):
+        if url == "http://a" + tn.TRANSPORT_ROUTE:
+            return self.local_route, (ROW if self.local_route == 200 else {})
         if url == "http://b" + tn.TRANSPORT_ROUTE:
             self.gets += 1
             status = self.routes.pop(0) if len(self.routes) > 1 else self.routes[0]
@@ -292,6 +294,20 @@ def test_a_route_not_admitted_when_one_was_sent_is_a_named_failure(monkeypatch, 
     a, b = _pair()
     with pytest.raises(tn.FixtureUnavailable, match=r"peer_transit_route=.*#808"):
         tn.peer(a, b, log=lambda m: None, notes=[])
+
+
+def test_a_local_node_older_than_808_is_peered_with_a_note(monkeypatch):
+    """The iOS leg: its embedded node is the Agent's pin (0.5.232, no
+    self-transport-destination route) and ignores the row a 0.5.233 peer
+    hands it. That is the older-server case seen from the other side —
+    noted, not a failure (gate run 39774629469: 3 flows cannot-start)."""
+    node = _PeeringNode([200], transit=None, local_route=404)
+    monkeypatch.setattr(tn, "http", node)
+    monkeypatch.setattr(tn, "time", _Clock())
+    a, b = _pair()
+    notes: list = []
+    tn.peer(a, b, log=lambda m: None, notes=notes)
+    assert any("local is older than CIRISServer#808" in n for n in notes), notes
 
 
 class _PendingNode:

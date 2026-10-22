@@ -10,7 +10,7 @@ plugins {
     id("com.android.library").version("8.5.2").apply(false)
 
     // Compose Multiplatform 1.7+
-    id("org.jetbrains.compose").version("1.7.1").apply(false)
+    id("org.jetbrains.compose").version("1.7.3").apply(false)
 
     // Python runtime - Chaquopy 17.0.0 (compatible with AGP 8.5+, Kotlin 2.x)
     id("com.chaquo.python").version("17.0.0").apply(false)
