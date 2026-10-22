@@ -43,6 +43,8 @@ class AgentRateBudgetTest {
     @AfterTest fun tearDown() {
         Dispatchers.resetMain()
         AgentRateGovernor.clock = { kotlinx.datetime.Clock.System.now().toEpochMilliseconds() }
+        // Governors are process-wide; state built on virtual time must not reach the next class.
+        kotlinx.coroutines.runBlocking { AgentRateGovernor.resetForTests() }
     }
 
     private fun TestScope.chat(initialTokens: Double = 60.0): Pair<FakeRateLimitedAgent, InteractViewModel> {
@@ -180,6 +182,9 @@ class AgentRateBudgetTest {
         AgentRateGovernor.resetForTests()
         val (agent, _) = chat()
         val screens = HttpClient(agent.engine) { install(AgentRateLimit) }
+        // The gate's burst came long after the client had first heard from the
+        // agent, so the governor already knew this host has a limiter.
+        screens.get("${agent.url}/v1/agent/status")
         val burst = (1..100).map { i -> async { screens.get("${agent.url}/v1/screen/$i") } }
         advanceTimeBy(2_000)
         val policy = CIRISApiClient(agent.url, "tok", agent.engine).getAttachmentPolicy()
@@ -188,4 +193,49 @@ class AgentRateBudgetTest {
         assertTrue(policy !is AttachmentPolicyRead.Failed, "the user's read was refused behind the burst: $policy")
         assertTrue(refused.isEmpty(), "the burst ran the agent dry: ${refused.size} refused, first ${refused.firstOrNull()}")
     }
+
+    /**
+     * THE THIRD GATE'S FAILURE (run 39774629469): the node on :4243 proxies
+     * brain routes onto the agent's :8080 from loopback, so both ports spend
+     * ONE bucket. Paced per origin, each port's mirror believed it had the
+     * whole bucket, and together they ran it dry.
+     */
+    /**
+     * A host that never says it has a limiter (a node with no agent behind it,
+     * or every in-process test server) is not held back by an imaginary one:
+     * a hundred unmarked reads all go at once.
+     */
+    @Test
+    fun aHostWithNoLimiterIsNotPaced() = runTest {
+        AgentRateGovernor.resetForTests()
+        val dispatcher = StandardTestDispatcher(testScheduler)
+        Dispatchers.setMain(dispatcher)
+        AgentRateGovernor.clock = { testScheduler.currentTime }
+        val agent = FakeRateLimitedAgent(dispatcher, { testScheduler.currentTime }, rate = 100_000, sendsHeaders = false)
+        val screens = HttpClient(agent.engine) { install(AgentRateLimit) }
+        val burst = (1..100).map { i -> async { screens.get("${agent.url}/v1/contacts/$i") } }
+        burst.awaitAll()
+        assertEquals(100, agent.hits.count { it.atMs == 0L }, "a node with no limiter was paced: ${agent.hits.map { it.atMs }.distinct()}")
+    }
+
+    @Test
+    fun theNodePortAndTheAgentPortShareOneBudget() = runTest {
+        AgentRateGovernor.resetForTests()
+        val (agent, _) = chat()
+        val screens = HttpClient(agent.engine) { install(AgentRateLimit) }
+        // The gate's burst came long after the client had first heard from the
+        // agent, so the governor already knew this host has a limiter.
+        screens.get("${agent.url}/v1/agent/status")
+        val node = agent.url.replace(":8080", ":4243")
+        val burst = (1..100).map { i ->
+            async { screens.get("${if (i % 2 == 0) node else agent.url}/v1/telemetry/$i") }
+        }
+        advanceTimeBy(2_000)
+        val policy = CIRISApiClient(agent.url, "tok", agent.engine).getAttachmentPolicy()
+        burst.awaitAll()
+        val refused = agent.counted().filter { it.status == 429 }
+        assertTrue(policy !is AttachmentPolicyRead.Failed, "the user's read was refused behind the two ports' burst: $policy")
+        assertTrue(refused.isEmpty(), "the two ports ran the agent dry: ${refused.size} refused")
+    }
 }
+

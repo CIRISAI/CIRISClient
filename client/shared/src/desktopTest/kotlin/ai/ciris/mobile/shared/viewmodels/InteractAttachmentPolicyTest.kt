@@ -68,7 +68,13 @@ class InteractAttachmentPolicyTest {
     private val made = mutableListOf<ViewModel>()
     private val agents = mutableListOf<Agent>()
     @BeforeTest fun setUp() = Dispatchers.setMain(Dispatchers.Unconfined)
-    @AfterTest fun tearDown() { stopViewModels(made); Dispatchers.resetMain(); agents.forEach { it.server.stop(0) } }
+    // The 429s here mark 127.0.0.1 as a limited host with an empty bucket, and
+    // the governor is process-wide: left in place, every later test that talks
+    // to 127.0.0.1 waits on it (WipeForgetsNodeTest stalled the whole suite).
+    @AfterTest fun tearDown() {
+        stopViewModels(made); Dispatchers.resetMain(); agents.forEach { it.server.stop(0) }
+        kotlinx.coroutines.runBlocking { ai.ciris.mobile.shared.api.AgentRateGovernor.resetForTests() }
+    }
 
     private fun agent(policy: Pair<Int, String>, interact: String = "") = Agent(policy, interact).also { agents += it }
     private fun agent(policy: (Int) -> Pair<Int, String>) = Agent(policy).also { agents += it }

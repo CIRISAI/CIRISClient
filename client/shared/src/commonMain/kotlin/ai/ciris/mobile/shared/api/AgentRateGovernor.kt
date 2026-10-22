@@ -73,7 +73,13 @@ suspend fun <T> asAgentUser(block: suspend CoroutineScope.() -> T): T = withCont
  * free to spend the user's half.
  *
  * User traffic bypasses the budget and the reserve; it is the reserve's
- * reason to exist. One governor per agent origin, process-wide.
+ * reason to exist. One governor per agent HOST, process-wide — not per
+ * origin: the node on :4243 reverse-proxies every brain route (/v1/agent/…,
+ * telemetry, audit, WA, tools, memory, …) onto the agent's :8080 from
+ * 127.0.0.1 with the caller's Bearer (CIRISAgent `brain_adapter.py`,
+ * BRAIN_UPSTREAM), so both ports spend one bucket. Per origin, the :8080
+ * mirror saw 25 requests in the minute the agent refused the policy read
+ * (gate run 39774629469); the other 35+ had gone through :4243.
  */
 class AgentRateGovernor internal constructor() {
 
@@ -91,6 +97,16 @@ class AgentRateGovernor internal constructor() {
 
     /** The agent's limit, per its `X-RateLimit-Limit` once seen. */
     private var agentLimit = AGENT_LIMIT_PER_MINUTE
+
+    /**
+     * Has this host shown it has a limiter (an `X-RateLimit-Limit` header or a
+     * 429)? Until it has, nothing is held back — not the background budget,
+     * not the reserve, not the unmarked floor: a node with no agent behind it
+     * has no bucket to protect, and pacing it against an imaginary one only
+     * throttled it (keyed per host, every test server on 127.0.0.1 shared one
+     * 30/min background budget and the desktop suite stalled).
+     */
+    private var agentLimited = false
 
     /** The mirror of the agent's bucket: a new caller starts full, as the agent's does. */
     private var agentTokens = AGENT_LIMIT_PER_MINUTE.toDouble()
@@ -126,7 +142,8 @@ class AgentRateGovernor internal constructor() {
                 refill(now)
                 val hold = when {
                     pausedUntilMs > now -> pausedUntilMs - now
-                    cls == null -> if (agentTokens < UNMARKED_FLOOR) msUntilMirror(UNMARKED_FLOOR) else 0L
+                    cls == null -> if (agentLimited && agentTokens < UNMARKED_FLOOR) msUntilMirror(UNMARKED_FLOOR) else 0L
+                    !agentLimited -> 0L
                     agentTokens < USER_RESERVE + 1 -> msUntilMirror(USER_RESERVE + 1.0)
                     tokens < 1.0 -> ((1.0 - tokens) * MS_PER_BACKGROUND_TOKEN).toLong().coerceAtLeast(1L)
                     else -> { tokens -= 1.0; 0L }
@@ -146,7 +163,11 @@ class AgentRateGovernor internal constructor() {
 
     private fun spendLocked(now: Long, route: String, cls: AgentTrafficClass?) {
         refill(now)
-        agentTokens -= 1.0
+        // The agent's bucket never goes below zero: a refused request costs it
+        // nothing. A mirror allowed to go negative (every send counted, the
+        // refused ones too) would hold background traffic for minutes after
+        // the agent had refilled.
+        agentTokens = maxOf(0.0, agentTokens - 1.0)
         recent.addLast(Sent(now, route, cls))
         while (recent.isNotEmpty() && recent.first().atMs < now - 60_000) recent.removeFirst()
     }
@@ -162,12 +183,13 @@ class AgentRateGovernor internal constructor() {
         state.withLock {
             val now = clock()
             refill(now)
-            limitHeader?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let { agentLimit = it }
+            limitHeader?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let { agentLimit = it; agentLimited = true }
             if (status == 429) {
+                agentLimited = true
                 val seconds = retryAfterSeconds(retryAfterHeader)
                 pausedUntilMs = maxOf(pausedUntilMs, now + seconds * 1000L)
                 // A 429 means the bucket is empty; the reserve has to refill before background goes again.
-                agentTokens = minOf(agentTokens, 0.0)
+                agentTokens = 0.0
                 PlatformLogger.w(TAG, "agent answered 429: background traffic paused ${seconds}s, held until $USER_RESERVE tokens refill")
                 logBreakdown(now)
                 return@withLock
@@ -259,19 +281,19 @@ class AgentRateGovernor internal constructor() {
         internal var clock: () -> Long = { Clock.System.now().toEpochMilliseconds() }
 
         private val registry = Mutex()
-        private val byOrigin = mutableMapOf<String, AgentRateGovernor>()
+        private val byHost = mutableMapOf<String, AgentRateGovernor>()
 
-        /** The governor for the agent at [url]'s origin (scheme, host, port). */
+        /** The governor for the agent on [url]'s host: every port of one host shares the agent's bucket. */
         suspend fun forUrl(url: Url): AgentRateGovernor {
-            val origin = "${url.protocol.name}://${url.host}:${url.port}"
-            return registry.withLock { byOrigin.getOrPut(origin) { AgentRateGovernor() } }
+            val host = url.host.lowercase().let { if (it == "localhost" || it == "::1" || it == "[::1]") "127.0.0.1" else it }
+            return registry.withLock { byHost.getOrPut(host) { AgentRateGovernor() } }
         }
 
         /** The governor for [baseUrl], or null when it does not parse. */
         suspend fun forBaseUrl(baseUrl: String): AgentRateGovernor? =
             runCatching { Url(baseUrl) }.getOrNull()?.let { forUrl(it) }
 
-        internal suspend fun resetForTests() = registry.withLock { byOrigin.clear() }
+        internal suspend fun resetForTests() = registry.withLock { byHost.clear() }
 
         fun isExempt(path: String): Boolean = path.trimEnd('/').ifEmpty { "/" } in EXEMPT_PATHS
 

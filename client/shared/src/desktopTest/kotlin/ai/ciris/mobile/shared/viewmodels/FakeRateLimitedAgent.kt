@@ -34,6 +34,8 @@ class FakeRateLimitedAgent(
     private val now: () -> Long,
     initialTokens: Double = 60.0,
     private val rate: Int = 60,
+    /** False: a server with no limiter in front (a bare node), which sends no X-RateLimit-* headers. */
+    private val sendsHeaders: Boolean = true,
 ) {
     data class Hit(val atMs: Long, val method: String, val path: String, val status: Int, val body: String)
 
@@ -110,7 +112,9 @@ class FakeRateLimitedAgent(
                 route(method, path)
             } else {
                 val (ok, n) = admit()
-                if (ok) {
+                if (ok && !sendsHeaders) {
+                    route(method, path)
+                } else if (ok) {
                     route(method, path).let { it.copy(headers = it.headers + mapOf("X-RateLimit-Limit" to "$rate", "X-RateLimit-Remaining" to "$n")) }
                 } else {
                     Reply(
