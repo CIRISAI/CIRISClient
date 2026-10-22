@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.232` (`01eb6ff25b931dd121373cec5889cef497886236`) | `chore/pin-server-0.5.232` (the release tag, which carries fix/client-copy-0.5.232 — the reworded contacts strings — plus #793/#794/#798/#802. Previous: `fix/client-copy-0.5.232` `b11aef95`, unmerged branch, carried by client 0.5.229) | 2026-10-21 |
+| `CIRISAI/CIRISServer` | `v0.5.233` (`7bcbee4206fc8d5b2b8db21e32a8424c4eccb185`) | `chore/pin-server-0.5.233` (the release tag: direct peering with the peer's signed transport row, CIRISServer#808; roster-key claims #805/#806; --home tier #807. Previous: `v0.5.232` `01eb6ff2`, `chore/pin-server-0.5.232`) | 2026-10-22 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `99ac0426de677182a391d981029be12f3930825ab509846f455a745457bd0573`
+**state digest:** `8a1c0de15aa943d0240ede899eee15a60ba9c1ffa9933075424ace43ac2e4987`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
