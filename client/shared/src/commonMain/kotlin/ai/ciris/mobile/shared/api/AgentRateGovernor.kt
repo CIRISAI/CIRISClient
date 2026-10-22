@@ -116,6 +116,16 @@ class AgentRateGovernor internal constructor() {
     private val recent = ArrayDeque<Sent>()
     private var lastBreakdownAtMs: Long? = null
 
+    /**
+     * The agent's last `X-RateLimit-Remaining`, on which route and when: said
+     * beside every 429, so a refusal while another route was just told "40
+     * left" shows two buckets, not one empty one (gate runs 39802071995 and
+     * 39808985094: only the policy route was ever refused).
+     */
+    private var lastRemaining: Int? = null
+    private var lastRemainingRoute: String? = null
+    private var lastRemainingAtMs: Long? = null
+
     private class Sent(val atMs: Long, val route: String, val cls: AgentTrafficClass?)
 
     private val msPerAgentToken get() = 60_000.0 / agentLimit
@@ -179,7 +189,13 @@ class AgentRateGovernor internal constructor() {
     suspend fun pauseRemainingMs(): Long = state.withLock { (pausedUntilMs - clock()).coerceAtLeast(0L) }
 
     /** Fold an agent response into the shared state. */
-    suspend fun observe(status: Int, retryAfterHeader: String?, remainingHeader: String?, limitHeader: String?) {
+    suspend fun observe(
+        status: Int,
+        retryAfterHeader: String?,
+        remainingHeader: String?,
+        limitHeader: String?,
+        route: String? = null,
+    ) {
         state.withLock {
             val now = clock()
             refill(now)
@@ -188,16 +204,27 @@ class AgentRateGovernor internal constructor() {
                 agentLimited = true
                 val seconds = retryAfterSeconds(retryAfterHeader)
                 pausedUntilMs = maxOf(pausedUntilMs, now + seconds * 1000L)
+                val mirrored = agentTokens
                 // A 429 means the bucket is empty; the reserve has to refill before background goes again.
                 agentTokens = 0.0
-                PlatformLogger.w(TAG, "agent answered 429: background traffic paused ${seconds}s, held until $USER_RESERVE tokens refill")
+                val said = lastRemaining?.let { r ->
+                    "agent last said Remaining=$r on ${lastRemainingRoute ?: "?"} ${now - (lastRemainingAtMs ?: now)}ms ago"
+                } ?: "agent has not said Remaining yet"
+                PlatformLogger.w(
+                    TAG,
+                    "agent answered 429${route?.let { " on $it" } ?: ""}: mirror had ${(mirrored * 10).toInt() / 10.0} tokens, $said; " +
+                        "background traffic paused ${seconds}s, held until $USER_RESERVE tokens refill",
+                )
                 logBreakdown(now)
                 return@withLock
             }
             // The agent stamps Remaining AFTER its handler ran, so a slow request's
             // reading is older than requests sent since: it may lower the mirror
             // (traffic this process did not see), never raise it.
-            remainingHeader?.trim()?.toIntOrNull()?.let { agentTokens = minOf(agentTokens, it.toDouble()) }
+            remainingHeader?.trim()?.toIntOrNull()?.let {
+                agentTokens = minOf(agentTokens, it.toDouble())
+                lastRemaining = it; lastRemainingRoute = route; lastRemainingAtMs = now
+            }
         }
     }
 
@@ -316,16 +343,20 @@ val AgentRateLimit = createClientPlugin("AgentRateLimit") {
         val governor = AgentRateGovernor.forUrl(url)
         // USER is never queued (a 429 there is answered by the caller's visible retry);
         // BACKGROUND and unmarked wait per the governor's rules.
-        governor.admit("${request.method.value} ${url.encodedPath}", currentCoroutineContext()[AgentTraffic]?.cls)
+        // The port is in the route: :8080 (the agent) and :4243 (the node, which
+        // proxies brain routes onto :8080) share this host's one budget.
+        val route = "${request.method.value} :${url.port}${url.encodedPath}"
+        governor.admit(route, currentCoroutineContext()[AgentTraffic]?.cls)
         val call = proceed(request)
-        call.response.observeInto(governor)
+        call.response.observeInto(governor, route)
         call
     }
 }
 
-private suspend fun HttpResponse.observeInto(governor: AgentRateGovernor) = governor.observe(
+private suspend fun HttpResponse.observeInto(governor: AgentRateGovernor, route: String) = governor.observe(
     status = status.value,
     retryAfterHeader = headers["Retry-After"],
     remainingHeader = headers["X-RateLimit-Remaining"],
     limitHeader = headers["X-RateLimit-Limit"],
+    route = route,
 )

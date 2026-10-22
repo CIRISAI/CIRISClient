@@ -43,8 +43,13 @@ class InteractAttachmentPolicyTest {
      * [policy] answers the policy route, called with how many policy reads came
      * before this one, so a test can script "429, then 200".
      */
-    private class Agent(private val policy: (Int) -> Pair<Int, String>, private val interact: String = "") {
-        constructor(policy: Pair<Int, String>, interact: String = "") : this({ _: Int -> policy }, interact)
+    private class Agent(
+        private val policy: (Int) -> Pair<Int, String>,
+        private val interact: String = "",
+        /** What `/v1/system/health` reports as `version`; null answers 404, as the fakes always did. */
+        private val version: String? = null,
+    ) {
+        constructor(policy: Pair<Int, String>, interact: String = "", version: String? = null) : this({ _: Int -> policy }, interact, version)
         val bodies: MutableList<String> = CopyOnWriteArrayList()
         val policyReads = java.util.concurrent.atomic.AtomicInteger(0)
         val server: HttpServer = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
@@ -53,6 +58,8 @@ class InteractAttachmentPolicyTest {
                 val (status, out) = when (ex.requestURI.path) {
                     "/v1/agent/attachments/policy" -> policy(policyReads.getAndIncrement())
                     "/v1/agent/interact" -> { bodies += body; 200 to interact }
+                    "/v1/system/health" -> if (version == null) 404 to """{"detail":"Not Found"}"""
+                        else 200 to """{"data":{"status":"healthy","version":"$version","cognitive_state":"WORK"}}"""
                     else -> 404 to """{"detail":"Not Found"}"""
                 }
                 val bytes = out.toByteArray()
@@ -190,6 +197,39 @@ class InteractAttachmentPolicyTest {
         assertEquals(AttachmentPolicySource.FALLBACK_UNAVAILABLE, vm.attachmentPolicySource.value)
         // One read and two re-reads, each with its own bounded 429 retries.
         assertTrue(a.policyReads.get() <= 12, "re-reads must stop; got ${a.policyReads.get()}")
+    }
+
+    /**
+     * CIRISAgent fix/node-proxy-loop: through 2.16.2 an absent `/v1/agent/…`
+     * path laps agent → node → agent until the caller's bucket is empty (gate
+     * run 39820724677: Remaining 47 → 0 in 1.5 s on one policy GET). An agent
+     * whose health says it predates the route is not asked for it at all.
+     */
+    @Test
+    fun anAgentOlderThanTheRouteIsNotAskedForIt() = runBlocking {
+        val a = Agent(200 to agentPolicy, version = "2.16.2-stable").also { agents += it }
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.FALLBACK_AGENT_TOO_OLD, vm.attachmentPolicySource.value)
+        assertEquals(0, a.policyReads.get(), "the policy route was requested from an agent that predates it")
+    }
+
+    @Test
+    fun anAgentWithTheRouteIsAskedForIt() = runBlocking {
+        val a = Agent(200 to agentPolicy, version = "2.16.3-stable").also { agents += it }
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.AGENT, vm.attachmentPolicySource.value)
+        assertEquals(1, a.policyReads.get())
+    }
+
+    /** A node answers `/v1/system/health` with its own 0.x version; that is not an agent's. */
+    @Test
+    fun aNodesVersionIsNotReadAsAnAgents() = runBlocking {
+        val a = Agent(200 to agentPolicy, version = "0.5.233").also { agents += it }
+        val vm = vm(a)
+        vm.loadAttachmentPolicy()
+        assertEquals(AttachmentPolicySource.AGENT, vm.attachmentPolicySource.value)
     }
 
     @Test

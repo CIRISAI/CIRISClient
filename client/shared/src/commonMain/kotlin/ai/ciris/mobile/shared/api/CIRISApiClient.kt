@@ -863,6 +863,16 @@ class CIRISApiClient internal constructor(
      * `/interact` applies to attached files (CIRISClient#217). A bare 404 is an
      * agent older than the route — [AttachmentPolicyRead.AgentTooOld], and the
      * caller falls back to the client's constants; it never blocks attaching.
+     *
+     * AN AGENT OLDER THAN THE ROUTE IS NOT ASKED FOR IT. On every agent through
+     * 2.16.2 an absent `/v1/agent/…` path does not answer 404: the agent's
+     * catch-all forwards it to the node on :4243, the node's BrainAdapter
+     * proxies `/v1/agent` back onto :8080, and the request laps until the
+     * caller's rate-limit bucket is empty and a 429 breaks the loop (gate run
+     * 39820724677: Remaining 47 → 0 in 1.5 s on one GET; CIRISAgent
+     * fix/node-proxy-loop). So the agent's version is read first from
+     * `/v1/system/health`, which its limiter never charges, and an agent below
+     * [ATTACHMENT_POLICY_SINCE] is answered locally.
      */
     suspend fun getAttachmentPolicy(): AttachmentPolicyRead {
         val method = "getAttachmentPolicy"
@@ -870,6 +880,13 @@ class CIRISApiClient internal constructor(
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
                 connectTimeoutMillis = 5000
+            }
+        }
+        agentVersionOrNull(client)?.let { v ->
+            if (compareVersions(v, ATTACHMENT_POLICY_SINCE) < 0) {
+                logInfo(method, "agent $v predates the attachment policy route ($ATTACHMENT_POLICY_SINCE); not asking it — using the client's limits")
+                client.close()
+                return AttachmentPolicyRead.AgentTooOld
             }
         }
         return try {
@@ -928,6 +945,27 @@ class CIRISApiClient internal constructor(
 
     /** Retries of the policy read after a 429: three reads in all, ~2 s on the agent's retry_after=1. */
     private val POLICY_RATE_LIMIT_RETRIES = 2
+
+    /** The first agent release that serves `GET /v1/agent/attachments/policy` (CIRISAgent#1302). */
+    internal val ATTACHMENT_POLICY_SINCE = "2.16.3"
+
+    /**
+     * The AGENT's version from its `/v1/system/health` (exempt from its rate
+     * limiter), or null when it cannot be read or is not an agent's: a node
+     * answers the same path with its own 0.x version, and ciris-agent releases
+     * are 2.x, so anything below 2.0 is not taken as an agent version.
+     */
+    private suspend fun agentVersionOrNull(client: io.ktor.client.HttpClient): String? = try {
+        val response = client.get("$baseUrl/v1/system/health")
+        if (response.status.value !in 200..299) null else {
+            val root = Json.parseToJsonElement(response.bodyAsText()).jsonObject
+            val data = root["data"]?.jsonObject ?: root
+            data["version"]?.jsonPrimitive?.contentOrNull?.takeIf { compareVersions(it, "2.0.0") >= 0 }
+        }
+    } catch (e: Exception) {
+        if (e is kotlinx.coroutines.CancellationException) throw e
+        null
+    }
     private val POLICY_RETRY_AFTER_CAP_MS = 5_000L
 
     /**
