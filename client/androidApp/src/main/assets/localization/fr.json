@@ -263,7 +263,7 @@
     "clarify_request": "Pourriez-vous préciser ce que vous voulez dire ?",
     "credit_blocked": "Interaction bloquée par la politique de crédit.",
     "defer_check_panel": "L'agent a choisi de différer, vérifiez le panneau d'autorité sage si vous êtes l'utilisateur de configuration",
-    "defer_to_wa": "Je dois consulter un conseiller humain à ce sujet. Je vous répondrai bientôt.",
+    "defer_to_wa": "Je dois consulter ma Wise Authority à ce sujet. Je reviendrai vers vous.",
     "error_generic": "J'ai rencontré un problème lors du traitement de votre demande. Veuillez réessayer.",
     "error_timeout": "La demande a pris trop de temps. Veuillez réessayer.",
     "greeting": "Bonjour ! Comment puis-je vous aider aujourd'hui ?",

@@ -281,7 +281,7 @@
     "clarify_request": "Could you clarify what you mean?",
     "credit_blocked": "Interaction blocked by credit policy.",
     "defer_check_panel": "The agent chose to defer, check the wise authority panel if you are the setup user",
-    "defer_to_wa": "I need to consult with a human advisor on this. I'll get back to you.",
+    "defer_to_wa": "I need to check with my Wise Authority on this. I'll get back to you.",
     "error_generic": "I encountered an issue processing your request. Please try again.",
     "error_timeout": "The request took too long. Please try again.",
     "greeting": "Hello! How can I help you today?",

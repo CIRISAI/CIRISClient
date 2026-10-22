@@ -263,7 +263,7 @@
     "clarify_request": "您能再说明一下您的意思吗？",
     "credit_blocked": "交互被信用政策阻止。",
     "defer_check_panel": "智能体选择延迟处理，如果您是设置用户，请查看智慧权威面板",
-    "defer_to_wa": "我需要就此事咨询人工顾问，稍后会回复您。",
+    "defer_to_wa": "我需要就此事咨询我的智慧权威，稍后会回复您。",
     "error_generic": "处理您的请求时遇到了问题，请重试。",
     "error_timeout": "请求超时，请重试。",
     "greeting": "您好！今天我能为您做些什么？",
