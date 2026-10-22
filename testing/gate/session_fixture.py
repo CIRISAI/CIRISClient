@@ -105,6 +105,23 @@ def _tags(drv: TestAutomationServer) -> set[str]:
     return {e.test_tag for e in drv.tree()}
 
 
+#: What the wizard shows first: the new-ID question, or (a client from before
+#: it) the account fields.
+WIZARD_FIRST_CONTROLS = ("btn_setup_new_identity", "input_username")
+
+
+def _wait_for_any(drv: TestAutomationServer, tags, timeout: float) -> bool:
+    """True once any of `tags` is in the tree; False after `timeout` (the
+    caller's next action then fails with the app's own words)."""
+    deadline = time.monotonic() + timeout
+    while True:
+        if set(tags) & _tags(drv):
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        time.sleep(0.5)
+
+
 def _wait_clickable(drv: TestAutomationServer, tag: str, timeout: float = 20.0) -> bool:
     """True once `tag` reports can_click (or the server does not report it at all)."""
     deadline = time.monotonic() + timeout
@@ -419,6 +436,11 @@ def run_setup(drv: TestAutomationServer, username: str, password: str,
             f"btn_local_login reached neither Setup (the wizard) nor the login form "
             f"within 30s (on {drv.screen()!r}); on screen: {sorted(_tags(drv))}"
         )
+
+    # THE SCREEN NAME IS NOT THE WIZARD (iOS with AI, gate run 39774629469):
+    # Setup was reported ~1 s before any of its controls registered, and the
+    # first /input was answered 404. Wait, bounded, for a control to type into.
+    _wait_for_any(drv, WIZARD_FIRST_CONTROLS, timeout=20.0)
 
     # The wizard's first question (CIRISServer 0.5.231, CSD-093): a new CIRIS
     # ID or this device added to an existing one. Nothing below it renders

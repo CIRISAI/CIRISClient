@@ -561,6 +561,13 @@ def transport_destination(party: Party, route_wait: float = 30.0) -> Optional[An
         time.sleep(2.0)
 
 
+def _predates_808(party: Party) -> bool:
+    """Is `party` a server older than CIRISServer#808 — one with no
+    self-transport-destination route at all (404)?"""
+    status, _ = http("GET", f"{party.url}{TRANSPORT_ROUTE}")
+    return status == 404
+
+
 def peer(a: Party, b: Party, log: Log = _say, notes: Optional[List[str]] = None,
          route_wait: float = 30.0) -> None:
     """`a` consents to replicate to `b`, handing over `b`'s key record and — on
@@ -578,7 +585,20 @@ def peer(a: Party, b: Party, log: Log = _say, notes: Optional[List[str]] = None,
     if not _ok(status) or not isinstance(body, dict):
         raise FixtureUnavailable(f"peering {a.name}->{b.name} answered {status}: {str(body)[:300]}")
     route = body.get("peer_transit_route")
-    if row is None:
+    if row is not None and "peer_transit_route" not in body and _predates_808(a):
+        # The PEER serves its row but THIS node is older than #808 and ignored
+        # the field: the iOS leg's embedded node is the Agent's pin (0.5.232)
+        # while the run's peer is 0.5.233 (gate run 39774629469, 3 flows
+        # cannot-start since the 0.5.233 pin). The same degraded peering as an
+        # older PEER, said the same way — not a failure of the client.
+        row = None
+        msg = (f"peering {a.name}->{b.name}: {a.name} is older than CIRISServer#808 (0.5.233; no "
+               f"{TRANSPORT_ROUTE}) and ignored {b.name}'s transport row. On 0.5.232 two directly "
+               f"peered nodes cannot seal a link (link_seal_refused_no_pair), so nothing will cross")
+        if notes is not None:
+            notes.append(msg)
+        log(msg)
+    elif row is None:
         msg = (f"peering {a.name}->{b.name} without {b.name}'s transport row: {b.name} serves no "
                f"{TRANSPORT_ROUTE} (a server older than CIRISServer#808, 0.5.233). On 0.5.232 two "
                f"directly peered nodes cannot seal a link (link_seal_refused_no_pair), so nothing "
