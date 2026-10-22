@@ -263,7 +263,7 @@
     "clarify_request": "¿Podrías aclarar lo que quieres decir?",
     "credit_blocked": "Interacción bloqueada por política de créditos.",
     "defer_check_panel": "El agente decidió diferir, verifica el panel de autoridad sabia si eres el usuario de configuración",
-    "defer_to_wa": "Necesito consultar con un asesor humano sobre esto. Te responderé pronto.",
+    "defer_to_wa": "Necesito consultar con mi Autoridad Sabia sobre esto. Me pondré en contacto contigo.",
     "error_generic": "Encontré un problema al procesar tu solicitud. Por favor, inténtalo de nuevo.",
     "error_timeout": "La solicitud tardó demasiado. Por favor, inténtalo de nuevo.",
     "greeting": "¡Hola! ¿Cómo puedo ayudarte hoy?",

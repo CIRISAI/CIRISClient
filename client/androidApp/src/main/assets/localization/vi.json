@@ -263,7 +263,7 @@
     "clarify_request": "Bạn có thể làm rõ ý bạn không?",
     "credit_blocked": "Tương tác bị chặn bởi chính sách tín dụng.",
     "defer_check_panel": "Tác nhân đã chọn chuyển giao, kiểm tra bảng Cơ Quan Sáng Suốt nếu bạn là người dùng thiết lập",
-    "defer_to_wa": "Tôi cần tham khảo ý kiến của một cố vấn con người về điều này. Tôi sẽ quay lại với bạn.",
+    "defer_to_wa": "Tôi cần tham khảo ý kiến của Cơ Quan Sáng Suốt của tôi về điều này. Tôi sẽ quay lại với bạn.",
     "error_generic": "Tôi gặp sự cố khi xử lý yêu cầu của bạn. Vui lòng thử lại.",
     "error_timeout": "Yêu cầu mất quá nhiều thời gian. Vui lòng thử lại.",
     "greeting": "Xin chào! Tôi có thể giúp gì cho bạn hôm nay?",
