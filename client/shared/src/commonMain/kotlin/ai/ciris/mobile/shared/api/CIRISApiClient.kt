@@ -229,8 +229,26 @@ private fun ConfigValue.toDisplayString(): String {
 class CIRISApiClient(
     // Default to the local ciris-server node read API (node base :4242 → API :4243).
     baseUrl: String = "http://127.0.0.1:4243",
-    private var accessToken: String? = null
+    private var accessToken: String? = null,
+    /**
+     * The HTTP engine every request of this client uses; null is the platform
+     * default. Tests pass an in-process fake agent so the pollers run against
+     * it on virtual time (AgentRateBudgetTest).
+     */
+    internal val engine: io.ktor.client.engine.HttpClientEngine? = null,
 ) : CIRISApiClientProtocol {
+
+    /**
+     * EVERY HttpClient this class makes comes from here (and the generated
+     * APIs get the same plugin through [httpClientConfig]), so every request
+     * passes [AgentRateLimit]: the one place agent-bound traffic is paced
+     * against the agent's 60/min limiter, and where a 429 on any route pauses
+     * the background pollers of every call site at once ([AgentRateGovernor]).
+     */
+    private fun agentHttpClient(block: HttpClientConfig<*>.() -> Unit = {}): io.ktor.client.HttpClient {
+        val withLimit: HttpClientConfig<*>.() -> Unit = { block(); install(AgentRateLimit) }
+        return engine?.let { io.ktor.client.HttpClient(it, withLimit) } ?: io.ktor.client.HttpClient(withLimit)
+    }
 
     /**
      * Current effective base URL - can be updated dynamically.
@@ -288,79 +306,79 @@ class CIRISApiClient(
 
         agentApi = AgentApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         authApi = AuthenticationApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         setupApi = SetupApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         systemApi = SystemApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         telemetryApi = TelemetryApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         billingApi = BillingApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         wiseAuthorityApi = WiseAuthorityApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         configApi = ConfigApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         consentApi = ConsentApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         auditApi = AuditApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         memoryApi = MemoryApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         usersApi = UsersApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
         ticketsApi = TicketsApi(
             baseUrl = baseUrl,
-            httpClientEngine = null,
+            httpClientEngine = engine,
             httpClientConfig = httpClientConfig,
             jsonSerializer = jsonConfig
         )
@@ -602,6 +620,7 @@ class CIRISApiClient(
     }
 
     private val httpClientConfig: (HttpClientConfig<*>) -> Unit = {
+        it.install(AgentRateLimit)
         it.install(ContentNegotiation) {
             json(jsonConfig)
         }
@@ -619,91 +638,91 @@ class CIRISApiClient(
     // Generated API instances (var to allow recreation when baseUrl changes)
     private var agentApi = AgentApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var authApi = AuthenticationApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var setupApi = SetupApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var systemApi = SystemApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var telemetryApi = TelemetryApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var billingApi = BillingApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var wiseAuthorityApi = WiseAuthorityApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var configApi = ConfigApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var consentApi = ConsentApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var auditApi = AuditApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var memoryApi = MemoryApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var usersApi = UsersApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
 
     private var ticketsApi = TicketsApi(
         baseUrl = baseUrl,
-        httpClientEngine = null,
+        httpClientEngine = engine,
         httpClientConfig = httpClientConfig,
         jsonSerializer = jsonConfig
     )
@@ -778,7 +797,8 @@ class CIRISApiClient(
         logInfo(method, "Sending message: '${message.take(50)}...' to channel=$channelId, images=${images?.size ?: 0}, docs=${documents?.size ?: 0}")
         logDebug(method, "Auth token present: ${accessToken != null}, token: ${maskToken(accessToken)}")
 
-        return try {
+        // A person pressed Send: never queued behind the background polls.
+        return asAgentUser { try {
             val request = SdkInteractRequest(
                 message = message,
                 images = images,
@@ -803,6 +823,14 @@ class CIRISApiClient(
                         throw shed
                     }
                 }
+                // The agent's RATE LIMITER (gate run 39755201812): refused in
+                // middleware before the handler, so not admitted — the caller
+                // shows "busy, retrying" and resends the same request.
+                if (response.status == 429) {
+                    val seconds = AgentRateGovernor.retryAfterSeconds(response.response.headers["Retry-After"]).toInt()
+                    logWarn(method, "429 from the agent's rate limiter; retry after ${seconds}s")
+                    throw AgentRateLimitedException(seconds)
+                }
                 logError(method, "API returned non-success status: ${response.status}")
                 throw RuntimeException("API error: HTTP ${response.status}")
             }
@@ -814,10 +842,12 @@ class CIRISApiClient(
             logInfo(method, "Message sent successfully: messageId=${parsed.message_id} outcome=${parsed.outcome} " +
                 "attachments=${parsed.attachments.size} refused=$refused")
             parsed
+        } catch (e: AgentShedException) {
+            throw e
         } catch (e: Exception) {
             logException(method, e, "message='${message.take(30)}...', channelId=$channelId, hasToken=${accessToken != null}")
             throw e
-        }
+        } }
     }
 
     /**
@@ -828,7 +858,7 @@ class CIRISApiClient(
      */
     suspend fun getAttachmentPolicy(): AttachmentPolicyRead {
         val method = "getAttachmentPolicy"
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
                 connectTimeoutMillis = 5000
@@ -842,19 +872,31 @@ class CIRISApiClient(
             // landed in that burst and was answered 429 retry_after=1. Waiting
             // it out is what the agent asked for. Bounded, so a limiter that
             // never relents ends as Failed, which the next paperclip tap re-reads.
+            //
+            // AND THE WAIT IS THE SHARED ONE (gate run 39755201812): the old
+            // fixed 1 s retries landed while the pollers kept the bucket empty,
+            // and all three were refused again. Now the 429 also pauses every
+            // background poller ([AgentRateGovernor]), the read is USER traffic
+            // (never queued behind them), and it waits the longer of what this
+            // 429 asked and the pause already in force.
+            val governor = AgentRateGovernor.forBaseUrl(baseUrl)
             var attempt = 0
-            var response = client.get("$baseUrl/v1/agent/attachments/policy") {
-                authHeader()?.let { header("Authorization", it) }
+            val read = suspend {
+                asAgentUser {
+                    client.get("$baseUrl/v1/agent/attachments/policy") {
+                        authHeader()?.let { header("Authorization", it) }
+                    }
+                }
             }
+            var response = read()
             var raw = response.bodyAsText()
             while (response.status.value == 429 && attempt < POLICY_RATE_LIMIT_RETRIES) {
                 attempt++
-                val waitMs = retryAfterMs(response.headers["Retry-After"], raw)
-                logWarn(method, "429 from the agent's rate limiter; retry $attempt/$POLICY_RATE_LIMIT_RETRIES in ${waitMs}ms")
+                val pausedMs = governor?.pauseRemainingMs() ?: 0L
+                val waitMs = maxOf(retryAfterMs(response.headers["Retry-After"], raw), pausedMs.coerceAtMost(POLICY_RETRY_AFTER_CAP_MS))
+                logWarn(method, "429 from the agent's rate limiter; retry $attempt/$POLICY_RATE_LIMIT_RETRIES in ${waitMs}ms (background paused)")
                 kotlinx.coroutines.delay(waitMs)
-                response = client.get("$baseUrl/v1/agent/attachments/policy") {
-                    authHeader()?.let { header("Authorization", it) }
-                }
+                response = read()
                 raw = response.bodyAsText()
             }
             when {
@@ -948,7 +990,7 @@ class CIRISApiClient(
     suspend fun postLocalShutdown() {
         val method = "postLocalShutdown"
         logInfo(method, "Sending local-shutdown request to $baseUrl/v1/system/local-shutdown")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 3000
@@ -1000,7 +1042,7 @@ class CIRISApiClient(
         // (`getAgentMode`, `postLocalShutdown`): there is no class-level
         // `httpClient` here, only `httpClientConfig`. My first version assumed
         // one and CI's Kotlin compile was the first thing to say otherwise.
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -1048,7 +1090,7 @@ class CIRISApiClient(
     suspend fun getAgentMode(): AgentModeStatus {
         val method = "getAgentMode"
         logDebug(method, "Fetching agent-mode from $baseUrl/v1/system/agent-mode")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -1079,7 +1121,7 @@ class CIRISApiClient(
     suspend fun setAgentMode(mode: AgentMode): AgentModeChangeResult {
         val method = "setAgentMode"
         logInfo(method, "Setting agent-mode → ${mode.wire}")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -1176,7 +1218,7 @@ class CIRISApiClient(
     private fun federationHttpClient(
         requestTimeoutMillis: Long = 30_000,
     ): io.ktor.client.HttpClient =
-        io.ktor.client.HttpClient {
+        agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 this.requestTimeoutMillis = requestTimeoutMillis
@@ -2296,7 +2338,7 @@ class CIRISApiClient(
     suspend fun getFabricVersions(): ai.ciris.mobile.shared.models.FabricVersionsResponse {
         val method = "getFabricVersions"
         logDebug(method, "GET /v1/system/fabric")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -7397,7 +7439,7 @@ class CIRISApiClient(
         val method = "getSystemStatus"
         logDebug(method, "Fetching system health from $baseUrl")
 
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -7479,7 +7521,7 @@ class CIRISApiClient(
         val method = "getNodeHealth"
         logDebug(method, "Probing node health at $nodeUrl/v1/system/health")
 
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -7601,7 +7643,7 @@ class CIRISApiClient(
         // never throw, never block the Login UI on a slow / offline
         // backend, never log at ERROR for the expected 404 case.
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -7717,7 +7759,7 @@ class CIRISApiClient(
 
         return try {
             // Use manual HTTP request since generated SDK doesn't include Apple auth endpoint
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -8003,7 +8045,7 @@ class CIRISApiClient(
     suspend fun getConsentDisclosure(): ai.ciris.mobile.shared.models.ConsentDisclosure {
         val method = "getConsentDisclosure"
         logDebug(method, "Fetching consent disclosure from $baseUrl/v1/setup/consent-disclosure")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 15000
                 connectTimeoutMillis = 5000
@@ -8040,7 +8082,7 @@ class CIRISApiClient(
     suspend fun getSetupToolDisclosure(): ToolDisclosureReport {
         val method = "getSetupToolDisclosure"
         logDebug(method, "Fetching tool disclosure from $baseUrl/v1/setup/tool-disclosure")
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 30000
                 connectTimeoutMillis = 5000
@@ -8143,7 +8185,7 @@ class CIRISApiClient(
         return try {
             // Use manual HTTP request to ensure auth header is sent
             // (generated SDK has requiresAuthentication=false for this endpoint)
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -8275,7 +8317,7 @@ class CIRISApiClient(
         return try {
             // Use longer HTTP timeout since discovery involves mDNS + HTTP probes
             val httpTimeoutMs = ((timeoutSeconds + 8) * 1000).toLong()
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -8383,7 +8425,7 @@ class CIRISApiClient(
         logInfo(method, "Starting local LLM server (type=$serverType, model=$model, port=$port, confirmDownload=$confirmDownload)")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -8500,7 +8542,7 @@ class CIRISApiClient(
         // Uses cached attestation from auth service - should be fast
         // Full attestation with Play Integrity may take longer
         val timeoutMs = 30000L
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = timeoutMs
@@ -8692,7 +8734,7 @@ class CIRISApiClient(
         val method = "connectToNode"
         logInfo(method, "Initiating device auth for node: $nodeUrl")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -8733,7 +8775,7 @@ class CIRISApiClient(
         val fullUrl = "$LOCAL_NODE_URL/v1/setup/connect-node/status"
         logInfo(method, "Full URL: $fullUrl")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -8779,7 +8821,7 @@ class CIRISApiClient(
         val method = "resetDeviceAuthOnServer"
         logDebug(method, "Resetting device auth session on server")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 5000
@@ -8821,7 +8863,7 @@ class CIRISApiClient(
 
             // Use manual HTTP request to handle error responses properly
             // The generated SDK tries to parse error responses as success, which fails
-            val httpClient = HttpClient {
+            val httpClient = agentHttpClient {
                 install(ContentNegotiation) {
                     // Response parsing only; the request body is pre-encoded by
                     // toWireJson() with the config that owns the default-collision
@@ -8957,7 +8999,7 @@ class CIRISApiClient(
 
         return try {
             // Use manual HTTP request since generated SDK doesn't include auth for this endpoint
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -9060,7 +9102,7 @@ class CIRISApiClient(
         logInfo(method, "Updating LLM config: provider=$provider, baseUrl=${baseUrl ?: "default"}, model=${model ?: "unchanged"}")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -9473,7 +9515,7 @@ class CIRISApiClient(
         logInfo(method, "GET $url | auth=${auth != null} token=${maskToken(accessToken)}")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -9949,7 +9991,7 @@ class CIRISApiClient(
 
         return try {
             // Use direct HTTP call to parse subscribers field (not in SDK yet)
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -10014,7 +10056,7 @@ class CIRISApiClient(
         logInfo(method, "Fetching wallet status")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -10148,7 +10190,7 @@ class CIRISApiClient(
         logInfo(method, "Transferring $amount USDC to $recipient")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -10208,7 +10250,7 @@ class CIRISApiClient(
         logInfo(method, "Validating address")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -10262,7 +10304,7 @@ class CIRISApiClient(
         logInfo(method, "Checking for duplicate transaction")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -10447,7 +10489,7 @@ class CIRISApiClient(
     suspend fun listConfigs(prefix: String? = null, host: String = baseUrl): ConfigListData {
         val method = "listConfigs"
         logInfo(method, "Listing configs, prefix=$prefix, host=$host")
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
         }
         return try {
@@ -10516,7 +10558,7 @@ class CIRISApiClient(
     ): ConfigItemData {
         val method = "updateConfig"
         logInfo(method, "Updating config: $key at $host")
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
         }
         return try {
@@ -10548,7 +10590,7 @@ class CIRISApiClient(
     suspend fun deleteConfig(key: String, host: String = baseUrl) {
         val method = "deleteConfig"
         logInfo(method, "Deleting config: $key at $host")
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
         }
         try {
@@ -10857,7 +10899,7 @@ class CIRISApiClient(
         nodeUrl: String,
     ): ai.ciris.mobile.shared.models.capability.LookupResult {
         val method = "lookupAgentHash"
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 10_000
                 connectTimeoutMillis = 5_000
@@ -10952,7 +10994,7 @@ class CIRISApiClient(
     suspend fun getNodeCapabilities(
         nodeUrl: String,
     ): ai.ciris.mobile.shared.models.capability.NodeCapabilities = try {
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 5_000
                 connectTimeoutMillis = 3_000
@@ -10995,7 +11037,7 @@ class CIRISApiClient(
     suspend fun getNodeHomePath(nodeUrl: String = LOCAL_NODE_URL): String? = runCatching {
         // A short-lived client, as the other raw scrapes in this file do: the
         // generated setup API binds a model that does not carry claim_pin_file.
-        val client = io.ktor.client.HttpClient {
+        val client = agentHttpClient {
             install(io.ktor.client.plugins.HttpTimeout) {
                 requestTimeoutMillis = 5_000
                 connectTimeoutMillis = 3_000
@@ -11024,7 +11066,7 @@ class CIRISApiClient(
 
         return try {
             // Use direct HTTP call to properly parse warnings
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11081,7 +11123,7 @@ class CIRISApiClient(
 
         return try {
             // Use direct HTTP call to parse the tools response properly
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11279,7 +11321,7 @@ class CIRISApiClient(
         val url = "$baseUrl/v1/telemetry/unified?category=buses&view=operational"
         logDebug(method, "GET $url")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -11327,7 +11369,7 @@ class CIRISApiClient(
         logInfo(method, "GET $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11393,7 +11435,7 @@ class CIRISApiClient(
         logInfo(method, "GET $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11495,7 +11537,7 @@ class CIRISApiClient(
         logInfo(method, "PUT $url strategy=${strategy.name.lowercase()}")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11550,7 +11592,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url force=$force")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11612,7 +11654,7 @@ class CIRISApiClient(
         logInfo(method, "PUT $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11690,7 +11732,7 @@ class CIRISApiClient(
         logInfo(method, "PUT $url priority=${priority.name.lowercase()}")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11750,7 +11792,7 @@ class CIRISApiClient(
         logInfo(method, "DELETE $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11815,7 +11857,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url (provider=$providerId, priority=${priority.name})")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11905,7 +11947,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -11967,7 +12009,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -12026,7 +12068,7 @@ class CIRISApiClient(
         logInfo(method, "GET $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -12072,7 +12114,7 @@ class CIRISApiClient(
         val url = "$baseUrl/v1/system/llm/providers/$name"
         logInfo(method, "DELETE $url")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
@@ -12503,7 +12545,7 @@ class CIRISApiClient(
                 }
                 logInfo(method, "Fetching timeline: $timelineUrl")
 
-                val client = HttpClient {
+                val client = agentHttpClient {
                     httpClientConfig(this)
                 }
                 val timelineResponse: io.ktor.client.statement.HttpResponse = client.get(timelineUrl) {
@@ -12607,7 +12649,7 @@ class CIRISApiClient(
         logInfo(method, "Fetching context enrichment cache")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true; isLenient = true })
                 }
@@ -12664,7 +12706,7 @@ class CIRISApiClient(
         logInfo(method, "Querying environment items")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true; isLenient = true })
                 }
@@ -12738,7 +12780,7 @@ class CIRISApiClient(
         logInfo(method, "Creating environment item: $name")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true; isLenient = true })
                 }
@@ -12798,7 +12840,7 @@ class CIRISApiClient(
         logInfo(method, "Deleting environment item: $nodeId")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true; isLenient = true })
                 }
@@ -12940,7 +12982,7 @@ class CIRISApiClient(
 
         // `POST /v1/system/runtime/step` (system_extensions.py:292, ADMIN) answers
         // a SingleStepResponse; read it as one ([parseRuntimeStepBody]).
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; isLenient = true }) }
         }
         return try {
@@ -13191,7 +13233,7 @@ class CIRISApiClient(
         val method = "grantTicketBudget"
         logInfo(method, "Granting budget on ticket=$ticketId amount=$amount $currency expiry=${expiresInHours}h")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
@@ -13273,7 +13315,7 @@ class CIRISApiClient(
         val method = "getTicketBudget"
         logInfo(method, "Fetching budget state for ticket=$ticketId")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
@@ -13478,7 +13520,7 @@ class CIRISApiClient(
         logInfo(method, "Requesting Play Integrity nonce from Python API")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13533,7 +13575,7 @@ class CIRISApiClient(
         logInfo(method, "Verifying Play Integrity token via Python API")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13597,7 +13639,7 @@ class CIRISApiClient(
         logInfo(method, "Reporting Play Integrity failure: code=$errorCode")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13653,7 +13695,7 @@ class CIRISApiClient(
         logInfo(method, "Fetching scheduled tasks (status=$status, limit=$limit)")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13711,7 +13753,7 @@ class CIRISApiClient(
         logInfo(method, "Fetching scheduler stats")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13770,7 +13812,7 @@ class CIRISApiClient(
         logInfo(method, "Creating scheduled task: $name")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13826,7 +13868,7 @@ class CIRISApiClient(
         logInfo(method, "Cancelling task: $taskId")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json { ignoreUnknownKeys = true })
                 }
@@ -13868,7 +13910,7 @@ class CIRISApiClient(
         val method = "getExportDestinations"
         logInfo(method, "Fetching export destinations")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -13908,7 +13950,7 @@ class CIRISApiClient(
         val method = "getExportDestination"
         logInfo(method, "Fetching export destination: $destinationId")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -13945,7 +13987,7 @@ class CIRISApiClient(
         val method = "createExportDestination"
         logInfo(method, "Creating export destination: ${destination.name}")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -13988,7 +14030,7 @@ class CIRISApiClient(
         val method = "updateExportDestination"
         logInfo(method, "Updating export destination: $destinationId")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14031,7 +14073,7 @@ class CIRISApiClient(
         val method = "deleteExportDestination"
         logInfo(method, "Deleting export destination: $destinationId")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14069,7 +14111,7 @@ class CIRISApiClient(
         val method = "testExportDestination"
         logInfo(method, "Testing export destination: $destinationId")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14123,7 +14165,7 @@ class CIRISApiClient(
         val method = "getLensIdentifier"
         logInfo(method, "Fetching lens identifier")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -14173,7 +14215,7 @@ class CIRISApiClient(
         val method = "deleteLensTraces"
         logInfo(method, "Requesting deletion of lens traces")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14237,7 +14279,7 @@ class CIRISApiClient(
         val method = "getAccordSettings"
         logInfo(method, "Fetching accord settings")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -14308,7 +14350,7 @@ class CIRISApiClient(
         val method = "getCapacity"
         logInfo(method, "Fetching CIRIS capacity (scope=both)")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 // Generous timeouts: backend lens call can take 8s, plus
@@ -14397,7 +14439,7 @@ class CIRISApiClient(
         val method = "updateAccordSettings"
         logInfo(method, "Updating accord settings: consent=$consentGiven, level=$traceLevel")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -14466,7 +14508,7 @@ class CIRISApiClient(
         val method = "resetAccount"
         logInfo(method, "Requesting account reset (preserving signing key)")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14539,7 +14581,7 @@ class CIRISApiClient(
         val method = "wipeSigningKey"
         logWarn(method, "DANGER: Requesting signing key wipe - wallet access will be DESTROYED")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 30000
@@ -14645,7 +14687,7 @@ class CIRISApiClient(
         val method = "searchLocations"
         logInfo(method, "Searching locations: query=$query, countryCode=$countryCode, limit=$limit")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -14701,7 +14743,7 @@ class CIRISApiClient(
         val method = "getCountries"
         logDebug(method, "Fetching countries list")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 15000
@@ -14744,7 +14786,7 @@ class CIRISApiClient(
         val method = "updateUserLocation"
         logInfo(method, "Updating user location to: ${location.displayName}")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -14823,7 +14865,7 @@ class CIRISApiClient(
         val method = "getCurrentLocation"
         logDebug(method, "Fetching current location from backend")
 
-        val client = HttpClient {
+        val client = agentHttpClient {
             install(ContentNegotiation) { json(jsonConfig) }
             install(HttpTimeout) {
                 requestTimeoutMillis = 10000
@@ -14884,7 +14926,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -14937,7 +14979,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -14995,7 +15037,7 @@ class CIRISApiClient(
         logInfo(method, "POST $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -15054,7 +15096,7 @@ class CIRISApiClient(
         logInfo(method, "GET $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true
@@ -15096,7 +15138,7 @@ class CIRISApiClient(
         logInfo(method, "DELETE $url")
 
         return try {
-            val client = HttpClient {
+            val client = agentHttpClient {
                 install(ContentNegotiation) {
                     json(Json {
                         ignoreUnknownKeys = true

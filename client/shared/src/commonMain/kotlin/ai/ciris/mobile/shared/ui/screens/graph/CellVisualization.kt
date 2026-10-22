@@ -422,13 +422,17 @@ fun CellVisualization(
     ) {
         val client = apiClient ?: return@LaunchedEffect
         try {
-            val graph = client.getGraphData(
-                hours = cfg.memoryLoadWindowHours,
-                scope = null,
-                nodeType = null,
-                limit = cfg.maxMemoryMotes,
-                includeMetrics = false,
-            )
+            // Ambient decoration, refreshed on every timeline event: background
+            // traffic, paced and yielding to the user (gate run 39755201812).
+            val graph = ai.ciris.mobile.shared.api.asAgentBackground {
+                client.getGraphData(
+                    hours = cfg.memoryLoadWindowHours,
+                    scope = null,
+                    nodeType = null,
+                    limit = cfg.maxMemoryMotes,
+                    includeMetrics = false,
+                )
+            }
             val nowMsLocal = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
             val wasPopulated = moteIndexById.isNotEmpty()
             val newMotes = graph.nodes.map { node ->

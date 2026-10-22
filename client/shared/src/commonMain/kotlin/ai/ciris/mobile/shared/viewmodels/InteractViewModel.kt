@@ -5,6 +5,7 @@ import ai.ciris.api.models.ImagePayload
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.AgentShed
 import ai.ciris.mobile.shared.api.AgentShedGaveUp
+import ai.ciris.mobile.shared.api.asAgentBackground
 import ai.ciris.mobile.shared.api.SystemWarning
 import ai.ciris.mobile.shared.api.ReasoningEvent
 import ai.ciris.mobile.shared.localization.LocalizationHelper
@@ -208,7 +209,36 @@ class InteractViewModel(
 
     companion object {
         private const val TAG = "InteractViewModel"
-        private const val POLL_INTERVAL_MS = 3000L
+
+        /*
+         * THE CHAT SCREEN'S AGENT BUDGET (gate run 39755201812). The agent
+         * allows 60 requests a minute per caller (rate_limiter.py:27 @
+         * v2.16.2-stable), and every request this process sends it draws on
+         * that one bucket. Background traffic is held to HALF of it
+         * ([AgentRateGovernor.BACKGROUND_BUDGET_PER_MINUTE] = 30, enforced in
+         * the HTTP layer) so a person's send always finds tokens. The
+         * intervals below are what fit inside that with room to spare, idle:
+         *
+         *   history            6 s  → 10/min  (3 s → 20/min only while a reply is awaited)
+         *   audit backstop    60 s  →  1/min  (SSE pushes each action as it happens)
+         *   health           60 s  →  4/min  (config + services status + verify + WA)
+         *   SSE reconnects            ≤ 2/min  (30 s cap; paced like any poll)
+         *   status / adapters          0       (/v1/system/health and /v1/system/adapters
+         *                                        are exempt from the agent's limiter)
+         *
+         * ≈ 17/min idle, ≈ 27/min while a reply is awaited.
+         */
+
+        /** History while nothing is awaited: SSE says when the agent acts, this is the backstop. */
+        private const val POLL_INTERVAL_MS = 6000L
+
+        /**
+         * History while a reply is awaited (from a send until the agent's
+         * message lands, at most [REPLY_WAIT_MS]): the reply arrives through
+         * this read, so it keeps the old 3 s cadence where it matters.
+         */
+        private const val REPLY_POLL_INTERVAL_MS = 3000L
+        private const val REPLY_WAIT_MS = 90_000L
 
         /**
          * How often the timeline re-reads the audit trail (CIRISAgent#1073).
@@ -224,10 +254,31 @@ class InteractViewModel(
          * refreshes the timeline from an SSE push the moment an action occurs,
          * so this is only a backstop for anything SSE missed. 30s is plenty for
          * that, and it takes the message loop from 40 req/min to 20.
+         *
+         * 30 s → 60 s (gate run 39755201812): the SSE-triggered refresh is
+         * the live path, so the backstop's cadence only bounds how stale a
+         * MISSED action can be.
          */
-        private const val AUDIT_POLL_INTERVAL_MS = 30000L
+        private const val AUDIT_POLL_INTERVAL_MS = 60000L
         private const val STATUS_POLL_INTERVAL_MS = 5000L
-        private const val HEALTH_POLL_INTERVAL_MS = 30000L  // Less frequent health checks
+
+        /**
+         * 30 s → 60 s (gate run 39755201812): each tick is four counted
+         * requests (LLM config, CIRIS services status, verify-status, WA
+         * status) for values that change on a settings edit, not by the
+         * second; 8/min was a quarter of the background budget.
+         */
+        private const val HEALTH_POLL_INTERVAL_MS = 60000L
+
+        /**
+         * Until the LLM provider is known, ONLY the LLM config is re-read, every
+         * 5 s, at most [HEALTH_FAST_MAX_TICKS] times. It used to re-run the whole
+         * four-request health fetch every 2 s (~120/min) — and a config read that
+         * failed (a 429 among them) kept it in that mode, so a rate-limited agent
+         * was asked harder the more it refused.
+         */
+        private const val HEALTH_FAST_POLL_MS = 5000L
+        private const val HEALTH_FAST_MAX_TICKS = 12
         private const val TRUST_PENDING_POLL_INTERVAL_MS = 5000L  // Fast polling when Play Integrity pending
         private const val MAX_BUBBLES = 8
         private const val BUBBLE_LIFETIME_MS = 2000L
@@ -506,8 +557,21 @@ class InteractViewModel(
         }
     }
 
+    private var attachmentPolicyJob: Job? = null
+
+    /**
+     * ONCE per chat open, not once per composition (gate run 39755201812: the
+     * screen composed twice and two reads ran side by side, each retrying into
+     * the same empty bucket). A read in flight is joined, not doubled; a live
+     * policy or an agent known to predate the route is not read again.
+     */
     fun refreshAttachmentPolicy() {
-        viewModelScope.launch { loadAttachmentPolicy() }
+        if (attachmentPolicyJob?.isActive == true) return
+        when (_attachmentPolicySource.value) {
+            AttachmentPolicySource.AGENT, AttachmentPolicySource.FALLBACK_AGENT_TOO_OLD -> return
+            else -> Unit
+        }
+        attachmentPolicyJob = viewModelScope.launch { loadAttachmentPolicy() }
     }
 
     /**
@@ -617,7 +681,8 @@ class InteractViewModel(
     // SSE client for reasoning stream
     private val sseClient = ReasoningStreamClient(
         baseUrl = apiClient.baseUrl,
-        getToken = { apiClient.getAccessToken() }
+        getToken = { apiClient.getAccessToken() },
+        engine = apiClient.engine,
     )
 
     // Track if polling has been started (to avoid duplicate starts)
@@ -762,7 +827,7 @@ class InteractViewModel(
         }
         logInfo(method, "Starting capacity fetch...")
         try {
-            val data = apiClient.getCapacity()
+            val data = asAgentBackground { apiClient.getCapacity() }
             // Prefer backend-authoritative local score when present (the
             // CCA proxy over runtime signals lives in my_data.py
             // _compute_local_capacity). Fall back to the client-side
@@ -851,7 +916,7 @@ class InteractViewModel(
         viewModelScope.launch {
             try {
                 logInfo(method, "Fetching wallet status from API")
-                val walletResponse = apiClient.getWalletStatus()
+                val walletResponse = asAgentBackground { apiClient.getWalletStatus() }
 
                 logInfo(method, "Wallet response: hasWallet=${walletResponse.hasWallet}, isInitializing=${walletResponse.isInitializing}, provider=${walletResponse.provider}")
 
@@ -1122,6 +1187,7 @@ class InteractViewModel(
                     return@launch
                 }
                 logInfo(method, "Message sent successfully: messageId=${response.message_id}")
+                replyWaitLeftMs = REPLY_WAIT_MS
 
                 // Reconcile the optimistic user message's ID to the server's
                 // canonical message_id. Without this, fetchHistory (which dedups
@@ -1335,19 +1401,24 @@ class InteractViewModel(
 
         healthJob = viewModelScope.launch {
             var llmReady = false  // True once LLM health is loaded successfully
-            val FAST_HEALTH_POLL_MS = 2000L  // 2 seconds - avoid rate limiting
+            var fastTicks = 0
 
+            asAgentBackground { fetchHealthData() }
             while (isActive) {
-                fetchHealthData()
-
                 // Check if LLM health was loaded (provider is not "unknown" anymore)
                 if (!llmReady && _llmHealth.value.provider != "unknown") {
                     llmReady = true
                     logInfo(method, "LLM health ready: provider=${_llmHealth.value.provider}")
                 }
-
-                // Fast poll until LLM ready, then normal interval
-                delay(if (llmReady) HEALTH_POLL_INTERVAL_MS else FAST_HEALTH_POLL_MS)
+                if (!llmReady && fastTicks < HEALTH_FAST_MAX_TICKS) {
+                    // Only the read that decides readiness, and bounded.
+                    fastTicks++
+                    delay(HEALTH_FAST_POLL_MS)
+                    asAgentBackground { fetchHealthData(llmOnly = true) }
+                } else {
+                    delay(HEALTH_POLL_INTERVAL_MS)
+                    asAgentBackground { fetchHealthData() }
+                }
             }
         }
 
@@ -1407,7 +1478,7 @@ class InteractViewModel(
     private suspend fun fetchTrustStatus() {
         val method = "fetchTrustStatus"
         try {
-            val verifyStatus = apiClient.getVerifyStatus()
+            val verifyStatus = asAgentBackground { apiClient.getVerifyStatus() }
             val previousLevel = _trustStatus.value.maxLevel
             val previousPending = _trustStatus.value.levelPending
             _trustStatus.value = TrustStatus(
@@ -1431,7 +1502,7 @@ class InteractViewModel(
     /**
      * Fetch LLM health, credits, and trust status
      */
-    private suspend fun fetchHealthData() {
+    private suspend fun fetchHealthData(llmOnly: Boolean = false) {
         val method = "fetchHealthData"
         try {
             // Fetch LLM config for health status
@@ -1487,6 +1558,7 @@ class InteractViewModel(
                     logWarn(method, "Failed to read LLM config from .env: ${e.message}")
                 }
             }
+            if (llmOnly) return
 
             // Fetch trust status (uses cached attestation from auth service)
             try {
@@ -1537,7 +1609,8 @@ class InteractViewModel(
     fun refreshTrustStatus() {
         viewModelScope.launch {
             try {
-                val verifyStatus = apiClient.getVerifyStatus()
+                // On screen entry, not a tap: background, paced with the rest.
+                val verifyStatus = asAgentBackground { apiClient.getVerifyStatus() }
                 val previousLevel = _trustStatus.value.maxLevel
                 _trustStatus.value = TrustStatus(
                     maxLevel = verifyStatus.maxLevel,  // Use backend's authoritative level
@@ -1575,6 +1648,10 @@ class InteractViewModel(
         logInfo(method, "Starting message polling (interval=${POLL_INTERVAL_MS}ms)")
 
         pollingJob = viewModelScope.launch {
+            // Time since the audit backstop last ran, counted in this loop's
+            // own waits (a wall clock here would not follow virtual time in
+            // AgentRateBudgetTest, and nothing else needs it).
+            var sinceAuditMs = AUDIT_POLL_INTERVAL_MS
             while (isActive) {
                 try {
                     fetchHistory()
@@ -1582,9 +1659,8 @@ class InteractViewModel(
                     // slow backstop, NOT the live path. Riding the 3s poll here
                     // doubled the request rate and tripped the server's own
                     // rate limiter (#1073).
-                    val nowMs = Clock.System.now().toEpochMilliseconds()
-                    if (nowMs - lastAuditFetchMs >= AUDIT_POLL_INTERVAL_MS) {
-                        lastAuditFetchMs = nowMs
+                    if (sinceAuditMs >= AUDIT_POLL_INTERVAL_MS) {
+                        sinceAuditMs = 0L
                         fetchAuditActions()
                     }
                 } catch (e: Exception) {
@@ -1596,10 +1672,19 @@ class InteractViewModel(
                         isFirstLoad = false
                     }
                 }
-                delay(POLL_INTERVAL_MS)
+                val interval = if (replyWaitLeftMs > 0) REPLY_POLL_INTERVAL_MS else POLL_INTERVAL_MS
+                delay(interval)
+                sinceAuditMs += interval
+                replyWaitLeftMs = (replyWaitLeftMs - interval).coerceAtLeast(0L)
             }
         }
     }
+
+    /**
+     * How much longer history is read at [REPLY_POLL_INTERVAL_MS]: set when a
+     * send is admitted, cleared when the agent's message lands.
+     */
+    private var replyWaitLeftMs = 0L
 
     /**
      * Fetch message history from API
@@ -1612,7 +1697,7 @@ class InteractViewModel(
     private suspend fun fetchHistory() {
         val method = "fetchHistory"
         try {
-            val messages = apiClient.getMessages(limit = 50)
+            val messages = asAgentBackground { apiClient.getMessages(limit = 50) }
             // Success - clear any auth error
             if (_authError.value != null) {
                 logInfo(method, "Auth restored, clearing error")
@@ -1659,6 +1744,7 @@ class InteractViewModel(
                     if (allMessages.size > previousSize) {
                         logInfo(method, "Added ${allMessages.size - previousSize} new messages to chat")
                     }
+                    if (newMessages.any { it.type == MessageType.AGENT }) replyWaitLeftMs = 0L
                     _messages.value = allMessages
                 }
             }
@@ -1696,8 +1782,6 @@ class InteractViewModel(
     // Track action IDs we've already added to avoid duplicates
     private val addedActionIds = mutableSetOf<String>()
 
-    /** When the audit backstop last ran, so it can be throttled independently. */
-    private var lastAuditFetchMs = 0L
 
     /**
      * Fetch recent audit actions and add them to the chat timeline.
@@ -1708,10 +1792,10 @@ class InteractViewModel(
 
         try {
             // Fetch recent audit entries (all types, we'll filter by action types)
-            val entries = apiClient.getAuditEntries(
+            val entries = asAgentBackground { apiClient.getAuditEntries(
                 limit = 50,
                 offset = 0
-            )
+            ) }
 
             if (entries.entries.isEmpty()) {
                 return
@@ -1905,13 +1989,19 @@ class InteractViewModel(
         val method = "fetchAndAddLatestAction"
         logDebug(method, "SSE triggered refresh for ${actionType.name}")
 
-        // Trigger immediate fetch of audit actions
-        viewModelScope.launch {
+        // ONE read per burst, not one per action: a reply's speak, memorize and
+        // task_complete arrive within a second, and each used to spend its own
+        // request (gate run 39755201812). Every action that lands while the
+        // read is pending is covered by it — the read returns the latest 50.
+        if (sseAuditRefreshJob?.isActive == true) return
+        sseAuditRefreshJob = viewModelScope.launch {
             // Small delay to allow audit entry to be written
             delay(500)
             fetchAuditActions()
         }
     }
+
+    private var sseAuditRefreshJob: Job? = null
 
     /**
      * Helper to extract string content from JsonElement
@@ -2588,7 +2678,8 @@ class InteractViewModel(
         selectionPollJob = viewModelScope.launch {
             while (isActive) {
                 try {
-                    val fresh = fetchSelectionDetail(kind)
+                    // A refresh of what is on screen, repeating: background.
+                    val fresh = asAgentBackground { fetchSelectionDetail(kind) }
                     // Cooperative cancel check: a rapid tap sequence can
                     // cancel this job while an HTTP call is in flight.
                     // Don't write the stale value after cancel — that's

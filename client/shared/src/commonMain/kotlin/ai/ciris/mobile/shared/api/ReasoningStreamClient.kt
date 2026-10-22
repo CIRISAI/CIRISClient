@@ -9,6 +9,7 @@ import io.ktor.http.*
 import io.ktor.utils.io.*
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.json.*
 
 /**
@@ -18,7 +19,9 @@ import kotlinx.serialization.json.*
  */
 class ReasoningStreamClient(
     private val baseUrl: String,
-    private val getToken: suspend () -> String?
+    private val getToken: suspend () -> String?,
+    /** Null is the platform engine; tests pass their fake agent's. */
+    private val engine: io.ktor.client.engine.HttpClientEngine? = null,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -66,12 +69,15 @@ class ReasoningStreamClient(
     fun connect(): Flow<ReasoningEvent> = flow {
         val token = getToken() ?: return@flow
 
-        val client = HttpClient {
+        val config: HttpClientConfig<*>.() -> Unit = {
             install(HttpTimeout) {
                 requestTimeoutMillis = Long.MAX_VALUE
                 socketTimeoutMillis = Long.MAX_VALUE
             }
+            // A (re)connect is a request against the agent's limiter like any other.
+            install(AgentRateLimit)
         }
+        val client = engine?.let { HttpClient(it, config) } ?: HttpClient(config)
 
         try {
             client.prepareGet("$baseUrl/v1/system/runtime/reasoning-stream") {
@@ -108,7 +114,7 @@ class ReasoningStreamClient(
         } finally {
             client.close()
         }
-    }
+    }.flowOn(AgentTraffic.Background) // a (re)connect is a poll: paced, and it yields to the user
 
     /**
      * Extract a compact one-line summary of an SSE event for the bubble payload.
