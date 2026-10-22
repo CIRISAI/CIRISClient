@@ -49,7 +49,7 @@ from typing import Any, Dict, List, Optional, Sequence
 import yaml
 
 #: Keys a step may carry. Anything else is a load error — see STRICT above.
-_STEP_KEYS = {"step_id", "title", "description", "requires", "do", "expect", "optional_step"}
+_STEP_KEYS = {"step_id", "title", "description", "requires", "do", "expect", "optional_step", "expect_within_ms"}
 #: CSD/3 §3 adds the predicates that let a flow check what the UI SHOWS, not
 #: merely that something is on screen. Before them the strongest value assertion
 #: was `text: substring`, so a CSD could promise "a composite equal to the
@@ -101,6 +101,8 @@ _RELATION_OPS = {"eq", "ne", "lt", "lte", "gt", "gte", "min_of", "max_of", "sum_
 #: leg (2026-09-29). The expect is re-read every quarter second until it holds
 #: or this runs out; a condition that never holds still fails, in this long.
 EXPECT_SETTLE_S = 2.5
+#: The longest a step may extend its own settle with `expect_within_ms`.
+EXPECT_WITHIN_MAX_MS = 120_000
 _STATES = {"populated", "empty", "loading", "error"}
 
 
@@ -286,6 +288,13 @@ class Step:
     #: everything it says WHEN its preconditions hold; it is skipped, loudly, when
     #: they do not. Never use this to paper over a step that ought to work.
     optional_step: bool = False
+    #: How long this step's `expect` may take to hold, when that is longer than
+    #: [EXPECT_SETTLE_S] for a reason outside the client: a value the client
+    #: re-reads in the background while the AGENT is refusing it (csd_010's
+    #: attachment policy, gate run 39802071995 — the agent's shared loopback
+    #: bucket stayed empty past the 2.5 s settle). Capped at
+    #: [EXPECT_WITHIN_MAX_MS]; a condition that never holds still fails.
+    expect_within_ms: Optional[int] = None
 
     @classmethod
     def parse(cls, raw: Any, index: int) -> "Step":
@@ -307,7 +316,13 @@ class Step:
             do=[Action.parse(a, f"{where}.do[{i}]") for i, a in enumerate(raw.get("do") or [])],
             expect=Condition.parse(raw.get("expect"), f"{where}.expect"),
             optional_step=bool(raw.get("optional_step", False)),
+            expect_within_ms=raw.get("expect_within_ms"),
         )
+        w = step.expect_within_ms
+        if w is not None and (isinstance(w, bool) or not isinstance(w, int) or not 0 < w <= EXPECT_WITHIN_MAX_MS):
+            raise SpecError(f"{where}: `expect_within_ms` must be an integer in 1..{EXPECT_WITHIN_MAX_MS}, got {w!r}")
+        if w is not None and step.expect.is_empty():
+            raise SpecError(f"{where}: `expect_within_ms` without an `expect` waits for nothing")
         # A step that neither acts nor asserts is a comment pretending to be a test.
         if not step.do and step.expect.is_empty():
             raise SpecError(f"{where}: has no `do` and no `expect` — it would assert nothing")
@@ -1008,7 +1023,8 @@ class FlowRunner:
                     return False
                 print(f"     did: {action.describe()}")
 
-            post = await self._settled(step.expect, "expect")
+            budget = step.expect_within_ms / 1000.0 if step.expect_within_ms else EXPECT_SETTLE_S
+            post = await self._settled(step.expect, "expect", budget)
             drivable = await self._drivable()
             shot = self._shot(spec, step)
             if post:

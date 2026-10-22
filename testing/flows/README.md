@@ -290,6 +290,15 @@ waiting. CIRISServer's own chat ladder is green only on a `test-anchor` build
 with a test trust root, which a leg's released binary is not. A flow naming
 `${MESSAGE_ATTESTATION_ID}` therefore fails on the matrix today, saying so.
 
+## A step may wait longer for its `expect`, and must say why
+
+Every `expect` is re-read for `EXPECT_SETTLE_S` (2.5 s) before it fails. A step
+may set `expect_within_ms` (at most 120000) when the value it asserts is one
+the client keeps re-reading in the background while something outside the
+client refuses it — csd_010's attachment policy against the agent's single
+loopback rate-limit bucket (gate run 39802071995). Put the reason in a comment
+on the step. A condition that never holds still fails, only later.
+
 ## Optional steps are counted, and the count is ratcheted
 
 A step with `optional_step: true` is **skipped**, not failed, when its

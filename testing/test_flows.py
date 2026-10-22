@@ -20,6 +20,7 @@ import pytest
 import yaml
 
 from testing.gate import run_flows
+from testing.gate import flow_spec
 from testing.gate.flow_spec import FlowSpec, SpecError
 
 REPO = Path(__file__).resolve().parents[1]
@@ -639,6 +640,60 @@ def test_an_expect_that_never_holds_still_fails_and_is_bounded(tmp_path):
     out = _run(_spec(tmp_path, body), FakeHelper("Thing", {"thing_list": ""}))
     assert out.status == run_flows.FAIL and "never_there" in out.detail
     assert _t.monotonic() - started < 10
+
+
+class _LateValue(FakeHelper):
+    """`value_score` reads "0.1" until `at` seconds have passed, then "0.5" —
+    a value the client re-reads in the background while the agent refuses it."""
+
+    def __init__(self, at: float):
+        import time as _t
+        super().__init__("Thing", {"thing_list": "", "value_score": "0.1"})
+        self.at = _t.monotonic() + at
+
+    async def get_element(self, tag):
+        import time as _t
+        if tag == "value_score" and _t.monotonic() >= self.at:
+            self.els[tag] = _El(tag, "0.5")
+        return await super().get_element(tag)
+
+
+_LATE = GOOD.replace("        expect:\n          visible: [thing_list]\n",
+                     "        EXTRA\n        expect:\n          one_of:\n            value_score: [\"0.5\"]\n")
+
+
+def test_expect_within_ms_waits_past_the_default_settle(tmp_path):
+    """csd_010's attachment policy (gate run 39802071995): the agent refused
+    the read for ~10 s, the client's background re-read landed after the
+    2.5 s settle, and the step failed on a value that was still coming."""
+    late = 4.0
+    assert late > flow_spec.EXPECT_SETTLE_S
+    out = _run(_spec(tmp_path, _LATE.replace("EXTRA", "expect_within_ms: 8000")), _LateValue(late))
+    assert out.status == run_flows.PASS, out.detail
+    # Without it, the same value is too late.
+    out = _run(_spec(tmp_path, _LATE.replace("        EXTRA\n", "")), _LateValue(late))
+    assert out.status == run_flows.FAIL
+
+
+def test_expect_within_ms_still_fails_a_value_that_never_comes(tmp_path):
+    import time as _t
+    started = _t.monotonic()
+    out = _run(_spec(tmp_path, _LATE.replace("EXTRA", "expect_within_ms: 1000")), _LateValue(60))
+    assert out.status == run_flows.FAIL
+    assert _t.monotonic() - started < 6
+
+
+@pytest.mark.parametrize("bad", ["0", "-5", "120001", "true", "'90s'", "2.5"])
+def test_expect_within_ms_out_of_range_is_a_load_error(tmp_path, bad):
+    with pytest.raises(SpecError, match="expect_within_ms"):
+        _spec(tmp_path, _LATE.replace("EXTRA", f"expect_within_ms: {bad}"))
+
+
+def test_expect_within_ms_without_an_expect_is_a_load_error(tmp_path):
+    body = GOOD.replace("        expect:\n          visible: [thing_list]\n",
+                        "        do:\n          - click: thing_list\n        expect_within_ms: 5000\n")
+    with pytest.raises(SpecError, match="waits for nothing"):
+        _spec(tmp_path, body)
 
 
 def test_a_failed_action_carries_the_drivers_reason(tmp_path):

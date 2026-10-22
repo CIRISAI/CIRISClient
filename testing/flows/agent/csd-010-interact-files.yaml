@@ -41,6 +41,11 @@ steps:
     do:
       - wait: interact_attachment_policy
         wait_ms: 2500
+    # Chat opening is a burst against the agent's ONE loopback bucket, which
+    # callers the client cannot see also spend (gate run 39802071995: refused
+    # for ~10 s with the client paused). The client re-reads the policy in the
+    # background (5/10/20/40/60 s); this waits for that, not for the first read.
+    expect_within_ms: 90000
     expect:
       one_of:
         interact_attachment_policy: ["live", "agent older than the attachments policy route"]
