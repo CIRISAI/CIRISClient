@@ -1606,6 +1606,75 @@
       },
       "notes": "THE 0.5.232 RELEASE, for CIRISAgent 2.16.3 to pin. Tested: the five-platform with-AI run on the release commit — see the release PR. Translations: draft / machine_reviewed (hand translations re-evaluated; de/vi add_device.approval_held are draft only). Upgraded homes: ciris-server >= 0.5.222 (#162).",
       "published": null
+    },
+    {
+      "client_version": "0.5.231",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Nothing in this release needs a newer node; the attachment policy is not requested from an agent older than 2.16.3 (it reads the client's limits locally).",
+      "node_max_tested": "0.5.233",
+      "agent_min_tested": "2.16.2",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker",
+        "contacts.pending",
+        "setup.add_device",
+        "setup.owned_node_route",
+        "billing.credential_refresh",
+        "agent.shed_retry",
+        "shell.sign_out",
+        "diagnostics.ios_crash_log",
+        "trace.run_kind",
+        "identity.self_roster",
+        "add_device.held",
+        "accord.trust_root_amend",
+        "chat.attachment_policy",
+        "chat.attachment_outcomes",
+        "agent.rate_governor"
+      ],
+      "capabilities_note": "new: one rate governor per agent host mirroring the agent's 60/min limiter — background polling held to half the limit, a 429 pauses every poller, the user's sends never queued, each 429 logged with the mirror and the agent's last Remaining (#230, #235). The attachment policy is not requested from an agent older than 2.16.3: through 2.16.2 the absent route laps agent→node→agent and empties the caller's bucket (#235; CIRISAgent fix/node-proxy-loop). Compose Multiplatform 1.7.3: the iOS popup-layer dispose crash entering setup (#233, #231, #50). Desktop /click waits for the frame that composed the preceding input (#234).",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5682
+      },
+      "notes": "THE 0.5.231 RELEASE, for CIRISAgent 2.16.3 to pin. Tested: the five-platform with-AI run on the release commit — see the release PR. Known, agent-side: on ciris-agent 2.16.2 the iOS with-AI leg's live model list falls back to a static list (no anthropic SDK in the iOS bundle; CIRISAgent#1298, fixed by #1309 in 2.16.3). Translations: draft / machine_reviewed.",
+      "published": null
     }
   ]
 }
