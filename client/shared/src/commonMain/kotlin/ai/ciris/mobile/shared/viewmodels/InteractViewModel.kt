@@ -560,10 +560,20 @@ class InteractViewModel(
     private var attachmentPolicyJob: Job? = null
 
     /**
+     * Waits before each re-read of a policy that could not be read. Gate run
+     * 39789325955 (linux-ai, windows-ai): the agent's `auth_127.0.0.1` bucket
+     * stayed empty for ~14 s after chat opened, spent by callers this process
+     * cannot see, so the read's own 1 s retries all landed inside it and the
+     * policy stayed `unavailable` until someone tapped the paperclip.
+     */
+    internal var policyRetryDelaysMs: List<Long> = listOf(5_000L, 10_000L, 20_000L, 40_000L, 60_000L)
+
+    /**
      * ONCE per chat open, not once per composition (gate run 39755201812: the
      * screen composed twice and two reads ran side by side, each retrying into
      * the same empty bucket). A read in flight is joined, not doubled; a live
-     * policy or an agent known to predate the route is not read again.
+     * policy or an agent known to predate the route is not read again. A read
+     * that fails is tried again in the background on [policyRetryDelaysMs].
      */
     fun refreshAttachmentPolicy() {
         if (attachmentPolicyJob?.isActive == true) return
@@ -571,19 +581,28 @@ class InteractViewModel(
             AttachmentPolicySource.AGENT, AttachmentPolicySource.FALLBACK_AGENT_TOO_OLD -> return
             else -> Unit
         }
-        attachmentPolicyJob = viewModelScope.launch { loadAttachmentPolicy() }
+        attachmentPolicyJob = viewModelScope.launch {
+            loadAttachmentPolicy()
+            for (wait in policyRetryDelaysMs) {
+                if (_attachmentPolicySource.value != AttachmentPolicySource.FALLBACK_UNAVAILABLE) break
+                delay(wait)
+                loadAttachmentPolicy()
+            }
+        }
     }
 
     /**
      * The paperclip was tapped. A policy that could not be read (a 429 that
-     * outlasted its retries, a dropped socket) is read again now, so one
-     * chat-open burst does not leave the client's constants in force for the
-     * session. A live policy, or an agent known to be older than the route, is
-     * not re-read. The picker opens either way: attaching never waits on this.
+     * outlasted its retries, a dropped socket) is read again now — not at the
+     * next background retry — so one chat-open burst does not leave the
+     * client's constants in force. A live policy, or an agent known to be older
+     * than the route, is not re-read. The picker opens either way: attaching
+     * never waits on this.
      */
     fun onAttachTapped() {
         if (_attachmentPolicySource.value == AttachmentPolicySource.FALLBACK_UNAVAILABLE) {
             logInfo("onAttachTapped", "attachment policy was unavailable; reading it again")
+            attachmentPolicyJob?.cancel()
             refreshAttachmentPolicy()
         }
     }

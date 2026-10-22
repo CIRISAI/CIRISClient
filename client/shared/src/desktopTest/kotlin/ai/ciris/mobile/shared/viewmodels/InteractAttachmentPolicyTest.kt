@@ -158,6 +158,40 @@ class InteractAttachmentPolicyTest {
         assertEquals(20971520L, vm.attachmentPolicy.value.imageMaxBytes)
     }
 
+    /**
+     * Gate run 39789325955: the bucket stayed empty for ~14 s after chat
+     * opened, longer than the read's own retries, and nothing tapped the
+     * paperclip before the files flow looked. Chat opening alone must get to
+     * the live policy once the agent answers again.
+     */
+    @Test
+    fun aPolicyLeftUnavailableByChatOpenIsReadAgainWithoutATap() = runBlocking {
+        val limited = java.util.concurrent.atomic.AtomicBoolean(true)
+        val a = agent { _: Int -> if (limited.get()) rateLimited else 200 to agentPolicy }
+        val vm = vm(a).apply { policyRetryDelaysMs = listOf(200L, 200L, 200L, 200L, 200L, 200L, 200L, 200L) }
+        vm.refreshAttachmentPolicy()
+        withContext(Dispatchers.Default) {
+            withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.FALLBACK_UNAVAILABLE } }
+        }
+        limited.set(false)
+        withContext(Dispatchers.Default) {
+            withTimeout(15_000) { vm.attachmentPolicySource.first { it == AttachmentPolicySource.AGENT } }
+        }
+        assertEquals(20971520L, vm.attachmentPolicy.value.imageMaxBytes)
+    }
+
+    @Test
+    fun theBackgroundRereadsAreBounded() = runBlocking {
+        val a = agent { _: Int -> rateLimited }
+        val vm = vm(a).apply { policyRetryDelaysMs = listOf(10L, 10L) }
+        vm.refreshAttachmentPolicy()
+        withContext(Dispatchers.Default) { withTimeout(30_000) { while (true) { kotlinx.coroutines.delay(100); if (a.policyReads.get() >= 9) break } } }
+        kotlinx.coroutines.delay(3_000)
+        assertEquals(AttachmentPolicySource.FALLBACK_UNAVAILABLE, vm.attachmentPolicySource.value)
+        // One read and two re-reads, each with its own bounded 429 retries.
+        assertTrue(a.policyReads.get() <= 12, "re-reads must stop; got ${a.policyReads.get()}")
+    }
+
     @Test
     fun aPaperclipTapDoesNotReReadALivePolicy() = runBlocking {
         val a = agent(200 to agentPolicy)
