@@ -735,7 +735,7 @@ fun InteractScreen(
                 sseConnected = sseConnected,
                 onLegendToggle = { viewModel.toggleLegend() },
                 attachedFiles = attachedFiles,
-                onAttach = { showFilePicker = true },
+                onAttach = { viewModel.onAttachTapped(); showFilePicker = true },
                 onRemoveAttachment = { viewModel.removeAttachment(it) },
                 canAttachMore = attachmentPolicy.hasRoom(attachedFiles),
                 policyProbe = attachmentPolicySource.probe,
