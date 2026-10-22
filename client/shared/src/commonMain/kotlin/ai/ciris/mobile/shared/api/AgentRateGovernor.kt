@@ -56,10 +56,21 @@ suspend fun <T> asAgentUser(block: suspend CoroutineScope.() -> T): T = withCont
  *     other half is the user's whatever the pollers do.
  *  2. **A 429 on any route pauses all background traffic** for its
  *     `Retry-After`, shared across every call site and client instance.
- *  3. **A reserve for the user**: when the agent says fewer than
- *     [USER_RESERVE] tokens remain, background traffic waits for the bucket
- *     to refill that far. The agent's answer is the truth — it also counts
+ *  3. **A reserve for the user**: the governor keeps a MIRROR of the
+ *     agent's bucket — every request this process sends it, of any class,
+ *     spends a mirror token, and the mirror refills at the agent's rate. When
+ *     the mirror is below [USER_RESERVE], background traffic waits for it to
+ *     refill that far, and unmarked traffic waits (up to
+ *     [UNCLASSIFIED_MAX_WAIT_MS]) rather than send into a bucket it
+ *     knows is empty. The agent's answer corrects it — `X-RateLimit-Remaining`
+ *     lowers the mirror, and a 429 empties it — because it also counts
  *     traffic this process did not send.
+ *
+ * Why a mirror (gate run 39764738615, linux-ai): with only the background
+ * budget, unmarked traffic — screens that never said who was asking — still
+ * emptied the bucket 36 s after launch, and the policy read was refused on
+ * every retry. Pacing only the traffic that declared itself left the rest
+ * free to spend the user's half.
  *
  * User traffic bypasses the budget and the reserve; it is the reserve's
  * reason to exist. One governor per agent origin, process-wide.
@@ -71,61 +82,123 @@ class AgentRateGovernor internal constructor() {
     /** Background acquirers queue here, FIFO, so they never stampede at a pause's end. */
     private val queue = Mutex()
 
+    /** Unmarked traffic queues here, FIFO, apart from background so neither starves the other. */
+    private val unmarkedQueue = Mutex()
+
     private var pausedUntilMs = 0L
-    private var reserveUntilMs = 0L
     private var tokens = BACKGROUND_BURST.toDouble()
     private var refilledAtMs: Long? = null
 
-    /** Wait until a background request may go, and spend its budget token. */
-    suspend fun acquireBackground() = queue.withLock {
+    /** The agent's limit, per its `X-RateLimit-Limit` once seen. */
+    private var agentLimit = AGENT_LIMIT_PER_MINUTE
+
+    /** The mirror of the agent's bucket: a new caller starts full, as the agent's does. */
+    private var agentTokens = AGENT_LIMIT_PER_MINUTE.toDouble()
+    private var agentRefilledAtMs: Long? = null
+
+    /** What this process sent the agent in the last minute, for the 429 breakdown. */
+    private val recent = ArrayDeque<Sent>()
+    private var lastBreakdownAtMs: Long? = null
+
+    private class Sent(val atMs: Long, val route: String, val cls: AgentTrafficClass?)
+
+    private val msPerAgentToken get() = 60_000.0 / agentLimit
+
+    /**
+     * Wait until a request of [cls] to [route] may go, and count it. The check
+     * and the spend are one step under the lock, so waiters released by the
+     * same refill cannot all pass on one token.
+     */
+    suspend fun admit(route: String, cls: AgentTrafficClass?) {
+        when (cls) {
+            AgentTrafficClass.USER -> state.withLock { spendLocked(clock(), route, cls) }
+            AgentTrafficClass.BACKGROUND -> queue.withLock { waitAndSpend(route, cls, Long.MAX_VALUE) }
+            null -> unmarkedQueue.withLock { waitAndSpend(route, cls, UNCLASSIFIED_MAX_WAIT_MS) }
+        }
+    }
+
+    /** Background acquirers' rule (budget, reserve, pause); unmarked's (floor, pause), until [maxWaitMs]. */
+    private suspend fun waitAndSpend(route: String, cls: AgentTrafficClass?, maxWaitMs: Long) {
+        var waited = 0L
         while (true) {
             val wait = state.withLock {
                 val now = clock()
                 refill(now)
-                val hold = maxOf(pausedUntilMs, reserveUntilMs) - now
-                when {
-                    hold > 0 -> hold
-                    tokens >= 1.0 -> { tokens -= 1.0; 0L }
-                    else -> ((1.0 - tokens) * MS_PER_BACKGROUND_TOKEN).toLong().coerceAtLeast(1L)
+                val hold = when {
+                    pausedUntilMs > now -> pausedUntilMs - now
+                    cls == null -> if (agentTokens < UNMARKED_FLOOR) msUntilMirror(UNMARKED_FLOOR) else 0L
+                    agentTokens < USER_RESERVE + 1 -> msUntilMirror(USER_RESERVE + 1.0)
+                    tokens < 1.0 -> ((1.0 - tokens) * MS_PER_BACKGROUND_TOKEN).toLong().coerceAtLeast(1L)
+                    else -> { tokens -= 1.0; 0L }
+                }
+                if (hold <= 0L || waited >= maxWaitMs) {
+                    spendLocked(now, route, cls)
+                    0L
+                } else {
+                    hold.coerceAtMost(maxWaitMs - waited)
                 }
             }
-            if (wait <= 0L) return@withLock
+            if (wait <= 0L) return
             delay(wait)
+            waited += wait
         }
     }
 
-    /** Wait out an active 429 pause, at most [maxWaitMs]. */
-    suspend fun awaitPause(maxWaitMs: Long) {
-        val wait = state.withLock { pausedUntilMs - clock() }
-        if (wait > 0) delay(wait.coerceAtMost(maxWaitMs))
+    private fun spendLocked(now: Long, route: String, cls: AgentTrafficClass?) {
+        refill(now)
+        agentTokens -= 1.0
+        recent.addLast(Sent(now, route, cls))
+        while (recent.isNotEmpty() && recent.first().atMs < now - 60_000) recent.removeFirst()
     }
+
+    /** Tokens the mirror says the agent has left (tests and the breakdown read it). */
+    suspend fun mirrorTokens(): Double = state.withLock { refill(clock()); agentTokens }
 
     /** Milliseconds left on the shared 429 pause (0 when none). */
     suspend fun pauseRemainingMs(): Long = state.withLock { (pausedUntilMs - clock()).coerceAtLeast(0L) }
 
     /** Fold an agent response into the shared state. */
     suspend fun observe(status: Int, retryAfterHeader: String?, remainingHeader: String?, limitHeader: String?) {
-        val limit = limitHeader?.trim()?.toIntOrNull()?.takeIf { it > 0 } ?: AGENT_LIMIT_PER_MINUTE
-        val msPerAgentToken = 60_000L / limit
         state.withLock {
             val now = clock()
+            refill(now)
+            limitHeader?.trim()?.toIntOrNull()?.takeIf { it > 0 }?.let { agentLimit = it }
             if (status == 429) {
                 val seconds = retryAfterSeconds(retryAfterHeader)
                 pausedUntilMs = maxOf(pausedUntilMs, now + seconds * 1000L)
-                // A 429 means the bucket is empty: the reserve has to refill too.
-                reserveUntilMs = maxOf(reserveUntilMs, now + USER_RESERVE * msPerAgentToken)
+                // A 429 means the bucket is empty; the reserve has to refill before background goes again.
+                agentTokens = minOf(agentTokens, 0.0)
                 PlatformLogger.w(TAG, "agent answered 429: background traffic paused ${seconds}s, held until $USER_RESERVE tokens refill")
+                logBreakdown(now)
                 return@withLock
             }
-            val remaining = remainingHeader?.trim()?.toIntOrNull() ?: return@withLock
-            reserveUntilMs = if (remaining < USER_RESERVE) {
-                maxOf(reserveUntilMs, now + (USER_RESERVE - remaining) * msPerAgentToken)
-            } else {
-                // The agent says there is room: a hold computed from an older reading is stale.
-                minOf(reserveUntilMs, now)
-            }
+            // The agent stamps Remaining AFTER its handler ran, so a slow request's
+            // reading is older than requests sent since: it may lower the mirror
+            // (traffic this process did not see), never raise it.
+            remainingHeader?.trim()?.toIntOrNull()?.let { agentTokens = minOf(agentTokens, it.toDouble()) }
         }
     }
+
+    /**
+     * WHO SPENT THE BUDGET, said at the moment it ran out (at most every
+     * [BREAKDOWN_EVERY_MS]): a gate log that shows only the refused request
+     * cannot say which screen emptied the bucket.
+     */
+    private fun logBreakdown(now: Long) {
+        val last = lastBreakdownAtMs
+        if (last != null && now - last < BREAKDOWN_EVERY_MS) return
+        lastBreakdownAtMs = now
+        val window = recent.filter { it.atMs >= now - 60_000 }
+        val byClass = window.groupingBy { it.cls?.name?.lowercase() ?: "unmarked" }.eachCount()
+        val top = window.groupingBy { "${it.route} (${it.cls?.name?.lowercase() ?: "unmarked"})" }.eachCount()
+            .entries.sortedByDescending { it.value }.take(BREAKDOWN_TOP_ROUTES)
+            .joinToString(", ") { "${it.key} ×${it.value}" }
+        PlatformLogger.w(TAG, "agent traffic from this process in the last 60 s: ${window.size} $byClass — $top")
+    }
+
+    /** Milliseconds until the mirror refills to [target] tokens. */
+    private fun msUntilMirror(target: Double): Long =
+        ((target - agentTokens) * msPerAgentToken).toLong().coerceAtLeast(1L)
 
     private fun refill(now: Long) {
         val last = refilledAtMs
@@ -133,6 +206,11 @@ class AgentRateGovernor internal constructor() {
             tokens = minOf(BACKGROUND_BURST.toDouble(), tokens + (now - last).toDouble() / MS_PER_BACKGROUND_TOKEN)
         }
         refilledAtMs = now
+        val agentLast = agentRefilledAtMs
+        if (agentLast != null && now > agentLast) {
+            agentTokens = minOf(agentLimit.toDouble(), agentTokens + (now - agentLast).toDouble() / msPerAgentToken)
+        }
+        agentRefilledAtMs = now
     }
 
     companion object {
@@ -153,8 +231,17 @@ class AgentRateGovernor internal constructor() {
         /** A `Retry-After` longer than this is clamped; a confused value must not stop polling for good. */
         const val MAX_RETRY_AFTER_SECONDS = 60L
 
-        /** How long unmarked traffic waits out a pause before going anyway. */
-        const val UNCLASSIFIED_MAX_PAUSE_WAIT_MS = 5_000L
+        /**
+         * The longest unmarked traffic waits out a pause or a near-empty mirror
+         * before going anyway: a safety net for a mirror gone wrong, not a pace.
+         */
+        const val UNCLASSIFIED_MAX_WAIT_MS = 60_000L
+
+        /** Unmarked traffic waits while the mirror is below this; the rest of the reserve is the user's alone. */
+        const val UNMARKED_FLOOR = 3.0
+
+        private const val BREAKDOWN_EVERY_MS = 10_000L
+        private const val BREAKDOWN_TOP_ROUTES = 12
 
         private const val MS_PER_BACKGROUND_TOKEN = 60_000.0 / BACKGROUND_BUDGET_PER_MINUTE
 
@@ -205,11 +292,9 @@ val AgentRateLimit = createClientPlugin("AgentRateLimit") {
         val url = request.url.build()
         if (AgentRateGovernor.isExempt(url.encodedPath)) return@on proceed(request)
         val governor = AgentRateGovernor.forUrl(url)
-        when (currentCoroutineContext()[AgentTraffic]?.cls) {
-            AgentTrafficClass.BACKGROUND -> governor.acquireBackground()
-            AgentTrafficClass.USER -> Unit // never queued: a 429 here is answered by the caller's visible retry
-            null -> governor.awaitPause(AgentRateGovernor.UNCLASSIFIED_MAX_PAUSE_WAIT_MS)
-        }
+        // USER is never queued (a 429 there is answered by the caller's visible retry);
+        // BACKGROUND and unmarked wait per the governor's rules.
+        governor.admit("${request.method.value} ${url.encodedPath}", currentCoroutineContext()[AgentTraffic]?.cls)
         val call = proceed(request)
         call.response.observeInto(governor)
         call

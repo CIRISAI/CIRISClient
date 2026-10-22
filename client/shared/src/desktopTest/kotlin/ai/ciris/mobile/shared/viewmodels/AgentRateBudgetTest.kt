@@ -1,10 +1,16 @@
 package ai.ciris.mobile.shared.viewmodels
 
 import ai.ciris.mobile.shared.api.AgentRateGovernor
+import ai.ciris.mobile.shared.api.AgentRateLimit
+import ai.ciris.mobile.shared.api.AttachmentPolicyRead
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.models.MessageType
 import androidx.lifecycle.viewModelScope
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
@@ -160,5 +166,26 @@ class AgentRateBudgetTest {
         val t = refusedAt ?: error("history was never polled after 20 s")
         val during = agent.counted().filter { it.atMs > t && it.atMs < t + 10_000 }
         assertTrue(during.isEmpty(), "background requests inside the 10 s pause: ${during.map { "${it.atMs - t}ms ${it.path}" }}")
+    }
+
+    /**
+     * THE SECOND GATE'S FAILURE (run 39764738615, linux-ai): traffic that never
+     * declared who was asking — a hundred unmarked reads from screens opening
+     * at once — emptied the bucket 36 s after launch, and the user's policy
+     * read was refused on every retry. Unmarked traffic now waits on the
+     * mirror of the agent's bucket, so the user's read still finds a token.
+     */
+    @Test
+    fun anUnmarkedBurstLeavesTheUserARequest() = runTest {
+        AgentRateGovernor.resetForTests()
+        val (agent, _) = chat()
+        val screens = HttpClient(agent.engine) { install(AgentRateLimit) }
+        val burst = (1..100).map { i -> async { screens.get("${agent.url}/v1/screen/$i") } }
+        advanceTimeBy(2_000)
+        val policy = CIRISApiClient(agent.url, "tok", agent.engine).getAttachmentPolicy()
+        burst.awaitAll()
+        val refused = agent.counted().filter { it.status == 429 }
+        assertTrue(policy !is AttachmentPolicyRead.Failed, "the user's read was refused behind the burst: $policy")
+        assertTrue(refused.isEmpty(), "the burst ran the agent dry: ${refused.size} refused, first ${refused.firstOrNull()}")
     }
 }
