@@ -33,18 +33,44 @@ import kotlinx.serialization.json.jsonPrimitive
  *
  * It is never DEFER or REJECT wording — those are H3ERE actions.
  */
-class AgentShedException(
+open class AgentShedException(
     /** Seconds to wait before resending, from `Retry-After` (else the body, else 30). */
     val retryAfterSeconds: Int,
     /** The resources under pressure, as the agent names them (`memory_mb`). */
     val resources: List<String> = emptyList(),
-) : RuntimeException("agent shedding new work (RESOURCE_SHED), retry after ${retryAfterSeconds}s") {
+    message: String = "agent shedding new work (RESOURCE_SHED), retry after ${retryAfterSeconds}s",
+) : RuntimeException(message) {
     /** The wire's reason, which is also the localization id suffix. */
-    val reasonId: String get() = REASON_ID
+    open val reasonId: String get() = REASON_ID
+
+    /** Sends in total, the first included, before the resend gives up. */
+    open val maxAttempts: Int get() = AgentShed.MAX_ATTEMPTS
 
     companion object {
         const val REASON_ID = "RESOURCE_SHED"
         const val ERROR_TOKEN = "resource_shed"
+    }
+}
+
+/**
+ * **The agent's rate limiter refused the request** (429, ciris-agent
+ * `api/middleware/rate_limiter.py`; gate run 39755201812). Same contract as a
+ * shed, which is why it rides the same visible countdown ("The agent is busy —
+ * retrying in Ns") and the same kept-text give-up: the middleware refuses
+ * BEFORE any route handler runs, so the message was not admitted and resending
+ * the same request cannot duplicate it. The waits are short (`Retry-After` is
+ * 1-2 s at the agent's 1 token/s), so it gets more sends than a shed does.
+ */
+class AgentRateLimitedException(retryAfterSeconds: Int) :
+    AgentShedException(retryAfterSeconds, emptyList(), "agent rate limiter refused the request (429), retry after ${retryAfterSeconds}s") {
+    override val reasonId: String get() = REASON_ID
+    override val maxAttempts: Int get() = MAX_ATTEMPTS
+
+    companion object {
+        const val REASON_ID = "RATE_LIMITED"
+
+        /** Sends in total, the first included: ~5-10 s of waiting at the agent's usual Retry-After. */
+        const val MAX_ATTEMPTS = 5
     }
 }
 
@@ -155,12 +181,12 @@ object AgentShed {
                 e
             }
             val wait = shed.retryAfterSeconds
-            if (attempt >= MAX_ATTEMPTS || waited + wait > MAX_TOTAL_WAIT_SECONDS) {
+            if (attempt >= shed.maxAttempts || waited + wait > MAX_TOTAL_WAIT_SECONDS) {
                 onWait(null)
                 throw AgentShedGaveUp(shed, attempt)
             }
             for (remaining in wait downTo 1) {
-                onWait(ShedWait(remaining, attempt + 1, MAX_ATTEMPTS, shed.resources))
+                onWait(ShedWait(remaining, attempt + 1, shed.maxAttempts, shed.resources))
                 sleep(1000L)
             }
             waited += wait

@@ -300,13 +300,16 @@ fun LiveGraphBackground(
         }
 
         try {
-            val graphData = apiClient.getGraphData(
-                hours = 24,
-                scope = null,  // All scopes
-                nodeType = null,
-                limit = 200,  // Limited nodes for performance
-                includeMetrics = false  // Exclude telemetry
-            )
+            // Ambient background: paced, yields to the user (gate run 39755201812).
+            val graphData = ai.ciris.mobile.shared.api.asAgentBackground {
+                apiClient.getGraphData(
+                    hours = 24,
+                    scope = null,  // All scopes
+                    nodeType = null,
+                    limit = 200,  // Limited nodes for performance
+                    includeMetrics = false  // Exclude telemetry
+                )
+            }
 
             val currentTime = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
             val newNodeIds = graphData.nodes.map { it.id }.toSet()
