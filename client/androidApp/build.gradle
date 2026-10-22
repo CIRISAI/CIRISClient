@@ -125,7 +125,8 @@ android {
                 // PyPI (the oldest available is now 0.5.207), so every
                 // androidApp build failed at :androidApp:installDebugPythonRequirements
                 // with "No matching distribution found for ciris-server==0.5.204" —
-                // the second time this pin has rotted (0.5.188 before it). 0.5.231
+                // the second time this pin has rotted (0.5.188 before it). Now 0.5.232
+                // (2026-10-21, the release the localization pin moved to). 0.5.232
                 // is the server version the client's localization pin and
                 // five-platform matrix are reconciled against, and it publishes
                 // android_24 wheels. The published AAR is unaffected
@@ -138,7 +139,7 @@ android {
                 // the release every leg downloads and talks to. The literal
                 // below is the default for a build with no property — a
                 // developer's local build — and is still bumped by hand.
-                install "ciris-server==${project.findProperty('cirisServerVersion') ?: '0.5.231'}"
+                install "ciris-server==${project.findProperty('cirisServerVersion') ?: '0.5.232'}"
                 // ciris-lens-core is REQUIRED by the accord_metrics adapter
                 // (CIRISAgent#866 LensCore fold) — the fourth substrate leg.
                 // Its Android wheels are committed to wheels/ like the other
