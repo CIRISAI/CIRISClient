@@ -45,6 +45,11 @@ data class Contact(
     /** Always `true` on this route — the discriminator against a bare peer card. */
     val contact: Boolean = true,
     /**
+     * Has this person added the owner back (CIRISServer 0.5.237, #820)? False is
+     * a request still waiting on them (CSD-109); null on an older node.
+     */
+    val mutual: Boolean? = null,
+    /**
      * The DERIVED two-party community id for a chat with this contact. Present
      * whether or not the room exists yet; [chatStarted] is what says it does.
      */

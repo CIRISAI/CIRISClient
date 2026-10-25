@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**82 cards** — 1 envisioned · 6 sketched · 67 building · 8 testable. **19 reserved**, **2 retired**.
+**82 cards** — 1 envisioned · 5 sketched · 68 building · 8 testable. **19 reserved**, **2 retired**.
 
 ## Cards
 
@@ -99,7 +99,7 @@ reserved. **A retired number is never reused.**
 | [CSD-106](CSD-106-membership-invites.md) | Invitations to a household or a community (nobody joins without saying yes) | `building` | `testing/flows/drafts/csd-106-membership-invites.yaml` |
 | [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | `testing/flows/drafts/csd-107-file-custody.yaml` |
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | none yet |
-| [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `sketched` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
+| [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
 | [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Neighbours › Chats, Communities and Businesses › Chats) | `building` | none yet |
 
 ## Reserved

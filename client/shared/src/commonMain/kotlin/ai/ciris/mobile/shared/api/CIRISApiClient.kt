@@ -15510,6 +15510,37 @@ class CIRISApiClient internal constructor(
         )
         return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteAnswer.serializer(), raw)
     }
+
+    // ─── CONTACT REQUESTS (/v1/contacts/requests) — CSD-109 ─────────────────
+    //
+    // CIRISServer 0.5.237 (#819, #820). Node-owned, at the node URL, owner-gated
+    // like the inbox; a delegate may read but not answer
+    // (`contacts.delegate_may_not_answer`). Accept is CSD-005's own add
+    // (`POST /v1/contacts`), so it is not repeated here.
+
+    /** `GET /v1/contacts/requests` — who added this owner and has not been added back, and who was ignored. */
+    suspend fun listContactRequests(nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.ContactRequestList {
+        val raw = familyCall("listContactRequests", HttpMethod.Get, nodeUrl, "/v1/contacts/requests")
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.ContactRequestList.serializer(), raw)
+    }
+
+    /** `POST /v1/contacts/requests/{grant_attestation_id}/ignore` — private: the requester is never told. */
+    suspend fun ignoreContactRequest(grantAttestationId: String, nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.ContactRequestIgnoreAnswer {
+        val raw = familyCall(
+            "ignoreContactRequest", HttpMethod.Post, nodeUrl,
+            "/v1/contacts/requests/${grantAttestationId.encodeURLPathPart()}/ignore", buildJsonObject { },
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.ContactRequestIgnoreAnswer.serializer(), raw)
+    }
+
+    /** `DELETE /v1/contacts/requests/{grant_attestation_id}/ignore` — back into the requests. */
+    suspend fun unignoreContactRequest(grantAttestationId: String, nodeUrl: String = LOCAL_NODE_URL): ai.ciris.mobile.shared.models.federation.ContactRequestIgnoreAnswer {
+        val raw = familyCall(
+            "unignoreContactRequest", HttpMethod.Delete, nodeUrl,
+            "/v1/contacts/requests/${grantAttestationId.encodeURLPathPart()}/ignore",
+        )
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.ContactRequestIgnoreAnswer.serializer(), raw)
+    }
     // ─── end HOUSEHOLDS ─────────────────────────────────────────────────────
 
     // ===== Data (CSD-039): erasure on the node, and the receipt that proves it =====

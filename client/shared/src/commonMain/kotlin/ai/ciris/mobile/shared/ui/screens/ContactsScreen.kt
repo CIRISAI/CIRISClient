@@ -102,6 +102,8 @@ fun ContactsScreen(
     onPeerPicked: ((LocalPeerState) -> Unit)? = null,
     /** The node's reported version, so the too-old state can name it. */
     nodeVersion: String? = null,
+    /** Contact requests (CSD-109), drawn above the list in browse mode. Null draws none. */
+    requests: ai.ciris.mobile.shared.viewmodels.ContactRequestsViewModel? = null,
 ) {
     val pickerMode = onPeerPicked != null
     val t = CirisTheme.tokens
@@ -339,6 +341,11 @@ fun ContactsScreen(
                 }
                 return@Column
             }
+
+            // ── Contact requests (CSD-109) ────────────────────────────────────
+            // Above every list state: a person with no contacts yet is exactly
+            // the one most likely to have someone asking to connect.
+            if (!pickerMode && requests != null) ContactRequestsSection(requests)
 
             // ── Loading ───────────────────────────────────────────────────────
             // A pending code is a row (never a contact), so a list of only
