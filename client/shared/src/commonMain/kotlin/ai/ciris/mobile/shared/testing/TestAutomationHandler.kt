@@ -270,6 +270,18 @@ object TestAutomationHandler {
             )
         }
 
+        return applyInput(request.testTag, request.text, request.clearFirst)
+    }
+
+    /**
+     * Post [text] to [testTag]'s sink and answer only once a screen has
+     * applied it — the part of `/input` after "is there a field, and is it
+     * listening". Shared with desktop's own server (CIRISClient#240): it used to
+     * post, sleep a fixed 100 ms and answer success, so on a cold first launch
+     * the password request replaced a username the UI thread had not collected
+     * yet, every call said success, and the wizard sat on "Username is required".
+     */
+    suspend fun applyInput(testTag: String, text: String, clearFirst: Boolean): ActionResponse {
         val ta = ai.ciris.mobile.shared.platform.TestAutomation
 
         // ACKNOWLEDGE ON APPLY, NOT ON POST (CIRISClient#31).
@@ -295,17 +307,17 @@ object TestAutomationHandler {
         // handleInput sink check.
         if (!awaitFlowIdle(ta)) {
             return ActionResponse(
-                success = false, element = request.testTag, action = "input",
+                success = false, element = testTag, action = "input",
                 error = "a previous /input was still unapplied after ${APPLY_TIMEOUT_MS}ms; " +
                     "posting now would silently replace it",
             )
         }
 
-        ta.requestTextInput(request.testTag, request.text, request.clearFirst)
+        ta.requestTextInput(testTag, text, clearFirst)
 
         if (!awaitFlowIdle(ta)) {
             return ActionResponse(
-                success = false, element = request.testTag, action = "input",
+                success = false, element = testTag, action = "input",
                 error = "the field did not apply the text within ${APPLY_TIMEOUT_MS}ms; " +
                     "it is registered as a sink but its dispatch did not run",
             )
@@ -314,14 +326,14 @@ object TestAutomationHandler {
         // Record what the field now holds, so /element and /tree can be read
         // back. Without this a consumer had no witness but a screenshot.
         // A sensitive field (a PIN) is acknowledged without being stored or echoed.
-        val sensitive = ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)
-        if (!sensitive) ta.setInputValue(request.testTag, request.text)
+        val sensitive = ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(testTag)
+        if (!sensitive) ta.setInputValue(testTag, text)
 
         return ActionResponse(
             success = true,
-            element = request.testTag,
+            element = testTag,
             action = "input",
-            text = if (sensitive) null else request.text
+            text = if (sensitive) null else text
         )
     }
 

@@ -2286,7 +2286,7 @@ private fun FederationIdentitySection(
                             enabled = !fed.inProgress,
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .testable("input_fedid_label"),
+                                .testable("input_fedid_label", fed.label),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = SetupColors.TextPrimary,
                                 unfocusedTextColor = SetupColors.TextPrimary,
@@ -3147,7 +3147,8 @@ private fun AccountSection(
             OutlinedTextField(
                 value = state.username,
                 onValueChange = { viewModel.setUsername(it) },
-                modifier = Modifier.fillMaxWidth().testable("input_username"),
+                // The value is exposed so a harness can read back what landed (CIRISClient#240).
+                modifier = Modifier.fillMaxWidth().testable("input_username", state.username),
                 label = { Text(localizedString("mobile.login_username"), color = SetupColors.TextSecondary) },
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = SetupColors.TextPrimary,

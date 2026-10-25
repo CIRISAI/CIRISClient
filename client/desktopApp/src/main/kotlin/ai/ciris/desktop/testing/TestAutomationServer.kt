@@ -494,18 +494,25 @@ class TestAutomationServer(
                         return@post
                     }
 
-                    TestAutomation.requestTextInput(request.testTag, request.text, request.clearFirst)
-
-                    // Give UI time to process the request
-                    delay(100)
-
-                    // A sensitive field (a PIN) is acknowledged, never echoed.
-                    call.respond(ActionResponse(
-                        success = true,
-                        element = element.testTag,
-                        action = "input",
-                        text = if (ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)) null else request.text
-                    ))
+                    // ACKNOWLEDGE ON APPLY, AS MOBILE DOES (CIRISClient#240). This
+                    // posted, slept a fixed 100 ms and answered success. On a cold
+                    // first launch (CIRISAgent run 40192130788, macOS) the UI
+                    // thread had not collected the username before the password
+                    // request replaced it in the conflating flow; every call said
+                    // success and the wizard sat on "Username is required". The
+                    // shared applyInput waits for the previous request to drain,
+                    // posts, and waits for a screen to apply it — or says it did not.
+                    val r = ai.ciris.mobile.shared.testing.TestAutomationHandler
+                        .applyInput(request.testTag, request.text, request.clearFirst)
+                    val applied = ActionResponse(
+                        success = r.success, element = r.element, action = r.action,
+                        text = r.text, error = r.error,
+                    )
+                    if (applied.success) {
+                        call.respond(applied)
+                    } else {
+                        call.respond(HttpStatusCode.Conflict, applied)
+                    }
                 }
 
                 // Navigate to screen
@@ -710,14 +717,16 @@ class TestAutomationServer(
                                     success = false,
                                     error = "Element not found: ${request.testTag}"
                                 )
-                            } else {
-                                TestAutomation.requestTextInput(request.testTag, request.text ?: "", request.clearFirst)
+                            } else if (!TestAutomation.hasInputSink(request.testTag)) {
                                 ai.ciris.mobile.shared.testing.ActionResponse(
-                                    success = true,
-                                    element = request.testTag,
-                                    action = "input",
-                                    text = if (ai.ciris.mobile.shared.platform.SensitiveInputs.isSensitive(request.testTag)) null else request.text
+                                    success = false, element = request.testTag, action = "input",
+                                    error = "no text sink is listening for ${request.testTag}; " +
+                                        "the field is tagged but not drivable (see GET /undrivable)",
                                 )
+                            } else {
+                                // Same acknowledge-on-apply as /input (CIRISClient#240).
+                                ai.ciris.mobile.shared.testing.TestAutomationHandler
+                                    .applyInput(request.testTag, request.text ?: "", request.clearFirst)
                             }
                         }
                         else -> ai.ciris.mobile.shared.testing.ActionResponse(
