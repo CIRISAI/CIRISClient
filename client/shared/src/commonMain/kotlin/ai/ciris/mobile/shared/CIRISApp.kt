@@ -1171,6 +1171,15 @@ fun CIRISApp(
         // to the NODE; with an agent at the api base it does not serve them (CIRISAgent#1213).
         ContactsViewModel(apiClient, nodeUrl = { contactsNodeUrl.value })
     }
+    // Contact requests (CSD-109): who added this owner and has not been added
+    // back. Node-owned like contacts; an accept is a new contact, so the list re-reads.
+    val contactRequestsViewModel: ai.ciris.mobile.shared.viewmodels.ContactRequestsViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.ContactRequestsViewModel(
+            api = ai.ciris.mobile.shared.api.ClientContactRequestsApi(apiClient),
+            nodeUrl = { contactsNodeUrl.value },
+            onAccepted = { contactsViewModel.refreshContacts() },
+        )
+    }
     // B3: one Files view model per cohort — a self, a family and a community
     // listing are different questions, and one model answering all would
     // show the last circle's files in the next. Every drive route is the
@@ -1199,7 +1208,10 @@ fun CIRISApp(
     // survive into the next session. Declared here, not in the approval-watch
     // effect above, because this ViewModel is constructed later in composition.
     LaunchedEffect(currentAccessToken) {
-        if (currentAccessToken == null) contactsViewModel.clearSessionState()
+        if (currentAccessToken == null) {
+            contactsViewModel.clearSessionState()
+            contactRequestsViewModel.clearSessionState()
+        }
     }
     // Households (CSD-100 / CSD-101): one view model for the hub and the roster,
     // so the household picked in one is the one shown in the other. NODE-owned:
@@ -1257,6 +1269,7 @@ fun CIRISApp(
     // (Codex, PR #115). Tell the model, which drops the list and re-reads.
     LaunchedEffect(effectiveNodeUrl) {
         contactsViewModel.nodeChanged()
+        contactRequestsViewModel.nodeChanged()
     }
     // The node predates /v1/contacts (the embedded APK node lags one release).
     // Contacts is the node-mode HOME, so landing there would put the user on a
@@ -4430,6 +4443,7 @@ fun CIRISApp(
                 ContactsScreen(
                     viewModel = contactsViewModel,
                     nodeVersion = nodeVersion,
+                    requests = contactRequestsViewModel,
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null
