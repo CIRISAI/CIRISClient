@@ -285,6 +285,7 @@ curl -X POST http://127.0.0.1:18080/v1/system/adapters/home_assistant/configure/
 | `/input` | POST | Text input to element |
 | `/wait` | POST | Wait for element to appear |
 | `/element/{tag}` | GET | Get element info |
+| `/inject-file` | POST | Hand a file to the chat paperclip as if picked (`{filename, mediaType, dataBase64, sizeBytes}`); answers once the chat screen has taken it |
 
 **Desktop-only endpoints:**
 

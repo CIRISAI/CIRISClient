@@ -106,6 +106,15 @@ class AndroidTestAutomationServer(private val port: Int = 9091) {
                     call.respond(if (resp.success) HttpStatusCode.OK else HttpStatusCode.NotFound, resp)
                 }
 
+                // The paperclip, as if picked (CIRISClient#222). Desktop had it;
+                // Android and iOS did not, so csd_010_interact_files' `attach:`
+                // could not run on either.
+                post("/inject-file") {
+                    val request = call.receive<InjectFileRequest>()
+                    val resp = TestAutomationHandler.handleInjectFile(request)
+                    call.respond(if (resp.success) HttpStatusCode.OK else HttpStatusCode.Conflict, resp)
+                }
+
                 // Scroll the screen (recovery after an off-screen refusal)
                 //
                 // ANDROID HAD NO SUCH ROUTE while desktop and iOS did, though
