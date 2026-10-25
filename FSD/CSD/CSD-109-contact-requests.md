@@ -53,15 +53,18 @@ is about one person and belongs with the people. The pair-room split stays
 (CSD-106 §2): a pair-room invitation is answered on that contact's row.
 
 **A row says only what the node sends.** The requester is not a contact yet,
-so there is no name you gave them. The row reads "Someone wants to connect" +
-the requester's short key id (`requester_key_id`, first 8 characters, the
-receipt's convention) + "Asked {relative time}" from `requested_at`. If the
-entry's `grant` carries a display name, the row shows it as "{name} (they
-named themselves)", never as a verified name (§6, open question 1). The row
-opens the grant's receipt (CSD-006) on tap, as a contact row does.
+so there is no name you gave them. When the entry's `requester_label` is set
+(the label they typed when they minted their fed-ID key, `<label>-<fingerprint>`:
+their own claim, never verified), the row reads "{label} (they named
+themselves) wants to connect". When it is null, "Someone wants to connect".
+Either way the requester's short key id follows (`requester_key_id`, first 8
+characters, the receipt's convention), then "Asked {relative time}" from
+`requested_at`. The row opens the grant's receipt (CSD-006) on tap, as a
+contact row does. A request has no expiry of its own: it lasts as long as its
+grant, so no date is drawn.
 
 **Accept is behind a ConfirmSheet with three facts.** *Who*: the requester's
-key id (and their self-given name when sent). *What*: "You'll be each other's
+key id, and their self-given label marked as theirs when sent. *What*: "You'll be each other's
 contacts." *What it means*: "They can message you and see that you're a
 contact. You can remove them later from their receipt." Confirming POSTs the
 entry's own `accept` body to `accept.path` (`POST /v1/contacts {key_id}`), the
@@ -90,8 +93,8 @@ fields:
   - ceg: x_private:contact_request
     use: display-only
     type: string
-    example: "Someone wants to connect · 9f3a1c2e · Asked 2 min ago"
-    renders: "one row per pending request: 'Someone wants to connect', the requester's short key id, 'Asked {relative time}' from requested_at, and the requester's self-given name marked as theirs when the grant carries one. From GET /v1/contacts/requests; nothing is inferred from a contact list the requester is not on"
+    example: "ada (they named themselves) wants to connect · 9f3a1c2e · Asked 2 min ago"
+    renders: "one row per pending request: '{requester_label} (they named themselves) wants to connect', or 'Someone wants to connect' when requester_label is null, then the requester's short key id and 'Asked {relative time}' from requested_at. From GET /v1/contacts/requests; nothing is inferred from a contact list the requester is not on"
     tag: "proposed:row_contact_request_*"
   - ceg: x_private:contact_request_accept
     use: emit
@@ -135,9 +138,10 @@ CIRISServer#819 (requests and accept) and #820 (ignore, stacked on #819); spec
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the requests | `GET /v1/contacts/requests` → `{requests: [entry], total, ignored: [entry + ignore_id]}`; entry = `{kind: "contact", requester_key_id, grant_attestation_id, granted_by_key_id, granted_to_key_id, requested_at, grant, accept: {method: "POST", path: "/v1/contacts", body: {key_id}}, ignore: {method: "POST", path}}` | CIRISServer | **0.5.237, unreleased** (#819, `ignored` and `ignore` from #820). A request is a grant naming you from someone you have not granted back. It leaves the list once they are your contact. **The only read this card makes** |
+| the requests | `GET /v1/contacts/requests` → `{requests: [entry], total, ignored: [entry + ignore_id]}`; entry = `{kind: "contact", requester_key_id, requester_label, grant_attestation_id, granted_by_key_id, granted_to_key_id, requested_at, grant, accept: {method: "POST", path: "/v1/contacts", body: {key_id}}, ignore: {method: "POST", path}}` | CIRISServer | **0.5.237, unreleased** (#819; `ignored`, `ignore` and `requester_label` from #820). A request is a grant naming you from someone you have not granted back: **one entry per person** (the newest live grant), keyed by `grant_attestation_id`. A withdraw and re-add is a new grant and a new request. **No TTL**: a request lasts as long as its grant (withdrawn, expired, or past `grant.valid_until`). It leaves the list once they are your contact. **The only read this card makes** |
+| whether a contact is mutual | `GET /v1/contacts` rows gain `mutual: bool` — has that person added this owner back | CIRISServer | **0.5.237, unreleased** (#820 @ `b784f8f9`). The requester's row for the other person is `mutual: false` (CSD-005's pending row) until they accept, then `true`; ignore never changes it. Absent on older nodes, where CSD-005 is unchanged |
 | the same requests, in the invitation inbox | `GET /v1/self/invites` → `contact_requests: [entry]` beside `invites` | CIRISServer | **0.5.237, not read here.** Pending only, no `ignored`. CSD-106's inbox model reads this route for groups; it ignores `contact_requests`, so a request is never drawn twice |
-| accept | the entry's `accept`: `POST /v1/contacts {key_id}` | CIRISServer | **live since 0.5.185** (CSD-005's add). The client sends the entry's body as given rather than building it. The outcomes are CSD-005's: added, `freshly_emitted: false`, or 202 `contacts.awaiting_key_body` (a pending row) |
+| accept | the entry's `accept`: `POST /v1/contacts {key_id}` | CIRISServer | **live since 0.5.185** (CSD-005's add). The client sends the entry's body as given rather than building it. The outcomes are CSD-005's: added, `freshly_emitted: false`, or 202 `contacts.awaiting_key_body` (a pending row; unlikely here, since the grant was admitted, but possible while the add ladder waits on the person's key body) |
 | ignore | `POST /v1/contacts/requests/{grant_attestation_id}/ignore` → 200 `{state: "ignored", grant_attestation_id, ignore_id}` | CIRISServer | **0.5.237, unreleased** (#820). Private: the requester's node never learns. Reversible |
 | un-ignore | `DELETE /v1/contacts/requests/{grant_attestation_id}/ignore` → 200 `{state: "pending", grant_attestation_id, withdrawal_id}` | CIRISServer | **0.5.237, unreleased** (#820) |
 | refusals | `contacts.request_not_found` (404: not a pending request), `contacts.request_not_ignored` (404: un-ignore of a request that is not ignored), `contacts.delegate_may_not_answer` (403: a delegate session read the list but may not answer) | CIRISServer | **0.5.237**, queued in the server's `KNOWN_UNLOCALIZED` for this bundle. Rendered by id through `NodeRefusal`. A 404 on an answer re-reads the list (the request was answered elsewhere, or withdrawn) |
@@ -161,9 +165,9 @@ CIRISAgent's cross-platform chat stage will drive:
 
 1. **Ada adds Cy by code** (CSD-005 `input_contacts_add_key` → `btn_contacts_add_submit`). Ada's list shows Cy as a contact or a pending row.
 2. **Cy sees the request.** Within 60 s (polling, §2), `row_contact_request_{grant}` is visible on Cy's People. Cy has not added Ada.
-3. **Ignore path.** Cy taps `btn_contact_request_ignore_{grant}`. The row leaves the requests and appears as `row_contact_request_ignored_{grant}` after opening the Ignored section. **Ada's view is unchanged** (her row for Cy reads exactly as before). Cy taps `btn_contact_request_unignore_{grant}`; the row returns.
+3. **Ignore path.** Cy taps `btn_contact_request_ignore_{grant}`. The row leaves the requests and appears as `row_contact_request_ignored_{grant}` after opening the Ignored section. **Ada's view is unchanged**: her row for Cy stays `mutual: false`. Cy taps `btn_contact_request_unignore_{grant}`; the row returns.
 4. **Accept path.** Cy taps `btn_contact_request_accept_{grant}` → `sheet_contact_request_accept` with its three facts → `btn_contact_request_accept_confirm`. Cy's list now has `contacts_row_{ada}`; the request row is gone on the re-read.
-5. **Both are contacts.** Within 60 s, Ada's row for Cy is a contact, not pending.
+5. **Both are contacts.** Within 60 s, Ada's row for Cy reads `mutual: true` (a contact, not pending).
 6. **Pair chat.** Ada opens chat with Cy (CSD-091); Cy accepts the pair-room invitation on Ada's row (`btn_contacts_chat_accept_{ada}`). One message each way arrives.
 7. **Decline path:** reserved until CIRISPersist#1121. Cy taps `btn_contact_request_decline_{grant}`; Ada's node sees the decline and no one else does.
 
@@ -196,27 +200,18 @@ node cannot observe either.
 
 ## 6. Delta — card vs API vs CC
 
-**Open questions for the server (sign-off):**
+**Signed off by CIRISServer, 2026-10-25** (CIRISServer#820 @ `b784f8f9`). The
+five questions this card asked, as answered:
 
-1. **What does `grant` carry about the requester?** If it holds a self-given
-   name (from their contact code), the row shows it marked as theirs. If it
-   holds only key ids, the row is "Someone wants to connect" + short key id,
-   which is honest but thin. Is a name available, and is it the requester's own
-   claim?
-2. **Is a 202 `contacts.awaiting_key_body` possible on accept?** The request
-   exists because the requester's grant replicated here, so this node should
-   already hold their key. If it can still happen, the card treats it as
-   CSD-005's pending row.
-3. **Ordering and identity.** The card sorts newest first by `requested_at`
-   and keys rows by `grant_attestation_id`. Can one person have more than one
-   pending request (a re-add after removal), and should the client collapse
-   them by `requester_key_id`?
-4. **Expiry.** Do requests expire, or stand until accepted, ignored or the
-   requester removes their grant? The card shows no expiry.
-5. **What the requester sees.** The card says the requester's view is
-   unchanged by ignore and shows nothing on accept beyond the contact
-   completing. Is there anything on the requester's side the client should
-   draw (for example, CSD-005's pending row resolving)?
+1. **The requester's name**: `grant` carries key ids only; the server added
+   `requester_label`, the person's own unverified label, null for a key not of
+   the `<label>-<fingerprint>` form (§2).
+2. **A 202 on accept**: unlikely but possible; CSD-005's pending row stays.
+3. **More than one request per person**: no; one entry per person, so the
+   client does not collapse.
+4. **Expiry**: no request TTL; a request lasts as long as its grant.
+5. **The requester's side**: `mutual` on each contact row (§3) is the exact
+   signal; ignore never changes it.
 
 **Deferred, by design:**
 
