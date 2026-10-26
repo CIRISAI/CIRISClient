@@ -3,10 +3,11 @@
 **CSD**: CSD-109 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the maintainer's ask of 2026-10-25 to lock membership invitations down end to end, contact requests included (CIRISServer `FSD/MEMBERSHIP_INVITES.md` §8; CIRISServer#819, #820)
 **Extends**: CSD-005 (People — the request section sits above the contact list). **No new card** (§2).
 **Reads with**: CSD-092 (the contact code that starts a request), CSD-091 (the pair chat a new contact can open), CSD-106 (the group-invitation inbox, which this does not merge into)
-**Flow**: `testing/flows/drafts/csd-109-contact-requests.yaml` (to be written with the build; floor `unreleased`: no released client carries these tags, and no released node serves these routes — ciris-server 0.5.237 will)
+**Flow**: `testing/flows/drafts/csd-109-contact-requests.yaml` (floor `unreleased`: no released client carries these tags, and no released node serves these routes — ciris-server 0.5.237 will)
+**Built**: `ContactRequestsViewModel`, `ui/screens/ContactRequestsSection.kt` (drawn by `ContactsScreen` above every list state), `ClientContactRequestsApi`; tested by `ContactRequestsViewModelTest` (commonTest) and `ContactRequestsWireTest` (desktopTest)
 
 ```yaml csd:stage
-stage: sketched
+stage: building
 owner: CIRISClient
 ```
 
@@ -58,7 +59,7 @@ so there is no name you gave them. When the entry's `requester_label` is set
 their own claim, never verified), the row reads "{label} (they named
 themselves) wants to connect". When it is null, "Someone wants to connect".
 Either way the requester's short key id follows (`requester_key_id`, first 8
-characters, the receipt's convention), then "Asked {relative time}" from
+characters, the receipt's convention), then "Asked {date}" from
 `requested_at`. The row opens the grant's receipt (CSD-006) on tap, as a
 contact row does. A request has no expiry of its own: it lasts as long as its
 grant, so no date is drawn.
@@ -93,40 +94,40 @@ fields:
   - ceg: x_private:contact_request
     use: display-only
     type: string
-    example: "ada (they named themselves) wants to connect · 9f3a1c2e · Asked 2 min ago"
-    renders: "one row per pending request: '{requester_label} (they named themselves) wants to connect', or 'Someone wants to connect' when requester_label is null, then the requester's short key id and 'Asked {relative time}' from requested_at. From GET /v1/contacts/requests; nothing is inferred from a contact list the requester is not on"
-    tag: "proposed:row_contact_request_*"
+    example: "ada (they named themselves) wants to connect · 9f3a1c2e · Asked 2026-10-25"
+    renders: "one row per pending request: '{requester_label} (they named themselves) wants to connect', or 'Someone wants to connect' when requester_label is null, then the requester's short key id and 'Asked {date}' from requested_at. From GET /v1/contacts/requests; nothing is inferred from a contact list the requester is not on"
+    tag: "row_contact_request_*"
   - ceg: x_private:contact_request_accept
     use: emit
     type: string
     example: "grant-att-7"
     renders: "Accept, behind the three-fact confirm (sheet_contact_request_accept), POSTing the entry's own accept body. The notice is 'You're now contacts.' only when the node answers without a reason_id; a 202 pending (contacts.awaiting_key_body) is CSD-005's pending row, never 'contacts'"
-    tag: "proposed:btn_contact_request_accept_*"
+    tag: "btn_contact_request_accept_*"
   - ceg: x_private:contact_request_ignore
     use: emit
     type: string
     example: "grant-att-7"
     renders: "Ignore, one tap, no confirm: POST …/{grant_attestation_id}/ignore. Notice 'Ignored. They aren't told.'; the row moves to the Ignored section on the re-read"
-    tag: "proposed:btn_contact_request_ignore_*"
+    tag: "btn_contact_request_ignore_*"
   - ceg: x_private:contact_request_ignored
     use: display-only
     type: string
     example: "9f3a1c2e · Ignored 1 day ago"
     renders: "one row per ignored request in the collapsed 'Ignored' section, from the list's `ignored` entries (each carries ignore_id). Shown only to the person; the requester's view never changes"
-    tag: "proposed:row_contact_request_ignored_*"
+    tag: "row_contact_request_ignored_*"
   - ceg: x_private:contact_request_unignore
     use: emit
     type: string
     example: "grant-att-7"
     renders: "Un-ignore, one tap: DELETE …/{grant_attestation_id}/ignore. Notice 'Back in your requests.'; the row returns to the requests section on the re-read"
-    tag: "proposed:btn_contact_request_unignore_*"
+    tag: "btn_contact_request_unignore_*"
 ```
 
 ```yaml csd:states
-populated: {tag: "proposed:contact_requests_list", renders: "the 'Wants to connect' heading and one row per pending request, newest first, above the contact list"}
-empty:     {tag: "proposed:contact_requests_empty", renders: "nothing visible: no requests is the normal case and People's own list speaks. A zero-height marker carries the tag"}
-loading:   {tag: "proposed:contact_requests_loading", renders: "nothing visible on the first read (the contact list's own loading speaks); a zero-height marker carries the tag"}
-error:     {tag: "proposed:contact_requests_error", renders: "'Couldn't read your requests.' with the node's refusal by id, above the contact list, which still shows. A node without the route is contact_requests_unsupported: a zero-height marker and no sentence, never 'no requests'"}
+populated: {tag: "contact_requests_list", renders: "the 'Wants to connect' heading and one row per pending request, newest first, above the contact list"}
+empty:     {tag: "contact_requests_empty", renders: "nothing visible: no requests is the normal case and People's own list speaks. A zero-height marker carries the tag"}
+loading:   {tag: "contact_requests_loading", renders: "nothing visible on the first read (the contact list's own loading speaks); a zero-height marker carries the tag"}
+error:     {tag: "contact_requests_error", renders: "'Couldn't read your requests.' with the node's refusal by id, above the contact list, which still shows. A node without the route is contact_requests_unsupported: a zero-height marker and no sentence, never 'no requests'"}
 ```
 
 ## 3. Contracts (who)

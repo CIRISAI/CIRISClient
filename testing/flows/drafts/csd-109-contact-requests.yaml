@@ -1,0 +1,50 @@
+csd: CSD-109
+flow: csd_109_contact_requests
+title: Contact requests — "wants to connect" on People, with Accept and Ignore
+description: >-
+  CSD-109 §4, driven. On one node, as its owner: People composes a
+  contact-requests state above the list (on a fresh node, nothing: the
+  zero-height empty marker, never the error), or the unsupported marker on a
+  node older than 0.5.237. A request is written by another person's node and
+  reaches this one by replication, so the populated steps need two persons on
+  two nodes (Ada adds Cy by code; Cy sees the request). They are optional
+  until the fixture can stand them up; CIRISAgent's cross-platform chat stage
+  drives them end to end.
+# Floor: every tag below is a string literal or a literal-prefixed builder in
+# ui/screens/ContactRequestsSection.kt (ContactRequestTags);
+# sheet_contact_request_accept, contact_request_accept_fact_1..3 and
+# btn_contact_request_accept_confirm/_cancel are derived by ConfirmSheet from
+# tagPrefix "contact_request_accept". No release carries them yet.
+# FIXTURE. The optional steps need the leg's client signed in as the person
+# who was ADDED: testing/gate/two_node.py peers a second node, whose owner
+# must POST /v1/contacts {key_id: <this owner's code>} over HTTP before the
+# leg's People screen is read.
+# Accept, Ignore and Un-ignore are driven by CIRISAgent's cross-platform chat
+# stage, which knows the request's grant_attestation_id (CSD-109 §4 steps 3-6);
+# here they would need a fixture value naming it.
+# NOT asserted: delivery of the grant to this node (persist's replication), and
+# that an ignore stays private on the requester's node (CSD-109 §5).
+client: "unreleased"
+
+steps:
+  - step_id: people_composes_a_requests_state
+    title: People shows contact requests in one of their states, never the error
+    description: >-
+      Entry: People › Contacts. With nobody asking, nothing is drawn: the
+      zero-height marker carries the tag. A node older than 0.5.237 draws
+      contact_requests_unsupported instead, and no sentence.
+    requires:
+      screen: Contacts
+    expect:
+      count: {of: "contact_requests_*", min: 1}
+      absent: [contact_requests_error]
+
+  - step_id: a_request_is_shown_with_accept_and_ignore
+    title: Someone who added you is a row with Accept and Ignore
+    optional_step: true
+    requires:
+      screen: Contacts
+      visible: [contact_requests_list]
+    expect:
+      visible: [contact_requests_list]
+      count: {of: "row_contact_request_*", min: 1}
