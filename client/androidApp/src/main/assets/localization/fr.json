@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Ce code est trop ancien pour être ajouté directement. Demandez-leur-en un nouveau, ou ajoutez-les via l'appairage.",
     "consent_emit_failed": "Le nœud n’a pas pu émettre l’octroi de consentement qui fait de cette identité un contact. Rien n’a été modifié.",
     "consent_not_granted": "Vous ne les avez pas encore acceptés sur cet appareil. Acceptez-les pour continuer.",
+    "delegate_may_not_answer": "répondre à une demande de contact est l'acte propre du propriétaire",
+    "request_not_found": "Cette demande n'est plus en attente. Elle a peut-être été traitée sur un autre appareil, ou retirée.",
+    "request_not_ignored": "Cette demande n'est plus ignorée.",
     "delegation_denied": "La délégation de cette session n'accorde pas cette action.",
     "key_pull_unavailable": "Cet appareil n'est pas connecté au réseau CIRIS pour le moment, il ne peut donc pas rechercher cette personne. Réessayez lorsqu'il sera en ligne, ou ajoutez-la depuis un autre de vos appareils.",
     "malformed_body": "key_id doit être un identifiant de clé de fédération non vide",
@@ -6163,5 +6166,20 @@
     "unexpected": "réponse inattendue de votre autre appareil",
     "unknown_identity": "impossible de trouver cette identité",
     "unreachable": "impossible de joindre votre autre appareil"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Cette demande de liaison de propriétaire n'a pas pu être lue.",
+    "build_failed": "La liaison de propriétaire n'a pas pu être créée sur cet appareil.",
+    "cohort_invalid": "Ce n'est pas une portée dans laquelle un appareil peut être possédé. Elle doit être self, family ou community.",
+    "no_identity": "aucun ID de fédération sur cet appareil — la liaison est signée par l'ID de fédération du propriétaire ou une clé de liste de membres de celui-ci",
+    "signer_unavailable": "Votre identité n'a pas pu être ouverte pour signer la liaison."
+  },
+  "upgrade_owner": {
+    "already_owned": "Cet appareil a déjà un propriétaire. Une liaison de propriétaire ne transfère jamais un appareil déjà possédé à quelqu'un d'autre.",
+    "bad_request": "Cette liaison de propriétaire n'a pas pu être lue. Signez-en une nouvelle sur votre propre appareil et réessayez.",
+    "binding_rejected": "La liaison de propriétaire a été refusée : elle ne se vérifie pas, ou elle désigne un autre appareil.",
+    "cohort_invalid": "Ce n'est pas une portée dans laquelle un appareil peut être possédé. Elle doit être self, family ou community.",
+    "directory": "Ce nœud n'a pas pu déterminer qui le possède. Réessayez dans un instant.",
+    "roster_proof_refused": "La preuve que votre autre appareil vous appartient a été refusée, la liaison n'a donc pas été stockée."
   }
 }

@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Kóòdù yìí ti dàgbà jù láti fi kún taara. Bèèrè lọ́wọ́ wọn fún òmíràn tuntun, tàbí fi wọ́n kún nípasẹ̀ ìsopọ̀ ẹlẹgbẹ́-sí-ẹlẹgbẹ́.",
     "consent_emit_failed": "Nóòdù náà kò lè gbé ìyọ̀ǹda àṣẹ tí ó sọ eléyìí di olùbásọ̀rọ̀ jáde. Kò sí ohun tí ó yí padà.",
     "consent_not_granted": "O kò tíì gba wọ́n lórí ẹ̀rọ yìí. Gba wọ́n kí o lè tẹ̀síwájú.",
+    "delegate_may_not_answer": "Dídáhùn ìbéèrè olùbásọ̀rọ̀ jẹ́ ìṣe tìkára-ẹni olówó náà.",
+    "request_not_found": "Ìbéèrè yẹn kò ṣì dúró de ìdáhùn mọ́. Ó lè jẹ́ pé a ti dáhùn rẹ̀ lórí ẹ̀rọ mìíràn, tàbí kí a ti yọ ọ́ kúrò.",
+    "request_not_ignored": "A kò ṣì fojú fo ìbéèrè yẹn mọ́.",
     "delegation_denied": "Ìfilélẹ̀-àṣẹ sáà yìí kò fún ìṣe yẹn ní àṣẹ.",
     "key_pull_unavailable": "Ẹ̀rọ yìí kò sopọ̀ mọ́ nẹ́tíwọ̀ọ̀kì CIRIS lọ́wọ́lọ́wọ́, nítorí náà kò lè wá ẹni yìí. Gbìyànjú lẹ́ẹ̀kan síi nígbà tí ó bá wà lórí ayélujára, tàbí fi wọ́n kún láti orí ẹ̀rọ rẹ mìíràn.",
     "malformed_body": "key_id gbọ́dọ̀ jẹ́ ID kọ́kọ́rọ́ ìṣọ̀kan tí kò ṣófo",
@@ -6163,5 +6166,20 @@
     "unexpected": "ìdáhùn tí a kò retí láti ọ̀dọ̀ ẹ̀rọ rẹ mìíràn",
     "unknown_identity": "a kò lè rí ìdánimọ̀ yẹn",
     "unreachable": "a kò lè dé ẹ̀rọ rẹ mìíràn"
+  },
+  "sign_owner_binding": {
+    "bad_request": "A kò lè ka ìbéèrè ìdè-ìní yẹn.",
+    "build_failed": "A kò lè kọ́ ìdè-ìní náà lórí ẹ̀rọ yìí.",
+    "cohort_invalid": "Èyí kì í ṣe àgbègbè tí a lè ní ẹ̀rọ kan ní ìní nínú rẹ̀. Ó gbọ́dọ̀ jẹ́ ti ara-ẹni, ìdílé, tàbí àwùjọ.",
+    "no_identity": "kò sí ID Ìṣọ̀kan-Àjùmọ̀ṣe lórí ẹ̀rọ yìí — a fọwọ́sí ìdè-ìní náà pẹ̀lú ID Ìṣọ̀kan-Àjùmọ̀ṣe olówó náà tàbí kọ́kọ́rọ́ àkójọ mẹ́ńbà kan nínú rẹ̀",
+    "signer_unavailable": "A kò lè ṣí ìdánimọ̀ rẹ láti fọwọ́sí ìdè-ìní náà."
+  },
+  "upgrade_owner": {
+    "already_owned": "Ẹ̀rọ yìí ti ní olówó tẹ́lẹ̀. Ìdè-ìní kò gbé ẹ̀rọ tí ó ní olówó lọ sọ́dọ̀ ẹlòmíràn rí.",
+    "bad_request": "A kò lè ka ìdè-ìní yẹn. Fọwọ́sí ọ̀kan tuntun lórí ẹ̀rọ tìrẹ, kí o sì tún gbìyànjú.",
+    "binding_rejected": "A kọ ìdè-ìní náà: kò jẹ́rìísí, tàbí ó dárúkọ ẹ̀rọ mìíràn.",
+    "cohort_invalid": "Èyí kì í ṣe àgbègbè tí a lè ní ẹ̀rọ kan ní ìní nínú rẹ̀. Ó gbọ́dọ̀ jẹ́ ti ara-ẹni, ìdílé, tàbí àwùjọ.",
+    "directory": "Nódù yìí kò lè mọ ẹni tí ó ní i. Gbìyànjú lẹ́ẹ̀kan síi láìpẹ́.",
+    "roster_proof_refused": "A kọ ẹ̀rí náà pé ẹ̀rọ rẹ mìíràn jẹ́ tìrẹ, nítorí náà a kò fi ìdè-ìní náà pamọ́."
   }
 }
