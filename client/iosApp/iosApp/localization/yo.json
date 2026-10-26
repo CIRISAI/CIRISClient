@@ -1231,6 +1231,7 @@
     "logs_download_too_old": "Aṣojú yìí ti darúgbó jù fún gbígba àkọsílẹ̀ sílẹ̀. Ó nílò CIRIS Agent 2.17.0 tàbí èyí tí ó tẹ̀lé e.",
     "logs_download_not_owner": "Olówó nìkan ló lè gba àwọn àkọsílẹ̀ sílẹ̀.",
     "logs_download_failed": "A kò lè gba àwọn àkọsílẹ̀ sílẹ̀: {why}",
+    "logs_share": "Pín",
     "roster_title": "Àwọn ìyípadà sí àwọn ẹ̀rọ rẹ",
     "roster_desc": "Bí o bá ní ẹ̀rọ méjì tàbí jù bẹ́ẹ̀ lọ lórí CIRIS ID rẹ, fífikún tàbí yíyọ ọ̀kan kúrò jẹ́ ìyípadà tí àwọn ẹ̀rọ rẹ mìíràn máa dáhùn sí. Gbà tàbí takò láti orí ẹ̀rọ tí kì í ṣe èyí tí ó dá àbá náà.",
     "roster_too_old": "Nóòdù yìí ti darúgbó jù láti di àwọn ìyípadà sí àwọn ẹ̀rọ rẹ mú fún àwọn ẹ̀rọ rẹ mìíràn láti dáhùn sí. Ṣàtúnṣe rẹ̀ láti rí wọn níbí.",

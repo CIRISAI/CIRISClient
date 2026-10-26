@@ -534,6 +534,9 @@ class InteractViewModel(
     private val _attachmentPolicySource = MutableStateFlow(AttachmentPolicySource.PENDING)
     val attachmentPolicySource: StateFlow<AttachmentPolicySource> = _attachmentPolicySource.asStateFlow()
 
+    /** The agent's full log zip for the diagnostics panel (CIRISClient#249); this screen has the owner session. */
+    suspend fun downloadLogsZip(): ai.ciris.mobile.shared.api.LogsDownload = apiClient.downloadLogsZip()
+
     /** Read the policy now (chat opening calls [refreshAttachmentPolicy]). */
     suspend fun loadAttachmentPolicy() {
         val method = "loadAttachmentPolicy"

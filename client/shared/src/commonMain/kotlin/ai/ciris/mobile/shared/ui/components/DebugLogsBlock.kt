@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.components
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import ai.ciris.mobile.shared.platform.copyToClipboard
 import ai.ciris.mobile.shared.platform.isDebugExportAvailable
 import ai.ciris.mobile.shared.platform.saveDebugBundle
@@ -61,6 +63,12 @@ fun DebugLogsBlock(
      *  else to offer. */
     initiallyExpanded: Boolean = false,
     modifier: Modifier = Modifier,
+    /**
+     * The agent's full log zip (CIRISAgent 2.17.0, CIRISClient#249), where the
+     * screen has an owner session to ask with. Null on login and startup: those
+     * keep the bundle's 32 KiB tails, which need no session.
+     */
+    fetchLogsZip: (suspend () -> ai.ciris.mobile.shared.api.LogsDownload)? = null,
 ) {
     // Desktop and mobile only. On web there is nothing to export — the node is
     // remote and the log buffer is deliberately not populated there — and under
@@ -72,6 +80,7 @@ fun DebugLogsBlock(
 
     var expanded by remember { mutableStateOf(initiallyExpanded) }
     var result by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     Column(modifier = modifier.fillMaxWidth()) {
         // testableWithHandler, not testable: `testable` only TAGS the element.
@@ -131,14 +140,17 @@ fun DebugLogsBlock(
                     // Named lambda so the button and the test handler invoke
                     // the SAME code path — a test that drives a parallel copy
                     // proves nothing about the button.
-                    val doSave = {
-                        val bundle = DebugBundle.render(extra)
-                        val path = saveDebugBundle(DebugBundle.fileName(), bundle)
-                        // Name the path, or say plainly that nothing was written.
-                        // "Saved" with no location is a dead end for whoever has
-                        // to find the file.
-                        result = path?.let { "Saved to:\n$it" }
-                            ?: "Could not write a file here. Use Copy instead."
+                    val doSave: () -> Unit = {
+                        scope.launch {
+                            val bundle = DebugBundle.render(extra)
+                            val path = saveDebugBundle(DebugBundle.fileName(), bundle)
+                            // Name the path, or say plainly that nothing was written.
+                            // "Saved" with no location is a dead end for whoever has
+                            // to find the file.
+                            val head = path?.let { "Saved to:\n$it" }
+                                ?: "Could not write a file here. Use Copy instead."
+                            result = head + "\n" + fullLogsLine(fetchLogsZip?.let { it() })
+                        }
                     }
                     OutlinedButton(
                         onClick = doSave,
@@ -147,12 +159,19 @@ fun DebugLogsBlock(
                             .testableWithHandler("btn_debug_download") { doSave() },
                     ) { Text("Download", fontSize = 12.sp) }
 
-                    val doCopy = {
-                        val bundle = DebugBundle.render(extra)
-                        result = if (copyToClipboard(bundle)) {
-                            "Copied to clipboard — paste it into the report."
-                        } else {
-                            "Clipboard unavailable. Select the text below."
+                    val doCopy: () -> Unit = {
+                        scope.launch {
+                            // Copy stays text: the bundle (with its 32 KiB tails),
+                            // plus the route's MANIFEST.txt when it answered.
+                            val zip = fetchLogsZip?.let { it() } as? ai.ciris.mobile.shared.api.LogsDownload.Got
+                            val manifest = zip?.let { ai.ciris.mobile.shared.platform.zipTextEntry(it.bytes, "MANIFEST.txt") }
+                            val bundle = DebugBundle.render(extra) +
+                                (manifest?.let { "\nAgent log download manifest\n---------------------------\n" + DebugBundle.redactSecrets(it) } ?: "")
+                            result = if (copyToClipboard(bundle)) {
+                                "Copied to clipboard — paste it into the report."
+                            } else {
+                                "Clipboard unavailable. Select the text below."
+                            }
                         }
                     }
                     OutlinedButton(
@@ -202,4 +221,22 @@ fun DebugLogsBlock(
             }
         }
     }
+}
+
+/**
+ * What the panel says about the agent's full logs after a Download
+ * (CIRISClient#249): the zip it saved, or which fallback the bundle is.
+ */
+private fun fullLogsLine(got: ai.ciris.mobile.shared.api.LogsDownload?): String = when (got) {
+    null -> "Log tails: the bundle carries the last 32 KiB of each agent log (sign in as the owner for the full logs)."
+    is ai.ciris.mobile.shared.api.LogsDownload.Got ->
+        ai.ciris.mobile.shared.platform.saveFileCopy(got.fileName, "application/zip", got.bytes)
+            ?.let { "Full agent and node logs saved to:\n$it" }
+            ?: "The full logs arrived but could not be written here; the bundle carries 32 KiB tails."
+    ai.ciris.mobile.shared.api.LogsDownload.AgentTooOld ->
+        "Full logs: this agent is too old for a log download (needs 2.17.0); the bundle carries 32 KiB tails."
+    is ai.ciris.mobile.shared.api.LogsDownload.NotOwner ->
+        "Full logs need the owner's session; the bundle carries 32 KiB tails."
+    is ai.ciris.mobile.shared.api.LogsDownload.Failed ->
+        "Full logs could not be fetched (${got.detail ?: "HTTP ${got.status}"}); the bundle carries 32 KiB tails."
 }

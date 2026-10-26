@@ -1200,6 +1200,7 @@
     "logs_download_too_old": "Wannan wakili ya yi tsufa don saukar logs. Yana buƙatar CIRIS Agent 2.17.0 ko sabo.",
     "logs_download_not_owner": "Mai mallaka kaɗai zai iya sauke logs ɗin.",
     "logs_download_failed": "An kasa sauke logs ɗin: {why}",
+    "logs_share": "Raba",
     "roster_title": "Canje-canje ga na'urorinku",
     "roster_desc": "Idan kuna da na'urori biyu ko fiye a kan CIRIS ID ɗinku, ƙarawa ko cirewa na'ura ɗaya canji ne da sauran na'urorinku ke amsawa. Ku yarda ko ku yi ƙorafi daga na'urar da ba ta gabatar da shi ba.",
     "roster_too_old": "Wannan node ya yi tsufa don riƙe canje-canje ga na'urorinku domin sauran na'urorinku su amsa. Ku sabunta shi domin ganin su a nan.",

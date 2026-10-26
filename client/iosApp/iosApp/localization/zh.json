@@ -1208,6 +1208,7 @@
     "logs_download_too_old": "此智能体版本过旧，无法下载日志。需要 CIRIS Agent 2.17.0 或更高版本。",
     "logs_download_not_owner": "只有所有者才能下载日志。",
     "logs_download_failed": "无法下载日志：{why}",
+    "logs_share": "分享",
     "roster_title": "您设备的更改",
     "roster_desc": "当您的 CIRIS ID 关联两台或更多设备时，添加或移除某台设备都是需要您的其他设备应答的更改。请从未提出该更改的设备上表示同意或反对。",
     "roster_too_old": "此节点版本过旧，无法保留供您其他设备应答的设备更改。请更新后在此查看。",

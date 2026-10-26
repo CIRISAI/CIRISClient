@@ -1200,6 +1200,7 @@
     "logs_download_too_old": "Wakala huyu ni wa zamani mno kwa upakuaji wa kumbukumbu. Anahitaji CIRIS Agent 2.17.0 au toleo jipya zaidi.",
     "logs_download_not_owner": "Mmiliki pekee ndiye anayeweza kupakua kumbukumbu.",
     "logs_download_failed": "Kumbukumbu hazikuweza kupakuliwa: {why}",
+    "logs_share": "Shiriki",
     "roster_title": "Mabadiliko kwa vifaa vyako",
     "roster_desc": "Ukiwa na vifaa viwili au zaidi kwenye CIRIS ID yako, kuongeza au kuondoa kimoja ni badiliko ambalo vifaa vyako vingine hujibu. Kubali au pinga kutoka kifaa ambacho hakikupendekeza badiliko hilo.",
     "roster_too_old": "Nodi hii ni ya zamani mno kushikilia mabadiliko kwa vifaa vyako ili vifaa vyako vingine vijibu. Isasishe ili uyaone hapa.",

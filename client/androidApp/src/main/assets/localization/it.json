@@ -1229,6 +1229,7 @@
     "logs_download_too_old": "Questo agente è troppo vecchio per il download dei log. Richiede CIRIS Agent 2.17.0 o successivo.",
     "logs_download_not_owner": "Solo il proprietario può scaricare i log.",
     "logs_download_failed": "Non è stato possibile scaricare i log: {why}",
+    "logs_share": "Condividi",
     "roster_title": "Modifiche ai tuoi dispositivi",
     "roster_desc": "Con due o più dispositivi sul tuo CIRIS ID, aggiungerne o rimuoverne uno è una modifica a cui i tuoi altri dispositivi devono rispondere. Dai il consenso o opponiti da un dispositivo che non l'ha proposta.",
     "roster_too_old": "Questo nodo è troppo vecchio per trattenere le modifiche ai tuoi dispositivi affinché gli altri possano rispondervi. Aggiornalo per vederle qui.",

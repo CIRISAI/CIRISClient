@@ -10,3 +10,7 @@ actual fun saveDebugBundle(fileName: String, content: String): String? = null
 actual fun copyToClipboard(text: String): Boolean = false
 
 actual fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String? = null
+
+actual fun canShareFiles(): Boolean = false
+actual fun shareFile(fileName: String, mediaType: String, bytes: ByteArray): Boolean = false
+actual fun zipTextEntry(zip: ByteArray, name: String): String? = null

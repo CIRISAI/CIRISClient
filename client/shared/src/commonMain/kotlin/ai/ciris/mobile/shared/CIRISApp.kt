@@ -3978,6 +3978,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] User asked for the log zip")
                         logsViewModel.downloadLogs()
                     },
+                    onShare = if (logsViewModel.canShare) ({ logsViewModel.shareLogs() }) else null,
                     onRefresh = {
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] User triggered refresh")
                         logsViewModel.refresh()

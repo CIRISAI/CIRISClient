@@ -38,3 +38,13 @@ private fun freeName(dir: File, fileName: String): File {
         n++
     }
 }
+
+/** Desktop has no share sheet; the saved path is the hand-off. */
+actual fun canShareFiles(): Boolean = false
+actual fun shareFile(fileName: String, mediaType: String, bytes: ByteArray): Boolean = false
+
+actual fun zipTextEntry(zip: ByteArray, name: String): String? = runCatching {
+    java.util.zip.ZipInputStream(zip.inputStream()).use { z ->
+        generateSequence { z.nextEntry }.firstOrNull { it.name == name }?.let { z.readBytes().decodeToString() }
+    }
+}.getOrNull()
