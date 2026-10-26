@@ -37,8 +37,24 @@ actual fun saveDebugBundle(fileName: String, content: String): String? =
 actual fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String? =
     writeToDownloads(fileName, mediaType, bytes)
 
+/**
+ * WHY A WRITE FAILED, SAID IN THE LOG (the maintainer's phone, 2026-10-26:
+ * Samsung SM-G998U, Android 15, a Play release build). Download "did not work"
+ * and Copy did, and the bundle could not say which step refused: every failure
+ * here returned a bare null. Each one now logs its step and cause into the
+ * buffer the next bundle carries (Copy still works, so that bundle arrives).
+ */
+private fun exportFailed(step: String, e: Throwable? = null): String? {
+    ai.ciris.mobile.shared.platform.PlatformLogger.w(
+        "DebugBundleExport",
+        "[writeToDownloads] $step failed on API ${Build.VERSION.SDK_INT} (${Build.MANUFACTURER} ${Build.MODEL})" +
+            (e?.let { ": ${it::class.simpleName}: ${it.message}" } ?: ""),
+    )
+    return null
+}
+
 internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArray): String? {
-    val ctx = appContext ?: return null
+    val ctx = appContext ?: return exportFailed("no Context (initDebugBundleExport was never called)")
     return runCatching {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // IS_PENDING keeps the row invisible to other apps until the bytes
@@ -56,7 +72,7 @@ internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArr
             val uri = ctx.contentResolver.insert(
                 MediaStore.Downloads.EXTERNAL_CONTENT_URI,
                 values,
-            ) ?: return@runCatching null
+            ) ?: return@runCatching exportFailed("MediaStore insert into Downloads (returned null)")
 
             val wrote = runCatching {
                 ctx.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
@@ -64,7 +80,7 @@ internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArr
             }
             if (wrote.isFailure) {
                 runCatching { ctx.contentResolver.delete(uri, null, null) }
-                return@runCatching null
+                return@runCatching exportFailed("writing the bytes", wrote.exceptionOrNull())
             }
 
             // Publish only now that the file is complete.
@@ -81,20 +97,28 @@ internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArr
             // Both are the same failure as an empty row, which this function
             // already knew to clean up: something is in MediaStore that the
             // user cannot reach and did not ask to keep.
-            val published = runCatching {
+            val publish = runCatching {
                 ctx.contentResolver.update(
                     uri,
                     ContentValues().apply { put(MediaStore.MediaColumns.IS_PENDING, 0) },
                     null,
                     null,
                 )
-            }.getOrDefault(0)
+            }
+            val published = publish.getOrDefault(0)
             if (published <= 0) {
                 runCatching { ctx.contentResolver.delete(uri, null, null) }
-                return@runCatching null
+                return@runCatching exportFailed("publishing (IS_PENDING=0 updated $published rows)", publish.exceptionOrNull())
             }
+            // THE NAME MEDIASTORE ACTUALLY GAVE IT. On a collision Android
+            // stores "name (1).txt" and the panel used to report the name it
+            // asked for, which is a file the user then could not find.
+            val stored = runCatching {
+                ctx.contentResolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)
+                    ?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+            }.getOrNull() ?: fileName
             // A name the user can search for, not a URI they cannot act on.
-            "Downloads/$fileName"
+            "Downloads/$stored"
         } else {
             // Pre-Q (API 24-28): the app-specific external dir, NOT public
             // Downloads.
@@ -114,7 +138,7 @@ internal fun writeToDownloads(fileName: String, mimeType: String, bytes: ByteArr
             out.writeBytes(bytes)
             out.absolutePath
         }
-    }.getOrNull()
+    }.getOrElse { exportFailed("the export", it) }
 }
 
 actual fun copyToClipboard(text: String): Boolean {
