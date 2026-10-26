@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "ဤ code သည် တိုက်ရိုက် ထည့်ရန် အလွန်ဟောင်းနွမ်းနေပြီ။ သူတို့ထံမှ အသစ်တစ်ခု တောင်းပါ၊ သို့မဟုတ် peering ဖြင့် ၎င်းတို့ကို ထည့်သွင်းပါ။",
     "consent_emit_failed": "ဤသူကို contact ဖြစ်စေမည့် consent ခွင့်ပြုချက်ကို node က ထုတ်၍မရပါ။ ဘာမှ ပြောင်းလဲမသွားပါ။",
     "consent_not_granted": "သင်သည် ဤ device ပေါ်တွင် ၎င်းတို့ကို လက်ခံရန် မပြုလုပ်ရသေးပါ။ ရှေ့ဆက်ရန် ၎င်းတို့ကို လက်ခံပါ။",
+    "delegate_may_not_answer": "contact request တစ်ခုကို ဖြေကြားခြင်းသည် owner ကိုယ်တိုင်၏ လုပ်ဆောင်ချက် ဖြစ်သည်။",
+    "request_not_found": "ထို request သည် မစောင့်ဆိုင်းတော့ပါ။ အခြား device တစ်ခုတွင် ဖြေကြားပြီး ဖြစ်နိုင်သည်၊ သို့မဟုတ် ရုပ်သိမ်းလိုက်ခြင်း ဖြစ်နိုင်သည်။",
+    "request_not_ignored": "ထို request သည် လျစ်လျူရှုထားခြင်း မရှိတော့ပါ။",
     "delegation_denied": "ဤ session ၏ ကိုယ်စားလွှဲအပ်ခြင်းသည် ထိုလုပ်ဆောင်ချက်ကို ခွင့်ပြုမထားပါ။",
     "key_pull_unavailable": "ဤစက်သည် ယခု CIRIS network နှင့် ချိတ်ဆက်မထားသဖြင့် ဤသူကို ရှာဖွေ၍ မရပါ။ အွန်လိုင်း ဖြစ်သည့်အခါ ထပ်ကြိုးစားပါ၊ သို့မဟုတ် သင်၏ အခြားစက်တစ်ခုမှ ထည့်သွင်းပါ။",
     "malformed_body": "key_id သည် ဗလာမဟုတ်သော federation key id ဖြစ်ရမည်",
@@ -6163,5 +6166,20 @@
     "unexpected": "သင်၏ အခြား device မှ မမျှော်လင့်ထားသော အဖြေ",
     "unknown_identity": "ထို identity ကို ရှာမတွေ့ပါ",
     "unreachable": "သင်၏ အခြား device ကို ဆိုက်ရောက်၍ မရပါ"
+  },
+  "sign_owner_binding": {
+    "bad_request": "ထို owner-binding request ကို ဖတ်၍ မရပါ။",
+    "build_failed": "owner binding ကို ဤ device တွင် တည်ဆောက်၍ မရပါ။",
+    "cohort_invalid": "ထိုသည် device တစ်ခု ပိုင်ဆိုင်နိုင်သော scope မဟုတ်ပါ။ ၎င်းသည် self, family သို့မဟုတ် community ဖြစ်ရပါမည်။",
+    "no_identity": "ဤ device တွင် federation ID မရှိပါ — binding ကို owner ၏ fed-ID သို့မဟုတ် ၎င်း၏ roster key တစ်ခုဖြင့် လက်မှတ်ရေးထိုးထားသည်",
+    "signer_unavailable": "binding ကို လက်မှတ်ရေးထိုးရန် သင့် identity ကို ဖွင့်၍ မရပါ။"
+  },
+  "upgrade_owner": {
+    "already_owned": "ဤ device တွင် owner ရှိပြီးဖြစ်သည်။ owner binding တစ်ခုသည် ပိုင်ဆိုင်ပြီးသား device တစ်ခုကို တစ်ခြားသူထံ ဘယ်တော့မှ မရွှေ့ပါ။",
+    "bad_request": "ထို owner binding ကို ဖတ်၍ မရပါ။ သင့်ကိုယ်ပိုင် device ပေါ်တွင် အသစ်တစ်ခု လက်မှတ်ရေးထိုးပြီး ထပ်မံကြိုးစားပါ။",
+    "binding_rejected": "owner binding ကို ငြင်းပယ်လိုက်သည်- ၎င်းကို အတည်ပြု၍ မရခြင်း၊ သို့မဟုတ် အခြား device တစ်ခုကို ညွှန်ပြထားခြင်း ဖြစ်သည်။",
+    "cohort_invalid": "ထိုသည် device တစ်ခု ပိုင်ဆိုင်နိုင်သော scope မဟုတ်ပါ။ ၎င်းသည် self, family သို့မဟုတ် community ဖြစ်ရပါမည်။",
+    "directory": "ဤ node သည် မည်သူက ပိုင်ဆိုင်ကြောင်း ဖတ်၍ မရပါ။ ခဏနေ၍ ထပ်မံကြိုးစားပါ။",
+    "roster_proof_refused": "သင့် အခြား device သည် သင့်ပိုင်ဆိုင်မှုဖြစ်ကြောင်း သက်သေပြချက်ကို ငြင်းပယ်ခဲ့သဖြင့် binding ကို သိမ်းဆည်းမထားပါ။"
   }
 }

@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "此代码过旧，无法直接添加。请向对方索取新代码，或通过对等连接添加对方。",
     "consent_emit_failed": "节点无法签发使其成为联系人的同意授权。未做任何更改。",
     "consent_not_granted": "您尚未在此设备上接受对方。请接受对方以继续。",
+    "delegate_may_not_answer": "回应联系人请求是所有者本人的行为",
+    "request_not_found": "该请求已不再等待。它可能已在另一台设备上被回应，或已被撤回。",
+    "request_not_ignored": "该请求已不再被忽略。",
     "delegation_denied": "此会话的委派未授予该操作权限。",
     "key_pull_unavailable": "此设备当前未连接到 CIRIS 网络，因此无法查找此人。请在设备联网后重试，或从您的另一台设备添加此人。",
     "malformed_body": "key_id 必须是非空的联邦密钥 ID",
@@ -6163,5 +6166,20 @@
     "unexpected": "您的另一台设备返回了意外的应答",
     "unknown_identity": "找不到该身份",
     "unreachable": "无法连接到您的另一台设备"
+  },
+  "sign_owner_binding": {
+    "bad_request": "该所有者绑定请求无法被读取。",
+    "build_failed": "所有者绑定无法在此设备上构建。",
+    "cohort_invalid": "设备无法在该范围内被拥有。必须是自身、家族或社区。",
+    "no_identity": "此设备上没有联邦 ID——该绑定由所有者的 fed-ID 或其名册密钥签名",
+    "signer_unavailable": "您的身份无法被打开以签署该绑定。"
+  },
+  "upgrade_owner": {
+    "already_owned": "此设备已有所有者。所有者绑定绝不会将已有所有者的设备转移给他人。",
+    "bad_request": "该所有者绑定无法被读取。请在您自己的设备上签署一个新的绑定并重试。",
+    "binding_rejected": "所有者绑定被拒绝：它无法通过验证，或指定了另一台设备。",
+    "cohort_invalid": "设备无法在该范围内被拥有。必须是自身、家族或社区。",
+    "directory": "此节点无法读取其所有者信息。请稍后重试。",
+    "roster_proof_refused": "用于证明您另一台设备归属于您的证明被拒绝，因此该绑定未被存储。"
   }
 }

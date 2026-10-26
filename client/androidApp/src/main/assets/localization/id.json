@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Kode ini terlalu lama untuk ditambahkan secara langsung. Minta kode baru dari mereka, atau tambahkan mereka melalui peering.",
     "consent_emit_failed": "Node tidak dapat menerbitkan pemberian persetujuan yang menjadikan ini sebuah kontak. Tidak ada yang diubah.",
     "consent_not_granted": "Anda belum menerima mereka di perangkat ini. Terima mereka untuk melanjutkan.",
+    "delegate_may_not_answer": "menjawab permintaan kontak adalah tindakan pemilik sendiri",
+    "request_not_found": "Permintaan tersebut tidak lagi menunggu. Permintaan itu mungkin telah dijawab di perangkat lain, atau dicabut.",
+    "request_not_ignored": "Permintaan tersebut tidak lagi diabaikan.",
     "delegation_denied": "Delegasi sesi ini tidak memberikan izin untuk tindakan tersebut.",
     "key_pull_unavailable": "Perangkat ini sedang tidak terhubung ke jaringan CIRIS, jadi tidak dapat mencari orang ini. Coba lagi saat sudah online, atau tambahkan mereka dari perangkat Anda yang lain.",
     "malformed_body": "key_id harus berupa id kunci federasi yang tidak kosong",
@@ -6163,5 +6166,20 @@
     "unexpected": "jawaban tidak terduga dari perangkat lain Anda",
     "unknown_identity": "tidak dapat menemukan identitas tersebut",
     "unreachable": "tidak dapat menjangkau perangkat lain Anda"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Permintaan owner binding tersebut tidak dapat dibaca.",
+    "build_failed": "Owner binding tidak dapat dibuat di perangkat ini.",
+    "cohort_invalid": "Itu bukan cakupan tempat perangkat dapat dimiliki. Cakupan harus self, family, atau community.",
+    "no_identity": "tidak ada ID federasi di perangkat ini — binding ditandatangani oleh ID federasi pemilik atau kunci roster dari ID federasi tersebut",
+    "signer_unavailable": "Identitas Anda tidak dapat dibuka untuk menandatangani binding tersebut."
+  },
+  "upgrade_owner": {
+    "already_owned": "Perangkat ini sudah memiliki pemilik. Owner binding tidak pernah memindahkan perangkat yang sudah dimiliki ke orang lain.",
+    "bad_request": "Owner binding tersebut tidak dapat dibaca. Tandatangani yang baru di perangkat Anda sendiri dan coba lagi.",
+    "binding_rejected": "Owner binding ditolak: tidak dapat diverifikasi, atau menyebutkan perangkat yang berbeda.",
+    "cohort_invalid": "Itu bukan cakupan tempat perangkat dapat dimiliki. Cakupan harus self, family, atau community.",
+    "directory": "Node ini tidak dapat membaca siapa pemiliknya. Coba lagi sesaat lagi.",
+    "roster_proof_refused": "Bukti bahwa perangkat Anda yang lain adalah milik Anda ditolak, sehingga binding tidak disimpan."
   }
 }

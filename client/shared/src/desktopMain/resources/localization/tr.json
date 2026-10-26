@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Bu kod doğrudan eklemek için çok eski. Onlardan yeni bir kod isteyin veya eşleştirme yoluyla ekleyin.",
     "consent_emit_failed": "Düğüm, bunu bir kişi kaydı yapan onay iznini yayımlayamadı. Hiçbir şey değiştirilmedi.",
     "consent_not_granted": "Bu cihazda onları henüz kabul etmediniz. Devam etmek için onları kabul edin.",
+    "delegate_may_not_answer": "bir iletişim isteğini yanıtlamak sahibin kendi eylemidir",
+    "request_not_found": "Bu istek artık beklemiyor. Başka bir cihazda yanıtlanmış ya da geri çekilmiş olabilir.",
+    "request_not_ignored": "Bu istek artık yok sayılmıyor.",
     "delegation_denied": "Bu oturumun yetki devri bu eylemi kapsamıyor.",
     "key_pull_unavailable": "Bu cihaz şu anda CIRIS ağına bağlı değil, bu yüzden bu kişiyi arayamıyor. Çevrimiçi olduğunda tekrar deneyin ya da onu diğer cihazlarınızdan birinden ekleyin.",
     "malformed_body": "key_id boş olmayan bir federasyon anahtar kimliği olmalıdır",
@@ -6163,5 +6166,20 @@
     "unexpected": "diğer cihazınızdan beklenmeyen bir yanıt geldi",
     "unknown_identity": "bu kimlik bulunamadı",
     "unreachable": "diğer cihazınıza ulaşılamadı"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Bu sahiplik bağlaması isteği okunamadı.",
+    "build_failed": "Sahiplik bağlaması bu cihazda oluşturulamadı.",
+    "cohort_invalid": "Bu, bir cihazın sahip olunabileceği bir kapsam değil. Self, family veya community olmalı.",
+    "no_identity": "bu cihazda federasyon kimliği yok — sahiplik bağlaması, sahibinin fed-ID'si veya onun üye listesi anahtarlarından biriyle imzalanır",
+    "signer_unavailable": "Bağlamayı imzalamak için kimliğiniz açılamadı."
+  },
+  "upgrade_owner": {
+    "already_owned": "Bu cihazın zaten bir sahibi var. Bir sahiplik bağlaması, sahipli bir cihazı asla başka birine taşımaz.",
+    "bad_request": "Bu sahiplik bağlaması okunamadı. Kendi cihazınızda yeni bir tane imzalayın ve tekrar deneyin.",
+    "binding_rejected": "Sahiplik bağlaması reddedildi: doğrulanmıyor veya farklı bir cihazı belirtiyor.",
+    "cohort_invalid": "Bu, bir cihazın sahip olunabileceği bir kapsam değil. Self, family veya community olmalı.",
+    "directory": "Bu düğüm, kendisine kimin sahip olduğunu okuyamadı. Biraz sonra tekrar deneyin.",
+    "roster_proof_refused": "Diğer cihazınızın size ait olduğunun kanıtı reddedildi, bu nedenle sahiplik bağlaması saklanmadı."
   }
 }

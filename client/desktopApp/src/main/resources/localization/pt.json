@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Este código é demasiado antigo para ser adicionado directamente. Peça um código novo, ou adicione essa pessoa através de peering.",
     "consent_emit_failed": "O nó não conseguiu emitir a concessão de consentimento que torna isto um contacto. Nada foi alterado.",
     "consent_not_granted": "Você ainda não aceitou essa pessoa neste dispositivo. Aceite-a para continuar.",
+    "delegate_may_not_answer": "responder a uma solicitação de contato é um ato exclusivo do proprietário",
+    "request_not_found": "Essa solicitação não está mais pendente. Ela pode ter sido respondida em outro dispositivo, ou retirada.",
+    "request_not_ignored": "Essa solicitação não está mais ignorada.",
     "delegation_denied": "A delegação desta sessão não concede essa ação.",
     "key_pull_unavailable": "Este dispositivo não está conectado à rede CIRIS no momento, por isso não consegue procurar esta pessoa. Tente novamente quando estiver online, ou adicione-a a partir de outro dos seus dispositivos.",
     "malformed_body": "key_id deve ser um id de chave de federação não vazio",
@@ -6163,5 +6166,20 @@
     "unexpected": "resposta inesperada do seu outro dispositivo",
     "unknown_identity": "não foi possível encontrar essa identidade",
     "unreachable": "não foi possível alcançar seu outro dispositivo"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Essa solicitação de vínculo de titularidade não pôde ser lida.",
+    "build_failed": "O vínculo de titularidade não pôde ser construído neste dispositivo.",
+    "cohort_invalid": "Esse não é um escopo no qual um dispositivo pode ter um proprietário. Ele precisa ser self (Apenas eu), family (família) ou community (comunidade).",
+    "no_identity": "nenhum ID de federação neste dispositivo — o vínculo é assinado pelo ID de federação do proprietário ou por uma chave do quadro de membros dele",
+    "signer_unavailable": "Sua identidade não pôde ser aberta para assinar o vínculo."
+  },
+  "upgrade_owner": {
+    "already_owned": "Este dispositivo já tem um proprietário. Um vínculo de titularidade nunca transfere um dispositivo já possuído para outra pessoa.",
+    "bad_request": "Esse vínculo de titularidade não pôde ser lido. Assine um novo no seu próprio dispositivo e tente novamente.",
+    "binding_rejected": "O vínculo de titularidade foi recusado: ele não verifica, ou nomeia um dispositivo diferente.",
+    "cohort_invalid": "Esse não é um escopo no qual um dispositivo pode ter um proprietário. Ele precisa ser self (Apenas eu), family (família) ou community (comunidade).",
+    "directory": "Este nó não conseguiu ler quem é o proprietário dele. Tente novamente em instantes.",
+    "roster_proof_refused": "A prova de que seu outro dispositivo pertence a você foi recusada, portanto o vínculo não foi armazenado."
   }
 }

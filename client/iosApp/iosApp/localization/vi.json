@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Mã này quá cũ để thêm trực tiếp. Hãy xin họ một mã mới, hoặc thêm họ qua kết nối ngang hàng.",
     "consent_emit_failed": "Nút không thể phát hành sự chấp thuận biến đây thành một liên hệ. Không có gì bị thay đổi.",
     "consent_not_granted": "Bạn chưa chấp nhận họ trên thiết bị này. Hãy chấp nhận họ để tiếp tục.",
+    "delegate_may_not_answer": "việc trả lời yêu cầu liên hệ là hành động của chính chủ sở hữu",
+    "request_not_found": "Yêu cầu đó không còn đang chờ nữa. Có thể nó đã được trả lời trên một thiết bị khác, hoặc đã bị rút lại.",
+    "request_not_ignored": "Yêu cầu đó không còn bị bỏ qua nữa.",
     "delegation_denied": "Ủy quyền của phiên này không cấp quyền cho hành động đó.",
     "key_pull_unavailable": "Thiết bị này hiện không kết nối với mạng CIRIS, nên không thể tìm người này. Hãy thử lại khi thiết bị trực tuyến, hoặc thêm họ từ một thiết bị khác của bạn.",
     "malformed_body": "key_id phải là một id khóa liên kết không rỗng",
@@ -6163,5 +6166,20 @@
     "unexpected": "câu trả lời không mong đợi từ thiết bị khác của bạn",
     "unknown_identity": "không thể tìm thấy danh tính đó",
     "unreachable": "không thể kết nối tới thiết bị khác của bạn"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Không thể đọc yêu cầu liên kết chủ sở hữu đó.",
+    "build_failed": "Không thể tạo liên kết chủ sở hữu trên thiết bị này.",
+    "cohort_invalid": "Đó không phải là phạm vi mà một thiết bị có thể được sở hữu. Phạm vi phải là self, family hoặc community.",
+    "no_identity": "không có ID liên bang nào trên thiết bị này — liên kết được ký bằng fed-ID của chủ sở hữu hoặc một khóa trong danh sách thành viên của fed-ID đó",
+    "signer_unavailable": "Không thể mở danh tính của bạn để ký liên kết."
+  },
+  "upgrade_owner": {
+    "already_owned": "Thiết bị này đã có chủ sở hữu. Liên kết chủ sở hữu không bao giờ chuyển một thiết bị đã có chủ sang người khác.",
+    "bad_request": "Không thể đọc liên kết chủ sở hữu đó. Hãy ký một liên kết mới trên thiết bị của chính bạn rồi thử lại.",
+    "binding_rejected": "Liên kết chủ sở hữu đã bị từ chối: liên kết không xác minh được, hoặc nêu tên một thiết bị khác.",
+    "cohort_invalid": "Đó không phải là phạm vi mà một thiết bị có thể được sở hữu. Phạm vi phải là self, family hoặc community.",
+    "directory": "Nút này không thể đọc được ai là chủ sở hữu của nó. Hãy thử lại sau một lát.",
+    "roster_proof_refused": "Bằng chứng rằng thiết bị khác của bạn thuộc về bạn đã bị từ chối, nên liên kết không được lưu trữ."
   }
 }

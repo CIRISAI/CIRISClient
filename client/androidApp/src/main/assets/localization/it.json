@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Questo codice è troppo vecchio per essere aggiunto direttamente. Chiedigli un nuovo codice, oppure aggiungilo tramite il peering.",
     "consent_emit_failed": "Il nodo non è riuscito a emettere la concessione di consenso che rende questo un contatto. Nulla è stato modificato.",
     "consent_not_granted": "Non li hai ancora accettati su questo dispositivo. Accettali per continuare.",
+    "delegate_may_not_answer": "rispondere a una richiesta di contatto è un atto esclusivo del proprietario",
+    "request_not_found": "Quella richiesta non è più in attesa. Potrebbe aver ricevuto una risposta da un altro dispositivo, oppure essere stata ritirata.",
+    "request_not_ignored": "Quella richiesta non è più ignorata.",
     "delegation_denied": "La delega di questa sessione non concede quell'azione.",
     "key_pull_unavailable": "Questo dispositivo non è connesso alla rete CIRIS in questo momento, quindi non può cercare questa persona. Riprova quando è online, oppure aggiungila da un altro dei tuoi dispositivi.",
     "malformed_body": "key_id deve essere un id di chiave di federazione non vuoto",
@@ -6163,5 +6166,20 @@
     "unexpected": "risposta inattesa dal tuo altro dispositivo",
     "unknown_identity": "non è stato possibile trovare quell'identità",
     "unreachable": "non è stato possibile raggiungere il tuo altro dispositivo"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Non è stato possibile leggere quella richiesta di associazione di proprietà.",
+    "build_failed": "Non è stato possibile creare l'associazione di proprietà su questo dispositivo.",
+    "cohort_invalid": "Non è un ambito in cui un dispositivo può essere di proprietà. Deve essere self, family o community.",
+    "no_identity": "nessun ID di federazione su questo dispositivo — l'associazione si firma con l'ID di federazione del proprietario o con una chiave del roster di quell'ID",
+    "signer_unavailable": "Non è stato possibile aprire la tua identità per firmare l'associazione."
+  },
+  "upgrade_owner": {
+    "already_owned": "Questo dispositivo ha già un proprietario. Un'associazione di proprietà non trasferisce mai a qualcun altro un dispositivo già di proprietà.",
+    "bad_request": "Non è stato possibile leggere quell'associazione di proprietà. Firmane una nuova sul tuo dispositivo e riprova.",
+    "binding_rejected": "L'associazione di proprietà è stata rifiutata: non supera la verifica, oppure indica un dispositivo diverso.",
+    "cohort_invalid": "Non è un ambito in cui un dispositivo può essere di proprietà. Deve essere self, family o community.",
+    "directory": "Questo nodo non è riuscito a leggere chi ne è proprietario. Riprova tra poco.",
+    "roster_proof_refused": "La prova che l'altro dispositivo ti appartiene è stata rifiutata, quindi l'associazione non è stata memorizzata."
   }
 }
