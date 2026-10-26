@@ -18,6 +18,10 @@ AI_LEGS = ("linux-ai", "windows-ai")
 AGENT_ACTION = NODE_ACTION.parent.parent / "ciris-agent" / "action.yml"
 
 
+
+#: The one way a with-AI step is handed a provider key.
+KEY_EXPR = "${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}"
+
 @pytest.fixture(scope="module")
 def wf() -> dict:
     return yaml.safe_load(WF.read_text(encoding="utf-8"))
@@ -46,7 +50,7 @@ def test_the_node_only_matrix_does_not_read_the_with_ai_inputs(wf, leg):
     node-only job may branch on, or be handed, anything the with-AI mode sets."""
     body = yaml.dump(wf["jobs"][leg])
     for name in ("inputs.with_ai", "inputs.agent_version", "inputs.llm_model", "agent_pypi",
-                 "ANTHROPIC_API_KEY", "--with-ai"):
+                 "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY", "LLM_API_KEY", "inputs.llm_provider", "--with-ai"):
         assert name not in body, f"{leg} reads {name}"
 
 
@@ -62,7 +66,8 @@ def test_a_with_ai_leg_is_a_gate_too(wf, leg):
         assert "--with-ai" in call and "--flows testing/flows/agent" in call, call
         assert '--agent-version "${{ needs.server.outputs.agent_pypi }}"' in call, call
         assert '--node-version "v${{ needs.server.outputs.agent_server }}"' in call, call
-        assert "--llm-key-env ANTHROPIC_API_KEY" in call, call
+        assert "--llm-key-env LLM_API_KEY" in call, call
+        assert '--llm-provider "${{ inputs.llm_provider || \'anthropic\' }}"' in call, call
 
 
 @pytest.mark.parametrize("leg", AI_LEGS)
@@ -99,13 +104,18 @@ def test_the_key_is_never_on_a_command_line_and_every_upload_is_scanned_first(wf
     for leg in AI_LEGS:
         steps = wf["jobs"][leg]["steps"]
         for s in steps:
-            if "ANTHROPIC_API_KEY" in yaml.dump(s.get("env") or {}):
-                assert s["env"]["ANTHROPIC_API_KEY"] == "${{ secrets.ANTHROPIC_API_KEY }}", s
+            env = s.get("env") or {}
+            if "API_KEY" in yaml.dump(env):
+                # One variable, from the provider's secret, and nothing else
+                # (2026-10-25: llm_provider picks OPENROUTER_API_KEY or ANTHROPIC_API_KEY).
+                assert set(k for k in env if k.endswith("API_KEY")) == {"LLM_API_KEY"}, s
+                assert env["LLM_API_KEY"] == KEY_EXPR, s
         names = [s.get("name", s.get("uses", "")) for s in steps]
         scan = next(i for i, s in enumerate(steps) if "testing.gate.secret_scan" in str(s.get("run", "")))
         upload = next(i for i, s in enumerate(steps) if "upload-artifact" in str(s.get("uses", "")))
         assert scan < upload, f"{leg}: the upload runs before the scan: {names}"
         assert str(steps[scan].get("if", "")).strip() == "always()", leg
+        assert "--env LLM_API_KEY" in steps[scan]["run"], f"{leg}: the scan does not look for the key the leg was given"
         uploaded = steps[upload]["with"]["path"]
         assert ".env" not in uploaded and "ciris-ai-" not in uploaded, f"{leg} uploads an agent home"
 

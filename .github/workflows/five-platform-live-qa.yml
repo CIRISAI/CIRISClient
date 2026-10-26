@@ -118,8 +118,14 @@ on:
         required: false
         default: ""
         type: string
+      llm_provider:
+        description: "with_ai: the wizard's BYOK provider and the secret its key comes from (anthropic = ANTHROPIC_API_KEY, openrouter = OPENROUTER_API_KEY)"
+        required: false
+        default: "anthropic"
+        type: choice
+        options: [anthropic, openrouter]
       llm_model:
-        description: "with_ai: the Anthropic model the wizard picks from the live list (never substituted)"
+        description: "with_ai: the model the wizard picks from the provider's live list (never substituted); an OpenRouter id for openrouter, e.g. anthropic/claude-sonnet-5"
         required: false
         default: "claude-sonnet-5-5"
         type: string
@@ -743,7 +749,8 @@ jobs:
   # — the board names that node as the agent's (`--node-version v<its pin>`),
   # not the run's server, which these legs do not run.
   #
-  # THE KEY. `secrets.ANTHROPIC_API_KEY` reaches exactly one process per leg —
+  # THE KEY. The provider's secret (`ANTHROPIC_API_KEY`, or `OPENROUTER_API_KEY` with
+  # `llm_provider: openrouter`), as `LLM_API_KEY`, reaches exactly one process per leg —
   # the harness, as an environment variable read by NAME (--llm-key-env); it is
   # masked in the log, typed into a sensitive sink the client never echoes
   # (SetupApiKeySinkTest), and every file an upload would carry is scanned for
@@ -809,12 +816,15 @@ jobs:
       - name: Linux desktop, with AI
         env:
           CIRIS_HOME: ${{ runner.temp }}/ciris-ai-linux
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
             --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
-            --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY \
+            --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
             --shots shots --report reports/linux-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
 
@@ -823,11 +833,14 @@ jobs:
       - name: No artifact carries the provider key
         if: always()
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
           mkdir -p agent-logs/linux
           cp -R "$RUNNER_TEMP/ciris-ai-linux/logs/." agent-logs/linux/ 2>/dev/null || true
-          python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
+          python3 -m testing.gate.secret_scan --env LLM_API_KEY \
             shots reports agent-logs agent-linux.log $(ls *-app.log 2>/dev/null)
 
       - if: always()
@@ -873,13 +886,16 @@ jobs:
         shell: bash
         env:
           CIRIS_HOME: ${{ runner.temp }}/ciris-ai-windows
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
           python3 -m pip install --quiet pyyaml
           python3 -m testing.gate.run_platform --platform desktop \
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
-            --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY \
+            --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
             --shots shots --report reports/windows-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
 
@@ -887,11 +903,14 @@ jobs:
         if: always()
         shell: bash
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
           mkdir -p agent-logs/windows
           cp -R "$RUNNER_TEMP/ciris-ai-windows/logs/." agent-logs/windows/ 2>/dev/null || true
-          python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
+          python3 -m testing.gate.secret_scan --env LLM_API_KEY \
             shots reports agent-logs agent-windows.log $(ls *-app.log 2>/dev/null)
 
       - if: always()
@@ -941,13 +960,16 @@ jobs:
 
       - name: iOS simulator, with AI
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
           set -euo pipefail
           python3 -m pip install --quiet pyyaml
           python3 -m testing.gate.run_platform --platform ios --app "${{ steps.ios.outputs.app }}" --udid "${{ steps.ios.outputs.udid }}" \
             --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
-            --llm-provider anthropic --llm-model "${{ inputs.llm_model }}" --llm-key-env ANTHROPIC_API_KEY \
+            --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
             --embedded-node-version "${{ steps.ios.outputs.embedded }}" \
             --shots shots --report reports/ios-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
@@ -993,9 +1015,12 @@ jobs:
       - name: No artifact carries the provider key
         if: always()
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          # ONE variable, whichever provider: the harness reads it by name, the
+          # scan below looks for it. 2026-10-25: the CI Anthropic account ran
+          # out of credit (run 40241085150), so openrouter is selectable.
+          LLM_API_KEY: ${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}
         run: |
-          python3 -m testing.gate.secret_scan --env ANTHROPIC_API_KEY \
+          python3 -m testing.gate.secret_scan --env LLM_API_KEY \
             shots reports ios-ai-logs $(ls *-app.log 2>/dev/null)
 
       - if: always()

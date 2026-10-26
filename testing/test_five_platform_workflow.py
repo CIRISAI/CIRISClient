@@ -557,7 +557,7 @@ def test_the_ios_ai_leg_drives_the_with_ai_wizard(wf):
     for want in ("--platform ios", "--with-ai", "--flows testing/flows/agent",
                  '--agent-version "${{ needs.server.outputs.agent_pypi }}"',
                  '--node-version "v${{ needs.server.outputs.agent_server }}"',
-                 "--embedded-node-version", "--llm-key-env ANTHROPIC_API_KEY",
+                 "--embedded-node-version", "--llm-key-env LLM_API_KEY",
                  "--report reports/ios-ai.json"):
         assert want in call, f"ios-ai: {want!r} not in {call}"
 
@@ -568,8 +568,10 @@ def test_the_ios_ai_leg_keeps_the_key_out_and_the_crash_record_in(wf):
     always() — and the app's data container (its .env holds the key) is not."""
     steps = wf["jobs"][IOS_AI]["steps"]
     for s in steps:
-        if "ANTHROPIC_API_KEY" in yaml.dump(s.get("env") or {}):
-            assert s["env"]["ANTHROPIC_API_KEY"] == "${{ secrets.ANTHROPIC_API_KEY }}", s
+        env = s.get("env") or {}
+        if "API_KEY" in yaml.dump(env):
+            assert set(k for k in env if k.endswith("API_KEY")) == {"LLM_API_KEY"}, s
+            assert env["LLM_API_KEY"] == "${{ inputs.llm_provider == 'openrouter' && secrets.OPENROUTER_API_KEY || secrets.ANTHROPIC_API_KEY }}", s
     idx = lambda pred: next(i for i, s in enumerate(steps) if pred(s))  # noqa: E731
     collect = idx(lambda s: "Documents/ciris/logs/kotlin_crash.log" in str(s.get("run", "")))
     scan = idx(lambda s: "testing.gate.secret_scan" in str(s.get("run", "")))
