@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Dieser Code ist zu alt, um ihn direkt hinzuzufügen. Bitten Sie die Person um einen neuen Code, oder fügen Sie sie über Peering hinzu.",
     "consent_emit_failed": "Der Knoten konnte die Einwilligung, die diesen Kontakt begründet, nicht ausstellen. Es wurde nichts geändert.",
     "consent_not_granted": "Sie haben die Person auf diesem Gerät noch nicht akzeptiert. Akzeptieren Sie sie, um fortzufahren.",
+    "delegate_may_not_answer": "das Beantworten einer Kontaktanfrage ist eine eigene Handlung des Eigentümers",
+    "request_not_found": "Diese Anfrage wartet nicht mehr. Sie wurde möglicherweise auf einem anderen Gerät beantwortet oder zurückgezogen.",
+    "request_not_ignored": "Diese Anfrage wird nicht mehr ignoriert.",
     "delegation_denied": "Die Delegation dieser Sitzung gewährt diese Handlung nicht.",
     "key_pull_unavailable": "Dieses Gerät ist gerade nicht mit dem CIRIS-Netzwerk verbunden und kann diese Person daher nicht nachschlagen. Versuchen Sie es erneut, wenn es online ist, oder fügen Sie die Person über eines Ihrer anderen Geräte hinzu.",
     "malformed_body": "key_id muss eine nicht leere Föderations-Schlüssel-ID sein",
@@ -6163,5 +6166,20 @@
     "unexpected": "Unerwartete Antwort von Ihrem anderen Gerät",
     "unknown_identity": "Diese Identität konnte nicht gefunden werden",
     "unreachable": "Ihr anderes Gerät konnte nicht erreicht werden"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Diese Owner-Binding-Anfrage konnte nicht gelesen werden.",
+    "build_failed": "Das Owner-Binding konnte auf diesem Gerät nicht erstellt werden.",
+    "cohort_invalid": "Das ist kein Bereich, in dem ein Gerät einen Eigentümer haben kann. Er muss self, family oder community sein.",
+    "no_identity": "keine Föderations-ID auf diesem Gerät — das Binding wird mit der Föderations-ID des Eigentümers oder einem Roster-Key davon signiert",
+    "signer_unavailable": "Ihre Identität konnte nicht geöffnet werden, um das Binding zu signieren."
+  },
+  "upgrade_owner": {
+    "already_owned": "Dieses Gerät hat bereits einen Eigentümer. Ein Owner-Binding überträgt ein Gerät, das bereits einen Eigentümer hat, niemals an eine andere Person.",
+    "bad_request": "Dieses Owner-Binding konnte nicht gelesen werden. Signieren Sie ein neues auf Ihrem eigenen Gerät und versuchen Sie es erneut.",
+    "binding_rejected": "Das Owner-Binding wurde abgelehnt: Es lässt sich nicht verifizieren, oder es nennt ein anderes Gerät.",
+    "cohort_invalid": "Das ist kein Bereich, in dem ein Gerät einen Eigentümer haben kann. Er muss self, family oder community sein.",
+    "directory": "Dieser Knoten konnte nicht ermitteln, wer sein Eigentümer ist. Versuchen Sie es in Kürze erneut.",
+    "roster_proof_refused": "Der Nachweis, dass Ihr anderes Gerät Ihnen gehört, wurde abgelehnt, daher wurde das Binding nicht gespeichert."
   }
 }

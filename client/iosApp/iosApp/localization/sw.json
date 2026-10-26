@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Msimbo huu ni wa zamani sana kuweza kuongezwa moja kwa moja. Waombe msimbo mpya, au waongeze kupitia peering.",
     "consent_emit_failed": "Nodi haikuweza kutoa idhini inayomfanya huyu kuwa anwani. Hakuna kilichobadilishwa.",
     "consent_not_granted": "Bado hujamkubali kwenye kifaa hiki. Mkubali ili uendelee.",
+    "delegate_may_not_answer": "kujibu ombi la mawasiliano ni tendo la mmiliki mwenyewe",
+    "request_not_found": "Ombi hilo halisubiri tena. Huenda lilijibiwa kwenye kifaa kingine, au likaondolewa.",
+    "request_not_ignored": "Ombi hilo halipuuzwi tena.",
     "delegation_denied": "Ukabidhi wa kikao hiki haupi ruhusa ya kitendo hicho.",
     "key_pull_unavailable": "Kifaa hiki hakijaunganishwa na mtandao wa CIRIS kwa sasa, hivyo hakiwezi kumtafuta mtu huyu. Jaribu tena kitakapokuwa mtandaoni, au mwongeze kutoka kifaa chako kingine.",
     "malformed_body": "key_id lazima iwe kitambulisho cha ufunguo wa shirikisho kisicho tupu",
@@ -6163,5 +6166,20 @@
     "unexpected": "jibu lisilotarajiwa kutoka kwa kifaa chako kingine",
     "unknown_identity": "haikuweza kupata utambulisho huo",
     "unreachable": "haikuweza kufikia kifaa chako kingine"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Ombi hilo la kiunganisho cha umiliki halikuweza kusomwa.",
+    "build_failed": "Kiunganisho cha umiliki hakikuweza kujengwa kwenye kifaa hiki.",
+    "cohort_invalid": "Huo si wigo ambao kifaa kinaweza kumilikiwa ndani yake. Lazima uwe self, family, au community.",
+    "no_identity": "hakuna kitambulisho cha shirikisho kwenye kifaa hiki — kiunganisho kinatiwa saini na kitambulisho cha shirikisho cha mmiliki au ufunguo wa orodha wake",
+    "signer_unavailable": "Utambulisho wako haukuweza kufunguliwa kutia saini kiunganisho."
+  },
+  "upgrade_owner": {
+    "already_owned": "Kifaa hiki tayari kina mmiliki. Kiunganisho cha umiliki kamwe hakihamishii kifaa kilichomilikiwa kwa mtu mwingine.",
+    "bad_request": "Kiunganisho hicho cha umiliki hakikuweza kusomwa. Tia saini kipya kwenye kifaa chako mwenyewe kisha ujaribu tena.",
+    "binding_rejected": "Kiunganisho cha umiliki kilikataliwa: hakithibitiki, au kinataja kifaa kingine.",
+    "cohort_invalid": "Huo si wigo ambao kifaa kinaweza kumilikiwa ndani yake. Lazima uwe self, family, au community.",
+    "directory": "Nodi hii haikuweza kusoma ni nani anayeimiliki. Jaribu tena baada ya muda mfupi.",
+    "roster_proof_refused": "Uthibitisho kwamba kifaa chako kingine ni chako ulikataliwa, kwa hivyo kiunganisho hakikuhifadhiwa."
   }
 }

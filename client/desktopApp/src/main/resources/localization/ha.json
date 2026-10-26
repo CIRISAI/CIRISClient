@@ -5753,6 +5753,9 @@
     "code_without_pqc_commitment": "Wannan lamba ta tsufa don ƙarawa kai tsaye. Ku tambaye su sabuwar lamba, ko ku ƙara su ta hanyar peering.",
     "consent_emit_failed": "Node ɗin ya kasa fitar da izinin yarda da ke mai da wannan lamba. Ba a canza komai ba.",
     "consent_not_granted": "Ba ku amince da su a kan wannan na'ura ba tukuna. Ku amince da su don ci gaba.",
+    "delegate_may_not_answer": "Amsa buƙatar sadarwa aikin mai mallaka ne da kansa.",
+    "request_not_found": "Wannan buƙatar ba ta jira kuma ba. Wataƙila an amsa ta a wata na'ura, ko kuwa an janye ta.",
+    "request_not_ignored": "Wannan buƙatar ba a yi watsi da ita kuma ba.",
     "delegation_denied": "Wakilcin wannan zaman bai bada izinin wannan aiki ba.",
     "key_pull_unavailable": "Wannan na'ura ba ta haɗu da hanyar sadarwar CIRIS a yanzu ba, don haka ba za ta iya nemo wannan mutumin ba. Ku sake gwadawa idan ta shiga intanet, ko ku ƙara shi daga wata na'urarku.",
     "malformed_body": "key_id dole ne ya zama id na mabuɗin tarayya wanda ba fanko ba",
@@ -6163,5 +6166,20 @@
     "unexpected": "amsa da ba a zata ba daga sauran na'urarku",
     "unknown_identity": "an kasa samun wannan shaidar",
     "unreachable": "an kasa isa ga sauran na'urarku"
+  },
+  "sign_owner_binding": {
+    "bad_request": "Ba a iya karanta wannan buƙatar owner binding ba.",
+    "build_failed": "Ba a iya gina owner binding a kan wannan na'urar ba.",
+    "cohort_invalid": "Wannan ba iyaka ce da za a iya mallakar na'ura a ciki ba. Dole ne ya kasance Kai, Iyali, ko al'umma.",
+    "no_identity": "babu ID na haɗin gwiwa a wannan na'urar — ana sa hannu kan binding da ID na haɗin gwiwar mai shi ko da wani maɓalli daga roster na wannan ID",
+    "signer_unavailable": "Ba a iya buɗe shaidarku don sa hannu kan owner binding ba."
+  },
+  "upgrade_owner": {
+    "already_owned": "Wannan na'ura tana da mai mallaka tuni. Owner binding ba ya taɓa canja na'ura mallakacciya zuwa wani ba.",
+    "bad_request": "Ba a iya karanta wannan owner binding ba. Ku sa hannu kan sabo a kan na'urarku sannan ku sake gwadawa.",
+    "binding_rejected": "An ƙi owner binding: ba ya tabbatar ba, ko kuwa yana ambaton wata na'ura dabam.",
+    "cohort_invalid": "Wannan ba iyaka ce da za a iya mallakar na'ura a ciki ba. Dole ne ya kasance Kai, Iyali, ko al'umma.",
+    "directory": "Wannan kumburi bai iya karanta wanda ke mallakarsa ba. Ku sake gwadawa nan ba da daɗewa ba.",
+    "roster_proof_refused": "An ƙi shaidar cewa wata na'urar naku ce, don haka ba a ajiye owner binding ba."
   }
 }

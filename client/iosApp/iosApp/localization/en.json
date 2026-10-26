@@ -703,6 +703,9 @@
   "consent_users_helped": "Users Helped",
   "consent_view_only": "View Only",
   "contacts": {
+    "delegate_may_not_answer": "answering a contact request is the owner's own act",
+    "request_not_found": "That request isn't waiting anymore. It may have been answered on another device, or withdrawn.",
+    "request_not_ignored": "That request isn't ignored anymore.",
     "awaiting_consent": "Waiting for them to accept. There is nothing to retry: this finishes when they accept.",
     "awaiting_key_body": "We're still getting this person's key. They'll be added once it arrives — usually within a minute.",
     "code_commitment_mismatch": "This code doesn't match the person it names, so it was not added. Ask them to send their contact code again.",
@@ -5510,6 +5513,13 @@
   "setup_validation_select_provider": "Select an LLM provider",
   "setup_validation_username_required": "Username is required",
   "setup_validation_username_reserved": "The username 'admin' is reserved. Please choose a different username.",
+  "sign_owner_binding": {
+    "bad_request": "That owner-binding request couldn't be read.",
+    "build_failed": "The owner binding couldn't be built on this device.",
+    "cohort_invalid": "That isn't a scope a device can be owned in. It must be self, family or community.",
+    "no_identity": "no federation ID on this device — the binding is signed by the owner's fed-ID or a roster key of it",
+    "signer_unavailable": "Your identity couldn't be opened to sign the binding."
+  },
   "startup": {
     "checking_services": "Checking services...",
     "initializing": "Initializing...",
@@ -5764,6 +5774,14 @@
   "trust_what_checks": "What Gets Checked",
   "trust_why_matters": "Why Trust Matters",
   "trust_wizard_hint": "Complete the setup wizard to enable trust verification",
+  "upgrade_owner": {
+    "already_owned": "This device already has an owner. An owner binding never moves an owned device to someone else.",
+    "bad_request": "That owner binding couldn't be read. Sign a new one on your own device and try again.",
+    "binding_rejected": "The owner binding was refused: it doesn't verify, or it names a different device.",
+    "cohort_invalid": "That isn't a scope a device can be owned in. It must be self, family or community.",
+    "directory": "This node couldn't read who owns it. Try again in a moment.",
+    "roster_proof_refused": "The proof that your other device belongs to you was refused, so the binding wasn't stored."
+  },
   "users_active": "Active",
   "users_api_role": "API Role",
   "users_auth_type": "Auth Type",
