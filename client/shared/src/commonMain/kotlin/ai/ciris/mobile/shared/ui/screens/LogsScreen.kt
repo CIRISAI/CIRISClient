@@ -61,6 +61,11 @@ fun LogsScreen(
     // node (no cognitive brain) the "Agent" log source is unavailable and the
     // dropdown item is disabled/grayed.
     isNodeMode: Boolean = true,
+    /** The agent's log zip (CIRISClient#249): what the last download did. */
+    downloadState: ai.ciris.mobile.shared.viewmodels.LogsDownloadState =
+        ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Idle,
+    /** Download the agent-and-node log zip; null hides the action. Agent only: a bare node has no route. */
+    onDownload: (() -> Unit)? = null,
 ) {
     var showFilters by remember { mutableStateOf(false) }
     var expandedLogId by remember { mutableStateOf<String?>(null) }
@@ -100,6 +105,14 @@ fun LogsScreen(
                     }
                 },
                 actions = {
+                    if (onDownload != null && !isNodeMode) {
+                        val working = downloadState == ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Working
+                        TextButton(
+                            onClick = { if (!working) onDownload() },
+                            enabled = !working,
+                            modifier = Modifier.testableClickable("btn_logs_download") { if (!working) onDownload() },
+                        ) { Text(localizedString("mobile.logs_download")) }
+                    }
                     // Filter toggle
                     TextButton(
                         onClick = { showFilters = !showFilters },
@@ -130,6 +143,8 @@ fun LogsScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            LogsDownloadResult(downloadState)
+
             // Log source selector (Node / Agent) at the top of the screen.
             LogsSourceSelector(
                 isNodeMode = isNodeMode,
@@ -733,4 +748,25 @@ data class LogEntryData(
         } catch (e: Exception) {
             timestamp
         }
+}
+
+/** One line saying what the last log download did, or nothing before one. */
+@Composable
+private fun LogsDownloadResult(state: ai.ciris.mobile.shared.viewmodels.LogsDownloadState) {
+    val text = when (state) {
+        ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Idle -> return
+        ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Working -> localizedString("mobile.logs_download_working")
+        is ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Saved ->
+            if (state.fileCount != null) localizedString("mobile.logs_download_saved", mapOf("count" to state.fileCount.toString(), "where" to state.where))
+            else localizedString("mobile.logs_download_saved_where", "where", state.where)
+        is ai.ciris.mobile.shared.viewmodels.LogsDownloadState.NotWritten -> localizedString("mobile.logs_download_not_written")
+        ai.ciris.mobile.shared.viewmodels.LogsDownloadState.AgentTooOld -> localizedString("mobile.logs_download_too_old")
+        ai.ciris.mobile.shared.viewmodels.LogsDownloadState.NotOwner -> localizedString("mobile.logs_download_not_owner")
+        is ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Failed -> localizedString("mobile.logs_download_failed", "why", state.why)
+    }
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).testable("logs_download_result", text),
+    )
 }

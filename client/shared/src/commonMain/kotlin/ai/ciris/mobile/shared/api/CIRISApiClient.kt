@@ -15511,6 +15511,56 @@ class CIRISApiClient internal constructor(
         return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteAnswer.serializer(), raw)
     }
 
+    // ─── LOG DOWNLOAD (CIRISAgent 2.17.0) — CIRISClient#249 ─────────────────
+
+    /**
+     * `GET {baseUrl}/v1/telemetry/logs/download?tail_kib=N` — the AGENT's zip of
+     * agent and node log tails. At [baseUrl], never the node URL: the node does
+     * not proxy it. 404 is an agent older than the route; 403 is not the owner.
+     */
+    suspend fun downloadLogsZip(tailKib: Int = LogsDownloadApi.DEFAULT_TAIL_KIB): LogsDownload {
+        val method = "downloadLogsZip"
+        val kib = tailKib.coerceIn(1, 8192)
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 120_000
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = 120_000
+            }
+        }
+        return try {
+            logInfo(method, "GET $baseUrl/v1/telemetry/logs/download?tail_kib=$kib")
+            val response = client.get("$baseUrl/v1/telemetry/logs/download") {
+                url { parameters.append("tail_kib", kib.toString()) }
+                authHeader()?.let { header("Authorization", it) }
+            }
+            when (val code = response.status.value) {
+                in 200..299 -> {
+                    val bytes = response.readRawBytes()
+                    val name = dispositionFileName(response.headers["Content-Disposition"]) ?: "ciris-logs.zip"
+                    val count = response.headers["X-CIRIS-Log-Files"]?.trim()?.toIntOrNull()
+                    logInfo(method, "got $name: ${bytes.size} bytes, ${count ?: "?"} log file(s)")
+                    LogsDownload.Got(bytes, name, count)
+                }
+                404 -> LogsDownload.AgentTooOld
+                403 -> LogsDownload.NotOwner(detailOf(response.bodyAsText()))
+                else -> LogsDownload.Failed(code, detailOf(response.bodyAsText()))
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            logException(method, e)
+            LogsDownload.Failed(0, e.message ?: e::class.simpleName)
+        } finally {
+            client.close()
+        }
+    }
+
+    /** `detail` / `error` from a JSON refusal body, else null. */
+    private fun detailOf(raw: String): String? = runCatching {
+        val o = Json.parseToJsonElement(raw).jsonObject
+        (o["detail"] ?: o["error"])?.jsonPrimitive?.contentOrNull
+    }.getOrNull()
+
     // ─── CONTACT REQUESTS (/v1/contacts/requests) — CSD-109 ─────────────────
     //
     // CIRISServer 0.5.237 (#819, #820). Node-owned, at the node URL, owner-gated

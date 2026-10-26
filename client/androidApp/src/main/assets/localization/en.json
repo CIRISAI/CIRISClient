@@ -1031,6 +1031,14 @@
     }
   },
   "mobile": {
+    "logs_download": "Download logs",
+    "logs_download_working": "Preparing the logs…",
+    "logs_download_saved": "Saved {count} log files to {where}",
+    "logs_download_saved_where": "Saved the logs to {where}",
+    "logs_download_not_written": "The logs arrived but couldn't be saved on this device, so nothing was written.",
+    "logs_download_too_old": "This agent is too old for a log download. It needs CIRIS Agent 2.17.0 or newer.",
+    "logs_download_not_owner": "Only the owner can download the logs.",
+    "logs_download_failed": "Couldn't download the logs: {why}",
     "contact_requests_heading": "Wants to connect",
     "contact_requests_title_named": "{label} (they named themselves) wants to connect",
     "contact_requests_title_someone": "Someone wants to connect",
