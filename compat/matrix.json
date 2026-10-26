@@ -1683,7 +1683,7 @@
       ],
       "node_min": "0.5.168",
       "node_min_reason": "unchanged. Contact requests draw nothing on a node without GET /v1/contacts/requests (a bare 404 is an older node, never 'no requests'); `mutual` is optional on contact rows.",
-      "node_max_tested": "0.5.235",
+      "node_max_tested": "0.5.237",
       "agent_min_tested": "2.16.5",
       "capabilities": [
         "contacts",
@@ -1732,7 +1732,7 @@
         "agent.rate_governor",
         "contacts.requests"
       ],
-      "capabilities_note": "new: contact requests on People — whoever added you by code and you have not added back, with Accept (three-fact confirm, POST /v1/contacts) and private, reversible Ignore; decline reserved for CIRISPersist#1121 (#243, CSD-109; server 0.5.237). Desktop /input acknowledges only once the value is applied, 409 otherwise, with the setup username and fed-ID label readable back (#241, #240). /inject-file served on iOS and Android through one shared handler that answers once the chat takes the file; the iOS test server reads bodies up to 16 MB (#244, #222). Wise Authority is never 'human advisor': glossaries and 23 shipped strings retranslated (#237, #238).",
+      "capabilities_note": "new: contact requests on People — whoever added you by code and you have not added back, with Accept (three-fact confirm, POST /v1/contacts) and private, reversible Ignore; decline reserved for CIRISPersist#1121 (#243, CSD-109; server 0.5.237). Desktop /input acknowledges only once the value is applied, 409 otherwise, with the setup username and fed-ID label readable back (#241, #240). /inject-file served on iOS and Android through one shared handler that answers once the chat takes the file; the iOS test server reads bodies up to 16 MB (#244, #222). Wise Authority is never 'human advisor': glossaries and 23 shipped strings retranslated (#237, #238). String parity with ciris-server v0.5.237: the contacts.request_not_found / request_not_ignored / delegate_may_not_answer and the 0.5.234 upgrade_owner.* / sign_owner_binding.* refusals are localized in all 29 languages (#247). The test-automation registry is read as immutable snapshots, so /tree no longer races the UI on iOS and Android (#248).",
       "spec_source": {
         "repo": "CIRISAI/CIRISServer",
         "release": null,
@@ -1741,7 +1741,7 @@
       },
       "locale_bundle": {
         "languages": 29,
-        "keys": 5703
+        "keys": 5717
       },
       "notes": "Tested: the five-platform run with AI on the release commit — see the release PR. Correction to the 0.5.231 row: CIRISAgent 2.16.3 pinned 0.5.230, not 0.5.231; 0.5.231 first reached the agent in a later pin. Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
       "published": null
