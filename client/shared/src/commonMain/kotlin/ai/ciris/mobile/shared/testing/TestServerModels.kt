@@ -144,6 +144,18 @@ data class ScrollRequest(
 @Serializable
 data class ScrollOutcome(val from: Int, val to: Int, val max: Int)
 
+/**
+ * `POST /inject-file` — a file handed to the chat paperclip as if picked
+ * (CIRISClient#222). The same shape on every platform's server.
+ */
+@Serializable
+data class InjectFileRequest(
+    val filename: String,
+    val mediaType: String,
+    val dataBase64: String,
+    val sizeBytes: Long,
+)
+
 @Serializable
 data class ActionResponse(
     val success: Boolean,

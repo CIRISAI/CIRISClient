@@ -158,6 +158,25 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         return -1
     }
 
+    /** Write one HTTP response with [body] and [statusCode]. */
+    private fun sendRaw(clientSocket: Int, statusCode: Int, body: String) {
+        val response = "HTTP/1.1 $statusCode OK\r\n" +
+            "Content-Type: application/json\r\n" +
+            "Access-Control-Allow-Origin: *\r\n" +
+            "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
+            "Access-Control-Allow-Headers: Content-Type, Authorization\r\n" +
+            "Connection: close\r\n" +
+            "Content-Length: ${body.encodeToByteArray().size}\r\n" +
+            "\r\n" +
+            body
+        val responseBytes = response.encodeToByteArray()
+        memScoped {
+            responseBytes.usePinned { pinned ->
+                send(clientSocket, pinned.addressOf(0), responseBytes.size.toULong(), 0)
+            }
+        }
+    }
+
     /** One recv() into [into] at [offset]; bytes read, or <= 0 at EOF/error. */
     private fun readChunk(clientSocket: Int, into: ByteArray, offset: Int): Int =
         if (offset >= into.size) 0 else memScoped {
@@ -178,7 +197,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         //
         // So: read until the header terminator, then keep reading until
         // Content-Length bytes of body have arrived.
-        val buffer = ByteArray(65536)
+        var buffer = ByteArray(65536)
         var filled = 0
         var headerEnd = -1
 
@@ -209,6 +228,17 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
             ?: 0
 
         val bodyStart = headerEnd + 4
+        // A BODY CAN OUTGROW THE FIRST BUFFER (CIRISClient#222). /inject-file
+        // carries a file as base64 — a 10 MB file is ~13.4 MB of JSON — and a
+        // fixed 64 KB buffer decoded a truncated body as malformed JSON. Grow
+        // to what Content-Length declares, up to MAX_BODY; past it, say so.
+        if (bodyStart + contentLength > buffer.size) {
+            if (bodyStart + contentLength > MAX_BODY) {
+                sendRaw(clientSocket, 413, """{"success":false,"error":"body of $contentLength bytes is over the ${MAX_BODY} byte limit"}""")
+                return
+            }
+            buffer = buffer.copyOf(bodyStart + contentLength)
+        }
         while (filled - bodyStart < contentLength && filled < buffer.size) {
             val n = readChunk(clientSocket, buffer, filled)
             if (n <= 0) break   // peer closed early; decode what we have and let route() report it
@@ -224,23 +254,7 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
         // Route
         val (statusCode, responseBody) = route(method, path, body)
 
-        // Send response
-        val response = "HTTP/1.1 $statusCode OK\r\n" +
-            "Content-Type: application/json\r\n" +
-            "Access-Control-Allow-Origin: *\r\n" +
-            "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n" +
-            "Access-Control-Allow-Headers: Content-Type, Authorization\r\n" +
-            "Connection: close\r\n" +
-            "Content-Length: ${responseBody.encodeToByteArray().size}\r\n" +
-            "\r\n" +
-            responseBody
-
-        val responseBytes = response.encodeToByteArray()
-        memScoped {
-            responseBytes.usePinned { pinned ->
-                send(clientSocket, pinned.addressOf(0), responseBytes.size.toULong(), 0)
-            }
-        }
+        sendRaw(clientSocket, statusCode, responseBody)
     }
 
     private suspend fun route(method: String, path: String, body: String): Pair<Int, String> {
@@ -284,6 +298,12 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
                     val resp = TestAutomationHandler.handleWait(req)
                     (if (resp.success) 200 else 404) to json.encodeToString(resp)
                 }
+                // The paperclip, as if picked (CIRISClient#222): csd_010_interact_files' `attach:`.
+                method == "POST" && path == "/inject-file" -> {
+                    val req = json.decodeFromString<InjectFileRequest>(body)
+                    val resp = TestAutomationHandler.handleInjectFile(req)
+                    (if (resp.success) 200 else 409) to json.encodeToString(resp)
+                }
                 method == "POST" && path == "/scroll" -> {
                     val req = json.decodeFromString<ScrollRequest>(body)
                     val resp = TestAutomationHandler.handleScroll(req)
@@ -313,6 +333,9 @@ class IOSTestAutomationServer(private val port: Int = 9091) {
     }
 
     companion object {
+        /** The largest request this server reads: a 10 MB file as base64, with room. */
+        private const val MAX_BODY = 16 * 1024 * 1024
+
         private var instance: IOSTestAutomationServer? = null
 
         fun startIfEnabled() {

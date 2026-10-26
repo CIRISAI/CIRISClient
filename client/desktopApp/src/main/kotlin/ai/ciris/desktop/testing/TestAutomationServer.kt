@@ -776,32 +776,23 @@ class TestAutomationServer(
                 // Inject a file attachment (bypasses native file picker for test automation)
                 post("/inject-file") {
                     val request = call.receive<InjectFileRequest>()
-
-                    // Validate size
-                    if (request.sizeBytes > 10L * 1024 * 1024) {
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            ActionResponse(success = false, error = "File too large: ${request.sizeBytes} bytes (max 10MB)")
+                    // The shared handler, as on iOS and Android (CIRISClient#222):
+                    // it answers once the chat screen has taken the file, where
+                    // this answered success after a fixed 200 ms either way.
+                    val r = ai.ciris.mobile.shared.testing.TestAutomationHandler.handleInjectFile(
+                        ai.ciris.mobile.shared.testing.InjectFileRequest(
+                            request.filename, request.mediaType, request.dataBase64, request.sizeBytes,
                         )
-                        return@post
-                    }
-
-                    // Inject via TestAutomation flow (ViewModel will pick it up)
-                    TestAutomation.injectFile(
-                        name = request.filename,
-                        mediaType = request.mediaType,
-                        dataBase64 = request.dataBase64,
-                        sizeBytes = request.sizeBytes
                     )
-
-                    // Give UI time to process
-                    delay(200)
-
-                    call.respond(ActionResponse(
-                        success = true,
-                        action = "inject-file",
-                        text = "${request.filename} (${request.mediaType}, ${request.sizeBytes} bytes)"
-                    ))
+                    val resp = ActionResponse(success = r.success, action = r.action, text = r.text, error = r.error)
+                    call.respond(
+                        when {
+                            r.success -> HttpStatusCode.OK
+                            request.sizeBytes > ai.ciris.mobile.shared.testing.TestAutomationHandler.INJECT_MAX_BYTES -> HttpStatusCode.BadRequest
+                            else -> HttpStatusCode.Conflict
+                        },
+                        resp,
+                    )
                 }
 
                 // Clear all injected file attachments

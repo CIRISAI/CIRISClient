@@ -337,6 +337,59 @@ object TestAutomationHandler {
         )
     }
 
+    /** The largest file `/inject-file` takes: the paperclip's own per-file ceiling. */
+    const val INJECT_MAX_BYTES = 10L * 1024 * 1024
+
+    /**
+     * `POST /inject-file` — hand [request]'s file to the chat paperclip as if
+     * picked, and answer once the chat screen has taken it (CIRISClient#222).
+     *
+     * iOS and Android had no such route, so the with-AI attachment flow
+     * (csd_010_interact_files) could run only on desktop; desktop's own route
+     * posted and answered success after a fixed 200 ms. The injection flow is
+     * cleared by the chat screen's collector (`InteractViewModel`'s
+     * file-injection observer) when it takes the file, so that clear is the
+     * apply signal, as for `/input`. Whether the paperclip ACCEPTED the file is
+     * the screen's to say (its chip or its refusal), not this route's.
+     */
+    suspend fun handleInjectFile(request: InjectFileRequest): ActionResponse {
+        if (request.sizeBytes > INJECT_MAX_BYTES) {
+            return ActionResponse(
+                success = false, action = "inject-file",
+                error = "File too large: ${request.sizeBytes} bytes (max ${INJECT_MAX_BYTES / (1024 * 1024)}MB)",
+            )
+        }
+        val ta = ai.ciris.mobile.shared.platform.TestAutomation
+        if (!awaitFileIdle(ta)) {
+            return ActionResponse(
+                success = false, action = "inject-file",
+                error = "a previous file was still untaken after ${APPLY_TIMEOUT_MS}ms; injecting now would replace it",
+            )
+        }
+        ta.injectFile(request.filename, request.mediaType, request.dataBase64, request.sizeBytes)
+        if (!awaitFileIdle(ta)) {
+            ta.clearFileInjectionRequest()
+            return ActionResponse(
+                success = false, action = "inject-file",
+                error = "nothing took ${request.filename} within ${APPLY_TIMEOUT_MS}ms: " +
+                    "is the chat screen (Interact) open? " + onScreenHint(),
+            )
+        }
+        return ActionResponse(
+            success = true, action = "inject-file",
+            text = "${request.filename} (${request.mediaType}, ${request.sizeBytes} bytes)",
+        )
+    }
+
+    private suspend fun awaitFileIdle(ta: ai.ciris.mobile.shared.platform.TestAutomation): Boolean {
+        var waited = 0L
+        while (ta.fileInjectionRequests.value != null && waited < APPLY_TIMEOUT_MS) {
+            kotlinx.coroutines.delay(APPLY_POLL_MS)
+            waited += APPLY_POLL_MS
+        }
+        return ta.fileInjectionRequests.value == null
+    }
+
     suspend fun handleWait(request: WaitRequest): ActionResponse {
         val timeoutMs = request.timeoutMs ?: 5000
         val startTime = currentTimeMs()
