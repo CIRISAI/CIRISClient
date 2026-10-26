@@ -3970,8 +3970,14 @@ fun CIRISApp(
                 PlatformLogger.d("CIRISApp", "[Screen.Logs] Rendering logs screen: " +
                         "logs=${logsState.logs.size}, isLoading=${logsState.isLoading}, error=${logsState.error}")
 
+                val logsDownload by logsViewModel.download.collectAsState()
                 LogsScreen(
                     logsState = logsState,
+                    downloadState = logsDownload,
+                    onDownload = {
+                        PlatformLogger.i("CIRISApp", "[Screen.Logs] User asked for the log zip")
+                        logsViewModel.downloadLogs()
+                    },
                     onRefresh = {
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] User triggered refresh")
                         logsViewModel.refresh()

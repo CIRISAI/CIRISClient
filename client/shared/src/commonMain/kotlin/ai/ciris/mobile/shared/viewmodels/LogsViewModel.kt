@@ -27,8 +27,26 @@ import kotlinx.coroutines.launch
  * - Search within logs
  * - Auto-scroll to latest logs
  */
+/** What the last log download did, said once on System Logs (CIRISClient#249). */
+sealed interface LogsDownloadState {
+    data object Idle : LogsDownloadState
+    data object Working : LogsDownloadState
+    /** Written: where, in words the person can act on, and how many logs it holds. */
+    data class Saved(val where: String, val fileCount: Int?) : LogsDownloadState
+    /** The agent sent the zip but nothing could be written on this device. */
+    data class NotWritten(val fileName: String) : LogsDownloadState
+    data object AgentTooOld : LogsDownloadState
+    data object NotOwner : LogsDownloadState
+    data class Failed(val why: String) : LogsDownloadState
+}
+
 class LogsViewModel(
-    private val apiClient: CIRISApiClient
+    private val apiClient: CIRISApiClient,
+    private val downloadApi: ai.ciris.mobile.shared.api.LogsDownloadApi =
+        ai.ciris.mobile.shared.api.ClientLogsDownload(apiClient),
+    /** Where the zip goes: [ai.ciris.mobile.shared.platform.saveFileCopy] (Downloads on Android). */
+    private val save: (fileName: String, mediaType: String, bytes: ByteArray) -> String? =
+        { n, t, b -> ai.ciris.mobile.shared.platform.saveFileCopy(n, t, b) },
 ) : ViewModel() {
 
     companion object {
@@ -56,6 +74,33 @@ class LogsViewModel(
     // State
     private val _state = MutableStateFlow(LogsScreenState())
     val state: StateFlow<LogsScreenState> = _state.asStateFlow()
+
+    private val _download = MutableStateFlow<LogsDownloadState>(LogsDownloadState.Idle)
+    val download: StateFlow<LogsDownloadState> = _download.asStateFlow()
+
+    /**
+     * Download the agent's agent-and-node log zip and save it (CIRISClient#249).
+     * The saved path, or plainly that nothing was written; an agent before
+     * 2.17.0 is told apart from a failure, and the in-app log list is untouched.
+     */
+    fun downloadLogs() {
+        if (_download.value == LogsDownloadState.Working) return
+        _download.value = LogsDownloadState.Working
+        viewModelScope.launch {
+            _download.value = when (val got = downloadApi.download()) {
+                is ai.ciris.mobile.shared.api.LogsDownload.Got -> {
+                    val where = save(got.fileName, "application/zip", got.bytes)
+                    if (where != null) LogsDownloadState.Saved(where, got.fileCount)
+                    else LogsDownloadState.NotWritten(got.fileName)
+                }
+                ai.ciris.mobile.shared.api.LogsDownload.AgentTooOld -> LogsDownloadState.AgentTooOld
+                is ai.ciris.mobile.shared.api.LogsDownload.NotOwner -> LogsDownloadState.NotOwner
+                is ai.ciris.mobile.shared.api.LogsDownload.Failed ->
+                    LogsDownloadState.Failed(got.detail ?: "HTTP ${got.status}")
+            }
+            logInfo("downloadLogs", "${_download.value}")
+        }
+    }
 
     // Polling job
     private var pollingJob: Job? = null
