@@ -1745,6 +1745,77 @@
       },
       "notes": "Tested: the five-platform run with AI on the release commit — see the release PR. Correction to the 0.5.231 row: CIRISAgent 2.16.3 pinned 0.5.230, not 0.5.231; 0.5.231 first reached the agent in a later pin. Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
       "published": null
+    },
+    {
+      "client_version": "0.5.233",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. The full log download needs CIRISAgent 2.17.0 (GET /v1/telemetry/logs/download); an older agent answers 404 and the panels say so and keep the 32 KiB tails.",
+      "node_max_tested": "0.5.237",
+      "agent_min_tested": "2.16.5",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker",
+        "contacts.pending",
+        "setup.add_device",
+        "setup.owned_node_route",
+        "billing.credential_refresh",
+        "agent.shed_retry",
+        "shell.sign_out",
+        "diagnostics.ios_crash_log",
+        "trace.run_kind",
+        "identity.self_roster",
+        "add_device.held",
+        "accord.trust_root_amend",
+        "chat.attachment_policy",
+        "chat.attachment_outcomes",
+        "agent.rate_governor",
+        "contacts.requests",
+        "diagnostics.agent_logs"
+      ],
+      "capabilities_note": "new: the agent's full logs. Logs screen: Download saves the agent's zip from GET /v1/telemetry/logs/download (CIRISAgent 2.17.0, owner session; 404 = agent too old, 403 = not the owner, each said in the panel) and Share hands it to the system share sheet on Android (#251, #252, CSD-029/CSD-010). The diagnostics panel on chat saves the same zip beside the bundle, and Copy carries the zip's MANIFEST.txt, redacted (#252). Android: the debug bundle carries 32 KiB tails of the agent's latest.log and incidents_latest.log with no session, and every failed Downloads write logs the step that refused; the HTTP transport talks to 127.0.0.1, not localhost, so a device resolving localhost to ::1 no longer misses the agent (#250, CIRISClient#249).",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5726
+      },
+      "notes": "Tested: the five-platform run with AI on the release commit, against ciris-server 0.5.237 and CIRISAgent 2.16.5 (2.17.0 is waiting on this release, so the download route was exercised by unit tests on its wire shape, not end to end). Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
+      "published": null
     }
   ]
 }
