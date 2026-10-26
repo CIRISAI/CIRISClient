@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.ContentValues
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
@@ -149,3 +150,44 @@ actual fun copyToClipboard(text: String): Boolean {
         true
     }.getOrDefault(false)
 }
+
+private fun shareFailed(why: String) =
+    ai.ciris.mobile.shared.platform.PlatformLogger.w("DebugBundleExport", "[shareFile] failed on API ${Build.VERSION.SDK_INT}: $why")
+
+/** The logs FileProvider's authority: `<package>.logs`, cache-path `logs/` (CIRISAgent 2.17.0). */
+private fun logsAuthority(ctx: Context) = ctx.packageName + ".logs"
+
+actual fun canShareFiles(): Boolean {
+    val ctx = appContext ?: return false
+    return runCatching { ctx.packageManager.resolveContentProvider(logsAuthority(ctx), 0) != null }.getOrDefault(false)
+}
+
+actual fun shareFile(fileName: String, mediaType: String, bytes: ByteArray): Boolean {
+    val ctx = appContext ?: run { shareFailed("no Context"); return false }
+    return runCatching {
+        val dir = File(ctx.cacheDir, "logs").apply { mkdirs() }
+        val file = File(dir, fileName.substringAfterLast('/').substringAfterLast('\\').ifBlank { "ciris-logs.zip" })
+        file.writeBytes(bytes)
+        // Throws IllegalArgumentException where the app has no such provider
+        // (an agent before 2.17.0): canShareFiles() keeps the button hidden there.
+        val uri = androidx.core.content.FileProvider.getUriForFile(ctx, logsAuthority(ctx), file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = mediaType
+            putExtra(Intent.EXTRA_STREAM, uri)
+            clipData = ClipData.newRawUri(fileName, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+        ctx.startActivity(Intent.createChooser(send, null).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        })
+        true
+    }.getOrElse { shareFailed("${it::class.simpleName}: ${it.message}"); false }
+}
+
+actual fun zipTextEntry(zip: ByteArray, name: String): String? = jvmZipTextEntry(zip, name)
+
+internal fun jvmZipTextEntry(zip: ByteArray, name: String): String? = runCatching {
+    java.util.zip.ZipInputStream(zip.inputStream()).use { z ->
+        generateSequence { z.nextEntry }.firstOrNull { it.name == name }?.let { z.readBytes().decodeToString() }
+    }
+}.getOrNull()

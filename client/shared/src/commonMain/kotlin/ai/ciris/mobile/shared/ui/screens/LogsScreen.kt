@@ -66,6 +66,8 @@ fun LogsScreen(
         ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Idle,
     /** Download the agent-and-node log zip; null hides the action. Agent only: a bare node has no route. */
     onDownload: (() -> Unit)? = null,
+    /** Share the downloaded zip; null where this app cannot share (no logs FileProvider). */
+    onShare: (() -> Unit)? = null,
 ) {
     var showFilters by remember { mutableStateOf(false) }
     var expandedLogId by remember { mutableStateOf<String?>(null) }
@@ -144,6 +146,12 @@ fun LogsScreen(
                 .padding(paddingValues)
         ) {
             LogsDownloadResult(downloadState)
+            if (onShare != null && downloadState is ai.ciris.mobile.shared.viewmodels.LogsDownloadState.Saved) {
+                TextButton(
+                    onClick = onShare,
+                    modifier = Modifier.padding(horizontal = 8.dp).testableClickable("btn_logs_share") { onShare() },
+                ) { Text(localizedString("mobile.logs_share")) }
+            }
 
             // Log source selector (Node / Agent) at the top of the screen.
             LogsSourceSelector(

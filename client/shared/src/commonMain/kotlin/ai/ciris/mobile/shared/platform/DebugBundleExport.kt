@@ -33,3 +33,17 @@ expect fun copyToClipboard(text: String): Boolean
  * itself. Nothing here overwrites: an existing name gets a numbered sibling.
  */
 expect fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): String?
+
+/**
+ * Whether this app can hand a file to the system share sheet (CIRISClient#249).
+ * Android only, and only where the app declares the logs FileProvider
+ * (`<package>.logs`, CIRISAgent 2.17.0's manifest); false everywhere else, so
+ * Share is hidden there and Download still works.
+ */
+expect fun canShareFiles(): Boolean
+
+/** Offer [bytes] as [fileName] to the share sheet. False when this app cannot. */
+expect fun shareFile(fileName: String, mediaType: String, bytes: ByteArray): Boolean
+
+/** One text entry of a zip (the log download's MANIFEST.txt), or null: absent, not a zip, or no unzip here. */
+expect fun zipTextEntry(zip: ByteArray, name: String): String?

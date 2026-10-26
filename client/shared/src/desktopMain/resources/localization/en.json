@@ -1031,6 +1031,7 @@
     }
   },
   "mobile": {
+    "logs_share": "Share",
     "logs_download": "Download logs",
     "logs_download_working": "Preparing the logs…",
     "logs_download_saved": "Saved {count} log files to {where}",

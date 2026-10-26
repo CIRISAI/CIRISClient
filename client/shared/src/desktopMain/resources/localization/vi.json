@@ -1229,6 +1229,7 @@
     "logs_download_too_old": "Tác nhân này quá cũ để tải xuống nhật ký. Cần CIRIS Agent 2.17.0 trở lên.",
     "logs_download_not_owner": "Chỉ chủ sở hữu mới có thể tải xuống nhật ký.",
     "logs_download_failed": "Không thể tải xuống nhật ký: {why}",
+    "logs_share": "Chia sẻ",
     "roster_title": "Thay đổi đối với thiết bị của bạn",
     "roster_desc": "Khi có từ hai thiết bị trở lên trên CIRIS ID của bạn, việc thêm hoặc gỡ bỏ một thiết bị là một thay đổi mà các thiết bị khác của bạn phải trả lời. Hãy đồng ý hoặc phản đối từ một thiết bị không phải là thiết bị đã đề xuất thay đổi đó.",
     "roster_too_old": "Nút này quá cũ để giữ các thay đổi đối với thiết bị của bạn cho các thiết bị khác của bạn trả lời. Hãy cập nhật nút để xem chúng ở đây.",

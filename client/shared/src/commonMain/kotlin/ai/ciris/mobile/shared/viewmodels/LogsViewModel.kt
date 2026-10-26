@@ -47,6 +47,11 @@ class LogsViewModel(
     /** Where the zip goes: [ai.ciris.mobile.shared.platform.saveFileCopy] (Downloads on Android). */
     private val save: (fileName: String, mediaType: String, bytes: ByteArray) -> String? =
         { n, t, b -> ai.ciris.mobile.shared.platform.saveFileCopy(n, t, b) },
+    /** The share sheet: [ai.ciris.mobile.shared.platform.shareFile]; false where this app cannot share. */
+    private val share: (fileName: String, mediaType: String, bytes: ByteArray) -> Boolean =
+        { n, t, b -> ai.ciris.mobile.shared.platform.shareFile(n, t, b) },
+    /** Whether Share is offered at all (Android with the logs FileProvider). */
+    val canShare: Boolean = ai.ciris.mobile.shared.platform.canShareFiles(),
 ) : ViewModel() {
 
     companion object {
@@ -89,6 +94,7 @@ class LogsViewModel(
         viewModelScope.launch {
             _download.value = when (val got = downloadApi.download()) {
                 is ai.ciris.mobile.shared.api.LogsDownload.Got -> {
+                    lastZip = got
                     val where = save(got.fileName, "application/zip", got.bytes)
                     if (where != null) LogsDownloadState.Saved(where, got.fileCount)
                     else LogsDownloadState.NotWritten(got.fileName)
@@ -100,6 +106,18 @@ class LogsViewModel(
             }
             logInfo("downloadLogs", "${_download.value}")
         }
+    }
+
+    /** The last zip the agent sent, kept so Share hands over the same bytes. */
+    private var lastZip: ai.ciris.mobile.shared.api.LogsDownload.Got? = null
+
+    /** Offer the last downloaded zip to the share sheet; false if there is none or this app cannot share. */
+    fun shareLogs(): Boolean {
+        val zip = lastZip ?: return false
+        if (!canShare) return false
+        val ok = share(zip.fileName, "application/zip", zip.bytes)
+        logInfo("shareLogs", "share sheet ${if (ok) "opened" else "not available"} for ${zip.fileName}")
+        return ok
     }
 
     // Polling job

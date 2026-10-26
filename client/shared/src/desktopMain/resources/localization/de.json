@@ -1229,6 +1229,7 @@
     "logs_download_too_old": "Dieser Agent ist zu alt für einen Protokoll-Download. Er benötigt CIRIS Agent 2.17.0 oder neuer.",
     "logs_download_not_owner": "Nur der Eigentümer kann die Protokolle herunterladen.",
     "logs_download_failed": "Die Protokolle konnten nicht heruntergeladen werden: {why}",
+    "logs_share": "Teilen",
     "roster_title": "Änderungen an Ihren Geräten",
     "roster_desc": "Haben Sie zwei oder mehr Geräte mit Ihrer CIRIS-ID verknüpft, ist das Hinzufügen oder Entfernen eines Geräts eine Änderung, auf die Ihre anderen Geräte antworten. Stimmen Sie zu oder widersprechen Sie von einem Gerät aus, das diese Änderung nicht vorgeschlagen hat.",
     "roster_too_old": "Dieser Knoten ist zu alt, um Änderungen an Ihren Geräten zurückzuhalten, damit Ihre anderen Geräte darauf antworten können. Aktualisieren Sie ihn, um sie hier zu sehen.",

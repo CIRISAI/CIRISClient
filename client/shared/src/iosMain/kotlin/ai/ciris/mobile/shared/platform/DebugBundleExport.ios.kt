@@ -53,3 +53,9 @@ actual fun saveFileCopy(fileName: String, mediaType: String, bytes: ByteArray): 
     }
     if (data.writeToFile(path, true)) path else null
 }.getOrNull()
+
+/** Not offered on iOS yet: no share-sheet bridge from shared code. */
+actual fun canShareFiles(): Boolean = false
+actual fun shareFile(fileName: String, mediaType: String, bytes: ByteArray): Boolean = false
+/** No unzip in shared iOS code; the zip itself is saved whole. */
+actual fun zipTextEntry(zip: ByteArray, name: String): String? = null

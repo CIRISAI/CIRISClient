@@ -801,6 +801,7 @@ fun InteractScreen(
                 isExpanded = showVizLegend,
                 onToggle = { showVizLegend = !showVizLegend },
                 theme = theme,
+                fetchLogsZip = { viewModel.downloadLogsZip() },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp, bottom = 140.dp)
@@ -3416,7 +3417,9 @@ private fun VisualizationLegendButton(
     isExpanded: Boolean,
     onToggle: () -> Unit,
     theme: InteractTheme,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** The agent's full log zip for the diagnostics panel (CIRISClient#249). */
+    fetchLogsZip: (suspend () -> ai.ciris.mobile.shared.api.LogsDownload)? = null,
 ) {
     Column(
         modifier = modifier,
@@ -3462,6 +3465,7 @@ private fun VisualizationLegendButton(
                         DebugLogsBlock(
                             extra = mapOf("screen" to "interact"),
                             initiallyExpanded = true,
+                            fetchLogsZip = fetchLogsZip,
                         )
                 }
             }
