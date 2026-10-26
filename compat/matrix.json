@@ -1675,6 +1675,76 @@
       },
       "notes": "THE 0.5.231 RELEASE, for CIRISAgent 2.16.3 to pin. Tested: the five-platform with-AI run on the release commit — see the release PR. Known, agent-side: on ciris-agent 2.16.2 the iOS with-AI leg's live model list falls back to a static list (no anthropic SDK in the iOS bundle; CIRISAgent#1298, fixed by #1309 in 2.16.3). Translations: draft / machine_reviewed.",
       "published": null
+    },
+    {
+      "client_version": "0.5.232",
+      "flavors": [
+        "universal"
+      ],
+      "node_min": "0.5.168",
+      "node_min_reason": "unchanged. Contact requests draw nothing on a node without GET /v1/contacts/requests (a bare 404 is an older node, never 'no requests'); `mutual` is optional on contact rows.",
+      "node_max_tested": "0.5.235",
+      "agent_min_tested": "2.16.5",
+      "capabilities": [
+        "contacts",
+        "chat",
+        "commons.ballots",
+        "identity.repair",
+        "identity.federation_entry",
+        "diagnostics.export",
+        "device.local_wipe",
+        "registry.verify",
+        "households",
+        "communities",
+        "contacts.withdraw",
+        "contacts.contact_code",
+        "peers.key_verification",
+        "data.trace_erasure",
+        "data.deletion_receipts",
+        "consent.partnership_queue",
+        "adapters.connectors",
+        "accord.trust_root",
+        "files.drive",
+        "notes",
+        "membership.invites",
+        "chat.pair_invitations",
+        "setup.claimed_session",
+        "identity.eviction_report",
+        "files.custody",
+        "accord.final_genesis",
+        "trust_root.served_bundle",
+        "files.awaiting_key",
+        "startup.node_wait",
+        "accord.ceremony_usb_picker",
+        "contacts.pending",
+        "setup.add_device",
+        "setup.owned_node_route",
+        "billing.credential_refresh",
+        "agent.shed_retry",
+        "shell.sign_out",
+        "diagnostics.ios_crash_log",
+        "trace.run_kind",
+        "identity.self_roster",
+        "add_device.held",
+        "accord.trust_root_amend",
+        "chat.attachment_policy",
+        "chat.attachment_outcomes",
+        "agent.rate_governor",
+        "contacts.requests"
+      ],
+      "capabilities_note": "new: contact requests on People — whoever added you by code and you have not added back, with Accept (three-fact confirm, POST /v1/contacts) and private, reversible Ignore; decline reserved for CIRISPersist#1121 (#243, CSD-109; server 0.5.237). Desktop /input acknowledges only once the value is applied, 409 otherwise, with the setup username and fed-ID label readable back (#241, #240). /inject-file served on iOS and Android through one shared handler that answers once the chat takes the file; the iOS test server reads bodies up to 16 MB (#244, #222). Wise Authority is never 'human advisor': glossaries and 23 shipped strings retranslated (#237, #238).",
+      "spec_source": {
+        "repo": "CIRISAI/CIRISServer",
+        "release": null,
+        "sha256": null,
+        "note": "CIRISServer#470 open — nulls retire when the node serves its spec"
+      },
+      "locale_bundle": {
+        "languages": 29,
+        "keys": 5703
+      },
+      "notes": "Tested: the five-platform run with AI on the release commit — see the release PR. Correction to the 0.5.231 row: CIRISAgent 2.16.3 pinned 0.5.230, not 0.5.231; 0.5.231 first reached the agent in a later pin. Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
+      "published": null
     }
   ]
 }
