@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.components
 
+import ai.ciris.mobile.shared.platform.agentLogTails
 import ai.ciris.mobile.shared.models.CLIENT_VERSION
 import ai.ciris.mobile.shared.platform.DebugLogBuffer
 import ai.ciris.mobile.shared.platform.getAppBuildNumber
@@ -63,6 +64,15 @@ object DebugBundle {
             appendLine(" crash-and-relaunch loses it. The on-disk log survives.)")
         } else {
             for (e in entries) appendLine("[${e.level}] ${e.tag}: ${e.message}")
+        }
+        // The agent's own logs, where only the bundle can reach them (Android
+        // release builds have no run-as). Redacted with the rest by render().
+        for ((name, text) in safelyList { agentLogTails() }) {
+            appendLine()
+            val title = "Agent log: $name"
+            appendLine(title)
+            appendLine("-".repeat(title.length))
+            appendLine(text.trimEnd())
         }
     }
 

@@ -20,7 +20,7 @@ private const val TAG = "PlatformHttp"
  */
 actual suspend fun platformHttpGet(url: String): Int = withContext(Dispatchers.IO) {
     try {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = URL(ai.ciris.mobile.shared.platform.loopbackLiteral(url)).openConnection() as HttpURLConnection
         connection.apply {
             requestMethod = "GET"
             connectTimeout = 2000
@@ -41,7 +41,7 @@ actual suspend fun platformHttpGet(url: String): Int = withContext(Dispatchers.I
  */
 actual suspend fun platformHttpPost(url: String, body: String): Pair<Int, ServerManager.ShutdownResponse> = withContext(Dispatchers.IO) {
     try {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = URL(ai.ciris.mobile.shared.platform.loopbackLiteral(url)).openConnection() as HttpURLConnection
         connection.apply {
             requestMethod = "POST"
             connectTimeout = 3000
@@ -82,7 +82,7 @@ actual suspend fun platformHttpPost(url: String, body: String): Pair<Int, Server
  */
 actual suspend fun platformHttpPostWithAuth(url: String, body: String, token: String?): Int = withContext(Dispatchers.IO) {
     try {
-        val connection = URL(url).openConnection() as HttpURLConnection
+        val connection = URL(ai.ciris.mobile.shared.platform.loopbackLiteral(url)).openConnection() as HttpURLConnection
         connection.apply {
             requestMethod = "POST"
             connectTimeout = 3000
