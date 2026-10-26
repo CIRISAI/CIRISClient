@@ -204,9 +204,14 @@ def test_any_other_policy_answer_fails_the_flow_instead_of_skipping(probe_text):
     assert helper.attached == []
 
 
-def test_the_skips_are_counted_in_the_baseline_on_every_with_ai_leg():
+def test_the_attach_steps_run_on_every_with_ai_leg():
+    """The gate's agent serves /v1/agent/attachments/policy (2.16.3+; the gate
+    resolves 2.16.5 since 2026-10-25), so the three attach steps RUN on every
+    with-AI leg and none is an optional skip. While it was 2.16.2 they skipped
+    and this pinned 3. Re-recorded from runs 40250199252 (linux-ai) and
+    40241085150 (ios-ai), where all three passed through /inject-file (#244)."""
     import json
 
     base = json.loads((REPO / "testing/flows/optional_skips_baseline.json").read_text())
     for leg in ("linux-ai", "windows-ai", "ios-ai"):
-        assert base[leg]["csd_010_interact_files"] == 3, leg
+        assert base[leg]["csd_010_interact_files"] == 0, leg

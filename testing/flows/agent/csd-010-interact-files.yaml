@@ -74,7 +74,13 @@ steps:
       send, so the wait is on the third chip of the newest user row — only
       this flow's message carries three files.
     do:
-      - input: {input_message: "Which library catalogue references do the attached files give? Please include every reference in your reply."}
+      # The question names the DOCUMENTS: only they carry a reference, and the
+      # image does not. Asked about "the attached files", the agent drafted the
+      # same two-reference reply four times and its entropy conscience pondered
+      # each (the draft did not account for the image) until the credit ran out
+      # (run 40250199252; CIRISAgent RCA). The image still travels and is still
+      # asserted read whole below.
+      - input: {input_message: "Which library catalogue references do the two attached documents give? The image is only a colour swatch and has none. Please include every reference in your reply."}
       - click: btn_send
       - wait: msg_user_latest_attachment_2
         wait_ms: 5000
