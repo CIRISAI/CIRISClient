@@ -2,19 +2,25 @@ package ai.ciris.mobile.shared.testing
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.flow.update
 
 /**
  * Cross-platform shared state for test automation.
  * All platforms write to this, the test server reads from it.
- * Uses coroutine Mutex for thread safety (works on all K/MP targets).
+ *
+ * THE REGISTRIES ARE IMMUTABLE SNAPSHOTS IN STATE FLOWS. The UI thread writes
+ * (an element composes, moves, leaves) while the test server reads from its
+ * own thread. These were plain mutable maps under a comment claiming a mutex
+ * nobody took, and the iOS server's `/tree` copied the element map mid-write:
+ * `GET /tree -> HTTP 500 ConcurrentModificationException` (release run
+ * 40260542326, ios-ai). Every write is now an atomic `update {}` that swaps
+ * in a new map, and every read is one consistent snapshot — on every K/MP
+ * target, with no platform lock.
  */
 object TestAutomationState {
 
-    // Element registry (guarded by elementsMutex for K/N safety)
-    private val elements = mutableMapOf<String, ElementInfo>()
-    private val clickHandlers = mutableMapOf<String, () -> Unit>()
+    private val elements = MutableStateFlow<Map<String, ElementInfo>>(emptyMap())
+    private val clickHandlers = MutableStateFlow<Map<String, () -> Unit>>(emptyMap())
 
     var currentScreen: String = "unknown"
     var isEnabled: Boolean = false
@@ -53,7 +59,7 @@ object TestAutomationState {
     fun registerElement(testTag: String, x: Int, y: Int, width: Int, height: Int, text: String?) {
         val screenX = x + windowX
         val screenY = y + windowY
-        elements[testTag] = ElementInfo(
+        val info = ElementInfo(
             testTag = testTag,
             x = screenX, y = screenY,
             width = width, height = height,
@@ -62,6 +68,7 @@ object TestAutomationState {
             centerY = screenY + height / 2,
             visible = isOnScreen(width, height),
         )
+        elements.update { it + (testTag to info) }
     }
 
     /**
@@ -69,39 +76,42 @@ object TestAutomationState {
      * This is the list a failed `/wait` or `/click` prints, so a wrong tag is a
      * line of output rather than a log dig (CIRISClient#33, #39).
      */
-    fun onScreenDrivable(): List<String> =
-        elements.values.filter { it.visible && clickHandlers.containsKey(it.testTag) }.map { it.testTag }.sorted()
+    fun onScreenDrivable(): List<String> {
+        val handlers = clickHandlers.value
+        return elements.value.values.filter { it.visible && handlers.containsKey(it.testTag) }.map { it.testTag }.sorted()
+    }
 
     /** Composed and positioned, but entirely outside the window. */
-    fun isOffScreen(testTag: String): Boolean = elements[testTag]?.visible == false
+    fun isOffScreen(testTag: String): Boolean = elements.value[testTag]?.visible == false
 
     fun unregisterElement(testTag: String) {
-        elements.remove(testTag)
-        clickHandlers.remove(testTag)
+        elements.update { it - testTag }
+        clickHandlers.update { it - testTag }
     }
 
     fun clearElements() {
-        elements.clear()
+        elements.value = emptyMap()
     }
 
     fun getElement(testTag: String): ElementInfo? {
-        return elements[testTag]
+        return elements.value[testTag]
     }
 
+    /** One consistent snapshot; never a live view another thread is writing. */
     fun getAllElements(): Map<String, ElementInfo> {
-        return elements.toMap()
+        return elements.value
     }
 
     fun registerClickHandler(testTag: String, handler: () -> Unit) {
-        clickHandlers[testTag] = handler
+        clickHandlers.update { it + (testTag to handler) }
     }
 
     fun unregisterClickHandler(testTag: String) {
-        clickHandlers.remove(testTag)
+        clickHandlers.update { it - testTag }
     }
 
     fun triggerClick(testTag: String): Boolean {
-        val handler = clickHandlers[testTag] ?: return false
+        val handler = clickHandlers.value[testTag] ?: return false
         handler()
         return true
     }
@@ -117,7 +127,7 @@ object TestAutomationState {
      * tree. Element-by-position lookups miss those buttons; click-handler
      * lookups don't.
      */
-    fun hasClickHandler(testTag: String): Boolean = clickHandlers.containsKey(testTag)
+    fun hasClickHandler(testTag: String): Boolean = clickHandlers.value.containsKey(testTag)
 
     // Text input
     private val _textInputRequests = MutableStateFlow<TextInputRequest?>(null)
@@ -164,28 +174,29 @@ object TestAutomationState {
     private val _scrollRequests = MutableStateFlow<ScrollRequest?>(null)
     val scrollRequests: StateFlow<ScrollRequest?> = _scrollRequests
 
-    private val scrollables = mutableListOf<Long>()
-    private val scrollableCapacity = mutableMapOf<Long, Int>()
-    private val scrollableNames = mutableMapOf<Long, String>()
-    private var nextScrollToken = 1L
+    private val scrollables = MutableStateFlow<List<Long>>(emptyList())
+    private val scrollableCapacity = MutableStateFlow<Map<Long, Int>>(emptyMap())
+    private val scrollableNames = MutableStateFlow<Map<Long, String>>(emptyMap())
+    private val nextScrollToken = MutableStateFlow(1L)
 
     /** Claim a token for a scrollable that is now composed. */
     fun registerScrollable(name: String? = null): Long {
-        val token = nextScrollToken++
-        scrollables.add(token)
-        if (name != null) scrollableNames[token] = name
+        var token = 0L
+        nextScrollToken.update { token = it; it + 1 }
+        scrollables.update { it + token }
+        if (name != null) scrollableNames.update { it + (token to name) }
         return token
     }
 
     fun unregisterScrollable(token: Long) {
-        scrollables.remove(token)
-        scrollableCapacity.remove(token)
-        scrollableNames.remove(token)
+        scrollables.update { it - token }
+        scrollableCapacity.update { it - token }
+        scrollableNames.update { it - token }
     }
 
     /** How far this scrollable can travel right now; 0 means no overflow. */
     fun setScrollableCapacity(token: Long, maxValue: Int) {
-        scrollableCapacity[token] = maxValue
+        scrollableCapacity.update { it + (token to maxValue) }
     }
 
     /**
@@ -208,16 +219,19 @@ object TestAutomationState {
         // one, but it cannot know that the caller meant the nav rail and not
         // the article it is sitting next to. When the request names a
         // registered container, that container owns the dispatch outright.
+        val list = scrollables.value
         if (wanted != null) {
-            val named = scrollables.lastOrNull { scrollableNames[it] == wanted }
+            val names = scrollableNames.value
+            val named = list.lastOrNull { names[it] == wanted }
             if (named != null) return named == token
         }
-        val movable = scrollables.lastOrNull { (scrollableCapacity[it] ?: 0) > 0 }
-        return (movable ?: scrollables.lastOrNull()) == token
+        val capacity = scrollableCapacity.value
+        val movable = list.lastOrNull { (capacity[it] ?: 0) > 0 }
+        return (movable ?: list.lastOrNull()) == token
     }
 
     /** Whether anything on screen can act on a scroll request at all. */
-    fun hasScrollable(): Boolean = scrollables.isNotEmpty()
+    fun hasScrollable(): Boolean = scrollables.value.isNotEmpty()
 
     fun requestScroll(testTag: String, direction: String, amount: Int,
                       container: String? = null) {
