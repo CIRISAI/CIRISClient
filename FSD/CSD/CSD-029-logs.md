@@ -104,6 +104,7 @@ state object, and never read by the branch that decides what to draw.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the log | `GET /v1/telemetry/logs` | **both** | live on CIRISServer (`/v1/telemetry/logs`) and CIRISAgent (`telemetry.py`) |
+| the log download (CIRISClient#249) | `GET /v1/telemetry/logs/download?tail_kib=N` → `application/zip`, `Content-Disposition` filename `ciris-logs-<UTC>.zip`, `X-CIRIS-Log-Files` | CIRISAgent (the AGENT base URL only; the node does not proxy it) | **2.17.0** (CIRISAgent#1326). Owner session (ADMIN): 403 otherwise; 404 on an older agent, which System Logs says is too old for a log download. Called by `downloadLogsZip` (`api/LogsDownloadApi.kt`), saved through `saveFileCopy` and shared through the agent app's `<package>.logs` FileProvider; the Interact diagnostics panel asks it too, falling back to the bundle's 32 KiB tails |
 | available services | same response | **both** | live; `availableServices` is derived from the returned lines |
 | the agent source on a node build | — | — | correctly refused client-side, with a sentence |
 

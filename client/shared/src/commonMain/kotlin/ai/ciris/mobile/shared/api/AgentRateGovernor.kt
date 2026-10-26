@@ -338,6 +338,12 @@ class AgentRateGovernor internal constructor() {
  */
 val AgentRateLimit = createClientPlugin("AgentRateLimit") {
     on(Send) { request ->
+        // `localhost` is not resolved on every device (LoopbackLiteral.kt): send
+        // the loopback address itself. Every agent-bound client installs this
+        // plugin, so this is the one place the rewrite has to live.
+        if (ai.ciris.mobile.shared.platform.isLoopbackName(request.url.host)) {
+            request.url.host = ai.ciris.mobile.shared.platform.LOOPBACK_LITERAL
+        }
         val url = request.url.build()
         if (AgentRateGovernor.isExempt(url.encodedPath)) return@on proceed(request)
         val governor = AgentRateGovernor.forUrl(url)

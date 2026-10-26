@@ -262,7 +262,7 @@ actual class PythonRuntime : PythonRuntimeProtocol {
 
     actual override suspend fun checkHealth(): Result<Boolean> = withContext(Dispatchers.IO) {
         try {
-            val url = URL(ActiveBackend.endpoint.healthUrl("localhost"))
+            val url = URL(loopbackLiteral(ActiveBackend.endpoint.healthUrl("localhost")))
             val connection = url.openConnection() as HttpURLConnection
 
             connection.apply {
