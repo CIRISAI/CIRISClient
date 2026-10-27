@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 
 import ai.ciris.mobile.shared.api.CIRISApiClient
+import ai.ciris.mobile.shared.api.probeFederationIdentity
 import ai.ciris.mobile.shared.auth.BillingCredentialRefreshOutcome
 import ai.ciris.mobile.shared.auth.BrowserSignInResult
 import ai.ciris.mobile.shared.auth.SilentSignInResult
@@ -610,8 +611,7 @@ fun CIRISApp(
 
     // Federation-ID-first startup. The owner's federation identity lives in this
     // device's LOCAL node (its keyring/substrate), NOT the app — the app holds no
-    // keys and signs nothing. We probe the LOCAL node's self-key-record ONCE at
-    // launch:
+    // keys and signs nothing. We probe the LOCAL node at launch:
     //  - present → Login offers "Sign in as <key_id>"
     //  - absent  → Login offers "Create a new federation ID" (the wizard's
     //              FEDERATION_IDENTITY_SETUP step drives the local node).
@@ -619,47 +619,37 @@ fun CIRISApp(
     // actually know which case we're in.
     var federationIdentityKeyId by remember { mutableStateOf<String?>(null) }
     var federationProbed by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        // THE OWNER'S FED-ID, NOT THE NODE'S SIGNER (Codex, PR #6).
-        //
-        // getSelfKeyRecord() returns the NODE key — `ciris-client` on a claimed
-        // node — which is the node's own signer and NOT the bound owner. Reading
-        // it here made the login screen offer "Sign in as ciris-client", and
-        // worse, treated an ordinary node signer as proof that the OWNER already
-        // has a federation identity, so the create path could never appear for
-        // an owner who genuinely has none. IdentityManagementViewModel.load()
-        // documents this exact trap and asks owned-nodes first; this now does
-        // the same thing, in the same order, for the same reason.
-        //
+    // Bumped when Login is shown while the node has not answered; restarts
+    // both node probes below (CIRISClient#254).
+    var nodeReprobeEpoch by remember { mutableStateOf(0) }
+    LaunchedEffect(nodeReprobeEpoch) {
         // Three outcomes, not two. A probe that could not REACH the node has
-        // learned nothing, and "nothing" must not render as "no identity" — the
-        // startup flow retries node readiness, and a cold launch can compose
-        // before the node answers. Only a probe that got an answer sets
-        // federationProbed, so an unreachable node renders no section at all
-        // rather than inviting the owner to create an identity they already have.
-        var reached = false
-        val keyId = try {
-            val owner = runCatching { apiClient.getOwnedNodes().owner }
-                .onSuccess { reached = true }
-                .getOrNull()
-                ?.takeIf { it.isNotBlank() }
-            owner ?: apiClient.getSelfKeyRecord(
-                ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
-            ).keyId.also { reached = true }
-        } catch (e: Exception) {
-            platformLog(TAG, "[INFO][federation] probe failed: ${e.message?.take(80)}")
-            null
-        }
-        federationIdentityKeyId = keyId
-        federationProbed = reached
-        platformLog(
-            TAG,
-            "[INFO][federation] startup probe: " + when {
-                !reached -> "node unreachable — no federation section rendered"
-                keyId != null -> "owner identity key_id=$keyId"
-                else -> "reached the node; owner has no federation identity yet"
+        // learned nothing, and "nothing" must not render as "no identity". Only
+        // a probe that got an answer sets federationProbed, so an unreachable
+        // node renders no section at all, rather than inviting the owner to
+        // create an identity they already have.
+        //
+        // AND ASKED AGAIN UNTIL IT ANSWERS (CIRISClient#254). A cold launch on
+        // a slow phone composes Login before the node binds; probing once left
+        // a healthy, unclaimed node with no claim section for good.
+        var lastLine: String? = null
+        ai.ciris.mobile.shared.api.NodeReprobe.untilAnswered<ai.ciris.mobile.shared.api.FederationProbe>(
+            answered = { it.reached },
+            onResult = { probe ->
+                // A transient miss never hides a section an earlier answer drew.
+                if (probe.reached || !federationProbed) {
+                    federationIdentityKeyId = probe.keyId
+                    federationProbed = probe.reached
+                }
+                val line = "[INFO][federation] startup probe: " + when {
+                    !probe.reached -> "node unreachable — no federation section rendered (will ask again)"
+                    probe.keyId != null -> "owner identity key_id=${probe.keyId}"
+                    else -> "reached the node; owner has no federation identity yet"
+                }
+                if (line != lastLine) platformLog(TAG, line)
+                lastLine = line
             },
-        )
+        ) { apiClient.probeFederationIdentity() }
     }
 
     // OAuth auth state for token exchange after setup (works for both Google and Apple)
@@ -1063,14 +1053,30 @@ fun CIRISApp(
     var nodeCapabilities by remember(effectiveNodeUrl) {
         mutableStateOf(ai.ciris.mobile.shared.models.capability.NodeCapabilities.UNREACHABLE)
     }
-    LaunchedEffect(effectiveNodeUrl, activeProfileId, capabilityProbeAttempt) {
-        nodeCapabilities = apiClient.getNodeCapabilities(effectiveNodeUrl)
-        platformLog(
-            TAG,
-            "[INFO][caps] $effectiveNodeUrl declares ${nodeCapabilities.declared?.size ?: "nothing"}" +
-                if (nodeCapabilities.unreachable) " (unreachable)" else "" +
-                if (nodeCapabilities.undetermined) " (undetermined)" else "",
-        )
+    LaunchedEffect(effectiveNodeUrl, activeProfileId, capabilityProbeAttempt, nodeReprobeEpoch) {
+        // Asked again until the node answers (CIRISClient#254): UNREACHABLE on a
+        // cold launch usually means "not bound yet", and nobody should have to
+        // press a retry to find that out.
+        var lastLine: String? = null
+        ai.ciris.mobile.shared.api.NodeReprobe.untilAnswered<ai.ciris.mobile.shared.models.capability.NodeCapabilities>(
+            answered = { !it.unreachable && !it.undetermined },
+            onResult = { caps ->
+                nodeCapabilities = caps
+                val line = "[INFO][caps] $effectiveNodeUrl declares ${caps.declared?.size ?: "nothing"}" +
+                    if (caps.unreachable) " (unreachable)" else "" +
+                    if (caps.undetermined) " (undetermined)" else ""
+                if (line != lastLine) platformLog(TAG, line)
+                lastLine = line
+            },
+        ) { apiClient.getNodeCapabilities(effectiveNodeUrl) }
+    }
+
+    // Login shown or shown again while the node has not answered: ask now,
+    // rather than at the backoff's next tick (CIRISClient#254).
+    LaunchedEffect(currentScreen) {
+        if (currentScreen == Screen.Login && (!federationProbed || nodeCapabilities.unreachable)) {
+            nodeReprobeEpoch++
+        }
     }
 
     // Catch-up: an existing logged-in owner whose local node has NO fed-ID
